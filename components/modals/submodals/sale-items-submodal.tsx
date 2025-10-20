@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import NumericInput from '@/components/ui/numeric-input';
 import { Item } from '@/types/entities';
-import { getSiteOptionsWithCategories } from '@/lib/utils/site-options-utils';
+import { createSiteOptionsWithCategories } from '@/lib/utils/site-options-utils';
 import { ClientAPI } from '@/lib/client-api';
 import { Trash2, Plus } from 'lucide-react';
 import { v4 as uuid } from 'uuid';
@@ -39,15 +39,20 @@ export default function SaleItemsSubModal({
   defaultSiteId = ''
 }: SaleItemsSubModalProps) {
   const [items, setItems] = useState<Item[]>([]);
+  const [sites, setSites] = useState<any[]>([]);
   const [lines, setLines] = useState<SaleItemLine[]>([]);
   const [selectedSiteId, setSelectedSiteId] = useState<string>(defaultSiteId);
 
-  const loadItems = async () => {
+  const loadData = async () => {
     try {
-      const itemsData = await ClientAPI.getItems();
+      const [itemsData, sitesData] = await Promise.all([
+        ClientAPI.getItems(),
+        ClientAPI.getSites()
+      ]);
       setItems(itemsData);
+      setSites(sitesData);
     } catch (error) {
-      console.error('Failed to load items:', error);
+      console.error('Failed to load data:', error);
     }
   };
 
@@ -63,7 +68,7 @@ export default function SaleItemsSubModal({
 
   useEffect(() => {
     if (open) {
-      loadItems();
+      loadData();
       setLines(initialItems.length > 0 ? initialItems : [createEmptyLine()]);
       setSelectedSiteId(defaultSiteId);
     }
@@ -157,7 +162,7 @@ export default function SaleItemsSubModal({
             <SearchableSelect
               value={selectedSiteId}
               onValueChange={setSelectedSiteId}
-              options={getSiteOptionsWithCategories()}
+              options={createSiteOptionsWithCategories(sites)}
               autoGroupByCategory={true}
               placeholder="Select site..."
               className="h-8 text-sm"

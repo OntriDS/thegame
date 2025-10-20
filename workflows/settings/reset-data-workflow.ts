@@ -70,23 +70,23 @@ export class ResetDataWorkflow {
       
       // Clear all entity data
       await this.clearAllEntityData(results, errors);
-      
+
       // Clear all links
       await this.clearAllLinks(results, errors);
-      
-      // Clear logs if not preserving
+
+      // Clear logs if not preserving (do this BEFORE creating new entities)
       if (!options.preserveLogs) {
         await this.clearAllLogs(results, errors);
       }
-      
-      // Seed default data if requested
-      if (options.seedSites) {
-        await this.seedDefaultSites(results, errors);
-      }
 
-      // Initialize Player One (The Triforce) if in defaults mode
+      // Initialize Player One (The Triforce) FIRST if in defaults mode
       if (mode === 'defaults') {
         await this.initializePlayerOne(results, errors);
+      }
+
+      // Seed default data if requested (AFTER player initialization)
+      if (options.seedSites) {
+        await this.seedDefaultSites(results, errors);
       }
       
       const success = errors.length === 0;

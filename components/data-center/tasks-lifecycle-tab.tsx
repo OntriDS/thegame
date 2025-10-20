@@ -148,7 +148,7 @@ export function TasksLifecycleTab({ projectStatus, tasksLog, onReload, isReloadi
                 processedTasksLog.entries.map((entry: any, index: number) => {
                   // Extract data from the rich logging structure
                   const data = entry.data || {};
-                  const status: string = entry.status || data.taskStatus || 'Unknown';
+                  const status: string = entry.event || data.taskStatus || 'Unknown';
                   const name: string = data.taskName || data.name || entry.taskName || entry.message || '—';
                   const description: string = data.description || entry.description || '';
                   const type: string = data.taskType || entry.taskType || '—';

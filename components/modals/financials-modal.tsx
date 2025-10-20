@@ -23,7 +23,7 @@ import type { Station, SubItemType } from '@/types/type-aliases';
 import { ItemType, Collection, CharacterRole } from '@/types/enums';
 import { getSubTypesForItemType } from '@/lib/utils/item-utils';
 import { getCategoryForItemType, createItemTypeOptionsWithCategories, createStationCategoryOptions, createCharacterOptions, createItemTypeSubTypeOptions, getItemTypeFromCombined } from '@/lib/utils/searchable-select-utils';
-import { getSiteOptionsWithCategories } from '@/lib/utils/site-options-utils';
+import { createSiteOptionsWithCategories } from '@/lib/utils/site-options-utils';
 import { ClientAPI } from '@/lib/client-api';
 // Side effects handled by parent component via API calls
 import { v4 as uuid } from 'uuid';
@@ -126,6 +126,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
   const [items, setItems] = useState<any[]>([]);
   const [existingItems, setExistingItems] = useState<any[]>([]);
   const [characters, setCharacters] = useState<any[]>([]);
+  const [sites, setSites] = useState<any[]>([]);
   const [selectedItemId, setSelectedItemId] = useState('');
   const [outputItemTypeSubType, setOutputItemTypeSubType] = useState<string>('none:');
   const [outputItemStatus, setOutputItemStatus] = useState<ItemStatus>(ItemStatus.FOR_SALE);
@@ -160,13 +161,15 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
   useEffect(() => {
     const loadUIData = async () => {
       try {
-        const [itemsData, charactersData] = await Promise.all([
+        const [itemsData, charactersData, sitesData] = await Promise.all([
           ClientAPI.getItems(),
-          ClientAPI.getCharacters()
+          ClientAPI.getCharacters(),
+          ClientAPI.getSites()
         ]);
         setItems(itemsData);
         setExistingItems(itemsData); // For item selection
         setCharacters(charactersData);
+        setSites(sitesData);
         setDataLoaded(true);
       } catch (error) {
         console.error('Failed to load UI data for record modal:', error);
@@ -651,7 +654,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
                   value={formData.site}
                   onValueChange={(v) => setFormData({ ...formData, site: v })}
                   placeholder="Select site..."
-                  options={getSiteOptionsWithCategories()}
+                  options={createSiteOptionsWithCategories(sites)}
                   autoGroupByCategory={true}
                   className="h-8 text-sm"
                 />
@@ -825,7 +828,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
                         value={formData.targetSite}
                         onValueChange={(value) => setFormData({ ...formData, targetSite: value })}
                         placeholder="Target Site"
-                        options={getSiteOptionsWithCategories()}
+                        options={createSiteOptionsWithCategories(sites)}
                         autoGroupByCategory={true}
                         className="h-8 text-sm"
                       />

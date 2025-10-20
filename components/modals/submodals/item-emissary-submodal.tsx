@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { ItemType, Collection, ItemStatus } from '@/types/enums';
 import { getSubTypesForItemType } from '@/lib/utils/item-utils';
 import { getCategoryForItemType, createItemTypeSubTypeOptions, getItemTypeFromCombined } from '@/lib/utils/searchable-select-utils';
-import { getSiteOptionsWithCategories } from '@/lib/utils/site-options-utils';
+import { createSiteOptionsWithCategories } from '@/lib/utils/site-options-utils';
 import type { SubItemType } from '@/types/type-aliases';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
 import { Package } from 'lucide-react';
@@ -61,23 +61,28 @@ export default function ItemEmissarySubModal({
   const [targetSite, setTargetSite] = useState<string>('');
   const [outputItemStatus, setOutputItemStatus] = useState<ItemStatus>(ItemStatus.FOR_SALE);
   
-  // State for existing items
+  // State for existing items and sites
   const [existingItems, setExistingItems] = useState<Item[]>([]);
+  const [sites, setSites] = useState<any[]>([]);
   const [selectedItemId, setSelectedItemId] = useState<string>('');
 
-  // Load existing items when modal opens
+  // Load existing items and sites when modal opens
   useEffect(() => {
-    const loadItems = async () => {
+    const loadData = async () => {
       if (open) {
         try {
-          const items = await ClientAPI.getItems();
+          const [items, sitesData] = await Promise.all([
+            ClientAPI.getItems(),
+            ClientAPI.getSites()
+          ]);
           setExistingItems(items);
+          setSites(sitesData);
         } catch (error) {
-          console.error('Failed to load items:', error);
+          console.error('Failed to load data:', error);
         }
       }
     };
-    loadItems();
+    loadData();
   }, [open]);
 
   // Initialize form when modal opens
@@ -274,7 +279,7 @@ export default function ItemEmissarySubModal({
               value={targetSite}
               onValueChange={setTargetSite}
               placeholder="Target Site"
-              options={getSiteOptionsWithCategories()}
+              options={createSiteOptionsWithCategories(sites)}
               autoGroupByCategory={true}
               className="h-8 text-sm"
             />

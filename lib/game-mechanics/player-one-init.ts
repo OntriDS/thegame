@@ -283,7 +283,7 @@ export async function createTriforceAtomic(
     
     // STEP 3: Manually create Logs (one "created" entry each)
     const { appendEntityLog } = await import('@/workflows/entities-logging');
-    
+
     // Log Player creation
     await appendEntityLog(
       'player',
@@ -293,10 +293,12 @@ export async function createTriforceAtomic(
         name: savedPlayer.name,
         level: savedPlayer.level,
         totalPoints: savedPlayer.totalPoints,
-        characterIds: savedPlayer.characterIds
+        characterIds: savedPlayer.characterIds,
+        description: 'Player One - Bootstrap identity for TheGame'
       }
     );
-    
+    console.log('[createTriforceAtomic] ✅ Player logged to player log');
+
     // Log Character creation
     await appendEntityLog(
       'character',
@@ -305,9 +307,11 @@ export async function createTriforceAtomic(
       {
         name: savedCharacter.name,
         roles: savedCharacter.roles,
-        playerId: savedCharacter.playerId
+        playerId: savedCharacter.playerId,
+        description: 'Character One - Founder role with Player One'
       }
     );
+    console.log('[createTriforceAtomic] ✅ Character logged to character log');
     
     console.log('[createTriforceAtomic] 📝 All logs created');
     

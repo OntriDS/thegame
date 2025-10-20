@@ -72,7 +72,7 @@ export function CharacterLogTab({ characterLog, onReload, isReloading }: Charact
           ) : (
             processedCharacterLog.entries.map((entry: any, index: number) => {
               const data = entry?.data || {};
-              const statusRaw: string = entry.status || 'unknown';
+              const statusRaw: string = entry.event || 'unknown';
               const status = statusRaw.charAt(0).toUpperCase() + statusRaw.slice(1);
               
               const name: string = data.name || entry.name || entry.title || 'Character Activity';

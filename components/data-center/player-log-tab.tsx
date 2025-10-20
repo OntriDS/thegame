@@ -98,7 +98,7 @@ export function PlayerLogTab({ playerLog, onReload, isReloading }: PlayerLogTabP
                   {/* Single row with all info */}
                   <div className="flex items-center gap-3 flex-1 min-w-0">
                     <Badge variant="outline" className="capitalize shrink-0">
-                      {entry.status}
+                      {entry.event}
                     </Badge>
                     <span className="text-sm font-medium truncate">
                       {entry.description || 'Player activity'}

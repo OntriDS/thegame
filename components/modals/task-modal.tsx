@@ -22,7 +22,7 @@ import { TaskType, TaskStatus, TaskPriority, STATION_CATEGORIES, SITE_GROUPS, It
 import { getSubTypesForItemType } from '@/lib/utils/item-utils';
 import { getCategoryForItemType, getCategoryForTaskType, createStationCategoryOptions, getStationFromCombined, getCategoryFromCombined, createTaskParentOptions, createItemTypeSubTypeOptions, getItemTypeFromCombined, getSubTypeFromCombined, createCharacterOptions } from '@/lib/utils/searchable-select-utils';
 import { getAreaForStation } from '@/lib/utils/business-structure-utils';
-import { getSiteOptionsWithCategories, getSiteNameFromId } from '@/lib/utils/site-options-utils';
+import { createSiteOptionsWithCategories, getSiteNameFromId } from '@/lib/utils/site-options-utils';
 import type { Station, SubItemType } from '@/types/type-aliases';
 import { v4 as uuid } from 'uuid';
 import { PROGRESS_MAX, PROGRESS_STEP, PRICE_STEP } from '@/lib/constants/app-constants';
@@ -170,20 +170,23 @@ export default function TaskModal({
   const [items, setItems] = useState<any[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [characters, setCharacters] = useState<any[]>([]);
+  const [sites, setSites] = useState<any[]>([]);
   const [dataLoaded, setDataLoaded] = useState(false);
 
   // Load UI data for form dropdowns
   useEffect(() => {
     const loadUIData = async () => {
       try {
-        const [itemsData, tasksData, charactersData] = await Promise.all([
+        const [itemsData, tasksData, charactersData, sitesData] = await Promise.all([
           ClientAPI.getItems(),
           ClientAPI.getTasks(),
-          ClientAPI.getCharacters()
+          ClientAPI.getCharacters(),
+          ClientAPI.getSites()
         ]);
         setItems(itemsData);
         setTasks(tasksData);
         setCharacters(charactersData);
+        setSites(sitesData);
         setDataLoaded(true);
       } catch (error) {
         console.error('Failed to load task modal UI data:', error);
@@ -854,7 +857,7 @@ export default function TaskModal({
                   value={formData.site}
                   onValueChange={(v) => setFormData({ ...formData, site: v })}
                   placeholder="Select site..."
-                  options={getSiteOptionsWithCategories()}
+                  options={createSiteOptionsWithCategories(sites)}
                   autoGroupByCategory={true}
                   className="h-8 text-sm"
                   persistentCollapsible={true}
@@ -1101,7 +1104,7 @@ export default function TaskModal({
                       value={formData.targetSite}
                       onValueChange={(v) => setFormData({ ...formData, targetSite: v })}
                       placeholder="Target Site"
-                      options={getSiteOptionsWithCategories()}
+                      options={createSiteOptionsWithCategories(sites)}
                       autoGroupByCategory={true}
                       className="h-8 text-sm"
                       persistentCollapsible={true}

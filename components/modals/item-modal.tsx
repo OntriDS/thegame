@@ -20,7 +20,7 @@ import { getAreaForStation } from '@/lib/utils/business-structure-utils';
 import type { Station, SubItemType } from '@/types/type-aliases';
 import { CM_TO_M2_CONVERSION, PRICE_STEP, YEAR_MIN, YEAR_MAX } from '@/lib/constants/app-constants';
 import { v4 as uuid } from 'uuid';
-import { getSiteOptionsWithCategories } from '@/lib/utils/site-options-utils';
+import { createSiteOptionsWithCategories } from '@/lib/utils/site-options-utils';
 import { Package, Trash2, User } from 'lucide-react';
 import { ClientAPI } from '@/lib/client-api';
 import MoveItemsModal from './submodals/move-items-submodal';
@@ -81,6 +81,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
   const [isNewItem, setIsNewItem] = useState(true);
   const [selectedItemId, setSelectedItemId] = useState('');
   const [existingItems, setExistingItems] = useState<Item[]>([]);
+  const [sites, setSites] = useState<any[]>([]);
   const [statusModalConfig, setStatusModalConfig] = useState<{
     title: string;
     message: string;
@@ -200,18 +201,23 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
     }
   }, [item]);
 
-  // Load existing items for selection
+  // Load existing items and sites for selection
   useEffect(() => {
-    const loadExistingItems = async () => {
+    const loadUIData = async () => {
       try {
-        const items = await ClientAPI.getItems();
+        const [items, sitesData] = await Promise.all([
+          ClientAPI.getItems(),
+          ClientAPI.getSites()
+        ]);
         setExistingItems(items);
+        setSites(sitesData);
       } catch (error) {
-        console.error('Failed to load existing items:', error);
+        console.error('Failed to load UI data for item modal:', error);
         setExistingItems([]);
+        setSites([]);
       }
     };
-    loadExistingItems();
+    loadUIData();
   }, []);
 
   // Effect to reset and populate state when the item prop changes
@@ -611,7 +617,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
                 value={site}
                 onValueChange={(value) => setSite(value)}
                 placeholder="Select site"
-                options={getSiteOptionsWithCategories()}
+                options={createSiteOptionsWithCategories(sites)}
                 autoGroupByCategory={true}
                 className="h-8 text-sm"
               />

@@ -17,7 +17,7 @@ import { getZIndexClass } from '@/lib/utils/z-index-utils';
 import { SaleType, SaleStatus, PaymentMethod, Currency, ItemType, ItemStatus, TaskType, TaskPriority, Collection, STATION_CATEGORIES, CharacterRole } from '@/types/enums';
 import { getSubTypesForItemType } from '@/lib/utils/item-utils';
 import type { Station } from '@/types/type-aliases';
-import { getSiteOptionsWithCategories } from '@/lib/utils/site-options-utils';
+import { createSiteOptionsWithCategories } from '@/lib/utils/site-options-utils';
 import { createCharacterOptions, createStationCategoryOptions, createTaskParentOptions, createItemTypeSubTypeOptions, getItemTypeFromCombined } from '@/lib/utils/searchable-select-utils';
 import { getAreaForStation } from '@/lib/utils/business-structure-utils';
 import { ClientAPI } from '@/lib/client-api';
@@ -989,7 +989,7 @@ export default function SalesModal({
                     <SearchableSelect
                       value={siteId}
                       onValueChange={setSiteId}
-                      options={getSiteOptionsWithCategories()}
+                      options={createSiteOptionsWithCategories(sites)}
                       autoGroupByCategory={true}
                       placeholder="Select site..."
                       className="h-8 text-sm"
@@ -1172,7 +1172,7 @@ export default function SalesModal({
                     <SearchableSelect
                       value={siteId}
                       onValueChange={setSiteId}
-                      options={getSiteOptionsWithCategories()}
+                      options={createSiteOptionsWithCategories(sites)}
                       autoGroupByCategory={true}
                       placeholder="Select site"
                       className="h-8 text-sm"
@@ -1357,7 +1357,7 @@ export default function SalesModal({
                     <SearchableSelect
                       value={siteId}
                       onValueChange={setSiteId}
-                      options={getSiteOptionsWithCategories()}
+                      options={createSiteOptionsWithCategories(sites)}
                       autoGroupByCategory={true}
                       placeholder="Select site"
                       className="h-8 text-sm"
@@ -1570,7 +1570,7 @@ export default function SalesModal({
                       <SearchableSelect
                         value={taskTargetSiteId}
                         onValueChange={setTaskTargetSiteId}
-                        options={getSiteOptionsWithCategories()}
+                        options={createSiteOptionsWithCategories(sites)}
                         autoGroupByCategory={true}
                         placeholder="Select target site"
                         className="h-8 text-sm"

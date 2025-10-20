@@ -166,7 +166,7 @@ export function ItemsLifecycleTab({ itemsLog, onReload, isReloading }: ItemsLife
               ) : (
                 processedItemsLog.entries.map((entry: any, index: number) => {
                   const data = entry?.data || {};
-                  const statusRaw: string = entry.status || entry.action || entry.type || 'unknown';
+                  const statusRaw: string = entry.event || entry.action || entry.type || 'unknown';
                   const status = statusRaw.charAt(0).toUpperCase() + statusRaw.slice(1);
                   
                   // Handle bulk seeded entries specially
