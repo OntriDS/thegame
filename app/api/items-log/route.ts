@@ -1,9 +1,11 @@
 // app/api/items-log/route.ts
 import { NextResponse, NextRequest } from 'next/server';
 import { requireAdminAuth } from '@/lib/api-auth';
-import { kvGet } from '@/data-store/kv';
 import { buildLogKey } from '@/data-store/keys';
 import path from 'path';
+
+// Force dynamic rendering - this route accesses cookies
+export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   if (!(await requireAdminAuth(request))) {

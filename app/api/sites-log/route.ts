@@ -5,6 +5,9 @@ import { kvGet } from '@/data-store/kv';
 import { buildLogKey } from '@/data-store/keys';
 import path from 'path';
 
+// Force dynamic rendering - this route accesses cookies
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   if (!(await requireAdminAuth(request))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
