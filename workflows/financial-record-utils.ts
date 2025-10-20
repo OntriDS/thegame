@@ -2,7 +2,7 @@
 // Financial record creation and management utilities
 
 import type { Task, FinancialRecord, Sale } from '@/types/entities';
-import { LinkType, EntityType } from '@/types/enums';
+import { LinkType, EntityType, LogEventType } from '@/types/enums';
 import { ClientAPI } from '@/lib/client-api';
 import { makeLink } from '@/links/links-workflows';
 import { createLink } from '@/links/link-registry';
@@ -147,7 +147,7 @@ export async function updateFinancialRecordFromTask(task: Task, previousTask: Ta
     await ClientAPI.upsertFinancialRecord(updatedFinrec);
     
     // Log the update
-    await appendEntityLog('financial', existingFinrec.id, 'UPDATED', {
+    await appendEntityLog(EntityType.FINANCIAL, existingFinrec.id, LogEventType.UPDATED, {
       name: task.name,
       updatedFrom: 'task',
       changes: {

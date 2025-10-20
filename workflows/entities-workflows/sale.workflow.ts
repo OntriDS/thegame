@@ -1,6 +1,7 @@
 // workflows/entities-workflows/sale.workflow.ts
 // Sale-specific workflow with CHARGED, CANCELLED, COLLECTED events
 
+import { EntityType, LogEventType } from '@/types/enums';
 import type { Sale } from '@/types/entities';
 import { appendEntityLog, updateEntityLogField } from '../entities-logging';
 import { hasEffect, markEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
@@ -24,7 +25,7 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
     const effectKey = `sale:${sale.id}:created`;
     if (await hasEffect(effectKey)) return;
     
-    await appendEntityLog('sale', sale.id, 'CREATED', { 
+    await appendEntityLog(EntityType.SALE, sale.id, LogEventType.CREATED, { 
       type: sale.type,
       status: sale.status,
       counterpartyName: sale.counterpartyName,
@@ -50,7 +51,7 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
   // Status changes
   if (previousSale.status !== sale.status) {
     if (sale.status === 'CHARGED') {
-      await appendEntityLog('sale', sale.id, 'CHARGED', {
+      await appendEntityLog(EntityType.SALE, sale.id, LogEventType.CHARGED, {
         counterpartyName: sale.counterpartyName,
         totalRevenue: sale.totals.totalRevenue,
         chargedAt: new Date().toISOString()
@@ -65,7 +66,7 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
         console.log(`[onSaleUpsert] ✅ Sale lines processed and effect marked: ${sale.counterpartyName}`);
       }
     } else if (sale.status === 'CANCELLED') {
-      await appendEntityLog('sale', sale.id, 'CANCELLED', {
+      await appendEntityLog(EntityType.SALE, sale.id, LogEventType.CANCELLED, {
         counterpartyName: sale.counterpartyName,
         cancelledAt: sale.cancelledAt || new Date().toISOString()
       });
@@ -74,7 +75,7 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
   
   // Collection status - COLLECTED event
   if (!previousSale.isCollected && sale.isCollected) {
-    await appendEntityLog('sale', sale.id, 'COLLECTED', {
+    await appendEntityLog(EntityType.SALE, sale.id, LogEventType.COLLECTED, {
       counterpartyName: sale.counterpartyName,
       collectedAt: new Date().toISOString()
     });
@@ -104,7 +105,7 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
   // Descriptive changes - update in-place
   for (const field of DESCRIPTIVE_FIELDS) {
     if ((previousSale as any)[field] !== (sale as any)[field]) {
-      await updateEntityLogField('sale', sale.id, field, (previousSale as any)[field], (sale as any)[field]);
+      await updateEntityLogField(EntityType.SALE, sale.id, field, (previousSale as any)[field], (sale as any)[field]);
     }
   }
 }

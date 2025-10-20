@@ -1,6 +1,7 @@
 // workflows/entities-workflows/character.workflow.ts
 // Character-specific workflow with ROLE_CHANGED event
 
+import { EntityType, LogEventType } from '@/types/enums';
 import type { Character } from '@/types/entities';
 import { appendEntityLog, updateEntityLogField } from '../entities-logging';
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
@@ -17,7 +18,7 @@ export async function onCharacterUpsert(character: Character, previousCharacter?
     const effectKey = `character:${character.id}:created`;
     if (await hasEffect(effectKey)) return;
     
-    await appendEntityLog('character', character.id, 'CREATED', { 
+    await appendEntityLog(EntityType.CHARACTER, character.id, LogEventType.CREATED, { 
       name: character.name, 
       roles: character.roles
     });
@@ -28,7 +29,7 @@ export async function onCharacterUpsert(character: Character, previousCharacter?
   // Role changes - ROLE_CHANGED event
   const rolesChanged = JSON.stringify(previousCharacter.roles) !== JSON.stringify(character.roles);
   if (rolesChanged) {
-    await appendEntityLog('character', character.id, 'ROLE_CHANGED', {
+    await appendEntityLog(EntityType.CHARACTER, character.id, LogEventType.ROLE_CHANGED, {
       name: character.name,
       oldRoles: previousCharacter.roles,
       newRoles: character.roles
@@ -38,7 +39,7 @@ export async function onCharacterUpsert(character: Character, previousCharacter?
   // General updates - UPDATED event
   const hasSignificantChanges = previousCharacter.isActive !== character.isActive;
   if (hasSignificantChanges) {
-    await appendEntityLog('character', character.id, 'UPDATED', {
+    await appendEntityLog(EntityType.CHARACTER, character.id, LogEventType.UPDATED, {
       name: character.name,
       isActive: character.isActive
     });
@@ -47,7 +48,7 @@ export async function onCharacterUpsert(character: Character, previousCharacter?
   // Descriptive changes - update in-place
   for (const field of DESCRIPTIVE_FIELDS) {
     if ((previousCharacter as any)[field] !== (character as any)[field]) {
-      await updateEntityLogField('character', character.id, field, (previousCharacter as any)[field], (character as any)[field]);
+      await updateEntityLogField(EntityType.CHARACTER, character.id, field, (previousCharacter as any)[field], (character as any)[field]);
     }
   }
 }

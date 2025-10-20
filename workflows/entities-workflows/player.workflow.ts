@@ -1,6 +1,7 @@
 // workflows/entities-workflows/player.workflow.ts
 // Player-specific workflow with LEVEL_UP, POINTS_CHANGED events
 
+import { EntityType, LogEventType } from '@/types/enums';
 import type { Player } from '@/types/entities';
 import { appendEntityLog, updateEntityLogField } from '../entities-logging';
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
@@ -17,7 +18,7 @@ export async function onPlayerUpsert(player: Player, previousPlayer?: Player): P
     const effectKey = `player:${player.id}:created`;
     if (await hasEffect(effectKey)) return;
     
-    await appendEntityLog('player', player.id, 'CREATED', { 
+    await appendEntityLog(EntityType.PLAYER, player.id, LogEventType.CREATED, { 
       name: player.name, 
       level: player.level
     });
@@ -27,7 +28,7 @@ export async function onPlayerUpsert(player: Player, previousPlayer?: Player): P
   
   // Level up - LEVEL_UP event
   if (previousPlayer.level < player.level) {
-    await appendEntityLog('player', player.id, 'LEVEL_UP', {
+    await appendEntityLog(EntityType.PLAYER, player.id, LogEventType.LEVEL_UP, {
       name: player.name,
       oldLevel: previousPlayer.level,
       newLevel: player.level
@@ -38,7 +39,7 @@ export async function onPlayerUpsert(player: Player, previousPlayer?: Player): P
   const pointsChanged = JSON.stringify(previousPlayer.totalPoints) !== JSON.stringify(player.totalPoints) ||
                        JSON.stringify(previousPlayer.points) !== JSON.stringify(player.points);
   if (pointsChanged) {
-    await appendEntityLog('player', player.id, 'POINTS_CHANGED', {
+    await appendEntityLog(EntityType.PLAYER, player.id, LogEventType.POINTS_CHANGED, {
       name: player.name,
       totalPoints: player.totalPoints,
       points: player.points
@@ -48,7 +49,7 @@ export async function onPlayerUpsert(player: Player, previousPlayer?: Player): P
   // General updates - UPDATED event
   const hasSignificantChanges = previousPlayer.isActive !== player.isActive;
   if (hasSignificantChanges) {
-    await appendEntityLog('player', player.id, 'UPDATED', {
+    await appendEntityLog(EntityType.PLAYER, player.id, LogEventType.UPDATED, {
       name: player.name,
       isActive: player.isActive
     });
@@ -57,7 +58,7 @@ export async function onPlayerUpsert(player: Player, previousPlayer?: Player): P
   // Descriptive changes - update in-place
   for (const field of DESCRIPTIVE_FIELDS) {
     if ((previousPlayer as any)[field] !== (player as any)[field]) {
-      await updateEntityLogField('player', player.id, field, (previousPlayer as any)[field], (player as any)[field]);
+      await updateEntityLogField(EntityType.PLAYER, player.id, field, (previousPlayer as any)[field], (player as any)[field]);
     }
   }
 }

@@ -1,4 +1,4 @@
-// app/api/character-log/route.ts
+// app/api/player-log/route.ts
 import { NextResponse, NextRequest } from 'next/server';
 import { requireAdminAuth } from '@/lib/api-auth';
 import { EntityType } from '@/types/enums';
@@ -16,27 +16,27 @@ export async function GET(request: NextRequest) {
   try {
     // Try KV first (production)
     const { kvGet } = await import('@/data-store/kv');
-    const characterLog = await kvGet(buildLogKey(EntityType.CHARACTER));
+    const playerLog = await kvGet(buildLogKey(EntityType.PLAYER));
 
-    if (characterLog) {
-      return NextResponse.json({ entries: characterLog });
+    if (playerLog) {
+      return NextResponse.json({ entries: playerLog });
     }
 
     // In development, read from filesystem
-    const filePath = path.join(process.cwd(), 'logs-research', 'character-log.json');
+    const filePath = path.join(process.cwd(), 'logs-research', 'player-log.json');
 
     try {
       const fs = await import('fs/promises');
       const fileContent = await fs.readFile(filePath, 'utf-8');
-      const characterLogData = JSON.parse(fileContent);
-      return NextResponse.json({ entries: characterLogData });
+      const playerLogData = JSON.parse(fileContent);
+      return NextResponse.json({ entries: playerLogData });
     } catch (fileError) {
-      console.error('Error reading character-log.json:', fileError);
+      console.error('Error reading player-log.json:', fileError);
       return NextResponse.json({ entries: [] });
     }
 
   } catch (error) {
-    console.error('Error fetching character log:', error);
-    return NextResponse.json({ error: 'Failed to fetch character log' }, { status: 500 });
+    console.error('Error fetching player log:', error);
+    return NextResponse.json({ error: 'Failed to fetch player log' }, { status: 500 });
   }
 }

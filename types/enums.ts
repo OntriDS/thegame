@@ -585,6 +585,48 @@ export enum EntityType {
 }
 
 // ============================================================================
+// LOG EVENT TYPES - Lifecycle events for entity logging
+// ============================================================================
+
+/** Log Event Types - Lifecycle events for entity logging */
+export enum LogEventType {
+  // Universal lifecycle events (all entities)
+  CREATED = 'CREATED',
+  UPDATED = 'UPDATED',
+  
+  // State transition events
+  STATUS_CHANGED = 'STATUS_CHANGED',
+  DONE = 'DONE',
+  COLLECTED = 'COLLECTED',
+  MOVED = 'MOVED',
+  
+  // Financial events
+  CHARGED = 'CHARGED',
+  CANCELLED = 'CANCELLED',
+  
+  // Item-specific events
+  SOLD = 'SOLD',
+  
+  // Player-specific events
+  LEVEL_UP = 'LEVEL_UP',
+  POINTS_CHANGED = 'POINTS_CHANGED',
+  
+  // Character-specific events
+  ROLE_CHANGED = 'ROLE_CHANGED',
+  
+  // Site-specific events
+  ACTIVATED = 'ACTIVATED',
+  DEACTIVATED = 'DEACTIVATED',
+  
+  // Task-specific events
+  UNCOMPLETED = 'UNCOMPLETED',
+  
+  // Bulk operations
+  BULK_IMPORT = 'BULK_IMPORT',
+  BULK_EXPORT = 'BULK_EXPORT',
+}
+
+// ============================================================================
 // NOTE SYSTEM
 // ============================================================================
 

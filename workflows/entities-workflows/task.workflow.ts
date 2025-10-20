@@ -1,7 +1,7 @@
 // workflows/entities-workflows/task.workflow.ts
 // Task-specific workflow with state vs descriptive field detection
 
-import { EntityType } from '@/types/enums';
+import { EntityType, LogEventType } from '@/types/enums';
 import type { Task } from '@/types/entities';
 import { appendEntityLog, updateEntityLogField } from '../entities-logging';
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
@@ -29,7 +29,7 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
     const effectKey = `task:${task.id}:created`;
     if (await hasEffect(effectKey)) return;
     
-    await appendEntityLog('task', task.id, 'CREATED', { 
+    await appendEntityLog(EntityType.TASK, task.id, LogEventType.CREATED, { 
       name: task.name, 
       status: task.status,
       station: task.station 
@@ -43,7 +43,7 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
     console.log(`[onTaskUpsert] Task status changed: ${previousTask.status} → ${task.status}`);
     
     // Log status change with transition context
-    await appendEntityLog('task', task.id, 'STATUS_CHANGED', {
+    await appendEntityLog(EntityType.TASK, task.id, LogEventType.STATUS_CHANGED, {
       oldStatus: previousTask.status,
       newStatus: task.status,
       name: task.name,
@@ -61,14 +61,14 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
   }
   
   if (!previousTask.doneAt && task.doneAt) {
-    await appendEntityLog('task', task.id, 'DONE', {
+    await appendEntityLog(EntityType.TASK, task.id, LogEventType.DONE, {
       name: task.name,
       doneAt: task.doneAt
     });
   }
   
   if (!previousTask.collectedAt && task.collectedAt) {
-    await appendEntityLog('task', task.id, 'COLLECTED', {
+    await appendEntityLog(EntityType.TASK, task.id, LogEventType.COLLECTED, {
       name: task.name,
       collectedAt: task.collectedAt
     });
@@ -76,7 +76,7 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
   
   // Site changes - MOVED event
   if (previousTask.siteId !== task.siteId || previousTask.targetSiteId !== task.targetSiteId) {
-    await appendEntityLog('task', task.id, 'MOVED', {
+    await appendEntityLog(EntityType.TASK, task.id, LogEventType.MOVED, {
       name: task.name,
       oldSiteId: previousTask.siteId,
       newSiteId: task.siteId,
@@ -146,7 +146,7 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
   // Descriptive changes - update in-place
   for (const field of DESCRIPTIVE_FIELDS) {
     if ((previousTask as any)[field] !== (task as any)[field]) {
-      await updateEntityLogField('task', task.id, field, (previousTask as any)[field], (task as any)[field]);
+      await updateEntityLogField(EntityType.TASK, task.id, field, (previousTask as any)[field], (task as any)[field]);
     }
   }
 }
@@ -286,7 +286,7 @@ export async function uncompleteTask(taskId: string): Promise<void> {
     console.log(`[uncompleteTask] ✅ Cleared effects registry entries`);
     
     // 4. Log UNCOMPLETED event
-    await appendEntityLog('task', taskId, 'UNCOMPLETED', {
+    await appendEntityLog(EntityType.TASK, taskId, LogEventType.UNCOMPLETED, {
       name: task.name,
       previousStatus: 'Done',
       uncompletedAt: new Date().toISOString()

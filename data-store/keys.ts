@@ -2,6 +2,8 @@
 // Centralized KV key builders. Keep shapes consistent across repositories.
 // Production-only system - no environment namespacing needed
 
+import { EntityType } from '@/types/enums';
+
 export function buildDataKey(entity: string, id: string): string {
   return `data:${entity}:${id}`;
 }
@@ -22,7 +24,7 @@ export function buildEffectKey(effectKey: string): string {
   return `effects:${effectKey}`;
 }
 
-export function buildLogKey(entity: string, yyyymm?: string): string {
+export function buildLogKey(entity: EntityType | string, yyyymm?: string): string {
   return yyyymm
     ? `logs:${entity}:${yyyymm}`
     : `logs:${entity}`;

@@ -2,7 +2,7 @@
 // Sale line processing utilities
 
 import type { Sale, ItemSaleLine, BundleSaleLine, ServiceLine, Task } from '@/types/entities';
-import { LinkType, EntityType } from '@/types/enums';
+import { LinkType, EntityType, LogEventType } from '@/types/enums';
 import { ClientAPI } from '@/lib/client-api';
 import { makeLink } from '@/links/links-workflows';
 import { createLink } from '@/links/link-registry';
@@ -119,7 +119,7 @@ export async function processItemSaleLine(line: ItemSaleLine, sale: Sale): Promi
     await markEffect(`sale:${sale.id}:${stockDecrementedKey}`);
     
     // Log the effect
-    await appendEntityLog('item', line.itemId, 'SOLD', {
+    await appendEntityLog(EntityType.ITEM, line.itemId, LogEventType.SOLD, {
       name: item.name,
       quantity: line.quantity,
       unitPrice: line.unitPrice,
@@ -249,7 +249,7 @@ export async function processServiceLine(line: ServiceLine, sale: Sale): Promise
     await markEffect(`sale:${sale.id}:${taskCreatedKey}`);
     
     // Log the task creation
-    await appendEntityLog('task', serviceTask.id, 'CREATED', {
+    await appendEntityLog(EntityType.TASK, serviceTask.id, LogEventType.CREATED, {
       name: serviceTask.name,
       createdFrom: 'service_sale',
       saleId: sale.id,

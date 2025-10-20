@@ -1,6 +1,7 @@
 // workflows/entities-workflows/site.workflow.ts
 // Site-specific workflow with ACTIVATED, DEACTIVATED events
 
+import { EntityType, LogEventType } from '@/types/enums';
 import type { Site } from '@/types/entities';
 import { appendEntityLog, updateEntityLogField } from '../entities-logging';
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
@@ -15,7 +16,7 @@ export async function onSiteUpsert(site: Site, previousSite?: Site): Promise<voi
     const effectKey = `site:${site.id}:created`;
     if (await hasEffect(effectKey)) return;
     
-    await appendEntityLog('site', site.id, 'CREATED', { 
+    await appendEntityLog(EntityType.SITE, site.id, LogEventType.CREATED, { 
       name: site.name, 
       type: site.metadata.type,
       isActive: site.isActive
@@ -27,12 +28,12 @@ export async function onSiteUpsert(site: Site, previousSite?: Site): Promise<voi
   // Activation status changes
   if (previousSite.isActive !== site.isActive) {
     if (site.isActive) {
-      await appendEntityLog('site', site.id, 'ACTIVATED', {
+      await appendEntityLog(EntityType.SITE, site.id, LogEventType.ACTIVATED, {
         name: site.name,
         activatedAt: new Date().toISOString()
       });
     } else {
-      await appendEntityLog('site', site.id, 'DEACTIVATED', {
+      await appendEntityLog(EntityType.SITE, site.id, LogEventType.DEACTIVATED, {
         name: site.name,
         deactivatedAt: new Date().toISOString()
       });
@@ -41,7 +42,7 @@ export async function onSiteUpsert(site: Site, previousSite?: Site): Promise<voi
   
   // Status changes - UPDATED event
   if (previousSite.status !== site.status) {
-    await appendEntityLog('site', site.id, 'UPDATED', {
+    await appendEntityLog(EntityType.SITE, site.id, LogEventType.UPDATED, {
       name: site.name,
       oldStatus: previousSite.status,
       newStatus: site.status
@@ -51,7 +52,7 @@ export async function onSiteUpsert(site: Site, previousSite?: Site): Promise<voi
   // Descriptive changes - update in-place
   for (const field of DESCRIPTIVE_FIELDS) {
     if ((previousSite as any)[field] !== (site as any)[field]) {
-      await updateEntityLogField('site', site.id, field, (previousSite as any)[field], (site as any)[field]);
+      await updateEntityLogField(EntityType.SITE, site.id, field, (previousSite as any)[field], (site as any)[field]);
     }
   }
 }

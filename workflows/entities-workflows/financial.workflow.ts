@@ -1,6 +1,7 @@
 // workflows/entities-workflows/financial.workflow.ts
 // Financial-specific workflow with CHARGED, COLLECTED events
 
+import { EntityType, LogEventType } from '@/types/enums';
 import type { FinancialRecord } from '@/types/entities';
 import { appendEntityLog, updateEntityLogField } from '../entities-logging';
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
@@ -27,7 +28,7 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
     const effectKey = `financial:${financial.id}:created`;
     if (await hasEffect(effectKey)) return;
     
-    await appendEntityLog('financial', financial.id, 'CREATED', { 
+    await appendEntityLog(EntityType.FINANCIAL, financial.id, LogEventType.CREATED, { 
       name: financial.name, 
       type: financial.type,
       station: financial.station,
@@ -79,7 +80,7 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
   
   // Payment status changes - CHARGED event
   if (previousFinancial.isNotCharged && !financial.isNotCharged) {
-    await appendEntityLog('financial', financial.id, 'CHARGED', {
+    await appendEntityLog(EntityType.FINANCIAL, financial.id, LogEventType.CHARGED, {
       name: financial.name,
       revenue: financial.revenue,
       chargedAt: new Date().toISOString()
@@ -88,7 +89,7 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
   
   // Collection status - COLLECTED event
   if (!previousFinancial.isCollected && financial.isCollected) {
-    await appendEntityLog('financial', financial.id, 'COLLECTED', {
+    await appendEntityLog(EntityType.FINANCIAL, financial.id, LogEventType.COLLECTED, {
       name: financial.name,
       collectedAt: new Date().toISOString()
     });
@@ -124,7 +125,7 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
   // Descriptive changes - update in-place
   for (const field of DESCRIPTIVE_FIELDS) {
     if ((previousFinancial as any)[field] !== (financial as any)[field]) {
-      await updateEntityLogField('financial', financial.id, field, (previousFinancial as any)[field], (financial as any)[field]);
+      await updateEntityLogField(EntityType.FINANCIAL, financial.id, field, (previousFinancial as any)[field], (financial as any)[field]);
     }
   }
 }

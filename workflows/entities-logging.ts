@@ -3,14 +3,13 @@
 
 import { kvGet, kvSet } from '@/data-store/kv';
 import { buildLogKey } from '@/data-store/keys';
+import { EntityType, LogEventType } from '@/types/enums';
 import { v4 as uuid } from 'uuid';
 
-export type LogEvent = 'CREATED' | 'STATUS_CHANGED' | 'DONE' | 'COLLECTED' | 'MOVED' | 'SOLD' | 'CHARGED' | 'CANCELLED' | 'UPDATED' | 'LEVEL_UP' | 'POINTS_CHANGED' | 'ROLE_CHANGED' | 'ACTIVATED' | 'DEACTIVATED' | 'UNCOMPLETED' | 'BULK_IMPORT' | 'BULK_EXPORT';
-
 export async function appendEntityLog(
-  entityType: string, 
+  entityType: EntityType, 
   entityId: string,
-  event: LogEvent,
+  event: LogEventType,
   details: Record<string, any>
 ): Promise<void> {
   const key = buildLogKey(entityType);
@@ -25,7 +24,7 @@ export async function appendEntityLog(
 }
 
 export async function updateEntityLogField(
-  entityType: string, 
+  entityType: EntityType, 
   entityId: string, 
   fieldName: string,
   oldValue: any,
@@ -47,7 +46,7 @@ export async function updateEntityLogField(
 }
 
 export async function appendBulkOperationLog(
-  entityType: string,
+  entityType: EntityType,
   operation: 'import' | 'export',
   details: {
     count: number;
@@ -60,7 +59,7 @@ export async function appendBulkOperationLog(
   const key = buildLogKey(entityType);
   const list = (await kvGet<any[]>(key)) || [];
   
-  const event: LogEvent = operation === 'import' ? 'BULK_IMPORT' : 'BULK_EXPORT';
+  const event: LogEventType = operation === 'import' ? LogEventType.BULK_IMPORT : LogEventType.BULK_EXPORT;
   const operationId = uuid();
   
   list.push({
@@ -91,7 +90,7 @@ export async function appendItemCreationLog(
   const list = (await kvGet<any[]>(key)) || [];
   
   const logEntry = {
-    event: 'CREATED' as LogEvent,
+    event: LogEventType.CREATED,
     entityId: item.id,
     itemName: item.name,
     itemType: item.type,
@@ -128,7 +127,7 @@ export async function appendPlayerPointsLog(
   const list = (await kvGet<any[]>(key)) || [];
   
   const logEntry = {
-    event: 'POINTS_CHANGED' as LogEvent,
+    event: LogEventType.POINTS_CHANGED,
     entityId: playerId,
     points: points,
     sourceId: sourceId,
@@ -155,7 +154,7 @@ export async function appendCharacterJungleCoinsLog(
   const list = (await kvGet<any[]>(key)) || [];
   
   const logEntry = {
-    event: 'UPDATED' as LogEvent,
+    event: LogEventType.UPDATED,
     entityId: characterId,
     jungleCoins: amount,
     sourceId: sourceId,
@@ -189,7 +188,7 @@ export async function appendPlayerPointsUpdateLog(
   };
   
   const logEntry = {
-    event: 'POINTS_CHANGED' as LogEvent,
+    event: LogEventType.POINTS_CHANGED,
     entityId: playerId,
     oldPoints: oldPoints,
     newPoints: newPoints,

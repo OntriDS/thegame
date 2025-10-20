@@ -1,6 +1,7 @@
 // app/api/sales-log/route.ts
 import { NextResponse, NextRequest } from 'next/server';
 import { requireAdminAuth } from '@/lib/api-auth';
+import { EntityType } from '@/types/enums';
 import { buildLogKey } from '@/data-store/keys';
 import path from 'path';
 
@@ -15,7 +16,7 @@ export async function GET(request: NextRequest) {
   try {
     // Try KV first (production)
     const { kvGet } = await import('@/data-store/kv');
-    const salesLog = await kvGet(buildLogKey('sales'));
+    const salesLog = await kvGet(buildLogKey(EntityType.SALE));
 
     if (salesLog) {
       return NextResponse.json({ entries: salesLog });

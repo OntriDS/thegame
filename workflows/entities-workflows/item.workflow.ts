@@ -1,6 +1,7 @@
 // workflows/entities-workflows/item.workflow.ts
 // Item-specific workflow with MOVED, SOLD, COLLECTED events
 
+import { EntityType, LogEventType } from '@/types/enums';
 import type { Item } from '@/types/entities';
 import { appendEntityLog, updateEntityLogField, appendItemCreationLog } from '../entities-logging';
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
@@ -15,7 +16,7 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
     const effectKey = `item:${item.id}:created`;
     if (await hasEffect(effectKey)) return;
     
-    await appendEntityLog('item', item.id, 'CREATED', { 
+    await appendEntityLog(EntityType.ITEM, item.id, LogEventType.CREATED, { 
       name: item.name, 
       type: item.type,
       station: item.station 
@@ -33,7 +34,7 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
   // Stock changes - MOVED event
   const stockChanged = JSON.stringify(previousItem.stock) !== JSON.stringify(item.stock);
   if (stockChanged) {
-    await appendEntityLog('item', item.id, 'MOVED', {
+    await appendEntityLog(EntityType.ITEM, item.id, LogEventType.MOVED, {
       name: item.name,
       oldStock: previousItem.stock,
       newStock: item.stock
@@ -42,7 +43,7 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
   
   // Quantity sold changes - SOLD event
   if (previousItem.quantitySold !== item.quantitySold && item.quantitySold > previousItem.quantitySold) {
-    await appendEntityLog('item', item.id, 'SOLD', {
+    await appendEntityLog(EntityType.ITEM, item.id, LogEventType.SOLD, {
       name: item.name,
       quantitySold: item.quantitySold,
       oldQuantitySold: previousItem.quantitySold
@@ -51,7 +52,7 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
   
   // Collection status - COLLECTED event
   if (!previousItem.isCollected && item.isCollected) {
-    await appendEntityLog('item', item.id, 'COLLECTED', {
+    await appendEntityLog(EntityType.ITEM, item.id, LogEventType.COLLECTED, {
       name: item.name,
       collectedAt: new Date().toISOString()
     });
@@ -60,7 +61,7 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
   // Descriptive changes - update in-place
   for (const field of DESCRIPTIVE_FIELDS) {
     if ((previousItem as any)[field] !== (item as any)[field]) {
-      await updateEntityLogField('item', item.id, field, (previousItem as any)[field], (item as any)[field]);
+      await updateEntityLogField(EntityType.ITEM, item.id, field, (previousItem as any)[field], (item as any)[field]);
     }
   }
 }
@@ -161,12 +162,12 @@ export async function updateItemLogEntryForItem(item: Item, dispatchEvents: bool
     };
 
     // Update the most recent log entry for this item
-    await updateEntityLogField('item', item.id, 'itemName', '', item.name);
-    await updateEntityLogField('item', item.id, 'itemType', '', item.type);
-    await updateEntityLogField('item', item.id, 'status', '', item.status);
-    await updateEntityLogField('item', item.id, 'quantity', '', item.stock?.reduce((sum: number, stock: any) => sum + stock.quantity, 0) || 0);
-    await updateEntityLogField('item', item.id, 'unitCost', '', item.unitCost || 0);
-    await updateEntityLogField('item', item.id, 'price', '', item.price || 0);
+    await updateEntityLogField(EntityType.ITEM, item.id, 'itemName', '', item.name);
+    await updateEntityLogField(EntityType.ITEM, item.id, 'itemType', '', item.type);
+    await updateEntityLogField(EntityType.ITEM, item.id, 'status', '', item.status);
+    await updateEntityLogField(EntityType.ITEM, item.id, 'quantity', '', item.stock?.reduce((sum: number, stock: any) => sum + stock.quantity, 0) || 0);
+    await updateEntityLogField(EntityType.ITEM, item.id, 'unitCost', '', item.unitCost || 0);
+    await updateEntityLogField(EntityType.ITEM, item.id, 'price', '', item.price || 0);
 
     console.log(`[updateItemLogEntryForItem] ✅ Item log entry updated successfully for ${item.name}`);
     

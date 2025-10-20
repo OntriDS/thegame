@@ -286,7 +286,7 @@ export async function createTriforceAtomic(
 
     // Log Player creation
     await appendEntityLog(
-      'player',
+      EntityType.PLAYER,
       PLAYER_ONE_ID,
       'CREATED',
       {
@@ -301,7 +301,7 @@ export async function createTriforceAtomic(
 
     // Log Character creation
     await appendEntityLog(
-      'character',
+      EntityType.CHARACTER,
       CHARACTER_ONE_ID,
       'CREATED',
       {
