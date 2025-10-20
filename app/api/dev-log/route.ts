@@ -4,6 +4,9 @@ import { requireAdminAuth } from '@/lib/api-auth';
 import fs from 'fs';
 import path from 'path';
 
+// Force dynamic rendering since this route accesses request cookies for auth
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
   if (!(await requireAdminAuth(req))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

@@ -1,7 +1,7 @@
 // app/api/settings/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdminAuth } from '@/lib/api-auth';
-import { 
+import {
   ResetDataWorkflow,
   ClearLogsWorkflow,
   ClearCacheWorkflow,
@@ -10,6 +10,9 @@ import {
   ImportDataWorkflow,
   SeedDataWorkflow
 } from '@/workflows/settings';
+
+// Force dynamic rendering since this route accesses request cookies for auth
+export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   if (!(await requireAdminAuth(request))) {

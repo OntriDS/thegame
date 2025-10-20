@@ -5,6 +5,9 @@ import type { Character } from '@/types/entities';
 import { getAllCharacters, upsertCharacter } from '@/data-store/datastore';
 import { requireAdminAuth } from '@/lib/api-auth';
 
+// Force dynamic rendering since this route accesses request cookies for auth
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
   if (!(await requireAdminAuth(req))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const characters = await getAllCharacters();
