@@ -163,10 +163,13 @@ export class ImportDataWorkflow {
     try {
       console.log('[ImportDataWorkflow] 📥 Importing all data...');
       
+      let importedEntityTypes = 0;
+      
       // Import all entity types
       for (const entityType of IMPORTABLE_ENTITY_TYPES) {
         try {
           await this.importEntityType(entityType, importData.entities[entityType], results, errors);
+          importedEntityTypes++;
         } catch (error) {
           const errorMsg = `Failed to import ${entityType}: ${error instanceof Error ? error.message : 'Unknown error'}`;
           errors.push(errorMsg);
@@ -185,7 +188,7 @@ export class ImportDataWorkflow {
       // Import logs
       await this.importLogs(importData.logs, results, errors);
       
-      results.push(`Imported data for ${entityTypes.length} entity types`);
+      results.push(`Imported data for ${importedEntityTypes} entity types`);
       console.log(`[ImportDataWorkflow] ✅ Imported all data`);
       
     } catch (error) {
