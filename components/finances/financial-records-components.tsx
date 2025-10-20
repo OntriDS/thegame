@@ -54,119 +54,119 @@ export function CompanyRecordsList({
     setRecordToEdit(record);
   };
 
-  if (records.length === 0) {
-    return (
-      <Card>
-        <CardContent className="text-center py-8">
-          <p className="text-muted-foreground">No company records for {formatMonthYear(new Date(year, month - 1))}</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
-    <div className="space-y-2">
-      {records.map(record => {
-        // Payment status indicators
-        const isWaiting = record.isNotPaid || record.isNotCharged;
-        const waitingText = record.isNotPaid ? '⏳ Not Paid' : record.isNotCharged ? '⏳ Not Charged' : '';
-        
-        return (
-          <Card key={record.id} className={isWaiting ? "border-orange-500/50 bg-orange-500/5" : ""}>
-            <CardContent className="p-3">
-              <div className="flex items-center justify-between gap-3">
-                {/* Single row - compact display */}
-                <div className="flex items-center gap-2 text-sm flex-1 min-w-0">
-                  <span className="font-medium truncate">{record.name}</span>
-                  <span className="text-muted-foreground">•</span>
-                  <span className="text-muted-foreground text-xs">{record.station}</span>
-                  <span className="text-muted-foreground">•</span>
-                  <span className={record.cost > 0 ? "text-red-600 font-medium" : "text-muted-foreground"}>
-                    {record.cost > 0 ? `-$${record.cost}` : '$0'}
-                  </span>
-                  <span className="text-muted-foreground">•</span>
-                  <span className={record.revenue > 0 ? "text-green-600 font-medium" : "text-muted-foreground"}>
-                    {record.revenue > 0 ? `+$${record.revenue}` : '$0'}
-                  </span>
-                  {isWaiting && (
-                    <>
+    <>
+      {records.length === 0 ? (
+        <Card>
+          <CardContent className="text-center py-8">
+            <p className="text-muted-foreground">No company records for {formatMonthYear(new Date(year, month - 1))}</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-2">
+          {records.map(record => {
+            // Payment status indicators
+            const isWaiting = record.isNotPaid || record.isNotCharged;
+            const waitingText = record.isNotPaid ? '⏳ Not Paid' : record.isNotCharged ? '⏳ Not Charged' : '';
+            
+            return (
+              <Card key={record.id} className={isWaiting ? "border-orange-500/50 bg-orange-500/5" : ""}>
+                <CardContent className="p-3">
+                  <div className="flex items-center justify-between gap-3">
+                    {/* Single row - compact display */}
+                    <div className="flex items-center gap-2 text-sm flex-1 min-w-0">
+                      <span className="font-medium truncate">{record.name}</span>
                       <span className="text-muted-foreground">•</span>
-                      <span className="text-orange-600 text-xs font-medium">{waitingText}</span>
-                    </>
-                  )}
-                  {record.outputItemName && (
-                    <>
+                      <span className="text-muted-foreground text-xs">{record.station}</span>
                       <span className="text-muted-foreground">•</span>
-                      <span className="text-xs">
-                        {record.outputItemName}
-                        {record.outputQuantity && record.outputQuantity > 1 && ` (${record.outputQuantity}x)`}
+                      <span className={record.cost > 0 ? "text-red-600 font-medium" : "text-muted-foreground"}>
+                        {record.cost > 0 ? `-$${record.cost}` : '$0'}
                       </span>
-                    </>
-                  )}
-                  {record.rewards?.points && (record.rewards.points.hp || record.rewards.points.fp || record.rewards.points.rp || record.rewards.points.xp) && (
-                    <>
                       <span className="text-muted-foreground">•</span>
-                      <span className="text-xs">
-                        {record.rewards.points.hp ? `HP:${record.rewards.points.hp} ` : ''}
-                        {record.rewards.points.fp ? `FP:${record.rewards.points.fp} ` : ''}
-                        {record.rewards.points.rp ? `RP:${record.rewards.points.rp} ` : ''}
-                        {record.rewards.points.xp ? `XP:${record.rewards.points.xp}` : ''}
+                      <span className={record.revenue > 0 ? "text-green-600 font-medium" : "text-muted-foreground"}>
+                        {record.revenue > 0 ? `+$${record.revenue}` : '$0'}
                       </span>
-                    </>
-                  )}
-                  {record.jungleCoins > 0 && (
-                    <>
-                      <span className="text-muted-foreground">•</span>
-                      <span className="text-blue-600 text-xs">J$: {record.jungleCoins}</span>
-                    </>
-                  )}
-                </div>
-                
-                {/* Edit button */}
-                <Button size="sm" variant="outline" onClick={() => handleEdit(record)}>
-                  Edit
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        );
-      })}
+                      {isWaiting && (
+                        <>
+                          <span className="text-muted-foreground">•</span>
+                          <span className="text-orange-600 text-xs font-medium">{waitingText}</span>
+                        </>
+                      )}
+                      {record.outputItemName && (
+                        <>
+                          <span className="text-muted-foreground">•</span>
+                          <span className="text-xs">
+                            {record.outputItemName}
+                            {record.outputQuantity && record.outputQuantity > 1 && ` (${record.outputQuantity}x)`}
+                          </span>
+                        </>
+                      )}
+                      {record.rewards?.points && (record.rewards.points.hp || record.rewards.points.fp || record.rewards.points.rp || record.rewards.points.xp) && (
+                        <>
+                          <span className="text-muted-foreground">•</span>
+                          <span className="text-xs">
+                            {record.rewards.points.hp ? `HP:${record.rewards.points.hp} ` : ''}
+                            {record.rewards.points.fp ? `FP:${record.rewards.points.fp} ` : ''}
+                            {record.rewards.points.rp ? `RP:${record.rewards.points.rp} ` : ''}
+                            {record.rewards.points.xp ? `XP:${record.rewards.points.xp}` : ''}
+                          </span>
+                        </>
+                      )}
+                      {record.jungleCoins > 0 && (
+                        <>
+                          <span className="text-muted-foreground">•</span>
+                          <span className="text-blue-600 text-xs">J$: {record.jungleCoins}</span>
+                        </>
+                      )}
+                    </div>
+                    
+                    {/* Edit button */}
+                    <Button size="sm" variant="outline" onClick={() => handleEdit(record)}>
+                      Edit
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
 
-      {recordToEdit && (
-        <FinancialsModal
-          record={recordToEdit}
-          year={year}
-          month={month}
-          open={!!recordToEdit}
-          onOpenChange={(open: boolean) => !open && setRecordToEdit(null)}
-          onSave={async (record: FinancialRecord) => {
-            try {
-              // Parent only calls DataStore - Links System handles all relationships automatically
-              const finalRecord = await ClientAPI.upsertFinancialRecord(record);
-              
-              const companyRecords = await ClientAPI.getFinancialRecordsByMonth(year, month, 'company');
-              setRecords(companyRecords);
-              onRecordUpdated();
-              setRecordToEdit(null);
-              
-              // Dispatch events
-              if (typeof window !== 'undefined') {
-                window.dispatchEvent(new Event('financialsUpdated'));
-                window.dispatchEvent(new Event('linksUpdated'));
-              }
-            } catch (error) {
-              console.error('Failed to save financial record:', error);
-            }
-          }}
-          onDelete={async () => {
-            const companyRecords = await ClientAPI.getFinancialRecordsByMonth(year, month, 'company');
-            setRecords(companyRecords);
-            onRecordUpdated();
-            setRecordToEdit(null);
-          }}
-        />
+          {recordToEdit && (
+            <FinancialsModal
+              record={recordToEdit}
+              year={year}
+              month={month}
+              open={!!recordToEdit}
+              onOpenChange={(open: boolean) => !open && setRecordToEdit(null)}
+              onSave={async (record: FinancialRecord) => {
+                try {
+                  // Parent only calls DataStore - Links System handles all relationships automatically
+                  const finalRecord = await ClientAPI.upsertFinancialRecord(record);
+                  
+                  const companyRecords = await ClientAPI.getFinancialRecordsByMonth(year, month, 'company');
+                  setRecords(companyRecords);
+                  onRecordUpdated();
+                  setRecordToEdit(null);
+                  
+                  // Dispatch events
+                  if (typeof window !== 'undefined') {
+                    window.dispatchEvent(new Event('financialsUpdated'));
+                    window.dispatchEvent(new Event('linksUpdated'));
+                  }
+                } catch (error) {
+                  console.error('Failed to save financial record:', error);
+                }
+              }}
+              onDelete={async () => {
+                const companyRecords = await ClientAPI.getFinancialRecordsByMonth(year, month, 'company');
+                setRecords(companyRecords);
+                onRecordUpdated();
+                setRecordToEdit(null);
+              }}
+            />
+          )}
+        </div>
       )}
-    </div>
+    </>
   );
 }
 
@@ -248,118 +248,118 @@ This action cannot be undone.`);
     }
   };
 
-  if (records.length === 0) {
-    return (
-      <Card>
-        <CardContent className="text-center py-8">
-          <p className="text-muted-foreground">No personal records for {formatMonthYear(new Date(year, month - 1))}</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
-    <div className="space-y-2">
-      {records.map(record => {
-        // Payment status indicators
-        const isWaiting = record.isNotPaid || record.isNotCharged;
-        const waitingText = record.isNotPaid ? '⏳ Not Paid' : record.isNotCharged ? '⏳ Not Charged' : '';
-        
-        return (
-          <Card key={record.id} className={isWaiting ? "border-orange-500/50 bg-orange-500/5" : ""}>
-            <CardContent className="p-3">
-              <div className="flex items-center justify-between gap-3">
-                {/* Single row - compact display */}
-                <div className="flex items-center gap-2 text-sm flex-1 min-w-0">
-                  <span className="font-medium truncate">{record.name}</span>
-                  <span className="text-muted-foreground">•</span>
-                  <span className="text-muted-foreground text-xs">{record.station}</span>
-                  <span className="text-muted-foreground">•</span>
-                  <span className={record.cost > 0 ? "text-red-600 font-medium" : "text-muted-foreground"}>
-                    {record.cost > 0 ? `-$${record.cost}` : '$0'}
-                  </span>
-                  <span className="text-muted-foreground">•</span>
-                  <span className={record.revenue > 0 ? "text-green-600 font-medium" : "text-muted-foreground"}>
-                    {record.revenue > 0 ? `+$${record.revenue}` : '$0'}
-                  </span>
-                  {isWaiting && (
-                    <>
+    <>
+      {records.length === 0 ? (
+        <Card>
+          <CardContent className="text-center py-8">
+            <p className="text-muted-foreground">No personal records for {formatMonthYear(new Date(year, month - 1))}</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-2">
+          {records.map(record => {
+            // Payment status indicators
+            const isWaiting = record.isNotPaid || record.isNotCharged;
+            const waitingText = record.isNotPaid ? '⏳ Not Paid' : record.isNotCharged ? '⏳ Not Charged' : '';
+            
+            return (
+              <Card key={record.id} className={isWaiting ? "border-orange-500/50 bg-orange-500/5" : ""}>
+                <CardContent className="p-3">
+                  <div className="flex items-center justify-between gap-3">
+                    {/* Single row - compact display */}
+                    <div className="flex items-center gap-2 text-sm flex-1 min-w-0">
+                      <span className="font-medium truncate">{record.name}</span>
                       <span className="text-muted-foreground">•</span>
-                      <span className="text-orange-600 text-xs font-medium">{waitingText}</span>
-                    </>
-                  )}
-                  {record.outputItemName && (
-                    <>
+                      <span className="text-muted-foreground text-xs">{record.station}</span>
                       <span className="text-muted-foreground">•</span>
-                      <span className="text-xs">
-                        {record.outputItemName}
-                        {record.outputQuantity && record.outputQuantity > 1 && ` (${record.outputQuantity}x)`}
+                      <span className={record.cost > 0 ? "text-red-600 font-medium" : "text-muted-foreground"}>
+                        {record.cost > 0 ? `-$${record.cost}` : '$0'}
                       </span>
-                    </>
-                  )}
-                  {record.rewards?.points && (record.rewards.points.hp || record.rewards.points.fp || record.rewards.points.rp || record.rewards.points.xp) && (
-                    <>
                       <span className="text-muted-foreground">•</span>
-                      <span className="text-xs">
-                        {record.rewards.points.hp ? `HP:${record.rewards.points.hp} ` : ''}
-                        {record.rewards.points.fp ? `FP:${record.rewards.points.fp} ` : ''}
-                        {record.rewards.points.rp ? `RP:${record.rewards.points.rp} ` : ''}
-                        {record.rewards.points.xp ? `XP:${record.rewards.points.xp}` : ''}
+                      <span className={record.revenue > 0 ? "text-green-600 font-medium" : "text-muted-foreground"}>
+                        {record.revenue > 0 ? `+$${record.revenue}` : '$0'}
                       </span>
-                    </>
-                  )}
-                  {record.jungleCoins > 0 && (
-                    <>
-                      <span className="text-muted-foreground">•</span>
-                      <span className="text-blue-600 text-xs">J$: {record.jungleCoins}</span>
-                    </>
-                  )}
-                </div>
-                
-                {/* Edit button */}
-                <Button size="sm" variant="outline" onClick={() => handleEdit(record)}>
-                  Edit
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        );
-      })}
+                      {isWaiting && (
+                        <>
+                          <span className="text-muted-foreground">•</span>
+                          <span className="text-orange-600 text-xs font-medium">{waitingText}</span>
+                        </>
+                      )}
+                      {record.outputItemName && (
+                        <>
+                          <span className="text-muted-foreground">•</span>
+                          <span className="text-xs">
+                            {record.outputItemName}
+                            {record.outputQuantity && record.outputQuantity > 1 && ` (${record.outputQuantity}x)`}
+                          </span>
+                        </>
+                      )}
+                      {record.rewards?.points && (record.rewards.points.hp || record.rewards.points.fp || record.rewards.points.rp || record.rewards.points.xp) && (
+                        <>
+                          <span className="text-muted-foreground">•</span>
+                          <span className="text-xs">
+                            {record.rewards.points.hp ? `HP:${record.rewards.points.hp} ` : ''}
+                            {record.rewards.points.fp ? `FP:${record.rewards.points.fp} ` : ''}
+                            {record.rewards.points.rp ? `RP:${record.rewards.points.rp} ` : ''}
+                            {record.rewards.points.xp ? `XP:${record.rewards.points.xp}` : ''}
+                          </span>
+                        </>
+                      )}
+                      {record.jungleCoins > 0 && (
+                        <>
+                          <span className="text-muted-foreground">•</span>
+                          <span className="text-blue-600 text-xs">J$: {record.jungleCoins}</span>
+                        </>
+                      )}
+                    </div>
+                    
+                    {/* Edit button */}
+                    <Button size="sm" variant="outline" onClick={() => handleEdit(record)}>
+                      Edit
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
 
-      {recordToEdit && (
-        <FinancialsModal
-          record={recordToEdit}
-          year={year}
-          month={month}
-          open={!!recordToEdit}
-          onOpenChange={(open: boolean) => !open && setRecordToEdit(null)}
-          onSave={async (record: FinancialRecord) => {
-            try {
-              // Parent only calls DataStore - Links System handles all relationships automatically
-              const finalRecord = await ClientAPI.upsertFinancialRecord(record);
-              
-              const personalRecords = await ClientAPI.getFinancialRecordsByMonth(year, month, 'personal');
-              setRecords(personalRecords);
-              onRecordUpdated();
-              setRecordToEdit(null);
-              
-              // Dispatch events
-              if (typeof window !== 'undefined') {
-                window.dispatchEvent(new Event('financialsUpdated'));
-                window.dispatchEvent(new Event('linksUpdated'));
-              }
-            } catch (error) {
-              console.error('Failed to save financial record:', error);
-            }
-          }}
-          onDelete={async () => {
-            const personalRecords = await ClientAPI.getFinancialRecordsByMonth(year, month, 'personal');
-            setRecords(personalRecords);
-            onRecordUpdated();
-            setRecordToEdit(null);
-          }}
-        />
+          {recordToEdit && (
+            <FinancialsModal
+              record={recordToEdit}
+              year={year}
+              month={month}
+              open={!!recordToEdit}
+              onOpenChange={(open: boolean) => !open && setRecordToEdit(null)}
+              onSave={async (record: FinancialRecord) => {
+                try {
+                  // Parent only calls DataStore - Links System handles all relationships automatically
+                  const finalRecord = await ClientAPI.upsertFinancialRecord(record);
+                  
+                  const personalRecords = await ClientAPI.getFinancialRecordsByMonth(year, month, 'personal');
+                  setRecords(personalRecords);
+                  onRecordUpdated();
+                  setRecordToEdit(null);
+                  
+                  // Dispatch events
+                  if (typeof window !== 'undefined') {
+                    window.dispatchEvent(new Event('financialsUpdated'));
+                    window.dispatchEvent(new Event('linksUpdated'));
+                  }
+                } catch (error) {
+                  console.error('Failed to save financial record:', error);
+                }
+              }}
+              onDelete={async () => {
+                const personalRecords = await ClientAPI.getFinancialRecordsByMonth(year, month, 'personal');
+                setRecords(personalRecords);
+                onRecordUpdated();
+                setRecordToEdit(null);
+              }}
+            />
+          )}
+        </div>
       )}
-    </div>
+    </>
   );
 }
