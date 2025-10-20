@@ -1,7 +1,7 @@
 // data-store/datastore.ts
 // Orchestration layer: repositories → workflows → links → logging
 
-import type { Task, Item, FinancialRecord, Sale, Character, Player, Site, Settlement } from '@/types/entities';
+import type { Task, Item, FinancialRecord, Sale, Character, Player, Site, Settlement, Account } from '@/types/entities';
 import { EntityType } from '@/types/enums';
 import { 
   upsertTask as repoUpsertTask,
@@ -40,6 +40,12 @@ import {
   deletePlayer as repoDeletePlayer
 } from './repositories/player.repo';
 import { 
+  upsertAccount as repoUpsertAccount,
+  getAllAccounts as repoGetAllAccounts,
+  getAccountById as repoGetAccountById,
+  deleteAccount as repoDeleteAccount
+} from './repositories/account.repo';
+import { 
   upsertSite as repoUpsertSite,
   getAllSites as repoGetAllSites,
   getSiteById as repoGetSiteById,
@@ -59,6 +65,7 @@ import { onFinancialUpsert } from '@/workflows/entities-workflows/financial.work
 import { onSaleUpsert } from '@/workflows/entities-workflows/sale.workflow';
 import { onCharacterUpsert } from '@/workflows/entities-workflows/character.workflow';
 import { onPlayerUpsert } from '@/workflows/entities-workflows/player.workflow';
+import { onAccountUpsert } from '@/workflows/entities-workflows/account.workflow';
 import { onSiteUpsert } from '@/workflows/entities-workflows/site.workflow';
 import { processLinkEntity } from '@/links/links-workflows';
 import { appendEntityLog } from '@/workflows/entities-logging';
@@ -222,6 +229,33 @@ export async function removePlayer(id: string): Promise<void> {
     // Call player deletion workflow for cleanup
     const { removePlayerEffectsOnDelete } = await import('@/workflows/entities-workflows/player.workflow');
     await removePlayerEffectsOnDelete(id);
+  }
+}
+
+// ACCOUNTS
+export async function upsertAccount(account: Account): Promise<Account> {
+  const previous = await repoGetAccountById(account.id);
+  const saved = await repoUpsertAccount(account);
+  await onAccountUpsert(saved, previous || undefined);
+  await processLinkEntity(saved, EntityType.ACCOUNT);
+  return saved;
+}
+
+export async function getAllAccounts(): Promise<Account[]> {
+  return await repoGetAllAccounts();
+}
+
+export async function getAccountById(id: string): Promise<Account | null> {
+  return await repoGetAccountById(id);
+}
+
+export async function removeAccount(id: string): Promise<void> {
+  const existing = await repoGetAccountById(id);
+  await repoDeleteAccount(id);
+  if (existing) {
+    // Call account deletion workflow for cleanup
+    const { removeAccountEffectsOnDelete } = await import('@/workflows/entities-workflows/account.workflow');
+    await removeAccountEffectsOnDelete(id);
   }
 }
 

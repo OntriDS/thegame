@@ -4,6 +4,7 @@
 import { kv } from '@vercel/kv';
 import { buildDataKey, buildIndexKey, buildLogKey, buildLinksIndexKey } from '@/data-store/keys';
 import { EntityType } from '@/types/enums';
+import { TransactionManager } from './transaction-manager';
 
 // Centralized list of entity types for reset operations
 const RESETTABLE_ENTITY_TYPES = [
@@ -13,6 +14,7 @@ const RESETTABLE_ENTITY_TYPES = [
   EntityType.FINANCIAL,
   EntityType.CHARACTER,
   EntityType.PLAYER,
+  EntityType.ACCOUNT,
   EntityType.SITE
 ];
 
@@ -107,82 +109,106 @@ export class ResetDataWorkflow {
         preserveLogs: false
       };
 
-      // Clear all entity data
-      try {
-        checkTimeoutAndProgress('Clearing entity data');
-        await this.clearAllEntityData(results, errors);
-      } catch (error) {
-        if (error instanceof Error && error.message.includes('timeout')) {
-          throw error; // Re-throw timeout errors
-        }
-        const errorMsg = `Failed to clear entity data: ${error instanceof Error ? error.message : 'Unknown error'}`;
-        errors.push(errorMsg);
-        console.error(`[ResetDataWorkflow] ❌ ${errorMsg}`);
-      }
+      // Use TransactionManager for rollback support
+      const transactionManager = new TransactionManager();
+      
+      const result = await transactionManager.execute(async () => {
+        // NEW ORDER (FIXED):
+        // 1. Clear entities
+        // 2. Clear links  
+        // 3. Create Player One (The Triforce) - BEFORE log clearing
+        // 4. Clear logs - AFTER entity creation
+        // 5. Seed default sites
 
-      // Clear all links
-      try {
-        checkTimeoutAndProgress('Clearing links');
-        await this.clearAllLinks(results, errors);
-      } catch (error) {
-        if (error instanceof Error && error.message.includes('timeout')) {
-          throw error; // Re-throw timeout errors
-        }
-        const errorMsg = `Failed to clear links: ${error instanceof Error ? error.message : 'Unknown error'}`;
-        errors.push(errorMsg);
-        console.error(`[ResetDataWorkflow] ❌ ${errorMsg}`);
-      }
-
-      // Clear logs if not preserving (do this BEFORE creating new entities)
-      if (!options.preserveLogs) {
+        // Step 1: Clear all entity data
         try {
-          checkTimeoutAndProgress('Clearing logs');
-          await this.clearAllLogs(results, errors);
+          checkTimeoutAndProgress('Clearing entity data');
+          await this.clearAllEntityData(results, errors);
         } catch (error) {
           if (error instanceof Error && error.message.includes('timeout')) {
             throw error; // Re-throw timeout errors
           }
-          const errorMsg = `Failed to clear logs: ${error instanceof Error ? error.message : 'Unknown error'}`;
+          const errorMsg = `Failed to clear entity data: ${error instanceof Error ? error.message : 'Unknown error'}`;
           errors.push(errorMsg);
           console.error(`[ResetDataWorkflow] ❌ ${errorMsg}`);
+          throw new Error(errorMsg); // Throw to trigger rollback
         }
-      } else {
-        currentOperation++; // Count as completed even if skipped
-      }
 
-      // Initialize Player One (The Triforce) FIRST if in defaults mode
-      if (mode === 'defaults') {
+        // Step 2: Clear all links
         try {
-          checkTimeoutAndProgress('Initializing Player One');
-          await this.initializePlayerOne(results, errors);
+          checkTimeoutAndProgress('Clearing links');
+          await this.clearAllLinks(results, errors);
         } catch (error) {
           if (error instanceof Error && error.message.includes('timeout')) {
             throw error; // Re-throw timeout errors
           }
-          const errorMsg = `Failed to initialize Player One: ${error instanceof Error ? error.message : 'Unknown error'}`;
+          const errorMsg = `Failed to clear links: ${error instanceof Error ? error.message : 'Unknown error'}`;
           errors.push(errorMsg);
           console.error(`[ResetDataWorkflow] ❌ ${errorMsg}`);
+          throw new Error(errorMsg); // Throw to trigger rollback
         }
-      } else {
-        currentOperation++; // Count as completed even if skipped
-      }
 
-      // Seed default data if requested (AFTER player initialization)
-      if (options.seedSites) {
-        try {
-          checkTimeoutAndProgress('Seeding default sites');
-          await this.seedDefaultSites(results, errors);
-        } catch (error) {
-          if (error instanceof Error && error.message.includes('timeout')) {
-            throw error; // Re-throw timeout errors
+        // Step 3: Initialize Player One (The Triforce) FIRST if in defaults mode
+        if (mode === 'defaults') {
+          try {
+            checkTimeoutAndProgress('Initializing Player One');
+            await this.initializePlayerOne(results, errors);
+          } catch (error) {
+            if (error instanceof Error && error.message.includes('timeout')) {
+              throw error; // Re-throw timeout errors
+            }
+            const errorMsg = `Failed to initialize Player One: ${error instanceof Error ? error.message : 'Unknown error'}`;
+            errors.push(errorMsg);
+            console.error(`[ResetDataWorkflow] ❌ ${errorMsg}`);
+            throw new Error(errorMsg); // Throw to trigger rollback
           }
-          const errorMsg = `Failed to seed default sites: ${error instanceof Error ? error.message : 'Unknown error'}`;
-          errors.push(errorMsg);
-          console.error(`[ResetDataWorkflow] ❌ ${errorMsg}`);
+        } else {
+          currentOperation++; // Count as completed even if skipped
         }
-      } else {
-        currentOperation++; // Count as completed even if skipped
-      }
+
+        // Step 4: Clear logs AFTER entity creation (FIXED TIMING)
+        if (!options.preserveLogs) {
+          try {
+            checkTimeoutAndProgress('Clearing logs');
+            await this.clearAllLogs(results, errors);
+          } catch (error) {
+            if (error instanceof Error && error.message.includes('timeout')) {
+              throw error; // Re-throw timeout errors
+            }
+            const errorMsg = `Failed to clear logs: ${error instanceof Error ? error.message : 'Unknown error'}`;
+            errors.push(errorMsg);
+            console.error(`[ResetDataWorkflow] ❌ ${errorMsg}`);
+            throw new Error(errorMsg); // Throw to trigger rollback
+          }
+        } else {
+          currentOperation++; // Count as completed even if skipped
+        }
+
+        // Step 5: Seed default data if requested (AFTER player initialization)
+        if (options.seedSites) {
+          try {
+            checkTimeoutAndProgress('Seeding default sites');
+            await this.seedDefaultSites(results, errors);
+          } catch (error) {
+            if (error instanceof Error && error.message.includes('timeout')) {
+              throw error; // Re-throw timeout errors
+            }
+            const errorMsg = `Failed to seed default sites: ${error instanceof Error ? error.message : 'Unknown error'}`;
+            errors.push(errorMsg);
+            console.error(`[ResetDataWorkflow] ❌ ${errorMsg}`);
+            throw new Error(errorMsg); // Throw to trigger rollback
+          }
+        } else {
+          currentOperation++; // Count as completed even if skipped
+        }
+
+        return { results, errors };
+      });
+
+      // Extract results from transaction
+      const { results: transactionResults, errors: transactionErrors } = result;
+      results.push(...transactionResults);
+      errors.push(...transactionErrors);
 
       // Check for critical errors that should stop the operation
       const criticalErrors = errors.filter(error =>
@@ -716,18 +742,20 @@ export class ResetDataWorkflow {
       const {
         getAllPlayers,
         getAllCharacters,
+        getAllAccounts,
         upsertPlayer,
-        upsertCharacter
+        upsertCharacter,
+        upsertAccount
       } = await import('@/data-store/datastore');
 
       // Initialize Player One
       await ensurePlayerOne(
         getAllPlayers,
         getAllCharacters,
-        () => Promise.resolve([]), // getAccounts - not implemented yet
+        getAllAccounts,    // ← REAL IMPLEMENTATION
         upsertPlayer,
         upsertCharacter,
-        () => Promise.resolve({} as any), // upsertAccount - not implemented yet
+        upsertAccount,     // ← REAL IMPLEMENTATION
         true, // force
         { skipLogging: false }
       );

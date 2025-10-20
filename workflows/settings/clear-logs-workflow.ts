@@ -4,6 +4,7 @@
 import { kv } from '@vercel/kv';
 import { buildLogKey } from '@/data-store/keys';
 import { EntityType } from '@/types/enums';
+import { TransactionManager } from './transaction-manager';
 
 // Centralized list of entity types for log clearing operations
 const CLEARABLE_LOG_ENTITY_TYPES = [
@@ -13,6 +14,7 @@ const CLEARABLE_LOG_ENTITY_TYPES = [
   EntityType.FINANCIAL,
   EntityType.CHARACTER,
   EntityType.PLAYER,
+  EntityType.ACCOUNT,
   EntityType.SITE
 ];
 
@@ -61,8 +63,20 @@ export class ClearLogsWorkflow {
         };
       }
       
-      // Clear all entity logs
-      await this.clearEntityLogs(results, errors);
+      // Use TransactionManager for rollback support
+      const transactionManager = new TransactionManager();
+      
+      const result = await transactionManager.execute(async () => {
+        // Clear all entity logs
+        await this.clearEntityLogs(results, errors);
+        
+        return { results, errors };
+      });
+      
+      // Extract results from transaction
+      const { results: transactionResults, errors: transactionErrors } = result;
+      results.push(...transactionResults);
+      errors.push(...transactionErrors);
       
       const success = errors.length === 0;
       const message = success 

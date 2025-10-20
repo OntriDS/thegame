@@ -202,4 +202,74 @@ export async function appendPlayerPointsUpdateLog(
   await kvSet(key, list);
 }
 
+/**
+ * Log account authentication events
+ * Used for login, logout, password reset, email verification
+ */
+export async function appendAccountAuthLog(
+  accountId: string,
+  eventType: LogEventType,
+  details: {
+    email?: string;
+    loginAttempts?: number;
+    ipAddress?: string;
+    userAgent?: string;
+    success?: boolean;
+    reason?: string;
+  }
+): Promise<void> {
+  const key = buildLogKey('account');
+  const list = (await kvGet<any[]>(key)) || [];
+  
+  const logEntry = {
+    event: eventType,
+    entityId: accountId,
+    email: details.email,
+    loginAttempts: details.loginAttempts,
+    ipAddress: details.ipAddress,
+    userAgent: details.userAgent,
+    success: details.success,
+    reason: details.reason,
+    description: `${eventType} event for account ${accountId}`,
+    timestamp: new Date().toISOString()
+  };
+  
+  list.push(logEntry);
+  await kvSet(key, list);
+}
 
+/**
+ * Log account security events
+ * Used for failed login attempts, suspicious activity, account lockouts
+ */
+export async function appendAccountSecurityLog(
+  accountId: string,
+  eventType: LogEventType,
+  details: {
+    email?: string;
+    loginAttempts?: number;
+    ipAddress?: string;
+    userAgent?: string;
+    reason?: string;
+    severity?: 'low' | 'medium' | 'high' | 'critical';
+  }
+): Promise<void> {
+  const key = buildLogKey('account');
+  const list = (await kvGet<any[]>(key)) || [];
+  
+  const logEntry = {
+    event: eventType,
+    entityId: accountId,
+    email: details.email,
+    loginAttempts: details.loginAttempts,
+    ipAddress: details.ipAddress,
+    userAgent: details.userAgent,
+    reason: details.reason,
+    severity: details.severity,
+    description: `Security event: ${eventType} for account ${accountId} - ${details.reason || 'No reason provided'}`,
+    timestamp: new Date().toISOString()
+  };
+  
+  list.push(logEntry);
+  await kvSet(key, list);
+}

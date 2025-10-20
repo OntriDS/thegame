@@ -247,10 +247,23 @@ export async function createTriforceAtomic(
   console.log('[createTriforceAtomic] 🔺 Creating Triforce atomically...');
   
   try {
-    // STEP 1: Create Player and Character entities (Account will be added later)
+    // STEP 1: Create Account entity FIRST (foundation of The Triforce)
+    const completeAccount = {
+      ...DEFAULT_ACCOUNT_ONE,
+      name: 'Akiles', // Default name
+      playerId: PLAYER_ONE_ID,
+      characterId: CHARACTER_ONE_ID
+    };
+    const savedAccount = await upsertAccount(completeAccount, { 
+      skipWorkflowEffects: true // Skip workflows
+    });
+    console.log('[createTriforceAtomic] ✅ Account created (workflows skipped)');
+    
+    // STEP 2: Create Player entity
     const completePlayer = {
       ...DEFAULT_PLAYER_ONE,
       name: 'Akiles', // Default name
+      accountId: PLAYER_ONE_ACCOUNT_ID,
       characterIds: [CHARACTER_ONE_ID]
     };
     const savedPlayer = await upsertPlayer(completePlayer, { 
@@ -258,9 +271,11 @@ export async function createTriforceAtomic(
     });
     console.log('[createTriforceAtomic] ✅ Player created (workflows skipped)');
     
+    // STEP 3: Create Character entity
     const completeCharacter = {
       ...DEFAULT_CHARACTER_ONE,
       name: 'Akiles', // Default name
+      accountId: PLAYER_ONE_ACCOUNT_ID,
       playerId: PLAYER_ONE_ID
     };
     const savedCharacter = await upsertCharacter(completeCharacter, { 
@@ -268,10 +283,30 @@ export async function createTriforceAtomic(
     });
     console.log('[createTriforceAtomic] ✅ Character created (workflows skipped)');
     
-    // STEP 2: Manually create Links (no workflows needed)
+    // STEP 4: Create ALL Triforce Links
     const { createLink } = await import('@/links/link-registry');
     
-    // Link: Player ↔ Character
+    // Link: Account → Player
+    await createLink({
+      id: `link-account-player-${PLAYER_ONE_ACCOUNT_ID}-${PLAYER_ONE_ID}`,
+      linkType: 'ACCOUNT_PLAYER' as any,
+      source: { type: EntityType.ACCOUNT, id: PLAYER_ONE_ACCOUNT_ID },
+      target: { type: EntityType.PLAYER, id: PLAYER_ONE_ID },
+      createdAt: new Date()
+    });
+    console.log('[createTriforceAtomic] 🔗 ACCOUNT_PLAYER link created');
+    
+    // Link: Account → Character
+    await createLink({
+      id: `link-account-character-${PLAYER_ONE_ACCOUNT_ID}-${CHARACTER_ONE_ID}`,
+      linkType: 'ACCOUNT_CHARACTER' as any,
+      source: { type: EntityType.ACCOUNT, id: PLAYER_ONE_ACCOUNT_ID },
+      target: { type: EntityType.CHARACTER, id: CHARACTER_ONE_ID },
+      createdAt: new Date()
+    });
+    console.log('[createTriforceAtomic] 🔗 ACCOUNT_CHARACTER link created');
+    
+    // Link: Player → Character
     await createLink({
       id: `link-player-character-${PLAYER_ONE_ID}-${CHARACTER_ONE_ID}`,
       linkType: 'PLAYER_CHARACTER' as any,
@@ -281,8 +316,23 @@ export async function createTriforceAtomic(
     });
     console.log('[createTriforceAtomic] 🔗 PLAYER_CHARACTER link created');
     
-    // STEP 3: Manually create Logs (one "created" entry each)
+    // STEP 5: Log all three entities
     const { appendEntityLog } = await import('@/workflows/entities-logging');
+
+    // Log Account creation
+    await appendEntityLog(
+      EntityType.ACCOUNT,
+      PLAYER_ONE_ACCOUNT_ID,
+      LogEventType.CREATED,
+      {
+        name: savedAccount.name,
+        email: savedAccount.email,
+        isActive: savedAccount.isActive,
+        isVerified: savedAccount.isVerified,
+        description: 'Account One - Bootstrap identity for TheGame'
+      }
+    );
+    console.log('[createTriforceAtomic] ✅ Account logged to account log');
 
     // Log Player creation
     await appendEntityLog(
@@ -315,16 +365,17 @@ export async function createTriforceAtomic(
     
     console.log('[createTriforceAtomic] 📝 All logs created');
     
-    // STEP 4: Mark effects as complete (prevent duplicate processing)
+    // STEP 6: Mark effects as complete (prevent duplicate processing)
     const { markEffect } = await import('@/data-store/effects-registry');
+    await markEffect(`account:${PLAYER_ONE_ACCOUNT_ID}:created`);
     await markEffect(`player:${PLAYER_ONE_ID}:created`);
     await markEffect(`character:${CHARACTER_ONE_ID}:created`);
     
-    console.log('[createTriforceAtomic] 🔺 Player and Character created! Player ↔ Character');
+    console.log('[createTriforceAtomic] 🔺 The Triforce created! Account ↔ Player ↔ Character');
     
   } catch (error) {
     console.error('[createTriforceAtomic] ❌ Failed to create Triforce atomically:', error);
-    throw error;
+    throw error; // Improved error handling - throw instead of console.error
   }
 }
 

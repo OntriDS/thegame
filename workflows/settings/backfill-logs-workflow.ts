@@ -4,6 +4,7 @@
 import { kv } from '@vercel/kv';
 import { buildDataKey, buildIndexKey, buildLogKey } from '@/data-store/keys';
 import { EntityType } from '@/types/enums';
+import { TransactionManager } from './transaction-manager';
 
 // Centralized list of entity types for backfill operations
 const BACKFILLABLE_ENTITY_TYPES = [
@@ -13,6 +14,7 @@ const BACKFILLABLE_ENTITY_TYPES = [
   EntityType.FINANCIAL,
   EntityType.CHARACTER,
   EntityType.PLAYER,
+  EntityType.ACCOUNT,
   EntityType.SITE
 ];
 
@@ -61,8 +63,20 @@ export class BackfillLogsWorkflow {
         };
       }
       
-      // Backfill logs for all entity types
-      await this.backfillEntityLogs(results, errors);
+      // Use TransactionManager for rollback support
+      const transactionManager = new TransactionManager();
+      
+      const result = await transactionManager.execute(async () => {
+        // Backfill logs for all entity types
+        await this.backfillEntityLogs(results, errors);
+        
+        return { results, errors };
+      });
+      
+      // Extract results from transaction
+      const { results: transactionResults, errors: transactionErrors } = result;
+      results.push(...transactionResults);
+      errors.push(...transactionErrors);
       
       const success = errors.length === 0;
       const message = success 

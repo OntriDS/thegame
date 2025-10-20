@@ -10,6 +10,7 @@ import {
   getAllSales,
   getAllCharacters,
   getAllPlayers,
+  getAllAccounts,
   getAllSites
 } from '@/data-store/datastore';
 
@@ -237,8 +238,9 @@ export async function validateEntityExists(entityType: EntityType, entityId: str
         const site = sites.find(s => s.id === entityId);
         return !!site;
       case EntityType.ACCOUNT:
-        // Account entity not implemented in current datastore
-        return false;
+        const accounts = await getAllAccounts();
+        const account = accounts.find(a => a.id === entityId);
+        return !!account;
       default:
         console.warn(`[validateEntityExists] Unknown entity type: ${entityType}`);
         return false;
@@ -319,6 +321,42 @@ export async function validateBusinessRules(
         const saleWithChar = saleForChar.find(s => s.id === source.id);
         if (saleWithChar && saleWithChar.customerId !== target.id) {
           warnings.push(`Sale customerId (${saleWithChar.customerId}) does not match target character ID (${target.id})`);
+        }
+        break;
+
+      case 'ACCOUNT_PLAYER':
+        // Validate that player belongs to the account
+        const playersForAccount = await getAllPlayers();
+        const playerForAccount = playersForAccount.find(p => p.id === target.id);
+        if (playerForAccount && playerForAccount.accountId !== source.id) {
+          warnings.push(`Player accountId (${playerForAccount.accountId}) does not match source account ID (${source.id})`);
+        }
+        break;
+
+      case 'ACCOUNT_CHARACTER':
+        // Validate that character belongs to the account
+        const charactersForAccount = await getAllCharacters();
+        const characterForAccount = charactersForAccount.find(c => c.id === target.id);
+        if (characterForAccount && characterForAccount.accountId !== source.id) {
+          warnings.push(`Character accountId (${characterForAccount.accountId}) does not match source account ID (${source.id})`);
+        }
+        break;
+
+      case 'PLAYER_ACCOUNT':
+        // Validate that player belongs to the account
+        const playerAccount = await getAllPlayers();
+        const playerWithAccount = playerAccount.find(p => p.id === source.id);
+        if (playerWithAccount && playerWithAccount.accountId !== target.id) {
+          warnings.push(`Player accountId (${playerWithAccount.accountId}) does not match target account ID (${target.id})`);
+        }
+        break;
+
+      case 'CHARACTER_ACCOUNT':
+        // Validate that character belongs to the account
+        const characterAccount = await getAllCharacters();
+        const characterWithAccount = characterAccount.find(c => c.id === source.id);
+        if (characterWithAccount && characterWithAccount.accountId !== target.id) {
+          warnings.push(`Character accountId (${characterWithAccount.accountId}) does not match target account ID (${target.id})`);
         }
         break;
 

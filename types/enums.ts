@@ -614,6 +614,12 @@ export enum LogEventType {
   // Character-specific events
   ROLE_CHANGED = 'ROLE_CHANGED',
   
+  // Account-specific events
+  EMAIL_VERIFIED = 'EMAIL_VERIFIED',
+  PASSWORD_RESET = 'PASSWORD_RESET',
+  LOGIN = 'LOGIN',
+  LOGOUT = 'LOGOUT',
+  
   // Site-specific events
   ACTIVATED = 'ACTIVATED',
   DEACTIVATED = 'DEACTIVATED',

@@ -1,6 +1,6 @@
 'use client';
 
-import type { Task, Item, Sale, FinancialRecord, Character, Player, Site } from '@/types/entities';
+import type { Task, Item, Sale, FinancialRecord, Character, Player, Site, Account } from '@/types/entities';
 
 export const ClientAPI = {
   // TASKS
@@ -216,6 +216,37 @@ export const ClientAPI = {
     if (!res.ok) throw new Error('Failed to delete player');
   },
   
+  // ACCOUNTS
+  getAllAccounts: async (): Promise<Account[]> => {
+    const res = await fetch('/api/accounts');
+    if (!res.ok) {
+      console.error('Failed to fetch accounts');
+      return [];
+    }
+    return await res.json();
+  },
+
+  getAccountById: async (id: string): Promise<Account | null> => {
+    const res = await fetch(`/api/accounts/${id}`);
+    if (!res.ok) return null;
+    return await res.json();
+  },
+  
+  upsertAccount: async (account: Account): Promise<Account> => {
+    const res = await fetch('/api/accounts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(account)
+    });
+    if (!res.ok) throw new Error('Failed to save account');
+    return await res.json();
+  },
+  
+  deleteAccount: async (id: string): Promise<void> => {
+    const res = await fetch(`/api/accounts/${id}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Failed to delete account');
+  },
+  
   // LINKS
   getLinksFor: async (params: { type: string; id: string }): Promise<any[]> => {
     const res = await fetch(`/api/links?entityType=${params.type}&entityId=${params.id}`);
@@ -282,10 +313,6 @@ export const ClientAPI = {
   
   // Placeholder methods for features not yet implemented
   getAccount: async (id: string): Promise<any> => {
-    throw new Error('Account entity not yet implemented in KV-only system');
-  },
-  
-  upsertAccount: async (account: any): Promise<any> => {
     throw new Error('Account entity not yet implemented in KV-only system');
   },
   
