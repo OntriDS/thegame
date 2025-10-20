@@ -92,7 +92,7 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
           setDescription('');
           setContactPhone('');
           setContactEmail('');
-          setRoles([]); // Empty roles array for new characters
+          setRoles([CharacterRole.CUSTOMER]); // Default to CUSTOMER role for new characters
           setJungleCoins(0);
           setPurchasedAmount(0);
           setCP(undefined);
@@ -147,6 +147,12 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
   };
 
   const handleSave = () => {
+    // Validation: Characters must have at least one role
+    if (roles.length === 0) {
+      alert('Please select at least one role for the character.');
+      return;
+    }
+    
     // If character has PLAYER role, don't save name/email/phone (they're from Account)
     const shouldPreserveContactInfo = hasPlayerRole;
     

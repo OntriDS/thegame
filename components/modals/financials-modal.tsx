@@ -671,38 +671,6 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
                 />
               </div>
               
-              <div>
-                <Label htmlFor="customer" className="text-xs">Customer</Label>
-                <div className="flex gap-2 items-center">
-                  <Button
-                    type="button"
-                    variant={formData.isNewCustomer ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setFormData({ ...formData, isNewCustomer: !formData.isNewCustomer })}
-                    className="h-6 text-xs px-2"
-                  >
-                    {formData.isNewCustomer ? 'Existing' : 'New'}
-                  </Button>
-                  
-                  {formData.isNewCustomer ? (
-                    <Input
-                      placeholder="New customer name..."
-                      value={formData.newCustomerName}
-                      onChange={(e) => setFormData({ ...formData, newCustomerName: e.target.value })}
-                      className="h-8 text-sm"
-                    />
-                  ) : (
-                    <SearchableSelect
-                      value={formData.customerCharacterId || ''}
-                      onValueChange={(value) => setFormData({ ...formData, customerCharacterId: value })}
-                      placeholder="Select customer..."
-                      options={createCharacterOptions(characters)}
-                      autoGroupByCategory={true}
-                      className="h-8 text-sm flex-1"
-                    />
-                  )}
-                </div>
-              </div>
 
             </div>
 
@@ -710,6 +678,39 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
             {emissaryColumnExpanded && (
               <div className="space-y-3">
                 <h3 className="text-sm font-semibold text-muted-foreground border-b pb-1">📡 EMISSARIES</h3>
+                
+                {/* Customer Character - Emissary field for financial records */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="customer-character" className="text-xs">Customer</Label>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setFormData({ ...formData, isNewCustomer: !formData.isNewCustomer })}
+                      className="h-6 text-xs px-2"
+                    >
+                      {formData.isNewCustomer ? 'Existing' : 'New'}
+                    </Button>
+                  </div>
+                  {formData.isNewCustomer ? (
+                    <Input
+                      id="customer-character"
+                      value={formData.newCustomerName}
+                      onChange={(e) => setFormData({ ...formData, newCustomerName: e.target.value })}
+                      placeholder="New customer name"
+                      className="h-8 text-sm"
+                    />
+                  ) : (
+                    <SearchableSelect
+                      value={formData.customerCharacterId || ''}
+                      onValueChange={(value) => setFormData({ ...formData, customerCharacterId: value })}
+                      options={createCharacterOptions(characters)}
+                      placeholder="Select customer"
+                      autoGroupByCategory={true}
+                      className="h-8 text-sm"
+                    />
+                  )}
+                </div>
                 
                 {/* Points Rewards - Above Item Creation */}
                 <div className="space-y-2">
@@ -918,16 +919,16 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
                   <Network className="w-3 h-3 mr-1" />
                   Links
                 </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setShowPlayerCharacterSelector(true)}
-                  className="h-8 text-xs"
-                >
-                  <User className="w-3 h-3 mr-1" />
-                  Player
-                </Button>
               </>
             )}
+            <Button
+              variant="outline"
+              onClick={() => setShowPlayerCharacterSelector(true)}
+              className="h-8 text-xs"
+            >
+              <User className="w-3 h-3 mr-1" />
+              Player
+            </Button>
             <Button
               variant="outline"
               onClick={toggleEmissaryColumn}

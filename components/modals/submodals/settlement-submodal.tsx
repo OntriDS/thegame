@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,7 +32,7 @@ export default function SettlementSubmodal({
   const [isSaving, setIsSaving] = useState(false);
 
   // Reset form when modal opens/closes or settlement changes
-  useState(() => {
+  useEffect(() => {
     if (open) {
       if (settlement) {
         setName(settlement.name || '');
@@ -51,7 +51,7 @@ export default function SettlementSubmodal({
         setIsActive(true);
       }
     }
-  });
+  }, [open, settlement]);
 
   const handleSave = async () => {
     if (!name.trim() || !country.trim() || !region.trim()) {

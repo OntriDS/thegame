@@ -317,8 +317,8 @@ export async function createTriforceAtomic(
     
     // STEP 4: Mark effects as complete (prevent duplicate processing)
     const { markEffect } = await import('@/data-store/effects-registry');
-    await markEffect(`player:${PLAYER_ONE_ID}:playerCreated`);
-    await markEffect(`character:${CHARACTER_ONE_ID}:characterCreated`);
+    await markEffect(`player:${PLAYER_ONE_ID}:created`);
+    await markEffect(`character:${CHARACTER_ONE_ID}:created`);
     
     console.log('[createTriforceAtomic] 🔺 Player and Character created! Player ↔ Character');
     

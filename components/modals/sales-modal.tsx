@@ -1710,16 +1710,16 @@ export default function SalesModal({
                   <Network className="w-3 h-3 mr-1" />
                   Links
                 </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setShowPlayerCharacterSelector(true)}
-                  className="h-8 text-xs"
-                >
-                  <User className="w-3 h-3 mr-1" />
-                  Player
-                </Button>
               </>
             )}
+            <Button
+              variant="outline"
+              onClick={() => setShowPlayerCharacterSelector(true)}
+              className="h-8 text-xs"
+            >
+              <User className="w-3 h-3 mr-1" />
+              Player
+            </Button>
             {/* Emissaries toggle - show for all modes */}
             <Button
               variant="outline"
