@@ -7,6 +7,7 @@ import { requireAdminAuth } from '@/lib/api-auth';
 import { EntityType } from '@/types/enums';
 
 export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
 
 // Centralized list of entity types that support backups
 const BACKUPABLE_ENTITY_TYPES = [

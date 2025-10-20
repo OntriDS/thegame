@@ -13,6 +13,7 @@ import {
 
 // Force dynamic rendering since this route accesses request cookies for auth
 export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
 
 export async function POST(request: NextRequest) {
   if (!(await requireAdminAuth(request))) {
