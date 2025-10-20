@@ -15,7 +15,8 @@ import {
   RefreshCw,
   AlertTriangle,
   CheckCircle,
-  XCircle
+  XCircle,
+  Sprout
 } from 'lucide-react';
 import { 
   DAY_IN_MS, 
@@ -42,7 +43,12 @@ export function SettingsPanel({ onStatusUpdate }: SettingsPanelProps) {
   const [showBackfillModal, setShowBackfillModal] = useState(false);
   const [backfillConfirmed, setBackfillConfirmed] = useState(false);
   const [showSeedModal, setShowSeedModal] = useState(false);
-  const [seedSource, setSeedSource] = useState<'backup' | 'constants'>('constants');
+  const [availableBackups, setAvailableBackups] = useState<Array<{
+    entityType: string;
+    count: number;
+    lastUpdated: string;
+  }>>([]);
+  const [selectedBackups, setSelectedBackups] = useState<Record<string, boolean>>({});
 
   const updateStatus = (message: string, isError: boolean = false) => {
     setStatus(message);
@@ -191,7 +197,30 @@ export function SettingsPanel({ onStatusUpdate }: SettingsPanelProps) {
   };
 
   const handleSeedData = async () => {
-    setShowSeedModal(true);
+    setIsLoading(true);
+    
+    try {
+      // Fetch available backups
+      const response = await fetch('/api/backups');
+      const result = await response.json();
+      
+      if (result.success && result.data.backups) {
+        setAvailableBackups(result.data.backups);
+        // Initialize selected state - all unchecked by default
+        const initialSelection: Record<string, boolean> = {};
+        result.data.backups.forEach((backup: any) => {
+          initialSelection[backup.entityType] = false;
+        });
+        setSelectedBackups(initialSelection);
+        setShowSeedModal(true);
+      } else {
+        updateStatus('❌ No backups available to seed from', true);
+      }
+    } catch (error) {
+      updateStatus('❌ Failed to load available backups', true);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSeedDataConfirm = async () => {
@@ -199,12 +228,25 @@ export function SettingsPanel({ onStatusUpdate }: SettingsPanelProps) {
     setIsLoading(true);
     
     try {
+      // Get selected entity types
+      const selectedEntityTypes = Object.keys(selectedBackups).filter(
+        entityType => selectedBackups[entityType]
+      );
+
+      if (selectedEntityTypes.length === 0) {
+        updateStatus('❌ Please select at least one entity type to seed', true);
+        return;
+      }
+
       const response = await fetch('/api/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           action: 'seed-data',
-          parameters: { source: seedSource }
+          parameters: { 
+            source: 'backup',
+            entityTypes: selectedEntityTypes
+          }
         })
       });
       
@@ -347,7 +389,7 @@ export function SettingsPanel({ onStatusUpdate }: SettingsPanelProps) {
             </div>
             
             <Button onClick={handleSeedData} variant="outline" disabled={isLoading}>
-              <Database className="h-4 w-4 mr-2" />
+              <Sprout className="h-4 w-4 mr-2" />
               Seed Data
             </Button>
           </div>
@@ -538,49 +580,56 @@ export function SettingsPanel({ onStatusUpdate }: SettingsPanelProps) {
           <DialogContent>
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <Database className="h-5 w-5 text-blue-500" />
-                Seed Data
+                <Sprout className="h-5 w-5 text-green-500" />
+                Seed Data from Backups
               </DialogTitle>
               <DialogDescription>
-                Choose the source for seeding data into the system.
+                Select which entity backups to restore. Only available backups are shown.
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-3">
-              <div className="flex items-center space-x-2">
-                <input
-                  type="radio"
-                  id="seed-constants"
-                  name="seed-source"
-                  value="constants"
-                  checked={seedSource === 'constants'}
-                  onChange={(e) => setSeedSource(e.target.value as 'constants')}
-                  className="w-4 h-4"
-                />
-                <Label htmlFor="seed-constants">
-                  Seed from Constants (Sites, default data)
-                </Label>
+            
+            {availableBackups.length === 0 ? (
+              <div className="text-center py-6 text-muted-foreground">
+                <Database className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                <p>No backups available</p>
+                <p className="text-sm">Export some data first to create backups</p>
               </div>
-              <div className="flex items-center space-x-2">
-                <input
-                  type="radio"
-                  id="seed-backup"
-                  name="seed-source"
-                  value="backup"
-                  checked={seedSource === 'backup'}
-                  onChange={(e) => setSeedSource(e.target.value as 'backup')}
-                  className="w-4 h-4"
-                />
-                <Label htmlFor="seed-backup">
-                  Seed from Backup Files
-                </Label>
+            ) : (
+              <div className="space-y-3 max-h-60 overflow-y-auto">
+                {availableBackups.map((backup) => (
+                  <div key={backup.entityType} className="flex items-center space-x-3 p-3 border rounded-lg">
+                    <Checkbox
+                      id={`backup-${backup.entityType}`}
+                      checked={selectedBackups[backup.entityType] || false}
+                      onCheckedChange={(checked) => {
+                        setSelectedBackups(prev => ({
+                          ...prev,
+                          [backup.entityType]: checked as boolean
+                        }));
+                      }}
+                    />
+                    <div className="flex-1">
+                      <Label htmlFor={`backup-${backup.entityType}`} className="font-medium capitalize">
+                        {backup.entityType}
+                      </Label>
+                      <div className="text-sm text-muted-foreground">
+                        {backup.count} items • Last updated: {new Date(backup.lastUpdated).toLocaleDateString()}
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
-            </div>
+            )}
+            
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowSeedModal(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleSeedDataConfirm}>
-                Seed Data
+              <Button 
+                onClick={handleSeedDataConfirm}
+                disabled={availableBackups.length === 0 || Object.values(selectedBackups).every(v => !v)}
+              >
+                Seed Selected ({Object.values(selectedBackups).filter(Boolean).length})
               </Button>
             </DialogFooter>
           </DialogContent>

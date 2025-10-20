@@ -22,7 +22,7 @@ export class SeedDataWorkflow {
   /**
    * Execute seed data operation
    */
-  static async execute(source: 'constants' | 'backup' = 'constants'): Promise<SettingsResult> {
+  static async execute(source: 'backup' = 'backup', entityTypes?: string[]): Promise<SettingsResult> {
     try {
       console.log(`[SeedDataWorkflow] 🌱 Starting seed data operation (source: ${source})...`);
       
@@ -52,10 +52,8 @@ export class SeedDataWorkflow {
       }
       
       // Seed data based on source
-      if (source === 'constants') {
-        await this.seedFromConstants(results, errors);
-      } else if (source === 'backup') {
-        await this.seedFromBackup(results, errors);
+      if (source === 'backup') {
+        await this.seedFromBackup(entityTypes || [], results, errors);
       }
       
       const success = errors.length === 0;
@@ -114,17 +112,55 @@ export class SeedDataWorkflow {
   }
   
   /**
-   * Seed data from backup
+   * Seed from backup KV keys
    */
-  private static async seedFromBackup(results: string[], errors: string[]): Promise<void> {
+  private static async seedFromBackup(entityTypes: string[], results: string[], errors: string[]): Promise<void> {
     try {
-      console.log('[SeedDataWorkflow] 🌱 Seeding data from backup...');
+      console.log(`[SeedDataWorkflow] 🌱 Seeding from backup KV keys for: ${entityTypes.join(', ')}...`);
       
-      // For now, just seed from constants as backup functionality would require
-      // reading backup files which is not implemented yet
-      results.push('Backup seeding not yet implemented, using constants instead');
-      await this.seedFromConstants(results, errors);
+      for (const entityType of entityTypes) {
+        try {
+          const backupKey = `backup:${entityType}`;
+          const backupData = await kv.get(backupKey);
+          
+          if (!backupData) {
+            errors.push(`No backup found for ${entityType}`);
+            continue;
+          }
+          
+          const parsed = JSON.parse(backupData as string);
+          const entities = parsed.data[entityType] || parsed.data;
+          
+          if (!Array.isArray(entities)) {
+            errors.push(`Invalid backup format for ${entityType}`);
+            continue;
+          }
+          
+          // Seed each entity
+          for (const entity of entities) {
+            try {
+              const dataKey = buildDataKey(entityType, entity.id);
+              await kv.set(dataKey, JSON.stringify(entity));
+              
+              // Add to index
+              const indexKey = buildIndexKey(entityType);
+              await kv.sadd(indexKey, entity.id);
+            } catch (error) {
+              console.warn(`[SeedDataWorkflow] ⚠️ Failed to seed ${entityType} ${entity.id}:`, error);
+            }
+          }
+          
+          results.push(`Seeded ${entities.length} ${entityType} entities from backup`);
+          console.log(`[SeedDataWorkflow] ✅ Seeded ${entities.length} ${entityType} entities`);
+          
+        } catch (error) {
+          const errorMsg = `Failed to seed ${entityType} from backup: ${error instanceof Error ? error.message : 'Unknown error'}`;
+          errors.push(errorMsg);
+          console.error(`[SeedDataWorkflow] ❌ ${errorMsg}`);
+        }
+      }
       
+      console.log(`[SeedDataWorkflow] ✅ Seeded from backup KV keys`);
     } catch (error) {
       const errorMsg = `Failed to seed from backup: ${error instanceof Error ? error.message : 'Unknown error'}`;
       errors.push(errorMsg);

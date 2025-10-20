@@ -201,20 +201,19 @@ export default function SeedDataPage() {
         [pendingExport]: data
       };
 
-      // 1. Save to backup folder (like Sites export does)
+      // 1. Save to backup KV key
       try {
-        await fetch('/api/backup-export', {
+        await fetch('/api/backups', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            dataType: pendingExport,
-            data: exportData,
-            useFixedFilename: true
+            entityType: pendingExport,
+            data: exportData
           })
         });
-        console.log(`✅ Saved to backup/${pendingExport}/${pendingExport}-db.json`);
+        console.log(`✅ Saved backup for ${pendingExport} to KV`);
       } catch (apiError) {
-        console.warn('⚠️ Could not save to backup/ folder:', apiError);
+        console.warn('⚠️ Could not save to backup KV:', apiError);
       }
 
       // 2. ALSO trigger browser download (with date for user's Downloads folder)
@@ -235,7 +234,7 @@ export default function SeedDataPage() {
         exportFormat: 'json'
       });
 
-      setStatus(`✅ Exported ${data.length} ${pendingExport} to backup/ folder + Downloads`);
+      setStatus(`✅ Exported ${data.length} ${pendingExport} entities and saved backup`);
       setTimeout(() => setStatus(''), 3000);
     } catch (error) {
       setStatus(`❌ Export failed: ${error instanceof Error ? error.message : 'Unknown error'}`);

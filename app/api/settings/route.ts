@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
       }
 
       case 'seed-data': {
-        const result = await SeedDataWorkflow.execute(parameters?.source || 'constants');
+        const result = await SeedDataWorkflow.execute(parameters?.source || 'backup', parameters?.entityTypes);
         return NextResponse.json({
           success: result.success,
           message: result.message,
