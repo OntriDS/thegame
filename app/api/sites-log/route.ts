@@ -1,7 +1,6 @@
 // app/api/sites-log/route.ts
 import { NextResponse, NextRequest } from 'next/server';
 import { requireAdminAuth } from '@/lib/api-auth';
-import { kvGet } from '@/data-store/kv';
 import { buildLogKey } from '@/data-store/keys';
 import path from 'path';
 
