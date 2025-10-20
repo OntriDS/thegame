@@ -1,0 +1,175 @@
+'use client';
+
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { ArrowUpDown, RefreshCw, Link, MapPin, Cloud, Home, Sparkles } from 'lucide-react';
+import { useState } from 'react';
+import { processLogData } from '@/lib/utils/logging-utils';
+import { SiteStatus, SiteType } from '@/types/enums';
+import { SITE_STATUS_COLORS } from '@/lib/constants/color-constants';
+import { useThemeColors } from '@/lib/hooks/use-theme-colors';
+
+interface SitesLogTabProps {
+  sitesLog: any;
+  onReload: () => void;
+  isReloading: boolean;
+}
+
+export function SitesLogTab({ sitesLog, onReload, isReloading }: SitesLogTabProps) {
+  const { isDarkMode } = useThemeColors();
+  const [logOrder, setLogOrder] = useState<'newest' | 'oldest'>('newest');
+
+  // Process sites log data
+  const processedSitesLog = processLogData(sitesLog, logOrder);
+
+  const getSiteStatusBadgeColor = (status: string) => {
+    const siteStatus = Object.values(SiteStatus).find(ss => ss === status);
+    if (siteStatus && SITE_STATUS_COLORS[siteStatus]) {
+      const colorClasses = isDarkMode ? SITE_STATUS_COLORS[siteStatus].dark : SITE_STATUS_COLORS[siteStatus].light;
+      return colorClasses;
+    }
+    
+    // Default fallback
+    const fallbackClasses = isDarkMode ? SITE_STATUS_COLORS[SiteStatus.INACTIVE].dark : SITE_STATUS_COLORS[SiteStatus.INACTIVE].light;
+    return fallbackClasses;
+  };
+
+  const getSiteTypeIcon = (siteType: string) => {
+    switch (siteType) {
+      case SiteType.PHYSICAL:
+        return <MapPin className="h-4 w-4 text-muted-foreground" />;
+      case SiteType.CLOUD:
+        return <Cloud className="h-4 w-4 text-muted-foreground" />;
+      case SiteType.SPECIAL:
+        return <Sparkles className="h-4 w-4 text-muted-foreground" />;
+      default:
+        return <Home className="h-4 w-4 text-muted-foreground" />;
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <div>
+          <CardTitle>Sites Lifecycle Log</CardTitle>
+          <CardDescription>
+            Complete history of site lifecycle events
+          </CardDescription>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setLogOrder(logOrder === 'newest' ? 'oldest' : 'newest')}
+          >
+            <ArrowUpDown className="h-4 w-4 mr-2" />
+            {logOrder === 'newest' ? 'Oldest First' : 'Newest First'}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onReload}
+            disabled={isReloading}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isReloading ? 'animate-spin' : ''}`} />
+            Reload
+          </Button>
+        </div>
+      </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {processedSitesLog.entries.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-4">No site lifecycle events found</p>
+                ) : (
+                  processedSitesLog.entries.map((entry: any, index: number) => {
+                    const data = entry?.data || {};
+                    const status = data.status || entry.status || SiteStatus.INACTIVE;
+                    const siteName = data.name || 'Site';
+                    const siteType = data.metadata?.type || SiteType.PHYSICAL;
+                    const businessType = data.metadata?.businessType || '—';
+                    const settlement = data.metadata?.settlement || '—';
+                    const digitalType = data.metadata?.digitalType || '—';
+                    const purpose = data.metadata?.purpose || '—';
+                    const date = entry.displayDate || entry.timestamp || '';
+
+                    return (
+                      <div key={index} className="flex items-center gap-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                        {/* Icon */}
+                        <div className="flex-shrink-0">
+                          {getSiteTypeIcon(siteType)}
+                        </div>
+                        
+                        {/* Main Info Row */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-3 text-sm">
+                            {/* Status Badge */}
+                            <div className={`inline-flex items-center rounded-full border px-2 py-1 text-xs font-semibold transition-colors ${getSiteStatusBadgeColor(status)}`}>
+                              {status}
+                            </div>
+                            
+                            {/* Name */}
+                            <span className="font-medium text-foreground min-w-0 flex-shrink-0">
+                              {siteName}
+                            </span>
+                            
+                            {/* Type-specific data */}
+                            {siteType === SiteType.PHYSICAL && (
+                              <>
+                                {settlement !== '—' && (
+                                  <span className="text-muted-foreground min-w-0 flex-shrink-0">
+                                    {settlement}
+                                  </span>
+                                )}
+                                {businessType !== '—' && (
+                                  <span className="text-muted-foreground min-w-0 flex-shrink-0">
+                                    {businessType}
+                                  </span>
+                                )}
+                              </>
+                            )}
+                            
+                            {siteType === SiteType.CLOUD && digitalType !== '—' && (
+                              <span className="text-muted-foreground min-w-0 flex-shrink-0">
+                                {digitalType}
+                              </span>
+                            )}
+                            
+                            {siteType === SiteType.SPECIAL && purpose !== '—' && (
+                              <span className="text-muted-foreground min-w-0 flex-shrink-0">
+                                {purpose}
+                              </span>
+                            )}
+                            
+                            {/* View Metadata (sideways dropdown) */}
+                            {data.metadata && Object.keys(data.metadata).length > 0 && (
+                              <details className="inline-flex items-center text-xs text-muted-foreground hover:text-foreground cursor-pointer">
+                                <summary className="list-none">
+                                  {'{metadata}'}
+                                </summary>
+                                <div className="absolute z-50 mt-2 p-2 bg-popover border rounded-md shadow-lg max-w-xs">
+                                  <pre className="text-xs overflow-x-auto">
+                                    {JSON.stringify(data.metadata, null, 2)}
+                                  </pre>
+                                </div>
+                              </details>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {/* Right Side: Date */}
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          {/* Date */}
+                          <span className="text-xs text-muted-foreground whitespace-nowrap">
+                            {date}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </CardContent>
+          </Card>
+  );
+}

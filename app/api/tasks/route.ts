@@ -1,0 +1,22 @@
+// app/api/tasks/route.ts
+import { NextResponse, NextRequest } from 'next/server';
+import { v4 as uuid } from 'uuid';
+import type { Task } from '@/types/entities';
+import { getAllTasks, upsertTask } from '@/data-store/datastore';
+import { requireAdminAuth } from '@/lib/api-auth';
+
+export async function GET(req: NextRequest) {
+  if (!(await requireAdminAuth(req))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const tasks = await getAllTasks();
+  return NextResponse.json(tasks);
+}
+
+export async function POST(req: NextRequest) {
+  if (!(await requireAdminAuth(req))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const body = (await req.json()) as Task;
+  const task: Task = { ...body, id: body.id || uuid(), createdAt: body.createdAt ? new Date(body.createdAt) : new Date(), updatedAt: new Date(), links: body.links || [] };
+  const saved = await upsertTask(task);
+  return NextResponse.json(saved);
+}
+
+

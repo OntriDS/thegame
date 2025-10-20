@@ -1,0 +1,358 @@
+{
+  "entries": [
+    {
+      "id": "2",
+      "title": "Agile & Iterative Development Approach",
+      "content": "We work like agile project management in an iterative and creative way, not a waterfall project where one task goes after the other. This is important to clarify. We can work on multiple phases simultaneously and iterate between them. For example, we're currently working on Phase 4 (Note-Taking System) while still in Phase 1, because the note-taking system helps us organize the strategic information we need for all phases.",
+      "notebookId": "general",
+      "color": "text-gray-600",
+      "isPinned": false,
+      "isClosed": false,
+      "isHidden": false,
+      "tags": [
+        "agile",
+        "iterative",
+        "methodology"
+      ],
+      "createdAt": "2024-12-19T00:00:00.000Z",
+      "updatedAt": "2025-09-16T23:40:58.614Z"
+    },
+    {
+      "id": "4",
+      "title": "Sales System",
+      "content": "Sales section:Record actual sales transactions\n1. Track customer informationHandle payment processing\n1. Generate sales reports\nClarification\nSales system is going to be designed to solve tracking sales from different sources (ferias, consignment, direct sales).  The operational workflow isn't clear yet.",
+      "notebookId": "challenges",
+      "color": "text-red-600",
+      "isPinned": true,
+      "isClosed": false,
+      "isHidden": false,
+      "tags": [
+        "sales",
+        "workflow",
+        "testing"
+      ],
+      "createdAt": "2024-12-19T00:00:00.000Z",
+      "updatedAt": "2025-09-25T01:40:48.990Z"
+    },
+    {
+      "id": "5",
+      "title": "Control Room Calendar Tab Requirement",
+      "content": "Need a third tab in Mission Hub: Big calendar view (Google Calendar style) for tasks. Should show: Past tasks, Completed tasks, Daily view, Upcoming tasks. This is high priority and needed before implementing recurring tasks.",
+      "notebookId": "road_ahead",
+      "color": "text-purple-600",
+      "isPinned": false,
+      "isClosed": false,
+      "isHidden": false,
+      "tags": [
+        "calendar",
+        "high-priority",
+        "Control Room"
+      ],
+      "createdAt": "2024-12-19T00:00:00.000Z",
+      "updatedAt": "2025-09-25T16:15:25.125Z"
+    },
+    {
+      "id": "9",
+      "title": "Alcon Blue Butterfly Sticker",
+      "content": "Design and create sticker featuring the Alcon Blue Butterfly. This could be part of the Animal Kingdom collection or a standalone nature-inspired piece.",
+      "notebookId": "ideas",
+      "color": "text-yellow-600",
+      "isPinned": false,
+      "isClosed": false,
+      "isHidden": false,
+      "tags": [
+        "sticker",
+        "butterfly",
+        "nature",
+        "animal-kingdom"
+      ],
+      "createdAt": "2024-12-19T00:00:00.000Z",
+      "updatedAt": "2024-12-19T00:00:00.000Z"
+    },
+    {
+      "id": "10",
+      "title": "Bulldog Ant Sticker",
+      "content": "Design and create sticker featuring the Bulldog Ant. This could be part of the Animal Kingdom collection or a standalone nature-inspired piece.",
+      "notebookId": "ideas",
+      "color": "text-yellow-600",
+      "isPinned": false,
+      "isClosed": false,
+      "isHidden": false,
+      "tags": [
+        "sticker",
+        "ant",
+        "nature",
+        "animal-kingdom"
+      ],
+      "createdAt": "2024-12-19T00:00:00.000Z",
+      "updatedAt": "2024-12-19T00:00:00.000Z"
+    },
+    {
+      "id": "11",
+      "title": "Business Logic Items - Future Enhancement",
+      "content": "Need to create a new category of items called 'Business Logic Items' (like Sticker Bundles) that are fundamentally different from regular Inventory Items. These items represent business operations, consignment tracking, and sales operations rather than physical inventory. They do not work like regular items when moved in the inventory system. Key characteristics: 1) They can have special functionalities like auto-calculating bundles of inventory items (e.g., stickers), 2) They track consignments and selling operations in bundles, 3) They represent business logic rather than physical stock. The quantity field represents a part/fraction of that business logic item, not individual inventory units. This is a complex enhancement that should be implemented much later after the core inventory system is solid. For now, Sticker Bundles will remain simple business tracking items without move functionality.",
+      "notebookId": "road_ahead",
+      "color": "text-blue-600",
+      "isPinned": false,
+      "isClosed": false,
+      "isHidden": false,
+      "tags": [
+        "business-logic-item",
+        "item-bundles",
+        "consignment-tracking",
+        "sale-operations"
+      ],
+      "createdAt": "2024-12-19T00:00:00.000Z",
+      "updatedAt": "2024-12-19T00:00:00.000Z"
+    },
+    {
+      "id": "12",
+      "title": "Player's characteristic: Spy Power -> Tech Ops Wizard",
+      "content": "Tech Ops Wizard, You have the incredible ability to break down any problem into a few simple parts, rearrange those parts, and then put them together in a useful solution. You have yet to meet a puzzle or a problem you didn't like, and with enough time you know you could crack any mystery put in front of you. But sometimes people misunderstand your focus and hunger for the next great challenge as selfish, and they may even accuse you of being lazy. As far back as you can remember, you have always second-guessed yourself. Sometimes it was over a small thing, like what to eat for lunch. Other times, it was big things like college majors or romantic relationships. And while you've always known how to solve complex problems, it's never been easy to trust your own solution. To turn your weakness into an advantage, realize that no solution is guaranteed to work 100% of the time. Every answer only carries a probability for success. Remember getting the 'correct' answer the 'wrong way' in middle-school math? As frustrating as partial credit was back then, people still work the same way now, even as adults! Your problem isn't that you ever pick a 'wrong' answer, but that you aren't sure if there is a 'better' option out there: a better job, a better salary, a better partner. Tech Ops Wizards like you are born with the ability to master complex questions with ease, but it takes a little bit of training to master your own brain.",
+      "notebookId": "ideas",
+      "color": "text-yellow-600",
+      "isPinned": false,
+      "isClosed": false,
+      "isHidden": false,
+      "tags": [
+        "tech-ops-wizard",
+        "problem-solving",
+        "self-confidence"
+      ],
+      "createdAt": "2024-12-19T00:00:00.000Z",
+      "updatedAt": "2025-09-25T01:43:34.785Z"
+    },
+    {
+      "id": "events-subtab-",
+      "title": "Create 'Events' SubTab in Control Room",
+      "content": "Introduce an 'Events' subtab to temporarily take over regular workflow during time-bound campaigns (e.g., Special Week Sale). Events can define global discounts (e.g., 50% artworks/prints/stickers, 25% merch), or other side effects or even special features. For now, we track Events as Tasks; later, formalize Events to orchestrate cross-system behavior (inventory, pricing, logs).",
+      "notebookId": "current_sprint",
+      "color": "text-blue-600",
+      "isPinned": true,
+      "isClosed": false,
+      "isHidden": false,
+      "tags": [
+        "events",
+        "control-room",
+        "offers",
+        "pricing"
+      ],
+      "createdAt": "2025-09-20T00:00:00.000Z",
+      "updatedAt": "2025-09-24T01:35:11.512Z"
+    },
+    {
+      "id": "assistant-roles-commands",
+      "title": "Assistant Role Commands (DEVELOPER / PLANNING / PM)",
+      "content": "Implement command triggers to switch AI operating modes without re-explaining context. Examples: Command:DEVELOPER (code-only, no planning, implement requested edits), Command:PLANNING (no code changes, produce concise plans/roadmaps), Command:PM (prioritize, sequence, and track progress). Document in wiki + (maybe) Enums; enforce in middleware so the AI respects the requested role until changed.",
+      "notebookId": "strategy",
+      "color": "text-blue-600",
+      "isPinned": false,
+      "isClosed": false,
+      "isHidden": false,
+      "tags": [
+        "assistant",
+        "commands",
+        "roles",
+        "workflow"
+      ],
+      "createdAt": "2025-09-20T00:00:00.000Z",
+      "updatedAt": "2025-09-20T00:00:00.000Z"
+    },
+    {
+      "id": "classes-adult-group",
+      "title": "Form adult painting classes group + find venue",
+      "content": "Plan a recurring adult painting class group and scout venues where solid artists can gather and teach. Define format (weekly/biweekly), pricing, materials, and partner instructors. Treat as a Mission with Milestones (venue shortlist, instructor roster, pilot session).",
+      "notebookId": "strategy",
+      "color": "text-yellow-600",
+      "isPinned": false,
+      "isClosed": false,
+      "isHidden": false,
+      "tags": [
+        "classes",
+        "venue",
+        "mission",
+        "education"
+      ],
+      "createdAt": "2025-09-20T00:00:00.000Z",
+      "updatedAt": "2025-09-20T00:00:00.000Z"
+    },
+    {
+      "id": "discount-system-future-note",
+      "title": "Discount System – Future Feature",
+      "content": "Per-item discountPercent field + global per-type overrides. Cards show crossed original price + computed sale price. Sources: Item.imageUrl (thumb), Item.originalFiles[0] (full). Keep DRY via constants. Post-event refinement only.",
+      "notebookId": "road_ahead",
+      "color": "text-green-600",
+      "isPinned": false,
+      "isClosed": false,
+      "isHidden": false,
+      "tags": [
+        "pricing",
+        "future",
+        "post-event"
+      ],
+      "createdAt": "2025-09-20T00:00:00.000Z",
+      "updatedAt": "2025-09-20T00:00:00.000Z"
+    },
+    {
+      "id": "1758677175576",
+      "title": "Route to implement shared data via KV",
+      "content": "Route to implement shared data via KV\n1) Define storage modes and adapter interface\nAdd a single source StorageMode enum: local | kv | hybrid (prod default: hybrid; dev default: local).\nCreate DataAdapter interface with CRUD and list/query for tasks, items, records, assets, settings.\nImplement LocalAdapter (localStorage) and KVAdapter (calls Next.js API routes).\n\n2) Add KV-backed CRUD APIs (parity with logs)\nCreate /api/tasks, /api/items, /api/assets, /api/settings with the same env auto-detect as logs (KV in Vercel; local JSON files in localhost).\nIdempotent operations; include timestamps and generated IDs (UUID).\n\n3) Refactor DataStore to use adapter\nDataStore selects adapter by StorageMode.\nHybrid mode: read-through/write-through to KV, with localStorage as cache (persist a local snapshot for fast loads/offline).\nAdd lastUpdated version stamps to entities; last-writer-wins to resolve conflicts safely.\n\n4) Initial sync and background cache refresh\nOn app load (hybrid mode), fetch all from KV, hydrate local cache, then serve from DataStore.\nOn mutations: write to KV, then update cache; dispatch tasksUpdated, itemsUpdated, etc.\nOptional: add ETag/If-None-Match or timestamp headers in APIs to avoid fetching unchanged data.\n\n5) Migration tools (DataSync)\nAdd “Upload local → KV” (first-time migration) and “Download KV → local” (hydrate cache) actions.\nKeep your existing Backfill for logs; add “Rebuild cache from KV” for each domain (tasks, items…).\n\n6) Multi-user scaffolding (future-ready, minimal now)\nIntroduce orgId and playerId context (simple constants now).\nKV key namespace: org::tasks, org::items, …; logs already per system, add playerId to player-log entries.\nAdd optional createdBy / updatedBy to tasks/items; UI still single-user until you enable player switching.\n7) Settings and admin utilities\nSettings → Persistence: read-only indicator of active mode, a “Rehydrate local cache from KV” button.\nDataSync → Clear KV (admin only; you already have clear-logs for KV – keep pattern consistent when adding entity APIs).\nKeep “Clear Cache” (localStorage only) as is.\n8) Security and config\nReuse the passphrase login you have; restrict write APIs to authenticated sessions.\nPrefix KV keys with project-specific env var to avoid collisions across deployments.\n9) QA plan\nVerify: two browsers on Vercel share identical tasks/items/records/settings.\nVerify: localhost remains local-first.\nVerify: offline still usable in hybrid (serves from cache; resyncs when online).\nVerify: clear-logs, cache rehydrate, and migration flows.\nAcceptance criteria\nOpening the app in two different browsers (prod) shows identical data for tasks/items/records/settings without manual import.\nCreating/updating data in one browser appears in the other after a short refresh.\nLocal dev remains unchanged: everything works with local storage + local files.\nBackfill remains functional and idempotent.\nNotes on the broader vision\nThis path gives you “single-tenant shared data” now (your company), and cleanly evolves to multi-user by adding a per-player filter (UI scope) and player-scoped logs while keeping tasks/items org-scoped.\nI added the dual-storage truth to the wiki already; we can also document this roadmap and the org/player scoping there after implementation.\nIf you approve, I’ll start with steps 1–3 (adapters, APIs, DataStore switch), then wire up initial sync and the DataSync tools.",
+      "notebookId": "current_sprint",
+      "color": "text-blue-600",
+      "isPinned": true,
+      "isClosed": false,
+      "isHidden": false,
+      "tags": [],
+      "createdAt": "2025-09-24T01:26:15.576Z",
+      "updatedAt": "2025-09-27T02:43:12.214Z"
+    },
+    {
+      "id": "1758677695868",
+      "title": "Week Sale 2 stage RoadMap",
+      "content": "COMPREHENSIVE STRATEGIC ROADMAP\n\nIMMEDIATE CONTEXT\n1. Week Sale Event: $800/$1000 collected (80% complete, 5 days left) ✅ 1. Two environments: localhost (testing/dev) vs Vercel (production/real) ✅ 1. Current challenge: system not fully operational for real business tracking  \nPHASE 1: EVENT COMPLETION (This Week)\n\nPriority: CRITICAL\n\n1.1 Marketing Push (Today/Tomorrow)\n\nIG/FB promotion of International Offers\n\nWhatsApp community exploration (later)\n\nTarget: $200 remaining to hit $1000 goal\n\n1.2 Physical Fulfillment (Ongoing)\n\nPrint framing: 2 for Ernest, 2 for Bruce\n\nOrder processing as sales come in\n\nPHASE 2: FRONTEND COMPLETION (Post-Event)\n\nPriority: HIGH\n\nDependencies: None\n\n2.1 Missing Pages\n\nAnimation section + Exiliado YouTube video\n\nBio page\n\nPortfolio page\n\nProjects section: Portal Skatepark link\n\n2.2 Community Setup\n\nWhatsApp business community research\n\nImplementation planning\n\nPHASE 3: SYSTEM FOUNDATION FIXES (Critical Path)\n\nPriority: CRITICAL\n\nDependencies: Must complete before major features\n\n3.1 Task Modal UX Fixes\n\nNumber field behavior: allow zero deletion/replacement\n\nRisk: Low, isolated component fix\n\n3.2 Task Detail View Improvements\n\nCompact layout (reduce unnecessary scrolling)\n\nInline editing: Status, Progress, Priority\n\nAdd Duplicate Task button\n\nRisk: Medium, affects core workflow\n\n3.3 Task Tree Enhancements\n\nRemove redundant \"Mission Tree\"/\"Recurrent Tree\" titles\n\nAdd Collapse/Expand toggle (simple → per-type toggles)\n\nRisk: Low, UI-only changes\n\nPHASE 4: DATA ARCHITECTURE DECISIONS (Strategic Choice Point)\n\nPriority: HIGH\n\nDependencies: Phase 3 complete\n\n4.1 Archive Foundation (Option A)\n\nMonthly data organization structure\n\nArchive vs active data separation\n\nEnables proper month-end workflows\n\nRisk: High complexity, affects all systems\n\n4.2 Sales Section Foundation (Option B)\n\nBasic sales tracking (you're selling now!)\n\nIntegration with existing Records/Tasks\n\nImmediate business value\n\nRisk: Medium, new system integration\n\n4.3 Task Import/Export (Option C)\n\nAdd/Merge/Replace with semantic matching\n\nSeparate Tasks and Logs import/export\n\nEnables localhost → Vercel migration\n\nRisk: High, data integrity critical\n\nPHASE 5: ADVANCED FEATURES (Post-Foundation)\n\nPriority: MEDIUM\n\nDependencies: Phase 4 complete\n\n5.1 Events Model\n\nControl Room Events subtab\n\nCampaign management (discounts, featured sets)\n\nWorkflow override capabilities\n\n5.2 Enhanced Import/Export\n\nLogs import/export with Add/Merge/Replace\n\nCross-environment synchronization\n\nArchive integration\n\nRISK ASSESSMENT &amp; RECOMMENDATIONS\n\nImmediate Safe Wins (Low Risk, High Value)\n\nTask Modal number field fix\n\nTask Tree UI improvements\n\nFrontend page completion\n\nStrategic Decision Required\n\nChoose ONE for Phase 4 focus:\n\nOption A (Archive): If you need month-end workflows soon\n\nOption B (Sales): If tracking current sales is priority\n\nOption C (Import): If localhost → Vercel migration is urgent\n\nHigh-Risk Items (Plan Carefully)\n\nTask Import/Export: data integrity critical\n\nArchive Foundation: affects all systems\n\nAny multi-system integration during active sales\n\nMy Assessment\n\nI'm confident on Phases 1-3 (isolated, well-scoped changes). Phase 4 requires careful planning and your strategic choice of focus. I recommend completing Phase 3 first to stabilize the foundation, then choosing one Phase 4 track based on your most urgent business need.\n\nRecommended Sequence\n\nComplete Event marketing push\n\nFix Task Modal/Tree UX (Phase 3) - safe, immediate value\n\nChoose Phase 4 focus based on business priority\n\nPlan and execute chosen track with full attention\n\nWhat's your strategic choice for Phase 4 focus?",
+      "notebookId": "current_sprint",
+      "color": "text-blue-600",
+      "isPinned": true,
+      "isClosed": false,
+      "isHidden": false,
+      "tags": [],
+      "createdAt": "2025-09-24T01:34:55.868Z",
+      "updatedAt": "2025-09-24T01:51:43.290Z"
+    },
+    {
+      "id": "1758776528938",
+      "title": "Create a Seven Elements Web app and Link in Design Section",
+      "content": "Create a Seven Elements Web app and Link in Design Section",
+      "notebookId": "general",
+      "color": "text-gray-600",
+      "isPinned": false,
+      "isClosed": false,
+      "isHidden": false,
+      "tags": [],
+      "createdAt": "2025-09-25T05:02:08.938Z",
+      "updatedAt": "2025-09-25T05:02:08.938Z"
+    },
+    {
+      "id": "1758777347533",
+      "title": "combined roadmap for next steps",
+      "content": "ROADMAP 1: SHARED DATA VIA KV\n\nStatus: Partially implemented (logs only, missing core data)\n\nMissing Components:\n\nDataAdapter Interface - Not implemented\n\nKV APIs for Core Data - Only logs exist, missing /api/tasks, /api/items, /api/assets, /api/settings\n\nHybrid Storage Mode - DataStore still localStorage-only\n\nMulti-user Scaffolding - Not implemented\n\nMigration Tools - Basic DataSync exists but missing KV migration\n\nROADMAP 2: BUSINESS FOUNDATION FIXES\n\nStatus: Phase 1 complete, Phase 2-5 pending\n\nMissing Components:\n\nMarketing Push - Frontend completion (Bio, Portfolio, Animation)\n\nSales Section Foundation - Critical for current business\n\nArchive System - Monthly data organization\n\nTask Import/Export - Cross-environment migration\n\nEvents Model - Campaign management\n\nUNIFIED STRATEGIC ROADMAP 🚀\n\nPHASE 2: SHARED DATA IMPLEMENTATION\n\nPriority: CRITICAL - Solves immediate multi-browser problem\n\n 1: Core KV APIs\n// Extend existing KV pattern to core data\r\n/api/tasks     // CRUD for tasks\r\n/api/items     // CRUD for items  \r\n/api/assets    // CRUD for assets\r\n/api/settings  // CRUD for settings\n\n2: DataStore Integration\n// DataAdapter interface\ninterface DataAdapter {\n  getTasks(): Promise\n  upsertTask(task: Task): Promise\n  // ... etc\n}\n\n// Hybrid mode implementation\nclass HybridAdapter implements DataAdapter {\n  // Read-through/write-through to KV\n  // localStorage as cache\n}\n\nPHASE 3: BUSINESS VALUE FEATURES\n\nPriority: HIGH - Immediate business impact\n\n3: Sales Foundation\n\nSales section implementation\n\nIntegration with existing Records/Tasks\n\nMulti-browser sales tracking\n\n4: Frontend Completion\n\nBio page, Portfolio page, Animation section\n\nUses shared data for consistency\n\nPHASE 4: ARCHIVE &amp; MIGRATION\n\nPriority: MEDIUM - System optimization\n\n5: Archive System\n\nMonthly data organization\n\nArchive vs active data separation\n\nMonthly close workflows\n\n6: Import/Export Enhancement\n\nCross-environment migration tools\n\nData integrity validation\n\nPHASE 5: ADVANCED FEATURES\n\nPriority: LOW - Future enhancements\n\nEvents Model\n\nEnhanced analytics\n\nMulti-user features\n\nCRITICAL SUCCESS FACTORS ⚡\n\n1. Leverage Existing Infrastructure\n\nYour KV system works perfectly for logs\n\nExtend the same pattern to core data\n\nNo need to rebuild - just replicate\n\n1. Business Value First\n\nShared data solves immediate problem\n\nSales tracking provides immediate ROI\n\nFrontend completion enables marketing\n\n1. Incremental Implementation\n\nEach phase delivers independent value\n\nCan stop after any phase with improvements\n\nBuilds on proven patterns",
+      "notebookId": "general",
+      "color": "text-gray-600",
+      "isPinned": true,
+      "isClosed": false,
+      "isHidden": false,
+      "tags": [],
+      "createdAt": "2025-09-25T05:15:47.533Z",
+      "updatedAt": "2025-09-25T16:03:27.886Z"
+    },
+    {
+      "id": "1759038812129",
+      "title": "ALL SAVED MEMORIES:",
+      "content": "ALL SAVED MEMORIES:\nUI Components Z-Index (ID: 8446675): The user prefers that all UI components use the Z_INDEX_LAYERS constant for z-index values rather than hardcoding numeric z-indexes, following the DRY principle.\nProject Understanding &amp; DRY Principles (ID: 8368002): The user prefers the assistant to fully understand the project by reading the wiki, README, and initial documentation before making structural or code style changes; to enforce absolute DRY principles, simplify complex logic, and avoid overcomplication; to suggest better approaches and improvements; and to ensure all solutions respect the existing system rules, workflow, and roadmap.\nShadcn/UI Base Library (ID: 8367983): The project uses shadcn/UI as the base library for UI components, and we can customize its components as needed.\nFeature Testing (ID: 8318243): The user prefers the AI to test new features for alignment with their vision before integrating them into the codebase.\nConsistent Delete Endpoints (ID: 8256128): The user prefers delete endpoints to consistently use entityId as the ID parameter across all APIs instead of using endpoint-specific names like taskId.\nCRITICAL RULE: No File Deletion (ID: 8162061): I must NEVER delete a file from the user's workspace without asking for and receiving explicit permission first. This is a strict limitation to prevent accidental data loss and respect the user's project integrity. Always propose deletion and wait for confirmation.\nSearchableSelect Modal Pattern Solution (ID: 8160124): CONFIRMED SOLUTION: SearchableSelect components work perfectly in custom modal patterns (like Record Modals) but fail in Radix Dialog contexts due to DialogOverlay intercepting pointer events. The Task Modal has been successfully converted to use the custom modal pattern (fixed div overlay + Card content) which completely resolves the SearchableSelect interaction issues. The component now works identically to the Record Modals. Additionally fixed: date handling for task.dueDate (use new Date() wrapper) and event handler type safety (use e.currentTarget instead of e.target).\nFinancial Operations Critical Issue (ID: 8057718): Critical issue identified: Not all financial operations come from tasks. Daily activities like groceries, personal expenses, and non-task-related business expenses need their own logging system. The current financials-log API incorrectly assumes all financial operations are task-related. Need to create separate entity type for standalone financial operations and integrate with daily activity tracking.\nProject Understanding &amp; DRY Principles (ID: 7972922): The user prefers the assistant to fully understand the project by reading the wiki, README, and initial documentation before making structural or code style changes; to enforce absolute DRY principles, simplify complex logic, and avoid overcomplication; to suggest better approaches and improvements; and to ensure all solutions respect the existing system rules, workflow, and roadmap.\nProject Status Changes (ID: 7779225): The user prefers that the assistant does not change project statuses until they explicitly say so.\nDate Formatting (ID: 7711774): The user prefers dates formatted as DD-MM-YYYY (day-month-year) and implementation should use global app constants for date formatting with that default.\nSite vs Location Terminology (ID: 7683739): Use 'Site' for specific defined areas or entities (e.g., El Hornito, Home, World, Google Drive, characters like Akiles). Use 'Location' for broader areas (e.g., Uvita, Puntarenas, Costa Rica, Central America). Every Site should be related to a Location, and these terms should be used consistently across the system.\nStrict Implementation (ID: 7467570): The user prefers that the assistant implement only the requested functionality and not add extra features, UI elements, or testing scaffolding without being asked, to strictly follow the user's instructions when implementing functionality, and to adapt the system foundation only as needed.\nContext Maintenance (ID: 7464395): The user prefers that the assistant maintain context and not require them to repeat long explanations.\nINTERNALIZE Command (ID: 7060571): The project uses an INTERNALIZE command that the assistant must follow before coding:\nRead THEGAME_WIKI.md (project vision, workflow)\nRead PROJECT-STATUS.json (Current state)\nRead project memories\nRead relevant READMEs for the current task\nUnderstand current system state\nWorkflow rules:\nFoundational/structural changes require asking the user and planning together before implementation\nBasic/feature changes allow the assistant to try an approach first, then refine based on feedback\nThis ensures full understanding before implementation and prevents generic coding tasks.\nChange Management (ID: 7060064): The user prefers that the assistant ask and plan when making big, structural, or foundational changes, but for normal or basic changes the assistant can proceed autonomously and iterate with testing and refinement.\nINTERNALIZE Command (ID: 7059217): The project uses an INTERNALIZE command that the assistant must follow before coding:\nRead THEGAME_WIKI.md (project vision, current state, workflow)\nRead project memories\nRead relevant READMEs for the current task\nUnderstand current system state\nWorkflow rules:\nFoundational/structural changes require asking the user and planning together before implementation\nBasic/feature changes allow the assistant to try an approach first, then refine based on feedback\nThis ensures full understanding before implementation and prevents generic coding tasks.\nStrict Implementation (ID: 6874083): The user prefers the assistant not to add unrequested features, to strictly follow the user's instructions when implementing functionality, and to adapt the system foundation only as needed.\nMinimal Discussion (ID: 6463018): The user prefers discussing project vision and approaches only when necessary, not for every code change, as repeated debates are boring.\nCLEAN and UPDATE Commands (ID: 6461420): The user wants to type CLEAN to automatically clean old code, remove unused functionality, and ensure DRY principles and system rules, and UPDATE to refresh the Wiki, README, Pages, and Components with the latest approved changes. These commands should be available every time a new chat is started.\nINTERNALIZE Command (ID: 6456564): The user expects the assistant to use the INTERNALIZE command to fully digest the project's wiki, rules, and memories before starting any implementation or feature changes. This command should be available every time a new chat is started.\nUI Libraries (ID: 6449821): The user prefers using Radix, Shadcn, and Motion libraries for UI components to ensure a consistent and high-quality user experience.\nIcon Preferences (ID: 6442704): The user prefers using lucide icons (white) for UI icons instead of emojis across the project, and wants this preference clearly documented in the project wiki.\nProject Understanding &amp; DRY Principles (ID: 6374301): The user prefers the assistant to fully understand the project by reading the wiki, README, and initial documentation before making structural changes; to adhere to the DRY principle, avoid overcomplication and unnecessary code; and to ensure that all solutions respect the existing project workflow, roadmap, and instructions.\nData Store as Source of Truth (ID: 6373717): The project uses data-store as the only source of truth; data should not be hardcoded in pages. The user prefers that tasks be fully completed before starting new ones to avoid messing up the system.\nCollaborative Approach (ID: 6373700): The user prefers that the assistant follow the existing code system and not make unnecessary foundational changes unless strictly necessary. The user prefers the assistant to build with him (not for him), ask questions and discuss before making structural changes. The user prefers the assistant to think through and propose its reasoning in its areas of expertise, acting as a collaborative coworker.\nDevelopment Server (ID: 6333807): The user always has the npm run dev server running and prefers the assistant to skip running npm run dev, only run the build command to check.",
+      "notebookId": "road_ahead",
+      "color": "text-purple-600",
+      "isPinned": false,
+      "isClosed": false,
+      "isHidden": false,
+      "tags": [],
+      "createdAt": "2025-09-28T05:53:32.129Z",
+      "updatedAt": "2025-09-28T05:53:32.129Z"
+    },
+    {
+      "id": "1759589221154",
+      "title": "Lua Documentation Resources:",
+      "content": "Lua Documentation Resources:\r\nRedis Lua Scripting: https://redis.io/docs/manual/programmability/eval-intro/\r\nVercel KV Lua: https://vercel.com/docs/storage/vercel-kv/lua-scripting\r\nLua Language Reference: https://www.lua.org/manual/5.1/",
+      "notebookId": "general",
+      "color": "text-gray-600",
+      "isPinned": false,
+      "isClosed": false,
+      "isHidden": false,
+      "tags": [],
+      "createdAt": "2025-10-04T14:47:01.154Z",
+      "updatedAt": "2025-10-04T14:47:01.154Z"
+    },
+    {
+      "id": "1759594728349",
+      "title": "TASK LIFECYCLE",
+      "content": "FULL PROCESS EXPLANATION 📋\n\n1. TASK CREATION PROCESS\n\nWhen a new task is created:\n\nModal → HybridAdapter: Task modal calls HybridAdapter.upsertTask(task, sideEffects)\n\nHybridAdapter → API: HybridAdapter makes POST request to /api/tasks with sideEffects.isNew = true\n\nAPI Route: /api/tasks receives the request\n\nTask Storage: API saves task to KV storage (akiles::tasks)\n\nLogging Trigger: API calls logTaskCreation(task) because sideEffects.isNew = true\n\nLoggingDataStore: logTaskCreation calls LoggingDataStore.addLogEntry('tasks', task.id, 'task', 'created', data)\n\nLoggingHybridAdapter: LoggingDataStore uses LoggingHybridAdapter (because DEFAULT_STORAGE_MODE = HYBRID)\n\nKV Operation: LoggingHybridAdapter calls kvAddLogEntry with key akiles::tasks-log\n\nLua Script: kvAddLogEntry executes atomic Lua script to add log entry to KV\n\nResult: Log entry with badge created appears in Tasks Lifecycle tab\n\n1. TASK STATUS CHANGE PROCESS\n\nWhen a task status changes (e.g., Not Started → Done):\n\nModal → HybridAdapter: Task modal calls HybridAdapter.upsertTask(task, sideEffects) with sideEffects.isCompleting = true\n\nHybridAdapter → API: HybridAdapter makes POST request to /api/tasks with completion flags\n\nAPI Route: /api/tasks receives the request\n\nTask Storage: API saves updated task to KV storage\n\nCompletion Effects: API calls processTaskCompletionEffects(task) to handle completion logic\n\nStatus Logging: API calls logTaskModifications(originalTask, finalTask) to log the status change\n\nStatus Transition: logTaskModifications calls logTaskStatusTransition(oldTask, newTask)\n\nBadge Logic: logTaskStatusTransition determines badge based on status change:\n\nNot Started → Done = done badge\n\nDone → Not Started = undone badge\n\nNot Started → In Progress = in_progress badge\n\nLoggingDataStore: Calls LoggingDataStore.addLogEntry with the appropriate badge\n\nKV Operation: Same process as creation - adds new log entry to akiles::tasks-log\n\nResult: New log entry with status badge appears in Tasks Lifecycle tab\n\n1. LOG RETRIEVAL PROCESS\n\nWhen DataCenter loads the Tasks Lifecycle tab:\n\nDataCenter → API: Makes GET request to /api/tasks-log\n\nAPI Route: /api/tasks-log receives the request\n\nKV Retrieval: API calls kvGetLogEntries('akiles::tasks-log')\n\nLua Script: Executes atomic Lua script to read log entries from KV\n\nData Processing: API processes and returns log entries\n\nUI Display: DataCenter displays log entries with badges in the Tasks Lifecycle tab\n\n1. CURRENT IMPLEMENTATION STATUS\n\nWhat's Working:\n\n✅ Task creation logging (created badge)\n\n✅ Status transition functions (logTaskStatusTransition, logTaskModifications)\n\n✅ KV operations (kvAddLogEntry, kvGetLogEntries)\n\n✅ API route integration for creation and status changes\n\nWhat Should Happen Now:\n\n✅ Task creation should log created badge\n\n✅ Status changes should log appropriate badges (in_progress, done, collected, undone)\n\n✅ All log entries should appear in Tasks Lifecycle tab\n\n✅ No more log corruption from broken update functions\n\nTHE COMPLETE FLOW\nTask Creation:\nModal → HybridAdapter → API → KV Storage → logTaskCreation → LoggingDataStore → LoggingHybridAdapter → kvAddLogEntry → KV → Tasks Lifecycle Tab\n\nStatus Change:\nModal → HybridAdapter → API → KV Storage → logTaskModifications → logTaskStatusTransition → LoggingDataStore → LoggingHybridAdapter → kvAddLogEntry → KV → Tasks Lifecycle Tab\n\nLog Retrieval:\nDataCenter → API → kvGetLogEntries → KV → Tasks Lifecycle Tab",
+      "notebookId": "general",
+      "color": "text-gray-600",
+      "isPinned": false,
+      "isClosed": false,
+      "isHidden": false,
+      "tags": [],
+      "createdAt": "2025-10-04T16:18:48.349Z",
+      "updatedAt": "2025-10-04T16:20:46.358Z"
+    },
+    {
+      "id": "1759613390763",
+      "title": "AI Agent",
+      "content": "AI Agent:\nA system that can reason, plan, and take actions on its own based on information it’s given. It can manage workflows, use external tools, and adapt as things change.\nIt's like a digital employee that can think, remember, and get things done.\nDifference:\nAutomation = predefined, fixed steps to complete a taskAgent = dynamic, flexible, and capable of reasoning\nDecision-making programs that perform digital actions with:Brain (LLM):\nPurpose: Reasoning, planning, and language generation.\nThink of it as the decision-maker that interprets inputs, breaks down tasks, and produces responses or plans.\nMemory:\nPurpose: Lets the agent remember past interactions.\nUseful for continuity, personalization, and learning from prior steps or user preferences (short-term working memory and longer-term recall).\nTools:\nPurpose: How the agent interacts with the outside world.\nExamples: Web browsing, code execution, databases, APIs, file I/O, sensors/actuators. The LLM decides when and how to call them.\nTypes of Tools\nRetrieving data or context\nSearching the web or pulling info from a document.\nTaking action\nSending an email, updating a database, or creating a calendar event.\nOrchestration\nCalling other agents, triggering workflows, or chaining actions together\n\nAPI: The list of operations or actions a system makes available.\n\nAPI Requests\nGET — pulls information\nExamples: check weather, load YouTube video, retrieve news article\nPOST — sends information\nExamples: submit a form, add a row, send a prompt to ChatGPT\nOther methods mentioned: PUT, PATCH, DELETE, TRACE, CONNECT, etc.\nHTTP request: A specific instruction you send to carry out one of those actions.\n\nAgents You Can Build\nPersonal Assistant\nSocial Media Manager\nCustomer Support\nResearch Assistant\nX (Travel Planner, Advanced Trading Bot, Weather Girl)",
+      "notebookId": "road_ahead",
+      "color": "text-purple-600",
+      "isPinned": false,
+      "isClosed": false,
+      "isHidden": false,
+      "tags": [
+        "Website-Apps",
+        "Strategy",
+        "Projects"
+      ],
+      "createdAt": "2025-10-04T21:29:50.763Z",
+      "updatedAt": "2025-10-05T06:59:58.914Z"
+    },
+    {
+      "id": "1759638175253",
+      "title": "best of both worlds",
+      "content": "Proposal: best of both worlds\nKeep logs append-only for all logs (tasks, items, financials, player) to avoid corruption and simplify history.\nEnforce idempotency at the side-effects layer (not in logs) via an effects registry.\nDesign\nEffects Registry (per entity in KV, local in dev):\nKey: effects::::\nValue: JSON map of effect flags:\nitemCreated: true\nfinancialLogged:: true\npointsLogged:: true\nMinimal API:\ngetEffects(entityId)\nmarkEffect(entityId, effectKey)\nclearEffect(entityId, effectKey) // used on uncompletion/rollback\nWorkflows gating:\nItems: before createItemFromTask/logItemCreation, check markEffect(task.id, 'itemCreated'). If already true, skip effect and optionally append a \"skipped_duplicate\" log entry.\nFinancials: before logFinancialEffect, check/mark 'financialLogged:'; if already set, skip.\nPlayer points: before logPlayerEffect, check/mark 'pointsLogged:'; if already set, skip.\nUncomplete: clear relevant flags (e.g., 'itemCreated', monthly financial/points keys for the task’s doneAt month) and apply rollback effects as needed (e.g., remove created item). Append reversal logs as separate entries.\nLogs remain append-only:\nNever mutate existing entries.\nOnly append when an effect actually executes (first time) or append an explicit “reverted” or “skipped_duplicate” entry for traceability.\nWhy this works:\nIdempotency is guaranteed by the small registry keys (tiny JSON GET/SET), not by heavy Lua on large log blobs.\nLogs are purely audit; effects are controlled by the registry, so double-counting can’t occur even if multiple log appends happen.\nImplementation outline\nCreate lib/utils/effects-registry.ts:\nDev: localStorage map\nProd: @vercel/kv get/set for effects::::\nUpdate processTaskCompletionEffects and uncompleteTask:\nGate item creation, financials, points with registry; clear flags on uncomplete.\nKeep current append-only logging calls, but only log when an effect executes or when a revert/skip occurs.\nOptional refinements\nAdd a deterministic effectId in log entries, e.g. effectId: task::::itemCreated or task::::points::, to make UI-level dedupe trivial if needed.\n\n---\nThe simple version\r\nThe problem\r\nWe want logs that are a clean history (append-only), but we also don’t want to double-count things (like items, money, or points) if a task gets toggled Done→In Progress→Done again.\r\nThe idea\r\nKeep logs simple and append-only.\r\nStop duplicates at the source with a tiny “effects checklist” per task/record that remembers what we already did.\r\nHow it works (in human terms)\r\nTiny checklist per task/record\r\nWhen a task completes, we look at a tiny checklist (stored in KV in prod, local in dev).\r\nExample keys:\r\nitemCreated: true\r\nfinancialLogged:2025-10: true\r\npointsLogged:2025-10: true\r\nWhen you mark a task Done\r\nIf itemCreated is not set → we create the item, log it, then set itemCreated = true.\r\nIf itemCreated is already true → we don’t create the item again. We can optionally add a small “skipped duplicate” note in the logs for transparency.\r\nFor money and points\r\nSame thing but with a month tag:\r\nIf financialLogged:2025-10 is not set → log it once and set it.\r\nIf you toggle statuses and come back to Done in the same month, it won’t re-count.\r\nWhen you “uncomplete” a task\r\nWe undo side effects (e.g., remove the created item), and we clear the checklist flags so doing Done again can recreate exactly what’s needed.\r\nLogs still stay append-only. We add a “reverted” entry instead of editing past entries.\r\nWhy this is good\r\nNo more log corruption: logs are append-only (no in-place edits).\r\nNo duplicates: the checklist blocks extra creations or double-counting.\r\nEasy to reason about: “Did we already do X?” is one tiny KV read/write, not a complex Lua dance on big log files.\r\nWhat we’ll build\r\nEffects registry: a tiny helper that reads/writes those checklist flags.\r\nHook it into the workflows:\r\nItems: guard item creation\r\nFinancials: guard monthly financial logs\r\nPlayer points: guard monthly points logs\r\nUncomplete: rollback and clear flags\r\nOptional: add a consistent effectId into log entries so the UI can easily group related log lines.\r\nNext steps\r\nI’ll implement the effects registry and wire it into the task completion/uncompletion workflows.\r\nThen we’ll test:\r\nToggle Done twice → 1 item created, 1 financial/points counting per month\r\nUncomplete → item removed and flags cleared\r\nLogs show a clean history (created, reverted, skipped_duplicate when relevant)",
+      "notebookId": "general",
+      "color": "text-gray-600",
+      "isPinned": false,
+      "isClosed": false,
+      "isHidden": false,
+      "tags": [],
+      "createdAt": "2025-10-05T04:22:55.253Z",
+      "updatedAt": "2025-10-05T04:22:55.253Z"
+    },
+    {
+      "id": "1759709175045",
+      "title": "Sales Entity",
+      "content": "// enums\nexport enum SaleType { FERIA, DIRECT, CONSIGNMENT, BUNDLE_SALE, ONLINE, NFT, GIFT, EXCHANGE }\nexport enum SaleStatus { PENDING, POSTED, DONE, CANCELLED }\nexport enum PaymentMethod { CASH, CARD, TRANSFER, BTC, CRC, OTHER }\n\n// base\ntype Discount = { amount?: number; percent?: number }; // either-or; validated\ntype Payment = { method: PaymentMethod; amount: number; currency: Currency; receivedAt?: Date };\n\n// lines\ntype SaleLineBase = {\n  lineId: string;\n  kind: 'item' | 'bundle' | 'service';\n  description?: string;\n  taxAmount?: number;\n  discount?: Discount;\n};\n\ntype ItemSaleLine = SaleLineBase &amp; {\n  kind: 'item';\n  itemId: string;           // precise item\n  quantity: number;\n  unitPrice: number;\n};\n\ntype BundleSaleLine = SaleLineBase &amp; {\n  kind: 'bundle';\n  itemType: ItemType;       // e.g., STICKER_BUNDLE\n  subItemType?: SubItemType;\n  siteId: string;\n  quantity: number;\n  unitPrice: number;\n};\n\ntype ServiceLine = SaleLineBase &amp; {\n  kind: 'service';\n  station: Station;         // where service belongs (Design/Production/etc.)\n  category: Category;\n  revenue: number;          // direct service revenue\n  createTask?: boolean;     // optional basic task creation\n};\n\ntype SaleLine = ItemSaleLine | BundleSaleLine | ServiceLine;\n\n// sale\nexport interface Sale extends BaseEntity {\n  saleDate: Date;                 // business date of the sale\n  type: SaleType;\n  status: SaleStatus;\n  siteId: string;\n  counterpartyName?: string;\n  isNotPaid?: boolean;\n  isNotCharged?: boolean;\n\n  overallDiscount?: Discount;\n  lines: SaleLine[];\n  payments?: Payment[];\n\n  // totals (computed, persisted for fast reads)\n  totals: {\n    subtotal: number;\n    discountTotal: number;\n    taxTotal: number;\n    totalRevenue: number;\n  };\n\n  // ties to tasks (not statuses)\n  requiresReconciliation?: boolean;\n  reconciliationTaskId?: string;\n  requiresRestock?: boolean;\n  restockTaskId?: string;\n\n  // entity creation\n  createdTaskId?: string;         // when a sale spawns a task (e.g., mural)\n}",
+      "notebookId": "general",
+      "color": "text-gray-600",
+      "isPinned": false,
+      "isClosed": false,
+      "isHidden": false,
+      "tags": [],
+      "createdAt": "2025-10-06T00:06:15.045Z",
+      "updatedAt": "2025-10-06T00:06:15.045Z"
+    },
+    {
+      "id": "1759795313054",
+      "title": "Entity Lifecycle Flow",
+      "content": "Entity Lifecycle Flow:\n1. Entity Created/Updated/Deleted\n   ↓\n2. Effects Registry processes the change\n   ↓\n3. Cascade Engine checks what should happen to linked entities\n   ↓\n4. Directional Workflow Engine checks if any workflows should trigger\n   ↓\n5. Actions are executed (create entities, update status, award points, etc.)\n---\nExample: The Feria Workflow\n1. Task \"Go to Feria\" completes\n   ↓ (Directional Workflow Engine)\n2. Finds TASK_SALE rule with createsSale: true\n   ↓ (Creates new Sale entity)\n3. Sale completion triggers SALE_FINREC rule\n   ↓ (Creates Financial Record)\n4. All entities trigger PLAYER rules\n   ↓ (Awards Player points)\n---Environment Integration:\r\nDevelopment (LocalStorage)\r\nUses link-local-adapter.ts\r\nFast, no network calls\r\nPerfect for testing\r\nProduction (KV Storage)\r\nUses link-hybrid-adapter.ts\r\nKV as source of truth\r\nlocalStorage as cache\r\nHandles both browser and server\r\nThe Rosetta Stone Effect:\r\nThis system transforms isolated entities into a coherent relationship network where:\r\nEvery action is traceable\r\nEvery relationship has rules\r\nEvery workflow is automated\r\nEvery entity is connected\r\nKey Benefits:\r\nModularity: Each file has one responsibility\r\nExtensibility: Easy to add new entities and rules\r\nConsistency: All interactions follow the same patterns\r\nPerformance: Environment-aware storage\r\nUser Experience: Clear messages and automatic workflows",
+      "notebookId": "general",
+      "color": "text-gray-600",
+      "isPinned": false,
+      "isClosed": false,
+      "isHidden": false,
+      "tags": [],
+      "createdAt": "2025-10-07T00:01:53.054Z",
+      "updatedAt": "2025-10-07T00:01:53.054Z"
+    },
+    {
+      "id": "1760016279706",
+      "title": "Flags vs SideEffects vs Links",
+      "content": "TERMINOLOGY CLARIFICATION:\n\nTerm\t         -&gt;   What It Is\t-&gt;   Example\n\nFlag\t-            &gt;  Boolean indicator\t-&gt;    isCompleting: true\n\nsideEffects parameter\t-&gt;     Container of flags (OLD)     -&gt;     \t{ isCompleting: true, hasPropertyChanges: true }\n\nshouldProcess     -&gt;\tSingle flag (NEW)\t-&gt;     shouldProcess: true\n\nLink    -&gt;   \tRelationship entity/data     -&gt; \t{ linkType: 'ITEM_SITE', source: {...}, target: {...} }\n\nSide Effect\t-&gt;   An action that happens as result\t-&gt;      \"Create an item\", \"Award points\", \"Log data\"\n\n📝 FOR FUTURE YOU TO REMEMBER:\n\n\"Flag\" = General programming term for boolean indicators\n\nUsed in every programming language ns \"boolean signal\"\n\n\"sideEffects parameter\" = Bad naming\n\nShould be called \"shouldProcess\" or \"processWorkflows\"\n\nContains flags OR is a flag itself\n\nHas nothing to do with Links\n\n\"Links\" = Relationship entities\n\nThey are data, not flags\n\nThey represent connections between entities\n\nThey are the \"RNA\" in the DNA/RNA pattern",
+      "notebookId": "general",
+      "color": "text-gray-600",
+      "isPinned": false,
+      "isClosed": false,
+      "isHidden": false,
+      "tags": [],
+      "createdAt": "2025-10-09T13:24:39.706Z",
+      "updatedAt": "2025-10-09T13:24:39.706Z"
+    }
+  ],
+  "lastUpdated": "2025-10-09T13:24:39.706Z"
+}

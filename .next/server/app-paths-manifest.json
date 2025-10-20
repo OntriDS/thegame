@@ -1,0 +1,16 @@
+{
+  "/_not-found/page": "app/_not-found/page.js",
+  "/api/items/route": "app/api/items/route.js",
+  "/api/settings/route": "app/api/settings/route.js",
+  "/api/tasks/route": "app/api/tasks/route.js",
+  "/api/financials/route": "app/api/financials/route.js",
+  "/api/sites/route": "app/api/sites/route.js",
+  "/api/characters/route": "app/api/characters/route.js",
+  "/api/players/route": "app/api/players/route.js",
+  "/api/sales/route": "app/api/sales/route.js",
+  "/admin/research/page": "app/admin/research/page.js",
+  "/admin/settings/page": "app/admin/settings/page.js",
+  "/admin/inventories/page": "app/admin/inventories/page.js",
+  "/admin/finances/page": "app/admin/finances/page.js",
+  "/admin/sales/page": "app/admin/sales/page.js"
+}
