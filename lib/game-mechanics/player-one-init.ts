@@ -16,7 +16,7 @@
  */
 
 import { Player, Character, Account } from '@/types/entities';
-import { CharacterRole, EntityType } from '@/types/enums';
+import { CharacterRole, EntityType, LogEventType } from '@/types/enums';
 import { PLAYER_ONE_ID, CHARACTER_ONE_ID, PLAYER_ONE_ACCOUNT_ID } from '@/lib/constants/entity-constants';
 
 /**
@@ -288,7 +288,7 @@ export async function createTriforceAtomic(
     await appendEntityLog(
       EntityType.PLAYER,
       PLAYER_ONE_ID,
-      'CREATED',
+      LogEventType.CREATED,
       {
         name: savedPlayer.name,
         level: savedPlayer.level,
@@ -303,7 +303,7 @@ export async function createTriforceAtomic(
     await appendEntityLog(
       EntityType.CHARACTER,
       CHARACTER_ONE_ID,
-      'CREATED',
+      LogEventType.CREATED,
       {
         name: savedCharacter.name,
         roles: savedCharacter.roles,
