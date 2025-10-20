@@ -74,11 +74,11 @@ export async function processTaskEffects(task: Task): Promise<void> {
   }
   
   // TASK_CHARACTER link
-  if (task.characterId) {
+  if (task.playerCharacterId) {
     const l = makeLink(
       LinkType.TASK_CHARACTER,
       { type: EntityType.TASK, id: task.id },
-      { type: EntityType.CHARACTER, id: task.characterId }
+      { type: EntityType.CHARACTER, id: task.playerCharacterId }
     );
     await createLink(l);
     await appendLinkLog(l, 'created');
