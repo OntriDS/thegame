@@ -9,6 +9,9 @@ import {
   upsertCharacter 
 } from '@/data-store/datastore';
 
+// Force dynamic rendering - this route accesses cookies
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: NextRequest) {
   if (!(await requireAdminAuth(req))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

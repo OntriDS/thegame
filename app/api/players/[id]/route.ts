@@ -3,6 +3,9 @@ import { NextResponse, NextRequest } from 'next/server';
 import { getPlayerById, removePlayer } from '@/data-store/datastore';
 import { requireAdminAuth } from '@/lib/api-auth';
 
+// Force dynamic rendering - this route accesses cookies
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   if (!(await requireAdminAuth(req))) return new NextResponse('Unauthorized', { status: 401 });
   const player = await getPlayerById(params.id);

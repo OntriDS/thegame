@@ -3,6 +3,18 @@
 
 import { kv } from '@vercel/kv';
 import { buildDataKey, buildIndexKey, buildLogKey } from '@/data-store/keys';
+import { EntityType } from '@/types/enums';
+
+// Centralized list of entity types for import operations
+const IMPORTABLE_ENTITY_TYPES = [
+  EntityType.TASK,
+  EntityType.ITEM,
+  EntityType.SALE,
+  EntityType.FINANCIAL,
+  EntityType.CHARACTER,
+  EntityType.PLAYER,
+  EntityType.SITE
+];
 
 export interface SettingsResult {
   success: boolean;
@@ -114,8 +126,7 @@ export class ImportDataWorkflow {
         return false;
       }
       
-      const requiredEntityTypes = ['tasks', 'items', 'sales', 'financials', 'characters', 'players', 'sites'];
-      for (const entityType of requiredEntityTypes) {
+      for (const entityType of IMPORTABLE_ENTITY_TYPES) {
         if (!Array.isArray(importData.entities[entityType])) {
           errors.push(`Import data must have ${entityType} as an array`);
           return false;
@@ -153,9 +164,7 @@ export class ImportDataWorkflow {
       console.log('[ImportDataWorkflow] 📥 Importing all data...');
       
       // Import all entity types
-      const entityTypes = ['tasks', 'items', 'sales', 'financials', 'characters', 'players', 'sites'];
-      
-      for (const entityType of entityTypes) {
+      for (const entityType of IMPORTABLE_ENTITY_TYPES) {
         try {
           await this.importEntityType(entityType, importData.entities[entityType], results, errors);
         } catch (error) {
@@ -293,7 +302,7 @@ export class ImportDataWorkflow {
    */
   private static async importLogs(logs: any, results: string[], errors: string[]): Promise<void> {
     try {
-      const logTypes = ['tasks', 'items', 'sales', 'financials', 'characters', 'players', 'sites', 'links'];
+      const logTypes = [...IMPORTABLE_ENTITY_TYPES, 'links']; // links is special case
       
       for (const logType of logTypes) {
         try {

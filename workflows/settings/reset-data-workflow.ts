@@ -3,6 +3,18 @@
 
 import { kv } from '@vercel/kv';
 import { buildDataKey, buildIndexKey, buildLogKey, buildLinksIndexKey } from '@/data-store/keys';
+import { EntityType } from '@/types/enums';
+
+// Centralized list of entity types for reset operations
+const RESETTABLE_ENTITY_TYPES = [
+  EntityType.TASK,
+  EntityType.ITEM,
+  EntityType.SALE,
+  EntityType.FINANCIAL,
+  EntityType.CHARACTER,
+  EntityType.PLAYER,
+  EntityType.SITE
+];
 
 export interface SettingsResult {
   success: boolean;
@@ -142,9 +154,7 @@ export class ResetDataWorkflow {
     try {
       console.log('[ResetDataWorkflow] 🗑️ Clearing all entity data...');
       
-      const entityTypes = ['tasks', 'items', 'sales', 'financials', 'characters', 'players', 'sites'];
-      
-      for (const entityType of entityTypes) {
+      for (const entityType of RESETTABLE_ENTITY_TYPES) {
         try {
           // Get all entity IDs from index
           const indexKey = buildIndexKey(entityType);
@@ -196,8 +206,7 @@ export class ResetDataWorkflow {
         await kv.del(linksIndexKey);
         
         // Clear all entity-specific link indexes
-        const entityTypes = ['tasks', 'items', 'sales', 'financials', 'characters', 'players', 'sites'];
-        for (const entityType of entityTypes) {
+        for (const entityType of RESETTABLE_ENTITY_TYPES) {
           const entityLinkIndexPattern = `index:links:by-entity:${entityType}:*`;
           const entityLinkKeys = await kv.keys(entityLinkIndexPattern);
           if (entityLinkKeys.length > 0) {
@@ -224,7 +233,7 @@ export class ResetDataWorkflow {
     try {
       console.log('[ResetDataWorkflow] 📝 Clearing all logs...');
       
-      const logTypes = ['tasks', 'items', 'sales', 'financials', 'characters', 'players', 'sites', 'links'];
+      const logTypes = [...RESETTABLE_ENTITY_TYPES, 'links']; // links is special case
       
       for (const logType of logTypes) {
         try {

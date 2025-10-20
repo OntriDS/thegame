@@ -3,6 +3,18 @@
 
 import { kv } from '@vercel/kv';
 import { buildLogKey } from '@/data-store/keys';
+import { EntityType } from '@/types/enums';
+
+// Centralized list of entity types for log clearing operations
+const CLEARABLE_LOG_ENTITY_TYPES = [
+  EntityType.TASK,
+  EntityType.ITEM,
+  EntityType.SALE,
+  EntityType.FINANCIAL,
+  EntityType.CHARACTER,
+  EntityType.PLAYER,
+  EntityType.SITE
+];
 
 export interface SettingsResult {
   success: boolean;
@@ -92,7 +104,7 @@ export class ClearLogsWorkflow {
     try {
       console.log('[ClearLogsWorkflow] 📝 Clearing entity logs...');
       
-      const logTypes = ['tasks', 'items', 'sales', 'financials', 'characters', 'players', 'sites', 'links'];
+      const logTypes = [...CLEARABLE_LOG_ENTITY_TYPES, 'links']; // links is special case
       
       for (const logType of logTypes) {
         try {

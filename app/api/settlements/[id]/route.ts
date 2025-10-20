@@ -4,6 +4,9 @@ import { getSettlementById, upsertSettlement, removeSettlement } from '@/data-st
 import { requireAdminAuth } from '@/lib/api-auth';
 import type { Settlement } from '@/types/entities';
 
+// Force dynamic rendering - this route accesses cookies
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   if (!(await requireAdminAuth(req))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 

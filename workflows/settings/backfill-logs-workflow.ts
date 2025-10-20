@@ -3,6 +3,18 @@
 
 import { kv } from '@vercel/kv';
 import { buildDataKey, buildIndexKey, buildLogKey } from '@/data-store/keys';
+import { EntityType } from '@/types/enums';
+
+// Centralized list of entity types for backfill operations
+const BACKFILLABLE_ENTITY_TYPES = [
+  EntityType.TASK,
+  EntityType.ITEM,
+  EntityType.SALE,
+  EntityType.FINANCIAL,
+  EntityType.CHARACTER,
+  EntityType.PLAYER,
+  EntityType.SITE
+];
 
 export interface SettingsResult {
   success: boolean;
@@ -92,9 +104,7 @@ export class BackfillLogsWorkflow {
     try {
       console.log('[BackfillLogsWorkflow] 📝 Backfilling entity logs...');
       
-      const entityTypes = ['tasks', 'items', 'sales', 'financials', 'characters', 'players', 'sites'];
-      
-      for (const entityType of entityTypes) {
+      for (const entityType of BACKFILLABLE_ENTITY_TYPES) {
         try {
           await this.backfillEntityTypeLogs(entityType, results, errors);
         } catch (error) {

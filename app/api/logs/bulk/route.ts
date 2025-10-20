@@ -2,6 +2,21 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { requireAdminAuth } from '@/lib/api-auth';
 import { appendBulkOperationLog } from '@/workflows/entities-logging';
+import { EntityType } from '@/types/enums';
+
+// Force dynamic rendering - this route accesses cookies
+export const dynamic = 'force-dynamic';
+
+// Centralized list of entity types that support bulk operations
+const BULK_OPERATION_ENTITY_TYPES = [
+  EntityType.TASK,
+  EntityType.ITEM,
+  EntityType.FINANCIAL,
+  EntityType.SITE,
+  EntityType.CHARACTER,
+  EntityType.PLAYER,
+  EntityType.SALE
+];
 
 export async function POST(req: NextRequest) {
   if (!(await requireAdminAuth(req))) {
@@ -29,10 +44,9 @@ export async function POST(req: NextRequest) {
     }
 
     // Validate entityType
-    const validEntityTypes = ['tasks', 'items', 'financials', 'sites', 'characters', 'players', 'sales'];
-    if (!validEntityTypes.includes(entityType)) {
+    if (!BULK_OPERATION_ENTITY_TYPES.includes(entityType as EntityType)) {
       return NextResponse.json(
-        { error: `Invalid entityType. Must be one of: ${validEntityTypes.join(', ')}` },
+        { error: `Invalid entityType. Must be one of: ${BULK_OPERATION_ENTITY_TYPES.join(', ')}` },
         { status: 400 }
       );
     }

@@ -5,6 +5,9 @@ import type { Task } from '@/types/entities';
 import { getAllTasks, upsertTask } from '@/data-store/datastore';
 import { requireAdminAuth } from '@/lib/api-auth';
 
+// Force dynamic rendering - this route accesses cookies
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
   if (!(await requireAdminAuth(req))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const tasks = await getAllTasks();

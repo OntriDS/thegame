@@ -3,6 +3,18 @@
 
 import { kv } from '@vercel/kv';
 import { buildDataKey, buildIndexKey } from '@/data-store/keys';
+import { EntityType } from '@/types/enums';
+
+// Centralized list of entity types for export operations
+const EXPORTABLE_ENTITY_TYPES = [
+  EntityType.TASK,
+  EntityType.ITEM,
+  EntityType.SALE,
+  EntityType.FINANCIAL,
+  EntityType.CHARACTER,
+  EntityType.PLAYER,
+  EntityType.SITE
+];
 
 export interface SettingsResult {
   success: boolean;
@@ -115,9 +127,7 @@ export class ExportDataWorkflow {
       };
       
       // Export all entity types
-      const entityTypes = ['tasks', 'items', 'sales', 'financials', 'characters', 'players', 'sites'];
-      
-      for (const entityType of entityTypes) {
+      for (const entityType of EXPORTABLE_ENTITY_TYPES) {
         try {
           await this.exportEntityType(entityType, exportData, results, errors);
         } catch (error) {
@@ -136,7 +146,7 @@ export class ExportDataWorkflow {
       // Export logs
       await this.exportLogs(exportData, results, errors);
       
-      results.push(`Exported data for ${entityTypes.length} entity types`);
+      results.push(`Exported data for ${EXPORTABLE_ENTITY_TYPES.length} entity types`);
       console.log(`[ExportDataWorkflow] ✅ Exported all data`);
       
       return exportData;
@@ -232,7 +242,7 @@ export class ExportDataWorkflow {
    */
   private static async exportLogs(exportData: any, results: string[], errors: string[]): Promise<void> {
     try {
-      const logTypes = ['tasks', 'items', 'sales', 'financials', 'characters', 'players', 'sites', 'links'];
+      const logTypes = [...EXPORTABLE_ENTITY_TYPES, 'links']; // links is special case
       
       for (const logType of logTypes) {
         try {
