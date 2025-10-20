@@ -13,7 +13,8 @@ import {
 
 // Force dynamic rendering since this route accesses request cookies for auth
 export const dynamic = 'force-dynamic';
-export const maxDuration = 60;
+// Increased timeout for data-intensive operations like import/reset
+export const maxDuration = 300; // 5 minutes
 
 export async function POST(request: NextRequest) {
   if (!(await requireAdminAuth(request))) {

@@ -25,25 +25,34 @@ export interface SettingsResult {
     operation: string;
     environment: string;
     requiresClientExecution?: boolean;
+    progress?: {
+      current: number;
+      total: number;
+      percentage: number;
+    };
   };
+}
+
+export interface ProgressCallback {
+  (current: number, total: number, message: string): void;
 }
 
 export class ImportDataWorkflow {
   
   /**
-   * Execute import data operation
-   */
-  static async execute(importData: any): Promise<SettingsResult> {
-    try {
-      console.log('[ImportDataWorkflow] 📥 Starting import data operation...');
-      
-      const isKV = Boolean(process.env.KV_REST_API_URL);
-      const isServer = typeof window === 'undefined';
-      const results: string[] = [];
-      const errors: string[] = [];
-      
-      console.log(`[ImportDataWorkflow] 🌍 Environment: ${isKV ? 'KV (Production)' : 'Local (Development)'}`);
-      console.log(`[ImportDataWorkflow] 🖥️ Context: ${isServer ? 'Server' : 'Client'}`);
+    * Execute import data operation with timeout and progress tracking
+    */
+   static async execute(importData: any, progressCallback?: ProgressCallback): Promise<SettingsResult> {
+     try {
+       console.log('[ImportDataWorkflow] 📥 Starting import data operation...');
+
+       const isKV = Boolean(process.env.KV_REST_API_URL);
+       const isServer = typeof window === 'undefined';
+       const results: string[] = [];
+       const errors: string[] = [];
+
+       console.log(`[ImportDataWorkflow] 🌍 Environment: ${isKV ? 'KV (Production)' : 'Local (Development)'}`);
+       console.log(`[ImportDataWorkflow] 🖥️ Context: ${isServer ? 'Server' : 'Client'}`);
       
       // For local environment, we need to run on client side
       if (!isKV && isServer) {
@@ -51,7 +60,7 @@ export class ImportDataWorkflow {
         return {
           success: true,
           message: 'Import data requires client-side execution for local environment',
-          data: { 
+          data: {
             results: ['Client-side import data required for local environment'],
             errors: [],
             operation: 'import-data',
@@ -60,7 +69,11 @@ export class ImportDataWorkflow {
           }
         };
       }
-      
+
+      const startTime = Date.now();
+      const TIMEOUT_MS = 4 * 60 * 1000; // 4 minutes (leaving 1 minute buffer for API timeout)
+      const totalOperations = IMPORTABLE_ENTITY_TYPES.length + 3; // entities + settlements + links + logs
+
       // Validate import data
       if (!this.validateImportData(importData, errors)) {
         return {
@@ -74,17 +87,39 @@ export class ImportDataWorkflow {
           }
         };
       }
-      
-      // Import all data
-      await this.importAllData(importData, results, errors);
+
+      // Import all data with timeout and progress tracking
+       try {
+         await this.importAllData(importData, results, errors, progressCallback);
+       } catch (error) {
+         if (error instanceof Error && error.message.includes('timeout')) {
+           console.error('[ImportDataWorkflow] ⏰ Operation timeout - attempting graceful shutdown');
+           return {
+             success: false,
+             message: `Import operation timed out: ${error.message}`,
+             data: {
+               results,
+               errors: [...errors, `TIMEOUT: ${error.message}`],
+               operation: 'import-data',
+               environment: isKV ? 'kv' : 'local',
+               progress: {
+                 current: Math.max(results.length, errors.length),
+                 total: totalOperations,
+                 percentage: Math.round((Math.max(results.length, errors.length) / totalOperations) * 100)
+               }
+             }
+           };
+         }
+         throw error; // Re-throw non-timeout errors
+       }
       
       const success = errors.length === 0;
       const message = success 
         ? `Successfully imported data - ${results.length} operations completed`
         : `Import data completed with ${errors.length} errors - ${results.length} operations completed`;
       
-      console.log(`[ImportDataWorkflow] ✅ Import data operation completed: ${message}`);
-      
+      console.log(`[ImportDataWorkflow] ✅ Import data operation completed in ${Date.now() - startTime}ms: ${message}`);
+
       return {
         success,
         message,
@@ -92,7 +127,12 @@ export class ImportDataWorkflow {
           results,
           errors,
           operation: 'import-data',
-          environment: isKV ? 'kv' : 'local'
+          environment: isKV ? 'kv' : 'local',
+          progress: {
+            current: totalOperations,
+            total: totalOperations,
+            percentage: 100
+          }
         }
       };
       
@@ -157,40 +197,93 @@ export class ImportDataWorkflow {
   }
   
   /**
-   * Import all data
+   * Import all data with timeout and progress tracking
    */
-  private static async importAllData(importData: any, results: string[], errors: string[]): Promise<void> {
+  private static async importAllData(importData: any, results: string[], errors: string[], progressCallback?: ProgressCallback): Promise<void> {
     try {
       console.log('[ImportDataWorkflow] 📥 Importing all data...');
-      
+
+      const startTime = Date.now();
+      const TIMEOUT_MS = 4 * 60 * 1000; // 4 minutes (leaving 1 minute buffer for API timeout)
       let importedEntityTypes = 0;
-      
+      const totalOperations = IMPORTABLE_ENTITY_TYPES.length + 3; // entities + settlements + links + logs
+      let currentOperation = 0;
+
+      // Helper function to check timeout and report progress
+      const checkTimeoutAndProgress = (operation: string) => {
+        currentOperation++;
+        const elapsed = Date.now() - startTime;
+        if (elapsed > TIMEOUT_MS) {
+          throw new Error(`Operation timeout after ${elapsed}ms during: ${operation}`);
+        }
+        if (progressCallback) {
+          const progress = Math.round((currentOperation / totalOperations) * 100);
+          progressCallback(currentOperation, totalOperations, `Processing: ${operation}`);
+        }
+      };
+
       // Import all entity types
       for (const entityType of IMPORTABLE_ENTITY_TYPES) {
         try {
+          checkTimeoutAndProgress(`Importing ${entityType} entities`);
           await this.importEntityType(entityType, importData.entities[entityType], results, errors);
           importedEntityTypes++;
         } catch (error) {
+          if (error instanceof Error && error.message.includes('timeout')) {
+            throw error; // Re-throw timeout errors
+          }
           const errorMsg = `Failed to import ${entityType}: ${error instanceof Error ? error.message : 'Unknown error'}`;
           errors.push(errorMsg);
           console.error(`[ImportDataWorkflow] ❌ ${errorMsg}`);
         }
       }
-      
+
       // Import settlements as reference data (if present)
       if (importData.settlements && Array.isArray(importData.settlements)) {
-        await this.importSettlements(importData.settlements, results, errors);
+        try {
+          checkTimeoutAndProgress('Importing settlements');
+          await this.importSettlements(importData.settlements, results, errors);
+        } catch (error) {
+          if (error instanceof Error && error.message.includes('timeout')) {
+            throw error; // Re-throw timeout errors
+          }
+          const errorMsg = `Failed to import settlements: ${error instanceof Error ? error.message : 'Unknown error'}`;
+          errors.push(errorMsg);
+          console.error(`[ImportDataWorkflow] ❌ ${errorMsg}`);
+        }
+      } else {
+        currentOperation++; // Count as completed even if skipped
       }
-      
+
       // Import links
-      await this.importLinks(importData.links, results, errors);
-      
+      try {
+        checkTimeoutAndProgress('Importing links');
+        await this.importLinks(importData.links, results, errors);
+      } catch (error) {
+        if (error instanceof Error && error.message.includes('timeout')) {
+          throw error; // Re-throw timeout errors
+        }
+        const errorMsg = `Failed to import links: ${error instanceof Error ? error.message : 'Unknown error'}`;
+        errors.push(errorMsg);
+        console.error(`[ImportDataWorkflow] ❌ ${errorMsg}`);
+      }
+
       // Import logs
-      await this.importLogs(importData.logs, results, errors);
-      
+      try {
+        checkTimeoutAndProgress('Importing logs');
+        await this.importLogs(importData.logs, results, errors);
+      } catch (error) {
+        if (error instanceof Error && error.message.includes('timeout')) {
+          throw error; // Re-throw timeout errors
+        }
+        const errorMsg = `Failed to import logs: ${error instanceof Error ? error.message : 'Unknown error'}`;
+        errors.push(errorMsg);
+        console.error(`[ImportDataWorkflow] ❌ ${errorMsg}`);
+      }
+
       results.push(`Imported data for ${importedEntityTypes} entity types`);
-      console.log(`[ImportDataWorkflow] ✅ Imported all data`);
-      
+      console.log(`[ImportDataWorkflow] ✅ Imported all data in ${Date.now() - startTime}ms`);
+
     } catch (error) {
       const errorMsg = `Failed to import all data: ${error instanceof Error ? error.message : 'Unknown error'}`;
       errors.push(errorMsg);
@@ -199,7 +292,7 @@ export class ImportDataWorkflow {
   }
   
   /**
-   * Import specific entity type
+   * Import specific entity type with batch processing
    */
   private static async importEntityType(entityType: string, entities: any[], results: string[], errors: string[]): Promise<void> {
     try {
@@ -207,41 +300,72 @@ export class ImportDataWorkflow {
         results.push(`No ${entityType} entities to import`);
         return;
       }
-      
+
+      console.log(`[ImportDataWorkflow] 📥 Processing ${entities.length} ${entityType} entities...`);
+
       // Clear existing entities for this type
       const indexKey = buildIndexKey(entityType);
       const existingIds = await kv.smembers(indexKey);
-      
+
       if (existingIds.length > 0) {
         const dataKeys = existingIds.map(id => buildDataKey(entityType, id));
         await kv.del(...dataKeys);
         await kv.del(indexKey);
         results.push(`Cleared ${existingIds.length} existing ${entityType} entities`);
       }
-      
-      // Import each entity
+
+      // Filter out entities without IDs and prepare batch operations
+      const validEntities = entities.filter(entity => entity && entity.id);
+      const invalidCount = entities.length - validEntities.length;
+
+      if (invalidCount > 0) {
+        console.warn(`[ImportDataWorkflow] ⚠️ Skipped ${invalidCount} ${entityType} entities without valid IDs`);
+      }
+
+      if (validEntities.length === 0) {
+        results.push(`No valid ${entityType} entities to import`);
+        return;
+      }
+
+      // Batch import entities in chunks to avoid overwhelming KV
+      const BATCH_SIZE = 50;
       let importedCount = 0;
-      for (const entity of entities) {
+      const totalBatches = Math.ceil(validEntities.length / BATCH_SIZE);
+
+      for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
+        const startIndex = batchIndex * BATCH_SIZE;
+        const endIndex = Math.min(startIndex + BATCH_SIZE, validEntities.length);
+        const batch = validEntities.slice(startIndex, endIndex);
+
+        console.log(`[ImportDataWorkflow] 🔄 Processing batch ${batchIndex + 1}/${totalBatches} for ${entityType} (${batch.length} entities)`);
+
         try {
-          if (!entity.id) {
-            console.warn(`[ImportDataWorkflow] ⚠️ Skipping ${entityType} entity without ID:`, entity);
-            continue;
+          // Prepare batch operations for this chunk
+          const pipeline = kv.multi();
+
+          for (const entity of batch) {
+            const dataKey = buildDataKey(entityType, entity.id);
+            pipeline.set(dataKey, JSON.stringify(entity));
           }
-          
-          const dataKey = buildDataKey(entityType, entity.id);
-          await kv.set(dataKey, JSON.stringify(entity));
-          
-          // Add to index
-          await kv.sadd(indexKey, entity.id);
-          importedCount++;
+
+          // Add all entity IDs to index in a single operation
+          const entityIds = batch.map(entity => entity.id);
+          pipeline.sadd(indexKey, entityIds);
+
+          // Execute batch
+          await pipeline.exec();
+          importedCount += batch.length;
+
+          console.log(`[ImportDataWorkflow] ✅ Batch ${batchIndex + 1}/${totalBatches} completed for ${entityType}`);
         } catch (error) {
-          console.warn(`[ImportDataWorkflow] ⚠️ Failed to import ${entityType} entity:`, error);
+          console.error(`[ImportDataWorkflow] ❌ Batch ${batchIndex + 1} failed for ${entityType}:`, error);
+          // Continue with next batch instead of failing completely
         }
       }
-      
-      results.push(`Imported ${importedCount} ${entityType} entities`);
+
+      results.push(`Imported ${importedCount} ${entityType} entities in ${totalBatches} batches`);
       console.log(`[ImportDataWorkflow] ✅ Imported ${importedCount} ${entityType} entities`);
-      
+
     } catch (error) {
       const errorMsg = `Failed to import ${entityType}: ${error instanceof Error ? error.message : 'Unknown error'}`;
       errors.push(errorMsg);
@@ -250,7 +374,7 @@ export class ImportDataWorkflow {
   }
   
   /**
-   * Import links
+   * Import links with batch processing
    */
   private static async importLinks(links: any[], results: string[], errors: string[]): Promise<void> {
     try {
@@ -258,41 +382,72 @@ export class ImportDataWorkflow {
         results.push('No links to import');
         return;
       }
-      
+
+      console.log(`[ImportDataWorkflow] 🔗 Processing ${links.length} links...`);
+
       // Clear existing links
       const linksIndexKey = buildIndexKey('links');
       const existingLinkIds = await kv.smembers(linksIndexKey);
-      
+
       if (existingLinkIds.length > 0) {
         const linkKeys = existingLinkIds.map(id => `links:link:${id}`);
         await kv.del(...linkKeys);
         await kv.del(linksIndexKey);
         results.push(`Cleared ${existingLinkIds.length} existing links`);
       }
-      
-      // Import each link
+
+      // Filter out links without IDs
+      const validLinks = links.filter(link => link && link.id);
+      const invalidCount = links.length - validLinks.length;
+
+      if (invalidCount > 0) {
+        console.warn(`[ImportDataWorkflow] ⚠️ Skipped ${invalidCount} links without valid IDs`);
+      }
+
+      if (validLinks.length === 0) {
+        results.push('No valid links to import');
+        return;
+      }
+
+      // Batch import links in chunks
+      const BATCH_SIZE = 50;
       let importedCount = 0;
-      for (const link of links) {
+      const totalBatches = Math.ceil(validLinks.length / BATCH_SIZE);
+
+      for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
+        const startIndex = batchIndex * BATCH_SIZE;
+        const endIndex = Math.min(startIndex + BATCH_SIZE, validLinks.length);
+        const batch = validLinks.slice(startIndex, endIndex);
+
+        console.log(`[ImportDataWorkflow] 🔄 Processing links batch ${batchIndex + 1}/${totalBatches} (${batch.length} links)`);
+
         try {
-          if (!link.id) {
-            console.warn(`[ImportDataWorkflow] ⚠️ Skipping link without ID:`, link);
-            continue;
+          // Prepare batch operations for this chunk
+          const pipeline = kv.multi();
+
+          for (const link of batch) {
+            const linkKey = `links:link:${link.id}`;
+            pipeline.set(linkKey, JSON.stringify(link));
           }
-          
-          const linkKey = `links:link:${link.id}`;
-          await kv.set(linkKey, JSON.stringify(link));
-          
-          // Add to links index
-          await kv.sadd(linksIndexKey, link.id);
-          importedCount++;
+
+          // Add all link IDs to index in a single operation
+          const linkIds = batch.map(link => link.id);
+          pipeline.sadd(linksIndexKey, linkIds);
+
+          // Execute batch
+          await pipeline.exec();
+          importedCount += batch.length;
+
+          console.log(`[ImportDataWorkflow] ✅ Links batch ${batchIndex + 1}/${totalBatches} completed`);
         } catch (error) {
-          console.warn(`[ImportDataWorkflow] ⚠️ Failed to import link:`, error);
+          console.error(`[ImportDataWorkflow] ❌ Links batch ${batchIndex + 1} failed:`, error);
+          // Continue with next batch instead of failing completely
         }
       }
-      
-      results.push(`Imported ${importedCount} links`);
+
+      results.push(`Imported ${importedCount} links in ${totalBatches} batches`);
       console.log(`[ImportDataWorkflow] ✅ Imported ${importedCount} links`);
-      
+
     } catch (error) {
       const errorMsg = `Failed to import links: ${error instanceof Error ? error.message : 'Unknown error'}`;
       errors.push(errorMsg);
@@ -301,42 +456,66 @@ export class ImportDataWorkflow {
   }
   
   /**
-   * Import logs
+   * Import logs with batch processing
    */
   private static async importLogs(logs: any, results: string[], errors: string[]): Promise<void> {
     try {
       const logTypes = [...IMPORTABLE_ENTITY_TYPES, 'links']; // links is special case
-      
+
       for (const logType of logTypes) {
         try {
           const logEntries = logs[logType] || [];
-          
+
           if (logEntries.length === 0) {
             results.push(`No ${logType} log entries to import`);
             continue;
           }
-          
+
+          console.log(`[ImportDataWorkflow] 📝 Processing ${logEntries.length} ${logType} log entries...`);
+
           // Clear existing logs for this type
           const logKey = buildLogKey(logType);
           await kv.del(logKey);
-          
-          // Import each log entry
-          for (const logEntry of logEntries) {
+
+          // Batch import log entries in chunks (logs can be very large)
+          const BATCH_SIZE = 100;
+          let importedCount = 0;
+          const totalBatches = Math.ceil(logEntries.length / BATCH_SIZE);
+
+          for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
+            const startIndex = batchIndex * BATCH_SIZE;
+            const endIndex = Math.min(startIndex + BATCH_SIZE, logEntries.length);
+            const batch = logEntries.slice(startIndex, endIndex);
+
+            console.log(`[ImportDataWorkflow] 🔄 Processing logs batch ${batchIndex + 1}/${totalBatches} for ${logType} (${batch.length} entries)`);
+
             try {
-              await kv.lpush(logKey, JSON.stringify(logEntry));
+              // For logs, we need to use individual lpush operations since Redis LPUSH doesn't support batch operations easily
+              // But we can still process them in reasonable chunks
+              for (const logEntry of batch) {
+                try {
+                  await kv.lpush(logKey, JSON.stringify(logEntry));
+                  importedCount++;
+                } catch (error) {
+                  console.warn(`[ImportDataWorkflow] ⚠️ Failed to import ${logType} log entry:`, error);
+                }
+              }
+
+              console.log(`[ImportDataWorkflow] ✅ Logs batch ${batchIndex + 1}/${totalBatches} completed for ${logType}`);
             } catch (error) {
-              console.warn(`[ImportDataWorkflow] ⚠️ Failed to import ${logType} log entry:`, error);
+              console.error(`[ImportDataWorkflow] ❌ Logs batch ${batchIndex + 1} failed for ${logType}:`, error);
+              // Continue with next batch instead of failing completely
             }
           }
-          
-          results.push(`Imported ${logEntries.length} ${logType} log entries`);
+
+          results.push(`Imported ${importedCount} ${logType} log entries in ${totalBatches} batches`);
         } catch (error) {
           console.warn(`[ImportDataWorkflow] ⚠️ Failed to import ${logType} logs:`, error);
         }
       }
-      
+
       console.log(`[ImportDataWorkflow] ✅ Imported logs for ${logTypes.length} log types`);
-      
+
     } catch (error) {
       const errorMsg = `Failed to import logs: ${error instanceof Error ? error.message : 'Unknown error'}`;
       errors.push(errorMsg);
@@ -345,7 +524,7 @@ export class ImportDataWorkflow {
   }
 
   /**
-   * Import settlements as reference data (not a core entity)
+   * Import settlements as reference data with batch processing
    */
   private static async importSettlements(settlements: any[], results: string[], errors: string[]): Promise<void> {
     try {
@@ -353,36 +532,72 @@ export class ImportDataWorkflow {
         results.push('No settlements to import');
         return;
       }
-      
-      console.log('[ImportDataWorkflow] 📥 Importing settlements as reference data...');
-      
+
+      console.log(`[ImportDataWorkflow] 🏘️ Processing ${settlements.length} settlements...`);
+
       // Clear existing settlements
       const settlementsIndexKey = buildIndexKey('settlements');
       const existingSettlementIds = await kv.smembers(settlementsIndexKey);
-      
+
       if (existingSettlementIds.length > 0) {
         const dataKeys = existingSettlementIds.map(id => buildDataKey('settlements', id));
         await kv.del(...dataKeys);
         await kv.del(settlementsIndexKey);
         results.push(`Cleared ${existingSettlementIds.length} existing settlements`);
       }
-      
-      // Import each settlement
-      for (const settlement of settlements) {
+
+      // Filter out settlements without IDs
+      const validSettlements = settlements.filter(settlement => settlement && settlement.id);
+      const invalidCount = settlements.length - validSettlements.length;
+
+      if (invalidCount > 0) {
+        console.warn(`[ImportDataWorkflow] ⚠️ Skipped ${invalidCount} settlements without valid IDs`);
+      }
+
+      if (validSettlements.length === 0) {
+        results.push('No valid settlements to import');
+        return;
+      }
+
+      // Batch import settlements in chunks
+      const BATCH_SIZE = 50;
+      let importedCount = 0;
+      const totalBatches = Math.ceil(validSettlements.length / BATCH_SIZE);
+
+      for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
+        const startIndex = batchIndex * BATCH_SIZE;
+        const endIndex = Math.min(startIndex + BATCH_SIZE, validSettlements.length);
+        const batch = validSettlements.slice(startIndex, endIndex);
+
+        console.log(`[ImportDataWorkflow] 🔄 Processing settlements batch ${batchIndex + 1}/${totalBatches} (${batch.length} settlements)`);
+
         try {
-          const dataKey = buildDataKey('settlements', settlement.id);
-          await kv.set(dataKey, JSON.stringify(settlement));
-          
-          // Add to settlements index
-          await kv.sadd(settlementsIndexKey, settlement.id);
+          // Prepare batch operations for this chunk
+          const pipeline = kv.multi();
+
+          for (const settlement of batch) {
+            const dataKey = buildDataKey('settlements', settlement.id);
+            pipeline.set(dataKey, JSON.stringify(settlement));
+          }
+
+          // Add all settlement IDs to index in a single operation
+          const settlementIds = batch.map(settlement => settlement.id);
+          pipeline.sadd(settlementsIndexKey, settlementIds);
+
+          // Execute batch
+          await pipeline.exec();
+          importedCount += batch.length;
+
+          console.log(`[ImportDataWorkflow] ✅ Settlements batch ${batchIndex + 1}/${totalBatches} completed`);
         } catch (error) {
-          console.warn(`[ImportDataWorkflow] ⚠️ Failed to import settlement ${settlement.id}:`, error);
+          console.error(`[ImportDataWorkflow] ❌ Settlements batch ${batchIndex + 1} failed:`, error);
+          // Continue with next batch instead of failing completely
         }
       }
-      
-      results.push(`Imported ${settlements.length} settlements as reference data`);
-      console.log(`[ImportDataWorkflow] ✅ Imported ${settlements.length} settlements`);
-      
+
+      results.push(`Imported ${importedCount} settlements as reference data in ${totalBatches} batches`);
+      console.log(`[ImportDataWorkflow] ✅ Imported ${importedCount} settlements`);
+
     } catch (error) {
       const errorMsg = `Failed to import settlements: ${error instanceof Error ? error.message : 'Unknown error'}`;
       errors.push(errorMsg);

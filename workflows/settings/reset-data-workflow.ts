@@ -25,7 +25,16 @@ export interface SettingsResult {
     mode: string;
     environment: string;
     requiresClientExecution?: boolean;
+    progress?: {
+      current: number;
+      total: number;
+      percentage: number;
+    };
   };
+}
+
+export interface ProgressCallback {
+  (current: number, total: number, message: string): void;
 }
 
 export interface ResetOptions {
@@ -37,9 +46,9 @@ export interface ResetOptions {
 export class ResetDataWorkflow {
   
   /**
-   * Execute reset data operation
+   * Execute reset data operation with timeout and progress tracking
    */
-  static async execute(mode: 'clear' | 'defaults' | 'backfill' = 'defaults'): Promise<SettingsResult> {
+  static async execute(mode: 'clear' | 'defaults' | 'backfill' = 'defaults', progressCallback?: ProgressCallback): Promise<SettingsResult> {
     try {
       console.log(`[ResetDataWorkflow] 🔄 Starting reset data operation (mode: ${mode})...`);
 
@@ -72,33 +81,119 @@ export class ResetDataWorkflow {
         console.log(`[ResetDataWorkflow] 🖥️ Running client-side reset for localhost...`);
         return await this.executeClientSideReset(mode, results, errors);
       }
-      
+
+      const startTime = Date.now();
+      const TIMEOUT_MS = 4 * 60 * 1000; // 4 minutes (leaving 1 minute buffer for API timeout)
+      const totalOperations = 5; // entity data + links + logs + player init + sites
+      let currentOperation = 0;
+
+      // Helper function to check timeout and report progress
+      const checkTimeoutAndProgress = (operation: string) => {
+        currentOperation++;
+        const elapsed = Date.now() - startTime;
+        if (elapsed > TIMEOUT_MS) {
+          throw new Error(`Operation timeout after ${elapsed}ms during: ${operation}`);
+        }
+        if (progressCallback) {
+          const progress = Math.round((currentOperation / totalOperations) * 100);
+          progressCallback(currentOperation, totalOperations, `Reset: ${operation}`);
+        }
+      };
+
       // Define reset options
       const options: ResetOptions = {
         mode,
         seedSites: mode === 'defaults',
         preserveLogs: false
       };
-      
+
       // Clear all entity data
-      await this.clearAllEntityData(results, errors);
+      try {
+        checkTimeoutAndProgress('Clearing entity data');
+        await this.clearAllEntityData(results, errors);
+      } catch (error) {
+        if (error instanceof Error && error.message.includes('timeout')) {
+          throw error; // Re-throw timeout errors
+        }
+        const errorMsg = `Failed to clear entity data: ${error instanceof Error ? error.message : 'Unknown error'}`;
+        errors.push(errorMsg);
+        console.error(`[ResetDataWorkflow] ❌ ${errorMsg}`);
+      }
 
       // Clear all links
-      await this.clearAllLinks(results, errors);
+      try {
+        checkTimeoutAndProgress('Clearing links');
+        await this.clearAllLinks(results, errors);
+      } catch (error) {
+        if (error instanceof Error && error.message.includes('timeout')) {
+          throw error; // Re-throw timeout errors
+        }
+        const errorMsg = `Failed to clear links: ${error instanceof Error ? error.message : 'Unknown error'}`;
+        errors.push(errorMsg);
+        console.error(`[ResetDataWorkflow] ❌ ${errorMsg}`);
+      }
 
       // Clear logs if not preserving (do this BEFORE creating new entities)
       if (!options.preserveLogs) {
-        await this.clearAllLogs(results, errors);
+        try {
+          checkTimeoutAndProgress('Clearing logs');
+          await this.clearAllLogs(results, errors);
+        } catch (error) {
+          if (error instanceof Error && error.message.includes('timeout')) {
+            throw error; // Re-throw timeout errors
+          }
+          const errorMsg = `Failed to clear logs: ${error instanceof Error ? error.message : 'Unknown error'}`;
+          errors.push(errorMsg);
+          console.error(`[ResetDataWorkflow] ❌ ${errorMsg}`);
+        }
+      } else {
+        currentOperation++; // Count as completed even if skipped
       }
 
       // Initialize Player One (The Triforce) FIRST if in defaults mode
       if (mode === 'defaults') {
-        await this.initializePlayerOne(results, errors);
+        try {
+          checkTimeoutAndProgress('Initializing Player One');
+          await this.initializePlayerOne(results, errors);
+        } catch (error) {
+          if (error instanceof Error && error.message.includes('timeout')) {
+            throw error; // Re-throw timeout errors
+          }
+          const errorMsg = `Failed to initialize Player One: ${error instanceof Error ? error.message : 'Unknown error'}`;
+          errors.push(errorMsg);
+          console.error(`[ResetDataWorkflow] ❌ ${errorMsg}`);
+        }
+      } else {
+        currentOperation++; // Count as completed even if skipped
       }
 
       // Seed default data if requested (AFTER player initialization)
       if (options.seedSites) {
-        await this.seedDefaultSites(results, errors);
+        try {
+          checkTimeoutAndProgress('Seeding default sites');
+          await this.seedDefaultSites(results, errors);
+        } catch (error) {
+          if (error instanceof Error && error.message.includes('timeout')) {
+            throw error; // Re-throw timeout errors
+          }
+          const errorMsg = `Failed to seed default sites: ${error instanceof Error ? error.message : 'Unknown error'}`;
+          errors.push(errorMsg);
+          console.error(`[ResetDataWorkflow] ❌ ${errorMsg}`);
+        }
+      } else {
+        currentOperation++; // Count as completed even if skipped
+      }
+
+      // Check for critical errors that should stop the operation
+      const criticalErrors = errors.filter(error =>
+        error.includes('Failed to clear') ||
+        error.includes('KV') ||
+        error.includes('Connection')
+      );
+
+      if (criticalErrors.length > 0 && results.length === 0) {
+        console.error('[ResetDataWorkflow] 🚨 Critical errors detected, operation may be incomplete');
+        throw new Error(`Critical errors encountered: ${criticalErrors.join(', ')}`);
       }
       
       const success = errors.length === 0;
@@ -118,9 +213,10 @@ export class ResetDataWorkflow {
           console.log(`[ResetDataWorkflow]   ${index + 1}. ${error}`);
         });
       }
-      
-      console.log(`[ResetDataWorkflow] ✅ Reset data operation completed: ${message}`);
-      
+
+      const totalTime = Date.now() - startTime;
+      console.log(`[ResetDataWorkflow] ✅ Reset data operation completed in ${totalTime}ms: ${message}`);
+
       return {
         success,
         message,
@@ -128,11 +224,34 @@ export class ResetDataWorkflow {
           results,
           errors,
           mode,
-          environment: isKV ? 'kv' : 'local'
+          environment: isKV ? 'kv' : 'local',
+          progress: {
+            current: totalOperations,
+            total: totalOperations,
+            percentage: 100
+          }
         }
       };
-      
     } catch (error) {
+      if (error instanceof Error && error.message.includes('timeout')) {
+        console.error('[ResetDataWorkflow] ⏰ Operation timeout - attempting graceful shutdown');
+        return {
+          success: false,
+          message: `Reset operation timed out: ${error.message}`,
+          data: {
+            results: [],
+            errors: [`TIMEOUT: ${error.message}`],
+            mode,
+            environment: 'unknown',
+            progress: {
+              current: 0,
+              total: 5,
+              percentage: 0
+            }
+          }
+        };
+      }
+
       console.error('[ResetDataWorkflow] ❌ Reset data operation failed:', error);
       return {
         success: false,
@@ -148,27 +267,45 @@ export class ResetDataWorkflow {
   }
   
   /**
-   * Clear all entity data from KV
+   * Clear all entity data from KV with batch processing
    */
   private static async clearAllEntityData(results: string[], errors: string[]): Promise<void> {
     try {
       console.log('[ResetDataWorkflow] 🗑️ Clearing all entity data...');
-      
+
       for (const entityType of RESETTABLE_ENTITY_TYPES) {
         try {
+          console.log(`[ResetDataWorkflow] 🔄 Processing ${entityType} entities...`);
+
           // Get all entity IDs from index
           const indexKey = buildIndexKey(entityType);
           const entityIds = await kv.smembers(indexKey);
-          
+
           if (entityIds.length > 0) {
-            // Delete all entity data
-            const dataKeys = entityIds.map(id => buildDataKey(entityType, id));
-            await kv.del(...dataKeys);
-            
-            // Clear the index
+            console.log(`[ResetDataWorkflow] 📊 Found ${entityIds.length} ${entityType} entities to clear`);
+
+            // For large datasets, process deletions in batches to avoid overwhelming KV
+            const BATCH_SIZE = 100;
+            const totalBatches = Math.ceil(entityIds.length / BATCH_SIZE);
+
+            for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
+              const startIndex = batchIndex * BATCH_SIZE;
+              const endIndex = Math.min(startIndex + BATCH_SIZE, entityIds.length);
+              const batchIds = entityIds.slice(startIndex, endIndex);
+
+              console.log(`[ResetDataWorkflow] 🔄 Clearing batch ${batchIndex + 1}/${totalBatches} for ${entityType} (${batchIds.length} entities)`);
+
+              // Delete entity data for this batch
+              const dataKeys = batchIds.map(id => buildDataKey(entityType, id));
+              await kv.del(...dataKeys);
+
+              console.log(`[ResetDataWorkflow] ✅ Cleared batch ${batchIndex + 1}/${totalBatches} for ${entityType}`);
+            }
+
+            // Clear the index after all data is deleted
             await kv.del(indexKey);
-            
-            results.push(`Cleared ${entityIds.length} ${entityType} entities`);
+
+            results.push(`Cleared ${entityIds.length} ${entityType} entities in ${totalBatches} batches`);
             console.log(`[ResetDataWorkflow] ✅ Cleared ${entityIds.length} ${entityType} entities`);
           } else {
             results.push(`No ${entityType} entities to clear`);
@@ -187,34 +324,63 @@ export class ResetDataWorkflow {
   }
   
   /**
-   * Clear all links from KV
+   * Clear all links from KV with batch processing
    */
   private static async clearAllLinks(results: string[], errors: string[]): Promise<void> {
     try {
       console.log('[ResetDataWorkflow] 🔗 Clearing all links...');
-      
+
       // Get all link IDs
       const linksIndexKey = buildIndexKey('links');
       const linkIds = await kv.smembers(linksIndexKey);
-      
+
       if (linkIds.length > 0) {
-        // Delete all link data
-        const linkKeys = linkIds.map(id => `links:link:${id}`);
-        await kv.del(...linkKeys);
-        
-        // Clear the links index
+        console.log(`[ResetDataWorkflow] 📊 Found ${linkIds.length} links to clear`);
+
+        // For large datasets, process deletions in batches
+        const BATCH_SIZE = 100;
+        const totalBatches = Math.ceil(linkIds.length / BATCH_SIZE);
+
+        for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
+          const startIndex = batchIndex * BATCH_SIZE;
+          const endIndex = Math.min(startIndex + BATCH_SIZE, linkIds.length);
+          const batchIds = linkIds.slice(startIndex, endIndex);
+
+          console.log(`[ResetDataWorkflow] 🔄 Clearing links batch ${batchIndex + 1}/${totalBatches} (${batchIds.length} links)`);
+
+          // Delete link data for this batch
+          const linkKeys = batchIds.map(id => `links:link:${id}`);
+          await kv.del(...linkKeys);
+
+          console.log(`[ResetDataWorkflow] ✅ Cleared links batch ${batchIndex + 1}/${totalBatches}`);
+        }
+
+        // Clear the links index after all data is deleted
         await kv.del(linksIndexKey);
-        
-        // Clear all entity-specific link indexes
+
+        // Clear all entity-specific link indexes in batches
         for (const entityType of RESETTABLE_ENTITY_TYPES) {
-          const entityLinkIndexPattern = `index:links:by-entity:${entityType}:*`;
-          const entityLinkKeys = await kv.keys(entityLinkIndexPattern);
-          if (entityLinkKeys.length > 0) {
-            await kv.del(...entityLinkKeys);
+          try {
+            const entityLinkIndexPattern = `index:links:by-entity:${entityType}:*`;
+            const entityLinkKeys = await kv.keys(entityLinkIndexPattern);
+            if (entityLinkKeys.length > 0) {
+              const indexBatches = Math.ceil(entityLinkKeys.length / BATCH_SIZE);
+
+              for (let indexBatch = 0; indexBatch < indexBatches; indexBatch++) {
+                const startIndex = indexBatch * BATCH_SIZE;
+                const endIndex = Math.min(startIndex + BATCH_SIZE, entityLinkKeys.length);
+                const indexBatchKeys = entityLinkKeys.slice(startIndex, endIndex);
+
+                await kv.del(...indexBatchKeys);
+                console.log(`[ResetDataWorkflow] ✅ Cleared entity link index batch ${indexBatch + 1}/${indexBatches} for ${entityType}`);
+              }
+            }
+          } catch (error) {
+            console.warn(`[ResetDataWorkflow] ⚠️ Failed to clear entity link indexes for ${entityType}:`, error);
           }
         }
-        
-        results.push(`Cleared ${linkIds.length} links`);
+
+        results.push(`Cleared ${linkIds.length} links in ${totalBatches} batches`);
         console.log(`[ResetDataWorkflow] ✅ Cleared ${linkIds.length} links`);
       } else {
         results.push('No links to clear');
@@ -254,12 +420,12 @@ export class ResetDataWorkflow {
   }
   
   /**
-   * Seed default sites
+   * Seed default sites with batch processing
    */
   private static async seedDefaultSites(results: string[], errors: string[]): Promise<void> {
     try {
       console.log('[ResetDataWorkflow] 🌱 Seeding default sites...');
-      
+
       const defaultSites = [
         {
           id: 'home',
@@ -301,25 +467,53 @@ export class ResetDataWorkflow {
           links: []
         }
       ];
-      
-      for (const site of defaultSites) {
-        try {
+
+      console.log(`[ResetDataWorkflow] 📊 Seeding ${defaultSites.length} default sites`);
+
+      try {
+        // Use batch operations for seeding sites
+        const pipeline = kv.multi();
+        const indexKey = buildIndexKey('sites');
+
+        for (const site of defaultSites) {
           const dataKey = buildDataKey('sites', site.id);
-          await kv.set(dataKey, JSON.stringify(site));
-          
-          // Add to sites index
-          const indexKey = buildIndexKey('sites');
-          await kv.sadd(indexKey, site.id);
-          
+          pipeline.set(dataKey, JSON.stringify(site));
+        }
+
+        // Add all site IDs to index in a single operation
+        const siteIds = defaultSites.map(site => site.id);
+        pipeline.sadd(indexKey, siteIds);
+
+        // Execute batch
+        await pipeline.exec();
+
+        // Add results for each site
+        for (const site of defaultSites) {
           results.push(`Seeded site: ${site.name}`);
-        } catch (error) {
-          const errorMsg = `Failed to seed site ${site.name}: ${error instanceof Error ? error.message : 'Unknown error'}`;
-          errors.push(errorMsg);
-          console.error(`[ResetDataWorkflow] ❌ ${errorMsg}`);
+        }
+
+        console.log('[ResetDataWorkflow] ✅ Seeded default sites');
+      } catch (error) {
+        // Fallback to individual operations if batch fails
+        console.warn('[ResetDataWorkflow] ⚠️ Batch seeding failed, falling back to individual operations');
+
+        for (const site of defaultSites) {
+          try {
+            const dataKey = buildDataKey('sites', site.id);
+            await kv.set(dataKey, JSON.stringify(site));
+
+            // Add to sites index
+            const indexKey = buildIndexKey('sites');
+            await kv.sadd(indexKey, site.id);
+
+            results.push(`Seeded site: ${site.name}`);
+          } catch (individualError) {
+            const errorMsg = `Failed to seed site ${site.name}: ${individualError instanceof Error ? individualError.message : 'Unknown error'}`;
+            errors.push(errorMsg);
+            console.error(`[ResetDataWorkflow] ❌ ${errorMsg}`);
+          }
         }
       }
-      
-      console.log('[ResetDataWorkflow] ✅ Seeded default sites');
     } catch (error) {
       const errorMsg = `Failed to seed default sites: ${error instanceof Error ? error.message : 'Unknown error'}`;
       errors.push(errorMsg);
@@ -407,7 +601,7 @@ export class ResetDataWorkflow {
   }
 
   /**
-   * Seed default sites for localhost (localStorage)
+   * Seed default sites for localhost (localStorage) with batch processing
    */
   private static async seedDefaultSitesLocal(results: string[], errors: string[]): Promise<void> {
     try {
@@ -455,28 +649,54 @@ export class ResetDataWorkflow {
         }
       ];
 
-      for (const site of defaultSites) {
-        try {
+      console.log(`[ResetDataWorkflow] 📊 Seeding ${defaultSites.length} default sites for localhost`);
+
+      try {
+        // Batch process localStorage operations
+        const indexKey = 'index:sites';
+        const existingIndex = localStorage.getItem(indexKey);
+        const indexSet = new Set(existingIndex ? JSON.parse(existingIndex) : []);
+
+        for (const site of defaultSites) {
           // Store site data
           const dataKey = `data:sites:${site.id}`;
           localStorage.setItem(dataKey, JSON.stringify(site));
 
-          // Add to sites index
-          const indexKey = 'index:sites';
-          const existingIndex = localStorage.getItem(indexKey);
-          const indexSet = new Set(existingIndex ? JSON.parse(existingIndex) : []);
+          // Collect IDs for batch index update
           indexSet.add(site.id);
-          localStorage.setItem(indexKey, JSON.stringify([...indexSet]));
 
           results.push(`Seeded localStorage site: ${site.name}`);
-        } catch (error) {
-          const errorMsg = `Failed to seed localStorage site ${site.name}: ${error instanceof Error ? error.message : 'Unknown error'}`;
-          errors.push(errorMsg);
-          console.error(`[ResetDataWorkflow] ❌ ${errorMsg}`);
+        }
+
+        // Update index once at the end
+        localStorage.setItem(indexKey, JSON.stringify([...indexSet]));
+
+        console.log('[ResetDataWorkflow] ✅ Seeded default sites for localhost');
+      } catch (error) {
+        // Fallback to individual operations if needed
+        console.warn('[ResetDataWorkflow] ⚠️ Batch seeding failed, falling back to individual operations');
+
+        for (const site of defaultSites) {
+          try {
+            // Store site data
+            const dataKey = `data:sites:${site.id}`;
+            localStorage.setItem(dataKey, JSON.stringify(site));
+
+            // Add to sites index
+            const indexKey = 'index:sites';
+            const existingIndex = localStorage.getItem(indexKey);
+            const indexSet = new Set(existingIndex ? JSON.parse(existingIndex) : []);
+            indexSet.add(site.id);
+            localStorage.setItem(indexKey, JSON.stringify([...indexSet]));
+
+            results.push(`Seeded localStorage site: ${site.name}`);
+          } catch (individualError) {
+            const errorMsg = `Failed to seed localStorage site ${site.name}: ${individualError instanceof Error ? individualError.message : 'Unknown error'}`;
+            errors.push(errorMsg);
+            console.error(`[ResetDataWorkflow] ❌ ${errorMsg}`);
+          }
         }
       }
-
-      console.log('[ResetDataWorkflow] ✅ Seeded default sites for localhost');
     } catch (error) {
       const errorMsg = `Failed to seed default sites for localhost: ${error instanceof Error ? error.message : 'Unknown error'}`;
       errors.push(errorMsg);

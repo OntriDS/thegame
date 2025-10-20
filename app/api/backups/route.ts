@@ -7,7 +7,8 @@ import { requireAdminAuth } from '@/lib/api-auth';
 import { EntityType } from '@/types/enums';
 
 export const dynamic = 'force-dynamic';
-export const maxDuration = 60;
+// Increased timeout for large backup operations
+export const maxDuration = 300; // 5 minutes
 
 // Centralized list of entity types that support backups
 const BACKUPABLE_ENTITY_TYPES = [
@@ -103,26 +104,36 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // List all available backups
+    // List all available backups with batch processing
     const backups = [];
+    const BATCH_SIZE = 5; // Process entity types in small batches
 
-    for (const entityType of BACKUPABLE_ENTITY_TYPES) {
-      try {
-        const backupKey = `backup:${entityType}`;
-        const backupData = await kv.get(backupKey);
+    for (let i = 0; i < BACKUPABLE_ENTITY_TYPES.length; i += BATCH_SIZE) {
+      const batch = BACKUPABLE_ENTITY_TYPES.slice(i, i + BATCH_SIZE);
 
-        if (backupData) {
-          const parsed = JSON.parse(backupData as string);
-          backups.push({
-            entityType,
-            count: parsed.metadata.count,
-            lastUpdated: parsed.metadata.savedAt,
-            version: parsed.metadata.version
-          });
+      const batchPromises = batch.map(async (entityType) => {
+        try {
+          const backupKey = `backup:${entityType}`;
+          const backupData = await kv.get(backupKey);
+
+          if (backupData) {
+            const parsed = JSON.parse(backupData as string);
+            return {
+              entityType,
+              count: parsed.metadata.count,
+              lastUpdated: parsed.metadata.savedAt,
+              version: parsed.metadata.version
+            };
+          }
+          return null;
+        } catch (error) {
+          console.warn(`[Backup API] Failed to read backup for ${entityType}:`, error);
+          return null;
         }
-      } catch (error) {
-        console.warn(`[Backup API] Failed to read backup for ${entityType}:`, error);
-      }
+      });
+
+      const batchResults = await Promise.all(batchPromises);
+      backups.push(...batchResults.filter(result => result !== null));
     }
 
     console.log(`[Backup API] ✅ Found ${backups.length} available backups`);
