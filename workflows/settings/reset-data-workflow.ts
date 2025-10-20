@@ -83,11 +83,29 @@ export class ResetDataWorkflow {
       if (options.seedSites) {
         await this.seedDefaultSites(results, errors);
       }
+
+      // Initialize Player One (The Triforce) if in defaults mode
+      if (mode === 'defaults') {
+        await this.initializePlayerOne(results, errors);
+      }
       
       const success = errors.length === 0;
-      const message = success 
-        ? `Successfully reset data (${mode} mode) - ${results.length} operations completed`
-        : `Reset completed with ${errors.length} errors - ${results.length} operations completed`;
+      const message = success
+        ? `Successfully reset data (${mode} mode) - ${results.length} operations completed: ${results.join(', ')}`
+        : `Reset completed with ${errors.length} errors - ${results.length} operations completed: ${results.join(', ')}`;
+
+      // Log detailed results for debugging
+      console.log('[ResetDataWorkflow] 📋 Detailed operation results:');
+      results.forEach((result, index) => {
+        console.log(`[ResetDataWorkflow]   ${index + 1}. ${result}`);
+      });
+
+      if (errors.length > 0) {
+        console.log('[ResetDataWorkflow] ❌ Errors encountered:');
+        errors.forEach((error, index) => {
+          console.log(`[ResetDataWorkflow]   ${index + 1}. ${error}`);
+        });
+      }
       
       console.log(`[ResetDataWorkflow] ✅ Reset data operation completed: ${message}`);
       
@@ -452,6 +470,43 @@ export class ResetDataWorkflow {
       console.log('[ResetDataWorkflow] ✅ Seeded default sites for localhost');
     } catch (error) {
       const errorMsg = `Failed to seed default sites for localhost: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      errors.push(errorMsg);
+      console.error(`[ResetDataWorkflow] ❌ ${errorMsg}`);
+    }
+  }
+
+  /**
+   * Initialize Player One (The Triforce) - Account + Player + Character
+   */
+  private static async initializePlayerOne(results: string[], errors: string[]): Promise<void> {
+    try {
+      console.log('[ResetDataWorkflow] 🔺 Initializing Player One (The Triforce)...');
+
+      // Import required functions
+      const { ensurePlayerOne } = await import('@/lib/game-mechanics/player-one-init');
+      const {
+        getAllPlayers,
+        getAllCharacters,
+        upsertPlayer,
+        upsertCharacter
+      } = await import('@/data-store/datastore');
+
+      // Initialize Player One
+      await ensurePlayerOne(
+        getAllPlayers,
+        getAllCharacters,
+        () => Promise.resolve([]), // getAccounts - not implemented yet
+        upsertPlayer,
+        upsertCharacter,
+        () => Promise.resolve({} as any), // upsertAccount - not implemented yet
+        true, // force
+        { skipLogging: false }
+      );
+
+      results.push('Initialized Player One (Account + Player + Character)');
+      console.log('[ResetDataWorkflow] ✅ Player One initialized successfully');
+    } catch (error) {
+      const errorMsg = `Failed to initialize Player One: ${error instanceof Error ? error.message : 'Unknown error'}`;
       errors.push(errorMsg);
       console.error(`[ResetDataWorkflow] ❌ ${errorMsg}`);
     }
