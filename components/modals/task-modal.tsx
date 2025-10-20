@@ -29,7 +29,9 @@ import { PROGRESS_MAX, PROGRESS_STEP, PRICE_STEP } from '@/lib/constants/app-con
 import { Network, User } from 'lucide-react';
 import { getEmissaryFields } from '@/types/diplomatic-fields';
 import { ClientAPI } from '@/lib/client-api';
+import { CHARACTER_ONE_ID } from '@/lib/constants/entity-constants';
 import CharacterSelectorModal from './submodals/character-selector-submodal';
+import PlayerCharacterSelectorModal from './submodals/player-character-selector-submodal';
 
 interface TaskModalProps {
   task?: Task | null;
@@ -157,9 +159,9 @@ export default function TaskModal({
   const [customerCharacterName, setCustomerCharacterName] = useState<string>('');
   const [isNewCustomer, setIsNewCustomer] = useState(true);
   const [newCustomerName, setNewCustomerName] = useState('');
-  const [characterId, setCharacterId] = useState<string | null>(null);
-  const [characterName, setCharacterName] = useState<string>('');
+  const [playerCharacterId, setPlayerCharacterId] = useState<string | null>(null);
   const [showCharacterSelector, setShowCharacterSelector] = useState(false);
+  const [showPlayerCharacterSelector, setShowPlayerCharacterSelector] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showRelationshipsModal, setShowRelationshipsModal] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -247,7 +249,7 @@ export default function TaskModal({
       setIsSold(task.isSold || false);
       setOutputItemStatus(task.outputItemStatus || ItemStatus.FOR_SALE);
       setCustomerCharacterId(task.customerCharacterId || null);
-      setCharacterId(task.characterId || null);
+      setPlayerCharacterId(task.playerCharacterId || CHARACTER_ONE_ID);
       setRewards({
         points: {
           xp: task.rewards?.points?.xp || 0,
@@ -302,6 +304,7 @@ export default function TaskModal({
       setCustomerCharacterId(null);
       setIsNewCustomer(true);
       setNewCustomerName('');
+      setPlayerCharacterId(CHARACTER_ONE_ID);
     }
   }, [task, getLastUsedType]);
 
@@ -324,33 +327,9 @@ export default function TaskModal({
     loadCustomerCharacter();
   }, [customerCharacterId]);
 
-  // Load character name when characterId changes
-  useEffect(() => {
-    const loadCharacter = async () => {
-      if (characterId) {
-        try {
-          const characters = await ClientAPI.getCharacters();
-          const character = characters.find(c => c.id === characterId);
-          setCharacterName(character?.name || 'Unknown');
-        } catch (error) {
-          console.error('Failed to load character:', error);
-          setCharacterName('Unknown');
-        }
-      } else {
-        setCharacterName('');
-      }
-    };
-    loadCharacter();
-  }, [characterId]);
-
   // Handle setting customer character
   const handleSetCustomer = (characterId: string | null) => {
     setCustomerCharacterId(characterId);
-  };
-
-  // Handle setting assigned character
-  const handleSetCharacter = (characterId: string | null) => {
-    setCharacterId(characterId);
   };
 
   const getCharacterOptions = () => {
@@ -442,7 +421,7 @@ export default function TaskModal({
       isSold,
       outputItemStatus,
       customerCharacterId: finalCustomerCharacterId,  // Emissary: Pass customer to created item
-      characterId: characterId,  // AMBASSADOR: Character assigned to this task
+      playerCharacterId: playerCharacterId,  // AMBASSADOR: Player character who owns this task
       rewards: {
         points: {
           xp: rewards.points.xp,
@@ -1014,19 +993,6 @@ export default function TaskModal({
                   </Tooltip>
                 </TooltipProvider>
               </div>
-
-              {/* Character Assignment */}
-              <div className="space-y-2">
-                <Label htmlFor="character-assignment" className="text-xs">Assigned Character</Label>
-                <SearchableSelect
-                  value={characterId || ''}
-                  onValueChange={(value) => setCharacterId(value || null)}
-                  options={getCharacterOptions()}
-                  placeholder="Select assigned character"
-                  autoGroupByCategory={true}
-                  className="h-8 text-sm"
-                />
-              </div>
               
               <div className="space-y-2">
                 <Label htmlFor="output-item-type-subtype" className="text-xs">Item Type & SubType</Label>
@@ -1168,6 +1134,14 @@ export default function TaskModal({
                   <Network className="w-3 h-3 mr-1" />
                   Links
                 </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowPlayerCharacterSelector(true)}
+                  className="h-8 text-xs"
+                >
+                  <User className="w-3 h-3 mr-1" />
+                  Player
+                </Button>
               </>
             )}
             <Button
@@ -1275,6 +1249,14 @@ export default function TaskModal({
         onOpenChange={setShowCharacterSelector}
         onSelect={handleSetCustomer}
         currentOwnerId={customerCharacterId}
+      />
+      
+      {/* Player Character Selector Modal */}
+      <PlayerCharacterSelectorModal
+        open={showPlayerCharacterSelector}
+        onOpenChange={setShowPlayerCharacterSelector}
+        onSelect={setPlayerCharacterId}
+        currentPlayerCharacterId={playerCharacterId}
       />
     </Dialog>
   );

@@ -21,9 +21,11 @@ import { createSiteOptionsWithCategories } from '@/lib/utils/site-options-utils'
 import { createCharacterOptions, createStationCategoryOptions, createTaskParentOptions, createItemTypeSubTypeOptions, getItemTypeFromCombined } from '@/lib/utils/searchable-select-utils';
 import { getAreaForStation } from '@/lib/utils/business-structure-utils';
 import { ClientAPI } from '@/lib/client-api';
+import { CHARACTER_ONE_ID } from '@/lib/constants/entity-constants';
+import PlayerCharacterSelectorModal from './submodals/player-character-selector-submodal';
 // Side effects handled by parent component via API calls
 import { v4 as uuid } from 'uuid';
-import { Plus, Trash2, Package, DollarSign, Network, ListPlus, Wallet, Gift } from 'lucide-react';
+import { Plus, Trash2, Package, DollarSign, Network, ListPlus, Wallet, Gift, User } from 'lucide-react';
 import DeleteModal from './submodals/delete-submodal';
 import EntityRelationshipsModal from './submodals/entity-relationships-submodal';
 import SaleItemsSubModal, { SaleItemLine } from './submodals/sale-items-submodal';
@@ -84,6 +86,8 @@ export default function SalesModal({
   const [whatKind, setWhatKind] = useState<'product' | 'service'>('product');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showRelationshipsModal, setShowRelationshipsModal] = useState(false);
+  const [playerCharacterId, setPlayerCharacterId] = useState<string | null>(null);
+  const [showPlayerCharacterSelector, setShowPlayerCharacterSelector] = useState(false);
   const [showItemsSubModal, setShowItemsSubModal] = useState(false);
   const [showPaymentsSubModal, setShowPaymentsSubModal] = useState(false);
   const [paymentsModalMode, setPaymentsModalMode] = useState<'payments' | 'other-methods'>('payments');
@@ -211,8 +215,13 @@ export default function SalesModal({
           });
         }
       }
+      
+      // Initialize player character
+      setPlayerCharacterId(sale.playerCharacterId || CHARACTER_ONE_ID);
     } else {
       resetForm();
+      // Initialize player character for new sale
+      setPlayerCharacterId(CHARACTER_ONE_ID);
     }
   }, [sale]);
 
@@ -484,6 +493,7 @@ export default function SalesModal({
       siteId,
       counterpartyName: counterpartyName.trim() || undefined,
       customerId: finalCustomerId || null,  // Ambassador: Customer character who bought items
+      playerCharacterId: playerCharacterId,
       isNotPaid,
       isNotCharged,
       overallDiscount: Object.keys(overallDiscount).length > 0 ? overallDiscount : undefined,
@@ -1700,6 +1710,14 @@ export default function SalesModal({
                   <Network className="w-3 h-3 mr-1" />
                   Links
                 </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowPlayerCharacterSelector(true)}
+                  className="h-8 text-xs"
+                >
+                  <User className="w-3 h-3 mr-1" />
+                  Player
+                </Button>
               </>
             )}
             {/* Emissaries toggle - show for all modes */}
@@ -1788,6 +1806,14 @@ export default function SalesModal({
             onClose={() => setShowRelationshipsModal(false)}
           />
         )}
+
+        {/* Player Character Selector Modal */}
+        <PlayerCharacterSelectorModal
+          open={showPlayerCharacterSelector}
+          onOpenChange={setShowPlayerCharacterSelector}
+          onSelect={setPlayerCharacterId}
+          currentPlayerCharacterId={playerCharacterId}
+        />
 
         {/* Items SubModal */}
         <SaleItemsSubModal

@@ -12,7 +12,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { ItemNameField } from '@/components/ui/item-name-field';
-import { Network } from 'lucide-react';
+import { Network, User } from 'lucide-react';
+import { CHARACTER_ONE_ID } from '@/lib/constants/entity-constants';
+import PlayerCharacterSelectorModal from './submodals/player-character-selector-submodal';
 import { FinancialRecord } from '@/types/entities';
 import { 
   BUSINESS_STRUCTURE, 
@@ -134,6 +136,8 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showRelationshipsModal, setShowRelationshipsModal] = useState(false);
+  const [playerCharacterId, setPlayerCharacterId] = useState<string | null>(null);
+  const [showPlayerCharacterSelector, setShowPlayerCharacterSelector] = useState(false);
   
   // Emissary column expansion state with persistence
   const [emissaryColumnExpanded, setEmissaryColumnExpanded] = useState(false);
@@ -242,6 +246,9 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
         isSold: record.isSold || false
       });
       
+      // Initialize player character
+      setPlayerCharacterId(record.playerCharacterId || CHARACTER_ONE_ID);
+      
       // Initialize combined item type/subtype field
       if (record.outputItemType && record.outputItemSubType) {
         setOutputItemTypeSubType(`${record.outputItemType}:${record.outputItemSubType}`);
@@ -287,6 +294,9 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
         isNewItem: false,
         isSold: false
       });
+      
+      // Initialize player character for new record
+      setPlayerCharacterId(CHARACTER_ONE_ID);
       
       // Initialize combined item type/subtype field for new record
       setOutputItemTypeSubType('none:');
@@ -461,6 +471,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
       siteId: formData.site || null,
       targetSiteId: formData.targetSite || null,
       customerCharacterId: finalCustomerCharacterId || null,
+      playerCharacterId: playerCharacterId,
       cost: formData.cost,
       revenue: formData.revenue,
       jungleCoins: formData.jungleCoins,
@@ -907,6 +918,14 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
                   <Network className="w-3 h-3 mr-1" />
                   Links
                 </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowPlayerCharacterSelector(true)}
+                  className="h-8 text-xs"
+                >
+                  <User className="w-3 h-3 mr-1" />
+                  Player
+                </Button>
               </>
             )}
             <Button
@@ -952,6 +971,14 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
           onClose={() => setShowRelationshipsModal(false)}
         />
       )}
+      
+      {/* Player Character Selector Modal */}
+      <PlayerCharacterSelectorModal
+        open={showPlayerCharacterSelector}
+        onOpenChange={setShowPlayerCharacterSelector}
+        onSelect={setPlayerCharacterId}
+        currentPlayerCharacterId={playerCharacterId}
+      />
     </Dialog>
   );
 }

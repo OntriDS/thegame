@@ -265,7 +265,7 @@ export interface Task extends BaseEntity {
   
   // Emissary Fields (Conditional entity creation - pass to created entities)
   customerCharacterId?: string | null;  // Customer for service tasks - passed to created items
-  characterId?: string | null;          // AMBASSADOR: Character assigned to this task (worker, team member)
+  playerCharacterId?: string | null;    // AMBASSADOR: Player character who owns this task
   
   // Item output (DNA for RNA - creates TASK_ITEM links)
   outputItemType?: string;          // Type of item this task creates
@@ -316,6 +316,7 @@ export interface FinancialRecord extends BaseEntity {
   siteId?: string | null;           // Site where financial activity occurred (optional)
   targetSiteId?: string | null;     // Target site/client (optional)
   customerCharacterId?: string | null; // Customer character for this financial record
+  playerCharacterId?: string | null;   // Player character who owns this record
   sourceTaskId?: string | null;     // Task that generated this financial record (optional)
   sourceSaleId?: string | null;     // Sale that generated this financial record (optional)
   
@@ -490,6 +491,7 @@ export interface Sale extends BaseEntity {
   siteId: string;                   // Site where sale occurred
   counterpartyName?: string;        // client/store/partner name
   customerId?: string | null;       // Character who is the customer (for tracking purchases)
+  playerCharacterId?: string | null; // Player character who owns this sale
 
   // Financial DNA (Permanent Ambassadors / Temporary Snapshots)
   // These fields are "instructions" that get copied via RNA to create FinancialRecord entity
