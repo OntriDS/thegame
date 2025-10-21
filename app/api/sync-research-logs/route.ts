@@ -23,14 +23,14 @@ export async function POST(req: NextRequest) {
       message: 'Research logs sync completed',
       results
     });
-  } catch (error) {
-    console.error('[Sync Research Logs API] ❌ Sync failed:', error);
-    return NextResponse.json({ 
-      success: false,
-      error: 'Failed to sync research logs',
-      details: error.message 
-    }, { status: 500 });
-  }
+    } catch (error) {
+      console.error('[Sync Research Logs API] ❌ Sync failed:', error);
+      return NextResponse.json({ 
+        success: false,
+        error: 'Failed to sync research logs',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      }, { status: 500 });
+    }
 }
 
 /**
@@ -52,12 +52,12 @@ export async function GET(req: NextRequest) {
       success: true,
       status
     });
-  } catch (error) {
-    console.error('[Sync Research Logs API] ❌ Status check failed:', error);
-    return NextResponse.json({ 
-      success: false,
-      error: 'Failed to check sync status',
-      details: error.message 
-    }, { status: 500 });
-  }
+    } catch (error) {
+      console.error('[Sync Research Logs API] ❌ Status check failed:', error);
+      return NextResponse.json({ 
+        success: false,
+        error: 'Failed to check sync status',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      }, { status: 500 });
+    }
 }

@@ -7,7 +7,7 @@ import { kvGet, kvSet } from '@/data-store/kv';
  * Only syncs when local files are newer than KV data
  */
 export async function syncResearchLogsToKV(): Promise<{synced: string[], skipped: string[]}> {
-  const results = {synced: [], skipped: []};
+  const results = {synced: [] as string[], skipped: [] as string[]};
   
   // Check if we're in production (KV available)
   if (!process.env.UPSTASH_REDIS_REST_URL) {
@@ -44,8 +44,8 @@ export async function syncResearchLogsToKV(): Promise<{synced: string[], skipped
       const kvData = await kvGet(kvKey);
       
       // Compare lastUpdated timestamps
-      const kvLastUpdated = kvData?.lastUpdated || null;
-      const localLastUpdated = localData.lastUpdated || fileStats.mtime.toISOString();
+      const kvLastUpdated = (kvData as any)?.lastUpdated || null;
+      const localLastUpdated = (localData as any).lastUpdated || fileStats.mtime.toISOString();
       
       console.log(`[ResearchSync] 📊 ${logType} comparison:`, {
         localLastUpdated,
@@ -65,7 +65,7 @@ export async function syncResearchLogsToKV(): Promise<{synced: string[], skipped
       }
     } catch (error) {
       console.error(`[ResearchSync] ❌ Error syncing ${logType}:`, error);
-      results.skipped.push(`${logType} (error: ${error.message})`);
+      results.skipped.push(`${logType} (error: ${error instanceof Error ? error.message : 'Unknown error'})`);
     }
   }
   
@@ -77,7 +77,7 @@ export async function syncResearchLogsToKV(): Promise<{synced: string[], skipped
  * Check if research logs need syncing without actually syncing
  */
 export async function checkResearchLogsSyncStatus(): Promise<{needsSync: string[], upToDate: string[]}> {
-  const results = {needsSync: [], upToDate: []};
+  const results = {needsSync: [] as string[], upToDate: [] as string[]};
   
   if (!process.env.UPSTASH_REDIS_REST_URL) {
     return results;
@@ -96,8 +96,8 @@ export async function checkResearchLogsSyncStatus(): Promise<{needsSync: string[
       
       const kvData = await kvGet(kvKey);
       
-      const kvLastUpdated = kvData?.lastUpdated || null;
-      const localLastUpdated = localData.lastUpdated || fileStats.mtime.toISOString();
+      const kvLastUpdated = (kvData as any)?.lastUpdated || null;
+      const localLastUpdated = (localData as any).lastUpdated || fileStats.mtime.toISOString();
       
       if (!kvLastUpdated || new Date(localLastUpdated) > new Date(kvLastUpdated)) {
         results.needsSync.push(logType);

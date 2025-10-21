@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     
     const playerLog = await kvGet(logKey);
     console.log('🔥 [Player Log API] Found:', playerLog ? 'YES' : 'NO');
-    console.log('🔥 [Player Log API] Entries:', playerLog?.length || 0);
+    console.log('🔥 [Player Log API] Entries:', Array.isArray(playerLog) ? playerLog.length : 0);
     console.log('🔥 [Player Log API] Data:', JSON.stringify(playerLog, null, 2));
 
     if (playerLog) {
