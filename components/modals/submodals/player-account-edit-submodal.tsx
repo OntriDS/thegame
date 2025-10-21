@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Settings } from 'lucide-react';
-import { getZIndexClass } from '@/lib/utils/z-index-utils';
+import { getZIndexClass, getZIndexValue } from '@/lib/utils/z-index-utils';
 
 interface AccountEditModalProps {
   account: any;
@@ -22,6 +22,11 @@ export default function AccountEditModal({ account, open, onOpenChange, onSave }
   
   useEffect(() => {
     console.log('AccountEditModal useEffect triggered, open:', open);
+    if (open) {
+      const zClass = getZIndexClass('SUB_MODALS');
+      const zValue = getZIndexValue('SUB_MODALS');
+      console.log('[AccountEditModal] open=true z-index', { zClass, zValue, actualValue: 300 });
+    }
     setName(account.name);
     setEmail(account.email);
     setPhone(account.phone || '');

@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { User } from 'lucide-react';
 import { Player } from '@/types/entities';
 import { ClientAPI } from '@/lib/client-api';
-import { getZIndexClass } from '@/lib/utils/z-index-utils';
+import { getZIndexClass, getZIndexValue } from '@/lib/utils/z-index-utils';
 
 interface PersonalDataModalProps {
   player: Player;
@@ -25,6 +25,11 @@ export default function PersonalDataModal({ player, open, onOpenChange, onSave }
   
   useEffect(() => {
     console.log('PersonalDataModal useEffect triggered, open:', open);
+    if (open) {
+      const zClass = getZIndexClass('SUB_MODALS');
+      const zValue = getZIndexValue('SUB_MODALS');
+      console.log('[PersonalDataModal] open=true z-index', { zClass, zValue, actualValue: 300 });
+    }
     const loadPersonalData = async () => {
       if (open) {
         setIsLoadingAccount(true);

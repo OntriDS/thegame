@@ -24,7 +24,7 @@ import { Label } from '@/components/ui/label';
 
 // Side effects handled by parent component via API calls
 
-import { getZIndexClass } from '@/lib/utils/z-index-utils';
+import { getZIndexClass, getZIndexValue } from '@/lib/utils/z-index-utils';
 
 import { POINTS_COLORS } from '@/lib/constants/color-constants';
 
@@ -64,6 +64,14 @@ interface PlayerCharacterModalProps {
 }
 
 function PlayerCharacterModal({ character, open, onOpenChange }: PlayerCharacterModalProps) {
+  // Debug z-index when modal opens
+  useEffect(() => {
+    if (open) {
+      const zClass = getZIndexClass('SUB_MODALS');
+      const zValue = getZIndexValue('SUB_MODALS');
+      console.log('[PlayerCharacterModal] open=true z-index', { zClass, zValue, actualValue: 300 });
+    }
+  }, [open]);
   if (!character) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -84,7 +92,7 @@ function PlayerCharacterModal({ character, open, onOpenChange }: PlayerCharacter
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={`max-w-md ${getZIndexClass('MODALS')}`}>
+      <DialogContent className={`max-w-md ${getZIndexClass('SUB_MODALS')}`}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <User className="h-5 w-5" />
@@ -158,6 +166,14 @@ interface RelationshipsModalProps {
 }
 
 function RelationshipsModal({ player, open, onOpenChange }: RelationshipsModalProps) {
+  // Debug z-index when modal opens
+  useEffect(() => {
+    if (open) {
+      const zClass = getZIndexClass('SUB_MODALS');
+      const zValue = getZIndexValue('SUB_MODALS');
+      console.log('[RelationshipsModal] open=true z-index', { zClass, zValue, actualValue: 300 });
+    }
+  }, [open]);
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className={`max-w-md ${getZIndexClass('SUB_MODALS')}`}>
@@ -215,6 +231,11 @@ function ExchangePointsModal({ player, open, onOpenChange, onExchange }: Exchang
 
   useEffect(() => {
     if (open) {
+      // Debug z-index when modal opens
+      const zClass = getZIndexClass('SUB_MODALS');
+      const zValue = getZIndexValue('SUB_MODALS');
+      console.log('[ExchangePointsModal] open=true z-index', { zClass, zValue, actualValue: 300 });
+      
       const loadRates = async () => {
         const rates = await ClientAPI.getPointsConversionRates();
         setConversionRates(rates);
@@ -269,7 +290,7 @@ function ExchangePointsModal({ player, open, onOpenChange, onExchange }: Exchang
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={`max-w-2xl ${getZIndexClass('MODALS')}`}>
+      <DialogContent className={`max-w-2xl ${getZIndexClass('SUB_MODALS')}`}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Coins className="h-5 w-5" />
@@ -448,6 +469,10 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
   useEffect(() => {
 
     if (open) {
+      // Debug z-index when main modal opens
+      const zClass = getZIndexClass('MODALS');
+      const zValue = getZIndexValue('MODALS');
+      console.log('[PlayerModal] open=true z-index', { zClass, zValue, actualValue: 100 });
 
       const loadData = async () => {
 
@@ -784,7 +809,7 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
 
         {/* Tabs System - State | Stats | Progression */}
 
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="flex-1 flex flex-col overflow-hidden">
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className={`flex-1 flex flex-col overflow-hidden ${getZIndexClass('SUBTABS')}`}>
 
           <TabsList className="w-full grid grid-cols-3 mb-4">
 
