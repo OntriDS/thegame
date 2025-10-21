@@ -74,8 +74,13 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
           
           // Load Account if linked
           if (loadedPlayer?.accountId) {
-            const account = await ClientAPI.getAccount(loadedPlayer.accountId);
-            setAccountData(account);
+            try {
+              const account = await ClientAPI.getAccount(loadedPlayer.accountId);
+              setAccountData(account);
+            } catch (error) {
+              console.warn('[PlayerModal] Could not load account data:', error);
+              setAccountData(null);
+            }
           } else {
             setAccountData(null);
           }

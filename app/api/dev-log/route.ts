@@ -41,3 +41,28 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Failed to load dev log' }, { status: 500 });
   }
 }
+
+export async function POST(req: NextRequest) {
+  if (!(await requireAdminAuth(req))) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    const devLogData = await req.json();
+
+    // In production with KV, write to KV
+    if (process.env.UPSTASH_REDIS_REST_URL) {
+      const { kvSet } = await import('@/data-store/kv');
+      await kvSet('data:dev-log', devLogData);
+      return NextResponse.json({ success: true, message: 'Dev log updated successfully' });
+    } else {
+      // In development, write to filesystem
+      const filePath = path.join(process.cwd(), 'logs-research', 'dev-log.json');
+      fs.writeFileSync(filePath, JSON.stringify(devLogData, null, 2));
+      return NextResponse.json({ success: true, message: 'Dev log updated successfully' });
+    }
+  } catch (error) {
+    console.error('Error saving dev log:', error);
+    return NextResponse.json({ error: 'Failed to save dev log' }, { status: 500 });
+  }
+}
