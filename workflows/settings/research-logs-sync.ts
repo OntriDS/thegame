@@ -1,5 +1,3 @@
-import { promises as fs } from 'fs';
-import path from 'path';
 import { kvGet, kvSet } from '@/data-store/kv';
 
 export interface SyncResult {
@@ -44,6 +42,10 @@ export async function syncResearchLogsToKV(): Promise<SyncResult> {
     console.log('[ResearchSync] ⏭️ Skipping sync - not in production (no KV)');
     return results;
   }
+  
+  // Dynamic imports for server-side only modules
+  const fs = await import('fs').then(m => m.promises);
+  const path = await import('path');
   
   console.log('[ResearchSync] 🔄 Starting research logs sync to KV...');
   
@@ -164,6 +166,10 @@ export async function checkResearchLogsSyncStatus(): Promise<{needsSync: string[
     return results;
   }
   
+  // Dynamic imports for server-side only modules
+  const fs = await import('fs').then(m => m.promises);
+  const path = await import('path');
+  
   const logsToCheck = ['project-status', 'notes-log', 'dev-log'];
   
   for (const logType of logsToCheck) {
@@ -217,6 +223,10 @@ export async function syncIndividualResearchData(logType: string): Promise<SyncR
     results.errors.push(`${logType} (unknown sync strategy)`);
     return results;
   }
+  
+  // Dynamic imports for server-side only modules
+  const fs = await import('fs').then(m => m.promises);
+  const path = await import('path');
   
   console.log(`[ResearchSync] 🔄 Starting ${logType} sync...`);
   
