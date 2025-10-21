@@ -92,6 +92,22 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
     return categories && categories.length > 0 ? categories[0] : categories[0] as Station;
   };
 
+  // Helper function to get the area for a given station
+  const getAreaForStation = (station: Station): string => {
+    for (const [area, stations] of Object.entries(BUSINESS_STRUCTURE)) {
+      if ((stations as readonly string[]).includes(station)) {
+        return area;
+      }
+    }
+    return 'ADMIN'; // Default fallback
+  };
+
+  // Helper function to get the correct value format for SearchableSelect
+  const getStationValue = (station: Station): string => {
+    const area = getAreaForStation(station);
+    return `${area}:${station}`;
+  };
+
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -587,10 +603,14 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
               <div>
                 <Label htmlFor="station" className="text-xs">Station</Label>
                 <SearchableSelect
-                  value={formData.station + ':' + formData.station}
+                  value={getStationValue(formData.station)}
                   onValueChange={(value) => {
-                    const [station] = value.split(':');
+                    const [, station] = value.split(':');
                     setFormData({ ...formData, station: station as Station });
+                    // Save last used station to localStorage
+                    if (typeof window !== 'undefined') {
+                      localStorage.setItem('lastUsedRecordStation', station);
+                    }
                   }}
                   placeholder="Select station..."
                   options={createStationCategoryOptions()}

@@ -48,6 +48,12 @@ export default function SalesModal({
   onSave,
   onDelete,
 }: SalesModalProps) {
+  // Helper function to get the correct value format for SearchableSelect
+  const getStationValue = (station: Station): string => {
+    const area = getAreaForStation(station);
+    return `${area}:${station}`;
+  };
+
   // Form state
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -1423,9 +1429,9 @@ export default function SalesModal({
                   <div>
                     <Label htmlFor="taskStation" className="text-xs">Station</Label>
                     <SearchableSelect
-                      value={taskStation + ':' + taskStation}
+                      value={getStationValue(taskStation)}
                       onValueChange={(value) => {
-                        const [station] = value.split(':');
+                        const [, station] = value.split(':');
                         setTaskStation(station as Station);
                       }}
                       placeholder="Select station..."
@@ -1591,9 +1597,9 @@ export default function SalesModal({
                     <div className="space-y-2">
                       <Label htmlFor="taskStation">Station</Label>
                       <SearchableSelect
-                        value={taskStation + ':' + taskStation}
+                        value={getStationValue(taskStation)}
                         onValueChange={(value) => {
-                          const [station] = value.split(':');
+                          const [, station] = value.split(':');
                           setTaskStation(station as Station);
                         }}
                         placeholder="Select station..."
