@@ -323,7 +323,7 @@ export class ResetDataWorkflow {
 
               // Delete entity data for this batch
               const dataKeys = batchIds.map(id => buildDataKey(entityType, id));
-              await kv.del(...dataKeys);
+              await kv.delMany(dataKeys);
 
               console.log(`[ResetDataWorkflow] ✅ Cleared batch ${batchIndex + 1}/${totalBatches} for ${entityType}`);
             }
@@ -374,7 +374,7 @@ export class ResetDataWorkflow {
           console.log(`[ResetDataWorkflow] 🔄 Clearing links batch ${batchIndex + 1}/${totalBatches} (${batchKeys.length} links)`);
 
           // Delete link data for this batch
-          await kv.del(...batchKeys);
+          await kv.delMany(batchKeys);
 
           console.log(`[ResetDataWorkflow] ✅ Cleared links batch ${batchIndex + 1}/${totalBatches}`);
         }
@@ -390,7 +390,7 @@ export class ResetDataWorkflow {
             const endIndex = Math.min(startIndex + BATCH_SIZE, entityLinkKeys.length);
             const indexBatchKeys = entityLinkKeys.slice(startIndex, endIndex);
 
-            await kv.del(...indexBatchKeys);
+            await kv.delMany(indexBatchKeys);
             console.log(`[ResetDataWorkflow] ✅ Cleared entity link index batch ${indexBatch + 1}/${indexBatches}`);
           }
         }
@@ -497,7 +497,7 @@ export class ResetDataWorkflow {
 
         // Add all site IDs to index in a single operation
         const siteIds = defaultSites.map(site => site.id);
-        pipeline.sadd(indexKey, siteIds);
+        pipeline.sadd(indexKey, ...siteIds);
 
         // Execute batch
         await pipeline.exec();

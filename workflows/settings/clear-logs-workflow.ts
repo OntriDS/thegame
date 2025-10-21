@@ -123,14 +123,10 @@ export class ClearLogsWorkflow {
       for (const logType of logTypes) {
         try {
           const logKey = buildLogKey(logType);
-          const deleted = await kv.del(logKey);
+          await kv.del(logKey);
           
-          if (deleted > 0) {
-            results.push(`Cleared ${logType} logs`);
-            console.log(`[ClearLogsWorkflow] ✅ Cleared ${logType} logs`);
-          } else {
-            results.push(`No ${logType} logs to clear`);
-          }
+          results.push(`Cleared ${logType} logs`);
+          console.log(`[ClearLogsWorkflow] ✅ Cleared ${logType} logs`);
         } catch (error) {
           const errorMsg = `Failed to clear ${logType} logs: ${error instanceof Error ? error.message : 'Unknown error'}`;
           errors.push(errorMsg);

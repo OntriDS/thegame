@@ -96,7 +96,7 @@ export class ClearCacheWorkflow {
         const effectsPattern = 'effects:*';
         const effectKeys = await kv.keys(effectsPattern);
         if (effectKeys.length > 0) {
-          await kv.del(...effectKeys);
+          await kv.delMany(effectKeys);
           results.push(`Cleared ${effectKeys.length} effect registry entries`);
           console.log(`[ClearCacheWorkflow] ✅ Cleared ${effectKeys.length} effect registry entries`);
         } else {
@@ -113,7 +113,7 @@ export class ClearCacheWorkflow {
         const tempPattern = 'temp:*';
         const tempKeys = await kv.keys(tempPattern);
         if (tempKeys.length > 0) {
-          await kv.del(...tempKeys);
+          await kv.delMany(tempKeys);
           results.push(`Cleared ${tempKeys.length} temporary cache entries`);
           console.log(`[ClearCacheWorkflow] ✅ Cleared ${tempKeys.length} temporary cache entries`);
         } else {
@@ -130,7 +130,7 @@ export class ClearCacheWorkflow {
         const sessionPattern = 'session:*';
         const sessionKeys = await kv.keys(sessionPattern);
         if (sessionKeys.length > 0) {
-          await kv.del(...sessionKeys);
+          await kv.delMany(sessionKeys);
           results.push(`Cleared ${sessionKeys.length} session cache entries`);
           console.log(`[ClearCacheWorkflow] ✅ Cleared ${sessionKeys.length} session cache entries`);
         } else {

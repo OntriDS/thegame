@@ -7,17 +7,28 @@ import { createClient } from '@vercel/kv';
 type KVClient = {
   get: <T>(key: string) => Promise<T | null>;
   set: (key: string, value: unknown) => Promise<void>;
-  del: (key: string) => Promise<void>;
+  del: (key: string, ...keys: string[]) => Promise<void>;
+  delMany: (keys: string[]) => Promise<void>;
   mget: (keys: string[]) => Promise<(unknown | null)[]>;
   scanIterator: (options: { match: string; count?: number }) => AsyncIterable<string>;
   sadd: (key: string, ...members: string[]) => Promise<void>;
   srem: (key: string, ...members: string[]) => Promise<void>;
-  smembers: (key: string) => Promise<string[] | null>;
+  smembers: (key: string) => Promise<string[]>;
+  lpush: (key: string, ...values: string[]) => Promise<void>;
+  lrange: (key: string, start: number, stop: number) => Promise<string[]>;
+  keys: (pattern: string) => Promise<string[]>;
+  multi: () => {
+    del: (key: string, ...keys: string[]) => void;
+    set: (key: string, value: unknown) => void;
+    sadd: (key: string, ...members: string[]) => void;
+    exec: () => Promise<void>;
+  };
 };
 
 function createLocalKV(): KVClient {
   const kvStore = new Map<string, unknown>();
   const setStore = new Map<string, Set<string>>();
+  const listStore = new Map<string, string[]>();
 
   const api: KVClient = {
     async get<T>(key: string) {
@@ -26,8 +37,20 @@ function createLocalKV(): KVClient {
     async set(key: string, value: unknown) {
       kvStore.set(key, value);
     },
-    async del(key: string) {
-      kvStore.delete(key);
+    async del(key: string, ...keys: string[]) {
+      const allKeys = [key, ...keys];
+      allKeys.forEach(k => {
+        kvStore.delete(k);
+        setStore.delete(k);
+        listStore.delete(k);
+      });
+    },
+    async delMany(keys: string[]) {
+      keys.forEach(k => {
+        kvStore.delete(k);
+        setStore.delete(k);
+        listStore.delete(k);
+      });
     },
     async mget(keys: string[]) {
       return keys.map((k) => (kvStore.has(k) ? kvStore.get(k)! : null));
@@ -54,6 +77,55 @@ function createLocalKV(): KVClient {
     async smembers(key: string) {
       const set = setStore.get(key);
       return set ? Array.from(set) : [];
+    },
+    async lpush(key: string, ...values: string[]) {
+      const list = listStore.get(key) ?? [];
+      list.unshift(...values); // Add to beginning (like Redis lpush)
+      listStore.set(key, list);
+    },
+    async lrange(key: string, start: number, stop: number) {
+      const list = listStore.get(key) ?? [];
+      const end = stop === -1 ? list.length : stop + 1;
+      return list.slice(start, end);
+    },
+    async keys(pattern: string) {
+      const regex = new RegExp(pattern.replace(/\*/g, '.*'));
+      const allKeys = [
+        ...kvStore.keys(),
+        ...setStore.keys(),
+        ...listStore.keys()
+      ];
+      return allKeys.filter(key => regex.test(key));
+    },
+    multi() {
+      const operations: Array<() => void> = [];
+      return {
+        del: (key: string, ...keys: string[]) => {
+          const allKeys = [key, ...keys];
+          operations.push(() => {
+            allKeys.forEach(k => {
+              kvStore.delete(k);
+              setStore.delete(k);
+              listStore.delete(k);
+            });
+          });
+        },
+        set: (key: string, value: unknown) => {
+          operations.push(() => {
+            kvStore.set(key, value);
+          });
+        },
+        sadd: (key: string, ...members: string[]) => {
+          operations.push(() => {
+            const set = setStore.get(key) ?? new Set<string>();
+            members.forEach((m) => set.add(m));
+            setStore.set(key, set);
+          });
+        },
+        exec: async () => {
+          operations.forEach(op => op());
+        }
+      };
     },
   };
 

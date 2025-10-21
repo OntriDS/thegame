@@ -1,7 +1,7 @@
 // lib/mcp/test-mcp-integration.ts
 // Test script to verify MCP integration works
 
-import { mcpClient } from './mcp-client';
+import { mcpClient } from '../../mcp/mcp-client';
 
 export async function testMCPIntegration() {
   console.log('🧪 Testing MCP Integration...\n');

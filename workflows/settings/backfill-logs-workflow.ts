@@ -143,7 +143,7 @@ export class BackfillLogsWorkflow {
       const indexKey = buildIndexKey(entityType);
       const entityIds = await kv.smembers(indexKey);
       
-      if (entityIds.length === 0) {
+      if (!entityIds || entityIds.length === 0) {
         results.push(`No ${entityType} entities to backfill logs for`);
         return;
       }

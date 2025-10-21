@@ -309,7 +309,7 @@ export class ImportDataWorkflow {
 
       if (existingIds.length > 0) {
         const dataKeys = existingIds.map(id => buildDataKey(entityType, id));
-        await kv.del(...dataKeys);
+        await kv.delMany(dataKeys);
         await kv.del(indexKey);
         results.push(`Cleared ${existingIds.length} existing ${entityType} entities`);
       }
@@ -350,7 +350,7 @@ export class ImportDataWorkflow {
 
           // Add all entity IDs to index in a single operation
           const entityIds = batch.map(entity => entity.id);
-          pipeline.sadd(indexKey, entityIds);
+          pipeline.sadd(indexKey, ...entityIds);
 
           // Execute batch
           await pipeline.exec();
@@ -391,7 +391,7 @@ export class ImportDataWorkflow {
 
       if (existingLinkIds.length > 0) {
         const linkKeys = existingLinkIds.map(id => `links:link:${id}`);
-        await kv.del(...linkKeys);
+        await kv.delMany(linkKeys);
         await kv.del(linksIndexKey);
         results.push(`Cleared ${existingLinkIds.length} existing links`);
       }
@@ -432,7 +432,7 @@ export class ImportDataWorkflow {
 
           // Add all link IDs to index in a single operation
           const linkIds = batch.map(link => link.id);
-          pipeline.sadd(linksIndexKey, linkIds);
+          pipeline.sadd(linksIndexKey, ...linkIds);
 
           // Execute batch
           await pipeline.exec();
@@ -541,7 +541,7 @@ export class ImportDataWorkflow {
 
       if (existingSettlementIds.length > 0) {
         const dataKeys = existingSettlementIds.map(id => buildDataKey('settlements', id));
-        await kv.del(...dataKeys);
+        await kv.delMany(dataKeys);
         await kv.del(settlementsIndexKey);
         results.push(`Cleared ${existingSettlementIds.length} existing settlements`);
       }
@@ -582,7 +582,7 @@ export class ImportDataWorkflow {
 
           // Add all settlement IDs to index in a single operation
           const settlementIds = batch.map(settlement => settlement.id);
-          pipeline.sadd(settlementsIndexKey, settlementIds);
+          pipeline.sadd(settlementsIndexKey, ...settlementIds);
 
           // Execute batch
           await pipeline.exec();
