@@ -11,7 +11,6 @@ import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Textarea } from '@/components/ui/textarea';
 import { ClientAPI } from '@/lib/client-api';
 import { getZIndexClass, getModalZIndex } from '@/lib/utils/z-index-utils';
-import { getSiteOptions } from '@/lib/utils/site-options-utils';
 import { 
   FinancialRecord, 
   CompanyFinancialCategory, 
