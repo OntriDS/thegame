@@ -12,7 +12,6 @@ import { RoadmapsTab } from '@/components/research/roadmaps-tab';
 import { DiagramsTab } from '@/components/research/diagrams-tab';
 import { SystemDevelopmentTab } from '@/components/research/system-development-tab';
 import { DevSprintsTab } from '@/components/data-center/dev-sprints-tab';
-import { LinkRulesTab } from '@/components/research/link-rules-tab';
 
 function ResearchPageContent() {
   const { getPreference, setPreference } = useUserPreferences();
@@ -20,7 +19,7 @@ function ResearchPageContent() {
   const [projectStatus, setProjectStatus] = useState<any>(null);
   const [devLog, setDevLog] = useState<any>(null);
   const [isReloading, setIsReloading] = useState(false);
-  const [activeTab, setActiveTab] = useState('link-rules');
+  const [activeTab, setActiveTab] = useState('system-development');
   const [notebooks, setNotebooks] = useState<any[]>([]);
   const [isClient, setIsClient] = useState(false);
 
@@ -33,7 +32,7 @@ function ResearchPageContent() {
   useEffect(() => {
     if (!isClient) return;
     
-    const savedTab = getPreference('research-active-tab', 'link-rules');
+    const savedTab = getPreference('research-active-tab', 'system-development');
     
     // Get URL tab from window.location.search
     const params = new URLSearchParams(window.location.search);
@@ -286,7 +285,7 @@ function ResearchPageContent() {
   return (
     <div className="container mx-auto px-4 space-y-6">
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="system-development" className="flex items-center gap-2">
             <BookOpen className="h-4 w-4" />
             System Development
@@ -298,10 +297,6 @@ function ResearchPageContent() {
           <TabsTrigger value="diagrams" className="flex items-center gap-2">
             <Map className="h-4 w-4" />
             Diagrams
-          </TabsTrigger>
-          <TabsTrigger value="link-rules" className="flex items-center gap-2">
-            <Zap className="h-4 w-4" />
-            Link Rules
           </TabsTrigger>
           <TabsTrigger value="roadmaps" className="flex items-center gap-2">    
             <Compass className="h-4 w-4" />
@@ -331,8 +326,6 @@ function ResearchPageContent() {
         {/* Diagrams Tab */}
         <DiagramsTab />
 
-        {/* Link Rules Tab */}
-        <LinkRulesTab />
 
         {/* Roadmaps Tab */}
         <RoadmapsTab />

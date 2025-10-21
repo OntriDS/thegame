@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Player, Character } from '@/types/entities';
+import { CharacterRole } from '@/types/enums';
 import { User, Heart, Users as UsersIcon, BookOpen, Zap, Settings, TrendingUp, Coins, Award, DollarSign, Network, CheckCircle, Target } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -80,15 +81,38 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
           }
           
           // Load characters managed by this player
+          let playerCharacters: Character[] = [];
+
           if (loadedPlayer?.characterIds && loadedPlayer.characterIds.length > 0) {
+            // Try ambassador field first
             const allCharacters = await ClientAPI.getCharacters();
-            const playerCharacters = allCharacters.filter(c => 
+            playerCharacters = allCharacters.filter(c => 
               loadedPlayer!.characterIds.includes(c.id)
             );
-            setCharacters(playerCharacters);
-          } else {
-            setCharacters([]);
           }
+
+          // Fallback: If no characters found via ambassador field, query by playerId
+          if (playerCharacters.length === 0 && loadedPlayer) {
+            const allCharacters = await ClientAPI.getCharacters();
+            playerCharacters = allCharacters.filter(c => 
+              c.playerId === loadedPlayer.id && 
+              c.roles.includes(CharacterRole.PLAYER) &&
+              c.isActive
+            );
+            
+            // If we found characters this way, update the Player entity to sync characterIds
+            if (playerCharacters.length > 0) {
+              const characterIds = playerCharacters.map(c => c.id);
+              console.log(`[PlayerModal] Syncing characterIds for player ${loadedPlayer.id}:`, characterIds);
+              // Note: We don't await this - let it sync in background
+              ClientAPI.upsertPlayer({
+                ...loadedPlayer,
+                characterIds
+              }).catch(err => console.error('Failed to sync characterIds:', err));
+            }
+          }
+
+          setCharacters(playerCharacters);
 
           // Load financial data (Personal Monetary Assets)
           const personalAssetsData = await ClientAPI.getPersonalAssets();
@@ -102,7 +126,8 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
             itemsValue: 0, // Placeholder - will calculate from sold items in future
           });
         } catch (error) {
-          console.error('Failed to load player data:', error);
+          console.error('[PlayerModal] Failed to load player data:', error);
+          console.error('[PlayerModal] Player:', player);
         } finally {
           setIsLoading(false);
         }
