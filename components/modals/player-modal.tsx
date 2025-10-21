@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { User, Settings, Network, Coins, Target, TrendingUp, Flag } from 'lucide-react';
 import { Player, Character } from '@/types/entities';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
@@ -13,9 +14,10 @@ import { ClientAPI } from '@/lib/client-api';
 import PersonalDataModal from './submodals/player-personal-data-submodal';
 import AccountEditModal from './submodals/player-account-edit-submodal';
 
-import PlayerStateTab from './modals-tabs/player-state-tab';
-import PlayerStatsTab from './modals-tabs/player-stats-tab';
-import PlayerProgressionTab from './modals-tabs/player-progression-tab';
+// Import tab content components
+import { PlayerStateContent } from './modals-tabs/player-state-tab';
+import { PlayerStatsContent } from './modals-tabs/player-stats-tab';
+import { PlayerProgressionContent } from './modals-tabs/player-progression-tab';
 
 interface PlayerModalProps {
   player: Player | null;
@@ -336,9 +338,7 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
   const [showAccountEdit, setShowAccountEdit] = useState(false);
   const [showRelationships, setShowRelationships] = useState(false);
   const [showExchangeModal, setShowExchangeModal] = useState(false);
-  const [showStateTab, setShowStateTab] = useState(false);
-  const [showStatsTab, setShowStatsTab] = useState(false);
-  const [showProgressionTab, setShowProgressionTab] = useState(false);
+  const [activeTab, setActiveTab] = useState('state');
 
   // Current player data
   const [playerData, setPlayerData] = useState<Player | null>(null);
@@ -453,52 +453,47 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
             </DialogTitle>
           </DialogHeader>
 
-          {/* Tab Buttons - State | Stats | Progression */}
-          <div className="flex gap-2 mb-4">
-            <Button 
-              variant="outline" 
-              onClick={() => setShowStateTab(true)}
-              className="flex-1"
-            >
-              <Target className="h-4 w-4 mr-2" />
-              State
-            </Button>
-            <Button 
-              variant="outline" 
-              onClick={() => setShowStatsTab(true)}
-              className="flex-1"
-            >
-              <TrendingUp className="h-4 w-4 mr-2" />
-              Stats
-            </Button>
-            <Button 
-              variant="outline" 
-              onClick={() => setShowProgressionTab(true)}
-              className="flex-1"
-            >
-              <Flag className="h-4 w-4 mr-2" />
-              Progression
-            </Button>
-          </div>
+          {/* Tabs - State | Stats | Progression */}
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="state" className="flex items-center gap-2">
+                <Target className="h-4 w-4" />
+                State
+              </TabsTrigger>
+              <TabsTrigger value="stats" className="flex items-center gap-2">
+                <TrendingUp className="h-4 w-4" />
+                Stats
+              </TabsTrigger>
+              <TabsTrigger value="progression" className="flex items-center gap-2">
+                <Flag className="h-4 w-4" />
+                Progression
+              </TabsTrigger>
+            </TabsList>
 
-          {/* Main Content Area - Player Info Summary */}
-          <div className="space-y-4">
-            <Card className="border-2">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <User className="h-5 w-5 text-primary" />
-                  Player Summary
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8">
-                  <User className="h-16 w-16 text-muted-foreground mx-auto mb-4 opacity-30" />
-                  <p className="text-muted-foreground">Click the buttons above to view detailed information</p>
-                  <p className="text-xs text-muted-foreground mt-2">State • Stats • Progression</p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+            {/* Tab Content */}
+            <div className="mt-4 overflow-y-auto max-h-[calc(90vh-12rem)] pr-2">
+              <TabsContent value="state" className="mt-0">
+                <PlayerStateContent 
+                  playerData={playerData}
+                  currentMonthMetrics={currentMonthMetrics}
+                  personalAssets={personalAssets}
+                />
+              </TabsContent>
+              
+              <TabsContent value="stats" className="mt-0">
+                <PlayerStatsContent 
+                  playerData={playerData}
+                  personalAssets={personalAssets}
+                />
+              </TabsContent>
+              
+              <TabsContent value="progression" className="mt-0">
+                <PlayerProgressionContent 
+                  playerData={playerData}
+                />
+              </TabsContent>
+            </div>
+          </Tabs>
 
           {/* FOOTER BUTTONS - Matches Sales Modal Pattern */}
           <DialogFooter className="flex items-center justify-between py-2 border-t">
@@ -558,27 +553,6 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
         </DialogContent>
       </Dialog>
 
-      {/* Tab Modals */}
-      <PlayerStateTab
-        open={showStateTab}
-        onOpenChange={setShowStateTab}
-        playerData={playerData}
-        currentMonthMetrics={currentMonthMetrics}
-        personalAssets={personalAssets}
-      />
-
-      <PlayerStatsTab
-        open={showStatsTab}
-        onOpenChange={setShowStatsTab}
-        playerData={playerData}
-        personalAssets={personalAssets}
-      />
-
-      <PlayerProgressionTab
-        open={showProgressionTab}
-        onOpenChange={setShowProgressionTab}
-        playerData={playerData}
-      />
 
       {/* Personal Data Submodal */}
       <PersonalDataModal
