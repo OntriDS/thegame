@@ -101,6 +101,7 @@ function PersonalDataModal({ player, open, onOpenChange, onSave }: PersonalDataM
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className={`max-w-md ${getZIndexClass('SUB_MODALS')}`}>
+        {console.log('PersonalDataModal DialogContent is rendering, open:', open)}
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <User className="h-5 w-5" />
@@ -526,6 +527,7 @@ function AccountEditModal({ account, open, onOpenChange, onSave }: AccountEditMo
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className={`max-w-md ${getZIndexClass('SUB_MODALS')}`}>
+        {console.log('AccountEditModal DialogContent is rendering, open:', open)}
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Settings className="h-5 w-5" />
