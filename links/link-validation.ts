@@ -62,7 +62,7 @@ export async function validateLink(
     }
 
     // 4. Entity existence validation
-    const sourceExists = await validateEntityExists(source.type, source.id);
+    const sourceExists = await validateEntityExistsWithRetry(source.type, source.id);
     if (!sourceExists) {
       return {
         isValid: false,
@@ -70,7 +70,7 @@ export async function validateLink(
       };
     }
 
-    const targetExists = await validateEntityExists(target.type, target.id);
+    const targetExists = await validateEntityExistsWithRetry(target.type, target.id);
     if (!targetExists) {
       return {
         isValid: false,
@@ -201,6 +201,17 @@ export function validateLinkTypeCompatibility(
   }
 
   return { isValid: true };
+}
+
+/**
+ * Validate entity exists with retry for KV eventual consistency
+ */
+async function validateEntityExistsWithRetry(t: EntityType, id: string, retries=5, delayMs=120): Promise<boolean> {
+  for (let i=0;i<=retries;i++) {
+    if (await validateEntityExists(t, id)) return true;
+    if (i<retries) await new Promise(r=>setTimeout(r, delayMs));
+  }
+  return false;
 }
 
 /**

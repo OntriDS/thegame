@@ -171,7 +171,9 @@ export class ResetDataWorkflow {
         if (mode === 'defaults') {
           try {
             checkTimeoutAndProgress('Initializing Player One');
+            console.log('[ResetDataWorkflow] 🔺 Starting Triforce initialization...');
             await this.initializePlayerOne(results, errors);
+            console.log('[ResetDataWorkflow] ✅ Triforce initialization completed');
           } catch (error) {
             if (error instanceof Error && error.message.includes('timeout')) {
               throw error; // Re-throw timeout errors

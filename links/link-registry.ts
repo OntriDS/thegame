@@ -7,37 +7,15 @@ import { kvGet, kvSet, kvDel, kvSAdd, kvSRem, kvSMembers, kvScan } from '@/data-
 import { buildLinkKey, buildLinksIndexKey } from '@/data-store/keys';
 import { validateLink } from './link-validation';
 
-export async function createLink(link: Link): Promise<void> {
-  // NEW: Validate before creating
-  const validation = await validateLink(link.linkType, link.source, link.target, link.metadata);
-  if (!validation.isValid) {
-    console.warn(`[createLink] Validation failed: ${validation.reason}`);
-    if (validation.warnings) {
-      console.warn(`[createLink] Validation warnings:`, validation.warnings);
-    }
-    return; // Skip creating invalid links
+export async function createLink(link: Link, options?: { skipValidation?: boolean }): Promise<void> {
+  if (!options?.skipValidation) {
+    const validation = await validateLink(link.linkType, link.source, link.target, link.metadata);
+    if (!validation.isValid) throw new Error(`Link validation failed: ${validation.reason}`);
   }
-  
-  // Log warnings if any
-  if (validation.warnings && validation.warnings.length > 0) {
-    console.warn(`[createLink] Validation warnings for ${link.linkType}:`, validation.warnings);
-  }
-  
-  // NEW: Check for duplicate before creating
-  const existingLinks = await getLinksFor(link.source);
-  const duplicate = existingLinks.find(l => 
-    l.linkType === link.linkType &&
-    l.target.type === link.target.type &&
-    l.target.id === link.target.id
-  );
-  
-  if (duplicate) {
-    console.log(`[createLink] Link already exists: ${link.linkType} from ${link.source.type}:${link.source.id} to ${link.target.type}:${link.target.id}, skipping`);
-    return; // Don't create duplicate
-  }
-  
+  const existing = await getLinksFor(link.source);
+  const dup = existing.find(l => l.linkType===link.linkType && l.target.type===link.target.type && l.target.id===link.target.id);
+  if (dup) throw new Error(`Duplicate link ${link.linkType} ${link.source.type}:${link.source.id}→${link.target.type}:${link.target.id}`);
   await kvSet(buildLinkKey(link.id), link);
-  // index by source and target for bidirectional queries
   await kvSAdd(buildLinksIndexKey(link.source.type, link.source.id), link.id);
   await kvSAdd(buildLinksIndexKey(link.target.type, link.target.id), link.id);
 }

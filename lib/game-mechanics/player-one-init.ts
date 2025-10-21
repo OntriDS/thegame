@@ -293,7 +293,7 @@ export async function createTriforceAtomic(
       source: { type: EntityType.ACCOUNT, id: PLAYER_ONE_ACCOUNT_ID },
       target: { type: EntityType.PLAYER, id: PLAYER_ONE_ID },
       createdAt: new Date()
-    });
+    }, { skipValidation: true });
     console.log('[createTriforceAtomic] 🔗 ACCOUNT_PLAYER link created');
     
     // Link: Account → Character
@@ -303,7 +303,7 @@ export async function createTriforceAtomic(
       source: { type: EntityType.ACCOUNT, id: PLAYER_ONE_ACCOUNT_ID },
       target: { type: EntityType.CHARACTER, id: CHARACTER_ONE_ID },
       createdAt: new Date()
-    });
+    }, { skipValidation: true });
     console.log('[createTriforceAtomic] 🔗 ACCOUNT_CHARACTER link created');
     
     // Link: Player → Character
@@ -313,7 +313,7 @@ export async function createTriforceAtomic(
       source: { type: EntityType.PLAYER, id: PLAYER_ONE_ID },
       target: { type: EntityType.CHARACTER, id: CHARACTER_ONE_ID },
       createdAt: new Date()
-    });
+    }, { skipValidation: true });
     console.log('[createTriforceAtomic] 🔗 PLAYER_CHARACTER link created');
     
     // STEP 5: Log all three entities
