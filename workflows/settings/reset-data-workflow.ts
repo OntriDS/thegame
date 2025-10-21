@@ -1,7 +1,7 @@
 // workflows/settings/reset-data-workflow.ts
 // Reset Data Workflow for KV-only architecture
 
-import { kv } from '@/data-store/kv';
+import { kv, kvDelMany } from '@/data-store/kv';
 import { buildDataKey, buildIndexKey, buildLogKey, buildLinksIndexKey } from '@/data-store/keys';
 import { EntityType } from '@/types/enums';
 import { kvScan } from '@/data-store/kv';
@@ -323,7 +323,7 @@ export class ResetDataWorkflow {
 
               // Delete entity data for this batch
               const dataKeys = batchIds.map(id => buildDataKey(entityType, id));
-              await kv.delMany(dataKeys);
+              await kvDelMany(dataKeys);
 
               console.log(`[ResetDataWorkflow] ✅ Cleared batch ${batchIndex + 1}/${totalBatches} for ${entityType}`);
             }
@@ -374,7 +374,7 @@ export class ResetDataWorkflow {
           console.log(`[ResetDataWorkflow] 🔄 Clearing links batch ${batchIndex + 1}/${totalBatches} (${batchKeys.length} links)`);
 
           // Delete link data for this batch
-          await kv.delMany(batchKeys);
+          await kvDelMany(batchKeys);
 
           console.log(`[ResetDataWorkflow] ✅ Cleared links batch ${batchIndex + 1}/${totalBatches}`);
         }
@@ -390,7 +390,7 @@ export class ResetDataWorkflow {
             const endIndex = Math.min(startIndex + BATCH_SIZE, entityLinkKeys.length);
             const indexBatchKeys = entityLinkKeys.slice(startIndex, endIndex);
 
-            await kv.delMany(indexBatchKeys);
+            await kvDelMany(indexBatchKeys);
             console.log(`[ResetDataWorkflow] ✅ Cleared entity link index batch ${indexBatch + 1}/${indexBatches}`);
           }
         }

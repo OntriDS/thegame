@@ -2,13 +2,12 @@
 // Thin server-only wrappers around a KV client. Prefers @vercel/kv when env vars are present,
 // falls back to an in-memory implementation for local development.
 
-import { createClient } from '@vercel/kv';
+import { Redis } from '@upstash/redis';
 
 type KVClient = {
   get: <T>(key: string) => Promise<T | null>;
   set: (key: string, value: unknown) => Promise<void>;
   del: (key: string, ...keys: string[]) => Promise<void>;
-  delMany: (keys: string[]) => Promise<void>;
   mget: (keys: string[]) => Promise<(unknown | null)[]>;
   scanIterator: (options: { match: string; count?: number }) => AsyncIterable<string>;
   sadd: (key: string, ...members: string[]) => Promise<void>;
@@ -40,13 +39,6 @@ function createLocalKV(): KVClient {
     async del(key: string, ...keys: string[]) {
       const allKeys = [key, ...keys];
       allKeys.forEach(k => {
-        kvStore.delete(k);
-        setStore.delete(k);
-        listStore.delete(k);
-      });
-    },
-    async delMany(keys: string[]) {
-      keys.forEach(k => {
         kvStore.delete(k);
         setStore.delete(k);
         listStore.delete(k);
@@ -154,10 +146,7 @@ export const kv: KVClient = hasUpstash
       if (typeof window === 'undefined') {
         console.log('🔥 KV DEBUG - Using Upstash Redis client');
       }
-      return createClient({
-        url: process.env.UPSTASH_REDIS_REST_URL!,
-        token: process.env.UPSTASH_REDIS_REST_TOKEN!,
-      }) as unknown as KVClient;
+      return Redis.fromEnv() as unknown as KVClient;
     })()
   : (() => {
       if (typeof window === 'undefined') {
@@ -205,6 +194,13 @@ export async function kvSRem(key: string, ...members: string[]): Promise<void> {
 export async function kvSMembers(key: string): Promise<string[]> {
   const members = await kv.smembers(key);
   return members ?? [];
+}
+
+export async function kvDelMany(keys: string[]): Promise<void> {
+  if (keys.length === 0) return;
+  
+  // Use the del method with multiple keys (Redis DEL command supports multiple keys)
+  await kv.del(keys[0], ...keys.slice(1));
 }
 
 

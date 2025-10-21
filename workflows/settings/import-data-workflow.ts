@@ -1,7 +1,7 @@
 // workflows/settings/import-data-workflow.ts
 // Import Data Workflow for KV-only architecture
 
-import { kv } from '@/data-store/kv';
+import { kv, kvDelMany } from '@/data-store/kv';
 import { buildDataKey, buildIndexKey, buildLogKey } from '@/data-store/keys';
 import { EntityType } from '@/types/enums';
 
@@ -309,7 +309,7 @@ export class ImportDataWorkflow {
 
       if (existingIds.length > 0) {
         const dataKeys = existingIds.map(id => buildDataKey(entityType, id));
-        await kv.delMany(dataKeys);
+        await kvDelMany(dataKeys);
         await kv.del(indexKey);
         results.push(`Cleared ${existingIds.length} existing ${entityType} entities`);
       }
@@ -391,7 +391,7 @@ export class ImportDataWorkflow {
 
       if (existingLinkIds.length > 0) {
         const linkKeys = existingLinkIds.map(id => `links:link:${id}`);
-        await kv.delMany(linkKeys);
+        await kvDelMany(linkKeys);
         await kv.del(linksIndexKey);
         results.push(`Cleared ${existingLinkIds.length} existing links`);
       }
@@ -541,7 +541,7 @@ export class ImportDataWorkflow {
 
       if (existingSettlementIds.length > 0) {
         const dataKeys = existingSettlementIds.map(id => buildDataKey('settlements', id));
-        await kv.delMany(dataKeys);
+        await kvDelMany(dataKeys);
         await kv.del(settlementsIndexKey);
         results.push(`Cleared ${existingSettlementIds.length} existing settlements`);
       }
