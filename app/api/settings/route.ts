@@ -35,7 +35,14 @@ export async function POST(request: NextRequest) {
       }
 
       case 'reset-data': {
+        console.log('🔥 [Settings API] Reset data requested with mode:', parameters?.mode || 'defaults');
         const result = await ResetDataWorkflow.execute(parameters?.mode || 'defaults');
+        console.log('🔥 [Settings API] Reset data result:', {
+          success: result.success,
+          message: result.message,
+          operationsCount: result.data?.results?.length || 0,
+          errorsCount: result.data?.errors?.length || 0
+        });
         return NextResponse.json({
           success: result.success,
           message: result.message,

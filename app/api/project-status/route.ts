@@ -25,10 +25,11 @@ export async function GET(req: NextRequest) {
 
       if (projectStatus) {
         console.log('🔥 [Project Status API] ✅ Returning project status from KV');
+        const projectStatusData = projectStatus as any;
         console.log('🔥 [Project Status API] Data structure:', {
-          hasPhasePlan: !!projectStatus.phasePlan,
-          hasCurrentSprint: !!projectStatus.currentSprint,
-          keys: Object.keys(projectStatus)
+          hasPhasePlan: !!projectStatusData.phasePlan,
+          hasCurrentSprint: !!projectStatusData.currentSprint,
+          keys: Object.keys(projectStatusData)
         });
         return NextResponse.json(projectStatus);
       } else {

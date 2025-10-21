@@ -305,7 +305,9 @@ export class ResetDataWorkflow {
 
           // Get all entity IDs from index
           const indexKey = buildIndexKey(entityType);
+          console.log(`[ResetDataWorkflow] 🔍 Looking for ${entityType} entities at key: ${indexKey}`);
           const entityIds = await kv.smembers(indexKey);
+          console.log(`[ResetDataWorkflow] 🔍 Found entity IDs:`, entityIds);
 
           if (entityIds.length > 0) {
             console.log(`[ResetDataWorkflow] 📊 Found ${entityIds.length} ${entityType} entities to clear`);
@@ -760,6 +762,8 @@ export class ResetDataWorkflow {
         upsertAccount
       } = await import('@/data-store/datastore');
 
+      console.log('[ResetDataWorkflow] 🔍 About to call ensurePlayerOne...');
+
       // Initialize Player One
       await ensurePlayerOne(
         getAllPlayers,
@@ -771,6 +775,22 @@ export class ResetDataWorkflow {
         true, // force
         { skipLogging: false }
       );
+
+      console.log('[ResetDataWorkflow] 🔍 ensurePlayerOne completed, checking results...');
+
+      // Verify the Triforce was created
+      const players = await getAllPlayers();
+      const characters = await getAllCharacters();
+      const accounts = await getAllAccounts();
+
+      console.log('[ResetDataWorkflow] 🔍 Post-creation verification:', {
+        playersCount: players.length,
+        charactersCount: characters.length,
+        accountsCount: accounts.length,
+        playerIds: players.map(p => p.id),
+        characterIds: characters.map(c => c.id),
+        accountIds: accounts.map(a => a.id)
+      });
 
       results.push('Initialized Player One (Account + Player + Character)');
       console.log('[ResetDataWorkflow] ✅ Player One initialized successfully');

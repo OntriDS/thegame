@@ -25,12 +25,13 @@ export async function GET(req: NextRequest) {
 
       if (devLog) {
         console.log('🔥 [Dev Log API] ✅ Returning dev log from KV');
+        const devLogData = devLog as any;
         console.log('🔥 [Dev Log API] Data structure:', {
-          hasSprints: !!devLog.sprints,
-          hasPhases: !!devLog.phases,
-          sprintsLength: devLog.sprints?.length || 0,
-          phasesLength: devLog.phases?.length || 0,
-          keys: Object.keys(devLog)
+          hasSprints: !!devLogData.sprints,
+          hasPhases: !!devLogData.phases,
+          sprintsLength: devLogData.sprints?.length || 0,
+          phasesLength: devLogData.phases?.length || 0,
+          keys: Object.keys(devLogData)
         });
         return NextResponse.json(devLog);
       } else {

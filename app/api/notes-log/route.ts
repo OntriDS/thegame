@@ -25,10 +25,11 @@ export async function GET(req: NextRequest) {
 
       if (notesData) {
         console.log('🔥 [Notes Log API] ✅ Returning notes from KV');
+        const notesDataTyped = notesData as any;
         console.log('🔥 [Notes Log API] Data structure:', {
-          hasEntries: !!notesData.entries,
-          entriesLength: notesData.entries?.length || 0,
-          keys: Object.keys(notesData)
+          hasEntries: !!notesDataTyped.entries,
+          entriesLength: notesDataTyped.entries?.length || 0,
+          keys: Object.keys(notesDataTyped)
         });
         return NextResponse.json(notesData);
       } else {
