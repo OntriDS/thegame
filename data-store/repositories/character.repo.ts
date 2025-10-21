@@ -1,9 +1,10 @@
 // data-store/repositories/character.repo.ts
 import { kvGet, kvSet, kvDel, kvSAdd, kvSRem, kvSMembers } from '../kv';
 import { buildDataKey, buildIndexKey } from '../keys';
+import { EntityType } from '@/types/enums';
 import type { Character } from '@/types/entities';
 
-const ENTITY = 'characters';
+const ENTITY = EntityType.CHARACTER;
 
 export async function getAllCharacters(): Promise<Character[]> {
   const indexKey = buildIndexKey(ENTITY);

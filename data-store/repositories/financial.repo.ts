@@ -1,9 +1,10 @@
 // data-store/repositories/financial.repo.ts
 import { kvGet, kvSet, kvDel, kvSAdd, kvSRem, kvSMembers } from '../kv';
 import { buildDataKey, buildIndexKey } from '../keys';
+import { EntityType } from '@/types/enums';
 import type { FinancialRecord } from '@/types/entities';
 
-const ENTITY = 'financials';
+const ENTITY = EntityType.FINANCIAL;
 
 export async function getAllFinancials(): Promise<FinancialRecord[]> {
   const indexKey = buildIndexKey(ENTITY);

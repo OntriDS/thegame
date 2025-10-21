@@ -54,7 +54,7 @@ export function createLogEntry(
   orgId?: string,
   userId?: string
 ): LogEntry {
-  if (entityType === 'character') {
+  if (entityType === EntityType.CHARACTER) {
     // Use the unified format for character logs (no points!)
     return {
       id: `${entityType}-${entityId}-${Date.now()}`,

@@ -39,7 +39,7 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
       if (!(await hasEffect(pointsEffectKey))) {
         console.log(`[onSaleUpsert] Awarding points from sale revenue: ${sale.counterpartyName}`);
         const points = calculatePointsFromRevenue(sale.totals.totalRevenue);
-        await awardPointsToPlayer(getMainPlayerId(), points, sale.id, 'sale');
+        await awardPointsToPlayer(getMainPlayerId(), points, sale.id, EntityType.SALE);
         await markEffect(pointsEffectKey);
         console.log(`[onSaleUpsert] ✅ Points awarded and effect marked for sale: ${sale.counterpartyName}`);
       }
@@ -98,7 +98,7 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
     // Propagate to Player (points delta from revenue)
     if (hasRevenueChanged(sale, previousSale)) {
       console.log(`[onSaleUpsert] Propagating revenue changes to player points: ${sale.counterpartyName}`);
-      await updatePlayerPointsFromSource('sale', sale, previousSale);
+      await updatePlayerPointsFromSource(EntityType.SALE, sale, previousSale);
     }
   }
   
@@ -122,7 +122,7 @@ export async function removeSaleEffectsOnDelete(saleId: string): Promise<void> {
     await removePlayerPointsFromSale(saleId);
     
     // 2. Remove all Links related to this sale
-    const saleLinks = await ClientAPI.getLinksFor({ type: 'sale', id: saleId });
+    const saleLinks = await ClientAPI.getLinksFor({ type: EntityType.SALE, id: saleId });
     console.log(`[removeSaleEffectsOnDelete] Found ${saleLinks.length} links to remove`);
     
     for (const link of saleLinks) {
@@ -135,17 +135,17 @@ export async function removeSaleEffectsOnDelete(saleId: string): Promise<void> {
     }
     
     // 3. Clear effects registry
-    await clearEffectsByPrefix('sale', saleId, 'sale:');
-    await clearEffectsByPrefix('sale', saleId, 'pointsAwarded:');
+    await clearEffectsByPrefix(EntityType.SALE, saleId, 'sale:');
+    await clearEffectsByPrefix(EntityType.SALE, saleId, 'pointsAwarded:');
     
     // 4. Remove log entries from all relevant logs
     console.log(`[removeSaleEffectsOnDelete] Starting log entry removal for sale: ${saleId}`);
     
     const removals = await Promise.all([
-      ClientAPI.removeLogEntry('sales', saleId).then(r => { console.log(`[removeSaleEffectsOnDelete] Sales log removal result:`, r); return r; }).catch(e => ({ success: false, message: String(e) })),
-      ClientAPI.removeLogEntry('financials', saleId).then(r => { console.log(`[removeSaleEffectsOnDelete] Financials log removal result:`, r); return r; }).catch(e => ({ success: false, message: String(e) })),
-      ClientAPI.removeLogEntry('character', saleId).then(r => { console.log(`[removeSaleEffectsOnDelete] Character log removal result:`, r); return r; }).catch(e => ({ success: false, message: String(e) })),
-      ClientAPI.removeLogEntry('items', saleId).then(r => { console.log(`[removeSaleEffectsOnDelete] Items log removal result:`, r); return r; }).catch(e => ({ success: false, message: String(e) })),
+      ClientAPI.removeLogEntry(EntityType.SALE, saleId).then(r => { console.log(`[removeSaleEffectsOnDelete] Sales log removal result:`, r); return r; }).catch(e => ({ success: false, message: String(e) })),
+      ClientAPI.removeLogEntry(EntityType.FINANCIAL, saleId).then(r => { console.log(`[removeSaleEffectsOnDelete] Financials log removal result:`, r); return r; }).catch(e => ({ success: false, message: String(e) })),
+      ClientAPI.removeLogEntry(EntityType.CHARACTER, saleId).then(r => { console.log(`[removeSaleEffectsOnDelete] Character log removal result:`, r); return r; }).catch(e => ({ success: false, message: String(e) })),
+      ClientAPI.removeLogEntry(EntityType.ITEM, saleId).then(r => { console.log(`[removeSaleEffectsOnDelete] Items log removal result:`, r); return r; }).catch(e => ({ success: false, message: String(e) })),
     ]);
 
     console.log(`[removeSaleEffectsOnDelete] All removal results:`, removals);

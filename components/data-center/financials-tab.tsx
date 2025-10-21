@@ -10,6 +10,7 @@ import { processLogData } from '@/lib/utils/logging-utils';
 import { FINANCIAL_ENTRY_ICONS, LOG_DISPLAY_ICONS, FINANCIAL_ABBREVIATIONS } from '@/lib/constants/icon-maps';
 import { FINANCIAL_COLORS } from '@/lib/constants/color-constants';
 import { LinksSubModal } from '@/components/modals/submodals/links-submodal';
+import { EntityType } from '@/types/enums';
 
 interface FinancialLogEntry {
   id?: string;
@@ -39,7 +40,7 @@ export function FinancialsTab({ financialsLog, onReload, isReloading }: Financia
   const [selectedFinancialId, setSelectedFinancialId] = useState<string>('');
   const [financialLinks, setFinancialLinks] = useState<any[]>([]);
   const [selectedLogEntry, setSelectedLogEntry] = useState<any>(null);
-  const [selectedEntityType, setSelectedEntityType] = useState<string>('financial');
+  const [selectedEntityType, setSelectedEntityType] = useState<string>(EntityType.FINANCIAL);
 
   // Process financials log data
   const processedFinancialsLog = processLogData(financialsLog, logOrder);
@@ -79,10 +80,10 @@ const getAmountColor = (amount: number) => (amount >= 0 ? 'text-green-600' : 'te
     const mapped = entries.map(entry => ({ entry, amounts: computeAmounts(entry) }));
 
     if (activeSubTab === 'tasks') {
-      return mapped.filter(({ entry }) => entry.entityType === 'task');
+      return mapped.filter(({ entry }) => entry.entityType === EntityType.TASK);
     }
     if (activeSubTab === 'records') {
-      return mapped.filter(({ entry }) => entry.entityType === 'financial');
+      return mapped.filter(({ entry }) => entry.entityType === EntityType.FINANCIAL);
     }
     return mapped;
   }, [processedFinancialsLog.entries, activeSubTab]);
@@ -219,14 +220,14 @@ const getAmountColor = (amount: number) => (amount >= 0 ? 'text-green-600' : 'te
                                 // Check if this is a sale revenue entry (has financialDescription: 'Sale revenue')
                                 if (data.financialDescription === 'Sale revenue' || data.type === 'sale_financial') {
                                   linkType = 'sale';
-                                  links = await ClientAPI.getLinksFor({ type: 'sale', id: entityId });
+                                  links = await ClientAPI.getLinksFor({ type: EntityType.SALE, id: entityId });
                                   console.log(`[FinancialsTab] 🔍 Detected sale revenue entry, fetching sale links for sale ${entityId}:`, {
                                     totalLinks: links.length,
                                     linkTypes: links.map(l => l.linkType)
                                   });
                                 } else {
                                   linkType = 'financial';
-                                  links = await ClientAPI.getLinksFor({ type: 'financial', id: entityId });
+                                  links = await ClientAPI.getLinksFor({ type: EntityType.FINANCIAL, id: entityId });
                                   console.log(`[FinancialsTab] 🔍 Fetching financial links for financial ${entityId}:`, {
                                     totalLinks: links.length,
                                     linkTypes: links.map(l => l.linkType)
@@ -376,14 +377,14 @@ const getAmountColor = (amount: number) => (amount >= 0 ? 'text-green-600' : 'te
                                 // Check if this is a sale revenue entry (has financialDescription: 'Sale revenue')
                                 if (data.financialDescription === 'Sale revenue' || data.type === 'sale_financial') {
                                   linkType = 'sale';
-                                  links = await ClientAPI.getLinksFor({ type: 'sale', id: entityId });
+                                  links = await ClientAPI.getLinksFor({ type: EntityType.SALE, id: entityId });
                                   console.log(`[FinancialsTab] 🔍 Detected sale revenue entry, fetching sale links for sale ${entityId}:`, {
                                     totalLinks: links.length,
                                     linkTypes: links.map(l => l.linkType)
                                   });
                                 } else {
                                   linkType = 'financial';
-                                  links = await ClientAPI.getLinksFor({ type: 'financial', id: entityId });
+                                  links = await ClientAPI.getLinksFor({ type: EntityType.FINANCIAL, id: entityId });
                                   console.log(`[FinancialsTab] 🔍 Fetching financial links for financial ${entityId}:`, {
                                     totalLinks: links.length,
                                     linkTypes: links.map(l => l.linkType)
@@ -536,14 +537,14 @@ const getAmountColor = (amount: number) => (amount >= 0 ? 'text-green-600' : 'te
                                 // Check if this is a sale revenue entry (has financialDescription: 'Sale revenue')
                                 if (data.financialDescription === 'Sale revenue' || data.type === 'sale_financial') {
                                   linkType = 'sale';
-                                  links = await ClientAPI.getLinksFor({ type: 'sale', id: entityId });
+                                  links = await ClientAPI.getLinksFor({ type: EntityType.SALE, id: entityId });
                                   console.log(`[FinancialsTab] 🔍 Detected sale revenue entry, fetching sale links for sale ${entityId}:`, {
                                     totalLinks: links.length,
                                     linkTypes: links.map(l => l.linkType)
                                   });
                                 } else {
                                   linkType = 'financial';
-                                  links = await ClientAPI.getLinksFor({ type: 'financial', id: entityId });
+                                  links = await ClientAPI.getLinksFor({ type: EntityType.FINANCIAL, id: entityId });
                                   console.log(`[FinancialsTab] 🔍 Fetching financial links for financial ${entityId}:`, {
                                     totalLinks: links.length,
                                     linkTypes: links.map(l => l.linkType)

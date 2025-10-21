@@ -8,6 +8,7 @@ import { ArrowUpDown, RefreshCw, Link } from 'lucide-react';
 import { LinksSubModal } from '@/components/modals/submodals/links-submodal';
 import { useState } from 'react';
 import { processLogData } from '@/lib/utils/logging-utils';
+import { EntityType } from '@/types/enums';
 import { LOG_DISPLAY_ICONS, FINANCIAL_ABBREVIATIONS } from '@/lib/constants/icon-maps';
 import { ItemStatus } from '@/types/enums';
 import { ITEM_STATUS_COLORS } from '@/lib/constants/color-constants';
@@ -304,7 +305,7 @@ export function ItemsLifecycleTab({ itemsLog, onReload, isReloading }: ItemsLife
                           onClick={async () => {
                             try {
                               const { ClientAPI } = await import('@/lib/client-api');
-                              const links = await ClientAPI.getLinksFor({ type: 'item', id: data.entityId });
+                              const links = await ClientAPI.getLinksFor({ type: EntityType.ITEM, id: data.entityId });
                               setItemLinks(links);
                               setSelectedItemId(data.entityId);
                               setSelectedLogEntry(entry); // Pass the log entry context

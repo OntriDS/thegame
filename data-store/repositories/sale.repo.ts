@@ -1,9 +1,10 @@
 // data-store/repositories/sale.repo.ts
 import { kvGet, kvSet, kvDel, kvSAdd, kvSRem, kvSMembers } from '../kv';
 import { buildDataKey, buildIndexKey } from '../keys';
+import { EntityType } from '@/types/enums';
 import type { Sale } from '@/types/entities';
 
-const ENTITY = 'sales';
+const ENTITY = EntityType.SALE;
 
 export async function getAllSales(): Promise<Sale[]> {
   const indexKey = buildIndexKey(ENTITY);

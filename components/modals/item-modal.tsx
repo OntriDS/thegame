@@ -192,7 +192,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
   const loadItemLinks = useCallback(async () => {
     if (item) {
       try {
-        const links = await ClientAPI.getLinksFor({ type: 'item', id: item.id });
+        const links = await ClientAPI.getLinksFor({ type: EntityType.ITEM, id: item.id });
         setItemLinks(links);
       } catch (error) {
         console.error('Failed to load item links:', error);
@@ -441,7 +441,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
     // Refresh links after save (Links are created by Ribosome)
     setTimeout(async () => {
       try {
-        const links = await ClientAPI.getLinksFor({ type: 'item', id: newItem.id });
+        const links = await ClientAPI.getLinksFor({ type: EntityType.ITEM, id: newItem.id });
         setItemLinks(links);
         setIsSaving(false);
       } catch (error) {
@@ -747,7 +747,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
                   onClick={async () => {
                     if (item) {
                       try {
-                        const links = await ClientAPI.getLinksFor({ type: 'item', id: item.id });
+                        const links = await ClientAPI.getLinksFor({ type: EntityType.ITEM, id: item.id });
                         setItemLinks(links);
                         setShowLinksModal(true);
                       } catch (error) {

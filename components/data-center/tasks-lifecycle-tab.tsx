@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowUpDown, RefreshCw, CheckSquare, Link } from 'lucide-react';
 import { LinksSubModal } from '@/components/modals/submodals/links-submodal';
 import { useState } from 'react';
-import { TaskStatus, TaskType } from '@/types/enums';
+import { TaskStatus, TaskType, EntityType } from '@/types/enums';
 import { TASK_STATUS_COLORS } from '@/lib/constants/color-constants';
 import { calculateTaskProfitPercentage } from '@/lib/utils/business-utils';
 import { useThemeColors } from '@/lib/hooks/use-theme-colors';
@@ -276,7 +276,7 @@ export function TasksLifecycleTab({ projectStatus, tasksLog, onReload, isReloadi
                           onClick={async () => {
                             try {
                               const { ClientAPI } = await import('@/lib/client-api');
-                              const links = await ClientAPI.getLinksFor({ type: 'task', id: data.entityId });
+                              const links = await ClientAPI.getLinksFor({ type: EntityType.TASK, id: data.entityId });
                               setTaskLinks(links);
                               setSelectedTaskId(data.entityId);
                               setSelectedLogEntry(entry); // Pass the log entry context

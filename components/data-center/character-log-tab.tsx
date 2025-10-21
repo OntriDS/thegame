@@ -7,7 +7,7 @@ import { ArrowUpDown, RefreshCw, Link as LinkIcon, User } from 'lucide-react';
 import { useState } from 'react';
 import { processLogData } from '@/lib/utils/logging-utils';
 import { LinksSubModal } from '@/components/modals/submodals/links-submodal';
-import { CharacterRole } from '@/types/enums';
+import { CharacterRole, EntityType } from '@/types/enums';
 
 interface CharacterLogTabProps {
   characterLog: any;
@@ -32,7 +32,7 @@ export function CharacterLogTab({ characterLog, onReload, isReloading }: Charact
   const [selectedCharacterId, setSelectedCharacterId] = useState<string>('');
   const [characterLinks, setCharacterLinks] = useState<any[]>([]);
   const [selectedLogEntry, setSelectedLogEntry] = useState<any>(null);
-  const [selectedEntityType, setSelectedEntityType] = useState<string>('character');
+  const [selectedEntityType, setSelectedEntityType] = useState<string>(EntityType.CHARACTER);
 
   const processedCharacterLog = processLogData(characterLog, logOrder);
 
@@ -137,14 +137,14 @@ export function CharacterLogTab({ characterLog, onReload, isReloading }: Charact
                         // Check if this is a financial record effect entry (has description starting with "Record")
                         if (data.description?.startsWith('Jungle Coins from record:') || entry.description?.startsWith('Record Jungle Coins:')) {
                             linkType = 'financial';
-                            links = await ClientAPI.getLinksFor({ type: 'financial', id: entityId });
+                            links = await ClientAPI.getLinksFor({ type: EntityType.FINANCIAL, id: entityId });
                             console.log(`[CharacterLogTab] 🔍 Detected financial record effect entry, fetching financial links for financial ${entityId}:`, {
                               totalLinks: links.length,
                               linkTypes: links.map(l => l.linkType)
                             });
                         } else {
                             linkType = 'character';
-                            links = await ClientAPI.getLinksFor({ type: 'character', id: entityId });
+                            links = await ClientAPI.getLinksFor({ type: EntityType.CHARACTER, id: entityId });
                             console.log(`[CharacterLogTab] 🔍 Fetching character links for character ${entityId}:`, {
                               totalLinks: links.length,
                               linkTypes: links.map(l => l.linkType)

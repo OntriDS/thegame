@@ -7,7 +7,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { calculateTaskProfit, calculateTaskProfitPercentage } from '@/lib/utils/business-utils';
-import { TaskStatus } from '@/types/enums';
+import { TaskStatus, EntityType } from '@/types/enums';
 import { useThemeColors } from '@/lib/hooks/use-theme-colors';
 import { formatDateDDMMYYYY } from '@/lib/constants/date-constants';
 import { SprintCompletionModal } from '@/components/research/sprint-completion-modal';
@@ -127,12 +127,12 @@ export default function DataCenterPage() {
 
   // Load character log
   useEffect(() => {
-    loadLog('character', setCharacterLog);
+    loadLog(EntityType.CHARACTER, setCharacterLog);
   }, [loadLog]);
 
   // Load player log
   useEffect(() => {
-    loadLog('player', setPlayerLog);
+    loadLog(EntityType.PLAYER, setPlayerLog);
   }, [loadLog]);
 
   // Load sales log

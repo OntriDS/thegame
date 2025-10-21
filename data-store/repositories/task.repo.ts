@@ -2,8 +2,9 @@
 import type { Task } from '@/types/entities';
 import { kvGet, kvSet, kvDel, kvSMembers, kvSAdd } from '@/data-store/kv';
 import { buildDataKey, buildIndexKey } from '@/data-store/keys';
+import { EntityType } from '@/types/enums';
 
-const ENTITY = 'task';
+const ENTITY = EntityType.TASK;
 
 export async function getTaskById(id: string): Promise<Task | null> {
   return await kvGet<Task>(buildDataKey(ENTITY, id));

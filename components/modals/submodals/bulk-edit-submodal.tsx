@@ -8,7 +8,7 @@ import { getZIndexClass } from '@/lib/utils/z-index-utils';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ItemType, ItemStatus, Collection } from '@/types/enums';
+import { ItemType, ItemStatus, Collection, EntityType } from '@/types/enums';
 import { getSubTypesForItemType } from '@/lib/utils/item-utils';
 import type { SubItemType } from '@/types/type-aliases';
 // Side effects handled by parent component via API calls
@@ -48,7 +48,7 @@ export default function BulkEditModal({ open, onOpenChange, itemType, onComplete
     { value: 'collection', label: 'Collection' },
     { value: 'subItemType', label: 'Sub Type' },
     { value: 'size', label: 'Size' },
-            { value: 'site', label: 'Site' }
+            { value: EntityType.SITE, label: 'Site' }
   ];
 
   // Load items when modal opens
@@ -102,7 +102,7 @@ export default function BulkEditModal({ open, onOpenChange, itemType, onComplete
           newValue = value as ItemStatus;
         } else if (field === 'collection') {
           newValue = value === 'none' ? undefined : value as Collection;
-        } else if (field === 'site') {
+        } else if (field === EntityType.SITE) {
           // Handle site change using the unified stock system
           const currentQuantity = ClientAPI.getItemTotalQuantity(item.id, items);
           const newSiteId = value as any; // Site enum

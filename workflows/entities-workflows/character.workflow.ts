@@ -103,7 +103,7 @@ export async function removeCharacterEffectsOnDelete(characterId: string): Promi
     console.log(`[removeCharacterEffectsOnDelete] Starting cleanup for character: ${characterId}`);
     
     // 1. Remove all Links related to this character
-    const characterLinks = await ClientAPI.getLinksFor({ type: 'character', id: characterId });
+    const characterLinks = await ClientAPI.getLinksFor({ type: EntityType.CHARACTER, id: characterId });
     console.log(`[removeCharacterEffectsOnDelete] Found ${characterLinks.length} links to remove`);
     
     for (const link of characterLinks) {
@@ -117,12 +117,12 @@ export async function removeCharacterEffectsOnDelete(characterId: string): Promi
     
     // 2. Clear all effects for this character
     await clearEffect(`character:${characterId}:created`);
-    await clearEffectsByPrefix('character', characterId, '');
+    await clearEffectsByPrefix(EntityType.CHARACTER, characterId, '');
     
     // 3. Remove log entries from character log
     console.log(`[removeCharacterEffectsOnDelete] Starting log entry removal for character: ${characterId}`);
     
-    const result = await ClientAPI.removeLogEntry('character', characterId);
+    const result = await ClientAPI.removeLogEntry(EntityType.CHARACTER, characterId);
     
     if (result.success) {
       console.log(`[removeCharacterEffectsOnDelete] ✅ Character log entries removed successfully for character: ${characterId}`);

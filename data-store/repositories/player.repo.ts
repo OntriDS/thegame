@@ -1,9 +1,10 @@
 // data-store/repositories/player.repo.ts
 import { kvGet, kvSet, kvDel, kvSAdd, kvSRem, kvSMembers } from '../kv';
 import { buildDataKey, buildIndexKey } from '../keys';
+import { EntityType } from '@/types/enums';
 import type { Player } from '@/types/entities';
 
-const ENTITY = 'players';
+const ENTITY = EntityType.PLAYER;
 
 export async function getAllPlayers(): Promise<Player[]> {
   const indexKey = buildIndexKey(ENTITY);

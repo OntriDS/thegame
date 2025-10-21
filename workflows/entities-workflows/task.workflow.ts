@@ -103,7 +103,7 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
     const effectKey = `task:${task.id}:pointsAwarded`;
     if (!(await hasEffect(effectKey))) {
       console.log(`[onTaskUpsert] Awarding points from task completion: ${task.name}`);
-      await awardPointsToPlayer(getMainPlayerId(), task.rewards.points, task.id, 'task');
+      await awardPointsToPlayer(getMainPlayerId(), task.rewards.points, task.id, EntityType.TASK);
       await markEffect(effectKey);
       console.log(`[onTaskUpsert] ✅ Points awarded and effect marked for task: ${task.name}`);
     }
@@ -139,7 +139,7 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
     // Propagate to Player (points delta)
     if (hasRewardsChanged(task, previousTask)) {
       console.log(`[onTaskUpsert] Propagating points changes from task: ${task.name}`);
-      await updatePlayerPointsFromSource('task', task, previousTask);
+      await updatePlayerPointsFromSource(EntityType.TASK, task, previousTask);
     }
   }
   
@@ -186,8 +186,8 @@ export async function removeTaskLogEntriesOnDelete(taskId: string): Promise<void
     await clearEffect(`task:${taskId}:itemCreated`);
     await clearEffect(`task:${taskId}:financialCreated`);
     await clearEffect(`task:${taskId}:pointsAwarded`);
-    await clearEffectsByPrefix('task', taskId, 'pointsLogged:');
-    await clearEffectsByPrefix('task', taskId, 'financialLogged:');
+    await clearEffectsByPrefix(EntityType.TASK, taskId, 'pointsLogged:');
+    await clearEffectsByPrefix(EntityType.TASK, taskId, 'financialLogged:');
     
     // 5. Remove log entries from all relevant logs
     // Note: Log removal is handled client-side via API calls

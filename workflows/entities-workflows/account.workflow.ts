@@ -84,7 +84,7 @@ export async function removeAccountEffectsOnDelete(accountId: string): Promise<v
     console.log(`[removeAccountEffectsOnDelete] Starting cleanup for account: ${accountId}`);
     
     // 1. Remove all Links related to this account
-    const accountLinks = await ClientAPI.getLinksFor({ type: 'account', id: accountId });
+    const accountLinks = await ClientAPI.getLinksFor({ type: EntityType.ACCOUNT, id: accountId });
     console.log(`[removeAccountEffectsOnDelete] Found ${accountLinks.length} links to remove`);
     
     for (const link of accountLinks) {
@@ -98,12 +98,12 @@ export async function removeAccountEffectsOnDelete(accountId: string): Promise<v
     
     // 2. Clear all effects for this account
     await clearEffect(`account:${accountId}:created`);
-    await clearEffectsByPrefix('account', accountId, '');
+    await clearEffectsByPrefix(EntityType.ACCOUNT, accountId, '');
     
     // 3. Remove log entries from account log
     console.log(`[removeAccountEffectsOnDelete] Starting log entry removal for account: ${accountId}`);
     
-    const result = await ClientAPI.removeLogEntry('account', accountId);
+    const result = await ClientAPI.removeLogEntry(EntityType.ACCOUNT, accountId);
     
     if (result.success) {
       console.log(`[removeAccountEffectsOnDelete] ✅ Account log entries removed successfully for account: ${accountId}`);

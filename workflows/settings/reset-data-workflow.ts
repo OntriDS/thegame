@@ -513,10 +513,10 @@ export class ResetDataWorkflow {
       try {
         // Use batch operations for seeding sites
         const pipeline = kv.multi();
-        const indexKey = buildIndexKey('sites');
+        const indexKey = buildIndexKey(EntityType.SITE);
 
         for (const site of defaultSites) {
-          const dataKey = buildDataKey('sites', site.id);
+          const dataKey = buildDataKey(EntityType.SITE, site.id);
           pipeline.set(dataKey, JSON.stringify(site));
         }
 
@@ -539,11 +539,11 @@ export class ResetDataWorkflow {
 
         for (const site of defaultSites) {
           try {
-            const dataKey = buildDataKey('sites', site.id);
+            const dataKey = buildDataKey(EntityType.SITE, site.id);
             await kv.set(dataKey, JSON.stringify(site));
 
             // Add to sites index
-            const indexKey = buildIndexKey('sites');
+            const indexKey = buildIndexKey(EntityType.SITE);
             await kv.sadd(indexKey, site.id);
 
             results.push(`Seeded site: ${site.name}`);

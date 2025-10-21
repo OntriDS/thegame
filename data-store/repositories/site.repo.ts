@@ -1,9 +1,10 @@
 // data-store/repositories/site.repo.ts
 import { kvGet, kvMGet, kvSet, kvDel, kvSAdd, kvSRem, kvSMembers } from '../kv';
 import { buildDataKey, buildIndexKey } from '../keys';
+import { EntityType } from '@/types/enums';
 import type { Site, Settlement, PhysicalSiteMetadata } from '@/types/entities';
 
-const ENTITY = 'sites';
+const ENTITY = EntityType.SITE;
 const SETTLEMENTS_ENTITY = 'settlements';
 
 export async function getAllSites(): Promise<Site[]> {

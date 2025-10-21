@@ -1,7 +1,7 @@
 // lib/utils/status-utils.ts
 // Status mapping and utility functions for all entity types
 
-import { TaskStatus, FinancialStatus, DevSprintStatus, ItemStatus } from '@/types/enums';
+import { TaskStatus, FinancialStatus, DevSprintStatus, ItemStatus, EntityType } from '@/types/enums';
 
 /** Task status key mappings */
 export const taskStatusKeyMap: Record<TaskStatus, string> = {
@@ -55,19 +55,19 @@ export const statusKeyMap = taskStatusKeyMap;
 /** Utility functions for status handling */
 
 /** Get status key for any entity type */
-export const getStatusKey = (status: string, entityType: 'task' | 'record' | 'financial' | 'devSprint' | 'item'): string => {
+export const getStatusKey = (status: string, entityType: EntityType | 'record' | 'devSprint'): string => {
   switch (entityType) {
-    case 'task':
+    case EntityType.TASK:
       const taskStatus = Object.values(TaskStatus).find(ts => ts === status);
       return taskStatus ? taskStatusKeyMap[taskStatus] : 'unknown';
     case 'record':
-    case 'financial':
+    case EntityType.FINANCIAL:
       const financialStatus = Object.values(FinancialStatus).find(fs => fs === status);
       return financialStatus ? financialStatusKeyMap[financialStatus] : 'unknown';
     case 'devSprint':
       const devSprintStatus = Object.values(DevSprintStatus).find(ds => ds === status);
       return devSprintStatus ? devSprintStatusKeyMap[devSprintStatus] : 'unknown';
-    case 'item':
+    case EntityType.ITEM:
       const itemStatus = Object.values(ItemStatus).find(is => is === status);
       return itemStatus ? itemStatusKeyMap[itemStatus] : 'unknown';
     default:
@@ -76,16 +76,16 @@ export const getStatusKey = (status: string, entityType: 'task' | 'record' | 'fi
 };
 
 /** Check if a status is valid for an entity type */
-export const isValidStatus = (status: string, entityType: 'task' | 'record' | 'financial' | 'devSprint' | 'item'): boolean => {
+export const isValidStatus = (status: string, entityType: EntityType | 'record' | 'devSprint'): boolean => {
   switch (entityType) {
-    case 'task':
+    case EntityType.TASK:
       return Object.values(TaskStatus).includes(status as TaskStatus);
     case 'record':
-    case 'financial':
+    case EntityType.FINANCIAL:
       return Object.values(FinancialStatus).includes(status as FinancialStatus);
     case 'devSprint':
       return Object.values(DevSprintStatus).includes(status as DevSprintStatus);
-    case 'item':
+    case EntityType.ITEM:
       return Object.values(ItemStatus).includes(status as ItemStatus);
     default:
       return false;

@@ -66,7 +66,7 @@ export async function removeSiteEffectsOnDelete(siteId: string): Promise<void> {
     console.log(`[removeSiteEffectsOnDelete] Starting cleanup for site: ${siteId}`);
     
     // 1. Remove all Links related to this site
-    const siteLinks = await ClientAPI.getLinksFor({ type: 'site', id: siteId });
+    const siteLinks = await ClientAPI.getLinksFor({ type: EntityType.SITE, id: siteId });
     console.log(`[removeSiteEffectsOnDelete] Found ${siteLinks.length} links to remove`);
     
     for (const link of siteLinks) {
@@ -80,12 +80,12 @@ export async function removeSiteEffectsOnDelete(siteId: string): Promise<void> {
     
     // 2. Clear all effects for this site
     await clearEffect(`site:${siteId}:created`);
-    await clearEffectsByPrefix('site', siteId, '');
+    await clearEffectsByPrefix(EntityType.SITE, siteId, '');
     
     // 3. Remove log entries from sites log
     console.log(`[removeSiteEffectsOnDelete] Starting log entry removal for site: ${siteId}`);
     
-    const result = await ClientAPI.removeLogEntry('sites', siteId);
+    const result = await ClientAPI.removeLogEntry(EntityType.SITE, siteId);
     
     if (result.success) {
       console.log(`[removeSiteEffectsOnDelete] ✅ Site log entries removed successfully for site: ${siteId}`);

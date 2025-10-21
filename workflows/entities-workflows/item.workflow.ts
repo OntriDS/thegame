@@ -75,7 +75,7 @@ export async function removeItemEffectsOnDelete(itemId: string): Promise<void> {
     console.log(`[removeItemEffectsOnDelete] Starting cleanup for item: ${itemId}`);
     
     // 1. Remove all Links related to this item
-    const itemLinks = await ClientAPI.getLinksFor({ type: 'item', id: itemId });
+    const itemLinks = await ClientAPI.getLinksFor({ type: EntityType.ITEM, id: itemId });
     console.log(`[removeItemEffectsOnDelete] Found ${itemLinks.length} links to remove`);
     
     for (const link of itemLinks) {
@@ -89,13 +89,13 @@ export async function removeItemEffectsOnDelete(itemId: string): Promise<void> {
     
     // 2. Clear all effects for this item
     await clearEffect(`item:${itemId}:created`);
-    await clearEffectsByPrefix('item', itemId, 'financialLogged:');
-    await clearEffectsByPrefix('item', itemId, 'pointsLogged:');
+    await clearEffectsByPrefix(EntityType.ITEM, itemId, 'financialLogged:');
+    await clearEffectsByPrefix(EntityType.ITEM, itemId, 'pointsLogged:');
     
     // 3. Remove log entries from items log only (Items don't have financial/player effects)
     console.log(`[removeItemEffectsOnDelete] Starting log entry removal for item: ${itemId}`);
     
-    const result = await ClientAPI.removeLogEntry('items', itemId);
+    const result = await ClientAPI.removeLogEntry(EntityType.ITEM, itemId);
     
     if (result.success) {
       console.log(`[removeItemEffectsOnDelete] ✅ Item log entries removed successfully for item: ${itemId}`);

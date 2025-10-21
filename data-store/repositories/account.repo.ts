@@ -1,9 +1,10 @@
 // data-store/repositories/account.repo.ts
 import { kvGet, kvSet, kvDel, kvSAdd, kvSRem, kvSMembers } from '../kv';
 import { buildDataKey, buildIndexKey } from '../keys';
+import { EntityType } from '@/types/enums';
 import type { Account } from '@/types/entities';
 
-const ENTITY = 'accounts';
+const ENTITY = EntityType.ACCOUNT;
 
 export async function getAllAccounts(): Promise<Account[]> {
   const indexKey = buildIndexKey(ENTITY);

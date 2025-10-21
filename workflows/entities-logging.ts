@@ -95,7 +95,7 @@ export async function appendItemCreationLog(
   sourceType: 'task' | 'record' | 'direct',
   sourceId?: string
 ): Promise<void> {
-  const key = buildLogKey('item');
+  const key = buildLogKey(EntityType.ITEM);
   const list = (await kvGet<any[]>(key)) || [];
   
   const logEntry = {
@@ -132,7 +132,7 @@ export async function appendPlayerPointsLog(
   sourceId: string,
   sourceType: string
 ): Promise<void> {
-  const key = buildLogKey('player');
+  const key = buildLogKey(EntityType.PLAYER);
   const list = (await kvGet<any[]>(key)) || [];
   
   const logEntry = {
@@ -159,7 +159,7 @@ export async function appendCharacterJungleCoinsLog(
   sourceId: string,
   sourceType: string
 ): Promise<void> {
-  const key = buildLogKey('character');
+  const key = buildLogKey(EntityType.CHARACTER);
   const list = (await kvGet<any[]>(key)) || [];
   
   const logEntry = {
@@ -186,7 +186,7 @@ export async function appendPlayerPointsUpdateLog(
   newPoints: { xp: number; rp: number; fp: number; hp: number },
   sourceId: string
 ): Promise<void> {
-  const key = buildLogKey('player');
+  const key = buildLogKey(EntityType.PLAYER);
   const list = (await kvGet<any[]>(key)) || [];
   
   const delta = {
@@ -227,7 +227,7 @@ export async function appendAccountAuthLog(
     reason?: string;
   }
 ): Promise<void> {
-  const key = buildLogKey('account');
+  const key = buildLogKey(EntityType.ACCOUNT);
   const list = (await kvGet<any[]>(key)) || [];
   
   const logEntry = {
@@ -263,7 +263,7 @@ export async function appendAccountSecurityLog(
     severity?: 'low' | 'medium' | 'high' | 'critical';
   }
 ): Promise<void> {
-  const key = buildLogKey('account');
+  const key = buildLogKey(EntityType.ACCOUNT);
   const list = (await kvGet<any[]>(key)) || [];
   
   const logEntry = {

@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, ShoppingCart, DollarSign, Calendar, Link as LinkIcon, ArrowUpDown, Package } from 'lucide-react';
 import { formatDisplayDate } from '@/lib/utils/date-utils';
+import { EntityType } from '@/types/enums';
 import { LinksSubModal } from '@/components/modals/submodals/links-submodal';
 import { useState, useMemo } from 'react';
 import { processLogData } from '@/lib/utils/logging-utils';
@@ -172,7 +173,7 @@ export function SalesLogTab({ salesLog, onReload, isReloading }: SalesLogTabProp
               if (data.lines && data.lines.length > 0) {
                 if (data.lines.length === 1) {
                   const line = data.lines[0];
-                  if (line.kind === 'item') {
+                  if (line.kind === EntityType.ITEM) {
                     relevantInfo = line.itemName || line.description || 'Item';
                   } else if (line.kind === 'service') {
                     relevantInfo = line.description || 'Service';
@@ -243,7 +244,7 @@ export function SalesLogTab({ salesLog, onReload, isReloading }: SalesLogTabProp
                       onClick={async () => {
                         try {
                           const { ClientAPI } = await import('@/lib/client-api');
-                          const links = await ClientAPI.getLinksFor({ type: 'sale', id: data.entityId });
+                          const links = await ClientAPI.getLinksFor({ type: EntityType.SALE, id: data.entityId });
                           setSaleLinks(links);
                           setSelectedSaleId(data.entityId);
                           setSelectedLogEntry(entry); // Pass the log entry context

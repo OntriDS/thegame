@@ -2,6 +2,7 @@
 // Comprehensive update propagation across ALL entity relationships
 
 import type { Task, Item, Sale, FinancialRecord, Character, Player } from '@/types/entities';
+import { EntityType } from '@/types/enums';
 import { ClientAPI } from '@/lib/client-api';
 import { hasEffect, markEffect } from '@/data-store/effects-registry';
 
@@ -361,7 +362,7 @@ export async function updateItemsFromSale(
 // ============================================================================
 
 export async function updatePlayerPointsFromSource(
-  sourceType: 'task' | 'financial' | 'sale',
+  sourceType: EntityType.TASK | EntityType.FINANCIAL | EntityType.SALE,
   newSource: any,
   oldSource: any
 ): Promise<void> {
@@ -371,7 +372,7 @@ export async function updatePlayerPointsFromSource(
     // Calculate points delta
     let pointsDelta = { xp: 0, rp: 0, fp: 0, hp: 0 };
     
-    if (sourceType === 'task' || sourceType === 'financial') {
+    if (sourceType === EntityType.TASK || sourceType === EntityType.FINANCIAL) {
       const newPoints = newSource.rewards?.points || { xp: 0, rp: 0, fp: 0, hp: 0 };
       const oldPoints = oldSource.rewards?.points || { xp: 0, rp: 0, fp: 0, hp: 0 };
       
@@ -381,7 +382,7 @@ export async function updatePlayerPointsFromSource(
         fp: (newPoints.fp || 0) - (oldPoints.fp || 0),
         hp: (newPoints.hp || 0) - (oldPoints.hp || 0)
       };
-    } else if (sourceType === 'sale') {
+    } else if (sourceType === EntityType.SALE) {
       // Calculate points from revenue (simplified)
       const newRevenue = newSource.totals?.totalRevenue || 0;
       const oldRevenue = oldSource.totals?.totalRevenue || 0;

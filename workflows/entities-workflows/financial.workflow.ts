@@ -58,7 +58,7 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
           rp: financial.rewards.points.rp || 0,
           fp: financial.rewards.points.fp || 0,
           hp: financial.rewards.points.hp || 0
-        }, financial.id, 'financial');
+        }, financial.id, EntityType.FINANCIAL);
         await markEffect(pointsEffectKey);
         console.log(`[onFinancialUpsert] ✅ Points awarded and effect marked for record: ${financial.name}`);
       }
@@ -69,7 +69,7 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
       const jungleCoinsEffectKey = `financial:${financial.id}:jungleCoinsAwarded`;
       if (!(await hasEffect(jungleCoinsEffectKey))) {
         console.log(`[onFinancialUpsert] Awarding jungle coins from financial record: ${financial.name}`);
-        await awardJungleCoinsToCharacter(getMainCharacterId(), financial.jungleCoins, financial.id, 'financial');
+        await awardJungleCoinsToCharacter(getMainCharacterId(), financial.jungleCoins, financial.id, EntityType.FINANCIAL);
         await markEffect(jungleCoinsEffectKey);
         console.log(`[onFinancialUpsert] ✅ Jungle coins awarded and effect marked for record: ${financial.name}`);
       }
@@ -112,7 +112,7 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
     // Propagate to Player (points delta)
     if (hasRewardsChanged(financial, previousFinancial)) {
       console.log(`[onFinancialUpsert] Propagating points changes to player: ${financial.name}`);
-      await updatePlayerPointsFromSource('financial', financial, previousFinancial);
+      await updatePlayerPointsFromSource(EntityType.FINANCIAL, financial, previousFinancial);
     }
     
     // Propagate to Character (jungle coins delta)
@@ -148,7 +148,7 @@ export async function removeRecordEffectsOnDelete(recordId: string): Promise<voi
     await removeJungleCoinsFromRecord(recordId);
     
     // 4. Remove all Links related to this record
-    const recordLinks = await ClientAPI.getLinksFor({ type: 'financial', id: recordId });
+    const recordLinks = await ClientAPI.getLinksFor({ type: EntityType.FINANCIAL, id: recordId });
     console.log(`[removeRecordEffectsOnDelete] Found ${recordLinks.length} links to remove`);
     
     for (const link of recordLinks) {
@@ -165,17 +165,17 @@ export async function removeRecordEffectsOnDelete(recordId: string): Promise<voi
     await clearEffect(`financial:${recordId}:itemCreated`);
     await clearEffect(`financial:${recordId}:pointsAwarded`);
     await clearEffect(`financial:${recordId}:jungleCoinsAwarded`);
-    await clearEffectsByPrefix('financial', recordId, 'pointsLogged:');
-    await clearEffectsByPrefix('financial', recordId, 'financialLogged:');
+    await clearEffectsByPrefix(EntityType.FINANCIAL, recordId, 'pointsLogged:');
+    await clearEffectsByPrefix(EntityType.FINANCIAL, recordId, 'financialLogged:');
     
     // 6. Remove log entries from all relevant logs
     console.log(`[removeRecordEffectsOnDelete] Starting log entry removal for record: ${recordId}`);
     
     const removals = await Promise.all([
-      ClientAPI.removeLogEntry('financials', recordId).then(r => { console.log(`[removeRecordEffectsOnDelete] Financials log removal result:`, r); return r; }).catch(e => ({ success: false, message: String(e) })),
-      ClientAPI.removeLogEntry('character', recordId).then(r => { console.log(`[removeRecordEffectsOnDelete] Character log removal result:`, r); return r; }).catch(e => ({ success: false, message: String(e) })),
-      ClientAPI.removeLogEntry('player', recordId).then(r => { console.log(`[removeRecordEffectsOnDelete] Player log removal result:`, r); return r; }).catch(e => ({ success: false, message: String(e) })),
-      ClientAPI.removeLogEntry('items', recordId).then(r => { console.log(`[removeRecordEffectsOnDelete] Items log removal result:`, r); return r; }).catch(e => ({ success: false, message: String(e) })),
+      ClientAPI.removeLogEntry(EntityType.FINANCIAL, recordId).then(r => { console.log(`[removeRecordEffectsOnDelete] Financials log removal result:`, r); return r; }).catch(e => ({ success: false, message: String(e) })),
+      ClientAPI.removeLogEntry(EntityType.CHARACTER, recordId).then(r => { console.log(`[removeRecordEffectsOnDelete] Character log removal result:`, r); return r; }).catch(e => ({ success: false, message: String(e) })),
+      ClientAPI.removeLogEntry(EntityType.PLAYER, recordId).then(r => { console.log(`[removeRecordEffectsOnDelete] Player log removal result:`, r); return r; }).catch(e => ({ success: false, message: String(e) })),
+      ClientAPI.removeLogEntry(EntityType.ITEM, recordId).then(r => { console.log(`[removeRecordEffectsOnDelete] Items log removal result:`, r); return r; }).catch(e => ({ success: false, message: String(e) })),
     ]);
 
     console.log(`[removeRecordEffectsOnDelete] All removal results:`, removals);

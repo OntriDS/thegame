@@ -7,6 +7,7 @@ import { RefreshCw, Gamepad, ArrowUpDown, Link as LinkIcon, User } from 'lucide-
 import { LinksSubModal } from '@/components/modals/submodals/links-submodal';
 import { useState } from 'react';
 import { formatDisplayDate } from '@/lib/utils/date-utils';
+import { EntityType } from '@/types/enums';
 import { getPointsMetadata } from '@/lib/utils/points-utils';
 import { ClientAPI } from '@/lib/client-api';
 import { cn } from '@/lib/utils';
@@ -36,7 +37,7 @@ export function PlayerLogTab({ playerLog, onReload, isReloading }: PlayerLogTabP
   const [selectedPlayerId, setSelectedPlayerId] = useState<string>('');
   const [playerLinks, setPlayerLinks] = useState<any[]>([]);
   const [selectedLogEntry, setSelectedLogEntry] = useState<any>(null);
-  const [selectedEntityType, setSelectedEntityType] = useState<string>('player');
+  const [selectedEntityType, setSelectedEntityType] = useState<string>(EntityType.PLAYER);
 
   // Sort entries based on order
   const sortedEntries = [...entries].sort((a, b) => {

@@ -128,7 +128,7 @@ export async function removePlayerEffectsOnDelete(playerId: string): Promise<voi
     console.log(`[removePlayerEffectsOnDelete] Starting cleanup for player: ${playerId}`);
     
     // 1. Remove all Links related to this player
-    const playerLinks = await ClientAPI.getLinksFor({ type: 'player', id: playerId });
+    const playerLinks = await ClientAPI.getLinksFor({ type: EntityType.PLAYER, id: playerId });
     console.log(`[removePlayerEffectsOnDelete] Found ${playerLinks.length} links to remove`);
     
     for (const link of playerLinks) {
@@ -142,12 +142,12 @@ export async function removePlayerEffectsOnDelete(playerId: string): Promise<voi
     
     // 2. Clear all effects for this player
     await clearEffect(`player:${playerId}:created`);
-    await clearEffectsByPrefix('player', playerId, '');
+    await clearEffectsByPrefix(EntityType.PLAYER, playerId, '');
     
     // 3. Remove log entries from player log
     console.log(`[removePlayerEffectsOnDelete] Starting log entry removal for player: ${playerId}`);
     
-    const result = await ClientAPI.removeLogEntry('player', playerId);
+    const result = await ClientAPI.removeLogEntry(EntityType.PLAYER, playerId);
     
     if (result.success) {
       console.log(`[removePlayerEffectsOnDelete] ✅ Player log entries removed successfully for player: ${playerId}`);

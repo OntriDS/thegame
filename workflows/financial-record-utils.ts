@@ -149,7 +149,7 @@ export async function updateFinancialRecordFromTask(task: Task, previousTask: Ta
     // Log the update
     await appendEntityLog(EntityType.FINANCIAL, existingFinrec.id, LogEventType.UPDATED, {
       name: task.name,
-      updatedFrom: 'task',
+      updatedFrom: EntityType.TASK,
       changes: {
         cost: { from: previousTask.cost || 0, to: task.cost || 0 },
         revenue: { from: previousTask.revenue || 0, to: task.revenue || 0 },

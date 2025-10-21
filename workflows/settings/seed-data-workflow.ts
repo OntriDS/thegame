@@ -3,6 +3,7 @@
 
 import { kv } from '@/data-store/kv';
 import { buildDataKey, buildIndexKey } from '@/data-store/keys';
+import { EntityType } from '@/types/enums';
 
 export interface SettingsResult {
   success: boolean;
@@ -232,11 +233,11 @@ export class SeedDataWorkflow {
       
       for (const task of defaultTasks) {
         try {
-          const dataKey = buildDataKey('tasks', task.id);
+          const dataKey = buildDataKey(EntityType.TASK, task.id);
           await kv.set(dataKey, JSON.stringify(task));
           
           // Add to tasks index
-          const indexKey = buildIndexKey('tasks');
+          const indexKey = buildIndexKey(EntityType.TASK);
           await kv.sadd(indexKey, task.id);
           
           results.push(`Seeded task: ${task.name}`);
@@ -319,11 +320,11 @@ export class SeedDataWorkflow {
       
       for (const site of sites) {
         try {
-          const dataKey = buildDataKey('sites', site.id);
+          const dataKey = buildDataKey(EntityType.SITE, site.id);
           await kv.set(dataKey, JSON.stringify(site));
           
           // Add to sites index
-          const indexKey = buildIndexKey('sites');
+          const indexKey = buildIndexKey(EntityType.SITE);
           await kv.sadd(indexKey, site.id);
           
           results.push(`Seeded site: ${site.name}`);
@@ -400,11 +401,11 @@ export class SeedDataWorkflow {
       
       for (const site of defaultSites) {
         try {
-          const dataKey = buildDataKey('sites', site.id);
+          const dataKey = buildDataKey(EntityType.SITE, site.id);
           await kv.set(dataKey, JSON.stringify(site));
           
           // Add to sites index
-          const indexKey = buildIndexKey('sites');
+          const indexKey = buildIndexKey(EntityType.SITE);
           await kv.sadd(indexKey, site.id);
           
           results.push(`Seeded fallback site: ${site.name}`);
