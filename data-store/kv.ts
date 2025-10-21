@@ -1,12 +1,93 @@
 // data-store/kv.ts
-// Thin server-only wrappers around @vercel/kv. No HTTP calls to own routes.
+// Thin server-only wrappers around a KV client. Prefers @vercel/kv when env vars are present,
+// falls back to an in-memory implementation for local development.
 
 import { createClient } from '@vercel/kv';
 
-export const kv = createClient({
-  url: process.env.UPSTASH_REDIS_REST_URL,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN,
+type KVClient = {
+  get: <T>(key: string) => Promise<T | null>;
+  set: (key: string, value: unknown) => Promise<void>;
+  del: (key: string) => Promise<void>;
+  mget: (keys: string[]) => Promise<(unknown | null)[]>;
+  scanIterator: (options: { match: string; count?: number }) => AsyncIterable<string>;
+  sadd: (key: string, ...members: string[]) => Promise<void>;
+  srem: (key: string, ...members: string[]) => Promise<void>;
+  smembers: (key: string) => Promise<string[] | null>;
+};
+
+function createLocalKV(): KVClient {
+  const kvStore = new Map<string, unknown>();
+  const setStore = new Map<string, Set<string>>();
+
+  const api: KVClient = {
+    async get<T>(key: string) {
+      return (kvStore.has(key) ? (kvStore.get(key) as T) : null) as T | null;
+    },
+    async set(key: string, value: unknown) {
+      kvStore.set(key, value);
+    },
+    async del(key: string) {
+      kvStore.delete(key);
+    },
+    async mget(keys: string[]) {
+      return keys.map((k) => (kvStore.has(k) ? kvStore.get(k)! : null));
+    },
+    async *scanIterator(options: { match: string; count?: number }) {
+      const prefix = options.match.replace(/\*$/, '');
+      for (const key of kvStore.keys()) {
+        if (key.startsWith(prefix)) {
+          yield key;
+        }
+      }
+    },
+    async sadd(key: string, ...members: string[]) {
+      const set = setStore.get(key) ?? new Set<string>();
+      members.forEach((m) => set.add(m));
+      setStore.set(key, set);
+    },
+    async srem(key: string, ...members: string[]) {
+      const set = setStore.get(key);
+      if (!set) return;
+      members.forEach((m) => set.delete(m));
+      if (set.size === 0) setStore.delete(key);
+    },
+    async smembers(key: string) {
+      const set = setStore.get(key);
+      return set ? Array.from(set) : [];
+    },
+  };
+
+  return api;
+}
+
+const hasUpstash = !!process.env.UPSTASH_REDIS_REST_URL && !!process.env.UPSTASH_REDIS_REST_TOKEN;
+
+// 🔥 DEBUG MODE: Let's see what's actually happening!
+console.log('🔥 KV DEBUG - Environment Check:', {
+  hasUpstash,
+  url: process.env.UPSTASH_REDIS_REST_URL ? `SET (${process.env.UPSTASH_REDIS_REST_URL.substring(0, 20)}...)` : 'MISSING',
+  token: process.env.UPSTASH_REDIS_REST_TOKEN ? `SET (${process.env.UPSTASH_REDIS_REST_TOKEN.substring(0, 10)}...)` : 'MISSING',
+  allUpstashKeys: Object.keys(process.env).filter(k => k.includes('UPSTASH')),
+  allRedisKeys: Object.keys(process.env).filter(k => k.includes('REDIS')),
+  nodeEnv: process.env.NODE_ENV,
+  vercelEnv: process.env.VERCEL_ENV,
+  timestamp: new Date().toISOString()
 });
+
+export const kv: KVClient = hasUpstash
+  ? (() => {
+      console.log('🔥 KV DEBUG - Using Upstash Redis client');
+      return createClient({
+        url: process.env.UPSTASH_REDIS_REST_URL!,
+        token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+      }) as unknown as KVClient;
+    })()
+  : (() => {
+      console.warn(
+        "🔥 KV DEBUG - Missing UPSTASH_REDIS_REST_URL/UPSTASH_REDIS_REST_TOKEN. Using in-memory KV fallback (dev only)."
+      );
+      return createLocalKV();
+    })();
 
 export async function kvGet<T>(key: string): Promise<T | null> {
   return (await kv.get<T>(key)) ?? null;

@@ -311,9 +311,20 @@ export const ClientAPI = {
     if (!res.ok) throw new Error('Failed to delete site');
   },
   
-  // Placeholder methods for features not yet implemented
-  getAccount: async (id: string): Promise<any> => {
-    throw new Error('Account entity not yet implemented in KV-only system');
+  // Compatibility aliases
+	// Note: getAccounts is defined below in the bulk ops section for historical reasons
+
+  getAccount: async (id: string): Promise<Account | null> => {
+    console.log('🔥 CLIENT API DEBUG - getAccount called with id:', id);
+    const res = await fetch(`/api/accounts/${id}`);
+    console.log('🔥 CLIENT API DEBUG - getAccount response status:', res.status);
+    if (!res.ok) {
+      console.log('🔥 CLIENT API DEBUG - getAccount failed:', res.status, res.statusText);
+      return null;
+    }
+    const account = await res.json();
+    console.log('🔥 CLIENT API DEBUG - getAccount success:', account ? 'Found account' : 'No account');
+    return account;
   },
   
   // ASSETS MANAGEMENT
@@ -522,9 +533,13 @@ export const ClientAPI = {
     return { success: false, addedCount: 0 };
   },
 
-  getAccounts: async (): Promise<any[]> => {
-    console.warn('[ClientAPI] getAccounts not implemented yet');
-    return [];
+  getAccounts: async (): Promise<Account[]> => {
+    const res = await fetch('/api/accounts');
+    if (!res.ok) {
+      console.error('Failed to fetch accounts');
+      return [];
+    }
+    return await res.json();
   },
 
   // BULK OPERATION LOGGING
@@ -579,4 +594,20 @@ export const ClientAPI = {
     const res = await fetch('/api/queue/clear', { method: 'POST' });
     if (!res.ok) throw new Error('Failed to clear queue');
   },
+};
+
+// Historical placement: keep alias methods at the end to avoid duplicate keys
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
+ClientAPI.getAccounts = async (): Promise<Account[]> => {
+  console.log('🔥 CLIENT API DEBUG - getAccounts called');
+  const res = await fetch('/api/accounts');
+  console.log('🔥 CLIENT API DEBUG - getAccounts response status:', res.status);
+  if (!res.ok) {
+    console.error('🔥 CLIENT API DEBUG - getAccounts failed:', res.status, res.statusText);
+    return [];
+  }
+  const accounts = await res.json();
+  console.log('🔥 CLIENT API DEBUG - getAccounts success, found:', accounts.length, 'accounts');
+  return accounts;
 };
