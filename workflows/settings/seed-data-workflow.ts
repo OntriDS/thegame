@@ -1,7 +1,7 @@
 // workflows/settings/seed-data-workflow.ts
 // Seed Data Workflow for KV-only architecture
 
-import { kv } from '@vercel/kv';
+import { kv } from '@/data-store/kv';
 import { buildDataKey, buildIndexKey } from '@/data-store/keys';
 
 export interface SettingsResult {
@@ -26,7 +26,7 @@ export class SeedDataWorkflow {
     try {
       console.log(`[SeedDataWorkflow] 🌱 Starting seed data operation (source: ${source})...`);
       
-      const isKV = Boolean(process.env.KV_REST_API_URL);
+      const isKV = Boolean(process.env.UPSTASH_REDIS_REST_URL);
       const isServer = typeof window === 'undefined';
       const results: string[] = [];
       const errors: string[] = [];

@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
 
   try {
     // In production with KV, read from KV
-    if (process.env.KV_REST_API_URL) {
+    if (process.env.UPSTASH_REDIS_REST_URL) {
       const { kvGet } = await import('@/data-store/kv');
       const projectStatus = await kvGet('data:project-status');
 

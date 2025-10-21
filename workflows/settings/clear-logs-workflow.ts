@@ -1,7 +1,7 @@
 // workflows/settings/clear-logs-workflow.ts
 // Clear Logs Workflow for KV-only architecture
 
-import { kv } from '@vercel/kv';
+import { kv } from '@/data-store/kv';
 import { buildLogKey } from '@/data-store/keys';
 import { EntityType } from '@/types/enums';
 import { TransactionManager } from './transaction-manager';
@@ -39,7 +39,7 @@ export class ClearLogsWorkflow {
     try {
       console.log('[ClearLogsWorkflow] 🗑️ Starting clear logs operation...');
       
-      const isKV = Boolean(process.env.KV_REST_API_URL);
+      const isKV = Boolean(process.env.UPSTASH_REDIS_REST_URL);
       const isServer = typeof window === 'undefined';
       const results: string[] = [];
       const errors: string[] = [];

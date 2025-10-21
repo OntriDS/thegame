@@ -1,7 +1,7 @@
 // workflows/settings/clear-cache-workflow.ts
 // Clear Cache Workflow for KV-only architecture
 
-import { kv } from '@vercel/kv';
+import { kv } from '@/data-store/kv';
 
 export interface SettingsResult {
   success: boolean;
@@ -24,7 +24,7 @@ export class ClearCacheWorkflow {
     try {
       console.log('[ClearCacheWorkflow] 🗑️ Starting clear cache operation...');
       
-      const isKV = Boolean(process.env.KV_REST_API_URL);
+      const isKV = Boolean(process.env.UPSTASH_REDIS_REST_URL);
       const isServer = typeof window === 'undefined';
       const results: string[] = [];
       const errors: string[] = [];

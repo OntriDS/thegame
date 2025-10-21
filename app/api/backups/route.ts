@@ -2,7 +2,7 @@
 // Backup Management API for KV-only architecture
 
 import { NextRequest, NextResponse } from 'next/server';
-import { kv } from '@vercel/kv';
+import { kv } from '@/data-store/kv';
 import { requireAdminAuth } from '@/lib/api-auth';
 import { EntityType } from '@/types/enums';
 

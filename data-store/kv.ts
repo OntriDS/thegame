@@ -1,7 +1,12 @@
 // data-store/kv.ts
 // Thin server-only wrappers around @vercel/kv. No HTTP calls to own routes.
 
-import { kv } from '@vercel/kv';
+import { createClient } from '@vercel/kv';
+
+export const kv = createClient({
+  url: process.env.UPSTASH_REDIS_REST_URL,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN,
+});
 
 export async function kvGet<T>(key: string): Promise<T | null> {
   return (await kv.get<T>(key)) ?? null;

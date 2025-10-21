@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
 
   try {
     // In production with KV, read from KV
-    if (process.env.KV_REST_API_URL) {
+    if (process.env.UPSTASH_REDIS_REST_URL) {
       const { kvGet } = await import('@/data-store/kv');
       const notesData = await kvGet('data:notes-log');
 
@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
    }
 
    // In production with KV, write to KV
-   if (process.env.KV_REST_API_URL) {
+   if (process.env.UPSTASH_REDIS_REST_URL) {
      const { kvGet, kvSet } = await import('@/data-store/kv');
 
      // Get current notes data
@@ -129,7 +129,7 @@ export async function PUT(req: NextRequest) {
    }
 
    // In production with KV, write to KV
-   if (process.env.KV_REST_API_URL) {
+   if (process.env.UPSTASH_REDIS_REST_URL) {
      const { kvGet, kvSet } = await import('@/data-store/kv');
 
      // Get current notes data
@@ -206,7 +206,7 @@ export async function DELETE(req: NextRequest) {
    }
 
    // In production with KV, write to KV
-   if (process.env.KV_REST_API_URL) {
+   if (process.env.UPSTASH_REDIS_REST_URL) {
      const { kvGet, kvSet } = await import('@/data-store/kv');
 
      // Get current notes data

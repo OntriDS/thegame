@@ -1,7 +1,7 @@
 // workflows/settings/transaction-manager.ts
 // Transaction Manager for rollback support in Settings workflows
 
-import { kv } from '@vercel/kv';
+import { kv } from '@/data-store/kv';
 import { buildDataKey, buildIndexKey, buildLogKey } from '@/data-store/keys';
 import { EntityType } from '@/types/enums';
 import { kvScan } from '@/data-store/kv';

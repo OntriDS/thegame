@@ -1,7 +1,7 @@
 // workflows/settings/reset-data-workflow.ts
 // Reset Data Workflow for KV-only architecture
 
-import { kv } from '@vercel/kv';
+import { kv } from '@/data-store/kv';
 import { buildDataKey, buildIndexKey, buildLogKey, buildLinksIndexKey } from '@/data-store/keys';
 import { EntityType } from '@/types/enums';
 import { kvScan } from '@/data-store/kv';
@@ -55,7 +55,7 @@ export class ResetDataWorkflow {
     try {
       console.log(`[ResetDataWorkflow] 🔄 Starting reset data operation (mode: ${mode})...`);
 
-      const isKV = Boolean(process.env.KV_REST_API_URL);
+      const isKV = Boolean(process.env.UPSTASH_REDIS_REST_URL);
       const isServer = typeof window === 'undefined';
       const results: string[] = [];
       const errors: string[] = [];

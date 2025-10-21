@@ -1,7 +1,7 @@
 // workflows/settings/import-data-workflow.ts
 // Import Data Workflow for KV-only architecture
 
-import { kv } from '@vercel/kv';
+import { kv } from '@/data-store/kv';
 import { buildDataKey, buildIndexKey, buildLogKey } from '@/data-store/keys';
 import { EntityType } from '@/types/enums';
 
@@ -46,7 +46,7 @@ export class ImportDataWorkflow {
      try {
        console.log('[ImportDataWorkflow] 📥 Starting import data operation...');
 
-       const isKV = Boolean(process.env.KV_REST_API_URL);
+       const isKV = Boolean(process.env.UPSTASH_REDIS_REST_URL);
        const isServer = typeof window === 'undefined';
        const results: string[] = [];
        const errors: string[] = [];

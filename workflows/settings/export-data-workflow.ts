@@ -1,7 +1,7 @@
 // workflows/settings/export-data-workflow.ts
 // Export Data Workflow for KV-only architecture
 
-import { kv } from '@vercel/kv';
+import { kv } from '@/data-store/kv';
 import { buildDataKey, buildIndexKey } from '@/data-store/keys';
 import { EntityType } from '@/types/enums';
 
@@ -38,7 +38,7 @@ export class ExportDataWorkflow {
     try {
       console.log('[ExportDataWorkflow] 📤 Starting export data operation...');
       
-      const isKV = Boolean(process.env.KV_REST_API_URL);
+      const isKV = Boolean(process.env.UPSTASH_REDIS_REST_URL);
       const isServer = typeof window === 'undefined';
       const results: string[] = [];
       const errors: string[] = [];
@@ -110,7 +110,7 @@ export class ExportDataWorkflow {
         metadata: {
           exportedAt: new Date().toISOString(),
           version: '1.0',
-          environment: process.env.KV_REST_API_URL ? 'kv' : 'local'
+          environment: process.env.UPSTASH_REDIS_REST_URL ? 'kv' : 'local'
         },
         entities: {
           tasks: [],
