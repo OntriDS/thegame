@@ -237,8 +237,8 @@ All logs are append-only.
 ## UI/Adapter Pattern Compliance
 
 - Modal → Parent → DataStore → Adapter → API → Workflows (unchanged).
-- LocalAdapter (dev): mirrors server behavior; dispatches UI events.
-- HybridAdapter (prod): `/api/sales`; KV as source of truth; cache & UI events.
+- KV-only system (dev): mirrors server behavior; dispatches UI events.
+- KV-only system (prod): `/api/sales`; KV as source of truth; cache & UI events.
 - Workflows: `sale-workflows.ts` orchestrates with EffectsRegistry + Links.
 
 ────────────────────────────────────────
@@ -276,7 +276,7 @@ Later: Marking Task Done appends sale_done in sales-log (if linked) without dupl
 - EffectsRegistry keys include link context where needed.
 
 3) Adapters & API
-- Local/Hybrid: add sales-log channel (filesystem/KV) + LoggingDataStore support.
+- KV-only system: add sales-log channel (KV) + LoggingDataStore support.
 - Add Links registry (localStorage/KV) with minimal helpers.
 
 4) Guardrails & prompts (stubs)

@@ -199,7 +199,7 @@ type SubItemType = StickerSubType | ArtworkSubType | DigitalSubType | /* ... */;
 - **Workflow Integration**: Item creation triggers logging via entity-workflows.ts
 
 ### **Data Management**
-- **DataStore**: Adapter-managed persistence (LocalAdapter for dev, HybridAdapter for prod)
+- **DataStore**: KV-only persistence (localStorage cache and offline mode planned for future)
 - **Environment Detection**: Automatic switching between localStorage and KV storage
 - **Real-time updates**: Event-driven refresh system via custom events
 - **Architecture**: Follows ENTITIES_ARCHITECTURE_PATTERN.md with proper separation of concerns

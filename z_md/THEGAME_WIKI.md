@@ -540,7 +540,7 @@ Next.js 14.2.3 • React 18.2.0 • Three.js 0.160.0 • @react-three/fiber 8.15
 
 #### **Architectural Principles**
 - **Separation of Concerns** – Each layer has clear, single responsibility
-- **Environment Parity** – LocalAdapter mirrors production behavior
+- **Environment Parity** – KV-only system mirrors production behavior
 - **Atomic Operations** – localStorage operations are naturally atomic, KV operations use Redis EVAL
 - **Cross-Environment Consistency** – Identical behavior between localStorage and KV
 - **Multi-Tenancy Ready** – `ORG_ID` namespacing supports future multi-user features

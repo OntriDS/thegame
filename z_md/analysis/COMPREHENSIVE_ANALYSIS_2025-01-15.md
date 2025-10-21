@@ -64,7 +64,7 @@ export async function DELETE(request: NextRequest) {
 }
 ```
 
-**2. HybridAdapter Links Implementation (lib/adapters/hybrid-adapter.ts)**
+**2. KV-only system Links Implementation (lib/adapters/hybrid-adapter.ts)**
 ```typescript
 // ✅ PRODUCTION-READY - Lines 1456-1587
 async createLink(link: any): Promise<void> {
@@ -72,7 +72,7 @@ async createLink(link: any): Promise<void> {
     // Browser: localStorage cache + API sync
     this.saveLinksToCache(links);
     this.syncLinkToServer(link).catch(error => 
-      console.warn('[HybridAdapter] Failed to sync link to server:', error)
+      console.warn('[KV-only system] Failed to sync link to server:', error)
     );
   } else {
     // Server: Direct API call
@@ -193,7 +193,7 @@ if (!process.env.KV_REST_API_TOKEN && process.env.UPSTASH_REDIS_REST_TOKEN) {
 // Plus STORAGE_* prefix support
 ```
 
-**HybridAdapter Environment Handling:**
+**KV-only system Environment Handling:**
 ```typescript
 // ✅ CONTEXT-AWARE IMPLEMENTATION
 async createLink(link: any): Promise<void> {
@@ -201,7 +201,7 @@ async createLink(link: any): Promise<void> {
     // Browser: localStorage cache + API sync (fire-and-forget)
     this.saveLinksToCache(links);
     this.syncLinkToServer(link).catch(error => 
-      console.warn('[HybridAdapter] Failed to sync link to server:', error)
+      console.warn('[KV-only system] Failed to sync link to server:', error)
     );
   } else {
     // Server: Direct API call

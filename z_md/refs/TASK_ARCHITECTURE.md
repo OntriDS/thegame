@@ -363,8 +363,7 @@ export async function processTaskCompletionEffects(task: Task): Promise<Task> {
 
 ### **Data Persistence**
 
-- **LocalAdapter**: localStorage + filesystem (development)
-- **HybridAdapter**: KV storage + localStorage cache (production)
+- **KV-only system**: KV storage (localStorage cache and offline mode planned for future)
 - **API Routes**: Server-side persistence and workflows
 
 ---

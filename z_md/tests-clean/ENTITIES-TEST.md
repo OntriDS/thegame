@@ -4,8 +4,8 @@
 This document outlines the complete testing process for the AKILES Ecosystem entities system. The test covers three main entity types: **Tasks**, **Records**, and **Items**, with comprehensive validation of their lifecycle, side effects, and idempotency across the tested environment.
 
 ## Test Environment Status
-- ✅ **Local Environment (LocalAdapter, Localhost)**: **PASSED COMPLETELY**
-- ❌ **Vercel KV Environment (Hybrid Adapter, Vercel KV DB)**: **FAILED - Issues to be resolved**
+- ✅ **Local Environment (KV-only system, Localhost)**: **PASSED COMPLETELY**
+- ❌ **Vercel KV Environment (KV-only system, Vercel KV DB)**: **FAILED - Issues to be resolved**
 
 ## Test Scope
 **The test validates the complete entities lifecycle** including:

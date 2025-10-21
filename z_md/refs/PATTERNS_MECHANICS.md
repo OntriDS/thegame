@@ -69,14 +69,14 @@ const handleEntitySave = async (entity, sideEffects) => {
 - Manage cross-environment consistency
 
 **Environment Detection**:
-- **No KV detected** → LocalAdapter (development)
-- **KV available** → HybridAdapter (production)
+- **No KV detected** → KV-only system (development)
+- **KV available** → KV-only system (production)
 
-#### **LocalAdapter (Development/Offline)**
+#### **KV-only system (Development/Offline)**
 **Purpose**: Complete implementation for localhost development.
 
 **Responsibilities**:
-- Use localStorage for entity caching + filesystem for persistence
+- Use localStorage for entity caching + KV for persistence
 - **Mirror ALL server-side behavior**:
   - Trigger workflows (side effects)
   - Delegate logging to LoggingDataStore
@@ -85,10 +85,10 @@ const handleEntitySave = async (entity, sideEffects) => {
 - Dispatch UI events for reactive components
 - Provide complete parity with production
 
-**Key Point**: LocalAdapter IS the "server-side" for localhost - it handles everything that production API routes handle.
+**Key Point**: KV-only system IS the "server-side" for localhost - it handles everything that production API routes handle.
 
-#### **HybridAdapter (Production)**
-**Purpose**: Production adapter with KV as source of truth.
+#### **KV-only system (Production)**
+**Purpose**: Production system with KV as source of truth.
 
 **Responsibilities**:
 - Fetch to API routes for persistence
@@ -119,7 +119,7 @@ const handleEntitySave = async (entity, sideEffects) => {
 
 **Responsibilities**:
 - **Production**: Invoked by API routes
-- **Development**: Invoked by LocalAdapter directly
+- **Development**: Invoked by KV-only system directly
 - Atomic logging operations
 - Idempotent side effect handling
 - Cross-entity relationship management
@@ -341,7 +341,7 @@ lib/
 - No duplicate data or logs
 
 ### **Environment Parity**
-- LocalAdapter mirrors production behavior
+- KV-only system mirrors production behavior
 - Same side effects in both environments
 - Same logging and idempotency
 
@@ -352,7 +352,7 @@ lib/
 - [x] All modals are UI-only (no APIs, no side effects)
 - [x] All parents handle side effects consistently
 - [x] All APIs only handle persistence
-- [x] LocalAdapter mirrors production behavior
+- [x] KV-only system mirrors production behavior
 - [x] Side effects work in both environments
 - [x] Idempotency maintained across all operations
 - [x] Comments and Documentation match implementation

@@ -414,7 +414,7 @@ export default function SeedDataPage() {
               Entity System Data
             </CardTitle>
             <CardDescription>
-              Detailed breakdown of {selectedEntity} data stored in {storageMode === 'local' ? 'localStorage' : storageMode === 'kv' ? 'Vercel KV Database' : `Unknown (${storageMode || 'undefined'})`}
+              Detailed breakdown of {selectedEntity} data stored in Vercel KV Database
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -453,7 +453,7 @@ export default function SeedDataPage() {
                   
                   <div className="pt-4 border-t">
                     <p className="text-sm text-muted-foreground">
-                      Data location: {storageMode === 'local' ? 'Browser localStorage (Development)' : storageMode === 'kv' ? 'Vercel KV Database (Production)' : `Unknown (${storageMode || 'undefined'})`}
+                      Data location: Vercel KV Database (Production)
                     </p>
                   </div>
                 </div>

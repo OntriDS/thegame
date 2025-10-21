@@ -7,15 +7,15 @@ You are working on **TheGame** - a gamified admin web-app for an Art & Design St
 ## **SYSTEM ARCHITECTURE UNDERSTANDING**
 
 ### **Current State (Post Phase 10.4)**
-- **Hybrid System**: Uses both `localStorage` (development) and KV storage (production)
-- **Data Adapters**: New system uses adapters (`LocalAdapter`, `KVAdapter`, `HybridAdapter`)
+- **KV-only System**: Uses KV storage (localStorage cache and offline mode planned for future)
+- **Data Adapters**: New system uses KV-only system (localStorage cache and offline mode planned for future)
 - **API-First**: Modern components should use APIs directly, not legacy data store functions
 - **Legacy Code**: `data-store-legacy.ts` contains old functions that need removal or refactoring to the new system
 - **Logging System**: Unified logging with `/api/*-log` routes for tasks, items, financials, player
 
 ### **Data Flow Principles**
 1. **New System**: Components → APIs → Adapters → Storage (KV/localStorage)
-2. **Legacy System**: Components → DataStore → localStorage only
+2. **Legacy System**: Components → DataStore → KV-only system
 3. **Migration Goal**: All components should use new system, legacy functions removed
 
 ## **WORKFLOW COMMANDS**

@@ -1,5 +1,9 @@
 # Logging Architecture
 
+> **Architecture Update**: This project now uses a KV-only architecture with Upstash Redis.
+> localStorage cache and offline mode are planned for future implementation.
+> All references to HybridAdapter/LocalAdapter reflect the old 2-adapter system (removed Oct 2024).
+
 ## Overview
 
 The Logging Architecture implements the "Best of Both Worlds" approach: **append-only logs** for clean history and **effects registry** for idempotency. This eliminates log corruption while preventing duplicate Links Effects.
@@ -73,11 +77,11 @@ The Logging Architecture implements the "Best of Both Worlds" approach: **append
 ┌──────────────────────────────────────────────────────────────────────────┐
 │                         LOGGING ADAPTERS                                 │
 │  ┌─────────────────────────┐         ┌─────────────────────────┐         │
-│  │   LoggingLocalAdapter   │         │  LoggingHybridAdapter   │         │
+│  │   KV-only system        │         │  KV-only system         │         │
 │  │                         │         │                         │         │
-│  │ • Filesystem only       │         │ • KV operations         │         │
+│  │ • KV operations         │         │ • KV operations         │         │
 │  │ • Append-only writes    │         │ • Append-only writes    │         │
-│  │ • Development only      │         │ • Production only       │         │
+│  │ • Production ready      │         │ • Production ready      │         │
 │  └─────────────────────────┘         └─────────────────────────┘         │
 └───────────────────────────────────────────────────────────────────────────┘
 ```
@@ -139,7 +143,7 @@ Logs still stay append-only. We add a "reverted" entry instead of editing past e
 
 #### 1. **TASKS**
 ```
-TaskModal → TaskSideEffects → LocalAdapter/HybridAdapter → Workflows → EffectsRegistry + Logs
+TaskModal → TaskSideEffects → KV-only system → Workflows → EffectsRegistry + Logs
 ├── Task Creation → tasks-log (always append)
 ├── Task Completion → 
 │   ├── Check EffectsRegistry.hasEffect(taskId, 'itemCreated')
@@ -153,7 +157,7 @@ TaskModal → TaskSideEffects → LocalAdapter/HybridAdapter → Workflows → E
 
 #### 2. **FINANCIAL RECORDS**
 ```
-RecordModal → RecordSideEffects → LocalAdapter/HybridAdapter → Workflows → EffectsRegistry + Logs
+RecordModal → RecordSideEffects → KV-only system → Workflows → EffectsRegistry + Logs
 ├── Record Creation → financials-log (always append)
 ├── Item Creation → items-log (if record creates item)
 └── Player Points → player-progress-log (if record awards points)
@@ -161,7 +165,7 @@ RecordModal → RecordSideEffects → LocalAdapter/HybridAdapter → Workflows �
 
 #### 3. **ITEMS**
 ```
-ItemModal → ItemSideEffects → LocalAdapter/HybridAdapter → Workflows → Logs
+ItemModal → ItemSideEffects → KV-only system → Workflows → Logs
 └── Item Creation → items-log (always append)
 ```
 

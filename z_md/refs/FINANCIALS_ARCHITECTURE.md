@@ -560,8 +560,7 @@ export async function processRecordCreationEffects(record: FinancialRecord): Pro
 
 ### **Data Persistence**
 
-- **LocalAdapter**: localStorage + filesystem (development)
-- **HybridAdapter**: KV storage + localStorage cache (production)
+- **KV-only system**: KV storage (localStorage cache and offline mode planned for future)
 - **API Routes**: Server-side persistence and workflows
 
 ### **Financial Calculations**

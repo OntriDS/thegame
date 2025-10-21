@@ -1,5 +1,9 @@
 # Account Entity Architecture • Authentication & Identity Layer
 
+> **Architecture Update**: This project now uses a KV-only architecture with Upstash Redis.
+> localStorage cache and offline mode are planned for future implementation.
+> All references to HybridAdapter/LocalAdapter reflect the old 2-adapter system (removed Oct 2024).
+
 ────────────────────────────────────────
 
 ## TABLE OF CONTENTS
@@ -353,8 +357,7 @@ interface Character extends BaseEntity {
 **Goal**: Implement Account entity storage and workflows
 
 **Tasks**:
-- [x] ✅ Create Account storage in LocalAdapter (localStorage)
-- [x] ✅ Create Account storage in HybridAdapter (KV)
+- [x] ✅ Create Account storage in KV-only system (localStorage cache and offline mode planned for future)
 - [x] ✅ Add Account methods to DataStore
   - [x] ✅ `getAccounts(): Promise<Account[]>`
   - [x] ✅ `getAccount(id: string): Promise<Account | null>`

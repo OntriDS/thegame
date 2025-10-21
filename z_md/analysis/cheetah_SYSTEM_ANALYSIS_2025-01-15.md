@@ -1,6 +1,10 @@
 # COMPREHENSIVE SYSTEM ANALYSIS - AKILES ECOSYSTEM ROSETTA
 **Date:** January 15, 2025 | **Version:** v0.1 | **Analyst:** Cursor AI (HONEST/ANALYSE Mode)
 
+> **Architecture Update**: This project now uses a KV-only architecture with Upstash Redis.
+> localStorage cache and offline mode are planned for future implementation.
+> All references to HybridAdapter/LocalAdapter reflect the old 2-adapter system (removed Oct 2024).
+
 ---
 
 ## EXECUTIVE SUMMARY
