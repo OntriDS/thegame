@@ -98,11 +98,15 @@ export async function removeTask(id: string): Promise<void> {
 }
 
 // ITEMS
+// NOTE: Item is saved to KV BEFORE workflows run. This means:
+// - If workflows fail, the item still exists in the database
+// - This prevents data loss but may cause 500 errors if workflows throw
+// - API routes MUST have try/catch to handle workflow failures gracefully
 export async function upsertItem(item: Item): Promise<Item> {
   const previous = await repoGetItemById(item.id);
-  const saved = await repoUpsertItem(item);
-  await onItemUpsert(saved, previous || undefined);
-  await processLinkEntity(saved, EntityType.ITEM);
+  const saved = await repoUpsertItem(item);  // ✅ Item persisted here
+  await onItemUpsert(saved, previous || undefined);  // ⚠️ Can throw
+  await processLinkEntity(saved, EntityType.ITEM);   // ⚠️ Can throw
   return saved;
 }
 

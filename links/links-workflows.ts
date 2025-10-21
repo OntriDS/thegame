@@ -3,7 +3,7 @@
 
 import { EntityType, LinkType } from '@/types/enums';
 import type { Task, Item, Sale, FinancialRecord, Character, Player, Site, Link } from '@/types/entities';
-import { createLink } from './link-registry';
+import { createLink, removeLink, getLinksFor } from './link-registry';
 import { appendLinkLog } from './links-logging';
 import { getAllItems } from '@/data-store/datastore';
 import { v4 as uuid } from 'uuid';
@@ -112,11 +112,33 @@ export async function processTaskEffects(task: Task): Promise<void> {
 }
 
 export async function processItemEffects(item: Item): Promise<void> {
+  // Get existing links for cleanup
+  const existingLinks = await getLinksFor({ type: EntityType.ITEM, id: item.id });
+  
+  // ITEM_TASK link
   if (item.sourceTaskId) {
+    // Remove old ITEM_TASK links (in case sourceTaskId changed)
+    const oldTaskLinks = existingLinks.filter(l => l.linkType === LinkType.ITEM_TASK);
+    for (const oldLink of oldTaskLinks) {
+      if (oldLink.target.id !== item.sourceTaskId) {
+        await removeLink(oldLink.id);
+        await appendLinkLog(oldLink, 'removed');
+      }
+    }
+    
     const l = makeLink(LinkType.ITEM_TASK, { type: EntityType.ITEM, id: item.id }, { type: EntityType.TASK, id: item.sourceTaskId });
     await createLink(l);
     await appendLinkLog(l, 'created');
   }
+  
+  // ITEM_SITE links (for stock locations)
+  // Remove all old ITEM_SITE links, then create new ones
+  const oldSiteLinks = existingLinks.filter(l => l.linkType === LinkType.ITEM_SITE);
+  for (const oldLink of oldSiteLinks) {
+    await removeLink(oldLink.id);
+  }
+  
+  // Create fresh ITEM_SITE links for current stock
   for (const s of item.stock || []) {
     if (s.siteId) {
       const l = makeLink(LinkType.ITEM_SITE, { type: EntityType.ITEM, id: item.id }, { type: EntityType.SITE, id: s.siteId });
@@ -127,6 +149,15 @@ export async function processItemEffects(item: Item): Promise<void> {
   
   // ITEM_CHARACTER link
   if (item.ownerCharacterId) {
+    // Remove old ITEM_CHARACTER links (in case owner changed)
+    const oldCharacterLinks = existingLinks.filter(l => l.linkType === LinkType.ITEM_CHARACTER);
+    for (const oldLink of oldCharacterLinks) {
+      if (oldLink.target.id !== item.ownerCharacterId) {
+        await removeLink(oldLink.id);
+        await appendLinkLog(oldLink, 'removed');
+      }
+    }
+    
     const l = makeLink(
       LinkType.ITEM_CHARACTER,
       { type: EntityType.ITEM, id: item.id },
@@ -134,6 +165,13 @@ export async function processItemEffects(item: Item): Promise<void> {
     );
     await createLink(l);
     await appendLinkLog(l, 'created');
+  } else {
+    // If no owner, remove all ITEM_CHARACTER links
+    const oldCharacterLinks = existingLinks.filter(l => l.linkType === LinkType.ITEM_CHARACTER);
+    for (const oldLink of oldCharacterLinks) {
+      await removeLink(oldLink.id);
+      await appendLinkLog(oldLink, 'removed');
+    }
   }
   
   // Note: ITEM_SALE links handled in processSaleEffects (from sale.lines)

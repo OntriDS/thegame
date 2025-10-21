@@ -26,8 +26,8 @@ export async function createLink(link: Link, options?: { skipValidation?: boolea
   const existing = await getLinksFor(link.source);
   const dup = existing.find(l => l.linkType===link.linkType && l.target.type===link.target.type && l.target.id===link.target.id);
   if (dup) {
-    console.warn('🔥 [createLink] ⚠️ Duplicate link found, skipping');
-    throw new Error(`Duplicate link ${link.linkType} ${link.source.type}:${link.source.id}→${link.target.type}:${link.target.id}`);
+    console.log('🔥 [createLink] ⏭️ Duplicate link found, skipping (idempotent)');
+    return; // Idempotent: silently skip duplicates
   }
   console.log('🔥 [createLink] ✅ No duplicates found');
   
