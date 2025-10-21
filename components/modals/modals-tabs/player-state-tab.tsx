@@ -21,7 +21,7 @@ export default function PlayerStateTab({
   playerData, 
   currentMonthMetrics, 
   personalAssets 
-}: PlayerStateTabSubmodalProps) {
+}: PlayerStateTabProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className={`w-full max-w-7xl max-h-[90vh] overflow-hidden ${getZIndexClass('MODAL_TABS')}`}>

@@ -12,6 +12,7 @@ import { ClientAPI } from '@/lib/client-api';
 // Submodal imports
 import PersonalDataModal from './submodals/player-personal-data-submodal';
 import AccountEditModal from './submodals/player-account-edit-submodal';
+
 import PlayerStateTab from './modals-tabs/player-state-tab';
 import PlayerStatsTab from './modals-tabs/player-stats-tab';
 import PlayerProgressionTab from './modals-tabs/player-progression-tab';

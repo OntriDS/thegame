@@ -63,7 +63,7 @@ export default function PersonalDataModal({ player, open, onOpenChange, onSave }
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md" style={{ zIndex: 300 }}>
+      <DialogContent className={`max-w-md ${getZIndexClass('SUB_MODALS')}`}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <User className="h-5 w-5" />
