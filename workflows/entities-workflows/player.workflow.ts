@@ -13,54 +13,110 @@ const STATE_FIELDS = ['level', 'totalPoints', 'points', 'isActive'];
 const DESCRIPTIVE_FIELDS = ['name', 'email'];
 
 export async function onPlayerUpsert(player: Player, previousPlayer?: Player): Promise<void> {
+  console.log('🔥 [onPlayerUpsert] START', { 
+    id: player.id, 
+    name: player.name,
+    type: previousPlayer ? 'UPDATE' : 'CREATE'
+  });
+  
   // New player creation
   if (!previousPlayer) {
     const effectKey = `player:${player.id}:created`;
-    if (await hasEffect(effectKey)) return;
+    const hasEffectResult = await hasEffect(effectKey);
     
+    console.log('🔥 [onPlayerUpsert] New player check', { effectKey, hasEffect: hasEffectResult });
+    
+    if (hasEffectResult) {
+      console.log('🔥 [onPlayerUpsert] ⏭️ SKIPPED - effect already exists');
+      return;
+    }
+    
+    console.log('🔥 [onPlayerUpsert] Creating log entry...');
     await appendEntityLog(EntityType.PLAYER, player.id, LogEventType.CREATED, { 
       name: player.name, 
       level: player.level
     });
+    
     await markEffect(effectKey);
+    console.log('🔥 [onPlayerUpsert] ✅ Log entry created and effect marked');
     return;
   }
   
   // Level up - LEVEL_UP event
-  if (previousPlayer.level < player.level) {
+  const levelUp = previousPlayer.level < player.level;
+  console.log('🔥 [onPlayerUpsert] Level up check', { 
+    levelUp,
+    oldLevel: previousPlayer.level,
+    newLevel: player.level
+  });
+  
+  if (levelUp) {
+    console.log('🔥 [onPlayerUpsert] Creating LEVEL_UP log entry...');
     await appendEntityLog(EntityType.PLAYER, player.id, LogEventType.LEVEL_UP, {
       name: player.name,
       oldLevel: previousPlayer.level,
       newLevel: player.level
     });
+    console.log('🔥 [onPlayerUpsert] ✅ LEVEL_UP log entry created');
   }
   
   // Points changes - POINTS_CHANGED event
-  const pointsChanged = JSON.stringify(previousPlayer.totalPoints) !== JSON.stringify(player.totalPoints) ||
-                       JSON.stringify(previousPlayer.points) !== JSON.stringify(player.points);
-  if (pointsChanged) {
+  const totalPointsChanged = JSON.stringify(previousPlayer.totalPoints) !== JSON.stringify(player.totalPoints);
+  const pointsChanged = JSON.stringify(previousPlayer.points) !== JSON.stringify(player.points);
+  const pointsChangedOverall = totalPointsChanged || pointsChanged;
+  
+  console.log('🔥 [onPlayerUpsert] Points change check', { 
+    pointsChangedOverall,
+    totalPointsChanged,
+    pointsChanged,
+    oldTotalPoints: previousPlayer.totalPoints,
+    newTotalPoints: player.totalPoints,
+    oldPoints: previousPlayer.points,
+    newPoints: player.points
+  });
+  
+  if (pointsChangedOverall) {
+    console.log('🔥 [onPlayerUpsert] Creating POINTS_CHANGED log entry...');
     await appendEntityLog(EntityType.PLAYER, player.id, LogEventType.POINTS_CHANGED, {
       name: player.name,
       totalPoints: player.totalPoints,
       points: player.points
     });
+    console.log('🔥 [onPlayerUpsert] ✅ POINTS_CHANGED log entry created');
   }
   
   // General updates - UPDATED event
   const hasSignificantChanges = previousPlayer.isActive !== player.isActive;
+  console.log('🔥 [onPlayerUpsert] Significant change check', { 
+    hasSignificantChanges,
+    oldIsActive: previousPlayer.isActive,
+    newIsActive: player.isActive
+  });
+  
   if (hasSignificantChanges) {
+    console.log('🔥 [onPlayerUpsert] Creating UPDATED log entry...');
     await appendEntityLog(EntityType.PLAYER, player.id, LogEventType.UPDATED, {
       name: player.name,
       isActive: player.isActive
     });
+    console.log('🔥 [onPlayerUpsert] ✅ UPDATED log entry created');
   }
   
   // Descriptive changes - update in-place
+  console.log('🔥 [onPlayerUpsert] Checking descriptive field changes...');
   for (const field of DESCRIPTIVE_FIELDS) {
-    if ((previousPlayer as any)[field] !== (player as any)[field]) {
-      await updateEntityLogField(EntityType.PLAYER, player.id, field, (previousPlayer as any)[field], (player as any)[field]);
+    const oldValue = (previousPlayer as any)[field];
+    const newValue = (player as any)[field];
+    const fieldChanged = oldValue !== newValue;
+    
+    if (fieldChanged) {
+      console.log(`🔥 [onPlayerUpsert] Field '${field}' changed:`, { oldValue, newValue });
+      await updateEntityLogField(EntityType.PLAYER, player.id, field, oldValue, newValue);
+      console.log(`🔥 [onPlayerUpsert] ✅ Field '${field}' updated in log`);
     }
   }
+  
+  console.log('🔥 [onPlayerUpsert] ✅ COMPLETED');
 }
 
 /**

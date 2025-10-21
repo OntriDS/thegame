@@ -8,6 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Task, Item, FinancialRecord, Sale } from '@/types/entities';
 import { Trash2 } from 'lucide-react';
 import { ClientAPI } from '@/lib/client-api';
+import { getZIndexClass } from '@/lib/utils/z-index-utils';
 // Side effects handled by parent component via API calls
 
 type EntityType = 'task' | 'item' | 'record' | 'sale';
@@ -221,7 +222,7 @@ export default function DeleteModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className={`max-w-md ${getZIndexClass('SUB_MODALS')}`}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-red-600">
             <Trash2 className="h-5 w-5" />

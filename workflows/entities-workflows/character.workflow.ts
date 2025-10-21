@@ -13,44 +13,85 @@ const STATE_FIELDS = ['roles', 'isActive'];
 const DESCRIPTIVE_FIELDS = ['name', 'description', 'contactEmail', 'contactPhone', 'commColor'];
 
 export async function onCharacterUpsert(character: Character, previousCharacter?: Character): Promise<void> {
+  console.log('🔥 [onCharacterUpsert] START', { 
+    id: character.id, 
+    name: character.name,
+    type: previousCharacter ? 'UPDATE' : 'CREATE'
+  });
+  
   // New character creation
   if (!previousCharacter) {
     const effectKey = `character:${character.id}:created`;
-    if (await hasEffect(effectKey)) return;
+    const hasEffectResult = await hasEffect(effectKey);
     
+    console.log('🔥 [onCharacterUpsert] New character check', { effectKey, hasEffect: hasEffectResult });
+    
+    if (hasEffectResult) {
+      console.log('🔥 [onCharacterUpsert] ⏭️ SKIPPED - effect already exists');
+      return;
+    }
+    
+    console.log('🔥 [onCharacterUpsert] Creating log entry...');
     await appendEntityLog(EntityType.CHARACTER, character.id, LogEventType.CREATED, { 
       name: character.name, 
       roles: character.roles
     });
+    
     await markEffect(effectKey);
+    console.log('🔥 [onCharacterUpsert] ✅ Log entry created and effect marked');
     return;
   }
   
   // Role changes - ROLE_CHANGED event
   const rolesChanged = JSON.stringify(previousCharacter.roles) !== JSON.stringify(character.roles);
+  console.log('🔥 [onCharacterUpsert] Role change check', { 
+    rolesChanged,
+    oldRoles: previousCharacter.roles,
+    newRoles: character.roles
+  });
+  
   if (rolesChanged) {
+    console.log('🔥 [onCharacterUpsert] Creating ROLE_CHANGED log entry...');
     await appendEntityLog(EntityType.CHARACTER, character.id, LogEventType.ROLE_CHANGED, {
       name: character.name,
       oldRoles: previousCharacter.roles,
       newRoles: character.roles
     });
+    console.log('🔥 [onCharacterUpsert] ✅ ROLE_CHANGED log entry created');
   }
   
   // General updates - UPDATED event
   const hasSignificantChanges = previousCharacter.isActive !== character.isActive;
+  console.log('🔥 [onCharacterUpsert] Significant change check', { 
+    hasSignificantChanges,
+    oldIsActive: previousCharacter.isActive,
+    newIsActive: character.isActive
+  });
+  
   if (hasSignificantChanges) {
+    console.log('🔥 [onCharacterUpsert] Creating UPDATED log entry...');
     await appendEntityLog(EntityType.CHARACTER, character.id, LogEventType.UPDATED, {
       name: character.name,
       isActive: character.isActive
     });
+    console.log('🔥 [onCharacterUpsert] ✅ UPDATED log entry created');
   }
   
   // Descriptive changes - update in-place
+  console.log('🔥 [onCharacterUpsert] Checking descriptive field changes...');
   for (const field of DESCRIPTIVE_FIELDS) {
-    if ((previousCharacter as any)[field] !== (character as any)[field]) {
-      await updateEntityLogField(EntityType.CHARACTER, character.id, field, (previousCharacter as any)[field], (character as any)[field]);
+    const oldValue = (previousCharacter as any)[field];
+    const newValue = (character as any)[field];
+    const fieldChanged = oldValue !== newValue;
+    
+    if (fieldChanged) {
+      console.log(`🔥 [onCharacterUpsert] Field '${field}' changed:`, { oldValue, newValue });
+      await updateEntityLogField(EntityType.CHARACTER, character.id, field, oldValue, newValue);
+      console.log(`🔥 [onCharacterUpsert] ✅ Field '${field}' updated in log`);
     }
   }
+  
+  console.log('🔥 [onCharacterUpsert] ✅ COMPLETED');
 }
 
 /**

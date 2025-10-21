@@ -412,21 +412,44 @@ export class ResetDataWorkflow {
    */
   private static async clearAllLogs(results: string[], errors: string[]): Promise<void> {
     try {
-      console.log('[ResetDataWorkflow] 📝 Clearing all logs...');
+      console.log('[ResetDataWorkflow] 📝 Clearing ENTITY logs only (preserving research logs)...');
       
-      const logTypes = [...RESETTABLE_ENTITY_TYPES, 'links']; // links is special case
+      // ONLY clear entity logs, NOT research logs
+      const entityLogTypes = [...RESETTABLE_ENTITY_TYPES, 'links'];
       
-      for (const logType of logTypes) {
+      console.log('[ResetDataWorkflow] Entity logs to clear:', entityLogTypes);
+      console.log('[ResetDataWorkflow] ⚠️ Research logs (notes-log, dev-log) will NOT be cleared');
+      
+      for (const logType of entityLogTypes) {
         try {
           const logKey = buildLogKey(logType);
+          console.log(`[ResetDataWorkflow] Clearing ${logKey}...`);
           await kv.del(logKey);
           results.push(`Cleared ${logType} logs`);
+          console.log(`[ResetDataWorkflow] ✅ Cleared ${logType}`);
         } catch (error) {
           const errorMsg = `Failed to clear ${logType} logs: ${error instanceof Error ? error.message : 'Unknown error'}`;
           errors.push(errorMsg);
           console.error(`[ResetDataWorkflow] ❌ ${errorMsg}`);
         }
       }
+      
+      // Verify research logs still exist
+      console.log('[ResetDataWorkflow] 🔍 Verifying research logs are preserved...');
+      const notesLog = await kv.get('data:notes-log');
+      const devLog = await kv.get('data:dev-log');
+      console.log('[ResetDataWorkflow] ✅ Research logs preserved:', {
+        notesLog: notesLog ? 'EXISTS' : 'MISSING',
+        devLog: devLog ? 'EXISTS' : 'MISSING'
+      });
+      
+      if (notesLog) {
+        results.push('Preserved notes-log (research)');
+      }
+      if (devLog) {
+        results.push('Preserved dev-log (research)');
+      }
+      
     } catch (error) {
       const errorMsg = `Failed to clear logs: ${error instanceof Error ? error.message : 'Unknown error'}`;
       errors.push(errorMsg);
