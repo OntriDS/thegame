@@ -5,6 +5,60 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { TrendingUp, BarChart3, Calendar, Target } from 'lucide-react';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
+import { POINT_TYPES, POINT_COLORS } from '@/lib/constants/app-constants';
+
+// Helper function to render point shapes
+function PointShape({ 
+  type, 
+  value, 
+  size = 'w-16 h-16' 
+}: { 
+  type: keyof typeof POINT_TYPES; 
+  value: number; 
+  size?: string;
+}) {
+  const colors = POINT_COLORS[POINT_TYPES[type]];
+  const pointType = POINT_TYPES[type];
+  
+  const baseClasses = `${size} flex items-center justify-center text-white font-bold border-2 ${colors.border}`;
+  
+  switch (pointType) {
+    case 'xp': // Square
+      return (
+        <div className={`${baseClasses} rounded-sm`}>
+          {value}
+        </div>
+      );
+    case 'rp': // Hexagon
+      return (
+        <div className={`${baseClasses} rounded-none`} style={{
+          clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)'
+        }}>
+          {value}
+        </div>
+      );
+    case 'fp': // Circle
+      return (
+        <div className={`${baseClasses} rounded-full`}>
+          {value}
+        </div>
+      );
+    case 'hp': // Triangle
+      return (
+        <div className={`${baseClasses} rounded-none`} style={{
+          clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)'
+        }}>
+          {value}
+        </div>
+      );
+    default:
+      return (
+        <div className={`${baseClasses} rounded-full`}>
+          {value}
+        </div>
+      );
+  }
+}
 
 // Content-only component for embedding in parent modals
 export function PlayerStatsContent({
@@ -27,14 +81,18 @@ export function PlayerStatsContent({
         <CardContent>
           <div className="grid grid-cols-4 gap-4">
             {[
-              { key: 'xp', label: 'Total XP', value: playerData?.points?.xp || 0, color: 'bg-blue-500' },
-              { key: 'rp', label: 'Total RP', value: playerData?.points?.rp || 0, color: 'bg-green-500' },
-              { key: 'fp', label: 'Total FP', value: playerData?.points?.fp || 0, color: 'bg-yellow-500' },
-              { key: 'hp', label: 'Total HP', value: playerData?.points?.hp || 0, color: 'bg-red-500' }
+              { key: 'XP', label: 'Total XP', value: playerData?.points?.xp || 0 },
+              { key: 'RP', label: 'Total RP', value: playerData?.points?.rp || 0 },
+              { key: 'FP', label: 'Total FP', value: playerData?.points?.fp || 0 },
+              { key: 'HP', label: 'Total HP', value: playerData?.points?.hp || 0 }
             ].map((point) => (
               <div key={point.key} className="text-center">
-                <div className={`w-16 h-16 rounded-full ${point.color} mx-auto mb-2 flex items-center justify-center text-white font-bold text-xl`}>
-                  {point.value}
+                <div className="mx-auto mb-2">
+                  <PointShape 
+                    type={point.key as keyof typeof POINT_TYPES} 
+                    value={point.value} 
+                    size="w-16 h-16"
+                  />
                 </div>
                 <div className="text-sm font-medium">{point.label}</div>
               </div>

@@ -89,3 +89,45 @@ export const SHOE_SIZE_CONVERSION: Record<string, string> = {
   '8': '39',
   '10': '44'
 };
+
+// Point System Constants
+export const POINT_TYPES = {
+  XP: 'xp',
+  RP: 'rp', 
+  FP: 'fp',
+  HP: 'hp'
+} as const;
+
+export const POINT_SHAPES = {
+  [POINT_TYPES.XP]: 'square',    // XP = Square
+  [POINT_TYPES.RP]: 'hexagon',   // RP = Hexagon  
+  [POINT_TYPES.FP]: 'circle',    // FP = Circle
+  [POINT_TYPES.HP]: 'triangle'   // HP = Triangle
+} as const;
+
+export const POINT_COLORS = {
+  [POINT_TYPES.XP]: {
+    bg: 'bg-blue-500',
+    border: 'border-blue-500',
+    text: 'text-blue-500',
+    hex: '#3b82f6'
+  },
+  [POINT_TYPES.RP]: {
+    bg: 'bg-green-500', 
+    border: 'border-green-500',
+    text: 'text-green-500',
+    hex: '#10b981'
+  },
+  [POINT_TYPES.FP]: {
+    bg: 'bg-yellow-500',
+    border: 'border-yellow-500', 
+    text: 'text-yellow-500',
+    hex: '#f59e0b'
+  },
+  [POINT_TYPES.HP]: {
+    bg: 'bg-red-500',
+    border: 'border-red-500',
+    text: 'text-red-500', 
+    hex: '#ef4444'
+  }
+} as const;

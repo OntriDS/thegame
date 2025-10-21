@@ -28,11 +28,6 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
     await appendItemCreationLog(item, sourceType, sourceId);
     
     await markEffect(effectKey);
-    
-    // Dispatch event to notify frontend of items update
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('itemsUpdated'));
-    }
     return;
   }
   
@@ -44,10 +39,6 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
       oldStock: previousItem.stock,
       newStock: item.stock
     });
-    // Dispatch event to notify frontend of items update
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('itemsUpdated'));
-    }
   }
   
   // Quantity sold changes - SOLD event
@@ -57,10 +48,6 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
       quantitySold: item.quantitySold,
       oldQuantitySold: previousItem.quantitySold
     });
-    // Dispatch event to notify frontend of items update
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('itemsUpdated'));
-    }
   }
   
   // Collection status - COLLECTED event
@@ -69,10 +56,6 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
       name: item.name,
       collectedAt: new Date().toISOString()
     });
-    // Dispatch event to notify frontend of items update
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('itemsUpdated'));
-    }
   }
 
   // Status changes - UPDATED event
@@ -82,20 +65,12 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
       oldStatus: previousItem.status,
       newStatus: item.status
     });
-    // Dispatch event to notify frontend of items update
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('itemsUpdated'));
-    }
   }
   
   // Descriptive changes - update in-place
   for (const field of DESCRIPTIVE_FIELDS) {
     if ((previousItem as any)[field] !== (item as any)[field]) {
       await updateEntityLogField(EntityType.ITEM, item.id, field, (previousItem as any)[field], (item as any)[field]);
-      // Dispatch event to notify frontend of items update
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('itemsUpdated'));
-      }
     }
   }
 }
@@ -205,10 +180,6 @@ export async function updateItemLogEntryForItem(item: Item, dispatchEvents: bool
 
     console.log(`[updateItemLogEntryForItem] ✅ Item log entry updated successfully for ${item.name}`);
     
-    // Dispatch event to notify frontend of items update
-    if (dispatchEvents && typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('itemsUpdated'));
-    }
   } catch (error) {
     console.error('Error updating item log entry:', error);
   }
@@ -225,10 +196,6 @@ export async function updateAllItemLogEntries(item: Item, dispatchEvents: boolea
     // Update item log entries
     await updateItemLogEntryForItem(item, false);
     
-    // Dispatch event to notify frontend of items update
-    if (dispatchEvents && typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('itemsUpdated'));
-    }
     
     console.log(`[updateAllItemLogEntries] ✅ All log entries updated successfully for ${item.name}`);
   } catch (error) {

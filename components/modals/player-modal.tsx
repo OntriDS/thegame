@@ -5,14 +5,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { User, Settings, Network, Coins, Target, TrendingUp, Flag } from 'lucide-react';
+import { User, Network, Coins, Target, TrendingUp, Flag } from 'lucide-react';
 import { Player, Character } from '@/types/entities';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
 import { ClientAPI } from '@/lib/client-api';
 
 // Submodal imports
 import PersonalDataModal from './submodals/player-personal-data-submodal';
-import AccountEditModal from './submodals/player-account-edit-submodal';
 
 // Import tab content components
 import { PlayerStateContent } from './modals-tabs/player-state-tab';
@@ -335,7 +334,6 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
   // Submodal states
   const [showPersonalData, setShowPersonalData] = useState(false);
   const [showPlayerCharacter, setShowPlayerCharacter] = useState(false);
-  const [showAccountEdit, setShowAccountEdit] = useState(false);
   const [showRelationships, setShowRelationships] = useState(false);
   const [showExchangeModal, setShowExchangeModal] = useState(false);
   const [activeTab, setActiveTab] = useState('state');
@@ -343,7 +341,6 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
   // Current player data
   const [playerData, setPlayerData] = useState<Player | null>(null);
   const [characters, setCharacters] = useState<Character[]>([]);
-  const [accountData, setAccountData] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   // Financial data
@@ -377,16 +374,6 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
             const playerCharacters = await ClientAPI.getCharacters();
             const playerChars = playerCharacters.filter(c => c.playerId === playerToLoad!.id);
             setCharacters(playerChars);
-            
-            // Load account data if player has accountId
-            if (playerToLoad.accountId) {
-              try {
-                const account = await ClientAPI.getAccount(playerToLoad.accountId);
-                setAccountData(account);
-              } catch (error) {
-                console.error('Failed to load account:', error);
-              }
-            }
             
             // Load personal assets
             try {
@@ -445,11 +432,6 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
             <DialogTitle className="flex items-center gap-2 text-2xl">
               <User className="h-6 w-6" />
               Player Profile • {playerData.name}
-              {accountData && (
-                <span className="ml-auto text-xs font-normal text-green-600 dark:text-green-400">
-                  • Account Linked
-                </span>
-              )}
             </DialogTitle>
           </DialogHeader>
 
@@ -498,17 +480,6 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
           {/* FOOTER BUTTONS - Matches Sales Modal Pattern */}
           <DialogFooter className="flex items-center justify-between py-2 border-t">
             <div className="flex items-center gap-2">
-              {accountData && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowAccountEdit(true)}
-                  className="flex items-center gap-2"
-                >
-                  <Settings className="h-4 w-4" />
-                  Edit Account
-                </Button>
-              )}
               <Button
                 variant="outline"
                 size="sm"
@@ -580,38 +551,6 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
         onOpenChange={setShowRelationships}
       />
 
-      {/* Account Edit Submodal */}
-      {accountData && (
-        <AccountEditModal
-          account={accountData}
-          open={showAccountEdit}
-          onOpenChange={setShowAccountEdit}
-          onSave={async (updatedAccount: any) => {
-            // Save Account
-            await ClientAPI.upsertAccount(updatedAccount);
-            // Update Player and Character names to match
-            if (playerData) {
-              await ClientAPI.upsertPlayer({
-                ...playerData,
-                name: updatedAccount.name
-              });
-            }
-            const character = characters[0];
-            if (character) {
-              await ClientAPI.upsertCharacter({
-                ...character,
-                name: updatedAccount.name,
-                contactEmail: updatedAccount.email,
-                contactPhone: updatedAccount.phone
-              });
-            }
-            // Reload data
-            setAccountData(updatedAccount);
-            setShowAccountEdit(false);
-            window.location.reload(); // Refresh to show updated data
-          }}
-        />
-      )}
 
       {/* Exchange Points Modal */}
       <ExchangePointsModal
