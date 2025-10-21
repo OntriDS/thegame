@@ -7,7 +7,6 @@ import {
   ItemCategory,
   ItemStatus,
   Collection,
-  SalesSessionStatus,
   Currency,
   SiteType,
   PhysicalBusinessType,
@@ -136,11 +135,6 @@ export interface Site extends BaseEntity {
 // But they ARE NOT sites themselves.
 // Use CHARACTER_SITE and SITE_CHARACTER links instead.
 
-/** Enhanced Site with Metadata (legacy - use Site instead) */
-export interface EnhancedSite {
-  id: string;
-  metadata: SiteMetadata;
-}
 
 // ═══════════════════════════════════════════════════════════════════════════
 // SECTION 3: ITEM ENTITY
@@ -531,23 +525,6 @@ export interface Sale extends BaseEntity {
   isCollected: boolean;          // Sale collected (monthly close)
 }
 
-/** Unified Product interface (legacy) */
-export interface Product {
-  itemId?: string;
-  itemType?: ItemType;
-  quantitySold: number;
-  revenue: number;          // total money collected for that line
-}
-
-/** Cash-drawer close / feria day record (legacy) */
-export interface SalesSession extends BaseEntity {
-  saleDate: Date;
-  siteId: string;
-  products: Product[];
-  totalRevenue: number;         // redundancy for fast queries
-  status: SalesSessionStatus;
-  notes?: string;
-}
 
 // ═══════════════════════════════════════════════════════════════════════════
 // SECTION 7: PLAYER & CHARACTER ENTITIES

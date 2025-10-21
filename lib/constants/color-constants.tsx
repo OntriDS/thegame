@@ -4,124 +4,70 @@
 import { TaskStatus, ItemStatus, SiteStatus } from '@/types/enums';
 
 // ============================================================================
+// SHARED STATUS COLOR BASE (DRY PRINCIPLE)
+// ============================================================================
+
+/** Shared status color base to reduce duplication */
+const STATUS_COLOR_BASE = {
+  CREATED: 'border-orange-500 bg-orange-100 text-orange-800',
+  ACTIVE: 'border-green-500 bg-green-100 text-green-800',
+  IN_PROGRESS: 'border-blue-500 bg-blue-100 text-blue-800',
+  DONE: 'border-green-500 bg-green-100 text-green-800',
+  ON_HOLD: 'border-gray-500 bg-gray-100 text-gray-800',
+  COLLECTED: 'border-yellow-500 bg-yellow-100 text-yellow-800',
+  FAILED: 'border-red-500 bg-red-100 text-red-800',
+  FINISHING: 'border-purple-500 bg-purple-100 text-purple-800',
+  UPDATED: 'border-blue-500 bg-blue-100 text-blue-800',
+  INACTIVE: 'border-gray-500 bg-gray-100 text-gray-800',
+  FOR_SALE: 'border-blue-500 bg-blue-100 text-blue-800',
+  SOLD: 'border-green-500 bg-green-100 text-green-800',
+  OBSOLETE: 'border-red-500 bg-red-100 text-red-800',
+  DAMAGED: 'border-red-500 bg-red-100 text-red-800',
+  IDLE: 'border-gray-500 bg-gray-100 text-gray-800',
+  STORED: 'border-gray-500 bg-gray-100 text-gray-800',
+  TO_REPAIR: 'border-orange-500 bg-orange-100 text-orange-800',
+} as const;
+
+// ============================================================================
 // STATUS COLOR DEFINITIONS
 // ============================================================================
 
 /** Task Status Colors - Light & Dark Mode with border contrast */
 export const TASK_STATUS_COLORS = {
-  [TaskStatus.CREATED]: {
-    light: 'border-orange-500 bg-orange-100 text-orange-800',
-    dark: 'border-orange-500 bg-orange-100 text-orange-800'
-  },
-  [TaskStatus.ON_HOLD]: {
-    light: 'border-gray-500 bg-gray-100 text-gray-800',
-    dark: 'border-gray-500 bg-gray-100 text-gray-800'
-  },
-  [TaskStatus.IN_PROGRESS]: {
-    light: 'border-blue-500 bg-blue-100 text-blue-800',
-    dark: 'border-blue-500 bg-blue-100 text-blue-800'
-  },
-  [TaskStatus.FINISHING]: {
-    light: 'border-purple-500 bg-purple-100 text-purple-800',
-    dark: 'border-purple-500 bg-purple-100 text-purple-800'
-  },
-  [TaskStatus.DONE]: {
-    light: 'border-green-500 bg-green-100 text-green-800',
-    dark: 'border-green-500 bg-green-100 text-green-800'
-  },
-  [TaskStatus.COLLECTED]: {
-    light: 'border-yellow-500 bg-yellow-100 text-yellow-800',
-    dark: 'border-yellow-500 bg-yellow-100 text-yellow-800'
-  },
-  [TaskStatus.FAILED]: {
-    light: 'border-red-500 bg-red-100 text-red-800',
-    dark: 'border-red-500 bg-red-100 text-red-800'
-  },
-  [TaskStatus.NONE]: {
-    light: 'border-gray-500 bg-gray-100 text-gray-800',
-    dark: 'border-gray-500 bg-gray-100 text-gray-800'
-  },
+  [TaskStatus.CREATED]: { light: STATUS_COLOR_BASE.CREATED, dark: STATUS_COLOR_BASE.CREATED },
+  [TaskStatus.ON_HOLD]: { light: STATUS_COLOR_BASE.ON_HOLD, dark: STATUS_COLOR_BASE.ON_HOLD },
+  [TaskStatus.IN_PROGRESS]: { light: STATUS_COLOR_BASE.IN_PROGRESS, dark: STATUS_COLOR_BASE.IN_PROGRESS },
+  [TaskStatus.FINISHING]: { light: STATUS_COLOR_BASE.FINISHING, dark: STATUS_COLOR_BASE.FINISHING },
+  [TaskStatus.DONE]: { light: STATUS_COLOR_BASE.DONE, dark: STATUS_COLOR_BASE.DONE },
+  [TaskStatus.COLLECTED]: { light: STATUS_COLOR_BASE.COLLECTED, dark: STATUS_COLOR_BASE.COLLECTED },
+  [TaskStatus.FAILED]: { light: STATUS_COLOR_BASE.FAILED, dark: STATUS_COLOR_BASE.FAILED },
+  [TaskStatus.NONE]: { light: STATUS_COLOR_BASE.ON_HOLD, dark: STATUS_COLOR_BASE.ON_HOLD },
 } as const;
 
 /** Item Status Colors - Light & Dark Mode with border contrast */
 export const ITEM_STATUS_COLORS = {
-  [ItemStatus.CREATED]: {
-    light: 'border-orange-500 bg-orange-100 text-orange-800',
-    dark: 'border-orange-500 bg-orange-100 text-orange-800'
-  },
-  [ItemStatus.FOR_SALE]: {
-    light: 'border-blue-500 bg-blue-100 text-blue-800',
-    dark: 'border-blue-500 bg-blue-100 text-blue-800'
-  },
-  [ItemStatus.SOLD]: {
-    light: 'border-green-500 bg-green-100 text-green-800',
-    dark: 'border-green-500 bg-green-100 text-green-800'
-  },
-  [ItemStatus.TO_ORDER]: {
-    light: 'border-blue-500 bg-blue-100 text-blue-800',
-    dark: 'border-blue-500 bg-blue-100 text-blue-800'
-  },
-  [ItemStatus.TO_DO]: {
-    light: 'border-blue-500 bg-blue-100 text-blue-800',
-    dark: 'border-blue-500 bg-blue-100 text-blue-800'
-  },
-  [ItemStatus.ON_HOLD]: {
-    light: 'border-yellow-500 bg-yellow-100 text-yellow-800',
-    dark: 'border-yellow-500 bg-yellow-100 text-yellow-800'
-  },
-  [ItemStatus.GIFTED]: {
-    light: 'border-gray-500 bg-gray-100 text-gray-800',
-    dark: 'border-gray-500 bg-gray-100 text-gray-800'
-  },
-  [ItemStatus.RESERVED]: {
-    light: 'border-purple-500 bg-purple-100 text-purple-800',
-    dark: 'border-purple-500 bg-purple-100 text-purple-800'
-  },
-  [ItemStatus.OBSOLETE]: {
-    light: 'border-red-500 bg-red-100 text-red-800',
-    dark: 'border-red-500 bg-red-100 text-red-800'
-  },
-  [ItemStatus.DAMAGED]: {
-    light: 'border-red-500 bg-red-100 text-red-800',
-    dark: 'border-red-500 bg-red-100 text-red-800'
-  },
-  [ItemStatus.IDLE]: {
-    light: 'border-gray-500 bg-gray-100 text-gray-800',
-    dark: 'border-gray-500 bg-gray-100 text-gray-800'
-  },
-  [ItemStatus.COLLECTED]: {
-    light: 'border-yellow-500 bg-yellow-100 text-yellow-800',
-    dark: 'border-yellow-500 bg-yellow-100 text-yellow-800'
-  },
-  // Temporary while building
-  [ItemStatus.STORED]: {
-    light: 'border-gray-500 bg-gray-100 text-gray-800',
-    dark: 'border-gray-500 bg-gray-100 text-gray-800'
-  },
-  [ItemStatus.TO_REPAIR]: {
-    light: 'border-orange-500 bg-orange-100 text-orange-800',
-    dark: 'border-orange-500 bg-orange-100 text-orange-800'
-  },
+  [ItemStatus.CREATED]: { light: STATUS_COLOR_BASE.CREATED, dark: STATUS_COLOR_BASE.CREATED },
+  [ItemStatus.FOR_SALE]: { light: STATUS_COLOR_BASE.FOR_SALE, dark: STATUS_COLOR_BASE.FOR_SALE },
+  [ItemStatus.SOLD]: { light: STATUS_COLOR_BASE.SOLD, dark: STATUS_COLOR_BASE.SOLD },
+  [ItemStatus.TO_ORDER]: { light: STATUS_COLOR_BASE.IN_PROGRESS, dark: STATUS_COLOR_BASE.IN_PROGRESS },
+  [ItemStatus.TO_DO]: { light: STATUS_COLOR_BASE.IN_PROGRESS, dark: STATUS_COLOR_BASE.IN_PROGRESS },
+  [ItemStatus.ON_HOLD]: { light: STATUS_COLOR_BASE.ON_HOLD, dark: STATUS_COLOR_BASE.ON_HOLD },
+  [ItemStatus.GIFTED]: { light: STATUS_COLOR_BASE.STORED, dark: STATUS_COLOR_BASE.STORED },
+  [ItemStatus.RESERVED]: { light: STATUS_COLOR_BASE.FINISHING, dark: STATUS_COLOR_BASE.FINISHING },
+  [ItemStatus.OBSOLETE]: { light: STATUS_COLOR_BASE.OBSOLETE, dark: STATUS_COLOR_BASE.OBSOLETE },
+  [ItemStatus.DAMAGED]: { light: STATUS_COLOR_BASE.DAMAGED, dark: STATUS_COLOR_BASE.DAMAGED },
+  [ItemStatus.IDLE]: { light: STATUS_COLOR_BASE.IDLE, dark: STATUS_COLOR_BASE.IDLE },
+  [ItemStatus.COLLECTED]: { light: STATUS_COLOR_BASE.COLLECTED, dark: STATUS_COLOR_BASE.COLLECTED },
+  [ItemStatus.STORED]: { light: STATUS_COLOR_BASE.STORED, dark: STATUS_COLOR_BASE.STORED },
+  [ItemStatus.TO_REPAIR]: { light: STATUS_COLOR_BASE.TO_REPAIR, dark: STATUS_COLOR_BASE.TO_REPAIR },
 } as const;
 
 /** Site Status Colors - Light & Dark Mode with border contrast */
 export const SITE_STATUS_COLORS = {
-  [SiteStatus.CREATED]: {
-    light: 'border-orange-500 bg-orange-100 text-orange-800',
-    dark: 'border-orange-500 bg-orange-100 text-orange-800'
-  },
-  [SiteStatus.ACTIVE]: {
-    light: 'border-green-500 bg-green-100 text-green-800',
-    dark: 'border-green-500 bg-green-100 text-green-800'
-  },
-  [SiteStatus.UPDATED]: {
-    light: 'border-blue-500 bg-blue-100 text-blue-800',
-    dark: 'border-blue-500 bg-blue-100 text-blue-800'
-  },
-  [SiteStatus.INACTIVE]: {
-    light: 'border-gray-500 bg-gray-100 text-gray-800',
-    dark: 'border-gray-500 bg-gray-100 text-gray-800'
-  },
+  [SiteStatus.CREATED]: { light: STATUS_COLOR_BASE.CREATED, dark: STATUS_COLOR_BASE.CREATED },
+  [SiteStatus.ACTIVE]: { light: STATUS_COLOR_BASE.ACTIVE, dark: STATUS_COLOR_BASE.ACTIVE },
+  [SiteStatus.UPDATED]: { light: STATUS_COLOR_BASE.UPDATED, dark: STATUS_COLOR_BASE.UPDATED },
+  [SiteStatus.INACTIVE]: { light: STATUS_COLOR_BASE.INACTIVE, dark: STATUS_COLOR_BASE.INACTIVE },
 } as const;
 
 /** Financial Colors - for cost, revenue, profit, margin display */

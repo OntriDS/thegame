@@ -673,7 +673,7 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
           </div>
         </DialogFooter>
       </DialogContent>
-      
+
       {/* Personal Data Submodal */}
       <PersonalDataModal
         player={playerData}

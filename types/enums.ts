@@ -346,6 +346,83 @@ export const ITEM_CATEGORIES = {
   RESOURCE_ITEM: ['MATERIAL', 'EQUIPMENT']
 } as const;
 
+// ============================================================================
+// ITEM SUBTYPES ENUMS
+// ============================================================================
+
+/** Digital Item SubTypes */
+export enum DigitalSubType {
+  DIGITAL_ART = "Digital Art",
+  DIGITIZATION = "Digitization",
+  ANIMATION = "Animation",
+  NFT = "NFT"
+}
+
+/** Artwork Item SubTypes */
+export enum ArtworkSubType {
+  ACRYLIC_CANVAS = "Acrylic on Canvas",
+  ACRYLIC_WOOD = "Acrylic on Wood",
+  ASSEMBLAGES = "Assemblages",
+  MURAL = "Mural",
+  FURNITURE_ART = "Furniture Art"
+}
+
+/** Print Item SubTypes */
+export enum PrintSubType {
+  GICLEE_PRINT = "Giclee Print",
+  STANDARD_PRINT = "Standard Print",
+  CONSIGNMENT = "Consignment"
+}
+
+/** Sticker Item SubTypes */
+export enum StickerSubType {
+  BRILLIANT_WHITE = "Brilliant White",
+  REFLECTIVE = "Reflective",
+  MATE = "Mate"
+}
+
+/** Merch Item SubTypes */
+export enum MerchSubType {
+  T_SHIRT = "T-Shirt",
+  BAG = "Bag",
+  SHOES = "Shoes",
+  RASHGUARD = "Rashguard",
+  SPORTS_BRA = "Sports Bra",
+  T_SHIRT_ALLOVER = "T-Shirt AllOver"
+}
+
+/** Material Item SubTypes */
+export enum MaterialSubType {
+  ART_MATERIAL = "Art Material",
+  DESIGN_MATERIAL = "Design Material",
+  WORKSHOP_MATERIAL = "Workshop Material"
+}
+
+/** Equipment Item SubTypes */
+export enum EquipmentSubType {
+  ART_EQUIPMENT = "Art Equipment",
+  DESIGN_EQUIPMENT = "Design Equipment",
+  WORKSHOP_EQUIPMENT = "Workshop Equipment",
+  STORE_EQUIPMENT = "Store Equipment",
+  VEHICLE = "Vehicle"
+}
+
+/** Sticker Bundle SubTypes */
+export enum StickerBundleSubType {
+  CONSIGNMENT = "Consignment",
+  STORED = "Stored",
+  DIRECT_SALE = "Direct Sale",
+  TRACKING = "Tracking"
+}
+
+/** Print Bundle SubTypes */
+export enum PrintBundleSubType {
+  CONSIGNMENT = "Consignment",
+  STORED = "Stored",
+  DIRECT_SALE = "Direct Sale",
+  TRACKING = "Tracking"
+}
+
 
 // ============================================================================
 // SALES ENUMS
@@ -361,11 +438,6 @@ export enum SaleType {
   NFT = 'NFT',
 }
 
-/** Cash-drawer state */
-export enum SalesSessionStatus {
-  PENDING_RECONCILIATION = 'Pending Reconciliation',
-  RECONCILED             = 'Reconciled',
-}
 
 /** Sales transaction status */
 export enum SaleStatus {

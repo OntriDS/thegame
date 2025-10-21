@@ -1,4 +1,4 @@
-import { TaskType, EntityType } from '@/types/enums';
+import { TaskType, ItemType, EntityType } from '@/types/enums';
 import { Box, Boxes, Brush, CheckSquare, Cpu, CircleDollarSign, FilePlus, FileText, Package, Receipt, Scan ,ShoppingCart, Target, Truck, Award, Trophy, Gamepad, Bolt, Anvil, CalendarSync, AlarmCheck, MapPin, Folder, Zap, BarChart3, DollarSign, Coins, User } from 'lucide-react';
 
 export const TASK_TYPE_ICONS: Record<TaskType, React.ElementType> = {
@@ -12,14 +12,14 @@ export const TASK_TYPE_ICONS: Record<TaskType, React.ElementType> = {
 };
 
 export const ITEM_TYPE_ICONS: Record<string, React.ElementType> = {
-  digital: Cpu,
-  artwork: Brush,
-  print: FilePlus,
-  sticker: Box,
-  'sticker bundle': Boxes,
-  merch: ShoppingCart,
-  material: Package,
-  equipment: Truck,
+  [ItemType.DIGITAL.toLowerCase()]: Cpu,
+  [ItemType.ARTWORK.toLowerCase()]: Brush,
+  [ItemType.PRINT.toLowerCase()]: FilePlus,
+  [ItemType.STICKER.toLowerCase()]: Box,
+  [ItemType.STICKER_BUNDLE.toLowerCase()]: Boxes,
+  [ItemType.MERCH.toLowerCase()]: ShoppingCart,
+  [ItemType.MATERIAL.toLowerCase()]: Package,
+  [ItemType.EQUIPMENT.toLowerCase()]: Truck,
   default: Package,
 };
 

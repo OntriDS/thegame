@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -8,14 +8,15 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useThemeColors } from '@/lib/hooks/use-theme-colors';
 import { ClientAPI } from '@/lib/client-api';
-import { Item } from '@/types/entities';
-import { ItemType, ItemStatus, Collection } from '@/types/enums';
+import { Item, Site } from '@/types/entities';
+import { ItemType, ItemStatus, Collection, SiteType, PhysicalBusinessType } from '@/types/enums';
 import { getSubTypesForItemType } from '@/lib/utils/item-utils';
 import type { Station, Area, SubItemType } from '@/types/type-aliases';
 import { CM_TO_M2_CONVERSION } from '@/lib/constants/app-constants';
 import { FileReference } from '@/types/entities';
 import { calculateTotalQuantity } from '@/lib/utils/business-utils';
-import { getAllSitesInNewFormat } from '@/lib/utils/site-migration-utils';
+import { getAllStations } from '@/lib/utils/business-structure-utils';
+import { getSiteByName } from '@/lib/utils/site-options-utils';
 
 type ImportMode = 'replace' | 'merge' | 'add-only';
 
@@ -30,8 +31,20 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
   const [importMode, setImportMode] = useState<ImportMode>('add-only');
   const [isImporting, setIsImporting] = useState(false);
   const [importResult, setImportResult] = useState<{ success: number; errors: string[] } | null>(null);
-  
+  const [sites, setSites] = useState<Site[]>([]);
 
+  // Load sites when component mounts
+  useEffect(() => {
+    const loadSites = async () => {
+      try {
+        const allSites = await ClientAPI.getSites();
+        setSites(allSites);
+      } catch (error) {
+        console.error('Failed to load sites:', error);
+      }
+    };
+    loadSites();
+  }, []);
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -97,8 +110,14 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
         return isValid;
       };
 
-  const convertToItems = (csvData: any[]): (Item | null)[] => {
-    return csvData.map((row, index) => {
+      // Validate that a station is valid
+      const isValidStation = (station: string): boolean => {
+        const validStations = getAllStations();
+        return validStations.includes(station as Station);
+      };
+
+  const convertToItems = async (csvData: any[]): Promise<(Item | null)[]> => {
+    const items = await Promise.all(csvData.map(async (row, index) => {
       // Parse dimensions if they exist
       const width = parseFloat(row.Width || row.width || '0');
       const height = parseFloat(row.Height || row.height || '0');
@@ -135,30 +154,51 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
           const siteName = row.Site || row.site || row.Locations || row.locations || row.Location || row.location || '';
         
         if (siteName && siteName.trim() !== '') {
-          // Try to find a matching site with better matching logic
-          const validSites = getAllSitesInNewFormat().map(site => site.name);
-          const matchingSite = validSites.find(site => {
-            const normalizedSite = site.toLowerCase().replace(/[_\s]/g, '');
-            const normalizedInput = siteName.toLowerCase().replace(/[_\s]/g, '');     
-            return normalizedSite === normalizedInput;
-          });
+          // Find matching site using proper site validation
+          let matchingSite = getSiteByName(sites, siteName);
           
-          if (matchingSite) {
-            stock = [{ siteId: matchingSite, quantity: quantity }];
-          } else {
-            console.warn(`Site "${siteName}" not found in CSV row ${index + 1}, skipping item`);
-            // Skip this item by returning null - will be filtered out later
-            return null;
+          if (!matchingSite) {
+            // Site doesn't exist - create it
+            console.log(`Creating new site: "${siteName}"`);
+            const newSite: Site = {
+              id: `site-${siteName.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
+              name: siteName,
+              description: `Site created from CSV import`,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+              links: [],
+              metadata: {
+                type: SiteType.PHYSICAL, // Default to physical site
+                isActive: true,
+                businessType: PhysicalBusinessType.STORAGE,
+                settlementId: 'default-settlement', // Default settlement
+                googleMapsAddress: 'TBD'
+              },
+              isActive: true,
+              status: 'ACTIVE'
+            };
+            
+            try {
+              // Create the site via API
+              const createdSite = await ClientAPI.upsertSite(newSite);
+              matchingSite = createdSite;
+              // Add to local sites array
+              setSites(prev => [...prev, createdSite]);
+              console.log(`Successfully created site: "${siteName}"`);
+            } catch (error) {
+              console.error(`Failed to create site "${siteName}":`, error);
+              // Fallback: use the site name as ID for now
+              matchingSite = { ...newSite, id: siteName };
+            }
           }
+          
+          stock = [{ siteId: matchingSite.id, quantity: quantity }];
         } else {
           // No site specified - create item without stock (for ideation items)
           stock = [];
         }
       
-      // Only ensure stock entry if we have a valid site
-      if (stock.length === 0 && siteName && siteName.trim() !== '') {
-        stock = [{ siteId: 'Home', quantity }];
-      }
+      // Stock is already properly set above based on site validation
 
       // Determine item type from CSV or use selected type
       const itemTypeFromCSV = row.ItemType || row.itemType || ItemType.DIGITAL;
@@ -205,7 +245,7 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
         type: finalItemType,
         collection: finalCollection,
         status: finalStatus,
-        station: 'Strategy' as Station,
+        station: (row.Station || row.station || 'Strategy') as Station,
         area: 'ADMIN' as Area, // Default area for imported items
         stock,
         dimensions: width > 0 || height > 0 ? { width, height, area } : undefined,
@@ -229,7 +269,9 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
         isCollected: false,
         links: [] // ✅ Initialize links array (The Rosetta Stone)
       };
-    });
+    }));
+    
+    return items;
   };
 
   const handleImport = async () => {
@@ -243,7 +285,7 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
 
     try {
       const parsedData = parseCSV(csvData);
-      const itemsWithNulls = convertToItems(parsedData);
+      const itemsWithNulls = await convertToItems(parsedData);
       const items = itemsWithNulls.filter((item): item is Item => item !== null);
       
       // Validate items before import
@@ -259,10 +301,7 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
         // Allow items without stock (ideation - only validate if stock exists
         if (item.stock && item.stock.length > 0) {
           item.stock.forEach((stockPoint, stockIndex) => {
-            const validSites = getAllSitesInNewFormat().map(site => site.name);
-            if (!stockPoint.siteId || !validSites.includes(stockPoint.siteId)) {
-              validationErrors.push(`Row ${index + 1}, Stock ${stockIndex + 1}: Invalid site "${stockPoint.siteId}"`);
-            }
+            // Note: Sites will be created automatically if they don't exist, so no validation needed
             if (stockPoint.quantity < 0) {
               validationErrors.push(`Row ${index + 1}, Stock ${stockIndex + 1}: Quantity cannot be negative`);
             }

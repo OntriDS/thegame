@@ -21,8 +21,6 @@ export const financialStatusKeyMap: Record<FinancialStatus, string> = {
   [FinancialStatus.COLLECTED]: 'collected',
 };
 
-/** @deprecated Use financialStatusKeyMap instead */
-export const recordStatusKeyMap = financialStatusKeyMap;
 
 /** Dev Sprint status key mappings */
 export const devSprintStatusKeyMap: Record<DevSprintStatus, string> = {
@@ -49,8 +47,6 @@ export const itemStatusKeyMap: Record<ItemStatus, string> = {
   [ItemStatus.TO_REPAIR]: 'toRepair',
 };
 
-/** Legacy export for backward compatibility - use specific maps above */
-export const statusKeyMap = taskStatusKeyMap;
 
 /** Utility functions for status handling */
 

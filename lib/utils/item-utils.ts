@@ -1,7 +1,19 @@
 // lib/utils/item-utils.ts
 // Item-related helper functions
 
-import { ItemType, ItemCategory } from '@/types/enums';
+import { 
+  ItemType, 
+  ItemCategory,
+  DigitalSubType,
+  ArtworkSubType,
+  PrintSubType,
+  StickerSubType,
+  MerchSubType,
+  MaterialSubType,
+  EquipmentSubType,
+  StickerBundleSubType,
+  PrintBundleSubType
+} from '@/types/enums';
 import type { SubItemType } from '@/types/type-aliases';
 
 /** Helper function to get the category for a given ItemType */
@@ -28,22 +40,23 @@ export function getItemCategory(itemType: ItemType): ItemCategory {
 export function getSubTypesForItemType(itemType: ItemType): SubItemType[] {
   switch (itemType) {
     case ItemType.DIGITAL:
-      return ["Digital Art", "Digitization", "Animation", "NFT"];
+      return Object.values(DigitalSubType);
     case ItemType.ARTWORK:
-      return ["Acrylic on Canvas", "Acrylic on Wood", "Assemblages", "Mural", "Furniture Art"];
+      return Object.values(ArtworkSubType);
     case ItemType.PRINT:
-      return ["Giclee Print", "Standard Print", "Consignment"];
+      return Object.values(PrintSubType);
     case ItemType.STICKER:
-      return ["Brilliant White", "Reflective", "Mate"];
+      return Object.values(StickerSubType);
     case ItemType.MERCH:
-      return ["T-Shirt", "Bag", "Shoes", "Rashguard", "Sports Bra", "T-Shirt AllOver"];
+      return Object.values(MerchSubType);
     case ItemType.STICKER_BUNDLE:
+      return Object.values(StickerBundleSubType);
     case ItemType.PRINT_BUNDLE:
-      return ["Consignment", "Stored", "Direct Sale", "Tracking"];
+      return Object.values(PrintBundleSubType);
     case ItemType.MATERIAL:
-      return ["Art Material", "Design Material", "Workshop Material"];
+      return Object.values(MaterialSubType);
     case ItemType.EQUIPMENT:
-      return ["Art Equipment", "Design Equipment", "Workshop Equipment", "Store Equipment", "Vehicle"];
+      return Object.values(EquipmentSubType);
     default:
       return [];
   }

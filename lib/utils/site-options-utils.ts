@@ -57,26 +57,32 @@ export const getSiteById = (siteId: string, sites: Site[]): Site | null => {
   return sites.find(s => s.id === siteId) || null;
 };
 
-// ============================================================================
-// DEPRECATED FUNCTIONS - For backward compatibility during migration
-// ============================================================================
-
 /**
- * @deprecated Use createSiteOptions(sites) instead. This function uses enum-based approach.
- * Legacy function for generating site options from SITE_GROUPS enum
+ * Gets all site names from Site entities
+ * @param sites Array of Site entities from datastore
+ * @returns Array of site names
  */
-export const getSiteOptions = () => {
-  console.warn('getSiteOptions() is deprecated. Use createSiteOptions(sites) with Site entities instead.');
-  // Return empty array - components should use createSiteOptions with Site entities
-  return [];
+export const getAllSiteNames = (sites: Site[]): string[] => {
+  return sites.map(site => site.name);
 };
 
 /**
- * @deprecated Use createSiteOptionsWithCategories(sites) instead. This function uses enum-based approach.
- * Legacy function for generating site options with categories from SITE_CATEGORIES enum
+ * Gets sites by type from Site entities
+ * @param sites Array of Site entities from datastore
+ * @param type Site type to filter by
+ * @returns Filtered array of Site entities
  */
-export const getSiteOptionsWithCategories = () => {
-  console.warn('getSiteOptionsWithCategories() is deprecated. Use createSiteOptionsWithCategories(sites) with Site entities instead.');
-  // Return empty array - components should use createSiteOptionsWithCategories with Site entities
-  return [];
+export const getSitesByType = (sites: Site[], type: string): Site[] => {
+  return sites.filter(site => site.metadata.type === type);
 };
+
+/**
+ * Gets site by name from Site entities
+ * @param sites Array of Site entities from datastore
+ * @param name Site name to find
+ * @returns Site entity or null if not found
+ */
+export const getSiteByName = (sites: Site[], name: string): Site | null => {
+  return sites.find(site => site.name === name) || null;
+};
+
