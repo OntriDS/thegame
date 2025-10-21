@@ -9,7 +9,7 @@ type KVClient = {
   set: (key: string, value: unknown) => Promise<void>;
   del: (key: string, ...keys: string[]) => Promise<void>;
   mget: (keys: string[]) => Promise<(unknown | null)[]>;
-  scanIterator: (options: { match: string; count?: number }) => AsyncIterable<string>;
+  scan: (cursor: number, options?: { match?: string; count?: number }) => Promise<[string, string[]]>;
   sadd: (key: string, ...members: string[]) => Promise<void>;
   srem: (key: string, ...members: string[]) => Promise<void>;
   smembers: (key: string) => Promise<string[]>;
@@ -47,13 +47,11 @@ function createLocalKV(): KVClient {
     async mget(keys: string[]) {
       return keys.map((k) => (kvStore.has(k) ? kvStore.get(k)! : null));
     },
-    async *scanIterator(options: { match: string; count?: number }) {
-      const prefix = options.match.replace(/\*$/, '');
-      for (const key of kvStore.keys()) {
-        if (key.startsWith(prefix)) {
-          yield key;
-        }
-      }
+    async scan(cursor: number, options?: { match?: string; count?: number }) {
+      const prefix = options?.match?.replace(/\*$/, '') || '';
+      const allKeys = Array.from(kvStore.keys()).filter(key => key.startsWith(prefix));
+      // For local implementation, we just return all matching keys with cursor 0 (done)
+      return ['0', allKeys] as [string, string[]];
     },
     async sadd(key: string, ...members: string[]) {
       const set = setStore.get(key) ?? new Set<string>();
@@ -176,10 +174,18 @@ export async function kvMGet<T>(keys: string[]): Promise<(T | null)[]> {
 
 export async function kvScan(prefix: string, limit = 100): Promise<string[]> {
   const keys: string[] = [];
-  const iter = kv.scanIterator({ match: `${prefix}*`, count: limit });
-  for await (const key of iter) {
-    keys.push(key as string);
-  }
+  let cursor = 0;
+  
+  do {
+    const [newCursor, foundKeys] = await kv.scan(cursor, { 
+      match: `${prefix}*`, 
+      count: limit 
+    });
+    
+    keys.push(...foundKeys);
+    cursor = parseInt(newCursor);
+  } while (cursor !== 0);
+  
   return keys;
 }
 
