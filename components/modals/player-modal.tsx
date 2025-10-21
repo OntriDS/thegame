@@ -36,6 +36,10 @@ import { getPointsOrder, getPointsMetadata } from '@/lib/utils/points-utils';
 
 import { ClientAPI } from '@/lib/client-api';
 
+// Submodal imports
+import PersonalDataModal from './submodals/player-personal-data-submodal';
+import AccountEditModal from './submodals/player-account-edit-submodal';
+
 
 
 interface PlayerModalProps {
@@ -51,123 +55,6 @@ interface PlayerModalProps {
 }
 
 
-// Personal Data Submodal Component
-interface PersonalDataModalProps {
-  player: Player;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSave: (player: Player) => void;
-}
-
-function PersonalDataModal({ player, open, onOpenChange, onSave }: PersonalDataModalProps) {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [isLoadingAccount, setIsLoadingAccount] = useState(false);
-  const [accountData, setAccountData] = useState<any | null>(null);
-  
-  useEffect(() => {
-    const loadPersonalData = async () => {
-      if (open) {
-        setIsLoadingAccount(true);
-        
-        if (player.accountId) {
-          try {
-            const account = await ClientAPI.getAccount(player.accountId);
-            if (account) {
-              setAccountData(account);
-              setName(account.name);
-              setEmail(account.email);
-              setPhone(account.phone || '');
-              setIsLoadingAccount(false);
-              return;
-            }
-          } catch (error) {
-            console.error('Failed to load account:', error);
-          }
-        }
-        
-        setAccountData(null);
-        setName(player.name);
-        setEmail(player.email);
-        setPhone('');
-        setIsLoadingAccount(false);
-      }
-    };
-    
-    loadPersonalData();
-  }, [player, open]);
-  
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={`max-w-md ${getZIndexClass('SUB_MODALS')}`}>
-        {console.log('PersonalDataModal DialogContent is rendering, open:', open)}
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <User className="h-5 w-5" />
-            Personal Data
-            {accountData && (
-              <span className="ml-auto text-xs font-normal text-green-600 dark:text-green-400">
-                • Account Linked
-              </span>
-            )}
-          </DialogTitle>
-        </DialogHeader>
-        
-        <div className="space-y-4 py-4">
-          {isLoadingAccount ? (
-            <div className="text-center py-4 text-muted-foreground">Loading...</div>
-          ) : (
-            <>
-              <div className="space-y-3">
-                <div>
-                  <Label className="text-xs text-muted-foreground">Name</Label>
-                  <div className="mt-1 text-base font-medium">{name || '—'}</div>
-                </div>
-                
-                <div>
-                  <Label className="text-xs text-muted-foreground">Email</Label>
-                  <div className="mt-1 text-sm">{email || '—'}</div>
-                </div>
-                
-                {phone && (
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Phone</Label>
-                    <div className="mt-1 text-sm">{phone}</div>
-                  </div>
-                )}
-              </div>
-              
-              <div className="border-t pt-3 flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Status</span>
-                {player.isActive ? (
-                  <span className="text-green-600 dark:text-green-400">● Active</span>
-                ) : (
-                  <span className="text-red-600 dark:text-red-400">● Inactive</span>
-                )}
-              </div>
-              
-              {player.lastActiveAt && (
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Last Active</span>
-                  <span className="text-xs">
-                    {new Date(player.lastActiveAt).toLocaleDateString()}
-                  </span>
-                </div>
-              )}
-            </>
-          )}
-        </div>
-        
-        <DialogFooter>
-          <Button onClick={() => onOpenChange(false)}>
-            Close
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
 
 // Player Character Submodal
 interface PlayerCharacterModalProps {
@@ -494,107 +381,6 @@ function ExchangePointsModal({ player, open, onOpenChange, onExchange }: Exchang
   );
 }
 
-// Account Edit Submodal
-interface AccountEditModalProps {
-  account: any;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSave: (account: any) => void;
-}
-
-function AccountEditModal({ account, open, onOpenChange, onSave }: AccountEditModalProps) {
-  const [name, setName] = useState(account.name);
-  const [email, setEmail] = useState(account.email);
-  const [phone, setPhone] = useState(account.phone || '');
-  
-  useEffect(() => {
-    setName(account.name);
-    setEmail(account.email);
-    setPhone(account.phone || '');
-  }, [account, open]);
-  
-  const handleSave = () => {
-    const updatedAccount = {
-      ...account,
-      name,
-      email,
-      phone: phone || undefined,
-      updatedAt: new Date()
-    };
-    onSave(updatedAccount);
-  };
-  
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={`max-w-md ${getZIndexClass('SUB_MODALS')}`}>
-        {console.log('AccountEditModal DialogContent is rendering, open:', open)}
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Settings className="h-5 w-5" />
-            Edit Account • {account.name || 'Unnamed'}
-          </DialogTitle>
-        </DialogHeader>
-        
-        <div className="space-y-4 py-4">
-          <div className="text-xs p-2 border rounded-lg bg-yellow-50 dark:bg-yellow-950/30">
-            <p className="font-semibold">⚠️ The Triforce - Source of Truth</p>
-            <p className="text-muted-foreground mt-1">Changes here update Account, Player, and Character names.</p>
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="account-name">Name *</Label>
-            <Input
-              id="account-name"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Your name"
-            />
-            <div className="text-xs text-muted-foreground">
-              This name will be synced to Player and Character
-            </div>
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="account-email">Email *</Label>
-            <Input
-              id="account-email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="your@email.com"
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="account-phone">Phone</Label>
-            <Input
-              id="account-phone"
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="+506 1234-5678"
-            />
-          </div>
-          
-          <div className="text-xs p-2 border rounded-lg bg-blue-50 dark:bg-blue-950/30">
-            <p className="font-semibold">Account ID</p>
-            <p className="text-muted-foreground mt-1 font-mono text-xs">{account.id}</p>
-          </div>
-        </div>
-        
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button onClick={handleSave} disabled={!name || !email}>
-            Save Account
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
 
 
 /**
