@@ -700,7 +700,7 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
 
       <Dialog open={open} onOpenChange={onOpenChange}>
 
-        <DialogContent className={`w-full max-w-7xl h-[90vh] ${getZIndexClass('MODALS')}`}>
+        <DialogContent className={`w-full max-w-7xl max-h-[90vh] ${getZIndexClass('MODALS')}`}>
 
           <DialogHeader>
 
@@ -736,7 +736,7 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
 
       <Dialog open={open} onOpenChange={onOpenChange}>
 
-        <DialogContent className={`w-full max-w-7xl h-[90vh] ${getZIndexClass('MODALS')}`}>
+        <DialogContent className={`w-full max-w-7xl max-h-[90vh] ${getZIndexClass('MODALS')}`}>
 
           <DialogHeader>
 
@@ -781,7 +781,7 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
     <>
     <Dialog open={open} onOpenChange={onOpenChange}>
 
-      <DialogContent className={`w-full max-w-7xl h-[90vh] ${getZIndexClass('MODALS')}`}>
+      <DialogContent className={`w-full max-w-7xl max-h-[90vh] ${getZIndexClass('MODALS')}`}>
 
         <DialogHeader>
 
@@ -843,7 +843,7 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
 
           {/* STATE TAB - Current Month Data */}
 
-          <TabsContent value="state" className="flex-1 overflow-y-auto space-y-4">
+          <TabsContent value="state" className="flex-1 space-y-4">
 
             {/* Current Points (Uncollected) */}
 
@@ -1177,7 +1177,7 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
 
           {/* STATS TAB - Historical Data */}
 
-          <TabsContent value="stats" className="flex-1 overflow-y-auto space-y-4">
+          <TabsContent value="stats" className="flex-1 space-y-4">
 
             {/* Lifetime Points */}
 
@@ -1355,7 +1355,7 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
 
           {/* PROGRESSION TAB - RPG Mechanics Placeholder */}
 
-          <TabsContent value="progression" className="flex-1 overflow-y-auto space-y-4">
+          <TabsContent value="progression" className="flex-1 space-y-4">
 
             {/* RPG Stats Preview */}
 
