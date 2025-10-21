@@ -1794,7 +1794,10 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
 
             size="sm"
 
-                onClick={() => setShowAccountEdit(true)}
+                onClick={() => {
+                  console.log('Opening Account Edit Modal');
+                  setShowAccountEdit(true);
+                }}
 
                 className="h-8 text-xs"
 
@@ -1816,7 +1819,10 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
 
               size="sm"
 
-              onClick={() => setShowPersonalData(true)}
+              onClick={() => {
+                console.log('Opening Personal Data Modal');
+                setShowPersonalData(true);
+              }}
 
               className="h-8 text-xs"
 
