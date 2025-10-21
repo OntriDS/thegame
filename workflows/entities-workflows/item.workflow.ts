@@ -28,6 +28,11 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
     await appendItemCreationLog(item, sourceType, sourceId);
     
     await markEffect(effectKey);
+    
+    // Dispatch event to notify frontend of items update
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('itemsUpdated'));
+    }
     return;
   }
   
@@ -39,6 +44,10 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
       oldStock: previousItem.stock,
       newStock: item.stock
     });
+    // Dispatch event to notify frontend of items update
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('itemsUpdated'));
+    }
   }
   
   // Quantity sold changes - SOLD event
@@ -48,20 +57,45 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
       quantitySold: item.quantitySold,
       oldQuantitySold: previousItem.quantitySold
     });
+    // Dispatch event to notify frontend of items update
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('itemsUpdated'));
+    }
   }
   
   // Collection status - COLLECTED event
-  if (!previousItem.isCollected && item.isCollected) {
+  if (item.isCollected && !previousItem.isCollected) {
     await appendEntityLog(EntityType.ITEM, item.id, LogEventType.COLLECTED, {
       name: item.name,
       collectedAt: new Date().toISOString()
     });
+    // Dispatch event to notify frontend of items update
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('itemsUpdated'));
+    }
+  }
+
+  // Status changes - UPDATED event
+  if (previousItem.status !== item.status) {
+    await appendEntityLog(EntityType.ITEM, item.id, LogEventType.UPDATED, {
+      name: item.name,
+      oldStatus: previousItem.status,
+      newStatus: item.status
+    });
+    // Dispatch event to notify frontend of items update
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('itemsUpdated'));
+    }
   }
   
   // Descriptive changes - update in-place
   for (const field of DESCRIPTIVE_FIELDS) {
     if ((previousItem as any)[field] !== (item as any)[field]) {
       await updateEntityLogField(EntityType.ITEM, item.id, field, (previousItem as any)[field], (item as any)[field]);
+      // Dispatch event to notify frontend of items update
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('itemsUpdated'));
+      }
     }
   }
 }
