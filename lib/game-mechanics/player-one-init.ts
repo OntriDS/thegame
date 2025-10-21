@@ -3,7 +3,7 @@
  * 
  * Environment-agnostic utility that ensures The Triforce (Account + Player + Character) exists.
  * There must ALWAYS be at least one account for the system to exist.
- * This runs ONCE on first load, works in BOTH LocalAdapter and HybridAdapter.
+ * This runs ONCE on first load, works in KV-only system for Vercel production.
  * 
  * Creates "The Triforce":
  * - Account "account-one" (Power - Source of Truth for identity)
@@ -286,35 +286,49 @@ export async function createTriforceAtomic(
     // STEP 4: Create ALL Triforce Links
     const { createLink } = await import('@/links/link-registry');
     
+    console.log('[createTriforceAtomic] 🔗 Creating Triforce links...');
+    
     // Link: Account → Player
-    await createLink({
-      id: `link-account-player-${PLAYER_ONE_ACCOUNT_ID}-${PLAYER_ONE_ID}`,
-      linkType: 'ACCOUNT_PLAYER' as any,
-      source: { type: EntityType.ACCOUNT, id: PLAYER_ONE_ACCOUNT_ID },
-      target: { type: EntityType.PLAYER, id: PLAYER_ONE_ID },
-      createdAt: new Date()
-    }, { skipValidation: true });
-    console.log('[createTriforceAtomic] 🔗 ACCOUNT_PLAYER link created');
+    try {
+      await createLink({
+        id: `link-account-player-${PLAYER_ONE_ACCOUNT_ID}-${PLAYER_ONE_ID}`,
+        linkType: 'ACCOUNT_PLAYER' as any,
+        source: { type: EntityType.ACCOUNT, id: PLAYER_ONE_ACCOUNT_ID },
+        target: { type: EntityType.PLAYER, id: PLAYER_ONE_ID },
+        createdAt: new Date()
+      }, { skipValidation: true });
+      console.log('[createTriforceAtomic] ✅ ACCOUNT_PLAYER link created');
+    } catch (error) {
+      console.error('[createTriforceAtomic] ❌ Failed to create ACCOUNT_PLAYER link:', error);
+    }
     
     // Link: Account → Character
-    await createLink({
-      id: `link-account-character-${PLAYER_ONE_ACCOUNT_ID}-${CHARACTER_ONE_ID}`,
-      linkType: 'ACCOUNT_CHARACTER' as any,
-      source: { type: EntityType.ACCOUNT, id: PLAYER_ONE_ACCOUNT_ID },
-      target: { type: EntityType.CHARACTER, id: CHARACTER_ONE_ID },
-      createdAt: new Date()
-    }, { skipValidation: true });
-    console.log('[createTriforceAtomic] 🔗 ACCOUNT_CHARACTER link created');
+    try {
+      await createLink({
+        id: `link-account-character-${PLAYER_ONE_ACCOUNT_ID}-${CHARACTER_ONE_ID}`,
+        linkType: 'ACCOUNT_CHARACTER' as any,
+        source: { type: EntityType.ACCOUNT, id: PLAYER_ONE_ACCOUNT_ID },
+        target: { type: EntityType.CHARACTER, id: CHARACTER_ONE_ID },
+        createdAt: new Date()
+      }, { skipValidation: true });
+      console.log('[createTriforceAtomic] ✅ ACCOUNT_CHARACTER link created');
+    } catch (error) {
+      console.error('[createTriforceAtomic] ❌ Failed to create ACCOUNT_CHARACTER link:', error);
+    }
     
     // Link: Player → Character
-    await createLink({
-      id: `link-player-character-${PLAYER_ONE_ID}-${CHARACTER_ONE_ID}`,
-      linkType: 'PLAYER_CHARACTER' as any,
-      source: { type: EntityType.PLAYER, id: PLAYER_ONE_ID },
-      target: { type: EntityType.CHARACTER, id: CHARACTER_ONE_ID },
-      createdAt: new Date()
-    }, { skipValidation: true });
-    console.log('[createTriforceAtomic] 🔗 PLAYER_CHARACTER link created');
+    try {
+      await createLink({
+        id: `link-player-character-${PLAYER_ONE_ID}-${CHARACTER_ONE_ID}`,
+        linkType: 'PLAYER_CHARACTER' as any,
+        source: { type: EntityType.PLAYER, id: PLAYER_ONE_ID },
+        target: { type: EntityType.CHARACTER, id: CHARACTER_ONE_ID },
+        createdAt: new Date()
+      }, { skipValidation: true });
+      console.log('[createTriforceAtomic] ✅ PLAYER_CHARACTER link created');
+    } catch (error) {
+      console.error('[createTriforceAtomic] ❌ Failed to create PLAYER_CHARACTER link:', error);
+    }
     
     // STEP 5: Log all three entities
     const { appendEntityLog } = await import('@/workflows/entities-logging');

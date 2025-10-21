@@ -33,7 +33,6 @@ export default function SeedDataPage() {
   const [status, setStatus] = useState<string>('');
   const [entityStats, setEntityStats] = useState<EntityStats[]>([]);
   const [selectedEntity, setSelectedEntity] = useState<string>('');
-  const [storageMode, setStorageMode] = useState<string>('');
   const [showImportModal, setShowImportModal] = useState(false);
   const [importMode, setImportMode] = useState<'add' | 'merge' | 'replace'>('merge');
   const [pendingImport, setPendingImport] = useState<{ entityType: string; data: any[]; count: number; filename: string } | null>(null);
@@ -43,13 +42,8 @@ export default function SeedDataPage() {
   // Load current entity statistics and storage mode
   useEffect(() => {
     loadEntityStats();
-    loadStorageMode();
   }, []);
 
-  const loadStorageMode = async () => {
-    // In KV-only system, we're always using Vercel KV
-    setStorageMode('kv');
-  };
 
   const loadEntityStats = async () => {
     try {

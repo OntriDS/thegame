@@ -16,16 +16,21 @@ export async function GET(req: NextRequest) {
     const entityType = searchParams.get('entityType');
     const entityId = searchParams.get('entityId');
 
+    console.log('🔥 LINKS API DEBUG - GET /api/links called with:', { entityType, entityId });
+
     let links: any[];
 
     if (entityType && entityId) {
       // Get links for specific entity
+      console.log('🔥 LINKS API DEBUG - Getting links for specific entity');
       links = await getLinksFor({ type: entityType as any, id: entityId });
     } else {
       // Get all links
+      console.log('🔥 LINKS API DEBUG - Getting all links');
       links = await getAllLinks();
     }
 
+    console.log('🔥 LINKS API DEBUG - Found links:', links.length);
     return NextResponse.json(links);
   } catch (error) {
     console.error('[Links API] Error fetching links:', error);

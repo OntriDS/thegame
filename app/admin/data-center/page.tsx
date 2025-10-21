@@ -23,7 +23,6 @@ import { SitesLogTab } from '@/components/data-center/sites-log-tab';
 import { LinksTab } from '@/components/data-center/links-tab';
 import { updatePhaseStatus, logPhaseCompletion, cyclePhaseStatus } from '@/lib/utils/phase-status-utils';
 import { deduplicateTasksLog } from '@/lib/utils/logging-utils';
-import { DEFAULT_STORAGE_MODE, StorageMode } from '@/lib/constants/storage-constants';
 
 export default function DataCenterPage() {
   const { textColor } = useThemeColors();
@@ -44,34 +43,13 @@ export default function DataCenterPage() {
   const [incompletePhases, setIncompletePhases] = useState<string[]>([]);
   const [isReloading, setIsReloading] = useState(false);
   
-  // Use the same environment detection as the rest of the system
-  const isKVEnvironment = DEFAULT_STORAGE_MODE === StorageMode.HYBRID;
-  
-  // Helper function to get the correct API URL
-  const getLogApiUrl = useCallback((logType: string) => {
-    return isKVEnvironment 
-      ? `/api/${logType}-log` 
-      : `/api/local-logs?logType=${logType}`;
-  }, [isKVEnvironment]);
-  
-  // Helper function to parse log response
-  const parseLogResponse = useCallback(async (response: Response, isTasksLog = false) => {
-    if (isKVEnvironment && isTasksLog) {
-      // Production tasks-log returns text that needs special parsing
-      const text = await response.text();
-      return (() => { try { return JSON.parse(text); } catch { return { entries: [] }; } })();
-    } else {
-      // All other cases return JSON directly
-      return await response.json();
-    }
-  }, [isKVEnvironment]);
   
   // Generic log loading function
   const loadLog = useCallback(async (logType: string, setter: (data: any) => void, isTasksLog = false) => {
     try {
-      const response = await fetch(getLogApiUrl(logType));
+      const response = await fetch(`/api/${logType}-log`);
       if (response.ok) {
-        const data = await parseLogResponse(response, isTasksLog);
+        const data = await response.json();
         if (isTasksLog) {
           setter(deduplicateTasksLog(data));
         } else {
@@ -81,7 +59,7 @@ export default function DataCenterPage() {
     } catch (error) {
       // Failed to load log
     }
-  }, [getLogApiUrl, parseLogResponse]);
+  }, []);
   
   // Main tab state
   const [activeMainTab, setActiveMainTab] = useState<string>('tasks-lifecycle');
@@ -248,13 +226,13 @@ export default function DataCenterPage() {
       // Reload all 7 entity logs + dev log
       const [devResponse, characterResponse, playerResponse, salesResponse, sitesResponse, financialsResponse, itemsResponse, tasksResponse] = await Promise.all([
         fetch('/api/dev-log'),
-        fetch(getLogApiUrl('character')),
-        fetch(getLogApiUrl('player')),
-        fetch(getLogApiUrl('sales')),
-        fetch(getLogApiUrl('sites')),
-        fetch(getLogApiUrl('financials')),
-        fetch(getLogApiUrl('items')),
-        fetch(getLogApiUrl('tasks'))
+        fetch('/api/character-log'),
+        fetch('/api/player-log'),
+        fetch('/api/sales-log'),
+        fetch('/api/sites-log'),
+        fetch('/api/financials-log'),
+        fetch('/api/items-log'),
+        fetch('/api/tasks-log')
       ]);
 
       if (devResponse.ok) {
@@ -262,31 +240,31 @@ export default function DataCenterPage() {
         setDevLog(data);
       }
       if (characterResponse.ok) {
-        const data = await parseLogResponse(characterResponse);
+        const data = await characterResponse.json();
         setCharacterLog(data);
       }
       if (playerResponse.ok) {
-        const data = await parseLogResponse(playerResponse);
+        const data = await playerResponse.json();
         setPlayerLog(data);
       }
       if (salesResponse.ok) {
-        const data = await parseLogResponse(salesResponse);
+        const data = await salesResponse.json();
         setSalesLog(data);
       }
       if (sitesResponse.ok) {
-        const data = await parseLogResponse(sitesResponse);
+        const data = await sitesResponse.json();
         setSitesLog(data);
       }
       if (financialsResponse.ok) {
-        const data = await parseLogResponse(financialsResponse);
+        const data = await financialsResponse.json();
         setFinancialsLog(data);
       }
       if (itemsResponse.ok) {
-        const data = await parseLogResponse(itemsResponse);
+        const data = await itemsResponse.json();
         setItemsLog(data);
       }
       if (tasksResponse.ok) {
-        const data = await parseLogResponse(tasksResponse, true);
+        const data = await tasksResponse.json();
         setTasksLog(deduplicateTasksLog(data));
       }
     } catch (error) {

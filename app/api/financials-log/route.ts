@@ -22,18 +22,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ entries: financialsLog });
     }
 
-    // In development, read from filesystem
-    const filePath = path.join(process.cwd(), 'logs-research', 'financials-log.json');
-
-    try {
-      const fs = await import('fs/promises');
-      const fileContent = await fs.readFile(filePath, 'utf-8');
-      const financialsLogData = JSON.parse(fileContent);
-      return NextResponse.json({ entries: financialsLogData });
-    } catch (fileError) {
-      console.error('Error reading financials-log.json:', fileError);
-      return NextResponse.json({ entries: [] });
-    }
+    // KV-only system - return empty array if no data in KV
+    return NextResponse.json({ entries: [] });
 
   } catch (error) {
     console.error('Error fetching financials log:', error);

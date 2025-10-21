@@ -16,24 +16,18 @@ export async function GET(request: NextRequest) {
   try {
     // Try KV first (production)
     const { kvGet } = await import('@/data-store/kv');
-    const characterLog = await kvGet(buildLogKey(EntityType.CHARACTER));
+    const logKey = buildLogKey(EntityType.CHARACTER);
+    console.log('🔥 CHARACTER LOG API DEBUG - Looking for key:', logKey);
+    
+    const characterLog = await kvGet(logKey);
+    console.log('🔥 CHARACTER LOG API DEBUG - Found in KV:', characterLog ? 'YES' : 'NO', characterLog);
 
     if (characterLog) {
       return NextResponse.json({ entries: characterLog });
     }
 
-    // In development, read from filesystem
-    const filePath = path.join(process.cwd(), 'logs-research', 'character-log.json');
-
-    try {
-      const fs = await import('fs/promises');
-      const fileContent = await fs.readFile(filePath, 'utf-8');
-      const characterLogData = JSON.parse(fileContent);
-      return NextResponse.json({ entries: characterLogData });
-    } catch (fileError) {
-      console.error('Error reading character-log.json:', fileError);
-      return NextResponse.json({ entries: [] });
-    }
+    // KV-only system - return empty array if no data in KV
+    return NextResponse.json({ entries: [] });
 
   } catch (error) {
     console.error('Error fetching character log:', error);

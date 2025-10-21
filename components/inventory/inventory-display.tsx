@@ -248,7 +248,7 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
 
   const handleSaveItem = async (item: Item) => {
     try {
-      // Parent only calls DataStore - LocalAdapter handles side effects
+      // Parent only calls DataStore - API routes handle side effects
       const finalItem = await ClientAPI.upsertItem(item);
       
       // Refresh all data (including sticker bundles)
