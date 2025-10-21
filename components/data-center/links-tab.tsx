@@ -61,11 +61,16 @@ export function LinksTab({ onReload, isReloading }: LinksTabProps) {
               // Special handling for items - show name and type
               if (config.singular === EntityType.ITEM) {
                 const name = entity.name || entity.id;
-                const type = entity.type || entity.itemType || '';
+                // Type-safe access to type/itemType properties
+                const type = 'type' in entity ? entity.type : 
+                           'itemType' in entity ? entity.itemType : '';
                 names[key] = type ? `${name} - ${type}` : name;
               } else {
-                // For other entities, just use name/title
-                names[key] = entity.name || entity.title || entity.id;
+                // For other entities, just use name/title (type-safe)
+                const displayName = entity.name || 
+                                  ('title' in entity ? (entity.title as string) : '') || 
+                                  entity.id;
+                names[key] = displayName;
               }
             });
           } catch (error) {
