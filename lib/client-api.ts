@@ -315,15 +315,11 @@ export const ClientAPI = {
 	// Note: getAccounts is defined below in the bulk ops section for historical reasons
 
   getAccount: async (id: string): Promise<Account | null> => {
-    console.log('🔥 CLIENT API DEBUG - getAccount called with id:', id);
     const res = await fetch(`/api/accounts/${id}`);
-    console.log('🔥 CLIENT API DEBUG - getAccount response status:', res.status);
     if (!res.ok) {
-      console.log('🔥 CLIENT API DEBUG - getAccount failed:', res.status, res.statusText);
       return null;
     }
     const account = await res.json();
-    console.log('🔥 CLIENT API DEBUG - getAccount success:', account ? 'Found account' : 'No account');
     return account;
   },
   

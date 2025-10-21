@@ -687,17 +687,15 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
 
           setPlayerData(loadedPlayer);
 
+          console.log('[PlayerModal] loadedPlayer:', loadedPlayer);
+          console.log('[PlayerModal] loadedPlayer?.accountId:', loadedPlayer?.accountId);
           
-
           // Load Account if linked
-
           if (loadedPlayer?.accountId) {
-
             try {
-
               const account = await ClientAPI.getAccount(loadedPlayer.accountId);
-
               setAccountData(account);
+              console.log('[PlayerModal] accountData after successful fetch:', account);
 
             } catch (error) {
 
