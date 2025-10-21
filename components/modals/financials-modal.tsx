@@ -517,14 +517,15 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
   const availableCategories = BUSINESS_STRUCTURE[formData.station as keyof typeof BUSINESS_STRUCTURE] || [];
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={`w-full max-w-7xl h-[90vh] ${getZIndexClass('MODALS')}`}>
-        <DialogHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <DialogTitle>
-                {record ? 'Edit Financial' : `Create New ${isCompany ? 'Company' : 'Personal'} Financial`}
-              </DialogTitle>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className={`w-full max-w-7xl h-[90vh] ${getZIndexClass('MODALS')}`}>
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <DialogTitle>
+                  {record ? 'Edit Financial' : `Create New ${isCompany ? 'Company' : 'Personal'} Financial`}
+                </DialogTitle>
               <DialogDescription>
                 {record 
                   ? 'Modify financial details' 
@@ -948,38 +949,39 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
           </div>
         </DialogFooter>
       </DialogContent>
-
-      {/* Delete Modal */}
-      {showDeleteModal && (
-        <DeleteModal
-          open={showDeleteModal}
-          onOpenChange={setShowDeleteModal}
-          entityType="record"
-          entities={record ? [record] : []}
-          onComplete={() => {
-            setShowDeleteModal(false);
-            onOpenChange(false);
-            onDelete?.();
-          }}
-        />
-      )}
-
-      {/* Entity Relationships Modal */}
-      {record && showRelationshipsModal && (
-        <EntityRelationshipsModal
-          entity={{ type: 'financial' as any, id: record.id, name: record.name }}
-          open={showRelationshipsModal}
-          onClose={() => setShowRelationshipsModal(false)}
-        />
-      )}
-      
-      {/* Player Character Selector Modal */}
-      <PlayerCharacterSelectorModal
-        open={showPlayerCharacterSelector}
-        onOpenChange={setShowPlayerCharacterSelector}
-        onSelect={setPlayerCharacterId}
-        currentPlayerCharacterId={playerCharacterId}
-      />
     </Dialog>
+
+    {/* Delete Modal */}
+    {showDeleteModal && (
+      <DeleteModal
+        open={showDeleteModal}
+        onOpenChange={setShowDeleteModal}
+        entityType="record"
+        entities={record ? [record] : []}
+        onComplete={() => {
+          setShowDeleteModal(false);
+          onOpenChange(false);
+          onDelete?.();
+        }}
+      />
+    )}
+
+    {/* Entity Relationships Modal */}
+    {record && showRelationshipsModal && (
+      <EntityRelationshipsModal
+        entity={{ type: 'financial' as any, id: record.id, name: record.name }}
+        open={showRelationshipsModal}
+        onClose={() => setShowRelationshipsModal(false)}
+      />
+    )}
+    
+    {/* Player Character Selector Modal */}
+    <PlayerCharacterSelectorModal
+      open={showPlayerCharacterSelector}
+      onOpenChange={setShowPlayerCharacterSelector}
+      onSelect={setPlayerCharacterId}
+      currentPlayerCharacterId={playerCharacterId}
+    />
+    </>
   );
 }

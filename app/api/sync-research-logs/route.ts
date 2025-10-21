@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdminAuth } from '@/lib/api-auth';
-import { syncResearchLogsToKV, checkResearchLogsSyncStatus } from '@/workflows/settings/research-logs-sync';
+import { 
+  syncResearchLogsToKV, 
+  checkResearchLogsSyncStatus,
+  syncIndividualResearchData 
+} from '@/workflows/settings/research-logs-sync';
 
 /**
  * API route to trigger research logs sync
@@ -14,15 +18,32 @@ export async function POST(req: NextRequest) {
   }
   
   try {
-    console.log('[Sync Research Logs API] 🔄 Starting sync...');
-    const results = await syncResearchLogsToKV();
+    const body = await req.json();
+    const { logType } = body;
     
-    console.log('[Sync Research Logs API] ✅ Sync completed:', results);
-    return NextResponse.json({
-      success: true,
-      message: 'Research logs sync completed',
-      results
-    });
+    if (logType) {
+      // Individual sync
+      console.log(`[Sync Research Logs API] 🔄 Starting ${logType} sync...`);
+      const results = await syncIndividualResearchData(logType);
+      
+      console.log(`[Sync Research Logs API] ✅ ${logType} sync completed:`, results);
+      return NextResponse.json({
+        success: true,
+        message: `${logType} sync completed`,
+        results
+      });
+    } else {
+      // Full sync
+      console.log('[Sync Research Logs API] 🔄 Starting full sync...');
+      const results = await syncResearchLogsToKV();
+      
+      console.log('[Sync Research Logs API] ✅ Full sync completed:', results);
+      return NextResponse.json({
+        success: true,
+        message: 'Research logs sync completed',
+        results
+      });
+    }
     } catch (error) {
       console.error('[Sync Research Logs API] ❌ Sync failed:', error);
       return NextResponse.json({ 

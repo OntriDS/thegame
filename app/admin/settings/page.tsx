@@ -14,6 +14,7 @@ import { SettingsPanel } from '@/components/settings/settings-panel';
 import { AdminSettingsTab } from '@/components/settings/admin-settings-tab';
 import { SystemSettingsTab } from '@/components/settings/system-settings-tab';
 import { LinkRulesTab } from '@/components/research/link-rules-tab';
+import { ResearchSyncTab } from '@/components/settings/research-sync-tab';
 import SeedDataPage from '@/app/admin/seed-data/page';
 
 
@@ -24,7 +25,7 @@ export default function SettingsPage() {
   return (
     <div className="space-y-8">
       <Tabs defaultValue="general" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="general" className="flex items-center gap-2">
             <Settings className="h-4 w-4" />
             General
@@ -32,6 +33,10 @@ export default function SettingsPage() {
           <TabsTrigger value="seed-data" className="flex items-center gap-2">
             <Database className="h-4 w-4" />
             Seed Data
+          </TabsTrigger>
+          <TabsTrigger value="research-sync" className="flex items-center gap-2">
+            <Database className="h-4 w-4" />
+            Research Sync
           </TabsTrigger>
           <TabsTrigger value="admin" className="flex items-center gap-2">
             <User className="h-4 w-4" />
@@ -53,6 +58,7 @@ export default function SettingsPage() {
         <TabsContent value="seed-data" className="space-y-4">
           <SeedDataPage />
         </TabsContent>
+        <ResearchSyncTab />
         <AdminSettingsTab />
         <LinkRulesTab />
         <SystemSettingsTab />

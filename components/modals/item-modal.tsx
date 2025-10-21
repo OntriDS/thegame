@@ -464,11 +464,12 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
   const showYear = true; // Always show Year field
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={`max-w-7xl max-h-[90vh] overflow-y-auto ${getZIndexClass('MODALS')}`}>
-        <DialogHeader className="pb-4">
-          <DialogTitle className="text-lg">{(item || selectedItemId) ? 'Edit Item' : 'Add New Item'}</DialogTitle>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className={`max-w-7xl max-h-[90vh] overflow-y-auto ${getZIndexClass('MODALS')}`}>
+          <DialogHeader className="pb-4">
+            <DialogTitle className="text-lg">{(item || selectedItemId) ? 'Edit Item' : 'Add New Item'}</DialogTitle>
+          </DialogHeader>
         
           {/* Main Fields - 3 Columns */}
           <div className="grid grid-cols-3 gap-6">
@@ -812,95 +813,96 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
           </div>
         </DialogFooter>
       </DialogContent>
-      
-      {/* MOVE Modal */}
-      <MoveItemsModal
-        open={showMoveModal}
-        onOpenChange={setShowMoveModal}
-        items={(item || (selectedItemId && existingItems.find(i => i.id === selectedItemId))) ? [item || existingItems.find(i => i.id === selectedItemId)!] : []}
-        onComplete={() => {
-          setShowMoveModal(false);
-          onOpenChange(false); // Close the modal after moving
-        }}
-        onStatusCheck={(item, isMovingToSold) => {
-          // Handle status check from move operation
-          if (isMovingToSold) {
-            // Item is being moved to a sold item - emit to parent for handling
-            const updatedItem = { ...item, status: ItemStatus.SOLD };
-            onSave(updatedItem);
-          }
-          // Close the move modal after status check
-          setShowMoveModal(false);
-          onOpenChange(false);
-        }}
-      />
-      
-      {/* DELETE Modal */}
-      <DeleteModal
-        open={showDeleteModal}
-        onOpenChange={setShowDeleteModal}
-        entityType="item"
-        entities={(item || (selectedItemId && existingItems.find(i => i.id === selectedItemId))) ? [item || existingItems.find(i => i.id === selectedItemId)!] : []}
-        onComplete={async () => {
-          setShowDeleteModal(false);
-          // Reload existing items to update SearchableSelect
-          try {
-            const updatedItems = await ClientAPI.getItems();
-            setExistingItems(updatedItems);
-            
-            // Clear selectedItemId if the deleted item was selected
-            const deletedItem = item || (selectedItemId && existingItems.find(i => i.id === selectedItemId));
-            if (deletedItem && selectedItemId === deletedItem.id) {
-              setSelectedItemId('');
-              setName('');
-              // Reset form to create mode
-              setIsNewItem(true);
-            }
-          } catch (error) {
-            console.error('Failed to reload items after deletion:', error);
-          }
-          onOpenChange(false); // Close the modal after deleting
-        }}
-      />
+    </Dialog>
 
-      {/* Status Modal */}
-      {showStatusModal && statusModalConfig && (
-        <div className={`fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 ${getZIndexClass('MODALS')}`}>
-          <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
-            <h3 className="text-lg font-semibold mb-2">{statusModalConfig.title}</h3>
-            <p className="text-sm mb-4">{statusModalConfig.message}</p>
-            <div className="flex justify-end gap-2">
-              {statusModalConfig.options.map((option, index) => (
-                <Button
-                  key={index}
-                  variant={option.variant}
-                  onClick={option.action}
-                >
-                  {option.label}
-                </Button>
-              ))}
-            </div>
+    {/* MOVE Modal */}
+    <MoveItemsModal
+      open={showMoveModal}
+      onOpenChange={setShowMoveModal}
+      items={(item || (selectedItemId && existingItems.find(i => i.id === selectedItemId))) ? [item || existingItems.find(i => i.id === selectedItemId)!] : []}
+      onComplete={() => {
+        setShowMoveModal(false);
+        onOpenChange(false); // Close the modal after moving
+      }}
+      onStatusCheck={(item, isMovingToSold) => {
+        // Handle status check from move operation
+        if (isMovingToSold) {
+          // Item is being moved to a sold item - emit to parent for handling
+          const updatedItem = { ...item, status: ItemStatus.SOLD };
+          onSave(updatedItem);
+        }
+        // Close the move modal after status check
+        setShowMoveModal(false);
+        onOpenChange(false);
+      }}
+    />
+    
+    {/* DELETE Modal */}
+    <DeleteModal
+      open={showDeleteModal}
+      onOpenChange={setShowDeleteModal}
+      entityType="item"
+      entities={(item || (selectedItemId && existingItems.find(i => i.id === selectedItemId))) ? [item || existingItems.find(i => i.id === selectedItemId)!] : []}
+      onComplete={async () => {
+        setShowDeleteModal(false);
+        // Reload existing items to update SearchableSelect
+        try {
+          const updatedItems = await ClientAPI.getItems();
+          setExistingItems(updatedItems);
+          
+          // Clear selectedItemId if the deleted item was selected
+          const deletedItem = item || (selectedItemId && existingItems.find(i => i.id === selectedItemId));
+          if (deletedItem && selectedItemId === deletedItem.id) {
+            setSelectedItemId('');
+            setName('');
+            // Reset form to create mode
+            setIsNewItem(true);
+          }
+        } catch (error) {
+          console.error('Failed to reload items after deletion:', error);
+        }
+        onOpenChange(false); // Close the modal after deleting
+      }}
+    />
+
+    {/* Status Modal */}
+    {showStatusModal && statusModalConfig && (
+      <div className={`fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 ${getZIndexClass('MODALS')}`}>
+        <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
+          <h3 className="text-lg font-semibold mb-2">{statusModalConfig.title}</h3>
+          <p className="text-sm mb-4">{statusModalConfig.message}</p>
+          <div className="flex justify-end gap-2">
+            {statusModalConfig.options.map((option, index) => (
+              <Button
+                key={index}
+                variant={option.variant}
+                onClick={option.action}
+              >
+                {option.label}
+              </Button>
+            ))}
           </div>
         </div>
-      )}
+      </div>
+    )}
 
-      {/* Links SubModal */}
-      <LinksSubModal
-        open={showLinksModal}
-        onOpenChange={setShowLinksModal}
-        entityType="item"
-        entityId={item?.id || ''}
-        entityName={item?.name || 'Item'}
-        links={itemLinks}
-      />
-      
-      {/* Character Selector Modal */}
-      <CharacterSelectorModal
-        open={showCharacterSelector}
-        onOpenChange={setShowCharacterSelector}
-        onSelect={handleSetOwner}
-        currentOwnerId={ownerCharacterId}
-      />
-    </Dialog>
+    {/* Links SubModal */}
+    <LinksSubModal
+      open={showLinksModal}
+      onOpenChange={setShowLinksModal}
+      entityType="item"
+      entityId={item?.id || ''}
+      entityName={item?.name || 'Item'}
+      links={itemLinks}
+    />
+    
+    {/* Character Selector Modal */}
+    <CharacterSelectorModal
+      open={showCharacterSelector}
+      onOpenChange={setShowCharacterSelector}
+      onSelect={handleSetOwner}
+      currentOwnerId={ownerCharacterId}
+    />
+    </>
   );
 }

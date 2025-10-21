@@ -200,11 +200,12 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-full max-w-5xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{character ? 'Edit Character' : 'Create Character'}</DialogTitle>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="w-full max-w-5xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{character ? 'Edit Character' : 'Create Character'}</DialogTitle>
+          </DialogHeader>
 
         {/* Content - 2 Column Layout */}
         <div className="px-6 space-y-4">
@@ -435,16 +436,17 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
         )}
 
       </DialogContent>
-      
-      {/* Account Info Submodal */}
-      {character && (
-        <AccountInfoModal
-          character={character}
-          open={showAccountInfo}
-          onOpenChange={setShowAccountInfo}
-        />
-      )}
     </Dialog>
+
+    {/* Account Info Submodal */}
+    {character && (
+      <AccountInfoModal
+        character={character}
+        open={showAccountInfo}
+        onOpenChange={setShowAccountInfo}
+      />
+    )}
+    </>
   );
 }
 

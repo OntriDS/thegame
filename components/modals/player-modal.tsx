@@ -25,6 +25,549 @@ interface PlayerModalProps {
   onSave: (player: Player) => void;
 }
 
+// Personal Data Submodal Component
+interface PersonalDataModalProps {
+  player: Player;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSave: (player: Player) => void;
+}
+
+function PersonalDataModal({ player, open, onOpenChange, onSave }: PersonalDataModalProps) {
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [isLoadingAccount, setIsLoadingAccount] = useState(false);
+  const [accountData, setAccountData] = useState<any | null>(null);
+  
+  useEffect(() => {
+    const loadPersonalData = async () => {
+      if (open) {
+        setIsLoadingAccount(true);
+        
+        if (player.accountId) {
+          try {
+            const account = await ClientAPI.getAccount(player.accountId);
+            if (account) {
+              setAccountData(account);
+              setName(account.name);
+              setEmail(account.email);
+              setPhone(account.phone || '');
+              setIsLoadingAccount(false);
+              return;
+            }
+          } catch (error) {
+            console.error('Failed to load account:', error);
+          }
+        }
+        
+        setAccountData(null);
+        setName(player.name);
+        setEmail(player.email);
+        setPhone('');
+        setIsLoadingAccount(false);
+      }
+    };
+    
+    loadPersonalData();
+  }, [player, open]);
+  
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className={`max-w-md ${getZIndexClass('SUB_MODALS')}`}>
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <User className="h-5 w-5" />
+            Personal Data
+            {accountData && (
+              <span className="ml-auto text-xs font-normal text-green-600 dark:text-green-400">
+                • Account Linked
+              </span>
+            )}
+          </DialogTitle>
+        </DialogHeader>
+        
+        <div className="space-y-4 py-4">
+          {isLoadingAccount ? (
+            <div className="text-center py-4 text-muted-foreground">Loading...</div>
+          ) : (
+            <>
+              <div className="space-y-3">
+                <div>
+                  <Label className="text-xs text-muted-foreground">Name</Label>
+                  <div className="mt-1 text-base font-medium">{name || '—'}</div>
+                </div>
+                
+                <div>
+                  <Label className="text-xs text-muted-foreground">Email</Label>
+                  <div className="mt-1 text-sm">{email || '—'}</div>
+                </div>
+                
+                {phone && (
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Phone</Label>
+                    <div className="mt-1 text-sm">{phone}</div>
+                  </div>
+                )}
+              </div>
+              
+              <div className="border-t pt-3 flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Status</span>
+                {player.isActive ? (
+                  <span className="text-green-600 dark:text-green-400">● Active</span>
+                ) : (
+                  <span className="text-red-600 dark:text-red-400">● Inactive</span>
+                )}
+              </div>
+              
+              {player.lastActiveAt && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Last Active</span>
+                  <span className="text-xs">
+                    {new Date(player.lastActiveAt).toLocaleDateString()}
+                  </span>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+        
+        <DialogFooter>
+          <Button onClick={() => onOpenChange(false)}>
+            Close
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Player Character Submodal
+interface PlayerCharacterModalProps {
+  character: Character | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+function PlayerCharacterModal({ character, open, onOpenChange }: PlayerCharacterModalProps) {
+  if (!character) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className={`max-w-md ${getZIndexClass('SUB_MODALS')}`}>
+          <DialogHeader>
+            <DialogTitle>Player Character</DialogTitle>
+          </DialogHeader>
+          <div className="py-8 text-center text-muted-foreground">
+            No player character found.
+          </div>
+          <DialogFooter>
+            <Button onClick={() => onOpenChange(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+  
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className={`max-w-md ${getZIndexClass('SUB_MODALS')}`}>
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <User className="h-5 w-5" />
+            Player Character • {character.name}
+          </DialogTitle>
+        </DialogHeader>
+        
+        <div className="space-y-4 py-4">
+          <div className="text-xs p-3 border rounded-lg bg-blue-50 dark:bg-blue-950/30">
+            <p className="font-semibold">⚡ The Triforce Connection</p>
+            <p className="text-muted-foreground mt-1">This character is mega-linked to your Player and Account with super glue.</p>
+          </div>
+          
+          <div className="space-y-3">
+            <div>
+              <Label className="text-xs text-muted-foreground">Name</Label>
+              <div className="mt-1 text-base font-medium">{character.name}</div>
+            </div>
+            
+            {character.description && (
+              <div>
+                <Label className="text-xs text-muted-foreground">Description</Label>
+                <div className="mt-1 text-sm">{character.description}</div>
+              </div>
+            )}
+            
+            <div>
+              <Label className="text-xs text-muted-foreground">Roles</Label>
+              <div className="mt-1 flex flex-wrap gap-1">
+                {character.roles.map(role => (
+                  <span key={role} className="text-xs px-2 py-1 rounded-md border">
+                    {role}
+                  </span>
+                ))}
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-3 pt-2 border-t">
+              <div>
+                <Label className="text-xs text-muted-foreground">Jungle Coins</Label>
+                <div className="mt-1 text-lg font-bold text-primary">
+                  {character.jungleCoins.toFixed(1)} J$
+                </div>
+              </div>
+              
+              <div>
+                <Label className="text-xs text-muted-foreground">Purchased Amount</Label>
+                <div className="mt-1 text-lg font-bold">
+                  ${character.purchasedAmount.toFixed(2)}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <DialogFooter>
+          <Button onClick={() => onOpenChange(false)}>
+            Close
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Relationships Submodal
+interface RelationshipsModalProps {
+  player: Player;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+function RelationshipsModal({ player, open, onOpenChange }: RelationshipsModalProps) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className={`max-w-md ${getZIndexClass('SUB_MODALS')}`}>
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Network className="h-5 w-5" />
+            Player Relationships
+          </DialogTitle>
+        </DialogHeader>
+        
+        <div className="space-y-4 py-4">
+          <div className="text-xs p-4 border rounded-lg bg-primary/5">
+            <p className="font-semibold mb-2">🔗 Coming in V0.2: Relationship Graph</p>
+            <p className="mb-2">This feature will display:</p>
+            <ul className="space-y-1 ml-4">
+              <li>• Character relationships and connections</li>
+              <li>• Social network visualization</li>
+              <li>• Relationship strength and history</li>
+              <li>• New gameplay opportunities</li>
+              <li>• Team building and collaboration mechanics</li>
+            </ul>
+          </div>
+          
+          <div className="text-center py-6">
+            <Network className="h-16 w-16 text-muted-foreground mx-auto mb-4 opacity-30" />
+            <p className="text-muted-foreground">Relationship system not yet implemented</p>
+          </div>
+        </div>
+        
+        <DialogFooter>
+          <Button onClick={() => onOpenChange(false)}>
+            Close
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Exchange Points Modal
+interface ExchangePointsModalProps {
+  player: Player | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onExchange: (pointsToExchange: { hp: number; fp: number; rp: number; xp: number }, j$Received: number) => Promise<void>;
+}
+
+function ExchangePointsModal({ player, open, onOpenChange, onExchange }: ExchangePointsModalProps) {
+  const [hpToExchange, setHpToExchange] = useState(0);
+  const [fpToExchange, setFpToExchange] = useState(0);
+  const [rpToExchange, setRpToExchange] = useState(0);
+  const [xpToExchange, setXpToExchange] = useState(0);
+  const [conversionRates, setConversionRates] = useState<any>(null);
+  const [isExchanging, setIsExchanging] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      const loadRates = async () => {
+        const rates = await ClientAPI.getPointsConversionRates();
+        setConversionRates(rates);
+      };
+      loadRates();
+      
+      setHpToExchange(0);
+      setFpToExchange(0);
+      setRpToExchange(0);
+      setXpToExchange(0);
+    }
+  }, [open]);
+
+  if (!player || !conversionRates) {
+    return null;
+  }
+
+  const calculateJ$Preview = () => {
+    return (
+      (hpToExchange / conversionRates.hpToJ$) +
+      (fpToExchange / conversionRates.fpToJ$) +
+      (rpToExchange / conversionRates.rpToJ$) +
+      (xpToExchange / conversionRates.xpToJ$)
+    );
+  };
+
+  const j$Preview = Math.round(calculateJ$Preview() * 100) / 100;
+  const usdValue = j$Preview * conversionRates.j$ToUSD;
+
+  const canExchange = j$Preview > 0 && 
+    hpToExchange <= (player.points?.hp || 0) &&
+    fpToExchange <= (player.points?.fp || 0) &&
+    rpToExchange <= (player.points?.rp || 0) &&
+    xpToExchange <= (player.points?.xp || 0);
+
+  const handleExchange = async () => {
+    if (!canExchange) return;
+    
+    setIsExchanging(true);
+    try {
+      await onExchange(
+        { hp: hpToExchange, fp: fpToExchange, rp: rpToExchange, xp: xpToExchange },
+        j$Preview
+      );
+    } catch (error) {
+      console.error('Exchange failed:', error);
+      alert('Exchange failed. Please try again.');
+    } finally {
+      setIsExchanging(false);
+    }
+  };
+  
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className={`max-w-2xl ${getZIndexClass('SUB_MODALS')}`}>
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Coins className="h-5 w-5" />
+            Exchange Points for J$
+          </DialogTitle>
+        </DialogHeader>
+        
+        <div className="space-y-4 py-4">
+          <Card className="bg-muted/30">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm">Available Points</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-4 gap-3 text-center">
+                {getPointsMetadata().map((pointType) => {
+                  const pointValue = player.points?.[pointType.key.toLowerCase() as keyof typeof player.points] || 0;
+                  return (
+                    <div key={pointType.key}>
+                      <div className="text-xs text-muted-foreground">{pointType.label}</div>
+                      <div className="text-lg font-bold">{pointValue}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm">Select Points to Exchange</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {getPointsMetadata().map((pointType) => {
+                const pointKey = pointType.key.toLowerCase();
+                const pointValue = player.points?.[pointKey as keyof typeof player.points] || 0;
+                const conversionKey = `${pointKey}ToJ$` as keyof typeof conversionRates;
+                const conversionRate = conversionRates[conversionKey] || 1;
+                
+                let currentValue, setValue;
+                switch (pointKey) {
+                  case 'xp':
+                    currentValue = xpToExchange;
+                    setValue = setXpToExchange;
+                    break;
+                  case 'rp':
+                    currentValue = rpToExchange;
+                    setValue = setRpToExchange;
+                    break;
+                  case 'fp':
+                    currentValue = fpToExchange;
+                    setValue = setFpToExchange;
+                    break;
+                  case 'hp':
+                    currentValue = hpToExchange;
+                    setValue = setHpToExchange;
+                    break;
+                  default:
+                    currentValue = 0;
+                    setValue = () => {};
+                }
+                
+                return (
+                  <div key={pointType.key} className="grid grid-cols-3 gap-3 items-center">
+                    <Label className="text-sm">{pointType.label} (÷{conversionRate} = 1 J$)</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={pointValue}
+                      value={currentValue}
+                      onChange={(e) => setValue(Math.min(parseInt(e.target.value) || 0, pointValue))}
+                      className="text-center"
+                    />
+                    <div className="text-xs text-muted-foreground text-right">
+                      = {(currentValue / conversionRate).toFixed(2)} J$
+                    </div>
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+          
+          <Card className="border-2 border-primary/50 bg-primary/5">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm text-muted-foreground">You will receive:</div>
+                  <div className="text-3xl font-bold text-primary">{j$Preview.toFixed(2)} J$</div>
+                  <div className="text-xs text-muted-foreground mt-1">≈ ${usdValue.toFixed(2)} USD</div>
+                </div>
+                <Coins className="h-16 w-16 text-primary opacity-20" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+        
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isExchanging}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleExchange} 
+            disabled={!canExchange || isExchanging}
+          >
+            {isExchanging ? 'Exchanging...' : 'Confirm Exchange'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Account Edit Submodal
+interface AccountEditModalProps {
+  account: any;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSave: (account: any) => void;
+}
+
+function AccountEditModal({ account, open, onOpenChange, onSave }: AccountEditModalProps) {
+  const [name, setName] = useState(account.name);
+  const [email, setEmail] = useState(account.email);
+  const [phone, setPhone] = useState(account.phone || '');
+  
+  useEffect(() => {
+    setName(account.name);
+    setEmail(account.email);
+    setPhone(account.phone || '');
+  }, [account, open]);
+  
+  const handleSave = () => {
+    const updatedAccount = {
+      ...account,
+      name,
+      email,
+      phone: phone || undefined,
+      updatedAt: new Date()
+    };
+    onSave(updatedAccount);
+  };
+  
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className={`max-w-md ${getZIndexClass('SUB_MODALS')}`}>
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Settings className="h-5 w-5" />
+            Edit Account • {account.name || 'Unnamed'}
+          </DialogTitle>
+        </DialogHeader>
+        
+        <div className="space-y-4 py-4">
+          <div className="text-xs p-2 border rounded-lg bg-yellow-50 dark:bg-yellow-950/30">
+            <p className="font-semibold">⚠️ The Triforce - Source of Truth</p>
+            <p className="text-muted-foreground mt-1">Changes here update Account, Player, and Character names.</p>
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="account-name">Name *</Label>
+            <Input
+              id="account-name"
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Your name"
+            />
+            <div className="text-xs text-muted-foreground">
+              This name will be synced to Player and Character
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="account-email">Email *</Label>
+            <Input
+              id="account-email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="your@email.com"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="account-phone">Phone</Label>
+            <Input
+              id="account-phone"
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="+506 1234-5678"
+            />
+          </div>
+          
+          <div className="text-xs p-2 border rounded-lg bg-blue-50 dark:bg-blue-950/30">
+            <p className="font-semibold">Account ID</p>
+            <p className="text-muted-foreground mt-1 font-mono text-xs">{account.id}</p>
+          </div>
+        </div>
+        
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button onClick={handleSave} disabled={!name || !email}>
+            Save Account
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 /**
  * PlayerModal - Player Entity Management (Real Person) - V0.1 Production Ready
  * v0.2 Full authentication, level system, achievements, relationship graph
@@ -211,6 +754,7 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
   }
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className={`w-full max-w-7xl h-[90vh] ${getZIndexClass('MODALS')}`}>
         <DialogHeader>
@@ -673,7 +1217,8 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
           </div>
         </DialogFooter>
       </DialogContent>
-
+      </Dialog>
+      
       {/* Personal Data Submodal */}
       <PersonalDataModal
         player={playerData}
@@ -792,557 +1337,6 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
           window.dispatchEvent(new Event('financialsUpdated'));
         }}
       />
-    </Dialog>
-  );
-}
-
-// Personal Data Submodal Component
-// NOTE: V0.1 - Displays Account entity if linked, otherwise falls back to Player fields
-interface PersonalDataModalProps {
-  player: Player;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSave: (player: Player) => void;
-}
-
-function PersonalDataModal({ player, open, onOpenChange, onSave }: PersonalDataModalProps) {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [isLoadingAccount, setIsLoadingAccount] = useState(false);
-  const [accountData, setAccountData] = useState<any | null>(null);
-  
-  useEffect(() => {
-    const loadPersonalData = async () => {
-      if (open) {
-        setIsLoadingAccount(true);
-        
-        if (player.accountId) {
-          try {
-            const account = await ClientAPI.getAccount(player.accountId);
-            if (account) {
-              setAccountData(account);
-              setName(account.name);
-              setEmail(account.email);
-              setPhone(account.phone || '');
-              setIsLoadingAccount(false);
-              return;
-            }
-          } catch (error) {
-            console.error('Failed to load account:', error);
-          }
-        }
-        
-        setAccountData(null);
-        setName(player.name);
-        setEmail(player.email);
-        setPhone('');
-        setIsLoadingAccount(false);
-      }
-    };
-    
-    loadPersonalData();
-  }, [player, open]);
-  
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={`max-w-md ${getZIndexClass('SUB_MODALS')}`}>
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <User className="h-5 w-5" />
-            Personal Data
-            {accountData && (
-              <span className="ml-auto text-xs font-normal text-green-600 dark:text-green-400">
-                • Account Linked
-              </span>
-            )}
-          </DialogTitle>
-        </DialogHeader>
-        
-        <div className="space-y-4 py-4">
-          {isLoadingAccount ? (
-            <div className="text-center py-4 text-muted-foreground">Loading...</div>
-          ) : (
-            <>
-              <div className="space-y-3">
-                <div>
-                  <Label className="text-xs text-muted-foreground">Name</Label>
-                  <div className="mt-1 text-base font-medium">{name || '—'}</div>
-                </div>
-                
-                <div>
-                  <Label className="text-xs text-muted-foreground">Email</Label>
-                  <div className="mt-1 text-sm">{email || '—'}</div>
-                </div>
-                
-                {phone && (
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Phone</Label>
-                    <div className="mt-1 text-sm">{phone}</div>
-                  </div>
-                )}
-              </div>
-              
-              <div className="border-t pt-3 flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Status</span>
-                {player.isActive ? (
-                  <span className="text-green-600 dark:text-green-400">● Active</span>
-                ) : (
-                  <span className="text-red-600 dark:text-red-400">● Inactive</span>
-                )}
-              </div>
-              
-              {player.lastActiveAt && (
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Last Active</span>
-                  <span className="text-xs">
-                    {new Date(player.lastActiveAt).toLocaleDateString()}
-                  </span>
-                </div>
-              )}
-            </>
-          )}
-        </div>
-        
-        <DialogFooter>
-          <Button onClick={() => onOpenChange(false)}>
-            Close
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-// Player Character Submodal - THE ONE mega-linked player character (Triforce)
-interface PlayerCharacterModalProps {
-  character: Character | null;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}
-
-function PlayerCharacterModal({ character, open, onOpenChange }: PlayerCharacterModalProps) {
-  if (!character) {
-    return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className={`max-w-md ${getZIndexClass('SUB_MODALS')}`}>
-          <DialogHeader>
-            <DialogTitle>Player Character</DialogTitle>
-          </DialogHeader>
-          <div className="py-8 text-center text-muted-foreground">
-            No player character found.
-          </div>
-          <DialogFooter>
-            <Button onClick={() => onOpenChange(false)}>Close</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    );
-  }
-  
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={`max-w-md ${getZIndexClass('SUB_MODALS')}`}>
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <User className="h-5 w-5" />
-            Player Character • {character.name}
-          </DialogTitle>
-        </DialogHeader>
-        
-        <div className="space-y-4 py-4">
-          <div className="text-xs p-3 border rounded-lg bg-blue-50 dark:bg-blue-950/30">
-            <p className="font-semibold">⚡ The Triforce Connection</p>
-            <p className="text-muted-foreground mt-1">This character is mega-linked to your Player and Account with super glue.</p>
-              </div>
-          
-          <div className="space-y-3">
-            <div>
-              <Label className="text-xs text-muted-foreground">Name</Label>
-              <div className="mt-1 text-base font-medium">{character.name}</div>
-              </div>
-            
-            {character.description && (
-              <div>
-                <Label className="text-xs text-muted-foreground">Description</Label>
-                <div className="mt-1 text-sm">{character.description}</div>
-              </div>
-            )}
-            
-            <div>
-              <Label className="text-xs text-muted-foreground">Roles</Label>
-              <div className="mt-1 flex flex-wrap gap-1">
-                {character.roles.map(role => (
-                  <span key={role} className="text-xs px-2 py-1 rounded-md border">
-                    {role}
-                  </span>
-                ))}
-              </div>
-              </div>
-            
-            <div className="grid grid-cols-2 gap-3 pt-2 border-t">
-              <div>
-                <Label className="text-xs text-muted-foreground">Jungle Coins</Label>
-                <div className="mt-1 text-lg font-bold text-primary">
-                  {character.jungleCoins.toFixed(1)} J$
-              </div>
-              </div>
-              
-              <div>
-                <Label className="text-xs text-muted-foreground">Purchased Amount</Label>
-                <div className="mt-1 text-lg font-bold">
-                  ${character.purchasedAmount.toFixed(2)}
-              </div>
-              </div>
-              </div>
-          </div>
-        </div>
-        
-        <DialogFooter>
-          <Button onClick={() => onOpenChange(false)}>
-            Close
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-// Relationships Submodal - V0.2 Placeholder
-interface RelationshipsModalProps {
-  player: Player;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}
-
-function RelationshipsModal({ player, open, onOpenChange }: RelationshipsModalProps) {
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={`max-w-md ${getZIndexClass('SUB_MODALS')}`}>
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Network className="h-5 w-5" />
-            Player Relationships
-          </DialogTitle>
-        </DialogHeader>
-        
-        <div className="space-y-4 py-4">
-          <div className="text-xs p-4 border rounded-lg bg-primary/5">
-            <p className="font-semibold mb-2">🔗 Coming in V0.2: Relationship Graph</p>
-            <p className="mb-2">This feature will display:</p>
-            <ul className="space-y-1 ml-4">
-              <li>• Character relationships and connections</li>
-              <li>• Social network visualization</li>
-              <li>• Relationship strength and history</li>
-              <li>• New gameplay opportunities</li>
-              <li>• Team building and collaboration mechanics</li>
-            </ul>
-          </div>
-          
-          <div className="text-center py-6">
-            <Network className="h-16 w-16 text-muted-foreground mx-auto mb-4 opacity-30" />
-            <p className="text-muted-foreground">Relationship system not yet implemented</p>
-          </div>
-        </div>
-        
-        <DialogFooter>
-          <Button onClick={() => onOpenChange(false)}>
-            Close
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-// Exchange Points Modal - Convert Points to J$
-interface ExchangePointsModalProps {
-  player: Player | null;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onExchange: (pointsToExchange: { hp: number; fp: number; rp: number; xp: number }, j$Received: number) => Promise<void>;
-}
-
-function ExchangePointsModal({ player, open, onOpenChange, onExchange }: ExchangePointsModalProps) {
-  const [hpToExchange, setHpToExchange] = useState(0);
-  const [fpToExchange, setFpToExchange] = useState(0);
-  const [rpToExchange, setRpToExchange] = useState(0);
-  const [xpToExchange, setXpToExchange] = useState(0);
-  const [conversionRates, setConversionRates] = useState<any>(null);
-  const [isExchanging, setIsExchanging] = useState(false);
-
-  useEffect(() => {
-    if (open) {
-      // Load conversion rates
-      const loadRates = async () => {
-        const rates = await ClientAPI.getPointsConversionRates();
-        setConversionRates(rates);
-      };
-      loadRates();
-      
-      // Reset exchange amounts
-      setHpToExchange(0);
-      setFpToExchange(0);
-      setRpToExchange(0);
-      setXpToExchange(0);
-    }
-  }, [open]);
-
-  if (!player || !conversionRates) {
-    return null;
-  }
-
-  // Calculate J$ preview
-  const calculateJ$Preview = () => {
-    return (
-      (hpToExchange / conversionRates.hpToJ$) +
-      (fpToExchange / conversionRates.fpToJ$) +
-      (rpToExchange / conversionRates.rpToJ$) +
-      (xpToExchange / conversionRates.xpToJ$)
-    );
-  };
-
-  const j$Preview = Math.round(calculateJ$Preview() * 100) / 100;
-  const usdValue = j$Preview * conversionRates.j$ToUSD;
-
-  const canExchange = j$Preview > 0 && 
-    hpToExchange <= (player.points?.hp || 0) &&
-    fpToExchange <= (player.points?.fp || 0) &&
-    rpToExchange <= (player.points?.rp || 0) &&
-    xpToExchange <= (player.points?.xp || 0);
-
-  const handleExchange = async () => {
-    if (!canExchange) return;
-    
-    setIsExchanging(true);
-    try {
-      await onExchange(
-        { hp: hpToExchange, fp: fpToExchange, rp: rpToExchange, xp: xpToExchange },
-        j$Preview
-      );
-    } catch (error) {
-      console.error('Exchange failed:', error);
-      alert('Exchange failed. Please try again.');
-    } finally {
-      setIsExchanging(false);
-    }
-  };
-  
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={`max-w-2xl ${getZIndexClass('SUB_MODALS')}`}>
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Coins className="h-5 w-5" />
-            Exchange Points for J$
-          </DialogTitle>
-        </DialogHeader>
-        
-        <div className="space-y-4 py-4">
-          {/* Current Points Display */}
-          <Card className="bg-muted/30">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Available Points</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-4 gap-3 text-center">
-                {getPointsMetadata().map((pointType) => {
-                  const pointValue = player.points?.[pointType.key.toLowerCase() as keyof typeof player.points] || 0;
-                  return (
-                    <div key={pointType.key}>
-                      <div className="text-xs text-muted-foreground">{pointType.label}</div>
-                      <div className="text-lg font-bold">{pointValue}</div>
-                    </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-          
-          {/* Exchange Inputs */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Select Points to Exchange</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {getPointsMetadata().map((pointType) => {
-                const pointKey = pointType.key.toLowerCase();
-                const pointValue = player.points?.[pointKey as keyof typeof player.points] || 0;
-                const conversionKey = `${pointKey}ToJ$` as keyof typeof conversionRates;
-                const conversionRate = conversionRates[conversionKey] || 1;
-                
-                // Get the current exchange value and setter
-                let currentValue, setValue;
-                switch (pointKey) {
-                  case 'xp':
-                    currentValue = xpToExchange;
-                    setValue = setXpToExchange;
-                    break;
-                  case 'rp':
-                    currentValue = rpToExchange;
-                    setValue = setRpToExchange;
-                    break;
-                  case 'fp':
-                    currentValue = fpToExchange;
-                    setValue = setFpToExchange;
-                    break;
-                  case 'hp':
-                    currentValue = hpToExchange;
-                    setValue = setHpToExchange;
-                    break;
-                  default:
-                    currentValue = 0;
-                    setValue = () => {};
-                }
-                
-                return (
-                  <div key={pointType.key} className="grid grid-cols-3 gap-3 items-center">
-                    <Label className="text-sm">{pointType.label} (÷{conversionRate} = 1 J$)</Label>
-                    <Input
-                      type="number"
-                      min={0}
-                      max={pointValue}
-                      value={currentValue}
-                      onChange={(e) => setValue(Math.min(parseInt(e.target.value) || 0, pointValue))}
-                      className="text-center"
-                    />
-                    <div className="text-xs text-muted-foreground text-right">
-                      = {(currentValue / conversionRate).toFixed(2)} J$
-                    </div>
-                  </div>
-                );
-              })}
-            </CardContent>
-          </Card>
-          
-          {/* Preview */}
-          <Card className="border-2 border-primary/50 bg-primary/5">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-sm text-muted-foreground">You will receive:</div>
-                  <div className="text-3xl font-bold text-primary">{j$Preview.toFixed(2)} J$</div>
-                  <div className="text-xs text-muted-foreground mt-1">≈ ${usdValue.toFixed(2)} USD</div>
-          </div>
-                <Coins className="h-16 w-16 text-primary opacity-20" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-        
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isExchanging}>
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleExchange} 
-            disabled={!canExchange || isExchanging}
-          >
-            {isExchanging ? 'Exchanging...' : 'Confirm Exchange'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-// Account Edit Submodal - Edit Account entity (Source of Truth for The Triforce)
-interface AccountEditModalProps {
-  account: any;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSave: (account: any) => void;
-}
-
-function AccountEditModal({ account, open, onOpenChange, onSave }: AccountEditModalProps) {
-  const [name, setName] = useState(account.name);
-  const [email, setEmail] = useState(account.email);
-  const [phone, setPhone] = useState(account.phone || '');
-  
-  useEffect(() => {
-    setName(account.name);
-    setEmail(account.email);
-    setPhone(account.phone || '');
-  }, [account, open]);
-  
-  const handleSave = () => {
-    const updatedAccount = {
-      ...account,
-      name,
-      email,
-      phone: phone || undefined,
-      updatedAt: new Date()
-    };
-    onSave(updatedAccount);
-  };
-  
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={`max-w-md ${getZIndexClass('SUB_MODALS')}`}>
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Settings className="h-5 w-5" />
-            Edit Account • {account.name || 'Unnamed'}
-          </DialogTitle>
-        </DialogHeader>
-        
-        <div className="space-y-4 py-4">
-          <div className="text-xs p-2 border rounded-lg bg-yellow-50 dark:bg-yellow-950/30">
-            <p className="font-semibold">⚠️ The Triforce - Source of Truth</p>
-            <p className="text-muted-foreground mt-1">Changes here update Account, Player, and Character names.</p>
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="account-name">Name *</Label>
-            <Input
-              id="account-name"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Your name"
-            />
-            <div className="text-xs text-muted-foreground">
-              This name will be synced to Player and Character
-            </div>
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="account-email">Email *</Label>
-            <Input
-              id="account-email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="your@email.com"
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="account-phone">Phone</Label>
-            <Input
-              id="account-phone"
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="+506 1234-5678"
-            />
-          </div>
-          
-          <div className="text-xs p-2 border rounded-lg bg-blue-50 dark:bg-blue-950/30">
-            <p className="font-semibold">Account ID</p>
-            <p className="text-muted-foreground mt-1 font-mono text-xs">{account.id}</p>
-          </div>
-        </div>
-        
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button onClick={handleSave} disabled={!name || !email}>
-            Save Account
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    </>
   );
 }
