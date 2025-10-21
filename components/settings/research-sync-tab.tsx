@@ -17,7 +17,7 @@ import {
   Code,
   Target
 } from 'lucide-react';
-import { SYNC_STRATEGIES, SyncResult } from '@/workflows/settings/research-logs-sync';
+import { SYNC_STRATEGIES, SyncResult } from '@/workflows/settings/research-sync-types';
 
 interface SyncStatus {
   needsSync: string[];
