@@ -75,7 +75,7 @@ function PlayerCharacterModal({ character, open, onOpenChange }: PlayerCharacter
   if (!character) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className={`max-w-md ${getZIndexClass('SUB_MODALS')}`}>
+        <DialogContent className="max-w-md" style={{ zIndex: 300 }}>
           <DialogHeader>
             <DialogTitle>Player Character</DialogTitle>
           </DialogHeader>
@@ -290,7 +290,7 @@ function ExchangePointsModal({ player, open, onOpenChange, onExchange }: Exchang
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={`max-w-2xl ${getZIndexClass('SUB_MODALS')}`}>
+      <DialogContent className="max-w-2xl" style={{ zIndex: 300 }}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Coins className="h-5 w-5" />
@@ -700,7 +700,7 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
 
       <Dialog open={open} onOpenChange={onOpenChange}>
 
-        <DialogContent className={`w-full max-w-7xl max-h-[90vh] ${getZIndexClass('MODALS')}`}>
+        <DialogContent className="w-full max-w-7xl max-h-[90vh] overflow-hidden" style={{ zIndex: 0 }}>
 
           <DialogHeader>
 
@@ -736,7 +736,7 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
 
       <Dialog open={open} onOpenChange={onOpenChange}>
 
-        <DialogContent className={`w-full max-w-7xl max-h-[90vh] ${getZIndexClass('MODALS')}`}>
+        <DialogContent className="w-full max-w-7xl max-h-[90vh] overflow-hidden" style={{ zIndex: 0 }}>
 
           <DialogHeader>
 
@@ -781,7 +781,7 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
     <>
     <Dialog open={open} onOpenChange={onOpenChange}>
 
-      <DialogContent className={`w-full max-w-7xl max-h-[90vh] ${getZIndexClass('MODALS')}`}>
+      <DialogContent className="w-full max-w-7xl max-h-[90vh] overflow-hidden" style={{ zIndex: 0 }}>
 
         <DialogHeader>
 
@@ -809,7 +809,10 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
 
         {/* Tabs System - State | Stats | Progression */}
 
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="flex-1 flex flex-col">
+        {/* White background square to cover content */}
+        <div className={`absolute inset-0 bg-background ${getZIndexClass('MODALS')}`} style={{ zIndex: 100 }}></div>
+        
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="flex-1 flex flex-col relative" style={{ zIndex: 101 }}>
 
           <TabsList className="w-full grid grid-cols-3 mb-4">
 

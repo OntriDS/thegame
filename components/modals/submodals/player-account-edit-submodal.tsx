@@ -45,7 +45,7 @@ export default function AccountEditModal({ account, open, onOpenChange, onSave }
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={`max-w-md ${getZIndexClass('SUB_MODALS')}`}>
+      <DialogContent className="max-w-md" style={{ zIndex: 300 }}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Settings className="h-5 w-5" />
