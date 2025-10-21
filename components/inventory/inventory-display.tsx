@@ -200,31 +200,11 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
   };
 
   const getFilteredItems = (itemType: ItemType) => {
-    return items.filter(item => {
-      if (item.type !== itemType) return false;
-      if (selectedStatus !== 'all' && item.status !== selectedStatus) return false;
-      if (selectedSite !== 'all') {
-        const hasStockAtSite = item.stock.some(stock => 
-          stock.siteId === selectedSite && stock.quantity > 0
-        );
-        if (!hasStockAtSite) return false;
-      }
-      return true;
-    });
+    return items;
   };
 
   const getFilteredItemsByCategory = (category: ItemCategory) => {
-    return items.filter(item => {
-      if (getItemCategory(item.type) !== category) return false;
-      if (selectedStatus !== 'all' && item.status !== selectedStatus) return false;
-      if (selectedSite !== 'all') {
-        const hasStockAtSite = item.stock.some(stock => 
-          stock.siteId === selectedSite && stock.quantity > 0
-        );
-        if (!hasStockAtSite) return false;
-      }
-      return true;
-    });
+    return items;
   };
 
   const formatCurrency = (amount: number, currency: string = 'USD') => {
