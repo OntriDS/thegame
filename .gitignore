@@ -10,6 +10,7 @@ out/
 
 # Production
 /build
+/tsconfig.tsbuildinfo
 
 # Runtime data
 pids

@@ -349,13 +349,13 @@ export const ClientAPI = {
   
   // CONVERSION RATES
   getConversionRates: async (): Promise<any> => {
-    const res = await fetch('/api/settings/conversion-rates');
+    const res = await fetch('/api/conversion-rates');
     if (!res.ok) throw new Error('Failed to fetch conversion rates');
     return await res.json();
   },
   
   saveConversionRates: async (rates: any): Promise<void> => {
-    const res = await fetch('/api/settings/conversion-rates', {
+    const res = await fetch('/api/conversion-rates', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(rates)
@@ -366,6 +366,10 @@ export const ClientAPI = {
   // LEGACY COMPATIBILITY
   getPointsConversionRates: async (): Promise<any> => {
     return await ClientAPI.getConversionRates();
+  },
+  
+  savePointsConversionRates: async (rates: any): Promise<void> => {
+    return await ClientAPI.saveConversionRates(rates);
   },
   
   // UTILITY HELPERS (client-side calculations)

@@ -4,15 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { 
-  getAllCharacters, 
-  upsertCharacter, 
-  getAllPlayers, 
-  upsertPlayer, 
-  getPointsConversionRates, 
-  savePointsConversionRates, 
-  getPersonalAssets
-} from "@/data-store/datastore";
+import { ClientAPI } from "@/lib/client-api";
 import { CharacterRole, CHARACTER_ROLE_TYPES } from "@/types/enums";
 import ConversionRatesModal from "@/components/modals/submodals/conversion-rates-submodal";
 import CharacterModal from "@/components/modals/character-modal";
@@ -62,10 +54,10 @@ export default function CharactersPage() {
       try {
         const [playerLogResponse, ratesData, charactersData, playersData, personalAssets] = await Promise.all([
           fetch('/api/player-log'),  // ✅ Points come from Player Log now
-          getPointsConversionRates(),
-          getAllCharacters(),
-          getAllPlayers(),
-          getPersonalAssets()
+          ClientAPI.getPointsConversionRates(),
+          ClientAPI.getCharacters(),
+          ClientAPI.getPlayers(),
+          ClientAPI.getPersonalAssets()
         ]);
         
         const playerLogData = await playerLogResponse.json();
@@ -152,7 +144,7 @@ export default function CharactersPage() {
       const isNew = !players.find(p => p.id === player.id);
       
       // Always trigger workflow processing for both create and update (includes logging)
-      await upsertPlayer(player);
+      await ClientAPI.upsertPlayer(player);
       
       setShowPlayerModal(false);
       setSelectedPlayer(null);
@@ -174,7 +166,7 @@ export default function CharactersPage() {
       const isNew = !characters.find(c => c.id === character.id);
       
       // Always trigger workflow processing for both create and update (includes logging)
-      await upsertCharacter(character);
+      await ClientAPI.upsertCharacter(character);
       
       setShowCharacterModal(false);
       setSelectedCharacter(null);
@@ -490,7 +482,7 @@ export default function CharactersPage() {
           isOpen={showConversionRatesModal}
           onClose={() => setShowConversionRatesModal(false)}
           onSave={(rates: any) => {
-            savePointsConversionRates(rates);
+            ClientAPI.savePointsConversionRates(rates);
             setShowConversionRatesModal(false);
             window.dispatchEvent(new Event('pointsUpdated'));
           }}
