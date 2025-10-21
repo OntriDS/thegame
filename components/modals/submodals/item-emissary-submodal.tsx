@@ -191,7 +191,7 @@ export default function ItemEmissarySubModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={`sm:max-w-[500px] ${getZIndexClass('MODALS')}`}>
+      <DialogContent className={`sm:max-w-[500px] ${getZIndexClass('SUB_MODALS')}`}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Package className="h-5 w-5" />

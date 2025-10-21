@@ -19,7 +19,7 @@ import { ROLE_BEHAVIORS, canViewAccountInfo } from '@/lib/game-mechanics/roles-r
 import { Info } from 'lucide-react';
 import { ClientAPI } from '@/lib/client-api';
 // Side effects handled by parent component via API calls
-import { Z_INDEX_LAYERS } from '@/lib/constants/app-constants';
+import { getZIndexClass } from '@/lib/utils/z-index-utils';
 
 interface CharacterModalProps {
   character?: Character | null;
@@ -480,7 +480,7 @@ function AccountInfoModal({ character, open, onOpenChange }: AccountInfoModalPro
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md" style={{ zIndex: Z_INDEX_LAYERS.SUB_MODALS }}>
+      <DialogContent className={`max-w-md ${getZIndexClass('SUB_MODALS')}`}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Info className="h-5 w-5" />
