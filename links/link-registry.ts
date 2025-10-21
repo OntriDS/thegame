@@ -23,6 +23,19 @@ export async function createLink(link: Link): Promise<void> {
     console.warn(`[createLink] Validation warnings for ${link.linkType}:`, validation.warnings);
   }
   
+  // NEW: Check for duplicate before creating
+  const existingLinks = await getLinksFor(link.source);
+  const duplicate = existingLinks.find(l => 
+    l.linkType === link.linkType &&
+    l.target.type === link.target.type &&
+    l.target.id === link.target.id
+  );
+  
+  if (duplicate) {
+    console.log(`[createLink] Link already exists: ${link.linkType} from ${link.source.type}:${link.source.id} to ${link.target.type}:${link.target.id}, skipping`);
+    return; // Don't create duplicate
+  }
+  
   await kvSet(buildLinkKey(link.id), link);
   // index by source and target for bidirectional queries
   await kvSAdd(buildLinksIndexKey(link.source.type, link.source.id), link.id);

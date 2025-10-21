@@ -179,11 +179,15 @@ export async function removeSale(id: string): Promise<void> {
 }
 
 // CHARACTERS
-export async function upsertCharacter(character: Character): Promise<Character> {
+export async function upsertCharacter(character: Character, options?: { skipWorkflowEffects?: boolean }): Promise<Character> {
   const previous = await repoGetCharacterById(character.id);
   const saved = await repoUpsertCharacter(character);
-  await onCharacterUpsert(saved, previous || undefined);
-  await processLinkEntity(saved, EntityType.CHARACTER);
+  
+  if (!options?.skipWorkflowEffects) {
+    await onCharacterUpsert(saved, previous || undefined);
+    await processLinkEntity(saved, EntityType.CHARACTER);
+  }
+  
   return saved;
 }
 
@@ -206,11 +210,15 @@ export async function removeCharacter(id: string): Promise<void> {
 }
 
 // PLAYERS
-export async function upsertPlayer(player: Player): Promise<Player> {
+export async function upsertPlayer(player: Player, options?: { skipWorkflowEffects?: boolean }): Promise<Player> {
   const previous = await repoGetPlayerById(player.id);
   const saved = await repoUpsertPlayer(player);
-  await onPlayerUpsert(saved, previous || undefined);
-  await processLinkEntity(saved, EntityType.PLAYER);
+  
+  if (!options?.skipWorkflowEffects) {
+    await onPlayerUpsert(saved, previous || undefined);
+    await processLinkEntity(saved, EntityType.PLAYER);
+  }
+  
   return saved;
 }
 
@@ -233,11 +241,15 @@ export async function removePlayer(id: string): Promise<void> {
 }
 
 // ACCOUNTS
-export async function upsertAccount(account: Account): Promise<Account> {
+export async function upsertAccount(account: Account, options?: { skipWorkflowEffects?: boolean }): Promise<Account> {
   const previous = await repoGetAccountById(account.id);
   const saved = await repoUpsertAccount(account);
-  await onAccountUpsert(saved, previous || undefined);
-  await processLinkEntity(saved, EntityType.ACCOUNT);
+  
+  if (!options?.skipWorkflowEffects) {
+    await onAccountUpsert(saved, previous || undefined);
+    await processLinkEntity(saved, EntityType.ACCOUNT);
+  }
+  
   return saved;
 }
 

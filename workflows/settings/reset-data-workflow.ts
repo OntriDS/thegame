@@ -4,6 +4,7 @@
 import { kv } from '@vercel/kv';
 import { buildDataKey, buildIndexKey, buildLogKey, buildLinksIndexKey } from '@/data-store/keys';
 import { EntityType } from '@/types/enums';
+import { kvScan } from '@/data-store/kv';
 import { TransactionManager } from './transaction-manager';
 
 // Centralized list of entity types for reset operations
@@ -113,11 +114,11 @@ export class ResetDataWorkflow {
       const transactionManager = new TransactionManager();
       
       const result = await transactionManager.execute(async () => {
-        // NEW ORDER (FIXED):
+        // CORRECT ORDER (FIXED):
         // 1. Clear entities
         // 2. Clear links  
-        // 3. Create Player One (The Triforce) - BEFORE log clearing
-        // 4. Clear logs - AFTER entity creation
+        // 3. Clear logs - BEFORE entity creation
+        // 4. Create Player One (The Triforce) - AFTER log clearing
         // 5. Seed default sites
 
         // Step 1: Clear all entity data
@@ -148,25 +149,7 @@ export class ResetDataWorkflow {
           throw new Error(errorMsg); // Throw to trigger rollback
         }
 
-        // Step 3: Initialize Player One (The Triforce) FIRST if in defaults mode
-        if (mode === 'defaults') {
-          try {
-            checkTimeoutAndProgress('Initializing Player One');
-            await this.initializePlayerOne(results, errors);
-          } catch (error) {
-            if (error instanceof Error && error.message.includes('timeout')) {
-              throw error; // Re-throw timeout errors
-            }
-            const errorMsg = `Failed to initialize Player One: ${error instanceof Error ? error.message : 'Unknown error'}`;
-            errors.push(errorMsg);
-            console.error(`[ResetDataWorkflow] ❌ ${errorMsg}`);
-            throw new Error(errorMsg); // Throw to trigger rollback
-          }
-        } else {
-          currentOperation++; // Count as completed even if skipped
-        }
-
-        // Step 4: Clear logs AFTER entity creation (FIXED TIMING)
+        // Step 3: Clear logs BEFORE creating new entities (FIXED TIMING)
         if (!options.preserveLogs) {
           try {
             checkTimeoutAndProgress('Clearing logs');
@@ -184,7 +167,25 @@ export class ResetDataWorkflow {
           currentOperation++; // Count as completed even if skipped
         }
 
-        // Step 5: Seed default data if requested (AFTER player initialization)
+        // Step 4: Initialize Player One (The Triforce) AFTER log clearing
+        if (mode === 'defaults') {
+          try {
+            checkTimeoutAndProgress('Initializing Player One');
+            await this.initializePlayerOne(results, errors);
+          } catch (error) {
+            if (error instanceof Error && error.message.includes('timeout')) {
+              throw error; // Re-throw timeout errors
+            }
+            const errorMsg = `Failed to initialize Player One: ${error instanceof Error ? error.message : 'Unknown error'}`;
+            errors.push(errorMsg);
+            console.error(`[ResetDataWorkflow] ❌ ${errorMsg}`);
+            throw new Error(errorMsg); // Throw to trigger rollback
+          }
+        } else {
+          currentOperation++; // Count as completed even if skipped
+        }
+
+        // Step 5: Seed default sites if requested (AFTER player initialization)
         if (options.seedSites) {
           try {
             checkTimeoutAndProgress('Seeding default sites');
@@ -202,13 +203,10 @@ export class ResetDataWorkflow {
           currentOperation++; // Count as completed even if skipped
         }
 
-        return { results, errors };
+        return {}; // Don't return arrays we already modified
       });
 
-      // Extract results from transaction
-      const { results: transactionResults, errors: transactionErrors } = result;
-      results.push(...transactionResults);
-      errors.push(...transactionErrors);
+      // Don't push anything - arrays already populated by operations
 
       // Check for critical errors that should stop the operation
       const criticalErrors = errors.filter(error =>
@@ -356,58 +354,47 @@ export class ResetDataWorkflow {
     try {
       console.log('[ResetDataWorkflow] 🔗 Clearing all links...');
 
-      // Get all link IDs
-      const linksIndexKey = buildIndexKey('links');
-      const linkIds = await kv.smembers(linksIndexKey);
+      // Get all link keys using kvScan (like getAllLinks does)
+      const linkKeys = await kvScan('links:link:');
 
-      if (linkIds.length > 0) {
-        console.log(`[ResetDataWorkflow] 📊 Found ${linkIds.length} links to clear`);
+      if (linkKeys.length > 0) {
+        console.log(`[ResetDataWorkflow] 📊 Found ${linkKeys.length} links to clear`);
 
         // For large datasets, process deletions in batches
         const BATCH_SIZE = 100;
-        const totalBatches = Math.ceil(linkIds.length / BATCH_SIZE);
+        const totalBatches = Math.ceil(linkKeys.length / BATCH_SIZE);
 
         for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
           const startIndex = batchIndex * BATCH_SIZE;
-          const endIndex = Math.min(startIndex + BATCH_SIZE, linkIds.length);
-          const batchIds = linkIds.slice(startIndex, endIndex);
+          const endIndex = Math.min(startIndex + BATCH_SIZE, linkKeys.length);
+          const batchKeys = linkKeys.slice(startIndex, endIndex);
 
-          console.log(`[ResetDataWorkflow] 🔄 Clearing links batch ${batchIndex + 1}/${totalBatches} (${batchIds.length} links)`);
+          console.log(`[ResetDataWorkflow] 🔄 Clearing links batch ${batchIndex + 1}/${totalBatches} (${batchKeys.length} links)`);
 
           // Delete link data for this batch
-          const linkKeys = batchIds.map(id => `links:link:${id}`);
-          await kv.del(...linkKeys);
+          await kv.del(...batchKeys);
 
           console.log(`[ResetDataWorkflow] ✅ Cleared links batch ${batchIndex + 1}/${totalBatches}`);
         }
 
-        // Clear the links index after all data is deleted
-        await kv.del(linksIndexKey);
-
         // Clear all entity-specific link indexes in batches
-        for (const entityType of RESETTABLE_ENTITY_TYPES) {
-          try {
-            const entityLinkIndexPattern = `index:links:by-entity:${entityType}:*`;
-            const entityLinkKeys = await kv.keys(entityLinkIndexPattern);
-            if (entityLinkKeys.length > 0) {
-              const indexBatches = Math.ceil(entityLinkKeys.length / BATCH_SIZE);
+        const entityLinkKeys = await kvScan('index:links:by-entity:');
+        if (entityLinkKeys.length > 0) {
+          console.log(`[ResetDataWorkflow] 📊 Found ${entityLinkKeys.length} entity link indexes to clear`);
+          
+          const indexBatches = Math.ceil(entityLinkKeys.length / BATCH_SIZE);
+          for (let indexBatch = 0; indexBatch < indexBatches; indexBatch++) {
+            const startIndex = indexBatch * BATCH_SIZE;
+            const endIndex = Math.min(startIndex + BATCH_SIZE, entityLinkKeys.length);
+            const indexBatchKeys = entityLinkKeys.slice(startIndex, endIndex);
 
-              for (let indexBatch = 0; indexBatch < indexBatches; indexBatch++) {
-                const startIndex = indexBatch * BATCH_SIZE;
-                const endIndex = Math.min(startIndex + BATCH_SIZE, entityLinkKeys.length);
-                const indexBatchKeys = entityLinkKeys.slice(startIndex, endIndex);
-
-                await kv.del(...indexBatchKeys);
-                console.log(`[ResetDataWorkflow] ✅ Cleared entity link index batch ${indexBatch + 1}/${indexBatches} for ${entityType}`);
-              }
-            }
-          } catch (error) {
-            console.warn(`[ResetDataWorkflow] ⚠️ Failed to clear entity link indexes for ${entityType}:`, error);
+            await kv.del(...indexBatchKeys);
+            console.log(`[ResetDataWorkflow] ✅ Cleared entity link index batch ${indexBatch + 1}/${indexBatches}`);
           }
         }
 
-        results.push(`Cleared ${linkIds.length} links in ${totalBatches} batches`);
-        console.log(`[ResetDataWorkflow] ✅ Cleared ${linkIds.length} links`);
+        results.push(`Cleared ${linkKeys.length} links`);
+        console.log(`[ResetDataWorkflow] ✅ Cleared ${linkKeys.length} links successfully`);
       } else {
         results.push('No links to clear');
       }
