@@ -37,7 +37,7 @@ function PlayerCharacterModal({ character, open, onOpenChange }: PlayerCharacter
   if (!character) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className={`max-w-md ${getZIndexClass('SUB_MODALS')}`}>
+        <DialogContent className={`max-w-md ${getZIndexClass('DROPDOWNS')}`}>
           <DialogHeader>
             <DialogTitle>Player Character</DialogTitle>
           </DialogHeader>
@@ -54,7 +54,7 @@ function PlayerCharacterModal({ character, open, onOpenChange }: PlayerCharacter
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className={`max-w-md ${getZIndexClass('SUB_MODALS')}`}>
+        <DialogContent className={`max-w-md ${getZIndexClass('DROPDOWNS')}`}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <User className="h-5 w-5" />
@@ -130,7 +130,7 @@ interface RelationshipsModalProps {
 function RelationshipsModal({ player, open, onOpenChange }: RelationshipsModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className={`max-w-md ${getZIndexClass('SUB_MODALS')}`}>
+        <DialogContent className={`max-w-md ${getZIndexClass('CRITICAL')}`}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Network className="h-5 w-5" />
@@ -238,7 +238,7 @@ function ExchangePointsModal({ player, open, onOpenChange, onExchange }: Exchang
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={`max-w-2xl ${getZIndexClass('SUB_MODALS')}`}>
+      <DialogContent className={`max-w-2xl ${getZIndexClass('CRITICAL')}`}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Coins className="h-5 w-5" />
