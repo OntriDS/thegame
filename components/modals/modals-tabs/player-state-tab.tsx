@@ -24,7 +24,7 @@ export default function PlayerStateTab({
 }: PlayerStateTabProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={`w-full max-w-7xl max-h-[90vh] overflow-hidden ${getZIndexClass('MODAL_TABS')}`}>
+      <DialogContent className={`w-full max-w-7xl max-h-[90vh] ${getZIndexClass('MODAL_TABS')}`}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-2xl">
             <Target className="h-6 w-6" />
@@ -32,7 +32,7 @@ export default function PlayerStateTab({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-4 overflow-y-auto max-h-[calc(90vh-8rem)] pr-2">
           {/* Current Points (Uncollected) */}
           <Card className="border-2">
             <CardHeader className="pb-3">
