@@ -62,16 +62,26 @@ function ResearchPageContent() {
     if (!isClient) return;
     
     const loadProjectStatus = async () => {
+      console.log('🔥 [Research Page] Loading project status...');
       try {
         const response = await fetch('/api/project-status');
+        console.log('🔥 [Research Page] Project status response:', response.status, response.statusText);
+        
         if (response.ok) {
           const data = await response.json();
+          console.log('🔥 [Research Page] Project status data:', data);
+          console.log('🔥 [Research Page] Project status structure:', {
+            hasPhasePlan: !!data.phasePlan,
+            hasCurrentSprint: !!data.currentSprint,
+            keys: Object.keys(data),
+            isEmpty: Object.keys(data).length === 0
+          });
           setProjectStatus(data);
         } else {
-          console.error('Failed to load project status:', response.status, response.statusText);
+          console.error('🔥 [Research Page] ❌ Failed to load project status:', response.status, response.statusText);
         }
       } catch (error) {
-        console.error('Error loading project status:', error);
+        console.error('🔥 [Research Page] ❌ Error loading project status:', error);
       }
     };
 
@@ -83,16 +93,28 @@ function ResearchPageContent() {
     if (!isClient) return;
     
     const loadDevLog = async () => {
+      console.log('🔥 [Research Page] Loading dev log...');
       try {
         const response = await fetch('/api/dev-log');
+        console.log('🔥 [Research Page] Dev log response:', response.status, response.statusText);
+        
         if (response.ok) {
           const data = await response.json();
+          console.log('🔥 [Research Page] Dev log data:', data);
+          console.log('🔥 [Research Page] Dev log structure:', {
+            hasSprints: !!data.sprints,
+            hasPhases: !!data.phases,
+            sprintsLength: data.sprints?.length || 0,
+            phasesLength: data.phases?.length || 0,
+            keys: Object.keys(data),
+            isEmpty: Object.keys(data).length === 0
+          });
           setDevLog(data);
         } else {
-          console.error('Failed to load dev log:', response.status, response.statusText);
+          console.error('🔥 [Research Page] ❌ Failed to load dev log:', response.status, response.statusText);
         }
       } catch (error) {
-        console.error('Error loading dev log:', error);
+        console.error('🔥 [Research Page] ❌ Error loading dev log:', error);
       }
     };
 
@@ -219,14 +241,26 @@ function ResearchPageContent() {
     if (!isClient) return;
     
     const loadNotes = async () => {
+      console.log('🔥 [Research Page] Loading notes...');
       try {
         const response = await fetch('/api/notes-log');
+        console.log('🔥 [Research Page] Notes response:', response.status, response.statusText);
+        
         if (response.ok) {
           const data = await response.json();
+          console.log('🔥 [Research Page] Notes data:', data);
+          console.log('🔥 [Research Page] Notes structure:', {
+            hasEntries: !!data.entries,
+            entriesLength: data.entries?.length || 0,
+            keys: Object.keys(data),
+            isEmpty: Object.keys(data).length === 0
+          });
           setNotes(data.entries || []);
+        } else {
+          console.error('🔥 [Research Page] ❌ Failed to load notes:', response.status, response.statusText);
         }
       } catch (error) {
-        console.error('Failed to load notes:', error);
+        console.error('🔥 [Research Page] ❌ Error loading notes:', error);
       }
     };
 

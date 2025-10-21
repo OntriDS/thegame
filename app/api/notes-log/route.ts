@@ -8,36 +8,51 @@ import path from 'path';
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
+  console.log('🔥 [Notes Log API] GET request received');
+  
   if (!(await requireAdminAuth(req))) {
+    console.log('🔥 [Notes Log API] ❌ Auth failed');
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
     // In production with KV, read from KV
     if (process.env.UPSTASH_REDIS_REST_URL) {
+      console.log('🔥 [Notes Log API] Using KV (production)');
       const { kvGet } = await import('@/data-store/kv');
       const notesData = await kvGet('data:notes-log');
+      console.log('🔥 [Notes Log API] KV data:', notesData ? 'FOUND' : 'NOT FOUND');
 
       if (notesData) {
+        console.log('🔥 [Notes Log API] ✅ Returning notes from KV');
+        console.log('🔥 [Notes Log API] Data structure:', {
+          hasEntries: !!notesData.entries,
+          entriesLength: notesData.entries?.length || 0,
+          keys: Object.keys(notesData)
+        });
         return NextResponse.json(notesData);
       } else {
+        console.log('🔥 [Notes Log API] ⚠️ No notes in KV, returning empty structure');
         return NextResponse.json({ entries: [] });
       }
     } else {
+      console.log('🔥 [Notes Log API] Using filesystem (development)');
       // In development, read from filesystem
       const filePath = path.join(process.cwd(), 'logs-research', 'notes-log.json');
+      console.log('🔥 [Notes Log API] Reading from:', filePath);
 
       try {
         const fileContent = fs.readFileSync(filePath, 'utf8');
         const notesData = JSON.parse(fileContent);
+        console.log('🔥 [Notes Log API] ✅ File read successfully');
         return NextResponse.json(notesData);
       } catch (fileError) {
-        console.error('Error reading notes-log.json:', fileError);
+        console.error('🔥 [Notes Log API] ❌ Error reading notes-log.json:', fileError);
         return NextResponse.json({ entries: [] });
       }
     }
   } catch (error) {
-   console.error('Error loading notes log:', error);
+   console.error('🔥 [Notes Log API] ❌ Error loading notes log:', error);
    return NextResponse.json({ error: 'Failed to load notes' }, { status: 500 });
  }
 }

@@ -8,36 +8,51 @@ import path from 'path';
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
+  console.log('🔥 [Project Status API] GET request received');
+  
   if (!(await requireAdminAuth(req))) {
+    console.log('🔥 [Project Status API] ❌ Auth failed');
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
     // In production with KV, read from KV
     if (process.env.UPSTASH_REDIS_REST_URL) {
+      console.log('🔥 [Project Status API] Using KV (production)');
       const { kvGet } = await import('@/data-store/kv');
       const projectStatus = await kvGet('data:project-status');
+      console.log('🔥 [Project Status API] KV data:', projectStatus ? 'FOUND' : 'NOT FOUND');
 
       if (projectStatus) {
+        console.log('🔥 [Project Status API] ✅ Returning project status from KV');
+        console.log('🔥 [Project Status API] Data structure:', {
+          hasPhasePlan: !!projectStatus.phasePlan,
+          hasCurrentSprint: !!projectStatus.currentSprint,
+          keys: Object.keys(projectStatus)
+        });
         return NextResponse.json(projectStatus);
       } else {
+        console.log('🔥 [Project Status API] ⚠️ No project status in KV, returning empty object');
         return NextResponse.json({});
       }
     } else {
+      console.log('🔥 [Project Status API] Using filesystem (development)');
       // In development, read from filesystem
       const filePath = path.join(process.cwd(), 'PROJECT-STATUS.json');
+      console.log('🔥 [Project Status API] Reading from:', filePath);
 
       try {
         const fileContent = fs.readFileSync(filePath, 'utf8');
         const projectStatus = JSON.parse(fileContent);
+        console.log('🔥 [Project Status API] ✅ File read successfully');
         return NextResponse.json(projectStatus);
       } catch (fileError) {
-        console.error('Error reading PROJECT-STATUS.json:', fileError);
+        console.error('🔥 [Project Status API] ❌ Error reading PROJECT-STATUS.json:', fileError);
         return NextResponse.json({});
       }
     }
   } catch (error) {
-    console.error('Error loading project status:', error);
+    console.error('🔥 [Project Status API] ❌ Error loading project status:', error);
     return NextResponse.json({ error: 'Failed to load project status' }, { status: 500 });
   }
 }
