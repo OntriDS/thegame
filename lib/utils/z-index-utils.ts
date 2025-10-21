@@ -40,6 +40,14 @@ export function getModalZIndex(): string {
 }
 
 /**
+ * Get the z-index class for modal tabs (Layer 2.5)
+ * @returns z-[150] class string
+ */
+export function getModalTabsZIndex(): string {
+  return getZIndexClass('MODAL_TABS');
+}
+
+/**
  * Get the z-index class for inner modals like calendars and dropdowns (Layer 3)
  * @returns z-[150] class string
  */

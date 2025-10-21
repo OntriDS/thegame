@@ -66,6 +66,7 @@ export const Z_INDEX_LAYERS = {
   BASE: 0, // Layer 0 (z-0): Base content, sections, background
   SUBTABS: 50, // Layer 1 (z-50): Subtabs and navigation
   MODALS: 100, // Layer 2 (z-100): First level modals (task-modal, record-modal)
+  MODAL_TABS: 150, // Layer 2.5 (z-150): Tabs in modals
   INNER_MODALS: 200, // Layer 3 (z-200): Inner modals (calendar, dropdowns, popovers)
   SUB_MODALS: 300, // Layer 4 (z-300): Inner sub-modals and nested dropdowns
   DROPDOWNS: 500, // Layer 5 (z-500): Dropdowns and popovers
