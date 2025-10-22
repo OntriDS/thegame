@@ -28,6 +28,7 @@ import DeleteModal from './submodals/delete-submodal';
 import { FileReference } from '@/types/entities';
 import EntityRelationshipsModal from './submodals/entity-relationships-submodal';
 import CharacterSelectorModal from './submodals/character-selector-submodal';
+import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
 
 interface ItemModalProps {
   item?: Item;
@@ -38,6 +39,8 @@ interface ItemModalProps {
 }
 
 export default function ItemModal({ item, defaultItemType, open, onOpenChange, onSave }: ItemModalProps) {
+  const { getPreference, setPreference } = useUserPreferences();
+  
   const getLastUsedStation = (): Station => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('lastUsedStation');
@@ -186,6 +189,10 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
     setItemTypeSubType(newItemTypeSubType);
     setType(newItemType);
     setSubItemType(newSubType || '');
+    
+    // Save to user preferences
+    const prefKey = `item-modal-last-subtype-${newItemType}`;
+    setPreference(prefKey, newItemTypeSubType);
   };
 
   // Load links for the current item
@@ -268,6 +275,36 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
       setItemLinks([]);
     }
   }, [item, defaultItemType, loadItemLinks]);
+
+  // Effect to handle auto-select of subtype when modal opens for new items
+  useEffect(() => {
+    if (!item && open && defaultItemType) {
+      // Load last used subtype for this ItemType
+      const prefKey = `item-modal-last-subtype-${defaultItemType}`;
+      const lastUsedSubtype = getPreference(prefKey);
+      
+      if (lastUsedSubtype) {
+        // Use the last selected subtype
+        setItemTypeSubType(lastUsedSubtype);
+        setType(getItemTypeFromCombined(lastUsedSubtype) as ItemType);
+        setSubItemType(getSubTypeFromCombined(lastUsedSubtype) as SubItemType);
+      } else {
+        // First time: select first subtype
+        const subtypes = getSubTypesForItemType(defaultItemType);
+        if (subtypes.length > 0) {
+          const firstOption = `${defaultItemType}:${subtypes[0]}`;
+          setItemTypeSubType(firstOption);
+          setType(defaultItemType);
+          setSubItemType(subtypes[0]);
+        } else {
+          // No subtypes available, just set type
+          setItemTypeSubType(`${defaultItemType}:`);
+          setType(defaultItemType);
+          setSubItemType('');
+        }
+      }
+    }
+  }, [item, open, defaultItemType, getPreference]);
 
   // Load owner character name when ownerCharacterId changes
   useEffect(() => {

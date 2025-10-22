@@ -30,23 +30,34 @@ export const createSiteOptions = (sites: Site[]): Array<{ value: string; label: 
  * - category: Site Category (PHYSICAL, CLOUD, SPECIAL) for automatic grouping
  */
 export const createSiteOptionsWithCategories = (sites: Site[]): Array<{ value: string; label: string; category?: string }> => {
-  return sites.map(site => {
+  // Enforce enum-defined order for groups: PHYSICAL → DIGITAL → SYSTEM
+  const groupOrder: Record<string, number> = {
+    [SiteType.PHYSICAL]: 0,
+    [SiteType.DIGITAL]: 1,
+    [SiteType.SYSTEM]: 2
+  };
+
+  // Stable sort by group order; keep original order within the same group
+  const sortedSites = [...sites].sort((a, b) => {
+    const aType = a.metadata?.type || SiteType.PHYSICAL;
+    const bType = b.metadata?.type || SiteType.PHYSICAL;
+    const aIdx = groupOrder[aType] ?? 99;
+    const bIdx = groupOrder[bType] ?? 99;
+    return aIdx - bIdx;
+  });
+
+  return sortedSites.map(site => {
     const siteType = site.metadata?.type || SiteType.PHYSICAL;
-    
-    let category = 'PHYSICAL';
-    
-    if (siteType === SiteType.DIGITAL) {
-      category = 'DIGITAL';
-    } else if (siteType === SiteType.SYSTEM) {
-      category = 'SYSTEM';
-    } else if (siteType === SiteType.PHYSICAL) {
-      category = 'PHYSICAL';
-    }
-    
+    const category = siteType === SiteType.DIGITAL
+      ? 'DIGITAL'
+      : siteType === SiteType.SYSTEM
+        ? 'SYSTEM'
+        : 'PHYSICAL';
+
     return {
       value: site.id,
       label: site.name,
-      category: category
+      category
     };
   });
 };
