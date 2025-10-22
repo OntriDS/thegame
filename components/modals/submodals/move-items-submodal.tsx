@@ -13,26 +13,27 @@ import { Item } from '@/types/entities';
 import { Package, MapPin, Cloud, Globe } from 'lucide-react';
 import { 
   getSitesByType, 
-  getSiteInfoByName 
-} from '@/lib/utils/site-migration-utils';
+  getSiteByName 
+} from '@/lib/utils/site-options-utils';
 
 interface MoveItemsModalProps {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   items: Item[];
+  sites: any[];
   onComplete: () => void;
   onStatusCheck?: (item: Item, isMovingToSold: boolean) => void;
 }
 
-export default function MoveItemsModal({ open, onOpenChange, items, onComplete, onStatusCheck }: MoveItemsModalProps) {
+export default function MoveItemsModal({ open, onOpenChange, items, sites, onComplete, onStatusCheck }: MoveItemsModalProps) {
   const [destination, setDestination] = useState<string>('Feria Box');
   const [quantity, setQuantity] = useState<string>('1');
   const [isProcessing, setIsProcessing] = useState(false);
 
   // Helper functions to organize sites
-  const getPhysicalSites = () => getSitesByType('PHYSICAL');
-  const getCloudSites = () => getSitesByType('CLOUD');
-  const getSpecialSites = () => getSitesByType('SPECIAL');
+  const getPhysicalSites = () => getSitesByType(sites, 'PHYSICAL');
+  const getDigitalSites = () => getSitesByType(sites, 'DIGITAL');
+  const getSystemSites = () => getSitesByType(sites, 'SYSTEM');
 
   // Get business type groups for physical sites
   const getPhysicalSitesGroupedByBusinessType = () => {
@@ -51,16 +52,16 @@ export default function MoveItemsModal({ open, onOpenChange, items, onComplete, 
 
   // Check if movement is valid based on item type and destination
   const isValidDestination = (item: Item, destinationSite: string): boolean => {
-    const siteInfo = getSiteInfoByName(destinationSite);
+    const siteInfo = getSiteByName(sites, destinationSite);
     if (!siteInfo) return false;
     
-    // Digital items can ONLY go to cloud sites
+    // Digital items can ONLY go to digital sites
     if (item.type === 'Digital') {
-      return siteInfo.type === 'CLOUD';
+      return siteInfo.metadata?.type === 'DIGITAL';
     }
     
-    // Physical items can go to physical and special sites (NOT cloud)
-    return ['PHYSICAL', 'SPECIAL'].includes(siteInfo.type);
+    // Physical items can go to physical and system sites (NOT digital)
+    return ['PHYSICAL', 'SYSTEM'].includes(siteInfo.metadata?.type || '');
   };
 
   const handleMove = async () => {
@@ -156,39 +157,39 @@ export default function MoveItemsModal({ open, onOpenChange, items, onComplete, 
                 ))}
                 
                 {/* Special Sites */}
-                {getSpecialSites().length > 0 && (
+                {getSystemSites().length > 0 && (
                   <div>
                     <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground bg-muted/50 rounded-md mb-1">
                       <Globe className="inline h-3 w-3 mr-1" />
                       Special Sites
                     </div>
-                    {getSpecialSites().map(site => (
+                    {getSystemSites().map((site: any) => (
                       <SelectItem 
                         key={site.name} 
                         value={site.name}
                         disabled={!items.every(item => isValidDestination(item, site.name))}
                         className="ml-4"
                       >
-                        {site.name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                        {site.name.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
                       </SelectItem>
                     ))}
                   </div>
                 )}
                 
                 {/* Cloud Sites - Only for Digital Items */}
-                {getCloudSites().length > 0 && items.every(item => item.type === 'Digital') && (
+                {getDigitalSites().length > 0 && items.every(item => item.type === 'Digital') && (
                   <div>
                     <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground bg-muted/50 rounded-md mb-1">
                       <Cloud className="inline h-3 w-3 mr-1" />
                       Cloud Sites
                     </div>
-                    {getCloudSites().map(site => (
+                    {getDigitalSites().map((site: any) => (
                       <SelectItem 
                         key={site.name} 
                         value={site.name}
                         className="ml-4"
                       >
-                        {site.name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                        {site.name.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
                       </SelectItem>
                     ))}
                   </div>

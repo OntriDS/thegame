@@ -21,8 +21,7 @@ export * from './settlement-utils';
 
 // Site utilities
 export * from './site-options-utils';
-export * from './site-seed-utils';
-// Note: site-migration-utils.ts is deprecated
+// Note: site-seed-utils.ts and site-migration-utils.ts are deprecated
 
 // UI utilities
 export * from './searchable-select-utils';

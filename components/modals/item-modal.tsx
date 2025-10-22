@@ -820,6 +820,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
       open={showMoveModal}
       onOpenChange={setShowMoveModal}
       items={(item || (selectedItemId && existingItems.find(i => i.id === selectedItemId))) ? [item || existingItems.find(i => i.id === selectedItemId)!] : []}
+      sites={sites}
       onComplete={() => {
         setShowMoveModal(false);
         onOpenChange(false); // Close the modal after moving

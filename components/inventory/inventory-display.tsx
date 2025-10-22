@@ -1913,6 +1913,7 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
       {/* Bulk Edit Modal */}
       <BulkEditModal
         itemType={bulkEditItemType}
+        sites={sites}
         open={showBulkEditModal}
         onOpenChange={setShowBulkEditModal}
         onComplete={handleBulkEditComplete}
@@ -1924,6 +1925,7 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
           open={showMoveModal}
           onOpenChange={setShowMoveModal}
           items={[movingItem]}
+          sites={sites}
           onComplete={handleMoveComplete}
           onStatusCheck={checkAndHandleStatusChange}
         />

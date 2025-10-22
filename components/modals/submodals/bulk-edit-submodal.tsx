@@ -16,7 +16,7 @@ import { Item } from '@/types/entities';
 import { PRICE_STEP, DEFAULT_MIN_VALUE, MODAL_MAX_HEIGHT, MODAL_MAX_WIDTH } from '@/lib/constants/app-constants';
 import { MapPin, Package, Trash2 } from 'lucide-react';
 import MoveItemsModal from './move-items-submodal';
-import { getAllSiteNames } from '@/lib/utils/site-migration-utils';
+import { getAllSiteNames } from '@/lib/utils/site-options-utils';
 import { ClientAPI } from '@/lib/client-api';
 import DeleteModal from './delete-submodal';
 
@@ -24,10 +24,11 @@ interface BulkEditModalProps {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   itemType: ItemType;
+  sites: any[];
   onComplete: () => void;
 }
 
-export default function BulkEditModal({ open, onOpenChange, itemType, onComplete }: BulkEditModalProps) {
+export default function BulkEditModal({ open, onOpenChange, itemType, sites, onComplete }: BulkEditModalProps) {
   const [field, setField] = useState<string>('price');
   const [value, setValue] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -176,7 +177,7 @@ export default function BulkEditModal({ open, onOpenChange, itemType, onComplete
               <SelectValue placeholder="Select site" />
             </SelectTrigger>
             <SelectContent>
-              {getAllSiteNames().map(site => (
+              {getAllSiteNames(sites).map(site => (
                 <SelectItem key={site} value={site}>
                   {site}
                 </SelectItem>
@@ -309,7 +310,7 @@ export default function BulkEditModal({ open, onOpenChange, itemType, onComplete
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Sites</SelectItem>
-                  {getAllSiteNames().map(site => (
+                  {getAllSiteNames(sites).map(site => (
                     <SelectItem key={site} value={site}>
                       {site}
                     </SelectItem>
@@ -395,6 +396,7 @@ export default function BulkEditModal({ open, onOpenChange, itemType, onComplete
         open={showMoveModal}
         onOpenChange={setShowMoveModal}
         items={items.filter(item => selectedItems.has(item.id))}
+        sites={sites}
         onComplete={async () => {
           setShowMoveModal(false);
           // Refresh items list and reset selection after move

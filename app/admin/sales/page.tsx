@@ -10,7 +10,7 @@ import { ClientAPI } from "@/lib/client-api";
 import { Sale } from "@/types/entities";
 import { SaleType, SaleStatus } from "@/types/enums";
 import { formatDateDDMMYYYY } from "@/lib/constants/date-constants";
-import { getAllSiteNames } from "@/lib/utils/site-migration-utils";
+import { getAllSiteNames } from "@/lib/utils/site-options-utils";
 import { Plus, Calendar, DollarSign, Package, TrendingUp } from "lucide-react";
 import SalesModal from "@/components/modals/sales-modal";
 
