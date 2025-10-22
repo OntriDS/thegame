@@ -23,6 +23,7 @@ import { MONTHS, getYearRange, getMonthName, getCurrentMonth } from '@/lib/const
 import { BUSINESS_STRUCTURE, ItemType } from '@/types/enums';
 import { getCompanyAreas, getPersonalAreas, isCompanyStation, getAreaForStation } from '@/lib/utils/business-structure-utils';
 import { CompanyRecordsList, PersonalRecordsList } from '@/components/finances/financial-records-components';
+import { aggregateRecordsByStation, calculateTotals } from '@/lib/utils/financial-aggregation-utils';
 import { PRICE_STEP, DECIMAL_STEP, J$_TO_USD_RATE, PRIMARY_CURRENCY, USD_CURRENCY } from '@/lib/constants/app-constants';
 import { VALIDATION_CONSTANTS } from '@/lib/constants/financial-constants';
 // formatMonthYear will be implemented inline
@@ -119,70 +120,55 @@ export default function FinancesPage() {
   }, []);
 
   const loadSummaries = useCallback(async () => {
-    // For now, calculate summaries client-side from financial records
     const records = await ClientAPI.getFinancialRecords();
-    const companyRecords = records.filter(r => r.year === currentYear && r.month === currentMonth && r.type === 'company');
-    const personalRecords = records.filter(r => r.year === currentYear && r.month === currentMonth && r.type === 'personal');
+    const companyRecords = records.filter(r => 
+      r.year === currentYear && 
+      r.month === currentMonth && 
+      r.type === 'company'
+    );
+    const personalRecords = records.filter(r => 
+      r.year === currentYear && 
+      r.month === currentMonth && 
+      r.type === 'personal'
+    );
     
-    // Calculate company summary
-    const totalRevenue = companyRecords.reduce((sum, r) => sum + r.revenue, 0);
-    const totalCost = companyRecords.reduce((sum, r) => sum + r.cost, 0);
-    const totalJungleCoins = companyRecords.reduce((sum, r) => sum + r.jungleCoins, 0);
+    // Aggregate company records by station using DRY utility
+    const companyStations = Object.values(BUSINESS_STRUCTURE)
+      .filter((_, idx) => idx < 5) // Exclude PERSONAL
+      .flat();
+    const companyBreakdown = aggregateRecordsByStation(companyRecords, companyStations);
+    const companyTotals = calculateTotals(companyBreakdown);
     
+    // Aggregate personal records by station using DRY utility
+    const personalStations = BUSINESS_STRUCTURE.PERSONAL;
+    const personalBreakdown = aggregateRecordsByStation(personalRecords, personalStations);
+    const personalTotals = calculateTotals(personalBreakdown);
+    
+    // Create summaries with REAL aggregated data
     const company: CompanyMonthlySummary = {
       year: currentYear,
       month: currentMonth,
-      totalRevenue,
-      totalCost,
-      netCashflow: totalRevenue - totalCost,
-      totalJungleCoins,
-      categoryBreakdown: {
-        ADMIN: { revenue: 0, cost: 0, net: 0, jungleCoins: 0 },
-        RESEARCH: { revenue: 0, cost: 0, net: 0, jungleCoins: 0 },
-        DESIGN: { revenue: 0, cost: 0, net: 0, jungleCoins: 0 },
-        PRODUCTION: { revenue: 0, cost: 0, net: 0, jungleCoins: 0 },
-        SALES: { revenue: 0, cost: 0, net: 0, jungleCoins: 0 },
-        PERSONAL: { revenue: 0, cost: 0, net: 0, jungleCoins: 0 }
-      } // Will be implemented in Monthly Archive phase
+      totalRevenue: companyTotals.revenue,
+      totalCost: companyTotals.cost,
+      netCashflow: companyTotals.net,
+      totalJungleCoins: companyTotals.jungleCoins,
+      categoryBreakdown: companyBreakdown
     };
-    
-    // Calculate personal summary
-    const personalTotalRevenue = personalRecords.reduce((sum, r) => sum + r.revenue, 0);
-    const personalTotalCost = personalRecords.reduce((sum, r) => sum + r.cost, 0);
-    const personalTotalJungleCoins = personalRecords.reduce((sum, r) => sum + r.jungleCoins, 0);
     
     const personal: PersonalMonthlySummary = {
       year: currentYear,
       month: currentMonth,
-      totalRevenue: personalTotalRevenue,
-      totalCost: personalTotalCost,
-      netCashflow: personalTotalRevenue - personalTotalCost,
-      totalJungleCoins: personalTotalJungleCoins,
-      categoryBreakdown: {
-        PERSONAL: { revenue: 0, cost: 0, net: 0, jungleCoins: 0 }
-      } as any // Will be implemented in Monthly Archive phase
+      totalRevenue: personalTotals.revenue,
+      totalCost: personalTotals.cost,
+      netCashflow: personalTotals.net,
+      totalJungleCoins: personalTotals.jungleCoins,
+      categoryBreakdown: personalBreakdown
     };
     
-    // For now, use empty aggregated data (will be implemented in Monthly Archive phase)
-    const aggregated = {
-      totalRevenue: totalRevenue,
-      totalCost: totalCost,
-      net: totalRevenue - totalCost,
-      totalJungleCoins: totalJungleCoins
-    };
-    const categoryData = {
-      categoryBreakdown: Object.fromEntries(
-        Object.values(BUSINESS_STRUCTURE).flat().map(category => [
-          category,
-          { revenue: 0, cost: 0, net: 0, jungleCoins: 0 }
-        ])
-      )
-    };
     setCompanySummary(company);
     setPersonalSummary(personal);
-    setAggregatedFinancialData(aggregated);
-    setAggregatedCategoryData(categoryData);
-    // Force records lists to refresh
+    setAggregatedFinancialData(companyTotals);
+    setAggregatedCategoryData({ categoryBreakdown: companyBreakdown });
     setRecordsRefreshKey(prev => prev + 1);
   }, [currentYear, currentMonth, refreshKey]);
 
@@ -959,49 +945,49 @@ export default function FinancesPage() {
 
             {/* Company Finances Sub-tab */}
             <TabsContent value="finances" className="space-y-4">
-              {/* Company Categories by Stations */}
-              {['ADMIN', 'RESEARCH', 'DESIGN', 'PRODUCTION', 'SALES'].map(station => {
-                const stationCategories = BUSINESS_STRUCTURE[station as keyof typeof BUSINESS_STRUCTURE];
+              {/* Company Stations by Area */}
+              {['ADMIN', 'RESEARCH', 'DESIGN', 'PRODUCTION', 'SALES'].map(area => {
+                const areaStations = BUSINESS_STRUCTURE[area as keyof typeof BUSINESS_STRUCTURE];
                 
                 return (
-                  <Card key={station}>
+                  <Card key={area}>
                     <CardHeader className="pb-3">
-                      <CardTitle className="text-lg">{station} Station</CardTitle>
+                      <CardTitle className="text-lg">{area} Area</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                        {stationCategories.map(category => {
-              const breakdown = aggregatedCategoryData?.categoryBreakdown[category];
-              const net = breakdown ? breakdown.net : 0;
-               
-              return (
-                            <Card key={category} className="border-muted">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">{category}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className={`text-lg font-bold ${
-                       net === 0 ? 'text-muted-foreground' : 
-                       net > 0 ? 'text-green-600' : 'text-red-600'
-                     }`}>
-                       {formatCurrency(net)}
-                     </div>
-                     <div className="text-xs text-muted-foreground mt-1">
-                       {breakdown ? (
-                         <>
-                           <div>Revenue: {formatCurrency(breakdown.revenue)}</div>
-                           <div>Cost: {formatCurrency(breakdown.cost)}</div>
-                           <div>J$: {breakdown.jungleCoins} ({formatCurrency(breakdown.jungleCoins * exchangeRates.j$ToUSD)})</div>
-                         </>
-                       ) : (
-                         'No data'
-                       )}
-                     </div>
-                   </CardContent>
-                 </Card>
-               );
-             })}
-           </div>
+                        {areaStations.map(station => {
+                          const breakdown = aggregatedCategoryData?.categoryBreakdown[station];
+                          const net = breakdown ? breakdown.net : 0;
+                           
+                          return (
+                            <Card key={station} className="border-muted">
+                              <CardHeader className="pb-2">
+                                <CardTitle className="text-sm">{station}</CardTitle>
+                              </CardHeader>
+                              <CardContent>
+                                <div className={`text-lg font-bold ${
+                                  net === 0 ? 'text-muted-foreground' : 
+                                  net > 0 ? 'text-green-600' : 'text-red-600'
+                                }`}>
+                                  {formatCurrency(net)}
+                                </div>
+                                <div className="text-xs text-muted-foreground mt-1">
+                                  {breakdown ? (
+                                    <>
+                                      <div>Revenue: {formatCurrency(breakdown.revenue)}</div>
+                                      <div>Cost: {formatCurrency(breakdown.cost)}</div>
+                                      <div>J$: {breakdown.jungleCoins} ({formatCurrency(breakdown.jungleCoins * exchangeRates.j$ToUSD)})</div>
+                                    </>
+                                  ) : (
+                                    'No data'
+                                  )}
+                                </div>
+                              </CardContent>
+                            </Card>
+                          );
+                        })}
+                      </div>
                     </CardContent>
                   </Card>
                 );
@@ -1037,41 +1023,43 @@ export default function FinancesPage() {
 
              {/* Personal Finances Sub-tab */}
              <TabsContent value="finances" className="space-y-4">
-           {/* Personal Categories Grid */}
-           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-                 {getPersonalAreas().map(category => {
-               const breakdown = aggregatedCategoryData?.categoryBreakdown[category];
-               const net = breakdown ? breakdown.net : 0;
-                
-               return (
-                 <Card key={category}>
-                   <CardHeader className="pb-2">
-                     <CardTitle className="text-sm">{category}</CardTitle>
-                   </CardHeader>
-                   <CardContent>
-                     <div className={`text-lg font-bold ${
-                        net === 0 ? 'text-muted-foreground' : 
-                        net > 0 ? 'text-green-600' : 'text-red-600'
-                      }`}>
-                        {formatCurrency(net)}
-                      </div>
-                      <div className="text-xs text-muted-foreground mt-1">
-                        {breakdown ? (
-                          <>
-                            <div>Revenue: {formatCurrency(breakdown.revenue)}</div>
-                            <div>Cost: {formatCurrency(breakdown.cost)}</div>
-                            <div>J$: {breakdown.jungleCoins} ({formatCurrency(breakdown.jungleCoins * exchangeRates.j$ToUSD)})</div>
-                          </>
-                        ) : (
-                          'No data'
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-             </TabsContent>
+               {/* Personal Stations Grid */}
+               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+                 {getPersonalAreas().flatMap(area => 
+                   BUSINESS_STRUCTURE[area].map(station => {
+                     const breakdown = aggregatedCategoryData?.categoryBreakdown[station];
+                     const net = breakdown ? breakdown.net : 0;
+                      
+                     return (
+                       <Card key={station}>
+                         <CardHeader className="pb-2">
+                           <CardTitle className="text-sm">{station}</CardTitle>
+                         </CardHeader>
+                         <CardContent>
+                           <div className={`text-lg font-bold ${
+                             net === 0 ? 'text-muted-foreground' : 
+                             net > 0 ? 'text-green-600' : 'text-red-600'
+                           }`}>
+                             {formatCurrency(net)}
+                           </div>
+                           <div className="text-xs text-muted-foreground mt-1">
+                             {breakdown ? (
+                               <>
+                                 <div>Revenue: {formatCurrency(breakdown.revenue)}</div>
+                                 <div>Cost: {formatCurrency(breakdown.cost)}</div>
+                                 <div>J$: {breakdown.jungleCoins} ({formatCurrency(breakdown.jungleCoins * exchangeRates.j$ToUSD)})</div>
+                               </>
+                             ) : (
+                               'No data'
+                             )}
+                           </div>
+                         </CardContent>
+                       </Card>
+                     );
+                   })
+                 )}
+               </div>
+         </TabsContent>
 
              {/* Personal Financial Records Sub-tab */}
              <TabsContent value="records" className="space-y-4">

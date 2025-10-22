@@ -364,7 +364,7 @@ export interface CompanyMonthlySummary {
   totalCost: number;
   netCashflow: number;
   totalJungleCoins: number;
-  categoryBreakdown: Record<CompanyFinancialCategory, { revenue: number; cost: number; net: number; jungleCoins: number }>;
+  categoryBreakdown: { [station: string]: { revenue: number; cost: number; net: number; jungleCoins: number } };
 }
 
 /** Personal financial summary for a month */
@@ -375,7 +375,7 @@ export interface PersonalMonthlySummary {
   totalCost: number;
   netCashflow: number;
   totalJungleCoins: number;
-  categoryBreakdown: Record<PersonalFinancialCategory, { revenue: number; cost: number; net: number; jungleCoins: number }>;
+  categoryBreakdown: { [station: string]: { revenue: number; cost: number; net: number; jungleCoins: number } };
 }
 
 /** Combined financial dashboard data */
