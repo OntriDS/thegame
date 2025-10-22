@@ -202,3 +202,4 @@ export const getTotalNetWorth = (
   
   return monetaryTotal + jungleCoinsTotal + inventoryTotal + otherTotal;
 };
+
