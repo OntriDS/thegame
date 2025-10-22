@@ -106,10 +106,11 @@ export function PlayerLogTab({ playerLog, onReload, isReloading }: PlayerLogTabP
                     </span>
                     
                     {/* Points Display - DRY using helper */}
-                    {data.points && (
+                    {(entry.points || data.points) && (
                       <div className="flex items-center gap-2">
                         {getPointsMetadata().map((pointType) => {
-                          const pointValue = data.points[pointType.key.toLowerCase() as keyof typeof data.points] || 0;
+                          const points = entry.points || data.points;
+                          const pointValue = points[pointType.key.toLowerCase() as keyof typeof points] || 0;
                           const colorClasses = {
                             'XP': 'border-orange-600 text-orange-600',
                             'RP': 'border-purple-600 text-purple-600', 

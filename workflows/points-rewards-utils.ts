@@ -59,7 +59,6 @@ export async function awardPointsToPlayer(
 
     // Save updated player
     await upsertPlayer(updatedPlayer);
-    console.log(`[awardPointsToPlayer] ✅ Points awarded successfully:`, points);
 
     // Create appropriate link based on source type - use forward links (SOURCE → PLAYER)
     let linkType: LinkType;
@@ -96,11 +95,8 @@ export async function awardPointsToPlayer(
     );
 
     await createLink(link);
-    console.log(`[awardPointsToPlayer] ✅ Link created: ${linkType}`);
-
     // Add dedicated player points log with source attribution
     await appendPlayerPointsLog(playerId, points, sourceId, sourceType);
-    console.log(`[awardPointsToPlayer] ✅ Player points log created with source attribution`);
 
   } catch (error) {
     console.error(`[awardPointsToPlayer] ❌ Failed to award points:`, error);
@@ -152,7 +148,6 @@ export async function removePointsFromPlayer(
 
     // Save updated player
     await upsertPlayer(updatedPlayer);
-    console.log(`[removePointsFromPlayer] ✅ Points removed successfully:`, points);
 
   } catch (error) {
     console.error(`[removePointsFromPlayer] ❌ Failed to remove points:`, error);
@@ -198,16 +193,12 @@ export async function awardJungleCoinsToCharacter(
 
     // Save updated character
     await upsertCharacter(updatedCharacter);
-    console.log(`[awardJungleCoinsToCharacter] ✅ Jungle coins awarded successfully: ${amount} J$`);
-
     // Add dedicated character jungle coins log with source attribution
     await appendCharacterJungleCoinsLog(characterId, amount, sourceId, sourceType);
-    console.log(`[awardJungleCoinsToCharacter] ✅ Character jungle coins log created with source attribution`);
 
     // NOTE: J$ (Jungle Coins) are CURRENCY that belongs to FINANCIALS
     // They can be borrowed as AMBASSADOR by Player and Character, but don't belong to them
     // No link creation needed here - J$ are handled by the Financial system
-    console.log(`[awardJungleCoinsToCharacter] ✅ Jungle coins awarded to character (J$ handled by Financial system)`);
 
   } catch (error) {
     console.error(`[awardJungleCoinsToCharacter] ❌ Failed to award jungle coins:`, error);
@@ -249,7 +240,6 @@ export async function removeJungleCoinsFromCharacter(
 
     // Save updated character
     await upsertCharacter(updatedCharacter);
-    console.log(`[removeJungleCoinsFromCharacter] ✅ Jungle coins removed successfully: ${amount} J$`);
 
   } catch (error) {
     console.error(`[removeJungleCoinsFromCharacter] ❌ Failed to remove jungle coins:`, error);

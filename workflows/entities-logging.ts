@@ -13,10 +13,7 @@ export async function appendEntityLog(
   details: Record<string, any>
 ): Promise<void> {
   const key = buildLogKey(entityType);
-  console.log('🔥 [appendEntityLog] START', { entityType, entityId, event, key });
-  
   const list = (await kvGet<any[]>(key)) || [];
-  console.log('🔥 [appendEntityLog] Current list length:', list.length);
   
   const entry = { 
     event,
@@ -26,10 +23,7 @@ export async function appendEntityLog(
   };
   
   list.push(entry);
-  console.log('🔥 [appendEntityLog] Pushing entry:', entry);
-  
   await kvSet(key, list);
-  console.log('🔥 [appendEntityLog] ✅ Saved to KV, new length:', list.length);
 }
 
 export async function updateEntityLogField(

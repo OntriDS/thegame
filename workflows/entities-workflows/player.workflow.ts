@@ -14,51 +14,32 @@ const STATE_FIELDS = ['level', 'totalPoints', 'points', 'isActive'];
 const DESCRIPTIVE_FIELDS = ['name', 'email'];
 
 export async function onPlayerUpsert(player: Player, previousPlayer?: Player): Promise<void> {
-  console.log('🔥 [onPlayerUpsert] START', { 
-    id: player.id, 
-    name: player.name,
-    type: previousPlayer ? 'UPDATE' : 'CREATE'
-  });
   
   // New player creation
   if (!previousPlayer) {
     const effectKey = `player:${player.id}:created`;
     const hasEffectResult = await hasEffect(effectKey);
     
-    console.log('🔥 [onPlayerUpsert] New player check', { effectKey, hasEffect: hasEffectResult });
-    
     if (hasEffectResult) {
-      console.log('🔥 [onPlayerUpsert] ⏭️ SKIPPED - effect already exists');
       return;
     }
-    
-    console.log('🔥 [onPlayerUpsert] Creating log entry...');
     await appendEntityLog(EntityType.PLAYER, player.id, LogEventType.CREATED, { 
       name: player.name, 
       level: player.level
     });
     
     await markEffect(effectKey);
-    console.log('🔥 [onPlayerUpsert] ✅ Log entry created and effect marked');
     return;
   }
   
   // Level up - LEVEL_UP event
   const levelUp = previousPlayer.level < player.level;
-  console.log('🔥 [onPlayerUpsert] Level up check', { 
-    levelUp,
-    oldLevel: previousPlayer.level,
-    newLevel: player.level
-  });
-  
   if (levelUp) {
-    console.log('🔥 [onPlayerUpsert] Creating LEVEL_UP log entry...');
     await appendEntityLog(EntityType.PLAYER, player.id, LogEventType.LEVEL_UP, {
       name: player.name,
       oldLevel: previousPlayer.level,
       newLevel: player.level
     });
-    console.log('🔥 [onPlayerUpsert] ✅ LEVEL_UP log entry created');
   }
   
   // Points changes - POINTS_CHANGED event
@@ -66,58 +47,33 @@ export async function onPlayerUpsert(player: Player, previousPlayer?: Player): P
   const pointsChanged = JSON.stringify(previousPlayer.points) !== JSON.stringify(player.points);
   const pointsChangedOverall = totalPointsChanged || pointsChanged;
   
-  console.log('🔥 [onPlayerUpsert] Points change check', { 
-    pointsChangedOverall,
-    totalPointsChanged,
-    pointsChanged,
-    oldTotalPoints: previousPlayer.totalPoints,
-    newTotalPoints: player.totalPoints,
-    oldPoints: previousPlayer.points,
-    newPoints: player.points
-  });
-  
   if (pointsChangedOverall) {
-    console.log('🔥 [onPlayerUpsert] Creating POINTS_CHANGED log entry...');
     await appendEntityLog(EntityType.PLAYER, player.id, LogEventType.POINTS_CHANGED, {
       name: player.name,
       totalPoints: player.totalPoints,
       points: player.points
     });
-    console.log('🔥 [onPlayerUpsert] ✅ POINTS_CHANGED log entry created');
   }
   
   // General updates - UPDATED event
   const hasSignificantChanges = previousPlayer.isActive !== player.isActive;
-  console.log('🔥 [onPlayerUpsert] Significant change check', { 
-    hasSignificantChanges,
-    oldIsActive: previousPlayer.isActive,
-    newIsActive: player.isActive
-  });
-  
   if (hasSignificantChanges) {
-    console.log('🔥 [onPlayerUpsert] Creating UPDATED log entry...');
     await appendEntityLog(EntityType.PLAYER, player.id, LogEventType.UPDATED, {
       name: player.name,
       isActive: player.isActive
     });
-    console.log('🔥 [onPlayerUpsert] ✅ UPDATED log entry created');
   }
   
   // Descriptive changes - update in-place
-  console.log('🔥 [onPlayerUpsert] Checking descriptive field changes...');
   for (const field of DESCRIPTIVE_FIELDS) {
     const oldValue = (previousPlayer as any)[field];
     const newValue = (player as any)[field];
     const fieldChanged = oldValue !== newValue;
     
     if (fieldChanged) {
-      console.log(`🔥 [onPlayerUpsert] Field '${field}' changed:`, { oldValue, newValue });
       await updateEntityLogField(EntityType.PLAYER, player.id, field, oldValue, newValue);
-      console.log(`🔥 [onPlayerUpsert] ✅ Field '${field}' updated in log`);
     }
   }
-  
-  console.log('🔥 [onPlayerUpsert] ✅ COMPLETED');
 }
 
 /**
@@ -135,7 +91,6 @@ export async function removePlayerEffectsOnDelete(playerId: string): Promise<voi
     for (const link of playerLinks) {
       try {
         await removeLink(link.id);
-        console.log(`[removePlayerEffectsOnDelete] ✅ Removed link: ${link.linkType}`);
       } catch (error) {
         console.error(`[removePlayerEffectsOnDelete] ❌ Failed to remove link ${link.id}:`, error);
       }
@@ -151,7 +106,6 @@ export async function removePlayerEffectsOnDelete(playerId: string): Promise<voi
     // TODO: Implement server-side log removal or remove this call
     console.log(`[removePlayerEffectsOnDelete] ⚠️ Log entry removal skipped - needs server-side implementation`);
     
-    console.log(`[removePlayerEffectsOnDelete] ✅ Cleared effects, removed links, and removed log entries for player ${playerId}`);
   } catch (error) {
     console.error('Error removing player effects:', error);
   }
@@ -193,7 +147,6 @@ export async function logPlayerEffect(task: Task): Promise<void> {
       'task'
     );
     
-    console.log(`[logPlayerEffect] ✅ Player effect logged successfully for ${task.name}`);
   } catch (error) {
     console.error('Error logging player effect:', error);
   }
@@ -235,7 +188,6 @@ export async function logPlayerEffectFromRecord(record: FinancialRecord): Promis
       'financial'
     );
     
-    console.log(`[logPlayerEffectFromRecord] ✅ Player effect logged successfully for ${record.name}`);
   } catch (error) {
     console.error('Error logging player effect from record:', error);
   }
@@ -280,7 +232,6 @@ export async function logPlayerUpdateFromTask(task: Task, oldTask: Task): Promis
       task.id
     );
     
-    console.log(`[logPlayerUpdateFromTask] ✅ Player update logged successfully for ${task.name}`);
   } catch (error) {
     console.error('Error logging player update from task:', error);
   }
@@ -345,7 +296,6 @@ export async function updatePlayerPointsFromTask(task: Task, oldTask: Task): Pro
     console.log(`[updatePlayerPointsFromTask] Applying point delta:`, delta);
     await upsertPlayer(updatedPlayer);
     
-    console.log(`[updatePlayerPointsFromTask] ✅ Player points updated successfully`);
   } catch (error) {
     console.error('Error updating player points from task:', error);
   }

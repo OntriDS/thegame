@@ -173,15 +173,28 @@ const getAmountColor = (amount: number) => (amount >= 0 ? 'text-green-600' : 'te
                   };
                   
                   const financialInfo = (
-                    <>
-                      <span className={FINANCIAL_COLORS.negative}>{FINANCIAL_ABBREVIATIONS.COST}: -${cost}</span>
-                      {' • '}
-                      <span className={FINANCIAL_COLORS.positive}>{FINANCIAL_ABBREVIATIONS.REVENUE}: ${revenue}</span>
-                      {' • '}
-                      <span className={getFinancialColor(taskProfit)}>{FINANCIAL_ABBREVIATIONS.PROFIT}: ${taskProfit}</span>
-                      {' • '}
-                      <span className={getFinancialColor(Number(taskMargin))}>{FINANCIAL_ABBREVIATIONS.MARGIN}: {taskMargin}%</span>
-                    </>
+                    <div className="flex items-center gap-3 text-sm">
+                      {cost > 0 && (
+                        <span className={`font-medium ${FINANCIAL_COLORS.negative}`}>
+                          {FINANCIAL_ABBREVIATIONS.COST}: ${cost.toLocaleString()}
+                        </span>
+                      )}
+                      {revenue > 0 && (
+                        <span className={`font-medium ${FINANCIAL_COLORS.positive}`}>
+                          {FINANCIAL_ABBREVIATIONS.REVENUE}: ${revenue.toLocaleString()}
+                        </span>
+                      )}
+                      {taskProfit !== 0 && (
+                        <span className={`font-medium ${getFinancialColor(taskProfit)}`}>
+                          {FINANCIAL_ABBREVIATIONS.PROFIT}: ${taskProfit.toLocaleString()}
+                        </span>
+                      )}
+                      {taskMargin !== '0' && (
+                        <span className={`font-medium ${getFinancialColor(Number(taskMargin))}`}>
+                          {FINANCIAL_ABBREVIATIONS.MARGIN}: {taskMargin}%
+                        </span>
+                      )}
+                    </div>
                   );
                   
                   // Second row info
@@ -330,15 +343,28 @@ const getAmountColor = (amount: number) => (amount >= 0 ? 'text-green-600' : 'te
                   };
                   
                   const financialInfo = (
-                    <>
-                      <span className={FINANCIAL_COLORS.negative}>{FINANCIAL_ABBREVIATIONS.COST}: -${cost}</span>
-                      {' • '}
-                      <span className={FINANCIAL_COLORS.positive}>{FINANCIAL_ABBREVIATIONS.REVENUE}: ${revenue}</span>
-                      {' • '}
-                      <span className={getFinancialColor(taskProfit)}>{FINANCIAL_ABBREVIATIONS.PROFIT}: ${taskProfit}</span>
-                      {' • '}
-                      <span className={getFinancialColor(Number(taskMargin))}>{FINANCIAL_ABBREVIATIONS.MARGIN}: {taskMargin}%</span>
-                    </>
+                    <div className="flex items-center gap-3 text-sm">
+                      {cost > 0 && (
+                        <span className={`font-medium ${FINANCIAL_COLORS.negative}`}>
+                          {FINANCIAL_ABBREVIATIONS.COST}: ${cost.toLocaleString()}
+                        </span>
+                      )}
+                      {revenue > 0 && (
+                        <span className={`font-medium ${FINANCIAL_COLORS.positive}`}>
+                          {FINANCIAL_ABBREVIATIONS.REVENUE}: ${revenue.toLocaleString()}
+                        </span>
+                      )}
+                      {taskProfit !== 0 && (
+                        <span className={`font-medium ${getFinancialColor(taskProfit)}`}>
+                          {FINANCIAL_ABBREVIATIONS.PROFIT}: ${taskProfit.toLocaleString()}
+                        </span>
+                      )}
+                      {taskMargin !== '0' && (
+                        <span className={`font-medium ${getFinancialColor(Number(taskMargin))}`}>
+                          {FINANCIAL_ABBREVIATIONS.MARGIN}: {taskMargin}%
+                        </span>
+                      )}
+                    </div>
                   );
                   
                   // Second row info
@@ -490,15 +516,28 @@ const getAmountColor = (amount: number) => (amount >= 0 ? 'text-green-600' : 'te
                   };
                   
                   const financialInfo = (
-                    <>
-                      <span className={FINANCIAL_COLORS.negative}>{FINANCIAL_ABBREVIATIONS.COST}: -${cost}</span>
-                      {' • '}
-                      <span className={FINANCIAL_COLORS.positive}>{FINANCIAL_ABBREVIATIONS.REVENUE}: ${revenue}</span>
-                      {' • '}
-                      <span className={getFinancialColor(taskProfit)}>{FINANCIAL_ABBREVIATIONS.PROFIT}: ${taskProfit}</span>
-                      {' • '}
-                      <span className={getFinancialColor(Number(taskMargin))}>{FINANCIAL_ABBREVIATIONS.MARGIN}: {taskMargin}%</span>
-                    </>
+                    <div className="flex items-center gap-3 text-sm">
+                      {cost > 0 && (
+                        <span className={`font-medium ${FINANCIAL_COLORS.negative}`}>
+                          {FINANCIAL_ABBREVIATIONS.COST}: ${cost.toLocaleString()}
+                        </span>
+                      )}
+                      {revenue > 0 && (
+                        <span className={`font-medium ${FINANCIAL_COLORS.positive}`}>
+                          {FINANCIAL_ABBREVIATIONS.REVENUE}: ${revenue.toLocaleString()}
+                        </span>
+                      )}
+                      {taskProfit !== 0 && (
+                        <span className={`font-medium ${getFinancialColor(taskProfit)}`}>
+                          {FINANCIAL_ABBREVIATIONS.PROFIT}: ${taskProfit.toLocaleString()}
+                        </span>
+                      )}
+                      {taskMargin !== '0' && (
+                        <span className={`font-medium ${getFinancialColor(Number(taskMargin))}`}>
+                          {FINANCIAL_ABBREVIATIONS.MARGIN}: {taskMargin}%
+                        </span>
+                      )}
+                    </div>
                   );
                   
                   // Second row info

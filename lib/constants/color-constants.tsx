@@ -72,9 +72,9 @@ export const SITE_STATUS_COLORS = {
 
 /** Financial Colors - for cost, revenue, profit, margin display */
 export const FINANCIAL_COLORS = {
-  negative: 'text-red-800',
-  positive: 'text-green-800', 
-  neutral: 'text-gray-800',
+  negative: 'text-red-600 dark:text-red-400',
+  positive: 'text-green-600 dark:text-green-400', 
+  neutral: 'text-muted-foreground',
   activeWhite: 'text-white',
   activeBlack: 'text-black',
 } as const;
