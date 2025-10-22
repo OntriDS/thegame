@@ -22,13 +22,13 @@ export function makeLink(linkType: LinkType, source: { type: EntityType; id: str
 
 export async function processLinkEntity(entity: any, entityType: EntityType): Promise<void> {
   // Check for circular reference
-  if (isProcessing(entityType, entity.id)) {
+  if (await isProcessing(entityType, entity.id)) {
     console.warn(`[CircuitBreaker] Already processing ${entityType}:${entity.id} - skipping to prevent circular reference`);
     return;
   }
   
   try {
-    startProcessing(entityType, entity.id);
+    await startProcessing(entityType, entity.id);
     
     switch (entityType) {
       case EntityType.TASK:
@@ -57,7 +57,7 @@ export async function processLinkEntity(entity: any, entityType: EntityType): Pr
         return;
     }
   } finally {
-    endProcessing(entityType, entity.id);
+    await endProcessing(entityType, entity.id);
   }
 }
 
