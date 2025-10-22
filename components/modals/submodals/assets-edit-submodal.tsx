@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
 import { PRICE_STEP, DECIMAL_STEP } from '@/lib/constants/app-constants';
 import { BITCOIN_SATOSHIS_PER_BTC } from '@/lib/constants/financial-constants';
-import { formatDecimal } from '@/lib/utils/financial-calculations';
+import { formatDecimal } from '@/lib/utils/financial-utils';
 
 interface AssetsEditModalProps {
   isOpen: boolean;

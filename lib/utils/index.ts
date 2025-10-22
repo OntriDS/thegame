@@ -14,7 +14,7 @@ export * from './points-utils';
 export * from './status-utils';
 
 // Financial utilities
-export * from './financial-calculations';
+export * from './financial-utils';
 
 // Location utilities
 export * from './settlement-utils';

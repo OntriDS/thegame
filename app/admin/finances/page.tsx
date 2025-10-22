@@ -23,16 +23,9 @@ import { MONTHS, getYearRange, getMonthName, getCurrentMonth } from '@/lib/const
 import { BUSINESS_STRUCTURE, ItemType } from '@/types/enums';
 import { getCompanyAreas, getPersonalAreas, isCompanyStation, getAreaForStation } from '@/lib/utils/business-structure-utils';
 import { CompanyRecordsList, PersonalRecordsList } from '@/components/finances/financial-records-components';
-import { aggregateRecordsByStation, calculateTotals } from '@/lib/utils/financial-aggregation-utils';
-import { PRICE_STEP, DECIMAL_STEP, J$_TO_USD_RATE, PRIMARY_CURRENCY, USD_CURRENCY } from '@/lib/constants/app-constants';
-import { VALIDATION_CONSTANTS } from '@/lib/constants/financial-constants';
-// formatMonthYear will be implemented inline
-import { MonthYearSelector } from '@/components/ui/month-year-selector'
-import AssetsEditModal from '@/components/modals/submodals/assets-edit-submodal'
-import ConversionRatesModal from '@/components/modals/submodals/conversion-rates-submodal'
-import FinancialsModal from '@/components/modals/financials-modal'
-import { useKeyboardShortcuts } from '@/lib/hooks/use-keyboard-shortcuts';
 import { 
+  aggregateRecordsByStation, 
+  calculateTotals,
   formatDecimal, 
   getCashTotal, 
   getBankTotal, 
@@ -50,7 +43,15 @@ import {
   type MonetaryAssets,
   type InventoryAssets,
   type OtherAssets
-} from '@/lib/utils/financial-calculations'
+} from '@/lib/utils/financial-utils';
+import { PRICE_STEP, DECIMAL_STEP, J$_TO_USD_RATE, PRIMARY_CURRENCY, USD_CURRENCY } from '@/lib/constants/app-constants';
+import { VALIDATION_CONSTANTS } from '@/lib/constants/financial-constants';
+// formatMonthYear will be implemented inline
+import { MonthYearSelector } from '@/components/ui/month-year-selector'
+import AssetsEditModal from '@/components/modals/submodals/assets-edit-submodal'
+import ConversionRatesModal from '@/components/modals/submodals/conversion-rates-submodal'
+import FinancialsModal from '@/components/modals/financials-modal'
+import { useKeyboardShortcuts } from '@/lib/hooks/use-keyboard-shortcuts';
 import {
   DEFAULT_CURRENCY_EXCHANGE_RATES,
   DEFAULT_POINTS_CONVERSION_RATES,
