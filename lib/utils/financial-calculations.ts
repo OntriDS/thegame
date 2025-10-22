@@ -4,7 +4,7 @@ import { BITCOIN_SATOSHIS_PER_BTC } from '@/lib/constants/financial-constants';
 export interface ExchangeRates {
   colonesToUsd: number;
   bitcoinToUsd: number;
-  jungleCoinsToUsd: number;
+  j$ToUSD: number;
 }
 
 export interface MonetaryAssets {
@@ -92,7 +92,7 @@ export const getMonetaryTotal = (assets: MonetaryAssets, exchangeRates: Exchange
 
 // Calculate jungle coins total in USD
 export const getJungleCoinsTotal = (jungleCoins: number, exchangeRates: ExchangeRates): number => {
-  return jungleCoins * exchangeRates.jungleCoinsToUsd;
+  return jungleCoins * exchangeRates.j$ToUSD;
 };
 
 // Calculate inventory total value

@@ -5,7 +5,7 @@
 - **Phase 1**: ✅ **COMPLETED** - Server-client boundary violations fixed
 - **Phase 2**: ✅ **COMPLETED** - Workflow chains working correctly  
 - **Phase 3**: ✅ **COMPLETED** - Data quality issues identified and fixed
-- **Phase 4**: ⏸️ **PENDING** - UI display issues (station enums, financial log display)
+- **Phase 4**: 🔴 **IN PROGRESS** - Logging display bugs and UI refresh issues
 
 ## 🎯 **OPTIMAL FIX ORDER** (REORGANIZED)
 
@@ -25,10 +25,27 @@
 - **3.2** ✅ NaN Values in Assets (fixed division-by-zero in financials-modal.tsx and exchange rates in finances page)
 - **3.3** ✅ Wrong Log Status Messages (fixed STATUS_CHANGED case in tasks-lifecycle-tab.tsx)
 
-### **PHASE 4: UI DISPLAY ISSUES** (AFTER WORKFLOWS WORK)
-- **4.1** Station Enum Updates
-- **4.2** Financial Log Display
-- **4.3** Standalone Financial Record
+### **PHASE 4: LOGGING DISPLAY BUGS AND UI REFRESH ISSUES** (IN PROGRESS)
+
+#### **PATTERN A: DATA STRUCTURE MISMATCH** (Quick Wins)
+- **4.1** Tasks Log Display Format Bug (showing "— Strategy —" instead of proper data)
+- **4.2** Items Log Display Format Bug (same data structure mismatch as tasks)
+- **4.3** Financial Log Not Displaying Task Financial Records (data exists but not showing)
+
+#### **PATTERN B: FINANCIAL SYSTEM FAILURES** (Critical)
+- **4.6** Massive NaN Attack in Finances Section (all assets showing T$NaN)
+- **4.7** Monthly Company/Personal Finances Not Communicating with System
+- **4.8** Financial Records Showing 0 Instead of Actual Cost/Revenue Values
+
+#### **PATTERN C: UPDATE PROPAGATION ISSUES** (Medium)
+- **4.5** Task Updates Not Dispatching Changes (requires refresh vs creation)
+
+#### **PATTERN D: MISSING SOURCE ATTRIBUTION** (Critical)
+- **4.4** Player Points Not Displaying in Player Log/Character/Player Modal
+
+#### **PATTERN E: UI POLISH** (Low Priority)
+- **4.9** Poor Financial Log Display (bad colors, unprofessional appearance)
+- **4.10** Financial Log Not Updating After Changes (idempotency but bad dispatching)
 
 ---
 
@@ -68,8 +85,130 @@
 - **Fix**: Added `else if (status === 'status_changed' || status === 'STATUS_CHANGED')` case
 - **Result**: Now displays "Done" instead of "status changed"
 
+### **Phase 4 Investigation Results**: 🔴 **CRITICAL LOGGING BUGS IDENTIFIED**
+
+#### **4.1 Tasks Log Display Format Bug** - 🔴 **CRITICAL**
+- **Problem**: Log entries showing "— Strategy —" instead of proper task data
+- **Root Cause**: Data structure mismatch between storage and UI reading
+- **Storage**: `appendEntityLog` spreads details directly: `{ event, entityId, ...details, timestamp }`
+- **UI Reading**: Looking for `entry.data.name` but should look for `entry.name` directly
+- **Files**: `components/data-center/tasks-lifecycle-tab.tsx` lines 150-152
+- **Impact**: All task log entries display incorrectly
+
+#### **4.2 Items Log Display Format Bug** - 🔴 **CRITICAL**
+- **Problem**: Items log showing "—" instead of proper item data (same as tasks)
+- **Root Cause**: Same data structure mismatch as tasks
+- **Files**: `components/data-center/items-lifecycle-tab.tsx` lines 169-198
+- **Impact**: All item log entries display incorrectly
+
+#### **4.3 Financial Log Not Displaying Task Financial Records** - 🔴 **CRITICAL**
+- **Problem**: Task financial records exist but not showing in financials tab
+- **Root Cause**: Data structure mismatch in financial log filtering/display
+- **Files**: `components/data-center/financials-tab.tsx` lines 305-310
+- **Impact**: Users can't see financial records created from task completion
+
+#### **4.4 Player Points Not Displaying** - 🔴 **CRITICAL**
+- **Problem**: Points awarded but not showing in player log, character section, or player modal
+- **Root Cause**: Missing source attribution logging in `awardPointsToPlayer()`
+- **Current Flow**: Points updated in player entity but no log entry created with source
+- **Files**: `workflows/points-rewards-utils.ts` missing `appendPlayerPointsLog()` call
+- **Impact**: No audit trail for points awarded from tasks/financials/sales
+
+#### **4.5 Task Updates Not Dispatching Changes** - 🟡 **MEDIUM**
+- **Problem**: Task updates require page refresh vs creation which updates immediately
+- **Root Cause**: Different update propagation patterns between create vs update
+- **Impact**: Poor UX, users think updates didn't work
+
+#### **4.6 Massive NaN Attack in Finances Section** - 🔴 **CRITICAL**
+- **Problem**: All assets showing "T$NaN" instead of proper values
+- **Root Cause**: Division by zero or undefined exchange rates in financial calculations
+- **Files**: `lib/utils/financial-calculations.ts` lines 50-96, `app/admin/finances/page.tsx` lines 885-897
+- **Impact**: Complete financial system unusable, all asset values corrupted
+
+#### **4.7 Monthly Company/Personal Finances Not Communicating** - 🔴 **CRITICAL**
+- **Problem**: Monthly finances tab not communicating with the system
+- **Root Cause**: Data flow issues between financial records and monthly summaries
+- **Files**: `app/admin/finances/page.tsx` monthly summary calculations
+- **Impact**: Users can't track monthly financial performance
+
+#### **4.8 Financial Records Showing 0 Instead of Actual Values** - 🔴 **CRITICAL**
+- **Problem**: Strategy has cost in test but shows 0 in financial records
+- **Root Cause**: Data structure mismatch or calculation errors in financial record display
+- **Files**: `components/data-center/financials-tab.tsx` lines 305-310
+- **Impact**: Financial audit trail completely unreliable
+
+#### **4.9 Poor Financial Log Display** - 🟡 **MEDIUM**
+- **Problem**: Bad color usage, unprofessional appearance, hard to read numbers
+- **Root Cause**: Poor UI design choices for financial data display
+- **Files**: `components/data-center/financials-tab.tsx` color schemes
+- **Impact**: Poor user experience, doesn't match professional design standards
+
+#### **4.10 Financial Log Not Updating After Changes** - 🟡 **MEDIUM**
+- **Problem**: Financial log has idempotency but bad dispatching - changes don't reflect
+- **Root Cause**: Update propagation issues in financial log refresh mechanism
+- **Files**: Financial log update/dispatch logic
+- **Impact**: Users see stale data, think changes didn't work
+
+### **Phase 4 Root Cause Analysis**:
+
+#### **PATTERN A: Data Structure Mismatch** (Quick Wins - 2-3 hours)
+All logging display bugs stem from the same architectural inconsistency:
+
+**Storage Pattern** (`workflows/entities-logging.ts`):
+```typescript
+const entry = { 
+  event,           // "CREATED"
+  entityId,        // entity ID
+  ...details,      // spreads: { name, status, station, etc. }
+  timestamp 
+};
+```
+
+**UI Reading Pattern** (all lifecycle tabs):
+```typescript
+const data = entry.data || {};
+const name: string = data.name || entry.name || '—';  // ❌ Wrong order!
+```
+
+**The Problem**: UI looks for `entry.data.name` but data is spread directly on entry as `entry.name`.
+**Fix**: Update UI to check `entry.name` first, then fall back to `entry.data.name`.
+
+#### **PATTERN B: Financial System Failures** (Critical)
+Massive NaN attack caused by division by zero or undefined exchange rates:
+
+**Problem Areas**:
+- `lib/utils/financial-calculations.ts` lines 50-96: Division by `exchangeRates.colonesToUsd` when undefined
+- `app/admin/finances/page.tsx` lines 885-897: Exchange rate fallbacks not working properly
+- `DEFAULT_CURRENCY_EXCHANGE_RATES.bitcoinToUsd: 0` - Will cause division by zero
+
+**The Problem**: Exchange rates not properly initialized or fallback values not working.
+**Fix**: Add exchange rate validation and proper fallback values.
+
+#### **PATTERN C: Update Propagation Issues** (Medium)
+Different propagation patterns between create vs update operations:
+
+**Create Pattern** (works): Entity created → Workflow triggered → Logs created → UI updates immediately
+**Update Pattern** (broken): Entity updated → Workflow triggered → Logs updated → UI requires refresh
+**Fix**: Standardize update propagation patterns across all entities.
+
+#### **PATTERN D: Missing Source Attribution** (Critical - 2-3 hours)
+Points are awarded successfully but lack proper audit trail:
+
+**Current Flow**:
+1. `awardPointsToPlayer()` updates player entity
+2. `upsertPlayer()` triggers `onPlayerUpsert()`
+3. `onPlayerUpsert()` creates generic `POINTS_CHANGED` log
+4. **Missing**: Direct call to `appendPlayerPointsLog()` with source context
+
+**Why Financial/Sale Works**: They have dedicated logging functions called separately from workflows.
+**Fix**: Add `appendPlayerPointsLog()` call in `awardPointsToPlayer()`.
+
+#### **PATTERN E: UI Polish** (Low Priority)
+Poor financial UI design and update dispatching issues:
+**Fix**: Professional color schemes, typography, and immediate update reflection.
+
 ### **Answers to User Questions**:
-1. **Q1: Are Phase 3 issues still present?** → **To be confirmed by user after testing**
+1. **Q1: Are Phase 3 issues still present?** → **✅ CONFIRMED: Phase 3 issues fixed, but Phase 4 logging bugs discovered**
 2. **Q2: Production data access?** → **User will check Vercel logs after testing**
 3. **Q3: Effects registry storage?** → **✅ CONFIRMED: Stored in Vercel KV (persistent)**
 
@@ -82,45 +221,55 @@
 **Impact**: Financial records fail to save, points not awarded
 **Status**: ✅ **FIXED** - All ClientAPI calls replaced with datastore calls
 
-### 2. **Item Dispatch 500 Error** (FIXED)
+### 2. **Item Dispatch 500 Error** (✅ FIXED)
 **Error**: Items save but return 500 errors due to server-client boundary violations
 **Impact**: Items appear after refresh, poor UX
 **Status**: ✅ FIXED - API error handling added, link system working correctly
 
-### 3. **NaN Issues in Assets** (DATA CORRUPTION)
+### 3. **NaN Issues in Assets** (✅ FIXED)
 **Error**: NaN values appearing in financial calculations
 **Impact**: Incorrect financial data display
-**Status**: 🔴 CRITICAL - Data integrity issue
+**Status**: ✅ FIXED - Division-by-zero checks added
 
-### 4. **Station Enum Not Updated** (UI BUG)
+### 4. **Tasks Log Display Format Bug** (🔴 CRITICAL)
+**Error**: Log entries showing "— Strategy —" instead of proper task data
+**Impact**: All task log entries display incorrectly
+**Status**: 🔴 CRITICAL - Logging system broken
+
+### 5. **Items Log Display Format Bug** (🔴 CRITICAL)
+**Error**: Items log showing "—" instead of proper item data
+**Impact**: All item log entries display incorrectly
+**Status**: 🔴 CRITICAL - Logging system broken
+
+### 6. **Financial Log Not Displaying Task Records** (🔴 CRITICAL)
+**Error**: Task financial records exist but not showing in financials tab
+**Impact**: Users can't see financial records created from task completion
+**Status**: 🔴 CRITICAL - Financial audit trail broken
+
+### 7. **Player Points Not Displaying** (🔴 CRITICAL)
+**Error**: Points awarded but not showing in player log, character section, or player modal
+**Impact**: No audit trail for points awarded from tasks/financials/sales
+**Status**: 🔴 CRITICAL - Points system audit trail broken
+
+### 8. **Task Updates Not Dispatching Changes** (🟡 MEDIUM)
+**Error**: Task updates require page refresh vs creation which updates immediately
+**Impact**: Poor UX, users think updates didn't work
+**Status**: 🟡 MEDIUM - UI refresh issue
+
+### 9. **Duplicate Log Entries** (✅ INVESTIGATED)
+**Error**: Item log shows 2 entries for single operations
+**Impact**: Confusing audit trail, data duplication
+**Status**: ✅ INVESTIGATED - Effects registry in KV, processing stack in-memory (not critical for single-instance)
+
+### 10. **Station Enum Not Updated** (🟡 MEDIUM)
 **Error**: Personal tab not getting stations from enums
 **Impact**: UI shows outdated/incorrect station options
 **Status**: 🟡 MEDIUM - UI consistency issue
 
-### 5. **Duplicate Log Entries** (DATA QUALITY)
-**Error**: Item log shows 2 entries for single operations
-**Impact**: Confusing audit trail, data duplication
-**Status**: 🟡 MEDIUM - Data quality issue (NOT related to duplicate links)
-
-### 6. **Financial Log Display Issues** (UI BUG)
-**Error**: Financial log not displaying information correctly
-**Impact**: Poor visibility into financial operations
-**Status**: 🟡 MEDIUM - UI display issue
-
-### 7. **Task Completion 500 Error** (CRITICAL)
-**Error**: `POST /api/tasks 500 (Internal Server Error)` when marking task as done
-**Impact**: Task completion fails, workflow chain broken
-**Status**: 🔴 CRITICAL - Blocking task completion workflow
-
-### 8. **Sales Creation 500 Error** (CRITICAL)
-**Error**: `POST /api/sales 500 (Internal Server Error)` when creating sale
-**Impact**: Sales fail to save, workflow chain broken
-**Status**: 🔴 CRITICAL - Blocking sales operations
-
-### 9. **Standalone Financial Record Disconnected** (FEATURE BROKEN)
+### 11. **Standalone Financial Record Disconnected** (🟡 MEDIUM)
 **Error**: Financial records not showing in standalone view
 **Impact**: Users can't view individual financial records
-**Status**: 🔴 HIGH - Feature completely broken
+**Status**: 🟡 MEDIUM - Feature needs investigation
 
 ---
 
@@ -194,25 +343,42 @@
 **Investigation**: Check if this is caused by workflow failures or logging logic
 **Likely Fix**: May auto-resolve after workflow fixes
 
-### 🎨 PHASE 4: FIX UI DISPLAY ISSUES (AFTER WORKFLOWS WORK)
+### 🔴 PHASE 4: FIX LOGGING DISPLAY BUGS AND UI REFRESH ISSUES (IN PROGRESS)
 
-#### 4.1 Station Enum Not Updated (UI BUG)
-**Problem**: Personal tab not getting stations from enums
-**Files**: `types/enums.ts`, `components/finances/financial-records-components.tsx`
-**Fix**: Ensure components import latest enum values
-**Impact**: UI consistency
+#### 4.1 Tasks Log Display Format Bug (CRITICAL)
+**Problem**: Log entries showing "— Strategy —" instead of proper task data
+**Root Cause**: Data structure mismatch - UI looks for `entry.data.name` but data is spread as `entry.name`
+**Files**: `components/data-center/tasks-lifecycle-tab.tsx` lines 150-152
+**Fix**: Update UI to check `entry.name` first, then fall back to `entry.data.name`
+**Impact**: All task log entries display correctly
 
-#### 4.2 Financial Log Display Issues (UI BUG)
-**Problem**: Financial log not displaying information correctly
-**Files**: `components/data-center/financials-tab.tsx`
-**Fix**: Fix log data structure and display formatting
-**Impact**: Better visibility into financial operations
+#### 4.2 Items Log Display Format Bug (CRITICAL)
+**Problem**: Items log showing "—" instead of proper item data (same as tasks)
+**Root Cause**: Same data structure mismatch as tasks
+**Files**: `components/data-center/items-lifecycle-tab.tsx` lines 169-198
+**Fix**: Update UI to check `entry.itemName` first, then fall back to `entry.data.itemName`
+**Impact**: All item log entries display correctly
 
-#### 4.3 Standalone Financial Record Disconnected (FEATURE BROKEN)
-**Problem**: Financial records not showing in standalone view
-**Files**: `components/modals/financials-modal.tsx`
-**Fix**: Fix data binding and API endpoints
-**Impact**: Users can view individual financial records
+#### 4.3 Financial Log Not Displaying Task Records (CRITICAL)
+**Problem**: Task financial records exist but not showing in financials tab
+**Root Cause**: Data structure mismatch in financial log filtering/display
+**Files**: `components/data-center/financials-tab.tsx` lines 305-310
+**Fix**: Update data extraction logic to handle flat vs nested structures
+**Impact**: Users can see financial records created from task completion
+
+#### 4.4 Player Points Not Displaying (CRITICAL)
+**Problem**: Points awarded but not showing in player log, character section, or player modal
+**Root Cause**: Missing source attribution logging in `awardPointsToPlayer()`
+**Files**: `workflows/points-rewards-utils.ts` missing `appendPlayerPointsLog()` call
+**Fix**: Add `appendPlayerPointsLog()` call after `upsertPlayer()` in `awardPointsToPlayer()`
+**Impact**: Full audit trail for points awarded from tasks/financials/sales
+
+#### 4.5 Task Updates Not Dispatching Changes (MEDIUM)
+**Problem**: Task updates require page refresh vs creation which updates immediately
+**Root Cause**: Different update propagation patterns between create vs update
+**Files**: Investigate update propagation in task workflow vs creation workflow
+**Fix**: Ensure consistent update propagation patterns
+**Impact**: Better UX, immediate updates after task changes
 
 ---
 
@@ -698,8 +864,30 @@ The task completion is **partially working** but failing at multiple points:
 2. **Fix Actual Data Issues**: Address any real data quality problems found
 3. **Comprehensive Testing**: Test entire workflow chain end-to-end
 
-### **🎨 LONG-TERM (Phase 4 - UI AFTER WORKFLOWS WORK)**
-1. **Fix UI Display Issues**: Station enums, financial log display, standalone records
+### **🔴 IMMEDIATE (Phase 4 - PATTERN-BASED FIXES - CRITICAL)**
+
+#### **PATTERN A: DATA STRUCTURE MISMATCH** (Start Here - Quick Wins)
+1. **Fix Tasks Log Display**: Update data extraction logic in tasks-lifecycle-tab.tsx
+2. **Fix Items Log Display**: Update data extraction logic in items-lifecycle-tab.tsx  
+3. **Fix Financial Log Display**: Update data extraction logic in financials-tab.tsx
+
+#### **PATTERN B: FINANCIAL SYSTEM FAILURES** (Critical - After Pattern A)
+4. **Fix NaN Attack in Finances**: Add exchange rate validation and fallback values
+5. **Fix Monthly Finances Communication**: Connect financial records to monthly summaries
+6. **Fix Financial Records Display**: Ensure actual values show instead of 0
+
+#### **PATTERN D: MISSING SOURCE ATTRIBUTION** (Critical - After Pattern A)
+7. **Fix Player Points Logging**: Add appendPlayerPointsLog() call in awardPointsToPlayer()
+
+#### **PATTERN C: UPDATE PROPAGATION ISSUES** (Medium - After Patterns A & B)
+8. **Fix Task Update Propagation**: Ensure consistent update patterns
+
+#### **PATTERN E: UI POLISH** (Low Priority - After Core Fixes)
+9. **Improve Financial UI Design**: Professional colors and typography
+10. **Fix Financial Update Dispatching**: Ensure changes reflect immediately
+
+### **🎨 LONG-TERM (Phase 5 - UI POLISH AFTER LOGGING FIXES)**
+1. **Fix UI Display Issues**: Station enums, standalone records
 2. **Architecture Cleanup**: Ensure consistent patterns across all entities
 3. **Performance Optimization**: Optimize workflow execution
 4. **Documentation**: Document the standardized patterns
@@ -716,26 +904,37 @@ The task completion is **partially working** but failing at multiple points:
 - **Link Idempotency**: Safety net prevents duplicate errors
 
 ### ❌ **What's Broken**
-- **ALL Entity Workflows**: No working entity workflow pattern exists
-- **Task Completion**: 500 error, missing financial records, broken points
-- **Sales Creation**: 500 error, missing financial records, broken points
-- **Financial Records**: 500 error, server-client boundary violations
-- **Points System**: Failing due to server-client boundary violations
-- **update-propagation-utils.ts**: Wrong context (should use ClientAPI, not datastore)
-- **Logging System**: Duplicate entries, wrong status messages
-- **Missing Links**: Critical links (TASK_FINREC) not being created
+- **Logging Display System**: All lifecycle tabs showing "—" instead of proper data
+- **Tasks Log**: Showing "— Strategy —" instead of task name, station, category
+- **Items Log**: Showing "—" instead of item name, type, quantity
+- **Financial Log**: Not displaying task financial records (data exists but not showing)
+- **Player Points Logging**: Points awarded but no audit trail in player log
+- **Task Update Propagation**: Updates require refresh vs creation which updates immediately
+- **Data Structure Mismatch**: UI expects nested `entry.data.name` but gets flat `entry.name`
+- **Financial System**: Massive NaN attack - all assets showing "T$NaN" instead of values
+- **Monthly Finances**: Not communicating with system, no data flow
+- **Financial Records**: Showing 0 instead of actual cost/revenue values
+- **Financial UI**: Poor colors, unprofessional appearance, hard to read
+- **Financial Updates**: Idempotency works but bad dispatching - changes don't reflect
 
 ### 🎯 **Root Cause**
-- **ALL Entity Workflows Broken**: No working pattern exists
-- **Server-Client Boundary Violations**: ALL workflows call client APIs from server
-- **Points System Failure**: `awardPointsToPlayer()` fails due to server-client boundary violations
-- **Missing Financial Record Creation**: Task completion doesn't trigger financial records
-- **Broken Link Creation**: Critical links not being created
+- **Data Structure Mismatch**: Logging system spreads details directly on entry but UI expects nested structure
+- **Missing Source Attribution**: Points awarded but no dedicated logging with source context
+- **Inconsistent Update Patterns**: Different propagation patterns between create vs update operations
+- **UI Reading Logic**: All lifecycle tabs use same flawed data extraction pattern
+- **Financial Calculation Failures**: Division by zero/undefined exchange rates causing NaN values
+- **Financial Data Flow Disconnection**: Monthly summaries not connected to financial record updates
+- **Exchange Rate Initialization**: Exchange rates not properly initialized or fallback values failing
 
 ### 🔧 **Solution Pattern**
-- **Standardize on Task Architecture**: All entities should follow task workflow pattern
-- **Single Points System**: Choose one approach (direct OR delta), not both
-- **Consistent Data Access**: Server-side workflows use datastore, client-side use ClientAPI
+- **Fix Data Extraction Logic**: Update all lifecycle tabs to check flat structure first, then nested
+- **Add Source Attribution Logging**: Call `appendPlayerPointsLog()` in `awardPointsToPlayer()`
+- **Standardize Update Propagation**: Ensure consistent patterns between create and update operations
+- **Backward Compatibility**: Support both flat and nested data structures during transition
+- **Fix Financial Calculations**: Add proper exchange rate validation and fallback values
+- **Connect Financial Data Flow**: Ensure monthly summaries reflect financial record updates
+- **Improve Financial UI**: Professional color scheme and typography for financial data
+- **Fix Financial Update Dispatching**: Ensure changes reflect immediately in UI
 
 ---
 

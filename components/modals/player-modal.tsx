@@ -582,7 +582,11 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
           setShowExchangeModal(false);
           
           // Trigger financials update event
-          window.dispatchEvent(new Event('financialsUpdated'));
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new Event('playersUpdated'));
+            window.dispatchEvent(new Event('financialsUpdated'));
+            window.dispatchEvent(new Event('linksUpdated'));
+          }
         }}
       />
     </>

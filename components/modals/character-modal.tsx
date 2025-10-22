@@ -197,6 +197,12 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
     };
 
     onSave(newCharacter);
+    
+    // Dispatch events AFTER calling parent (operation completed)
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('charactersUpdated'));
+      window.dispatchEvent(new Event('linksUpdated'));
+    }
   };
 
   return (

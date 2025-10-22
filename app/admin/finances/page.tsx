@@ -77,6 +77,7 @@ export default function FinancesPage() {
   const [aggregatedFinancialData, setAggregatedFinancialData] = useState<any>(null);
   const [aggregatedCategoryData, setAggregatedCategoryData] = useState<any>(null);
   const [recordsRefreshKey, setRecordsRefreshKey] = useState(0);
+  const [refreshKey, setRefreshKey] = useState(0);
   const [showConversionRatesModal, setShowConversionRatesModal] = useState(false);
   const [showFinancialsModal, setShowFinancialsModal] = useState(false);
   
@@ -116,77 +117,6 @@ export default function FinancesPage() {
     
     loadConversionRates();
   }, []);
-
-  // Load summaries for current month
-  useEffect(() => {
-    const loadSummaries = async () => {
-      // For now, calculate summaries client-side from financial records
-      const records = await ClientAPI.getFinancialRecords();
-      const companyRecords = records.filter(r => r.year === currentYear && r.month === currentMonth && r.type === 'company');
-      const personalRecords = records.filter(r => r.year === currentYear && r.month === currentMonth && r.type === 'personal');
-      
-      // Calculate company summary
-      const totalRevenue = companyRecords.reduce((sum, r) => sum + r.revenue, 0);
-      const totalCost = companyRecords.reduce((sum, r) => sum + r.cost, 0);
-      const totalJungleCoins = companyRecords.reduce((sum, r) => sum + r.jungleCoins, 0);
-      
-      const company: CompanyMonthlySummary = {
-        year: currentYear,
-        month: currentMonth,
-        totalRevenue,
-        totalCost,
-        netCashflow: totalRevenue - totalCost,
-        totalJungleCoins,
-        categoryBreakdown: {
-          ADMIN: { revenue: 0, cost: 0, net: 0, jungleCoins: 0 },
-          RESEARCH: { revenue: 0, cost: 0, net: 0, jungleCoins: 0 },
-          DESIGN: { revenue: 0, cost: 0, net: 0, jungleCoins: 0 },
-          PRODUCTION: { revenue: 0, cost: 0, net: 0, jungleCoins: 0 },
-          SALES: { revenue: 0, cost: 0, net: 0, jungleCoins: 0 },
-          PERSONAL: { revenue: 0, cost: 0, net: 0, jungleCoins: 0 }
-        } // Will be implemented in Monthly Archive phase
-      };
-      
-      // Calculate personal summary
-      const personalTotalRevenue = personalRecords.reduce((sum, r) => sum + r.revenue, 0);
-      const personalTotalCost = personalRecords.reduce((sum, r) => sum + r.cost, 0);
-      const personalTotalJungleCoins = personalRecords.reduce((sum, r) => sum + r.jungleCoins, 0);
-      
-      const personal: PersonalMonthlySummary = {
-        year: currentYear,
-        month: currentMonth,
-        totalRevenue: personalTotalRevenue,
-        totalCost: personalTotalCost,
-        netCashflow: personalTotalRevenue - personalTotalCost,
-        totalJungleCoins: personalTotalJungleCoins,
-        categoryBreakdown: {
-          PERSONAL: { revenue: 0, cost: 0, net: 0, jungleCoins: 0 }
-        } as any // Will be implemented in Monthly Archive phase
-      };
-      
-      // For now, use empty aggregated data (will be implemented in Monthly Archive phase)
-      const aggregated = {
-        totalRevenue: totalRevenue,
-        totalCost: totalCost,
-        net: totalRevenue - totalCost,
-        totalJungleCoins: totalJungleCoins
-      };
-      const categoryData = {
-        categoryBreakdown: Object.fromEntries(
-          Object.values(BUSINESS_STRUCTURE).flat().map(category => [
-            category,
-            { revenue: 0, cost: 0, net: 0, jungleCoins: 0 }
-          ])
-        )
-      };
-      setCompanySummary(company);
-      setPersonalSummary(personal);
-      setAggregatedFinancialData(aggregated);
-      setAggregatedCategoryData(categoryData);
-    };
-    
-    loadSummaries();
-  }, [currentYear, currentMonth]);
 
   const loadSummaries = useCallback(async () => {
     // For now, calculate summaries client-side from financial records
@@ -254,19 +184,24 @@ export default function FinancesPage() {
     setAggregatedCategoryData(categoryData);
     // Force records lists to refresh
     setRecordsRefreshKey(prev => prev + 1);
-  }, [currentYear, currentMonth]);
+  }, [currentYear, currentMonth, refreshKey]);
+
+  // Load summaries for current month
+  useEffect(() => {
+    loadSummaries();
+  }, [loadSummaries]);
 
   // Listen for financials updates to refresh summaries
   useEffect(() => {
     const handleFinancialsUpdate = () => {
-      loadSummaries();
+      setRefreshKey(prev => prev + 1);
     };
 
     window.addEventListener('financialsUpdated', handleFinancialsUpdate);
     return () => {
       window.removeEventListener('financialsUpdated', handleFinancialsUpdate);
     };
-  }, [currentYear, currentMonth, loadSummaries]);
+  }, []);
 
   const fetchBitcoinPrice = async () => {
     try {
@@ -578,7 +513,7 @@ export default function FinancesPage() {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>J$ Paid Out</span>
-                  <span className="font-medium">{aggregatedFinancialData ? `-${aggregatedFinancialData.totalJungleCoins} J$ (${formatCurrency(aggregatedFinancialData.totalJungleCoins * exchangeRates.jungleCoinsToUsd)})` : '0 J$'}</span>
+                  <span className="font-medium">{aggregatedFinancialData ? `-${aggregatedFinancialData.totalJungleCoins} J$ (${formatCurrency(aggregatedFinancialData.totalJungleCoins * exchangeRates.j$ToUSD)})` : '0 J$'}</span>
                 </div>
               </CardContent>
             </Card>
@@ -613,7 +548,7 @@ export default function FinancesPage() {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>J$ Received</span>
-                  <span className="font-medium">{personalSummary ? `+${personalSummary.totalJungleCoins} J$ (${formatCurrency(personalSummary.totalJungleCoins * exchangeRates.jungleCoinsToUsd)})` : '0 J$'}</span>
+                  <span className="font-medium">{personalSummary ? `+${personalSummary.totalJungleCoins} J$ (${formatCurrency(personalSummary.totalJungleCoins * exchangeRates.j$ToUSD)})` : '0 J$'}</span>
                 </div>
               </CardContent>
             </Card>
@@ -689,7 +624,7 @@ export default function FinancesPage() {
                         
                         <div>In-Game Currency (J$)</div>
                         <div className="text-right">{companyAssets.companyJ$} J$</div>
-                        <div className="text-right">${((companyAssets.companyJ$ || 0) * exchangeRates.jungleCoinsToUsd).toLocaleString()}</div>
+                        <div className="text-right">${((companyAssets.companyJ$ || 0) * exchangeRates.j$ToUSD).toLocaleString()}</div>
                         
                         <div className="text-muted-foreground opacity-60">Bitcoin Zaps (Z₿)</div>
                         <div className="text-right text-muted-foreground opacity-60">0 sats</div>
@@ -701,7 +636,7 @@ export default function FinancesPage() {
                         
                         <div className="font-semibold border-t pt-1">Total</div>
                         <div className="border-t pt-1"></div>
-                        <div className="font-semibold text-right border-t pt-1">${((companyAssets.companyJ$ || 0) * exchangeRates.jungleCoinsToUsd).toLocaleString()}</div>
+                        <div className="font-semibold text-right border-t pt-1">${((companyAssets.companyJ$ || 0) * exchangeRates.j$ToUSD).toLocaleString()}</div>
                       </div>
                     </div>
                   </div>
@@ -883,7 +818,7 @@ export default function FinancesPage() {
                         
                         <div>In-Game Currency (J$)</div>
                         <div className="text-right">{personalAssets.personalJ$} J$</div>
-                        <div className="text-right">${((personalAssets.personalJ$ || VALIDATION_CONSTANTS.DEFAULT_NUMERIC_VALUE) * (exchangeRates.jungleCoinsToUsd || VALIDATION_CONSTANTS.DEFAULT_EXCHANGE_RATE)).toLocaleString()}</div>
+                        <div className="text-right">${((personalAssets.personalJ$ || VALIDATION_CONSTANTS.DEFAULT_NUMERIC_VALUE) * (exchangeRates.j$ToUSD || VALIDATION_CONSTANTS.DEFAULT_EXCHANGE_RATE)).toLocaleString()}</div>
                         
                         <div className="text-muted-foreground opacity-60">Bitcoin Zaps (Z₿)</div>
                         <div className="text-right text-muted-foreground opacity-60">0 sats</div>
@@ -895,7 +830,7 @@ export default function FinancesPage() {
                         
                         <div className="font-semibold border-t pt-1">Total</div>
                         <div className="border-t pt-1"></div>
-                        <div className="font-semibold text-right border-t pt-1">${((personalAssets.personalJ$ || VALIDATION_CONSTANTS.DEFAULT_NUMERIC_VALUE) * (exchangeRates.jungleCoinsToUsd || VALIDATION_CONSTANTS.DEFAULT_EXCHANGE_RATE)).toLocaleString()}</div>
+                        <div className="font-semibold text-right border-t pt-1">${((personalAssets.personalJ$ || VALIDATION_CONSTANTS.DEFAULT_NUMERIC_VALUE) * (exchangeRates.j$ToUSD || VALIDATION_CONSTANTS.DEFAULT_EXCHANGE_RATE)).toLocaleString()}</div>
                       </div>
                     </div>
                   </div>
@@ -988,8 +923,8 @@ export default function FinancesPage() {
                     <span>1 J$ = $</span>
                     <Input
                       type="number"
-                      value={exchangeRates.jungleCoinsToUsd}
-                      onChange={(e) => setExchangeRates(prev => ({ ...prev, jungleCoinsToUsd: parseFloat(e.target.value) || DEFAULT_CURRENCY_EXCHANGE_RATES.jungleCoinsToUsd }))}
+                      value={exchangeRates.j$ToUSD}
+                      onChange={(e) => setExchangeRates(prev => ({ ...prev, j$ToUSD: parseFloat(e.target.value) || DEFAULT_CURRENCY_EXCHANGE_RATES.j$ToUSD }))}
                       className="w-16 h-6 text-xs"
                       min="1"
                     />
@@ -1056,7 +991,7 @@ export default function FinancesPage() {
                          <>
                            <div>Revenue: {formatCurrency(breakdown.revenue)}</div>
                            <div>Cost: {formatCurrency(breakdown.cost)}</div>
-                           <div>J$: {breakdown.jungleCoins} ({formatCurrency(breakdown.jungleCoins * exchangeRates.jungleCoinsToUsd)})</div>
+                           <div>J$: {breakdown.jungleCoins} ({formatCurrency(breakdown.jungleCoins * exchangeRates.j$ToUSD)})</div>
                          </>
                        ) : (
                          'No data'
@@ -1125,7 +1060,7 @@ export default function FinancesPage() {
                           <>
                             <div>Revenue: {formatCurrency(breakdown.revenue)}</div>
                             <div>Cost: {formatCurrency(breakdown.cost)}</div>
-                            <div>J$: {breakdown.jungleCoins} ({formatCurrency(breakdown.jungleCoins * exchangeRates.jungleCoinsToUsd)})</div>
+                            <div>J$: {breakdown.jungleCoins} ({formatCurrency(breakdown.jungleCoins * exchangeRates.j$ToUSD)})</div>
                           </>
                         ) : (
                           'No data'
@@ -1235,7 +1170,7 @@ export default function FinancesPage() {
             ...pointsConversionRates,
             colonesToUsd: exchangeRates.colonesToUsd,
             bitcoinToUsd: exchangeRates.bitcoinToUsd,
-            jungleCoinsToUsd: exchangeRates.jungleCoinsToUsd
+            j$ToUSD: exchangeRates.j$ToUSD
           }}
           onSave={(rates) => {
             ClientAPI.saveConversionRates(rates);

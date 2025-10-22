@@ -193,8 +193,8 @@ export function ItemsLifecycleTab({ itemsLog, onReload, isReloading }: ItemsLife
                     }
                   } else {
                     // For regular entries, use normal logic
-                    itemName = data.itemName || data.name || entry.itemName || entry.message || '—';
-                    itemType = data.itemType || entry.itemType || '—';
+                    itemName = entry.itemName || entry.name || data.itemName || data.name || entry.message || '—';
+                    itemType = entry.itemType || data.itemType || '—';
                   }
                   const subType: string = data.subItemType || entry.subItemType || '—';
                   const quantity: number | string | undefined = data.quantity ?? entry.quantity;

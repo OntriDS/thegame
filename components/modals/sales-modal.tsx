@@ -527,6 +527,12 @@ export default function SalesModal({
 
     // Emit pure sale entity - Links System handles all relationships automatically
     onSave(saleData);
+    
+    // Dispatch events AFTER calling parent (operation completed)
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('salesUpdated'));
+      window.dispatchEvent(new Event('linksUpdated'));
+    }
   };
 
   // Validation: Check if sale can have the specified line type

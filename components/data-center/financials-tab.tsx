@@ -25,6 +25,13 @@ interface FinancialLogEntry {
   data?: any;
   station?: string;
   category?: string;
+  name?: string;
+  taskName?: string;
+  recordName?: string;
+  cost?: number;
+  revenue?: number;
+  isNotPaid?: boolean;
+  isNotCharged?: boolean;
 }
 
 interface FinancialsTabProps {
@@ -58,11 +65,12 @@ export function FinancialsTab({ financialsLog, onReload, isReloading }: Financia
 
   const computeAmounts = (entry: FinancialLogEntry) => {
     const data = entry?.data || {};
-    const isNotPaid = Boolean(data.isNotPaid);
-    const isNotCharged = Boolean(data.isNotCharged);
+    const isNotPaid = Boolean(entry.isNotPaid ?? data.isNotPaid);
+    const isNotCharged = Boolean(entry.isNotCharged ?? data.isNotCharged);
     
-    const rawCost = Number(data.cost ?? 0);
-    const rawRevenue = Number(data.revenue ?? 0);
+    // Check entry fields FIRST, then fall back to data fields
+    const rawCost = Number(entry.cost ?? data.cost ?? 0);
+    const rawRevenue = Number(entry.revenue ?? data.revenue ?? 0);
     
     const cost = isNotPaid ? 0 : rawCost;
     const revenue = isNotCharged ? 0 : rawRevenue;
@@ -147,9 +155,9 @@ const getAmountColor = (amount: number) => (amount >= 0 ? 'text-green-600' : 'te
               ) : (
                 filteredEntries.map(({ entry, amounts }, index: number) => {
                   const data = entry?.data || {};
-                  const station = formatStation(data.station || entry.station);
-                  const category = data.category || entry.category || '—';
-                  const name = data.taskName || data.recordName || entry.description || entry.message || '—';
+                  const station = formatStation(entry.station || data.station);
+                  const category = entry.category || data.category || '—';
+                  const name = entry.name || entry.taskName || entry.recordName || data.taskName || data.recordName || entry.description || entry.message || '—';
                   const date = entry.displayDate || entry.timestamp || '';
                   const { cost, revenue, profit, margin } = amounts;
 
@@ -304,9 +312,9 @@ const getAmountColor = (amount: number) => (amount >= 0 ? 'text-green-600' : 'te
               ) : (
                 filteredEntries.map(({ entry, amounts }, index: number) => {
                   const data = entry?.data || {};
-                  const station = formatStation(data.station || entry.station);
-                  const category = data.category || entry.category || '—';
-                  const name = data.taskName || data.recordName || entry.description || entry.message || '—';
+                  const station = formatStation(entry.station || data.station);
+                  const category = entry.category || data.category || '—';
+                  const name = entry.name || entry.taskName || entry.recordName || data.taskName || data.recordName || entry.description || entry.message || '—';
                   const date = entry.displayDate || entry.timestamp || '';
                   const { cost, revenue, profit, margin } = amounts;
 
@@ -464,9 +472,9 @@ const getAmountColor = (amount: number) => (amount >= 0 ? 'text-green-600' : 'te
               ) : (
                 filteredEntries.map(({ entry, amounts }, index: number) => {
                   const data = entry?.data || {};
-                  const station = formatStation(data.station || entry.station);
-                  const category = data.category || entry.category || '—';
-                  const name = data.taskName || data.recordName || entry.description || entry.message || '—';
+                  const station = formatStation(entry.station || data.station);
+                  const category = entry.category || data.category || '—';
+                  const name = entry.name || entry.taskName || entry.recordName || data.taskName || data.recordName || entry.description || entry.message || '—';
                   const date = entry.displayDate || entry.timestamp || '';
                   const { cost, revenue, profit, margin } = amounts;
 

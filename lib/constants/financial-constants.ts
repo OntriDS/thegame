@@ -3,13 +3,13 @@
 export type CurrencyExchangeRates = {
   colonesToUsd: number;
   bitcoinToUsd: number;
-  jungleCoinsToUsd: number;
+  j$ToUSD: number;
 };
 
 export const DEFAULT_CURRENCY_EXCHANGE_RATES: CurrencyExchangeRates = {
   colonesToUsd: 500, // ₡500 = $1 USD
   bitcoinToUsd: 0, // Will be fetched from API
-  jungleCoinsToUsd: 10, // 1 J$ = $10 USD
+  j$ToUSD: 10, // 1 J$ = $10 USD
 };
 
 export type PointsConversionRates = {

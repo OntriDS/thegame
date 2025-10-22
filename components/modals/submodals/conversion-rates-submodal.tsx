@@ -19,7 +19,6 @@ interface ConversionRatesModalProps {
     j$ToUSD: number;
     colonesToUsd: number;
     bitcoinToUsd: number;
-    jungleCoinsToUsd: number;
   }) => void;
   initialRates?: {
     hpToJ$: number;
@@ -29,7 +28,6 @@ interface ConversionRatesModalProps {
     j$ToUSD: number;
     colonesToUsd: number;
     bitcoinToUsd: number;
-    jungleCoinsToUsd: number;
   };
 }
 
@@ -92,7 +90,7 @@ export default function ConversionRatesModal({ isOpen, onClose, onSave, initialR
               {[
                 { key: 'colonesToUsd', label: '₡ to $', desc: 'Colones = $1' },
                 { key: 'bitcoinToUsd', label: '₿ to $', desc: 'Bitcoin price' },
-                { key: 'jungleCoinsToUsd', label: 'J$ to $', desc: '1 J$ = $' }
+                { key: 'j$ToUSD', label: 'J$ to $', desc: '1 J$ = $10' }
               ].map(({ key, label, desc }) => (
                 <div key={key} className="space-y-1">
                   <label className="block text-sm font-medium">{label}</label>

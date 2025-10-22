@@ -149,11 +149,11 @@ export function TasksLifecycleTab({ projectStatus, tasksLog, onReload, isReloadi
                   // Extract data from the rich logging structure
                   const data = entry.data || {};
                   const status: string = entry.event || data.taskStatus || 'Unknown';
-                  const name: string = data.taskName || data.name || entry.taskName || entry.message || '—';
+                  const name: string = entry.name || entry.taskName || data.taskName || data.name || entry.message || '—';
                   const description: string = data.description || entry.description || '';
-                  const type: string = data.taskType || entry.taskType || '—';
-                  const station: string = formatStation(data.station || entry.station);
-                  const category: string = formatCategory(data.category || entry.category);
+                  const type: string = entry.taskType || data.taskType || '—';
+                  const station: string = formatStation(entry.station || data.station);
+                  const category: string = formatCategory(entry.category || data.category);
                   const priority: string = formatPriority(data.priority);
                   
                   // Debug logging for Done entries

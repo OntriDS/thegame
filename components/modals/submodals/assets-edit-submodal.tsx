@@ -22,7 +22,7 @@ interface AssetsEditModalProps {
   exchangeRates: {
     colonesToUsd: number;
     bitcoinToUsd: number;
-    jungleCoinsToUsd: number;
+    j$ToUSD: number;
   };
 }
 
@@ -428,7 +428,7 @@ export default function AssetsEditModal({ isOpen, onClose, onSave, section, init
         min="0"
       />
       <p className="text-xs text-muted-foreground mt-1">
-        Value in USD: ${((section.type === 'company' ? formData.companyJ$ : formData.personalJ$) * exchangeRates.jungleCoinsToUsd).toLocaleString()}
+        Value in USD: ${((section.type === 'company' ? formData.companyJ$ : formData.personalJ$) * exchangeRates.j$ToUSD).toLocaleString()}
       </p>
     </div>
   );

@@ -105,6 +105,7 @@ export default function ControlRoom() {
   const [typeFilter, setTypeFilter] = useState<TaskType | 'all'>('all');
   // Sub-tab State
   const [activeSubTab, setActiveSubTab] = useState<'mission-tree' | 'recurrent-tasks' | 'schedule' | 'calendar'>('mission-tree');
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Define sensors with an activation constraint
   const sensors = useSensors(
@@ -191,7 +192,7 @@ export default function ControlRoom() {
     } catch (error) {
       console.error('Failed to load tasks:', error);
     }
-  }, [stationFilters, typeFilter, activeSubTab]);
+  }, [stationFilters, typeFilter, activeSubTab, refreshKey]);
 
   useEffect(() => {
     loadTasks();
@@ -230,10 +231,10 @@ export default function ControlRoom() {
   }, [tree, selectedTaskId, selectedNode]);
 
   useEffect(() => {
-    const cb = () => loadTasks();
+    const cb = () => setRefreshKey(prev => prev + 1);
     window.addEventListener('tasksUpdated', cb);
     return () => window.removeEventListener('tasksUpdated', cb);
-  }, [loadTasks]);
+  }, []);
 
   // Event handlers
   const handleToggle = (nodeId: string) => {
@@ -518,6 +519,7 @@ export default function ControlRoom() {
               // Dispatch financial events to refresh financial tabs
               // This ensures that if the task created a financial record, the UI will refresh
               if (typeof window !== 'undefined') {
+                window.dispatchEvent(new Event('tasksUpdated'));
                 window.dispatchEvent(new Event('financialsUpdated'));
                 window.dispatchEvent(new Event('financialsCreated'));
                 window.dispatchEvent(new Event('linksUpdated'));
@@ -538,6 +540,7 @@ export default function ControlRoom() {
               // Dispatch financial events to refresh financial tabs
               // This ensures that if the task completion created a financial record, the UI will refresh
               if (typeof window !== 'undefined') {
+                window.dispatchEvent(new Event('tasksUpdated'));
                 window.dispatchEvent(new Event('financialsUpdated'));
                 window.dispatchEvent(new Event('financialsCreated'));
                 window.dispatchEvent(new Event('linksUpdated'));
