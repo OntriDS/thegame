@@ -3,7 +3,7 @@
 
 import { kv, kvDelMany } from '@/data-store/kv';
 import { buildDataKey, buildIndexKey, buildLogKey, buildLinksIndexKey } from '@/data-store/keys';
-import { EntityType, SiteType, SiteStatus, PhysicalBusinessType, CloudSiteType, SpecialSiteType } from '@/types/enums';
+import { EntityType, SiteType, SiteStatus, PhysicalBusinessType, DigitalSiteType, SystemSiteType } from '@/types/enums';
 import { kvScan } from '@/data-store/kv';
 import { TransactionManager } from './transaction-manager';
 
@@ -481,9 +481,9 @@ export class ResetDataWorkflow {
         {
           id: 'drive',
           name: 'Drive',
-          type: SiteType.CLOUD.toLowerCase(),
+          type: SiteType.DIGITAL.toLowerCase(),
           status: SiteStatus.ACTIVE.toLowerCase(),
-          metadata: { type: SiteType.CLOUD, digitalType: CloudSiteType.REPOSITORY },
+          metadata: { type: SiteType.DIGITAL, digitalType: DigitalSiteType.REPOSITORY },
           isActive: true,
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -492,9 +492,9 @@ export class ResetDataWorkflow {
         {
           id: 'world',
           name: 'World',
-          type: SiteType.SPECIAL.toLowerCase(),
+          type: SiteType.SYSTEM.toLowerCase(),
           status: SiteStatus.ACTIVE.toLowerCase(),
-          metadata: { type: SiteType.SPECIAL, specialType: SpecialSiteType.UNIVERSAL_TRACKING },
+          metadata: { type: SiteType.SYSTEM, systemType: SystemSiteType.UNIVERSAL_TRACKING },
           isActive: true,
           createdAt: new Date(),
           updatedAt: new Date(),

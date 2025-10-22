@@ -166,7 +166,7 @@ export default function ItemEmissarySubModal({
   const itemOptions = existingItems.map(item => ({
     value: item.id,
     label: `${item.name} (${item.type})`,
-    category: item.type
+    category: getCategoryForItemType(item.type)
   }));
 
   const handleSave = () => {

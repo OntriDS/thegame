@@ -18,7 +18,7 @@ import { SaleType, SaleStatus, PaymentMethod, Currency, ItemType, ItemStatus, Ta
 import { getSubTypesForItemType } from '@/lib/utils/item-utils';
 import type { Station } from '@/types/type-aliases';
 import { createSiteOptionsWithCategories } from '@/lib/utils/site-options-utils';
-import { createCharacterOptions, createStationCategoryOptions, createTaskParentOptions, createItemTypeSubTypeOptions, getItemTypeFromCombined } from '@/lib/utils/searchable-select-utils';
+import { createCharacterOptions, createStationCategoryOptions, createTaskParentOptions, createItemTypeSubTypeOptions, getItemTypeFromCombined, createItemOptions } from '@/lib/utils/searchable-select-utils';
 import { getAreaForStation } from '@/lib/utils/business-structure-utils';
 import { ClientAPI } from '@/lib/client-api';
 import { CHARACTER_ONE_ID } from '@/lib/constants/entity-constants';
@@ -702,18 +702,11 @@ export default function SalesModal({
   };
 
   const getCharacterOptions = () => {
-    return characters.map(character => ({
-      value: character.id,
-      label: character.name
-    }));
+    return createCharacterOptions(characters);
   };
 
   const getItemOptions = () => {
-    return items.map(item => ({
-      value: item.id,
-      label: `${item.name} - $${item.price} (Qty: ${ClientAPI.getItemTotalQuantity(item.id, items)})`,
-      category: item.type
-    }));
+    return createItemOptions(items, true, true);
   };
 
   const getSelectedItem = () => {

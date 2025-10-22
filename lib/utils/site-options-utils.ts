@@ -1,4 +1,5 @@
 import { Site } from '@/types/entities';
+import { SiteType } from '@/types/enums';
 
 /**
  * Creates site options for SearchableSelect components from Site entities
@@ -29,11 +30,25 @@ export const createSiteOptions = (sites: Site[]): Array<{ value: string; label: 
  * - category: Site Category (PHYSICAL, CLOUD, SPECIAL) for automatic grouping
  */
 export const createSiteOptionsWithCategories = (sites: Site[]): Array<{ value: string; label: string; category?: string }> => {
-  return sites.map(site => ({
-    value: site.id,
-    label: site.name,
-    category: site.metadata.type || 'PHYSICAL' // Default to PHYSICAL if type not set
-  }));
+  return sites.map(site => {
+    const siteType = site.metadata?.type || SiteType.PHYSICAL;
+    
+    let category = 'PHYSICAL';
+    
+    if (siteType === SiteType.DIGITAL) {
+      category = 'DIGITAL';
+    } else if (siteType === SiteType.SYSTEM) {
+      category = 'SYSTEM';
+    } else if (siteType === SiteType.PHYSICAL) {
+      category = 'PHYSICAL';
+    }
+    
+    return {
+      value: site.id,
+      label: site.name,
+      category: category
+    };
+  });
 };
 
 /**

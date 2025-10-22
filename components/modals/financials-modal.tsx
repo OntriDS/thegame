@@ -17,8 +17,7 @@ import { CHARACTER_ONE_ID } from '@/lib/constants/entity-constants';
 import PlayerCharacterSelectorModal from './submodals/player-character-selector-submodal';
 import { FinancialRecord } from '@/types/entities';
 import { 
-  BUSINESS_STRUCTURE, 
-  SITE_GROUPS 
+  BUSINESS_STRUCTURE
 } from '@/types/enums';
 import { getCompanyAreas, getPersonalAreas, isCompanyStation, isPersonalStation, getAreaForStation } from '@/lib/utils/business-structure-utils';
 import type { Station, SubItemType } from '@/types/type-aliases';

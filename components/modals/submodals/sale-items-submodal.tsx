@@ -8,6 +8,7 @@ import { SearchableSelect } from '@/components/ui/searchable-select';
 import NumericInput from '@/components/ui/numeric-input';
 import { Item } from '@/types/entities';
 import { createSiteOptionsWithCategories } from '@/lib/utils/site-options-utils';
+import { createItemOptions, createItemOptionsForSite } from '@/lib/utils/searchable-select-utils';
 import { ClientAPI } from '@/lib/client-api';
 import { Trash2, Plus } from 'lucide-react';
 import { v4 as uuid } from 'uuid';
@@ -75,16 +76,11 @@ export default function SaleItemsSubModal({
   }, [open, initialItems, defaultSiteId, createEmptyLine]);
 
   const getItemOptions = (lineId: string) => {
-    // Show all items, with quantity info if site is selected
-    return items.map(item => {
-      const itemQty = selectedSiteId ? ClientAPI.getQuantityAtSite(item, selectedSiteId) : 0;
-      const qtyInfo = selectedSiteId ? ` (Qty: ${itemQty})` : '';
-      return {
-        value: item.id,
-        label: `${item.name} - $${item.price}${qtyInfo}`,
-        category: item.type
-      };
-    });
+    if (selectedSiteId) {
+      return createItemOptionsForSite(items, selectedSiteId, true);
+    } else {
+      return createItemOptions(items, true, false);
+    }
   };
 
   const handleItemSelect = (lineId: string, itemId: string) => {

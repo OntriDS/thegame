@@ -8,13 +8,13 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SearchableSelect } from '@/components/ui/searchable-select';
-import { Site, PhysicalSiteMetadata, CloudSiteMetadata, SpecialSiteMetadata, Settlement } from '@/types/entities';
+import { Site, PhysicalSiteMetadata, DigitalSiteMetadata, SystemSiteMetadata, Settlement } from '@/types/entities';
 import { 
   SiteType, 
   SiteStatus, 
   PhysicalBusinessType, 
-  CloudSiteType, 
-  SpecialSiteType, 
+  DigitalSiteType, 
+  SystemSiteType, 
   LOCATION_HIERARCHY
 } from '@/types/enums';
 import { createSettlementOptions } from '@/lib/utils/searchable-select-utils';
@@ -47,10 +47,10 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
   
   // Digital site fields
   const [digitalUrl, setDigitalUrl] = useState('');
-  const [digitalType, setDigitalType] = useState<CloudSiteType>(CloudSiteType.DIGITAL_STORAGE);
+  const [digitalType, setDigitalType] = useState<DigitalSiteType>(DigitalSiteType.DIGITAL_STORAGE);
   
   // Special site fields
-  const [specialPurpose, setSpecialPurpose] = useState<SpecialSiteType>(SpecialSiteType.UNIVERSAL_TRACKING);
+  const [systemPurpose, setSystemPurpose] = useState<SystemSiteType>(SystemSiteType.UNIVERSAL_TRACKING);
   
   // Delete modal
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -93,13 +93,13 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
         setSettlementId(physicalMeta.settlementId || '');
         setBusinessType(physicalMeta.businessType || PhysicalBusinessType.STORAGE);
         setGoogleMapsAddress(physicalMeta.googleMapsAddress || '');
-      } else if (site.metadata.type === SiteType.CLOUD) {
-        const cloudMeta = site.metadata as CloudSiteMetadata;
-        setDigitalType(cloudMeta.digitalType || CloudSiteType.DIGITAL_STORAGE);
-        setDigitalUrl((cloudMeta as any).url || '');
-      } else if (site.metadata.type === SiteType.SPECIAL) {
-        const specialMeta = site.metadata as SpecialSiteMetadata;
-        setSpecialPurpose(specialMeta.purpose || SpecialSiteType.UNIVERSAL_TRACKING);
+      } else if (site.metadata.type === SiteType.DIGITAL) {
+        const digitalMeta = site.metadata as DigitalSiteMetadata;
+        setDigitalType(digitalMeta.digitalType || DigitalSiteType.DIGITAL_STORAGE);
+        setDigitalUrl((digitalMeta as any).url || '');
+      } else if (site.metadata.type === SiteType.SYSTEM) {
+        const systemMeta = site.metadata as SystemSiteMetadata;
+        setSystemPurpose(systemMeta.systemType || SystemSiteType.UNIVERSAL_TRACKING);
       }
     } else {
       // Reset form for new site
@@ -112,8 +112,8 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
       setBusinessType(PhysicalBusinessType.STORAGE);
       setGoogleMapsAddress('');
       setDigitalUrl('');
-      setDigitalType(CloudSiteType.DIGITAL_STORAGE);
-      setSpecialPurpose(SpecialSiteType.UNIVERSAL_TRACKING);
+      setDigitalType(DigitalSiteType.DIGITAL_STORAGE);
+      setSystemPurpose(SystemSiteType.UNIVERSAL_TRACKING);
     }
   }, [site, open]);
 
@@ -132,19 +132,19 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
         settlementId,
         googleMapsAddress
       } as PhysicalSiteMetadata;
-    } else if (siteType === SiteType.CLOUD) {
+    } else if (siteType === SiteType.DIGITAL) {
       metadata = {
-        type: SiteType.CLOUD,
+        type: SiteType.DIGITAL,
         isActive,
         digitalType,
         url: digitalUrl
-      } as CloudSiteMetadata & { url: string };
+      } as DigitalSiteMetadata & { url: string };
     } else {
       metadata = {
-        type: SiteType.SPECIAL,
+        type: SiteType.SYSTEM,
         isActive,
-        purpose: specialPurpose
-      } as SpecialSiteMetadata;
+        systemType: systemPurpose
+      } as SystemSiteMetadata;
     }
 
     const siteData: Site = {
@@ -217,8 +217,8 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
           <DialogHeader className="border-b pb-4">
             <DialogTitle className="flex items-center gap-2">
               {siteType === SiteType.PHYSICAL && <MapPin className="h-5 w-5" />}
-              {siteType === SiteType.CLOUD && <Cloud className="h-5 w-5" />}
-              {siteType === SiteType.SPECIAL && <Sparkles className="h-5 w-5" />}
+              {siteType === SiteType.DIGITAL && <Cloud className="h-5 w-5" />}
+              {siteType === SiteType.SYSTEM && <Sparkles className="h-5 w-5" />}
               <span>{site ? 'Edit Site' : 'New Site'}</span>
             </DialogTitle>
           </DialogHeader>
@@ -252,8 +252,8 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value={SiteType.PHYSICAL}>Physical</SelectItem>
-                    <SelectItem value={SiteType.CLOUD}>Cloud</SelectItem>
-                    <SelectItem value={SiteType.SPECIAL}>System</SelectItem>
+                    <SelectItem value={SiteType.DIGITAL}>Digital</SelectItem>
+                    <SelectItem value={SiteType.SYSTEM}>System</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -322,19 +322,19 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
               </div>
             )}
 
-            {siteType === SiteType.CLOUD && (
+            {siteType === SiteType.DIGITAL && (
               <div className="grid grid-cols-4 gap-4">
                 <div className="col-span-2 space-y-2">
                   <Label htmlFor="digitalType" className="text-xs">Digital Type *</Label>
                   <Select
                     value={digitalType}
-                    onValueChange={(v) => setDigitalType(v as CloudSiteType)}
+                    onValueChange={(v) => setDigitalType(v as DigitalSiteType)}
                   >
                     <SelectTrigger className="h-8 text-sm">
                       <SelectValue placeholder="Select digital type..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {Object.values(CloudSiteType).map(type => (
+                      {Object.values(DigitalSiteType).map(type => (
                         <SelectItem key={type} value={type}>
                           {type}
                         </SelectItem>
@@ -356,19 +356,19 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
               </div>
             )}
 
-            {siteType === SiteType.SPECIAL && (
+            {siteType === SiteType.SYSTEM && (
               <div className="grid grid-cols-4 gap-4">
                 <div className="col-span-2 space-y-2">
                   <Label htmlFor="specialPurpose" className="text-xs">Purpose *</Label>
                   <Select
-                    value={specialPurpose}
-                    onValueChange={(v) => setSpecialPurpose(v as SpecialSiteType)}
+                    value={systemPurpose}
+                    onValueChange={(v) => setSystemPurpose(v as SystemSiteType)}
                   >
                     <SelectTrigger className="h-8 text-sm">
                       <SelectValue placeholder="Select purpose..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {Object.values(SpecialSiteType).map(type => (
+                      {Object.values(SystemSiteType).map(type => (
                         <SelectItem key={type} value={type}>
                           {type}
                         </SelectItem>

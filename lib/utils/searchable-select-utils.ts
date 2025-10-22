@@ -41,7 +41,14 @@ export function getCategoryForItemType(itemTypeValue: string): string {
   return getCategoryForValue(itemTypeValue, ITEM_CATEGORIES);
 }
 
-// getCategoryForSiteType removed - SiteTypes enum no longer exists
+/**
+ * Gets the category for a SiteType value (for SearchableSelect autoGroupByCategory)
+ * @param siteTypeValue The SiteType value (e.g., 'PHYSICAL', 'CLOUD', 'SPECIAL')
+ * @returns The category string
+ */
+export function getCategoryForSiteType(siteTypeValue: string): string {
+  return getCategoryForValue(siteTypeValue, SITE_CATEGORIES);
+}
 
 /**
  * Gets the station for a Category value (for SearchableSelect autoGroupByCategory)
@@ -351,6 +358,100 @@ export function getItemTypeFromCombined(combinedValue: string): string {
  */
 export function getSubTypeFromCombined(combinedValue: string): string {
   return combinedValue.split(':')[1] || '';
+}
+
+/**
+ * Creates SiteType options with automatic category grouping for SearchableSelect
+ * @returns Array of SiteType options with category information
+ */
+export function createSiteTypeOptionsWithCategories() {
+  return createOptionsWithCategories(
+    Object.keys(SITE_CATEGORIES) as string[],
+    (siteType) => siteType // Site type names are their own categories
+  );
+}
+
+/**
+ * Creates item options with automatic category grouping for SearchableSelect
+ * Uses ITEM_CATEGORIES for proper categorization
+ * @param items Array of available items
+ * @param showPrice Optional flag to include price in label (default: true)
+ * @param showQuantity Optional flag to include total quantity in label (default: true)
+ * @returns Array of item options with proper ITEM_CATEGORIES grouping
+ */
+export function createItemOptions(
+  items: any[], 
+  showPrice: boolean = true, 
+  showQuantity: boolean = true
+) {
+  const options: Array<{
+    value: string;
+    label: string;
+    category: string;
+  }> = [];
+  
+  for (const item of items) {
+    let label = item.name;
+    
+    if (showPrice && item.price !== undefined) {
+      label += ` - $${item.price}`;
+    }
+    
+    if (showQuantity) {
+      const ClientAPI = require('@/lib/client-api').ClientAPI;
+      const qty = ClientAPI.getItemTotalQuantity(item.id, items);
+      label += ` (Qty: ${qty})`;
+    }
+    
+    options.push({
+      value: item.id,
+      label: label,
+      category: getCategoryForItemType(item.type)
+    });
+  }
+  
+  return options;
+}
+
+/**
+ * Creates item options for a specific site with quantity at that site
+ * @param items Array of available items
+ * @param siteId The site ID to show quantities for
+ * @param showPrice Optional flag to include price in label (default: true)
+ * @returns Array of item options with site-specific quantities
+ */
+export function createItemOptionsForSite(
+  items: any[], 
+  siteId: string,
+  showPrice: boolean = true
+) {
+  const options: Array<{
+    value: string;
+    label: string;
+    category: string;
+  }> = [];
+  
+  const ClientAPI = require('@/lib/client-api').ClientAPI;
+  
+  for (const item of items) {
+    const qtyAtSite = siteId ? ClientAPI.getQuantityAtSite(item, siteId) : 0;
+    
+    let label = item.name;
+    
+    if (showPrice && item.price !== undefined) {
+      label += ` - $${item.price}`;
+    }
+    
+    label += ` (Qty: ${qtyAtSite})`;
+    
+    options.push({
+      value: item.id,
+      label: label,
+      category: getCategoryForItemType(item.type)
+    });
+  }
+  
+  return options;
 }
 
 /**

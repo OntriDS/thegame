@@ -18,7 +18,7 @@ import EntityRelationshipsModal from './submodals/entity-relationships-submodal'
 import { Task, Item } from '@/types/entities';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
 import { getPointsMetadata } from '@/lib/utils/points-utils';
-import { TaskType, TaskStatus, TaskPriority, STATION_CATEGORIES, SITE_GROUPS, ItemType, RecurrentFrequency, Collection, ItemStatus, CharacterRole } from '@/types/enums';
+import { TaskType, TaskStatus, TaskPriority, STATION_CATEGORIES, ItemType, RecurrentFrequency, Collection, ItemStatus, CharacterRole } from '@/types/enums';
 import { getSubTypesForItemType } from '@/lib/utils/item-utils';
 import { getCategoryForItemType, getCategoryForTaskType, createStationCategoryOptions, getStationFromCombined, getCategoryFromCombined, createTaskParentOptions, createItemTypeSubTypeOptions, getItemTypeFromCombined, getSubTypeFromCombined, createCharacterOptions } from '@/lib/utils/searchable-select-utils';
 import { getAreaForStation } from '@/lib/utils/business-structure-utils';

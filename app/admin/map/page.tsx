@@ -80,8 +80,8 @@ export default function MapPage() {
   const getSiteTypeColor = (type: SiteType): string => {
     switch (type) {
       case SiteType.PHYSICAL: return 'bg-blue-500';
-      case SiteType.CLOUD: return 'bg-purple-500';
-      case SiteType.SPECIAL: return 'bg-green-500';
+      case SiteType.DIGITAL: return 'bg-purple-500';
+      case SiteType.SYSTEM: return 'bg-green-500';
       default: return 'bg-gray-500';
     }
   };
@@ -89,8 +89,8 @@ export default function MapPage() {
   const getSiteTypeBadgeColor = (type: SiteType): string => {
     switch (type) {
       case SiteType.PHYSICAL: return 'text-blue-700 bg-blue-100 dark:text-blue-300 dark:bg-blue-900';
-      case SiteType.CLOUD: return 'text-purple-700 bg-purple-100 dark:text-purple-300 dark:bg-purple-900';
-      case SiteType.SPECIAL: return 'text-green-700 bg-green-100 dark:text-green-300 dark:bg-green-900';
+      case SiteType.DIGITAL: return 'text-purple-700 bg-purple-100 dark:text-purple-300 dark:bg-purple-900';
+      case SiteType.SYSTEM: return 'text-green-700 bg-green-100 dark:text-green-300 dark:bg-green-900';
       default: return 'text-gray-700 bg-gray-100 dark:text-gray-300 dark:bg-gray-900';
     }
   };
@@ -218,13 +218,13 @@ export default function MapPage() {
                       <MapPin className="h-4 w-4 mr-1" />
                       Physical ({sites.filter(s => s.metadata.type === SiteType.PHYSICAL).length})
                     </TabsTrigger>
-                    <TabsTrigger value={SiteType.CLOUD}>
+                    <TabsTrigger value={SiteType.DIGITAL}>
                       <Cloud className="h-4 w-4 mr-1" />
-                      Cloud ({sites.filter(s => s.metadata.type === SiteType.CLOUD).length})
+                      Digital ({sites.filter(s => s.metadata.type === SiteType.DIGITAL).length})
                     </TabsTrigger>
-                    <TabsTrigger value={SiteType.SPECIAL}>
+                    <TabsTrigger value={SiteType.SYSTEM}>
                       <Sparkles className="h-4 w-4 mr-1" />
-                      System ({sites.filter(s => s.metadata.type === SiteType.SPECIAL).length})
+                      System ({sites.filter(s => s.metadata.type === SiteType.SYSTEM).length})
                     </TabsTrigger>
                   </TabsList>
                   

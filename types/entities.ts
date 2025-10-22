@@ -11,8 +11,8 @@ import {
   SiteType,
   PhysicalBusinessType,
   CharacterRole,
-  CloudSiteType,
-  SpecialSiteType,
+  DigitalSiteType,
+  SystemSiteType,
   RecurrentFrequency,
   IntelectualFunction,
   Attribute,
@@ -105,20 +105,20 @@ export interface PhysicalSiteMetadata extends BaseSiteMetadata {
   googleMapsAddress: string;
 }
 
-export interface CloudSiteMetadata extends BaseSiteMetadata {
-  type: SiteType.CLOUD;
-  digitalType: CloudSiteType;
+export interface DigitalSiteMetadata extends BaseSiteMetadata {
+  type: SiteType.DIGITAL;
+  digitalType: DigitalSiteType;
 }
 
-export interface SpecialSiteMetadata extends BaseSiteMetadata {
-  type: SiteType.SPECIAL;
-  purpose: SpecialSiteType;
+export interface SystemSiteMetadata extends BaseSiteMetadata {
+  type: SiteType.SYSTEM;
+  systemType: SystemSiteType;
 }
 
 export type SiteMetadata = 
   | PhysicalSiteMetadata 
-  | CloudSiteMetadata 
-  | SpecialSiteMetadata;
+  | DigitalSiteMetadata 
+  | SystemSiteMetadata;
 
 /** Site Entity - Core entity for all locations */
 export interface Site extends BaseEntity {

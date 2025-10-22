@@ -89,14 +89,14 @@ export enum PhysicalBusinessType {
 }
 
 /** Cloud Digital Types */
-export enum CloudSiteType {
+export enum DigitalSiteType {
   REPOSITORY          = 'repository',             // Source files, templates, digital assets
   DIGITAL_STORAGE     = 'digital storage',        // Drives, digital art folder, online galleries
-  NFT_WALLET          = 'nft wallet'              // NFt assets
+  NFT_WALLET          = 'nft wallet'              // NFT assets
 }
 
-/** Special Site Purposes */
-export enum SpecialSiteType {
+/** System Site Purposes */
+export enum SystemSiteType {
   UNIVERSAL_TRACKING = 'universal tracking', // Items no longer at specific sites
   SOLD_ITEMS         = 'sold items',         // Sold items tracking
   ARCHIVED           = 'archived',           // Archived/historical items
@@ -106,8 +106,8 @@ export enum SpecialSiteType {
 /** SiteType enum for backward compatibility with entities */
 export enum SiteType {
   PHYSICAL = 'PHYSICAL',  // Physical locations with addresses
-  CLOUD = 'CLOUD',        // Digital/cloud storage locations
-  SPECIAL = 'SPECIAL'     // Special system-managed locations
+  DIGITAL = 'DIGITAL',    // Digital/cloud storage locations
+  SYSTEM = 'SYSTEM'       // System-managed locations
 }
 
 /** Status of Sites - controls state */
@@ -159,12 +159,31 @@ export enum SiteStatus {
 // // Export the structure for components to use
 // export const SITE_GROUPS = SITE_STRUCTURE;
 
-// /** Site categories for UI organization and SearchableSelect grouping */
-// export const SITE_CATEGORIES = {
-//   PHYSICAL: ['HOME', 'FERIA_BOX', 'SMOKING_LOUNGE', 'TAGUA', 'CAFE_VIVO', 'XIVA', 'PEREZOSO_FELIZ', 'EL_HORNITO', 'JUNGLE_ACADEMY', 'LA_TRIBU', 'OSA_DE_RIO', 'GALLERY_1084', 'CAT_CAFE', 'ECO_FERIA', 'ESCUELA_VERDE', 'PRINT_MASTERS'],
-//   CLOUD: ['DIGITAL_SPACE', 'DESKTOP_PC', 'LAPTOP', 'GOOGLE_DRIVE', 'GITHUB', 'MAGIC_EDEN', 'OPENSEA'],
-//   SPECIAL: ['NONE', 'WORLD', 'SOLD_ITEMS_THIS_MONTH', 'ARCHIVED_HISTORICAL', 'DELETED_ITEMS_THIS_MONTH']
-// } as const;
+/** Site categories for UI organization and SearchableSelect grouping */
+export const SITE_CATEGORIES = {
+  PHYSICAL: [
+    PhysicalBusinessType.STORAGE,
+    PhysicalBusinessType.CONSIGNMENT,
+    PhysicalBusinessType.SELLING_POINT,
+    PhysicalBusinessType.FERIA,
+    PhysicalBusinessType.TEACHING_SPACE,
+    PhysicalBusinessType.HQ,
+    PhysicalBusinessType.ART_GALLERY,
+    PhysicalBusinessType.DESIGN_SPACE,
+    PhysicalBusinessType.WORKSHOP
+  ],
+  DIGITAL: [
+    DigitalSiteType.REPOSITORY,
+    DigitalSiteType.DIGITAL_STORAGE,
+    DigitalSiteType.NFT_WALLET
+  ],
+  SYSTEM: [
+    SystemSiteType.UNIVERSAL_TRACKING,
+    SystemSiteType.SOLD_ITEMS,
+    SystemSiteType.ARCHIVED,
+    SystemSiteType.DELETED
+  ]
+} as const;
 
 // Settlement enum removed - now using dynamic Settlement entities
 
