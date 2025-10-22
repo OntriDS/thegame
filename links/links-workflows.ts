@@ -140,7 +140,7 @@ export async function processItemEffects(item: Item): Promise<void> {
   
   // Create fresh ITEM_SITE links for current stock
   for (const s of item.stock || []) {
-    if (s.siteId) {
+    if (s.siteId && s.siteId !== 'None') { // Skip invalid "None" site IDs
       const l = makeLink(LinkType.ITEM_SITE, { type: EntityType.ITEM, id: item.id }, { type: EntityType.SITE, id: s.siteId });
       await createLink(l);
       await appendLinkLog(l, 'created');

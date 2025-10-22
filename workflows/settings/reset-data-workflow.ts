@@ -3,7 +3,7 @@
 
 import { kv, kvDelMany } from '@/data-store/kv';
 import { buildDataKey, buildIndexKey, buildLogKey, buildLinksIndexKey } from '@/data-store/keys';
-import { EntityType } from '@/types/enums';
+import { EntityType, SiteType, SiteStatus, PhysicalBusinessType, CloudSiteType, SpecialSiteType } from '@/types/enums';
 import { kvScan } from '@/data-store/kv';
 import { TransactionManager } from './transaction-manager';
 
@@ -468,40 +468,34 @@ export class ResetDataWorkflow {
 
       const defaultSites = [
         {
-          id: 'home',
-          name: 'Home',
-          type: 'physical',
-          status: 'active',
-          metadata: {
-            settlement: 'Uvita',
-            location: { lat: 9.1500, lng: -83.7500 }
-          },
+          id: 'hq',
+          name: 'HQ',
+          type: SiteType.PHYSICAL.toLowerCase(),
+          status: SiteStatus.ACTIVE.toLowerCase(),
+          metadata: { type: SiteType.PHYSICAL, businessType: PhysicalBusinessType.STORAGE },
+          isActive: true,
           createdAt: new Date(),
           updatedAt: new Date(),
           links: []
         },
         {
-          id: 'feria-box',
-          name: 'Feria Box',
-          type: 'physical',
-          status: 'active',
-          metadata: {
-            settlement: 'Uvita',
-            location: { lat: 9.1500, lng: -83.7500 }
-          },
+          id: 'drive',
+          name: 'Drive',
+          type: SiteType.CLOUD.toLowerCase(),
+          status: SiteStatus.ACTIVE.toLowerCase(),
+          metadata: { type: SiteType.CLOUD, digitalType: CloudSiteType.REPOSITORY },
+          isActive: true,
           createdAt: new Date(),
           updatedAt: new Date(),
           links: []
         },
         {
-          id: 'digital-space',
-          name: 'Digital Space',
-          type: 'cloud',
-          status: 'active',
-          metadata: {
-            settlement: 'Cloud',
-            location: null
-          },
+          id: 'world',
+          name: 'World',
+          type: SiteType.SPECIAL.toLowerCase(),
+          status: SiteStatus.ACTIVE.toLowerCase(),
+          metadata: { type: SiteType.SPECIAL, specialType: SpecialSiteType.UNIVERSAL_TRACKING },
+          isActive: true,
           createdAt: new Date(),
           updatedAt: new Date(),
           links: []
@@ -591,11 +585,6 @@ export class ResetDataWorkflow {
         results.push(`Removed localStorage key: ${key}`);
       });
 
-      // Seed default sites if in defaults mode
-      if (mode === 'defaults') {
-        await this.seedDefaultSitesLocal(results, errors);
-      }
-
       // Clear any cached data
       if ('caches' in window) {
         try {
@@ -641,108 +630,7 @@ export class ResetDataWorkflow {
   }
 
   /**
-   * Seed default sites for localhost (localStorage) with batch processing
-   */
-  private static async seedDefaultSitesLocal(results: string[], errors: string[]): Promise<void> {
-    try {
-      console.log('[ResetDataWorkflow] 🌱 Seeding default sites for localhost...');
 
-      const defaultSites = [
-        {
-          id: 'home',
-          name: 'Home',
-          type: 'physical',
-          status: 'active',
-          metadata: {
-            settlement: 'Uvita',
-            location: { lat: 9.1500, lng: -83.7500 }
-          },
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          links: []
-        },
-        {
-          id: 'feria-box',
-          name: 'Feria Box',
-          type: 'physical',
-          status: 'active',
-          metadata: {
-            settlement: 'Uvita',
-            location: { lat: 9.1500, lng: -83.7500 }
-          },
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          links: []
-        },
-        {
-          id: 'digital-space',
-          name: 'Digital Space',
-          type: 'cloud',
-          status: 'active',
-          metadata: {
-            settlement: 'Cloud',
-            location: null
-          },
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          links: []
-        }
-      ];
-
-      console.log(`[ResetDataWorkflow] 📊 Seeding ${defaultSites.length} default sites for localhost`);
-
-      try {
-        // Batch process localStorage operations
-        const indexKey = 'index:sites';
-        const existingIndex = localStorage.getItem(indexKey);
-        const indexSet = new Set(existingIndex ? JSON.parse(existingIndex) : []);
-
-        for (const site of defaultSites) {
-          // Store site data
-          const dataKey = `data:sites:${site.id}`;
-          localStorage.setItem(dataKey, JSON.stringify(site));
-
-          // Collect IDs for batch index update
-          indexSet.add(site.id);
-
-          results.push(`Seeded localStorage site: ${site.name}`);
-        }
-
-        // Update index once at the end
-        localStorage.setItem(indexKey, JSON.stringify([...indexSet]));
-
-        console.log('[ResetDataWorkflow] ✅ Seeded default sites for localhost');
-      } catch (error) {
-        // Fallback to individual operations if needed
-        console.warn('[ResetDataWorkflow] ⚠️ Batch seeding failed, falling back to individual operations');
-
-        for (const site of defaultSites) {
-          try {
-            // Store site data
-            const dataKey = `data:sites:${site.id}`;
-            localStorage.setItem(dataKey, JSON.stringify(site));
-
-            // Add to sites index
-            const indexKey = 'index:sites';
-            const existingIndex = localStorage.getItem(indexKey);
-            const indexSet = new Set(existingIndex ? JSON.parse(existingIndex) : []);
-            indexSet.add(site.id);
-            localStorage.setItem(indexKey, JSON.stringify([...indexSet]));
-
-            results.push(`Seeded localStorage site: ${site.name}`);
-          } catch (individualError) {
-            const errorMsg = `Failed to seed localStorage site ${site.name}: ${individualError instanceof Error ? individualError.message : 'Unknown error'}`;
-            errors.push(errorMsg);
-            console.error(`[ResetDataWorkflow] ❌ ${errorMsg}`);
-          }
-        }
-      }
-    } catch (error) {
-      const errorMsg = `Failed to seed default sites for localhost: ${error instanceof Error ? error.message : 'Unknown error'}`;
-      errors.push(errorMsg);
-      console.error(`[ResetDataWorkflow] ❌ ${errorMsg}`);
-    }
-  }
 
   /**
    * Initialize Player One (The Triforce) - Account + Player + Character

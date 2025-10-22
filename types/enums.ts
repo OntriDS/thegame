@@ -118,53 +118,53 @@ export enum SiteStatus {
   INACTIVE = 'Inactive',  // No relationships
 }
 
-/** Site Structure - Single source of truth for sites and their types */
-const SITE_STRUCTURE = {
-  PHYSICAL: {
-    HOME: 'Home',
-    FERIA_BOX: 'Feria Box',
-    SMOKING_LOUNGE: 'Smoking Lounge',
-    TAGUA: 'Tagua',
-    CAFE_VIVO: 'Cafe Vivo',
-    XIVA: 'Xiva',
-    PEREZOSO_FELIZ: 'Perezoso Feliz',
-    EL_HORNITO: 'El Hornito',
-    JUNGLE_ACADEMY: 'Jungle Academy',
-    LA_TRIBU: 'La Tribu',
-    OSA_DE_RIO: 'Osa de Rio',
-    GALLERY_1084: 'Gallery 1084',
-    CAT_CAFE: 'Cat Cafe',
-    ECO_FERIA: 'Eco Feria',
-    ESCUELA_VERDE: 'Escuela Verde',
-    PRINT_MASTERS: 'Print Masters',
-  },
-  CLOUD: {
-    DIGITAL_SPACE: 'Digital Space',
-    DESKTOP_PC: 'Desktop PC',
-    LAPTOP: 'Laptop',
-    GOOGLE_DRIVE: 'Google Drive',
-    GITHUB: 'Github',
-    MAGIC_EDEN: 'Magic Eden',
-    OPENSEA: 'OpenSea',
-  },
-  SPECIAL: {
-    NONE: 'None',
-    WORLD: 'World',
-    SOLD_ITEMS_THIS_MONTH: 'Sold Items',
-    ARCHIVED_HISTORICAL: 'Archived',
-    DELETED_ITEMS_THIS_MONTH: 'Deleted Items',
-  }
-} as const;
+// /** Site Structure - Single source of truth for sites and their types */
+// const SITE_STRUCTURE = {
+//   PHYSICAL: {
+//     HOME: 'Home',
+//     FERIA_BOX: 'Feria Box',
+//     SMOKING_LOUNGE: 'Smoking Lounge',
+//     TAGUA: 'Tagua',
+//     CAFE_VIVO: 'Cafe Vivo',
+//     XIVA: 'Xiva',
+//     PEREZOSO_FELIZ: 'Perezoso Feliz',
+//     EL_HORNITO: 'El Hornito',
+//     JUNGLE_ACADEMY: 'Jungle Academy',
+//     LA_TRIBU: 'La Tribu',
+//     OSA_DE_RIO: 'Osa de Rio',
+//     GALLERY_1084: 'Gallery 1084',
+//     CAT_CAFE: 'Cat Cafe',
+//     ECO_FERIA: 'Eco Feria',
+//     ESCUELA_VERDE: 'Escuela Verde',
+//     PRINT_MASTERS: 'Print Masters',
+//   },
+//   CLOUD: {
+//     DIGITAL_SPACE: 'Digital Space',
+//     DESKTOP_PC: 'Desktop PC',
+//     LAPTOP: 'Laptop',
+//     GOOGLE_DRIVE: 'Google Drive',
+//     GITHUB: 'Github',
+//     MAGIC_EDEN: 'Magic Eden',
+//     OPENSEA: 'OpenSea',
+//   },
+//   SPECIAL: {
+//     NONE: 'None',
+//     WORLD: 'World',
+//     SOLD_ITEMS_THIS_MONTH: 'Sold Items',
+//     ARCHIVED_HISTORICAL: 'Archived',
+//     DELETED_ITEMS_THIS_MONTH: 'Deleted Items',
+//   }
+// } as const;
 
-// Export the structure for components to use
-export const SITE_GROUPS = SITE_STRUCTURE;
+// // Export the structure for components to use
+// export const SITE_GROUPS = SITE_STRUCTURE;
 
-/** Site categories for UI organization and SearchableSelect grouping */
-export const SITE_CATEGORIES = {
-  PHYSICAL: ['HOME', 'FERIA_BOX', 'SMOKING_LOUNGE', 'TAGUA', 'CAFE_VIVO', 'XIVA', 'PEREZOSO_FELIZ', 'EL_HORNITO', 'JUNGLE_ACADEMY', 'LA_TRIBU', 'OSA_DE_RIO', 'GALLERY_1084', 'CAT_CAFE', 'ECO_FERIA', 'ESCUELA_VERDE', 'PRINT_MASTERS'],
-  CLOUD: ['DIGITAL_SPACE', 'DESKTOP_PC', 'LAPTOP', 'GOOGLE_DRIVE', 'GITHUB', 'MAGIC_EDEN', 'OPENSEA'],
-  SPECIAL: ['NONE', 'WORLD', 'SOLD_ITEMS_THIS_MONTH', 'ARCHIVED_HISTORICAL', 'DELETED_ITEMS_THIS_MONTH']
-} as const;
+// /** Site categories for UI organization and SearchableSelect grouping */
+// export const SITE_CATEGORIES = {
+//   PHYSICAL: ['HOME', 'FERIA_BOX', 'SMOKING_LOUNGE', 'TAGUA', 'CAFE_VIVO', 'XIVA', 'PEREZOSO_FELIZ', 'EL_HORNITO', 'JUNGLE_ACADEMY', 'LA_TRIBU', 'OSA_DE_RIO', 'GALLERY_1084', 'CAT_CAFE', 'ECO_FERIA', 'ESCUELA_VERDE', 'PRINT_MASTERS'],
+//   CLOUD: ['DIGITAL_SPACE', 'DESKTOP_PC', 'LAPTOP', 'GOOGLE_DRIVE', 'GITHUB', 'MAGIC_EDEN', 'OPENSEA'],
+//   SPECIAL: ['NONE', 'WORLD', 'SOLD_ITEMS_THIS_MONTH', 'ARCHIVED_HISTORICAL', 'DELETED_ITEMS_THIS_MONTH']
+// } as const;
 
 // Settlement enum removed - now using dynamic Settlement entities
 

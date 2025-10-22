@@ -3,7 +3,7 @@
 
 import { kv } from '@/data-store/kv';
 import { buildDataKey, buildIndexKey } from '@/data-store/keys';
-import { EntityType } from '@/types/enums';
+import { EntityType, SiteType, SiteStatus, PhysicalBusinessType, CloudSiteType, SpecialSiteType } from '@/types/enums';
 
 export interface SettingsResult {
   success: boolean;
@@ -352,47 +352,34 @@ export class SeedDataWorkflow {
       
       const defaultSites = [
         {
-          id: 'home',
-          name: 'Home',
-          description: 'Home base',
-          metadata: {
-            type: 'PHYSICAL',
-            businessType: 'STORE',
-            settlementId: 'settlement-uvita',
-            googleMapsAddress: 'https://maps.app.goo.gl/...'
-          },
+          id: 'hq',
+          name: 'HQ',
+          type: SiteType.PHYSICAL.toLowerCase(),
+          status: SiteStatus.ACTIVE.toLowerCase(),
+          metadata: { type: SiteType.PHYSICAL, businessType: PhysicalBusinessType.STORAGE },
           isActive: true,
-          status: 'active',
           createdAt: new Date(),
           updatedAt: new Date(),
           links: []
         },
         {
-          id: 'feria-box',
-          name: 'Feria Box',
-          description: 'Feria sales location',
-          metadata: {
-            type: 'PHYSICAL',
-            businessType: 'STORE',
-            settlementId: 'settlement-uvita',
-            googleMapsAddress: 'https://maps.app.goo.gl/...'
-          },
+          id: 'drive',
+          name: 'Drive',
+          type: SiteType.CLOUD.toLowerCase(),
+          status: SiteStatus.ACTIVE.toLowerCase(),
+          metadata: { type: SiteType.CLOUD, digitalType: CloudSiteType.REPOSITORY },
           isActive: true,
-          status: 'active',
           createdAt: new Date(),
           updatedAt: new Date(),
           links: []
         },
         {
-          id: 'digital-space',
-          name: 'Digital Space',
-          description: 'Digital workspace',
-          metadata: {
-            type: 'CLOUD',
-            digitalType: 'WEBSITE'
-          },
+          id: 'world',
+          name: 'World',
+          type: SiteType.SPECIAL.toLowerCase(),
+          status: SiteStatus.ACTIVE.toLowerCase(),
+          metadata: { type: SiteType.SPECIAL, specialType: SpecialSiteType.UNIVERSAL_TRACKING },
           isActive: true,
-          status: 'active',
           createdAt: new Date(),
           updatedAt: new Date(),
           links: []

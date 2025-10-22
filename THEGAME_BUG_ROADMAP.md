@@ -6,6 +6,7 @@
 - **Phase 2**: ✅ **COMPLETED** - Workflow chains working correctly  
 - **Phase 3**: ✅ **COMPLETED** - Data quality issues identified and fixed
 - **Phase 4**: ✅ **COMPLETED** - Logging display bugs, UI refresh issues, source attribution, and UI polish fixed
+- **Phase 5**: ✅ **COMPLETED** - Site initialization and invalid site ID handling fixed
 
 ## 🎯 **OPTIMAL FIX ORDER** (REORGANIZED)
 
@@ -58,6 +59,30 @@
 - **Solution**: Fixed React memoization with refreshKey pattern and proper event dispatching
 - **Files Fixed**: `app/admin/finances/page.tsx`
 - **Result**: Financial log now updates immediately after changes
+
+### **PHASE 5: SITE INITIALIZATION & INVALID SITE ID HANDLING** (✅ COMPLETED)
+
+#### **PATTERN F: INVALID SITE ID "NONE"** (✅ COMPLETED)
+- **5.1** ✅ Link Validation Failures for Site "None"
+- **Root Cause**: Tasks having `siteId` or `targetSiteId` set to string `"None"` instead of `null`, causing item creation to use invalid site ID
+- **Solution**: Added checks to filter out `"None"` site IDs and default to `"hq"` in item creation and skip invalid IDs in link creation
+- **Files Fixed**: `workflows/item-creation-utils.ts`, `links/links-workflows.ts`
+- **Result**: Items can now be created from tasks without link validation errors
+
+#### **PATTERN G: INCORRECT DEFAULT SITES** (✅ COMPLETED)
+- **5.2** ✅ Wrong Default Sites Being Seeded
+- **Root Cause**: System was seeding incorrect sites (Home, Feria Box, Digital Space) instead of the required 3 sites (HQ, Drive, World)
+- **Solution**: Updated both `seedDefaultSites()` in reset-data-workflow and `seedFallbackSites()` in seed-data-workflow to create correct sites
+- **Files Fixed**: `workflows/settings/reset-data-workflow.ts`, `workflows/settings/seed-data-workflow.ts`
+- **Required Sites**: HQ (physical, storage), Drive (cloud, repository), World (system, universal tracking)
+- **Result**: Default sites now match system requirements
+
+#### **PATTERN H: OBSOLETE LOCAL ENVIRONMENT CODE** (✅ COMPLETED)
+- **5.3** ✅ Removed localStorage/Local Environment Code
+- **Root Cause**: System is now KV-only but still had localStorage fallback code for non-existent local environment
+- **Solution**: Removed `seedDefaultSitesLocal()` method and its call from reset workflow
+- **Files Fixed**: `workflows/settings/reset-data-workflow.ts`
+- **Result**: Codebase is now clean and consistent with KV-only architecture
 
 ---
 

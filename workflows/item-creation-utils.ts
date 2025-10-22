@@ -79,7 +79,9 @@ export async function createItemFromTask(task: Task): Promise<Item | null> {
       links: [],  // Initialize links array (The Rosetta Stone)
       stock: [
         {
-          siteId: task.targetSiteId || task.siteId || 'home-storage', // Default to home storage
+          siteId: (task.targetSiteId && task.targetSiteId !== 'None' ? task.targetSiteId : null) ||
+                  (task.siteId && task.siteId !== 'None' ? task.siteId : null) ||
+                  'hq', // Default to HQ
           quantity: task.outputQuantity || 1
         }
       ]
@@ -150,7 +152,7 @@ export async function createItemFromRecord(record: FinancialRecord): Promise<Ite
       links: [],  // Initialize links array (The Rosetta Stone)
       stock: [
         {
-          siteId: record.siteId || 'home-storage', // Default to home storage
+          siteId: (record.siteId && record.siteId !== 'None' ? record.siteId : null) || 'hq', // Default to HQ
           quantity: record.outputQuantity || 1
         }
       ]

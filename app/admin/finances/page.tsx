@@ -20,7 +20,7 @@ import {
 } from '@/types/entities';
 import { Plus, DollarSign, TrendingUp, TrendingDown, Building2, User } from 'lucide-react';
 import { MONTHS, getYearRange, getMonthName, getCurrentMonth } from '@/lib/constants/date-constants';
-import { BUSINESS_STRUCTURE, SITE_GROUPS, ItemType } from '@/types/enums';
+import { BUSINESS_STRUCTURE, ItemType } from '@/types/enums';
 import { getCompanyAreas, getPersonalAreas, isCompanyStation, getAreaForStation } from '@/lib/utils/business-structure-utils';
 import { CompanyRecordsList, PersonalRecordsList } from '@/components/finances/financial-records-components';
 import { PRICE_STEP, DECIMAL_STEP, J$_TO_USD_RATE, PRIMARY_CURRENCY, USD_CURRENCY } from '@/lib/constants/app-constants';
