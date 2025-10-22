@@ -17,6 +17,7 @@ import SalesModal from "@/components/modals/sales-modal";
 export default function SalesPage() {
   const { activeBg } = useThemeColors();
   const [sales, setSales] = useState<Sale[]>([]);
+  const [sites, setSites] = useState<any[]>([]);
   const [filteredSales, setFilteredSales] = useState<Sale[]>([]);
   const [selectedType, setSelectedType] = useState<SaleType | 'all'>('all');
   const [selectedStatus, setSelectedStatus] = useState<SaleStatus | 'all'>('all');
@@ -52,8 +53,12 @@ export default function SalesPage() {
   const loadSales = async () => {
     try {
       setIsLoading(true);
-      const salesData = await ClientAPI.getSales();
+      const [salesData, sitesData] = await Promise.all([
+        ClientAPI.getSales(),
+        ClientAPI.getSites()
+      ]);
       setSales(salesData);
+      setSites(sitesData);
     } catch (error) {
       console.error('Failed to load sales:', error);
     } finally {
@@ -262,7 +267,7 @@ export default function SalesPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Sites</SelectItem>
-                  {getAllSiteNames().map(site => (
+                  {getAllSiteNames(sites).map(site => (
                     <SelectItem key={site} value={site}>{site}</SelectItem>
                   ))}
                 </SelectContent>
