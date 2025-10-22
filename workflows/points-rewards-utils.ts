@@ -4,6 +4,7 @@ import { getAllPlayers, upsertPlayer, getAllCharacters, upsertCharacter } from '
 import { makeLink } from '@/links/links-workflows';
 import { createLink } from '@/links/link-registry';
 import { LinkType, EntityType } from '@/types/enums';
+import { appendPlayerPointsLog, appendCharacterJungleCoinsLog } from './entities-logging';
 
 /**
  * Awards points to a player with idempotency and proper tracking
@@ -96,6 +97,10 @@ export async function awardPointsToPlayer(
 
     await createLink(link);
     console.log(`[awardPointsToPlayer] ✅ Link created: ${linkType}`);
+
+    // Add dedicated player points log with source attribution
+    await appendPlayerPointsLog(playerId, points, sourceId, sourceType);
+    console.log(`[awardPointsToPlayer] ✅ Player points log created with source attribution`);
 
   } catch (error) {
     console.error(`[awardPointsToPlayer] ❌ Failed to award points:`, error);
@@ -194,6 +199,10 @@ export async function awardJungleCoinsToCharacter(
     // Save updated character
     await upsertCharacter(updatedCharacter);
     console.log(`[awardJungleCoinsToCharacter] ✅ Jungle coins awarded successfully: ${amount} J$`);
+
+    // Add dedicated character jungle coins log with source attribution
+    await appendCharacterJungleCoinsLog(characterId, amount, sourceId, sourceType);
+    console.log(`[awardJungleCoinsToCharacter] ✅ Character jungle coins log created with source attribution`);
 
     // NOTE: J$ (Jungle Coins) are CURRENCY that belongs to FINANCIALS
     // They can be borrowed as AMBASSADOR by Player and Character, but don't belong to them

@@ -534,6 +534,12 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
           setPlayerData(updatedPlayer);
           onSave(updatedPlayer);
           setShowPersonalData(false);
+          
+          // Dispatch events AFTER save completes
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new Event('playersUpdated'));
+            window.dispatchEvent(new Event('linksUpdated'));
+          }
         }}
       />
 
