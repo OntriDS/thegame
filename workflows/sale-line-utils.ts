@@ -3,7 +3,7 @@
 
 import type { Sale, ItemSaleLine, BundleSaleLine, ServiceLine, Task } from '@/types/entities';
 import { LinkType, EntityType, LogEventType } from '@/types/enums';
-import { ClientAPI } from '@/lib/client-api';
+import { getAllItems, upsertItem, upsertTask } from '@/data-store/datastore';
 import { makeLink } from '@/links/links-workflows';
 import { createLink } from '@/links/link-registry';
 import { hasEffect, markEffect } from '@/data-store/effects-registry';
@@ -67,7 +67,7 @@ export async function processItemSaleLine(line: ItemSaleLine, sale: Sale): Promi
     }
     
     // Get the item
-    const items = await ClientAPI.getItems();
+    const items = await getAllItems();
     const item = items.find(i => i.id === line.itemId);
     
     if (!item) {
@@ -96,7 +96,7 @@ export async function processItemSaleLine(line: ItemSaleLine, sale: Sale): Promi
     }
     
     // Save the updated item
-    await ClientAPI.upsertItem(updatedItem);
+    await upsertItem(updatedItem);
     
     // Create SALE_ITEM link
     const linkMetadata = {
@@ -226,7 +226,7 @@ export async function processServiceLine(line: ServiceLine, sale: Sale): Promise
     };
     
     // Save the task
-    await ClientAPI.upsertTask(serviceTask);
+    await upsertTask(serviceTask);
     
     // Create SALE_TASK link
     const linkMetadata = {

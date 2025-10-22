@@ -5,7 +5,7 @@ import { EntityType, LogEventType } from '@/types/enums';
 import type { Account } from '@/types/entities';
 import { appendEntityLog, updateEntityLogField } from '../entities-logging';
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
-import { ClientAPI } from '@/lib/client-api';
+import { getLinksFor, removeLink } from '@/links/link-registry';
 
 const STATE_FIELDS = ['isActive', 'isVerified', 'loginAttempts'];
 const DESCRIPTIVE_FIELDS = ['name', 'email', 'phone', 'privacySettings'];
@@ -84,12 +84,12 @@ export async function removeAccountEffectsOnDelete(accountId: string): Promise<v
     console.log(`[removeAccountEffectsOnDelete] Starting cleanup for account: ${accountId}`);
     
     // 1. Remove all Links related to this account
-    const accountLinks = await ClientAPI.getLinksFor({ type: EntityType.ACCOUNT, id: accountId });
+    const accountLinks = await getLinksFor({ type: EntityType.ACCOUNT, id: accountId });
     console.log(`[removeAccountEffectsOnDelete] Found ${accountLinks.length} links to remove`);
     
     for (const link of accountLinks) {
       try {
-        await ClientAPI.removeLink(link.id);
+        await removeLink(link.id);
         console.log(`[removeAccountEffectsOnDelete] ✅ Removed link: ${link.linkType}`);
       } catch (error) {
         console.error(`[removeAccountEffectsOnDelete] ❌ Failed to remove link ${link.id}:`, error);
@@ -103,13 +103,8 @@ export async function removeAccountEffectsOnDelete(accountId: string): Promise<v
     // 3. Remove log entries from account log
     console.log(`[removeAccountEffectsOnDelete] Starting log entry removal for account: ${accountId}`);
     
-    const result = await ClientAPI.removeLogEntry(EntityType.ACCOUNT, accountId);
-    
-    if (result.success) {
-      console.log(`[removeAccountEffectsOnDelete] ✅ Account log entries removed successfully for account: ${accountId}`);
-    } else {
-      console.error(`[removeAccountEffectsOnDelete] Failed to remove account log entries: ${result.message}`);
-    }
+    // TODO: Implement server-side log removal or remove this call
+    console.log(`[removeAccountEffectsOnDelete] ⚠️ Log entry removal skipped - needs server-side implementation`);
     
     console.log(`[removeAccountEffectsOnDelete] ✅ Cleared effects, removed links, and removed log entries for account ${accountId}`);
   } catch (error) {

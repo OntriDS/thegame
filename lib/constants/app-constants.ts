@@ -90,6 +90,13 @@ export const SHOE_SIZE_CONVERSION: Record<string, string> = {
   '10': '44'
 };
 
+// Processing Stack Constants
+export const PROCESSING_CONSTANTS = {
+  MAX_DEPTH: 5,
+  TIMEOUT_MS: 5 * 60 * 1000, // 5 minutes
+  PROCESSING_STACK_KEY: 'processing-stack',
+} as const;
+
 // Point System Constants
 export const POINT_TYPES = {
   XP: 'xp',

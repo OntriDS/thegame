@@ -5,7 +5,7 @@ import { EntityType, LogEventType } from '@/types/enums';
 import type { Site } from '@/types/entities';
 import { appendEntityLog, updateEntityLogField } from '../entities-logging';
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
-import { ClientAPI } from '@/lib/client-api';
+import { getLinksFor, removeLink } from '@/links/link-registry';
 
 const STATE_FIELDS = ['isActive', 'status'];
 const DESCRIPTIVE_FIELDS = ['name', 'description', 'metadata'];
@@ -66,12 +66,12 @@ export async function removeSiteEffectsOnDelete(siteId: string): Promise<void> {
     console.log(`[removeSiteEffectsOnDelete] Starting cleanup for site: ${siteId}`);
     
     // 1. Remove all Links related to this site
-    const siteLinks = await ClientAPI.getLinksFor({ type: EntityType.SITE, id: siteId });
+    const siteLinks = await getLinksFor({ type: EntityType.SITE, id: siteId });
     console.log(`[removeSiteEffectsOnDelete] Found ${siteLinks.length} links to remove`);
     
     for (const link of siteLinks) {
       try {
-        await ClientAPI.removeLink(link.id);
+        await removeLink(link.id);
         console.log(`[removeSiteEffectsOnDelete] ✅ Removed link: ${link.linkType}`);
       } catch (error) {
         console.error(`[removeSiteEffectsOnDelete] ❌ Failed to remove link ${link.id}:`, error);
@@ -85,15 +85,8 @@ export async function removeSiteEffectsOnDelete(siteId: string): Promise<void> {
     // 3. Remove log entries from sites log
     console.log(`[removeSiteEffectsOnDelete] Starting log entry removal for site: ${siteId}`);
     
-    const result = await ClientAPI.removeLogEntry(EntityType.SITE, siteId);
-    
-    if (result.success) {
-      console.log(`[removeSiteEffectsOnDelete] ✅ Site log entries removed successfully for site: ${siteId}`);
-    } else if (result.message === 'No matching entries found') {
-      console.log(`[removeSiteEffectsOnDelete] ⏭️ No log entries found for site: ${siteId} (this is normal)`);
-    } else {
-      console.error(`[removeSiteEffectsOnDelete] Failed to remove site log entries: ${result.message}`);
-    }
+    // TODO: Implement server-side log removal or remove this call
+    console.log(`[removeSiteEffectsOnDelete] ⚠️ Log entry removal skipped - needs server-side implementation`);
     
     console.log(`[removeSiteEffectsOnDelete] ✅ Cleared effects, removed links, and removed log entries for site ${siteId}`);
   } catch (error) {

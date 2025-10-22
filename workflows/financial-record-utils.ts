@@ -3,7 +3,7 @@
 
 import type { Task, FinancialRecord, Sale } from '@/types/entities';
 import { LinkType, EntityType, LogEventType } from '@/types/enums';
-import { ClientAPI } from '@/lib/client-api';
+import { getAllFinancials, upsertFinancial, removeFinancial } from '@/data-store/datastore';
 import { makeLink } from '@/links/links-workflows';
 import { createLink } from '@/links/link-registry';
 import { appendEntityLog } from './entities-logging';
@@ -23,7 +23,7 @@ export async function createFinancialRecordFromTask(task: Task): Promise<Financi
     }
     
     // IDEMPOTENCY CHECK: Look for existing financial record created by this task
-    const allFinancials = await ClientAPI.getFinancialRecords();
+    const allFinancials = await getAllFinancials();
     const existingFinrec = allFinancials.find(fr => fr.sourceTaskId === task.id);
     
     if (existingFinrec) {
@@ -59,7 +59,7 @@ export async function createFinancialRecordFromTask(task: Task): Promise<Financi
     
     // Store the financial record
     console.log(`[createFinancialRecordFromTask] Creating new financial record:`, newFinrec);
-    const createdFinrec = await ClientAPI.upsertFinancialRecord(newFinrec);
+    const createdFinrec = await upsertFinancial(newFinrec);
     
     // Create TASK_FINREC link with metadata
     const linkMetadata = {
@@ -100,7 +100,7 @@ export async function updateFinancialRecordFromTask(task: Task, previousTask: Ta
     console.log(`[updateFinancialRecordFromTask] Updating financial record for task: ${task.name} (${task.id})`);
     
     // Find the existing financial record created by this task
-    const allFinancials = await ClientAPI.getFinancialRecords();
+    const allFinancials = await getAllFinancials();
     const existingFinrec = allFinancials.find(fr => fr.sourceTaskId === task.id);
     
     if (!existingFinrec) {
@@ -144,7 +144,7 @@ export async function updateFinancialRecordFromTask(task: Task, previousTask: Ta
     
     // Store the updated financial record
     console.log(`[updateFinancialRecordFromTask] Updating financial record:`, updatedFinrec);
-    await ClientAPI.upsertFinancialRecord(updatedFinrec);
+    await upsertFinancial(updatedFinrec);
     
     // Log the update
     await appendEntityLog(EntityType.FINANCIAL, existingFinrec.id, LogEventType.UPDATED, {
@@ -176,7 +176,7 @@ export async function removeFinancialRecordsCreatedByTask(taskId: string): Promi
     console.log(`[removeFinancialRecordsCreatedByTask] Removing financial records created by task: ${taskId}`);
     
     // Find financial records created by this task
-    const allFinancials = await ClientAPI.getFinancialRecords();
+    const allFinancials = await getAllFinancials();
     const taskFinancials = allFinancials.filter(fr => fr.sourceTaskId === taskId);
     
     if (taskFinancials.length === 0) {
@@ -189,7 +189,7 @@ export async function removeFinancialRecordsCreatedByTask(taskId: string): Promi
     // Remove each financial record
     for (const financial of taskFinancials) {
       try {
-        await ClientAPI.deleteFinancialRecord(financial.id);
+        await removeFinancial(financial.id);
         console.log(`[removeFinancialRecordsCreatedByTask] ✅ Removed financial record: ${financial.name}`);
       } catch (error) {
         console.error(`[removeFinancialRecordsCreatedByTask] ❌ Failed to remove financial record ${financial.id}:`, error);
@@ -219,7 +219,7 @@ export async function createFinancialRecordFromSale(sale: Sale): Promise<Financi
     }
     
     // IDEMPOTENCY CHECK: Look for existing financial record created by this sale
-    const allFinancials = await ClientAPI.getFinancialRecords();
+    const allFinancials = await getAllFinancials();
     const existingFinrec = allFinancials.find(fr => fr.sourceSaleId === sale.id);
     
     if (existingFinrec) {
@@ -255,7 +255,7 @@ export async function createFinancialRecordFromSale(sale: Sale): Promise<Financi
     
     // Store the financial record
     console.log(`[createFinancialRecordFromSale] Creating financial record:`, newFinrec);
-    const createdFinrec = await ClientAPI.upsertFinancialRecord(newFinrec);
+    const createdFinrec = await upsertFinancial(newFinrec);
     
     // Create SALE_FINREC link
     const linkMetadata = {

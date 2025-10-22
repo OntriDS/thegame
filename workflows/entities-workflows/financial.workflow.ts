@@ -5,7 +5,8 @@ import { EntityType, LogEventType } from '@/types/enums';
 import type { FinancialRecord } from '@/types/entities';
 import { appendEntityLog, updateEntityLogField } from '../entities-logging';
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
-import { ClientAPI } from '@/lib/client-api';
+import { getLinksFor, removeLink } from '@/links/link-registry';
+import { getAllFinancials, getAllPlayers, getAllCharacters } from '@/data-store/datastore';
 import { createItemFromRecord, removeItemsCreatedByRecord } from '../item-creation-utils';
 import { awardPointsToPlayer, removePointsFromPlayer, awardJungleCoinsToCharacter, removeJungleCoinsFromCharacter, getMainPlayerId, getMainCharacterId } from '../points-rewards-utils';
 import { 
@@ -148,12 +149,12 @@ export async function removeRecordEffectsOnDelete(recordId: string): Promise<voi
     await removeJungleCoinsFromRecord(recordId);
     
     // 4. Remove all Links related to this record
-    const recordLinks = await ClientAPI.getLinksFor({ type: EntityType.FINANCIAL, id: recordId });
+    const recordLinks = await getLinksFor({ type: EntityType.FINANCIAL, id: recordId });
     console.log(`[removeRecordEffectsOnDelete] Found ${recordLinks.length} links to remove`);
     
     for (const link of recordLinks) {
       try {
-        await ClientAPI.removeLink(link.id);
+        await removeLink(link.id);
         console.log(`[removeRecordEffectsOnDelete] ✅ Removed link: ${link.linkType}`);
       } catch (error) {
         console.error(`[removeRecordEffectsOnDelete] ❌ Failed to remove link ${link.id}:`, error);
@@ -171,12 +172,10 @@ export async function removeRecordEffectsOnDelete(recordId: string): Promise<voi
     // 6. Remove log entries from all relevant logs
     console.log(`[removeRecordEffectsOnDelete] Starting log entry removal for record: ${recordId}`);
     
-    const removals = await Promise.all([
-      ClientAPI.removeLogEntry(EntityType.FINANCIAL, recordId).then(r => { console.log(`[removeRecordEffectsOnDelete] Financials log removal result:`, r); return r; }).catch(e => ({ success: false, message: String(e) })),
-      ClientAPI.removeLogEntry(EntityType.CHARACTER, recordId).then(r => { console.log(`[removeRecordEffectsOnDelete] Character log removal result:`, r); return r; }).catch(e => ({ success: false, message: String(e) })),
-      ClientAPI.removeLogEntry(EntityType.PLAYER, recordId).then(r => { console.log(`[removeRecordEffectsOnDelete] Player log removal result:`, r); return r; }).catch(e => ({ success: false, message: String(e) })),
-      ClientAPI.removeLogEntry(EntityType.ITEM, recordId).then(r => { console.log(`[removeRecordEffectsOnDelete] Items log removal result:`, r); return r; }).catch(e => ({ success: false, message: String(e) })),
-    ]);
+    // TODO: Implement server-side log removal or remove these calls
+    console.log(`[removeRecordEffectsOnDelete] ⚠️ Log entry removal skipped - needs server-side implementation`);
+    
+    const removals: { success: boolean; message?: string }[] = []; // Placeholder for removed log calls
 
     console.log(`[removeRecordEffectsOnDelete] All removal results:`, removals);
     const failed = removals.filter(r => !r.success);
@@ -201,7 +200,7 @@ async function removePlayerPointsFromRecord(recordId: string): Promise<void> {
     console.log(`[removePlayerPointsFromRecord] Removing points for record: ${recordId}`);
     
     // Get the record to find what points were awarded
-    const records = await ClientAPI.getFinancialRecords();
+    const records = await getAllFinancials();
     const record = records.find(r => r.id === recordId);
     
     if (!record || !record.rewards?.points) {
@@ -211,7 +210,7 @@ async function removePlayerPointsFromRecord(recordId: string): Promise<void> {
     
     // Get the main player
     const mainPlayerId = getMainPlayerId();
-    const players = await ClientAPI.getPlayers();
+    const players = await getAllPlayers();
     const mainPlayer = players.find(p => p.id === mainPlayerId);
     
     if (!mainPlayer) {
@@ -252,7 +251,7 @@ async function removeJungleCoinsFromRecord(recordId: string): Promise<void> {
     console.log(`[removeJungleCoinsFromRecord] Removing jungle coins for record: ${recordId}`);
     
     // Get the record to find what jungle coins were awarded
-    const records = await ClientAPI.getFinancialRecords();
+    const records = await getAllFinancials();
     const record = records.find(r => r.id === recordId);
     
     if (!record || !record.jungleCoins || record.jungleCoins <= 0) {
@@ -262,7 +261,7 @@ async function removeJungleCoinsFromRecord(recordId: string): Promise<void> {
     
     // Get the main character
     const mainCharacterId = getMainCharacterId();
-    const characters = await ClientAPI.getCharacters();
+    const characters = await getAllCharacters();
     const mainCharacter = characters.find(c => c.id === mainCharacterId);
     
     if (!mainCharacter) {

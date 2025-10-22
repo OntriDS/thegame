@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowUpDown, RefreshCw, CheckSquare, Link } from 'lucide-react';
 import { LinksSubModal } from '@/components/modals/submodals/links-submodal';
 import { useState } from 'react';
-import { TaskStatus, TaskType, EntityType } from '@/types/enums';
+import { TaskStatus, TaskType, EntityType, LogEventType } from '@/types/enums';
 import { TASK_STATUS_COLORS } from '@/lib/constants/color-constants';
 import { calculateTaskProfitPercentage } from '@/lib/utils/business-utils';
 import { useThemeColors } from '@/lib/hooks/use-theme-colors';
@@ -184,15 +184,18 @@ export function TasksLifecycleTab({ projectStatus, tasksLog, onReload, isReloadi
                   if (status === 'renamed' && data.oldValue && data.newValue) {
                     statusBadge = 'Renamed';
                     renameInfo = `Changed from: "${data.oldValue}"`;
-                  } else if (status === 'updated' && data.field && data.oldValue !== undefined && data.newValue !== undefined) {
+                  } else if (status === LogEventType.UPDATED && data.field && data.oldValue !== undefined && data.newValue !== undefined) {
                     statusBadge = 'Updated';
                     renameInfo = `${data.field}: "${data.oldValue}" → "${data.newValue}"`;
-                  } else if (status === 'created') {
+                  } else if (status === LogEventType.CREATED) {
                     statusBadge = 'Created';
-                  } else if (status.toLowerCase() === 'done') {
+                  } else if (status.toLowerCase() === LogEventType.DONE.toLowerCase()) {
                     statusBadge = 'Done';
-                  } else if (status === 'collected') {
+                  } else if (status === LogEventType.COLLECTED) {
                     statusBadge = 'Collected';
+                  } else if (status === LogEventType.STATUS_CHANGED) {
+                    statusBadge = data.newStatus || 'Status Changed';
+                    renameInfo = data.oldStatus ? `Changed from: "${data.oldStatus}"` : '';
                   } else if (status === 'BULK_IMPORT') {
                     statusBadge = 'Bulk Import';
                     const count = data.count || 0;

@@ -3,8 +3,14 @@
 
 import type { Task, Item, Sale, FinancialRecord, Character, Player } from '@/types/entities';
 import { EntityType } from '@/types/enums';
-import { ClientAPI } from '@/lib/client-api';
 import { hasEffect, markEffect } from '@/data-store/effects-registry';
+import {
+  getAllFinancials, upsertFinancial,
+  getAllTasks, upsertTask,
+  getAllItems, upsertItem,
+  getAllPlayers, upsertPlayer,
+  getAllCharacters, upsertCharacter
+} from '@/data-store/datastore';
 
 // ============================================================================
 // TASK → FINANCIAL RECORD PROPAGATION
@@ -18,7 +24,7 @@ export async function updateFinancialRecordsFromTask(
     console.log(`[updateFinancialRecordsFromTask] Updating financial records for task: ${task.name}`);
     
     // Find financial records created from this task
-    const allFinancials = await ClientAPI.getFinancialRecords();
+    const allFinancials = await getAllFinancials();
     const relatedRecords = allFinancials.filter(record => record.sourceTaskId === task.id);
     
     for (const record of relatedRecords) {
@@ -50,7 +56,7 @@ export async function updateFinancialRecordsFromTask(
           updatedAt: new Date()
         };
         
-        await ClientAPI.upsertFinancialRecord(updatedRecord);
+        await upsertFinancial(updatedRecord);
         await markEffect(updateKey);
         
         console.log(`[updateFinancialRecordsFromTask] ✅ Updated financial record: ${record.id}`);
@@ -73,7 +79,7 @@ export async function updateTasksFromFinancialRecord(
     console.log(`[updateTasksFromFinancialRecord] Updating tasks for financial record: ${record.name}`);
     
     // Find tasks that created this financial record
-    const allTasks = await ClientAPI.getTasks();
+    const allTasks = await getAllTasks();
     const relatedTasks = allTasks.filter(task => task.id === record.sourceTaskId);
     
     for (const task of relatedTasks) {
@@ -105,7 +111,7 @@ export async function updateTasksFromFinancialRecord(
           updatedAt: new Date()
         };
         
-        await ClientAPI.upsertTask(updatedTask);
+        await upsertTask(updatedTask);
         await markEffect(updateKey);
         
         console.log(`[updateTasksFromFinancialRecord] ✅ Updated task: ${task.id}`);
@@ -128,7 +134,7 @@ export async function updateItemsCreatedByTask(
     console.log(`[updateItemsCreatedByTask] Updating items for task: ${task.name}`);
     
     // Find items created from this task
-    const allItems = await ClientAPI.getItems();
+    const allItems = await getAllItems();
     const relatedItems = allItems.filter(item => item.sourceTaskId === task.id);
     
     for (const item of relatedItems) {
@@ -173,7 +179,7 @@ export async function updateItemsCreatedByTask(
           }
         }
         
-        await ClientAPI.upsertItem(updatedItem);
+        await upsertItem(updatedItem);
         await markEffect(updateKey);
         
         console.log(`[updateItemsCreatedByTask] ✅ Updated item: ${item.id}`);
@@ -196,7 +202,7 @@ export async function updateItemsCreatedByRecord(
     console.log(`[updateItemsCreatedByRecord] Updating items for financial record: ${record.name}`);
     
     // Find items created from this financial record
-    const allItems = await ClientAPI.getItems();
+    const allItems = await getAllItems();
     const relatedItems = allItems.filter(item => item.sourceRecordId === record.id);
     
     for (const item of relatedItems) {
@@ -241,7 +247,7 @@ export async function updateItemsCreatedByRecord(
           }
         }
         
-        await ClientAPI.upsertItem(updatedItem);
+        await upsertItem(updatedItem);
         await markEffect(updateKey);
         
         console.log(`[updateItemsCreatedByRecord] ✅ Updated item: ${item.id}`);
@@ -264,7 +270,7 @@ export async function updateFinancialRecordsFromSale(
     console.log(`[updateFinancialRecordsFromSale] Updating financial records for sale: ${sale.name}`);
     
     // Find financial records created from this sale
-    const allFinancials = await ClientAPI.getFinancialRecords();
+    const allFinancials = await getAllFinancials();
     const relatedRecords = allFinancials.filter(record => record.sourceSaleId === sale.id);
     
     for (const record of relatedRecords) {
@@ -290,7 +296,7 @@ export async function updateFinancialRecordsFromSale(
           updatedAt: new Date()
         };
         
-        await ClientAPI.upsertFinancialRecord(updatedRecord);
+        await upsertFinancial(updatedRecord);
         await markEffect(updateKey);
         
         console.log(`[updateFinancialRecordsFromSale] ✅ Updated financial record: ${record.id}`);
@@ -333,7 +339,8 @@ export async function updateItemsFromSale(
         }
         
         // Get the item
-        const item = await ClientAPI.getItemById(line.itemId);
+        const allItems = await getAllItems();
+        const item = allItems.find(i => i.id === line.itemId);
         if (!item) {
           console.warn(`[updateItemsFromSale] Item not found: ${line.itemId}`);
           continue;
@@ -346,7 +353,7 @@ export async function updateItemsFromSale(
           updatedAt: new Date()
         };
         
-        await ClientAPI.upsertItem(updatedItem);
+        await upsertItem(updatedItem);
         await markEffect(updateKey);
         
         console.log(`[updateItemsFromSale] ✅ Updated item: ${line.itemId}`);
@@ -404,7 +411,7 @@ export async function updatePlayerPointsFromSource(
     }
     
     // Find the player (assuming single player for now)
-    const players = await ClientAPI.getPlayers();
+    const players = await getAllPlayers();
     const player = players[0]; // Simplified - in real system, find by source relationship
     
     if (!player) {
@@ -431,7 +438,7 @@ export async function updatePlayerPointsFromSource(
       updatedAt: new Date()
     };
     
-    await ClientAPI.upsertPlayer(updatedPlayer);
+    await upsertPlayer(updatedPlayer);
     await markEffect(updateKey);
     
     console.log(`[updatePlayerPointsFromSource] ✅ Updated player points: ${player.id}`);
@@ -462,7 +469,7 @@ export async function updateCharacterJungleCoinsFromRecord(
     }
     
     // Find characters related to this financial record
-    const allCharacters = await ClientAPI.getCharacters();
+    const allCharacters = await getAllCharacters();
     const relatedCharacters = allCharacters.filter(char => 
       char.id === record.customerCharacterId
     );
@@ -482,7 +489,7 @@ export async function updateCharacterJungleCoinsFromRecord(
         updatedAt: new Date()
       };
       
-      await ClientAPI.upsertCharacter(updatedCharacter);
+      await upsertCharacter(updatedCharacter);
       await markEffect(updateKey);
       
       console.log(`[updateCharacterJungleCoinsFromRecord] ✅ Updated character jungle coins: ${character.id}`);

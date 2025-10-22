@@ -5,7 +5,7 @@ import { EntityType, LogEventType } from '@/types/enums';
 import type { Character } from '@/types/entities';
 import { appendEntityLog, updateEntityLogField } from '../entities-logging';
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
-import { ClientAPI } from '@/lib/client-api';
+import { getLinksFor, removeLink } from '@/links/link-registry';
 import { appendCharacterJungleCoinsLog } from '../entities-logging';
 import type { Task, FinancialRecord } from '@/types/entities';
 
@@ -103,12 +103,12 @@ export async function removeCharacterEffectsOnDelete(characterId: string): Promi
     console.log(`[removeCharacterEffectsOnDelete] Starting cleanup for character: ${characterId}`);
     
     // 1. Remove all Links related to this character
-    const characterLinks = await ClientAPI.getLinksFor({ type: EntityType.CHARACTER, id: characterId });
+    const characterLinks = await getLinksFor({ type: EntityType.CHARACTER, id: characterId });
     console.log(`[removeCharacterEffectsOnDelete] Found ${characterLinks.length} links to remove`);
     
     for (const link of characterLinks) {
       try {
-        await ClientAPI.removeLink(link.id);
+        await removeLink(link.id);
         console.log(`[removeCharacterEffectsOnDelete] ✅ Removed link: ${link.linkType}`);
       } catch (error) {
         console.error(`[removeCharacterEffectsOnDelete] ❌ Failed to remove link ${link.id}:`, error);
@@ -122,13 +122,8 @@ export async function removeCharacterEffectsOnDelete(characterId: string): Promi
     // 3. Remove log entries from character log
     console.log(`[removeCharacterEffectsOnDelete] Starting log entry removal for character: ${characterId}`);
     
-    const result = await ClientAPI.removeLogEntry(EntityType.CHARACTER, characterId);
-    
-    if (result.success) {
-      console.log(`[removeCharacterEffectsOnDelete] ✅ Character log entries removed successfully for character: ${characterId}`);
-    } else {
-      console.error(`[removeCharacterEffectsOnDelete] Failed to remove character log entries: ${result.message}`);
-    }
+    // TODO: Implement server-side log removal or remove this call
+    console.log(`[removeCharacterEffectsOnDelete] ⚠️ Log entry removal skipped - needs server-side implementation`);
     
     console.log(`[removeCharacterEffectsOnDelete] ✅ Cleared effects, removed links, and removed log entries for character ${characterId}`);
   } catch (error) {

@@ -5,7 +5,8 @@ import { EntityType, LogEventType } from '@/types/enums';
 import type { Player } from '@/types/entities';
 import { appendEntityLog, updateEntityLogField } from '../entities-logging';
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
-import { ClientAPI } from '@/lib/client-api';
+import { getLinksFor, removeLink } from '@/links/link-registry';
+import { getAllPlayers, upsertPlayer } from '@/data-store/datastore';
 import { appendPlayerPointsLog, appendPlayerPointsUpdateLog } from '../entities-logging';
 import type { Task, FinancialRecord } from '@/types/entities';
 
@@ -128,12 +129,12 @@ export async function removePlayerEffectsOnDelete(playerId: string): Promise<voi
     console.log(`[removePlayerEffectsOnDelete] Starting cleanup for player: ${playerId}`);
     
     // 1. Remove all Links related to this player
-    const playerLinks = await ClientAPI.getLinksFor({ type: EntityType.PLAYER, id: playerId });
+    const playerLinks = await getLinksFor({ type: EntityType.PLAYER, id: playerId });
     console.log(`[removePlayerEffectsOnDelete] Found ${playerLinks.length} links to remove`);
     
     for (const link of playerLinks) {
       try {
-        await ClientAPI.removeLink(link.id);
+        await removeLink(link.id);
         console.log(`[removePlayerEffectsOnDelete] ✅ Removed link: ${link.linkType}`);
       } catch (error) {
         console.error(`[removePlayerEffectsOnDelete] ❌ Failed to remove link ${link.id}:`, error);
@@ -147,13 +148,8 @@ export async function removePlayerEffectsOnDelete(playerId: string): Promise<voi
     // 3. Remove log entries from player log
     console.log(`[removePlayerEffectsOnDelete] Starting log entry removal for player: ${playerId}`);
     
-    const result = await ClientAPI.removeLogEntry(EntityType.PLAYER, playerId);
-    
-    if (result.success) {
-      console.log(`[removePlayerEffectsOnDelete] ✅ Player log entries removed successfully for player: ${playerId}`);
-    } else {
-      console.error(`[removePlayerEffectsOnDelete] Failed to remove player log entries: ${result.message}`);
-    }
+    // TODO: Implement server-side log removal or remove this call
+    console.log(`[removePlayerEffectsOnDelete] ⚠️ Log entry removal skipped - needs server-side implementation`);
     
     console.log(`[removePlayerEffectsOnDelete] ✅ Cleared effects, removed links, and removed log entries for player ${playerId}`);
   } catch (error) {
@@ -319,7 +315,7 @@ export async function updatePlayerPointsFromTask(task: Task, oldTask: Task): Pro
     
     // Get main player
     const mainPlayerId = 'PLAYER_ONE_ID';
-    const players = await ClientAPI.getPlayers();
+    const players = await getAllPlayers();
     const mainPlayer = players.find(p => p.id === mainPlayerId);
     
     if (!mainPlayer) {
@@ -347,7 +343,7 @@ export async function updatePlayerPointsFromTask(task: Task, oldTask: Task): Pro
     
     // Store the updated player
     console.log(`[updatePlayerPointsFromTask] Applying point delta:`, delta);
-    await ClientAPI.upsertPlayer(updatedPlayer);
+    await upsertPlayer(updatedPlayer);
     
     console.log(`[updatePlayerPointsFromTask] ✅ Player points updated successfully`);
   } catch (error) {

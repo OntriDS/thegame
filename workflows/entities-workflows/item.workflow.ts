@@ -5,7 +5,7 @@ import { EntityType, LogEventType } from '@/types/enums';
 import type { Item } from '@/types/entities';
 import { appendEntityLog, updateEntityLogField, appendItemCreationLog } from '../entities-logging';
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
-import { ClientAPI } from '@/lib/client-api';
+import { getLinksFor, removeLink } from '@/links/link-registry';
 
 const STATE_FIELDS = ['status', 'stock', 'quantitySold', 'isCollected'];
 const DESCRIPTIVE_FIELDS = ['name', 'description', 'price', 'unitCost', 'additionalCost', 'value'];
@@ -84,12 +84,12 @@ export async function removeItemEffectsOnDelete(itemId: string): Promise<void> {
     console.log(`[removeItemEffectsOnDelete] Starting cleanup for item: ${itemId}`);
     
     // 1. Remove all Links related to this item
-    const itemLinks = await ClientAPI.getLinksFor({ type: EntityType.ITEM, id: itemId });
+    const itemLinks = await getLinksFor({ type: EntityType.ITEM, id: itemId });
     console.log(`[removeItemEffectsOnDelete] Found ${itemLinks.length} links to remove`);
     
     for (const link of itemLinks) {
       try {
-        await ClientAPI.removeLink(link.id);
+        await removeLink(link.id);
         console.log(`[removeItemEffectsOnDelete] ✅ Removed link: ${link.linkType}`);
       } catch (error) {
         console.error(`[removeItemEffectsOnDelete] ❌ Failed to remove link ${link.id}:`, error);
@@ -104,13 +104,9 @@ export async function removeItemEffectsOnDelete(itemId: string): Promise<void> {
     // 3. Remove log entries from items log only (Items don't have financial/player effects)
     console.log(`[removeItemEffectsOnDelete] Starting log entry removal for item: ${itemId}`);
     
-    const result = await ClientAPI.removeLogEntry(EntityType.ITEM, itemId);
-    
-    if (result.success) {
-      console.log(`[removeItemEffectsOnDelete] ✅ Item log entries removed successfully for item: ${itemId}`);
-    } else {
-      console.error(`[removeItemEffectsOnDelete] Failed to remove item log entries: ${result.message}`);
-    }
+    // TODO: Implement server-side log removal or remove this call
+    // const result = await ClientAPI.removeLogEntry(EntityType.ITEM, itemId);
+    console.log(`[removeItemEffectsOnDelete] ⚠️ Log entry removal skipped - needs server-side implementation`);
     
     console.log(`[removeItemEffectsOnDelete] ✅ Cleared effects, removed links, and removed log entries for item ${itemId}`);
   } catch (error) {

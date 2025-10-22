@@ -24,6 +24,7 @@ import { BUSINESS_STRUCTURE, SITE_GROUPS, ItemType } from '@/types/enums';
 import { getCompanyAreas, getPersonalAreas, isCompanyStation, getAreaForStation } from '@/lib/utils/business-structure-utils';
 import { CompanyRecordsList, PersonalRecordsList } from '@/components/finances/financial-records-components';
 import { PRICE_STEP, DECIMAL_STEP, J$_TO_USD_RATE, PRIMARY_CURRENCY, USD_CURRENCY } from '@/lib/constants/app-constants';
+import { VALIDATION_CONSTANTS } from '@/lib/constants/financial-constants';
 // formatMonthYear will be implemented inline
 import { MonthYearSelector } from '@/components/ui/month-year-selector'
 import AssetsEditModal from '@/components/modals/submodals/assets-edit-submodal'
@@ -882,7 +883,7 @@ export default function FinancesPage() {
                         
                         <div>In-Game Currency (J$)</div>
                         <div className="text-right">{personalAssets.personalJ$} J$</div>
-                        <div className="text-right">${((personalAssets.personalJ$ || 0) * exchangeRates.jungleCoinsToUsd).toLocaleString()}</div>
+                        <div className="text-right">${((personalAssets.personalJ$ || VALIDATION_CONSTANTS.DEFAULT_NUMERIC_VALUE) * (exchangeRates.jungleCoinsToUsd || VALIDATION_CONSTANTS.DEFAULT_EXCHANGE_RATE)).toLocaleString()}</div>
                         
                         <div className="text-muted-foreground opacity-60">Bitcoin Zaps (Z₿)</div>
                         <div className="text-right text-muted-foreground opacity-60">0 sats</div>
@@ -894,7 +895,7 @@ export default function FinancesPage() {
                         
                         <div className="font-semibold border-t pt-1">Total</div>
                         <div className="border-t pt-1"></div>
-                        <div className="font-semibold text-right border-t pt-1">${((personalAssets.personalJ$ || 0) * exchangeRates.jungleCoinsToUsd).toLocaleString()}</div>
+                        <div className="font-semibold text-right border-t pt-1">${((personalAssets.personalJ$ || VALIDATION_CONSTANTS.DEFAULT_NUMERIC_VALUE) * (exchangeRates.jungleCoinsToUsd || VALIDATION_CONSTANTS.DEFAULT_EXCHANGE_RATE)).toLocaleString()}</div>
                       </div>
                     </div>
                   </div>

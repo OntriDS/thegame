@@ -5,7 +5,6 @@ import { EntityType, LogEventType } from '@/types/enums';
 import type { Task } from '@/types/entities';
 import { appendEntityLog, updateEntityLogField } from '../entities-logging';
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
-import { ClientAPI } from '@/lib/client-api';
 import { getAllTasks, getAllPlayers } from '@/data-store/datastore';
 import { getLinksFor, removeLink } from '@/links/link-registry';
 import { createItemFromTask, removeItemsCreatedByTask } from '../item-creation-utils';
@@ -109,8 +108,8 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
     }
   }
   
-  // Financial record creation from task - when task has cost or revenue
-  if (task.cost || task.revenue) {
+  // Financial record creation from task - when task is completed (Done) with cost, revenue, or rewards
+  if (task.status === 'Done' && (task.cost || task.revenue || task.rewards?.points)) {
     const effectKey = `task:${task.id}:financialCreated`;
     if (!(await hasEffect(effectKey))) {
       console.log(`[onTaskUpsert] Creating financial record from task: ${task.name}`);

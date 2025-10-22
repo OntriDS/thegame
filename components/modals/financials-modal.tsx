@@ -33,6 +33,7 @@ import { PRICE_STEP, QUANTITY_STEP, J$_TO_USD_RATE } from '@/lib/constants/app-c
 import { formatMonthYear } from '@/lib/utils/date-utils';
 import { ItemStatus } from '@/types/enums';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
+import { VALIDATION_CONSTANTS } from '@/lib/constants/financial-constants';
 
 // FinancialsModal: UI-only form for financial record data collection and validation
 // Side effects and persistence handled by parent component
@@ -406,19 +407,19 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
 
   // Auto-calculate unit cost and price from total cost/revenue and quantity
   const handleAutoCalculateUnitCost = () => {
-    if (formData.outputQuantity > 0) {
+    if (formData.outputQuantity > VALIDATION_CONSTANTS.MIN_QUANTITY) {
       let updates: any = {};
       
       // Calculate unit cost if cost is available
-      if (formData.cost > 0) {
+      if (formData.cost > VALIDATION_CONSTANTS.MIN_COST && formData.outputQuantity > VALIDATION_CONSTANTS.MIN_QUANTITY) {
         const calculatedUnitCost = formData.cost / formData.outputQuantity;
         updates.outputUnitCost = calculatedUnitCost;
         updates.outputUnitCostString = formatSmartDecimal(calculatedUnitCost);
       }
       
       // Calculate price if revenue is available (check both revenue state and revenueString)
-      const currentRevenue = formData.revenue || parseFloat(formData.revenueString) || 0;
-      if (currentRevenue > 0) {
+      const currentRevenue = formData.revenue || parseFloat(formData.revenueString) || VALIDATION_CONSTANTS.DEFAULT_NUMERIC_VALUE;
+      if (currentRevenue > VALIDATION_CONSTANTS.MIN_REVENUE && formData.outputQuantity > VALIDATION_CONSTANTS.MIN_QUANTITY) {
         const calculatedPrice = currentRevenue / formData.outputQuantity;
         updates.outputItemPrice = calculatedPrice;
         updates.outputItemPriceString = formatSmartDecimal(calculatedPrice);

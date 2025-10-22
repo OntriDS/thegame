@@ -1,6 +1,6 @@
 // thegame/workflows/points-rewards-utils.ts
 import type { Player, Character, Rewards } from '@/types/entities';
-import { ClientAPI } from '@/lib/client-api';
+import { getAllPlayers, upsertPlayer, getAllCharacters, upsertCharacter } from '@/data-store/datastore';
 import { makeLink } from '@/links/links-workflows';
 import { createLink } from '@/links/link-registry';
 import { LinkType, EntityType } from '@/types/enums';
@@ -22,7 +22,7 @@ export async function awardPointsToPlayer(
     console.log(`[awardPointsToPlayer] Awarding points to player ${playerId} from ${sourceType} ${sourceId}`);
     
     // Get the player
-    const players = await ClientAPI.getPlayers();
+    const players = await getAllPlayers();
     const player = players.find(p => p.id === playerId);
     if (!player) {
       console.log(`[awardPointsToPlayer] Player ${playerId} not found, skipping`);
@@ -57,7 +57,7 @@ export async function awardPointsToPlayer(
     };
 
     // Save updated player
-    await ClientAPI.upsertPlayer(updatedPlayer);
+    await upsertPlayer(updatedPlayer);
     console.log(`[awardPointsToPlayer] ✅ Points awarded successfully:`, points);
 
     // Create appropriate link based on source type - use forward links (SOURCE → PLAYER)
@@ -116,7 +116,7 @@ export async function removePointsFromPlayer(
     console.log(`[removePointsFromPlayer] Removing points from player ${playerId}`);
     
     // Get the player
-    const players = await ClientAPI.getPlayers();
+    const players = await getAllPlayers();
     const player = players.find(p => p.id === playerId);
     if (!player) {
       console.log(`[removePointsFromPlayer] Player ${playerId} not found, skipping`);
@@ -146,7 +146,7 @@ export async function removePointsFromPlayer(
     };
 
     // Save updated player
-    await ClientAPI.upsertPlayer(updatedPlayer);
+    await upsertPlayer(updatedPlayer);
     console.log(`[removePointsFromPlayer] ✅ Points removed successfully:`, points);
 
   } catch (error) {
@@ -177,7 +177,7 @@ export async function awardJungleCoinsToCharacter(
     }
 
     // Get the character
-    const characters = await ClientAPI.getCharacters();
+    const characters = await getAllCharacters();
     const character = characters.find(c => c.id === characterId);
     if (!character) {
       console.log(`[awardJungleCoinsToCharacter] Character ${characterId} not found, skipping`);
@@ -192,7 +192,7 @@ export async function awardJungleCoinsToCharacter(
     };
 
     // Save updated character
-    await ClientAPI.upsertCharacter(updatedCharacter);
+    await upsertCharacter(updatedCharacter);
     console.log(`[awardJungleCoinsToCharacter] ✅ Jungle coins awarded successfully: ${amount} J$`);
 
     // NOTE: J$ (Jungle Coins) are CURRENCY that belongs to FINANCIALS
@@ -224,7 +224,7 @@ export async function removeJungleCoinsFromCharacter(
     }
 
     // Get the character
-    const characters = await ClientAPI.getCharacters();
+    const characters = await getAllCharacters();
     const character = characters.find(c => c.id === characterId);
     if (!character) {
       console.log(`[removeJungleCoinsFromCharacter] Character ${characterId} not found, skipping`);
@@ -239,7 +239,7 @@ export async function removeJungleCoinsFromCharacter(
     };
 
     // Save updated character
-    await ClientAPI.upsertCharacter(updatedCharacter);
+    await upsertCharacter(updatedCharacter);
     console.log(`[removeJungleCoinsFromCharacter] ✅ Jungle coins removed successfully: ${amount} J$`);
 
   } catch (error) {

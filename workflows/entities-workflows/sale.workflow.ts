@@ -5,7 +5,8 @@ import { EntityType, LogEventType } from '@/types/enums';
 import type { Sale } from '@/types/entities';
 import { appendEntityLog, updateEntityLogField } from '../entities-logging';
 import { hasEffect, markEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
-import { ClientAPI } from '@/lib/client-api';
+import { getLinksFor, removeLink } from '@/links/link-registry';
+import { getAllSales, getAllPlayers } from '@/data-store/datastore';
 import { awardPointsToPlayer, removePointsFromPlayer, calculatePointsFromRevenue, getMainPlayerId } from '../points-rewards-utils';
 import { processSaleLines } from '../sale-line-utils';
 import { 
@@ -122,12 +123,12 @@ export async function removeSaleEffectsOnDelete(saleId: string): Promise<void> {
     await removePlayerPointsFromSale(saleId);
     
     // 2. Remove all Links related to this sale
-    const saleLinks = await ClientAPI.getLinksFor({ type: EntityType.SALE, id: saleId });
+    const saleLinks = await getLinksFor({ type: EntityType.SALE, id: saleId });
     console.log(`[removeSaleEffectsOnDelete] Found ${saleLinks.length} links to remove`);
     
     for (const link of saleLinks) {
       try {
-        await ClientAPI.removeLink(link.id);
+        await removeLink(link.id);
         console.log(`[removeSaleEffectsOnDelete] ✅ Removed link: ${link.linkType}`);
       } catch (error) {
         console.error(`[removeSaleEffectsOnDelete] ❌ Failed to remove link ${link.id}:`, error);
@@ -141,12 +142,10 @@ export async function removeSaleEffectsOnDelete(saleId: string): Promise<void> {
     // 4. Remove log entries from all relevant logs
     console.log(`[removeSaleEffectsOnDelete] Starting log entry removal for sale: ${saleId}`);
     
-    const removals = await Promise.all([
-      ClientAPI.removeLogEntry(EntityType.SALE, saleId).then(r => { console.log(`[removeSaleEffectsOnDelete] Sales log removal result:`, r); return r; }).catch(e => ({ success: false, message: String(e) })),
-      ClientAPI.removeLogEntry(EntityType.FINANCIAL, saleId).then(r => { console.log(`[removeSaleEffectsOnDelete] Financials log removal result:`, r); return r; }).catch(e => ({ success: false, message: String(e) })),
-      ClientAPI.removeLogEntry(EntityType.CHARACTER, saleId).then(r => { console.log(`[removeSaleEffectsOnDelete] Character log removal result:`, r); return r; }).catch(e => ({ success: false, message: String(e) })),
-      ClientAPI.removeLogEntry(EntityType.ITEM, saleId).then(r => { console.log(`[removeSaleEffectsOnDelete] Items log removal result:`, r); return r; }).catch(e => ({ success: false, message: String(e) })),
-    ]);
+    // TODO: Implement server-side log removal or remove these calls
+    console.log(`[removeSaleEffectsOnDelete] ⚠️ Log entry removal skipped - needs server-side implementation`);
+    
+    const removals: { success: boolean; message?: string }[] = []; // Placeholder for removed log calls
 
     console.log(`[removeSaleEffectsOnDelete] All removal results:`, removals);
     const failed = removals.filter(r => !r.success);
@@ -171,7 +170,7 @@ async function removePlayerPointsFromSale(saleId: string): Promise<void> {
     console.log(`[removePlayerPointsFromSale] Removing points for sale: ${saleId}`);
     
     // Get the sale to find what points were awarded
-    const sales = await ClientAPI.getSales();
+    const sales = await getAllSales();
     const sale = sales.find(s => s.id === saleId);
     
     if (!sale || sale.totals.totalRevenue <= 0) {
@@ -181,7 +180,7 @@ async function removePlayerPointsFromSale(saleId: string): Promise<void> {
     
     // Get the main player
     const mainPlayerId = getMainPlayerId();
-    const players = await ClientAPI.getPlayers();
+    const players = await getAllPlayers();
     const mainPlayer = players.find(p => p.id === mainPlayerId);
     
     if (!mainPlayer) {

@@ -53,3 +53,12 @@ export const ASSET_TYPES = {
   COMPANY: 'company',
   PERSONAL: 'personal',
 } as const;
+
+// Validation Constants
+export const VALIDATION_CONSTANTS = {
+  MIN_QUANTITY: 0,
+  MIN_COST: 0,
+  MIN_REVENUE: 0,
+  DEFAULT_NUMERIC_VALUE: 0,
+  DEFAULT_EXCHANGE_RATE: 0,
+} as const;
