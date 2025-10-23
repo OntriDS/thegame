@@ -115,6 +115,10 @@ export function calculateTotals(breakdown: AreaBreakdown) {
 
 // Helper function for proper decimal formatting
 export const formatDecimal = (value: number): string => {
+  // Guard against NaN and Infinity
+  if (!isFinite(value) || isNaN(value)) {
+    return '0';
+  }
   if (Number.isInteger(value)) {
     return value.toString(); // No decimals for whole numbers
   } else {

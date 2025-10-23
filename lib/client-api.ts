@@ -354,29 +354,36 @@ export const ClientAPI = {
     if (!res.ok) throw new Error('Failed to save personal assets');
   },
   
-  // CONVERSION RATES
-  getConversionRates: async (): Promise<any> => {
-    const res = await fetch('/api/conversion-rates');
-    if (!res.ok) throw new Error('Failed to fetch conversion rates');
+  // PLAYER CONVERSION RATES (for character/player pages)
+  getPlayerConversionRates: async (): Promise<any> => {
+    const res = await fetch('/api/conversion-rates/player-conversion-rates');
+    if (!res.ok) throw new Error('Failed to fetch player conversion rates');
     return await res.json();
   },
-  
-  saveConversionRates: async (rates: any): Promise<void> => {
-    const res = await fetch('/api/conversion-rates', {
+
+  savePlayerConversionRates: async (rates: any): Promise<void> => {
+    const res = await fetch('/api/conversion-rates/player-conversion-rates', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(rates)
     });
-    if (!res.ok) throw new Error('Failed to save conversion rates');
+    if (!res.ok) throw new Error('Failed to save player conversion rates');
   },
-  
-  // LEGACY COMPATIBILITY
-  getPointsConversionRates: async (): Promise<any> => {
-    return await ClientAPI.getConversionRates();
+
+  // FINANCIAL CONVERSION RATES (for finances/assets pages)
+  getFinancialConversionRates: async (): Promise<any> => {
+    const res = await fetch('/api/conversion-rates/financial-conversion-rates');
+    if (!res.ok) throw new Error('Failed to fetch financial conversion rates');
+    return await res.json();
   },
-  
-  savePointsConversionRates: async (rates: any): Promise<void> => {
-    return await ClientAPI.saveConversionRates(rates);
+
+  saveFinancialConversionRates: async (rates: any): Promise<void> => {
+    const res = await fetch('/api/conversion-rates/financial-conversion-rates', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(rates)
+    });
+    if (!res.ok) throw new Error('Failed to save financial conversion rates');
   },
   
   // UTILITY HELPERS (client-side calculations)

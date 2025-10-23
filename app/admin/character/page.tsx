@@ -54,7 +54,7 @@ export default function CharactersPage() {
       try {
         const [playerLogResponse, ratesData, charactersData, playersData, personalAssets] = await Promise.all([
           fetch('/api/player-log'),  // ✅ Points come from Player Log now
-          ClientAPI.getPointsConversionRates(),
+          ClientAPI.getPlayerConversionRates(),
           ClientAPI.getCharacters(),
           ClientAPI.getPlayers(),
           ClientAPI.getPersonalAssets()
@@ -482,7 +482,7 @@ export default function CharactersPage() {
           isOpen={showConversionRatesModal}
           onClose={() => setShowConversionRatesModal(false)}
           onSave={(rates: any) => {
-            ClientAPI.savePointsConversionRates(rates);
+            ClientAPI.savePlayerConversionRates(rates);
             setShowConversionRatesModal(false);
             window.dispatchEvent(new Event('pointsUpdated'));
           }}

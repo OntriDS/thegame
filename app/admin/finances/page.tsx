@@ -109,7 +109,7 @@ export default function FinancesPage() {
   useEffect(() => {
     const loadConversionRates = async () => {
       try {
-        const rates = await ClientAPI.getConversionRates();
+        const rates = await ClientAPI.getFinancialConversionRates();
         setPointsConversionRates(rates);
         setExchangeRates(rates);
       } catch (error) {
@@ -1162,7 +1162,7 @@ export default function FinancesPage() {
             j$ToUSD: exchangeRates.j$ToUSD
           }}
           onSave={(rates) => {
-            ClientAPI.saveConversionRates(rates);
+            ClientAPI.saveFinancialConversionRates(rates);
             setPointsConversionRates(rates);
             setExchangeRates(rates);
             setShowConversionRatesModal(false);

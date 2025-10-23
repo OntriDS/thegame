@@ -184,7 +184,7 @@ function ExchangePointsModal({ player, open, onOpenChange, onExchange }: Exchang
   useEffect(() => {
     if (open) {
       const loadRates = async () => {
-        const rates = await ClientAPI.getPointsConversionRates();
+        const rates = await ClientAPI.getPlayerConversionRates();
         setConversionRates(rates);
       };
       loadRates();

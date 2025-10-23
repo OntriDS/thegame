@@ -338,9 +338,9 @@ export async function getSitesByRadius(
   return await repoGetSitesByRadius(centerLat, centerLng, radiusMeters);
 }
 
-// POINTS CONVERSION RATES
-export async function getPointsConversionRates(): Promise<any> {
-  const rates = await kvGet('data:points-conversion-rates');
+// PLAYER CONVERSION RATES
+export async function getPlayerConversionRates(): Promise<any> {
+  const rates = await kvGet('data:player-conversion-rates');
   return rates || {
     // Points conversion rates (in enum order: XP, RP, FP, HP)
     xpToJ$: 3,
@@ -351,8 +351,8 @@ export async function getPointsConversionRates(): Promise<any> {
   };
 }
 
-export async function savePointsConversionRates(rates: any): Promise<void> {
-  await kvSet('data:points-conversion-rates', rates);
+export async function savePlayerConversionRates(rates: any): Promise<void> {
+  await kvSet('data:player-conversion-rates', rates);
 }
 
 // COMPANY ASSETS
@@ -410,9 +410,9 @@ export async function savePersonalAssets(assets: any): Promise<void> {
   await kvSet('data:personal-assets', assets);
 }
 
-// CONVERSION RATES
-export async function getConversionRates(): Promise<any> {
-  const rates = await kvGet('data:conversion-rates');
+// FINANCIAL CONVERSION RATES
+export async function getFinancialConversionRates(): Promise<any> {
+  const rates = await kvGet('data:financial-conversion-rates');
   return rates || {
     // Points conversion rates (in enum order: XP, RP, FP, HP)
     xpToJ$: 3,
@@ -427,6 +427,6 @@ export async function getConversionRates(): Promise<any> {
   };
 }
 
-export async function saveConversionRates(rates: any): Promise<void> {
-  await kvSet('data:conversion-rates', rates);
+export async function saveFinancialConversionRates(rates: any): Promise<void> {
+  await kvSet('data:financial-conversion-rates', rates);
 }
