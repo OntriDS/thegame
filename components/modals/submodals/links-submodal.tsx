@@ -28,15 +28,7 @@ export function LinksSubModal({
 }: LinksSubModalProps) {
   const [entityNames, setEntityNames] = useState<Record<string, string>>({});
   
-  // Debug logging
-  console.log('[LinksSubModal] 🔍 Props received:', {
-    open,
-    entityType,
-    entityId,
-    entityName,
-    linksCount: links?.length || 0,
-    links: links
-  });
+  // Debug logging removed
 
   // Get relevant links based on log entry context
   const getRelevantLinks = () => {
@@ -85,26 +77,7 @@ export function LinksSubModal({
 
   const relevantLinks = getRelevantLinks();
 
-  // Debug logging
-  console.log(`[LinksSubModal] 🔍 Link filtering debug:`, {
-    entityType,
-    totalLinks: links.length,
-    allLinkTypes: links.map(l => l.linkType),
-    relevantLinks: relevantLinks.length,
-    relevantLinkTypes: relevantLinks.map(l => l.linkType),
-    logEntryDescription: logEntry?.description,
-    activityLinks: relevantLinks.filter(link => 
-      link.linkType.includes('TASK') || 
-      link.linkType.includes('FINREC') || 
-      link.linkType.includes('SALE') ||
-      link.linkType.includes('ITEM')
-    ).map(l => l.linkType),
-    structuralLinks: relevantLinks.filter(link => 
-      link.linkType.includes('ACCOUNT') || 
-      link.linkType.includes('CHARACTER') ||
-      link.linkType.includes('SITE')
-    ).map(l => l.linkType)
-  });
+  // Debug logging removed
 
   // Load entity names when modal opens
   useEffect(() => {

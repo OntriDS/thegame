@@ -125,7 +125,6 @@ export default function ControlRoom() {
   // Initialize DataStore
   useEffect(() => {
     // DataStore initialization handled automatically in KV-only architecture
-    console.log('[ControlRoom] Using KV-only architecture with ClientAPI');
   }, []);
 
   // Data loading

@@ -8,7 +8,7 @@ export type CurrencyExchangeRates = {
 
 export const DEFAULT_CURRENCY_EXCHANGE_RATES: CurrencyExchangeRates = {
   colonesToUsd: 500, // ₡500 = $1 USD
-  bitcoinToUsd: 0, // Will be fetched from API
+  bitcoinToUsd: 100000, // Default until fetched from API
   j$ToUSD: 10, // 1 J$ = $10 USD
 };
 

@@ -342,10 +342,11 @@ export async function getSitesByRadius(
 export async function getPointsConversionRates(): Promise<any> {
   const rates = await kvGet('data:points-conversion-rates');
   return rates || {
-    hpToJ$: 10,
-    fpToJ$: 15,
-    rpToJ$: 12,
+    // Points conversion rates (in enum order: XP, RP, FP, HP)
     xpToJ$: 3,
+    rpToJ$: 12,
+    fpToJ$: 15,
+    hpToJ$: 10,
     j$ToUSD: 10
   };
 }
@@ -413,13 +414,15 @@ export async function savePersonalAssets(assets: any): Promise<void> {
 export async function getConversionRates(): Promise<any> {
   const rates = await kvGet('data:conversion-rates');
   return rates || {
-    hpToJ$: 10,
-    fpToJ$: 15,
-    rpToJ$: 12,
+    // Points conversion rates (in enum order: XP, RP, FP, HP)
     xpToJ$: 3,
+    rpToJ$: 12,
+    fpToJ$: 15,
+    hpToJ$: 10,
+    // Currency exchange rates
     j$ToUSD: 10,
     colonesToUsd: 500,
-    bitcoinToUsd: 50000,
+    bitcoinToUsd: 100000,
     jungleCoinsToUsd: 0.1
   };
 }

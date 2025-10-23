@@ -190,9 +190,7 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
 
   const loadItems = async () => {
     try {
-      console.log('[InventoryDisplay] Loading items...');
       const allItems = await ClientAPI.getItems();
-      console.log(`[InventoryDisplay] Loaded ${allItems.length} items:`, allItems);
       setItems(allItems);
     } catch (error) {
       console.error('Failed to load items:', error);

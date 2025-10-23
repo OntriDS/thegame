@@ -436,14 +436,8 @@ export default function CharactersPage() {
             </div>
             
             <div className="flex items-center gap-1">
-              <span className="text-xs text-muted-foreground">HP:</span>
-              <span className="font-semibold">{conversionRates.hpToJ$}</span>
-              <span className="text-xs text-muted-foreground">= 1 J$</span>
-            </div>
-            
-            <div className="flex items-center gap-1">
-              <span className="text-xs text-muted-foreground">FP:</span>
-              <span className="font-semibold">{conversionRates.fpToJ$}</span>
+              <span className="text-xs text-muted-foreground">XP:</span>
+              <span className="font-semibold">{conversionRates.xpToJ$}</span>
               <span className="text-xs text-muted-foreground">= 1 J$</span>
             </div>
             
@@ -454,8 +448,14 @@ export default function CharactersPage() {
             </div>
             
             <div className="flex items-center gap-1">
-              <span className="text-xs text-muted-foreground">XP:</span>
-              <span className="font-semibold">{conversionRates.xpToJ$}</span>
+              <span className="text-xs text-muted-foreground">FP:</span>
+              <span className="font-semibold">{conversionRates.fpToJ$}</span>
+              <span className="text-xs text-muted-foreground">= 1 J$</span>
+            </div>
+            
+            <div className="flex items-center gap-1">
+              <span className="text-xs text-muted-foreground">HP:</span>
+              <span className="font-semibold">{conversionRates.hpToJ$}</span>
               <span className="text-xs text-muted-foreground">= 1 J$</span>
             </div>
             
