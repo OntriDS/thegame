@@ -4,7 +4,6 @@ import * as React from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { DayPicker } from 'react-day-picker';
 import { cn } from '@/lib/utils';
-import { getPseudoZIndexClass } from '@/lib/utils/z-index-utils';
 
 export type CalendarProps = React.ComponentProps<typeof DayPicker>;
 
@@ -36,10 +35,7 @@ function Calendar({
           'text-muted-foreground w-9 h-9 font-normal text-[0.8rem] text-center p-0 inline-flex items-center justify-center',
         row: 'grid grid-cols-7 w-full mt-2',
         day:
-          cn(
-            'h-9 w-9 text-center text-sm p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative',
-            getPseudoZIndexClass('focus-within', 'INNER_MODALS')
-          ),
+          'h-9 w-9 text-center text-sm p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative',
         day_button: cn(
           'hover:bg-accent hover:text-accent-foreground w-full h-9 rounded-md font-normal aria-selected:opacity-100 inline-flex items-center justify-center'
         ),
