@@ -12,6 +12,7 @@ import { useThemeColors } from '@/lib/hooks/use-theme-colors';
 import { formatDateDDMMYYYY } from '@/lib/constants/date-constants';
 import { SprintCompletionModal } from '@/components/research/sprint-completion-modal';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
+import { useEntityUpdates } from '@/lib/hooks/use-entity-updates';
 import { TasksLifecycleTab } from '@/components/data-center/tasks-lifecycle-tab';
 import { ItemsLifecycleTab } from '@/components/data-center/items-lifecycle-tab';
 import { DevSprintsTab } from '@/components/data-center/dev-sprints-tab';
@@ -151,16 +152,7 @@ export default function DataCenterPage() {
   }, [loadLog]);
 
   // Listen for financials updates to refresh financials log
-  useEffect(() => {
-    const handleFinancialsUpdate = () => {
-      loadLog('financials', setFinancialsLog);
-    };
-
-    window.addEventListener('financialsUpdated', handleFinancialsUpdate);
-    return () => {
-      window.removeEventListener('financialsUpdated', handleFinancialsUpdate);
-    };
-  }, [loadLog]);
+  useEntityUpdates('financial', () => loadLog('financials', setFinancialsLog));
 
   // Load items log
   useEffect(() => {
@@ -168,16 +160,7 @@ export default function DataCenterPage() {
   }, [loadLog]);
 
   // Listen for items updates to refresh items log
-  useEffect(() => {
-    const handleItemsUpdate = () => {
-      loadLog('items', setItemsLog);
-    };
-
-    window.addEventListener('itemsUpdated', handleItemsUpdate);
-    return () => {
-      window.removeEventListener('itemsUpdated', handleItemsUpdate);
-    };
-  }, [loadLog]);
+  useEntityUpdates('item', () => loadLog('items', setItemsLog));
 
   // Load tasks log
   useEffect(() => {
@@ -185,16 +168,7 @@ export default function DataCenterPage() {
   }, [loadLog]);
 
   // Listen for tasks updates to refresh tasks log
-  useEffect(() => {
-    const handleTasksUpdate = () => {
-      loadLog('tasks', setTasksLog, true);
-    };
-
-    window.addEventListener('tasksUpdated', handleTasksUpdate);
-    return () => {
-      window.removeEventListener('tasksUpdated', handleTasksUpdate);
-    };
-  }, [loadLog]);
+  useEntityUpdates('task', () => loadLog('tasks', setTasksLog, true));
 
   // Phase status management using utilities
   const handleCyclePhaseStatus = async (phaseKey: string) => {

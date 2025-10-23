@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import { useEntityUpdates } from '@/lib/hooks/use-entity-updates';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Download, Upload, FileText } from 'lucide-react';
@@ -52,16 +53,13 @@ export default function ItemsImportExport() {
       setSummary(summaryData);
     };
     loadSummary();
-    
-    // Listen for item updates
-    const handleItemsUpdate = async () => {
-      const summaryData = await getItemsSummary();
-      setSummary(summaryData);
-    };
-    
-    window.addEventListener('itemsUpdated', handleItemsUpdate);
-    return () => window.removeEventListener('itemsUpdated', handleItemsUpdate);
   }, []);
+
+  // Listen for item updates
+  useEntityUpdates('item', async () => {
+    const summaryData = await getItemsSummary();
+    setSummary(summaryData);
+  });
 
   const handleExport = async () => {
     setIsExporting(true);

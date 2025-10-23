@@ -119,14 +119,7 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate }: TaskD
     // Trigger parent update to refresh the selected node
     onTaskUpdate?.();
     
-    // Dispatch financial events to refresh financial tabs
-    // This ensures that if the task update created a financial record, the UI will refresh
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new Event('tasksUpdated'));
-      window.dispatchEvent(new Event('financialsUpdated'));
-      window.dispatchEvent(new Event('financialsCreated'));
-      window.dispatchEvent(new Event('linksUpdated'));
-    }
+
     
     setEditingField(null);
     setTempValue('');

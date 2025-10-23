@@ -487,6 +487,12 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
       }
     }, 100); // Small delay to ensure Ribosome has processed the entity
     
+    // Dispatch UI update events for immediate feedback
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('itemsUpdated'));
+      window.dispatchEvent(new Event('linksUpdated'));
+    }
+    
     onOpenChange(false);
   };
 

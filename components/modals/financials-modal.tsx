@@ -516,6 +516,13 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
 
     // Emit pure record entity - Links System handles all relationships automatically
     onSave(recordData);
+    
+    // Dispatch UI update events for immediate feedback
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('financialsUpdated'));
+      window.dispatchEvent(new Event('linksUpdated'));
+    }
+    
     onOpenChange(false);
     setIsSaving(false);
   };

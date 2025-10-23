@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useEntityUpdates } from '@/lib/hooks/use-entity-updates';
 import { Button } from '@/components/ui/button';
 import { ClientAPI } from '@/lib/client-api';
 import { FinancialRecord } from '@/types/entities';
@@ -32,23 +33,13 @@ export function CompanyRecordsList({
   }, [year, month]);
 
   // Listen for financial record updates to refresh the list
-  useEffect(() => {
-    const handleFinancialUpdate = () => {
-      const loadRecords = async () => {
-        const companyRecords = await ClientAPI.getFinancialRecordsByMonth(year, month, 'company');
-        setRecords(companyRecords);
-      };
-      loadRecords();
+  useEntityUpdates('financial', () => {
+    const loadRecords = async () => {
+      const companyRecords = await ClientAPI.getFinancialRecordsByMonth(year, month, 'company');
+      setRecords(companyRecords);
     };
-
-    window.addEventListener('financialsUpdated', handleFinancialUpdate);
-    window.addEventListener('financialsCreated', handleFinancialUpdate);
-
-    return () => {
-      window.removeEventListener('financialsUpdated', handleFinancialUpdate);
-      window.removeEventListener('financialsCreated', handleFinancialUpdate);
-    };
-  }, [year, month]);
+    loadRecords();
+  });
 
   const handleEdit = (record: FinancialRecord) => {
     setRecordToEdit(record);
@@ -147,11 +138,7 @@ export function CompanyRecordsList({
                   onRecordUpdated();
                   setRecordToEdit(null);
                   
-                  // Dispatch events
-                  if (typeof window !== 'undefined') {
-                    window.dispatchEvent(new Event('financialsUpdated'));
-                    window.dispatchEvent(new Event('linksUpdated'));
-                  }
+
                 } catch (error) {
                   console.error('Failed to save financial record:', error);
                 }
@@ -194,23 +181,13 @@ export function PersonalRecordsList({
   }, [year, month]);
 
   // 🚨 FIX: Listen for financial record updates to refresh the list
-  useEffect(() => {
-    const handleFinancialUpdate = () => {
-      const loadRecords = async () => {
-        const personalRecords = await ClientAPI.getFinancialRecordsByMonth(year, month, 'personal');
-        setRecords(personalRecords);
-      };
-      loadRecords();
+  useEntityUpdates('financial', () => {
+    const loadRecords = async () => {
+      const personalRecords = await ClientAPI.getFinancialRecordsByMonth(year, month, 'personal');
+      setRecords(personalRecords);
     };
-
-    window.addEventListener('financialsUpdated', handleFinancialUpdate);
-    window.addEventListener('financialsCreated', handleFinancialUpdate);
-
-    return () => {
-      window.removeEventListener('financialsUpdated', handleFinancialUpdate);
-      window.removeEventListener('financialsCreated', handleFinancialUpdate);
-    };
-  }, [year, month]);
+    loadRecords();
+  });
 
   // Note: Removed automatic modal opening behavior that was causing the bug
   // The modal should only open when explicitly triggered by user action
@@ -341,11 +318,7 @@ This action cannot be undone.`);
                   onRecordUpdated();
                   setRecordToEdit(null);
                   
-                  // Dispatch events
-                  if (typeof window !== 'undefined') {
-                    window.dispatchEvent(new Event('financialsUpdated'));
-                    window.dispatchEvent(new Event('linksUpdated'));
-                  }
+
                 } catch (error) {
                   console.error('Failed to save financial record:', error);
                 }

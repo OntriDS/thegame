@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ClientAPI } from '@/lib/client-api';
 import { Item } from '@/types/entities';
+import { useEntityUpdates } from '@/lib/hooks/use-entity-updates';
 import { ItemType, ItemCategory, ItemStatus, InventoryTab } from '@/types/enums';
 import { getItemCategory } from '@/lib/utils/item-utils';
 import ItemModal from '@/components/modals/item-modal';
@@ -85,12 +86,10 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
     const handleImportStarted = () => setIsImporting(true);
     const handleImportComplete = () => setIsImporting(false);
     
-    window.addEventListener('itemsUpdated', handleItemsUpdated);
     window.addEventListener('importStarted', handleImportStarted);
     window.addEventListener('importComplete', handleImportComplete);
     
     return () => {
-      window.removeEventListener('itemsUpdated', handleItemsUpdated);
       window.removeEventListener('importStarted', handleImportStarted);
       window.removeEventListener('importComplete', handleImportComplete);
     };
@@ -197,6 +196,9 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
     }
   };
 
+  // Listen for item updates to refresh the list
+  useEntityUpdates('item', loadItems);
+
   const getFilteredItems = (itemType: ItemType) => {
     return items;
   };
@@ -232,11 +234,7 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
       // Refresh all data (including sticker bundles)
       loadItems();
       
-      // Dispatch events for other components
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new Event('itemsUpdated'));
-        window.dispatchEvent(new Event('linksUpdated'));
-      }
+
       
       // Close modal after successful save
       setShowItemModal(false);

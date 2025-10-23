@@ -11,6 +11,7 @@ import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Textarea } from '@/components/ui/textarea';
 import { ClientAPI } from '@/lib/client-api';
 import { getZIndexClass, getModalZIndex } from '@/lib/utils/z-index-utils';
+import { useEntityUpdates } from '@/lib/hooks/use-entity-updates';
 import { 
   FinancialRecord, 
   CompanyFinancialCategory, 
@@ -177,17 +178,6 @@ export default function FinancesPage() {
     loadSummaries();
   }, [loadSummaries]);
 
-  // Listen for financials updates to refresh summaries
-  useEffect(() => {
-    const handleFinancialsUpdate = () => {
-      setRefreshKey(prev => prev + 1);
-    };
-
-    window.addEventListener('financialsUpdated', handleFinancialsUpdate);
-    return () => {
-      window.removeEventListener('financialsUpdated', handleFinancialsUpdate);
-    };
-  }, []);
 
   const fetchBitcoinPrice = async () => {
     setIsFetchingBitcoin(true);
@@ -271,19 +261,21 @@ export default function FinancesPage() {
       }
     };
 
+    // Listen for financials updates to refresh summaries
+    useEntityUpdates('financial', () => setRefreshKey(prev => prev + 1));
+    
+    // Listen for items updates to refresh assets
+    useEntityUpdates('item', handleItemsUpdate);
+
   // Load assets from data store and mark as hydrated
   useEffect(() => {
     loadAssets();
     fetchBitcoinPrice();
 
     window.addEventListener('assetsUpdated', handleAssetsUpdate);
-    window.addEventListener('itemsUpdated', handleItemsUpdate);
-    window.addEventListener('financialsUpdated', handleAssetsUpdate); // ← NEW
     
     return () => {
       window.removeEventListener('assetsUpdated', handleAssetsUpdate);
-      window.removeEventListener('itemsUpdated', handleItemsUpdate);
-      window.removeEventListener('financialsUpdated', handleAssetsUpdate); // ← NEW
     };
   }, []);
 

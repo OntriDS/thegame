@@ -532,13 +532,16 @@ Entity Created/Updated → Server processes → Cache refreshes automatically �
 
 **Technical Implementation**:
 ```typescript
-// After entity save/update
-await DataStore.refreshLinksCache();
+// After entity save/update in modals
+import { dispatchEntityUpdated } from '@/lib/ui/ui-events';
 
-// Dispatch events for real-time updates
-if (typeof window !== 'undefined') {
-  window.dispatchEvent(new Event('linksUpdated'));
-}
+onSave(entity);
+dispatchEntityUpdated('task'); // or 'item', 'financial', etc.
+
+// In parent components, subscribe to updates
+import { useEntityUpdates } from '@/lib/hooks/use-entity-updates';
+
+useEntityUpdates('task', () => loadTasks());
 ```
 
 #### Benefits

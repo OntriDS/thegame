@@ -160,6 +160,13 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
     };
 
     onSave(siteData);
+    
+    // Dispatch UI update events for immediate feedback
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('sitesUpdated'));
+      window.dispatchEvent(new Event('linksUpdated'));
+    }
+    
     onOpenChange(false);
     setIsSaving(false);
   };
@@ -239,7 +246,7 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
                   id="name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="El Hornito"
+                  placeholder="New Site"
                   className="h-8 text-sm"
                 />
               </div>

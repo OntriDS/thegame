@@ -149,11 +149,7 @@ export default function CharactersPage() {
       setShowPlayerModal(false);
       setSelectedPlayer(null);
       
-      // Dispatch events
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new Event('playersUpdated'));
-        window.dispatchEvent(new Event('linksUpdated'));
-      }
+
     } catch (error) {
       console.error('Failed to save player:', error);
       alert('Failed to save player');
@@ -171,11 +167,7 @@ export default function CharactersPage() {
       setShowCharacterModal(false);
       setSelectedCharacter(null);
       
-      // Dispatch events
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new Event('charactersUpdated'));
-        window.dispatchEvent(new Event('linksUpdated'));
-      }
+
     } catch (error) {
       console.error('Failed to save character:', error);
       alert('Failed to save character');

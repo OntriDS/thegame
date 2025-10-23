@@ -131,11 +131,7 @@ export default function SalesPage() {
       setEditingSale(null);
       await loadSales(); // Refresh the list
       
-      // Dispatch events for UI updates
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new Event('salesUpdated'));
-        window.dispatchEvent(new Event('linksUpdated'));
-      }
+
     } catch (error) {
       console.error('Failed to save sale:', error);
       alert('Failed to save sale. Please try again.');

@@ -53,11 +53,7 @@ export default function MapPage() {
       // Save site using ClientAPI (workflows handled server-side)
       await ClientAPI.upsertSite(site);
       
-      // Dispatch events for UI updates
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new Event('sitesUpdated'));
-        window.dispatchEvent(new Event('linksUpdated'));
-      }
+
       
       setShowSiteModal(false);
       setSelectedSite(null);

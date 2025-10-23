@@ -13,6 +13,7 @@ import { ClientAPI } from '@/lib/client-api';
 import { buildTaskTree, TreeNode } from '@/lib/utils/tree-utils';
 import { useThemeColors } from '@/lib/hooks/use-theme-colors';
 import { useKeyboardShortcuts } from '@/lib/hooks/use-keyboard-shortcuts';
+import { useEntityUpdates } from '@/lib/hooks/use-entity-updates';
 import TaskModal from '@/components/modals/task-modal';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { ORDER_INCREMENT, SIDEBAR_MIN_WIDTH, SIDEBAR_MAX_WIDTH, SIDEBAR_DEFAULT_WIDTH, DRAG_ACTIVATION_DISTANCE } from '@/lib/constants/app-constants';
@@ -229,11 +230,8 @@ export default function ControlRoom() {
     return () => { cancelled = true; };
   }, [tree, selectedTaskId, selectedNode]);
 
-  useEffect(() => {
-    const cb = () => setRefreshKey(prev => prev + 1);
-    window.addEventListener('tasksUpdated', cb);
-    return () => window.removeEventListener('tasksUpdated', cb);
-  }, []);
+  // Listen for task updates to refresh the tree
+  useEntityUpdates('task', () => setRefreshKey(prev => prev + 1));
 
   // Event handlers
   const handleToggle = (nodeId: string) => {
@@ -515,14 +513,7 @@ export default function ControlRoom() {
                 }
               }
               
-              // Dispatch financial events to refresh financial tabs
-              // This ensures that if the task created a financial record, the UI will refresh
-              if (typeof window !== 'undefined') {
-                window.dispatchEvent(new Event('tasksUpdated'));
-                window.dispatchEvent(new Event('financialsUpdated'));
-                window.dispatchEvent(new Event('financialsCreated'));
-                window.dispatchEvent(new Event('linksUpdated'));
-              }
+
             } catch (error) {
               console.error('Failed to save task:', error);
             }
@@ -536,14 +527,7 @@ export default function ControlRoom() {
                 setSelectedNode(null);
               }
               
-              // Dispatch financial events to refresh financial tabs
-              // This ensures that if the task completion created a financial record, the UI will refresh
-              if (typeof window !== 'undefined') {
-                window.dispatchEvent(new Event('tasksUpdated'));
-                window.dispatchEvent(new Event('financialsUpdated'));
-                window.dispatchEvent(new Event('financialsCreated'));
-                window.dispatchEvent(new Event('linksUpdated'));
-              }
+
             } catch (error) {
               console.error('Failed to reload tasks after completion:', error);
             }
