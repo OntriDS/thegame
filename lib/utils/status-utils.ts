@@ -45,6 +45,7 @@ export const itemStatusKeyMap: Record<ItemStatus, string> = {
   [ItemStatus.ON_HOLD]: 'onHold',
   [ItemStatus.STORED]: 'stored',
   [ItemStatus.TO_REPAIR]: 'toRepair',
+  [ItemStatus.CONSIGNED]: 'consigned',
 };
 
 
