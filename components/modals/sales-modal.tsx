@@ -574,7 +574,7 @@ export default function SalesModal({
 
   // Quick Count helpers
   const addQuickRow = () => {
-    setQuickRows(prev => ([...prev, { id: uuid(), itemType: ItemType.STICKER_BUNDLE, quantity: 1, unitPrice: 0 }]));
+    setQuickRows(prev => ([...prev, { id: uuid(), itemType: ItemType.BUNDLE, quantity: 1, unitPrice: 0 }]));
   };
   const updateQuickRow = (id: string, patch: Partial<QuickRow>) => {
     setQuickRows(prev => prev.map(r => r.id === id ? { ...r, ...patch } : r));
@@ -628,7 +628,7 @@ export default function SalesModal({
     const newLine: SaleLine = {
       lineId: uuid(),
       kind: 'bundle',
-      itemType: ItemType.STICKER_BUNDLE,
+      itemType: ItemType.BUNDLE,
       siteId: siteId || '',
       quantity: 1,
       unitPrice: 0,

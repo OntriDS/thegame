@@ -390,7 +390,7 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
     const artworkSubtypes = getSubTypesForItemType(ItemType.ARTWORK);
     const printSubtypes = getSubTypesForItemType(ItemType.PRINT);
     const stickerSubtypes = getSubTypesForItemType(ItemType.STICKER);
-    const stickerBundleSubtypes = getSubTypesForItemType(ItemType.STICKER_BUNDLE);
+    const bundleSubtypes = getSubTypesForItemType(ItemType.BUNDLE);
     const merchSubtypes = getSubTypesForItemType(ItemType.MERCH);
     const materialSubtypes = getSubTypesForItemType(ItemType.MATERIAL);
     const equipmentSubtypes = getSubTypesForItemType(ItemType.EQUIPMENT);
@@ -403,7 +403,7 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
     "Artwork","${artworkSubtypes[0]}","Organic Imaginary Canvas",1,"Home","For Sale","${collections[1]}",5.00,150.00,2024,https://example.com/organic-imaginary-canvas.jpg,,,,30,40,
     "Print","${printSubtypes[0]}","Organic Imaginary Print",0,"World","To Order","${collections[1]}",5.00,25.00,2024,https://example.com/organic-imaginary-canvas.jpg,,,,30,40,
     "Sticker","${stickerSubtypes[0]}","Red Dope Crew Sticker",100,"Feria Box","For Sale","${collections[6]}",0.30,2.50,2024,https://example.com/red-dope-crew-sticker.jpg,,,,5,5,
-    "Sticker Bundle","${stickerBundleSubtypes[0]}","Smoking Lounge Stickers",80,"Smoking Lounge","For Sale","${collections[6]}",0.30,2.50,2024,https://example.com/smoking-lounge-bundle.jpg,,,,,,
+    "Bundle","${bundleSubtypes[0]}","Smoking Lounge Stickers",80,"Smoking Lounge","For Sale","${collections[6]}",0.30,2.50,2024,https://example.com/smoking-lounge-bundle.jpg,,,,,,
     "Merch","${merchSubtypes[0]}","Dope Crew T-Shirt",35,"Home","For Sale","${collections[6]}",8.00,25.00,2024,https://example.com/dope-crew-tshirt.jpg,,,,,M,
     "Merch","${merchSubtypes[2]}","Dope Crew Shoes",20,"Home","For Sale","${collections[6]}",15.00,45.00,2024,https://example.com/dope-crew-tshirt.jpg,,,,,7.5,
     "Material","${materialSubtypes[0]}","Acrylic Paint Set",10,"Home","For Sale","Art Supplies",15.00,25.00,2024,https://example.com/acrylic-paint-set.jpg,,,,,,

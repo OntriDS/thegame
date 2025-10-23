@@ -287,8 +287,7 @@ export enum ItemType {
   MERCH           = 'Merch',
   
   // BUNDLE_ITEM - Business Logic Items that are Packs of the same Type of Item
-  STICKER_BUNDLE  = 'Sticker Bundle',    // Pack of Stickers
-  PRINT_BUNDLE    = 'Print Bundle',      // Pack of Prints
+  BUNDLE          = 'Bundle',            // Pack of Items (Stickers or Prints)
   
   // RESOURCE_ITEM - Materials and Equipment for production
   MATERIAL        = 'Material',
@@ -328,6 +327,7 @@ export enum ItemStatus {
   TO_DO       = 'To Do',
   GIFTED      = 'Gifted',
   RESERVED    = 'Reserved',
+  CONSIGNED   = 'Consigned',
   OBSOLETE    = 'Obsolete',
   DAMAGED     = 'Damaged',
   IDLE        = 'Idle',
@@ -361,7 +361,7 @@ export enum Collection {
 /** Item categories for UI organization and SearchableSelect grouping */
 export const ITEM_CATEGORIES = {
   MODEL_ITEM: ['DIGITAL', 'ARTWORK', 'PRINT', 'STICKER', 'MERCH'],
-  BUNDLE_ITEM: ['STICKER_BUNDLE', 'PRINT_BUNDLE'],
+  BUNDLE_ITEM: ['BUNDLE'],
   RESOURCE_ITEM: ['MATERIAL', 'EQUIPMENT']
 } as const;
 
@@ -410,6 +410,12 @@ export enum MerchSubType {
   T_SHIRT_ALLOVER = "T-Shirt AllOver"
 }
 
+/** Bundle Item SubTypes */
+export enum BundleSubType {
+  STICKERS = "Stickers",
+  PRINTS = "Prints"
+}
+
 /** Material Item SubTypes */
 export enum MaterialSubType {
   ART_MATERIAL = "Art Material",
@@ -426,21 +432,7 @@ export enum EquipmentSubType {
   VEHICLE = "Vehicle"
 }
 
-/** Sticker Bundle SubTypes */
-export enum StickerBundleSubType {
-  CONSIGNMENT = "Consignment",
-  STORED = "Stored",
-  DIRECT_SALE = "Direct Sale",
-  TRACKING = "Tracking"
-}
 
-/** Print Bundle SubTypes */
-export enum PrintBundleSubType {
-  CONSIGNMENT = "Consignment",
-  STORED = "Stored",
-  DIRECT_SALE = "Direct Sale",
-  TRACKING = "Tracking"
-}
 
 
 // ============================================================================

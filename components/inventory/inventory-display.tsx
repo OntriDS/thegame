@@ -990,7 +990,7 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
 
   // Sticker Bundles View - Location-based mixed sticker collections
   const renderStickerBundlesTab = () => {
-    const filteredBundles = getFilteredItems(ItemType.STICKER_BUNDLE);
+    const filteredBundles = getFilteredItems(ItemType.BUNDLE);
 
     // Group bundles by their primary location (site with highest quantity, or first if all equal)
     const groupedBundles = filteredBundles.reduce((acc, bundle) => {
@@ -1018,7 +1018,7 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
           <div className="flex items-center gap-4">
             <h3 className="text-lg font-semibold">Sticker Bundles</h3>
           </div>
-          <Button size="sm" className="bg-primary hover:bg-primary/90" onClick={() => handleAddBundle(ItemType.STICKER_BUNDLE)}>
+          <Button size="sm" className="bg-primary hover:bg-primary/90" onClick={() => handleAddBundle(ItemType.BUNDLE)}>
             Add Sticker Bundle
           </Button>
         </div>

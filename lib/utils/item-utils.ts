@@ -11,8 +11,7 @@ import {
   MerchSubType,
   MaterialSubType,
   EquipmentSubType,
-  StickerBundleSubType,
-  PrintBundleSubType
+  BundleSubType
 } from '@/types/enums';
 import type { SubItemType } from '@/types/type-aliases';
 
@@ -25,8 +24,7 @@ export function getItemCategory(itemType: ItemType): ItemCategory {
     case ItemType.STICKER:
     case ItemType.MERCH:
       return ItemCategory.MODEL_ITEM;
-    case ItemType.STICKER_BUNDLE:
-    case ItemType.PRINT_BUNDLE:
+    case ItemType.BUNDLE:
       return ItemCategory.BUNDLE_ITEM;
     case ItemType.MATERIAL:
     case ItemType.EQUIPMENT:
@@ -49,10 +47,8 @@ export function getSubTypesForItemType(itemType: ItemType): SubItemType[] {
       return Object.values(StickerSubType);
     case ItemType.MERCH:
       return Object.values(MerchSubType);
-    case ItemType.STICKER_BUNDLE:
-      return Object.values(StickerBundleSubType);
-    case ItemType.PRINT_BUNDLE:
-      return Object.values(PrintBundleSubType);
+    case ItemType.BUNDLE:
+      return Object.values(BundleSubType);
     case ItemType.MATERIAL:
       return Object.values(MaterialSubType);
     case ItemType.EQUIPMENT:
@@ -68,7 +64,7 @@ export function getItemTypesForCategory(category: ItemCategory): ItemType[] {
     case ItemCategory.MODEL_ITEM:
       return [ItemType.DIGITAL, ItemType.ARTWORK, ItemType.PRINT, ItemType.STICKER, ItemType.MERCH];
     case ItemCategory.BUNDLE_ITEM:
-      return [ItemType.STICKER_BUNDLE, ItemType.PRINT_BUNDLE];
+      return [ItemType.BUNDLE];
     case ItemCategory.RESOURCE_ITEM:
       return [ItemType.MATERIAL, ItemType.EQUIPMENT];
     default:

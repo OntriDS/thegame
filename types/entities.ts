@@ -431,7 +431,7 @@ export interface ItemSaleLine extends SaleLineBase {
 /** Bundle sale: consume by item type (business-logic items) */
 export interface BundleSaleLine extends SaleLineBase {
   kind: 'bundle';
-  itemType: ItemType;      // e.g., STICKER_BUNDLE
+  itemType: ItemType;      // e.g., BUNDLE
   itemId?: string;         // optional: specific item ID if selling from existing item
   subItemType?: SubItemType;
   siteId: string;          // where inventory is consumed

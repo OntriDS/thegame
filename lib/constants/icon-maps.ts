@@ -16,7 +16,7 @@ export const ITEM_TYPE_ICONS: Record<string, React.ElementType> = {
   [ItemType.ARTWORK.toLowerCase()]: Brush,
   [ItemType.PRINT.toLowerCase()]: FilePlus,
   [ItemType.STICKER.toLowerCase()]: Box,
-  [ItemType.STICKER_BUNDLE.toLowerCase()]: Boxes,
+  [ItemType.BUNDLE.toLowerCase()]: Boxes,
   [ItemType.MERCH.toLowerCase()]: ShoppingCart,
   [ItemType.MATERIAL.toLowerCase()]: Package,
   [ItemType.EQUIPMENT.toLowerCase()]: Truck,
