@@ -21,6 +21,7 @@ import { createSiteOptionsWithCategories } from '@/lib/utils/site-options-utils'
 import { createCharacterOptions, createStationCategoryOptions, createTaskParentOptions, createItemTypeSubTypeOptions, getItemTypeFromCombined, createItemOptions } from '@/lib/utils/searchable-select-utils';
 import { getAreaForStation } from '@/lib/utils/business-structure-utils';
 import { ClientAPI } from '@/lib/client-api';
+import { dispatchEntityUpdated } from '@/lib/ui/ui-events';
 import { CHARACTER_ONE_ID } from '@/lib/constants/entity-constants';
 import PlayerCharacterSelectorModal from './submodals/player-character-selector-submodal';
 // Side effects handled by parent component via API calls
@@ -529,10 +530,7 @@ export default function SalesModal({
     onSave(saleData);
     
     // Dispatch events AFTER calling parent (operation completed)
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new Event('salesUpdated'));
-      window.dispatchEvent(new Event('linksUpdated'));
-    }
+    dispatchEntityUpdated('sale');
   };
 
   // Validation: Check if sale can have the specified line type

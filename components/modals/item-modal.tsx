@@ -29,6 +29,7 @@ import { FileReference } from '@/types/entities';
 import EntityRelationshipsModal from './submodals/entity-relationships-submodal';
 import CharacterSelectorModal from './submodals/character-selector-submodal';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
+import { dispatchEntityUpdated } from '@/lib/ui/ui-events';
 
 interface ItemModalProps {
   item?: Item;
@@ -488,10 +489,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
     }, 100); // Small delay to ensure Ribosome has processed the entity
     
     // Dispatch UI update events for immediate feedback
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new Event('itemsUpdated'));
-      window.dispatchEvent(new Event('linksUpdated'));
-    }
+    dispatchEntityUpdated('item');
     
     onOpenChange(false);
   };

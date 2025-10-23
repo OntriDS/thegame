@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useEntityUpdates } from "@/lib/hooks/use-entity-updates";
 import { ClientAPI } from "@/lib/client-api";
 import { CharacterRole, CHARACTER_ROLE_TYPES } from "@/types/enums";
 import ConversionRatesModal from "@/components/modals/submodals/conversion-rates-submodal";
@@ -84,59 +85,69 @@ export default function CharactersPage() {
     };
     
     loadData();
-
-    // ✅ FIX: Listen for characterUpdated events to refresh data when tasks/records are completed
-    // Debounce to prevent excessive refreshes from multiple rapid events
-    let refreshTimeout: NodeJS.Timeout | null = null;
-    const handleCharacterUpdate = (event: Event) => {
-      const now = Date.now();
-      console.log(`[Character Section] Received ${event.type} event, scheduling refresh...`);
-      
-      // Skip if already loading to prevent infinite loops
-      if (isLoadingDataRef.current) {
-        console.log('[Character Section] ⏭️ Skipping refresh - already loading data');
-        return;
-      }
-      
-      // Skip if we refreshed too recently (within 1 second)
-      if (now - lastRefreshTimeRef.current < 1000) {
-        console.log('[Character Section] ⏭️ Skipping refresh - too soon after last refresh');
-        return;
-      }
-      
-      // Clear existing timeout to debounce rapid events
-      if (refreshTimeout) {
-        clearTimeout(refreshTimeout);
-      }
-      
-      // Schedule refresh with 100ms debounce
-      refreshTimeout = setTimeout(() => {
-        console.log('[Character Section] Executing debounced refresh...');
-        lastRefreshTimeRef.current = Date.now();
-        loadData();
-        refreshTimeout = null;
-      }, 100);
-    };
-
-    // Add event listeners for player and character updates
-    window.addEventListener('characterUpdated', handleCharacterUpdate);
-    window.addEventListener('charactersUpdated', handleCharacterUpdate);
-    window.addEventListener('playerUpdated', handleCharacterUpdate);
-    window.addEventListener('playersUpdated', handleCharacterUpdate);
-
-    // Cleanup event listener on unmount
-    return () => {
-      // Clear any pending refresh timeout
-      if (refreshTimeout) {
-        clearTimeout(refreshTimeout);
-      }
-      
-      window.removeEventListener('characterUpdated', handleCharacterUpdate);
-      window.removeEventListener('charactersUpdated', handleCharacterUpdate);
-      window.removeEventListener('playerUpdated', handleCharacterUpdate);
-      window.removeEventListener('playersUpdated', handleCharacterUpdate);
-    };
   }, []);
+
+  // ✅ Debounced handler for entity updates
+  const refreshTimeout = useRef<NodeJS.Timeout | null>(null);
+  const handleUpdate = () => {
+    const now = Date.now();
+    
+    // Skip if already loading to prevent infinite loops
+    if (isLoadingDataRef.current) {
+      console.log('[Character Section] ⏭️ Skipping refresh - already loading data');
+      return;
+    }
+    
+    // Skip if we refreshed too recently (within 1 second)
+    if (now - lastRefreshTimeRef.current < 1000) {
+      console.log('[Character Section] ⏭️ Skipping refresh - too soon after last refresh');
+      return;
+    }
+    
+    // Clear existing timeout to debounce rapid events
+    if (refreshTimeout.current) {
+      clearTimeout(refreshTimeout.current);
+    }
+    
+    // Schedule refresh with 100ms debounce
+    refreshTimeout.current = setTimeout(async () => {
+      console.log('[Character Section] Executing debounced refresh...');
+      if (isLoadingDataRef.current) return;
+      
+      isLoadingDataRef.current = true;
+      try {
+        const [playerLogResponse, ratesData, charactersData, playersData, personalAssets] = await Promise.all([
+          fetch('/api/player-log'),
+          ClientAPI.getPlayerConversionRates(),
+          ClientAPI.getCharacters(),
+          ClientAPI.getPlayers(),
+          ClientAPI.getPersonalAssets()
+        ]);
+        
+        const playerLogData = await playerLogResponse.json();
+        const playerLogEntries = playerLogData.entries || [];
+        const mainPlayer = playersData.find((p: Player) => p.id === 'player-one') || playersData[0];
+        const pointsData = mainPlayer?.points || { xp: 0, rp: 0, fp: 0, hp: 0 };
+        
+        setPoints(pointsData);
+        setPersonalJ$(personalAssets?.personalJ$ || 0);
+        setConversionRates(ratesData || { xpToJ$: 1, rpToJ$: 1, fpToJ$: 1, hpToJ$: 1, j$ToUSD: 1 });
+        setCharacters(charactersData || []);
+        setPlayers(playersData || []);
+        setPlayerLog(playerLogEntries);
+      } catch (error) {
+        console.error('Failed to refresh player/character data:', error);
+      } finally {
+        isLoadingDataRef.current = false;
+        lastRefreshTimeRef.current = Date.now();
+      }
+      refreshTimeout.current = null;
+    }, 100);
+  };
+
+  // Listen for character and player updates (unified pattern)
+  useEntityUpdates('character', handleUpdate);
+  useEntityUpdates('player', handleUpdate);
 
   const handlePlayerSave = async (player: Player) => {
     try {

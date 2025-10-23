@@ -9,6 +9,7 @@ import { User, Network, Coins, Target, TrendingUp, Flag } from 'lucide-react';
 import { Player, Character } from '@/types/entities';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
 import { ClientAPI } from '@/lib/client-api';
+import { dispatchEntityUpdated } from '@/lib/ui/ui-events';
 
 // Submodal imports
 import PersonalDataModal from './submodals/player-personal-data-submodal';
@@ -536,10 +537,7 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
           setShowPersonalData(false);
           
           // Dispatch events AFTER save completes
-          if (typeof window !== 'undefined') {
-            window.dispatchEvent(new Event('playersUpdated'));
-            window.dispatchEvent(new Event('linksUpdated'));
-          }
+          dispatchEntityUpdated('player');
         }}
       />
 
@@ -588,11 +586,8 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
           setShowExchangeModal(false);
           
           // Trigger financials update event
-          if (typeof window !== 'undefined') {
-            window.dispatchEvent(new Event('playersUpdated'));
-            window.dispatchEvent(new Event('financialsUpdated'));
-            window.dispatchEvent(new Event('linksUpdated'));
-          }
+          dispatchEntityUpdated('player');
+          dispatchEntityUpdated('financial');
         }}
       />
     </>

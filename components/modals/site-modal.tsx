@@ -23,6 +23,7 @@ import { MapPin, Cloud, Sparkles, Trash2 } from 'lucide-react';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
 // No complex categorization needed for site fields
 import DeleteModal from './submodals/delete-submodal';
+import { dispatchEntityUpdated } from '@/lib/ui/ui-events';
 // Side effects handled by parent component via API calls
 
 interface SiteModalProps {
@@ -162,10 +163,7 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
     onSave(siteData);
     
     // Dispatch UI update events for immediate feedback
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new Event('sitesUpdated'));
-      window.dispatchEvent(new Event('linksUpdated'));
-    }
+    dispatchEntityUpdated('site');
     
     onOpenChange(false);
     setIsSaving(false);

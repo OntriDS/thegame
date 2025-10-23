@@ -32,6 +32,7 @@ import { ClientAPI } from '@/lib/client-api';
 import { CHARACTER_ONE_ID } from '@/lib/constants/entity-constants';
 import CharacterSelectorModal from './submodals/character-selector-submodal';
 import PlayerCharacterSelectorModal from './submodals/player-character-selector-submodal';
+import { dispatchEntityUpdated } from '@/lib/ui/ui-events';
 
 interface TaskModalProps {
   task?: Task | null;
@@ -450,10 +451,7 @@ export default function TaskModal({
     onSave(newTask);
     
     // Dispatch UI update events for immediate feedback
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new Event('tasksUpdated'));
-      window.dispatchEvent(new Event('linksUpdated'));
-    }
+    dispatchEntityUpdated('task');
     
     onOpenChange(false);
     setIsSaving(false);

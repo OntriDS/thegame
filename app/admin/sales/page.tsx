@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useThemeColors } from "@/lib/hooks/use-theme-colors";
+import { useEntityUpdates } from "@/lib/hooks/use-entity-updates";
 import { ClientAPI } from "@/lib/client-api";
 import { Sale } from "@/types/entities";
 import { SaleType, SaleStatus } from "@/types/enums";
@@ -65,6 +66,9 @@ export default function SalesPage() {
       setIsLoading(false);
     }
   };
+
+  // Listen for sale updates (event-driven refresh)
+  useEntityUpdates('sale', loadSales);
 
   const getStatusBadge = (status: SaleStatus) => {
     const statusColors = {

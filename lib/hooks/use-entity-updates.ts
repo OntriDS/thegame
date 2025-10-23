@@ -14,23 +14,28 @@
  * ```
  */
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import type { EntityKind } from '@/lib/ui/ui-events';
 import { getEventName } from '@/lib/ui/ui-events';
 
 export function useEntityUpdates(kind: EntityKind, onUpdate: () => void | Promise<void>) {
-  // Create a stable handler to prevent unnecessary re-subscriptions
-  const stableHandler = useCallback(() => {
-    void onUpdate();
+  // Keep the latest callback in a ref so the event handler can remain stable
+  const callbackRef = useRef(onUpdate);
+
+  // Always update the ref when the callback changes
+  useEffect(() => {
+    callbackRef.current = onUpdate;
   }, [onUpdate]);
+
+  // Stable event handler that calls the latest callback from the ref
+  const stableHandler = useCallback(() => {
+    void callbackRef.current();
+  }, []);
 
   useEffect(() => {
     const eventName = getEventName(kind);
-    
-    // Subscribe to the entity-specific event
+
     window.addEventListener(eventName, stableHandler);
-    
-    // Cleanup on unmount or dependency change
     return () => {
       window.removeEventListener(eventName, stableHandler);
     };

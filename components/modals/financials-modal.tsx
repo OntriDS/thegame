@@ -26,6 +26,7 @@ import { getSubTypesForItemType } from '@/lib/utils/item-utils';
 import { getCategoryForItemType, createItemTypeOptionsWithCategories, createStationCategoryOptions, createCharacterOptions, createItemTypeSubTypeOptions, getItemTypeFromCombined } from '@/lib/utils/searchable-select-utils';
 import { createSiteOptionsWithCategories } from '@/lib/utils/site-options-utils';
 import { ClientAPI } from '@/lib/client-api';
+import { dispatchEntityUpdated } from '@/lib/ui/ui-events';
 // Side effects handled by parent component via API calls
 import { v4 as uuid } from 'uuid';
 import { PRICE_STEP, QUANTITY_STEP, J$_TO_USD_RATE } from '@/lib/constants/app-constants';
@@ -518,10 +519,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
     onSave(recordData);
     
     // Dispatch UI update events for immediate feedback
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new Event('financialsUpdated'));
-      window.dispatchEvent(new Event('linksUpdated'));
-    }
+    dispatchEntityUpdated('financial');
     
     onOpenChange(false);
     setIsSaving(false);

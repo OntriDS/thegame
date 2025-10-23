@@ -18,6 +18,7 @@ import { PLAYER_ONE_ID, CHARACTER_ONE_ID } from '@/lib/constants/entity-constant
 import { ROLE_BEHAVIORS, canViewAccountInfo } from '@/lib/game-mechanics/roles-rules';
 import { Info } from 'lucide-react';
 import { ClientAPI } from '@/lib/client-api';
+import { dispatchEntityUpdated } from '@/lib/ui/ui-events';
 // Side effects handled by parent component via API calls
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
 
@@ -199,10 +200,7 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
     onSave(newCharacter);
     
     // Dispatch events AFTER calling parent (operation completed)
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new Event('charactersUpdated'));
-      window.dispatchEvent(new Event('linksUpdated'));
-    }
+    dispatchEntityUpdated('character');
   };
 
   return (
