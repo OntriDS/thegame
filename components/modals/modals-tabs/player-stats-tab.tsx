@@ -193,7 +193,7 @@ export default function PlayerStatsTab({
 }: PlayerStatsTabProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={`w-full max-w-7xl max-h-[90vh] ${getZIndexClass('MODAL_TABS')}`}>
+      <DialogContent zIndexLayer={'INNER_FIELDS'} className="w-full max-w-7xl max-h-[90vh]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-2xl">
             <TrendingUp className="h-6 w-6" />
