@@ -40,7 +40,7 @@ const DialogContent = React.forwardRef<
   DialogContentProps
 >(({ className, children, zIndexLayer, ...props }, ref) => (
   <DialogPortal>
-    <DialogOverlay className={zIndexLayer ? getZIndexClass(zIndexLayer) : undefined} />
+    <DialogOverlay />
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
