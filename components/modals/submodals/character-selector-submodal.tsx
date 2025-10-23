@@ -65,7 +65,7 @@ export default function CharacterSelectorModal({ open, onOpenChange, onSelect, c
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={`${getZIndexClass('SUB_MODALS')} max-w-2xl`}>
+      <DialogContent zIndexLayer={'SUB_MODALS'} className="max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <User className="h-5 w-5" />

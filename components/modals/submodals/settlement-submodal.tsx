@@ -90,7 +90,7 @@ export default function SettlementSubmodal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={`w-[500px] max-w-[95vw] ${getZIndexClass('SUB_MODALS')}`}>
+      <DialogContent zIndexLayer={'SUB_MODALS'} className="w-[500px] max-w-[95vw]">
         <DialogHeader className="border-b pb-4">
           <DialogTitle className="flex items-center gap-2">
             <MapPin className="h-5 w-5" />

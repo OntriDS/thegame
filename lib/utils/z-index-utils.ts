@@ -40,24 +40,24 @@ export function getModalZIndex(): string {
 }
 
 /**
- * Get the z-index class for modal tabs (Layer 2.5)
- * @returns z-[150] class string
+ * Get the z-index class for modal tabs (Layer 2)
+ * @returns z-[200] class string
  */
 export function getModalTabsZIndex(): string {
-  return getZIndexClass('MODAL_TABS');
+  return getZIndexClass('MODALS');
 }
 
 /**
- * Get the z-index class for inner modals like calendars and dropdowns (Layer 3)
- * @returns z-[150] class string
+ * Get the z-index class for inner modals like calendars and dropdowns (Layer 2)
+ * @returns z-[200] class string
  */
 export function getInnerModalZIndex(): string {
-  return getZIndexClass('INNER_MODALS');
+  return getZIndexClass('MODALS');
 }
 
 /**
  * Get the z-index class for sub-modals and nested dropdowns (Layer 4)
- * @returns z-[200] class string
+ * @returns z-[400] class string
  */
 export function getSubModalZIndex(): string {
   return getZIndexClass('SUB_MODALS');
@@ -68,12 +68,12 @@ export function getSubModalZIndex(): string {
  * @returns z-[500] class string
  */
 export function getDropdownZIndex(): string {
-  return getZIndexClass('DROPDOWNS');
+  return getZIndexClass('SUPRA_FIELDS');
 }
 
 /**
  * Get the z-index class for tooltips (Layer 6)
- * @returns z-[750] class string
+ * @returns z-[600] class string
  */
 export function getTooltipZIndex(): string {
   return getZIndexClass('TOOLTIPS');
@@ -81,7 +81,7 @@ export function getTooltipZIndex(): string {
 
 /**
  * Get the z-index class for notifications (Layer 7)
- * @returns z-[900] class string
+ * @returns z-[800] class string
  */
 export function getNotificationZIndex(): string {
   return getZIndexClass('NOTIFICATIONS');
@@ -106,15 +106,15 @@ export function getInteractiveZIndex(layer: keyof typeof Z_INDEX_LAYERS): string
 
 /**
  * Get the z-index class for inner modals with proper interaction
- * @returns z-[150] pointer-events-auto class string
+ * @returns z-[200] pointer-events-auto class string
  */
 export function getInteractiveInnerModalZIndex(): string {
-  return getInteractiveZIndex('INNER_MODALS');
+  return getInteractiveZIndex('MODALS');
 }
 
 /**
  * Get the z-index class for sub-modals with proper interaction
- * @returns z-[200] pointer-events-auto class string
+ * @returns z-[400] pointer-events-auto class string
  */
 export function getInteractiveSubModalZIndex(): string {
   return getInteractiveZIndex('SUB_MODALS');

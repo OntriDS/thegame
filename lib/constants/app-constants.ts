@@ -60,21 +60,20 @@ export const TASK_TYPE_ICONS: Record<TaskType, React.ElementType> = {
   [TaskType.RECURRENT_INSTANCE]: Target,
 };
 
-// Z-Index Layer System - Systematic approach to prevent conflicts
+// Z-Index Layer System - Unified, production-safe layering
 export const Z_INDEX_LAYERS = {
+  BASE: 0, // Base content, sections, background
+  SUBTABS: 100, // Tabs at parent sections
+  MODALS: 200, // First level modals
+  INNER_FIELDS: 300, // Tabs and regular fields inside modals
+  SUB_MODALS: 400, // Independent submodals (mounted as separate Dialogs)
+  SUPRA_FIELDS: 500, // Dropdowns, popovers, calendars, over-field UI
+  TOOLTIPS: 600, // Tooltips and small overlays
+  NOTIFICATIONS: 800, // Notifications and alerts
+  CRITICAL: 1000, // Highest priority modals (delete confirmations, critical alerts)
+  DRAG: 1500, // For dragging elements
+  MAX: 9999, // Emergency upper bound
   
-  BASE: 0, // Layer 0 (z-0): Base content, sections, background
-  SUBTABS: 50, // Layer 1 (z-50): Subtabs and navigation
-  MODALS: 100, // Layer 2 (z-100): First level modals (task-modal, record-modal)
-  MODAL_TABS: 150, // Layer 2.5 (z-150): Tabs in modals
-  INNER_MODALS: 200, // Layer 3 (z-200): Inner modals (calendar, dropdowns, popovers)
-  SUB_MODALS: 300, // Layer 4 (z-300): Inner sub-modals and nested dropdowns
-  DROPDOWNS: 500, // Layer 5 (z-500): Dropdowns and popovers
-  TOOLTIPS: 750, // Layer 6 (z-750): Tooltips and small overlays
-  NOTIFICATIONS: 900, // Layer 7 (z-900): Notifications and alerts
-  CRITICAL: 1000, // Layer 8 (z-1000): Highest priority modals (delete confirmations, critical alerts)
-  DRAG: 1500, // Special cases: For dragging elements
-  MAX: 9999, // Maximum z-index for emergency cases
 } as const;
 
 // UI and interaction constants

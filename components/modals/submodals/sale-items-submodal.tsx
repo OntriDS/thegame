@@ -146,7 +146,7 @@ export default function SaleItemsSubModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={`w-full max-w-4xl max-h-[80vh] ${getZIndexClass('SUB_MODALS')}`}>
+      <DialogContent zIndexLayer={'SUB_MODALS'} className="w-full max-w-4xl max-h-[80vh]">
         <DialogHeader>
           <DialogTitle>Select Sale Items</DialogTitle>
         </DialogHeader>

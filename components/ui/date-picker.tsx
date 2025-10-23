@@ -47,7 +47,7 @@ export function DatePicker({
       </PopoverTrigger>
       <PopoverPrimitive.Portal>
         <PopoverContent 
-          className={`p-0 ${getInteractiveZIndex('DROPDOWNS')}`} 
+          className={`p-0 ${getInteractiveZIndex('SUPRA_FIELDS')}`} 
           align="start"
           side="bottom"
           avoidCollisions={true}

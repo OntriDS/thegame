@@ -193,7 +193,7 @@ export function LinksSubModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={`max-w-6xl max-h-[90vh] ${getZIndexClass('SUB_MODALS')}`}>
+      <DialogContent zIndexLayer={'SUB_MODALS'} className="max-w-6xl max-h-[90vh]">
         <DialogHeader>
           <DialogTitle className="text-xl flex items-center gap-2">
             <span>Entity Relationships</span>

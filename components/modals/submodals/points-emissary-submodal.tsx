@@ -68,7 +68,7 @@ export default function PointsEmissarySubModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={`sm:max-w-[400px] ${getZIndexClass('SUB_MODALS')}`}>
+      <DialogContent zIndexLayer={'SUB_MODALS'} className="sm:max-w-[400px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Star className="h-5 w-5" />

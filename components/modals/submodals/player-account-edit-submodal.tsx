@@ -21,12 +21,6 @@ export default function AccountEditModal({ account, open, onOpenChange, onSave }
   const [phone, setPhone] = useState(account.phone || '');
   
   useEffect(() => {
-    console.log('AccountEditModal useEffect triggered, open:', open);
-    if (open) {
-      const zClass = getZIndexClass('SUB_MODALS');
-      const zValue = getZIndexValue('SUB_MODALS');
-      console.log('[AccountEditModal] open=true z-index', { zClass, zValue, actualValue: 300 });
-    }
     setName(account.name);
     setEmail(account.email);
     setPhone(account.phone || '');
@@ -45,7 +39,7 @@ export default function AccountEditModal({ account, open, onOpenChange, onSave }
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={`max-w-md ${getZIndexClass('DROPDOWNS')}`}>
+      <DialogContent zIndexLayer={'SUB_MODALS'} className="max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Settings className="h-5 w-5" />

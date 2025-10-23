@@ -218,7 +218,7 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className={`w-[1000px] max-w-[95vw] ${getZIndexClass('MODALS')}`}>
+        <DialogContent zIndexLayer={'MODALS'} className="w-[1000px] max-w-[95vw]">
           <DialogHeader className="border-b pb-4">
             <DialogTitle className="flex items-center gap-2">
               {siteType === SiteType.PHYSICAL && <MapPin className="h-5 w-5" />}

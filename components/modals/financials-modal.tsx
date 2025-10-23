@@ -531,7 +531,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className={`w-full max-w-7xl h-[90vh] ${getZIndexClass('MODALS')}`}>
+        <DialogContent zIndexLayer={'MODALS'} className="w-full max-w-7xl h-[90vh]">
           <DialogHeader>
             <div className="flex items-center justify-between">
               <div>

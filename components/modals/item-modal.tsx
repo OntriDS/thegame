@@ -507,7 +507,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className={`max-w-7xl max-h-[90vh] overflow-y-auto ${getZIndexClass('MODALS')}`}>
+        <DialogContent zIndexLayer={'MODALS'} className="max-w-7xl max-h-[90vh] overflow-y-auto">
           <DialogHeader className="pb-4">
             <DialogTitle className="text-lg">{(item || selectedItemId) ? 'Edit Item' : 'Add New Item'}</DialogTitle>
           </DialogHeader>

@@ -76,7 +76,7 @@ export default function PlayerCharacterSelectorModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={`max-w-md ${getZIndexClass('SUB_MODALS')}`}>
+      <DialogContent zIndexLayer={'SUB_MODALS'} className="max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <User className="h-4 w-4" />

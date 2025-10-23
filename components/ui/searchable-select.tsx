@@ -198,7 +198,7 @@ export function SearchableSelect({
       </PopoverTrigger>
       <PopoverPrimitive.Portal>
         <PopoverContent
-          className={`w-full max-w-[var(--radix-popover-trigger-width)] max-h-[300px] p-0 ${getZIndexClass('DROPDOWNS')} pointer-events-auto`}
+          className={`w-full max-w-[var(--radix-popover-trigger-width)] max-h-[300px] p-0 ${getZIndexClass('SUPRA_FIELDS')} pointer-events-auto`}
           align="start"
           side="bottom"
           avoidCollisions={true}

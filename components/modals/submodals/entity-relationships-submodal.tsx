@@ -145,7 +145,7 @@ export default function EntityRelationshipsModal({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className={`max-w-4xl max-h-[80vh] ${getZIndexClass('SUB_MODALS')}`}>
+      <DialogContent zIndexLayer={'SUB_MODALS'} className="max-w-4xl max-h-[80vh]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Network className="w-5 h-5" />

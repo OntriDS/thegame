@@ -37,7 +37,7 @@ function PlayerCharacterModal({ character, open, onOpenChange }: PlayerCharacter
   if (!character) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className={`max-w-md ${getZIndexClass('DROPDOWNS')}`}>
+        <DialogContent zIndexLayer={'SUB_MODALS'} className="max-w-md">
           <DialogHeader>
             <DialogTitle>Player Character</DialogTitle>
           </DialogHeader>
@@ -54,7 +54,7 @@ function PlayerCharacterModal({ character, open, onOpenChange }: PlayerCharacter
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className={`max-w-md ${getZIndexClass('DROPDOWNS')}`}>
+        <DialogContent zIndexLayer={'SUB_MODALS'} className="max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <User className="h-5 w-5" />
@@ -398,7 +398,7 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
   if (isLoading) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className={`w-full max-w-7xl max-h-[90vh] overflow-hidden ${getZIndexClass('MODALS')}`}>
+        <DialogContent zIndexLayer={'MODALS'} className="w-full max-w-7xl max-h-[90vh] overflow-hidden">
           <DialogHeader>
             <DialogTitle>Loading Player Data...</DialogTitle>
           </DialogHeader>
@@ -413,7 +413,7 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
   if (!playerData) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className={`w-full max-w-7xl max-h-[90vh] overflow-hidden ${getZIndexClass('MODALS')}`}>
+        <DialogContent zIndexLayer={'MODALS'} className="w-full max-w-7xl max-h-[90vh] overflow-hidden">
           <DialogHeader>
             <DialogTitle>Player Not Found</DialogTitle>
           </DialogHeader>
@@ -428,7 +428,7 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className={`w-full max-w-7xl max-h-[90vh] overflow-hidden ${getZIndexClass('MODALS')}`}>
+        <DialogContent zIndexLayer={'MODALS'} className="w-full max-w-7xl max-h-[90vh] overflow-hidden">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-2xl">
               <User className="h-6 w-6" />

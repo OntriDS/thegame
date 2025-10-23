@@ -829,7 +829,7 @@ export default function SalesModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={`w-full max-w-7xl h-[90vh] ${getZIndexClass('MODALS')}`}>
+      <DialogContent zIndexLayer={'MODALS'} className="w-full max-w-7xl h-[90vh]">
         <DialogHeader>
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">

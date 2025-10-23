@@ -213,7 +213,7 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={`max-w-4xl max-h-[90vh] overflow-y-auto ${getZIndexClass('SUB_MODALS')}`}>
+      <DialogContent zIndexLayer={'SUB_MODALS'} className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Bulk Edit {itemType}</DialogTitle>
           <DialogDescription>

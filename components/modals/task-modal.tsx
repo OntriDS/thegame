@@ -656,7 +656,7 @@ export default function TaskModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={`w-full max-w-7xl max-h-[90vh] overflow-y-auto ${getZIndexClass('MODALS')}`}>
+      <DialogContent zIndexLayer={'MODALS'} className="w-full max-w-7xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{task ? 'Edit Task' : (isRecurrentModal ? 'Create New Recurrent Task' : 'Create New Task')}</DialogTitle>
           <DialogDescription>
@@ -1220,7 +1220,7 @@ export default function TaskModal({
 
       {/* Validation Modal */}
       <Dialog open={showValidationModal} onOpenChange={setShowValidationModal}>
-        <DialogContent className={getZIndexClass('MODALS')}>
+        <DialogContent zIndexLayer={'MODALS'}>
           <DialogHeader>
             <DialogTitle>Missing Required Information</DialogTitle>
             <DialogDescription>

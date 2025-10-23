@@ -173,7 +173,7 @@ export default function SalePaymentsSubModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={`w-full max-w-4xl max-h-[80vh] ${getZIndexClass('SUB_MODALS')}`}>
+      <DialogContent zIndexLayer={'SUB_MODALS'} className="w-full max-w-4xl max-h-[80vh]">
         <DialogHeader>
           <DialogTitle>{mode === 'other-methods' ? 'Other Payment Methods' : 'Financial Record Payments'}</DialogTitle>
         </DialogHeader>
