@@ -99,6 +99,7 @@ export default function FinancesPage() {
   // Currency conversion state
   const [exchangeRates, setExchangeRates] = useState<CurrencyExchangeRates>(DEFAULT_CURRENCY_EXCHANGE_RATES);
   const [pointsConversionRates, setPointsConversionRates] = useState<PointsConversionRates>(DEFAULT_POINTS_CONVERSION_RATES);
+  const [isFetchingBitcoin, setIsFetchingBitcoin] = useState(false);
   
   const [editingSection, setEditingSection] = useState<{
     type: 'company' | 'personal';
@@ -191,6 +192,7 @@ export default function FinancesPage() {
   }, []);
 
   const fetchBitcoinPrice = async () => {
+    setIsFetchingBitcoin(true);
     try {
       // Try multiple APIs for better reliability
       const apis = [
@@ -215,6 +217,7 @@ export default function FinancesPage() {
           
           if (bitcoinPrice > 0) {
             setExchangeRates(prev => ({ ...prev, bitcoinToUsd: bitcoinPrice }));
+            setIsFetchingBitcoin(false);
             return; // Success, exit the loop
           }
         } catch (apiError) {
@@ -229,6 +232,8 @@ export default function FinancesPage() {
     } catch (error) {
       console.error('Failed to fetch Bitcoin price:', error);
       setExchangeRates(prev => ({ ...prev, bitcoinToUsd: FALLBACK_BITCOIN_PRICE }));
+    } finally {
+      setIsFetchingBitcoin(false);
     }
   };
 
@@ -481,26 +486,24 @@ export default function FinancesPage() {
               <CardContent className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Revenue</span>
-                  <span className="font-medium">{aggregatedFinancialData ? formatCurrency(aggregatedFinancialData.totalRevenue) : '$0'}</span>
+                  <span className="font-medium">{aggregatedFinancialData?.totalRevenue ? formatCurrency(aggregatedFinancialData.totalRevenue) : '$0'}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>Cost</span>
-                  <span className="font-medium">{aggregatedFinancialData ? formatCurrency(aggregatedFinancialData.totalCost) : '$0'}</span>
+                  <span className="font-medium">{aggregatedFinancialData?.totalCost ? formatCurrency(aggregatedFinancialData.totalCost) : '$0'}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>Net</span>
                   <span className={`font-bold ${
-                    aggregatedFinancialData ? 
-                      aggregatedFinancialData.net === 0 ? 'text-muted-foreground' : 
-                      aggregatedFinancialData.net > 0 ? 'text-green-600' : 'text-red-600'
-                    : 'text-muted-foreground'
+                    aggregatedFinancialData?.net === 0 ? 'text-muted-foreground' : 
+                    aggregatedFinancialData?.net > 0 ? 'text-green-600' : 'text-red-600'
                   }`}>
-                    {aggregatedFinancialData ? formatCurrency(aggregatedFinancialData.net) : '$0'}
+                    {aggregatedFinancialData?.net ? formatCurrency(aggregatedFinancialData.net) : '$0'}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>J$ Paid Out</span>
-                  <span className="font-medium">{aggregatedFinancialData ? `-${aggregatedFinancialData.totalJungleCoins} J$ (${formatCurrency(aggregatedFinancialData.totalJungleCoins * exchangeRates.j$ToUSD)})` : '0 J$'}</span>
+                  <span className="font-medium">{aggregatedFinancialData?.totalJungleCoins ? `-${aggregatedFinancialData.totalJungleCoins} J$ (${formatCurrency(aggregatedFinancialData.totalJungleCoins * exchangeRates.j$ToUSD)})` : '0 J$'}</span>
                 </div>
               </CardContent>
             </Card>
@@ -516,26 +519,24 @@ export default function FinancesPage() {
               <CardContent className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Revenue</span>
-                  <span className="font-medium">{personalSummary ? formatCurrency(personalSummary.totalRevenue) : '$0'}</span>
+                  <span className="font-medium">{personalSummary?.totalRevenue ? formatCurrency(personalSummary.totalRevenue) : '$0'}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>Cost</span>
-                  <span className="font-medium">{personalSummary ? formatCurrency(personalSummary.totalCost) : '$0'}</span>
+                  <span className="font-medium">{personalSummary?.totalCost ? formatCurrency(personalSummary.totalCost) : '$0'}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>Net</span>
                   <span className={`font-bold ${
-                    personalSummary ? 
-                      personalSummary.netCashflow === 0 ? 'text-muted-foreground' : 
-                      personalSummary.netCashflow > 0 ? 'text-green-600' : 'text-red-600'
-                    : 'text-muted-foreground'
+                    personalSummary?.netCashflow === 0 ? 'text-muted-foreground' : 
+                    (personalSummary?.netCashflow ?? 0) > 0 ? 'text-green-600' : 'text-red-600'
                   }`}>
-                    {personalSummary ? formatCurrency(personalSummary.netCashflow) : '$0'}
+                    {personalSummary?.netCashflow ? formatCurrency(personalSummary.netCashflow) : '$0'}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>J$ Received</span>
-                  <span className="font-medium">{personalSummary ? `+${personalSummary.totalJungleCoins} J$ (${formatCurrency(personalSummary.totalJungleCoins * exchangeRates.j$ToUSD)})` : '0 J$'}</span>
+                  <span className="font-medium">{personalSummary?.totalJungleCoins ? `+${personalSummary.totalJungleCoins} J$ (${formatCurrency(personalSummary.totalJungleCoins * exchangeRates.j$ToUSD)})` : '0 J$'}</span>
                 </div>
               </CardContent>
             </Card>
@@ -897,9 +898,10 @@ export default function FinancesPage() {
                       size="sm"
                       variant="outline"
                       onClick={fetchBitcoinPrice}
+                      disabled={isFetchingBitcoin}
                       className="h-6 px-2 text-xs"
                     >
-                      Refresh
+                      {isFetchingBitcoin ? '...' : 'Refresh'}
                     </Button>
                   </div>
                 </div>
