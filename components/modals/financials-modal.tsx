@@ -92,15 +92,6 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
     return categories && categories.length > 0 ? categories[0] : categories[0] as Station;
   };
 
-  // Helper function to get the area for a given station
-  const getAreaForStation = (station: Station): string => {
-    for (const [area, stations] of Object.entries(BUSINESS_STRUCTURE)) {
-      if ((stations as readonly string[]).includes(station)) {
-        return area;
-      }
-    }
-    return 'ADMIN'; // Default fallback
-  };
 
   // Helper function to get the correct value format for SearchableSelect
   const getStationValue = (station: Station): string => {
@@ -214,8 +205,8 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
   }, []);
 
   // Smart detection: Determine if this is Company or Personal based on station
-  const isCompany = getCompanyAreas().includes(formData.station as any);
-  const isPersonal = getPersonalAreas().includes(formData.station as any);
+  const isCompany = isCompanyStation(formData.station);
+  const isPersonal = isPersonalStation(formData.station);
 
   useEffect(() => {
     if (record && record.id) {

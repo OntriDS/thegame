@@ -7,6 +7,8 @@ import { getAllFinancials, upsertFinancial, removeFinancial } from '@/data-store
 import { makeLink } from '@/links/links-workflows';
 import { createLink } from '@/links/link-registry';
 import { appendEntityLog } from './entities-logging';
+import { getFinancialTypeForStation } from '@/lib/utils/business-structure-utils';
+import type { Station } from '@/types/type-aliases';
 
 /**
  * Create a financial record from a task (when task has cost or revenue)
@@ -39,7 +41,7 @@ export async function createFinancialRecordFromTask(task: Task): Promise<Financi
       year: currentDate.getFullYear(),
       month: currentDate.getMonth() + 1,
       station: task.station,
-      type: 'company', // Tasks are business activities
+      type: getFinancialTypeForStation(task.station),
       siteId: task.siteId,
       targetSiteId: task.targetSiteId,
       sourceTaskId: task.id, // AMBASSADOR field - points back to Task
@@ -234,8 +236,8 @@ export async function createFinancialRecordFromSale(sale: Sale): Promise<Financi
       description: `Financial record from sale: ${sale.counterpartyName}`,
       year: currentDate.getFullYear(),
       month: currentDate.getMonth() + 1,
-      station: 'Sales' as any, // Sales are business activities
-      type: 'company',
+      station: 'Direct Sales' as Station,
+      type: getFinancialTypeForStation('Direct Sales' as Station),
       siteId: sale.siteId,
       targetSiteId: undefined,
       sourceSaleId: sale.id, // AMBASSADOR field - points back to Sale

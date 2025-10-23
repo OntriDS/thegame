@@ -1,17 +1,17 @@
 // lib/utils/business-structure-utils.ts
 // Business structure helper functions
 
-import { BUSINESS_STRUCTURE } from '@/types/enums';
+import { BUSINESS_STRUCTURE, COMPANY_AREAS, PERSONAL_AREAS } from '@/types/enums';
 import type { Area, Station } from '@/types/type-aliases';
 
 // Get all company areas
 export function getCompanyAreas(): readonly Area[] {
-  return ['ADMIN', 'RESEARCH', 'DESIGN', 'PRODUCTION', 'SALES'] as const;
+  return COMPANY_AREAS;
 }
 
 // Get all personal areas
 export function getPersonalAreas(): readonly Area[] {
-  return ['PERSONAL'] as const;
+  return PERSONAL_AREAS;
 }
 
 // Get all areas
@@ -49,4 +49,12 @@ export function isCompanyStation(station: Station): boolean {
 export function isPersonalStation(station: Station): boolean {
   const personalStations = getPersonalAreas().flatMap(area => BUSINESS_STRUCTURE[area]);
   return personalStations.includes(station);
+}
+
+/**
+ * Get financial type for a station
+ * Uses COMPANY_AREAS and PERSONAL_AREAS from enums as source of truth
+ */
+export function getFinancialTypeForStation(station: Station): 'company' | 'personal' {
+  return isCompanyStation(station) ? 'company' : 'personal';
 }

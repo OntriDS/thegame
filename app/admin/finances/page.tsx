@@ -135,9 +135,7 @@ export default function FinancesPage() {
     );
     
     // Aggregate company records by station using DRY utility
-    const companyStations = Object.values(BUSINESS_STRUCTURE)
-      .filter((_, idx) => idx < 5) // Exclude PERSONAL
-      .flat();
+    const companyStations = getCompanyAreas().flatMap(area => BUSINESS_STRUCTURE[area]);
     const companyBreakdown = aggregateRecordsByStation(companyRecords, companyStations);
     const companyTotals = calculateTotals(companyBreakdown);
     
