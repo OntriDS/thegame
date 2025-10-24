@@ -1205,7 +1205,7 @@ export default function TaskModal({
             <Button variant="outline" onClick={() => onOpenChange(false)} className="h-8 text-xs" disabled={isSaving}>
               Cancel
             </Button>
-            <Button onClick={handleSave} className="h-8 text-xs" disabled={isSaving}>
+            <Button onClick={handleSave} className="h-8 text-xs" disabled={!name.trim() || isSaving}>
               {isSaving ? 'Saving...' : (task ? 'Update' : 'Create')} Task
             </Button>
           </div>

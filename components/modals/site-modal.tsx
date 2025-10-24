@@ -461,8 +461,8 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
               <Button variant="outline" onClick={() => onOpenChange(false)} className="h-8 text-xs" disabled={isSaving}>
                 Cancel
               </Button>
-              <Button onClick={handleSave} className="h-8 text-xs" disabled={!name || isSaving}>
-                {isSaving ? 'Saving...' : (site ? 'Update Site' : 'Create Site')}
+              <Button onClick={handleSave} className="h-8 text-xs" disabled={!name.trim() || isSaving}>
+                {isSaving ? 'Saving...' : (site ? 'Update' : 'Create')} Site
               </Button>
             </div>
           </DialogFooter>

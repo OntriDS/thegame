@@ -47,6 +47,9 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
   // Account Info Modal
   const [showAccountInfo, setShowAccountInfo] = useState(false);
 
+  // Loading state
+  const [isSaving, setIsSaving] = useState(false);
+
   // V0.1 Core - Game Mechanics (Character-specific only!)
   const [jungleCoins, setJungleCoins] = useState<number>(0);
   const [purchasedAmount, setPurchasedAmount] = useState<number>(0);
@@ -148,9 +151,13 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
   };
 
   const handleSave = async () => {
+    if (isSaving) return;
+    setIsSaving(true);
+    
     // Validation: Characters must have at least one role
     if (roles.length === 0) {
       alert('Please select at least one role for the character.');
+      setIsSaving(false);
       return;
     }
     
@@ -202,9 +209,13 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
       
       // Dispatch events AFTER successful save
       dispatchEntityUpdated('character');
+      
+      onOpenChange(false);
     } catch (error) {
       console.error('Save failed:', error);
       // Keep modal open on error
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -422,8 +433,10 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
           )}
           
           <div className="flex items-center gap-2 ml-auto">
-            <Button variant="outline" onClick={() => onOpenChange(false)} className="h-8 text-xs">Cancel</Button>
-            <Button onClick={handleSave} className="h-8 text-xs">Save Character</Button>
+            <Button variant="outline" onClick={() => onOpenChange(false)} className="h-8 text-xs" disabled={isSaving}>Cancel</Button>
+            <Button onClick={handleSave} className="h-8 text-xs" disabled={!name.trim() || isSaving}>
+              {isSaving ? 'Saving...' : (character ? 'Update' : 'Create')} Character
+            </Button>
           </div>
         </DialogFooter>
 

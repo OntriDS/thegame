@@ -165,7 +165,7 @@ export default function SalesModal({
   const [sites, setSites] = useState<Site[]>([]);
   const [characters, setCharacters] = useState<Character[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Load data on mount
   useEffect(() => {
@@ -316,6 +316,19 @@ export default function SalesModal({
   };
 
   const handleSave = async () => {
+    if (isSaving) return;
+    setIsSaving(true);
+    
+    // Validation: Sales must have either product (item) OR service (task)
+    const hasProductLines = lines.some(line => line.kind === 'item' || line.kind === 'bundle');
+    const hasServiceLines = lines.some(line => line.kind === 'service');
+    const hasProductFields = selectedItemId || quickRows.some(r => r.quantity > 0);
+    
+    if (!hasProductLines && !hasServiceLines && !hasProductFields) {
+      alert('Please add at least one product (item) or service (task) to the sale.');
+      setIsSaving(false);
+      return;
+    }
 
     // Handle new customer character creation
     let finalCustomerId: string | null = customerId;
@@ -352,9 +365,6 @@ export default function SalesModal({
     }
 
     // Validate: Check for conflicting data (product fields filled while service lines exist, or vice versa)
-    const hasServiceLines = lines.some(line => line.kind === 'service');
-    const hasProductLines = lines.some(line => line.kind === 'item' || line.kind === 'bundle');
-    const hasProductFields = selectedItemId || quickRows.some(r => r.quantity > 0);
     
     if (hasServiceLines && hasProductFields) {
       alert('Conflicting data detected! You have service lines but also product fields filled. Please clear one before saving.');
@@ -532,9 +542,13 @@ export default function SalesModal({
       
       // Dispatch events AFTER successful save
       dispatchEntityUpdated('sale');
+      
+      onOpenChange(false);
     } catch (error) {
       console.error('Save failed:', error);
       // Keep modal open on error
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -1778,11 +1792,11 @@ export default function SalesModal({
                   ))}
                 </SelectContent>
               </Select>
-              <Button variant="outline" onClick={() => onOpenChange(false)} className="h-8 text-xs" disabled={isLoading}>
+              <Button variant="outline" onClick={() => onOpenChange(false)} className="h-8 text-xs" disabled={isSaving}>
                 Cancel
               </Button>
-              <Button onClick={handleSave} className="h-8 text-xs" disabled={isLoading}>
-                {isLoading ? 'Saving...' : 'Save Sale'}
+              <Button onClick={handleSave} className="h-8 text-xs" disabled={isSaving}>
+                {isSaving ? 'Saving...' : (sale ? 'Update' : 'Create')} Sale
               </Button>
             </div>
           </div>
