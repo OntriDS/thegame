@@ -1,7 +1,7 @@
 // workflows/entities-workflows/task.workflow.ts
 // Task-specific workflow with state vs descriptive field detection
 
-import { EntityType, LogEventType } from '@/types/enums';
+import { EntityType, LogEventType, TaskType } from '@/types/enums';
 import type { Task } from '@/types/entities';
 import { appendEntityLog, updateEntityLogField } from '../entities-logging';
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
@@ -18,6 +18,11 @@ import {
   hasOutputPropsChanged,
   hasRewardsChanged
 } from '../update-propagation-utils';
+import { 
+  handleTemplateInstanceCreation,
+  archiveCompletedInstances,
+  deleteTemplateCascade 
+} from '@/lib/utils/recurrent-task-utils';
 
 const STATE_FIELDS = ['status', 'progress', 'doneAt', 'collectedAt', 'siteId', 'targetSiteId'];
 const DESCRIPTIVE_FIELDS = ['name', 'description', 'cost', 'revenue', 'rewards', 'priority'];
@@ -34,6 +39,17 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
       station: task.station 
     });
     await markEffect(effectKey);
+
+    // Recurrent Template instance spawning - when template is created
+    if (task.type === TaskType.RECURRENT_TEMPLATE) {
+      const instancesEffectKey = `task:${task.id}:instancesGenerated`;
+      if (!(await hasEffect(instancesEffectKey))) {
+        console.log(`[onTaskUpsert] Generating instances for new template: ${task.name}`);
+        const instances = await handleTemplateInstanceCreation(task);
+        await markEffect(instancesEffectKey);
+        console.log(`[onTaskUpsert] ✅ Generated ${instances.length} instances for template`);
+      }
+    }
     return;
   }
   
@@ -56,6 +72,14 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
       
       // Uncomplete the task and remove effects
       await uncompleteTask(task.id);
+    }
+
+    // Archive completed recurrent instances when parent is collected
+    if (task.type === TaskType.RECURRENT_PARENT && 
+        (task.status === 'Collected' || task.status === 'Archived')) {
+      console.log(`[onTaskUpsert] Archiving completed instances for parent: ${task.name}`);
+      const archived = await archiveCompletedInstances(task.id);
+      console.log(`[onTaskUpsert] ✅ Archived ${archived.length} completed instances`);
     }
   }
   
@@ -140,6 +164,22 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
       console.log(`[onTaskUpsert] Propagating points changes from task: ${task.name}`);
       await updatePlayerPointsFromSource(EntityType.TASK, task, previousTask);
     }
+
+    // Recurrent Template instance spawning - when template frequency or due date changes
+    if (task.type === TaskType.RECURRENT_TEMPLATE) {
+      const frequencyChanged = JSON.stringify(previousTask.frequencyConfig) !== JSON.stringify(task.frequencyConfig);
+      const dueDateChanged = previousTask.dueDate?.getTime() !== task.dueDate?.getTime();
+      
+      if (frequencyChanged || dueDateChanged) {
+        const instancesEffectKey = `task:${task.id}:instancesGenerated`;
+        if (!(await hasEffect(instancesEffectKey))) {
+          console.log(`[onTaskUpsert] Regenerating instances for template: ${task.name} (frequency/due date changed)`);
+          const instances = await handleTemplateInstanceCreation(task);
+          await markEffect(instancesEffectKey);
+          console.log(`[onTaskUpsert] ✅ Regenerated ${instances.length} instances for template`);
+        }
+      }
+    }
   }
   
   // Descriptive changes - update in-place
@@ -157,6 +197,16 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
 export async function removeTaskLogEntriesOnDelete(taskId: string): Promise<void> {
   try {
     console.log(`[removeTaskLogEntriesOnDelete] Starting cleanup for task: ${taskId}`);
+    
+    // Handle recurrent template cascade deletion
+    const tasks = await getAllTasks();
+    const task = tasks.find(t => t.id === taskId);
+    if (task && task.type === TaskType.RECURRENT_TEMPLATE) {
+      console.log(`[removeTaskLogEntriesOnDelete] Cascading delete for template: ${task.name}`);
+      const deletedCount = await deleteTemplateCascade(taskId);
+      console.log(`[removeTaskLogEntriesOnDelete] ✅ Cascade deleted ${deletedCount} tasks`);
+      return; // Skip normal deletion flow
+    }
     
     // 1. Remove items created by this task
     await removeItemsCreatedByTask(taskId);
