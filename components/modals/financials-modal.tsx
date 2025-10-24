@@ -68,7 +68,7 @@ interface FinancialsModalProps {
   month: number;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (record: FinancialRecord) => void;
+  onSave: (record: FinancialRecord) => Promise<void>;
   onDelete?: () => void;
 }
 
@@ -515,14 +515,20 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
       localStorage.setItem('lastUsedRecordStation', recordData.station as any);
     }
 
-    // Emit pure record entity - Links System handles all relationships automatically
-    onSave(recordData);
-    
-    // Dispatch UI update events for immediate feedback
-    dispatchEntityUpdated('financial');
-    
-    onOpenChange(false);
-    setIsSaving(false);
+    try {
+      // Emit pure record entity - Links System handles all relationships automatically
+      await onSave(recordData);
+      
+      // Dispatch UI update events AFTER successful save
+      dispatchEntityUpdated('financial');
+      
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Save failed:', error);
+      // Keep modal open on error
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // Get available categories based on selected station

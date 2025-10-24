@@ -30,7 +30,7 @@ interface SiteModalProps {
   site?: Site | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (site: Site) => void;
+  onSave: (site: Site) => Promise<void>;
 }
 
 export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) {
@@ -118,55 +118,61 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
     }
   }, [site, open]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (isSaving) return;
     setIsSaving(true);
     
-    // Build metadata based on site type
-    let metadata;
-    
-    if (siteType === SiteType.PHYSICAL) {
-      metadata = {
-        type: SiteType.PHYSICAL,
+    try {
+      // Build metadata based on site type
+      let metadata;
+      
+      if (siteType === SiteType.PHYSICAL) {
+        metadata = {
+          type: SiteType.PHYSICAL,
+          isActive,
+          businessType,
+          settlementId,
+          googleMapsAddress
+        } as PhysicalSiteMetadata;
+      } else if (siteType === SiteType.DIGITAL) {
+        metadata = {
+          type: SiteType.DIGITAL,
+          isActive,
+          digitalType,
+          url: digitalUrl
+        } as DigitalSiteMetadata & { url: string };
+      } else {
+        metadata = {
+          type: SiteType.SYSTEM,
+          isActive,
+          systemType: systemPurpose
+        } as SystemSiteMetadata;
+      }
+
+      const siteData: Site = {
+        id: site?.id || `site-${name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')}`,
+        name,
+        description,
         isActive,
-        businessType,
-        settlementId,
-        googleMapsAddress
-      } as PhysicalSiteMetadata;
-    } else if (siteType === SiteType.DIGITAL) {
-      metadata = {
-        type: SiteType.DIGITAL,
-        isActive,
-        digitalType,
-        url: digitalUrl
-      } as DigitalSiteMetadata & { url: string };
-    } else {
-      metadata = {
-        type: SiteType.SYSTEM,
-        isActive,
-        systemType: systemPurpose
-      } as SystemSiteMetadata;
+        status,
+        metadata,
+        createdAt: site?.createdAt || new Date(),
+        updatedAt: new Date(),
+        links: site?.links || []
+      };
+
+      await onSave(siteData);
+      
+      // Dispatch UI update events AFTER successful save
+      dispatchEntityUpdated('site');
+      
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Save failed:', error);
+      // Keep modal open on error
+    } finally {
+      setIsSaving(false);
     }
-
-    const siteData: Site = {
-      id: site?.id || `site-${name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')}`,
-      name,
-      description,
-      isActive,
-      status,
-      metadata,
-      createdAt: site?.createdAt || new Date(),
-      updatedAt: new Date(),
-      links: site?.links || []
-    };
-
-    onSave(siteData);
-    
-    // Dispatch UI update events for immediate feedback
-    dispatchEntityUpdated('site');
-    
-    onOpenChange(false);
-    setIsSaving(false);
   };
   
   const handleDelete = () => {

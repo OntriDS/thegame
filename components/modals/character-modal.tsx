@@ -26,7 +26,7 @@ interface CharacterModalProps {
   character?: Character | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (character: Character) => void;
+  onSave: (character: Character) => Promise<void>;
 }
 
 /**
@@ -147,60 +147,65 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
     return colorClass;
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     // Validation: Characters must have at least one role
     if (roles.length === 0) {
       alert('Please select at least one role for the character.');
       return;
     }
     
-    // If character has PLAYER role, don't save name/email/phone (they're from Account)
-    const shouldPreserveContactInfo = hasPlayerRole;
-    
-    const newCharacter: Character = {
-      id: character?.id || uuid(),
-      name: name?.trim() || 'Unnamed Character',
-      description: description?.trim() || undefined,
-      createdAt: character?.createdAt || new Date(),
-      updatedAt: new Date(),
-      isActive: character?.isActive ?? true,  // Character is active by default
-      links: character?.links || [],
+    try {
+      // If character has PLAYER role, don't save name/email/phone (they're from Account)
+      const shouldPreserveContactInfo = hasPlayerRole;
+      
+      const newCharacter: Character = {
+        id: character?.id || uuid(),
+        name: name?.trim() || 'Unnamed Character',
+        description: description?.trim() || undefined,
+        createdAt: character?.createdAt || new Date(),
+        updatedAt: new Date(),
+        isActive: character?.isActive ?? true,  // Character is active by default
+        links: character?.links || [],
 
-      // Account Ambassador - Preserve existing accountId
-      accountId: character?.accountId || null,
+        // Account Ambassador - Preserve existing accountId
+        accountId: character?.accountId || null,
 
-      // Character core
-      roles,
-      // For PLAYER role characters, preserve existing contact info (read from Account)
-      contactPhone: shouldPreserveContactInfo ? character?.contactPhone : (contactPhone?.trim() || undefined),
-      contactEmail: shouldPreserveContactInfo ? character?.contactEmail : (contactEmail?.trim() || undefined),
+        // Character core
+        roles,
+        // For PLAYER role characters, preserve existing contact info (read from Account)
+        contactPhone: shouldPreserveContactInfo ? character?.contactPhone : (contactPhone?.trim() || undefined),
+        contactEmail: shouldPreserveContactInfo ? character?.contactEmail : (contactEmail?.trim() || undefined),
 
-      // Character Stats
-      commColor: character?.commColor,
+        // Character Stats
+        commColor: character?.commColor,
 
-      // Character Progression
-      CP,
-      achievementsCharacter,
+        // Character Progression
+        CP,
+        achievementsCharacter,
 
-      // V0.1 required - Character-specific only
-      jungleCoins,
-      purchasedAmount,
-      inventory: character?.inventory || [], // Empty array for new characters
+        // V0.1 required - Character-specific only
+        jungleCoins,
+        purchasedAmount,
+        inventory: character?.inventory || [], // Empty array for new characters
 
-      // Relationships - V0.1: Founder player is the default
-      playerId: character?.playerId || PLAYER_ONE_ID,
+        // Relationships - V0.1: Founder player is the default
+        playerId: character?.playerId || PLAYER_ONE_ID,
 
-      // Lifecycle
-      lastActiveAt: character?.lastActiveAt || new Date(),
+        // Lifecycle
+        lastActiveAt: character?.lastActiveAt || new Date(),
 
-      // Social graph
-      relationships: character?.relationships,
-    };
+        // Social graph
+        relationships: character?.relationships,
+      };
 
-    onSave(newCharacter);
-    
-    // Dispatch events AFTER calling parent (operation completed)
-    dispatchEntityUpdated('character');
+      await onSave(newCharacter);
+      
+      // Dispatch events AFTER successful save
+      dispatchEntityUpdated('character');
+    } catch (error) {
+      console.error('Save failed:', error);
+      // Keep modal open on error
+    }
   };
 
   return (

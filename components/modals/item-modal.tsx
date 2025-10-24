@@ -36,7 +36,7 @@ interface ItemModalProps {
   defaultItemType?: ItemType;
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  onSave: (item: Item) => void;
+  onSave: (item: Item) => Promise<void>;
 }
 
 export default function ItemModal({ item, defaultItemType, open, onOpenChange, onSave }: ItemModalProps) {
@@ -366,132 +366,137 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (isSaving) return;
     setIsSaving(true);
     
-    const dimensions = width && height ? {
-      width: parseFloat(width),
-      height: parseFloat(height),
-      area: parseFloat(width) * parseFloat(height) / CM_TO_M2_CONVERSION // Convert to m²
-    } : undefined;
+    try {
+      const dimensions = width && height ? {
+        width: parseFloat(width),
+        height: parseFloat(height),
+        area: parseFloat(width) * parseFloat(height) / CM_TO_M2_CONVERSION // Convert to m²
+      } : undefined;
 
-    // Parse size field
-    const parsedSize = size.trim() || undefined;
+      // Parse size field
+      const parsedSize = size.trim() || undefined;
 
-    // Handle stock quantity - add to existing if item already exists at this site
-    let updatedStock: StockPoint[] = [];
-    
-    // Determine if we're editing an existing item (either via prop or selectedItemId)
-    const isEditingExistingItem = item || selectedItemId;
-    
-    if (isEditingExistingItem) {
-      // Editing existing item - get the item data
-      const existingItem = item || existingItems.find(i => i.id === selectedItemId);
+      // Handle stock quantity - add to existing if item already exists at this site
+      let updatedStock: StockPoint[] = [];
       
-      if (existingItem) {
-        // Merge with existing stock
-        updatedStock = [...(existingItem.stock || [])];
-        const existingStockIndex = updatedStock.findIndex(stock => stock.siteId === site);
+      // Determine if we're editing an existing item (either via prop or selectedItemId)
+      const isEditingExistingItem = item || selectedItemId;
+      
+      if (isEditingExistingItem) {
+        // Editing existing item - get the item data
+        const existingItem = item || existingItems.find(i => i.id === selectedItemId);
         
-        if (existingStockIndex >= 0) {
-          // Update existing quantity at this site (replace, don't add)
-          updatedStock[existingStockIndex] = {
-            siteId: site,
-            quantity: quantity || 0
-          };
-          console.log(`📦 Updated stock at ${site}: ${quantity || 0} units`);
-        } else {
-          // Add new stock point at this site
-          updatedStock.push({
-            siteId: site,
-            quantity: quantity || 0
-          });
-          console.log(`📦 Added new stock at ${site}: ${quantity || 0} units`);
+        if (existingItem) {
+          // Merge with existing stock
+          updatedStock = [...(existingItem.stock || [])];
+          const existingStockIndex = updatedStock.findIndex(stock => stock.siteId === site);
+          
+          if (existingStockIndex >= 0) {
+            // Update existing quantity at this site (replace, don't add)
+            updatedStock[existingStockIndex] = {
+              siteId: site,
+              quantity: quantity || 0
+            };
+            console.log(`📦 Updated stock at ${site}: ${quantity || 0} units`);
+          } else {
+            // Add new stock point at this site
+            updatedStock.push({
+              siteId: site,
+              quantity: quantity || 0
+            });
+            console.log(`📦 Added new stock at ${site}: ${quantity || 0} units`);
+          }
         }
+      } else {
+        // Creating new item - single stock point
+        updatedStock = [{
+          siteId: site,
+          quantity: quantity || 0
+        }];
       }
-    } else {
-      // Creating new item - single stock point
-      updatedStock = [{
-        siteId: site,
-        quantity: quantity || 0
-      }];
-    }
 
-    // Parse file attachments
-    const parseFileReferences = (field: string): FileReference[] => {
-      if (!field || field.trim() === '') return [];
+      // Parse file attachments
+      const parseFileReferences = (field: string): FileReference[] => {
+        if (!field || field.trim() === '') return [];
+        
+        return field.split(';').map(fileRef => {
+          const parts = fileRef.split(':');
+          if (parts.length >= 2) {
+            return {
+              url: parts[0] === 'symbolic' ? undefined : parts[0],
+              type: parts[1]
+            };
+          }
+          return { type: fileRef.trim() }; // Fallback for simple types
+        });
+      };
+
+      const parsedOriginalFiles = parseFileReferences(originalFiles);
+      const parsedAccessoryFiles = parseFileReferences(accessoryFiles);
+
+      const newItem: Item = {
+        id: item?.id || selectedItemId || uuid(),
+        name,
+        description,
+        type,
+        subItemType: subItemType || undefined,
+        collection: collection === Collection.NO_COLLECTION ? undefined : collection as Collection,
+        status,
+        station,
+        unitCost: unitCost || 0,
+        additionalCost: 0, // Default value
+        price: price || 0,
+        value: 0, // Default value
+        quantitySold: 0, // Default value
+        targetAmount: targetAmount ? parseInt(targetAmount) : undefined,
+        stock: updatedStock,
+        dimensions,
+        size: parsedSize,
+        year: year || undefined,
+        imageUrl: imageUrl || undefined,
+        originalFiles: parsedOriginalFiles.length > 0 ? parsedOriginalFiles : undefined,
+        accessoryFiles: parsedAccessoryFiles.length > 0 ? parsedAccessoryFiles : undefined,
+        sourceTaskId: (item || existingItems.find(i => i.id === selectedItemId))?.sourceTaskId || null,      // Preserve source task if exists
+        sourceRecordId: (item || existingItems.find(i => i.id === selectedItemId))?.sourceRecordId || null,  // Preserve source record if exists
+        ownerCharacterId: ownerCharacterId,            // Ambassador: Character who owns this item
+        createdAt: (item || existingItems.find(i => i.id === selectedItemId))?.createdAt || new Date(),
+        updatedAt: new Date(),
+        isCollected: (item || existingItems.find(i => i.id === selectedItemId))?.isCollected || false,        // Preserve collection status
+        links: (item || existingItems.find(i => i.id === selectedItemId))?.links || [],  // Preserve links for Rosetta Stone
+      };
+
+      // Clear saved form data when item is successfully saved (only for truly new items)
+      if (!item && !selectedItemId) {
+        localStorage.removeItem('itemModalFormData');
+      }
+
+      // Emit pure item entity - Links System handles all relationships automatically
+      await onSave(newItem);
       
-      return field.split(';').map(fileRef => {
-        const parts = fileRef.split(':');
-        if (parts.length >= 2) {
-          return {
-            url: parts[0] === 'symbolic' ? undefined : parts[0],
-            type: parts[1]
-          };
+      // Dispatch UI update events AFTER successful save
+      dispatchEntityUpdated('item');
+      
+      // Refresh links after save (Links are created by Ribosome)
+      setTimeout(async () => {
+        try {
+          const links = await ClientAPI.getLinksFor({ type: EntityType.ITEM, id: newItem.id });
+          setItemLinks(links);
+        } catch (error) {
+          console.error('Failed to refresh links after save:', error);
         }
-        return { type: fileRef.trim() }; // Fallback for simple types
-      });
-    };
-
-    const parsedOriginalFiles = parseFileReferences(originalFiles);
-    const parsedAccessoryFiles = parseFileReferences(accessoryFiles);
-
-    const newItem: Item = {
-      id: item?.id || selectedItemId || uuid(),
-      name,
-      description,
-      type,
-      subItemType: subItemType || undefined,
-      collection: collection === Collection.NO_COLLECTION ? undefined : collection as Collection,
-      status,
-      station,
-      unitCost: unitCost || 0,
-      additionalCost: 0, // Default value
-      price: price || 0,
-      value: 0, // Default value
-      quantitySold: 0, // Default value
-      targetAmount: targetAmount ? parseInt(targetAmount) : undefined,
-      stock: updatedStock,
-      dimensions,
-      size: parsedSize,
-      year: year || undefined,
-      imageUrl: imageUrl || undefined,
-      originalFiles: parsedOriginalFiles.length > 0 ? parsedOriginalFiles : undefined,
-      accessoryFiles: parsedAccessoryFiles.length > 0 ? parsedAccessoryFiles : undefined,
-      sourceTaskId: (item || existingItems.find(i => i.id === selectedItemId))?.sourceTaskId || null,      // Preserve source task if exists
-      sourceRecordId: (item || existingItems.find(i => i.id === selectedItemId))?.sourceRecordId || null,  // Preserve source record if exists
-      ownerCharacterId: ownerCharacterId,            // Ambassador: Character who owns this item
-      createdAt: (item || existingItems.find(i => i.id === selectedItemId))?.createdAt || new Date(),
-      updatedAt: new Date(),
-      isCollected: (item || existingItems.find(i => i.id === selectedItemId))?.isCollected || false,        // Preserve collection status
-      links: (item || existingItems.find(i => i.id === selectedItemId))?.links || [],  // Preserve links for Rosetta Stone
-    };
-
-    // Clear saved form data when item is successfully saved (only for truly new items)
-    if (!item && !selectedItemId) {
-      localStorage.removeItem('itemModalFormData');
+      }, 100); // Small delay to ensure Ribosome has processed the entity
+      
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Save failed:', error);
+      // Keep modal open on error
+    } finally {
+      setIsSaving(false);
     }
-
-    // Emit pure item entity - Links System handles all relationships automatically
-    onSave(newItem);
-    
-    // Refresh links after save (Links are created by Ribosome)
-    setTimeout(async () => {
-      try {
-        const links = await ClientAPI.getLinksFor({ type: EntityType.ITEM, id: newItem.id });
-        setItemLinks(links);
-        setIsSaving(false);
-      } catch (error) {
-        console.error('Failed to refresh links after save:', error);
-        setIsSaving(false);
-      }
-    }, 100); // Small delay to ensure Ribosome has processed the entity
-    
-    // Dispatch UI update events for immediate feedback
-    dispatchEntityUpdated('item');
-    
-    onOpenChange(false);
   };
 
   const getSubItemTypeOptions = () => {

@@ -23,7 +23,7 @@ interface PlayerModalProps {
   player: Player | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (player: Player) => void;
+  onSave: (player: Player) => Promise<void>;
 }
 
 // Player Character Submodal
@@ -531,13 +531,18 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
         player={playerData}
         open={showPersonalData}
         onOpenChange={setShowPersonalData}
-        onSave={(updatedPlayer) => {
-          setPlayerData(updatedPlayer);
-          onSave(updatedPlayer);
-          setShowPersonalData(false);
-          
-          // Dispatch events AFTER save completes
-          dispatchEntityUpdated('player');
+        onSave={async (updatedPlayer) => {
+          try {
+            setPlayerData(updatedPlayer);
+            await onSave(updatedPlayer);
+            setShowPersonalData(false);
+            
+            // Dispatch events AFTER successful save
+            dispatchEntityUpdated('player');
+          } catch (error) {
+            console.error('Save failed:', error);
+            // Keep modal open on error
+          }
         }}
       />
 
@@ -580,14 +585,19 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
             usdValue: ((personalAssets?.jungleCoins || 0) + j$Received) * 10
           };
           
-          await ClientAPI.upsertPlayer(updatedPlayer);
-          setPlayerData(updatedPlayer);
-          setPersonalAssets(updatedAssets);
-          setShowExchangeModal(false);
-          
-          // Trigger financials update event
-          dispatchEntityUpdated('player');
-          dispatchEntityUpdated('financial');
+          try {
+            await ClientAPI.upsertPlayer(updatedPlayer);
+            setPlayerData(updatedPlayer);
+            setPersonalAssets(updatedAssets);
+            setShowExchangeModal(false);
+            
+            // Trigger financials update event AFTER successful save
+            dispatchEntityUpdated('player');
+            dispatchEntityUpdated('financial');
+          } catch (error) {
+            console.error('Save failed:', error);
+            // Keep modal open on error
+          }
         }}
       />
     </>

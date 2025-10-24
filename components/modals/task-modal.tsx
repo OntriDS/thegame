@@ -38,7 +38,7 @@ interface TaskModalProps {
   task?: Task | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (task: Task) => void;
+  onSave: (task: Task) => Promise<void>;
   onComplete?: () => void;
   isRecurrentModal?: boolean;
 }
@@ -447,14 +447,20 @@ export default function TaskModal({
       localStorage.setItem('lastUsedStation', newTask.station as any);
     }
 
-    // Emit pure task entity - Links System handles all relationships automatically
-    onSave(newTask);
-    
-    // Dispatch UI update events for immediate feedback
-    dispatchEntityUpdated('task');
-    
-    onOpenChange(false);
-    setIsSaving(false);
+    try {
+      // Emit pure task entity - Links System handles all relationships automatically
+      await onSave(newTask);
+      
+      // Dispatch UI update events AFTER successful save
+      dispatchEntityUpdated('task');
+      
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Save failed:', error);
+      // Keep modal open on error
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleStationChange = (newStation: Station) => {

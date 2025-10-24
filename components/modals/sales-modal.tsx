@@ -38,7 +38,7 @@ interface SalesModalProps {
   sale?: Sale | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (sale: Sale) => void;
+  onSave: (sale: Sale) => Promise<void>;
   onDelete?: () => void; // Optional callback for when sale is deleted
 }
 
@@ -526,11 +526,16 @@ export default function SalesModal({
       links: sale?.links || [],  // NEW: Initialize links for Rosetta Stone
     };
 
-    // Emit pure sale entity - Links System handles all relationships automatically
-    onSave(saleData);
-    
-    // Dispatch events AFTER calling parent (operation completed)
-    dispatchEntityUpdated('sale');
+    try {
+      // Emit pure sale entity - Links System handles all relationships automatically
+      await onSave(saleData);
+      
+      // Dispatch events AFTER successful save
+      dispatchEntityUpdated('sale');
+    } catch (error) {
+      console.error('Save failed:', error);
+      // Keep modal open on error
+    }
   };
 
   // Validation: Check if sale can have the specified line type
