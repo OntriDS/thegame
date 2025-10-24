@@ -66,8 +66,8 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
   // Load settlements when modal opens
   const loadSettlements = async () => {
     try {
-      const { getAllSettlements } = await import('@/data-store/datastore');
-      const allSettlements = await getAllSettlements();
+      const { ClientAPI } = await import('@/lib/client-api');
+      const allSettlements = await ClientAPI.getSettlements();
       setSettlements(allSettlements);
     } catch (error) {
       console.error('Failed to load settlements:', error);
@@ -182,8 +182,8 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
 
   const handleSettlementSave = async (settlement: Settlement) => {
     try {
-      const { upsertSettlement } = await import('@/data-store/datastore');
-      await upsertSettlement(settlement);
+      const { ClientAPI } = await import('@/lib/client-api');
+      await ClientAPI.upsertSettlement(settlement);
       
       // Refresh settlements list
       await loadSettlements();

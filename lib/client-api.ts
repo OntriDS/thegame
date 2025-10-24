@@ -1,9 +1,23 @@
 'use client';
 
-import type { Task, Item, Sale, FinancialRecord, Character, Player, Site, Account } from '@/types/entities';
+/**
+ * CLIENT API - Client-Side Data Access Layer
+ * 
+ * This file provides the proper client-side interface for accessing server-side data.
+ * It follows the established KV-Only Architecture pattern:
+ * 
+ * Client: ClientAPI → API routes → DataStore → Repository (KV)
+ * 
+ * All client-side components should use this API instead of directly importing
+ * from @/data-store/datastore, which is server-side only.
+ */
+
+import type { Task, Item, Sale, FinancialRecord, Character, Player, Site, Account, Settlement } from '@/types/entities';
 
 export const ClientAPI = {
-  // TASKS
+  // ============================================================================
+  // TASKS - Task management operations
+  // ============================================================================
   getTasks: async (): Promise<Task[]> => {
     const res = await fetch('/api/tasks');
     if (!res.ok) throw new Error('Failed to fetch tasks');
@@ -31,7 +45,8 @@ export const ClientAPI = {
     if (!res.ok) throw new Error('Failed to delete task');
   },
 
-  // QUEUED OPERATIONS (Safety belt for real money operations)
+  // QUEUED OPERATIONS - Safety belt for real money operations
+  // These operations go through a queue system for additional safety
   upsertTaskQueued: async (task: Task, priority: number = 1): Promise<string> => {
     const res = await fetch('/api/tasks/queued', {
       method: 'POST',
@@ -43,7 +58,9 @@ export const ClientAPI = {
     return result.queueId;
   },
   
-  // ITEMS
+  // ============================================================================
+  // ITEMS - Item management operations
+  // ============================================================================
   getItems: async (): Promise<Item[]> => {
     const res = await fetch('/api/items');
     if (!res.ok) throw new Error('Failed to fetch items');
@@ -82,7 +99,9 @@ export const ClientAPI = {
     return result.queueId;
   },
   
-  // SALES
+  // ============================================================================
+  // SALES - Sales management operations
+  // ============================================================================
   getSales: async (): Promise<Sale[]> => {
     const res = await fetch('/api/sales');
     if (!res.ok) throw new Error('Failed to fetch sales');
@@ -121,7 +140,9 @@ export const ClientAPI = {
     return result.queueId;
   },
   
-  // FINANCIALS
+  // ============================================================================
+  // FINANCIALS - Financial records management operations
+  // ============================================================================
   getFinancialRecords: async (): Promise<FinancialRecord[]> => {
     const res = await fetch('/api/financials');
     if (!res.ok) throw new Error('Failed to fetch financials');
@@ -160,7 +181,9 @@ export const ClientAPI = {
     return result.queueId;
   },
   
-  // CHARACTERS
+  // ============================================================================
+  // CHARACTERS - Character management operations
+  // ============================================================================
   getCharacters: async (): Promise<Character[]> => {
     const res = await fetch('/api/characters');
     if (!res.ok) throw new Error('Failed to fetch characters');
@@ -188,7 +211,9 @@ export const ClientAPI = {
     if (!res.ok) throw new Error('Failed to delete character');
   },
   
-  // PLAYERS
+  // ============================================================================
+  // PLAYERS - Player management operations
+  // ============================================================================
   getPlayers: async (): Promise<Player[]> => {
     const res = await fetch('/api/players');
     if (!res.ok) throw new Error('Failed to fetch players');
@@ -216,7 +241,9 @@ export const ClientAPI = {
     if (!res.ok) throw new Error('Failed to delete player');
   },
   
-  // ACCOUNTS
+  // ============================================================================
+  // ACCOUNTS - Account management operations
+  // ============================================================================
   getAllAccounts: async (): Promise<Account[]> => {
     const res = await fetch('/api/accounts');
     if (!res.ok) {
@@ -247,7 +274,9 @@ export const ClientAPI = {
     if (!res.ok) throw new Error('Failed to delete account');
   },
   
-  // LINKS
+  // ============================================================================
+  // LINKS - Entity relationship management operations
+  // ============================================================================
   getLinksFor: async (params: { type: string; id: string }): Promise<any[]> => {
     const res = await fetch(`/api/links?entityType=${params.type}&entityId=${params.id}`);
     if (!res.ok) {
@@ -283,7 +312,9 @@ export const ClientAPI = {
     return await res.json();
   },
   
-  // SITES
+  // ============================================================================
+  // SITES - Site management operations
+  // ============================================================================
   getSites: async (): Promise<Site[]> => {
     const res = await fetch('/api/sites');
     if (!res.ok) throw new Error('Failed to fetch sites');
@@ -310,6 +341,36 @@ export const ClientAPI = {
     const res = await fetch(`/api/sites/${id}`, { method: 'DELETE' });
     if (!res.ok) throw new Error('Failed to delete site');
   },
+
+  // ============================================================================
+  // SETTLEMENTS - Settlement management operations
+  // ============================================================================
+  getSettlements: async (): Promise<Settlement[]> => {
+    const res = await fetch('/api/settlements');
+    if (!res.ok) throw new Error('Failed to fetch settlements');
+    return await res.json();
+  },
+
+  getSettlementById: async (id: string): Promise<Settlement | null> => {
+    const res = await fetch(`/api/settlements/${id}`);
+    if (!res.ok) return null;
+    return await res.json();
+  },
+
+  upsertSettlement: async (settlement: Settlement): Promise<Settlement> => {
+    const res = await fetch('/api/settlements', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(settlement)
+    });
+    if (!res.ok) throw new Error('Failed to save settlement');
+    return await res.json();
+  },
+
+  deleteSettlement: async (id: string): Promise<void> => {
+    const res = await fetch(`/api/settlements/${id}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Failed to delete settlement');
+  },
   
   // Compatibility aliases
 	// Note: getAccounts is defined below in the bulk ops section for historical reasons
@@ -323,7 +384,9 @@ export const ClientAPI = {
     return account;
   },
   
-  // ASSETS MANAGEMENT
+  // ============================================================================
+  // ASSETS MANAGEMENT - Company and personal assets
+  // ============================================================================
   getCompanyAssets: async (): Promise<any> => {
     const res = await fetch('/api/assets/company');
     if (!res.ok) throw new Error('Failed to fetch company assets');
@@ -354,6 +417,9 @@ export const ClientAPI = {
     if (!res.ok) throw new Error('Failed to save personal assets');
   },
   
+  // ============================================================================
+  // CONVERSION RATES - Point to currency conversion management
+  // ============================================================================
   // PLAYER CONVERSION RATES (for character/player pages)
   getPlayerConversionRates: async (): Promise<any> => {
     const res = await fetch('/api/conversion-rates/player-conversion-rates');
@@ -386,7 +452,9 @@ export const ClientAPI = {
     if (!res.ok) throw new Error('Failed to save financial conversion rates');
   },
   
-  // UTILITY HELPERS (client-side calculations)
+  // ============================================================================
+  // UTILITY HELPERS - Client-side calculations and helper functions
+  // ============================================================================
   getItemTotalQuantity: (itemId: string, items: Item[]): number => {
     const item = items.find(i => i.id === itemId);
     if (!item) return 0;
@@ -545,7 +613,9 @@ export const ClientAPI = {
     return await res.json();
   },
 
-  // BULK OPERATION LOGGING
+  // ============================================================================
+  // BULK OPERATIONS - Bulk import/export and logging
+  // ============================================================================
   logBulkImport: async (entityType: string, details: { count: number; source?: string; importMode?: 'add' | 'merge' | 'replace'; extra?: any }): Promise<void> => {
     const res = await fetch('/api/logs/bulk', {
       method: 'POST',
@@ -572,7 +642,9 @@ export const ClientAPI = {
     if (!res.ok) throw new Error('Failed to log bulk export');
   },
 
-  // QUEUE MANAGEMENT
+  // ============================================================================
+  // QUEUE MANAGEMENT - Background task queue operations
+  // ============================================================================
   getQueueStatus: async (): Promise<any> => {
     const res = await fetch('/api/queue/status');
     if (!res.ok) throw new Error('Failed to get queue status');

@@ -6,8 +6,8 @@ import type { Settlement } from '@/types/entities';
 /** Helper function to get all settlements from API */
 export async function getAllSettlements(): Promise<Settlement[]> {
   try {
-    const { getAllSettlements: getSettlements } = await import('@/data-store/datastore');
-    return await getSettlements();
+    const { ClientAPI } = await import('@/lib/client-api');
+    return await ClientAPI.getSettlements();
   } catch (error) {
     console.error('Failed to load settlements:', error);
     return [];

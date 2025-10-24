@@ -36,8 +36,8 @@ export default function CharacterSelectorModal({ open, onOpenChange, onSelect, c
       setLoading(true);
       console.log('🛸 [OwnerCharacterSelector] Starting to load characters...');
       
-      const { getAllCharacters } = await import('@/data-store/datastore');
-      const allCharacters = await getAllCharacters();
+      const { ClientAPI } = await import('@/lib/client-api');
+      const allCharacters = await ClientAPI.getCharacters();
       
       console.log('🛸 [OwnerCharacterSelector] Raw characters from datastore:', allCharacters.length);
       console.log('🛸 [OwnerCharacterSelector] Raw characters data:', allCharacters.map(c => ({
