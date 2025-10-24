@@ -248,7 +248,7 @@ export interface Task extends BaseEntity {
 
   // Hierarchy
   parentId?: string | null;         // Single parent field - can be Mission, Milestone, Goal, or Recurrent Parent/Template
-  isRecurrentParent?: boolean;      // Is this a Recurrent Parent?
+  isRecurrentGroup?: boolean;       // Is this a Recurrent Group?
   isTemplate?: boolean;             // Is this a Recurrent Template?
   outputItemId?: string | null;     // if this task creates an Item
 

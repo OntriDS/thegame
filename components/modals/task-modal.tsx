@@ -28,6 +28,8 @@ import { v4 as uuid } from 'uuid';
 import { PROGRESS_MAX, PROGRESS_STEP, PRICE_STEP } from '@/lib/constants/app-constants';
 import { Network, User } from 'lucide-react';
 import { getEmissaryFields } from '@/types/diplomatic-fields';
+import CascadeStatusConfirmationModal from './submodals/cascade-status-confirmation-submodal';
+import { cascadeStatusToInstances, getUndoneInstancesCount } from '@/lib/utils/recurrent-task-utils';
 import { ClientAPI } from '@/lib/client-api';
 import { CHARACTER_ONE_ID } from '@/lib/constants/entity-constants';
 import CharacterSelectorModal from './submodals/owner-character-selector-submodal';
@@ -89,7 +91,7 @@ export default function TaskModal({
   const getLastUsedType = useCallback((): TaskType => {
     if (isRecurrentModal) {
       const saved = getPreference('task-modal-last-recurrent-type');
-      return (saved as TaskType) || TaskType.RECURRENT_PARENT;
+      return (saved as TaskType) || TaskType.RECURRENT_GROUP;
     }
     const saved = getPreference('task-modal-last-type');
     return (saved as TaskType) || TaskType.MISSION;
@@ -122,8 +124,17 @@ export default function TaskModal({
   const [revenueString, setRevenueString] = useState('0');
   const [isNotPaid, setIsNotPaid] = useState(false);
   const [isNotCharged, setIsNotCharged] = useState(false);
-  const [isRecurrentParent, setIsRecurrentParent] = useState(false);
+  const [isRecurrentGroup, setIsRecurrentGroup] = useState(false);
   const [isTemplate, setIsTemplate] = useState(false);
+  
+  // Cascade confirmation modal state
+  const [showCascadeModal, setShowCascadeModal] = useState(false);
+  const [cascadeData, setCascadeData] = useState<{
+    newStatus: TaskStatus;
+    oldStatus: TaskStatus;
+    affectedCount: number;
+    isReversal: boolean;
+  } | null>(null);
   const [formData, setFormData] = useState({
     site: 'None' as string,
     targetSite: 'None' as string,
@@ -218,7 +229,7 @@ export default function TaskModal({
       setRevenueString(task.revenue.toString());
       setIsNotPaid(task.isNotPaid || false);
       setIsNotCharged(task.isNotCharged || false);
-      setIsRecurrentParent(task.isRecurrentParent || false);
+      setIsRecurrentGroup(task.isRecurrentGroup || false);
       setIsTemplate(task.isTemplate || false);
       setFormData({
         site: task.siteId || 'None',
@@ -276,7 +287,7 @@ export default function TaskModal({
       setRevenueString('0');
       setIsNotPaid(false);
       setIsNotCharged(false);
-      setIsRecurrentParent(false);
+      setIsRecurrentGroup(false);
       setIsTemplate(false);
       setFormData({ site: 'None', targetSite: 'None' });
       setOutputItemType('');
@@ -395,7 +406,7 @@ export default function TaskModal({
       station,
       progress,
       dueDate,
-      frequencyConfig: (type === TaskType.RECURRENT_PARENT || type === TaskType.RECURRENT_TEMPLATE) ? frequencyConfig : undefined,
+      frequencyConfig: (type === TaskType.RECURRENT_GROUP || type === TaskType.RECURRENT_TEMPLATE) ? frequencyConfig : undefined,
       cost,
       revenue,
       isNotPaid,
@@ -426,11 +437,35 @@ export default function TaskModal({
       isCollected: task?.isCollected || false,
       order: task?.order || Date.now(),
       parentId,
-      isRecurrentParent,
+      isRecurrentGroup,
       isTemplate,
       outputItemId: task?.outputItemId || null,
       links: task?.links || [],  // Initialize links for Rosetta Stone
     };
+
+    // Check for cascade status change for Recurrent Templates
+    if (type === TaskType.RECURRENT_TEMPLATE && task && task.status !== status) {
+      try {
+        const affectedCount = await getUndoneInstancesCount(task.id, status);
+        
+        if (affectedCount > 0) {
+          const isReversal = task.status === 'Done' && status !== 'Done';
+          
+          setCascadeData({
+            newStatus: status,
+            oldStatus: task.status,
+            affectedCount,
+            isReversal
+          });
+          setShowCascadeModal(true);
+          setIsSaving(false);
+          return;
+        }
+      } catch (error) {
+        console.error('Failed to check cascade status:', error);
+        // Continue with save if cascade check fails
+      }
+    }
 
     // Save user preferences
     setPreference('task-modal-last-station', newTask.station as any);
@@ -449,6 +484,82 @@ export default function TaskModal({
     } finally {
       setIsSaving(false);
     }
+  };
+
+  // Cascade confirmation handlers
+  const handleCascadeConfirm = async () => {
+    if (!cascadeData || !task) return;
+    
+    try {
+      // Apply cascade to instances
+      await cascadeStatusToInstances(task.id, cascadeData.newStatus, cascadeData.oldStatus);
+      
+      // Now save the template with the new status
+      const newTask: Task = {
+        id: task.id,
+        name,
+        description,
+        status: cascadeData.newStatus,
+        priority,
+        type,
+        station,
+        progress,
+        dueDate,
+        frequencyConfig: (type === TaskType.RECURRENT_GROUP || type === TaskType.RECURRENT_TEMPLATE) ? frequencyConfig : undefined,
+        cost,
+        revenue,
+        isNotPaid,
+        isNotCharged,
+        siteId: formData.site,
+        targetSiteId: formData.targetSite,
+        outputItemType: (outputItemType || undefined) as ItemType | undefined,
+        outputItemSubType: (outputItemSubType || undefined) as SubItemType | undefined,
+        outputQuantity,
+        outputUnitCost,
+        outputItemName: outputItemName || undefined,
+        outputItemPrice,
+        isNewItem,
+        isSold,
+        outputItemStatus,
+        customerCharacterId: task.customerCharacterId,
+        playerCharacterId: playerCharacterId,
+        rewards: {
+          points: {
+            xp: rewards.points.xp,
+            rp: rewards.points.rp,
+            fp: rewards.points.fp,
+            hp: rewards.points.hp,
+          },
+        },
+        createdAt: task.createdAt,
+        updatedAt: new Date(),
+        isCollected: task.isCollected,
+        order: task.order,
+        parentId,
+        isRecurrentGroup,
+        isTemplate,
+        outputItemId: task.outputItemId,
+        links: task.links,
+      };
+
+      await onSave(newTask);
+      dispatchEntityUpdated('task');
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Cascade save failed:', error);
+    } finally {
+      setShowCascadeModal(false);
+      setCascadeData(null);
+      setIsSaving(false);
+    }
+  };
+
+  const handleCascadeCancel = () => {
+    // Just save the template without cascading
+    setShowCascadeModal(false);
+    setCascadeData(null);
+    // Continue with normal save
+    handleSave();
   };
 
   const handleStationChange = (newStation: Station) => {
@@ -768,7 +879,7 @@ export default function TaskModal({
                     {Object.values(TaskType)
                       .filter((taskType) => {
                         if (isRecurrentModal) {
-                          return taskType === TaskType.RECURRENT_PARENT || 
+                          return taskType === TaskType.RECURRENT_GROUP || 
                                  taskType === TaskType.RECURRENT_TEMPLATE || 
                                  taskType === TaskType.RECURRENT_INSTANCE;
                         } else {
@@ -807,13 +918,13 @@ export default function TaskModal({
                 )}
               </div>
 
-              {(type === TaskType.RECURRENT_PARENT || type === TaskType.RECURRENT_TEMPLATE) && (
+              {(type === TaskType.RECURRENT_GROUP || type === TaskType.RECURRENT_TEMPLATE) && (
                 <div className="space-y-2">
                   <Label htmlFor="task-frequency" className="text-xs">Frequency</Label>
                   <FrequencyCalendar
                     value={frequencyConfig}
                     onChange={setFrequencyConfig}
-                    allowAlways={type === TaskType.RECURRENT_PARENT}
+                    allowAlways={type === TaskType.RECURRENT_GROUP}
                   />
                 </div>
               )}
@@ -1250,6 +1361,21 @@ export default function TaskModal({
         onSelect={setPlayerCharacterId}
         currentPlayerCharacterId={playerCharacterId}
       />
+
+      {/* Cascade Status Confirmation Modal */}
+      {cascadeData && (
+        <CascadeStatusConfirmationModal
+          open={showCascadeModal}
+          onOpenChange={setShowCascadeModal}
+          templateName={name}
+          newStatus={cascadeData.newStatus}
+          oldStatus={cascadeData.oldStatus}
+          affectedInstancesCount={cascadeData.affectedCount}
+          onConfirm={handleCascadeConfirm}
+          onCancel={handleCascadeCancel}
+          isReversal={cascadeData.isReversal}
+        />
+      )}
     </Dialog>
   );
 }

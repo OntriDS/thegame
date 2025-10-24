@@ -137,14 +137,14 @@ export default function ControlRoom() {
     if (activeSubTab === 'recurrent-tasks') {
       // Only show RECURRENT tasks for Recurrent Tree tab
       tasks = tasks.filter(task => 
-        task.type === TaskType.RECURRENT_PARENT || 
+        task.type === TaskType.RECURRENT_GROUP || 
         task.type === TaskType.RECURRENT_TEMPLATE || 
         task.type === TaskType.RECURRENT_INSTANCE
       );
     } else {
       // Mission Tree tab: exclude RECURRENT tasks
       tasks = tasks.filter(task => 
-        task.type !== TaskType.RECURRENT_PARENT && 
+        task.type !== TaskType.RECURRENT_GROUP && 
         task.type !== TaskType.RECURRENT_TEMPLATE && 
         task.type !== TaskType.RECURRENT_INSTANCE
       );

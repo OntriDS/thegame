@@ -8,6 +8,9 @@ import {
   upsertTask, 
   removeTask as deleteTask 
 } from '@/data-store/datastore';
+import { hasEffect, markEffect } from '@/data-store/effects-registry';
+import { appendEntityLog } from '@/workflows/entities-logging';
+import { EntityType, LogEventType } from '@/types/enums';
 import { FrequencyConfig } from '@/components/ui/frequency-calendar';
 import { v4 as uuid } from 'uuid';
 
@@ -25,9 +28,9 @@ export interface RecurrentTaskConfig {
 }
 
 /**
- * Creates a Recurrent Parent (folder/container)
+ * Creates a Recurrent Group (folder/container)
  */
-export function createRecurrentParent(
+export function createRecurrentGroup(
   name: string,
   description: string,
   station: string
@@ -36,13 +39,13 @@ export function createRecurrentParent(
     id: uuid(),
     name,
     description,
-    type: TaskType.RECURRENT_PARENT,
+    type: TaskType.RECURRENT_GROUP,
     status: 'Not Started' as any, // Will be updated when we add the new status
     priority: 'Normal' as any,
     station: station as any,
     progress: 0,
     order: 0,
-    isRecurrentParent: true,
+    isRecurrentGroup: true,
     isTemplate: false,
     cost: 0,
     revenue: 0,
@@ -75,7 +78,7 @@ export function createRecurrentTemplate(
     progress: 0,
     order: 0,
     parentId,
-    isRecurrentParent: false,
+    isRecurrentGroup: false,
     isTemplate: true,
     frequencyConfig,
     cost: 0,
@@ -102,7 +105,7 @@ export function spawnRecurrentInstance(
     type: TaskType.RECURRENT_INSTANCE,
     dueDate,
     parentId: template.id, // Instance points to its template
-    isRecurrentParent: false,
+    isRecurrentGroup: false,
     isTemplate: false,
     frequencyConfig: undefined, // Instances don't have frequency config
     createdAt: new Date(),
@@ -222,7 +225,7 @@ export async function getRecurrentHierarchy(parentId: string): Promise<{
 }> {
   const tasks = await getTasks();
   
-  const parent = tasks.find(t => t.id === parentId && t.isRecurrentParent) || null;
+  const parent = tasks.find(t => t.id === parentId && t.isRecurrentGroup) || null;
   const templates = tasks.filter(t => t.parentId === parentId && t.isTemplate);
   const instances = tasks.filter(t => t.parentId === parentId && t.type === TaskType.RECURRENT_INSTANCE);
 
@@ -240,10 +243,10 @@ export async function archiveCompletedInstances(parentId: string): Promise<Task[
     (t.status === 'Done' || t.status === 'Collected')
   );
 
-  // Update instances to archived status
+  // Update instances to collected status (Archived)
   const updatedInstances: Task[] = [];
   for (const instance of instances) {
-    const updated = { ...instance, status: 'Archived' as any, isCollected: true, updatedAt: new Date() } as Task;
+    const updated = { ...instance, status: 'Collected' as any, isCollected: true, updatedAt: new Date() } as Task;
     await upsertTask(updated);
     updatedInstances.push(updated);
   }
@@ -299,4 +302,115 @@ export async function deleteTemplateCascade(templateId: string): Promise<number>
     await deleteTask(t.id);
   }
   return toDelete.length;
+}
+
+/**
+ * Cascades status change from template to its instances
+ */
+export async function cascadeStatusToInstances(
+  templateId: string,
+  newStatus: string,
+  oldStatus: string
+): Promise<{ updated: Task[], count: number }> {
+  // Check effects registry to prevent duplicate cascade operations
+  const effectKey = `task:${templateId}:cascadeStatus:${newStatus}`;
+  if (await hasEffect(effectKey)) {
+    console.log(`[cascadeStatusToInstances] Cascade already applied for template ${templateId} to ${newStatus}`);
+    return { updated: [], count: 0 };
+  }
+
+  const tasks = await getTasks();
+  const instances = tasks.filter(t => 
+    t.parentId === templateId && 
+    t.type === TaskType.RECURRENT_INSTANCE &&
+    t.status !== newStatus // Only update instances that don't already have the target status
+  );
+
+  const updatedInstances: Task[] = [];
+  for (const instance of instances) {
+    const updated = { 
+      ...instance, 
+      status: newStatus as any, 
+      updatedAt: new Date() 
+    } as Task;
+    await upsertTask(updated);
+    updatedInstances.push(updated);
+
+    // Log status change for each instance with cascade context
+    await appendEntityLog(EntityType.TASK, instance.id, LogEventType.STATUS_CHANGED, {
+      oldStatus: instance.status,
+      newStatus: newStatus,
+      name: instance.name,
+      cascadedFrom: templateId,
+      transition: `${instance.status} → ${newStatus}`,
+      changedAt: new Date().toISOString()
+    });
+  }
+
+  // Mark effect to prevent duplicate operations
+  await markEffect(effectKey);
+  console.log(`[cascadeStatusToInstances] ✅ Cascaded ${updatedInstances.length} instances to ${newStatus}`);
+
+  return { updated: updatedInstances, count: updatedInstances.length };
+}
+
+/**
+ * Gets count of instances that are not at the target status
+ */
+export async function getUndoneInstancesCount(templateId: string, targetStatus: string): Promise<number> {
+  const tasks = await getTasks();
+  return tasks.filter(t => 
+    t.parentId === templateId && 
+    t.type === TaskType.RECURRENT_INSTANCE &&
+    t.status !== targetStatus
+  ).length;
+}
+
+/**
+ * Reverses cascade status change from template to its instances (uncascade)
+ */
+export async function uncascadeStatusFromInstances(
+  templateId: string,
+  revertToStatus: string
+): Promise<{ reverted: Task[], count: number }> {
+  // Check effects registry to prevent duplicate uncascade operations
+  const effectKey = `task:${templateId}:uncascadeStatus:${revertToStatus}`;
+  if (await hasEffect(effectKey)) {
+    console.log(`[uncascadeStatusFromInstances] Uncascade already applied for template ${templateId} to ${revertToStatus}`);
+    return { reverted: [], count: 0 };
+  }
+
+  const tasks = await getTasks();
+  const instances = tasks.filter(t => 
+    t.parentId === templateId && 
+    t.type === TaskType.RECURRENT_INSTANCE &&
+    t.status !== revertToStatus // Only revert instances that don't already have the target status
+  );
+
+  const revertedInstances: Task[] = [];
+  for (const instance of instances) {
+    const updated = { 
+      ...instance, 
+      status: revertToStatus as any, 
+      updatedAt: new Date() 
+    } as Task;
+    await upsertTask(updated);
+    revertedInstances.push(updated);
+
+    // Log status reversal for each instance with uncascade context
+    await appendEntityLog(EntityType.TASK, instance.id, LogEventType.STATUS_CHANGED, {
+      oldStatus: instance.status,
+      newStatus: revertToStatus,
+      name: instance.name,
+      uncascadedFrom: templateId,
+      transition: `${instance.status} → ${revertToStatus}`,
+      changedAt: new Date().toISOString()
+    });
+  }
+
+  // Mark effect to prevent duplicate operations
+  await markEffect(effectKey);
+  console.log(`[uncascadeStatusFromInstances] ✅ Reverted ${revertedInstances.length} instances to ${revertToStatus}`);
+
+  return { reverted: revertedInstances, count: revertedInstances.length };
 }

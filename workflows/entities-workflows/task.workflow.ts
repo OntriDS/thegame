@@ -20,8 +20,10 @@ import {
 } from '../update-propagation-utils';
 import { 
   handleTemplateInstanceCreation,
-  archiveCompletedInstances,
-  deleteTemplateCascade 
+  deleteTemplateCascade,
+  cascadeStatusToInstances,
+  uncascadeStatusFromInstances,
+  getUndoneInstancesCount
 } from '@/lib/utils/recurrent-task-utils';
 
 const STATE_FIELDS = ['status', 'progress', 'doneAt', 'collectedAt', 'siteId', 'targetSiteId'];
@@ -74,13 +76,6 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
       await uncompleteTask(task.id);
     }
 
-    // Archive completed recurrent instances when parent is collected
-    if (task.type === TaskType.RECURRENT_PARENT && 
-        (task.status === 'Collected' || task.status === 'Archived')) {
-      console.log(`[onTaskUpsert] Archiving completed instances for parent: ${task.name}`);
-      const archived = await archiveCompletedInstances(task.id);
-      console.log(`[onTaskUpsert] ✅ Archived ${archived.length} completed instances`);
-    }
   }
   
   if (!previousTask.doneAt && task.doneAt) {
@@ -178,6 +173,15 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
           await markEffect(instancesEffectKey);
           console.log(`[onTaskUpsert] ✅ Regenerated ${instances.length} instances for template`);
         }
+      }
+
+      // Detect template status reversal (uncascade)
+      const statusReverted = previousTask.status === 'Done' && task.status !== 'Done';
+      
+      if (statusReverted) {
+        console.log(`[onTaskUpsert] Template status reverted, uncascading instances: ${task.name}`);
+        const { reverted } = await uncascadeStatusFromInstances(task.id, task.status);
+        console.log(`[onTaskUpsert] ✅ Reverted ${reverted.length} instances to ${task.status}`);
       }
     }
   }

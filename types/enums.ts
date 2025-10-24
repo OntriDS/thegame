@@ -198,7 +198,7 @@ export enum TaskType {
   MILESTONE             = 'Milestone',
   GOAL                  = 'Goal',
   ASSIGNMENT            = 'Assignment',
-  RECURRENT_PARENT      = 'Recurrent Parent',     // NEW: Folder/container for recurrent tasks
+  RECURRENT_GROUP       = 'Recurrent Group',      // NEW: Folder/container for recurrent tasks
   RECURRENT_TEMPLATE    = 'Recurrent Template',   // NEW: Sets frequency pattern
   RECURRENT_INSTANCE    = 'Recurrent Instance'    // NEW: Spawned with due date
 }

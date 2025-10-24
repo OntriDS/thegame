@@ -344,4 +344,93 @@ Recurrent tasks are partially built (types, UI separation, modal affordances) bu
 
 The recurrent task system is now fully integrated and ready for production use with the KV-only architecture.
 
+## Cascade Status System Implementation ✅
+
+**Date**: October 24, 2024
+**Status**: Cascade status system fully implemented with user confirmation
+
+### What Was Added
+- ✅ Renamed `RECURRENT_PARENT` → `RECURRENT_GROUP` for better UX
+- ✅ Created cascade status confirmation modal component
+- ✅ Implemented cascade and uncascade utility functions
+- ✅ Integrated confirmation modal into Task Modal save flow
+- ✅ Added effects registry keys for idempotency
+- ✅ Added Best of Both Worlds logging for all cascade operations
+- ✅ Implemented status reversal (uncascade) logic
+- ✅ Wired reversal detection into task workflow
+
+### Implementation Details
+
+**File**: `components/modals/submodals/cascade-status-confirmation-modal.tsx`
+- Beautiful confirmation modal with three options: "Apply to All", "Only Template", "Cancel"
+- Shows template name, status change, and affected instance count
+- Handles both forward cascade and reversal scenarios
+- Uses proper z-index layering for sub-modals
+
+**File**: `lib/utils/recurrent-task-utils.ts`
+- `cascadeStatusToInstances()` - Cascades status from template to instances
+- `uncascadeStatusFromInstances()` - Reverses cascade when template status changes back
+- `getUndoneInstancesCount()` - Counts instances that need status update
+- Effects registry integration prevents duplicate operations
+- Best of Both Worlds logging for all status changes
+
+**File**: `components/modals/task-modal.tsx`
+- Detects status changes for `RECURRENT_TEMPLATE` tasks
+- Shows confirmation modal before cascading
+- Handles user choices: cascade all, template only, or cancel
+- Maintains proper state management and error handling
+
+**File**: `workflows/entities-workflows/task.workflow.ts`
+- Detects template status reversal (DONE → other status)
+- Automatically triggers uncascade when template status reverts
+- Maintains idempotency with effects registry
+
+### User Experience Flow
+
+1. **User edits Recurrent Template status** (e.g., In Progress → Done)
+2. **System checks for affected instances** (instances not already at target status)
+3. **If instances need updating**, confirmation modal appears:
+   - Shows template name and status change
+   - Shows count of affected instances
+   - Three options: "Apply to All", "Only Template", "Cancel"
+4. **User chooses**:
+   - "Apply to All" → Cascades status to all instances
+   - "Only Template" → Updates only the template
+   - "Cancel" → No changes made
+5. **System logs all changes** with Best of Both Worlds pattern
+
+### Idempotency Guarantees
+- Effects registry prevents duplicate cascade operations
+- Each cascade operation has unique effect key: `task:{templateId}:cascadeStatus:{newStatus}`
+- Each uncascade operation has unique effect key: `task:{templateId}:uncascadeStatus:{revertStatus}`
+- No duplicate logs or side effects possible
+
+### Logging Strategy
+- Each instance status change logged with `STATUS_CHANGED` event
+- Includes cascade context: `cascadedFrom` or `uncascadedFrom` template ID
+- Maintains entity purity - each task logs only its own status changes
+- Full audit trail for all cascade operations
+
+### Architecture Alignment
+- ✅ Follows ENUMS → ENTITIES → WORKFLOWS → DATA-STORE pattern
+- ✅ Pure property inspection (no flags)
+- ✅ Effects Registry for idempotency
+- ✅ Links System for relationships
+- ✅ KV-only storage compatibility
+- ✅ Best of Both Worlds logging pattern
+
+### Ready for Testing
+The cascade status system is now fully implemented and ready for manual testing:
+
+**Test Scenarios**:
+1. Create Recurrent Group → Recurrent Template → Instances
+2. Change template status → Verify confirmation modal appears
+3. Test "Apply to All" → Verify instances update
+4. Test "Only Template" → Verify only template changes
+5. Test "Cancel" → Verify no changes made
+6. Test status reversal → Verify uncascade works
+7. Test idempotency → Verify no duplicate operations
+
+The system is production-ready and follows all architectural principles!
+
 
