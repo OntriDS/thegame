@@ -201,11 +201,11 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
   useEntityUpdates('item', loadItems);
 
   const getFilteredItems = (itemType: ItemType) => {
-    return items;
+    return items.filter(item => item.type === itemType);
   };
 
   const getFilteredItemsByCategory = (category: ItemCategory) => {
-    return items;
+    return items.filter(item => getItemCategory(item.type) === category);
   };
 
   const formatCurrency = (amount: number, currency: string = 'USD') => {
