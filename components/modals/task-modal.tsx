@@ -30,7 +30,7 @@ import { Network, User } from 'lucide-react';
 import { getEmissaryFields } from '@/types/diplomatic-fields';
 import { ClientAPI } from '@/lib/client-api';
 import { CHARACTER_ONE_ID } from '@/lib/constants/entity-constants';
-import CharacterSelectorModal from './submodals/character-selector-submodal';
+import CharacterSelectorModal from './submodals/owner-character-selector-submodal';
 import PlayerCharacterSelectorModal from './submodals/player-character-selector-submodal';
 import { dispatchEntityUpdated } from '@/lib/ui/ui-events';
 

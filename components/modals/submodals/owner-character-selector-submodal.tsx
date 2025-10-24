@@ -34,13 +34,34 @@ export default function CharacterSelectorModal({ open, onOpenChange, onSelect, c
   const loadCharacters = async () => {
     try {
       setLoading(true);
+      console.log('🛸 [OwnerCharacterSelector] Starting to load characters...');
+      
       const { getAllCharacters } = await import('@/data-store/datastore');
       const allCharacters = await getAllCharacters();
+      
+      console.log('🛸 [OwnerCharacterSelector] Raw characters from datastore:', allCharacters.length);
+      console.log('🛸 [OwnerCharacterSelector] Raw characters data:', allCharacters.map(c => ({
+        id: c.id,
+        name: c.name,
+        isActive: c.isActive,
+        roles: c.roles,
+        description: c.description?.substring(0, 50) + '...'
+      })));
+      
       // Filter only active characters
       const activeCharacters = allCharacters.filter((c: Character) => c.isActive);
+      
+      console.log('🛸 [OwnerCharacterSelector] Active characters after filter:', activeCharacters.length);
+      console.log('🛸 [OwnerCharacterSelector] Active characters data:', activeCharacters.map(c => ({
+        id: c.id,
+        name: c.name,
+        isActive: c.isActive,
+        roles: c.roles
+      })));
+      
       setCharacters(activeCharacters);
     } catch (error) {
-      console.error('Failed to load characters:', error);
+      console.error('🛸 [OwnerCharacterSelector] Failed to load characters:', error);
     } finally {
       setLoading(false);
     }
@@ -52,6 +73,17 @@ export default function CharacterSelectorModal({ open, onOpenChange, onSelect, c
     c.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     c.contactEmail?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // Debug filtered characters
+  console.log('🛸 [OwnerCharacterSelector] Search term:', searchTerm);
+  console.log('🛸 [OwnerCharacterSelector] Characters before search filter:', characters.length);
+  console.log('🛸 [OwnerCharacterSelector] Filtered characters after search:', filteredCharacters.length);
+  console.log('🛸 [OwnerCharacterSelector] Filtered characters data:', filteredCharacters.map(c => ({
+    id: c.id,
+    name: c.name,
+    isActive: c.isActive,
+    roles: c.roles
+  })));
 
   const handleSelect = () => {
     onSelect(selectedId);

@@ -27,7 +27,7 @@ import MoveItemsModal from './submodals/move-items-submodal';
 import DeleteModal from './submodals/delete-submodal';
 import { FileReference } from '@/types/entities';
 import EntityRelationshipsModal from './submodals/entity-relationships-submodal';
-import CharacterSelectorModal from './submodals/character-selector-submodal';
+import CharacterSelectorModal from './submodals/owner-character-selector-submodal';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
 import { dispatchEntityUpdated } from '@/lib/ui/ui-events';
 
@@ -771,7 +771,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
 
         <DialogFooter className="flex justify-between items-center pt-4 border-t">
           <div className="flex gap-2">
-            {item && ( // Show DELETE/VIEW LINKS/MOVE/SET OWNER for existing items
+            {item && ( // Show DELETE/VIEW LINKS/MOVE for existing items
               <>
                 <Button 
                   variant="outline" 
@@ -813,18 +813,19 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
                   <Package className="h-3 w-3" />
                   Move
                 </Button>
-                
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => setShowCharacterSelector(true)}
-                  className="flex items-center gap-2 h-8 text-xs"
-                >
-                  <User className="h-3 w-3" />
-                  {ownerCharacterId ? `Owner: ${ownerCharacterName}` : 'Set Owner'}
-                </Button>
               </>
             )}
+            
+            {/* Set Owner button - available for both creating and editing */}
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => setShowCharacterSelector(true)}
+              className="flex items-center gap-2 h-8 text-xs"
+            >
+              <User className="h-3 w-3" />
+              {ownerCharacterId ? `Owner: ${ownerCharacterName}` : 'Set Owner'}
+            </Button>
           </div>
 
           <div className="flex gap-2 items-center">
