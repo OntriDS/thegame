@@ -20,6 +20,7 @@ import { DEFAULT_YELLOW_THRESHOLD } from '@/lib/constants/app-constants';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
 import { useKeyboardShortcuts } from '@/lib/hooks/use-keyboard-shortcuts';
+import { getAreaForStation } from '@/lib/utils/business-structure-utils';
 
 
 interface InventoryDisplayProps {
@@ -858,14 +859,28 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
                 <div className="grid grid-cols-1 gap-4">
                   {groupStickers.map(sticker => (
                     <div key={sticker.id} className="bg-card border rounded-lg p-3 hover:bg-accent/50 transition-colors">
-                      {/* Row 1: Name | Location | Qty | Price | Status | Actions - 6 columns */}
+                      {/* Row 1: Name | Area | Station | Location | Qty | Size | Price | Status | Actions - 8 columns */}
                       <div className="flex items-center gap-4 mb-2">
                         {/* Column 1: Name */}
                         <div className="font-medium text-sm truncate flex-1 min-w-0" title={sticker.name}>
                           {sticker.name}
                         </div>
                         
-                        {/* Column 2: Location - Hidden in Model view */}
+                        {/* Column 2: Area */}
+                        <div className="text-center flex-shrink-0 w-24">
+                          <div className="text-sm font-bold">
+                            {getAreaForStation(sticker.station) || 'N/A'}
+                          </div>
+                        </div>
+                        
+                        {/* Column 3: Station */}
+                        <div className="text-center flex-shrink-0 w-32">
+                          <div className="text-sm font-bold">
+                            {sticker.station}
+                          </div>
+                        </div>
+                        
+                        {/* Column 4: Location - Hidden in Model view */}
                         <div className="text-sm flex items-center justify-center gap-1 flex-shrink-0 w-32">
                           <MapPin className="w-4 h-4 flex-shrink-0" />
                           <div className="flex-1 min-w-0">
@@ -894,28 +909,28 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
                           </div>
                         </div>
                         
-                        {/* Column 3: Quantity */}
+                        {/* Column 5: Quantity */}
                         <div className="text-center flex-shrink-0 w-20">
                           <div className="text-sm font-bold">
                             {renderEditableField(sticker, 'quantity', sticker.stock?.reduce((s, stock) => s + stock.quantity, 0) || 0, 'number', [], '1', '0')}
                           </div>
                         </div>
                         
-                        {/* Column 4: Size */}
+                        {/* Column 6: Size */}
                         <div className="text-center flex-shrink-0 w-20">
                           <div className="text-sm font-bold">
                             {renderEditableField(sticker, 'size', sticker.size || '', 'text')}
                           </div>
                         </div>
                         
-                        {/* Column 5: Price */}
+                        {/* Column 7: Price */}
                         <div className="text-center flex-shrink-0 w-24">
                           <div className="text-sm font-bold">
                             {renderEditableField(sticker, 'price', sticker.price, 'number')}
                           </div>
                         </div>
                         
-                        {/* Column 6: Status */}
+                        {/* Column 8: Status */}
                         <div className="text-center flex-shrink-0 w-28">
                           <div className="text-sm font-bold">
                             {renderEditableField(sticker, 'status', sticker.status, 'select', 
@@ -927,7 +942,7 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
                           </div>
                         </div>
                         
-                                                 {/* Column 7: Actions */}
+                                                 {/* Column 9: Actions */}
                          <div className="flex justify-center gap-1 flex-shrink-0 w-16">
                            <Button 
                              size="sm" 
@@ -949,7 +964,7 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
                          </div>
                       </div>
                       
-                      {/* Row 2: Collection | Subtype | Size | Price | Status | Move - 7 columns */}
+                      {/* Row 2: Collection | Subtype | Area | Station | Size | Price | Status | Move - 8 columns */}
                       <div className="flex items-center gap-4">
                         {/* Column 1: Collection */}
                         <div className="text-xs text-muted-foreground truncate flex-1 min-w-0">
@@ -961,16 +976,22 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
                           {sticker.subItemType || 'No Subtype'}
                         </div>
                         
-                        {/* Column 3: Size Label */}
+                        {/* Column 3: Area Label */}
+                        <div className="text-xs text-muted-foreground text-center flex-shrink-0 w-24">Area</div>
+                        
+                        {/* Column 4: Station Label */}
+                        <div className="text-xs text-muted-foreground text-center flex-shrink-0 w-32">Station</div>
+                        
+                        {/* Column 5: Size Label */}
                         <div className="text-xs text-muted-foreground text-center flex-shrink-0 w-20">Size</div>
                         
-                        {/* Column 4: Price Label */}
+                        {/* Column 6: Price Label */}
                         <div className="text-xs text-muted-foreground text-center flex-shrink-0 w-24">Price ($)</div>
                         
-                        {/* Column 5: Status Label */}
+                        {/* Column 7: Status Label */}
                         <div className="text-xs text-muted-foreground text-center flex-shrink-0 w-28">Status</div>
                         
-                        {/* Column 6: Empty space for alignment */}
+                        {/* Column 8: Empty space for alignment */}
                         <div className="flex justify-center gap-1 flex-shrink-0 w-16">
                         </div>
                       </div>
@@ -1057,6 +1078,10 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
                                 {bundle.name}
                               </div>
                             )}
+                          </div>
+                          
+                          <div className="text-xs text-muted-foreground">
+                            {getAreaForStation(bundle.station) || 'N/A'} - {bundle.station}
                           </div>
                           
                           <div className="text-xs text-muted-foreground flex items-center gap-2">
@@ -1227,6 +1252,9 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
                  </div>
                 <div className="text-xs font-medium truncate">{item.name}</div>
                 <div className="text-xs text-muted-foreground">{item.year}</div>
+                <div className="text-xs text-muted-foreground">
+                  {getAreaForStation(item.station) || 'N/A'} - {item.station}
+                </div>
                 <div className="text-sm font-bold">{item.stock?.reduce((s, stock) => s + stock.quantity, 0) || 0}</div>
                 <div className="text-xs text-muted-foreground">{formatCurrency(item.unitCost)}</div>
                 <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={(e) => { e.stopPropagation(); handleEditItem(item); }}>Edit</Button>
@@ -1274,6 +1302,9 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
               <div className="space-y-2">
                 <div className="font-medium text-sm">{item.name}</div>
                 <div className="text-xs text-muted-foreground">{item.collection}</div>
+                <div className="text-xs text-muted-foreground">
+                  {getAreaForStation(item.station) || 'N/A'} - {item.station}
+                </div>
                 <div className="flex justify-between items-center">
                   <div className="text-sm font-bold">{item.stock?.reduce((s, stock) => s + stock.quantity, 0) || 0}</div>
                   <div className="text-sm">{formatCurrency(item.price)}</div>
@@ -1333,6 +1364,9 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
                       <div className="space-y-2">
                         <div className="font-medium text-sm">{artwork.name}</div>
                         <div className="text-xs text-muted-foreground">{artwork.collection}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {getAreaForStation(artwork.station) || 'N/A'} - {artwork.station}
+                        </div>
                         {artwork.dimensions && (
                           <div className="text-xs text-muted-foreground">
                             {artwork.dimensions.width}×{artwork.dimensions.height} cm
@@ -1399,6 +1433,9 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
                   <div className="flex-1">
                     <div className="font-medium text-sm">{item.name}</div>
                     <div className="text-xs text-muted-foreground">{item.collection}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {getAreaForStation(item.station) || 'N/A'} - {item.station}
+                    </div>
                   </div>
                   <div className="flex items-center gap-4 text-sm">
                     <div className="text-center">
@@ -1463,6 +1500,9 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
                 <div key={print.id} className="flex items-center justify-between p-3 hover:bg-accent/50 cursor-pointer">
                   <div className="flex-1">
                     <div className="font-medium text-sm">{print.name}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {getAreaForStation(print.station) || 'N/A'} - {print.station}
+                    </div>
                     {print.dimensions && (
                       <div className="text-xs text-muted-foreground">
                         {print.dimensions.width}×{print.dimensions.height} cm
@@ -1504,6 +1544,9 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
                   <Package2 className="w-6 h-6" />
                 </div>
                 <div className="text-xs font-medium truncate">{item.name}</div>
+                <div className="text-xs text-muted-foreground">
+                  {getAreaForStation(item.station) || 'N/A'} - {item.station}
+                </div>
                 <div className="text-xs text-muted-foreground">{item.year}</div>
                 <div className="text-sm font-bold">{item.stock?.reduce((s, stock) => s + stock.quantity, 0) || 0}</div>
                 <div className="text-xs text-muted-foreground">{formatCurrency(item.unitCost)}</div>
