@@ -3,7 +3,7 @@
 
 import { EntityType, LogEventType } from '@/types/enums';
 import type { Item } from '@/types/entities';
-import { appendEntityLog, updateEntityLogField, appendItemCreationLog } from '../entities-logging';
+import { appendEntityLog, updateEntityLogField } from '../entities-logging';
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
 import { getLinksFor, removeLink } from '@/links/link-registry';
 
@@ -16,16 +16,24 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
     const effectKey = `item:${item.id}:created`;
     if (await hasEffect(effectKey)) return;
     
-    await appendEntityLog(EntityType.ITEM, item.id, LogEventType.CREATED, { 
-      name: item.name, 
-      type: item.type,
-      station: item.station 
-    });
-    
-    // Log item creation with source tracking
+    // Log item creation with standard pattern + source tracking
     const sourceType = item.sourceTaskId ? 'task' : item.sourceRecordId ? 'record' : 'direct';
     const sourceId = item.sourceTaskId || item.sourceRecordId || undefined;
-    await appendItemCreationLog(item, sourceType, sourceId);
+    await appendEntityLog(EntityType.ITEM, item.id, LogEventType.CREATED, {
+      name: item.name,
+      type: item.type,
+      station: item.station,
+      collection: item.collection,
+      status: item.status,
+      quantity: item.stock?.reduce((sum: number, stock: any) => sum + stock.quantity, 0) || 0,
+      unitCost: item.unitCost || 0,
+      totalCost: (item.stock?.reduce((sum: number, stock: any) => sum + stock.quantity, 0) || 0) * (item.unitCost || 0),
+      price: item.price || 0,
+      year: item.year,
+      sourceType,
+      sourceId,
+      description: `Item created from ${sourceType}: ${item.type} (${item.stock?.reduce((sum: number, stock: any) => sum + stock.quantity, 0) || 0}x)`
+    });
     
     await markEffect(effectKey);
     return;
@@ -121,31 +129,12 @@ export async function removeItemEffectsOnDelete(itemId: string): Promise<void> {
 export async function processItemCreationEffects(item: Item): Promise<void> {
   console.log(`[processItemCreationEffects] Processing item creation effects for: ${item.name} (${item.id})`);
   
-  // Log item creation once (with idempotency)
-  const itemCreated = await hasEffect(`item:${item.id}:itemCreated`);
-  if (!itemCreated) {
-    await logItemCreationForItem(item);
-    await markEffect(`item:${item.id}:itemCreated`);
-  }
 
   // Items created from Item Modal have NO financial effects
   // Items are just inventory/assets - financial effects come from Tasks/Records
   // This is different from Tasks/Records which have cost/revenue properties
 }
 
-/**
- * Log item creation when item is created directly (not from task/record)
- */
-export async function logItemCreationForItem(item: Item): Promise<void> {
-  try {
-    console.log(`[logItemCreationForItem] Logging direct item creation: ${item.name} (${item.id})`);
-    
-    await appendItemCreationLog(item, 'direct');
-    console.log(`[logItemCreationForItem] ✅ Direct item creation logged successfully for ${item.name}`);
-  } catch (error) {
-    console.error('Error logging direct item creation:', error);
-  }
-}
 
 /**
  * Update item log entry when item properties change

@@ -1,9 +1,8 @@
 // workflows/entities-workflows/account.workflow.ts
 // Account-specific workflow with EMAIL_VERIFIED, PASSWORD_RESET, LOGIN, LOGOUT events
 
-import { EntityType, LogEventType } from '@/types/enums';
+import { EntityType } from '@/types/enums';
 import type { Account } from '@/types/entities';
-import { appendEntityLog, updateEntityLogField } from '../entities-logging';
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
 import { getLinksFor, removeLink } from '@/links/link-registry';
 
@@ -11,73 +10,24 @@ const STATE_FIELDS = ['isActive', 'isVerified', 'loginAttempts'];
 const DESCRIPTIVE_FIELDS = ['name', 'email', 'phone', 'privacySettings'];
 
 export async function onAccountUpsert(account: Account, previousAccount?: Account): Promise<void> {
-  // New account creation
+  // Account is an infrastructure entity - no logging needed
+  // Account only handles: triforce creation, player linking, character linking
+  
+  // New account creation - just mark effect for idempotency
   if (!previousAccount) {
     const effectKey = `account:${account.id}:created`;
     if (await hasEffect(effectKey)) return;
-    
-    await appendEntityLog(EntityType.ACCOUNT, account.id, LogEventType.CREATED, { 
-      name: account.name, 
-      email: account.email,
-      isActive: account.isActive,
-      isVerified: account.isVerified
-    });
     await markEffect(effectKey);
     return;
   }
   
-  // Email verification changes - EMAIL_VERIFIED event
-  if (!previousAccount.isVerified && account.isVerified) {
-    await appendEntityLog(EntityType.ACCOUNT, account.id, LogEventType.EMAIL_VERIFIED, {
-      name: account.name,
-      email: account.email,
-      verifiedAt: new Date().toISOString()
-    });
-  }
-  
-  // Password reset changes - PASSWORD_RESET event
-  if (previousAccount.resetToken && !account.resetToken) {
-    await appendEntityLog(EntityType.ACCOUNT, account.id, LogEventType.PASSWORD_RESET, {
-      name: account.name,
-      resetAt: new Date().toISOString()
-    });
-  }
-  
-  // Login attempts changes - LOGIN event
-  if (previousAccount.loginAttempts !== account.loginAttempts) {
-    if (account.loginAttempts === 0 && previousAccount.loginAttempts > 0) {
-      // Successful login (reset attempts)
-      await appendEntityLog(EntityType.ACCOUNT, account.id, LogEventType.LOGIN, {
-        name: account.name,
-        loginAt: new Date().toISOString()
-      });
-    }
-  }
-  
-  // General updates - UPDATED event
-  const hasSignificantChanges = 
-    previousAccount.isActive !== account.isActive ||
-    previousAccount.isVerified !== account.isVerified;
-    
-  if (hasSignificantChanges) {
-    await appendEntityLog(EntityType.ACCOUNT, account.id, LogEventType.UPDATED, {
-      name: account.name,
-      isActive: account.isActive,
-      isVerified: account.isVerified
-    });
-  }
-  
-  // Descriptive changes - update in-place
-  for (const field of DESCRIPTIVE_FIELDS) {
-    if ((previousAccount as any)[field] !== (account as any)[field]) {
-      await updateEntityLogField(EntityType.ACCOUNT, account.id, field, (previousAccount as any)[field], (account as any)[field]);
-    }
-  }
+  // Account updates - no logging needed
+  // Account is pure infrastructure for authentication
 }
 
 /**
  * Remove account effects when account is deleted
- * Accounts can have entries in account log and related links
+ * Accounts can have related links but no log entries
  */
 export async function removeAccountEffectsOnDelete(accountId: string): Promise<void> {
   try {
@@ -100,13 +50,9 @@ export async function removeAccountEffectsOnDelete(accountId: string): Promise<v
     await clearEffect(`account:${accountId}:created`);
     await clearEffectsByPrefix(EntityType.ACCOUNT, accountId, '');
     
-    // 3. Remove log entries from account log
-    console.log(`[removeAccountEffectsOnDelete] Starting log entry removal for account: ${accountId}`);
+    // 3. No log entries to remove - Account is infrastructure entity
     
-    // TODO: Implement server-side log removal or remove this call
-    console.log(`[removeAccountEffectsOnDelete] ⚠️ Log entry removal skipped - needs server-side implementation`);
-    
-    console.log(`[removeAccountEffectsOnDelete] ✅ Cleared effects, removed links, and removed log entries for account ${accountId}`);
+    console.log(`[removeAccountEffectsOnDelete] ✅ Cleared effects and removed links for account ${accountId}`);
   } catch (error) {
     console.error('Error removing account effects:', error);
   }

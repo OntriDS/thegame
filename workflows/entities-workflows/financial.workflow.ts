@@ -8,7 +8,7 @@ import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data
 import { getLinksFor, removeLink } from '@/links/link-registry';
 import { getAllFinancials, getAllPlayers, getAllCharacters } from '@/data-store/datastore';
 import { createItemFromRecord, removeItemsCreatedByRecord } from '../item-creation-utils';
-import { awardPointsToPlayer, removePointsFromPlayer, awardJungleCoinsToCharacter, removeJungleCoinsFromCharacter, getMainPlayerId, getMainCharacterId } from '../points-rewards-utils';
+import { awardPointsToPlayer, removePointsFromPlayer, getMainPlayerId, removeJungleCoinsFromCharacter, getMainCharacterId } from '../points-rewards-utils';
 import { 
   updateTasksFromFinancialRecord, 
   updateItemsCreatedByRecord, 
@@ -65,16 +65,8 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
       }
     }
     
-    // Jungle coins awarding - on record creation
-    if (financial.jungleCoins && financial.jungleCoins > 0) {
-      const jungleCoinsEffectKey = `financial:${financial.id}:jungleCoinsAwarded`;
-      if (!(await hasEffect(jungleCoinsEffectKey))) {
-        console.log(`[onFinancialUpsert] Awarding jungle coins from financial record: ${financial.name}`);
-        await awardJungleCoinsToCharacter(getMainCharacterId(), financial.jungleCoins, financial.id, EntityType.FINANCIAL);
-        await markEffect(jungleCoinsEffectKey);
-        console.log(`[onFinancialUpsert] ✅ Jungle coins awarded and effect marked for record: ${financial.name}`);
-      }
-    }
+    // REMOVED: Jungle coins awarding - Financial records don't create jungle coins
+    // Only players can convert points to J$ through the points system
     
     return;
   }

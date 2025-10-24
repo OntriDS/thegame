@@ -6,7 +6,6 @@ import type { Character } from '@/types/entities';
 import { appendEntityLog, updateEntityLogField } from '../entities-logging';
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
 import { getLinksFor, removeLink } from '@/links/link-registry';
-import { appendCharacterJungleCoinsLog } from '../entities-logging';
 import type { Task, FinancialRecord } from '@/types/entities';
 
 const STATE_FIELDS = ['roles', 'isActive'];
@@ -142,35 +141,7 @@ export async function logCharacterEffect(task: Task): Promise<void> {
   return;
 }
 
-/**
- * Log character effect from financial record
- * This logs the jungle coins awarded to the character from a financial record
- */
-export async function logCharacterEffectFromRecord(record: FinancialRecord): Promise<void> {
-  try {
-    console.log(`[logCharacterEffectFromRecord] Logging character effect for record: ${record.name} (${record.id})`);
-    
-    // Only log if there are jungle coins to award
-    if (!record.jungleCoins || record.jungleCoins <= 0) {
-      console.log('[logCharacterEffectFromRecord] No jungle coins to log, skipping');
-      return;
-    }
-    
-    // Get main character ID (V0.1 constant)
-    const mainCharacterId = 'CHARACTER_ONE_ID';
-    
-    await appendCharacterJungleCoinsLog(
-      mainCharacterId,
-      record.jungleCoins,
-      record.id,
-      'financial'
-    );
-    
-    console.log(`[logCharacterEffectFromRecord] ✅ Character effect logged successfully for ${record.name}`);
-  } catch (error) {
-    console.error('Error logging character effect from record:', error);
-  }
-}
+// Only players can convert points to J$ through the points system
 
 /**
  * Log character update from task changes

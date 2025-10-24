@@ -80,41 +80,7 @@ export async function appendBulkOperationLog(
   await kvSet(key, list);
 }
 
-/**
- * Log item creation with source tracking
- * Used for items created from tasks, financial records, or directly
- */
-export async function appendItemCreationLog(
-  item: any,
-  sourceType: 'task' | 'record' | 'direct',
-  sourceId?: string
-): Promise<void> {
-  const key = buildLogKey(EntityType.ITEM);
-  const list = (await kvGet<any[]>(key)) || [];
-  
-  const logEntry = {
-    event: LogEventType.CREATED,
-    entityId: item.id,
-    itemName: item.name,
-    itemType: item.type,
-    collection: item.collection,
-    status: item.status,
-    quantity: item.stock?.reduce((sum: number, stock: any) => sum + stock.quantity, 0) || 0,
-    unitCost: item.unitCost || 0,
-    totalCost: (item.stock?.reduce((sum: number, stock: any) => sum + stock.quantity, 0) || 0) * (item.unitCost || 0),
-    price: item.price || 0,
-    station: item.station,
-    category: item.category,
-    year: item.year,
-    sourceType,
-    sourceId,
-    description: `Item created from ${sourceType}: ${item.type} (${item.stock?.reduce((sum: number, stock: any) => sum + stock.quantity, 0) || 0}x)`,
-    timestamp: new Date().toISOString()
-  };
-  
-  list.push(logEntry);
-  await kvSet(key, list);
-}
+
 
 /**
  * Log player points award with source tracking
@@ -205,74 +171,5 @@ export async function appendPlayerPointsUpdateLog(
   await kvSet(key, list);
 }
 
-/**
- * Log account authentication events
- * Used for login, logout, password reset, email verification
- */
-export async function appendAccountAuthLog(
-  accountId: string,
-  eventType: LogEventType,
-  details: {
-    email?: string;
-    loginAttempts?: number;
-    ipAddress?: string;
-    userAgent?: string;
-    success?: boolean;
-    reason?: string;
-  }
-): Promise<void> {
-  const key = buildLogKey(EntityType.ACCOUNT);
-  const list = (await kvGet<any[]>(key)) || [];
-  
-  const logEntry = {
-    event: eventType,
-    entityId: accountId,
-    email: details.email,
-    loginAttempts: details.loginAttempts,
-    ipAddress: details.ipAddress,
-    userAgent: details.userAgent,
-    success: details.success,
-    reason: details.reason,
-    description: `${eventType} event for account ${accountId}`,
-    timestamp: new Date().toISOString()
-  };
-  
-  list.push(logEntry);
-  await kvSet(key, list);
-}
-
-/**
- * Log account security events
- * Used for failed login attempts, suspicious activity, account lockouts
- */
-export async function appendAccountSecurityLog(
-  accountId: string,
-  eventType: LogEventType,
-  details: {
-    email?: string;
-    loginAttempts?: number;
-    ipAddress?: string;
-    userAgent?: string;
-    reason?: string;
-    severity?: 'low' | 'medium' | 'high' | 'critical';
-  }
-): Promise<void> {
-  const key = buildLogKey(EntityType.ACCOUNT);
-  const list = (await kvGet<any[]>(key)) || [];
-  
-  const logEntry = {
-    event: eventType,
-    entityId: accountId,
-    email: details.email,
-    loginAttempts: details.loginAttempts,
-    ipAddress: details.ipAddress,
-    userAgent: details.userAgent,
-    reason: details.reason,
-    severity: details.severity,
-    description: `Security event: ${eventType} for account ${accountId} - ${details.reason || 'No reason provided'}`,
-    timestamp: new Date().toISOString()
-  };
-  
-  list.push(logEntry);
-  await kvSet(key, list);
-}
+// REMOVED: Account logging functions - Account is infrastructure entity, not Core Entity
+// Account only handles: triforce creation, player linking, character linking

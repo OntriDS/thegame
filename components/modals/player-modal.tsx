@@ -591,6 +591,22 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
             setPersonalAssets(updatedAssets);
             setShowExchangeModal(false);
             
+            // Log the points-to-J$ conversion
+            const totalPointsExchanged = pointsToExchange.xp + pointsToExchange.rp + pointsToExchange.fp + pointsToExchange.hp;
+            const { appendEntityLog } = await import('@/workflows/entities-logging');
+            const { EntityType, LogEventType } = await import('@/types/enums');
+            await appendEntityLog(
+              EntityType.PLAYER,
+              playerData.id,
+              LogEventType.UPDATED,
+              {
+                name: playerData.name,
+                pointsExchanged: pointsToExchange,
+                jungleCoinsReceived: j$Received,
+                description: `Player exchanged ${totalPointsExchanged} points for ${j$Received} J$`
+              }
+            );
+            
             // Trigger financials update event AFTER successful save
             dispatchEntityUpdated('player');
             dispatchEntityUpdated('financial');
