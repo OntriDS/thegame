@@ -127,10 +127,7 @@ function ResearchPageContent() {
     
     const loadNotebooks = () => {
       try {
-        // SSR Guard for localStorage
-        if (typeof window === 'undefined') return;
-        
-        const savedNotebooks = localStorage.getItem('notebooks');
+        const savedNotebooks = getPreference('research-notebooks');
         if (savedNotebooks) {
           setNotebooks(JSON.parse(savedNotebooks));
         } else {
@@ -180,7 +177,7 @@ function ResearchPageContent() {
             }
           ];
           setNotebooks(initialNotebooks);
-          localStorage.setItem('notebooks', JSON.stringify(initialNotebooks));
+          setPreference('research-notebooks', JSON.stringify(initialNotebooks));
         }
       } catch (error) {
         console.error('Error loading notebooks:', error);

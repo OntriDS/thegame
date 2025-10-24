@@ -182,12 +182,6 @@ export async function ensurePlayerOne(
     console.log('[ensurePlayerOne] 🚩 Force flag received - resetting initialization state');
     playerOneInitialized = false;
   }
-  // Check if force re-initialization flag is set (after reset)
-  if (typeof window !== 'undefined' && localStorage.getItem('force-triforce-reinit')) {
-    console.log('[ensurePlayerOne] 🔄 Force re-initialization flag detected - resetting Triforce');
-    playerOneInitialized = false;
-    localStorage.removeItem('force-triforce-reinit');
-  }
   
   // Check if already initialized in this session (but allow re-initialization after reset)
   if (playerOneInitialized && !force) {

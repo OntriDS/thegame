@@ -3,25 +3,27 @@
 
 import { useEffect, useState } from 'react';
 import { THEMES, ThemeName, DEFAULT_THEME } from '@/lib/constants/theme-constants';
+import { useUserPreferences } from './use-user-preferences';
 
 export function useTheme() {
+  const { getPreference, setPreference, isLoading } = useUserPreferences();
   const [currentTheme, setCurrentTheme] = useState<ThemeName>(DEFAULT_THEME);
   const [isDark, setIsDark] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // Load theme from localStorage on mount
+  // Load theme from preferences on mount
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (isLoading) return;
     
-    const savedColorTheme = localStorage.getItem('color-theme') as ThemeName;
-    const savedMode = localStorage.getItem('theme') === 'dark';
+    const savedColorTheme = getPreference('theme-color') as ThemeName;
+    const savedMode = getPreference('theme-mode') === 'dark';
     
     if (savedColorTheme && THEMES[savedColorTheme]) {
       setCurrentTheme(savedColorTheme);
     }
     setIsDark(savedMode);
     setIsInitialized(true);
-  }, []);
+  }, [isLoading, getPreference]);
 
   // Apply theme + dark mode to CSS variables
   useEffect(() => {
@@ -44,17 +46,13 @@ export function useTheme() {
 
   const setTheme = (theme: ThemeName) => {
     setCurrentTheme(theme);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('color-theme', theme);
-    }
+    setPreference('theme-color', theme);
   };
 
   const toggleDarkMode = () => {
     const newMode = !isDark;
     setIsDark(newMode);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('theme', newMode ? 'dark' : 'light');
-    }
+    setPreference('theme-mode', newMode ? 'dark' : 'light');
   };
 
   return {

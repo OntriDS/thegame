@@ -22,6 +22,7 @@ import { createCharacterOptions, createStationCategoryOptions, createTaskParentO
 import { getAreaForStation } from '@/lib/utils/business-structure-utils';
 import { ClientAPI } from '@/lib/client-api';
 import { dispatchEntityUpdated } from '@/lib/ui/ui-events';
+import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
 import { CHARACTER_ONE_ID } from '@/lib/constants/entity-constants';
 import PlayerCharacterSelectorModal from './submodals/player-character-selector-submodal';
 // Side effects handled by parent component via API calls
@@ -49,6 +50,8 @@ export default function SalesModal({
   onSave,
   onDelete,
 }: SalesModalProps) {
+  const { getPreference, setPreference } = useUserPreferences();
+  
   // Helper function to get the correct value format for SearchableSelect
   const getStationValue = (station: Station): string => {
     const area = getAreaForStation(station);
@@ -132,17 +135,13 @@ export default function SalesModal({
   const toggleAdvanced = () => {
     const newValue = !showAdvanced;
     setShowAdvanced(newValue);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('salesModal_advancedExpanded', String(newValue));
-    }
+    setPreference('sales-modal-advanced-expanded', String(newValue));
   };
 
   const toggleEmissary = () => {
     const newValue = !emissaryColumnExpanded;
     setEmissaryColumnExpanded(newValue);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('salesModal_emissaryExpanded', String(newValue));
-    }
+    setPreference('sales-modal-emissary-expanded', String(newValue));
   };
 
   // Update Sale Status based on Charged Status (only IsNotCharged affects Sale Status)
@@ -232,20 +231,18 @@ export default function SalesModal({
     }
   }, [sale]);
 
-  // Load localStorage values after hydration to prevent SSR mismatches
+  // Load preferences after hydration to prevent SSR mismatches
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const savedEmissary = localStorage.getItem('salesModal_emissaryExpanded');
-      if (savedEmissary === 'true') {
-        setEmissaryColumnExpanded(true);
-      }
-      
-      const savedAdvanced = localStorage.getItem('salesModal_advancedExpanded');
-      if (savedAdvanced === 'true') {
-        setShowAdvanced(true);
-      }
+    const savedEmissary = getPreference('sales-modal-emissary-expanded');
+    if (savedEmissary === 'true') {
+      setEmissaryColumnExpanded(true);
     }
-  }, []);
+    
+    const savedAdvanced = getPreference('sales-modal-advanced-expanded');
+    if (savedAdvanced === 'true') {
+      setShowAdvanced(true);
+    }
+  }, [getPreference]);
 
   const loadItems = async () => {
     try {

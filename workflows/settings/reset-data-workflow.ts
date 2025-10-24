@@ -19,6 +19,25 @@ const RESETTABLE_ENTITY_TYPES = [
   EntityType.SITE
 ];
 
+// System State keys that should be cleared on reset
+const SYSTEM_STATE_KEYS = [
+  'data:company-assets',
+  'data:personal-assets'
+];
+
+// Configuration keys that should be preserved
+const CONFIGURATION_KEYS = [
+  'data:financial-conversion-rates',
+  'data:player-conversion-rates'
+];
+
+// Research Data keys that should be preserved (NEVER cleared)
+const RESEARCH_DATA_KEYS = [
+  'data:project-status',
+  'data:notes-log',
+  'data:dev-log'
+];
+
 export interface SettingsResult {
   success: boolean;
   message: string;
@@ -81,13 +100,18 @@ export class ResetDataWorkflow {
 
       // Handle client-side execution for localhost
       if (!isKV && !isServer) {
-        console.log(`[ResetDataWorkflow] 🖥️ Running client-side reset for localhost...`);
-        return await this.executeClientSideReset(mode, results, errors);
+        console.log(`[ResetDataWorkflow] 🖥️ Client-side reset not supported - use KV environment`);
+        errors.push('Client-side reset not supported - use KV environment');
+        return {
+          success: false,
+          message: 'Client-side reset not supported - use KV environment',
+          data: { results, errors, mode, environment: 'local' }
+        };
       }
 
       const startTime = Date.now();
       const TIMEOUT_MS = 4 * 60 * 1000; // 4 minutes (leaving 1 minute buffer for API timeout)
-      const totalOperations = 5; // entity data + links + logs + player init + sites
+      const totalOperations = 6; // entity data + links + logs + system state + player init + sites
       let currentOperation = 0;
 
       // Helper function to check timeout and report progress
@@ -165,6 +189,20 @@ export class ResetDataWorkflow {
           }
         } else {
           currentOperation++; // Count as completed even if skipped
+        }
+
+        // Step 3.5: Clear System State (assets, project status)
+        try {
+          checkTimeoutAndProgress('Clearing System State');
+          await this.clearSystemState(results, errors);
+        } catch (error) {
+          if (error instanceof Error && error.message.includes('timeout')) {
+            throw error;
+          }
+          const errorMsg = `Failed to clear System State: ${error instanceof Error ? error.message : 'Unknown error'}`;
+          errors.push(errorMsg);
+          console.error(`[ResetDataWorkflow] ❌ ${errorMsg}`);
+          throw new Error(errorMsg);
         }
 
         // Step 4: Initialize Player One (The Triforce) AFTER log clearing
@@ -458,6 +496,34 @@ export class ResetDataWorkflow {
       console.error(`[ResetDataWorkflow] ❌ ${errorMsg}`);
     }
   }
+
+  /**
+   * Clear System State data (company and personal assets)
+   * Configuration data (conversion rates) and Research Data are preserved
+   */
+  private static async clearSystemState(results: string[], errors: string[]): Promise<void> {
+    try {
+      console.log('[ResetDataWorkflow] 🗑️ Clearing System State...');
+      
+      for (const key of SYSTEM_STATE_KEYS) {
+        try {
+          await kv.del(key);
+          console.log(`[ResetDataWorkflow] ✅ Cleared ${key}`);
+        } catch (error) {
+          const errorMsg = `Failed to clear ${key}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+          errors.push(errorMsg);
+          console.error(`[ResetDataWorkflow] ❌ ${errorMsg}`);
+        }
+      }
+      
+      results.push(`Cleared ${SYSTEM_STATE_KEYS.length} System State keys`);
+      console.log('[ResetDataWorkflow] ✅ System State cleared successfully');
+    } catch (error) {
+      const errorMsg = `Failed to clear System State: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      errors.push(errorMsg);
+      console.error(`[ResetDataWorkflow] ❌ ${errorMsg}`);
+    }
+  }
   
   /**
    * Seed default sites with batch processing
@@ -555,79 +621,6 @@ export class ResetDataWorkflow {
     }
   }
 
-  /**
-   * Execute client-side reset for localhost (localStorage)
-   */
-  private static async executeClientSideReset(mode: string, results: string[], errors: string[]): Promise<SettingsResult> {
-    try {
-      console.log(`[ResetDataWorkflow] 🖥️ Starting client-side reset (mode: ${mode})...`);
-
-      // Clear localStorage data
-      const keysToRemove: string[] = [];
-
-      // Find all data keys in localStorage
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && (
-          key.startsWith('data:') ||
-          key.startsWith('index:') ||
-          key.startsWith('links:') ||
-          key.startsWith('log:') ||
-          key.startsWith('akiles:')
-        )) {
-          keysToRemove.push(key);
-        }
-      }
-
-      // Remove all found keys
-      keysToRemove.forEach(key => {
-        localStorage.removeItem(key);
-        results.push(`Removed localStorage key: ${key}`);
-      });
-
-      // Clear any cached data
-      if ('caches' in window) {
-        try {
-          const cacheNames = await caches.keys();
-          for (const cacheName of cacheNames) {
-            await caches.delete(cacheName);
-            results.push(`Cleared cache: ${cacheName}`);
-          }
-        } catch (cacheError) {
-          console.warn('[ResetDataWorkflow] Cache clearing failed:', cacheError);
-        }
-      }
-
-      console.log(`[ResetDataWorkflow] ✅ Client-side reset completed: ${results.length} operations`);
-
-      return {
-        success: errors.length === 0,
-        message: `Client-side reset completed (${mode} mode) - ${results.length} operations completed`,
-        data: {
-          results,
-          errors,
-          mode,
-          environment: 'local'
-        }
-      };
-
-    } catch (error) {
-      const errorMsg = `Client-side reset failed: ${error instanceof Error ? error.message : 'Unknown error'}`;
-      errors.push(errorMsg);
-      console.error(`[ResetDataWorkflow] ❌ ${errorMsg}`);
-
-      return {
-        success: false,
-        message: errorMsg,
-        data: {
-          results: [],
-          errors,
-          mode,
-          environment: 'local'
-        }
-      };
-    }
-  }
 
   /**
 
@@ -682,6 +675,53 @@ export class ResetDataWorkflow {
 
       results.push('Initialized Player One (Account + Player + Character)');
       console.log('[ResetDataWorkflow] ✅ Player One initialized successfully');
+
+      // Initialize System State to baseline values
+      const { saveCompanyAssets, savePersonalAssets } = await import('@/data-store/datastore');
+
+      // Initialize company assets to zero
+      await saveCompanyAssets({
+        cash: 0,
+        bank: 0,
+        bitcoin: 0,
+        toCharge: 0,
+        toPay: 0,
+        companyJ$: 0,
+        cashColones: 0,
+        bankColones: 0,
+        toChargeColones: 0,
+        toPayColones: 0,
+        bitcoinSats: 0,
+        materials: { value: 0, cost: 0 },
+        equipment: { value: 0, cost: 0 },
+        artworks: { value: 0, cost: 0 },
+        prints: { value: 0, cost: 0 },
+        stickers: { value: 0, cost: 0 },
+        merch: { value: 0, cost: 0 }
+      });
+
+      // Initialize personal assets to zero
+      await savePersonalAssets({
+        cash: 0,
+        bank: 0,
+        bitcoin: 0,
+        crypto: 0,
+        toCharge: 0,
+        toPay: 0,
+        personalJ$: 0,
+        cashColones: 0,
+        bankColones: 0,
+        toChargeColones: 0,
+        toPayColones: 0,
+        bitcoinSats: 0,
+        vehicle: 0,
+        properties: 0,
+        nfts: 0,
+        other: 0
+      });
+
+      results.push('Initialized System State (assets zeroed)');
+      console.log('[ResetDataWorkflow] ✅ System State initialized to baseline values');
     } catch (error) {
       const errorMsg = `Failed to initialize Player One: ${error instanceof Error ? error.message : 'Unknown error'}`;
       errors.push(errorMsg);

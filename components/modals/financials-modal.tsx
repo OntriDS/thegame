@@ -27,6 +27,7 @@ import { getCategoryForItemType, createItemTypeOptionsWithCategories, createStat
 import { createSiteOptionsWithCategories } from '@/lib/utils/site-options-utils';
 import { ClientAPI } from '@/lib/client-api';
 import { dispatchEntityUpdated } from '@/lib/ui/ui-events';
+import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
 // Side effects handled by parent component via API calls
 import { v4 as uuid } from 'uuid';
 import { PRICE_STEP, QUANTITY_STEP, J$_TO_USD_RATE } from '@/lib/constants/app-constants';
@@ -75,20 +76,17 @@ interface FinancialsModalProps {
 
 
 export default function FinancialsModal({ record, year, month, open, onOpenChange, onSave, onDelete }: FinancialsModalProps) {
+  const { getPreference, setPreference } = useUserPreferences();
+  
   // User preference functions
   const getLastUsedStation = (): Station => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('lastUsedRecordStation');
-      return (saved as Station) || ('Strategy' as Station);
-    }
-    return 'Strategy' as Station;
+    const saved = getPreference('finrec-modal-last-station');
+    return (saved as Station) || ('Strategy' as Station);
   };
 
   const getLastUsedCategory = (station: Station): Station => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem(`lastUsedRecordCategory:${station}`);
-      if (saved) return saved as Station;
-    }
+    const saved = getPreference(`finrec-modal-last-category-${station}`);
+    if (saved) return saved as Station;
     const categories = BUSINESS_STRUCTURE[station as keyof typeof BUSINESS_STRUCTURE];
     return categories && categories.length > 0 ? categories[0] : categories[0] as Station;
   };
@@ -153,9 +151,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
   const toggleEmissaryColumn = () => {
     const newValue = !emissaryColumnExpanded;
     setEmissaryColumnExpanded(newValue);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('finrecModal_emissaryColumnExpanded', String(newValue));
-    }
+    setPreference('finrec-modal-emissary-expanded', String(newValue));
   };
 
   // Description expansion state with persistence
@@ -164,9 +160,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
   const toggleDescription = () => {
     const newValue = !descriptionExpanded;
     setDescriptionExpanded(newValue);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('finrecModal_descriptionExpanded', String(newValue));
-    }
+    setPreference('finrec-modal-description-expanded', String(newValue));
   };
 
   // Load items on mount
@@ -190,20 +184,18 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
     loadUIData();
   }, []);
 
-  // Load localStorage values after hydration to prevent SSR mismatches
+  // Load preferences after hydration to prevent SSR mismatches
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const savedEmissary = localStorage.getItem('finrecModal_emissaryColumnExpanded');
-      if (savedEmissary === 'true') {
-        setEmissaryColumnExpanded(true);
-      }
-      
-      const savedDescription = localStorage.getItem('finrecModal_descriptionExpanded');
-      if (savedDescription === 'true') {
-        setDescriptionExpanded(true);
-      }
+    const savedEmissary = getPreference('finrec-modal-emissary-expanded');
+    if (savedEmissary === 'true') {
+      setEmissaryColumnExpanded(true);
     }
-  }, []);
+    
+    const savedDescription = getPreference('finrec-modal-description-expanded');
+    if (savedDescription === 'true') {
+      setDescriptionExpanded(true);
+    }
+  }, [getPreference]);
 
   // Smart detection: Determine if this is Company or Personal based on station
   const isCompany = isCompanyStation(formData.station);
@@ -511,9 +503,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
     };
 
     // Save user preferences
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('lastUsedRecordStation', recordData.station as any);
-    }
+    setPreference('finrec-modal-last-station', recordData.station as any);
 
     try {
       // Emit pure record entity - Links System handles all relationships automatically
@@ -609,10 +599,8 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
                   onValueChange={(value) => {
                     const [, station] = value.split(':');
                     setFormData({ ...formData, station: station as Station });
-                    // Save last used station to localStorage
-                    if (typeof window !== 'undefined') {
-                      localStorage.setItem('lastUsedRecordStation', station);
-                    }
+                    // Save last used station to preferences
+                    setPreference('finrec-modal-last-station', station);
                   }}
                   placeholder="Select station..."
                   options={createStationCategoryOptions()}

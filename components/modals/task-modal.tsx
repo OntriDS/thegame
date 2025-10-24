@@ -33,6 +33,7 @@ import { CHARACTER_ONE_ID } from '@/lib/constants/entity-constants';
 import CharacterSelectorModal from './submodals/owner-character-selector-submodal';
 import PlayerCharacterSelectorModal from './submodals/player-character-selector-submodal';
 import { dispatchEntityUpdated } from '@/lib/ui/ui-events';
+import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
 
 interface TaskModalProps {
   task?: Task | null;
@@ -69,39 +70,30 @@ export default function TaskModal({
   onComplete,
   isRecurrentModal = false,
 }: TaskModalProps) {
-  // Collapsible Emissary Column state - persisted in localStorage
+  const { getPreference, setPreference } = useUserPreferences();
+  
+  // Collapsible Emissary Column state - persisted in preferences
   const [emissaryColumnExpanded, setEmissaryColumnExpanded] = useState(false); // Default to false
 
   const toggleEmissaryColumn = () => {
     const newValue = !emissaryColumnExpanded;
     setEmissaryColumnExpanded(newValue);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('taskModalEmissaryExpanded', String(newValue));
-    }
+    setPreference('task-modal-emissary-expanded', String(newValue));
   };
 
   const getLastUsedStation = (): Station => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('lastUsedStation');
-      return (saved as Station) || ('Strategy' as Station);
-    }
-    return 'Strategy' as Station;
+    const saved = getPreference('task-modal-last-station');
+    return (saved as Station) || ('Strategy' as Station);
   };
 
   const getLastUsedType = useCallback((): TaskType => {
     if (isRecurrentModal) {
-      if (typeof window !== 'undefined') {
-        const saved = localStorage.getItem('lastUsedRecurrentType');
-        return (saved as TaskType) || TaskType.RECURRENT_PARENT;
-      }
-      return TaskType.RECURRENT_PARENT;
+      const saved = getPreference('task-modal-last-recurrent-type');
+      return (saved as TaskType) || TaskType.RECURRENT_PARENT;
     }
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('lastUsedType');
-      return (saved as TaskType) || TaskType.MISSION;
-    }
-    return TaskType.MISSION;
-  }, [isRecurrentModal]);
+    const saved = getPreference('task-modal-last-type');
+    return (saved as TaskType) || TaskType.MISSION;
+  }, [isRecurrentModal, getPreference]);
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -198,18 +190,16 @@ export default function TaskModal({
     loadUIData();
   }, []);
 
-  // Load localStorage values after hydration to prevent SSR mismatches
+  // Load preferences after hydration to prevent SSR mismatches
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const savedEmissary = localStorage.getItem('taskModalEmissaryExpanded');
-      if (savedEmissary === 'true') {
-        setEmissaryColumnExpanded(true);
-      } else if (savedEmissary === 'false') {
-        setEmissaryColumnExpanded(false);
-      }
-      // If savedEmissary is null, keep default (true)
+    const savedEmissary = getPreference('task-modal-emissary-expanded');
+    if (savedEmissary === 'true') {
+      setEmissaryColumnExpanded(true);
+    } else if (savedEmissary === 'false') {
+      setEmissaryColumnExpanded(false);
     }
-  }, []);
+    // If savedEmissary is null, keep default (false)
+  }, [getPreference]);
   
   useEffect(() => {
     if (task && task.id) {
@@ -443,9 +433,7 @@ export default function TaskModal({
     };
 
     // Save user preferences
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('lastUsedStation', newTask.station as any);
-    }
+    setPreference('task-modal-last-station', newTask.station as any);
 
     try {
       // Emit pure task entity - Links System handles all relationships automatically
@@ -465,9 +453,7 @@ export default function TaskModal({
 
   const handleStationChange = (newStation: Station) => {
     setStation(newStation);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('lastUsedStation', newStation);
-    }
+    setPreference('task-modal-last-station', newStation);
   };
 
   const handleStationCategoryChange = (newStationCategory: string) => {
@@ -475,19 +461,14 @@ export default function TaskModal({
     
     setStationCategory(newStationCategory);
     setStation(newStation);
-    
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('lastUsedStation', newStation);
-    }
+    setPreference('task-modal-last-station', newStation);
   };
 
   const handleTypeChange = (newType: string) => {
     const casted = newType as TaskType;
     setType(casted);
-    if (typeof window !== 'undefined') {
-      const key = isRecurrentModal ? 'lastUsedRecurrentType' : 'lastUsedType';
-      localStorage.setItem(key, casted);
-    }
+    const key = isRecurrentModal ? 'task-modal-last-recurrent-type' : 'task-modal-last-type';
+    setPreference(key, casted);
   };
 
   const handleItemTypeChange = (newItemType: ItemType | '') => {

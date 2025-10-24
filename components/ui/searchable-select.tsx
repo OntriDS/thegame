@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/popover';
 import * as PopoverPrimitive from '@radix-ui/react-popover';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
+import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
 
 interface SearchableSelectProps {
   value: string;
@@ -50,10 +51,11 @@ export function SearchableSelect({
   persistentCollapsible = false,
   instanceId,
 }: SearchableSelectProps) {
+  const { getPreference, setPreference } = useUserPreferences();
   const [open, setOpen] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState('');
   
-  // Persistent collapsible state with localStorage - collapsed by default
+  // Persistent collapsible state with preferences - collapsed by default
   const [collapsedGroups, setCollapsedGroups] = React.useState<Set<string>>(new Set());
 
   // Group options by group property or category, maintaining enum order
@@ -117,8 +119,8 @@ export function SearchableSelect({
 
   // Initialize collapsed state on first use (collapse all groups by default)
   React.useEffect(() => {
-    if (persistentCollapsible && instanceId && typeof window !== 'undefined') {
-      const saved = localStorage.getItem(`searchable-select-collapsed-${instanceId}`);
+    if (persistentCollapsible && instanceId) {
+      const saved = getPreference(`searchable-select-collapsed-${instanceId}`);
       if (!saved) {
         // First time: collapse all groups by default
         const allGroups = Object.keys(groupedOptions);
@@ -127,12 +129,12 @@ export function SearchableSelect({
         }
       }
     }
-  }, [groupedOptions, persistentCollapsible, instanceId]);
+  }, [groupedOptions, persistentCollapsible, instanceId, getPreference]);
 
-  // Load localStorage values after hydration to prevent SSR mismatches
+  // Load preferences after hydration to prevent SSR mismatches
   React.useEffect(() => {
-    if (persistentCollapsible && instanceId && typeof window !== 'undefined') {
-      const saved = localStorage.getItem(`searchable-select-collapsed-${instanceId}`);
+    if (persistentCollapsible && instanceId) {
+      const saved = getPreference(`searchable-select-collapsed-${instanceId}`);
       if (saved) {
         try {
           setCollapsedGroups(new Set(JSON.parse(saved)));
@@ -141,7 +143,7 @@ export function SearchableSelect({
         }
       }
     }
-  }, [persistentCollapsible, instanceId]);
+  }, [persistentCollapsible, instanceId, getPreference]);
 
   // Auto-expand groups with matches when searching
   React.useEffect(() => {
@@ -154,14 +156,14 @@ export function SearchableSelect({
       });
     } else {
       // Reset to saved collapsed state when search is cleared
-      if (persistentCollapsible && instanceId && typeof window !== 'undefined') {
-        const saved = localStorage.getItem(`searchable-select-collapsed-${instanceId}`);
+      if (persistentCollapsible && instanceId) {
+        const saved = getPreference(`searchable-select-collapsed-${instanceId}`);
         if (saved) {
           setCollapsedGroups(new Set(JSON.parse(saved)));
         }
       }
     }
-  }, [searchQuery, groupedOptions, persistentCollapsible, instanceId]);
+  }, [searchQuery, groupedOptions, persistentCollapsible, instanceId, getPreference]);
 
   // Toggle group collapse state with persistence
   const toggleGroup = (groupName: string) => {
@@ -173,9 +175,9 @@ export function SearchableSelect({
         newSet.add(groupName);
       }
       
-      // Save to localStorage if persistent
-      if (persistentCollapsible && instanceId && typeof window !== 'undefined') {
-        localStorage.setItem(`searchable-select-collapsed-${instanceId}`, JSON.stringify([...newSet]));
+      // Save to preferences if persistent
+      if (persistentCollapsible && instanceId) {
+        setPreference(`searchable-select-collapsed-${instanceId}`, JSON.stringify([...newSet]));
       }
       
       return newSet;

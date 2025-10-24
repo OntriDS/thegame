@@ -96,25 +96,19 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
     };
   }, []);
 
-  // Save thresholds to localStorage when they change
+  // Save thresholds to preferences when they change
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('stickerYellowThreshold', yellowThreshold.toString());
-    }
-  }, [yellowThreshold]);
+    setPreference('inventory-yellow-threshold', yellowThreshold.toString());
+  }, [yellowThreshold, setPreference]);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('stickerRedThreshold', redThreshold.toString());
-    }
-  }, [redThreshold]);
+    setPreference('inventory-red-threshold', redThreshold.toString());
+  }, [redThreshold, setPreference]);
 
-  // Save column selection to localStorage when it changes
+  // Save column selection to preferences when it changes
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('stickerSelectedColumns', JSON.stringify(Array.from(selectedColumns)));
-    }
-  }, [selectedColumns]);
+    setPreference('inventory-selected-columns', JSON.stringify(Array.from(selectedColumns)));
+  }, [selectedColumns, setPreference]);
 
   // Load preferences on mount
   useEffect(() => {
@@ -134,57 +128,55 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
     }
   }, [sites, selectedLocationsForModel.size]);
 
-  // Load localStorage values after hydration to prevent SSR mismatches
+  // Load preferences after hydration to prevent SSR mismatches
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      // Load collapsed divisions
-      const savedDivisions = localStorage.getItem('stickerDivisionsCollapsed');
-      if (savedDivisions) {
-        try {
-          setCollapsedDivisions(new Set(JSON.parse(savedDivisions)));
-        } catch {
-          // Keep default empty Set
-        }
-      }
-
-      // Load all collapsed state
-      const savedAllCollapsed = localStorage.getItem('stickerAllCollapsed');
-      if (savedAllCollapsed) {
-        setAllCollapsed(JSON.parse(savedAllCollapsed));
-      }
-
-      // Load selected locations
-      const savedLocations = localStorage.getItem('stickerSelectedLocations');
-      if (savedLocations) {
-        try {
-          setSelectedLocationsForModel(new Set(JSON.parse(savedLocations)));
-        } catch {
-          // Keep default Set
-        }
-      }
-
-      // Load thresholds
-      const savedYellow = localStorage.getItem('stickerYellowThreshold');
-      if (savedYellow) {
-        setYellowThreshold(Number(savedYellow));
-      }
-
-      const savedRed = localStorage.getItem('stickerRedThreshold');
-      if (savedRed) {
-        setRedThreshold(Number(savedRed));
-      }
-
-      // Load selected columns
-      const savedColumns = localStorage.getItem('stickerSelectedColumns');
-      if (savedColumns) {
-        try {
-          setSelectedColumns(new Set(JSON.parse(savedColumns)));
-        } catch {
-          // Keep default Set
-        }
+    // Load collapsed divisions
+    const savedDivisions = getPreference('inventory-divisions-collapsed');
+    if (savedDivisions) {
+      try {
+        setCollapsedDivisions(new Set(JSON.parse(savedDivisions)));
+      } catch {
+        // Keep default empty Set
       }
     }
-  }, []);
+
+    // Load all collapsed state
+    const savedAllCollapsed = getPreference('inventory-all-collapsed');
+    if (savedAllCollapsed !== undefined) {
+      setAllCollapsed(JSON.parse(savedAllCollapsed));
+    }
+
+    // Load selected locations
+    const savedLocations = getPreference('inventory-selected-locations');
+    if (savedLocations) {
+      try {
+        setSelectedLocationsForModel(new Set(JSON.parse(savedLocations)));
+      } catch {
+        // Keep default Set
+      }
+    }
+
+    // Load thresholds
+    const savedYellow = getPreference('inventory-yellow-threshold');
+    if (savedYellow) {
+      setYellowThreshold(Number(savedYellow));
+    }
+
+    const savedRed = getPreference('inventory-red-threshold');
+    if (savedRed) {
+      setRedThreshold(Number(savedRed));
+    }
+
+    // Load selected columns
+    const savedColumns = getPreference('inventory-selected-columns');
+    if (savedColumns) {
+      try {
+        setSelectedColumns(new Set(JSON.parse(savedColumns)));
+      } catch {
+        // Keep default Set
+      }
+    }
+  }, [getPreference]);
 
 
 
@@ -332,10 +324,8 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
         newSet.add(divisionKey);
       }
       
-      // Save to localStorage
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('stickerDivisionsCollapsed', JSON.stringify(Array.from(newSet)));
-      }
+      // Save to preferences
+      setPreference('inventory-divisions-collapsed', JSON.stringify(Array.from(newSet)));
       
       return newSet;
     });
@@ -378,11 +368,9 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
     setCollapsedDivisions(allKeys);
     setAllCollapsed(true);
     
-    // Save to localStorage
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('stickerDivisionsCollapsed', JSON.stringify(Array.from(allKeys)));
-      localStorage.setItem('stickerAllCollapsed', 'true');
-    }
+    // Save to preferences
+    setPreference('inventory-divisions-collapsed', JSON.stringify(Array.from(allKeys)));
+    setPreference('inventory-all-collapsed', 'true');
   };
 
   const expandAllDivisions = () => {
@@ -390,11 +378,9 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
     setCollapsedDivisions(new Set());
     setAllCollapsed(false);
     
-    // Save to localStorage
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('stickerDivisionsCollapsed', JSON.stringify([]));
-      localStorage.setItem('stickerAllCollapsed', 'false');
-    }
+    // Save to preferences
+    setPreference('inventory-divisions-collapsed', JSON.stringify([]));
+    setPreference('inventory-all-collapsed', 'false');
   };
 
   const calculateDivisionTotal = (items: Item[]) => {
@@ -440,28 +426,24 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
     // Also check/uncheck all locations in that column
     const locationsInColumn = getLocationsInColumn(column);
     if (checked) {
-      // Add all locations in this column
-      setSelectedLocationsForModel(prev => {
-        const newSet = new Set(prev);
-        locationsInColumn.forEach(site => newSet.add(site));
-        
-        // Save to localStorage
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('stickerSelectedLocations', JSON.stringify(Array.from(newSet)));
-        }
-        
-        return newSet;
-      });
+        // Add all locations in this column
+        setSelectedLocationsForModel(prev => {
+          const newSet = new Set(prev);
+          locationsInColumn.forEach(site => newSet.add(site));
+          
+          // Save to preferences
+          setPreference('inventory-selected-locations', JSON.stringify(Array.from(newSet)));
+          
+          return newSet;
+        });
     } else {
       // Remove all locations in this column
       setSelectedLocationsForModel(prev => {
         const newSet = new Set(prev);
         locationsInColumn.forEach(site => newSet.delete(site));
         
-        // Save to localStorage
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('stickerSelectedLocations', JSON.stringify(Array.from(newSet)));
-        }
+        // Save to preferences
+        setPreference('inventory-selected-locations', JSON.stringify(Array.from(newSet)));
         
         return newSet;
       });
@@ -496,10 +478,8 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
         newSet.delete(site);
       }
       
-      // Save to localStorage
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('stickerSelectedLocations', JSON.stringify(Array.from(newSet)));
-      }
+      // Save to preferences
+      setPreference('inventory-selected-locations', JSON.stringify(Array.from(newSet)));
       
       return newSet;
     });

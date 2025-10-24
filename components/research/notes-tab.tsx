@@ -49,7 +49,7 @@ export function NotesTab({ notes, notebooks, onUpdateNotes, onUpdateNotebooks }:
   };
 
   const handleSaveNotebook = (notebookData: any) => {
-    // Update the notebook in state and save to localStorage
+    // Update the notebook in state - parent component handles persistence
     const updatedNotebooks = notebooks.map(notebook => 
       notebook.id === notebookData.type 
         ? { 
@@ -59,8 +59,6 @@ export function NotesTab({ notes, notebooks, onUpdateNotes, onUpdateNotebooks }:
           }
         : notebook
     );
-    // Save to localStorage
-    localStorage.setItem('notebooks', JSON.stringify(updatedNotebooks));
     onUpdateNotebooks(updatedNotebooks);
   };
 

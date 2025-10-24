@@ -27,8 +27,8 @@ import MoveItemsModal from './submodals/move-items-submodal';
 import DeleteModal from './submodals/delete-submodal';
 import { FileReference } from '@/types/entities';
 import EntityRelationshipsModal from './submodals/entity-relationships-submodal';
-import CharacterSelectorModal from './submodals/owner-character-selector-submodal';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
+import CharacterSelectorModal from './submodals/owner-character-selector-submodal';
 import { dispatchEntityUpdated } from '@/lib/ui/ui-events';
 
 interface ItemModalProps {
@@ -43,11 +43,8 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
   const { getPreference, setPreference } = useUserPreferences();
   
   const getLastUsedStation = (): Station => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('lastUsedStation');
-      return (saved as Station) || ('Strategy' as Station);
-    }
-    return 'Strategy' as Station;
+    const saved = getPreference('item-modal-last-station');
+    return (saved as Station) || ('Strategy' as Station);
   };
 
   const [name, setName] = useState('');
@@ -96,7 +93,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
   const [originalFiles, setOriginalFiles] = useState('');
   const [accessoryFiles, setAccessoryFiles] = useState('');
 
-  // Save form data to localStorage when modal closes
+  // Save form data to preferences when modal closes
   const saveFormDataToStorage = useCallback(() => {
     if (!item) { // Only save for new items, not when editing existing items
       const formData = {
@@ -121,14 +118,14 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         originalFiles,
         accessoryFiles
       };
-      localStorage.setItem('itemModalFormData', JSON.stringify(formData));
+      setPreference('item-modal-form-data', JSON.stringify(formData));
     }
-  }, [item, name, description, type, station, stationCategory, subItemType, collection, status, quantity, unitCost, price, year, imageUrl, width, height, size, targetAmount, site, originalFiles, accessoryFiles]);
+  }, [item, name, description, type, station, stationCategory, subItemType, collection, status, quantity, unitCost, price, year, imageUrl, width, height, size, targetAmount, site, originalFiles, accessoryFiles, setPreference]);
 
-  // Load form data from localStorage when modal opens
+  // Load form data from preferences when modal opens
   const loadFormDataFromStorage = useCallback(() => {
     if (!item) { // Only load for new items
-      const savedData = localStorage.getItem('itemModalFormData');
+      const savedData = getPreference('item-modal-form-data');
       if (savedData) {
         try {
           const formData = JSON.parse(savedData);
@@ -152,11 +149,11 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
           setOriginalFiles(formData.originalFiles || '');
           setAccessoryFiles(formData.accessoryFiles || '');
         } catch (error) {
-          console.error('Error loading form data from storage:', error);
+          console.error('Error loading form data from preferences:', error);
         }
       }
     }
-  }, [item, defaultItemType]);
+  }, [item, defaultItemType, getPreference]);
 
   // Save form data when modal closes
   useEffect(() => {
@@ -177,10 +174,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
     
     setStationCategory(newStationCategory);
     setStation(newStation);
-    
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('lastUsedStation', newStation);
-    }
+    setPreference('item-modal-last-station', newStation);
   };
 
   const handleItemTypeSubTypeChange = (newItemTypeSubType: string) => {
@@ -471,7 +465,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
 
       // Clear saved form data when item is successfully saved (only for truly new items)
       if (!item && !selectedItemId) {
-        localStorage.removeItem('itemModalFormData');
+        setPreference('item-modal-form-data', '');
       }
 
       // Emit pure item entity - Links System handles all relationships automatically
