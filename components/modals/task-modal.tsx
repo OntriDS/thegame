@@ -567,6 +567,12 @@ export default function TaskModal({
     setPreference('task-modal-last-station', newStation);
   };
 
+  // Helper function to get the correct value format for SearchableSelect
+  const getStationValue = (station: Station): string => {
+    const area = getAreaForStation(station);
+    return `${area}:${station}`;
+  };
+
   const handleStationCategoryChange = (newStationCategory: string) => {
     const newStation = getStationFromCombined(newStationCategory) as Station;
     
@@ -857,7 +863,7 @@ export default function TaskModal({
               <div className="space-y-2">
                 <Label htmlFor="task-station-category" className="text-xs">Station & Category</Label>
                 <SearchableSelect
-                  value={stationCategory}
+                  value={getStationValue(station)}
                   onValueChange={handleStationCategoryChange}
                   options={createStationCategoryOptions()}
                   autoGroupByCategory={true}
