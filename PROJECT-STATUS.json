@@ -96,99 +96,62 @@
     "foundations": {
       "status": "Done",
       "version": "v0.1",
-      "description": "Solid foundation implemented with proper enums, entities, and data flow",
-      "nextSprint": "Site System Integration & Task Workflow Design"
+      "description": "Solid foundation implemented with proper enums, entities, and data flow"
     },
     "dashboards": {
       "status": "Not Started",
       "version": "v0.0",
-      "description": "Dashboard system for tracking key metrics and progress",
-      "nextSprint": "Operational workflow design and testing"
+      "description": "Dashboard system for tracking key metrics and progress"
     },
     "controlRoom": {
       "status": "Done",
       "version": "v0.1",
-      "description": "Implemented with hierarchical task management",
-      "nextSprint": "Task Completion Workflow Design & Calendar Integration"
+      "description": "Implemented with hierarchical task management"
     },
     "finances": {
       "status": "Done",
       "version": "v0.1",
-      "description": "Implemented with Company/Personal split and J$ currency",
-      "nextSprint": "Task-Financial Connection Workflow"
+      "description": "Implemented with Company/Personal split and J$ currency"
     },
     "sales": {
-      "status": "Not Started",
+      "status": "Done",
       "version": "v0.1",
-      "description": "Designed to solve tracking sales tasks from different sources (ferias, consignment, direct sales)",
-      "nextSprint": "Operational workflow design and testing"
+      "description": "Designed to solve tracking sales tasks from different sources (ferias, consignment, direct sales)"
     },
     "inventories": {
       "status": "Done",
       "version": "v0.1",
-      "description": "Working with unified stock management and smart sites",
-      "nextSprint": "Site System Integration Fixes"
+      "description": "Working with unified stock management and smart sites"
     },
     "maps": {
-      "status": "Placeholder",
+      "status": "In Progress",
       "version": "v0.05",
-      "description": "Basic structure with World Map",
-      "nextSprint": "Site System Architecture integration"
+      "description": "Basic structure with World Map"
     },
     "research": {
-      "status": "done",
+      "status": "Done",
       "version": "v0.1",
-      "description": "system development, Diagrams, Notes, etc.",
-      "nextSprint": "Operational workflow design and testing"
+      "description": "system development, Diagrams, Notes, etc."
     },
     "dataCenter": {
       "status": "Done",
       "version": "v0.1",
-      "description": "Central data repository for logs and events tracking with unified logging system",
-      "nextSprint": "Complete basic structure with 3 logs subtabs"
+      "description": "Central data repository for logs and events tracking with unified logging system"
     },
     "archive": {
-      "status": "Not Started",
+      "status": "In Progress",
       "version": "v0.0",
-      "description": "Archive system for storing and managing historical data",
-      "nextSprint": "Operational workflow design and testing"
+      "description": "Archive system for storing and managing historical data"
     },
     "player": {
       "status": "Done",
       "version": "v0.1",
-      "description": "Player system for managing and tracking player data",
-      "nextSprint": "Operational workflow design and testing"
+      "description": "Player system for managing and tracking player data"
     },
     "settings": {
       "status": "Done",
       "version": "v0.1",
-      "description": "Settings system for managing and tracking player data",
-      "nextSprint": "Undefined"
-    }
-  },
-  "currentChallenges": {
-    "": {
-      "Note-taking Improvements": {
-        "description": "Note-taking functionality like ClickUp notepad/PDF",
-        "features": [
-          "Sidebar navigation",
-          "AI note-taking capability",
-          "Organized roadmap display",
-          "Note-Taking System Self Component"
-        ],
-        "priority": "high"
-      },
-      "Recurrents Templates System": {
-        "description": "Complete recurrent tasks implementation",
-        "features": [
-          "Master templates for recurring work",
-          "Automatic task spawning based on schedule",
-          "Integration with Control Room task management",
-          "Connect with financial and logging systems",
-          "Test with real workflow examples (classes, buy orders)"
-        ],
-        "priority": "high"
-      }
+      "description": "Settings system for managing and tracking player data"
     }
   },
   "nextChallenges": {
