@@ -156,24 +156,14 @@
   },
   "nextChallenges": {
     "": {
-      "calendarTab": {
-        "description": "Big calendar view (Google Calendar style) for tasks",
+      "calendar & Schedule Tabs": {
+        "description": "Calendar & Schedule views for tasks",
         "features": [
-          "Past tasks",
-          "Completed tasks",
-          "Daily view",
-          "Upcoming tasks"
+          "Active, Completed, Upcoming tasks",
+          "Daily/Weekly view",
+          "Hourly View in Schedule Tab"
         ],
         "priority": "medium"
-      },
-      "locationSystem": {
-        "description": "Improve Site system for managing and tracking site data",
-        "features": [
-          "Inventory items not moving correctly with new site system",
-          "Task and location connections need testing and fixing",
-          "Integration with other systems incomplete"
-        ],
-        "priority": "high"
       },
       "monthlyClosureWorkflow": {
         "description": "Automated monthly closure process",
@@ -205,15 +195,6 @@
           "Integration with Archive System"
         ],
         "priority": "low"
-      },
-      "Sites json for Site Managment": {
-        "description": "Sites JSON and Site Managment System",
-        "features": [
-          "Sites json and Site Managment System",
-          "Integration with other systems",
-          "Replace Enums with Seed-Data for Sites"
-        ],
-        "priority": "medium"
       },
       "Develop Map View": {
         "description": "Develop Map View",

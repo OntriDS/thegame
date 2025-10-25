@@ -85,7 +85,7 @@ export function SystemDevelopmentTab({ projectStatus }: SystemDevelopmentTabProp
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Zap className="h-5 w-5" />
-            Challenges
+            Next Challenges
           </CardTitle>
         </CardHeader>
         <CardContent>  
@@ -94,7 +94,6 @@ export function SystemDevelopmentTab({ projectStatus }: SystemDevelopmentTabProp
           {/* Next Challenges */}
           {projectStatus.nextChallenges && (
             <div className="space-y-4">
-              <h4 className="font-semibold text-lg border-b pb-2 mt-4">Next Challenges</h4>
               {Object.entries(projectStatus.nextChallenges).map(([sectionKey, section]: [string, any]) => (
                 <div key={sectionKey} className="space-y-4">
                   <h5 className="font-semibold text-lg capitalize">{sectionKey.replace(/([A-Z])/g, ' $1').trim()}</h5>
