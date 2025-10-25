@@ -412,8 +412,8 @@ function ResearchPageContent() {
       const updatePhaseKeys = (phases: any, sprintNumber: number) => {
         const updatedPhases: any = {};
         Object.entries(phases).forEach(([key, phase]: [string, any]) => {
-          // Replace phaseX.N with phase{sprintNumber}.N
-          const newKey = key.replace(/phaseX\./g, `phase${sprintNumber}.`);
+          // Replace phaseX.N or PhaseX.N with phase{sprintNumber}.N (case insensitive)
+          const newKey = key.replace(/phaseX\./gi, `phase${sprintNumber}.`);
           updatedPhases[newKey] = phase;
         });
         return updatedPhases;

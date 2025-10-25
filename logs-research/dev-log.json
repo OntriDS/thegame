@@ -640,11 +640,76 @@
           ]
         }
       ]
+    },
+    {
+      "id": "sprint-12",
+      "sprintName": "Sprint 12",
+      "description": "Sprint 12 completed successfully",
+      "completedAt": "25-10-2025",
+      "challenge": "System Development",
+      "phases": [
+        {
+          "id": "phase12.1",
+          "phaseName": "KV-only Cutover Hardening & Server-First Workflows",
+          "description": "Finalize the KV-only rebuild by eliminating client-side API usage from server workflows, enforcing auth, and stabilizing API routes.",
+          "completedAt": "25-10-2025",
+          "completedFeatures": [
+            "Replaced ClientAPI calls with server-side datastore in points, financial and sale utilities (KV-only)",
+            "Fixed entity workflows to run entirely on the server (tasks, sales, financials)",
+            "Added try/catch error handling to all core API routes (tasks/items/financials/sales/characters/sites)",
+            "Enforced jose JWT middleware + requireAdminAuth on every API route",
+            "Removed obsolete localStorage/local-environment code; project is KV-only",
+            "Effects-registry verified for idempotency; no server→server HTTP anti-patterns"
+          ]
+        },
+         {
+           "id": "phase12.2",
+           "phaseName": "Links & Logging Idempotency + Parity Fixes",
+           "description": "Make link creation idempotent, clean up stale links on edits, and align UI with logging semantics.",
+           "completedAt": "25-10-2025",
+           "completedFeatures": [
+             "createLink made idempotent (duplicate-safe) with clear debug logs",
+             "Link validation uses retry for KV eventual consistency; bootstrap links allow skipValidation",
+             "Item effects clean up ITEM_TASK/ITEM_SITE/ITEM_CHARACTER links before re-creating",
+             "Lifecycle logging parity: append events + update-in-place for descriptive fields",
+             "Data Center logs fixed to read flat entry fields before nested (tasks/items/financials)",
+             "API error messages surfaced consistently in route handlers"
+           ]
+         },
+        {
+          "id": "phase12.3",
+          "phaseName": "Real-time UI Updates Unification",
+          "description": "Unify event dispatch/subscription so sections refresh instantly after saves across all entities.",
+          "completedAt": "25-10-2025",
+          "completedFeatures": [
+            "Introduced dispatchEntityUpdated() and ref-stabilized useEntityUpdates() hook",
+            "Replaced manual window event listeners/dispatches in modals and pages",
+            "Applied refreshKey pattern to break stale memoization and ensure re-renders",
+            "Verified immediate updates for tasks, items, financials, sales, sites, characters, players",
+            "Sales keeps temporary dual path (direct reload + event listener) for safety during migration"
+          ]
+        },
+        {
+          "id": "phase12.4",
+          "phaseName": "Sites/Settlements, Z-Index & Data Architecture Cleanups",
+          "description": "Finish dynamic Site system with settlements, unify z-index layers for modals/submodals, and correct data/reset architecture with DRY fixes.",
+          "completedAt": "25-10-2025",
+          "completedFeatures": [
+            "Settlement CRUD implemented and integrated in Site modal (dynamic dropdown with +New)",
+            "Seed updated to correct default sites (HQ, Drive, World); invalid 'None' site guarded",
+            "Unified z-index layers; submodals portaled above parents using z-index-utils",
+            "Reset workflow extended to clear system-state assets keys; rates/preferences preserved",
+            "Documentation updated clarifying System State vs Configuration (assets/rates) and reset policy",
+            "DRY enforcement: station/category usage via BUSINESS_STRUCTURE; CSV/enum/icon/color usages aligned",
+            "Recurrent tasks wiring and cascade status confirmation integrated per workflow plan"
+          ]
+        }
+      ]
     }
   ],
   "phases": [
     {
-      "id": "1756660913048",
+      "id": "1756660913048-phase8.1",
       "type": "phase_completion",
       "phaseKey": "phase8.1",
       "phaseName": "Strategic Foundation & Documentation",
@@ -652,7 +717,7 @@
       "description": "Phase \"Strategic Foundation & Documentation\" marked as completed"
     },
     {
-      "id": "1756660913049",
+      "id": "1756660913049-phase8.2",
       "type": "phase_completion",
       "phaseKey": "phase8.2",
       "phaseName": "Site System & DataCenter Logs Foundation",
@@ -660,7 +725,7 @@
       "description": "Phase \"Site System & DataCenter Logs Foundation\" marked as completed"
     },
     {
-      "id": "1756941925898",
+      "id": "1756941925898-phase8.3",
       "type": "phase_completion",
       "phaseKey": "phase8.3",
       "phaseName": "Task & Automation Workflow Design & Testing",
@@ -668,7 +733,7 @@
       "description": "Phase \"Task & Automation Workflow Design & Testing\" marked as completed"
     },
     {
-      "id": "1756951785835",
+      "id": "1756951785835-phase8.4",
       "type": "phase_completion",
       "phaseKey": "phase8.4",
       "phaseName": "Simple Note Taking System & Develop Completed Tasks Log",
@@ -676,7 +741,7 @@
       "description": "Phase \"Simple Note Taking System & Develop Completed Tasks Log\" marked as completed"
     },
     {
-      "id": "1757215927378",
+      "id": "1757215927378-phase9.1",
       "type": "phase_completion",
       "phaseKey": "phase9.1",
       "phaseName": "Financial Operations Integration & Daily Activities",
@@ -684,7 +749,7 @@
       "description": "Phase \"Financial Operations Integration & Daily Activities\" marked as completed"
     },
     {
-      "id": "1757985301199",
+      "id": "1757985301199-phase9.2",
       "type": "phase_completion",
       "phaseKey": "phase9.2",
       "phaseName": "Recurrent Tasks Implementation",
@@ -692,7 +757,7 @@
       "description": "Phase \"Recurrent Tasks Implementation\" marked as completed"
     },
     {
-      "id": "1758007365661",
+      "id": "1758007365661-phase9.3",
       "type": "phase_completion",
       "phaseKey": "phase9.3",
       "phaseName": "Improve the Note-Taking System",
@@ -700,7 +765,7 @@
       "description": "Phase \"Improve the Note-Taking System\" marked as completed"
     },
     {
-      "id": "1757473821127",
+      "id": "1757473821127-phase9.4",
       "type": "phase_completion",
       "phaseKey": "phase9.4",
       "phaseName": "Shadcn Component Integration & Z-Index System",
@@ -708,7 +773,7 @@
       "description": "Phase \"Shadcn Component Integration & Z-Index System\" marked as completed"
     },
     {
-      "id": "1758072821356",
+      "id": "1758072821356-phase10.1",
       "type": "phase_completion",
       "phaseKey": "phase10.1",
       "phaseName": "System Clean Up & Consolidation",
@@ -716,7 +781,7 @@
       "description": "Phase \"System Clean Up & Consolidation\" marked as completed"
     },
     {
-      "id": "1759196693799",
+      "id": "1759196693799-phase10.2",
       "type": "phase_completion",
       "phaseKey": "phase10.2",
       "phaseName": "Week Sale Event",
@@ -724,7 +789,7 @@
       "description": "Phase \"Week Sale Event\" marked as completed"
     },
     {
-      "id": "1759196693800",
+      "id": "1759196693800-phase10.3",
       "type": "phase_completion",
       "phaseKey": "phase10.3",
       "phaseName": "Two environments: localhost (testing/dev) & Vercel (production/real)",
@@ -732,7 +797,7 @@
       "description": "Phase \"Two environments: localhost (testing/dev) & Vercel (production/real)\" marked as completed"
     },
     {
-      "id": "1759196693805",
+      "id": "1759196693805-phase10.4",
       "type": "phase_completion",
       "phaseKey": "phase10.4",
       "phaseName": "Shared Data System (KV + Local)",
@@ -740,7 +805,7 @@
       "description": "Phase \"Shared Data System (KV + Local)\" marked as completed"
     },
     {
-      "id": "1759196693801",
+      "id": "1759196693801-phase11.1",
       "type": "phase_completion",
       "phaseKey": "phase11.1",
       "phaseName": "Complete architecture refactor",
@@ -748,7 +813,7 @@
       "description": "Phase \"Complete architecture refactor\" marked as completed"
     },
     {
-      "id": "1759196693802",
+      "id": "1759196693802-phase11.2",
       "type": "phase_completion",
       "phaseKey": "phase11.2",
       "phaseName": "Unified Entities, Modals, Side Effects Pattern",
@@ -756,7 +821,7 @@
       "description": "Phase \"Unified Entities, Modals, Side Effects Pattern\" marked as completed"
     },
     {
-      "id": "1759196693803",
+      "id": "1759196693803-phase11.3",
       "type": "phase_completion",
       "phaseKey": "phase11.3",
       "phaseName": "Logging System and Entities Complete Workflow Test in both Environments",
@@ -764,12 +829,44 @@
       "description": "Phase \"Logging System and Entities Complete Workflow Test in both Environments\" marked as completed"
     },
     {
-      "id": "1759196693804",
+      "id": "1759196693804-phase11.4",
       "type": "phase_completion",
       "phaseKey": "phase11.4",
       "phaseName": "Links System, finish all main Entities",
       "completedAt": "29-09-2025",
       "description": "Phase \"Links System, finish all main Entities\" marked as completed"
+    },
+    {
+      "id": "1761414995960-phase12.1",
+      "type": "phase_completion",
+      "phaseKey": "phase12.1",
+      "phaseName": "KV-only Cutover Hardening & Server-First Workflows",
+      "completedAt": "25-10-2025",
+      "description": "Phase \"KV-only Cutover Hardening & Server-First Workflows\" marked as completed"
+    },
+     {
+       "id": "1761414995960-phase12.2",
+       "type": "phase_completion",
+       "phaseKey": "phase12.2",
+       "phaseName": "Links & Logging Idempotency + Parity Fixes",
+       "completedAt": "25-10-2025",
+       "description": "Phase \"Links & Logging Idempotency + Parity Fixes\" marked as completed"
+     },
+    {
+      "id": "1761414995960-phase12.3",
+      "type": "phase_completion",
+      "phaseKey": "phase12.3",
+      "phaseName": "Real-time UI Updates Unification",
+      "completedAt": "25-10-2025",
+      "description": "Phase \"Real-time UI Updates Unification\" marked as completed"
+    },
+    {
+      "id": "1761414995960-phase12.4",
+      "type": "phase_completion",
+      "phaseKey": "phase12.4",
+      "phaseName": "Sites/Settlements, Z-Index & Data Architecture Cleanups",
+      "completedAt": "25-10-2025",
+      "description": "Phase \"Sites/Settlements, Z-Index & Data Architecture Cleanups\" marked as completed"
     }
   ],
   "lastUpdated": "2025-09-30T01:46:46.890Z",
