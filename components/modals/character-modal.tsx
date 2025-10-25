@@ -231,8 +231,8 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
         <div className="px-6 space-y-4">
           {/* Column Headers */}
           <div className="grid grid-cols-2 gap-4 mb-2">
-            <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">🧬 Native</div>
-            <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">🧬 Native</div>
+            {/* <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">🧬 Native</div>*/}
+            {/* <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">🧬 Native</div>*/}
           </div>
 
           {/* Main 2-Column Grid */}

@@ -858,7 +858,7 @@ export default function TaskModal({
 
             {/* Column 2: NATIVE (Structure) */}
             <div className="space-y-3">
-              <h3 className="text-sm font-semibold text-muted-foreground border-b pb-1">🧬 NATIVE</h3>
+            {/* <h3 className="text-sm font-semibold text-muted-foreground border-b pb-1">🧬 NATIVE</h3>*/}
               
               <div className="space-y-2">
                 <Label htmlFor="task-station-category" className="text-xs">Station</Label>
@@ -938,7 +938,7 @@ export default function TaskModal({
 
             {/* Column 3: AMBASSADORS */}
             <div className="space-y-3">
-              <h3 className="text-sm font-semibold text-muted-foreground border-b pb-1">🏛️ AMBASSADORS</h3>
+            {/* <h3 className="text-sm font-semibold text-muted-foreground border-b pb-1">🏛️ AMBASSADORS</h3>*/}
               <div className="space-y-2">
                 <Label htmlFor="site" className="text-xs">Site</Label>
                 <SearchableSelect
@@ -1042,7 +1042,7 @@ export default function TaskModal({
              {/* Column 4: EMISSARIES (Collapsible) */}
              {emissaryColumnExpanded && (
             <div className="space-y-3">
-              <h3 className="text-sm font-semibold text-muted-foreground border-b pb-1">📡 EMISSARIES</h3>
+            {/* <h3 className="text-sm font-semibold text-muted-foreground border-b pb-1">📡 EMISSARIES</h3>*/}
               
               {/* Customer Character - Emissary field for service tasks */}
               <div className="space-y-2">

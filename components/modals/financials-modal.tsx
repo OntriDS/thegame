@@ -620,7 +620,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
 
             {/* Column 2: NATIVE (Financial Data) */}
             <div className="space-y-3">
-              <h3 className="text-sm font-semibold text-muted-foreground border-b pb-1">🧬 NATIVE</h3>
+            {/* <h3 className="text-sm font-semibold text-muted-foreground border-b pb-1">🧬 NATIVE</h3>*/}
               
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-2">
@@ -669,7 +669,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
 
             {/* Column 3: AMBASSADORS */}
             <div className="space-y-3">
-              <h3 className="text-sm font-semibold text-muted-foreground border-b pb-1">🏛️ AMBASSADORS</h3>
+            {/* <h3 className="text-sm font-semibold text-muted-foreground border-b pb-1">🏛️ AMBASSADORS</h3>*/}
               
               <div>
                 <Label htmlFor="site" className="text-xs">Site</Label>
@@ -689,7 +689,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
             {/* Column 4: EMISSARIES (Collapsible) */}
             {emissaryColumnExpanded && (
               <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-muted-foreground border-b pb-1">📡 EMISSARIES</h3>
+            {/* <h3 className="text-sm font-semibold text-muted-foreground border-b pb-1">📡 EMISSARIES</h3>*/}
                 
                 {/* Customer Character - Emissary field for financial records */}
                 <div className="space-y-2">

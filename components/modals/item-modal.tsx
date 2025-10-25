@@ -515,7 +515,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
           <div className="grid grid-cols-3 gap-6">
             {/* Column 1 - NATIVE (Item Basics) */}
             <div className="space-y-3">
-              <h3 className="text-sm font-semibold text-muted-foreground border-b pb-1">🧬 NATIVE</h3>
+            {/* <h3 className="text-sm font-semibold text-muted-foreground border-b pb-1">🧬 NATIVE</h3>*/}
             <div>
               <ItemNameField
                 value={name}
@@ -562,7 +562,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
 
             {/* Column 2 - NATIVE (Item Data) */}
             <div className="space-y-3">
-              <h3 className="text-sm font-semibold text-muted-foreground border-b pb-1">🧬 NATIVE</h3>
+            {/* <h3 className="text-sm font-semibold text-muted-foreground border-b pb-1">🧬 NATIVE</h3>*/}
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <Label htmlFor="quantity" className="text-xs">Quantity *</Label>
@@ -651,7 +651,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
 
             {/* Column 3 - AMBASSADOR (Site References) */}
             <div className="space-y-3">
-              <h3 className="text-sm font-semibold text-muted-foreground border-b pb-1">🏛️ AMBASSADOR</h3>
+            {/* <h3 className="text-sm font-semibold text-muted-foreground border-b pb-1">🏛️ AMBASSADOR</h3>*/}
             
             <div>
               <Label htmlFor="site" className="text-xs">Site</Label>
