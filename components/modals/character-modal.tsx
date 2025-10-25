@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { v4 as uuid } from 'uuid';
 
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -225,6 +225,9 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
         <DialogContent className="w-full max-w-5xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{character ? 'Edit Character' : 'Create Character'}</DialogTitle>
+            <DialogDescription>
+              {character ? 'Modify the character details below' : 'Fill in the character information to create a new character'}
+            </DialogDescription>
           </DialogHeader>
 
         {/* Content - 2 Column Layout */}

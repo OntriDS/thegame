@@ -21,10 +21,24 @@ export async function POST(request: NextRequest) {
     await requireAdminAuth(request);
     
     const body = await request.json();
-    const { key, value } = body;
     
-    await setUserPreference(key, value);
-    console.log(`[UserPreferences] Saved to KV: ${key} = ${value}`);
+    // Handle both single preference and batch preferences
+    if (body.preferences) {
+      // Batch save multiple preferences
+      const preferences = body.preferences;
+      const keys = Object.keys(preferences);
+      
+      for (const key of keys) {
+        await setUserPreference(key, preferences[key]);
+      }
+      
+      console.log(`[UserPreferences] Batch saved to KV: ${keys.length} preferences`);
+    } else {
+      // Single preference save (backward compatibility)
+      const { key, value } = body;
+      await setUserPreference(key, value);
+      console.log(`[UserPreferences] Saved to KV: ${key} = ${value}`);
+    }
     
     return NextResponse.json({ success: true });
   } catch (error) {

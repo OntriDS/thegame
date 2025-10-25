@@ -158,8 +158,8 @@ export function createSkillsOptionsWithCategories() {
 
 /**
  * Creates Station+Category combined options for SearchableSelect
- * Format: "STATION:CATEGORY" (e.g., "ADMIN:Strategy", "SALES:Direct Sales")
- * @returns Array of Station+Category options with station as category
+ * Format: "STATION:AREA" (e.g., "Strategy:ADMIN", "Direct Sales:SALES")
+ * @returns Array of Station+Category options with area as category
  */
 export function createStationCategoryOptions() {
   const options: Array<{
@@ -168,12 +168,12 @@ export function createStationCategoryOptions() {
     category: string;
   }> = [];
   
-  for (const [station, categories] of Object.entries(STATION_CATEGORIES)) {
-    for (const category of categories as readonly string[]) {
+  for (const [area, stations] of Object.entries(STATION_CATEGORIES)) {
+    for (const station of stations as readonly string[]) {
       options.push({
-        value: `${station}:${category}`,
-        label: category,
-        category: station
+        value: `${station}:${area}`,
+        label: station,
+        category: area
       });
     }
   }
@@ -182,8 +182,8 @@ export function createStationCategoryOptions() {
 }
 
 /**
- * Extracts station from combined station:category value
- * @param combinedValue The combined "STATION:CATEGORY" value
+ * Extracts station from combined station:area value
+ * @param combinedValue The combined "STATION:AREA" value
  * @returns The station part
  */
 export function getStationFromCombined(combinedValue: string): string {
@@ -191,9 +191,9 @@ export function getStationFromCombined(combinedValue: string): string {
 }
 
 /**
- * Extracts category from combined station:category value
- * @param combinedValue The combined "STATION:CATEGORY" value
- * @returns The category part
+ * Extracts area from combined station:area value
+ * @param combinedValue The combined "STATION:AREA" value
+ * @returns The area part
  */
 export function getCategoryFromCombined(combinedValue: string): string {
   return combinedValue.split(':')[1];

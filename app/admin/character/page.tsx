@@ -51,7 +51,6 @@ export default function CharactersPage() {
       }
       
       isLoadingDataRef.current = true;
-      console.log('[Character Section] 🔄 Starting loadData...');
       try {
         const [playerLogResponse, ratesData, charactersData, playersData, personalAssets] = await Promise.all([
           fetch('/api/player-log'),  // ✅ Points come from Player Log now
@@ -74,7 +73,6 @@ export default function CharactersPage() {
         setCharacters(charactersData || []);
         setPlayers(playersData || []);
         setPlayerLog(playerLogEntries);
-        console.log('[Character Section] ✅ loadData completed successfully');
       } catch (error) {
         console.error('Failed to load player/character data:', error);
       } finally {
