@@ -45,7 +45,7 @@ export async function syncResearchLogsToKV(): Promise<SyncResult> {
   }
   
   // Dynamic imports for server-side only modules
-  const fs = await import('fs').then(m => m.promises);
+  const fs = await import('fs');
   const path = await import('path');
   
   console.log('[ResearchSync] 🔄 Starting research logs sync to KV...');
@@ -65,8 +65,8 @@ export async function syncResearchLogsToKV(): Promise<SyncResult> {
       let localData;
       
       try {
-        fileStats = await fs.stat(localFile);
-        fileContent = await fs.readFile(localFile, 'utf8');
+        fileStats = await fs.promises.stat(localFile);
+        fileContent = await fs.promises.readFile(localFile, 'utf8');
         localData = JSON.parse(fileContent);
         console.log(`[ResearchSync] 📁 Found local ${logType} (${fileStats.size} bytes)`);
       } catch (error) {
@@ -168,7 +168,7 @@ export async function checkResearchLogsSyncStatus(): Promise<{needsSync: string[
   }
   
   // Dynamic imports for server-side only modules
-  const fs = await import('fs').then(m => m.promises);
+  const fs = await import('fs');
   const path = await import('path');
   
   const logsToCheck = ['project-status', 'notes-log', 'dev-log'];
@@ -182,8 +182,8 @@ export async function checkResearchLogsSyncStatus(): Promise<{needsSync: string[
       
       const kvKey = `data:${logType}`;
       
-      const fileStats = await fs.stat(localFile);
-      const fileContent = await fs.readFile(localFile, 'utf8');
+      const fileStats = await fs.promises.stat(localFile);
+      const fileContent = await fs.promises.readFile(localFile, 'utf8');
       const localData = JSON.parse(fileContent);
       
       const kvData = await kvGet(kvKey);
@@ -229,7 +229,7 @@ export async function syncIndividualResearchData(
   }
   
   // Dynamic imports for server-side only modules
-  const fs = await import('fs').then(m => m.promises);
+  const fs = await import('fs');
   const path = await import('path');
   
   console.log(`[ResearchSync] 🔄 Starting ${logType} sync...`);
@@ -246,8 +246,8 @@ export async function syncIndividualResearchData(
     let localData;
     
     try {
-      fileStats = await fs.stat(localFile);
-      fileContent = await fs.readFile(localFile, 'utf8');
+      fileStats = await fs.promises.stat(localFile);
+      fileContent = await fs.promises.readFile(localFile, 'utf8');
       localData = JSON.parse(fileContent);
       console.log(`[ResearchSync] 📁 Found local ${logType} (${fileStats.size} bytes)`);
     } catch (error) {

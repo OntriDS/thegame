@@ -21,7 +21,7 @@
             "Remove unused logging utilities and consolidate duplicated functions",
             "Fix Task Completion logic duplication and Consolidate date formatting constants",
             "Clean up unused theme configurations and seed data",
-            "Refactor item import logic for consistency"
+            "Refactor item import logic, for consistency"
           ],
           "completedAt": "29-09-2025",
           "status": "completed"
