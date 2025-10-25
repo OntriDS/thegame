@@ -537,7 +537,7 @@ function ResearchPageContent() {
 
 
         {/* Roadmaps Tab */}
-        <RoadmapsTab />
+        <RoadmapsTab projectStatus={projectStatus} />
 
         {/* Notes Tab */}
         <NotesTab 
