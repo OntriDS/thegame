@@ -1587,10 +1587,19 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
     }
   };
 
-  // Check quantity 0 separately
+  /**
+   * Check quantity 0 separately
+   * 
+   * WARNING: This function sets modal state. NEVER call this function from within
+   * modal action callbacks to avoid infinite recursion. Modal actions should only
+   * call setShowStatusModal(false) to close.
+   */
   const checkQuantityZero = (item: Item, newQuantity: number) => {
     // Don't show status modal during import
     if (isImporting) return;
+    
+    // DEFENSIVE GUARD: Prevent re-entry if modal is already showing
+    if (showStatusModal) return;
     
     // Check if this inventory type should show the "Set to Sold" modal
     // Default behavior: show modal for all item types
@@ -1634,8 +1643,8 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
                   {
                     label: 'Cancel',
                     action: () => {
-                      // Return to previous modal (quantity 0 options)
-                      checkQuantityZero(item, newQuantity);
+                      // Just close the modal - user can reopen if needed
+                      setShowStatusModal(false);
                     },
                     variant: 'default'
                   }
