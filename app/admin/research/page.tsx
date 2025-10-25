@@ -3,7 +3,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { BookOpen, Map, FileText, Compass, Zap } from 'lucide-react';
+import { BookOpen, Map, FileText, Compass, Zap, CheckCircle, AlertTriangle, X } from 'lucide-react';
 import { useState, useEffect, Suspense } from 'react';
 import { NotebookType } from '@/types/enums';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
@@ -22,6 +22,8 @@ function ResearchPageContent() {
   const [activeTab, setActiveTab] = useState('system-development');
   const [notebooks, setNotebooks] = useState<any[]>([]);
   const [isClient, setIsClient] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
   // SSR Guard: Only run client-side code after hydration
   useEffect(() => {
@@ -353,13 +355,13 @@ function ResearchPageContent() {
         id: `sprint-${projectStatus.currentSprintNumber}`,
         sprintName: projectStatus.currentSprint,
         description: `Sprint ${projectStatus.currentSprintNumber} completed successfully`,
-        completedAt: new Date().toISOString().split('T')[0], // YYYY-MM-DD format
+        completedAt: new Date().toLocaleDateString('en-GB'), // DD-MM-YYYY format
         challenge: projectStatus.currentChallenge || 'System Development',
         phases: Object.entries(projectStatus.phasePlan).map(([phaseKey, phase]: [string, any]) => ({
           id: phaseKey,
-          phaseName: phase.phaseName,
+          phaseName: phase.phaseName || phaseKey, // Use phaseName if available, fallback to phaseKey
           description: phase.description,
-          completedAt: new Date().toISOString().split('T')[0],
+          completedAt: new Date().toLocaleDateString('en-GB'), // DD-MM-YYYY format
           completedFeatures: phase.deliverables || []
         }))
       };
@@ -430,12 +432,14 @@ function ResearchPageContent() {
       // 4. Reload data to reflect changes
       await handleReloadLogs();
       
-      alert(`Sprint ${projectStatus.currentSprintNumber} completed successfully! Moved to Sprint ${nextSprintNumber}.`);
+      setSuccessMessage(`Sprint ${projectStatus.currentSprintNumber} completed successfully! Moved to Sprint ${nextSprintNumber}.`);
+      setShowSuccessModal(true);
       
     } catch (error) {
       console.error('Error completing sprint:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      alert(`Error completing sprint: ${errorMessage}`);
+      setSuccessMessage(`Error completing sprint: ${errorMessage}`);
+      setShowSuccessModal(true);
     }
   };
 
@@ -509,6 +513,39 @@ function ResearchPageContent() {
           onUpdateNotebooks={setNotebooks}
         />
       </Tabs>
+
+      {/* Success/Error Modal */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                {successMessage.includes('successfully') ? (
+                  <CheckCircle className="h-6 w-6 text-green-500" />
+                ) : (
+                  <AlertTriangle className="h-6 w-6 text-red-500" />
+                )}
+                <h3 className="text-lg font-semibold">
+                  {successMessage.includes('successfully') ? 'Success' : 'Error'}
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowSuccessModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <p className="text-gray-700 mb-4">{successMessage}</p>
+            <Button 
+              onClick={() => setShowSuccessModal(false)}
+              className="w-full"
+            >
+              OK
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );  
 }

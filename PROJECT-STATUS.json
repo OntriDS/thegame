@@ -76,7 +76,7 @@
   "nextSprintPlan": {
     "phaseX.1": {
       "phaseName": "KV-only Cutover Hardening & Server-First Workflows",
-      "status": "Done",
+      "status": "Not Started",
       "description": "Finalize the KV-only rebuild by eliminating client-side API usage from server workflows, enforcing auth, and stabilizing API routes.",
       "deliverables": [
         "Replaced ClientAPI calls with server-side datastore in points, financial and sale utilities (KV-only)",
@@ -89,7 +89,7 @@
     },
     "PhaseX.2": {
       "phaseName": "Links & Logging Idempotency + Parity Fixes",
-      "status": "Done",
+      "status": "Not Started",
       "description": "Make link creation idempotent, clean up stale links on edits, and align UI with logging semantics.",
       "deliverables": [
         "createLink made idempotent (duplicate-safe) with clear debug logs",
@@ -102,7 +102,7 @@
     },
     "phaseX.3":{
       "phaseName": "Real-time UI Updates Unification",
-      "status": "Done",
+      "status": "Not Started",
       "description": "Unify event dispatch/subscription so sections refresh instantly after saves across all entities.",
       "deliverables": [
         "Introduced dispatchEntityUpdated() and ref-stabilized useEntityUpdates() hook",
@@ -114,7 +114,7 @@
     },
     "phaseX.4": {
       "phaseName": "Sites/Settlements, Z-Index & Data Architecture Cleanups",
-      "status": "Done",
+      "status": "Not Started",
       "description": "Finish dynamic Site system with settlements, unify z-index layers for modals/submodals, and correct data/reset architecture with DRY fixes.",
       "deliverables": [
         "Settlement CRUD implemented and integrated in Site modal (dynamic dropdown with +New)",
