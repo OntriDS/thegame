@@ -89,20 +89,6 @@ export function SystemDevelopmentTab({ projectStatus }: SystemDevelopmentTabProp
           </CardTitle>
         </CardHeader>
         <CardContent>  
-          {/* Workflow Examples */}
-          {projectStatus.workflowExamples && (
-            <div className="space-y-4 mt-4">
-              <h4 className="font-semibold text-lg border-b pb-2">Workflow Examples</h4>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {Object.entries(projectStatus.workflowExamples).map(([key, workflow]: [string, any]) => (
-                  <div key={key} className="space-y-2 p-3 border rounded-lg">
-                    <h4 className="font-semibold capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</h4>
-                    <p className="text-sm text-muted-foreground">{(workflow as any).description}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
 
 
           {/* Next Challenges */}

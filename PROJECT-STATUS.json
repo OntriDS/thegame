@@ -224,27 +224,5 @@
         "priority": "low"
       }
     }
-  },
-  "workflowExamples": {
-    "buyOrders": {
-      "description": "Should be recurrent, but test as simple assignment first",
-      "type": "recurrent",
-      "testingPhase": "phase3"
-    },
-    "classes": {
-      "description": "Recurrent tasks for teaching schedule",
-      "type": "recurrent",
-      "testingPhase": "phase4"
-    },
-    "muralCompletion": {
-      "description": "One-time task completion workflow",
-      "type": "assignment",
-      "testingPhase": "phase3"
-    }
-  },
-  "automationChallenges": {
-    "theLoop": "System needs to automatically capture and connect activities across all subsystems",
-    "currentState": "Can't manually log everything (defeats the purpose)",
-    "solution": "Design automation workflows before implementing real data capture"
   }
 }
