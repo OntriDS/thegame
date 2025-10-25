@@ -34,6 +34,9 @@ export const SYNC_STRATEGIES: Record<string, SyncStrategy> = {
 /**
  * Auto-sync research logs from local files to KV when changed
  * Uses different strategies based on file type
+ * 
+ * NOTE: This function is designed for development environments where local files exist.
+ * In production KV-only architecture, this functionality is not available.
  */
 export async function syncResearchLogsToKV(): Promise<SyncResult> {
   const results: SyncResult = {synced: [], skipped: [], conflicts: [], errors: []};
@@ -44,65 +47,12 @@ export async function syncResearchLogsToKV(): Promise<SyncResult> {
     return results;
   }
   
-  // Dynamic imports for server-side only modules
-  const fs = await import('fs');
-  const path = await import('path');
+  // In KV-only architecture, there are no local files to sync
+  console.log('[ResearchSync] ⏭️ Skipping sync - KV-only architecture has no local files');
+  results.skipped.push('project-status (KV-only architecture)');
+  results.skipped.push('dev-log (KV-only architecture)');
+  results.skipped.push('notes-log (KV-only architecture)');
   
-  console.log('[ResearchSync] 🔄 Starting research logs sync to KV...');
-  
-  const logsToSync = ['project-status', 'notes-log', 'dev-log'];
-  
-  for (const logType of logsToSync) {
-    try {
-      // Determine file path based on type
-      const localFile = logType === 'project-status' 
-        ? path.join(process.cwd(), 'PROJECT-STATUS.json')
-        : path.join(process.cwd(), 'logs-research', `${logType}.json`);
-      
-      // Check if local file exists and get stats
-      let fileStats;
-      let fileContent;
-      let localData;
-      
-      try {
-        fileStats = await fs.promises.stat(localFile);
-        fileContent = await fs.promises.readFile(localFile, 'utf8');
-        localData = JSON.parse(fileContent);
-        console.log(`[ResearchSync] 📁 Found local ${logType} (${fileStats.size} bytes)`);
-      } catch (error) {
-        console.log(`[ResearchSync] ⚠️ Local ${logType} not found or invalid, skipping`);
-        results.skipped.push(`${logType} (local file missing)`);
-        continue;
-      }
-      
-      // Get current KV data
-      const kvKey = `data:${logType}`;
-      const kvData = await kvGet(kvKey);
-      
-      // Apply sync strategy
-      const strategy = SYNC_STRATEGIES[logType];
-      const syncResult = await applySyncStrategy(logType, strategy, localData, kvData, fileStats);
-      
-      // Update results based on strategy outcome
-      if (syncResult.action === 'synced') {
-        await kvSet(kvKey, localData);
-        results.synced.push(logType);
-        console.log(`[ResearchSync] ✅ Synced ${logType} to KV`);
-      } else if (syncResult.action === 'skipped') {
-        results.skipped.push(`${logType} (${syncResult.reason})`);
-        console.log(`[ResearchSync] ⏭️ Skipped ${logType}: ${syncResult.reason}`);
-      } else if (syncResult.action === 'conflict') {
-        results.conflicts.push(`${logType} (${syncResult.reason})`);
-        console.log(`[ResearchSync] ⚠️ Conflict detected for ${logType}: ${syncResult.reason}`);
-      }
-      
-    } catch (error) {
-      console.error(`[ResearchSync] ❌ Error syncing ${logType}:`, error);
-      results.errors.push(`${logType} (${error instanceof Error ? error.message : 'Unknown error'})`);
-    }
-  }
-  
-  console.log('[ResearchSync] 📋 Sync results:', results);
   return results;
 }
 
@@ -159,6 +109,9 @@ async function applySyncStrategy(
 
 /**
  * Check if research logs need syncing without actually syncing
+ * 
+ * NOTE: In KV-only architecture, this always returns that everything is up to date
+ * since there are no local files to compare against.
  */
 export async function checkResearchLogsSyncStatus(): Promise<{needsSync: string[], upToDate: string[], conflicts: string[]}> {
   const results = {needsSync: [] as string[], upToDate: [] as string[], conflicts: [] as string[]};
@@ -167,48 +120,21 @@ export async function checkResearchLogsSyncStatus(): Promise<{needsSync: string[
     return results;
   }
   
-  // Dynamic imports for server-side only modules
-  const fs = await import('fs');
-  const path = await import('path');
-  
+  // In KV-only architecture, all research data is already in KV
+  // There are no local files to sync, so everything is up to date
   const logsToCheck = ['project-status', 'notes-log', 'dev-log'];
+  results.upToDate = logsToCheck;
   
-  for (const logType of logsToCheck) {
-    try {
-      // Determine file path based on type
-      const localFile = logType === 'project-status' 
-        ? path.join(process.cwd(), 'PROJECT-STATUS.json')
-        : path.join(process.cwd(), 'logs-research', `${logType}.json`);
-      
-      const kvKey = `data:${logType}`;
-      
-      const fileStats = await fs.promises.stat(localFile);
-      const fileContent = await fs.promises.readFile(localFile, 'utf8');
-      const localData = JSON.parse(fileContent);
-      
-      const kvData = await kvGet(kvKey);
-      const strategy = SYNC_STRATEGIES[logType];
-      
-      // Apply strategy logic without actually syncing
-      const syncResult = await applySyncStrategy(logType, strategy, localData, kvData, fileStats);
-      
-      if (syncResult.action === 'synced') {
-        results.needsSync.push(logType);
-      } else if (syncResult.action === 'conflict') {
-        results.conflicts.push(logType);
-      } else {
-        results.upToDate.push(logType);
-      }
-    } catch (error) {
-      console.error(`[ResearchSync] Error checking ${logType}:`, error);
-    }
-  }
+  console.log('[ResearchSync] 📊 Status check - KV-only architecture: all data up to date');
   
   return results;
 }
 
 /**
  * Sync individual research data type
+ * 
+ * NOTE: In KV-only architecture, this function is not applicable since there are no local files.
+ * All research data is already stored in KV and managed through the normal API routes.
  */
 export async function syncIndividualResearchData(
   logType: string, 
@@ -228,63 +154,9 @@ export async function syncIndividualResearchData(
     return results;
   }
   
-  // Dynamic imports for server-side only modules
-  const fs = await import('fs');
-  const path = await import('path');
-  
-  console.log(`[ResearchSync] 🔄 Starting ${logType} sync...`);
-  
-  try {
-    // Determine file path based on type
-    const localFile = logType === 'project-status' 
-      ? path.join(process.cwd(), 'PROJECT-STATUS.json')
-      : path.join(process.cwd(), 'logs-research', `${logType}.json`);
-    
-    // Check if local file exists and get stats
-    let fileStats;
-    let fileContent;
-    let localData;
-    
-    try {
-      fileStats = await fs.promises.stat(localFile);
-      fileContent = await fs.promises.readFile(localFile, 'utf8');
-      localData = JSON.parse(fileContent);
-      console.log(`[ResearchSync] 📁 Found local ${logType} (${fileStats.size} bytes)`);
-    } catch (error) {
-      console.log(`[ResearchSync] ⚠️ Local ${logType} not found or invalid`);
-      results.errors.push(`${logType} (local file missing)`);
-      return results;
-    }
-    
-    // Get current KV data
-    const kvKey = `data:${logType}`;
-    const kvData = await kvGet(kvKey);
-    
-    // Use override if provided, otherwise use default strategy
-    const strategy = strategyOverride 
-      ? { type: strategyOverride, description: SYNC_STRATEGIES[logType].description }
-      : SYNC_STRATEGIES[logType];
-    
-    // Apply sync strategy
-    const syncResult = await applySyncStrategy(logType, strategy, localData, kvData, fileStats);
-    
-    // Update results based on strategy outcome
-    if (syncResult.action === 'synced') {
-      await kvSet(kvKey, localData);
-      results.synced.push(logType);
-      console.log(`[ResearchSync] ✅ Synced ${logType} to KV`);
-    } else if (syncResult.action === 'skipped') {
-      results.skipped.push(`${logType} (${syncResult.reason})`);
-      console.log(`[ResearchSync] ⏭️ Skipped ${logType}: ${syncResult.reason}`);
-    } else if (syncResult.action === 'conflict') {
-      results.conflicts.push(`${logType} (${syncResult.reason})`);
-      console.log(`[ResearchSync] ⚠️ Conflict detected for ${logType}: ${syncResult.reason}`);
-    }
-    
-  } catch (error) {
-    console.error(`[ResearchSync] ❌ Error syncing ${logType}:`, error);
-    results.errors.push(`${logType} (${error instanceof Error ? error.message : 'Unknown error'})`);
-  }
+  // In KV-only architecture, there are no local files to sync
+  console.log(`[ResearchSync] ⏭️ Skipping ${logType} sync - KV-only architecture has no local files`);
+  results.skipped.push(`${logType} (KV-only architecture - no local files)`);
   
   return results;
 }
