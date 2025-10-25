@@ -18,7 +18,7 @@ import { SaleType, SaleStatus, PaymentMethod, Currency, ItemType, ItemStatus, Ta
 import { getSubTypesForItemType } from '@/lib/utils/item-utils';
 import type { Station } from '@/types/type-aliases';
 import { createSiteOptionsWithCategories } from '@/lib/utils/site-options-utils';
-import { createCharacterOptions, createStationCategoryOptions, createTaskParentOptions, createItemTypeSubTypeOptions, getItemTypeFromCombined, createItemOptions } from '@/lib/utils/searchable-select-utils';
+import { createCharacterOptions, createStationCategoryOptions, createTaskParentOptions, createItemTypeSubTypeOptions, getItemTypeFromCombined, createItemOptions, getCategoryFromCombined } from '@/lib/utils/searchable-select-utils';
 import { getAreaForStation } from '@/lib/utils/business-structure-utils';
 import { ClientAPI } from '@/lib/client-api';
 import { dispatchEntityUpdated } from '@/lib/ui/ui-events';
@@ -1450,6 +1450,7 @@ export default function SalesModal({
                       placeholder="Select station..."
                       options={createStationCategoryOptions()}
                       autoGroupByCategory={true}
+                      getCategoryForValue={(value) => getCategoryFromCombined(value)}
                       className="h-8 text-sm"
                     />
                   </div>
@@ -1618,6 +1619,7 @@ export default function SalesModal({
                         placeholder="Select station..."
                         options={createStationCategoryOptions()}
                         autoGroupByCategory={true}
+                        getCategoryForValue={(value) => getCategoryFromCombined(value)}
                         className="h-8 text-sm"
                       />
                     </div>

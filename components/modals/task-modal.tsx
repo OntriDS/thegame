@@ -867,8 +867,8 @@ export default function TaskModal({
                   onValueChange={handleStationCategoryChange}
                   options={createStationCategoryOptions()}
                   autoGroupByCategory={true}
-                  getCategoryForValue={(value) => getStationFromCombined(value)}
-                  placeholder="Select station and category..."
+                  getCategoryForValue={(value) => getCategoryFromCombined(value)}
+                  placeholder="Select station..."
                   className="h-8 text-sm"
                   persistentCollapsible={true}
                   instanceId="task-modal-station-category"

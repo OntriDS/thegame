@@ -23,7 +23,7 @@ import { getCompanyAreas, getPersonalAreas, isCompanyStation, isPersonalStation,
 import type { Station, SubItemType } from '@/types/type-aliases';
 import { ItemType, Collection, CharacterRole } from '@/types/enums';
 import { getSubTypesForItemType } from '@/lib/utils/item-utils';
-import { getCategoryForItemType, createItemTypeOptionsWithCategories, createStationCategoryOptions, createCharacterOptions, createItemTypeSubTypeOptions, getItemTypeFromCombined } from '@/lib/utils/searchable-select-utils';
+import { getCategoryForItemType, createItemTypeOptionsWithCategories, createStationCategoryOptions, createCharacterOptions, createItemTypeSubTypeOptions, getItemTypeFromCombined, getCategoryFromCombined } from '@/lib/utils/searchable-select-utils';
 import { createSiteOptionsWithCategories } from '@/lib/utils/site-options-utils';
 import { ClientAPI } from '@/lib/client-api';
 import { dispatchEntityUpdated } from '@/lib/ui/ui-events';
@@ -605,6 +605,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
                   placeholder="Select station..."
                   options={createStationCategoryOptions()}
                   autoGroupByCategory={true}
+                  getCategoryForValue={(value) => getCategoryFromCombined(value)}
                   className="h-8 text-sm"
                 />
               </div>

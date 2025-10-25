@@ -537,7 +537,8 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
                 onValueChange={handleStationCategoryChange}
                 options={createStationCategoryOptions()}
                 autoGroupByCategory={true}
-                placeholder="Select station and category..."
+                getCategoryForValue={(value) => getCategoryFromCombined(value)}
+                placeholder="Select station..."
                 className="h-8 text-sm mt-1"
                 persistentCollapsible={true}
                 instanceId="item-modal-station-category"
