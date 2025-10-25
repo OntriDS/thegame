@@ -155,6 +155,21 @@ export function TasksLifecycleTab({ tasksLog, onReload, isReloading }: TasksLife
                   const category: string = formatCategory(entry.category || data.category);
                   const priority: string = formatPriority(data.priority);
                   
+                  // Debug logging for all entries to see what data we're getting
+                  console.log('🔍 Task entry debug:', {
+                    entry,
+                    data,
+                    status,
+                    station: data.station || entry.station,
+                    category: data.category || entry.category,
+                    type: data.taskType || entry.taskType,
+                    priority: data.priority,
+                    formattedStation: station,
+                    formattedCategory: category,
+                    formattedType: type,
+                    formattedPriority: priority
+                  });
+                  
                   // Debug logging for Done entries
                   if (status.toLowerCase() === 'done') {
                     console.log('🔍 Done entry debug:', {
@@ -244,20 +259,22 @@ export function TasksLifecycleTab({ tasksLog, onReload, isReloading }: TasksLife
                             {name}
                           </span>
                           
+                          {/* Type */}
+                          <span className="text-muted-foreground min-w-0 flex-shrink-0">
+                            {type}
+                          </span>
+                          
                           {/* Station */}
                           <span className="text-muted-foreground min-w-0 flex-shrink-0">
                             {station}
                           </span>
                           
-                          {/* Category */}
-                          <span className="text-muted-foreground min-w-0 flex-shrink-0">
-                            {category}
-                          </span>
-                          
-                          {/* Type */}
-                          <span className="text-muted-foreground min-w-0 flex-shrink-0">
-                            {type}
-                          </span>
+                          {/* Priority */}
+                          {priority !== '—' && (
+                            <span className="text-muted-foreground min-w-0 flex-shrink-0">
+                              {priority}
+                            </span>
+                          )}
                           
                           {/* Rename Info (if any) */}
                           {renameInfo && (

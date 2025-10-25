@@ -186,7 +186,7 @@ export default function DataCenterPage() {
         setActiveMainTab(value);
         setPreference('data-center-active-main-tab', value);
       }} className="w-full">
-        <TabsList className="grid w-full grid-cols-7">
+        <TabsList className="grid w-full grid-cols-8">
           <TabsTrigger value="tasks-lifecycle" className="flex items-center gap-2">
             <CheckCircle className="h-4 w-4" />
             Tasks
