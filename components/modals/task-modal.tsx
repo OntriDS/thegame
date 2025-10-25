@@ -861,7 +861,7 @@ export default function TaskModal({
               <h3 className="text-sm font-semibold text-muted-foreground border-b pb-1">🧬 NATIVE</h3>
               
               <div className="space-y-2">
-                <Label htmlFor="task-station-category" className="text-xs">Station & Category</Label>
+                <Label htmlFor="task-station-category" className="text-xs">Station</Label>
                 <SearchableSelect
                   value={getStationValue(station)}
                   onValueChange={handleStationCategoryChange}
