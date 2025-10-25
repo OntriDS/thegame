@@ -58,83 +58,72 @@
       ]
     },
     "phase11.4": {
-      "phaseName": "Links System, finish all main Entities, basic Calendar and Schedule",
+      "phaseName": "Links System, finish all main Entities",
       "status": "In Progress",
       "description": "Links System: The Rossetta Effect; finish Character, Player, Account and Sales Entities, basic Calendar and Schedule",
       "deliverables": [
-        "✅Define and Create Sales Entity and develop Sales Section",
-        "✅Create Links System, The Rossetta Effect and implemented",
-        "✅Create Character Entity, Update Player Section, and implement Basic Character Modal",
-        "✅Organize and Create missing Documentation and Completely Replace Player Entity.",
-        "✅Do a full migration to the Character Entity, orchestrate new entites and test.",
-        "✅Track customer information, Handle payment processing",
+        "Define and Create Sales Entity and develop Sales Section",
+        "Create Links System, The Rossetta Effect and implemented",
+        "Create Character Entity, Update Player Section, and implement Basic Character Modal",
+        "Organize and Create missing Documentation and Completely Replace Player Entity.",
+        "Do a full migration to the Character Entity, orchestrate new entites and test.",
+        "Track customer information, Handle payment processing",
         "Sales Transactions: Record all actual different types of sales (direct, ferias, consignment, online)",
-        "Develop Calendar and Schedule Tabs in the Control Room",
-        "Debug and fix Local and KV Environments with full Rossetta Effect working System"
+        "Develop Calendar and Schedule Tabs in the Control Room"
       ]
     }
   },
   "nextSprintPlan": {
     "phaseX.1": {
-      "phaseName": "Archive System Foundation",
-      "status": "Not Started",
-      "description": "Create archive structure and monthly close workflow",
+      "phaseName": "KV-only Cutover Hardening & Server-First Workflows",
+      "status": "Done",
+      "description": "Finalize the KV-only rebuild by eliminating client-side API usage from server workflows, enforcing auth, and stabilizing API routes.",
       "deliverables": [
-        "Create archives/ folder structure with monthly organization",
-        "Implement archives/index.json for archived months index",
-        "Create monthly close functionality to move completed data",
-        "Move Done tasks to archive with proper status preservation",
-        "Move Sold items to archive maintaining final status",
-        "Move all records to archive (inherently completed data)",
-        "Create summary generation for archived months",
-        "Update DataStore to remove archived data from active storage",
-        "Keep only current working set in active DataStore"
+        "Replaced ClientAPI calls with server-side datastore in points, financial and sale utilities (KV-only)",
+        "Fixed entity workflows to run entirely on the server (tasks, sales, financials)",
+        "Added try/catch error handling to all core API routes (tasks/items/financials/sales/characters/sites)",
+        "Enforced jose JWT middleware + requireAdminAuth on every API route",
+        "Removed obsolete localStorage/local-environment code; project is KV-only",
+        "Effects-registry verified for idempotency; no server→server HTTP anti-patterns"
       ]
     },
     "PhaseX.2": {
-      "phaseName": "Monthly Logging System",
-      "status": "Not Started",
-      "description": "Implement comprehensive monthly logging for data lifecycle tracking",
+      "phaseName": "Links & Logging Idempotency + Parity Fixes",
+      "status": "Done",
+      "description": "Make link creation idempotent, clean up stale links on edits, and align UI with logging semantics.",
       "deliverables": [
-        "Create monthly log file structure (tasks-log-MM-YY.json format)",
-        "Implement task lifecycle logging (Created, Started, Done)",
-        "Implement item lifecycle logging (Created, Moved, Sold)",
-        "Implement record lifecycle logging (Created)",
-        "Implement financial effects logging with proper categorization",
-        "Implement player effects logging for points and achievements",
-        "Update logging logic to track complete data lifecycle",
-        "Ensure logs track lifecycle events, not current state",
-        "Test logging system with real workflow examples"
+        "createLink made idempotent (duplicate-safe) with clear debug logs",
+        "Link validation uses retry for KV eventual consistency; bootstrap links allow skipValidation",
+        "Item effects clean up ITEM_TASK/ITEM_SITE/ITEM_CHARACTER links before re-creating",
+        "Lifecycle logging parity: append events + update-in-place for descriptive fields",
+        "Data Center logs fixed to read flat entry fields before nested (tasks/items/financials)",
+        "API error messages surfaced consistently in route handlers"
       ]
     },
     "phaseX.3":{
-      "phaseName": "Dashboards Section, Month Selectors connected to Archive System and Events Tab",
-      "status": "Not Started",
-      "description": "Implement month/year selectors and connect it to Archive System and Dashboards Section",
+      "phaseName": "Real-time UI Updates Unification",
+      "status": "Done",
+      "description": "Unify event dispatch/subscription so sections refresh instantly after saves across all entities.",
       "deliverables": [
-        "Add Month Selector to Archive Section for historical data viewing",
-        "Add Month Selector to Financials Section for monthly financials",
-        "Test month switching functionality across all sections",
-        "Ensure proper data isolation between current and historical views",
-        "Create Basic Dashboard Section and prepare to visualize data across all sections",
-        "Connect Dashboards to Archive System and the Month Selectors",
-        "Create connectivity with all other sections.",
-        "Define and Create Events Tab in the Control Room",
-        "Conected to Events to the system and Manage Events, tracking Tasks and Items sales in a specific timeframe.",
-        "Events temporarily take over regular workflow during time-bound campaigns (e.g. Special Week Sale)."
+        "Introduced dispatchEntityUpdated() and ref-stabilized useEntityUpdates() hook",
+        "Replaced manual window event listeners/dispatches in modals and pages",
+        "Applied refreshKey pattern to break stale memoization and ensure re-renders",
+        "Verified immediate updates for tasks, items, financials, sales, sites, characters, players",
+        "Sales keeps temporary dual path (direct reload + event listener) for safety during migration"
       ]
     },
     "phaseX.4": {
-      "phaseName": "AI Agent System, PixelBrain",
-      "status": "Not Started",
-      "description": "",
+      "phaseName": "Sites/Settlements, Z-Index & Data Architecture Cleanups",
+      "status": "Done",
+      "description": "Finish dynamic Site system with settlements, unify z-index layers for modals/submodals, and correct data/reset architecture with DRY fixes.",
       "deliverables": [
-        "Define and Develop 'Pixel Brain', a 'Manager Agent' to Manage a Set of 'AI Agents'",
-        "Create one AI Agent for Time Planning, one for Prepare classes and one for Tasks Organization",
-        "Create one AI Marketing Agent to Manage Social Media Apps, Marketing Campaings and Content Creation",
-        "Create one AI Agent for Data Analysis and Reporting of Business Data with Performance Metrics",
-        "Create one AI Agent for Game Design improvements, Player Analysis and UX, Game Balance and Game Mechanics",
-        "Create a set of Automations: Voice to Text. Image to Text, Text to Speech, PDF Converter, Image Creator. "
+        "Settlement CRUD implemented and integrated in Site modal (dynamic dropdown with +New)",
+        "Seed updated to correct default sites (HQ, Drive, World); invalid 'None' site guarded",
+        "Unified z-index layers; submodals portaled above parents using z-index-utils",
+        "Reset workflow extended to clear system-state assets keys; rates/preferences preserved",
+        "Documentation updated clarifying System State vs Configuration (assets/rates) and reset policy",
+        "DRY enforcement: station/category usage via BUSINESS_STRUCTURE; CSV/enum/icon/color usages aligned",
+        "Recurrent tasks wiring and cascade status confirmation integrated per workflow plan"
       ]
     }
   },

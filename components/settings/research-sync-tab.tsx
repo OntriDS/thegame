@@ -15,7 +15,8 @@ import {
   Database,
   FileText,
   Code,
-  Target
+  Target,
+  Download
 } from 'lucide-react';
 import { SYNC_STRATEGIES, SyncResult } from '@/workflows/settings/research-sync-types';
 
@@ -28,6 +29,7 @@ interface SyncStatus {
 export function ResearchSyncTab() {
   const [syncStatus, setSyncStatus] = useState<SyncStatus>({ needsSync: [], upToDate: [], conflicts: [] });
   const [isLoading, setIsLoading] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const [lastSync, setLastSync] = useState<Record<string, string>>({});
   const [syncResults, setSyncResults] = useState<Record<string, SyncResult>>({});
 
@@ -70,6 +72,68 @@ export function ResearchSyncTab() {
       console.error('Sync error:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleDownloadProjectStatus = async () => {
+    setIsDownloading(true);
+    try {
+      const response = await fetch('/api/project-status');
+      if (response.ok) {
+        const data = await response.json();
+        
+        // Create a blob with the JSON data
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = window.URL.createObjectURL(blob);
+        
+        // Create a temporary link and trigger download
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `project-status-${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(link);
+        link.click();
+        
+        // Cleanup
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      } else {
+        console.error('Failed to download project status');
+      }
+    } catch (error) {
+      console.error('Download error:', error);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  const handleDownloadDevLog = async () => {
+    setIsDownloading(true);
+    try {
+      const response = await fetch('/api/dev-log');
+      if (response.ok) {
+        const data = await response.json();
+        
+        // Create a blob with the JSON data
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = window.URL.createObjectURL(blob);
+        
+        // Create a temporary link and trigger download
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `dev-log-${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(link);
+        link.click();
+        
+        // Cleanup
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      } else {
+        console.error('Failed to download dev log');
+      }
+    } catch (error) {
+      console.error('Download error:', error);
+    } finally {
+      setIsDownloading(false);
     }
   };
 
@@ -170,6 +234,44 @@ export function ResearchSyncTab() {
                       <div className="flex items-center gap-3">
                         {getStatusIcon(logType)}
                         {getStatusBadge(logType)}
+                        
+                        {/* Download button for project-status */}
+                        {logType === 'project-status' && (
+                          <Button
+                            onClick={handleDownloadProjectStatus}
+                            disabled={isDownloading}
+                            size="sm"
+                            variant="outline"
+                          >
+                            {isDownloading ? (
+                              <RefreshCw className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <>
+                                <Download className="h-4 w-4 mr-2" />
+                                Download
+                              </>
+                            )}
+                          </Button>
+                        )}
+                        
+                        {/* Download button for dev-log */}
+                        {logType === 'dev-log' && (
+                          <Button
+                            onClick={handleDownloadDevLog}
+                            disabled={isDownloading}
+                            size="sm"
+                            variant="outline"
+                          >
+                            {isDownloading ? (
+                              <RefreshCw className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <>
+                                <Download className="h-4 w-4 mr-2" />
+                                Download
+                              </>
+                            )}
+                          </Button>
+                        )}
                         
                         <Button
                           onClick={() => handleSync(logType)}
