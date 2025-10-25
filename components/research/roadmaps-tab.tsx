@@ -100,25 +100,19 @@ function BuildingFloor({
       <div className="absolute left-0 right-0 top-1/2 h-0.5 bg-gradient-to-r from-slate-200 via-slate-300 to-slate-200 transform -translate-y-1/2" />
       
       {/* Systems on this floor */}
-      <div className="relative flex justify-between items-center py-8">
-        {systems.map(([key, info], index) => {
+      <div className="relative flex justify-center items-center py-6 gap-16">
+        {systems.map(([key, info]) => {
           const Icon = systemIcons[key as keyof typeof systemIcons] || Building2;
           const name = systemNames[key as keyof typeof systemNames] || key;
-          const isEven = index % 2 === 0;
           
           return (
-            <div
-              key={key}
-              className={`relative flex flex-col items-center group ${
-                isEven ? 'self-start' : 'self-end'
-              }`}
-            >
+            <div key={key} className="relative flex flex-col items-center group">
               {/* Connection line to floor */}
-              <div className={`w-0.5 h-8 bg-slate-300 ${isEven ? 'mb-2' : 'mt-2'}`} />
+              <div className="w-0.5 h-6 bg-slate-300 mb-1" />
               
               {/* System pin */}
               <div className={`
-                relative w-16 h-16 rounded-full 
+                relative w-12 h-12 rounded-full 
                 bg-gradient-to-br ${getStatusColor(info.status)}
                 shadow-lg ${getStatusGlow(info.status)}
                 flex items-center justify-center
@@ -126,18 +120,18 @@ function BuildingFloor({
                 group-hover:scale-110 group-hover:shadow-xl
                 ${info.status === 'Done' ? 'animate-pulse' : ''}
               `}>
-                <Icon className="h-8 w-8 text-white" />
+                <Icon className="h-6 w-6 text-white" />
                 
                 {/* Version badge */}
-                <div className="absolute -top-2 -right-2 bg-white rounded-full px-1.5 py-0.5 shadow-md">
-                  <span className="text-xs font-bold text-slate-600">{info.version}</span>
+                <div className="absolute -top-1 -right-1 bg-white rounded-full px-1 py-0.5 shadow-md">
+                  <span className="text-[10px] font-bold text-slate-600">{info.version}</span>
                 </div>
               </div>
               
               {/* System name */}
               <div className="mt-2 text-center">
-                <div className="text-sm font-medium text-slate-700">{name}</div>
-                <div className="text-xs text-slate-500">Floor {floorNumber}</div>
+                <div className="text-xs font-medium text-slate-700">{name}</div>
+                <div className="text-[10px] text-slate-500">F{floorNumber}</div>
               </div>
             </div>
           );
@@ -150,7 +144,7 @@ function BuildingFloor({
 function SmartBuilding({ systems }: { systems: NonNullable<ProjectStatus['systems']> }) {
   const floors = useMemo(() => {
     const entries = Object.entries(systems);
-    // Order systems for building layout
+    // Order systems for building layout (foundations at bottom)
     const order = [
       'foundations',
       'settings', 
@@ -167,10 +161,10 @@ function SmartBuilding({ systems }: { systems: NonNullable<ProjectStatus['system
     ];
     const sorted = entries.sort((a, b) => order.indexOf(a[0]) - order.indexOf(b[0]));
     
-    // Group into floors (3 systems per floor)
+    // Group into floors (2 systems per floor)
     const floors: Array<Array<[string, { status: SystemStatus; version: string; description?: string }]>> = [];
-    for (let i = 0; i < sorted.length; i += 3) {
-      floors.push(sorted.slice(i, i + 3));
+    for (let i = 0; i < sorted.length; i += 2) {
+      floors.push(sorted.slice(i, i + 2));
     }
     return floors;
   }, [systems]);
@@ -190,7 +184,7 @@ function SmartBuilding({ systems }: { systems: NonNullable<ProjectStatus['system
           </div>
 
           {/* Building floors */}
-          <div className="space-y-12">
+          <div className="space-y-8">
             {floors.map((floorSystems, index) => (
               <BuildingFloor 
                 key={index} 
