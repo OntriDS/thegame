@@ -74,7 +74,7 @@ export class MCPServer {
           // Add other required fields with defaults
           dueDate: undefined,
           parentId: null,
-          isRecurrentParent: false,
+          isRecurrentGroup: false,
           isTemplate: false,
           outputItemId: null,
           siteId: null,

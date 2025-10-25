@@ -180,7 +180,7 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate }: TaskD
       progress: 0,
       order: Date.now(),
       parentId: parent.id,
-      isRecurrentParent: false,
+      isRecurrentGroup: false,
       isTemplate: true,
       frequencyConfig: undefined, // Do not set by default
       dueDate: parent.dueDate ? new Date(parent.dueDate) : undefined,
