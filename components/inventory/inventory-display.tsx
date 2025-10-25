@@ -117,11 +117,11 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
     }
   }, [selectedColumns, setPreference, preferencesLoaded]);
 
-  // Load preferences on mount
+  // Load active tab ONCE on mount
   useEffect(() => {
     const savedActiveTab = getPreference('inventory-active-tab', InventoryTab.STICKERS);
     setActiveTab(savedActiveTab as InventoryTab);
-  }, [getPreference]);
+  }, []); // ← SOLUTION: Empty array = runs once on mount only
 
   // Initialize selectedLocationsForModel with default sites when sites are loaded
   useEffect(() => {
@@ -135,7 +135,8 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
     }
   }, [sites, selectedLocationsForModel.size]);
 
-  // Load preferences after hydration to prevent SSR mismatches
+  // Load preferences ONCE on mount - no dependencies
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     // Load collapsed divisions
     const savedDivisions = getPreference('inventory-divisions-collapsed');
@@ -186,7 +187,7 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
 
     // Mark preferences as loaded to enable saving
     setPreferencesLoaded(true);
-  }, [getPreference]);
+  }, []); // ← SOLUTION: Empty array = runs once on mount only
 
 
 
