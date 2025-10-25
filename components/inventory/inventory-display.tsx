@@ -77,8 +77,9 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
    const [showThresholdModal, setShowThresholdModal] = useState(false);
   const [isImporting, setIsImporting] = useState(false); // Flag to prevent status modals during import
    
-   // Column selection state for location modal
-   const [selectedColumns, setSelectedColumns] = useState<Set<string>>(new Set(['own', 'consignment']));
+  // Column selection state for location modal
+  const [selectedColumns, setSelectedColumns] = useState<Set<string>>(new Set(['own', 'consignment']));
+  const [preferencesLoaded, setPreferencesLoaded] = useState(false);
 
   useEffect(() => {
     // Load items when component mounts
@@ -96,19 +97,25 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
     };
   }, []);
 
-  // Save thresholds to preferences when they change
+  // Save thresholds to preferences when they change (but not during initial load)
   useEffect(() => {
-    setPreference('inventory-yellow-threshold', yellowThreshold.toString());
-  }, [yellowThreshold, setPreference]);
+    if (preferencesLoaded) {
+      setPreference('inventory-yellow-threshold', yellowThreshold.toString());
+    }
+  }, [yellowThreshold, setPreference, preferencesLoaded]);
 
   useEffect(() => {
-    setPreference('inventory-red-threshold', redThreshold.toString());
-  }, [redThreshold, setPreference]);
+    if (preferencesLoaded) {
+      setPreference('inventory-red-threshold', redThreshold.toString());
+    }
+  }, [redThreshold, setPreference, preferencesLoaded]);
 
-  // Save column selection to preferences when it changes
+  // Save column selection to preferences when it changes (but not during initial load)
   useEffect(() => {
-    setPreference('inventory-selected-columns', JSON.stringify(Array.from(selectedColumns)));
-  }, [selectedColumns, setPreference]);
+    if (preferencesLoaded) {
+      setPreference('inventory-selected-columns', JSON.stringify(Array.from(selectedColumns)));
+    }
+  }, [selectedColumns, setPreference, preferencesLoaded]);
 
   // Load preferences on mount
   useEffect(() => {
@@ -176,6 +183,9 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
         // Keep default Set
       }
     }
+
+    // Mark preferences as loaded to enable saving
+    setPreferencesLoaded(true);
   }, [getPreference]);
 
 
