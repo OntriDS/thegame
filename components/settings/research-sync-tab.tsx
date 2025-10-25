@@ -32,7 +32,7 @@ export function ResearchSyncTab() {
   const [isDownloading, setIsDownloading] = useState(false);
   const [lastSync, setLastSync] = useState<Record<string, string>>({});
   const [syncResults, setSyncResults] = useState<Record<string, SyncResult>>({});
-  const [strategyOverrides, setStrategyOverrides] = useState<Record<string, 'force' | 'smart' | 'migrate-once'>>({});
+  const [strategyOverrides, setStrategyOverrides] = useState<Record<string, 'replace' | 'merge'>>({});
 
   // Load sync status on mount
   useEffect(() => {
@@ -166,19 +166,15 @@ export function ResearchSyncTab() {
 
   const getSyncButtonText = (logType: string) => {
     const strategy = SYNC_STRATEGIES[logType];
+    const displayName = logType.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase());
     switch (strategy.type) {
-      case 'force': return 'Sync Project Status';
-      case 'smart': return 'Sync Dev Log';
-      case 'migrate-once': return 'Migrate Notes (One-Time)';
-      default: return `Sync ${logType}`;
+      case 'replace': return `Replace ${displayName}`;
+      case 'merge': return `Merge ${displayName}`;
+      default: return `Sync ${displayName}`;
     }
   };
 
   const isButtonDisabled = (logType: string) => {
-    const strategy = SYNC_STRATEGIES[logType];
-    if (strategy.type === 'migrate-once' && syncStatus.upToDate.includes(logType)) {
-      return true; // Disable after migration
-    }
     return isLoading;
   };
 
@@ -281,7 +277,7 @@ export function ResearchSyncTab() {
                           onClick={() => handleSync(logType)}
                           disabled={isButtonDisabled(logType)}
                           size="sm"
-                          variant={strategy.type === 'force' ? 'default' : 'outline'}
+                          variant={strategy.type === 'replace' ? 'default' : 'outline'}
                         >
                           {isLoading ? (
                             <RefreshCw className="h-4 w-4 animate-spin" />
@@ -300,34 +296,23 @@ export function ResearchSyncTab() {
                           <input
                             type="radio"
                             name={`strategy-${logType}`}
-                            value="force"
-                            checked={(strategyOverrides[logType] || SYNC_STRATEGIES[logType].type) === 'force'}
-                            onChange={(e) => setStrategyOverrides(prev => ({ ...prev, [logType]: 'force' }))}
+                            value="replace"
+                            checked={(strategyOverrides[logType] || SYNC_STRATEGIES[logType].type) === 'replace'}
+                            onChange={(e) => setStrategyOverrides(prev => ({ ...prev, [logType]: 'replace' }))}
                             className="cursor-pointer"
                           />
-                          <span className="text-sm">Force (Replace)</span>
+                          <span className="text-sm">Replace</span>
                         </label>
                         <label className="flex items-center gap-2 cursor-pointer">
                           <input
                             type="radio"
                             name={`strategy-${logType}`}
-                            value="smart"
-                            checked={(strategyOverrides[logType] || SYNC_STRATEGIES[logType].type) === 'smart'}
-                            onChange={(e) => setStrategyOverrides(prev => ({ ...prev, [logType]: 'smart' }))}
+                            value="merge"
+                            checked={(strategyOverrides[logType] || SYNC_STRATEGIES[logType].type) === 'merge'}
+                            onChange={(e) => setStrategyOverrides(prev => ({ ...prev, [logType]: 'merge' }))}
                             className="cursor-pointer"
                           />
-                          <span className="text-sm">Smart (Merge)</span>
-                        </label>
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <input
-                            type="radio"
-                            name={`strategy-${logType}`}
-                            value="migrate-once"
-                            checked={(strategyOverrides[logType] || SYNC_STRATEGIES[logType].type) === 'migrate-once'}
-                            onChange={(e) => setStrategyOverrides(prev => ({ ...prev, [logType]: 'migrate-once' }))}
-                            className="cursor-pointer"
-                          />
-                          <span className="text-sm">Migrate (One-Time)</span>
+                          <span className="text-sm">Merge</span>
                         </label>
                       </div>
                     </div>
@@ -390,15 +375,15 @@ export function ResearchSyncTab() {
             <CardContent className="space-y-2 text-sm">
               <div className="flex items-center gap-2">
                 <Target className="h-4 w-4 text-blue-500" />
-                <span><strong>Project Status:</strong> Force sync - always overwrites KV (version controlled)</span>
+                <span><strong>Project Status:</strong> Replace sync - overwrites KV with deployed files (version controlled)</span>
               </div>
               <div className="flex items-center gap-2">
                 <Code className="h-4 w-4 text-orange-500" />
-                <span><strong>Dev Log:</strong> Smart sync - checks timestamps, warns on conflicts</span>
+                <span><strong>Dev Log:</strong> Replace sync - overwrites KV with deployed files (version controlled)</span>
               </div>
               <div className="flex items-center gap-2">
                 <FileText className="h-4 w-4 text-green-500" />
-                <span><strong>Notes:</strong> One-time migration - KV becomes source of truth after sync</span>
+                <span><strong>Notes:</strong> Merge sync - combines deployed files with existing KV data</span>
               </div>
             </CardContent>
           </Card>
