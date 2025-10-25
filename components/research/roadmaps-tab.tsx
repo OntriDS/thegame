@@ -118,7 +118,6 @@ function BuildingFloor({
                 flex items-center justify-center
                 transition-all duration-300
                 group-hover:scale-110 group-hover:shadow-xl
-                ${info.status === 'Done' ? 'animate-pulse' : ''}
               `}>
                 <Icon className="h-6 w-6 text-white" />
                 
