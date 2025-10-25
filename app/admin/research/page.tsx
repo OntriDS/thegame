@@ -393,32 +393,44 @@ function ResearchPageContent() {
 
       // 3. Update project status: move nextSprintPlan to phasePlan, increment sprint number
       const nextSprintNumber = (projectStatus.currentSprintNumber || 10) + 1;
+      
+      // Helper function to update phase keys from phaseX.N to phase{sprintNumber}.N
+      const updatePhaseKeys = (phases: any, sprintNumber: number) => {
+        const updatedPhases: any = {};
+        Object.entries(phases).forEach(([key, phase]: [string, any]) => {
+          // Replace phaseX.N with phase{sprintNumber}.N
+          const newKey = key.replace(/phaseX\./g, `phase${sprintNumber}.`);
+          updatedPhases[newKey] = phase;
+        });
+        return updatedPhases;
+      };
+      
       const updatedProjectStatus = {
         ...projectStatus,
         lastUpdated: new Date().toISOString(),
         currentSprintNumber: nextSprintNumber,
         currentSprint: `Sprint ${nextSprintNumber}`,
-        phasePlan: projectStatus.nextSprintPlan,
+        phasePlan: updatePhaseKeys(projectStatus.nextSprintPlan, nextSprintNumber),
         nextSprintPlan: {
-          [`phase${nextSprintNumber}.1`]: {
+          [`phaseX.1`]: {
             "phaseName": "",
             "status": "Not Started",
             "description": "",
             "deliverables": []
           },
-          [`phase${nextSprintNumber}.2`]: {
+          [`phaseX.2`]: {
             "phaseName": "",
             "status": "Not Started", 
             "description": "",
             "deliverables": []
           },
-          [`phase${nextSprintNumber}.3`]: {
+          [`phaseX.3`]: {
             "phaseName": "",
             "status": "Not Started",
             "description": "",
             "deliverables": []
           },
-          [`phase${nextSprintNumber}.4`]: {
+          [`phaseX.4`]: {
             "phaseName": "",
             "status": "Not Started",
             "description": "",

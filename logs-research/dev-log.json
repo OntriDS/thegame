@@ -16,7 +16,7 @@
             "Resolve Site System conflict between enums and data structures",
             "Fix Task Hierarchy conflict in data relationships",
             "Consolidate Financial Methods duplication across APIs",
-            "Fix API Route inconsistencies (standardize entityId parameter).",
+            "Fix API Route inconsistencies (standardize entityId parameter)",
             "Standardize Modal z-index management using Z_INDEX_LAYERS",
             "Remove unused logging utilities and consolidate duplicated functions",
             "Fix Task Completion logic duplication and Consolidate date formatting constants",
