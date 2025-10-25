@@ -47,18 +47,23 @@ const systemIcons = {
 
 // System display names
 const systemNames = {
-  foundations: 'Foundations',
-  settings: 'Settings',
-  dataCenter: 'Data Center',
-  research: 'Research',
-  controlRoom: 'Control Room',
-  inventories: 'Inventories',
-  sales: 'Sales',
-  finances: 'Finances',
-  maps: 'Maps',
   dashboards: 'Dashboards',
   archive: 'Archive',
+
+  maps: 'Maps',
   player: 'Player',
+
+  sales: 'Sales',
+  finances: 'Finances',
+
+  inventories: 'Inventories',
+  controlRoom: 'Control Room',
+
+  dataCenter: 'Data Center',
+  research: 'Research',
+
+  settings: 'Settings',
+  foundations: 'Foundations',
 };
 
 function getStatusColor(status: SystemStatus) {
@@ -66,7 +71,7 @@ function getStatusColor(status: SystemStatus) {
     case 'Done':
       return 'from-green-400 to-emerald-500';
     case 'In Progress':
-      return 'from-blue-400 to-cyan-500';
+      return 'from-yellow-400 to-amber-500';
     case 'Not Started':
       return 'from-gray-300 to-slate-400';
     default:
@@ -120,12 +125,10 @@ function BuildingFloor({
                 group-hover:scale-110 group-hover:shadow-xl
               `}>
                 <Icon className="h-6 w-6 text-white" />
-                
-                {/* Version badge */}
-                <div className="absolute -top-1 -right-1 bg-white rounded-full px-1 py-0.5 shadow-md">
-                  <span className="text-[10px] font-bold text-slate-600">{info.version}</span>
-                </div>
               </div>
+              
+              {/* Connection line down from pin */}
+              <div className="w-0.5 h-6 bg-slate-300 mt-1" />
               
               {/* System name */}
               <div className="mt-2 text-center">
@@ -173,14 +176,7 @@ function SmartBuilding({ systems }: { systems: NonNullable<ProjectStatus['system
       <div className="mx-auto max-w-6xl">
         {/* Building structure */}
         <div className="relative bg-gradient-to-b from-slate-50 to-white rounded-2xl p-8 shadow-lg border">
-          {/* Building title */}
-          <div className="text-center mb-8">
-            <div className="flex items-center justify-center gap-3 mb-2">
-              <Building2 className="h-8 w-8 text-slate-600" />
-              <h3 className="text-2xl font-bold text-slate-800">Smart Building</h3>
-            </div>
-            <p className="text-slate-600">Version v0.1 Development Progress</p>
-          </div>
+
 
           {/* Building floors */}
           <div className="space-y-8">
@@ -210,7 +206,8 @@ export function RoadmapsTab({ projectStatus }: { projectStatus: ProjectStatus | 
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Smart Building Roadmap</CardTitle>
+              <Building2 className="h-8 w-8 text-slate-600" />
+              <CardTitle>Building Roadmap</CardTitle>
               <CardDescription>
                 {projectStatus?.currentSprint ? (
                   <span>Version v0.1 in development • {projectStatus.currentSprint}</span>
