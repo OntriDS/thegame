@@ -79,8 +79,8 @@ export async function createItemFromTask(task: Task): Promise<Item | null> {
       links: [],  // Initialize links array (The Rosetta Stone)
       stock: [
         {
-          siteId: (task.targetSiteId && task.targetSiteId !== 'None' ? task.targetSiteId : null) ||
-                  (task.siteId && task.siteId !== 'None' ? task.siteId : null) ||
+          siteId: (task.targetSiteId && task.targetSiteId !== 'none' ? task.targetSiteId : null) ||
+                  (task.siteId && task.siteId !== 'none' ? task.siteId : null) ||
                   'hq', // Default to HQ
           quantity: task.outputQuantity || 1
         }

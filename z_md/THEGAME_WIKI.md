@@ -127,7 +127,7 @@
   - 4-tier hierarchy: Continent → Country → Region → Settlement
   - Physical sites are "located at" these locations
 
-- **SITE** = Specific, defined area where items exist (El Hornito, Home, World, Google Drive, Characters like Akiles)
+- **SITE** = Specific, defined area where items exist (El Hornito, Home, None, Google Drive, Characters like Akiles)
   - Used for: Inventory management, item movement, stock tracking
   - Only Physical Sites have a Location reference
   - Digital/Character/Special Sites don't have physical locations

@@ -401,7 +401,7 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
             const template = `ItemType,SubItemType,Name,TotalQuantity,Site,Status,Collection,UnitCost,Price,Year,ImageUrl,OriginalFiles,AccessoryFiles,Width,Height,Size
     "Digital","${digitalSubtypes[0]}","Organic Imaginary Digital",0,"Digital Space","Idle","${collections[1]}",0.00,25.00,2024,https://example.com/organic-imaginary-digital.jpg,,,,,,
     "Artwork","${artworkSubtypes[0]}","Organic Imaginary Canvas",1,"Home","For Sale","${collections[1]}",5.00,150.00,2024,https://example.com/organic-imaginary-canvas.jpg,,,,30,40,
-    "Print","${printSubtypes[0]}","Organic Imaginary Print",0,"World","To Order","${collections[1]}",5.00,25.00,2024,https://example.com/organic-imaginary-canvas.jpg,,,,30,40,
+    "Print","${printSubtypes[0]}","Organic Imaginary Print",0,"None","To Order","${collections[1]}",5.00,25.00,2024,https://example.com/organic-imaginary-canvas.jpg,,,,30,40,
     "Sticker","${stickerSubtypes[0]}","Red Dope Crew Sticker",100,"Feria Box","For Sale","${collections[6]}",0.30,2.50,2024,https://example.com/red-dope-crew-sticker.jpg,,,,5,5,
     "Bundle","${bundleSubtypes[0]}","Smoking Lounge Stickers",80,"Smoking Lounge","For Sale","${collections[6]}",0.30,2.50,2024,https://example.com/smoking-lounge-bundle.jpg,,,,,,
     "Merch","${merchSubtypes[0]}","Dope Crew T-Shirt",35,"Home","For Sale","${collections[6]}",8.00,25.00,2024,https://example.com/dope-crew-tshirt.jpg,,,,,M,

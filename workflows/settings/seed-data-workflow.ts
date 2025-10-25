@@ -374,8 +374,8 @@ export class SeedDataWorkflow {
           links: []
         },
         {
-          id: 'world',
-          name: 'World',
+          id: 'none',
+          name: 'None',
           type: SiteType.SYSTEM.toLowerCase(),
           status: SiteStatus.ACTIVE.toLowerCase(),
           metadata: { type: SiteType.SYSTEM, systemType: SystemSiteType.UNIVERSAL_TRACKING },

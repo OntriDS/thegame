@@ -315,7 +315,7 @@ interface LinkRule {
 
 #### Site Types
 
-- **Physical Sites**: Have location references (El Hornito, Home, World)
+- **Physical Sites**: Have location references (El Hornito, Home, None)
 - **Digital Sites**: No physical location (Google Drive, Characters like Akiles)
 - **Special Sites**: System-managed (Consignment Network, Feria Box)
 

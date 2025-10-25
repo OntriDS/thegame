@@ -985,9 +985,8 @@ Sites WERE defined inconsistently - sometimes as enums, sometimes as entities. *
 ```typescript
 // types/enums.ts
 export const SITE_GROUPS = {
-  physical: ['HOME', 'STUDIO', 'FERIA_BOX'],
-  digital: ['GOOGLE_DRIVE', 'DROPBOX'],
-  special: ['WORLD', 'LIMBO']
+  physical: ['HOME', 'STUDIO],
+  system: ['NONE']
 };
 ```
 

@@ -136,8 +136,8 @@ export default function TaskModal({
     isReversal: boolean;
   } | null>(null);
   const [formData, setFormData] = useState({
-    site: 'None' as string,
-    targetSite: 'None' as string,
+    site: 'none' as string,
+    targetSite: 'none' as string,
   });
 
   const [outputItemType, setOutputItemType] = useState<ItemType | ''>('');
@@ -232,8 +232,8 @@ export default function TaskModal({
       setIsRecurrentGroup(task.isRecurrentGroup || false);
       setIsTemplate(task.isTemplate || false);
       setFormData({
-        site: task.siteId || 'None',
-        targetSite: task.targetSiteId || 'None',
+        site: task.siteId || 'none',
+        targetSite: task.targetSiteId || 'none',
       });
       const taskItemType = (task.outputItemType as ItemType) || '';
       const taskSubType = task.outputItemSubType || '';
@@ -289,7 +289,7 @@ export default function TaskModal({
       setIsNotCharged(false);
       setIsRecurrentGroup(false);
       setIsTemplate(false);
-      setFormData({ site: 'None', targetSite: 'None' });
+      setFormData({ site: 'none', targetSite: 'none' });
       setOutputItemType('');
       setOutputItemSubType('');
       setOutputQuantity(1);
@@ -411,8 +411,8 @@ export default function TaskModal({
       revenue,
       isNotPaid,
       isNotCharged,
-      siteId: formData.site,
-      targetSiteId: formData.targetSite,
+      siteId: formData.site && formData.site !== 'none' ? formData.site : null,
+      targetSiteId: formData.targetSite && formData.targetSite !== 'none' ? formData.targetSite : null,
       outputItemType: (outputItemType || undefined) as ItemType | undefined,
       outputItemSubType: (outputItemSubType || undefined) as SubItemType | undefined,
       outputQuantity,

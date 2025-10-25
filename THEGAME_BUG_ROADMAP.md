@@ -71,10 +71,10 @@
 
 #### **PATTERN G: INCORRECT DEFAULT SITES** (✅ COMPLETED)
 - **5.2** ✅ Wrong Default Sites Being Seeded
-- **Root Cause**: System was seeding incorrect sites (Home, Feria Box, Digital Space) instead of the required 3 sites (HQ, Drive, World)
+- **Root Cause**: System was seeding incorrect sites (Home, Feria Box, Digital Space) instead of the required 3 sites (HQ, Drive, None)
 - **Solution**: Updated both `seedDefaultSites()` in reset-data-workflow and `seedFallbackSites()` in seed-data-workflow to create correct sites
 - **Files Fixed**: `workflows/settings/reset-data-workflow.ts`, `workflows/settings/seed-data-workflow.ts`
-- **Required Sites**: HQ (physical, storage), Drive (cloud, repository), World (system, universal tracking)
+- **Required Sites**: HQ (physical, storage), Drive (cloud, repository), None (system, universal tracking)
 - **Result**: Default sites now match system requirements
 
 #### **PATTERN H: OBSOLETE LOCAL ENVIRONMENT CODE** (✅ COMPLETED)
