@@ -88,8 +88,9 @@ logs
 # Backup files
 *.backup
 *.bak
+PROJECT-STATUS - copia.json
+dev-log - copia.json
 
 .env
-
 .cursor
 

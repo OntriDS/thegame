@@ -375,10 +375,24 @@ function ResearchPageContent() {
         }))
       };
 
-      // 2. Update dev log with completed sprint
+      // 2. Create individual phase completion entries (only for phases not already completed)
+      const existingPhaseKeys = new Set((currentDevLog.phases || []).map((p: any) => p.phaseKey));
+      const phaseCompletions = Object.entries(projectStatus.phasePlan)
+        .filter(([phaseKey, phase]: [string, any]) => !existingPhaseKeys.has(phaseKey))
+        .map(([phaseKey, phase]: [string, any]) => ({
+          id: `${Date.now()}-${phaseKey}`,
+          type: "phase_completion",
+          phaseKey: phaseKey,
+          phaseName: phase.phaseName || phaseKey,
+          completedAt: formatDateDDMMYYYY(new Date()),
+          description: `Phase "${phase.phaseName || phaseKey}" marked as completed`
+        }));
+
+      // 3. Update dev log with completed sprint and phase entries
       const updatedDevLog = {
         ...currentDevLog,
-        sprints: [...(currentDevLog.sprints || []), completedSprint]
+        sprints: [...(currentDevLog.sprints || []), completedSprint],
+        phases: [...(currentDevLog.phases || []), ...phaseCompletions]
       };
 
       const devLogResponse = await fetch('/api/dev-log', {
@@ -391,7 +405,7 @@ function ResearchPageContent() {
         throw new Error('Failed to update dev log');
       }
 
-      // 3. Update project status: move nextSprintPlan to phasePlan, increment sprint number
+      // 4. Update project status: move nextSprintPlan to phasePlan, increment sprint number
       const nextSprintNumber = (projectStatus.currentSprintNumber || 10) + 1;
       
       // Helper function to update phase keys from phaseX.N to phase{sprintNumber}.N
@@ -449,7 +463,7 @@ function ResearchPageContent() {
         throw new Error('Failed to update project status');
       }
 
-      // 4. Reload data to reflect changes
+      // 5. Reload data to reflect changes
       await handleReloadLogs();
       
       setSuccessMessage(`Sprint ${projectStatus.currentSprintNumber} completed successfully! Moved to Sprint ${nextSprintNumber}.`);

@@ -1,87 +1,6 @@
 {
   "sprints": [
     {
-      "id": "sprint-10",
-      "sprintName": "System Clean Up & Archive Foundation",
-      "description": "System Clean Up & Archive Foundation",
-      "challenge": "System Development BLA BLA BLA",
-      "completedAt": "29-09-2025",
-      "status": "completed",
-      "phases": [
-        {
-          "id": "phase-phase10.1",
-          "phaseName": "System Clean Up & Consolidation",
-          "description": "Resolve critical system conflicts and consolidate duplicated functionality",
-          "completedFeatures": [
-            "Resolve Site System conflict between enums and data structures",
-            "Fix Task Hierarchy conflict in data relationships",
-            "Consolidate Financial Methods duplication across APIs",
-            "Fix API Route inconsistencies (standardize entityId parameter)",
-            "Standardize Modal z-index management using Z_INDEX_LAYERS",
-            "Remove unused logging utilities and consolidate duplicated functions",
-            "Fix Task Completion logic duplication and Consolidate date formatting constants",
-            "Clean up unused theme configurations and seed data",
-            "Refactor item import logic, for consistency"
-          ],
-          "completedAt": "29-09-2025",
-          "status": "completed"
-        },
-        {
-          "id": "phase-phase10.2",
-          "phaseName": "Week Sale Event",
-          "description": "Complete Week Sale Event, Data Sync and Items Debug and add Front End Sections",
-          "completedFeatures": [
-            "create and populate Offers Section in the Frontend",
-            "payments methods modal in the Frontend",
-            "create and populate Bio Section in the Frontend",
-            "Task Modal UX Fixes, Task Detail View Improvements and Task Tree Enhancement",
-            "Frontend Completion, Portfolio, Animation, Projects Sections",
-            "Create and Link Seven Elements Web Game vercel app in the Projects Section",
-            "Solve idempotency bug in task completion and Clear Logs Integration in both localhost and Vercel"
-          ],
-          "completedAt": "29-09-2025",
-          "status": "completed"
-        },
-        {
-          "id": "phase-phase10.3",
-          "phaseName": "Two environments: localhost (testing/dev) & Vercel (production/real)",
-          "description": "Implement shared data storage across browsers using KV database while keeping local-first development",
-          "completedFeatures": [
-            "Complete logging coverage for all task types (recurrent Parents, Templates, Instances)",
-            "Seamless Vercel deployment with KV storage (fix EROFS read-only filesystem errors)",
-            "Comprehensive backfill system for all log types (tasks, items, financials, player)",
-            "Debug Items Log, eliminate 'Unknown Item' entries, task duplication, and Q + 0 (&&) bug",
-            "Robust cross-environment compatibility (KV for production, FS for development)",
-            "User Preferences api for tabs persistence in both environments and Price and Collection fields in Task Modal",
-            "Add a Not Paid checkmark functionality to the Task Modal, so the financials effects are not true",
-            "Implement Atomic Operations for all routes and APIs",
-            "Add Colones, Sats and USD calculations to the Assets Modal and fix Step/Decimals validation"
-          ],
-          "completedAt": "29-09-2025",
-          "status": "completed"
-        },
-        {
-          "id": "phase-phase10.4",
-          "phaseName": "Shared Data System (KV + Local)",
-          "description": "Implement shared data storage across browsers using KV database while keeping local-first development",
-          "completedFeatures": [
-            "Create DataAdapter interface (Local + KV)",
-            "Add KV-backed APIs for tasks, items, assets, settings",
-            "Refactor DataStore to use hybrid storage mode",
-            "Implement initial sync and cache refresh",
-            "Add migration tools in DataSync",
-            "Add multi-user scaffolding (orgId/playerId)",
-            "Update Settings with persistence controls",
-            "Test cross-browser data sharing in production",
-            "Create Dev Tools page and functionality for complex debugging and development",
-            "Full system clean up, refactor, extractions, debug console logs and old system code"
-          ],
-          "completedAt": "29-09-2025",
-          "status": "completed"
-        }
-      ]
-    },
-    {
       "id": "sprint-1",
       "sprintName": "Project Foundation & UI Setup",
       "description": "Complete project setup, tech stack, and basic UI foundation",
@@ -558,47 +477,186 @@
           "status": "completed"
         }
       ]
+    },
+    {
+      "id": "sprint-10",
+      "sprintName": "System Clean Up & Archive Foundation",
+      "description": "System Clean Up & Archive Foundation",
+      "challenge": "System Development BLA BLA BLA",
+      "completedAt": "29-09-2025",
+      "status": "completed",
+      "phases": [
+        {
+          "id": "phase-phase10.1",
+          "phaseName": "System Clean Up & Consolidation",
+          "description": "Resolve critical system conflicts and consolidate duplicated functionality",
+          "completedFeatures": [
+            "Resolve Site System conflict between enums and data structures",
+            "Fix Task Hierarchy conflict in data relationships",
+            "Consolidate Financial Methods duplication across APIs",
+            "Fix API Route inconsistencies (standardize entityId parameter)",
+            "Standardize Modal z-index management using Z_INDEX_LAYERS",
+            "Remove unused logging utilities and consolidate duplicated functions",
+            "Fix Task Completion logic duplication and Consolidate date formatting constants",
+            "Clean up unused theme configurations and seed data",
+            "Refactor item import logic, for consistency"
+          ],
+          "completedAt": "29-09-2025",
+          "status": "completed"
+        },
+        {
+          "id": "phase-phase10.2",
+          "phaseName": "Week Sale Event",
+          "description": "Complete Week Sale Event, Data Sync and Items Debug and add Front End Sections",
+          "completedFeatures": [
+            "create and populate Offers Section in the Frontend",
+            "payments methods modal in the Frontend",
+            "create and populate Bio Section in the Frontend",
+            "Task Modal UX Fixes, Task Detail View Improvements and Task Tree Enhancement",
+            "Frontend Completion, Portfolio, Animation, Projects Sections",
+            "Create and Link Seven Elements Web Game vercel app in the Projects Section",
+            "Solve idempotency bug in task completion and Clear Logs Integration in both localhost and Vercel"
+          ],
+          "completedAt": "29-09-2025",
+          "status": "completed"
+        },
+        {
+          "id": "phase-phase10.3",
+          "phaseName": "Two environments: localhost (testing/dev) & Vercel (production/real)",
+          "description": "Implement shared data storage across browsers using KV database while keeping local-first development",
+          "completedFeatures": [
+            "Complete logging coverage for all task types (recurrent Parents, Templates, Instances)",
+            "Seamless Vercel deployment with KV storage (fix EROFS read-only filesystem errors)",
+            "Comprehensive backfill system for all log types (tasks, items, financials, player)",
+            "Debug Items Log, eliminate 'Unknown Item' entries, task duplication, and Q + 0 (&&) bug",
+            "Robust cross-environment compatibility (KV for production, FS for development)",
+            "User Preferences api for tabs persistence in both environments and Price and Collection fields in Task Modal",
+            "Add a Not Paid checkmark functionality to the Task Modal, so the financials effects are not true",
+            "Implement Atomic Operations for all routes and APIs",
+            "Add Colones, Sats and USD calculations to the Assets Modal and fix Step/Decimals validation"
+          ],
+          "completedAt": "29-09-2025",
+          "status": "completed"
+        },
+        {
+          "id": "phase-phase10.4",
+          "phaseName": "Shared Data System (KV + Local)",
+          "description": "Implement shared data storage across browsers using KV database while keeping local-first development",
+          "completedFeatures": [
+            "Create DataAdapter interface (Local + KV)",
+            "Add KV-backed APIs for tasks, items, assets, settings",
+            "Refactor DataStore to use hybrid storage mode",
+            "Implement initial sync and cache refresh",
+            "Add migration tools in DataSync",
+            "Add multi-user scaffolding (orgId/playerId)",
+            "Update Settings with persistence controls",
+            "Test cross-browser data sharing in production",
+            "Create Dev Tools page and functionality for complex debugging and development",
+            "Full system clean up, refactor, extractions, debug console logs and old system code"
+          ],
+          "completedAt": "29-09-2025",
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "id": "sprint-11",
+      "sprintName": "Sprint 11",
+      "description": "Sprint 11 completed successfully",
+      "completedAt": "25-10-2025",
+      "challenge": "System Development",
+      "phases": [
+        {
+          "id": "phase11.1",
+          "phaseName": "Complete architecture refactor",
+          "description": "Adapters, Architecture for Data Store and Local vs KV Environments",
+          "completedAt": "25-10-2025",
+          "completedFeatures": [
+            "Adapter System: 4 adapters total (LocalAdapter + HybridAdapter + LoggingLocalAdapter + LoggingHybridAdapter)",
+            "Fixed HybridAdapter Design: Now properly handles both browser and server contexts without LocalAdapter dependency",
+            "Context-Aware Storage: HybridAdapter automatically detects environment and uses appropriate storage method",
+            "Idempotency Fixes: Resolved duplicate item creation and inconsistent log updates across all systems",
+            "Log Update System: Fixed Task A → Task B renaming to update all log types (Tasks, Financials, Items, Player)",
+            "Environment Auto-Detection: System automatically detects and uses appropriate storage method",
+            "Atomic Logging: All log operations use atomic Lua scripts to prevent race conditions",
+            "Cross-Environment Testing: Verified identical behavior between localStorage and KV systems",
+            "Logging Architecture: Unified LoggingDataStore with environment-specific adapters (filesystem/KV)"
+          ]
+        },
+        {
+          "id": "phase11.2",
+          "phaseName": "Unified Entities, Modals, Side Effects Pattern",
+          "description": "Entities, Modals, Side Effects Patterns Unification and Rebuild across the system",
+          "completedAt": "25-10-2025",
+          "completedFeatures": [
+            "Unified Modal Pattern: All modals (TaskModal, RecordModal, ItemModal) follow identical `onSave(entity, sideEffects)` pattern",
+            "Side Effects System: Centralized workflow-based side effect handling with proper separation of concerns",
+            "Smart Delete Modal: Single unified DeleteModal handles all entity types (Tasks, Records, Items) with bulk support",
+            "Side Effects System: Centralized workflow-based side effect handling with proper separation of concerns",
+            "Smart Delete Modal: Single unified DeleteModal handles all entity types (Tasks, Records, Items) with bulk support",
+            "Pattern Compliance: 100% adherence to ENTITIES_ARCHITECTURE_PATTERN.md across entire system",
+            "Modal Consolidation: Removed redundant delete modals, consolidated functionality into smart universal modal",
+            "Workflow Integration: All side effects properly handled via workflow functions in both development and production",
+            "UI Consistency: Dynamic UI adaptation based on entity type and operation context",
+            "Complete Verification: All phases completed with comprehensive testing and validation",
+            "Renamed task-completion to entity-workflows to reflect its scope and Auto-Calculation Enhancement"
+          ]
+        },
+        {
+          "id": "phase11.3",
+          "phaseName": "Logging System and Entities Complete Workflow Test in both Environments",
+          "description": "Create Logging System in the same Entities System Pattern, Fix bugs and Test verified complete functionality in both environments",
+          "completedAt": "25-10-2025",
+          "completedFeatures": [
+            "Create and Update Documentation: Sync LOGGING_ARCHITECTURE.md with actual implementation",
+            "Refactor the Logging Systems to follow the same workflow pattern that Entities System follows",
+            "Verify correct logging architecture for local and production environments",
+            "Bug fixing: Local and Production Logging Architecture",
+            "Deep Entities Bug Fixing in Local Environment after refactor",
+            "Test and Validate: Verify all entities, modals and logging work correctly in both environments",
+            "Financial Terminology Standardization, DataCenter and Finances Tab Fixes",
+            "Data Sync and Backfill Logs bug fixing after rebuild, in both environments",
+            "Modals UI/UX Layout Optimization and across consistency fixes",
+            "Unify the Theme system and fix logging idempotency",
+            "API Routes cleanup, optimization and debugging",
+            "Create the COMMANDS.md file with, new commands, like HONEST, ANALYSE and VERIFY",
+            "Entities, Logging, Settings, Finances, Inventories and Player Complete Debug and consistency fixes"
+          ]
+        },
+        {
+          "id": "phase11.4",
+          "phaseName": "Links System, finish all main Entities",
+          "description": "Links System: The Rossetta Effect; finish Character, Player, Account and Sales Entities, basic Calendar and Schedule",
+          "completedAt": "25-10-2025",
+          "completedFeatures": [
+            "Define and Create Sales Entity and develop Sales Section",
+            "Create Links System, The Rossetta Effect and implemented",
+            "Create Character Entity, Update Player Section, and implement Basic Character Modal",
+            "Organize and Create missing Documentation and Completely Replace Player Entity.",
+            "Do a full migration to the Character Entity, orchestrate new entites and test.",
+            "Track customer information, Handle payment processing",
+            "Sales Transactions: Record all actual different types of sales (direct, ferias, consignment, online)",
+            "Develop Calendar and Schedule Tabs in the Control Room"
+          ]
+        }
+      ]
     }
   ],
   "phases": [
+    {
+      "id": "1756660913048",
+      "type": "phase_completion",
+      "phaseKey": "phase8.1",
+      "phaseName": "Strategic Foundation & Documentation",
+      "completedAt": "01-09-2025",
+      "description": "Phase \"Strategic Foundation & Documentation\" marked as completed"
+    },
     {
       "id": "1756660913049",
       "type": "phase_completion",
       "phaseKey": "phase8.2",
       "phaseName": "Site System & DataCenter Logs Foundation",
-      "completedAt": "2025-08-31T17:21:53.049Z",
-      "description": "Phase \"Site System & DataCenter Logs Foundation\" marked as completed"
-    },
-    {
-      "id": "1756661749408",
-      "type": "phase_completion",
-      "phaseKey": "phase8.2",
-      "phaseName": "Site System & DataCenter Logs Foundation",
-      "completedAt": "2025-08-31T17:35:49.408Z",
-      "description": "Phase \"Site System & DataCenter Logs Foundation\" marked as completed"
-    },
-    {
-      "id": "1756662064923",
-      "type": "phase_completion",
-      "phaseKey": "phase8.2",
-      "phaseName": "Site System & DataCenter Logs Foundation",
-      "completedAt": "2025-08-31T17:41:04.923Z",
-      "description": "Phase \"Site System & DataCenter Logs Foundation\" marked as completed"
-    },
-    {
-      "id": "1756662536687",
-      "type": "phase_completion",
-      "phaseKey": "phase8.2",
-      "phaseName": "Site System & DataCenter Logs Foundation",
-      "completedAt": "2025-08-31T17:48:56.687Z",
-      "description": "Phase \"Site System & DataCenter Logs Foundation\" marked as completed"
-    },
-    {
-      "id": "1756662564273",
-      "type": "phase_completion",
-      "phaseKey": "phase8.2",
-      "phaseName": "Site System & DataCenter Logs Foundation",
-      "completedAt": "2025-08-31T17:49:24.273Z",
+      "completedAt": "02-09-2025",
       "description": "Phase \"Site System & DataCenter Logs Foundation\" marked as completed"
     },
     {
@@ -606,31 +664,15 @@
       "type": "phase_completion",
       "phaseKey": "phase8.3",
       "phaseName": "Task & Automation Workflow Design & Testing",
-      "completedAt": "2025-09-03T23:25:25.898Z",
+      "completedAt": "03-09-2025",
       "description": "Phase \"Task & Automation Workflow Design & Testing\" marked as completed"
     },
     {
       "id": "1756951785835",
       "type": "phase_completion",
       "phaseKey": "phase8.4",
-      "phaseName": "Improvements Note-Taking System & develop Completed Tasks Log",
-      "completedAt": "2025-09-04T02:09:45.836Z",
-      "description": "Phase \"Improvements Note-Taking System & develop Completed Tasks Log\" marked as completed"
-    },
-    {
-      "id": "1756952137541",
-      "type": "phase_completion",
-      "phaseKey": "phase8.4",
       "phaseName": "Simple Note Taking System & Develop Completed Tasks Log",
-      "completedAt": "2025-09-04T02:15:37.541Z",
-      "description": "Phase \"Simple Note Taking System & Develop Completed Tasks Log\" marked as completed"
-    },
-    {
-      "id": "1756952628342",
-      "type": "phase_completion",
-      "phaseKey": "phase8.4",
-      "phaseName": "Simple Note Taking System & Develop Completed Tasks Log",
-      "completedAt": "2025-09-04T02:23:48.342Z",
+      "completedAt": "04-09-2025",
       "description": "Phase \"Simple Note Taking System & Develop Completed Tasks Log\" marked as completed"
     },
     {
@@ -638,47 +680,15 @@
       "type": "phase_completion",
       "phaseKey": "phase9.1",
       "phaseName": "Financial Operations Integration & Daily Activities",
-      "completedAt": "2025-09-07T03:32:07.378Z",
+      "completedAt": "07-09-2025",
       "description": "Phase \"Financial Operations Integration & Daily Activities\" marked as completed"
-    },
-    {
-      "id": "1757473821127",
-      "type": "phase_completion",
-      "phaseKey": "phase9.4",
-      "phaseName": "Shadcn Component Integration & Z-Index System",
-      "completedAt": "2025-09-10T03:10:21.127Z",
-      "description": "Phase \"Shadcn Component Integration & Z-Index System\" marked as completed"
-    },
-    {
-      "id": "1757473834594",
-      "type": "phase_completion",
-      "phaseKey": "phase9.4",
-      "phaseName": "Shadcn Component Integration & Z-Index System",
-      "completedAt": "2025-09-10T03:10:34.595Z",
-      "description": "Phase \"Shadcn Component Integration & Z-Index System\" marked as completed"
-    },
-    {
-      "id": "1757473835894",
-      "type": "phase_completion",
-      "phaseKey": "phase9.4",
-      "phaseName": "Shadcn Component Integration & Z-Index System",
-      "completedAt": "2025-09-10T03:10:35.894Z",
-      "description": "Phase \"Shadcn Component Integration & Z-Index System\" marked as completed"
-    },
-    {
-      "id": "1757985298697",
-      "type": "phase_completion",
-      "phaseKey": "phase9.4",
-      "phaseName": "Shadcn Component Integration & Z-Index System",
-      "completedAt": "2025-09-16T01:14:58.697Z",
-      "description": "Phase \"Shadcn Component Integration & Z-Index System\" marked as completed"
     },
     {
       "id": "1757985301199",
       "type": "phase_completion",
       "phaseKey": "phase9.2",
       "phaseName": "Recurrent Tasks Implementation",
-      "completedAt": "2025-09-16T01:15:01.199Z",
+      "completedAt": "16-09-2025",
       "description": "Phase \"Recurrent Tasks Implementation\" marked as completed"
     },
     {
@@ -686,47 +696,80 @@
       "type": "phase_completion",
       "phaseKey": "phase9.3",
       "phaseName": "Improve the Note-Taking System",
-      "completedAt": "2025-09-16T07:22:45.661Z",
+      "completedAt": "16-09-2025",
       "description": "Phase \"Improve the Note-Taking System\" marked as completed"
     },
     {
-      "id": "1758007394051",
+      "id": "1757473821127",
       "type": "phase_completion",
-      "phaseKey": "phase9.2",
-      "phaseName": "Recurrent Tasks Implementation",
-      "completedAt": "2025-09-16T07:23:14.051Z",
-      "description": "Phase \"Recurrent Tasks Implementation\" marked as completed"
-    },
-    {
-      "id": "1758007395061",
-      "type": "phase_completion",
-      "phaseKey": "phase9.3",
-      "phaseName": "Improve the Note-Taking System",
-      "completedAt": "2025-09-16T07:23:15.061Z",
-      "description": "Phase \"Improve the Note-Taking System\" marked as completed"
+      "phaseKey": "phase9.4",
+      "phaseName": "Shadcn Component Integration & Z-Index System",
+      "completedAt": "10-09-2025",
+      "description": "Phase \"Shadcn Component Integration & Z-Index System\" marked as completed"
     },
     {
       "id": "1758072821356",
       "type": "phase_completion",
       "phaseKey": "phase10.1",
       "phaseName": "System Clean Up & Consolidation",
-      "completedAt": "2025-09-17T01:33:41.357Z",
+      "completedAt": "17-09-2025",
       "description": "Phase \"System Clean Up & Consolidation\" marked as completed"
     },
     {
-      "id": "1758263217823",
+      "id": "1759196693799",
       "type": "phase_completion",
-      "phaseKey": "phase10.1",
-      "completedAt": "2025-09-19T06:26:57.824Z",
-      "description": "Phase \"undefined\" marked as completed"
+      "phaseKey": "phase10.2",
+      "phaseName": "Week Sale Event",
+      "completedAt": "29-09-2025",
+      "description": "Phase \"Week Sale Event\" marked as completed"
+    },
+    {
+      "id": "1759196693800",
+      "type": "phase_completion",
+      "phaseKey": "phase10.3",
+      "phaseName": "Two environments: localhost (testing/dev) & Vercel (production/real)",
+      "completedAt": "29-09-2025",
+      "description": "Phase \"Two environments: localhost (testing/dev) & Vercel (production/real)\" marked as completed"
+    },
+    {
+      "id": "1759196693805",
+      "type": "phase_completion",
+      "phaseKey": "phase10.4",
+      "phaseName": "Shared Data System (KV + Local)",
+      "completedAt": "29-09-2025",
+      "description": "Phase \"Shared Data System (KV + Local)\" marked as completed"
     },
     {
       "id": "1759196693801",
       "type": "phase_completion",
       "phaseKey": "phase11.1",
-      "phaseName": "Sales Section and Events Implementation",
+      "phaseName": "Complete architecture refactor",
       "completedAt": "29-09-2025",
-      "description": "Phase \"Sales Section and Events Implementation\" marked as completed"
+      "description": "Phase \"Complete architecture refactor\" marked as completed"
+    },
+    {
+      "id": "1759196693802",
+      "type": "phase_completion",
+      "phaseKey": "phase11.2",
+      "phaseName": "Unified Entities, Modals, Side Effects Pattern",
+      "completedAt": "29-09-2025",
+      "description": "Phase \"Unified Entities, Modals, Side Effects Pattern\" marked as completed"
+    },
+    {
+      "id": "1759196693803",
+      "type": "phase_completion",
+      "phaseKey": "phase11.3",
+      "phaseName": "Logging System and Entities Complete Workflow Test in both Environments",
+      "completedAt": "29-09-2025",
+      "description": "Phase \"Logging System and Entities Complete Workflow Test in both Environments\" marked as completed"
+    },
+    {
+      "id": "1759196693804",
+      "type": "phase_completion",
+      "phaseKey": "phase11.4",
+      "phaseName": "Links System, finish all main Entities",
+      "completedAt": "29-09-2025",
+      "description": "Phase \"Links System, finish all main Entities\" marked as completed"
     }
   ],
   "lastUpdated": "2025-09-30T01:46:46.890Z",

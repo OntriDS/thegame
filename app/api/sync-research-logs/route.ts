@@ -124,12 +124,16 @@ async function checkSyncStatus(): Promise<{needsSync: string[], upToDate: string
         continue;
       }
 
-      // 2. Compare timestamps
+      // 2. Compare timestamps (normalize both to Date objects for comparison)
       const localLastUpdated = (localData as any).lastUpdated;
       const kvLastUpdated = (kvData as any)?.lastUpdated;
+      
+      // Normalize timestamps to Date objects for proper comparison
+      const localDate = localLastUpdated ? new Date(localLastUpdated) : null;
+      const kvDate = kvLastUpdated ? new Date(kvLastUpdated) : null;
 
       // 3. If no timestamps, compare data directly
-      if (!localLastUpdated || !kvLastUpdated) {
+      if (!localDate || !kvDate) {
         const dataMatches = JSON.stringify(localData) === JSON.stringify(kvData);
         if (!dataMatches) {
           results.needsSync.push(logType);
@@ -141,11 +145,11 @@ async function checkSyncStatus(): Promise<{needsSync: string[], upToDate: string
         continue;
       }
 
-      // 4. Compare timestamps
-      if (new Date(localLastUpdated) > new Date(kvLastUpdated)) {
+      // 4. Compare timestamps using normalized Date objects
+      if (localDate > kvDate) {
         results.needsSync.push(logType);
         console.log(`[Sync Research Logs API] 📊 ${logType}: needs sync (local newer)`);
-      } else if (new Date(kvLastUpdated) > new Date(localLastUpdated)) {
+      } else if (kvDate > localDate) {
         // KV is newer - check for data integrity issues
         if (hasDataIntegrityIssues(kvData, logType)) {
           results.conflicts.push(logType);
