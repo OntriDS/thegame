@@ -55,7 +55,7 @@ export const TASK_TYPE_ICONS: Record<TaskType, React.ElementType> = {
   [TaskType.MILESTONE]: Flag,
   [TaskType.GOAL]: Target,
   [TaskType.ASSIGNMENT]: CheckSquare,
-  [TaskType.RECURRENT_PARENT]: Award,
+  [TaskType.RECURRENT_GROUP]: Award,
   [TaskType.RECURRENT_TEMPLATE]: Flag,
   [TaskType.RECURRENT_INSTANCE]: Target,
 };

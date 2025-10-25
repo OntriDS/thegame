@@ -168,7 +168,7 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate }: TaskD
   const handleOpenTemplateFromParent = () => {
     if (!node) return;
     const parent = node.task;
-    if (parent.type !== TaskType.RECURRENT_PARENT) return;
+    if (parent.type !== TaskType.RECURRENT_GROUP) return;
     const prefill: Task = {
       id: crypto.randomUUID(),
       name: `${parent.name} • Template`,
@@ -259,7 +259,7 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate }: TaskD
             )}
           </div>
           <div className="flex gap-2">
-            {task.type === TaskType.RECURRENT_PARENT && (
+            {task.type === TaskType.RECURRENT_GROUP && (
               <Button 
                 variant="outline" 
                 size="sm"

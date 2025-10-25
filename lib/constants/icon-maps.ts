@@ -6,7 +6,7 @@ export const TASK_TYPE_ICONS: Record<TaskType, React.ElementType> = {
   [TaskType.MILESTONE]: Award,
   [TaskType.MISSION]: Trophy,
   [TaskType.ASSIGNMENT]: CheckSquare,
-  [TaskType.RECURRENT_PARENT]: CalendarSync,
+  [TaskType.RECURRENT_GROUP]: CalendarSync,
   [TaskType.RECURRENT_TEMPLATE]: Anvil,
   [TaskType.RECURRENT_INSTANCE]: AlarmCheck,
 };

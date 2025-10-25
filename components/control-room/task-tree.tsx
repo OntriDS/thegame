@@ -228,17 +228,17 @@ export default function TaskTree({
             )}
             {activeSubTab === 'recurrent-tasks' && (
               <>
-                {/* Recurrent Parent Toggle */}
-                {collectNodesByType(tree, TaskType.RECURRENT_PARENT).length > 0 && (
+                {/* Recurrent Group Toggle */}
+                {collectNodesByType(tree, TaskType.RECURRENT_GROUP).length > 0 && (
                   <Button 
                     variant={(() => {
-                      const parentNodes = collectNodesByType(tree, TaskType.RECURRENT_PARENT);
+                      const parentNodes = collectNodesByType(tree, TaskType.RECURRENT_GROUP);
                       return parentNodes.length > 0 && parentNodes.every(node => expanded.has(node.task.id)) ? "default" : "ghost";
                     })()}
                     size="sm"
                     className="text-xs px-2"
                     onClick={() => {
-                      const parentNodes = collectNodesByType(tree, TaskType.RECURRENT_PARENT);
+                      const parentNodes = collectNodesByType(tree, TaskType.RECURRENT_GROUP);
                       const allParentsExpanded = parentNodes.every(node => expanded.has(node.task.id));
                       
                       if (allParentsExpanded) {
@@ -252,7 +252,7 @@ export default function TaskTree({
                       }
                     }}
                   >
-                    {React.createElement(TASK_TYPE_ICONS[TaskType.RECURRENT_PARENT] || TASK_TYPE_ICONS[TaskType.ASSIGNMENT], { className: "h-4 w-4" })}
+                    {React.createElement(TASK_TYPE_ICONS[TaskType.RECURRENT_GROUP] || TASK_TYPE_ICONS[TaskType.ASSIGNMENT], { className: "h-4 w-4" })}
                   </Button>
                 )}
                 {/* Recurrent Template Toggle */}
@@ -266,7 +266,7 @@ export default function TaskTree({
                     className="text-xs px-2"
                     onClick={() => {
                       const templateNodes = collectNodesByType(tree, TaskType.RECURRENT_TEMPLATE);
-                      const parentNodes = collectNodesByType(tree, TaskType.RECURRENT_PARENT);
+                      const parentNodes = collectNodesByType(tree, TaskType.RECURRENT_GROUP);
                       const allTemplatesExpanded = templateNodes.every(node => expanded.has(node.task.id));
                       
                       if (allTemplatesExpanded) {
@@ -330,12 +330,12 @@ export default function TaskTree({
                 <SelectItem value="all">All Types</SelectItem>
                 {activeSubTab === 'recurrent-tasks' 
                   ? [
-                      <SelectItem key={TaskType.RECURRENT_PARENT} value={TaskType.RECURRENT_PARENT}>Recurrent Parent</SelectItem>,
+                      <SelectItem key={TaskType.RECURRENT_GROUP} value={TaskType.RECURRENT_GROUP}>Recurrent Group</SelectItem>,
                       <SelectItem key={TaskType.RECURRENT_TEMPLATE} value={TaskType.RECURRENT_TEMPLATE}>Recurrent Template</SelectItem>,
                       <SelectItem key={TaskType.RECURRENT_INSTANCE} value={TaskType.RECURRENT_INSTANCE}>Recurrent Instance</SelectItem>,
                     ]
                   : Object.values(TaskType)
-                      .filter(t => t !== TaskType.RECURRENT_PARENT && t !== TaskType.RECURRENT_TEMPLATE && t !== TaskType.RECURRENT_INSTANCE)
+                      .filter(t => t !== TaskType.RECURRENT_GROUP && t !== TaskType.RECURRENT_TEMPLATE && t !== TaskType.RECURRENT_INSTANCE)
                       .map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)
                 }
               </SelectContent>
