@@ -2,8 +2,24 @@
 
 import { TabsContent } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Building2, Circle, CircleCheck, Construction, Compass } from 'lucide-react';
+import { 
+  Building2, 
+  Circle, 
+  CircleCheck, 
+  Construction, 
+  Compass,
+  Settings,
+  Database,
+  BookOpen,
+  Command,
+  Package,
+  ShoppingCart,
+  DollarSign,
+  Map,
+  BarChart3,
+  Archive,
+  User
+} from 'lucide-react';
 import { useMemo } from 'react';
 
 type SystemStatus = 'Done' | 'In Progress' | 'Not Started';
@@ -13,58 +29,131 @@ type ProjectStatus = {
   systems?: Record<string, { status: SystemStatus; version: string; description?: string }>;
 };
 
-function StatusPill({ status }: { status: SystemStatus }) {
-  const style =
-    status === 'Done'
-      ? 'bg-green-50 text-green-700 border border-green-200'
-      : status === 'In Progress'
-      ? 'bg-blue-50 text-blue-700 border border-blue-200'
-      : 'bg-gray-50 text-gray-600 border border-gray-200';
-  const Icon = status === 'Done' ? CircleCheck : status === 'In Progress' ? Construction : Circle;
-  return (
-    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs ${style}`}>
-      <Icon className="h-3.5 w-3.5" />
-      {status}
-    </span>
-  );
+// Icon mapping for each system
+const systemIcons = {
+  foundations: Building2,
+  settings: Settings,
+  dataCenter: Database,
+  research: BookOpen,
+  controlRoom: Command,
+  inventories: Package,
+  sales: ShoppingCart,
+  finances: DollarSign,
+  maps: Map,
+  dashboards: BarChart3,
+  archive: Archive,
+  player: User,
+};
+
+// System display names
+const systemNames = {
+  foundations: 'Foundations',
+  settings: 'Settings',
+  dataCenter: 'Data Center',
+  research: 'Research',
+  controlRoom: 'Control Room',
+  inventories: 'Inventories',
+  sales: 'Sales',
+  finances: 'Finances',
+  maps: 'Maps',
+  dashboards: 'Dashboards',
+  archive: 'Archive',
+  player: 'Player',
+};
+
+function getStatusColor(status: SystemStatus) {
+  switch (status) {
+    case 'Done':
+      return 'from-green-400 to-emerald-500';
+    case 'In Progress':
+      return 'from-blue-400 to-cyan-500';
+    case 'Not Started':
+      return 'from-gray-300 to-slate-400';
+    default:
+      return 'from-gray-300 to-slate-400';
+  }
 }
 
-function DepartmentCard({
-  name,
-  info,
-}: {
-  name: string;
-  info: { status: SystemStatus; version: string; description?: string };
+function getStatusGlow(status: SystemStatus) {
+  switch (status) {
+    case 'Done':
+      return 'shadow-green-500/50';
+    case 'In Progress':
+      return 'shadow-blue-500/50';
+    case 'Not Started':
+      return 'shadow-gray-400/30';
+    default:
+      return 'shadow-gray-400/30';
+  }
+}
+
+function BuildingFloor({ 
+  systems, 
+  floorNumber 
+}: { 
+  systems: Array<[string, { status: SystemStatus; version: string; description?: string }]>;
+  floorNumber: number;
 }) {
   return (
-    <div className="rounded-lg border bg-white p-3 shadow-sm flex items-center justify-between">
-      <div className="flex items-center gap-3 min-w-0">
-        <div className="h-8 w-8 rounded-md bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center text-slate-600">
-          <Building2 className="h-5 w-5" />
-        </div>
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="font-medium truncate">{name}</span>
-            <Badge variant="secondary" className="text-[10px]">{info.version}</Badge>
-          </div>
-          {info.description ? (
-            <p className="text-xs text-muted-foreground truncate">{info.description}</p>
-          ) : null}
-        </div>
+    <div className="relative">
+      {/* Floor line */}
+      <div className="absolute left-0 right-0 top-1/2 h-0.5 bg-gradient-to-r from-slate-200 via-slate-300 to-slate-200 transform -translate-y-1/2" />
+      
+      {/* Systems on this floor */}
+      <div className="relative flex justify-between items-center py-8">
+        {systems.map(([key, info], index) => {
+          const Icon = systemIcons[key as keyof typeof systemIcons] || Building2;
+          const name = systemNames[key as keyof typeof systemNames] || key;
+          const isEven = index % 2 === 0;
+          
+          return (
+            <div
+              key={key}
+              className={`relative flex flex-col items-center group ${
+                isEven ? 'self-start' : 'self-end'
+              }`}
+            >
+              {/* Connection line to floor */}
+              <div className={`w-0.5 h-8 bg-slate-300 ${isEven ? 'mb-2' : 'mt-2'}`} />
+              
+              {/* System pin */}
+              <div className={`
+                relative w-16 h-16 rounded-full 
+                bg-gradient-to-br ${getStatusColor(info.status)}
+                shadow-lg ${getStatusGlow(info.status)}
+                flex items-center justify-center
+                transition-all duration-300
+                group-hover:scale-110 group-hover:shadow-xl
+                ${info.status === 'Done' ? 'animate-pulse' : ''}
+              `}>
+                <Icon className="h-8 w-8 text-white" />
+                
+                {/* Version badge */}
+                <div className="absolute -top-2 -right-2 bg-white rounded-full px-1.5 py-0.5 shadow-md">
+                  <span className="text-xs font-bold text-slate-600">{info.version}</span>
+                </div>
+              </div>
+              
+              {/* System name */}
+              <div className="mt-2 text-center">
+                <div className="text-sm font-medium text-slate-700">{name}</div>
+                <div className="text-xs text-slate-500">Floor {floorNumber}</div>
+              </div>
+            </div>
+          );
+        })}
       </div>
-      <StatusPill status={info.status} />
     </div>
   );
 }
 
 function SmartBuilding({ systems }: { systems: NonNullable<ProjectStatus['systems']> }) {
-  // Order departments in a pleasing layout (floors)
   const floors = useMemo(() => {
     const entries = Object.entries(systems);
-    // Preferred display order
+    // Order systems for building layout
     const order = [
       'foundations',
-      'settings',
+      'settings', 
       'dataCenter',
       'research',
       'controlRoom',
@@ -77,33 +166,42 @@ function SmartBuilding({ systems }: { systems: NonNullable<ProjectStatus['system
       'player',
     ];
     const sorted = entries.sort((a, b) => order.indexOf(a[0]) - order.indexOf(b[0]));
-    // Group 3 per row to resemble floors
-    const rows: typeof sorted[] = [];
-    for (let i = 0; i < sorted.length; i += 3) rows.push(sorted.slice(i, i + 3));
-    return rows;
+    
+    // Group into floors (3 systems per floor)
+    const floors: Array<Array<[string, { status: SystemStatus; version: string; description?: string }]>> = [];
+    for (let i = 0; i < sorted.length; i += 3) {
+      floors.push(sorted.slice(i, i + 3));
+    }
+    return floors;
   }, [systems]);
 
   return (
     <div className="relative">
-      <div className="mx-auto max-w-4xl">
-        {/* Building shell */}
-        <div className="rounded-2xl border bg-gradient-to-b from-white to-slate-50 p-4 shadow-md">
-          <div className="mb-3 flex items-center justify-between">
-            <div className="flex items-center gap-2 text-slate-700">
-              <Building2 className="h-5 w-5" />
-              <span className="font-semibold">Smart Building</span>
+      <div className="mx-auto max-w-6xl">
+        {/* Building structure */}
+        <div className="relative bg-gradient-to-b from-slate-50 to-white rounded-2xl p-8 shadow-lg border">
+          {/* Building title */}
+          <div className="text-center mb-8">
+            <div className="flex items-center justify-center gap-3 mb-2">
+              <Building2 className="h-8 w-8 text-slate-600" />
+              <h3 className="text-2xl font-bold text-slate-800">Smart Building</h3>
             </div>
-            <span className="text-xs text-muted-foreground">Departments</span>
+            <p className="text-slate-600">Version v0.1 Development Progress</p>
           </div>
-          <div className="space-y-3">
-            {floors.map((row, idx) => (
-              <div key={idx} className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {row.map(([key, value]) => (
-                  <DepartmentCard key={key} name={key} info={value as any} />
-                ))}
-              </div>
+
+          {/* Building floors */}
+          <div className="space-y-12">
+            {floors.map((floorSystems, index) => (
+              <BuildingFloor 
+                key={index} 
+                systems={floorSystems} 
+                floorNumber={floors.length - index} 
+              />
             ))}
           </div>
+
+          {/* Building foundation */}
+          <div className="mt-8 h-4 bg-gradient-to-r from-slate-300 via-slate-400 to-slate-300 rounded-b-2xl" />
         </div>
       </div>
     </div>
@@ -112,14 +210,6 @@ function SmartBuilding({ systems }: { systems: NonNullable<ProjectStatus['system
 
 export function RoadmapsTab({ projectStatus }: { projectStatus: ProjectStatus | null }) {
   const systems = projectStatus?.systems;
-  const versionSummary = useMemo(() => {
-    if (!systems) return null;
-    const total = Object.keys(systems).length;
-    const done = Object.values(systems).filter((s) => s.status === 'Done').length;
-    const inProgress = Object.values(systems).filter((s) => s.status === 'In Progress').length;
-    const notStarted = total - done - inProgress;
-    return { total, done, inProgress, notStarted };
-  }, [systems]);
 
   return (
     <TabsContent value="roadmaps" className="space-y-4">
@@ -127,7 +217,7 @@ export function RoadmapsTab({ projectStatus }: { projectStatus: ProjectStatus | 
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Roadmap • Smart Building</CardTitle>
+              <CardTitle>Smart Building Roadmap</CardTitle>
               <CardDescription>
                 {projectStatus?.currentSprint ? (
                   <span>Version v0.1 in development • {projectStatus.currentSprint}</span>
@@ -146,19 +236,7 @@ export function RoadmapsTab({ projectStatus }: { projectStatus: ProjectStatus | 
               <p className="text-xs">Make sure PROJECT-STATUS.json is accessible via the API.</p>
             </div>
           ) : (
-            <div className="space-y-6">
-              {versionSummary ? (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <StatusPill status="Done" />
-                  <span className="mr-3">{versionSummary.done}</span>
-                  <StatusPill status="In Progress" />
-                  <span className="mr-3">{versionSummary.inProgress}</span>
-                  <StatusPill status="Not Started" />
-                  <span>{versionSummary.notStarted}</span>
-                </div>
-              ) : null}
-              <SmartBuilding systems={systems} />
-            </div>
+            <SmartBuilding systems={systems} />
           )}
         </CardContent>
       </Card>
