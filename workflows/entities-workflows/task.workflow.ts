@@ -10,6 +10,7 @@ import { getLinksFor, removeLink } from '@/links/link-registry';
 import { createItemFromTask, removeItemsCreatedByTask } from '../item-creation-utils';
 import { awardPointsToPlayer, removePointsFromPlayer, getMainPlayerId } from '../points-rewards-utils';
 import { createFinancialRecordFromTask, updateFinancialRecordFromTask, removeFinancialRecordsCreatedByTask } from '../financial-record-utils';
+import { getCategoryForTaskType } from '@/lib/utils/searchable-select-utils';
 import { 
   updateFinancialRecordsFromTask, 
   updateItemsCreatedByTask, 
@@ -38,7 +39,10 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
     await appendEntityLog(EntityType.TASK, task.id, LogEventType.CREATED, { 
       name: task.name, 
       status: task.status,
-      station: task.station 
+      station: task.station,
+      taskType: task.type,
+      priority: task.priority,
+      category: getCategoryForTaskType(task.type)
     });
     await markEffect(effectKey);
 

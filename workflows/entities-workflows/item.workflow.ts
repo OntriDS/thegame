@@ -6,6 +6,7 @@ import type { Item } from '@/types/entities';
 import { appendEntityLog, updateEntityLogField } from '../entities-logging';
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
 import { getLinksFor, removeLink } from '@/links/link-registry';
+import { getCategoryForItemType } from '@/lib/utils/searchable-select-utils';
 
 const STATE_FIELDS = ['status', 'stock', 'quantitySold', 'isCollected'];
 const DESCRIPTIVE_FIELDS = ['name', 'description', 'price', 'unitCost', 'additionalCost', 'value'];
@@ -32,6 +33,8 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
       year: item.year,
       sourceType,
       sourceId,
+      category: getCategoryForItemType(item.type),
+      subItemType: item.subItemType,
       description: `Item created from ${sourceType}: ${item.type} (${item.stock?.reduce((sum: number, stock: any) => sum + stock.quantity, 0) || 0}x)`
     });
     

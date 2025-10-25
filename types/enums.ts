@@ -206,7 +206,7 @@ export enum TaskType {
 /** Task categories for UI organization and SearchableSelect grouping */
 export const TASK_CATEGORIES = {
   MISSION: ['Mission', 'Milestone', 'Goal', 'Assignment'],
-  RECURRENT: ['Recurrent Parent', 'Recurrent Template', 'Recurrent Instance']
+  RECURRENT: ['Recurrent Group', 'Recurrent Template', 'Recurrent Instance']
 } as const;
 
 /** Recurrent task frequency options */

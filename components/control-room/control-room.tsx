@@ -483,35 +483,7 @@ export default function ControlRoom() {
                 setSelectedNode(updatedNode);
               }
               
-              // If task has cost or revenue, wait for financial record creation
-              if (task.cost > 0 || task.revenue > 0) {
-                console.log(`[ControlRoom] Task has cost/revenue, waiting for financial record creation...`);
-                
-                // Poll for financial record creation (max 15 attempts, 200ms each = 3 seconds total)
-                let attempts = 0;
-                let financialRecordCreated = false;
-                
-                while (attempts < 15 && !financialRecordCreated) {
-                  const financials = await ClientAPI.getFinancialRecords();
-                  const finrec = financials.find(fr => fr.sourceTaskId === finalTask.id);
-                  
-                  if (finrec) {
-                    console.log(`[ControlRoom] ✅ Financial record found for task: ${finrec.name} (cost: ${finrec.cost}, revenue: ${finrec.revenue})`);
-                    financialRecordCreated = true;
-                  } else {
-                    console.log(`[ControlRoom] Waiting for financial record... attempt ${attempts + 1}/15 (task: ${finalTask.name}, cost: ${finalTask.cost}, revenue: ${finalTask.revenue})`);
-                    await new Promise(resolve => setTimeout(resolve, 200));
-                    attempts++;
-                  }
-                }
-                
-                if (financialRecordCreated) {
-                  // Explicitly refresh financial records cache to ensure UI has latest data
-                  // Financial records cache refresh not needed in KV-only system
-                } else {
-                  console.warn(`[ControlRoom] ⚠️ Financial record not found after ${attempts} attempts (task: ${finalTask.name}, cost: ${finalTask.cost}, revenue: ${finalTask.revenue})`);
-                }
-              }
+              // Financial records, items, and points will be created automatically when task status changes to "Done"
               
 
             } catch (error) {
