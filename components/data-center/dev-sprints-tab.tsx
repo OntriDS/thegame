@@ -34,38 +34,26 @@ export function DevSprintsTab({
   const [activeSubTab, setActiveSubTab] = useState<string>('sprints');
   const [logOrder, setLogOrder] = useState<'newest' | 'oldest'>('newest');
 
-  // Helper function to parse dates in either DD-MM-YYYY or YYYY-MM-DD format
-  const parseFlexibleDate = (dateStr: string): Date => {
+  // Helper function to parse dates using our standard DD-MM-YYYY format (from date-constants.ts)
+  const parseDate = (dateStr: string): Date => {
     if (!dateStr || dateStr === 'Current Sprint') {
       return new Date();
     }
     
-    // Check if format is DD-MM-YYYY (has day > 12 in first position or matches pattern)
+    // Our standard format is DD-MM-YYYY (from date-constants.ts)
     const parts = dateStr.split('-');
     
     if (parts.length === 3) {
-      const [first, second, third] = parts;
+      const [day, month, year] = parts;
       
-      // If first part > 12, it's definitely DD-MM-YYYY
-      if (parseInt(first) > 12) {
-        return new Date(`${third}-${second}-${first}`); // Convert to YYYY-MM-DD
+      // Validate DD-MM-YYYY format
+      if (day.length === 2 && month.length === 2 && year.length === 4) {
+        // Convert DD-MM-YYYY to YYYY-MM-DD for Date constructor
+        return new Date(`${year}-${month}-${day}`);
       }
-      
-      // If third part > 31, it's YYYY-MM-DD
-      if (parseInt(third) > 31) {
-        return new Date(dateStr); // Already YYYY-MM-DD
-      }
-      
-      // If third part is 4 digits, it's DD-MM-YYYY
-      if (third.length === 4) {
-        return new Date(`${third}-${second}-${first}`); // Convert to YYYY-MM-DD
-      }
-      
-      // Default: assume DD-MM-YYYY (our standard format)
-      return new Date(`${third}-${second}-${first}`);
     }
     
-    // Fallback: try direct parsing
+    // Fallback for any other format
     return new Date(dateStr);
   };
 
@@ -123,8 +111,8 @@ export function DevSprintsTab({
     if (devLog && devLog.sprints) {
       // Sort sprints by completion date (newest first for logOrder === 'newest')
       const sortedSprints = [...devLog.sprints].sort((a, b) => {
-        const dateA = parseFlexibleDate(a.completedAt);
-        const dateB = parseFlexibleDate(b.completedAt);
+        const dateA = parseDate(a.completedAt);
+        const dateB = parseDate(b.completedAt);
         return logOrder === 'newest' ? dateB.getTime() - dateA.getTime() : dateA.getTime() - dateB.getTime();
       });
       
@@ -133,8 +121,8 @@ export function DevSprintsTab({
         if (sprint.phases && sprint.phases.length > 0) {
           // Sort phases by completion date within the sprint
           const sortedPhases = [...sprint.phases].sort((a, b) => {
-            const dateA = parseFlexibleDate(a.completedAt);
-            const dateB = parseFlexibleDate(b.completedAt);
+            const dateA = parseDate(a.completedAt);
+            const dateB = parseDate(b.completedAt);
             return logOrder === 'newest' ? dateB.getTime() - dateA.getTime() : dateA.getTime() - dateB.getTime();
           });
           
@@ -168,8 +156,8 @@ export function DevSprintsTab({
     entries.sort((a, b) => {
       // All entries now have real dates, so we can sort them properly
       // Use flexible date parsing to handle both DD-MM-YYYY and YYYY-MM-DD formats
-      const dateA = parseFlexibleDate(a.completedAt);
-      const dateB = parseFlexibleDate(b.completedAt);
+      const dateA = parseDate(a.completedAt);
+      const dateB = parseDate(b.completedAt);
      
       // If dates are the same, ensure the logical order (sprint vs phase) is respected
       if (dateA.getTime() === dateB.getTime()) {

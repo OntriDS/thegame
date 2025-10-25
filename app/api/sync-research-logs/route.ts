@@ -114,8 +114,8 @@ async function checkSyncStatus(): Promise<{needsSync: string[], upToDate: string
         continue;
       }
       
-      // Get KV data
-      const kvData = await kvGet(logType);
+      // Get KV data (use correct key with data: prefix)
+      const kvData = await kvGet(`data:${logType}`);
       
       // 1. Check if KV is empty
       if (!kvData || Object.keys(kvData).length === 0) {
@@ -155,8 +155,15 @@ async function checkSyncStatus(): Promise<{needsSync: string[], upToDate: string
           console.log(`[Sync Research Logs API] 📊 ${logType}: up to date (KV newer but valid)`);
         }
       } else {
-        results.upToDate.push(logType);
-        console.log(`[Sync Research Logs API] 📊 ${logType}: up to date (timestamps match)`);
+        // Timestamps match - check if data actually differs
+        const dataMatches = JSON.stringify(localData) === JSON.stringify(kvData);
+        if (!dataMatches) {
+          results.needsSync.push(logType);
+          console.log(`[Sync Research Logs API] 📊 ${logType}: needs sync (timestamps match but data differs)`);
+        } else {
+          results.upToDate.push(logType);
+          console.log(`[Sync Research Logs API] 📊 ${logType}: up to date (timestamps and data match)`);
+        }
       }
     } catch (error) {
       console.error(`[Sync Research Logs API] ❌ Error checking ${logType}:`, error);
@@ -256,8 +263,8 @@ async function syncIndividualLogType(
       return results;
     }
     
-    // Get KV data
-    const kvData = await kvGet(logType);
+    // Get KV data (use correct key with data: prefix)
+    const kvData = await kvGet(`data:${logType}`);
     
     // Get file stats for timestamp comparison
     const fileStats = await getFileStats(logType);
@@ -273,7 +280,7 @@ async function syncIndividualLogType(
     if (syncDecision.action === 'synced') {
       // Use merged data if available (for merge strategy), otherwise use local data (for replace strategy)
       const dataToSync = syncDecision.mergedData || localData;
-      await kvSet(logType, dataToSync);
+      await kvSet(`data:${logType}`, dataToSync);
       results.synced.push(logType);
       console.log(`[Sync Research Logs API] ✅ ${logType} synced: ${syncDecision.reason}`);
     } else if (syncDecision.action === 'skipped') {
