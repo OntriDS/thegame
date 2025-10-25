@@ -18,7 +18,7 @@ import {
   Target,
   Download
 } from 'lucide-react';
-import { SYNC_STRATEGIES, SyncResult } from '@/workflows/settings/research-sync-types';
+import { SYNC_STRATEGIES, SyncResult } from '@/workflows/settings/research-sync';
 
 interface SyncStatus {
   needsSync: string[];
@@ -32,6 +32,7 @@ export function ResearchSyncTab() {
   const [isDownloading, setIsDownloading] = useState(false);
   const [lastSync, setLastSync] = useState<Record<string, string>>({});
   const [syncResults, setSyncResults] = useState<Record<string, SyncResult>>({});
+  const [strategyOverrides, setStrategyOverrides] = useState<Record<string, 'force' | 'smart' | 'migrate-once'>>({});
 
   // Load sync status on mount
   useEffect(() => {
@@ -56,7 +57,10 @@ export function ResearchSyncTab() {
       const response = await fetch('/api/sync-research-logs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ logType })
+        body: JSON.stringify({ 
+          logType,
+          strategyOverride: strategyOverrides[logType] // Pass override if set
+        })
       });
 
       const result = await response.json();
@@ -285,6 +289,46 @@ export function ResearchSyncTab() {
                             getSyncButtonText(logType)
                           )}
                         </Button>
+                      </div>
+                    </div>
+
+                    {/* Sync Strategy Radio Buttons */}
+                    <div className="flex items-center gap-4 mt-3">
+                      <span className="text-sm text-muted-foreground">Sync Mode:</span>
+                      <div className="flex gap-4">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name={`strategy-${logType}`}
+                            value="force"
+                            checked={(strategyOverrides[logType] || SYNC_STRATEGIES[logType].type) === 'force'}
+                            onChange={(e) => setStrategyOverrides(prev => ({ ...prev, [logType]: 'force' }))}
+                            className="cursor-pointer"
+                          />
+                          <span className="text-sm">Force (Replace)</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name={`strategy-${logType}`}
+                            value="smart"
+                            checked={(strategyOverrides[logType] || SYNC_STRATEGIES[logType].type) === 'smart'}
+                            onChange={(e) => setStrategyOverrides(prev => ({ ...prev, [logType]: 'smart' }))}
+                            className="cursor-pointer"
+                          />
+                          <span className="text-sm">Smart (Merge)</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name={`strategy-${logType}`}
+                            value="migrate-once"
+                            checked={(strategyOverrides[logType] || SYNC_STRATEGIES[logType].type) === 'migrate-once'}
+                            onChange={(e) => setStrategyOverrides(prev => ({ ...prev, [logType]: 'migrate-once' }))}
+                            className="cursor-pointer"
+                          />
+                          <span className="text-sm">Migrate (One-Time)</span>
+                        </label>
                       </div>
                     </div>
 

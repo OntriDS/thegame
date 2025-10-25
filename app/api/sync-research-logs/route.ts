@@ -4,7 +4,7 @@ import {
   syncResearchLogsToKV, 
   checkResearchLogsSyncStatus,
   syncIndividualResearchData 
-} from '@/workflows/settings/research-logs-sync';
+} from '@/workflows/settings/research-sync';
 
 /**
  * API route to trigger research logs sync
@@ -19,12 +19,12 @@ export async function POST(req: NextRequest) {
   
   try {
     const body = await req.json();
-    const { logType } = body;
+    const { logType, strategyOverride } = body;
     
     if (logType) {
       // Individual sync
       console.log(`[Sync Research Logs API] 🔄 Starting ${logType} sync...`);
-      const results = await syncIndividualResearchData(logType);
+      const results = await syncIndividualResearchData(logType, strategyOverride);
       
       console.log(`[Sync Research Logs API] ✅ ${logType} sync completed:`, results);
       return NextResponse.json({

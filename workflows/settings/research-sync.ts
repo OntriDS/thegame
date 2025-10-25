@@ -1,5 +1,35 @@
 import { kvGet, kvSet } from '@/data-store/kv';
-import { SyncResult, SyncStrategy, SYNC_STRATEGIES } from './research-sync-types';
+
+// === TYPES ===
+export interface SyncResult {
+  synced: string[];
+  skipped: string[];
+  conflicts: string[];
+  errors: string[];
+}
+
+export interface SyncStrategy {
+  type: 'force' | 'smart' | 'migrate-once';
+  description: string;
+}
+
+// === SYNC STRATEGIES ===
+export const SYNC_STRATEGIES: Record<string, SyncStrategy> = {
+  'project-status': {
+    type: 'force',
+    description: 'Always overwrite KV with local (version controlled)'
+  },
+  'dev-log': {
+    type: 'force',  // CHANGED from 'smart' - CRITICAL FIX
+    description: 'Always overwrite KV with local (version controlled)'
+  },
+  'notes-log': {
+    type: 'migrate-once',
+    description: 'One-time migration, then KV becomes source of truth'
+  }
+};
+
+// === IMPLEMENTATION ===
 
 /**
  * Auto-sync research logs from local files to KV when changed
@@ -98,11 +128,11 @@ async function applySyncStrategy(
   
   switch (strategy.type) {
     case 'force':
-      // Always sync (project-status)
+      // Always sync (project-status, dev-log)
       return { action: 'synced', reason: 'Force sync (version controlled)' };
       
     case 'smart':
-      // Check for conflicts (dev-log)
+      // Check for conflicts (dev-log when overridden)
       if (!kvLastUpdated) {
         return { action: 'synced', reason: 'No KV data, syncing from local' };
       }
@@ -180,7 +210,10 @@ export async function checkResearchLogsSyncStatus(): Promise<{needsSync: string[
 /**
  * Sync individual research data type
  */
-export async function syncIndividualResearchData(logType: string): Promise<SyncResult> {
+export async function syncIndividualResearchData(
+  logType: string, 
+  strategyOverride?: 'force' | 'smart' | 'migrate-once'
+): Promise<SyncResult> {
   const results: SyncResult = {synced: [], skipped: [], conflicts: [], errors: []};
   
   // Check if we're in production (KV available)
@@ -227,8 +260,12 @@ export async function syncIndividualResearchData(logType: string): Promise<SyncR
     const kvKey = `data:${logType}`;
     const kvData = await kvGet(kvKey);
     
+    // Use override if provided, otherwise use default strategy
+    const strategy = strategyOverride 
+      ? { type: strategyOverride, description: SYNC_STRATEGIES[logType].description }
+      : SYNC_STRATEGIES[logType];
+    
     // Apply sync strategy
-    const strategy = SYNC_STRATEGIES[logType];
     const syncResult = await applySyncStrategy(logType, strategy, localData, kvData, fileStats);
     
     // Update results based on strategy outcome

@@ -7,6 +7,7 @@ import { BookOpen, Map, FileText, Compass, Zap, CheckCircle, AlertTriangle, X } 
 import { useState, useEffect, Suspense } from 'react';
 import { NotebookType } from '@/types/enums';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
+import { formatDateDDMMYYYY } from '@/lib/constants/date-constants';
 import { NotesTab } from '@/components/research/notes-tab';
 import { RoadmapsTab } from '@/components/research/roadmaps-tab';
 import { DiagramsTab } from '@/components/research/diagrams-tab';
@@ -349,25 +350,32 @@ function ResearchPageContent() {
     }
 
     try {
+      // Check for duplicate sprint ID
+      const sprintId = `sprint-${projectStatus.currentSprintNumber}`;
+      const currentDevLog = devLog || { sprints: [], phases: [] };
+
+      if (currentDevLog.sprints?.some((s: any) => s.id === sprintId)) {
+        alert(`Sprint ${projectStatus.currentSprintNumber} already exists in dev log. Please check the data.`);
+        return;
+      }
       
       // 1. Create sprint completion entry for dev log
       const completedSprint = {
-        id: `sprint-${projectStatus.currentSprintNumber}`,
+        id: sprintId,
         sprintName: projectStatus.currentSprint,
         description: `Sprint ${projectStatus.currentSprintNumber} completed successfully`,
-        completedAt: new Date().toLocaleDateString('en-GB'), // DD-MM-YYYY format
+        completedAt: formatDateDDMMYYYY(new Date()), // DD-MM-YYYY format
         challenge: projectStatus.currentChallenge || 'System Development',
         phases: Object.entries(projectStatus.phasePlan).map(([phaseKey, phase]: [string, any]) => ({
           id: phaseKey,
           phaseName: phase.phaseName || phaseKey, // Use phaseName if available, fallback to phaseKey
           description: phase.description,
-          completedAt: new Date().toLocaleDateString('en-GB'), // DD-MM-YYYY format
+          completedAt: formatDateDDMMYYYY(new Date()), // DD-MM-YYYY format
           completedFeatures: phase.deliverables || []
         }))
       };
 
       // 2. Update dev log with completed sprint
-      const currentDevLog = devLog || { sprints: [], phases: [] };
       const updatedDevLog = {
         ...currentDevLog,
         sprints: [...(currentDevLog.sprints || []), completedSprint]
@@ -392,25 +400,25 @@ function ResearchPageContent() {
         currentSprint: `Sprint ${nextSprintNumber}`,
         phasePlan: projectStatus.nextSprintPlan,
         nextSprintPlan: {
-          "phaseX.1": {
+          [`phase${nextSprintNumber}.1`]: {
             "phaseName": "",
             "status": "Not Started",
             "description": "",
             "deliverables": []
           },
-          "PhaseX.2": {
+          [`phase${nextSprintNumber}.2`]: {
             "phaseName": "",
             "status": "Not Started", 
             "description": "",
             "deliverables": []
           },
-          "phaseX.3": {
+          [`phase${nextSprintNumber}.3`]: {
             "phaseName": "",
             "status": "Not Started",
             "description": "",
             "deliverables": []
           },
-          "phaseX.4": {
+          [`phase${nextSprintNumber}.4`]: {
             "phaseName": "",
             "status": "Not Started",
             "description": "",
