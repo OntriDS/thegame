@@ -10,26 +10,21 @@ import { calculateTaskProfit, calculateTaskProfitPercentage } from '@/lib/utils/
 import { TaskStatus, EntityType } from '@/types/enums';
 import { useThemeColors } from '@/lib/hooks/use-theme-colors';
 import { formatDateDDMMYYYY } from '@/lib/constants/date-constants';
-import { SprintCompletionModal } from '@/components/research/sprint-completion-modal';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
 import { useEntityUpdates } from '@/lib/hooks/use-entity-updates';
 import { TasksLifecycleTab } from '@/components/data-center/tasks-lifecycle-tab';
 import { ItemsLifecycleTab } from '@/components/data-center/items-lifecycle-tab';
-import { DevSprintsTab } from '@/components/data-center/dev-sprints-tab';
 import { FinancialsTab } from '@/components/data-center/financials-tab';
 import { CharacterLogTab } from '@/components/data-center/character-log-tab';
 import { PlayerLogTab } from '@/components/data-center/player-log-tab';
 import { SalesLogTab } from '@/components/data-center/sales-log-tab';
 import { SitesLogTab } from '@/components/data-center/sites-log-tab';
 import { LinksTab } from '@/components/data-center/links-tab';
-import { updatePhaseStatus, logPhaseCompletion, cyclePhaseStatus } from '@/lib/utils/phase-status-utils';
 import { deduplicateTasksLog } from '@/lib/utils/logging-utils';
 
 export default function DataCenterPage() {
   const { textColor } = useThemeColors();
   const { getPreference, setPreference } = useUserPreferences();
-  const [projectStatus, setProjectStatus] = useState<any>(null);
-  const [devLog, setDevLog] = useState<any>(null);
   const [characterLog, setCharacterLog] = useState<any>(null);
   const [playerLog, setPlayerLog] = useState<any>(null);
   const [salesLog, setSalesLog] = useState<any>(null);
@@ -38,10 +33,6 @@ export default function DataCenterPage() {
   const [itemsLog, setItemsLog] = useState<any>(null);
   const [tasksLog, setTasksLog] = useState<any>(null);
   const [logOrder, setLogOrder] = useState<'newest' | 'oldest'>('newest');
-  const [showSprintCompletionModal, setShowSprintCompletionModal] = useState(false);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [successMessage, setSuccessMessage] = useState('');
-  const [incompletePhases, setIncompletePhases] = useState<string[]>([]);
   const [isReloading, setIsReloading] = useState(false);
   
   
@@ -92,39 +83,6 @@ export default function DataCenterPage() {
     }
   }, [getPreference, setPreference]);
 
-  // Load project status from API
-  useEffect(() => {
-    const loadProjectStatus = async () => {
-      try {
-        const response = await fetch('/api/project-status');
-        if (response.ok) {
-          const data = await response.json();
-          setProjectStatus(data);
-        }
-      } catch (error) {
-        // Failed to load project status from API
-      }
-    };
-
-    loadProjectStatus();
-  }, []);
-
-  // Load dev log
-  useEffect(() => {
-    const loadDevLog = async () => {
-      try {
-        const response = await fetch('/api/dev-log');
-        if (response.ok) {
-          const data = await response.json();
-          setDevLog(data);
-        }
-      } catch (error) {
-        // Failed to load Dev log
-      }
-    };
-
-    loadDevLog();
-  }, []);
 
   // Load character log
   useEffect(() => {
@@ -170,36 +128,13 @@ export default function DataCenterPage() {
   // Listen for tasks updates to refresh tasks log
   useEntityUpdates('task', () => loadLog('tasks', setTasksLog, true));
 
-  // Phase status management using utilities
-  const handleCyclePhaseStatus = async (phaseKey: string) => {
-    await cyclePhaseStatus(phaseKey, projectStatus, handleUpdatePhaseStatus);
-  };
-
-  const handleUpdatePhaseStatus = async (phaseKey: string, newStatus: string) => {
-    await updatePhaseStatus(phaseKey, newStatus, projectStatus);
-    
-    // Reload project status after update
-    const statusResponse = await fetch('/api/project-status');
-    if (statusResponse.ok) {
-      const statusData = await statusResponse.json();
-      setProjectStatus(statusData);
-    }
-    
-    // Reload dev log after update (especially important when phase is marked as "Done")
-    const devLogResponse = await fetch('/api/dev-log');
-    if (devLogResponse.ok) {
-      const devLogData = await devLogResponse.json();
-      setDevLog(devLogData);
-    }
-  };
 
   // Reload all logs (all 7 entity logs)
   const handleReloadLogs = async () => {
     setIsReloading(true);
     try {
-      // Reload all 7 entity logs + dev log
-      const [devResponse, characterResponse, playerResponse, salesResponse, sitesResponse, financialsResponse, itemsResponse, tasksResponse] = await Promise.all([
-        fetch('/api/dev-log'),
+      // Reload all 7 entity logs
+      const [characterResponse, playerResponse, salesResponse, sitesResponse, financialsResponse, itemsResponse, tasksResponse] = await Promise.all([
         fetch('/api/character-log'),
         fetch('/api/player-log'),
         fetch('/api/sales-log'),
@@ -209,10 +144,6 @@ export default function DataCenterPage() {
         fetch('/api/tasks-log')
       ]);
 
-      if (devResponse.ok) {
-        const data = await devResponse.json();
-        setDevLog(data);
-      }
       if (characterResponse.ok) {
         const data = await characterResponse.json();
         setCharacterLog(data);
@@ -248,69 +179,6 @@ export default function DataCenterPage() {
     }
   };
 
-  const handleSprintCompletion = async () => {
-    if (!projectStatus || !projectStatus.phasePlan) return;
-
-    // Check if all phases are "Done"
-    const incompletePhasesList = Object.entries(projectStatus.phasePlan)
-      .filter(([phaseKey, phase]: [string, any]) => phase.status !== 'Done')
-      .map(([phaseKey, phase]: [string, any]) => phase.phaseName);
-
-    if (incompletePhasesList.length > 0) {
-      setIncompletePhases(incompletePhasesList);
-      setShowSprintCompletionModal(true);
-      return;
-    }
-
-    // Check if nextSprintPlan exists and has phases
-    if (!projectStatus.nextSprintPlan || 
-        Object.keys(projectStatus.nextSprintPlan).length === 0) {
-      alert('Next sprint plan is not ready. Please ensure it has at least one phase.');
-      return;
-    }
-
-    try {
-      const response = await fetch('/api/sprint-completion', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          currentSprintNumber: projectStatus.currentSprintNumber,
-          currentSprintName: projectStatus.currentSprint,
-          phasePlan: projectStatus.phasePlan
-        }),
-      });
-
-      if (response.ok) {
-        // Reload project status to get updated data
-        const statusResponse = await fetch('/api/project-status');
-        if (statusResponse.ok) {
-          const data = await statusResponse.json();
-          setProjectStatus(data);
-        }
-
-        // Reload dev log to show completion entry
-        const devLogResponse = await fetch('/api/dev-log');
-        if (devLogResponse.ok) {
-          const data = await devLogResponse.json();
-          setDevLog(data);
-        }
-        
-        setSuccessMessage('Sprint completed successfully!');
-        setShowSuccessModal(true);
-      } else {
-        const errorText = await response.text();
-        console.error('Failed to complete sprint:', errorText);
-        setSuccessMessage('Failed to complete sprint. Please try again.');
-        setShowSuccessModal(true);
-      }
-    } catch (error) {
-      console.error('Error completing sprint:', error);
-      setSuccessMessage('Error completing sprint. Please try again.');
-      setShowSuccessModal(true);
-    }
-  };
 
   return (
     <div className="container mx-auto px-6 space-y-6 ">
@@ -318,7 +186,7 @@ export default function DataCenterPage() {
         setActiveMainTab(value);
         setPreference('data-center-active-main-tab', value);
       }} className="w-full">
-        <TabsList className="grid w-full grid-cols-8">
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="tasks-lifecycle" className="flex items-center gap-2">
             <CheckCircle className="h-4 w-4" />
             Tasks
@@ -356,7 +224,6 @@ export default function DataCenterPage() {
         {/* Tasks Lifecycle Tab */}
         <TabsContent value="tasks-lifecycle" className="space-y-4">
           <TasksLifecycleTab 
-            projectStatus={projectStatus}
             tasksLog={tasksLog}
             onReload={handleReloadLogs}
             isReloading={isReloading}
@@ -425,63 +292,10 @@ export default function DataCenterPage() {
           />
         </TabsContent>
 
-        {/* Dev Log Tab - Moving to Research */}
-        <TabsContent value="dev-log" className="space-y-4">
-          <DevSprintsTab 
-            projectStatus={projectStatus}
-            devLog={devLog}
-            onReload={handleReloadLogs}
-            isReloading={isReloading}
-            onCyclePhaseStatus={handleCyclePhaseStatus}
-            onCheckSprintCompletion={handleSprintCompletion}
-          />
-                </TabsContent>
                 
 
       </Tabs>
 
-      {/* Sprint Completion Modal */}
-      <SprintCompletionModal
-        isOpen={showSprintCompletionModal}
-        onClose={() => setShowSprintCompletionModal(false)}
-        onConfirm={() => setShowSprintCompletionModal(false)}
-        incompletePhases={incompletePhases}
-        currentSprintNumber={projectStatus?.currentSprintNumber || 0}
-        currentSprintName={projectStatus?.currentSprint || ''}
-      />
-      
-      {/* Success/Error Modal */}
-      {showSuccessModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                {successMessage.includes('successfully') ? (
-                  <CheckCircle className="h-6 w-6 text-green-500" />
-                ) : (
-                  <AlertTriangle className="h-6 w-6 text-red-500" />
-                )}
-                <h3 className="text-lg font-semibold">
-                  {successMessage.includes('successfully') ? 'Success' : 'Error'}
-                </h3>
-              </div>
-              <button
-                onClick={() => setShowSuccessModal(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <p className="text-gray-700 mb-4">{successMessage}</p>
-            <Button 
-              onClick={() => setShowSuccessModal(false)}
-              className="w-full"
-            >
-              OK
-            </Button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

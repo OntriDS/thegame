@@ -15,13 +15,12 @@ import { processLogData } from '@/lib/utils/logging-utils';
 import { TASK_TYPE_ICONS, LOG_DISPLAY_ICONS, FINANCIAL_ABBREVIATIONS } from '@/lib/constants/icon-maps';
 
 interface TasksLifecycleTabProps {
-  projectStatus: any;
   tasksLog: any;
   onReload: () => void;
   isReloading: boolean;
 }
 
-export function TasksLifecycleTab({ projectStatus, tasksLog, onReload, isReloading }: TasksLifecycleTabProps) {
+export function TasksLifecycleTab({ tasksLog, onReload, isReloading }: TasksLifecycleTabProps) {
   const { textColor, isDarkMode } = useThemeColors();
   const [activeSubTab, setActiveSubTab] = useState<string>('lifecycle-log');
   const [logOrder, setLogOrder] = useState<'newest' | 'oldest'>('newest');

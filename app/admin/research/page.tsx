@@ -290,13 +290,153 @@ function ResearchPageContent() {
 
   // Phase status management handlers (placeholder for now)
   const handleCyclePhaseStatus = async (phaseKey: string) => {
-    console.log('Cycle phase status:', phaseKey);
-    // This functionality is currently in data-center, keeping it simple for research
+    if (!projectStatus || !projectStatus.phasePlan || !projectStatus.phasePlan[phaseKey]) {
+      return;
+    }
+
+    const currentStatus = projectStatus.phasePlan[phaseKey].status;
+    const statusCycle = ['Not Started', 'In Progress', 'Done'];
+    const currentIndex = statusCycle.indexOf(currentStatus);
+    const nextIndex = (currentIndex + 1) % statusCycle.length;
+    const newStatus = statusCycle[nextIndex];
+
+    try {
+      const response = await fetch('/api/project-status', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phaseKey,
+          newStatus
+        })
+      });
+
+      if (response.ok) {
+        // Reload project status to reflect changes
+        await handleReloadLogs();
+      } else {
+        const errorText = await response.text();
+        console.error('Failed to update phase status:', errorText);
+        alert('Failed to update phase status. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error updating phase status:', error);
+      alert('Error updating phase status. Please try again.');
+    }
   };
 
   const handleCheckSprintCompletion = async () => {
-    console.log('Check sprint completion');
-    // This functionality is currently in data-center, keeping it simple for research
+    if (!projectStatus || !projectStatus.phasePlan) {
+      return;
+    }
+
+    // Check if all phases are "Done"
+    const incompletePhasesList = Object.entries(projectStatus.phasePlan)
+      .filter(([phaseKey, phase]: [string, any]) => phase.status !== 'Done')
+      .map(([phaseKey, phase]: [string, any]) => phase.phaseName);
+
+    if (incompletePhasesList.length > 0) {
+      alert(`Cannot complete sprint. Incomplete phases: ${incompletePhasesList.join(', ')}`);
+      return;
+    }
+
+    // Check if nextSprintPlan exists and has phases
+    if (!projectStatus.nextSprintPlan || 
+        Object.keys(projectStatus.nextSprintPlan).length === 0) {
+      alert('Next sprint plan is not ready. Please ensure it has at least one phase.');
+      return;
+    }
+
+    try {
+      
+      // 1. Create sprint completion entry for dev log
+      const completedSprint = {
+        id: `sprint-${projectStatus.currentSprintNumber}`,
+        sprintName: projectStatus.currentSprint,
+        description: `Sprint ${projectStatus.currentSprintNumber} completed successfully`,
+        completedAt: new Date().toISOString().split('T')[0], // YYYY-MM-DD format
+        challenge: projectStatus.currentChallenge || 'System Development',
+        phases: Object.entries(projectStatus.phasePlan).map(([phaseKey, phase]: [string, any]) => ({
+          id: phaseKey,
+          phaseName: phase.phaseName,
+          description: phase.description,
+          completedAt: new Date().toISOString().split('T')[0],
+          completedFeatures: phase.deliverables || []
+        }))
+      };
+
+      // 2. Update dev log with completed sprint
+      const currentDevLog = devLog || { sprints: [], phases: [] };
+      const updatedDevLog = {
+        ...currentDevLog,
+        sprints: [...(currentDevLog.sprints || []), completedSprint]
+      };
+
+      const devLogResponse = await fetch('/api/dev-log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedDevLog)
+      });
+
+      if (!devLogResponse.ok) {
+        throw new Error('Failed to update dev log');
+      }
+
+      // 3. Update project status: move nextSprintPlan to phasePlan, increment sprint number
+      const nextSprintNumber = (projectStatus.currentSprintNumber || 10) + 1;
+      const updatedProjectStatus = {
+        ...projectStatus,
+        lastUpdated: new Date().toISOString(),
+        currentSprintNumber: nextSprintNumber,
+        currentSprint: `Sprint ${nextSprintNumber}`,
+        phasePlan: projectStatus.nextSprintPlan,
+        nextSprintPlan: {
+          "phaseX.1": {
+            "phaseName": "",
+            "status": "Not Started",
+            "description": "",
+            "deliverables": []
+          },
+          "PhaseX.2": {
+            "phaseName": "",
+            "status": "Not Started", 
+            "description": "",
+            "deliverables": []
+          },
+          "phaseX.3": {
+            "phaseName": "",
+            "status": "Not Started",
+            "description": "",
+            "deliverables": []
+          },
+          "phaseX.4": {
+            "phaseName": "",
+            "status": "Not Started",
+            "description": "",
+            "deliverables": []
+          }
+        }
+      };
+
+      const projectStatusResponse = await fetch('/api/project-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedProjectStatus)
+      });
+
+      if (!projectStatusResponse.ok) {
+        throw new Error('Failed to update project status');
+      }
+
+      // 4. Reload data to reflect changes
+      await handleReloadLogs();
+      
+      alert(`Sprint ${projectStatus.currentSprintNumber} completed successfully! Moved to Sprint ${nextSprintNumber}.`);
+      
+    } catch (error) {
+      console.error('Error completing sprint:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      alert(`Error completing sprint: ${errorMessage}`);
+    }
   };
 
 
