@@ -146,20 +146,25 @@ function BuildingFloor({
 function SmartBuilding({ systems }: { systems: NonNullable<ProjectStatus['systems']> }) {
   const floors = useMemo(() => {
     const entries = Object.entries(systems);
-    // Order systems for building layout (foundations at bottom)
+    // Order systems for building layout
     const order = [
-      'foundations',
-      'settings', 
-      'dataCenter',
-      'research',
-      'controlRoom',
-      'inventories',
-      'sales',
-      'finances',
-      'maps',
       'dashboards',
       'archive',
+
+      'maps',
       'player',
+
+      'sales',
+      'finances',
+
+      'inventories',
+      'controlRoom',
+
+      'dataCenter',
+      'research',
+
+      'settings', 
+      'foundations',
     ];
     const sorted = entries.sort((a, b) => order.indexOf(a[0]) - order.indexOf(b[0]));
     
