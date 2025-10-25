@@ -675,14 +675,11 @@ export const ClientAPI = {
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 ClientAPI.getAccounts = async (): Promise<Account[]> => {
-  console.log('🔥 CLIENT API DEBUG - getAccounts called');
   const res = await fetch('/api/accounts');
-  console.log('🔥 CLIENT API DEBUG - getAccounts response status:', res.status);
   if (!res.ok) {
-    console.error('🔥 CLIENT API DEBUG - getAccounts failed:', res.status, res.statusText);
+    console.error('Failed to fetch accounts');
     return [];
   }
   const accounts = await res.json();
-  console.log('🔥 CLIENT API DEBUG - getAccounts success, found:', accounts.length, 'accounts');
   return accounts;
 };

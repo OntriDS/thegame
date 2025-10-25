@@ -32,12 +32,10 @@ export async function POST(request: NextRequest) {
         await setUserPreference(key, preferences[key]);
       }
       
-      console.log(`[UserPreferences] Batch saved to KV: ${keys.length} preferences`);
     } else {
       // Single preference save (backward compatibility)
       const { key, value } = body;
       await setUserPreference(key, value);
-      console.log(`[UserPreferences] Saved to KV: ${key} = ${value}`);
     }
     
     return NextResponse.json({ success: true });

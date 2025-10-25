@@ -153,22 +153,7 @@ export function TasksLifecycleTab({ tasksLog, onReload, isReloading }: TasksLife
                   const type: string = entry.taskType || data.taskType || '—';
                   const station: string = formatStation(entry.station || data.station);
                   const category: string = formatCategory(entry.category || data.category);
-                  const priority: string = formatPriority(data.priority);
-                  
-                  // Debug logging for all entries to see what data we're getting
-                  console.log('🔍 Task entry debug:', {
-                    entry,
-                    data,
-                    status,
-                    station: data.station || entry.station,
-                    category: data.category || entry.category,
-                    type: data.taskType || entry.taskType,
-                    priority: data.priority,
-                    formattedStation: station,
-                    formattedCategory: category,
-                    formattedType: type,
-                    formattedPriority: priority
-                  });
+                  const priority: string = formatPriority(entry.priority || data.priority);
                   
                   // Debug logging for Done entries
                   if (status.toLowerCase() === 'done') {

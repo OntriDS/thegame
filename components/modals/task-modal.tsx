@@ -386,7 +386,6 @@ export default function TaskModal({
         await ClientAPI.upsertCharacter(newCharacter);
         
         finalCustomerCharacterId = newCharacter.id;
-        console.log(`[TaskModal] ✅ Created new customer character: ${newCharacter.name} (${newCharacter.id})`);
       } catch (error) {
         console.error('[TaskModal] ❌ Failed to create customer character:', error);
         alert('Warning: Failed to create customer character. Continuing without customer link.');
@@ -775,7 +774,7 @@ export default function TaskModal({
             <div className={`flex-1 grid gap-4 ${emissaryColumnExpanded ? 'grid-cols-4' : 'grid-cols-3'}`}>
             {/* Column 1: NATIVE (Basic Info) */}
             <div className="space-y-3">
-              <h3 className="text-sm font-semibold text-muted-foreground border-b pb-1">🧬 NATIVE</h3>
+              {/* <h3 className="text-sm font-semibold text-muted-foreground border-b pb-1">🧬 NATIVE</h3>*/}
               <div className="space-y-2">
                 <Label htmlFor="task-name" className="text-xs">Name *</Label>
                 <Input

@@ -9,16 +9,11 @@ import { requireAdminAuth } from '@/lib/api-auth';
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
-  console.log('🔥 ACCOUNTS API DEBUG - GET /api/accounts called');
-  
   if (!(await requireAdminAuth(req))) {
-    console.log('🔥 ACCOUNTS API DEBUG - Auth failed');
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   
-  console.log('🔥 ACCOUNTS API DEBUG - Auth passed, fetching accounts...');
   const accounts = await getAllAccounts();
-  console.log('🔥 ACCOUNTS API DEBUG - Found accounts:', accounts.length);
   return NextResponse.json(accounts);
 }
 

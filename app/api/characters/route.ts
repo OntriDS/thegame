@@ -9,16 +9,11 @@ import { requireAdminAuth } from '@/lib/api-auth';
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
-  console.log('🔥 CHARACTERS API DEBUG - GET /api/characters called');
-  
   if (!(await requireAdminAuth(req))) {
-    console.log('🔥 CHARACTERS API DEBUG - Auth failed');
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   
-  console.log('🔥 CHARACTERS API DEBUG - Auth passed, fetching characters...');
   const characters = await getAllCharacters();
-  console.log('🔥 CHARACTERS API DEBUG - Found characters:', characters.length);
   return NextResponse.json(characters);
 }
 
