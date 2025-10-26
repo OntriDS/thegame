@@ -4,7 +4,6 @@ import { v4 as uuid } from 'uuid';
 import type { Character } from '@/types/entities';
 import { getAllCharacters, upsertCharacter } from '@/data-store/datastore';
 import { requireAdminAuth } from '@/lib/api-auth';
-import { convertEntityDates } from '@/lib/constants/date-constants';
 
 // Force dynamic rendering since this route accesses request cookies for auth
 export const dynamic = 'force-dynamic';
@@ -23,10 +22,14 @@ export async function POST(req: NextRequest) {
   
   try {
     const body = (await req.json()) as Character;
-    const character = convertEntityDates(
-      { ...body, id: body.id || uuid(), links: body.links || [] },
-      ['lastActiveAt']
-    );
+    const character = {
+      ...body,
+      id: body.id || uuid(),
+      links: body.links || [],
+      createdAt: body.createdAt ? new Date(body.createdAt) : new Date(),
+      updatedAt: new Date(),
+      lastActiveAt: body.lastActiveAt ? new Date(body.lastActiveAt) : new Date()
+    };
     const saved = await upsertCharacter(character);
     return NextResponse.json(saved);
   } catch (error) {

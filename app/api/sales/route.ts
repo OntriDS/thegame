@@ -4,7 +4,6 @@ import { v4 as uuid } from 'uuid';
 import type { Sale } from '@/types/entities';
 import { getAllSales, upsertSale } from '@/data-store/datastore';
 import { requireAdminAuth } from '@/lib/api-auth';
-import { convertEntityDates } from '@/lib/constants/date-constants';
 
 // Force dynamic rendering - this route accesses cookies
 export const dynamic = 'force-dynamic';
@@ -20,10 +19,17 @@ export async function POST(req: NextRequest) {
   
   try {
     const body = (await req.json()) as Sale;
-    const sale = convertEntityDates(
-      { ...body, id: body.id || uuid(), links: body.links || [] },
-      ['saleDate', 'postedAt', 'doneAt', 'cancelledAt']
-    );
+    const sale = {
+      ...body,
+      id: body.id || uuid(),
+      links: body.links || [],
+      createdAt: body.createdAt ? new Date(body.createdAt) : new Date(),
+      updatedAt: new Date(),
+      saleDate: body.saleDate ? new Date(body.saleDate) : new Date(),
+      postedAt: body.postedAt ? new Date(body.postedAt) : undefined,
+      doneAt: body.doneAt ? new Date(body.doneAt) : undefined,
+      cancelledAt: body.cancelledAt ? new Date(body.cancelledAt) : undefined
+    };
     const saved = await upsertSale(sale);
     return NextResponse.json(saved);
   } catch (error) {

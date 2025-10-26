@@ -4,7 +4,6 @@ import { v4 as uuid } from 'uuid';
 import type { FinancialRecord } from '@/types/entities';
 import { getAllFinancials, upsertFinancial } from '@/data-store/datastore';
 import { requireAdminAuth } from '@/lib/api-auth';
-import { convertEntityDates } from '@/lib/constants/date-constants';
 
 // Force dynamic rendering - this route accesses cookies
 export const dynamic = 'force-dynamic';
@@ -20,10 +19,13 @@ export async function POST(req: NextRequest) {
   
   try {
     const body = (await req.json()) as FinancialRecord;
-    const financial = convertEntityDates(
-      { ...body, id: body.id || uuid(), links: body.links || [] },
-      []
-    );
+    const financial = {
+      ...body,
+      id: body.id || uuid(),
+      links: body.links || [],
+      createdAt: body.createdAt ? new Date(body.createdAt) : new Date(),
+      updatedAt: new Date()
+    };
     const saved = await upsertFinancial(financial);
     return NextResponse.json(saved);
   } catch (error) {
