@@ -87,11 +87,15 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
 
   }
   
-  if (previousTask && !previousTask.doneAt && task.doneAt) {
-    await appendEntityLog(EntityType.TASK, task.id, LogEventType.DONE, {
-      name: task.name,
-      doneAt: task.doneAt
-    });
+  // Log DONE event - either when status changes to Done OR when creating a task that's already Done
+  if (task.status === 'Done' && task.doneAt) {
+    const shouldLogDone = !previousTask || !previousTask.doneAt;
+    if (shouldLogDone) {
+      await appendEntityLog(EntityType.TASK, task.id, LogEventType.DONE, {
+        name: task.name,
+        doneAt: task.doneAt
+      });
+    }
   }
   
   if (previousTask && !previousTask.collectedAt && task.collectedAt) {
