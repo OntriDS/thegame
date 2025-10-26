@@ -66,34 +66,19 @@ export function FinancialsTab({ financialsLog, onReload, isReloading }: Financia
   const computeAmounts = (entry: FinancialLogEntry) => {
     const data = entry?.data || {};
     
-    // DEBUG: Log what we're receiving
-    console.log('[computeAmounts] Entry data:', {
-      entryCost: entry.cost,
-      entryRevenue: entry.revenue,
-      dataCost: data.cost,
-      dataRevenue: data.revenue,
-      isNotPaid: entry.isNotPaid ?? data.isNotPaid,
-      isNotCharged: entry.isNotCharged ?? data.isNotCharged,
-      fullEntry: entry
-    });
-    
     const isNotPaid = Boolean(entry.isNotPaid ?? data.isNotPaid);
     const isNotCharged = Boolean(entry.isNotCharged ?? data.isNotCharged);
     
-    // Check entry fields FIRST, then fall back to data fields
+    // Check entry level first, then data level
     const rawCost = Number(entry.cost ?? data.cost ?? 0);
     const rawRevenue = Number(entry.revenue ?? data.revenue ?? 0);
     
     const cost = isNotPaid ? 0 : rawCost;
     const revenue = isNotCharged ? 0 : rawRevenue;
     const profit = revenue - cost;
-    // Calculate margin as profit relative to revenue (standard net margin calculation)
     const margin = revenue > 0 ? (profit / revenue) * 100 : 0;
 
-    const result = { cost, revenue, profit, margin };
-    console.log('[computeAmounts] Computed amounts:', result);
-    
-    return result;
+    return { cost, revenue, profit, margin };
   };
 
   // Shared render function

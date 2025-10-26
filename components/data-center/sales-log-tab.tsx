@@ -3,6 +3,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RefreshCw, ShoppingCart, DollarSign, Calendar, Link as LinkIcon, ArrowUpDown, Package } from 'lucide-react';
 import { formatDisplayDate } from '@/lib/utils/date-utils';
 import { EntityType } from '@/types/enums';
@@ -31,6 +32,7 @@ interface SalesLogTabProps {
  * This tab shows the audit trail of all sales activities
  */
 export function SalesLogTab({ salesLog, onReload, isReloading }: SalesLogTabProps) {
+  const [activeSubTab, setActiveSubTab] = useState<string>('lifecycle-log');
   const [logOrder, setLogOrder] = useState<'newest' | 'oldest'>('newest');
   const [showLinksModal, setShowLinksModal] = useState(false);
   const [selectedSaleId, setSelectedSaleId] = useState<string>('');
@@ -84,13 +86,20 @@ export function SalesLogTab({ salesLog, onReload, isReloading }: SalesLogTabProp
 
   return (
     <>
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-        <div className="space-y-1">
-          <CardTitle className="flex items-center gap-2">
-            <ShoppingCart className="h-5 w-5" />
-            Sales Log
-          </CardTitle>
+    <Tabs value={activeSubTab} onValueChange={setActiveSubTab} className="space-y-4">
+      <TabsList className="grid w-full grid-cols-2">
+        <TabsTrigger value="lifecycle-log">Lifecycle Log</TabsTrigger>
+        <TabsTrigger value="sales-analysis">Sales Analysis</TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="lifecycle-log" className="space-y-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+            <div className="space-y-1">
+              <CardTitle className="flex items-center gap-2">
+                <ShoppingCart className="h-5 w-5" />
+                Sales Lifecycle Log
+              </CardTitle>
           <CardDescription>
             Transaction records - Sales activities and revenue tracking
           </CardDescription>
@@ -149,57 +158,6 @@ export function SalesLogTab({ salesLog, onReload, isReloading }: SalesLogTabProp
                 return 'text-muted-foreground';
               };
 
-              // Financial info for first row with colors
-              const financialInfo = (
-                <>
-                  <span className={getFinancialColor(revenue)}>R: ${revenue}</span>
-                  {cost > 0 && (
-                    <>
-                      {' • '}
-                      <span className={getFinancialColor(-cost)}>C: ${cost}</span>
-                    </>
-                  )}
-                  {profit !== 0 && (
-                    <>
-                      {' • '}
-                      <span className={getFinancialColor(profit)}>P: ${profit}</span>
-                    </>
-                  )}
-                </>
-              );
-
-              // Relevant info based on sale content
-              let relevantInfo = '';
-              if (data.lines && data.lines.length > 0) {
-                if (data.lines.length === 1) {
-                  const line = data.lines[0];
-                  if (line.kind === EntityType.ITEM) {
-                    relevantInfo = line.itemName || line.description || 'Item';
-                  } else if (line.kind === 'service') {
-                    relevantInfo = line.description || 'Service';
-                  }
-                } else {
-                  relevantInfo = `${data.lines.length} items`;
-                }
-              } else if (type !== '—') {
-                relevantInfo = type;
-              }
-
-              // Second row info - station, category, and relevant info
-              const secondRowParts = [];
-              if (station !== '—' && category !== '—') {
-                secondRowParts.push(`${station} • ${category}`);
-              } else if (station !== '—') {
-                secondRowParts.push(station);
-              } else if (category !== '—') {
-                secondRowParts.push(category);
-              }
-              if (relevantInfo) {
-                secondRowParts.push(relevantInfo);
-              }
-              
-              const secondRowInfo = secondRowParts.join(' • ');
-
               return (
                 <div key={index} className="flex items-center gap-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors">
                   {/* Icon */}
@@ -207,7 +165,7 @@ export function SalesLogTab({ salesLog, onReload, isReloading }: SalesLogTabProp
                     {getSaleTypeIcon(type)}
                   </div>
                   
-                  {/* Main Info Row - ONE ROW like tasks */}
+                  {/* Main Info Row - Matches Tasks/Items/Financials pattern */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3 text-sm">
                       {/* Status Badge */}
@@ -220,15 +178,52 @@ export function SalesLogTab({ salesLog, onReload, isReloading }: SalesLogTabProp
                         {name}
                       </span>
                       
-                      {/* Financial Info */}
-                      <span className="text-muted-foreground min-w-0 flex-shrink-0">
-                        {financialInfo}
-                      </span>
-                      
-                      {/* Relevant Info */}
-                      {relevantInfo && (
+                      {/* Type */}
+                      {type !== '—' && (
                         <span className="text-muted-foreground min-w-0 flex-shrink-0">
-                          {relevantInfo}
+                          {type}
+                        </span>
+                      )}
+                      
+                      {/* Station */}
+                      {station !== '—' && (
+                        <span className="text-muted-foreground min-w-0 flex-shrink-0">
+                          {station}
+                        </span>
+                      )}
+                      
+                      {/* Category */}
+                      {category !== '—' && (
+                        <span className="text-muted-foreground min-w-0 flex-shrink-0">
+                          {category}
+                        </span>
+                      )}
+                      
+                      {/* Revenue */}
+                      {revenue > 0 && (
+                        <span className="font-medium text-green-600 dark:text-green-400 min-w-0 flex-shrink-0">
+                          Rev: ${revenue.toLocaleString()}
+                        </span>
+                      )}
+                      
+                      {/* Cost */}
+                      {cost > 0 && (
+                        <span className="font-medium text-red-600 dark:text-red-400 min-w-0 flex-shrink-0">
+                          Cost: ${cost.toLocaleString()}
+                        </span>
+                      )}
+                      
+                      {/* Profit */}
+                      {profit !== 0 && (
+                        <span className={`font-medium ${getFinancialColor(profit)} min-w-0 flex-shrink-0`}>
+                          {profit > 0 ? 'Profit' : 'Loss'}: ${profit.toLocaleString()}
+                        </span>
+                      )}
+                      
+                      {/* Margin */}
+                      {revenue > 0 && profit !== 0 && (
+                        <span className={`font-medium ${getFinancialColor(((profit / revenue) * 100))} min-w-0 flex-shrink-0`}>
+                          {((profit / revenue) * 100).toFixed(0)}%
                         </span>
                       )}
                     </div>
@@ -247,20 +242,20 @@ export function SalesLogTab({ salesLog, onReload, isReloading }: SalesLogTabProp
                           const links = await ClientAPI.getLinksFor({ type: EntityType.SALE, id: data.entityId });
                           setSaleLinks(links);
                           setSelectedSaleId(data.entityId);
-                          setSelectedLogEntry(entry); // Pass the log entry context
+                          setSelectedLogEntry(entry);
                           setShowLinksModal(true);
                         } catch (error) {
                           console.error('Failed to fetch links:', error);
                         }
                       }}
                     >
-                      <LinkIcon className="h-4 w-4" />
+                      <LinkIcon className="h-4 w-4 text-muted-foreground hover:text-foreground" />
                     </Button>
                     
                     {/* Date */}
-                    <div className="text-xs text-muted-foreground">
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">
                       {date}
-                    </div>
+                    </span>
                   </div>
                 </div>
               );
@@ -269,6 +264,24 @@ export function SalesLogTab({ salesLog, onReload, isReloading }: SalesLogTabProp
         </div>
       </CardContent>
     </Card>
+      </TabsContent>
+
+      <TabsContent value="sales-analysis" className="space-y-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Sales Analysis</CardTitle>
+            <CardDescription>
+              Detailed sales statistics and analytics
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground text-center py-8">
+              Sales analysis coming soon...
+            </p>
+          </CardContent>
+        </Card>
+      </TabsContent>
+    </Tabs>
     
     {/* Links SubModal */}
     <LinksSubModal

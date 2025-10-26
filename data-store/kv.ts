@@ -141,9 +141,6 @@ if (typeof window === 'undefined') {
 
 export const kv: KVClient = hasUpstash
   ? (() => {
-      if (typeof window === 'undefined') {
-        console.log('🔥 KV DEBUG - Using Upstash Redis client');
-      }
       return Redis.fromEnv() as unknown as KVClient;
     })()
   : (() => {

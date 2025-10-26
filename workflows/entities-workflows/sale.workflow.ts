@@ -30,7 +30,14 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
       type: sale.type,
       status: sale.status,
       counterpartyName: sale.counterpartyName,
-      totalRevenue: sale.totals.totalRevenue
+      totals: {
+        subtotal: sale.totals.subtotal,
+        discountTotal: sale.totals.discountTotal,
+        taxTotal: sale.totals.taxTotal,
+        totalRevenue: sale.totals.totalRevenue
+      },
+      isNotPaid: sale.isNotPaid,
+      isNotCharged: sale.isNotCharged
     });
     await markEffect(effectKey);
     
@@ -54,7 +61,12 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
     if (sale.status === 'CHARGED') {
       await appendEntityLog(EntityType.SALE, sale.id, LogEventType.CHARGED, {
         counterpartyName: sale.counterpartyName,
-        totalRevenue: sale.totals.totalRevenue,
+        totals: {
+          subtotal: sale.totals.subtotal,
+          discountTotal: sale.totals.discountTotal,
+          taxTotal: sale.totals.taxTotal,
+          totalRevenue: sale.totals.totalRevenue
+        },
         chargedAt: new Date().toISOString()
       });
       

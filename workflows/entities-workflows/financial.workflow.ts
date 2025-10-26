@@ -33,6 +33,10 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
       name: financial.name, 
       type: financial.type,
       station: financial.station,
+      cost: financial.cost,
+      revenue: financial.revenue,
+      isNotPaid: financial.isNotPaid,
+      isNotCharged: financial.isNotCharged
     });
     await markEffect(effectKey);
     

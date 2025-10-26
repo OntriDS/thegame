@@ -17,10 +17,8 @@ export async function GET(request: NextRequest) {
     // Try KV first (production)
     const { kvGet } = await import('@/data-store/kv');
     const logKey = buildLogKey(EntityType.CHARACTER);
-    console.log('🔥 CHARACTER LOG API DEBUG - Looking for key:', logKey);
     
     const characterLog = await kvGet(logKey);
-    console.log('🔥 CHARACTER LOG API DEBUG - Found in KV:', characterLog ? 'YES' : 'NO', characterLog);
 
     if (characterLog) {
       return NextResponse.json({ entries: characterLog });
