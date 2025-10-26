@@ -50,7 +50,8 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
         priority: task.priority,
         sourceSaleId: task.sourceSaleId,
         dueDate: task.dueDate,
-        frequencyConfig: task.frequencyConfig
+        frequencyConfig: task.frequencyConfig,
+        _logOrder: 0 // Tie-breaker for same timestamp: CREATED comes first
       });
       await markEffect(effectKey);
     }
@@ -117,7 +118,8 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
         sourceSaleId: task.sourceSaleId,
         dueDate: task.dueDate,
         frequencyConfig: task.frequencyConfig,
-        doneAt: task.doneAt
+        doneAt: task.doneAt,
+        _logOrder: 1 // Tie-breaker for same timestamp: DONE comes after CREATED
       });
     }
   }

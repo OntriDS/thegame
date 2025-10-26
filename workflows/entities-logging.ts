@@ -36,12 +36,25 @@ export async function updateEntityLogField(
   const key = buildLogKey(entityType);
   const list = (await kvGet<any[]>(key)) || [];
   
-  // Find the most recent log entry for this entity
-  for (let i = list.length - 1; i >= 0; i--) {
-    if (list[i]?.entityId === entityId) {
-      list[i][fieldName] = newValue;
-      list[i].lastUpdated = new Date().toISOString();
-      break;
+  // For CREATED entries specifically, update only the CREATED entry
+  // For other event types, update the most recent matching entry
+  const createdEntry = list.find(entry => 
+    entry.entityId === entityId && 
+    entry.event?.toLowerCase() === 'created'
+  );
+  
+  if (createdEntry) {
+    // Update CREATED entry directly
+    createdEntry[fieldName] = newValue;
+    createdEntry.lastUpdated = new Date().toISOString();
+  } else {
+    // Find the most recent log entry for this entity as fallback
+    for (let i = list.length - 1; i >= 0; i--) {
+      if (list[i]?.entityId === entityId) {
+        list[i][fieldName] = newValue;
+        list[i].lastUpdated = new Date().toISOString();
+        break;
+      }
     }
   }
   
