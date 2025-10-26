@@ -249,31 +249,29 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
  * Remove task effects when task is deleted
  * Tasks can have entries in multiple logs: tasks, financials, character, player, items
  */
-export async function removeTaskLogEntriesOnDelete(taskId: string): Promise<void> {
+export async function removeTaskLogEntriesOnDelete(task: Task): Promise<void> {
   try {
-    console.log(`[removeTaskLogEntriesOnDelete] Starting cleanup for task: ${taskId}`);
+    console.log(`[removeTaskLogEntriesOnDelete] Starting cleanup for task: ${task.id}`);
     
     // Handle recurrent template cascade deletion
-    const tasks = await getAllTasks();
-    const task = tasks.find(t => t.id === taskId);
-    if (task && task.type === TaskType.RECURRENT_TEMPLATE) {
+    if (task.type === TaskType.RECURRENT_TEMPLATE) {
       console.log(`[removeTaskLogEntriesOnDelete] Cascading delete for template: ${task.name}`);
-      const deletedCount = await deleteTemplateCascade(taskId);
+      const deletedCount = await deleteTemplateCascade(task.id);
       console.log(`[removeTaskLogEntriesOnDelete] ✅ Cascade deleted ${deletedCount} tasks`);
       return; // Skip normal deletion flow
     }
     
     // 1. Remove items created by this task
-    await removeItemsCreatedByTask(taskId);
+    await removeItemsCreatedByTask(task.id);
     
     // 2. Remove financial records created by this task
-    await removeFinancialRecordsCreatedByTask(taskId);
+    await removeFinancialRecordsCreatedByTask(task.id);
     
     // 3. Remove player points that were awarded by this task (if points were badly given)
-    await removePlayerPointsFromTask(taskId);
+    await removePlayerPointsFromTask(task);
     
     // 3. Remove all Links related to this task
-    const taskLinks = await getLinksFor({ type: EntityType.TASK, id: taskId });
+    const taskLinks = await getLinksFor({ type: EntityType.TASK, id: task.id });
     console.log(`[removeTaskLogEntriesOnDelete] Found ${taskLinks.length} links to remove`);
     
     for (const link of taskLinks) {
@@ -286,19 +284,19 @@ export async function removeTaskLogEntriesOnDelete(taskId: string): Promise<void
     }
     
     // 4. Clear effects registry
-    await clearEffect(`task:${taskId}:created`);
-    await clearEffect(`task:${taskId}:itemCreated`);
-    await clearEffect(`task:${taskId}:financialCreated`);
-    await clearEffect(`task:${taskId}:pointsAwarded`);
-    await clearEffectsByPrefix(EntityType.TASK, taskId, 'pointsLogged:');
-    await clearEffectsByPrefix(EntityType.TASK, taskId, 'financialLogged:');
+    await clearEffect(`task:${task.id}:created`);
+    await clearEffect(`task:${task.id}:itemCreated`);
+    await clearEffect(`task:${task.id}:financialCreated`);
+    await clearEffect(`task:${task.id}:pointsAwarded`);
+    await clearEffectsByPrefix(EntityType.TASK, task.id, 'pointsLogged:');
+    await clearEffectsByPrefix(EntityType.TASK, task.id, 'financialLogged:');
     
     // 5. Remove log entries from all relevant logs
     // Note: Log removal is handled client-side via API calls
     // Server-side log removal would require implementing removeLogEntry in entities-logging.ts
-    console.log(`[removeTaskLogEntriesOnDelete] Log entry removal handled client-side for task: ${taskId}`);
+    console.log(`[removeTaskLogEntriesOnDelete] Log entry removal handled client-side for task: ${task.id}`);
     
-    console.log(`[removeTaskLogEntriesOnDelete] ✅ Cleared effects, removed links for task ${taskId}`);
+    console.log(`[removeTaskLogEntriesOnDelete] ✅ Cleared effects, removed links for task ${task.id}`);
   } catch (error) {
     console.error('Error removing task effects:', error);
   }
@@ -308,16 +306,12 @@ export async function removeTaskLogEntriesOnDelete(taskId: string): Promise<void
  * Remove player points that were awarded by a specific task
  * This is used when rolling back a task that incorrectly awarded points
  */
-async function removePlayerPointsFromTask(taskId: string): Promise<void> {
+async function removePlayerPointsFromTask(task: Task): Promise<void> {
   try {
-    console.log(`[removePlayerPointsFromTask] Starting removal of points AND J$ for task: ${taskId}`);
+    console.log(`[removePlayerPointsFromTask] Starting removal of points AND J$ for task: ${task.id}`);
     
-    // Get the task to find what points were awarded
-    const tasks = await getAllTasks();
-    const task = tasks.find(t => t.id === taskId);
-    
-    if (!task || !task.rewards?.points) {
-      console.log(`[removePlayerPointsFromTask] Task ${taskId} has no points to remove`);
+    if (!task.rewards?.points) {
+      console.log(`[removePlayerPointsFromTask] Task ${task.id} has no points to remove`);
       return;
     }
     
@@ -337,7 +331,7 @@ async function removePlayerPointsFromTask(taskId: string): Promise<void> {
                      (pointsToRemove.fp || 0) > 0 || (pointsToRemove.hp || 0) > 0;
     
     if (!hasPoints) {
-      console.log(`[removePlayerPointsFromTask] No points to remove from task ${taskId}`);
+      console.log(`[removePlayerPointsFromTask] No points to remove from task ${task.id}`);
       return;
     }
     
@@ -379,7 +373,7 @@ async function removePlayerPointsFromTask(taskId: string): Promise<void> {
             name: mainPlayer.name,
             jungleCoinsRemoved: j$ToRemove,
             reason: 'Task deletion - J$ rollback',
-            sourceTaskId: taskId,
+            sourceTaskId: task.id,
             taskName: task.name,
             description: `Removed ${j$ToRemove.toFixed(2)} J$ due to task deletion: ${task.name}`
           }
@@ -400,7 +394,7 @@ async function removePlayerPointsFromTask(taskId: string): Promise<void> {
     console.log(`[removePlayerPointsFromTask] ✅ Successfully removed points: XP:${pointsToRemove.xp || 0}, RP:${pointsToRemove.rp || 0}, FP:${pointsToRemove.fp || 0}, HP:${pointsToRemove.hp || 0}`);
     
   } catch (error) {
-    console.error(`[removePlayerPointsFromTask] ❌ FAILED to remove player points/J$ for task ${taskId}:`, error);
+    console.error(`[removePlayerPointsFromTask] ❌ FAILED to remove player points/J$ for task ${task.id}:`, error);
     throw error; // Re-throw to see the error in console
   }
 }
@@ -471,7 +465,7 @@ export async function uncompleteTask(taskId: string): Promise<void> {
     console.log(`[uncompleteTask] ✅ Removed items created by task`);
     
     // 2. Remove points awarded by this task
-    await removePlayerPointsFromTask(taskId);
+    await removePlayerPointsFromTask(task);
     console.log(`[uncompleteTask] ✅ Removed points awarded by task`);
     
     // 3. Clear effects registry entries

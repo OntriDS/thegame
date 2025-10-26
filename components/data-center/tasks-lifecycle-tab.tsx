@@ -210,20 +210,6 @@ export function TasksLifecycleTab({ tasksLog, onReload, isReloading }: TasksLife
                   const dueDate = data.dueDate || entry.dueDate;
                   const frequencyConfig = data.frequencyConfig || entry.frequencyConfig;
                   
-                  // Debug logging for Done entries
-                  if (status.toLowerCase() === 'done') {
-                    console.log('🔍 Done entry debug:', {
-                      entry,
-                      data,
-                      status,
-                      station: data.station || entry.station,
-                      type: data.taskType || entry.taskType,
-                      formattedStation: station,
-                      formattedType: type,
-                      secondRowParts: [station, type].filter(p => p !== '—'),
-                      secondRowInfo: [station, type].filter(p => p !== '—').join(' • ')
-                    });
-                  }
                   const progress: number = data.progress || 0;
                   const cost: number = data.cost || 0;
                   const revenue: number = data.revenue || 0;

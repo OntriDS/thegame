@@ -94,9 +94,9 @@ export async function removeTask(id: string): Promise<void> {
   const existing = await repoGetTaskById(id);
   await repoDeleteTask(id);
   if (existing) {
-    // Call task deletion workflow for cleanup
+    // Call task deletion workflow for cleanup - pass the task object since it's already deleted from DB
     const { removeTaskLogEntriesOnDelete } = await import('@/workflows/entities-workflows/task.workflow');
-    await removeTaskLogEntriesOnDelete(id);
+    await removeTaskLogEntriesOnDelete(existing);
   }
 }
 

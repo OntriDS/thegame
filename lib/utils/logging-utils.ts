@@ -210,7 +210,9 @@ export function deduplicateLogEntries(log: any): any {
   const map = new Map<string, any>();
 
   for (const entry of log.entries) {
-    const key = `${entry.entityId ?? entry.id ?? 'unknown'}|${entry.status ?? entry.type ?? 'unknown'}`;
+    // Use event first (our logs store event), then fall back to status/type
+    const kind = (entry.event ?? entry.status ?? entry.type ?? 'unknown');
+    const key = `${entry.entityId ?? entry.id ?? 'unknown'}|${String(kind).toLowerCase()}`;
     const existing = map.get(key);
     if (!existing) {
       map.set(key, entry);
