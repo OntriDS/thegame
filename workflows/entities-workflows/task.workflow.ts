@@ -14,6 +14,8 @@ import { getPlayerConversionRates, getPersonalAssets, savePersonalAssets } from 
 import { DEFAULT_POINTS_CONVERSION_RATES } from '@/lib/constants/financial-constants';
 import type { PointsConversionRates } from '@/lib/constants/financial-constants';
 import { getCategoryForTaskType } from '@/lib/utils/searchable-select-utils';
+import { kvGet, kvSet } from '@/data-store/kv';
+import { buildLogKey } from '@/data-store/keys';
 import { 
   updateFinancialRecordsFromTask, 
   updateItemsCreatedByTask, 
@@ -292,11 +294,47 @@ export async function removeTaskLogEntriesOnDelete(task: Task): Promise<void> {
     await clearEffectsByPrefix(EntityType.TASK, task.id, 'financialLogged:');
     
     // 5. Remove log entries from all relevant logs
-    // Note: Log removal is handled client-side via API calls
-    // Server-side log removal would require implementing removeLogEntry in entities-logging.ts
-    console.log(`[removeTaskLogEntriesOnDelete] Log entry removal handled client-side for task: ${task.id}`);
+    console.log(`[removeTaskLogEntriesOnDelete] Removing log entries for task: ${task.id}`);
     
-    console.log(`[removeTaskLogEntriesOnDelete] ✅ Cleared effects, removed links for task ${task.id}`);
+    // Remove from tasks log
+    const tasksLogKey = buildLogKey(EntityType.TASK);
+    const tasksLog = (await kvGet<any[]>(tasksLogKey)) || [];
+    const filteredTasksLog = tasksLog.filter(entry => entry.entityId !== task.id);
+    if (filteredTasksLog.length !== tasksLog.length) {
+      await kvSet(tasksLogKey, filteredTasksLog);
+      console.log(`[removeTaskLogEntriesOnDelete] ✅ Removed ${tasksLog.length - filteredTasksLog.length} entries from tasks log`);
+    }
+    
+    // Also check and remove from player log if this task awarded points
+    if (task.rewards?.points) {
+      const playerLogKey = buildLogKey(EntityType.PLAYER);
+      const playerLog = (await kvGet<any[]>(playerLogKey)) || [];
+      const filteredPlayerLog = playerLog.filter(entry => entry.sourceId !== task.id && entry.sourceTaskId !== task.id);
+      if (filteredPlayerLog.length !== playerLog.length) {
+        await kvSet(playerLogKey, filteredPlayerLog);
+        console.log(`[removeTaskLogEntriesOnDelete] ✅ Removed ${playerLog.length - filteredPlayerLog.length} entries from player log`);
+      }
+    }
+    
+    // Check and remove from items log if this task created items
+    const itemsLogKey = buildLogKey(EntityType.ITEM);
+    const itemsLog = (await kvGet<any[]>(itemsLogKey)) || [];
+    const filteredItemsLog = itemsLog.filter(entry => entry.sourceTaskId !== task.id);
+    if (filteredItemsLog.length !== itemsLog.length) {
+      await kvSet(itemsLogKey, filteredItemsLog);
+      console.log(`[removeTaskLogEntriesOnDelete] ✅ Removed ${itemsLog.length - filteredItemsLog.length} entries from items log`);
+    }
+    
+    // Check and remove from financials log if this task created financial records
+    const financialsLogKey = buildLogKey(EntityType.FINANCIAL);
+    const financialsLog = (await kvGet<any[]>(financialsLogKey)) || [];
+    const filteredFinancialsLog = financialsLog.filter(entry => entry.sourceTaskId !== task.id);
+    if (filteredFinancialsLog.length !== financialsLog.length) {
+      await kvSet(financialsLogKey, filteredFinancialsLog);
+      console.log(`[removeTaskLogEntriesOnDelete] ✅ Removed ${financialsLog.length - filteredFinancialsLog.length} entries from financials log`);
+    }
+    
+    console.log(`[removeTaskLogEntriesOnDelete] ✅ Cleared effects, removed links, and removed log entries for task ${task.id}`);
   } catch (error) {
     console.error('Error removing task effects:', error);
   }
