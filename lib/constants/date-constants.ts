@@ -33,7 +33,8 @@ export const convertEntityDates = <T extends Record<string, any>>(
   entity: T,
   additionalDateFields: (keyof T)[] = []
 ): T => {
-  const converted = { ...entity } as any;
+  // Create a proper deep copy to avoid mutating the original
+  const converted = JSON.parse(JSON.stringify(entity)) as any;
   
   // Always handle base entity dates
   if (converted.createdAt) {
