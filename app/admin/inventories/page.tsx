@@ -14,7 +14,7 @@ import { getZIndexClass } from "@/lib/utils/z-index-utils";
 
 export default function InventoriesPage() {
   const { activeBg } = useThemeColors();
-  const { getPreference, setPreference } = useUserPreferences();
+  const { getPreference, setPreference, isLoading } = useUserPreferences();
   const [selectedSite, setSelectedSite] = useState<string | 'all'>('all');
   const [selectedStatus, setSelectedStatus] = useState<ItemStatus | 'all'>('all');
   const [sites, setSites] = useState<Site[]>([]);
@@ -32,14 +32,16 @@ export default function InventoriesPage() {
     loadSites();
   }, []);
 
-  // Load saved preferences on mount
+  // Load saved preferences on mount (wait for KV to load)
   useEffect(() => {
+    if (isLoading) return;
+    
     const savedSite = getPreference('inventory-selected-site', 'all');
     const savedStatus = getPreference('inventory-selected-status', 'all');
     
     if (savedSite) setSelectedSite(savedSite);
     if (savedStatus) setSelectedStatus(savedStatus);
-  }, [getPreference]);
+  }, [getPreference, isLoading]);
 
 
   return (
