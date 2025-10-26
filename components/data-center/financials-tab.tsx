@@ -41,7 +41,7 @@ interface FinancialsTabProps {
 }
 
 export function FinancialsTab({ financialsLog, onReload, isReloading }: FinancialsTabProps) {
-  const [activeSubTab, setActiveSubTab] = useState<string>('all');
+  const [activeSubTab, setActiveSubTab] = useState<string>('lifecycle-log');
   const [logOrder, setLogOrder] = useState<'newest' | 'oldest'>('newest');
   const [showLinksModal, setShowLinksModal] = useState(false);
   const [selectedFinancialId, setSelectedFinancialId] = useState<string>('');
@@ -65,6 +65,18 @@ export function FinancialsTab({ financialsLog, onReload, isReloading }: Financia
 
   const computeAmounts = (entry: FinancialLogEntry) => {
     const data = entry?.data || {};
+    
+    // DEBUG: Log what we're receiving
+    console.log('[computeAmounts] Entry data:', {
+      entryCost: entry.cost,
+      entryRevenue: entry.revenue,
+      dataCost: data.cost,
+      dataRevenue: data.revenue,
+      isNotPaid: entry.isNotPaid ?? data.isNotPaid,
+      isNotCharged: entry.isNotCharged ?? data.isNotCharged,
+      fullEntry: entry
+    });
+    
     const isNotPaid = Boolean(entry.isNotPaid ?? data.isNotPaid);
     const isNotCharged = Boolean(entry.isNotCharged ?? data.isNotCharged);
     
@@ -78,25 +90,13 @@ export function FinancialsTab({ financialsLog, onReload, isReloading }: Financia
     // Calculate margin as profit relative to revenue (standard net margin calculation)
     const margin = revenue > 0 ? (profit / revenue) * 100 : 0;
 
-    return { cost, revenue, profit, margin };
+    const result = { cost, revenue, profit, margin };
+    console.log('[computeAmounts] Computed amounts:', result);
+    
+    return result;
   };
 
-const getAmountColor = (amount: number) => (amount >= 0 ? 'text-green-600' : 'text-red-600');
-
-  const filteredEntries = useMemo(() => {
-    const entries = processedFinancialsLog.entries as FinancialLogEntry[];
-    const mapped = entries.map(entry => ({ entry, amounts: computeAmounts(entry) }));
-
-    if (activeSubTab === 'tasks') {
-      return mapped.filter(({ entry }) => entry.entityType === EntityType.TASK);
-    }
-    if (activeSubTab === 'records') {
-      return mapped.filter(({ entry }) => entry.entityType === EntityType.FINANCIAL);
-    }
-    return mapped;
-  }, [processedFinancialsLog.entries, activeSubTab]);
-
-  // Shared render function for all tabs
+  // Shared render function
   const renderFinancialEntry = ({ entry, amounts }: { entry: FinancialLogEntry, amounts: ReturnType<typeof computeAmounts> }, index: number) => {
     const data = entry?.data || {};
     
@@ -111,8 +111,8 @@ const getAmountColor = (amount: number) => (amount >= 0 ? 'text-green-600' : 'te
     const { cost, revenue, profit, margin } = amounts;
     
     // Calculate display values
-    const taskProfit = revenue - cost;
-    const taskMargin = revenue > 0 ? ((taskProfit / revenue) * 100).toFixed(0) : '0';
+    const displayProfit = revenue - cost;
+    const displayMargin = revenue > 0 ? ((displayProfit / revenue) * 100).toFixed(0) : '0';
     
     // Helper function to get color for financial values
     const getFinancialColor = (value: number) => {
@@ -157,31 +157,31 @@ const getAmountColor = (amount: number) => (amount >= 0 ? 'text-green-600' : 'te
               </span>
             )}
             
-            {/* Cost */}
-            {cost > 0 && (
+            {/* Cost - ALWAYS show if there's any cost data */}
+            {cost !== 0 && (
               <span className={`font-medium ${FINANCIAL_COLORS.negative} min-w-0 flex-shrink-0`}>
                 Cost: ${cost.toLocaleString()}
               </span>
             )}
             
-            {/* Revenue */}
-            {revenue > 0 && (
+            {/* Revenue - ALWAYS show if there's any revenue data */}
+            {revenue !== 0 && (
               <span className={`font-medium ${FINANCIAL_COLORS.positive} min-w-0 flex-shrink-0`}>
                 Rev: ${revenue.toLocaleString()}
               </span>
             )}
             
             {/* Profit */}
-            {taskProfit !== 0 && (
-              <span className={`font-medium ${getFinancialColor(taskProfit)} min-w-0 flex-shrink-0`}>
-                {taskProfit > 0 ? 'Profit' : 'Loss'}: ${taskProfit.toLocaleString()}
+            {displayProfit !== 0 && (
+              <span className={`font-medium ${getFinancialColor(displayProfit)} min-w-0 flex-shrink-0`}>
+                {displayProfit > 0 ? 'Profit' : 'Loss'}: ${displayProfit.toLocaleString()}
               </span>
             )}
             
             {/* Margin */}
-            {taskMargin !== '0' && (
-              <span className={`font-medium ${getFinancialColor(Number(taskMargin))} min-w-0 flex-shrink-0`}>
-                {taskMargin}%
+            {displayMargin !== '0' && (
+              <span className={`font-medium ${getFinancialColor(Number(displayMargin))} min-w-0 flex-shrink-0`}>
+                {displayMargin}%
               </span>
             )}
           </div>
@@ -232,20 +232,25 @@ const getAmountColor = (amount: number) => (amount >= 0 ? 'text-green-600' : 'te
     );
   };
 
+  // Get all entries (no filtering)
+  const allEntries = useMemo(() => {
+    const entries = processedFinancialsLog.entries as FinancialLogEntry[];
+    return entries.map(entry => ({ entry, amounts: computeAmounts(entry) }));
+  }, [processedFinancialsLog.entries]);
+
   return (
     <>
     <Tabs value={activeSubTab} onValueChange={setActiveSubTab} className="space-y-4">
-      <TabsList className="grid w-full grid-cols-3">
-        <TabsTrigger value="all">All</TabsTrigger>
-        <TabsTrigger value="tasks">Tasks</TabsTrigger>
-        <TabsTrigger value="records">Records</TabsTrigger>
+      <TabsList className="grid w-full grid-cols-2">
+        <TabsTrigger value="lifecycle-log">Lifecycle Log</TabsTrigger>
+        <TabsTrigger value="financial-analysis">Financial Analysis</TabsTrigger>
       </TabsList>
 
-      <TabsContent value="all" className="space-y-4">
+      <TabsContent value="lifecycle-log" className="space-y-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <div>
-              <CardTitle>All Financial Records</CardTitle>
+              <CardTitle>Financial Lifecycle Log</CardTitle>
               <CardDescription>
                 Complete financial transaction history
               </CardDescription>
@@ -272,119 +277,32 @@ const getAmountColor = (amount: number) => (amount >= 0 ? 'text-green-600' : 'te
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {filteredEntries.length === 0 ? (
+              {allEntries.length === 0 ? (
                 <div className="text-center py-8">
                   <p className="text-muted-foreground mb-2">
-                    {activeSubTab === 'tasks' 
-                      ? 'No task-related financial records found' 
-                      : activeSubTab === 'records'
-                      ? 'No standalone financial records found'
-                      : 'No financial records found'
-                    }
+                    No financial records found
                   </p>
-                  {activeSubTab === 'records' && (
-                    <p className="text-sm text-muted-foreground">
-                      Create standalone financial records using the Record Modal in the Finances section
-                    </p>
-                  )}
                 </div>
               ) : (
-                filteredEntries.map((entryData, index) => renderFinancialEntry(entryData, index))
+                allEntries.map((entryData, index) => renderFinancialEntry(entryData, index))
               )}
             </div>
           </CardContent>
         </Card>
       </TabsContent>
 
-      <TabsContent value="tasks" className="space-y-4">
+      <TabsContent value="financial-analysis" className="space-y-4">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <div>
-              <CardTitle>Task Financial Records</CardTitle>
-              <CardDescription>
-                Financial records from completed tasks
-              </CardDescription>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setLogOrder(logOrder === 'newest' ? 'oldest' : 'newest')}
-              >
-                <ArrowUpDown className="h-4 w-4 mr-2" />
-                {logOrder === 'newest' ? 'Oldest First' : 'Newest First'}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onReload}
-                disabled={isReloading}
-              >
-                <RefreshCw className={`h-4 w-4 mr-2 ${isReloading ? 'animate-spin' : ''}`} />
-                Reload
-              </Button>
-            </div>
+          <CardHeader>
+            <CardTitle>Financial Analysis</CardTitle>
+            <CardDescription>
+              Detailed financial statistics and analytics
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
-              {filteredEntries.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground mb-2">
-                    No task-related financial records found
-                  </p>
-                </div>
-              ) : (
-                filteredEntries.map((entryData, index) => renderFinancialEntry(entryData, index))
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </TabsContent>
-
-      <TabsContent value="records" className="space-y-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <div>
-              <CardTitle>Standalone Financial Records</CardTitle>
-              <CardDescription>
-                Financial records created directly (not from tasks)
-              </CardDescription>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setLogOrder(logOrder === 'newest' ? 'oldest' : 'newest')}
-              >
-                <ArrowUpDown className="h-4 w-4 mr-2" />
-                {logOrder === 'newest' ? 'Oldest First' : 'Newest First'}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onReload}
-                disabled={isReloading}
-              >
-                <RefreshCw className={`h-4 w-4 mr-2 ${isReloading ? 'animate-spin' : ''}`} />
-                Reload
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {filteredEntries.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground mb-2">
-                    No standalone financial records found
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Create standalone financial records using the Record Modal in the Finances section
-                  </p>
-                </div>
-              ) : (
-                filteredEntries.map((entryData, index) => renderFinancialEntry(entryData, index))
-              )}
-            </div>
+            <p className="text-muted-foreground text-center py-8">
+              Financial analysis coming soon...
+            </p>
           </CardContent>
         </Card>
       </TabsContent>
