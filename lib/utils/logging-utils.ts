@@ -260,7 +260,29 @@ export function sortLogEntries(entries: any[], order: 'newest' | 'oldest' = 'new
   return [...entries].sort((a, b) => {
     const aMs = toMs(a);
     const bMs = toMs(b);
-    return order === 'newest' ? bMs - aMs : aMs - bMs;
+    
+    // Primary sort by timestamp
+    if (aMs !== bMs) {
+      return order === 'newest' ? bMs - aMs : aMs - bMs;
+    }
+    
+    // Tie-breaker: Event lifecycle order when timestamps are identical
+    // CREATED should come before DONE, STATUS_CHANGED, MOVED, etc.
+    const eventOrder: Record<string, number> = {
+      'created': 0,
+      'status_changed': 1,
+      'done': 2,
+      'collected': 3,
+      'moved': 4,
+      'updated': 5,
+    };
+    
+    const eventA = (a.event || a.status || '').toLowerCase();
+    const eventB = (b.event || b.status || '').toLowerCase();
+    const orderA = eventOrder[eventA] ?? 999;
+    const orderB = eventOrder[eventB] ?? 999;
+    
+    return order === 'newest' ? orderA - orderB : orderB - orderA;
   });
 }
 
