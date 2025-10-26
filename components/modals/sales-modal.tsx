@@ -64,11 +64,11 @@ export default function SalesModal({
   const [description, setDescription] = useState('');
   const [saleDate, setSaleDate] = useState<Date>(new Date());
   const [type, setType] = useState<SaleType>(SaleType.DIRECT);
-  const [status, setStatus] = useState<SaleStatus>(SaleStatus.PENDING);
+  const [status, setStatus] = useState<SaleStatus>(SaleStatus.CHARGED);
   const [siteId, setSiteId] = useState<string>('');
   const [counterpartyName, setCounterpartyName] = useState('');
   const [isNotPaid, setIsNotPaid] = useState(false); // Default: Paid = true (not not paid)
-  const [isNotCharged, setIsNotCharged] = useState(true); // Default: Charged = false (not charged)
+  const [isNotCharged, setIsNotCharged] = useState(false); // Default: Charged = true (not not charged)
   const [overallDiscount, setOverallDiscount] = useState<Discount>({});
   const [lines, setLines] = useState<SaleLine[]>([]);
   const [payments, setPayments] = useState<any[]>([]);
@@ -286,7 +286,7 @@ export default function SalesModal({
     setDescription('');
     setSaleDate(new Date());
     setType(SaleType.DIRECT);
-    setStatus(SaleStatus.PENDING);
+    setStatus(SaleStatus.CHARGED);
     setSiteId('');
     setCounterpartyName('');
     setIsNotPaid(false);
