@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
       createdAt: body.createdAt ? new Date(body.createdAt) : new Date(),
       updatedAt: new Date(),
       dueDate: body.dueDate ? new Date(body.dueDate) : undefined,
-      doneAt: body.doneAt ? new Date(body.doneAt) : undefined,
+      doneAt: body.doneAt ? new Date(body.doneAt) : (body.status === 'Done' ? new Date() : undefined),
       collectedAt: body.collectedAt ? new Date(body.collectedAt) : undefined
     };
     const saved = await upsertTask(task);
