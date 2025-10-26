@@ -21,6 +21,7 @@ interface FinancialLogEntry {
   description?: string;
   message?: string;
   displayDate?: string;
+  displayName?: string;  // From processLogData normalization
   timestamp?: string;
   data?: any;
   station?: string;
@@ -82,11 +83,11 @@ export function FinancialsTab({ financialsLog, onReload, isReloading }: Financia
   };
 
   // Shared render function
-  const renderFinancialEntry = ({ entry, amounts }: { entry: FinancialLogEntry, amounts: ReturnType<typeof computeAmounts> }, index: number) => {
+  const renderFinancialEntry = ({ entry, amounts }: { entry: any, amounts: ReturnType<typeof computeAmounts> }, index: number) => {
     const data = entry?.data || {};
     
-    // Extract financial fields properly
-    const name = entry.name || entry.taskName || entry.recordName || data.name || data.taskName || data.recordName || entry.description || entry.message || 'Unnamed';
+    // Extract financial fields properly - use displayName from normalization
+    const name = entry.displayName || entry.name || entry.taskName || entry.recordName || data.name || data.taskName || data.recordName || entry.description || entry.message || 'Unnamed';
     const financialType = data.type || entry.type || '—';
     const station = formatStation(entry.station || data.station);
     const category = entry.category || data.category || '—';

@@ -135,7 +135,8 @@ export function SalesLogTab({ salesLog, onReload, isReloading }: SalesLogTabProp
               // Extract data from the rich logging structure
               const data = entry.data || {};
               const status: string = entry.status || data.saleStatus || data.status || 'Unknown';
-              const name: string = entry.name || entry.saleName || data.saleName || data.name || entry.message || '—';
+              // Use displayName from normalization, fallback to entry data
+              const name: string = entry.displayName || entry.name || entry.saleName || data.saleName || data.name || entry.message || '—';
               const type: string = entry.type || entry.saleType || data.saleType || data.type || '—';
               const station: string = formatStation(entry.station || data.station);
               const category: string = formatCategory(entry.category || data.category);

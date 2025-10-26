@@ -200,7 +200,8 @@ export function TasksLifecycleTab({ tasksLog, onReload, isReloading }: TasksLife
                   // Extract data from the rich logging structure
                   const data = entry.data || {};
                   const status: string = entry.event || data.taskStatus || 'Unknown';
-                  const name: string = entry.name || entry.taskName || data.taskName || data.name || entry.message || '—';
+                  // Use displayName from normalization, fallback to entry data
+                  const name: string = entry.displayName || entry.name || entry.taskName || data.taskName || data.name || entry.message || '—';
                   const description: string = data.description || entry.description || '';
                   const type: string = entry.taskType || data.taskType || '—';
                   const station: string = formatStation(entry.station || data.station);

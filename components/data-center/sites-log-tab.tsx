@@ -85,7 +85,8 @@ export function SitesLogTab({ sitesLog, onReload, isReloading }: SitesLogTabProp
                   processedSitesLog.entries.map((entry: any, index: number) => {
                     const data = entry?.data || {};
                     const status = data.status || entry.status || SiteStatus.INACTIVE;
-                    const siteName = data.name || 'Site';
+                    // Use displayName from normalization, fallback to entry data
+                    const siteName = entry.displayName || data.name || 'Site';
                     const siteType = data.metadata?.type || SiteType.PHYSICAL;
                     const businessType = data.metadata?.businessType || '—';
                     const settlement = data.metadata?.settlement || '—';

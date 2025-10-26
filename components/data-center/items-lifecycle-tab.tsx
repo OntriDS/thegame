@@ -204,8 +204,8 @@ export function ItemsLifecycleTab({ itemsLog, onReload, isReloading }: ItemsLife
                     statusDisplayName = 'Collected';
                   }
                   
-                  // Extract item fields
-                  const name = data.name || entry.name || entry.itemName || 'Unnamed Item';
+                  // Extract item fields - use displayName from normalization
+                  const name = entry.displayName || data.name || entry.name || entry.itemName || 'Unnamed Item';
                   const itemType = data.itemType || entry.itemType || '—';
                   const station = data.station || entry.station || '—';
                   const subItemType = data.subItemType || entry.subItemType || '—';

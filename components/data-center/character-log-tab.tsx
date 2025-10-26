@@ -75,7 +75,8 @@ export function CharacterLogTab({ characterLog, onReload, isReloading }: Charact
               const statusRaw: string = entry.event || 'unknown';
               const status = statusRaw.charAt(0).toUpperCase() + statusRaw.slice(1);
               
-              const name: string = data.name || entry.name || entry.title || 'Character Activity';
+              // Use displayName from normalization, fallback to entry data
+              const name: string = entry.displayName || data.name || entry.name || entry.title || 'Character Activity';
               const date: string = entry.displayDate || entry.timestamp || '';
 
               // Character-specific info (roles display)
