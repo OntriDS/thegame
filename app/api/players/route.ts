@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
     const body = (await req.json()) as Player;
     const player = convertEntityDates(
       { ...body, id: body.id || uuid(), links: body.links || [] },
-      ['lastActiveAt', 'REVIEW_DATE']
+      ['lastActiveAt']
     );
     const saved = await upsertPlayer(player);
     return NextResponse.json(saved);
