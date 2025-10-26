@@ -117,20 +117,20 @@ export function PlayerStatsContent({
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 gap-6">
-            <div className="space-y-4">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">
-                  {personalAssets?.jungleCoins?.toFixed(1) || '0.0'} J$
+                            <div className="space-y-4">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-green-600">
+                      {personalAssets?.personalJ$?.toFixed(1) || '0.0'} J$
+                    </div>
+                    <div className="text-sm text-muted-foreground">Current J$</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold">
+                      ${((personalAssets?.personalJ$ || 0) * 10).toFixed(2)}
+                    </div>
+                    <div className="text-sm text-muted-foreground">USD Value (1 J$ = $10)</div>
+                  </div>
                 </div>
-                <div className="text-sm text-muted-foreground">Current Jungle Coins</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold">
-                  ${personalAssets?.usdValue?.toFixed(2) || '0.00'}
-                </div>
-                <div className="text-sm text-muted-foreground">USD Value</div>
-              </div>
-            </div>
             <div className="space-y-4">
               <div className="text-center">
                 <div className="text-2xl font-bold">
@@ -248,15 +248,15 @@ export default function PlayerStatsTab({
                 <div className="space-y-4">
                   <div className="text-center">
                     <div className="text-2xl font-bold text-green-600">
-                      {personalAssets?.jungleCoins?.toFixed(1) || '0.0'} J$
+                      {personalAssets?.personalJ$?.toFixed(1) || '0.0'} J$
                     </div>
-                    <div className="text-sm text-muted-foreground">Current Jungle Coins</div>
+                    <div className="text-sm text-muted-foreground">Current J$</div>
                   </div>
                   <div className="text-center">
                     <div className="text-2xl font-bold">
-                      ${personalAssets?.usdValue?.toFixed(2) || '0.00'}
+                      ${((personalAssets?.personalJ$ || 0) * 10).toFixed(2)}
                     </div>
-                    <div className="text-sm text-muted-foreground">USD Value</div>
+                    <div className="text-sm text-muted-foreground">USD Value (1 J$ = $10)</div>
                   </div>
                 </div>
                 <div className="space-y-4">

@@ -10,6 +10,9 @@ import { getLinksFor, removeLink } from '@/links/link-registry';
 import { createItemFromTask, removeItemsCreatedByTask } from '../item-creation-utils';
 import { awardPointsToPlayer, removePointsFromPlayer, getMainPlayerId } from '../points-rewards-utils';
 import { createFinancialRecordFromTask, updateFinancialRecordFromTask, removeFinancialRecordsCreatedByTask } from '../financial-record-utils';
+import { getPlayerConversionRates, getPersonalAssets, savePersonalAssets } from '@/data-store/datastore';
+import { DEFAULT_POINTS_CONVERSION_RATES } from '@/lib/constants/financial-constants';
+import type { PointsConversionRates } from '@/lib/constants/financial-constants';
 import { getCategoryForTaskType } from '@/lib/utils/searchable-select-utils';
 import { 
   updateFinancialRecordsFromTask, 
@@ -274,7 +277,7 @@ export async function removeTaskLogEntriesOnDelete(taskId: string): Promise<void
  */
 async function removePlayerPointsFromTask(taskId: string): Promise<void> {
   try {
-    console.log(`[removePlayerPointsFromTask] Removing points for task: ${taskId}`);
+    console.log(`[removePlayerPointsFromTask] Starting removal of points AND J$ for task: ${taskId}`);
     
     // Get the task to find what points were awarded
     const tasks = await getAllTasks();
@@ -291,7 +294,7 @@ async function removePlayerPointsFromTask(taskId: string): Promise<void> {
     const mainPlayer = players.find(p => p.id === mainPlayerId);
     
     if (!mainPlayer) {
-      console.log(`[removePlayerPointsFromTask] Main player not found, skipping points removal`);
+      console.log(`[removePlayerPointsFromTask] Main player not found, skipping removal`);
       return;
     }
     
@@ -305,12 +308,102 @@ async function removePlayerPointsFromTask(taskId: string): Promise<void> {
       return;
     }
     
-    // Remove the points from the player
+    console.log(`[removePlayerPointsFromTask] Task "${task.name}" awarded: XP:${pointsToRemove.xp || 0}, RP:${pointsToRemove.rp || 0}, FP:${pointsToRemove.fp || 0}, HP:${pointsToRemove.hp || 0}`);
+    
+    // STEP 1: Calculate potential J$ from these points
+    const conversionRates = await getConversionRatesOrDefault();
+    const potentialJ$ = calculateJ$FromPoints(pointsToRemove, conversionRates);
+    
+    console.log(`[removePlayerPointsFromTask] These points could convert to ${potentialJ$.toFixed(2)} J$`);
+    
+    // STEP 2: Remove J$ from personal assets FIRST (if any was converted)
+    try {
+      const personalAssets = await getPersonalAssets();
+      const currentJ$ = personalAssets?.personalJ$ || 0;
+      
+      console.log(`[removePlayerPointsFromTask] Player currently has ${currentJ$.toFixed(2)} J$`);
+      
+      // Calculate J$ to remove (can't remove more than player has)
+      const j$ToRemove = Math.min(potentialJ$, currentJ$);
+      
+      if (j$ToRemove > 0) {
+        console.log(`[removePlayerPointsFromTask] Removing ${j$ToRemove.toFixed(2)} J$ from personal assets`);
+        
+        // Update personal assets
+        const updatedAssets = {
+          ...personalAssets,
+          personalJ$: Math.max(0, currentJ$ - j$ToRemove)
+        };
+        
+        await savePersonalAssets(updatedAssets);
+        
+        // Log the J$ removal
+        await appendEntityLog(
+          EntityType.PLAYER,
+          mainPlayerId,
+          LogEventType.UPDATED,
+          {
+            name: mainPlayer.name,
+            jungleCoinsRemoved: j$ToRemove,
+            reason: 'Task deletion - J$ rollback',
+            sourceTaskId: taskId,
+            taskName: task.name,
+            description: `Removed ${j$ToRemove.toFixed(2)} J$ due to task deletion: ${task.name}`
+          }
+        );
+        
+        console.log(`[removePlayerPointsFromTask] ✅ Successfully removed ${j$ToRemove.toFixed(2)} J$ from personal assets`);
+      } else {
+        console.log(`[removePlayerPointsFromTask] No J$ to remove (player has ${currentJ$.toFixed(2)} J$)`);
+      }
+    } catch (error) {
+      console.error(`[removePlayerPointsFromTask] ⚠️ Failed to remove J$:`, error);
+      // Continue with points removal even if J$ removal fails
+    }
+    
+    // STEP 3: Remove the points from the player
+    console.log(`[removePlayerPointsFromTask] Now removing points from player...`);
     await removePointsFromPlayer(mainPlayerId, pointsToRemove);
-    console.log(`[removePlayerPointsFromTask] ✅ Removed points from player: ${JSON.stringify(pointsToRemove)}`);
+    console.log(`[removePlayerPointsFromTask] ✅ Successfully removed points: XP:${pointsToRemove.xp || 0}, RP:${pointsToRemove.rp || 0}, FP:${pointsToRemove.fp || 0}, HP:${pointsToRemove.hp || 0}`);
     
   } catch (error) {
-    console.error(`[removePlayerPointsFromTask] ❌ Failed to remove player points for task ${taskId}:`, error);
+    console.error(`[removePlayerPointsFromTask] ❌ FAILED to remove player points/J$ for task ${taskId}:`, error);
+    throw error; // Re-throw to see the error in console
+  }
+}
+
+/**
+ * Calculate maximum J$ value that could be obtained from given points
+ * Uses current conversion rates to determine the J$ equivalent
+ */
+function calculateJ$FromPoints(
+  points: { xp?: number; rp?: number; fp?: number; hp?: number },
+  rates: PointsConversionRates
+): number {
+  const xpJ$ = (points.xp || 0) / rates.xpToJ$;
+  const rpJ$ = (points.rp || 0) / rates.rpToJ$;
+  const fpJ$ = (points.fp || 0) / rates.fpToJ$;
+  const hpJ$ = (points.hp || 0) / rates.hpToJ$;
+  
+  const totalJ$ = xpJ$ + rpJ$ + fpJ$ + hpJ$;
+  
+  console.log(`[calculateJ$FromPoints] XP:${points.xp || 0}→${xpJ$.toFixed(2)}J$, RP:${points.rp || 0}→${rpJ$.toFixed(2)}J$, FP:${points.fp || 0}→${fpJ$.toFixed(2)}J$, HP:${points.hp || 0}→${hpJ$.toFixed(2)}J$ = ${totalJ$.toFixed(2)}J$ total`);
+  
+  return totalJ$;
+}
+
+/**
+ * Get current conversion rates, or use defaults if fetch fails
+ * This ensures the function always has rates to work with
+ */
+async function getConversionRatesOrDefault(): Promise<PointsConversionRates> {
+  try {
+    const rates = await getPlayerConversionRates();
+    console.log(`[getConversionRatesOrDefault] Using current rates:`, rates);
+    return rates;
+  } catch (error) {
+    console.warn('[getConversionRatesOrDefault] Failed to get conversion rates, using defaults:', error);
+    return DEFAULT_POINTS_CONVERSION_RATES;
   }
 }
 
