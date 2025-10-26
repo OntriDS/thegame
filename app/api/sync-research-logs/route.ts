@@ -9,10 +9,7 @@ import path from 'path';
  * API route to trigger research logs sync
  */
 export async function POST(req: NextRequest) {
-  console.log('[Sync Research Logs API] POST request received');
-  
   if (!(await requireAdminAuth(req))) {
-    console.log('[Sync Research Logs API] ❌ Auth failed');
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   
@@ -22,10 +19,7 @@ export async function POST(req: NextRequest) {
     
     if (logType) {
       // Individual sync
-      console.log(`[Sync Research Logs API] 🔄 Starting ${logType} sync...`);
       const results = await syncIndividualLogType(logType, strategyOverride);
-      
-      console.log(`[Sync Research Logs API] ✅ ${logType} sync completed:`, results);
       return NextResponse.json({
         success: true,
         message: `${logType} sync completed`,
@@ -33,10 +27,7 @@ export async function POST(req: NextRequest) {
       });
     } else {
       // Full sync
-      console.log('[Sync Research Logs API] 🔄 Starting full sync...');
       const results = await syncAllLogs();
-      
-      console.log('[Sync Research Logs API] ✅ Full sync completed:', results);
       return NextResponse.json({
         success: true,
         message: 'Research logs sync completed',
@@ -57,17 +48,13 @@ export async function POST(req: NextRequest) {
  * API route to check sync status without syncing
  */
 export async function GET(req: NextRequest) {
-  console.log('[Sync Research Logs API] GET request received (status check)');
-  
   if (!(await requireAdminAuth(req))) {
-    console.log('[Sync Research Logs API] ❌ Auth failed');
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   
   try {
     const status = await checkSyncStatus();
     
-    console.log('[Sync Research Logs API] 📊 Status check completed:', status);
     return NextResponse.json({
       success: true,
       status
@@ -98,7 +85,6 @@ async function checkSyncStatus(): Promise<{needsSync: string[], upToDate: string
   const results = {needsSync: [] as string[], upToDate: [] as string[], conflicts: [] as string[]};
   
   if (!process.env.UPSTASH_REDIS_REST_URL) {
-    console.log('[Sync Research Logs API] ⏭️ No KV available - returning empty status');
     return results;
   }
   
@@ -109,7 +95,6 @@ async function checkSyncStatus(): Promise<{needsSync: string[], upToDate: string
       // Get local file data
       const localData = await getLocalFileData(logType);
       if (!localData) {
-        console.log(`[Sync Research Logs API] ⚠️ No deployed file for ${logType} - this is a conflict`);
         results.conflicts.push(logType);
         continue;
       }
@@ -120,7 +105,6 @@ async function checkSyncStatus(): Promise<{needsSync: string[], upToDate: string
       // 1. Check if KV is empty
       if (!kvData || Object.keys(kvData).length === 0) {
         results.needsSync.push(logType);
-        console.log(`[Sync Research Logs API] 📊 ${logType}: needs sync (no KV data)`);
         continue;
       }
 
@@ -137,10 +121,8 @@ async function checkSyncStatus(): Promise<{needsSync: string[], upToDate: string
         const dataMatches = JSON.stringify(localData) === JSON.stringify(kvData);
         if (!dataMatches) {
           results.needsSync.push(logType);
-          console.log(`[Sync Research Logs API] 📊 ${logType}: needs sync (data differs)`);
         } else {
           results.upToDate.push(logType);
-          console.log(`[Sync Research Logs API] 📊 ${logType}: up to date (data matches)`);
         }
         continue;
       }
@@ -148,25 +130,20 @@ async function checkSyncStatus(): Promise<{needsSync: string[], upToDate: string
       // 4. Compare timestamps using normalized Date objects
       if (localDate > kvDate) {
         results.needsSync.push(logType);
-        console.log(`[Sync Research Logs API] 📊 ${logType}: needs sync (local newer)`);
       } else if (kvDate > localDate) {
         // KV is newer - check for data integrity issues
         if (hasDataIntegrityIssues(kvData, logType)) {
           results.conflicts.push(logType);
-          console.log(`[Sync Research Logs API] 📊 ${logType}: conflict (data integrity issues)`);
         } else {
           results.upToDate.push(logType);
-          console.log(`[Sync Research Logs API] 📊 ${logType}: up to date (KV newer but valid)`);
         }
       } else {
         // Timestamps match - check if data actually differs
         const dataMatches = JSON.stringify(localData) === JSON.stringify(kvData);
         if (!dataMatches) {
           results.needsSync.push(logType);
-          console.log(`[Sync Research Logs API] 📊 ${logType}: needs sync (timestamps match but data differs)`);
         } else {
           results.upToDate.push(logType);
-          console.log(`[Sync Research Logs API] 📊 ${logType}: up to date (timestamps and data match)`);
         }
       }
     } catch (error) {
@@ -175,7 +152,6 @@ async function checkSyncStatus(): Promise<{needsSync: string[], upToDate: string
     }
   }
   
-  console.log('[Sync Research Logs API] 📊 Status check completed:', results);
   return results;
 }
 
@@ -189,13 +165,11 @@ function hasDataIntegrityIssues(data: any, logType: string): boolean {
     const sprintIds = sprints.map((s: any) => s.id);
     const hasDuplicates = sprintIds.length !== new Set(sprintIds).size;
     if (hasDuplicates) {
-      console.log(`[Sync Research Logs API] ⚠️ ${logType}: duplicate sprint IDs detected`);
       return true;
     }
     
     // Check for missing required fields
     if (!data.sprints || !Array.isArray(data.sprints)) {
-      console.log(`[Sync Research Logs API] ⚠️ ${logType}: missing or invalid sprints array`);
       return true;
     }
   }
@@ -203,7 +177,6 @@ function hasDataIntegrityIssues(data: any, logType: string): boolean {
   if (logType === 'project-status') {
     // Check for required fields
     if (!data.currentSprint || !data.currentSprintNumber) {
-      console.log(`[Sync Research Logs API] ⚠️ ${logType}: missing required fields`);
       return true;
     }
   }
@@ -211,7 +184,6 @@ function hasDataIntegrityIssues(data: any, logType: string): boolean {
   if (logType === 'notes-log') {
     // Check for valid structure
     if (!data.notes || !Array.isArray(data.notes)) {
-      console.log(`[Sync Research Logs API] ⚠️ ${logType}: missing or invalid notes array`);
       return true;
     }
   }
@@ -258,8 +230,6 @@ async function syncIndividualLogType(
   }
   
   try {
-    console.log(`[Sync Research Logs API] 🔄 Starting ${logType} sync...`);
-    
     // Get local file data
     const localData = await getLocalFileData(logType);
     if (!localData) {
@@ -286,13 +256,10 @@ async function syncIndividualLogType(
       const dataToSync = syncDecision.mergedData || localData;
       await kvSet(`data:${logType}`, dataToSync);
       results.synced.push(logType);
-      console.log(`[Sync Research Logs API] ✅ ${logType} synced: ${syncDecision.reason}`);
     } else if (syncDecision.action === 'skipped') {
       results.skipped.push(`${logType} (${syncDecision.reason})`);
-      console.log(`[Sync Research Logs API] ⏭️ ${logType} skipped: ${syncDecision.reason}`);
     } else if (syncDecision.action === 'conflict') {
       results.conflicts.push(`${logType} (${syncDecision.reason})`);
-      console.log(`[Sync Research Logs API] ⚠️ ${logType} conflict: ${syncDecision.reason}`);
     }
     
   } catch (error) {
@@ -326,7 +293,6 @@ async function getLocalFileData(logType: string): Promise<any | null> {
     const fileContent = await fs.promises.readFile(filePath, 'utf-8');
     return JSON.parse(fileContent);
   } catch (error) {
-    console.log(`[Sync Research Logs API] ⏭️ Could not read local file for ${logType}:`, error);
     return null;
   }
 }
@@ -391,12 +357,6 @@ async function applySyncStrategy(
   
   const kvLastUpdated = (kvData as any)?.lastUpdated || null;
   const localLastUpdated = (localData as any).lastUpdated || fileStats.mtime.toISOString();
-  
-  console.log(`[Sync Research Logs API] 📊 ${logType} (${strategy.type}) comparison:`, {
-    localLastUpdated,
-    kvLastUpdated: kvLastUpdated || 'null',
-    localNewer: !kvLastUpdated || new Date(localLastUpdated) > new Date(kvLastUpdated)
-  });
   
   switch (strategy.type) {
     case 'replace':

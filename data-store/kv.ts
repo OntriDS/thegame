@@ -124,31 +124,11 @@ function createLocalKV(): KVClient {
 
 const hasUpstash = !!process.env.UPSTASH_REDIS_REST_URL && !!process.env.UPSTASH_REDIS_REST_TOKEN;
 
-// 🔥 DEBUG MODE: Let's see what's actually happening!
-// Only log on server-side (where env vars are available)
-if (typeof window === 'undefined') {
-  console.log('🔥 KV DEBUG - Environment Check:', {
-    hasUpstash,
-    url: process.env.UPSTASH_REDIS_REST_URL ? `SET (${process.env.UPSTASH_REDIS_REST_URL.substring(0, 20)}...)` : 'MISSING',
-    token: process.env.UPSTASH_REDIS_REST_TOKEN ? `SET (${process.env.UPSTASH_REDIS_REST_TOKEN.substring(0, 10)}...)` : 'MISSING',
-    allUpstashKeys: Object.keys(process.env).filter(k => k.includes('UPSTASH')),
-    allRedisKeys: Object.keys(process.env).filter(k => k.includes('REDIS')),
-    nodeEnv: process.env.NODE_ENV,
-    vercelEnv: process.env.VERCEL_ENV,
-    timestamp: new Date().toISOString()
-  });
-}
-
 export const kv: KVClient = hasUpstash
   ? (() => {
       return Redis.fromEnv() as unknown as KVClient;
     })()
   : (() => {
-      if (typeof window === 'undefined') {
-        console.warn(
-          "🔥 KV DEBUG - Missing UPSTASH_REDIS_REST_URL/UPSTASH_REDIS_REST_TOKEN. Using in-memory KV fallback (dev only)."
-        );
-      }
       return createLocalKV();
     })();
 

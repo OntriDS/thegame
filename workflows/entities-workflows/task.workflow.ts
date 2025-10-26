@@ -37,19 +37,21 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
   // New task creation
   if (!previousTask) {
     const effectKey = `task:${task.id}:created`;
-    if (await hasEffect(effectKey)) return;
+    const alreadyLoggedCreated = await hasEffect(effectKey);
     
-    await appendEntityLog(EntityType.TASK, task.id, LogEventType.CREATED, { 
-      name: task.name, 
-      status: task.status,
-      station: task.station,
-      taskType: task.type,
-      priority: task.priority,
-      sourceSaleId: task.sourceSaleId,
-      dueDate: task.dueDate,
-      frequencyConfig: task.frequencyConfig
-    });
-    await markEffect(effectKey);
+    if (!alreadyLoggedCreated) {
+      await appendEntityLog(EntityType.TASK, task.id, LogEventType.CREATED, { 
+        name: task.name, 
+        status: task.status,
+        station: task.station,
+        taskType: task.type,
+        priority: task.priority,
+        sourceSaleId: task.sourceSaleId,
+        dueDate: task.dueDate,
+        frequencyConfig: task.frequencyConfig
+      });
+      await markEffect(effectKey);
+    }
 
     // Recurrent Template instance spawning - when template is created
     if (task.type === TaskType.RECURRENT_TEMPLATE) {
@@ -62,11 +64,12 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
       }
     }
 
-    // FIXED: Only return early if task is NOT Done
-    // If task is Done, continue to completion workflows below
-    if (task.status !== 'Done') {
+    // Return early ONLY if CREATED was already logged AND task is NOT Done
+    // This prevents duplicates but allows Done tasks to proceed to DONE logging
+    if (alreadyLoggedCreated && task.status !== 'Done') {
       return;
     }
+    // Continue to DONE logging below if task is Done (whether CREATED just logged or was already there)
   }
   
   // State changes - append new log

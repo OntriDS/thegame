@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useThemeColors } from "@/lib/hooks/use-theme-colors";
+import { useUserPreferences } from "@/lib/hooks/use-user-preferences";
 import { InventoryDisplay } from "@/components/inventory/inventory-display";
 import { ClientAPI } from "@/lib/client-api";
 import { ItemStatus } from "@/types/enums";
@@ -13,6 +14,7 @@ import { getZIndexClass } from "@/lib/utils/z-index-utils";
 
 export default function InventoriesPage() {
   const { activeBg } = useThemeColors();
+  const { getPreference, setPreference } = useUserPreferences();
   const [selectedSite, setSelectedSite] = useState<string | 'all'>('all');
   const [selectedStatus, setSelectedStatus] = useState<ItemStatus | 'all'>('all');
   const [sites, setSites] = useState<Site[]>([]);
@@ -30,6 +32,15 @@ export default function InventoriesPage() {
     loadSites();
   }, []);
 
+  // Load saved preferences on mount
+  useEffect(() => {
+    const savedSite = getPreference('inventory-selected-site', 'all');
+    const savedStatus = getPreference('inventory-selected-status', 'all');
+    
+    if (savedSite) setSelectedSite(savedSite);
+    if (savedStatus) setSelectedStatus(savedStatus);
+  }, [getPreference]);
+
 
   return (
     <div className="space-y-6">
@@ -39,7 +50,10 @@ export default function InventoriesPage() {
           {/* Compact Filters */}
           <div className="flex items-center gap-2 text-sm">
                          <span className="text-muted-foreground">Site:</span>
-              <Select value={selectedSite} onValueChange={(value) => setSelectedSite(value)}>
+              <Select value={selectedSite} onValueChange={(value) => {
+                setSelectedSite(value);
+                setPreference('inventory-selected-site', value);
+              }}>
               <SelectTrigger className="w-32 h-8">
                 <SelectValue />
               </SelectTrigger>
@@ -54,7 +68,11 @@ export default function InventoriesPage() {
           
           <div className="flex items-center gap-2">
             <span className="text-muted-foreground">Status:</span>
-            <Select value={selectedStatus} onValueChange={(value) => setSelectedStatus(value as ItemStatus | 'all')}>
+            <Select value={selectedStatus} onValueChange={(value) => {
+              const newStatus = value as ItemStatus | 'all';
+              setSelectedStatus(newStatus);
+              setPreference('inventory-selected-status', newStatus);
+            }}>
               <SelectTrigger className="w-32 h-8">
                 <SelectValue />
               </SelectTrigger>
