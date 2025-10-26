@@ -71,13 +71,11 @@ export function ItemsLifecycleTab({ itemsLog, onReload, isReloading }: ItemsLife
     const mappedStatus = statusMap[normalizedStatus];
     if (mappedStatus && ITEM_STATUS_COLORS[mappedStatus]) {
       const colorClasses = isDarkMode ? ITEM_STATUS_COLORS[mappedStatus].dark : ITEM_STATUS_COLORS[mappedStatus].light;
-      console.log('🎨 Item status badge mapped color:', { status, normalizedStatus, mappedStatus, colorClasses, isDarkMode });
       return colorClasses;
     }
     
     // Default fallback
     const fallbackClasses = isDarkMode ? ITEM_STATUS_COLORS[ItemStatus.IDLE].dark : ITEM_STATUS_COLORS[ItemStatus.IDLE].light;
-    console.log('🎨 Item status badge fallback color:', { status, fallbackClasses, isDarkMode });
     return fallbackClasses;
   };
 

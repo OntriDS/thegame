@@ -13,13 +13,16 @@ import {
   upsertItem as repoUpsertItem,
   getAllItems as repoGetAllItems,
   getItemById as repoGetItemById,
-  deleteItem as repoDeleteItem
+  deleteItem as repoDeleteItem,
+  getItemsBySourceTaskId as repoGetItemsBySourceTaskId,
+  getItemsBySourceRecordId as repoGetItemsBySourceRecordId
 } from './repositories/item.repo';
 import { 
   upsertFinancial as repoUpsertFinancial,
   getAllFinancials as repoGetAllFinancials,
   getFinancialById as repoGetFinancialById,
-  deleteFinancial as repoDeleteFinancial
+  deleteFinancial as repoDeleteFinancial,
+  getFinancialsBySourceTaskId as repoGetFinancialsBySourceTaskId
 } from './repositories/financial.repo';
 import { 
   upsertSale as repoUpsertSale,
@@ -118,6 +121,15 @@ export async function getItemById(id: string): Promise<Item | null> {
   return await repoGetItemById(id);
 }
 
+// OPTIMIZED: Indexed queries - only load items created by specific tasks/records
+export async function getItemsBySourceTaskId(taskId: string): Promise<Item[]> {
+  return await repoGetItemsBySourceTaskId(taskId);
+}
+
+export async function getItemsBySourceRecordId(recordId: string): Promise<Item[]> {
+  return await repoGetItemsBySourceRecordId(recordId);
+}
+
 export async function removeItem(id: string): Promise<void> {
   const existing = await repoGetItemById(id);
   await repoDeleteItem(id);
@@ -143,6 +155,11 @@ export async function getAllFinancials(): Promise<FinancialRecord[]> {
 
 export async function getFinancialById(id: string): Promise<FinancialRecord | null> {
   return await repoGetFinancialById(id);
+}
+
+// OPTIMIZED: Indexed queries - only load financials created by specific tasks
+export async function getFinancialsBySourceTaskId(taskId: string): Promise<FinancialRecord[]> {
+  return await repoGetFinancialsBySourceTaskId(taskId);
 }
 
 export async function removeFinancial(id: string): Promise<void> {

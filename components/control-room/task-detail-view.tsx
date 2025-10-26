@@ -340,7 +340,7 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate }: TaskD
         </div>
 
         {/* Key Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
           <Card className="p-3">
             <div className="flex items-center justify-between mb-2">
               <CardTitle className="text-xs font-medium">Status</CardTitle>
@@ -421,15 +421,6 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate }: TaskD
                 {task.station}
               </div>
             )}
-          </Card>
-          <Card className="p-3">
-            <div className="flex items-center justify-between mb-2">
-              <CardTitle className="text-xs font-medium">Station</CardTitle>
-              <Tag className="w-3 h-3 text-muted-foreground" />
-            </div>
-            <div className="text-sm font-bold">
-              {task.station}
-            </div>
           </Card>
         </div>
 

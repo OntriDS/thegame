@@ -4,8 +4,8 @@
 
 import type { Task, Item, FinancialRecord } from '@/types/entities';
 import { ItemStatus, ItemType, LinkType, EntityType } from '@/types/enums';
-import { upsertItem, getAllItems } from '@/data-store/datastore';
-import { deleteItem } from '@/data-store/repositories/item.repo';
+import { upsertItem } from '@/data-store/datastore';
+import { getAllItems, deleteItem, getItemsBySourceTaskId, getItemsBySourceRecordId } from '@/data-store/repositories/item.repo';
 import { hasEffect, markEffect } from '@/data-store/effects-registry';
 // links are created by processLinkEntity()
 import { v4 as uuid } from 'uuid';
@@ -27,8 +27,8 @@ export function getDefaultItemStatus(itemType: string, isSold: boolean = false):
 
 /**
  * Creates an Item entity from a Task's emissary fields
- * IDEMPOTENT: Checks if item already exists before creating
- * Uses atomic operations to prevent race conditions
+ * IDEMPOTENT: Relies on Effects Registry to prevent duplicate creation
+ * This function is only called when Effects Registry confirms no item exists yet
  */
 export async function createItemFromTask(task: Task): Promise<Item | null> {
   try {
@@ -41,21 +41,9 @@ export async function createItemFromTask(task: Task): Promise<Item | null> {
       return null;
     }
     
-    // IDEMPOTENCY CHECK: Look for existing item created by this task
-    console.log(`[createItemFromTask] Checking for existing items...`);
-    const allItems = await getAllItems();
-    console.log(`[createItemFromTask] Found ${allItems.length} total items`);
-    
-    const existingItems = allItems.filter(item => 
-      item.sourceTaskId === task.id && 
-      item.type === task.outputItemType
-    );
-    console.log(`[createItemFromTask] Found ${existingItems.length} existing items for this task`);
-    
-    if (existingItems.length > 0) {
-      console.log(`[createItemFromTask] Item already exists, skipping creation`);
-      return existingItems[0]; // Return existing item
-    }
+    // OPTIMIZED: No need to check for existing items - Effects Registry already did!
+    // The workflow only calls this when hasEffect('task:{id}:itemCreated') === false
+    console.log(`[createItemFromTask] Creating new item (Effect Registry confirmed no existing item)`);
     
     const newItem: Item = {
       id: `item-${task.id}-${Date.now()}`, // More predictable ID based on task ID
@@ -101,8 +89,8 @@ export async function createItemFromTask(task: Task): Promise<Item | null> {
 
 /**
  * Creates an Item entity from a Financial Record's emissary fields
- * IDEMPOTENT: Checks if item already exists before creating
- * Uses atomic operations to prevent race conditions
+ * IDEMPOTENT: Relies on Effects Registry to prevent duplicate creation
+ * This function is only called when Effects Registry confirms no item exists yet
  */
 export async function createItemFromRecord(record: FinancialRecord): Promise<Item | null> {
   try {
@@ -115,21 +103,9 @@ export async function createItemFromRecord(record: FinancialRecord): Promise<Ite
       return null;
     }
     
-    // IDEMPOTENCY CHECK: Look for existing item created by this record
-    console.log(`[createItemFromRecord] Checking for existing items...`);
-    const allItems = await getAllItems();
-    console.log(`[createItemFromRecord] Found ${allItems.length} total items`);
-    
-    const existingItems = allItems.filter(item => 
-      item.sourceRecordId === record.id && 
-      item.type === record.outputItemType
-    );
-    console.log(`[createItemFromRecord] Found ${existingItems.length} existing items for this record`);
-    
-    if (existingItems.length > 0) {
-      console.log(`[createItemFromRecord] Item already exists, skipping creation`);
-      return existingItems[0]; // Return existing item
-    }
+    // OPTIMIZED: No need to check for existing items - Effects Registry already did!
+    // The workflow only calls this when hasEffect('record:{id}:itemCreated') === false
+    console.log(`[createItemFromRecord] Creating new item (Effect Registry confirmed no existing item)`);
     
     const newItem: Item = {
       id: `item-${record.id}-${Date.now()}`, // More predictable ID based on record ID
@@ -173,13 +149,14 @@ export async function createItemFromRecord(record: FinancialRecord): Promise<Ite
 /**
  * Removes all items created by a specific task
  * Used when task is uncompleted or deleted
+ * OPTIMIZED: Uses indexed query instead of loading all items
  */
 export async function removeItemsCreatedByTask(taskId: string): Promise<void> {
   try {
     console.log(`[removeItemsCreatedByTask] Removing items created by task: ${taskId}`);
     
-    const items = await getAllItems();
-    const itemsToRemove = items.filter(item => item.sourceTaskId === taskId);
+    // OPTIMIZED: Only load items created by this task, not all items
+    const itemsToRemove = await getItemsBySourceTaskId(taskId);
     
     console.log(`[removeItemsCreatedByTask] Found ${itemsToRemove.length} items to remove`);
     
@@ -207,13 +184,14 @@ export async function removeItemsCreatedByTask(taskId: string): Promise<void> {
 /**
  * Removes all items created by a specific financial record
  * Used when financial record is deleted
+ * OPTIMIZED: Uses indexed query instead of loading all items
  */
 export async function removeItemsCreatedByRecord(recordId: string): Promise<void> {
   try {
     console.log(`[removeItemsCreatedByRecord] Removing items created by record: ${recordId}`);
     
-    const items = await getAllItems();
-    const itemsToRemove = items.filter(item => item.sourceRecordId === recordId);
+    // OPTIMIZED: Only load items created by this record, not all items
+    const itemsToRemove = await getItemsBySourceRecordId(recordId);
     
     console.log(`[removeItemsCreatedByRecord] Found ${itemsToRemove.length} items to remove`);
     

@@ -5,6 +5,9 @@ import type { Task, Item, Sale, FinancialRecord, Character, Player } from '@/typ
 import { EntityType } from '@/types/enums';
 import { hasEffect, markEffect } from '@/data-store/effects-registry';
 import {
+  getFinancialsBySourceTaskId,
+  getItemsBySourceTaskId,
+  getItemsBySourceRecordId,
   getAllFinancials, upsertFinancial,
   getAllTasks, upsertTask,
   getAllItems, upsertItem,
@@ -23,9 +26,8 @@ export async function updateFinancialRecordsFromTask(
   try {
     console.log(`[updateFinancialRecordsFromTask] Updating financial records for task: ${task.name}`);
     
-    // Find financial records created from this task
-    const allFinancials = await getAllFinancials();
-    const relatedRecords = allFinancials.filter(record => record.sourceTaskId === task.id);
+    // OPTIMIZED: Only load financials created by this task (already filtered by index)
+    const relatedRecords = await getFinancialsBySourceTaskId(task.id);
     
     for (const record of relatedRecords) {
       const updateKey = `updateFinancialFromTask:${task.id}:${record.id}:${task.updatedAt?.getTime()}`;
@@ -133,9 +135,8 @@ export async function updateItemsCreatedByTask(
   try {
     console.log(`[updateItemsCreatedByTask] Updating items for task: ${task.name}`);
     
-    // Find items created from this task
-    const allItems = await getAllItems();
-    const relatedItems = allItems.filter(item => item.sourceTaskId === task.id);
+    // OPTIMIZED: Only load items created by this task (already filtered by index)
+    const relatedItems = await getItemsBySourceTaskId(task.id);
     
     for (const item of relatedItems) {
       const updateKey = `updateItemFromTask:${task.id}:${item.id}:${task.updatedAt?.getTime()}`;
@@ -201,9 +202,8 @@ export async function updateItemsCreatedByRecord(
   try {
     console.log(`[updateItemsCreatedByRecord] Updating items for financial record: ${record.name}`);
     
-    // Find items created from this financial record
-    const allItems = await getAllItems();
-    const relatedItems = allItems.filter(item => item.sourceRecordId === record.id);
+    // OPTIMIZED: Only load items created by this record (already filtered by index)
+    const relatedItems = await getItemsBySourceRecordId(record.id);
     
     for (const item of relatedItems) {
       const updateKey = `updateItemFromRecord:${record.id}:${item.id}:${record.updatedAt?.getTime()}`;

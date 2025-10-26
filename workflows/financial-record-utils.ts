@@ -3,7 +3,8 @@
 
 import type { Task, FinancialRecord, Sale } from '@/types/entities';
 import { LinkType, EntityType, LogEventType } from '@/types/enums';
-import { getAllFinancials, upsertFinancial, removeFinancial } from '@/data-store/datastore';
+import { upsertFinancial, removeFinancial } from '@/data-store/datastore';
+import { getAllFinancials, getFinancialsBySourceTaskId } from '@/data-store/repositories/financial.repo';
 import { makeLink } from '@/links/links-workflows';
 import { createLink } from '@/links/link-registry';
 import { appendEntityLog } from './entities-logging';
@@ -24,14 +25,9 @@ export async function createFinancialRecordFromTask(task: Task): Promise<Financi
       return null;
     }
     
-    // IDEMPOTENCY CHECK: Look for existing financial record created by this task
-    const allFinancials = await getAllFinancials();
-    const existingFinrec = allFinancials.find(fr => fr.sourceTaskId === task.id);
-    
-    if (existingFinrec) {
-      console.log(`[createFinancialRecordFromTask] Financial record already exists for task ${task.id}, skipping creation`);
-      return existingFinrec;
-    }
+    // OPTIMIZED: No need to check for existing records - Effects Registry already did!
+    // The workflow only calls this when hasEffect('task:{id}:financialCreated') === false
+    console.log(`[createFinancialRecordFromTask] Creating new financial record (Effect Registry confirmed no existing record)`);
     
     const currentDate = new Date();
     const newFinrec: FinancialRecord = {
@@ -172,14 +168,14 @@ export async function updateFinancialRecordFromTask(task: Task, previousTask: Ta
 /**
  * Remove financial records created by a specific task
  * This is used when a task is deleted to clean up associated financial records
+ * OPTIMIZED: Uses indexed query instead of loading all financials
  */
 export async function removeFinancialRecordsCreatedByTask(taskId: string): Promise<void> {
   try {
     console.log(`[removeFinancialRecordsCreatedByTask] Removing financial records created by task: ${taskId}`);
     
-    // Find financial records created by this task
-    const allFinancials = await getAllFinancials();
-    const taskFinancials = allFinancials.filter(fr => fr.sourceTaskId === taskId);
+    // OPTIMIZED: Only load financials created by this task, not all financials
+    const taskFinancials = await getFinancialsBySourceTaskId(taskId);
     
     if (taskFinancials.length === 0) {
       console.log(`[removeFinancialRecordsCreatedByTask] No financial records found for task ${taskId}`);
@@ -209,6 +205,7 @@ export async function removeFinancialRecordsCreatedByTask(taskId: string): Promi
 /**
  * Create a financial record from a sale (when sale has revenue)
  * This implements the emissary pattern: Sale DNA → FinancialRecord entity
+ * IDEMPOTENT: Relies on Effects Registry to prevent duplicate creation
  */
 export async function createFinancialRecordFromSale(sale: Sale): Promise<FinancialRecord | null> {
   try {
@@ -220,14 +217,9 @@ export async function createFinancialRecordFromSale(sale: Sale): Promise<Financi
       return null;
     }
     
-    // IDEMPOTENCY CHECK: Look for existing financial record created by this sale
-    const allFinancials = await getAllFinancials();
-    const existingFinrec = allFinancials.find(fr => fr.sourceSaleId === sale.id);
-    
-    if (existingFinrec) {
-      console.log(`[createFinancialRecordFromSale] Financial record already exists for sale ${sale.id}, skipping creation`);
-      return existingFinrec;
-    }
+    // OPTIMIZED: No need to check for existing records - Effects Registry already did!
+    // The workflow only calls this when hasEffect('sale:{id}:financialCreated') === false
+    console.log(`[createFinancialRecordFromSale] Creating new financial record (Effect Registry confirmed no existing record)`);
     
     const currentDate = new Date();
     const newFinrec: FinancialRecord = {

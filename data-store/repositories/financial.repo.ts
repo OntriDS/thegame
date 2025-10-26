@@ -26,6 +26,25 @@ export async function getFinancialById(id: string): Promise<FinancialRecord | nu
   return await kvGet<FinancialRecord>(key);
 }
 
+/**
+ * Get financial records by sourceTaskId using an index
+ * OPTIMIZED: Only loads records created by this task, not all records
+ */
+export async function getFinancialsBySourceTaskId(sourceTaskId: string): Promise<FinancialRecord[]> {
+  const indexKey = `index:${ENTITY}:sourceTaskId:${sourceTaskId}`;
+  const ids = await kvSMembers(indexKey);
+  if (ids.length === 0) return [];
+  
+  const financials: FinancialRecord[] = [];
+  for (const id of ids) {
+    const key = buildDataKey(ENTITY, id);
+    const financial = await kvGet<FinancialRecord>(key);
+    if (financial) financials.push(financial);
+  }
+  
+  return financials;
+}
+
 export async function upsertFinancial(financial: FinancialRecord): Promise<FinancialRecord> {
   const key = buildDataKey(ENTITY, financial.id);
   const indexKey = buildIndexKey(ENTITY);
@@ -33,12 +52,25 @@ export async function upsertFinancial(financial: FinancialRecord): Promise<Finan
   await kvSet(key, financial);
   await kvSAdd(indexKey, financial.id);
   
+  // Maintain sourceTaskId index
+  if (financial.sourceTaskId) {
+    const sourceTaskIndexKey = `index:${ENTITY}:sourceTaskId:${financial.sourceTaskId}`;
+    await kvSAdd(sourceTaskIndexKey, financial.id);
+  }
+  
   return financial;
 }
 
 export async function deleteFinancial(id: string): Promise<void> {
   const key = buildDataKey(ENTITY, id);
   const indexKey = buildIndexKey(ENTITY);
+  
+  // Get financial to clean up sourceTaskId index
+  const financial = await kvGet<FinancialRecord>(key);
+  if (financial?.sourceTaskId) {
+    const sourceTaskIndexKey = `index:${ENTITY}:sourceTaskId:${financial.sourceTaskId}`;
+    await kvSRem(sourceTaskIndexKey, id);
+  }
   
   await kvDel(key);
   await kvSRem(indexKey, id);
