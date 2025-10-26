@@ -276,15 +276,20 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
             }
           };
           
-          // Update personal assets
+          // Update personal assets - Use correct property name personalJ$
           const updatedAssets = {
             ...personalAssets,
-            jungleCoins: (personalAssets?.jungleCoins || 0) + j$Received,
-            usdValue: ((personalAssets?.jungleCoins || 0) + j$Received) * 10
+            personalJ$: (personalAssets?.personalJ$ || 0) + j$Received,
           };
           
           try {
+            // Save player
             await ClientAPI.upsertPlayer(updatedPlayer);
+            
+            // Save personal assets - THIS WAS MISSING!
+            await ClientAPI.savePersonalAssets(updatedAssets);
+            
+            // Update local state
             setPlayerData(updatedPlayer);
             setPersonalAssets(updatedAssets);
             setShowExchangeModal(false);
