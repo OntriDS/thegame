@@ -12,6 +12,7 @@ import { getPointsMetadata } from '@/lib/utils/points-utils';
 import { ClientAPI } from '@/lib/client-api';
 import { cn } from '@/lib/utils';
 import { PLAYER_ONE_ID } from '@/lib/constants/entity-constants';
+import { processLogData } from '@/lib/utils/logging-utils';
 
 interface PlayerLogTabProps {
   playerLog: any;
@@ -31,7 +32,6 @@ interface PlayerLogTabProps {
  * This tab shows the audit trail of player progression and achievements
  */
 export function PlayerLogTab({ playerLog, onReload, isReloading }: PlayerLogTabProps) {
-  const entries = playerLog?.entries || [];
   const [logOrder, setLogOrder] = useState<'newest' | 'oldest'>('newest');
   const [showLinksModal, setShowLinksModal] = useState(false);
   const [selectedPlayerId, setSelectedPlayerId] = useState<string>('');
@@ -39,12 +39,9 @@ export function PlayerLogTab({ playerLog, onReload, isReloading }: PlayerLogTabP
   const [selectedLogEntry, setSelectedLogEntry] = useState<any>(null);
   const [selectedEntityType, setSelectedEntityType] = useState<string>(EntityType.PLAYER);
 
-  // Sort entries based on order
-  const sortedEntries = [...entries].sort((a, b) => {
-    const dateA = new Date(a.timestamp).getTime();
-    const dateB = new Date(b.timestamp).getTime();
-    return logOrder === 'newest' ? dateB - dateA : dateA - dateB;
-  });
+  // Process player log data using normalized approach
+  const processedPlayerLog = processLogData(playerLog, logOrder);
+  const sortedEntries = processedPlayerLog.entries || [];
 
   return (
     <Card>
@@ -102,7 +99,7 @@ export function PlayerLogTab({ playerLog, onReload, isReloading }: PlayerLogTabP
                       {entry.event}
                     </Badge>
                     <span className="text-sm font-medium truncate">
-                      {entry.description || 'Player activity'}
+                      {entry.displayName || entry.description || 'Player activity'}
                     </span>
                     
                     {/* Points Display - DRY using helper */}
