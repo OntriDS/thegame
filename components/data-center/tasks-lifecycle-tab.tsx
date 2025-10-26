@@ -178,7 +178,7 @@ export function TasksLifecycleTab({ tasksLog, onReload, isReloading }: TasksLife
                 onClick={() => setLogOrder(logOrder === 'newest' ? 'oldest' : 'newest')}
               >
                 <ArrowUpDown className="h-4 w-4 mr-2" />
-                {logOrder === 'newest' ? 'Oldest First' : 'Newest First'}
+                {logOrder === 'oldest' ? 'Newest First' : 'Oldest First'}
               </Button>
               <Button
                 variant="outline"

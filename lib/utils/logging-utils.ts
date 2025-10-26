@@ -270,7 +270,9 @@ export function sortLogEntries(entries: any[], order: 'newest' | 'oldest' = 'new
     const orderA = (a as any)._logOrder ?? getEventOrder(a);
     const orderB = (b as any)._logOrder ?? getEventOrder(b);
     
-    return order === 'newest' ? orderA - orderB : orderB - orderA;
+    // For newest: ascending order (CREATED 0 < DONE 1)
+    // For oldest: also ascending order (CREATED 0 < DONE 1)
+    return orderA - orderB;
   });
 }
 
