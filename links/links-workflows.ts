@@ -21,6 +21,30 @@ export function makeLink(linkType: LinkType, source: { type: EntityType; id: str
 }
 
 export async function processLinkEntity(entity: any, entityType: EntityType): Promise<void> {
+  // Add debugging to understand the issue
+  console.log('[DEBUG] processLinkEntity called with:', {
+    entityType,
+    entityId: entity?.id,
+    entityName: entity?.name,
+    entityKeys: entity ? Object.keys(entity) : 'undefined'
+  });
+  
+  // Validate entity before processing
+  if (!entity) {
+    console.error('[ERROR] processLinkEntity called with undefined entity');
+    return;
+  }
+  
+  if (!entity.id) {
+    console.error('[ERROR] Entity missing id property:', entity);
+    return;
+  }
+  
+  if (!entity.name) {
+    console.error('[ERROR] Entity missing name property:', entity);
+    return;
+  }
+  
   // Check for circular reference
   if (await isProcessing(entityType, entity.id)) {
     console.warn(`[CircuitBreaker] Already processing ${entityType}:${entity.id} - skipping to prevent circular reference`);
@@ -56,12 +80,34 @@ export async function processLinkEntity(entity: any, entityType: EntityType): Pr
       default:
         return;
     }
+  } catch (error) {
+    console.error(`[ERROR] processLinkEntity failed for ${entityType}:${entity.id}:`, error);
+    // Don't rethrow - let the system continue
   } finally {
     await endProcessing(entityType, entity.id);
   }
 }
 
 export async function processTaskEffects(task: Task): Promise<void> {
+  // Add debugging to understand the issue
+  console.log('[DEBUG] processTaskEffects called with task:', {
+    id: task?.id,
+    name: task?.name,
+    status: task?.status,
+    outputItemType: task?.outputItemType,
+    outputQuantity: task?.outputQuantity
+  });
+  
+  if (!task) {
+    console.error('[ERROR] processTaskEffects called with undefined task');
+    return;
+  }
+  
+  if (!task.name) {
+    console.error('[ERROR] Task missing name property:', task);
+    return;
+  }
+  
   if (task.siteId) {
     const l = makeLink(LinkType.TASK_SITE, { type: EntityType.TASK, id: task.id }, { type: EntityType.SITE, id: task.siteId });
     await createLink(l);
@@ -86,24 +132,41 @@ export async function processTaskEffects(task: Task): Promise<void> {
   
   // Create TASK_ITEM link for items created from task emissary fields
   if (task.outputItemType && task.outputQuantity && task.status === 'Done') {
-    // Find the item created by this task
-    const items = await getAllItems();
-    const createdItem = items.find(item => item.sourceTaskId === task.id && item.type === task.outputItemType);
-    
-    if (createdItem) {
-      const l = makeLink(
-        LinkType.TASK_ITEM, 
-        { type: EntityType.TASK, id: task.id }, 
-        { type: EntityType.ITEM, id: createdItem.id },
-        {
-          quantity: task.outputQuantity,
-          unitCost: task.outputUnitCost,
-          price: task.outputItemPrice,
-          itemType: task.outputItemType
+    try {
+      // Find the item created by this task
+      console.log('[DEBUG] About to call getAllItems()');
+      const items = await getAllItems();
+      console.log('[DEBUG] getAllItems() returned:', items?.length, 'items');
+      
+      if (items && Array.isArray(items)) {
+        // Filter out any undefined/null items before processing
+        const validItems = items.filter(item => item && typeof item === 'object' && item.id && item.name);
+        console.log('[DEBUG] Valid items after filtering:', validItems.length);
+        
+        const createdItem = validItems.find(item => item.sourceTaskId === task.id && item.type === task.outputItemType);
+        console.log('[DEBUG] Found createdItem:', createdItem?.id, createdItem?.name);
+        
+        if (createdItem) {
+          const l = makeLink(
+            LinkType.TASK_ITEM, 
+            { type: EntityType.TASK, id: task.id }, 
+            { type: EntityType.ITEM, id: createdItem.id },
+            {
+              quantity: task.outputQuantity,
+              unitCost: task.outputUnitCost,
+              price: task.outputItemPrice,
+              itemType: task.outputItemType
+            }
+          );
+          await createLink(l);
+          await appendLinkLog(l, 'created');
         }
-      );
-      await createLink(l);
-      await appendLinkLog(l, 'created');
+      } else {
+        console.error('[ERROR] getAllItems() returned invalid data:', items);
+      }
+    } catch (error) {
+      console.error('[ERROR] Error in processTaskEffects getAllItems:', error);
+      // Don't throw - continue processing other links
     }
   }
   
