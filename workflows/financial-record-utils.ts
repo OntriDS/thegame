@@ -46,7 +46,7 @@ export async function createFinancialRecordFromTask(task: Task): Promise<Financi
       jungleCoins: 0, // J$ no longer awarded as task rewards
       isNotPaid: task.isNotPaid,       // Copy payment status from Task
       isNotCharged: task.isNotCharged, // Copy payment status from Task
-      rewards: task.rewards,
+      rewards: undefined, // ← FIXED: Don't copy rewards when created from task
       netCashflow: (task.revenue || 0) - (task.cost || 0),
       jungleCoinsValue: 0, // J$ no longer awarded as task rewards
       isCollected: false,
