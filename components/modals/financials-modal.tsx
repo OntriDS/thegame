@@ -22,6 +22,7 @@ import {
 import { getCompanyAreas, getPersonalAreas, isCompanyStation, isPersonalStation, getAreaForStation } from '@/lib/utils/business-structure-utils';
 import type { Station, SubItemType } from '@/types/type-aliases';
 import { ItemType, Collection, CharacterRole } from '@/types/enums';
+import { PLAYER_ONE_ID } from '@/lib/constants/entity-constants';
 import { getSubTypesForItemType } from '@/lib/utils/item-utils';
 import { getCategoryForItemType, createItemTypeOptionsWithCategories, createStationCategoryOptions, createCharacterOptions, createItemTypeSubTypeOptions, getItemTypeFromCombined, getCategoryFromCombined } from '@/lib/utils/searchable-select-utils';
 import { createSiteOptionsWithCategories } from '@/lib/utils/site-options-utils';
@@ -435,7 +436,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
           achievementsCharacter: [],
           jungleCoins: 0,
           purchasedAmount: 0,
-          playerId: 'player-one', // Default to Player One for now
+          playerId: PLAYER_ONE_ID, // Default to Player One for now
           lastActiveAt: new Date(),
           isActive: true,
           createdAt: new Date(),

@@ -19,6 +19,7 @@ import { Task, Item } from '@/types/entities';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
 import { getPointsMetadata } from '@/lib/utils/points-utils';
 import { TaskType, TaskStatus, TaskPriority, STATION_CATEGORIES, ItemType, RecurrentFrequency, Collection, ItemStatus, CharacterRole } from '@/types/enums';
+import { PLAYER_ONE_ID } from '@/lib/constants/entity-constants';
 import { getSubTypesForItemType } from '@/lib/utils/item-utils';
 import { getCategoryForItemType, getCategoryForTaskType, createStationCategoryOptions, getStationFromCombined, getCategoryFromCombined, createTaskParentOptions, createItemTypeSubTypeOptions, getItemTypeFromCombined, getSubTypeFromCombined, createCharacterOptions } from '@/lib/utils/searchable-select-utils';
 import { getAreaForStation } from '@/lib/utils/business-structure-utils';
@@ -375,7 +376,7 @@ export default function TaskModal({
           achievementsCharacter: [],
           jungleCoins: 0,
           purchasedAmount: 0,
-          playerId: 'player-one', // Default to Player One for now
+          playerId: PLAYER_ONE_ID, // Default to Player One for now
           lastActiveAt: new Date(),
           isActive: true,
           createdAt: new Date(),

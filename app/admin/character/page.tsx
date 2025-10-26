@@ -14,6 +14,7 @@ import { useKeyboardShortcuts } from '@/lib/hooks/use-keyboard-shortcuts';
 import type { Character, Player } from "@/types/entities";
 import { Plus, User, Users, Mail, Phone } from "lucide-react";
 import { ROLE_COLORS } from "@/lib/constants/color-constants";
+import { PLAYER_ONE_ID } from '@/lib/constants/entity-constants';
 
 export default function CharactersPage() {
   const [showConversionRatesModal, setShowConversionRatesModal] = useState(false);
@@ -64,7 +65,7 @@ export default function CharactersPage() {
         const playerLogEntries = playerLogData.entries || [];
         
         // Get current player points (not sum of all log entries)
-        const mainPlayer = playersData.find((p: Player) => p.id === 'player-one') || playersData[0];
+        const mainPlayer = playersData.find((p: Player) => p.id === PLAYER_ONE_ID) || playersData[0];
         const pointsData = mainPlayer?.points || { xp: 0, rp: 0, fp: 0, hp: 0 };
         
         setPoints(pointsData);
@@ -124,7 +125,7 @@ export default function CharactersPage() {
         
         const playerLogData = await playerLogResponse.json();
         const playerLogEntries = playerLogData.entries || [];
-        const mainPlayer = playersData.find((p: Player) => p.id === 'player-one') || playersData[0];
+        const mainPlayer = playersData.find((p: Player) => p.id === PLAYER_ONE_ID) || playersData[0];
         const pointsData = mainPlayer?.points || { xp: 0, rp: 0, fp: 0, hp: 0 };
         
         setPoints(pointsData);

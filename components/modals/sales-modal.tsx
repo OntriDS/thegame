@@ -15,6 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { Sale, SaleLine, Item, Discount, Site, Character, Task } from '@/types/entities';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
 import { SaleType, SaleStatus, PaymentMethod, Currency, ItemType, ItemStatus, TaskType, TaskPriority, Collection, STATION_CATEGORIES, CharacterRole } from '@/types/enums';
+import { PLAYER_ONE_ID } from '@/lib/constants/entity-constants';
 import { getSubTypesForItemType } from '@/lib/utils/item-utils';
 import type { Station } from '@/types/type-aliases';
 import { createSiteOptionsWithCategories } from '@/lib/utils/site-options-utils';
@@ -341,7 +342,7 @@ export default function SalesModal({
           achievementsCharacter: [],
           jungleCoins: 0,
           purchasedAmount: 0,
-          playerId: 'player-one', // Default to Player One for now
+          playerId: PLAYER_ONE_ID, // Default to Player One for now
           lastActiveAt: new Date(),
           isActive: true,
           createdAt: new Date(),
