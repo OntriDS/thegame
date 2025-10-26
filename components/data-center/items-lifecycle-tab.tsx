@@ -8,9 +8,9 @@ import { ArrowUpDown, RefreshCw, Link } from 'lucide-react';
 import { LinksSubModal } from '@/components/modals/submodals/links-submodal';
 import { useState } from 'react';
 import { processLogData } from '@/lib/utils/logging-utils';
-import { EntityType } from '@/types/enums';
+import { EntityType, LogEventType } from '@/types/enums';
 import { LOG_DISPLAY_ICONS, FINANCIAL_ABBREVIATIONS } from '@/lib/constants/icon-maps';
-import { ItemStatus } from '@/types/enums';
+import { ItemStatus, ItemType } from '@/types/enums';
 import { ITEM_STATUS_COLORS } from '@/lib/constants/color-constants';
 import { useThemeColors } from '@/lib/hooks/use-theme-colors';
 import { ITEM_TYPE_ICONS } from '@/lib/constants/icon-maps';
@@ -33,25 +33,13 @@ export function ItemsLifecycleTab({ itemsLog, onReload, isReloading }: ItemsLife
   // Process items log data
   const processedItemsLog = processLogData(itemsLog, logOrder);
 
-  // Ensure Tailwind recognizes all possible classes by listing them here:
-  // bg-orange-100 text-orange-800 bg-orange-900 text-orange-200 (CREATED)
-  // bg-blue-100 text-blue-800 bg-blue-900 text-blue-200 (FOR_SALE, TO_ORDER, TO_DO)
-  // bg-green-100 text-green-800 bg-green-900 text-green-200 (SOLD)
-  // bg-purple-100 text-purple-800 bg-purple-900 text-purple-200 (RESERVED)
-  // bg-gray-100 text-gray-800 bg-gray-800 text-gray-200 (GIFTED, IDLE)
-  // bg-yellow-100 text-yellow-800 bg-yellow-900 text-yellow-200 (COLLECTED)
-  // bg-red-100 text-red-800 bg-red-900 text-red-200 (OBSOLETE, DAMAGED)
-   
   const getItemStatusBadgeColor = (status: string) => {
-    // First check if it's already an ItemStatus enum value
     const itemStatus = Object.values(ItemStatus).find(is => is === status);
     if (itemStatus && ITEM_STATUS_COLORS[itemStatus]) {
       const colorClasses = isDarkMode ? ITEM_STATUS_COLORS[itemStatus].dark : ITEM_STATUS_COLORS[itemStatus].light;
-      console.log('🎨 Item status badge color:', { status, itemStatus, colorClasses, isDarkMode });
       return colorClasses;
     }
     
-    // Map lowercase/string statuses to ItemStatus enum values
     const normalizedStatus = status.toLowerCase();
     const statusMap: Record<string, ItemStatus> = {
       'created': ItemStatus.CREATED,
@@ -74,7 +62,6 @@ export function ItemsLifecycleTab({ itemsLog, onReload, isReloading }: ItemsLife
       return colorClasses;
     }
     
-    // Default fallback
     const fallbackClasses = isDarkMode ? ITEM_STATUS_COLORS[ItemStatus.IDLE].dark : ITEM_STATUS_COLORS[ItemStatus.IDLE].light;
     return fallbackClasses;
   };
@@ -83,44 +70,6 @@ export function ItemsLifecycleTab({ itemsLog, onReload, isReloading }: ItemsLife
     const key = (itemType || 'default').toLowerCase();
     const Icon = ITEM_TYPE_ICONS[key] || ITEM_TYPE_ICONS.default;
     return <Icon className="h-4 w-4 text-muted-foreground" />;
-  };
-
-  const getActionLabel = (entry: any) => {
-    const data = entry?.data || {};
-    
-    // TODO: Implement proper Links System lookup
-    // This should:
-    // 1. Look up ITEM_TASK link to find which task created this item
-    // 2. Look up TASK_CHARACTER link to find which character completed that task
-    // 3. Show: "created by: CharacterName (FOUNDER, PLAYER) via Task 'TaskName'"
-    
-    // For now, fallback to existing logic
-    if (data.characterId && data.characterName) {
-      return `created by: ${data.characterName} (${data.characterRoles?.join(', ') || 'Character'})`;
-    }
-    
-    // Check for task information
-    const originTask = data.taskName || entry?.taskName;
-    if (originTask) {
-      return `created by: Task "${originTask}"`;
-    }
-    
-    // Check for record information
-    const originRecord = data.recordName || entry?.recordName;
-    if (originRecord) {
-      return `created by: Record "${originRecord}"`;
-    }
-    
-    // Fallback to source
-    const source = data.source || entry?.source;
-    if (source === 'item-modal') {
-      return 'created by: item modal';
-    }
-    if (source) {
-      return `created by: ${source}`;
-    }
-    
-    return '';
   };
 
   return (
@@ -166,69 +115,62 @@ export function ItemsLifecycleTab({ itemsLog, onReload, isReloading }: ItemsLife
               ) : (
                 processedItemsLog.entries.map((entry: any, index: number) => {
                   const data = entry?.data || {};
-                  const statusRaw: string = entry.event || entry.action || entry.type || 'unknown';
-                  const status = statusRaw.charAt(0).toUpperCase() + statusRaw.slice(1);
                   
-                  // Handle bulk seeded entries specially
-                  let itemName: string = '—';
-                  let itemType: string = '—';
+                  // Extract status with proper normalization
+                  const statusRaw: string = entry.event || entry.action || entry.type || entry.status || 'unknown';
+                  let status = statusRaw;
+                  let statusDisplayName = statusRaw;
                   
-                  if (status === 'BULK_IMPORT' || status === 'BULK_EXPORT' || status === 'Bulk_seeded' || status === 'Bulk Seed') {
-                    // For bulk operation entries, show the count and source
+                  // Normalize status display name
+                  if (statusRaw.toLowerCase() === LogEventType.CREATED.toLowerCase()) {
+                    statusDisplayName = 'Created';
+                  } else if (statusRaw.toLowerCase() === LogEventType.UPDATED.toLowerCase()) {
+                    statusDisplayName = 'Updated';
+                  } else if (statusRaw.toLowerCase() === LogEventType.COLLECTED.toLowerCase()) {
+                    statusDisplayName = 'Collected';
+                  }
+                  
+                  // Extract item fields
+                  const name = data.name || entry.name || entry.itemName || 'Unnamed Item';
+                  const itemType = data.type || entry.type || data.itemType || entry.itemType || '—';
+                  const station = data.station || entry.station || '—';
+                  const category = data.category || entry.category || '—';
+                  const quantity = data.quantity || entry.quantity;
+                  const unitCost = data.unitCost || data.cost || 0;
+                  const price = data.price || 0;
+                  const date = entry.displayDate || entry.timestamp || '';
+                  
+                  // Handle bulk operations
+                  if (statusRaw === 'BULK_IMPORT' || statusRaw === 'BULK_EXPORT') {
                     const count = data.count || 0;
                     const source = data.source || 'backup folder';
                     const importMode = data.importMode;
                     
-                    if (status === 'BULK_IMPORT') {
-                      itemName = `${count} items imported`;
-                      itemType = `from ${source} (${importMode || 'merge'} mode)`;
-                    } else if (status === 'BULK_EXPORT') {
-                      itemName = `${count} items exported`;
-                      itemType = `to backup folder`;
-                    } else {
-                      // Legacy bulk seeded
-                      itemName = `${count} items`;
-                      itemType = `from ${source}`;
-                    }
-                  } else {
-                    // For regular entries, use normal logic
-                    itemName = entry.itemName || entry.name || data.itemName || data.name || entry.message || '—';
-                    itemType = entry.itemType || data.itemType || '—';
-                  }
-                  const subType: string = data.subItemType || entry.subItemType || '—';
-                  const quantity: number | string | undefined = data.quantity ?? entry.quantity;
-                  const date: string = entry.displayDate || entry.timestamp || '';
-                  const createdByLabel = getActionLabel(entry);
-                  const taskName = data.taskName || entry.taskName;
-
-                  // Quantity info for first row (if available)
-                  let quantityInfo = '';
-                  if (quantity !== undefined && quantity !== 0) {
-                    quantityInfo = `• ${FINANCIAL_ABBREVIATIONS.QUANTITY}: ${quantity}`;
+                    return (
+                      <div key={index} className="flex items-center gap-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                        <div className="flex-shrink-0">
+                          {getItemTypeIcon(itemType)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-3 text-sm">
+                            <div className={`inline-flex items-center rounded-full border px-2 py-1 text-xs font-semibold transition-colors ${getItemStatusBadgeColor(status)}`}>
+                              {statusRaw === 'BULK_IMPORT' ? 'Bulk Import' : 'Bulk Export'}
+                            </div>
+                            <span className="font-medium text-foreground">
+                              {statusRaw === 'BULK_IMPORT' 
+                                ? `${count} items imported from ${source} (${importMode || 'merge'} mode)`
+                                : `${count} items exported to backup folder`}
+                            </span>
+                          </div>
+                        </div>
+                        <span className="text-xs text-muted-foreground whitespace-nowrap">
+                          {date}
+                        </span>
+                      </div>
+                    );
                   }
                   
-                  // Second row info - same format as tasks log
-                  const secondRowParts = [];
-                  if (data.station && data.category) {
-                    secondRowParts.push(`${data.station} • ${data.category}`);
-                  } else if (data.station) {
-                    secondRowParts.push(data.station);
-                  } else if (data.category) {
-                    secondRowParts.push(data.category);
-                  }
-                  if (itemType !== '—') {
-                    secondRowParts.push(itemType);
-                  }
-                  
-                  const secondRowInfo = secondRowParts.join(' • ');
-
-                  // Extract all the data we need for the new compact display
-                  const station = data.station || '—';
-                  const category = data.category || '—';
-                  const subtype = data.subItemType || '—';
-                  const unitCost = data.unitCost || data.cost || 0;
-                  const price = data.price || 0;
-                  
+                  // Regular item entry - match tasks log structure
                   return (
                     <div key={index} className="flex items-center gap-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors">
                       {/* Icon */}
@@ -241,38 +183,37 @@ export function ItemsLifecycleTab({ itemsLog, onReload, isReloading }: ItemsLife
                         <div className="flex items-center gap-3 text-sm">
                           {/* Status Badge */}
                           <div className={`inline-flex items-center rounded-full border px-2 py-1 text-xs font-semibold transition-colors ${getItemStatusBadgeColor(status)}`}>
-                            {status}
+                            {statusDisplayName}
                           </div>
                           
                           {/* Name */}
                           <span className="font-medium text-foreground min-w-0 flex-shrink-0">
-                            {itemName}
-                          </span>
-                          
-                          {/* Station */}
-                          <span className="text-muted-foreground min-w-0 flex-shrink-0">
-                            {station}
-                          </span>
-                          
-                          {/* Category */}
-                          <span className="text-muted-foreground min-w-0 flex-shrink-0">
-                            {category}
+                            {name}
                           </span>
                           
                           {/* Type */}
-                          <span className="text-muted-foreground min-w-0 flex-shrink-0">
-                            {itemType}
-                          </span>
-                          
-                          {/* Subtype (only if not default) */}
-                          {subtype !== '—' && (
+                          {itemType !== '—' && (
                             <span className="text-muted-foreground min-w-0 flex-shrink-0">
-                              {subtype}
+                              {itemType}
+                            </span>
+                          )}
+                          
+                          {/* Station */}
+                          {station !== '—' && (
+                            <span className="text-muted-foreground min-w-0 flex-shrink-0">
+                              {station}
+                            </span>
+                          )}
+                          
+                          {/* Category */}
+                          {category !== '—' && (
+                            <span className="text-muted-foreground min-w-0 flex-shrink-0">
+                              {category}
                             </span>
                           )}
                           
                           {/* Quantity */}
-                          {quantity !== undefined && quantity !== 0 && (
+                          {quantity !== undefined && quantity > 0 && (
                             <span className="text-muted-foreground min-w-0 flex-shrink-0">
                               Q: {quantity}
                             </span>
@@ -281,14 +222,14 @@ export function ItemsLifecycleTab({ itemsLog, onReload, isReloading }: ItemsLife
                           {/* Unit Cost */}
                           {unitCost > 0 && (
                             <span className="text-muted-foreground min-w-0 flex-shrink-0">
-                              U. Cost: ${unitCost}
+                              Cost: ${unitCost}
                             </span>
                           )}
                           
                           {/* Price */}
                           {price > 0 && (
                             <span className="text-muted-foreground min-w-0 flex-shrink-0">
-                              Price: ${price}
+                              ${price}
                             </span>
                           )}
                         </div>
@@ -304,10 +245,10 @@ export function ItemsLifecycleTab({ itemsLog, onReload, isReloading }: ItemsLife
                           onClick={async () => {
                             try {
                               const { ClientAPI } = await import('@/lib/client-api');
-                              const links = await ClientAPI.getLinksFor({ type: EntityType.ITEM, id: data.entityId });
+                              const links = await ClientAPI.getLinksFor({ type: EntityType.ITEM, id: data.entityId || entry.entityId });
                               setItemLinks(links);
-                              setSelectedItemId(data.entityId);
-                              setSelectedLogEntry(entry); // Pass the log entry context
+                              setSelectedItemId(data.entityId || entry.entityId);
+                              setSelectedLogEntry(entry);
                               setShowLinksModal(true);
                             } catch (error) {
                               console.error('Failed to fetch links:', error);
@@ -329,57 +270,35 @@ export function ItemsLifecycleTab({ itemsLog, onReload, isReloading }: ItemsLife
             </div>
           </CardContent>
         </Card>
-        
-        {/* Links SubModal */}
-        <LinksSubModal
-          open={showLinksModal}
-          onOpenChange={setShowLinksModal}
-          entityType="item"
-          entityId={selectedItemId}
-          entityName="Item"
-          links={itemLinks}
-          logEntry={selectedLogEntry}
-        />
       </TabsContent>
 
+      {/* Placeholder for item analysis */}
       <TabsContent value="item-analysis" className="space-y-4">
         <Card>
           <CardHeader>
             <CardTitle>Item Analysis</CardTitle>
             <CardDescription>
-              Overview of item performance and statistics
+              Detailed item statistics and analytics
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="text-center">
-                <p className="text-2xl font-bold text-blue-600">
-                  {(processedItemsLog.counts as any)['created'] || 0}
-                </p>
-                <p className="text-sm text-muted-foreground">Items Created</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-green-600">
-                  {(processedItemsLog.counts as any)['sold'] || 0}
-                </p>
-                <p className="text-sm text-muted-foreground">Items Sold</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-orange-600">
-                  {(processedItemsLog.counts as any)['moved'] || 0}
-                </p>
-                <p className="text-sm text-muted-foreground">Items Moved</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-purple-600">
-                  {(processedItemsLog.counts as any)['updated'] || 0}
-                </p>
-                <p className="text-sm text-muted-foreground">Items Updated</p>
-              </div>
-            </div>
+            <p className="text-muted-foreground text-center py-8">
+              Item analysis coming soon...
+            </p>
           </CardContent>
         </Card>
       </TabsContent>
+
+      {/* Links Modal */}
+      <LinksSubModal
+        open={showLinksModal}
+        onOpenChange={setShowLinksModal}
+        entityType="item"
+        entityId={selectedItemId}
+        entityName="Item"
+        links={itemLinks}
+        logEntry={selectedLogEntry}
+      />
     </Tabs>
   );
 }

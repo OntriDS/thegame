@@ -96,6 +96,142 @@ const getAmountColor = (amount: number) => (amount >= 0 ? 'text-green-600' : 'te
     return mapped;
   }, [processedFinancialsLog.entries, activeSubTab]);
 
+  // Shared render function for all tabs
+  const renderFinancialEntry = ({ entry, amounts }: { entry: FinancialLogEntry, amounts: ReturnType<typeof computeAmounts> }, index: number) => {
+    const data = entry?.data || {};
+    
+    // Extract financial fields properly
+    const name = entry.name || entry.taskName || entry.recordName || data.name || data.taskName || data.recordName || entry.description || entry.message || 'Unnamed';
+    const financialType = data.type || entry.type || '—';
+    const station = formatStation(entry.station || data.station);
+    const category = entry.category || data.category || '—';
+    const date = entry.displayDate || entry.timestamp || '';
+    
+    // Extract financial amounts
+    const { cost, revenue, profit, margin } = amounts;
+    
+    // Calculate display values
+    const taskProfit = revenue - cost;
+    const taskMargin = revenue > 0 ? ((taskProfit / revenue) * 100).toFixed(0) : '0';
+    
+    // Helper function to get color for financial values
+    const getFinancialColor = (value: number) => {
+      if (value < 0) return FINANCIAL_COLORS.negative;
+      if (value > 0) return FINANCIAL_COLORS.positive;
+      return FINANCIAL_COLORS.neutral;
+    };
+
+    return (
+      <div key={index} className="flex items-center gap-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+        {/* Icon */}
+        <div className="flex-shrink-0">
+          {getFinancialIcon(entry)}
+        </div>
+        
+        {/* Main Info Row */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-3 text-sm">
+            {/* Name */}
+            <span className="font-medium text-foreground min-w-0 flex-shrink-0">
+              {name}
+            </span>
+            
+            {/* Type */}
+            {financialType !== '—' && (
+              <span className="text-muted-foreground min-w-0 flex-shrink-0">
+                {financialType}
+              </span>
+            )}
+            
+            {/* Station */}
+            {station !== '—' && (
+              <span className="text-muted-foreground min-w-0 flex-shrink-0">
+                {station}
+              </span>
+            )}
+            
+            {/* Category */}
+            {category !== '—' && (
+              <span className="text-muted-foreground min-w-0 flex-shrink-0">
+                {category}
+              </span>
+            )}
+            
+            {/* Cost */}
+            {cost > 0 && (
+              <span className={`font-medium ${FINANCIAL_COLORS.negative} min-w-0 flex-shrink-0`}>
+                Cost: ${cost.toLocaleString()}
+              </span>
+            )}
+            
+            {/* Revenue */}
+            {revenue > 0 && (
+              <span className={`font-medium ${FINANCIAL_COLORS.positive} min-w-0 flex-shrink-0`}>
+                Rev: ${revenue.toLocaleString()}
+              </span>
+            )}
+            
+            {/* Profit */}
+            {taskProfit !== 0 && (
+              <span className={`font-medium ${getFinancialColor(taskProfit)} min-w-0 flex-shrink-0`}>
+                {taskProfit > 0 ? 'Profit' : 'Loss'}: ${taskProfit.toLocaleString()}
+              </span>
+            )}
+            
+            {/* Margin */}
+            {taskMargin !== '0' && (
+              <span className={`font-medium ${getFinancialColor(Number(taskMargin))} min-w-0 flex-shrink-0`}>
+                {taskMargin}%
+              </span>
+            )}
+          </div>
+        </div>
+        
+        {/* Right Side: Links Icon + Date */}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {/* Links Icon */}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 w-6 p-0"
+            onClick={async () => {
+              try {
+                const { ClientAPI } = await import('@/lib/client-api');
+                
+                const entityId = data.entityId || entry.entityId;
+                let links: any[] = [];
+                let linkType = 'financial';
+                
+                if (data.financialDescription === 'Sale revenue' || data.type === 'sale_financial') {
+                  linkType = 'sale';
+                  links = await ClientAPI.getLinksFor({ type: EntityType.SALE, id: entityId });
+                } else {
+                  linkType = 'financial';
+                  links = await ClientAPI.getLinksFor({ type: EntityType.FINANCIAL, id: entityId });
+                }
+                
+                setFinancialLinks(links);
+                setSelectedFinancialId(entityId);
+                setSelectedEntityType(linkType);
+                setSelectedLogEntry(entry);
+                setShowLinksModal(true);
+              } catch (error) {
+                console.error('Failed to fetch financial links:', error);
+              }
+            }}
+          >
+            <LinkIcon className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+          </Button>
+          
+          {/* Date */}
+          <span className="text-xs text-muted-foreground whitespace-nowrap">
+            {date}
+          </span>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <>
     <Tabs value={activeSubTab} onValueChange={setActiveSubTab} className="space-y-4">
@@ -153,132 +289,7 @@ const getAmountColor = (amount: number) => (amount >= 0 ? 'text-green-600' : 'te
                   )}
                 </div>
               ) : (
-                filteredEntries.map(({ entry, amounts }, index: number) => {
-                  const data = entry?.data || {};
-                  const station = formatStation(entry.station || data.station);
-                  const category = entry.category || data.category || '—';
-                  const name = entry.name || entry.taskName || entry.recordName || data.taskName || data.recordName || entry.description || entry.message || '—';
-                  const date = entry.displayDate || entry.timestamp || '';
-                  const { cost, revenue, profit, margin } = amounts;
-
-                  // Financial info for first row with colors
-                  const taskProfit = revenue - cost;
-                  const taskMargin = revenue > 0 ? ((taskProfit / revenue) * 100).toFixed(0) : '0';
-                  
-                  // Helper function to get color for financial values
-                  const getFinancialColor = (value: number) => {
-                    if (value < 0) return FINANCIAL_COLORS.negative;
-                    if (value > 0) return FINANCIAL_COLORS.positive;
-                    return FINANCIAL_COLORS.neutral;
-                  };
-                  
-                  const financialInfo = (
-                    <div className="flex items-center gap-3 text-sm">
-                      {cost > 0 && (
-                        <span className={`font-medium ${FINANCIAL_COLORS.negative}`}>
-                          {FINANCIAL_ABBREVIATIONS.COST}: ${cost.toLocaleString()}
-                        </span>
-                      )}
-                      {revenue > 0 && (
-                        <span className={`font-medium ${FINANCIAL_COLORS.positive}`}>
-                          {FINANCIAL_ABBREVIATIONS.REVENUE}: ${revenue.toLocaleString()}
-                        </span>
-                      )}
-                      {taskProfit !== 0 && (
-                        <span className={`font-medium ${getFinancialColor(taskProfit)}`}>
-                          {FINANCIAL_ABBREVIATIONS.PROFIT}: ${taskProfit.toLocaleString()}
-                        </span>
-                      )}
-                      {taskMargin !== '0' && (
-                        <span className={`font-medium ${getFinancialColor(Number(taskMargin))}`}>
-                          {FINANCIAL_ABBREVIATIONS.MARGIN}: {taskMargin}%
-                        </span>
-                      )}
-                    </div>
-                  );
-                  
-                  // Second row info
-                  const secondRowParts = [];
-                  if (station !== '—' && category !== '—') {
-                    secondRowParts.push(`${station} • ${category}`);
-                  } else if (station !== '—') {
-                    secondRowParts.push(station);
-                  } else if (category !== '—') {
-                    secondRowParts.push(category);
-                  }
-                  if (data.taskType) {
-                    secondRowParts.push(data.taskType);
-                  }
-                  
-                  const secondRowInfo = secondRowParts.join(' • ');
-
-                  return (
-                    <div key={index} className="flex items-start gap-3 p-3 border rounded-lg">
-                      {getFinancialIcon(entry)}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-1">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium">{name}</span>
-                            <span className="text-sm text-muted-foreground">{financialInfo}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <div className="text-xs text-muted-foreground">
-                              {date}
-                            </div>
-                            {/* Links button */}
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                            onClick={async () => {
-                              try {
-                                const { ClientAPI } = await import('@/lib/client-api');
-                                
-                                // Smart link fetching: detect if this is a sale revenue entry
-                                const entityId = data.entityId || entry.entityId;
-                                let links: any[] = [];
-                                let linkType = 'financial';
-                                
-                                // Check if this is a sale revenue entry (has financialDescription: 'Sale revenue')
-                                if (data.financialDescription === 'Sale revenue' || data.type === 'sale_financial') {
-                                  linkType = 'sale';
-                                  links = await ClientAPI.getLinksFor({ type: EntityType.SALE, id: entityId });
-                                  console.log(`[FinancialsTab] 🔍 Detected sale revenue entry, fetching sale links for sale ${entityId}:`, {
-                                    totalLinks: links.length,
-                                    linkTypes: links.map(l => l.linkType)
-                                  });
-                                } else {
-                                  linkType = 'financial';
-                                  links = await ClientAPI.getLinksFor({ type: EntityType.FINANCIAL, id: entityId });
-                                  console.log(`[FinancialsTab] 🔍 Fetching financial links for financial ${entityId}:`, {
-                                    totalLinks: links.length,
-                                    linkTypes: links.map(l => l.linkType)
-                                  });
-                                }
-                                
-                                setFinancialLinks(links);
-                                setSelectedFinancialId(entityId);
-                                setSelectedEntityType(linkType); // Set the correct entity type
-                                setSelectedLogEntry(entry); // Pass the log entry context
-                                setShowLinksModal(true);
-                              } catch (error) {
-                                console.error('Failed to fetch financial links:', error);
-                              }
-                            }}
-                              className="h-6 w-6 p-0 shrink-0"
-                            >
-                              <LinkIcon className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                        {secondRowInfo && (
-                          <div className="text-sm text-muted-foreground">
-                            {secondRowInfo}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })
+                filteredEntries.map((entryData, index) => renderFinancialEntry(entryData, index))
               )}
             </div>
           </CardContent>
@@ -323,132 +334,7 @@ const getAmountColor = (amount: number) => (amount >= 0 ? 'text-green-600' : 'te
                   </p>
                 </div>
               ) : (
-                filteredEntries.map(({ entry, amounts }, index: number) => {
-                  const data = entry?.data || {};
-                  const station = formatStation(entry.station || data.station);
-                  const category = entry.category || data.category || '—';
-                  const name = entry.name || entry.taskName || entry.recordName || data.taskName || data.recordName || entry.description || entry.message || '—';
-                  const date = entry.displayDate || entry.timestamp || '';
-                  const { cost, revenue, profit, margin } = amounts;
-
-                  // Financial info for first row with colors
-                  const taskProfit = revenue - cost;
-                  const taskMargin = revenue > 0 ? ((taskProfit / revenue) * 100).toFixed(0) : '0';
-                  
-                  // Helper function to get color for financial values
-                  const getFinancialColor = (value: number) => {
-                    if (value < 0) return FINANCIAL_COLORS.negative;
-                    if (value > 0) return FINANCIAL_COLORS.positive;
-                    return FINANCIAL_COLORS.neutral;
-                  };
-                  
-                  const financialInfo = (
-                    <div className="flex items-center gap-3 text-sm">
-                      {cost > 0 && (
-                        <span className={`font-medium ${FINANCIAL_COLORS.negative}`}>
-                          {FINANCIAL_ABBREVIATIONS.COST}: ${cost.toLocaleString()}
-                        </span>
-                      )}
-                      {revenue > 0 && (
-                        <span className={`font-medium ${FINANCIAL_COLORS.positive}`}>
-                          {FINANCIAL_ABBREVIATIONS.REVENUE}: ${revenue.toLocaleString()}
-                        </span>
-                      )}
-                      {taskProfit !== 0 && (
-                        <span className={`font-medium ${getFinancialColor(taskProfit)}`}>
-                          {FINANCIAL_ABBREVIATIONS.PROFIT}: ${taskProfit.toLocaleString()}
-                        </span>
-                      )}
-                      {taskMargin !== '0' && (
-                        <span className={`font-medium ${getFinancialColor(Number(taskMargin))}`}>
-                          {FINANCIAL_ABBREVIATIONS.MARGIN}: {taskMargin}%
-                        </span>
-                      )}
-                    </div>
-                  );
-                  
-                  // Second row info
-                  const secondRowParts = [];
-                  if (station !== '—' && category !== '—') {
-                    secondRowParts.push(`${station} • ${category}`);
-                  } else if (station !== '—') {
-                    secondRowParts.push(station);
-                  } else if (category !== '—') {
-                    secondRowParts.push(category);
-                  }
-                  if (data.taskType) {
-                    secondRowParts.push(data.taskType);
-                  }
-                  
-                  const secondRowInfo = secondRowParts.join(' • ');
-
-                  return (
-                    <div key={index} className="flex items-start gap-3 p-3 border rounded-lg">
-                      {getFinancialIcon(entry)}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-1">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium">{name}</span>
-                            <span className="text-sm text-muted-foreground">{financialInfo}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <div className="text-xs text-muted-foreground">
-                              {date}
-                            </div>
-                            {/* Links button */}
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                            onClick={async () => {
-                              try {
-                                const { ClientAPI } = await import('@/lib/client-api');
-                                
-                                // Smart link fetching: detect if this is a sale revenue entry
-                                const entityId = data.entityId || entry.entityId;
-                                let links: any[] = [];
-                                let linkType = 'financial';
-                                
-                                // Check if this is a sale revenue entry (has financialDescription: 'Sale revenue')
-                                if (data.financialDescription === 'Sale revenue' || data.type === 'sale_financial') {
-                                  linkType = 'sale';
-                                  links = await ClientAPI.getLinksFor({ type: EntityType.SALE, id: entityId });
-                                  console.log(`[FinancialsTab] 🔍 Detected sale revenue entry, fetching sale links for sale ${entityId}:`, {
-                                    totalLinks: links.length,
-                                    linkTypes: links.map(l => l.linkType)
-                                  });
-                                } else {
-                                  linkType = 'financial';
-                                  links = await ClientAPI.getLinksFor({ type: EntityType.FINANCIAL, id: entityId });
-                                  console.log(`[FinancialsTab] 🔍 Fetching financial links for financial ${entityId}:`, {
-                                    totalLinks: links.length,
-                                    linkTypes: links.map(l => l.linkType)
-                                  });
-                                }
-                                
-                                setFinancialLinks(links);
-                                setSelectedFinancialId(entityId);
-                                setSelectedEntityType(linkType); // Set the correct entity type
-                                setSelectedLogEntry(entry); // Pass the log entry context
-                                setShowLinksModal(true);
-                              } catch (error) {
-                                console.error('Failed to fetch financial links:', error);
-                              }
-                            }}
-                              className="h-6 w-6 p-0 shrink-0"
-                            >
-                              <LinkIcon className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                        {secondRowInfo && (
-                          <div className="text-sm text-muted-foreground">
-                            {secondRowInfo}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })
+                filteredEntries.map((entryData, index) => renderFinancialEntry(entryData, index))
               )}
             </div>
           </CardContent>
@@ -496,132 +382,7 @@ const getAmountColor = (amount: number) => (amount >= 0 ? 'text-green-600' : 'te
                   </p>
                 </div>
               ) : (
-                filteredEntries.map(({ entry, amounts }, index: number) => {
-                  const data = entry?.data || {};
-                  const station = formatStation(entry.station || data.station);
-                  const category = entry.category || data.category || '—';
-                  const name = entry.name || entry.taskName || entry.recordName || data.taskName || data.recordName || entry.description || entry.message || '—';
-                  const date = entry.displayDate || entry.timestamp || '';
-                  const { cost, revenue, profit, margin } = amounts;
-
-                  // Financial info for first row with colors
-                  const taskProfit = revenue - cost;
-                  const taskMargin = revenue > 0 ? ((taskProfit / revenue) * 100).toFixed(0) : '0';
-                  
-                  // Helper function to get color for financial values
-                  const getFinancialColor = (value: number) => {
-                    if (value < 0) return FINANCIAL_COLORS.negative;
-                    if (value > 0) return FINANCIAL_COLORS.positive;
-                    return FINANCIAL_COLORS.neutral;
-                  };
-                  
-                  const financialInfo = (
-                    <div className="flex items-center gap-3 text-sm">
-                      {cost > 0 && (
-                        <span className={`font-medium ${FINANCIAL_COLORS.negative}`}>
-                          {FINANCIAL_ABBREVIATIONS.COST}: ${cost.toLocaleString()}
-                        </span>
-                      )}
-                      {revenue > 0 && (
-                        <span className={`font-medium ${FINANCIAL_COLORS.positive}`}>
-                          {FINANCIAL_ABBREVIATIONS.REVENUE}: ${revenue.toLocaleString()}
-                        </span>
-                      )}
-                      {taskProfit !== 0 && (
-                        <span className={`font-medium ${getFinancialColor(taskProfit)}`}>
-                          {FINANCIAL_ABBREVIATIONS.PROFIT}: ${taskProfit.toLocaleString()}
-                        </span>
-                      )}
-                      {taskMargin !== '0' && (
-                        <span className={`font-medium ${getFinancialColor(Number(taskMargin))}`}>
-                          {FINANCIAL_ABBREVIATIONS.MARGIN}: {taskMargin}%
-                        </span>
-                      )}
-                    </div>
-                  );
-                  
-                  // Second row info
-                  const secondRowParts = [];
-                  if (station !== '—' && category !== '—') {
-                    secondRowParts.push(`${station} • ${category}`);
-                  } else if (station !== '—') {
-                    secondRowParts.push(station);
-                  } else if (category !== '—') {
-                    secondRowParts.push(category);
-                  }
-                  if (data.taskType) {
-                    secondRowParts.push(data.taskType);
-                  }
-                  
-                  const secondRowInfo = secondRowParts.join(' • ');
-
-                  return (
-                    <div key={index} className="flex items-start gap-3 p-3 border rounded-lg">
-                      {getFinancialIcon(entry)}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-1">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium">{name}</span>
-                            <span className="text-sm text-muted-foreground">{financialInfo}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <div className="text-xs text-muted-foreground">
-                              {date}
-                            </div>
-                            {/* Links button */}
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                            onClick={async () => {
-                              try {
-                                const { ClientAPI } = await import('@/lib/client-api');
-                                
-                                // Smart link fetching: detect if this is a sale revenue entry
-                                const entityId = data.entityId || entry.entityId;
-                                let links: any[] = [];
-                                let linkType = 'financial';
-                                
-                                // Check if this is a sale revenue entry (has financialDescription: 'Sale revenue')
-                                if (data.financialDescription === 'Sale revenue' || data.type === 'sale_financial') {
-                                  linkType = 'sale';
-                                  links = await ClientAPI.getLinksFor({ type: EntityType.SALE, id: entityId });
-                                  console.log(`[FinancialsTab] 🔍 Detected sale revenue entry, fetching sale links for sale ${entityId}:`, {
-                                    totalLinks: links.length,
-                                    linkTypes: links.map(l => l.linkType)
-                                  });
-                                } else {
-                                  linkType = 'financial';
-                                  links = await ClientAPI.getLinksFor({ type: EntityType.FINANCIAL, id: entityId });
-                                  console.log(`[FinancialsTab] 🔍 Fetching financial links for financial ${entityId}:`, {
-                                    totalLinks: links.length,
-                                    linkTypes: links.map(l => l.linkType)
-                                  });
-                                }
-                                
-                                setFinancialLinks(links);
-                                setSelectedFinancialId(entityId);
-                                setSelectedEntityType(linkType); // Set the correct entity type
-                                setSelectedLogEntry(entry); // Pass the log entry context
-                                setShowLinksModal(true);
-                              } catch (error) {
-                                console.error('Failed to fetch financial links:', error);
-                              }
-                            }}
-                              className="h-6 w-6 p-0 shrink-0"
-                            >
-                              <LinkIcon className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                        {secondRowInfo && (
-                          <div className="text-sm text-muted-foreground">
-                            {secondRowInfo}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })
+                filteredEntries.map((entryData, index) => renderFinancialEntry(entryData, index))
               )}
             </div>
           </CardContent>
