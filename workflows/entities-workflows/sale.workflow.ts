@@ -64,11 +64,31 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
   if (previousSale.status !== sale.status) {
     if (sale.status === 'CANCELLED') {
       await appendEntityLog(EntityType.SALE, sale.id, LogEventType.CANCELLED, {
+        type: sale.type,
+        status: sale.status,
+        counterpartyName: sale.counterpartyName,
+        totals: {
+          subtotal: sale.totals.subtotal,
+          discountTotal: sale.totals.discountTotal,
+          taxTotal: sale.totals.taxTotal,
+          totalRevenue: sale.totals.totalRevenue
+        },
         cancelledAt: sale.cancelledAt || new Date().toISOString()
       });
     } else if (wasPending && !nowPending) {
       // Transitioned from PENDING to DONE (both paid and charged)
       await appendEntityLog(EntityType.SALE, sale.id, LogEventType.DONE, {
+        type: sale.type,
+        status: sale.status,
+        counterpartyName: sale.counterpartyName,
+        totals: {
+          subtotal: sale.totals.subtotal,
+          discountTotal: sale.totals.discountTotal,
+          taxTotal: sale.totals.taxTotal,
+          totalRevenue: sale.totals.totalRevenue
+        },
+        isNotPaid: sale.isNotPaid,
+        isNotCharged: sale.isNotCharged,
         completedAt: new Date().toISOString()
       });
       
@@ -83,6 +103,17 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
     } else if (!wasPending && nowPending) {
       // Reverted from DONE to PENDING (became unpaid or uncharged)
       await appendEntityLog(EntityType.SALE, sale.id, LogEventType.PENDING, {
+        type: sale.type,
+        status: sale.status,
+        counterpartyName: sale.counterpartyName,
+        totals: {
+          subtotal: sale.totals.subtotal,
+          discountTotal: sale.totals.discountTotal,
+          taxTotal: sale.totals.taxTotal,
+          totalRevenue: sale.totals.totalRevenue
+        },
+        isNotPaid: sale.isNotPaid,
+        isNotCharged: sale.isNotCharged,
         pendingAt: new Date().toISOString()
       });
     }
@@ -91,6 +122,14 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
   // Collection status - COLLECTED event (kept for completeness)
   if (!previousSale.isCollected && sale.isCollected) {
     await appendEntityLog(EntityType.SALE, sale.id, LogEventType.COLLECTED, {
+      type: sale.type,
+      counterpartyName: sale.counterpartyName,
+      totals: {
+        subtotal: sale.totals.subtotal,
+        discountTotal: sale.totals.discountTotal,
+        taxTotal: sale.totals.taxTotal,
+        totalRevenue: sale.totals.totalRevenue
+      },
       collectedAt: new Date().toISOString()
     });
   }

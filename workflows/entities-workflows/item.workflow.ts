@@ -45,6 +45,9 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
   const stockChanged = JSON.stringify(previousItem.stock) !== JSON.stringify(item.stock);
   if (stockChanged) {
     await appendEntityLog(EntityType.ITEM, item.id, LogEventType.MOVED, {
+      name: item.name,
+      itemType: item.type,
+      collection: item.collection,
       oldStock: previousItem.stock,
       newStock: item.stock
     });
@@ -53,6 +56,9 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
   // Quantity sold changes - SOLD event
   if (previousItem.quantitySold !== item.quantitySold && item.quantitySold > previousItem.quantitySold) {
     await appendEntityLog(EntityType.ITEM, item.id, LogEventType.SOLD, {
+      name: item.name,
+      itemType: item.type,
+      collection: item.collection,
       quantitySold: item.quantitySold,
       oldQuantitySold: previousItem.quantitySold
     });
@@ -61,6 +67,9 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
   // Collection status - COLLECTED event
   if (item.isCollected && !previousItem.isCollected) {
     await appendEntityLog(EntityType.ITEM, item.id, LogEventType.COLLECTED, {
+      name: item.name,
+      itemType: item.type,
+      collection: item.collection,
       collectedAt: new Date().toISOString()
     });
   }
@@ -68,6 +77,9 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
   // Status changes - UPDATED event
   if (previousItem.status !== item.status) {
     await appendEntityLog(EntityType.ITEM, item.id, LogEventType.UPDATED, {
+      name: item.name,
+      itemType: item.type,
+      collection: item.collection,
       oldStatus: previousItem.status,
       newStatus: item.status
     });

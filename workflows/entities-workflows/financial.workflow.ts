@@ -83,11 +83,25 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
   if (wasPending && !nowPending) {
     // Transitioned from PENDING to DONE (both paid and charged)
     await appendEntityLog(EntityType.FINANCIAL, financial.id, LogEventType.DONE, {
+      name: financial.name,
+      type: financial.type,
+      station: financial.station,
+      cost: financial.cost,
+      revenue: financial.revenue,
+      isNotPaid: financial.isNotPaid,
+      isNotCharged: financial.isNotCharged,
       completedAt: new Date().toISOString()
     });
   } else if (!wasPending && nowPending) {
     // Reverted from DONE to PENDING (became unpaid or uncharged)
     await appendEntityLog(EntityType.FINANCIAL, financial.id, LogEventType.PENDING, {
+      name: financial.name,
+      type: financial.type,
+      station: financial.station,
+      cost: financial.cost,
+      revenue: financial.revenue,
+      isNotPaid: financial.isNotPaid,
+      isNotCharged: financial.isNotCharged,
       pendingAt: new Date().toISOString()
     });
   }
@@ -95,6 +109,9 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
   // Collection status - COLLECTED event (kept for completeness)
   if (!previousFinancial.isCollected && financial.isCollected) {
     await appendEntityLog(EntityType.FINANCIAL, financial.id, LogEventType.COLLECTED, {
+      name: financial.name,
+      type: financial.type,
+      station: financial.station,
       collectedAt: new Date().toISOString()
     });
   }

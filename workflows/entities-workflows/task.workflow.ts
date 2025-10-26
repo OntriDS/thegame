@@ -82,6 +82,10 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
     
     // Log status change with transition context (using UPDATED event)
     await appendEntityLog(EntityType.TASK, task.id, LogEventType.UPDATED, {
+      name: task.name,
+      taskType: task.type,
+      station: task.station,
+      priority: task.priority,
       oldStatus: previousTask!.status,
       newStatus: task.status,
       transition: `${previousTask!.status} → ${task.status}`,
@@ -103,6 +107,13 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
     const shouldLogDone = !previousTask || !previousTask.doneAt;
     if (shouldLogDone) {
       await appendEntityLog(EntityType.TASK, task.id, LogEventType.DONE, {
+        name: task.name,
+        taskType: task.type,
+        station: task.station,
+        priority: task.priority,
+        sourceSaleId: task.sourceSaleId,
+        dueDate: task.dueDate,
+        frequencyConfig: task.frequencyConfig,
         doneAt: task.doneAt,
         _logOrder: 1
       });
@@ -111,6 +122,10 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
   
   if (previousTask && !previousTask.collectedAt && task.collectedAt) {
     await appendEntityLog(EntityType.TASK, task.id, LogEventType.COLLECTED, {
+      name: task.name,
+      taskType: task.type,
+      station: task.station,
+      priority: task.priority,
       collectedAt: task.collectedAt
     });
   }
@@ -118,6 +133,9 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
   // Site changes - MOVED event
   if (previousTask && (previousTask.siteId !== task.siteId || previousTask.targetSiteId !== task.targetSiteId)) {
     await appendEntityLog(EntityType.TASK, task.id, LogEventType.MOVED, {
+      name: task.name,
+      taskType: task.type,
+      station: task.station,
       oldSiteId: previousTask!.siteId,
       newSiteId: task.siteId,
       oldTargetSiteId: previousTask!.targetSiteId,
