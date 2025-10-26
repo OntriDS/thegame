@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Script from 'next/script'
 import { Inter } from 'next/font/google'
 import './globals.css'
 
@@ -15,8 +16,34 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
-      <body className={inter.className}>{children}</body>
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <Script
+          id="prevent-theme-flash"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  const themeMode = localStorage.getItem('theme-mode');
+                  const htmlElement = document.documentElement;
+                  
+                  if (themeMode === 'dark') {
+                    htmlElement.classList.add('dark');
+                  } else if (themeMode === 'light') {
+                    htmlElement.classList.remove('dark');
+                  }
+                } catch (e) {
+                  // Silently fail if localStorage is unavailable
+                }
+              })();
+            `,
+          }}
+        />
+      </head>
+      <body className={inter.className} suppressHydrationWarning>
+        {children}
+      </body>
     </html>
   )
 }

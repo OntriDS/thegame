@@ -42,6 +42,10 @@ export function useTheme() {
 
     // Apply dark mode class to html element
     root.classList.toggle('dark', isDark);
+    
+    // Sync to localStorage for instant hydration (prevents flash on page load)
+    localStorage.setItem('theme-mode', isDark ? 'dark' : 'light');
+    localStorage.setItem('theme-color', currentTheme);
   }, [currentTheme, isDark, isInitialized]);
 
   const setTheme = (theme: ThemeName) => {
