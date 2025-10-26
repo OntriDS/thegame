@@ -337,7 +337,7 @@ export async function cascadeStatusToInstances(
     updatedInstances.push(updated);
 
     // Log status change for each instance with cascade context
-    await appendEntityLog(EntityType.TASK, instance.id, LogEventType.STATUS_CHANGED, {
+    await appendEntityLog(EntityType.TASK, instance.id, LogEventType.UPDATED, {
       oldStatus: instance.status,
       newStatus: newStatus,
       name: instance.name,
@@ -398,7 +398,7 @@ export async function uncascadeStatusFromInstances(
     revertedInstances.push(updated);
 
     // Log status reversal for each instance with uncascade context
-    await appendEntityLog(EntityType.TASK, instance.id, LogEventType.STATUS_CHANGED, {
+    await appendEntityLog(EntityType.TASK, instance.id, LogEventType.UPDATED, {
       oldStatus: instance.status,
       newStatus: revertToStatus,
       name: instance.name,
