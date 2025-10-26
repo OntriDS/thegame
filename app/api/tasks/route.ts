@@ -4,6 +4,7 @@ import { v4 as uuid } from 'uuid';
 import type { Task } from '@/types/entities';
 import { getAllTasks, upsertTask } from '@/data-store/datastore';
 import { requireAdminAuth } from '@/lib/api-auth';
+import { convertEntityDates } from '@/lib/constants/date-constants';
 
 // Force dynamic rendering - this route accesses cookies
 export const dynamic = 'force-dynamic';
@@ -19,13 +20,10 @@ export async function POST(req: NextRequest) {
   
   try {
     const body = (await req.json()) as Task;
-    const task: Task = { 
-      ...body, 
-      id: body.id || uuid(), 
-      createdAt: body.createdAt ? new Date(body.createdAt) : new Date(), 
-      updatedAt: new Date(), 
-      links: body.links || [] 
-    };
+    const task = convertEntityDates(
+      { ...body, id: body.id || uuid(), links: body.links || [] },
+      ['dueDate', 'doneAt', 'collectedAt']
+    );
     const saved = await upsertTask(task);
     return NextResponse.json(saved);
   } catch (error) {

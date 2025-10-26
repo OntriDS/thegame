@@ -56,25 +56,30 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
         console.log(`[onTaskUpsert] ✅ Generated ${instances.length} instances for template`);
       }
     }
-    return;
+
+    // FIXED: Only return early if task is NOT Done
+    // If task is Done, continue to completion workflows below
+    if (task.status !== 'Done') {
+      return;
+    }
   }
   
   // State changes - append new log
-  if (previousTask.status !== task.status) {
+  if (previousTask && previousTask.status !== task.status) {
     console.log(`[onTaskUpsert] Task status changed: ${previousTask.status} → ${task.status}`);
     
     // Log status change with transition context
     await appendEntityLog(EntityType.TASK, task.id, LogEventType.STATUS_CHANGED, {
-      oldStatus: previousTask.status,
+      oldStatus: previousTask!.status,
       newStatus: task.status,
       name: task.name,
-      transition: `${previousTask.status} → ${task.status}`,
+      transition: `${previousTask!.status} → ${task.status}`,
       changedAt: new Date().toISOString()
     });
     
     // Handle uncompletion (Done → Other status)
-    if (previousTask.status === 'Done' && task.status !== 'Done' && task.status !== 'Collected') {
-      console.log(`[onTaskUpsert] Task uncompleted: ${task.name} (${previousTask.status} → ${task.status})`);
+    if (previousTask!.status === 'Done' && task.status !== 'Done' && task.status !== 'Collected') {
+      console.log(`[onTaskUpsert] Task uncompleted: ${task.name} (${previousTask!.status} → ${task.status})`);
       
       // Uncomplete the task and remove effects
       await uncompleteTask(task.id);
@@ -82,14 +87,14 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
 
   }
   
-  if (!previousTask.doneAt && task.doneAt) {
+  if (previousTask && !previousTask.doneAt && task.doneAt) {
     await appendEntityLog(EntityType.TASK, task.id, LogEventType.DONE, {
       name: task.name,
       doneAt: task.doneAt
     });
   }
   
-  if (!previousTask.collectedAt && task.collectedAt) {
+  if (previousTask && !previousTask.collectedAt && task.collectedAt) {
     await appendEntityLog(EntityType.TASK, task.id, LogEventType.COLLECTED, {
       name: task.name,
       collectedAt: task.collectedAt
@@ -97,12 +102,12 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
   }
   
   // Site changes - MOVED event
-  if (previousTask.siteId !== task.siteId || previousTask.targetSiteId !== task.targetSiteId) {
+  if (previousTask && (previousTask.siteId !== task.siteId || previousTask.targetSiteId !== task.targetSiteId)) {
     await appendEntityLog(EntityType.TASK, task.id, LogEventType.MOVED, {
       name: task.name,
-      oldSiteId: previousTask.siteId,
+      oldSiteId: previousTask!.siteId,
       newSiteId: task.siteId,
-      oldTargetSiteId: previousTask.targetSiteId,
+      oldTargetSiteId: previousTask!.targetSiteId,
       newTargetSiteId: task.targetSiteId
     });
   }

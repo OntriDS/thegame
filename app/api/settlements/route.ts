@@ -4,6 +4,7 @@ import { v4 as uuid } from 'uuid';
 import type { Settlement } from '@/types/entities';
 import { getAllSettlements, upsertSettlement } from '@/data-store/datastore';
 import { requireAdminAuth } from '@/lib/api-auth';
+import { convertEntityDates } from '@/lib/constants/date-constants';
 
 // Force dynamic rendering - this route accesses cookies
 export const dynamic = 'force-dynamic';
@@ -25,12 +26,10 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = (await req.json()) as Settlement;
-    const settlement: Settlement = { 
-      ...body, 
-      id: body.id || uuid(), 
-      createdAt: body.createdAt ? new Date(body.createdAt) : new Date(), 
-      updatedAt: new Date()
-    };
+    const settlement = convertEntityDates(
+      { ...body, id: body.id || uuid() },
+      []
+    );
     const saved = await upsertSettlement(settlement);
     return NextResponse.json(saved);
   } catch (error) {

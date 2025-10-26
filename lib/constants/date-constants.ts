@@ -27,3 +27,29 @@ export const getCurrentMonth = (): number => {
 export const getCurrentYear = (): number => {
   return new Date().getFullYear();
 };
+
+// UTILITY: Unified date conversion for all entities
+export const convertEntityDates = <T extends Record<string, any>>(
+  entity: T,
+  additionalDateFields: (keyof T)[] = []
+): T => {
+  const converted = { ...entity } as any;
+  
+  // Always handle base entity dates
+  if (converted.createdAt) {
+    converted.createdAt = new Date(converted.createdAt);
+  } else {
+    converted.createdAt = new Date();
+  }
+  
+  converted.updatedAt = new Date();
+  
+  // Convert additional entity-specific date fields
+  additionalDateFields.forEach(field => {
+    if (converted[field]) {
+      converted[field] = new Date(converted[field] as string);
+    }
+  });
+  
+  return converted as T;
+};
