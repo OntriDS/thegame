@@ -213,7 +213,6 @@ export function ItemsLifecycleTab({ itemsLog, onReload, isReloading }: ItemsLife
                   const quantity = data.quantity || entry.quantity;
                   const unitCost = data.unitCost || entry.unitCost || entry.cost || 0;
                   const price = data.price || entry.price || 0;
-                  const year = data.year || entry.year;
                   const sourceType = data.sourceType || entry.sourceType;
                   const sourceId = data.sourceId || entry.sourceId;
                   const date = entry.displayDate || entry.timestamp || '';
@@ -318,13 +317,6 @@ export function ItemsLifecycleTab({ itemsLog, onReload, isReloading }: ItemsLife
                           {price !== undefined && (
                             <span className="text-muted-foreground min-w-0 flex-shrink-0">
                               ${price}
-                            </span>
-                          )}
-                          
-                          {/* Year */}
-                          {year && (
-                            <span className="text-muted-foreground min-w-0 flex-shrink-0">
-                              Y: {year}
                             </span>
                           )}
                           

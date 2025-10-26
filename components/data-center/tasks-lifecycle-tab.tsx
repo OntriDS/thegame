@@ -207,6 +207,8 @@ export function TasksLifecycleTab({ tasksLog, onReload, isReloading }: TasksLife
                   const priority: string = formatPriority(entry.priority || data.priority);
                   const sourceSaleId = data.sourceSaleId || entry.sourceSaleId;
                   const truncatedSourceName = sourceSaleId ? sourceNameCache[sourceSaleId] || '' : '';
+                  const dueDate = data.dueDate || entry.dueDate;
+                  const frequencyConfig = data.frequencyConfig || entry.frequencyConfig;
                   
                   // Debug logging for Done entries
                   if (status.toLowerCase() === 'done') {
@@ -319,6 +321,20 @@ export function TasksLifecycleTab({ tasksLog, onReload, isReloading }: TasksLife
                           {truncatedSourceName && (
                             <span className="text-xs text-muted-foreground min-w-0 flex-shrink-0">
                               source: {truncatedSourceName}
+                            </span>
+                          )}
+                          
+                          {/* Due Date */}
+                          {dueDate && (
+                            <span className="text-xs text-muted-foreground min-w-0 flex-shrink-0">
+                              due: {new Date(dueDate).toLocaleDateString()}
+                            </span>
+                          )}
+                          
+                          {/* Frequency */}
+                          {frequencyConfig && frequencyConfig.frequency && (
+                            <span className="text-xs text-muted-foreground min-w-0 flex-shrink-0">
+                              freq: {frequencyConfig.frequency}
                             </span>
                           )}
                         </div>

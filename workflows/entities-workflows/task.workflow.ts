@@ -45,7 +45,9 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
       station: task.station,
       taskType: task.type,
       priority: task.priority,
-      sourceSaleId: task.sourceSaleId
+      sourceSaleId: task.sourceSaleId,
+      dueDate: task.dueDate,
+      frequencyConfig: task.frequencyConfig
     });
     await markEffect(effectKey);
 
@@ -81,6 +83,8 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
       taskType: task.type,
       priority: task.priority,
       sourceSaleId: task.sourceSaleId,
+      dueDate: task.dueDate,
+      frequencyConfig: task.frequencyConfig,
       transition: `${previousTask!.status} → ${task.status}`,
       changedAt: new Date().toISOString()
     });
@@ -106,6 +110,8 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
         taskType: task.type,
         priority: task.priority,
         sourceSaleId: task.sourceSaleId,
+        dueDate: task.dueDate,
+        frequencyConfig: task.frequencyConfig,
         doneAt: task.doneAt
       });
     }
@@ -119,6 +125,8 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
       taskType: task.type,
       priority: task.priority,
       sourceSaleId: task.sourceSaleId,
+      dueDate: task.dueDate,
+      frequencyConfig: task.frequencyConfig,
       collectedAt: task.collectedAt
     });
   }
@@ -132,6 +140,8 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
       taskType: task.type,
       priority: task.priority,
       sourceSaleId: task.sourceSaleId,
+      dueDate: task.dueDate,
+      frequencyConfig: task.frequencyConfig,
       oldSiteId: previousTask!.siteId,
       newSiteId: task.siteId,
       oldTargetSiteId: previousTask!.targetSiteId,
@@ -474,6 +484,8 @@ export async function uncompleteTask(taskId: string): Promise<void> {
       taskType: task.type,
       priority: task.priority,
       sourceSaleId: task.sourceSaleId,
+      dueDate: task.dueDate,
+      frequencyConfig: task.frequencyConfig,
       previousStatus: 'Done',
       uncompletedAt: new Date().toISOString()
     });

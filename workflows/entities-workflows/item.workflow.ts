@@ -30,7 +30,6 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
       unitCost: item.unitCost || 0,
       totalCost: (item.stock?.reduce((sum: number, stock: any) => sum + stock.quantity, 0) || 0) * (item.unitCost || 0),
       price: item.price || 0,
-      year: item.year,
       sourceType,
       sourceId,
       subItemType: item.subItemType,
@@ -50,7 +49,6 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
       station: item.station,
       collection: item.collection,
       subItemType: item.subItemType,
-      year: item.year,
       oldStock: previousItem.stock,
       newStock: item.stock
     });
@@ -64,7 +62,6 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
       station: item.station,
       collection: item.collection,
       subItemType: item.subItemType,
-      year: item.year,
       quantitySold: item.quantitySold,
       oldQuantitySold: previousItem.quantitySold
     });
@@ -78,7 +75,6 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
       station: item.station,
       collection: item.collection,
       subItemType: item.subItemType,
-      year: item.year,
       collectedAt: new Date().toISOString()
     });
   }
@@ -91,7 +87,6 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
       station: item.station,
       collection: item.collection,
       subItemType: item.subItemType,
-      year: item.year,
       oldStatus: previousItem.status,
       newStatus: item.status
     });
