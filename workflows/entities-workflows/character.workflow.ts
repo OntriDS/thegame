@@ -5,6 +5,7 @@ import { EntityType, LogEventType } from '@/types/enums';
 import type { Character } from '@/types/entities';
 import { appendEntityLog, updateEntityLogField } from '../entities-logging';
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
+import { EffectKeys } from '@/data-store/keys';
 import { getLinksFor, removeLink } from '@/links/link-registry';
 import type { Task, FinancialRecord } from '@/types/entities';
 
@@ -20,7 +21,7 @@ export async function onCharacterUpsert(character: Character, previousCharacter?
   
   // New character creation
   if (!previousCharacter) {
-    const effectKey = `character:${character.id}:created`;
+    const effectKey = EffectKeys.created('character', character.id);
     const hasEffectResult = await hasEffect(effectKey);
     
     console.log('🔥 [onCharacterUpsert] New character check', { effectKey, hasEffect: hasEffectResult });
@@ -115,7 +116,7 @@ export async function removeCharacterEffectsOnDelete(characterId: string): Promi
     }
     
     // 2. Clear all effects for this character
-    await clearEffect(`character:${characterId}:created`);
+    await clearEffect(EffectKeys.created('character', characterId));
     await clearEffectsByPrefix(EntityType.CHARACTER, characterId, '');
     
     // 3. Remove log entries from character log

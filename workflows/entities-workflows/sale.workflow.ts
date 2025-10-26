@@ -5,6 +5,7 @@ import { EntityType, LogEventType } from '@/types/enums';
 import type { Sale } from '@/types/entities';
 import { appendEntityLog, updateEntityLogField } from '../entities-logging';
 import { hasEffect, markEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
+import { EffectKeys } from '@/data-store/keys';
 import { getLinksFor, removeLink } from '@/links/link-registry';
 import { getAllSales, getAllPlayers } from '@/data-store/datastore';
 import { awardPointsToPlayer, removePointsFromPlayer, calculatePointsFromRevenue, getMainPlayerId } from '../points-rewards-utils';
@@ -23,7 +24,7 @@ const DESCRIPTIVE_FIELDS = ['counterpartyName', 'totals'];
 export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<void> {
   // New sale creation
   if (!previousSale) {
-    const effectKey = `sale:${sale.id}:created`;
+    const effectKey = EffectKeys.created('sale', sale.id);
     if (await hasEffect(effectKey)) return;
     
     await appendEntityLog(EntityType.SALE, sale.id, LogEventType.CREATED, { 
@@ -43,7 +44,7 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
     
     // Points awarding - on sale creation with revenue
     if (sale.totals.totalRevenue > 0) {
-      const pointsEffectKey = `sale:${sale.id}:pointsAwarded`;
+      const pointsEffectKey = EffectKeys.sideEffect('sale', sale.id, 'pointsAwarded');
       if (!(await hasEffect(pointsEffectKey))) {
         console.log(`[onSaleUpsert] Awarding points from sale revenue: ${sale.counterpartyName}`);
         const points = calculatePointsFromRevenue(sale.totals.totalRevenue);
@@ -56,40 +57,40 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
     return;
   }
   
-  // Status changes
+  // Status changes - PENDING (not paid/not charged) vs DONE (paid and charged)
+  const wasPending = previousSale.isNotPaid || previousSale.isNotCharged;
+  const nowPending = sale.isNotPaid || sale.isNotCharged;
+  
   if (previousSale.status !== sale.status) {
-    if (sale.status === 'CHARGED') {
-      await appendEntityLog(EntityType.SALE, sale.id, LogEventType.CHARGED, {
-        counterpartyName: sale.counterpartyName,
-        totals: {
-          subtotal: sale.totals.subtotal,
-          discountTotal: sale.totals.discountTotal,
-          taxTotal: sale.totals.taxTotal,
-          totalRevenue: sale.totals.totalRevenue
-        },
-        chargedAt: new Date().toISOString()
+    if (sale.status === 'CANCELLED') {
+      await appendEntityLog(EntityType.SALE, sale.id, LogEventType.CANCELLED, {
+        cancelledAt: sale.cancelledAt || new Date().toISOString()
+      });
+    } else if (wasPending && !nowPending) {
+      // Transitioned from PENDING to DONE (both paid and charged)
+      await appendEntityLog(EntityType.SALE, sale.id, LogEventType.DONE, {
+        completedAt: new Date().toISOString()
       });
       
-      // Process sale lines when sale is charged
+      // Process sale lines when sale transitions to DONE
       const linesProcessedKey = `sale:${sale.id}:linesProcessed`;
       if (!(await hasEffect(linesProcessedKey))) {
-        console.log(`[onSaleUpsert] Processing sale lines for charged sale: ${sale.counterpartyName}`);
+        console.log(`[onSaleUpsert] Processing sale lines for completed sale: ${sale.counterpartyName}`);
         await processSaleLines(sale);
         await markEffect(linesProcessedKey);
         console.log(`[onSaleUpsert] ✅ Sale lines processed and effect marked: ${sale.counterpartyName}`);
       }
-    } else if (sale.status === 'CANCELLED') {
-      await appendEntityLog(EntityType.SALE, sale.id, LogEventType.CANCELLED, {
-        counterpartyName: sale.counterpartyName,
-        cancelledAt: sale.cancelledAt || new Date().toISOString()
+    } else if (!wasPending && nowPending) {
+      // Reverted from DONE to PENDING (became unpaid or uncharged)
+      await appendEntityLog(EntityType.SALE, sale.id, LogEventType.PENDING, {
+        pendingAt: new Date().toISOString()
       });
     }
   }
   
-  // Collection status - COLLECTED event
+  // Collection status - COLLECTED event (kept for completeness)
   if (!previousSale.isCollected && sale.isCollected) {
     await appendEntityLog(EntityType.SALE, sale.id, LogEventType.COLLECTED, {
-      counterpartyName: sale.counterpartyName,
       collectedAt: new Date().toISOString()
     });
   }

@@ -4,6 +4,7 @@
 import { EntityType } from '@/types/enums';
 import type { Account } from '@/types/entities';
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
+import { EffectKeys } from '@/data-store/keys';
 import { getLinksFor, removeLink } from '@/links/link-registry';
 
 const STATE_FIELDS = ['isActive', 'isVerified', 'loginAttempts'];
@@ -15,7 +16,7 @@ export async function onAccountUpsert(account: Account, previousAccount?: Accoun
   
   // New account creation - just mark effect for idempotency
   if (!previousAccount) {
-    const effectKey = `account:${account.id}:created`;
+    const effectKey = EffectKeys.created('account', account.id);
     if (await hasEffect(effectKey)) return;
     await markEffect(effectKey);
     return;
@@ -47,7 +48,7 @@ export async function removeAccountEffectsOnDelete(accountId: string): Promise<v
     }
     
     // 2. Clear all effects for this account
-    await clearEffect(`account:${accountId}:created`);
+    await clearEffect(EffectKeys.created('account', accountId));
     await clearEffectsByPrefix(EntityType.ACCOUNT, accountId, '');
     
     // 3. No log entries to remove - Account is infrastructure entity

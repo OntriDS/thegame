@@ -5,6 +5,7 @@ import { EntityType, LogEventType } from '@/types/enums';
 import type { FinancialRecord } from '@/types/entities';
 import { appendEntityLog, updateEntityLogField } from '../entities-logging';
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
+import { EffectKeys } from '@/data-store/keys';
 import { getLinksFor, removeLink } from '@/links/link-registry';
 import { getAllFinancials, getAllPlayers, getAllCharacters } from '@/data-store/datastore';
 import { createItemFromRecord, removeItemsCreatedByRecord } from '../item-creation-utils';
@@ -26,7 +27,7 @@ const DESCRIPTIVE_FIELDS = ['name', 'description', 'cost', 'revenue', 'jungleCoi
 export async function onFinancialUpsert(financial: FinancialRecord, previousFinancial?: FinancialRecord): Promise<void> {
   // New financial record creation
   if (!previousFinancial) {
-    const effectKey = `financial:${financial.id}:created`;
+    const effectKey = EffectKeys.created('financial', financial.id);
     if (await hasEffect(effectKey)) return;
     
     await appendEntityLog(EntityType.FINANCIAL, financial.id, LogEventType.CREATED, { 
@@ -42,7 +43,7 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
     
     // Item creation from emissary fields - on record creation
     if (financial.outputItemType && financial.outputQuantity) {
-      const itemEffectKey = `financial:${financial.id}:itemCreated`;
+      const itemEffectKey = EffectKeys.sideEffect('financial', financial.id, 'itemCreated');
       if (!(await hasEffect(itemEffectKey))) {
         console.log(`[onFinancialUpsert] Creating item from financial record emissary fields: ${financial.name}`);
         const createdItem = await createItemFromRecord(financial);
@@ -55,7 +56,7 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
     
     // Points awarding - on record creation with rewards
     if (financial.rewards?.points) {
-      const pointsEffectKey = `financial:${financial.id}:pointsAwarded`;
+      const pointsEffectKey = EffectKeys.sideEffect('financial', financial.id, 'pointsAwarded');
       if (!(await hasEffect(pointsEffectKey))) {
         console.log(`[onFinancialUpsert] Awarding points from financial record: ${financial.name}`);
         await awardPointsToPlayer(getMainPlayerId(), {
@@ -75,19 +76,25 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
     return;
   }
   
-  // Payment status changes - CHARGED event
-  if (previousFinancial.isNotCharged && !financial.isNotCharged) {
-    await appendEntityLog(EntityType.FINANCIAL, financial.id, LogEventType.CHARGED, {
-      name: financial.name,
-      revenue: financial.revenue,
-      chargedAt: new Date().toISOString()
+  // Payment status changes - PENDING (not paid or not charged) vs DONE (paid and charged)
+  const wasPending = previousFinancial.isNotPaid || previousFinancial.isNotCharged;
+  const nowPending = financial.isNotPaid || financial.isNotCharged;
+  
+  if (wasPending && !nowPending) {
+    // Transitioned from PENDING to DONE (both paid and charged)
+    await appendEntityLog(EntityType.FINANCIAL, financial.id, LogEventType.DONE, {
+      completedAt: new Date().toISOString()
+    });
+  } else if (!wasPending && nowPending) {
+    // Reverted from DONE to PENDING (became unpaid or uncharged)
+    await appendEntityLog(EntityType.FINANCIAL, financial.id, LogEventType.PENDING, {
+      pendingAt: new Date().toISOString()
     });
   }
   
-  // Collection status - COLLECTED event
+  // Collection status - COLLECTED event (kept for completeness)
   if (!previousFinancial.isCollected && financial.isCollected) {
     await appendEntityLog(EntityType.FINANCIAL, financial.id, LogEventType.COLLECTED, {
-      name: financial.name,
       collectedAt: new Date().toISOString()
     });
   }
@@ -158,10 +165,10 @@ export async function removeRecordEffectsOnDelete(recordId: string): Promise<voi
     }
     
     // 5. Clear effects registry
-    await clearEffect(`financial:${recordId}:created`);
-    await clearEffect(`financial:${recordId}:itemCreated`);
-    await clearEffect(`financial:${recordId}:pointsAwarded`);
-    await clearEffect(`financial:${recordId}:jungleCoinsAwarded`);
+    await clearEffect(EffectKeys.created('financial', recordId));
+    await clearEffect(EffectKeys.sideEffect('financial', recordId, 'itemCreated'));
+    await clearEffect(EffectKeys.sideEffect('financial', recordId, 'pointsAwarded'));
+    await clearEffect(EffectKeys.sideEffect('financial', recordId, 'jungleCoinsAwarded'));
     await clearEffectsByPrefix(EntityType.FINANCIAL, recordId, 'pointsLogged:');
     await clearEffectsByPrefix(EntityType.FINANCIAL, recordId, 'financialLogged:');
     

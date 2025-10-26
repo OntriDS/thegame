@@ -279,15 +279,87 @@ export function sortLogEntries(entries: any[], order: 'newest' | 'oldest' = 'new
 function getEventOrder(entry: any): number {
   const eventOrder: Record<string, number> = {
     'created': 0,
-    'status_changed': 1,
-    'done': 2,
-    'collected': 3,
-    'moved': 4,
-    'updated': 5,
+    'pending': 1,
+    'moved': 2,
+    'updated': 3,
+    'done': 4,
+    'sold': 5,
+    'collected': 6,
+    'cancelled': 7,
   };
   
   const event = (entry.event || entry.status || '').toLowerCase();
   return eventOrder[event] ?? 999;
+}
+
+/**
+ * Derive a normalized event kind for an entry.
+ * Prefers `event`, falls back to `status` or `type`.
+ */
+export function getEntryEventKind(entry: any): string {
+  const kind = (entry?.event ?? entry?.status ?? entry?.type ?? 'unknown');
+  return String(kind).toLowerCase();
+}
+
+/**
+ * Build a map of entityId -> latest state event kind (for badges).
+ * State events considered: created, pending, updated, done, collected, cancelled, moved, sold
+ */
+export function buildLatestStatusMap(entries: any[]): Record<string, string> {
+  const stateEventSet = new Set([
+    'created', 'pending', 'updated', 'done', 'collected', 'cancelled', 'moved', 'sold'
+  ]);
+  const latest: Record<string, { when: number; kind: string }> = {};
+
+  for (const e of entries || []) {
+    const entityId = e.entityId || e.id;
+    if (!entityId) continue;
+    const kind = getEntryEventKind(e);
+    if (!stateEventSet.has(kind)) continue;
+    const whenRaw = e.timestamp ?? e.date;
+    const when = whenRaw ? new Date(whenRaw).getTime() : 0;
+    const prev = latest[entityId];
+    if (!prev || when >= prev.when) {
+      latest[entityId] = { when, kind };
+    }
+  }
+
+  const result: Record<string, string> = {};
+  Object.keys(latest).forEach(id => (result[id] = latest[id].kind));
+  return result;
+}
+
+/** Extract a best-effort display name from a log entry */
+export function extractEntryName(entry: any): string | undefined {
+  const d = entry?.data || {};
+  return (
+    entry?.name ||
+    d.name ||
+    entry?.taskName || d.taskName ||
+    entry?.itemName || d.itemName ||
+    entry?.saleName || d.saleName ||
+    undefined
+  );
+}
+
+/** Build entityId -> latest known display name map */
+export function buildLatestNameMap(entries: any[]): Record<string, string> {
+  const latestName: Record<string, { when: number; name: string }> = {};
+  for (const e of entries || []) {
+    const entityId = e.entityId || e.id;
+    if (!entityId) continue;
+    const name = extractEntryName(e);
+    if (!name) continue;
+    const whenRaw = e.timestamp ?? e.date;
+    const when = whenRaw ? new Date(whenRaw).getTime() : 0;
+    const prev = latestName[entityId];
+    if (!prev || when >= prev.when) {
+      latestName[entityId] = { when, name };
+    }
+  }
+  const result: Record<string, string> = {};
+  Object.keys(latestName).forEach(id => (result[id] = latestName[id].name));
+  return result;
 }
 
 /**
@@ -312,7 +384,7 @@ export function getLogEntryCounts(entries: any[]): { [key: string]: number } {
 
   const counts: { [key: string]: number } = {};
   entries.forEach(entry => {
-    const type = (entry.type || entry.status || 'unknown').toLowerCase();
+    const type = getEntryEventKind(entry) || 'unknown';
     counts[type] = (counts[type] || 0) + 1;
   });
 
@@ -361,6 +433,11 @@ export function processLogData(log: any, order: 'newest' | 'oldest' = 'newest', 
 
   let processedEntries = [...log.entries];
 
+  // Compute latest status per entity for deterministic badge usage by consumers
+  const latestStatusMap = buildLatestStatusMap(processedEntries);
+  // Compute latest display name per entity for consistent naming after renames
+  const latestNameMap = buildLatestNameMap(processedEntries);
+
   // Apply type filter if specified
   if (typeFilter && typeFilter !== 'all') {
     processedEntries = filterLogEntries(processedEntries, typeFilter);
@@ -370,7 +447,11 @@ export function processLogData(log: any, order: 'newest' | 'oldest' = 'newest', 
   processedEntries = sortLogEntries(processedEntries, order);
   
   // Format entries
-  processedEntries = processedEntries.map(formatLogEntry);
+  processedEntries = processedEntries.map((e: any) => ({
+    ...formatLogEntry(e),
+    currentStatus: latestStatusMap[e.entityId || e.id],
+    displayName: latestNameMap[e.entityId || e.id]
+  }));
   
   // Get counts
   const counts = getLogEntryCounts(log.entries);
@@ -379,7 +460,9 @@ export function processLogData(log: any, order: 'newest' | 'oldest' = 'newest', 
     entries: processedEntries,
     counts,
     total: log.entries.length,
-    filtered: processedEntries.length
+    filtered: processedEntries.length,
+    latestStatusMap,
+    latestNameMap
   };
 }
 

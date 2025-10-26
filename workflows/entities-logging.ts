@@ -61,6 +61,45 @@ export async function updateEntityLogField(
   await kvSet(key, list);
 }
 
+// Safer helpers: update CREATED entry fields (descriptive corrections only)
+export async function updateCreatedEntryFields(
+  entityType: EntityType,
+  entityId: string,
+  partial: Record<string, any>
+): Promise<void> {
+  const key = buildLogKey(entityType);
+  const list = (await kvGet<any[]>(key)) || [];
+  const createdEntry = list.find(entry => 
+    entry.entityId === entityId && 
+    String(entry.event ?? entry.status ?? '').toLowerCase() === 'created'
+  );
+  if (createdEntry) {
+    Object.assign(createdEntry, partial, { lastUpdated: new Date().toISOString() });
+    await kvSet(key, list);
+  }
+}
+
+// Safer helpers: update latest entry of specific event kind
+export async function updateLatestEventFields(
+  entityType: EntityType,
+  entityId: string,
+  eventKind: string,
+  partial: Record<string, any>
+): Promise<void> {
+  const key = buildLogKey(entityType);
+  const list = (await kvGet<any[]>(key)) || [];
+  const kind = eventKind.toLowerCase();
+  for (let i = list.length - 1; i >= 0; i--) {
+    const e = list[i];
+    const ek = String(e?.event ?? e?.status ?? '').toLowerCase();
+    if (e?.entityId === entityId && ek === kind) {
+      Object.assign(e, partial, { lastUpdated: new Date().toISOString() });
+      await kvSet(key, list);
+      break;
+    }
+  }
+}
+
 export async function appendBulkOperationLog(
   entityType: EntityType,
   operation: 'import' | 'export',

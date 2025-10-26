@@ -24,6 +24,23 @@ export function buildEffectKey(effectKey: string): string {
   return `effects:${effectKey}`;
 }
 
+// Unified effect key builders
+export const EffectKeys = {
+  created(entity: string, id: string): string {
+    return `${entity}:${id}:created`;
+  },
+  status(entity: string, id: string, from: string, to: string, bucket?: string): string {
+    const base = `${entity}:${id}:status:${from}->${to}`;
+    return bucket ? `${base}:${bucket}` : base;
+  },
+  sideEffect(entity: string, id: string, kind: string): string {
+    return `${entity}:${id}:${kind}`; // e.g. task:123:itemCreated
+  },
+  monthly(entity: string, id: string, kind: string, yyyymm: string): string {
+    return `${entity}:${id}:${kind}:${yyyymm}`; // e.g. task:123:pointsLogged:2025-10
+  }
+};
+
 export function buildLogKey(entity: EntityType | string, yyyymm?: string): string {
   return yyyymm
     ? `logs:${entity}:${yyyymm}`

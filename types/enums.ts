@@ -676,15 +676,10 @@ export enum LogEventType {
   // Universal lifecycle events (all entities)
   CREATED = 'CREATED',
   UPDATED = 'UPDATED',
-  
-  // State transition events
-  STATUS_CHANGED = 'STATUS_CHANGED',
+  PENDING = 'PENDING',
   DONE = 'DONE',
   COLLECTED = 'COLLECTED',
   MOVED = 'MOVED',
-  
-  // Financial events
-  CHARGED = 'CHARGED',
   CANCELLED = 'CANCELLED',
   
   // Item-specific events

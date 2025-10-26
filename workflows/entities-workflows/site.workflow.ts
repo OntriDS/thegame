@@ -5,6 +5,7 @@ import { EntityType, LogEventType } from '@/types/enums';
 import type { Site } from '@/types/entities';
 import { appendEntityLog, updateEntityLogField } from '../entities-logging';
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
+import { EffectKeys } from '@/data-store/keys';
 import { getLinksFor, removeLink } from '@/links/link-registry';
 
 const STATE_FIELDS = ['isActive', 'status'];
@@ -13,7 +14,7 @@ const DESCRIPTIVE_FIELDS = ['name', 'description', 'metadata'];
 export async function onSiteUpsert(site: Site, previousSite?: Site): Promise<void> {
   // New site creation
   if (!previousSite) {
-    const effectKey = `site:${site.id}:created`;
+    const effectKey = EffectKeys.created('site', site.id);
     if (await hasEffect(effectKey)) return;
     
     await appendEntityLog(EntityType.SITE, site.id, LogEventType.CREATED, { 
@@ -79,7 +80,7 @@ export async function removeSiteEffectsOnDelete(siteId: string): Promise<void> {
     }
     
     // 2. Clear all effects for this site
-    await clearEffect(`site:${siteId}:created`);
+    await clearEffect(EffectKeys.created('site', siteId));
     await clearEffectsByPrefix(EntityType.SITE, siteId, '');
     
     // 3. Remove log entries from sites log

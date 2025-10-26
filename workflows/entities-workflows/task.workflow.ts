@@ -5,6 +5,7 @@ import { EntityType, LogEventType, TaskType } from '@/types/enums';
 import type { Task } from '@/types/entities';
 import { appendEntityLog, updateEntityLogField } from '../entities-logging';
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
+import { EffectKeys } from '@/data-store/keys';
 import { getAllTasks, getAllPlayers } from '@/data-store/datastore';
 import { getLinksFor, removeLink } from '@/links/link-registry';
 import { createItemFromTask, removeItemsCreatedByTask } from '../item-creation-utils';
@@ -38,27 +39,27 @@ const DESCRIPTIVE_FIELDS = ['name', 'description', 'cost', 'revenue', 'rewards',
 export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<void> {
   // New task creation
   if (!previousTask) {
-    const effectKey = `task:${task.id}:created`;
+    const effectKey = EffectKeys.created('task', task.id);
     const alreadyLoggedCreated = await hasEffect(effectKey);
     
     if (!alreadyLoggedCreated) {
+      // Minimal, event-specific payload for CREATED
       await appendEntityLog(EntityType.TASK, task.id, LogEventType.CREATED, { 
-        name: task.name, 
-        status: task.status,
-        station: task.station,
+        name: task.name,
         taskType: task.type,
+        station: task.station,
         priority: task.priority,
         sourceSaleId: task.sourceSaleId,
         dueDate: task.dueDate,
         frequencyConfig: task.frequencyConfig,
-        _logOrder: 0 // Tie-breaker for same timestamp: CREATED comes first
+        _logOrder: 0
       });
       await markEffect(effectKey);
     }
 
     // Recurrent Template instance spawning - when template is created
     if (task.type === TaskType.RECURRENT_TEMPLATE) {
-      const instancesEffectKey = `task:${task.id}:instancesGenerated`;
+      const instancesEffectKey = EffectKeys.sideEffect('task', task.id, 'instancesGenerated');
       if (!(await hasEffect(instancesEffectKey))) {
         console.log(`[onTaskUpsert] Generating instances for new template: ${task.name}`);
         const instances = await handleTemplateInstanceCreation(task);
@@ -79,18 +80,10 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
   if (previousTask && previousTask.status !== task.status) {
     console.log(`[onTaskUpsert] Task status changed: ${previousTask.status} → ${task.status}`);
     
-    // Log status change with transition context
-    await appendEntityLog(EntityType.TASK, task.id, LogEventType.STATUS_CHANGED, {
+    // Log status change with transition context (using UPDATED event)
+    await appendEntityLog(EntityType.TASK, task.id, LogEventType.UPDATED, {
       oldStatus: previousTask!.status,
       newStatus: task.status,
-      name: task.name,
-      status: task.status,
-      station: task.station,
-      taskType: task.type,
-      priority: task.priority,
-      sourceSaleId: task.sourceSaleId,
-      dueDate: task.dueDate,
-      frequencyConfig: task.frequencyConfig,
       transition: `${previousTask!.status} → ${task.status}`,
       changedAt: new Date().toISOString()
     });
@@ -110,30 +103,14 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
     const shouldLogDone = !previousTask || !previousTask.doneAt;
     if (shouldLogDone) {
       await appendEntityLog(EntityType.TASK, task.id, LogEventType.DONE, {
-        name: task.name,
-        status: task.status,
-        station: task.station,
-        taskType: task.type,
-        priority: task.priority,
-        sourceSaleId: task.sourceSaleId,
-        dueDate: task.dueDate,
-        frequencyConfig: task.frequencyConfig,
         doneAt: task.doneAt,
-        _logOrder: 1 // Tie-breaker for same timestamp: DONE comes after CREATED
+        _logOrder: 1
       });
     }
   }
   
   if (previousTask && !previousTask.collectedAt && task.collectedAt) {
     await appendEntityLog(EntityType.TASK, task.id, LogEventType.COLLECTED, {
-      name: task.name,
-      status: task.status,
-      station: task.station,
-      taskType: task.type,
-      priority: task.priority,
-      sourceSaleId: task.sourceSaleId,
-      dueDate: task.dueDate,
-      frequencyConfig: task.frequencyConfig,
       collectedAt: task.collectedAt
     });
   }
@@ -141,14 +118,6 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
   // Site changes - MOVED event
   if (previousTask && (previousTask.siteId !== task.siteId || previousTask.targetSiteId !== task.targetSiteId)) {
     await appendEntityLog(EntityType.TASK, task.id, LogEventType.MOVED, {
-      name: task.name,
-      status: task.status,
-      station: task.station,
-      taskType: task.type,
-      priority: task.priority,
-      sourceSaleId: task.sourceSaleId,
-      dueDate: task.dueDate,
-      frequencyConfig: task.frequencyConfig,
       oldSiteId: previousTask!.siteId,
       newSiteId: task.siteId,
       oldTargetSiteId: previousTask!.targetSiteId,
@@ -158,7 +127,7 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
   
   // Item creation from emissary fields - when task is completed
   if (task.outputItemType && task.outputQuantity && task.status === 'Done') {
-    const effectKey = `task:${task.id}:itemCreated`;
+    const effectKey = EffectKeys.sideEffect('task', task.id, 'itemCreated');
     if (!(await hasEffect(effectKey))) {
       console.log(`[onTaskUpsert] Creating item from task emissary fields: ${task.name}`);
       const createdItem = await createItemFromTask(task);
@@ -171,7 +140,7 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
   
   // Points awarding - when task is completed with rewards
   if (task.status === 'Done' && task.rewards?.points) {
-    const effectKey = `task:${task.id}:pointsAwarded`;
+    const effectKey = EffectKeys.sideEffect('task', task.id, 'pointsAwarded');
     if (!(await hasEffect(effectKey))) {
       console.log(`[onTaskUpsert] Awarding points from task completion: ${task.name}`);
       await awardPointsToPlayer(getMainPlayerId(), task.rewards.points, task.id, EntityType.TASK);
@@ -182,7 +151,7 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
   
   // Financial record creation from task - when task is completed (Done) with cost, revenue, or rewards
   if (task.status === 'Done' && (task.cost || task.revenue || task.rewards?.points)) {
-    const effectKey = `task:${task.id}:financialCreated`;
+    const effectKey = EffectKeys.sideEffect('task', task.id, 'financialCreated');
     if (!(await hasEffect(effectKey))) {
       console.log(`[onTaskUpsert] Creating financial record from task: ${task.name}`);
       const createdFinancial = await createFinancialRecordFromTask(task);
@@ -219,7 +188,7 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
       const dueDateChanged = previousTask.dueDate?.getTime() !== task.dueDate?.getTime();
       
       if (frequencyChanged || dueDateChanged) {
-        const instancesEffectKey = `task:${task.id}:instancesGenerated`;
+        const instancesEffectKey = EffectKeys.sideEffect('task', task.id, 'instancesGenerated');
         if (!(await hasEffect(instancesEffectKey))) {
           console.log(`[onTaskUpsert] Regenerating instances for template: ${task.name} (frequency/due date changed)`);
           const instances = await handleTemplateInstanceCreation(task);
@@ -288,10 +257,10 @@ export async function removeTaskLogEntriesOnDelete(task: Task): Promise<void> {
     }
     
     // 4. Clear effects registry
-    await clearEffect(`task:${task.id}:created`);
-    await clearEffect(`task:${task.id}:itemCreated`);
-    await clearEffect(`task:${task.id}:financialCreated`);
-    await clearEffect(`task:${task.id}:pointsAwarded`);
+    await clearEffect(EffectKeys.created('task', task.id));
+    await clearEffect(EffectKeys.sideEffect('task', task.id, 'itemCreated'));
+    await clearEffect(EffectKeys.sideEffect('task', task.id, 'financialCreated'));
+    await clearEffect(EffectKeys.sideEffect('task', task.id, 'pointsAwarded'));
     await clearEffectsByPrefix(EntityType.TASK, task.id, 'pointsLogged:');
     await clearEffectsByPrefix(EntityType.TASK, task.id, 'financialLogged:');
     
@@ -509,20 +478,12 @@ export async function uncompleteTask(taskId: string): Promise<void> {
     console.log(`[uncompleteTask] ✅ Removed points awarded by task`);
     
     // 3. Clear effects registry entries
-    await clearEffect(`task:${taskId}:itemCreated`);
-    await clearEffect(`task:${taskId}:pointsAwarded`);
+    await clearEffect(EffectKeys.sideEffect('task', taskId, 'itemCreated'));
+    await clearEffect(EffectKeys.sideEffect('task', taskId, 'pointsAwarded'));
     console.log(`[uncompleteTask] ✅ Cleared effects registry entries`);
     
     // 4. Log UNCOMPLETED event
     await appendEntityLog(EntityType.TASK, taskId, LogEventType.UNCOMPLETED, {
-      name: task.name,
-      status: task.status,
-      station: task.station,
-      taskType: task.type,
-      priority: task.priority,
-      sourceSaleId: task.sourceSaleId,
-      dueDate: task.dueDate,
-      frequencyConfig: task.frequencyConfig,
       previousStatus: 'Done',
       uncompletedAt: new Date().toISOString()
     });

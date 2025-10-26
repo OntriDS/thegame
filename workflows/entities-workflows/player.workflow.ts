@@ -5,6 +5,7 @@ import { EntityType, LogEventType } from '@/types/enums';
 import type { Player } from '@/types/entities';
 import { appendEntityLog, updateEntityLogField } from '../entities-logging';
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
+import { EffectKeys } from '@/data-store/keys';
 import { getLinksFor, removeLink } from '@/links/link-registry';
 import { getAllPlayers, upsertPlayer } from '@/data-store/datastore';
 import { appendPlayerPointsLog, appendPlayerPointsUpdateLog } from '../entities-logging';
@@ -18,7 +19,7 @@ export async function onPlayerUpsert(player: Player, previousPlayer?: Player): P
   
   // New player creation
   if (!previousPlayer) {
-    const effectKey = `player:${player.id}:created`;
+    const effectKey = EffectKeys.created('player', player.id);
     const hasEffectResult = await hasEffect(effectKey);
     
     if (hasEffectResult) {
@@ -98,7 +99,7 @@ export async function removePlayerEffectsOnDelete(playerId: string): Promise<voi
     }
     
     // 2. Clear all effects for this player
-    await clearEffect(`player:${playerId}:created`);
+    await clearEffect(EffectKeys.created('player', playerId));
     await clearEffectsByPrefix(EntityType.PLAYER, playerId, '');
     
     // 3. Remove log entries from player log
