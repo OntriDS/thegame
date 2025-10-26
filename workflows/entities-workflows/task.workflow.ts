@@ -45,7 +45,7 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
       station: task.station,
       taskType: task.type,
       priority: task.priority,
-      category: getCategoryForTaskType(task.type)
+      sourceSaleId: task.sourceSaleId
     });
     await markEffect(effectKey);
 
@@ -76,6 +76,11 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
       oldStatus: previousTask!.status,
       newStatus: task.status,
       name: task.name,
+      status: task.status,
+      station: task.station,
+      taskType: task.type,
+      priority: task.priority,
+      sourceSaleId: task.sourceSaleId,
       transition: `${previousTask!.status} → ${task.status}`,
       changedAt: new Date().toISOString()
     });
@@ -96,6 +101,11 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
     if (shouldLogDone) {
       await appendEntityLog(EntityType.TASK, task.id, LogEventType.DONE, {
         name: task.name,
+        status: task.status,
+        station: task.station,
+        taskType: task.type,
+        priority: task.priority,
+        sourceSaleId: task.sourceSaleId,
         doneAt: task.doneAt
       });
     }
@@ -104,6 +114,11 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
   if (previousTask && !previousTask.collectedAt && task.collectedAt) {
     await appendEntityLog(EntityType.TASK, task.id, LogEventType.COLLECTED, {
       name: task.name,
+      status: task.status,
+      station: task.station,
+      taskType: task.type,
+      priority: task.priority,
+      sourceSaleId: task.sourceSaleId,
       collectedAt: task.collectedAt
     });
   }
@@ -112,6 +127,11 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
   if (previousTask && (previousTask.siteId !== task.siteId || previousTask.targetSiteId !== task.targetSiteId)) {
     await appendEntityLog(EntityType.TASK, task.id, LogEventType.MOVED, {
       name: task.name,
+      status: task.status,
+      station: task.station,
+      taskType: task.type,
+      priority: task.priority,
+      sourceSaleId: task.sourceSaleId,
       oldSiteId: previousTask!.siteId,
       newSiteId: task.siteId,
       oldTargetSiteId: previousTask!.targetSiteId,
@@ -449,6 +469,11 @@ export async function uncompleteTask(taskId: string): Promise<void> {
     // 4. Log UNCOMPLETED event
     await appendEntityLog(EntityType.TASK, taskId, LogEventType.UNCOMPLETED, {
       name: task.name,
+      status: task.status,
+      station: task.station,
+      taskType: task.type,
+      priority: task.priority,
+      sourceSaleId: task.sourceSaleId,
       previousStatus: 'Done',
       uncompletedAt: new Date().toISOString()
     });

@@ -22,7 +22,7 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
     const sourceId = item.sourceTaskId || item.sourceRecordId || undefined;
     await appendEntityLog(EntityType.ITEM, item.id, LogEventType.CREATED, {
       name: item.name,
-      type: item.type,
+      itemType: item.type,
       station: item.station,
       collection: item.collection,
       status: item.status,
@@ -33,7 +33,6 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
       year: item.year,
       sourceType,
       sourceId,
-      category: getCategoryForItemType(item.type),
       subItemType: item.subItemType,
       description: `Item created from ${sourceType}: ${item.type} (${item.stock?.reduce((sum: number, stock: any) => sum + stock.quantity, 0) || 0}x)`
     });
@@ -47,6 +46,11 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
   if (stockChanged) {
     await appendEntityLog(EntityType.ITEM, item.id, LogEventType.MOVED, {
       name: item.name,
+      itemType: item.type,
+      station: item.station,
+      collection: item.collection,
+      subItemType: item.subItemType,
+      year: item.year,
       oldStock: previousItem.stock,
       newStock: item.stock
     });
@@ -56,6 +60,11 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
   if (previousItem.quantitySold !== item.quantitySold && item.quantitySold > previousItem.quantitySold) {
     await appendEntityLog(EntityType.ITEM, item.id, LogEventType.SOLD, {
       name: item.name,
+      itemType: item.type,
+      station: item.station,
+      collection: item.collection,
+      subItemType: item.subItemType,
+      year: item.year,
       quantitySold: item.quantitySold,
       oldQuantitySold: previousItem.quantitySold
     });
@@ -65,6 +74,11 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
   if (item.isCollected && !previousItem.isCollected) {
     await appendEntityLog(EntityType.ITEM, item.id, LogEventType.COLLECTED, {
       name: item.name,
+      itemType: item.type,
+      station: item.station,
+      collection: item.collection,
+      subItemType: item.subItemType,
+      year: item.year,
       collectedAt: new Date().toISOString()
     });
   }
@@ -73,6 +87,11 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
   if (previousItem.status !== item.status) {
     await appendEntityLog(EntityType.ITEM, item.id, LogEventType.UPDATED, {
       name: item.name,
+      itemType: item.type,
+      station: item.station,
+      collection: item.collection,
+      subItemType: item.subItemType,
+      year: item.year,
       oldStatus: previousItem.status,
       newStatus: item.status
     });

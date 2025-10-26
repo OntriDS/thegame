@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowUpDown, RefreshCw, CheckSquare, Link } from 'lucide-react';
 import { LinksSubModal } from '@/components/modals/submodals/links-submodal';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { TaskStatus, TaskType, EntityType, LogEventType } from '@/types/enums';
 import { TASK_STATUS_COLORS } from '@/lib/constants/color-constants';
 import { calculateTaskProfitPercentage } from '@/lib/utils/business-utils';
@@ -28,9 +28,61 @@ export function TasksLifecycleTab({ tasksLog, onReload, isReloading }: TasksLife
   const [selectedTaskId, setSelectedTaskId] = useState<string>('');
   const [taskLinks, setTaskLinks] = useState<any[]>([]);
   const [selectedLogEntry, setSelectedLogEntry] = useState<any>(null);
+  const [sourceNameCache, setSourceNameCache] = useState<Record<string, string>>({});
 
   // Process tasks log data
   const processedTasksLog = processLogData(tasksLog, logOrder);
+
+  // Fetch source names for entries that need them
+  useEffect(() => {
+    const fetchSourceNames = async () => {
+      const entries = processedTasksLog.entries || [];
+      const sourceIds = new Set<string>();
+      
+      // Collect all sourceIds that need lookup
+      entries.forEach((entry: any) => {
+        const data = entry?.data || {};
+        const sourceId = data.sourceSaleId || entry.sourceSaleId;
+        if (sourceId && !sourceNameCache[sourceId]) {
+          sourceIds.add(sourceId);
+        }
+      });
+      
+      if (sourceIds.size === 0) return;
+      
+      try {
+        const { ClientAPI } = await import('@/lib/client-api');
+        const newCache: Record<string, string> = { ...sourceNameCache };
+        
+        const entriesWithSaleSources = entries.filter((entry: any) => {
+          const sourceId = entry?.data?.sourceSaleId || entry?.sourceSaleId;
+          return sourceId && !newCache[sourceId];
+        });
+        
+        if (entriesWithSaleSources.length > 0) {
+          const sales = await ClientAPI.getSales();
+          entriesWithSaleSources.forEach((entry: any) => {
+            const sourceId = entry?.data?.sourceSaleId || entry?.sourceSaleId;
+            if (sourceId) {
+              const sale = sales.find((s: any) => s.id === sourceId);
+              if (sale) {
+                const truncatedName = sale.name.length > 30 
+                  ? sale.name.substring(0, 27) + '...' 
+                  : sale.name;
+                newCache[sourceId] = truncatedName;
+              }
+            }
+          });
+        }
+        
+        setSourceNameCache(newCache);
+      } catch (error) {
+        console.error('Failed to fetch source names:', error);
+      }
+    };
+    
+    fetchSourceNames();
+  }, [processedTasksLog.entries, sourceNameCache]);
 
   // Ensure Tailwind recognizes all possible classes by listing them here:
   // bg-orange-100 text-orange-800 bg-orange-900 text-orange-200 (CREATED)
@@ -152,8 +204,9 @@ export function TasksLifecycleTab({ tasksLog, onReload, isReloading }: TasksLife
                   const description: string = data.description || entry.description || '';
                   const type: string = entry.taskType || data.taskType || '—';
                   const station: string = formatStation(entry.station || data.station);
-                  const category: string = formatCategory(entry.category || data.category);
                   const priority: string = formatPriority(entry.priority || data.priority);
+                  const sourceSaleId = data.sourceSaleId || entry.sourceSaleId;
+                  const truncatedSourceName = sourceSaleId ? sourceNameCache[sourceSaleId] || '' : '';
                   
                   // Debug logging for Done entries
                   if (status.toLowerCase() === 'done') {
@@ -162,13 +215,11 @@ export function TasksLifecycleTab({ tasksLog, onReload, isReloading }: TasksLife
                       data,
                       status,
                       station: data.station || entry.station,
-                      category: data.category || entry.category,
                       type: data.taskType || entry.taskType,
                       formattedStation: station,
-                      formattedCategory: category,
                       formattedType: type,
-                      secondRowParts: [station, category, type].filter(p => p !== '—'),
-                      secondRowInfo: [station, category, type].filter(p => p !== '—').join(' • ')
+                      secondRowParts: [station, type].filter(p => p !== '—'),
+                      secondRowInfo: [station, type].filter(p => p !== '—').join(' • ')
                     });
                   }
                   const progress: number = data.progress || 0;
@@ -211,12 +262,8 @@ export function TasksLifecycleTab({ tasksLog, onReload, isReloading }: TasksLife
                   
                   // Second row info
                   const secondRowParts = [];
-                  if (station !== '—' && category !== '—') {
-                    secondRowParts.push(`${station} • ${category}`);
-                  } else if (station !== '—') {
+                  if (station !== '—') {
                     secondRowParts.push(station);
-                  } else if (category !== '—') {
-                    secondRowParts.push(category);
                   }
                   if (type !== '—') {
                     secondRowParts.push(type);
@@ -265,6 +312,13 @@ export function TasksLifecycleTab({ tasksLog, onReload, isReloading }: TasksLife
                           {renameInfo && (
                             <span className="text-xs text-muted-foreground min-w-0 flex-shrink-0">
                               {renameInfo}
+                            </span>
+                          )}
+                          
+                          {/* Source */}
+                          {truncatedSourceName && (
+                            <span className="text-xs text-muted-foreground min-w-0 flex-shrink-0">
+                              source: {truncatedSourceName}
                             </span>
                           )}
                         </div>

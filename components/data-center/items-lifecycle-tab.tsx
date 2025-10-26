@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowUpDown, RefreshCw, Link } from 'lucide-react';
 import { LinksSubModal } from '@/components/modals/submodals/links-submodal';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { processLogData } from '@/lib/utils/logging-utils';
 import { EntityType, LogEventType } from '@/types/enums';
 import { LOG_DISPLAY_ICONS, FINANCIAL_ABBREVIATIONS } from '@/lib/constants/icon-maps';
@@ -29,9 +29,83 @@ export function ItemsLifecycleTab({ itemsLog, onReload, isReloading }: ItemsLife
   const [selectedItemId, setSelectedItemId] = useState<string>('');
   const [itemLinks, setItemLinks] = useState<any[]>([]);
   const [selectedLogEntry, setSelectedLogEntry] = useState<any>(null);
+  const [sourceNameCache, setSourceNameCache] = useState<Record<string, string>>({});
 
   // Process items log data
   const processedItemsLog = processLogData(itemsLog, logOrder);
+
+  // Fetch source names for entries that need them
+  useEffect(() => {
+    const fetchSourceNames = async () => {
+      const entries = processedItemsLog.entries || [];
+      const sourceIds = new Set<string>();
+      
+      // Collect all sourceIds that need lookup
+      entries.forEach((entry: any) => {
+        const data = entry?.data || {};
+        const sourceId = data.sourceId || entry.sourceId;
+        const sourceType = data.sourceType || entry.sourceType;
+        if (sourceId && sourceType && !sourceNameCache[sourceId]) {
+          sourceIds.add(sourceId);
+        }
+      });
+      
+      if (sourceIds.size === 0) return;
+      
+      try {
+        const { ClientAPI } = await import('@/lib/client-api');
+        const newCache: Record<string, string> = { ...sourceNameCache };
+        
+        const entriesWithTaskSources = entries.filter((entry: any) => {
+          const sourceType = entry?.data?.sourceType || entry?.sourceType;
+          return sourceType === 'task';
+        });
+        
+        if (entriesWithTaskSources.length > 0) {
+          const tasks = await ClientAPI.getTasks();
+          entriesWithTaskSources.forEach((entry: any) => {
+            const sourceId = entry?.data?.sourceId || entry?.sourceId;
+            if (sourceId) {
+              const task = tasks.find((t: any) => t.id === sourceId);
+              if (task) {
+                const truncatedName = task.name.length > 30 
+                  ? task.name.substring(0, 27) + '...' 
+                  : task.name;
+                newCache[sourceId] = truncatedName;
+              }
+            }
+          });
+        }
+        
+        const entriesWithRecordSources = entries.filter((entry: any) => {
+          const sourceType = entry?.data?.sourceType || entry?.sourceType;
+          return sourceType === 'record';
+        });
+        
+        if (entriesWithRecordSources.length > 0) {
+          const records = await ClientAPI.getFinancialRecords();
+          entriesWithRecordSources.forEach((entry: any) => {
+            const sourceId = entry?.data?.sourceId || entry?.sourceId;
+            if (sourceId) {
+              const record = records.find((r: any) => r.id === sourceId);
+              if (record) {
+                const truncatedName = record.name.length > 30 
+                  ? record.name.substring(0, 27) + '...' 
+                  : record.name;
+                newCache[sourceId] = truncatedName;
+              }
+            }
+          });
+        }
+        
+        setSourceNameCache(newCache);
+      } catch (error) {
+        console.error('Failed to fetch source names:', error);
+      }
+    };
+    
+    fetchSourceNames();
+  }, [processedItemsLog.entries, sourceNameCache]);
 
   const getItemStatusBadgeColor = (status: string) => {
     const itemStatus = Object.values(ItemStatus).find(is => is === status);
@@ -132,13 +206,20 @@ export function ItemsLifecycleTab({ itemsLog, onReload, isReloading }: ItemsLife
                   
                   // Extract item fields
                   const name = data.name || entry.name || entry.itemName || 'Unnamed Item';
-                  const itemType = data.type || entry.type || data.itemType || entry.itemType || '—';
+                  const itemType = data.itemType || entry.itemType || '—';
                   const station = data.station || entry.station || '—';
-                  const category = data.category || entry.category || '—';
+                  const subItemType = data.subItemType || entry.subItemType || '—';
+                  const collection = data.collection || entry.collection || '—';
                   const quantity = data.quantity || entry.quantity;
-                  const unitCost = data.unitCost || data.cost || 0;
-                  const price = data.price || 0;
+                  const unitCost = data.unitCost || entry.unitCost || entry.cost || 0;
+                  const price = data.price || entry.price || 0;
+                  const year = data.year || entry.year;
+                  const sourceType = data.sourceType || entry.sourceType;
+                  const sourceId = data.sourceId || entry.sourceId;
                   const date = entry.displayDate || entry.timestamp || '';
+                  
+                  // Get source name from cache
+                  const truncatedSourceName = sourceId ? sourceNameCache[sourceId] || '' : '';
                   
                   // Handle bulk operations
                   if (statusRaw === 'BULK_IMPORT' || statusRaw === 'BULK_EXPORT') {
@@ -191,13 +272,6 @@ export function ItemsLifecycleTab({ itemsLog, onReload, isReloading }: ItemsLife
                             {name}
                           </span>
                           
-                          {/* Type */}
-                          {itemType !== '—' && (
-                            <span className="text-muted-foreground min-w-0 flex-shrink-0">
-                              {itemType}
-                            </span>
-                          )}
-                          
                           {/* Station */}
                           {station !== '—' && (
                             <span className="text-muted-foreground min-w-0 flex-shrink-0">
@@ -205,10 +279,24 @@ export function ItemsLifecycleTab({ itemsLog, onReload, isReloading }: ItemsLife
                             </span>
                           )}
                           
-                          {/* Category */}
-                          {category !== '—' && (
+                          {/* Type */}
+                          {itemType !== '—' && (
                             <span className="text-muted-foreground min-w-0 flex-shrink-0">
-                              {category}
+                              {itemType}
+                            </span>
+                          )}
+                          
+                          {/* SubItemType */}
+                          {subItemType !== '—' && (
+                            <span className="text-muted-foreground min-w-0 flex-shrink-0">
+                              {subItemType}
+                            </span>
+                          )}
+                          
+                          {/* Collection */}
+                          {collection !== '—' && (
+                            <span className="text-muted-foreground min-w-0 flex-shrink-0">
+                              {collection}
                             </span>
                           )}
                           
@@ -220,16 +308,30 @@ export function ItemsLifecycleTab({ itemsLog, onReload, isReloading }: ItemsLife
                           )}
                           
                           {/* Unit Cost */}
-                          {unitCost > 0 && (
+                          {unitCost !== undefined && (
                             <span className="text-muted-foreground min-w-0 flex-shrink-0">
                               Cost: ${unitCost}
                             </span>
                           )}
                           
                           {/* Price */}
-                          {price > 0 && (
+                          {price !== undefined && (
                             <span className="text-muted-foreground min-w-0 flex-shrink-0">
                               ${price}
+                            </span>
+                          )}
+                          
+                          {/* Year */}
+                          {year && (
+                            <span className="text-muted-foreground min-w-0 flex-shrink-0">
+                              Y: {year}
+                            </span>
+                          )}
+                          
+                          {/* Source */}
+                          {truncatedSourceName && (
+                            <span className="text-xs text-muted-foreground min-w-0 flex-shrink-0">
+                              source: {truncatedSourceName}
                             </span>
                           )}
                         </div>
