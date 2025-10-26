@@ -222,18 +222,21 @@ export function TasksLifecycleTab({ tasksLog, onReload, isReloading }: TasksLife
                   if (status === 'renamed' && data.oldValue && data.newValue) {
                     statusBadge = 'Renamed';
                     renameInfo = `Changed from: "${data.oldValue}"`;
-                  } else if (status === LogEventType.UPDATED && data.field && data.oldValue !== undefined && data.newValue !== undefined) {
+                  } else if (status === LogEventType.UPDATED) {
                     statusBadge = 'Updated';
-                    renameInfo = `${data.field}: "${data.oldValue}" → "${data.newValue}"`;
+                    // Check if it's a field update or status change
+                    if (data.field && data.oldValue !== undefined && data.newValue !== undefined) {
+                      renameInfo = `${data.field}: "${data.oldValue}" → "${data.newValue}"`;
+                    } else if (data.newStatus) {
+                      renameInfo = data.oldStatus ? `Changed from: "${data.oldStatus}"` : '';
+                      statusBadge = data.newStatus || 'Status Changed';
+                    }
                   } else if (status === LogEventType.CREATED) {
                     statusBadge = 'Created';
                   } else if (status.toLowerCase() === LogEventType.DONE.toLowerCase()) {
                     statusBadge = 'Done';
                   } else if (status === LogEventType.COLLECTED) {
                     statusBadge = 'Collected';
-                  } else if (status === LogEventType.STATUS_CHANGED) {
-                    statusBadge = data.newStatus || 'Status Changed';
-                    renameInfo = data.oldStatus ? `Changed from: "${data.oldStatus}"` : '';
                   } else if (status === 'BULK_IMPORT') {
                     statusBadge = 'Bulk Import';
                     const count = data.count || 0;
