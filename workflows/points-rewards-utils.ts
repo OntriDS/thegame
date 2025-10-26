@@ -5,6 +5,7 @@ import { makeLink } from '@/links/links-workflows';
 import { createLink } from '@/links/link-registry';
 import { LinkType, EntityType } from '@/types/enums';
 import { appendPlayerPointsLog, appendCharacterJungleCoinsLog } from './entities-logging';
+import { PLAYER_ONE_ID } from '@/lib/constants/entity-constants';
 
 /**
  * Awards points to a player with idempotency and proper tracking
@@ -276,7 +277,7 @@ export function calculatePointsFromRevenue(revenue: number): Rewards['points'] {
  * TODO: V0.2 - Use character.playerId field
  */
 export function getMainPlayerId(): string {
-  return 'PLAYER_ONE_ID'; // V0.1 constant
+  return PLAYER_ONE_ID; // V0.1 constant
 }
 
 /**

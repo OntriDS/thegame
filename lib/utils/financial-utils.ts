@@ -70,21 +70,6 @@ export function aggregateRecordsByStation(
   records: FinancialRecord[],
   stations: readonly Station[]
 ): AreaBreakdown {
-  // DEBUG: Log aggregation process
-  console.log('🔍 [aggregateRecordsByStation] DEBUG - Starting aggregation:', {
-    recordsCount: records.length,
-    stationsCount: stations.length,
-    stations: stations,
-    records: records.map(r => ({
-      id: r.id,
-      name: r.name,
-      station: r.station,
-      revenue: r.revenue,
-      cost: r.cost,
-      type: r.type
-    }))
-  });
-  
   // Initialize breakdown with zeros for all stations
   const breakdown: AreaBreakdown = {};
   stations.forEach(station => {
@@ -96,23 +81,16 @@ export function aggregateRecordsByStation(
     };
   });
   
-  console.log('🔍 [aggregateRecordsByStation] DEBUG - Initialized breakdown:', breakdown);
-  
   // Aggregate records by station
   records.forEach(record => {
-    console.log(`🔍 [aggregateRecordsByStation] Processing record: ${record.name} (station: ${record.station})`);
     if (breakdown[record.station]) {
-      console.log(`✅ [aggregateRecordsByStation] Found station ${record.station} in breakdown, adding values`);
       breakdown[record.station].revenue += record.revenue;
       breakdown[record.station].cost += record.cost;
       breakdown[record.station].net += (record.revenue - record.cost);
       breakdown[record.station].jungleCoins += record.jungleCoins;
-    } else {
-      console.warn(`❌ [aggregateRecordsByStation] Station ${record.station} NOT FOUND in breakdown! Available stations:`, Object.keys(breakdown));
     }
   });
   
-  console.log('🔍 [aggregateRecordsByStation] DEBUG - Final breakdown:', breakdown);
   return breakdown;
 }
 
@@ -122,12 +100,12 @@ export function aggregateRecordsByStation(
 export function calculateTotals(breakdown: AreaBreakdown) {
   return Object.values(breakdown).reduce(
     (totals, station) => ({
-      revenue: totals.revenue + station.revenue,
-      cost: totals.cost + station.cost,
+      totalRevenue: totals.totalRevenue + station.revenue,
+      totalCost: totals.totalCost + station.cost,
       net: totals.net + station.net,
-      jungleCoins: totals.jungleCoins + station.jungleCoins
+      totalJungleCoins: totals.totalJungleCoins + station.jungleCoins
     }),
-    { revenue: 0, cost: 0, net: 0, jungleCoins: 0 }
+    { totalRevenue: 0, totalCost: 0, net: 0, totalJungleCoins: 0 }
   );
 }
 

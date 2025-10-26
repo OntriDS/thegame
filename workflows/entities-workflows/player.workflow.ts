@@ -8,6 +8,7 @@ import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data
 import { getLinksFor, removeLink } from '@/links/link-registry';
 import { getAllPlayers, upsertPlayer } from '@/data-store/datastore';
 import { appendPlayerPointsLog, appendPlayerPointsUpdateLog } from '../entities-logging';
+import { PLAYER_ONE_ID } from '@/lib/constants/entity-constants';
 import type { Task, FinancialRecord } from '@/types/entities';
 
 const STATE_FIELDS = ['level', 'totalPoints', 'points', 'isActive'];
@@ -133,7 +134,7 @@ export async function logPlayerEffect(task: Task): Promise<void> {
     }
     
     // Get main player ID (V0.1 constant)
-    const mainPlayerId = 'PLAYER_ONE_ID';
+    const mainPlayerId = PLAYER_ONE_ID;
     
     await appendPlayerPointsLog(
       mainPlayerId,
@@ -174,7 +175,7 @@ export async function logPlayerEffectFromRecord(record: FinancialRecord): Promis
     }
     
     // Get main player ID (V0.1 constant)
-    const mainPlayerId = 'PLAYER_ONE_ID';
+    const mainPlayerId = PLAYER_ONE_ID;
     
     await appendPlayerPointsLog(
       mainPlayerId,
@@ -213,7 +214,7 @@ export async function logPlayerUpdateFromTask(task: Task, oldTask: Task): Promis
     }
     
     // Get main player ID (V0.1 constant)
-    const mainPlayerId = 'PLAYER_ONE_ID';
+    const mainPlayerId = PLAYER_ONE_ID;
     
     await appendPlayerPointsUpdateLog(
       mainPlayerId,
@@ -265,7 +266,7 @@ export async function updatePlayerPointsFromTask(task: Task, oldTask: Task): Pro
     }
     
     // Get main player
-    const mainPlayerId = 'PLAYER_ONE_ID';
+    const mainPlayerId = PLAYER_ONE_ID;
     const players = await getAllPlayers();
     const mainPlayer = players.find(p => p.id === mainPlayerId);
     

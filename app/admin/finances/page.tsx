@@ -135,38 +135,10 @@ export default function FinancesPage() {
       r.type === 'personal'
     );
     
-    // DEBUG: Log financial records and station mapping
-    console.log('🔍 [loadSummaries] DEBUG - Financial Records Analysis:', {
-      allRecords: records.length,
-      companyRecords: companyRecords.length,
-      personalRecords: personalRecords.length,
-      currentYear,
-      currentMonth,
-      companyRecordsData: companyRecords.map(r => ({
-        id: r.id,
-        name: r.name,
-        station: r.station,
-        type: r.type,
-        revenue: r.revenue,
-        cost: r.cost,
-        year: r.year,
-        month: r.month
-      }))
-    });
-    
     // Aggregate company records by station using DRY utility
     const companyStations = getCompanyAreas().flatMap(area => BUSINESS_STRUCTURE[area]);
-    console.log('🔍 [loadSummaries] DEBUG - Station Mapping:', {
-      companyAreas: getCompanyAreas(),
-      companyStations,
-      businessStructure: BUSINESS_STRUCTURE
-    });
-    
     const companyBreakdown = aggregateRecordsByStation(companyRecords, companyStations);
-    console.log('🔍 [loadSummaries] DEBUG - Company Breakdown:', companyBreakdown);
-    
     const companyTotals = calculateTotals(companyBreakdown);
-    console.log('🔍 [loadSummaries] DEBUG - Company Totals:', companyTotals);
     
     // Aggregate personal records by station using DRY utility
     const personalStations = BUSINESS_STRUCTURE.PERSONAL;
@@ -177,20 +149,20 @@ export default function FinancesPage() {
     const company: CompanyMonthlySummary = {
       year: currentYear,
       month: currentMonth,
-      totalRevenue: companyTotals.revenue,
-      totalCost: companyTotals.cost,
+      totalRevenue: companyTotals.totalRevenue,
+      totalCost: companyTotals.totalCost,
       netCashflow: companyTotals.net,
-      totalJungleCoins: companyTotals.jungleCoins,
+      totalJungleCoins: companyTotals.totalJungleCoins,
       categoryBreakdown: companyBreakdown
     };
     
     const personal: PersonalMonthlySummary = {
       year: currentYear,
       month: currentMonth,
-      totalRevenue: personalTotals.revenue,
-      totalCost: personalTotals.cost,
+      totalRevenue: personalTotals.totalRevenue,
+      totalCost: personalTotals.totalCost,
       netCashflow: personalTotals.net,
-      totalJungleCoins: personalTotals.jungleCoins,
+      totalJungleCoins: personalTotals.totalJungleCoins,
       categoryBreakdown: personalBreakdown
     };
     
