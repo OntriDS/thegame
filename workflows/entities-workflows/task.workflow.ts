@@ -195,10 +195,12 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
     }
   }
   
-  // Descriptive changes - update in-place
-  for (const field of DESCRIPTIVE_FIELDS) {
-    if ((previousTask as any)[field] !== (task as any)[field]) {
-      await updateEntityLogField(EntityType.TASK, task.id, field, (previousTask as any)[field], (task as any)[field]);
+  // Descriptive changes - update in-place (only when there is a previous task to compare)
+  if (previousTask) {
+    for (const field of DESCRIPTIVE_FIELDS) {
+      if ((previousTask as any)[field] !== (task as any)[field]) {
+        await updateEntityLogField(EntityType.TASK, task.id, field, (previousTask as any)[field], (task as any)[field]);
+      }
     }
   }
 }
