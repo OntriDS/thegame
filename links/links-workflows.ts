@@ -75,18 +75,8 @@ export async function processTaskEffects(task: Task): Promise<void> {
     await appendLinkLog(l, 'created');
   }
   
-  // TASK_CHARACTER link (from playerCharacterId)
-  if (task.playerCharacterId) {
-    const l = makeLink(
-      LinkType.TASK_CHARACTER,
-      { type: EntityType.TASK, id: task.id },
-      { type: EntityType.CHARACTER, id: task.playerCharacterId }
-    );
-    await createLink(l);
-    await appendLinkLog(l, 'created');
-  }
-  
   // TASK_CHARACTER link (from customerCharacterId)
+  // NOTE: playerCharacterId is internal assignment, not logged as a character action
   if (task.customerCharacterId) {
     // Check if link already exists to prevent duplicates
     const existingLinks = await getLinksFor({ type: EntityType.TASK, id: task.id });
@@ -103,8 +93,13 @@ export async function processTaskEffects(task: Task): Promise<void> {
       await createLink(l);
       await appendLinkLog(l, 'created');
       
+      // Get character name for logging
+      const characters = await getAllCharacters();
+      const character = characters.find((c: Character) => c.id === task.customerCharacterId);
+      
       // Log in character log (customer requested task)
       await appendEntityLog(EntityType.CHARACTER, task.customerCharacterId, LogEventType.REQUESTED_TASK, {
+        name: character?.name || 'Unknown Character',
         taskId: task.id,
         taskName: task.name,
         taskType: task.type,
