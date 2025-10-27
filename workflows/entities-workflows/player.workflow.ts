@@ -7,7 +7,7 @@ import { appendEntityLog, updateEntityLogField } from '../entities-logging';
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
 import { EffectKeys } from '@/data-store/keys';
 import { getLinksFor, removeLink } from '@/links/link-registry';
-import { getAllPlayers, upsertPlayer } from '@/data-store/datastore';
+import { getAllPlayers, upsertPlayer } from '@/data-store/repositories/player.repo';
 import { appendPlayerPointsLog, appendPlayerPointsUpdateLog } from '../entities-logging';
 import { PLAYER_ONE_ID } from '@/lib/constants/entity-constants';
 import type { Task, FinancialRecord } from '@/types/entities';

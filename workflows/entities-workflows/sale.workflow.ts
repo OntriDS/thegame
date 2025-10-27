@@ -7,7 +7,8 @@ import { appendEntityLog, updateEntityLogField } from '../entities-logging';
 import { hasEffect, markEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
 import { EffectKeys } from '@/data-store/keys';
 import { getLinksFor, removeLink } from '@/links/link-registry';
-import { getAllSales, getAllPlayers } from '@/data-store/datastore';
+import { getAllSales } from '@/data-store/repositories/sale.repo';
+import { getAllPlayers } from '@/data-store/repositories/player.repo';
 import { awardPointsToPlayer, removePointsFromPlayer, calculatePointsFromRevenue, getMainPlayerId } from '../points-rewards-utils';
 import { processSaleLines } from '../sale-line-utils';
 import { 

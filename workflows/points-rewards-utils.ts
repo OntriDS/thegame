@@ -1,6 +1,7 @@
 // thegame/workflows/points-rewards-utils.ts
 import type { Player, Character, Rewards } from '@/types/entities';
-import { getAllPlayers, upsertPlayer, getAllCharacters, upsertCharacter } from '@/data-store/datastore';
+import { getAllPlayers, upsertPlayer } from '@/data-store/repositories/player.repo';
+import { getAllCharacters, upsertCharacter } from '@/data-store/repositories/character.repo';
 import { makeLink } from '@/links/links-workflows';
 import { createLink } from '@/links/link-registry';
 import { LinkType, EntityType } from '@/types/enums';
