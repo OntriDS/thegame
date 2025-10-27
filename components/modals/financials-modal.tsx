@@ -219,7 +219,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
         site: record.siteId || 'Home',
         targetSite: record.targetSiteId || 'Home',
         customerCharacterId: record.customerCharacterId || null,
-        isNewCustomer: false, // Always false when loading existing record
+        isNewCustomer: !record.customerCharacterId, // Toggle based on whether customer exists
         newCustomerName: '',
         points: { 
           hp: record.rewards?.points?.hp || 0, 

@@ -691,6 +691,10 @@ export enum LogEventType {
   
   // Character-specific events
   ROLE_CHANGED = 'ROLE_CHANGED',
+  OWNS_ITEM = 'OWNS_ITEM',           // Character owns an item
+  REQUESTED_TASK = 'REQUESTED_TASK', // Character requested a task
+  PURCHASED = 'PURCHASED',            // Character made a purchase
+  TRANSACTED = 'TRANSACTED',          // Character in financial transaction
   
   // Account-specific events
   EMAIL_VERIFIED = 'EMAIL_VERIFIED',

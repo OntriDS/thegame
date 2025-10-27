@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, Gamepad, ArrowUpDown, Link as LinkIcon, User } from 'lucide-react';
 import { LinksSubModal } from '@/components/modals/submodals/links-submodal';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { formatDisplayDate } from '@/lib/utils/date-utils';
 import { EntityType } from '@/types/enums';
 import { getPointsMetadata } from '@/lib/utils/points-utils';
@@ -38,10 +38,91 @@ export function PlayerLogTab({ playerLog, onReload, isReloading }: PlayerLogTabP
   const [playerLinks, setPlayerLinks] = useState<any[]>([]);
   const [selectedLogEntry, setSelectedLogEntry] = useState<any>(null);
   const [selectedEntityType, setSelectedEntityType] = useState<string>(EntityType.PLAYER);
+  const [sourceNameCache, setSourceNameCache] = useState<Record<string, string>>({});
 
   // Process player log data using normalized approach
   const processedPlayerLog = processLogData(playerLog, logOrder);
   const sortedEntries = processedPlayerLog.entries || [];
+
+  // Fetch source names for entries that need them
+  useEffect(() => {
+    const fetchSourceNames = async () => {
+      const entries = processedPlayerLog.entries || [];
+      
+      try {
+        const newCache: Record<string, string> = { ...sourceNameCache };
+        
+        // Fetch tasks
+        const entriesWithTaskSources = entries.filter((entry: any) => {
+          const sourceType = entry.sourceType || entry.data?.sourceType;
+          return sourceType === 'task';
+        });
+        
+        if (entriesWithTaskSources.length > 0) {
+          const tasks = await ClientAPI.getTasks();
+          entriesWithTaskSources.forEach((entry: any) => {
+            const sourceId = entry.sourceId || entry.data?.sourceId;
+            if (sourceId && !newCache[sourceId]) {
+              const task = tasks.find((t: any) => t.id === sourceId);
+              if (task) {
+                newCache[sourceId] = task.name.length > 30 
+                  ? task.name.substring(0, 27) + '...' 
+                  : task.name;
+              }
+            }
+          });
+        }
+        
+        // Fetch financial records
+        const entriesWithFinancialSources = entries.filter((entry: any) => {
+          const sourceType = entry.sourceType || entry.data?.sourceType;
+          return sourceType === 'financial';
+        });
+        
+        if (entriesWithFinancialSources.length > 0) {
+          const records = await ClientAPI.getFinancialRecords();
+          entriesWithFinancialSources.forEach((entry: any) => {
+            const sourceId = entry.sourceId || entry.data?.sourceId;
+            if (sourceId && !newCache[sourceId]) {
+              const record = records.find((r: any) => r.id === sourceId);
+              if (record) {
+                newCache[sourceId] = record.name.length > 30 
+                  ? record.name.substring(0, 27) + '...' 
+                  : record.name;
+              }
+            }
+          });
+        }
+        
+        if (Object.keys(newCache).length > Object.keys(sourceNameCache).length) {
+          setSourceNameCache(newCache);
+        }
+      } catch (error) {
+        console.error('Failed to fetch source names:', error);
+      }
+    };
+    
+    fetchSourceNames();
+  }, [processedPlayerLog.entries]);
+
+  // Helper function to determine action label based on entry type
+  const getActionLabel = (entry: any): string => {
+    const data = entry.data || {};
+    const points = entry.points || data.points;
+    const delta = entry.delta || data.delta;
+    
+    if (delta) {
+      // Points update (rewards changed)
+      return 'Points Updated';
+    } else if (points) {
+      // Check if any points are negative (future: Lost Points)
+      const hasNegative = (points.xp || 0) < 0 || (points.rp || 0) < 0 || 
+                         (points.fp || 0) < 0 || (points.hp || 0) < 0;
+      return hasNegative ? 'Lost Points' : 'Win Points';
+    }
+    
+    return entry.event || 'Player Activity';
+  };
 
   return (
     <Card>
@@ -95,12 +176,27 @@ export function PlayerLogTab({ playerLog, onReload, isReloading }: PlayerLogTabP
                 >
                   {/* Single row with all info */}
                   <div className="flex items-center gap-3 flex-1 min-w-0">
+                    {/* Action Label Badge */}
                     <Badge variant="outline" className="capitalize shrink-0">
-                      {entry.event}
+                      {getActionLabel(entry)}
                     </Badge>
-                    <span className="text-sm font-medium truncate">
-                      {entry.displayName || entry.description || 'Player activity'}
-                    </span>
+
+                    {/* Source Information */}
+                    {(entry.sourceId || entry.data?.sourceId) && (
+                      <span className="text-sm text-muted-foreground truncate">
+                        from {entry.sourceType || entry.data?.sourceType}: {
+                          sourceNameCache[entry.sourceId || entry.data?.sourceId] || 
+                          (entry.sourceId || entry.data?.sourceId).substring(0, 8) + '...'
+                        }
+                      </span>
+                    )}
+
+                    {/* Player name (for non-points events) */}
+                    {!entry.points && !entry.data?.points && (
+                      <span className="text-sm font-medium truncate">
+                        {entry.displayName || 'Player activity'}
+                      </span>
+                    )}
                     
                     {/* Points Display - DRY using helper */}
                     {(entry.points || data.points) && (

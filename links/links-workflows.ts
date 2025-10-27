@@ -1,13 +1,14 @@
 // links/links-workflows.ts
 // Universal entry point for creating links from entities (property inspection)
 
-import { EntityType, LinkType } from '@/types/enums';
+import { EntityType, LinkType, LogEventType } from '@/types/enums';
 import type { Task, Item, Sale, FinancialRecord, Character, Player, Site, Link } from '@/types/entities';
 import { createLink, removeLink, getLinksFor } from './link-registry';
 import { appendLinkLog } from './links-logging';
 import { getAllItems } from '@/data-store/datastore';
 import { v4 as uuid } from 'uuid';
 import { isProcessing, startProcessing, endProcessing } from '@/data-store/effects-registry';
+import { appendEntityLog } from '@/workflows/entities-logging';
 
 export function makeLink(linkType: LinkType, source: { type: EntityType; id: string }, target: { type: EntityType; id: string }, metadata?: Record<string, any>): Link {
   return {
@@ -73,7 +74,7 @@ export async function processTaskEffects(task: Task): Promise<void> {
     await appendLinkLog(l, 'created');
   }
   
-  // TASK_CHARACTER link
+  // TASK_CHARACTER link (from playerCharacterId)
   if (task.playerCharacterId) {
     const l = makeLink(
       LinkType.TASK_CHARACTER,
@@ -82,6 +83,27 @@ export async function processTaskEffects(task: Task): Promise<void> {
     );
     await createLink(l);
     await appendLinkLog(l, 'created');
+  }
+  
+  // TASK_CHARACTER link (from customerCharacterId)
+  if (task.customerCharacterId) {
+    const l = makeLink(
+      LinkType.TASK_CHARACTER,
+      { type: EntityType.TASK, id: task.id },
+      { type: EntityType.CHARACTER, id: task.customerCharacterId }
+    );
+    await createLink(l);
+    await appendLinkLog(l, 'created');
+    
+    // Log in character log (customer requested task)
+    const { ClientAPI } = await import('@/lib/client-api');
+    const taskData = await ClientAPI.getTaskById(task.id);
+    await appendEntityLog(EntityType.CHARACTER, task.customerCharacterId, LogEventType.REQUESTED_TASK, {
+      taskId: task.id,
+      taskName: taskData?.name || task.name,
+      taskType: taskData?.type || task.type,
+      station: taskData?.station || task.station
+    });
   }
   
   // Create TASK_ITEM link for items created from task emissary fields
@@ -165,6 +187,15 @@ export async function processItemEffects(item: Item): Promise<void> {
     );
     await createLink(l);
     await appendLinkLog(l, 'created');
+    
+    // Log in character log (customer owns item)
+    const { ClientAPI } = await import('@/lib/client-api');
+    const itemData = await ClientAPI.getItemById(item.id);
+    await appendEntityLog(EntityType.CHARACTER, item.ownerCharacterId, LogEventType.OWNS_ITEM, {
+      itemId: item.id,
+      itemName: itemData?.name || item.name,
+      itemType: itemData?.type || item.type
+    });
   } else {
     // If no owner, remove all ITEM_CHARACTER links
     const oldCharacterLinks = existingLinks.filter(l => l.linkType === LinkType.ITEM_CHARACTER);
@@ -193,6 +224,16 @@ export async function processSaleEffects(sale: Sale): Promise<void> {
     );
     await createLink(l);
     await appendLinkLog(l, 'created');
+    
+    // Log in character log (customer purchased)
+    const { ClientAPI } = await import('@/lib/client-api');
+    const saleData = await ClientAPI.getSaleById(sale.id);
+    await appendEntityLog(EntityType.CHARACTER, sale.customerId, LogEventType.PURCHASED, {
+      saleId: sale.id,
+      saleName: saleData?.name || saleData?.counterpartyName || sale.name,
+      saleType: saleData?.type || sale.type,
+      totalRevenue: saleData?.totals.totalRevenue || sale.totals.totalRevenue
+    });
   }
   
   // SALE_ITEM links (from sale lines)
@@ -241,6 +282,17 @@ export async function processFinancialEffects(fin: FinancialRecord): Promise<voi
     );
     await createLink(l);
     await appendLinkLog(l, 'created');
+    
+    // Log in character log (customer transacted)
+    const { ClientAPI } = await import('@/lib/client-api');
+    const finrec = await ClientAPI.getFinancialRecordById(fin.id);
+    await appendEntityLog(EntityType.CHARACTER, fin.customerCharacterId, LogEventType.TRANSACTED, {
+      financialId: fin.id,
+      financialName: finrec?.name || fin.name,
+      type: finrec?.type || fin.type,
+      cost: finrec?.cost || fin.cost,
+      revenue: finrec?.revenue || fin.revenue
+    });
   }
   
   // Create FINREC_ITEM link for items created from financial record emissary fields

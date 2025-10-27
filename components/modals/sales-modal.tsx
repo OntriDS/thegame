@@ -187,7 +187,9 @@ export default function SalesModal({
       setStatus(sale.status);
       setSiteId(sale.siteId);
       setCounterpartyName(sale.counterpartyName || '');
-      setCustomerId(sale.customerId || '');  // Load customer when editing sale
+      setCustomerId(sale.customerId || '');
+      setIsNewCustomer(!sale.customerId); // Toggle to "Existing" if customer exists
+      setNewCustomerName(''); // Clear new customer name
       setIsNotPaid(sale.isNotPaid || false);
       setIsNotCharged(sale.isNotCharged || false);
       setOverallDiscount(sale.overallDiscount || {});

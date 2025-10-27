@@ -252,6 +252,8 @@ export default function TaskModal({
       setIsSold(task.isSold || false);
       setOutputItemStatus(task.outputItemStatus || ItemStatus.FOR_SALE);
       setCustomerCharacterId(task.customerCharacterId || null);
+      setIsNewCustomer(!task.customerCharacterId); // Toggle to "Existing" if customer exists
+      setNewCustomerName(''); // Clear new customer name
       setPlayerCharacterId(task.playerCharacterId || CHARACTER_ONE_ID);
       setRewards({
         points: {
