@@ -91,6 +91,7 @@ logs
 PROJECT-STATUS - copia.json
 dev-log - copia.json
 
+.env.local
 .env
 .cursor
 

@@ -3,7 +3,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { BookOpen, Map, FileText, Compass, Zap, CheckCircle, AlertTriangle, X } from 'lucide-react';
+import { BookOpen, Map, FileText, Compass, Zap, CheckCircle, AlertTriangle, X, Bot } from 'lucide-react';
 import { useState, useEffect, Suspense } from 'react';
 import { NotebookType } from '@/types/enums';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
@@ -13,6 +13,7 @@ import { RoadmapsTab } from '@/components/research/roadmaps-tab';
 import { DiagramsTab } from '@/components/research/diagrams-tab';
 import { SystemDevelopmentTab } from '@/components/research/system-development-tab';
 import { DevSprintsTab } from '@/components/data-center/dev-sprints-tab';
+import { AIAssistantTab } from '@/components/research/ai-assistant-tab';
 
 function ResearchPageContent() {
   const { getPreference, setPreference } = useUserPreferences();
@@ -465,7 +466,11 @@ function ResearchPageContent() {
   return (
     <div className="container mx-auto px-4 space-y-6">
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
+          <TabsTrigger value="ai-assistant" className="flex items-center gap-2">
+            <Bot className="h-4 w-4" />
+            AI Assistant
+          </TabsTrigger>
           <TabsTrigger value="system-development" className="flex items-center gap-2">
             <BookOpen className="h-4 w-4" />
             System Development
@@ -487,6 +492,11 @@ function ResearchPageContent() {
             Notes
           </TabsTrigger>
         </TabsList>
+
+        {/* AI Assistant Tab */}
+        <TabsContent value="ai-assistant" className="space-y-6">
+          <AIAssistantTab />
+        </TabsContent>
 
         {/* System Development Tab */}
         <SystemDevelopmentTab projectStatus={projectStatus} />
