@@ -87,21 +87,29 @@ export async function processTaskEffects(task: Task): Promise<void> {
   
   // TASK_CHARACTER link (from customerCharacterId)
   if (task.customerCharacterId) {
-    const l = makeLink(
-      LinkType.TASK_CHARACTER,
-      { type: EntityType.TASK, id: task.id },
-      { type: EntityType.CHARACTER, id: task.customerCharacterId }
+    // Check if link already exists to prevent duplicates
+    const existingLinks = await getLinksFor({ type: EntityType.TASK, id: task.id });
+    const linkExists = existingLinks.some(
+      link => link.linkType === LinkType.TASK_CHARACTER && link.target.id === task.customerCharacterId
     );
-    await createLink(l);
-    await appendLinkLog(l, 'created');
     
-    // Log in character log (customer requested task)
-    await appendEntityLog(EntityType.CHARACTER, task.customerCharacterId, LogEventType.REQUESTED_TASK, {
-      taskId: task.id,
-      taskName: task.name,
-      taskType: task.type,
-      station: task.station
-    });
+    if (!linkExists) {
+      const l = makeLink(
+        LinkType.TASK_CHARACTER,
+        { type: EntityType.TASK, id: task.id },
+        { type: EntityType.CHARACTER, id: task.customerCharacterId }
+      );
+      await createLink(l);
+      await appendLinkLog(l, 'created');
+      
+      // Log in character log (customer requested task)
+      await appendEntityLog(EntityType.CHARACTER, task.customerCharacterId, LogEventType.REQUESTED_TASK, {
+        taskId: task.id,
+        taskName: task.name,
+        taskType: task.type,
+        station: task.station
+      });
+    }
   }
   
   // Create TASK_ITEM link for items created from task emissary fields

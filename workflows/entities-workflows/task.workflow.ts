@@ -498,8 +498,9 @@ export async function uncompleteTask(taskId: string): Promise<void> {
     
     // 3. Clear effects registry entries
     await clearEffect(EffectKeys.sideEffect('task', taskId, 'itemCreated'));
+    await clearEffect(EffectKeys.sideEffect('task', taskId, 'financialCreated'));
     await clearEffect(EffectKeys.sideEffect('task', taskId, 'pointsAwarded'));
-    console.log(`[uncompleteTask] ✅ Cleared effects registry entries`);
+    console.log(`[uncompleteTask] ✅ Cleared effects registry entries (itemCreated, financialCreated, pointsAwarded)`);
     
     // 4. Log UNCOMPLETED event
     await appendEntityLog(EntityType.TASK, taskId, LogEventType.UNCOMPLETED, {
