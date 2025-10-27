@@ -4,7 +4,7 @@
 
 import type { Task, Item, FinancialRecord } from '@/types/entities';
 import { ItemStatus, ItemType, LinkType, EntityType } from '@/types/enums';
-import { upsertItem, getAllItems, deleteItem, getItemsBySourceTaskId, getItemsBySourceRecordId } from '@/data-store/datastore';
+import { upsertItem, getAllItems, removeItem, getItemsBySourceTaskId, getItemsBySourceRecordId } from '@/data-store/datastore';
 import { hasEffect, markEffect } from '@/data-store/effects-registry';
 // links are created by processLinkEntity()
 import { v4 as uuid } from 'uuid';
@@ -162,7 +162,7 @@ export async function removeItemsCreatedByTask(taskId: string): Promise<void> {
     // Remove each item created by this task
     for (const item of itemsToRemove) {
       try {
-        await deleteItem(item.id);
+        await removeItem(item.id);
         console.log(`[removeItemsCreatedByTask] ✅ Removed item: ${item.name} (${item.id})`);
       } catch (error) {
         console.error(`[removeItemsCreatedByTask] ❌ Failed to remove item ${item.id}:`, error);
@@ -197,7 +197,7 @@ export async function removeItemsCreatedByRecord(recordId: string): Promise<void
     // Remove each item created by this record
     for (const item of itemsToRemove) {
       try {
-        await deleteItem(item.id);
+        await removeItem(item.id);
         console.log(`[removeItemsCreatedByRecord] ✅ Removed item: ${item.name} (${item.id})`);
       } catch (error) {
         console.error(`[removeItemsCreatedByRecord] ❌ Failed to remove item ${item.id}:`, error);

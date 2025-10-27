@@ -3,7 +3,7 @@
 
 import type { Task, FinancialRecord, Sale } from '@/types/entities';
 import { LinkType, EntityType, LogEventType } from '@/types/enums';
-import { upsertFinancial, getAllFinancials, getFinancialsBySourceTaskId, deleteFinancial } from '@/data-store/datastore';
+import { upsertFinancial, getAllFinancials, getFinancialsBySourceTaskId, removeFinancial } from '@/data-store/datastore';
 import { makeLink } from '@/links/links-workflows';
 import { createLink } from '@/links/link-registry';
 import { appendEntityLog } from './entities-logging';
@@ -186,7 +186,7 @@ export async function removeFinancialRecordsCreatedByTask(taskId: string): Promi
     // Remove each financial record
     for (const financial of taskFinancials) {
       try {
-        await deleteFinancial(financial.id);
+        await removeFinancial(financial.id);
         console.log(`[removeFinancialRecordsCreatedByTask] ✅ Removed financial record: ${financial.name}`);
       } catch (error) {
         console.error(`[removeFinancialRecordsCreatedByTask] ❌ Failed to remove financial record ${financial.id}:`, error);
