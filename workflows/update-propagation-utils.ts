@@ -4,11 +4,11 @@
 import type { Task, Item, Sale, FinancialRecord, Character, Player } from '@/types/entities';
 import { EntityType } from '@/types/enums';
 import { hasEffect, markEffect } from '@/data-store/effects-registry';
-import { getFinancialsBySourceTaskId, getAllFinancials, upsertFinancial } from '@/data-store/repositories/financial.repo';
-import { getItemsBySourceTaskId, getItemsBySourceRecordId, getAllItems, upsertItem } from '@/data-store/repositories/item.repo';
-import { getAllTasks, upsertTask } from '@/data-store/repositories/task.repo';
-import { getAllPlayers, upsertPlayer } from '@/data-store/repositories/player.repo';
-import { getAllCharacters, upsertCharacter } from '@/data-store/repositories/character.repo';
+import { getFinancialsBySourceTaskId, getAllFinancials, upsertFinancial } from '@/data-store/datastore';
+import { getItemsBySourceTaskId, getItemsBySourceRecordId, getAllItems, upsertItem } from '@/data-store/datastore';
+import { getAllTasks, upsertTask } from '@/data-store/datastore';
+import { getAllPlayers, upsertPlayer } from '@/data-store/datastore';
+import { getAllCharacters, upsertCharacter } from '@/data-store/datastore';
 
 // ============================================================================
 // TASK → FINANCIAL RECORD PROPAGATION

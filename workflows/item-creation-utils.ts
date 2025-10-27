@@ -4,7 +4,7 @@
 
 import type { Task, Item, FinancialRecord } from '@/types/entities';
 import { ItemStatus, ItemType, LinkType, EntityType } from '@/types/enums';
-import { upsertItem, getAllItems, deleteItem, getItemsBySourceTaskId, getItemsBySourceRecordId } from '@/data-store/repositories/item.repo';
+import { upsertItem, getAllItems, deleteItem, getItemsBySourceTaskId, getItemsBySourceRecordId } from '@/data-store/datastore';
 import { hasEffect, markEffect } from '@/data-store/effects-registry';
 // links are created by processLinkEntity()
 import { v4 as uuid } from 'uuid';

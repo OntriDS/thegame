@@ -3,7 +3,7 @@
 
 import type { Task, FinancialRecord, Sale } from '@/types/entities';
 import { LinkType, EntityType, LogEventType } from '@/types/enums';
-import { upsertFinancial, getAllFinancials, getFinancialsBySourceTaskId, deleteFinancial } from '@/data-store/repositories/financial.repo';
+import { upsertFinancial, getAllFinancials, getFinancialsBySourceTaskId, deleteFinancial } from '@/data-store/datastore';
 import { makeLink } from '@/links/links-workflows';
 import { createLink } from '@/links/link-registry';
 import { appendEntityLog } from './entities-logging';

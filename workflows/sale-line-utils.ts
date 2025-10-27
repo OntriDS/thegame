@@ -3,8 +3,8 @@
 
 import type { Sale, ItemSaleLine, BundleSaleLine, ServiceLine, Task } from '@/types/entities';
 import { LinkType, EntityType, LogEventType } from '@/types/enums';
-import { getAllItems, upsertItem } from '@/data-store/repositories/item.repo';
-import { upsertTask } from '@/data-store/repositories/task.repo';
+import { getAllItems, upsertItem } from '@/data-store/datastore';
+import { upsertTask } from '@/data-store/datastore';
 import { makeLink } from '@/links/links-workflows';
 import { createLink } from '@/links/link-registry';
 import { hasEffect, markEffect } from '@/data-store/effects-registry';

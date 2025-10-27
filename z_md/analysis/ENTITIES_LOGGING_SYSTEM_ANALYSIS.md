@@ -659,27 +659,37 @@ if (previousEntity) {
 - KV write failures (check console for errors)
 - KV connection issues (check KV credentials/setup)
 
-**🔴 CRITICAL: Items/Financials Not Logging When Task Done**
+**✅ FIXED: Items/Financials Not Logging When Task Done**
 
-**Problem:** Items and Financials lifecycle logs are empty even after completing tasks that have the required fields.
+**Problem:** Items and Financials lifecycle logs were not logging after completing tasks that have the required fields.
 
-**Actual Root Cause:**
-- Effects Registry has leftover `effectKey` marks from previous runs
-- Task workflow checks `if (!(await hasEffect(effectKey)))` before creating items/financials
-- If effect is already marked → Creation/logging is SKIPPED
-- Effects never cleared when task is uncompleted or when testing
-
-**Evidence:**
-- Task A has `outputItemType` and `revenue: $2` (visible in UI)
-- Task A shows as Done in tasks log
-- But items and financials logs are empty
-- This means: `hasEffect('task:TaskA:id:itemCreated')` returns `true`
-- This means: `hasEffect('task:TaskA:id:financialCreated')` returns `true`
+**Root Cause:**
+- Utilities called repository functions instead of datastore functions
+- Repository only saves to KV (no workflows, no logging)
+- Datastore saves to KV + runs workflows + logs + processes links
 
 **Solution:**
-1. Clear all effects: Run Settings → Clear Cache or manually clear KV `effects:*` keys
-2. Fix Task: Uncomplete Task A → Re-complete it → Should create items/financials
-3. **PROPER FIX**: Effects should be cleared when task status changes from Done to non-Done
+Changed imports in 5 workflow files from `@/data-store/repositories/` to `@/data-store/datastore`:
+- ✅ `item-creation-utils.ts`
+- ✅ `financial-record-utils.ts`
+- ✅ `update-propagation-utils.ts`
+- ✅ `sale-line-utils.ts`
+- ✅ `points-rewards-utils.ts`
+
+**Evidence Before Fix:**
+- Task A outputed  `outputItemType` and `revenue: $2` (visible in UI)
+- Task A shows as Done in tasks log
+- But items and financials logs were empty (entities were created, but not logged)
+
+**Architecture Flow Now:**
+```
+Task Done → createItemFromTask() → datastore.upsertItem() → 
+  ├─ Repository saves to KV
+  ├─ Workflow logs CREATED ✓
+  └─ Links processed ✓
+```
+
+
 
 ### 🟡 FUTURE: Log Storage Architecture (Pagination not root cause of current issues)
 
