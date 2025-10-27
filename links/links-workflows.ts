@@ -6,6 +6,7 @@ import type { Task, Item, Sale, FinancialRecord, Character, Player, Site, Link }
 import { createLink, removeLink, getLinksFor } from './link-registry';
 import { appendLinkLog } from './links-logging';
 import { getAllItems } from '@/data-store/repositories/item.repo';
+import { getAllCharacters, getAllTasks } from '@/data-store/datastore';
 import { v4 as uuid } from 'uuid';
 import { isProcessing, startProcessing, endProcessing } from '@/data-store/effects-registry';
 import { appendEntityLog } from '@/workflows/entities-logging';
@@ -194,11 +195,28 @@ export async function processItemEffects(item: Item): Promise<void> {
     await createLink(l);
     await appendLinkLog(l, 'created');
     
+    // Get character name and source task info for logging
+    const characters = await getAllCharacters();
+    const character = characters.find((c: Character) => c.id === item.ownerCharacterId);
+    let sourceTaskName: string | undefined;
+    
+    // Get source task name if available
+    if (item.sourceTaskId) {
+      const tasks = await getAllTasks();
+      const sourceTask = tasks.find((t: Task) => t.id === item.sourceTaskId);
+      if (sourceTask) {
+        sourceTaskName = sourceTask.name;
+      }
+    }
+    
     // Log in character log (customer owns item)
     await appendEntityLog(EntityType.CHARACTER, item.ownerCharacterId, LogEventType.OWNS_ITEM, {
+      name: character?.name || 'Unknown Character',
       itemId: item.id,
       itemName: item.name,
-      itemType: item.type
+      itemType: item.type,
+      sourceTaskId: item.sourceTaskId,
+      sourceTaskName: sourceTaskName
     });
   } else {
     // If no owner, remove all ITEM_CHARACTER links
