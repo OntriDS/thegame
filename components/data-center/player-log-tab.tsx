@@ -7,7 +7,7 @@ import { RefreshCw, Gamepad, ArrowUpDown, Link as LinkIcon, User } from 'lucide-
 import { LinksSubModal } from '@/components/modals/submodals/links-submodal';
 import { useState, useEffect } from 'react';
 import { formatDisplayDate } from '@/lib/utils/date-utils';
-import { EntityType } from '@/types/enums';
+import { EntityType, LogEventType } from '@/types/enums';
 import { getPointsMetadata } from '@/lib/utils/points-utils';
 import { ClientAPI } from '@/lib/client-api';
 import { cn } from '@/lib/utils';
@@ -107,21 +107,25 @@ export function PlayerLogTab({ playerLog, onReload, isReloading }: PlayerLogTabP
 
   // Helper function to determine action label based on entry type
   const getActionLabel = (entry: any): string => {
-    const data = entry.data || {};
-    const points = entry.points || data.points;
-    const delta = entry.delta || data.delta;
+    const event = entry.event;
     
-    if (delta) {
-      // Points update (rewards changed)
-      return 'Points Updated';
-    } else if (points) {
-      // Check if any points are negative (future: Lost Points)
-      const hasNegative = (points.xp || 0) < 0 || (points.rp || 0) < 0 || 
-                         (points.fp || 0) < 0 || (points.hp || 0) < 0;
-      return hasNegative ? 'Lost Points' : 'Win Points';
+    // Check actual event type from enum
+    switch (event) {
+      case LogEventType.WIN_POINTS:
+        return 'Win Points';
+      case LogEventType.POINTS_CHANGED:
+        return 'Points Changed';
+      case LogEventType.LEVEL_UP:
+        return 'Level Up';
+      case LogEventType.LOST_POINTS:
+        return 'Lost Points';
+      case LogEventType.CREATED:
+        return 'Created';
+      case LogEventType.UPDATED:
+        return 'Updated';
+      default:
+        return entry.event || 'Player Activity';
     }
-    
-    return entry.event || 'Player Activity';
   };
 
   return (

@@ -688,6 +688,8 @@ export enum LogEventType {
   // Player-specific events
   LEVEL_UP = 'LEVEL_UP',
   POINTS_CHANGED = 'POINTS_CHANGED',
+  WIN_POINTS = 'WIN_POINTS',
+  LOST_POINTS = 'LOST_POINTS',
   
   // Character-specific events
   ROLE_CHANGED = 'ROLE_CHANGED',

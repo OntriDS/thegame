@@ -148,12 +148,37 @@ export async function appendPlayerPointsLog(
   const list = (await kvGet<any[]>(key)) || [];
   
   const logEntry = {
-    event: LogEventType.POINTS_CHANGED,
+    event: LogEventType.WIN_POINTS,
     entityId: playerId,
     points: points,
     sourceId: sourceId,
     sourceType: sourceType,
-    description: `Points awarded from ${sourceType}: XP+${points.xp}, RP+${points.rp}, FP+${points.fp}, HP+${points.hp}`,
+    description: `XP+${points.xp}, RP+${points.rp}, FP+${points.fp}, HP+${points.hp} from ${sourceType}`,
+    timestamp: new Date().toISOString()
+  };
+  
+  list.push(logEntry);
+  await kvSet(key, list);
+}
+
+/**
+ * Log player total points after changes
+ * Shows the actual total points the player has after any change
+ */
+export async function appendPlayerPointsChangedLog(
+  playerId: string,
+  totalPoints: { xp: number; rp: number; fp: number; hp: number },
+  points: { xp: number; rp: number; fp: number; hp: number }
+): Promise<void> {
+  const key = buildLogKey(EntityType.PLAYER);
+  const list = (await kvGet<any[]>(key)) || [];
+  
+  const logEntry = {
+    event: LogEventType.POINTS_CHANGED,
+    entityId: playerId,
+    totalPoints: totalPoints,
+    points: points,
+    description: `Total points: XP=${points.xp}, RP=${points.rp}, FP=${points.fp}, HP=${points.hp}`,
     timestamp: new Date().toISOString()
   };
   

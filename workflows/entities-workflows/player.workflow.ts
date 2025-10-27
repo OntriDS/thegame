@@ -3,7 +3,7 @@
 
 import { EntityType, LogEventType } from '@/types/enums';
 import type { Player } from '@/types/entities';
-import { appendEntityLog, updateEntityLogField } from '../entities-logging';
+import { appendEntityLog, updateEntityLogField, appendPlayerPointsChangedLog } from '../entities-logging';
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
 import { EffectKeys } from '@/data-store/keys';
 import { getLinksFor, removeLink } from '@/links/link-registry';
@@ -44,17 +44,13 @@ export async function onPlayerUpsert(player: Player, previousPlayer?: Player): P
     });
   }
   
-  // Points changes - POINTS_CHANGED event
+  // Points changes - POINTS_CHANGED event (shows total after changes)
   const totalPointsChanged = JSON.stringify(previousPlayer.totalPoints) !== JSON.stringify(player.totalPoints);
   const pointsChanged = JSON.stringify(previousPlayer.points) !== JSON.stringify(player.points);
   const pointsChangedOverall = totalPointsChanged || pointsChanged;
   
   if (pointsChangedOverall) {
-    await appendEntityLog(EntityType.PLAYER, player.id, LogEventType.POINTS_CHANGED, {
-      name: player.name,
-      totalPoints: player.totalPoints,
-      points: player.points
-    });
+    await appendPlayerPointsChangedLog(player.id, player.totalPoints, player.points);
   }
   
   // General updates - UPDATED event
