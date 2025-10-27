@@ -5,7 +5,7 @@ import { EntityType, LinkType, LogEventType } from '@/types/enums';
 import type { Task, Item, Sale, FinancialRecord, Character, Player, Site, Link } from '@/types/entities';
 import { createLink, removeLink, getLinksFor } from './link-registry';
 import { appendLinkLog } from './links-logging';
-import { getAllItems } from '@/data-store/datastore';
+import { getAllItems } from '@/data-store/repositories/item.repo';
 import { v4 as uuid } from 'uuid';
 import { isProcessing, startProcessing, endProcessing } from '@/data-store/effects-registry';
 import { appendEntityLog } from '@/workflows/entities-logging';
@@ -96,13 +96,11 @@ export async function processTaskEffects(task: Task): Promise<void> {
     await appendLinkLog(l, 'created');
     
     // Log in character log (customer requested task)
-    const { ClientAPI } = await import('@/lib/client-api');
-    const taskData = await ClientAPI.getTaskById(task.id);
     await appendEntityLog(EntityType.CHARACTER, task.customerCharacterId, LogEventType.REQUESTED_TASK, {
       taskId: task.id,
-      taskName: taskData?.name || task.name,
-      taskType: taskData?.type || task.type,
-      station: taskData?.station || task.station
+      taskName: task.name,
+      taskType: task.type,
+      station: task.station
     });
   }
   
@@ -189,12 +187,10 @@ export async function processItemEffects(item: Item): Promise<void> {
     await appendLinkLog(l, 'created');
     
     // Log in character log (customer owns item)
-    const { ClientAPI } = await import('@/lib/client-api');
-    const itemData = await ClientAPI.getItemById(item.id);
     await appendEntityLog(EntityType.CHARACTER, item.ownerCharacterId, LogEventType.OWNS_ITEM, {
       itemId: item.id,
-      itemName: itemData?.name || item.name,
-      itemType: itemData?.type || item.type
+      itemName: item.name,
+      itemType: item.type
     });
   } else {
     // If no owner, remove all ITEM_CHARACTER links
@@ -226,13 +222,11 @@ export async function processSaleEffects(sale: Sale): Promise<void> {
     await appendLinkLog(l, 'created');
     
     // Log in character log (customer purchased)
-    const { ClientAPI } = await import('@/lib/client-api');
-    const saleData = await ClientAPI.getSaleById(sale.id);
     await appendEntityLog(EntityType.CHARACTER, sale.customerId, LogEventType.PURCHASED, {
       saleId: sale.id,
-      saleName: saleData?.name || saleData?.counterpartyName || sale.name,
-      saleType: saleData?.type || sale.type,
-      totalRevenue: saleData?.totals.totalRevenue || sale.totals.totalRevenue
+      saleName: sale.counterpartyName || sale.name,
+      saleType: sale.type,
+      totalRevenue: sale.totals.totalRevenue
     });
   }
   
@@ -284,14 +278,12 @@ export async function processFinancialEffects(fin: FinancialRecord): Promise<voi
     await appendLinkLog(l, 'created');
     
     // Log in character log (customer transacted)
-    const { ClientAPI } = await import('@/lib/client-api');
-    const finrec = await ClientAPI.getFinancialRecordById(fin.id);
     await appendEntityLog(EntityType.CHARACTER, fin.customerCharacterId, LogEventType.TRANSACTED, {
       financialId: fin.id,
-      financialName: finrec?.name || fin.name,
-      type: finrec?.type || fin.type,
-      cost: finrec?.cost || fin.cost,
-      revenue: finrec?.revenue || fin.revenue
+      financialName: fin.name,
+      type: fin.type,
+      cost: fin.cost,
+      revenue: fin.revenue
     });
   }
   

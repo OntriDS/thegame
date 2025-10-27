@@ -3,11 +3,8 @@
 
 import { Task } from '@/types/entities';
 import { TaskType, RecurrentFrequency } from '@/types/enums';
-import { 
-  getAllTasks as getTasks, 
-  upsertTask, 
-  removeTask as deleteTask 
-} from '@/data-store/datastore';
+import { getAllTasks as getTasks, upsertTask } from '@/data-store/repositories/task.repo';
+import { removeTask as deleteTask } from '@/data-store/datastore';
 import { hasEffect, markEffect } from '@/data-store/effects-registry';
 import { appendEntityLog } from '@/workflows/entities-logging';
 import { EntityType, LogEventType } from '@/types/enums';

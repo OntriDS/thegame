@@ -3,16 +3,14 @@
 // Migrated from lib/game-mechanics/workflow-integration.ts
 
 import { LinkType, EntityType } from '@/types/enums';
-import { 
-  getAllTasks,
-  getAllItems,
-  getAllFinancials,
-  getAllSales,
-  getAllCharacters,
-  getAllPlayers,
-  getAllAccounts,
-  getAllSites
-} from '@/data-store/datastore';
+import { getAllTasks } from '@/data-store/repositories/task.repo';
+import { getAllItems } from '@/data-store/repositories/item.repo';
+import { getAllFinancials } from '@/data-store/repositories/financial.repo';
+import { getAllSales } from '@/data-store/repositories/sale.repo';
+import { getAllCharacters } from '@/data-store/repositories/character.repo';
+import { getAllPlayers } from '@/data-store/repositories/player.repo';
+import { getAllAccounts } from '@/data-store/repositories/account.repo';
+import { getAllSites } from '@/data-store/repositories/site.repo';
 
 /**
  * Link validation result interface
