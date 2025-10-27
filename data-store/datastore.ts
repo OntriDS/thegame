@@ -61,15 +61,7 @@ import {
   getSitesByRadius as repoGetSitesByRadius
 } from './repositories/site.repo';
 import { kvGet, kvSet } from './kv';
-// Import workflow functions individually to avoid TypeScript issues
-import { onTaskUpsert } from '@/workflows/entities-workflows/task.workflow';
-import { onItemUpsert } from '@/workflows/entities-workflows/item.workflow';
-import { onFinancialUpsert } from '@/workflows/entities-workflows/financial.workflow';
-import { onSaleUpsert } from '@/workflows/entities-workflows/sale.workflow';
-import { onCharacterUpsert } from '@/workflows/entities-workflows/character.workflow';
-import { onPlayerUpsert } from '@/workflows/entities-workflows/player.workflow';
-import { onAccountUpsert } from '@/workflows/entities-workflows/account.workflow';
-import { onSiteUpsert } from '@/workflows/entities-workflows/site.workflow';
+// Import workflow functions dynamically to break circular dependency
 import { processLinkEntity } from '@/links/links-workflows';
 import { appendEntityLog } from '@/workflows/entities-logging';
 
@@ -77,6 +69,7 @@ import { appendEntityLog } from '@/workflows/entities-logging';
 export async function upsertTask(task: Task): Promise<Task> {
   const previous = await repoGetTaskById(task.id);
   const saved = await repoUpsertTask(task);
+  const { onTaskUpsert } = await import('@/workflows/entities-workflows/task.workflow');
   await onTaskUpsert(saved, previous || undefined);
   await processLinkEntity(saved, EntityType.TASK);
   return saved;
@@ -108,6 +101,7 @@ export async function removeTask(id: string): Promise<void> {
 export async function upsertItem(item: Item): Promise<Item> {
   const previous = await repoGetItemById(item.id);
   const saved = await repoUpsertItem(item);  // ✅ Item persisted here
+  const { onItemUpsert } = await import('@/workflows/entities-workflows/item.workflow');
   await onItemUpsert(saved, previous || undefined);  // ⚠️ Can throw
   await processLinkEntity(saved, EntityType.ITEM);   // ⚠️ Can throw
   return saved;
@@ -144,6 +138,7 @@ export async function removeItem(id: string): Promise<void> {
 export async function upsertFinancial(financial: FinancialRecord): Promise<FinancialRecord> {
   const previous = await repoGetFinancialById(financial.id);
   const saved = await repoUpsertFinancial(financial);
+  const { onFinancialUpsert } = await import('@/workflows/entities-workflows/financial.workflow');
   await onFinancialUpsert(saved, previous || undefined);
   await processLinkEntity(saved, EntityType.FINANCIAL);
   return saved;
@@ -176,6 +171,7 @@ export async function removeFinancial(id: string): Promise<void> {
 export async function upsertSale(sale: Sale): Promise<Sale> {
   const previous = await repoGetSaleById(sale.id);
   const saved = await repoUpsertSale(sale);
+  const { onSaleUpsert } = await import('@/workflows/entities-workflows/sale.workflow');
   await onSaleUpsert(saved, previous || undefined);
   await processLinkEntity(saved, EntityType.SALE);
   return saved;
@@ -205,6 +201,7 @@ export async function upsertCharacter(character: Character, options?: { skipWork
   const saved = await repoUpsertCharacter(character);
   
   if (!options?.skipWorkflowEffects) {
+    const { onCharacterUpsert } = await import('@/workflows/entities-workflows/character.workflow');
     await onCharacterUpsert(saved, previous || undefined);
     await processLinkEntity(saved, EntityType.CHARACTER);
   }
@@ -236,6 +233,7 @@ export async function upsertPlayer(player: Player, options?: { skipWorkflowEffec
   const saved = await repoUpsertPlayer(player);
   
   if (!options?.skipWorkflowEffects) {
+    const { onPlayerUpsert } = await import('@/workflows/entities-workflows/player.workflow');
     await onPlayerUpsert(saved, previous || undefined);
     await processLinkEntity(saved, EntityType.PLAYER);
   }
@@ -267,6 +265,7 @@ export async function upsertAccount(account: Account, options?: { skipWorkflowEf
   const saved = await repoUpsertAccount(account);
   
   if (!options?.skipWorkflowEffects) {
+    const { onAccountUpsert } = await import('@/workflows/entities-workflows/account.workflow');
     await onAccountUpsert(saved, previous || undefined);
     await processLinkEntity(saved, EntityType.ACCOUNT);
   }
@@ -296,6 +295,7 @@ export async function removeAccount(id: string): Promise<void> {
 export async function upsertSite(site: Site): Promise<Site> {
   const previous = await repoGetSiteById(site.id);
   const saved = await repoUpsertSite(site);
+  const { onSiteUpsert } = await import('@/workflows/entities-workflows/site.workflow');
   await onSiteUpsert(saved, previous || undefined);
   await processLinkEntity(saved, EntityType.SITE);
   return saved;
