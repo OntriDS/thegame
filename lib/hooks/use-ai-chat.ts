@@ -6,11 +6,19 @@ export interface ChatMessage {
   timestamp: Date;
 }
 
+export interface RateLimitInfo {
+  remainingRequests: string | null;
+  limitRequests: string | null;
+  remainingTokens: string | null;
+  limitTokens: string | null;
+}
+
 export function useAIChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedModel, setSelectedModel] = useState<string>('openai/gpt-oss-120b');
+  const [rateLimits, setRateLimits] = useState<RateLimitInfo | null>(null);
 
   const sendMessage = async (message: string, model?: string) => {
     if (!message.trim()) return;
@@ -37,6 +45,11 @@ export function useAIChat() {
       }
 
       const data = await response.json();
+      
+      // Store rate limit info if available
+      if (data.rateLimits) {
+        setRateLimits(data.rateLimits);
+      }
       
       // Add assistant message
       const assistantMessage: ChatMessage = {
@@ -67,6 +80,7 @@ export function useAIChat() {
     clearMessages,
     selectedModel,
     setSelectedModel,
+    rateLimits,
   };
 }
 

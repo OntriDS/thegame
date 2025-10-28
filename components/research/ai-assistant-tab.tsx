@@ -16,7 +16,7 @@ interface GroqModel {
 }
 
 export function AIAssistantTab() {
-  const { messages, isLoading, error, sendMessage, clearMessages, selectedModel, setSelectedModel } = useAIChat();
+  const { messages, isLoading, error, sendMessage, clearMessages, selectedModel, setSelectedModel, rateLimits } = useAIChat();
   const [availableModels, setAvailableModels] = useState<GroqModel[]>([]);
   const [showModelSelect, setShowModelSelect] = useState(false);
   const [input, setInput] = useState('');
@@ -69,9 +69,9 @@ export function AIAssistantTab() {
                 onClick={() => setShowModelSelect(!showModelSelect)}
                 className="gap-1 h-6 text-xs"
                 title="Select AI Model"
-              >
+                >
                 <Settings className="h-3 w-3" />
-                {selectedModel.replace('llama-', 'Llama ').replace('-', '.')}
+                {selectedModel.replace('llama-', 'Llama ').replace('openai/', '').replace('-', '.')}
               </Button>
             </CardDescription>
           </div>
@@ -89,6 +89,18 @@ export function AIAssistantTab() {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Rate Limit Display */}
+        {rateLimits && (
+          <div className="flex gap-4 text-xs text-muted-foreground px-2">
+            {rateLimits.remainingRequests && rateLimits.limitRequests && (
+              <span>Requests: {rateLimits.remainingRequests}/{rateLimits.limitRequests}</span>
+            )}
+            {rateLimits.remainingTokens && rateLimits.limitTokens && (
+              <span>Tokens: {rateLimits.remainingTokens}/{rateLimits.limitTokens}</span>
+            )}
+          </div>
+        )}
+
         {/* Model Selector */}
         {showModelSelect && availableModels.length > 0 && (
           <div className="space-y-2">

@@ -47,9 +47,19 @@ export async function POST(request: NextRequest) {
     }
 
     const data = await response.json();
+    
+    // Extract rate limit info from headers
+    const rateLimitInfo = {
+      remainingRequests: response.headers.get('x-ratelimit-remaining-requests'),
+      limitRequests: response.headers.get('x-ratelimit-limit-requests'),
+      remainingTokens: response.headers.get('x-ratelimit-remaining-tokens'),
+      limitTokens: response.headers.get('x-ratelimit-limit-tokens'),
+    };
+    
     return Response.json({ 
       response: data.choices[0].message.content,
-      model: data.model 
+      model: data.model,
+      rateLimits: rateLimitInfo
     });
   } catch (error) {
     console.error('AI chat error:', error);
