@@ -421,7 +421,7 @@ export async function updatePlayerPointsFromSource(
       return;
     }
     
-    // Update player points
+    // Update player points and totalPoints
     const updatedPlayer = {
       ...player,
       points: {
@@ -430,11 +430,23 @@ export async function updatePlayerPointsFromSource(
         fp: (player.points?.fp || 0) + pointsDelta.fp,
         hp: (player.points?.hp || 0) + pointsDelta.hp
       },
+      totalPoints: {
+        xp: (player.totalPoints?.xp || 0) + pointsDelta.xp,
+        rp: (player.totalPoints?.rp || 0) + pointsDelta.rp,
+        fp: (player.totalPoints?.fp || 0) + pointsDelta.fp,
+        hp: (player.totalPoints?.hp || 0) + pointsDelta.hp
+      },
       updatedAt: new Date()
     };
     
     await upsertPlayer(updatedPlayer);
     await markEffect(updateKey);
+    
+    // If this is a task update, also update the log entries
+    if (sourceType === EntityType.TASK) {
+      const { logPlayerUpdateFromTask } = await import('./entities-workflows/player.workflow');
+      await logPlayerUpdateFromTask(newSource, oldSource);
+    }
     
     console.log(`[updatePlayerPointsFromSource] ✅ Updated player points: ${player.id}`);
   } catch (error) {

@@ -3,7 +3,7 @@
 
 import { EntityType, LogEventType, PLAYER_ONE_ID } from '@/types/enums';
 import type { Player } from '@/types/entities';
-import { appendEntityLog, updateEntityLogField, appendPlayerPointsChangedLog } from '../entities-logging';
+import { appendEntityLog, updateEntityLogField, appendPlayerPointsChangedLog, upsertPlayerPointsChangedLog } from '../entities-logging';
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
 import { EffectKeys } from '@/data-store/keys';
 import { getLinksFor, removeLink } from '@/links/link-registry';
@@ -49,7 +49,7 @@ export async function onPlayerUpsert(player: Player, previousPlayer?: Player): P
   const pointsChangedOverall = totalPointsChanged || pointsChanged;
   
   if (pointsChangedOverall) {
-    await appendPlayerPointsChangedLog(player.id, player.totalPoints, player.points);
+    await upsertPlayerPointsChangedLog(player.id, player.totalPoints, player.points);
   }
   
   // General updates - UPDATED event

@@ -187,6 +187,50 @@ export async function appendPlayerPointsChangedLog(
 }
 
 /**
+ * Update player points changed log entry in-place (idempotent)
+ * Updates the most recent POINTS_CHANGED entry if it exists, otherwise creates a new one
+ */
+export async function upsertPlayerPointsChangedLog(
+  playerId: string,
+  totalPoints: { xp: number; rp: number; fp: number; hp: number },
+  points: { xp: number; rp: number; fp: number; hp: number }
+): Promise<void> {
+  const key = buildLogKey(EntityType.PLAYER);
+  const list = (await kvGet<any[]>(key)) || [];
+  
+  // Find the most recent POINTS_CHANGED entry
+  let found = false;
+  for (let i = list.length - 1; i >= 0; i--) {
+    const entry = list[i];
+    if (entry.entityId === playerId && entry.event === LogEventType.POINTS_CHANGED) {
+      // Update existing entry in-place
+      entry.totalPoints = totalPoints;
+      entry.points = points;
+      entry.lastUpdated = new Date().toISOString();
+      found = true;
+      console.log(`[upsertPlayerPointsChangedLog] Updated existing POINTS_CHANGED entry for player ${playerId}`);
+      break;
+    }
+  }
+  
+  // If no existing entry found, create a new one
+  if (!found) {
+    const logEntry = {
+      event: LogEventType.POINTS_CHANGED,
+      entityId: playerId,
+      totalPoints: totalPoints,
+      points: points,
+      description: `Total points: XP=${points.xp}, RP=${points.rp}, FP=${points.fp}, HP=${points.hp}`,
+      timestamp: new Date().toISOString()
+    };
+    list.push(logEntry);
+    console.log(`[upsertPlayerPointsChangedLog] Created new POINTS_CHANGED entry for player ${playerId}`);
+  }
+  
+  await kvSet(key, list);
+}
+
+/**
  * Log character jungle coins award with source tracking
  * Used for jungle coins awarded from financial records
  */
@@ -216,6 +260,7 @@ export async function appendCharacterJungleCoinsLog(
 /**
  * Log player points update with change tracking
  * Used when task rewards change and points need to be updated
+ * This function UPDATES existing log entries in-place instead of creating new ones
  */
 export async function appendPlayerPointsUpdateLog(
   playerId: string,
@@ -226,25 +271,59 @@ export async function appendPlayerPointsUpdateLog(
   const key = buildLogKey(EntityType.PLAYER);
   const list = (await kvGet<any[]>(key)) || [];
   
-  const delta = {
-    xp: newPoints.xp - oldPoints.xp,
-    rp: newPoints.rp - oldPoints.rp,
-    fp: newPoints.fp - oldPoints.fp,
-    hp: newPoints.hp - oldPoints.hp
-  };
+  // 1. Find and update the existing "Win Points" entry for this source task
+  let winPointsUpdated = false;
+  for (let i = list.length - 1; i >= 0; i--) {
+    const entry = list[i];
+    if (entry.entityId === playerId && 
+        entry.event === LogEventType.WIN_POINTS && 
+        entry.sourceId === sourceId) {
+      // Update the existing "Win Points" entry
+      entry.points = newPoints;
+      entry.description = `XP+${newPoints.xp}, RP+${newPoints.rp}, FP+${newPoints.fp}, HP+${newPoints.hp} from task`;
+      entry.lastUpdated = new Date().toISOString();
+      winPointsUpdated = true;
+      console.log(`[appendPlayerPointsUpdateLog] Updated existing "Win Points" log entry for sourceId: ${sourceId}`);
+      break;
+    }
+  }
   
-  const logEntry = {
-    event: LogEventType.POINTS_CHANGED,
-    entityId: playerId,
-    oldPoints: oldPoints,
-    newPoints: newPoints,
-    delta: delta,
-    sourceId: sourceId,
-    description: `Points updated: XP${delta.xp >= 0 ? '+' : ''}${delta.xp}, RP${delta.rp >= 0 ? '+' : ''}${delta.rp}, FP${delta.fp >= 0 ? '+' : ''}${delta.fp}, HP${delta.hp >= 0 ? '+' : ''}${delta.hp}`,
-    timestamp: new Date().toISOString()
-  };
+  // If no existing "Win Points" entry found, create a new one (shouldn't happen in normal flow)
+  if (!winPointsUpdated) {
+    console.warn(`[appendPlayerPointsUpdateLog] No existing "Win Points" log entry found for sourceId: ${sourceId}, creating new entry`);
+    const winPointsEntry = {
+      event: LogEventType.WIN_POINTS,
+      entityId: playerId,
+      points: newPoints,
+      sourceId: sourceId,
+      sourceType: 'task',
+      description: `XP+${newPoints.xp}, RP+${newPoints.rp}, FP+${newPoints.fp}, HP+${newPoints.hp} from task`,
+      timestamp: new Date().toISOString()
+    };
+    list.push(winPointsEntry);
+  }
   
-  list.push(logEntry);
+  // 2. Find and update the most recent "Points Changed" entry
+  // This entry doesn't have sourceId, so we update the most recent one for this player
+  let pointsChangedUpdated = false;
+  for (let i = list.length - 1; i >= 0; i--) {
+    const entry = list[i];
+    if (entry.entityId === playerId && entry.event === LogEventType.POINTS_CHANGED) {
+      // Update the existing "Points Changed" entry
+      entry.points = newPoints;
+      entry.lastUpdated = new Date().toISOString();
+      pointsChangedUpdated = true;
+      console.log(`[appendPlayerPointsUpdateLog] Updated existing "Points Changed" log entry`);
+      break;
+    }
+  }
+  
+  // If no "Points Changed" entry found, we don't create one here
+  // It will be created by the player entity workflow when needed
+  if (!pointsChangedUpdated) {
+    console.log(`[appendPlayerPointsUpdateLog] No existing "Points Changed" entry found to update`);
+  }
+  
   await kvSet(key, list);
 }
 
