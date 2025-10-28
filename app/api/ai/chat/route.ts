@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 
 export async function POST(request: NextRequest) {
   try {
-    const { message, model = 'llama3.1-70b-versatile' } = await request.json();
+    const { message, model = 'llama-3.1-70b-versatile' } = await request.json();
     
     // Get API key from environment (Groq, Anthropic, or Hugging Face)
     const apiKey = process.env.GROQ_API_KEY || process.env.ANTHROPIC_API_KEY || process.env.HUGGINGFACE_API_KEY;
@@ -18,11 +18,11 @@ export async function POST(request: NextRequest) {
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+        'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: model || 'llama3.1-70b-versatile',
+        model: model || 'llama-3.1-70b-versatile',
         messages: [{ role: 'user', content: message }],
         temperature: 0.7,
       }),
@@ -31,8 +31,17 @@ export async function POST(request: NextRequest) {
     if (!response.ok) {
       const errorText = await response.text();
       console.error('Groq API error:', errorText);
+      let errorMessage = 'AI service temporarily unavailable';
+      
+      try {
+        const errorData = JSON.parse(errorText);
+        errorMessage = errorData.error?.message || errorText;
+      } catch {
+        errorMessage = errorText || 'Failed to connect to AI service';
+      }
+      
       return Response.json(
-        { error: 'AI service temporarily unavailable' },
+        { error: errorMessage },
         { status: response.status }
       );
     }
