@@ -272,4 +272,12 @@ export function calculatePointsFromRevenue(revenue: number): Rewards['points'] {
   };
 }
 
+/**
+ * Gets the main player ID (V0.1 constant)
+ * TODO: V0.2 - Use character.playerId field
+ */
+export function getMainPlayerId(): string {
+  return PLAYER_ONE_ID; // V0.1 constant
+}
+
 

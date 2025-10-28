@@ -233,13 +233,13 @@ async function removePlayerPointsFromSale(saleId: string): Promise<void> {
       return;
     }
     
-    // Use unified ID
-    const mainPlayerId = PLAYER_ONE_ID;
+    // Get the player from the sale (same logic as creation)
+    const playerId = sale.playerCharacterId || PLAYER_ONE_ID;
     const players = await getAllPlayers();
-    const mainPlayer = players.find(p => p.id === mainPlayerId);
+    const player = players.find(p => p.id === playerId);
     
-    if (!mainPlayer) {
-      console.log(`[removePlayerPointsFromSale] Main player not found, skipping points removal`);
+    if (!player) {
+      console.log(`[removePlayerPointsFromSale] Player ${playerId} not found, skipping points removal`);
       return;
     }
     
@@ -256,7 +256,7 @@ async function removePlayerPointsFromSale(saleId: string): Promise<void> {
     }
     
     // Remove the points from the player
-    await removePointsFromPlayer(mainPlayerId, pointsToRemove);
+    await removePointsFromPlayer(playerId, pointsToRemove);
     console.log(`[removePlayerPointsFromSale] ✅ Removed points from player: ${JSON.stringify(pointsToRemove)} (sale revenue: ${sale.totals.totalRevenue})`);
     
   } catch (error) {

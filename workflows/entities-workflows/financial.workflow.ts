@@ -232,13 +232,13 @@ async function removePlayerPointsFromRecord(recordId: string): Promise<void> {
       return;
     }
     
-    // Get the main player
-    const mainPlayerId = getMainPlayerId();
+    // Get the player from the record (same logic as creation)
+    const playerId = record.playerCharacterId || PLAYER_ONE_ID;
     const players = await getAllPlayers();
-    const mainPlayer = players.find(p => p.id === mainPlayerId);
+    const player = players.find(p => p.id === playerId);
     
-    if (!mainPlayer) {
-      console.log(`[removePlayerPointsFromRecord] Main player not found, skipping points removal`);
+    if (!player) {
+      console.log(`[removePlayerPointsFromRecord] Player ${playerId} not found, skipping points removal`);
       return;
     }
     
@@ -253,7 +253,7 @@ async function removePlayerPointsFromRecord(recordId: string): Promise<void> {
     }
     
     // Remove the points from the player
-    await removePointsFromPlayer(mainPlayerId, {
+    await removePointsFromPlayer(playerId, {
       xp: pointsToRemove.xp || 0,
       rp: pointsToRemove.rp || 0,
       fp: pointsToRemove.fp || 0,
@@ -283,18 +283,23 @@ async function removeJungleCoinsFromRecord(recordId: string): Promise<void> {
       return;
     }
     
-    // Get the main character
-    const mainCharacterId = getMainCharacterId();
-    const characters = await getAllCharacters();
-    const mainCharacter = characters.find(c => c.id === mainCharacterId);
+    // Get the character from the record (if there's a customerCharacterId)
+    const characterId = record.customerCharacterId;
+    if (!characterId) {
+      console.log(`[removeJungleCoinsFromRecord] Record ${recordId} has no customerCharacterId, skipping`);
+      return;
+    }
     
-    if (!mainCharacter) {
-      console.log(`[removeJungleCoinsFromRecord] Main character not found, skipping jungle coins removal`);
+    const characters = await getAllCharacters();
+    const character = characters.find(c => c.id === characterId);
+    
+    if (!character) {
+      console.log(`[removeJungleCoinsFromRecord] Character ${characterId} not found, skipping jungle coins removal`);
       return;
     }
     
     // Remove the jungle coins from the character
-    await removeJungleCoinsFromCharacter(mainCharacterId, record.jungleCoins);
+    await removeJungleCoinsFromCharacter(characterId, record.jungleCoins);
     console.log(`[removeJungleCoinsFromRecord] ✅ Removed ${record.jungleCoins} jungle coins from character`);
     
   } catch (error) {

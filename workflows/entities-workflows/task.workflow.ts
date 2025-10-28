@@ -345,13 +345,13 @@ async function removePlayerPointsFromTask(task: Task): Promise<void> {
       return;
     }
     
-    // Get the main player
-      const mainPlayerId = PLAYER_ONE_ID;
+    // Get the player from the task (same logic as creation)
+    const playerId = task.playerCharacterId || PLAYER_ONE_ID;
     const players = await getAllPlayers();
-    const mainPlayer = players.find(p => p.id === mainPlayerId);
+    const player = players.find(p => p.id === playerId);
     
-    if (!mainPlayer) {
-      console.log(`[removePlayerPointsFromTask] Main player not found, skipping removal`);
+    if (!player) {
+      console.log(`[removePlayerPointsFromTask] Player ${playerId} not found, skipping removal`);
       return;
     }
     
@@ -397,10 +397,10 @@ async function removePlayerPointsFromTask(task: Task): Promise<void> {
         // Log the J$ removal
         await appendEntityLog(
           EntityType.PLAYER,
-          mainPlayerId,
+          playerId,
           LogEventType.UPDATED,
           {
-            name: mainPlayer.name,
+            name: player.name,
             jungleCoinsRemoved: j$ToRemove,
             reason: 'Task deletion - J$ rollback',
             sourceTaskId: task.id,
@@ -420,7 +420,7 @@ async function removePlayerPointsFromTask(task: Task): Promise<void> {
     
     // STEP 3: Remove the points from the player
     console.log(`[removePlayerPointsFromTask] Now removing points from player...`);
-    await removePointsFromPlayer(mainPlayerId, pointsToRemove);
+    await removePointsFromPlayer(playerId, pointsToRemove);
     console.log(`[removePlayerPointsFromTask] ✅ Successfully removed points: XP:${pointsToRemove.xp || 0}, RP:${pointsToRemove.rp || 0}, FP:${pointsToRemove.fp || 0}, HP:${pointsToRemove.hp || 0}`);
     
   } catch (error) {
