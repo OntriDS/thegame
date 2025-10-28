@@ -15,7 +15,6 @@ import { Badge } from '@/components/ui/badge';
 import { Sale, SaleLine, Item, Discount, Site, Character, Task } from '@/types/entities';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
 import { SaleType, SaleStatus, PaymentMethod, Currency, ItemType, ItemStatus, TaskType, TaskPriority, Collection, STATION_CATEGORIES, CharacterRole } from '@/types/enums';
-import { PLAYER_ONE_ID } from '@/lib/constants/entity-constants';
 import { getSubTypesForItemType } from '@/lib/utils/item-utils';
 import type { Station } from '@/types/type-aliases';
 import { createSiteOptionsWithCategories } from '@/lib/utils/site-options-utils';
@@ -24,7 +23,7 @@ import { getAreaForStation } from '@/lib/utils/business-structure-utils';
 import { ClientAPI } from '@/lib/client-api';
 import { dispatchEntityUpdated } from '@/lib/ui/ui-events';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
-import { CHARACTER_ONE_ID } from '@/lib/constants/entity-constants';
+import { PLAYER_ONE_ID } from '@/types/enums';
 import PlayerCharacterSelectorModal from './submodals/player-character-selector-submodal';
 // Side effects handled by parent component via API calls
 import { v4 as uuid } from 'uuid';
@@ -226,11 +225,11 @@ export default function SalesModal({
       }
       
       // Initialize player character
-      setPlayerCharacterId(sale.playerCharacterId || CHARACTER_ONE_ID);
+      setPlayerCharacterId(sale.playerCharacterId || PLAYER_ONE_ID);
     } else {
       resetForm();
       // Initialize player character for new sale
-      setPlayerCharacterId(CHARACTER_ONE_ID);
+      setPlayerCharacterId(PLAYER_ONE_ID);
     }
   }, [sale]);
 

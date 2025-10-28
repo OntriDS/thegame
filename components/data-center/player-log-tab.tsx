@@ -11,8 +11,8 @@ import { EntityType, LogEventType } from '@/types/enums';
 import { getPointsMetadata } from '@/lib/utils/points-utils';
 import { ClientAPI } from '@/lib/client-api';
 import { cn } from '@/lib/utils';
-import { PLAYER_ONE_ID } from '@/lib/constants/entity-constants';
 import { processLogData } from '@/lib/utils/logging-utils';
+import { PLAYER_ONE_ID } from '@/types/enums';
 
 interface PlayerLogTabProps {
   playerLog: any;

@@ -744,5 +744,16 @@ export enum NotebookType {
   GENERAL        = 'general'
 }
 
+// ============================================================================
+// TRIFORCE CONSTANT
+// ============================================================================
+
+/** Player One ID - Bootstrap identity for the system */
+export const PLAYER_ONE_ID = 'player-one';
+
+// ============================================================================
+// NOTE SYSTEM TAGS
+// ============================================================================
+
 /** Available tags derived from business structure - DRY principle */
 export const NOTE_TAGS = Object.values(BUSINESS_STRUCTURE).flat();

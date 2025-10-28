@@ -14,7 +14,7 @@ import { useKeyboardShortcuts } from '@/lib/hooks/use-keyboard-shortcuts';
 import type { Character, Player } from "@/types/entities";
 import { Plus, User, Users, Mail, Phone } from "lucide-react";
 import { ROLE_COLORS } from "@/lib/constants/color-constants";
-import { PLAYER_ONE_ID } from '@/lib/constants/entity-constants';
+import { PLAYER_ONE_ID } from "@/types/enums";
 
 export default function CharactersPage() {
   const [showConversionRatesModal, setShowConversionRatesModal] = useState(false);

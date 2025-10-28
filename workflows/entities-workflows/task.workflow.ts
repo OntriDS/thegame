@@ -1,7 +1,7 @@
 // workflows/entities-workflows/task.workflow.ts
 // Task-specific workflow with state vs descriptive field detection
 
-import { EntityType, LogEventType, TaskType } from '@/types/enums';
+import { EntityType, LogEventType, TaskType, PLAYER_ONE_ID } from '@/types/enums';
 import type { Task } from '@/types/entities';
 import { appendEntityLog, updateEntityLogField } from '../entities-logging';
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
@@ -11,7 +11,7 @@ import { getAllTasks } from '@/data-store/repositories/task.repo';
 import { getAllPlayers } from '@/data-store/repositories/player.repo';
 import { getLinksFor, removeLink } from '@/links/link-registry';
 import { createItemFromTask, removeItemsCreatedByTask } from '../item-creation-utils';
-import { awardPointsToPlayer, removePointsFromPlayer, getMainPlayerId } from '../points-rewards-utils';
+import { awardPointsToPlayer, removePointsFromPlayer } from '../points-rewards-utils';
 import { createFinancialRecordFromTask, updateFinancialRecordFromTask, removeFinancialRecordsCreatedByTask } from '../financial-record-utils';
 import { DEFAULT_POINTS_CONVERSION_RATES } from '@/lib/constants/financial-constants';
 import type { PointsConversionRates } from '@/lib/constants/financial-constants';
@@ -158,13 +158,15 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
   }
   
   // Points awarding - when task is completed with rewards
+  // Use task.playerCharacterId directly as playerId (they're the same now with unified 'creator' ID)
   if (task.status === 'Done' && task.rewards?.points) {
     const effectKey = EffectKeys.sideEffect('task', task.id, 'pointsAwarded');
     if (!(await hasEffect(effectKey))) {
       console.log(`[onTaskUpsert] Awarding points from task completion: ${task.name}`);
-      await awardPointsToPlayer(getMainPlayerId(), task.rewards.points, task.id, EntityType.TASK);
+      const playerId = task.playerCharacterId || PLAYER_ONE_ID;
+      await awardPointsToPlayer(playerId, task.rewards.points, task.id, EntityType.TASK);
       await markEffect(effectKey);
-      console.log(`[onTaskUpsert] ✅ Points awarded and effect marked for task: ${task.name}`);
+      console.log(`[onTaskUpsert] ✅ Points awarded to player ${playerId} for task: ${task.name}`);
     }
   }
   
@@ -344,7 +346,7 @@ async function removePlayerPointsFromTask(task: Task): Promise<void> {
     }
     
     // Get the main player
-    const mainPlayerId = getMainPlayerId();
+      const mainPlayerId = PLAYER_ONE_ID;
     const players = await getAllPlayers();
     const mainPlayer = players.find(p => p.id === mainPlayerId);
     

@@ -75,17 +75,39 @@ export function CharacterLogTab({ characterLog, onReload, isReloading }: Charact
               const statusRaw: string = entry.event || 'unknown';
               const status = statusRaw.charAt(0).toUpperCase() + statusRaw.slice(1);
               
-              // Use displayName from normalization, fallback to entry data
+              // Use displayName from normalization, fallback to entry data (standardized with other log tabs)
               const name: string = entry.displayName || data.name || entry.name || entry.title || 'Character Activity';
               const date: string = entry.displayDate || entry.timestamp || '';
-
-              // Character-specific info (roles display)
+              
+              // Character native fields
               const isFounder = data.roles && Array.isArray(data.roles) && data.roles.includes(CharacterRole.FOUNDER);
               const characterInfo = [];
               
-              // Only show roles for non-Founder characters (Founder is special, we know who they are)
-              if (!isFounder && data.roles && Array.isArray(data.roles) && data.roles.length > 0) {
+              // ALWAYS show roles - they're the primary character identifier
+              if (data.roles && Array.isArray(data.roles) && data.roles.length > 0) {
                 characterInfo.push(`Roles: ${data.roles.join(', ')}`);
+              }
+              
+              // Show native fields only when present
+              if (data.commColor) characterInfo.push(`CommColor: ${data.commColor}`);
+              if (data.description) characterInfo.push(`Description: ${data.description}`);
+              if (data.contactEmail) characterInfo.push(`Email: ${data.contactEmail}`);
+              if (data.contactPhone) characterInfo.push(`Phone: ${data.contactPhone}`);
+              if (data.isActive !== undefined) characterInfo.push(`Active: ${data.isActive ? 'Yes' : 'No'}`);
+              
+              // Event-specific details (show when present)
+              if (statusRaw === 'REQUESTED_TASK') {
+                if (data.taskName) characterInfo.push(`Task: ${data.taskName}`);
+                if (data.taskType) characterInfo.push(`Type: ${data.taskType}`);
+                if (data.station) characterInfo.push(`Station: ${data.station}`);
+              } else if (statusRaw === 'OWNS_ITEM') {
+                if (data.itemName) characterInfo.push(`Item: ${data.itemName}`);
+                if (data.itemType) characterInfo.push(`Type: ${data.itemType}`);
+                if (data.sourceTaskName) characterInfo.push(`From: ${data.sourceTaskName}`);
+              } else if (statusRaw === 'PURCHASED') {
+                if (data.saleName) characterInfo.push(`Sale: ${data.saleName}`);
+                if (data.saleType) characterInfo.push(`Type: ${data.saleType}`);
+                if (data.totalRevenue) characterInfo.push(`Revenue: $${data.totalRevenue.toFixed(2)}`);
               }
               
               const characterInfoText = characterInfo.join(' • ');

@@ -1,7 +1,7 @@
 // workflows/entities-workflows/player.workflow.ts
 // Player-specific workflow with LEVEL_UP, POINTS_CHANGED events
 
-import { EntityType, LogEventType } from '@/types/enums';
+import { EntityType, LogEventType, PLAYER_ONE_ID } from '@/types/enums';
 import type { Player } from '@/types/entities';
 import { appendEntityLog, updateEntityLogField, appendPlayerPointsChangedLog } from '../entities-logging';
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
@@ -9,7 +9,6 @@ import { EffectKeys } from '@/data-store/keys';
 import { getLinksFor, removeLink } from '@/links/link-registry';
 import { getAllPlayers, upsertPlayer } from '@/data-store/repositories/player.repo';
 import { appendPlayerPointsLog, appendPlayerPointsUpdateLog } from '../entities-logging';
-import { PLAYER_ONE_ID } from '@/lib/constants/entity-constants';
 import type { Task, FinancialRecord } from '@/types/entities';
 
 const STATE_FIELDS = ['level', 'totalPoints', 'points', 'isActive'];

@@ -4,7 +4,10 @@
 import { ResetDataWorkflow } from '@/workflows/settings/reset-data-workflow';
 import { TransactionManager } from '@/workflows/settings/transaction-manager';
 import { getAllPlayers, getAllCharacters, getAllAccounts, getAllSites } from '@/data-store/datastore';
-import { PLAYER_ONE_ID, CHARACTER_ONE_ID, PLAYER_ONE_ACCOUNT_ID } from '@/lib/constants/entity-constants';
+// Unified Triforce ID
+const PLAYER_ONE_ID = 'creator';
+const CHARACTER_ONE_ID = PLAYER_ONE_ID;
+const PLAYER_ONE_ACCOUNT_ID = PLAYER_ONE_ID;
 
 describe('ResetDataWorkflow', () => {
   let transactionManager: TransactionManager;

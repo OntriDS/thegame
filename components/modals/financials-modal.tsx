@@ -13,7 +13,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { ItemNameField } from '@/components/ui/item-name-field';
 import { Network, User } from 'lucide-react';
-import { CHARACTER_ONE_ID } from '@/lib/constants/entity-constants';
 import PlayerCharacterSelectorModal from './submodals/player-character-selector-submodal';
 import { FinancialRecord } from '@/types/entities';
 import { 
@@ -21,8 +20,7 @@ import {
 } from '@/types/enums';
 import { getCompanyAreas, getPersonalAreas, isCompanyStation, isPersonalStation, getAreaForStation } from '@/lib/utils/business-structure-utils';
 import type { Station, SubItemType } from '@/types/type-aliases';
-import { ItemType, Collection, CharacterRole } from '@/types/enums';
-import { PLAYER_ONE_ID } from '@/lib/constants/entity-constants';
+import { ItemType, Collection, CharacterRole, PLAYER_ONE_ID } from '@/types/enums';
 import { getSubTypesForItemType } from '@/lib/utils/item-utils';
 import { getCategoryForItemType, createItemTypeOptionsWithCategories, createStationCategoryOptions, createCharacterOptions, createItemTypeSubTypeOptions, getItemTypeFromCombined, getCategoryFromCombined, getStationFromCombined } from '@/lib/utils/searchable-select-utils';
 import { createSiteOptionsWithCategories } from '@/lib/utils/site-options-utils';
@@ -248,7 +246,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
       });
       
       // Initialize player character
-      setPlayerCharacterId(record.playerCharacterId || CHARACTER_ONE_ID);
+      setPlayerCharacterId(record.playerCharacterId || PLAYER_ONE_ID);
       
       // Initialize combined item type/subtype field
       if (record.outputItemType && record.outputItemSubType) {
@@ -297,7 +295,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
       });
       
       // Initialize player character for new record
-      setPlayerCharacterId(CHARACTER_ONE_ID);
+      setPlayerCharacterId(PLAYER_ONE_ID);
       
       // Initialize combined item type/subtype field for new record
       setOutputItemTypeSubType('none:');

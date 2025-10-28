@@ -1,7 +1,7 @@
 // workflows/entities-workflows/financial.workflow.ts
 // Financial-specific workflow with CHARGED, COLLECTED events
 
-import { EntityType, LogEventType } from '@/types/enums';
+import { EntityType, LogEventType, PLAYER_ONE_ID } from '@/types/enums';
 import type { FinancialRecord } from '@/types/entities';
 import { appendEntityLog, updateEntityLogField } from '../entities-logging';
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
@@ -11,7 +11,7 @@ import { getAllFinancials } from '@/data-store/repositories/financial.repo';
 import { getAllPlayers } from '@/data-store/repositories/player.repo';
 import { getAllCharacters } from '@/data-store/repositories/character.repo';
 import { createItemFromRecord, removeItemsCreatedByRecord } from '../item-creation-utils';
-import { awardPointsToPlayer, removePointsFromPlayer, getMainPlayerId, removeJungleCoinsFromCharacter, getMainCharacterId } from '../points-rewards-utils';
+import { awardPointsToPlayer, removePointsFromPlayer, removeJungleCoinsFromCharacter } from '../points-rewards-utils';
 import { 
   updateTasksFromFinancialRecord, 
   updateItemsCreatedByRecord, 
@@ -57,18 +57,20 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
     }
     
     // Points awarding - on record creation with rewards
+    // Use financial.playerCharacterId directly as playerId (unified ID)
     if (financial.rewards?.points) {
       const pointsEffectKey = EffectKeys.sideEffect('financial', financial.id, 'pointsAwarded');
       if (!(await hasEffect(pointsEffectKey))) {
         console.log(`[onFinancialUpsert] Awarding points from financial record: ${financial.name}`);
-        await awardPointsToPlayer(getMainPlayerId(), {
+        const playerId = financial.playerCharacterId || PLAYER_ONE_ID;
+        await awardPointsToPlayer(playerId, {
           xp: financial.rewards.points.xp || 0,
           rp: financial.rewards.points.rp || 0,
           fp: financial.rewards.points.fp || 0,
           hp: financial.rewards.points.hp || 0
         }, financial.id, EntityType.FINANCIAL);
         await markEffect(pointsEffectKey);
-        console.log(`[onFinancialUpsert] ✅ Points awarded and effect marked for record: ${financial.name}`);
+        console.log(`[onFinancialUpsert] ✅ Points awarded to player ${playerId} for record: ${financial.name}`);
       }
     }
     

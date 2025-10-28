@@ -18,8 +18,7 @@ import EntityRelationshipsModal from './submodals/entity-relationships-submodal'
 import { Task, Item } from '@/types/entities';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
 import { getPointsMetadata } from '@/lib/utils/points-utils';
-import { TaskType, TaskStatus, TaskPriority, STATION_CATEGORIES, ItemType, RecurrentFrequency, Collection, ItemStatus, CharacterRole } from '@/types/enums';
-import { PLAYER_ONE_ID } from '@/lib/constants/entity-constants';
+import { TaskType, TaskStatus, TaskPriority, STATION_CATEGORIES, ItemType, RecurrentFrequency, Collection, ItemStatus, CharacterRole, PLAYER_ONE_ID } from '@/types/enums';
 import { getSubTypesForItemType } from '@/lib/utils/item-utils';
 import { getCategoryForItemType, getCategoryForTaskType, createStationCategoryOptions, getStationFromCombined, getCategoryFromCombined, createTaskParentOptions, createItemTypeSubTypeOptions, getItemTypeFromCombined, getSubTypeFromCombined, createCharacterOptions } from '@/lib/utils/searchable-select-utils';
 import { getAreaForStation } from '@/lib/utils/business-structure-utils';
@@ -32,7 +31,6 @@ import { getEmissaryFields } from '@/types/diplomatic-fields';
 import CascadeStatusConfirmationModal from './submodals/cascade-status-confirmation-submodal';
 import { cascadeStatusToInstances, getUndoneInstancesCount } from '@/lib/utils/recurrent-task-utils';
 import { ClientAPI } from '@/lib/client-api';
-import { CHARACTER_ONE_ID } from '@/lib/constants/entity-constants';
 import CharacterSelectorModal from './submodals/owner-character-selector-submodal';
 import PlayerCharacterSelectorModal from './submodals/player-character-selector-submodal';
 import { dispatchEntityUpdated } from '@/lib/ui/ui-events';
@@ -164,7 +162,7 @@ export default function TaskModal({
   const [customerCharacterName, setCustomerCharacterName] = useState<string>('');
   const [isNewCustomer, setIsNewCustomer] = useState(true);
   const [newCustomerName, setNewCustomerName] = useState('');
-  const [playerCharacterId, setPlayerCharacterId] = useState<string | null>(null);
+  const [playerCharacterId, setPlayerCharacterId] = useState<string | null>(PLAYER_ONE_ID);
   const [showCharacterSelector, setShowCharacterSelector] = useState(false);
   const [showPlayerCharacterSelector, setShowPlayerCharacterSelector] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -254,7 +252,7 @@ export default function TaskModal({
       setCustomerCharacterId(task.customerCharacterId || null);
       setIsNewCustomer(!task.customerCharacterId); // Toggle to "Existing" if customer exists
       setNewCustomerName(''); // Clear new customer name
-      setPlayerCharacterId(task.playerCharacterId || CHARACTER_ONE_ID);
+      setPlayerCharacterId(task.playerCharacterId || PLAYER_ONE_ID);
       setRewards({
         points: {
           xp: task.rewards?.points?.xp || 0,
@@ -309,7 +307,7 @@ export default function TaskModal({
       setCustomerCharacterId(null);
       setIsNewCustomer(true);
       setNewCustomerName('');
-      setPlayerCharacterId(CHARACTER_ONE_ID);
+      setPlayerCharacterId(null);
     }
   }, [task, getLastUsedType]);
 
@@ -397,6 +395,9 @@ export default function TaskModal({
       }
     }
 
+    // Fallback playerCharacterId to PLAYER_ONE_ID if still null
+    const finalPlayerCharacterId = playerCharacterId || PLAYER_ONE_ID;
+
     // Build task entity from form data
     const newTask: Task = {
       id: task?.id || uuid(),
@@ -425,7 +426,7 @@ export default function TaskModal({
       isSold,
       outputItemStatus,
       customerCharacterId: finalCustomerCharacterId,  // Emissary: Pass customer to created item
-      playerCharacterId: playerCharacterId,  // AMBASSADOR: Player character who owns this task
+      playerCharacterId: finalPlayerCharacterId,  // AMBASSADOR: Player character who owns this task
       rewards: {
         points: {
           xp: rewards.points.xp,
@@ -522,10 +523,10 @@ export default function TaskModal({
         outputItemPrice,
         isNewItem,
         isSold,
-        outputItemStatus,
-        customerCharacterId: task.customerCharacterId,
-        playerCharacterId: playerCharacterId,
-        rewards: {
+      outputItemStatus,
+      customerCharacterId: task.customerCharacterId,
+      playerCharacterId: playerCharacterId || PLAYER_ONE_ID,
+      rewards: {
           points: {
             xp: rewards.points.xp,
             rp: rewards.points.rp,

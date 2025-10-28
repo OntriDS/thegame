@@ -1,7 +1,7 @@
 // workflows/entities-workflows/sale.workflow.ts
 // Sale-specific workflow with CHARGED, CANCELLED, COLLECTED events
 
-import { EntityType, LogEventType } from '@/types/enums';
+import { EntityType, LogEventType, PLAYER_ONE_ID } from '@/types/enums';
 import type { Sale } from '@/types/entities';
 import { appendEntityLog, updateEntityLogField } from '../entities-logging';
 import { hasEffect, markEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
@@ -9,7 +9,7 @@ import { EffectKeys } from '@/data-store/keys';
 import { getLinksFor, removeLink } from '@/links/link-registry';
 import { getAllSales } from '@/data-store/repositories/sale.repo';
 import { getAllPlayers } from '@/data-store/repositories/player.repo';
-import { awardPointsToPlayer, removePointsFromPlayer, calculatePointsFromRevenue, getMainPlayerId } from '../points-rewards-utils';
+import { awardPointsToPlayer, removePointsFromPlayer, calculatePointsFromRevenue } from '../points-rewards-utils';
 import { processSaleLines } from '../sale-line-utils';
 import { 
   updateFinancialRecordsFromSale, 
@@ -44,14 +44,16 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
     await markEffect(effectKey);
     
     // Points awarding - on sale creation with revenue
+    // Use sale.playerCharacterId directly as playerId (unified ID)
     if (sale.totals.totalRevenue > 0) {
       const pointsEffectKey = EffectKeys.sideEffect('sale', sale.id, 'pointsAwarded');
       if (!(await hasEffect(pointsEffectKey))) {
         console.log(`[onSaleUpsert] Awarding points from sale revenue: ${sale.counterpartyName}`);
         const points = calculatePointsFromRevenue(sale.totals.totalRevenue);
-        await awardPointsToPlayer(getMainPlayerId(), points, sale.id, EntityType.SALE);
+        const playerId = sale.playerCharacterId || PLAYER_ONE_ID;
+        await awardPointsToPlayer(playerId, points, sale.id, EntityType.SALE);
         await markEffect(pointsEffectKey);
-        console.log(`[onSaleUpsert] ✅ Points awarded and effect marked for sale: ${sale.counterpartyName}`);
+        console.log(`[onSaleUpsert] ✅ Points awarded to player ${playerId} for sale: ${sale.counterpartyName}`);
       }
     }
     
@@ -231,8 +233,8 @@ async function removePlayerPointsFromSale(saleId: string): Promise<void> {
       return;
     }
     
-    // Get the main player
-    const mainPlayerId = getMainPlayerId();
+    // Use unified ID
+    const mainPlayerId = PLAYER_ONE_ID;
     const players = await getAllPlayers();
     const mainPlayer = players.find(p => p.id === mainPlayerId);
     

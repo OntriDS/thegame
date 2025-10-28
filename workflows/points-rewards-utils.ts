@@ -4,9 +4,8 @@ import { getAllPlayers, upsertPlayer } from '@/data-store/datastore';
 import { getAllCharacters, upsertCharacter } from '@/data-store/datastore';
 import { makeLink } from '@/links/links-workflows';
 import { createLink } from '@/links/link-registry';
-import { LinkType, EntityType } from '@/types/enums';
+import { LinkType, EntityType, PLAYER_ONE_ID } from '@/types/enums';
 import { appendPlayerPointsLog, appendCharacterJungleCoinsLog } from './entities-logging';
-import { PLAYER_ONE_ID } from '@/lib/constants/entity-constants';
 
 /**
  * Awards points to a player with idempotency and proper tracking
@@ -273,18 +272,4 @@ export function calculatePointsFromRevenue(revenue: number): Rewards['points'] {
   };
 }
 
-/**
- * Gets the main player ID (V0.1 constant)
- * TODO: V0.2 - Use character.playerId field
- */
-export function getMainPlayerId(): string {
-  return PLAYER_ONE_ID; // V0.1 constant
-}
 
-/**
- * Gets the main character ID (V0.1 constant)
- * TODO: V0.2 - Use proper character selection
- */
-export function getMainCharacterId(): string {
-  return 'CHARACTER_ONE_ID'; // V0.1 constant
-}
