@@ -10,8 +10,9 @@ export function useAIChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedModel, setSelectedModel] = useState<string>('openai/gpt-oss-120b');
 
-  const sendMessage = async (message: string) => {
+  const sendMessage = async (message: string, model?: string) => {
     if (!message.trim()) return;
 
     // Add user message
@@ -28,7 +29,7 @@ export function useAIChat() {
       const response = await fetch('/api/ai/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message }),
+        body: JSON.stringify({ message, model: model || selectedModel }),
       });
 
       if (!response.ok) {
@@ -64,6 +65,8 @@ export function useAIChat() {
     error,
     sendMessage,
     clearMessages,
+    selectedModel,
+    setSelectedModel,
   };
 }
 

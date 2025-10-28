@@ -5,13 +5,30 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Bot, Send, Trash2, Loader2 } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Bot, Send, Trash2, Loader2, Settings } from 'lucide-react';
 import { useAIChat, ChatMessage } from '@/lib/hooks/use-ai-chat';
 
+interface GroqModel {
+  id: string;
+  created: number;
+  owned_by: string;
+}
+
 export function AIAssistantTab() {
-  const { messages, isLoading, error, sendMessage, clearMessages } = useAIChat();
+  const { messages, isLoading, error, sendMessage, clearMessages, selectedModel, setSelectedModel } = useAIChat();
+  const [availableModels, setAvailableModels] = useState<GroqModel[]>([]);
+  const [showModelSelect, setShowModelSelect] = useState(false);
   const [input, setInput] = useState('');
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+
+  // Fetch available models
+  useEffect(() => {
+    fetch('/api/ai/models')
+      .then(res => res.json())
+      .then(data => setAvailableModels(data.models || []))
+      .catch(err => console.error('Failed to fetch models:', err));
+  }, []);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -44,8 +61,18 @@ export function AIAssistantTab() {
               <Bot className="h-5 w-5" />
               AI Assistant
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="flex items-center gap-2">
               Get intelligent insights about your project
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowModelSelect(!showModelSelect)}
+                className="gap-1 h-6 text-xs"
+                title="Select AI Model"
+              >
+                <Settings className="h-3 w-3" />
+                {selectedModel.replace('llama-', 'Llama ').replace('-', '.')}
+              </Button>
             </CardDescription>
           </div>
           {messages.length > 0 && (
@@ -62,6 +89,25 @@ export function AIAssistantTab() {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Model Selector */}
+        {showModelSelect && availableModels.length > 0 && (
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Select AI Model:</label>
+            <Select value={selectedModel} onValueChange={setSelectedModel}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {availableModels.map((model) => (
+                  <SelectItem key={model.id} value={model.id}>
+                    {model.id} {model.owned_by && `(${model.owned_by})`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
         {/* Chat Messages */}
         <ScrollArea className="h-[400px] w-full border rounded-lg p-4" ref={scrollAreaRef}>
           {messages.length === 0 ? (

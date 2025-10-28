@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 
 export async function POST(request: NextRequest) {
   try {
-    const { message, model = 'llama-3.1-70b-versatile' } = await request.json();
+    const { message, model = 'openai/gpt-oss-120b' } = await request.json();
     
     // Get API key from environment (Groq, Anthropic, or Hugging Face)
     const apiKey = process.env.GROQ_API_KEY || process.env.ANTHROPIC_API_KEY || process.env.HUGGINGFACE_API_KEY;
@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: model || 'llama-3.1-70b-versatile',
+        model: model || 'openai/gpt-oss-120b',
         messages: [{ role: 'user', content: message }],
         temperature: 0.7,
       }),
