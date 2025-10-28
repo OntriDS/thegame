@@ -84,8 +84,9 @@ export function CharacterLogTab({ characterLog, onReload, isReloading }: Charact
               const characterInfo = [];
               
               // ALWAYS show roles - they're the primary character identifier
-              if (data.roles && Array.isArray(data.roles) && data.roles.length > 0) {
-                characterInfo.push(`Roles: ${data.roles.join(', ')}`);
+              const roles = data.roles || entry.roles;
+              if (roles && Array.isArray(roles) && roles.length > 0) {
+                characterInfo.push(`Roles: ${roles.join(', ')}`);
               }
               
               // Show native fields only when present
