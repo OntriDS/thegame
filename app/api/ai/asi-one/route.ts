@@ -42,6 +42,14 @@ export async function POST(request: NextRequest, parsedData?: any) {
       temperature: 0.7,
     };
 
+    // Attach identity metadata (email + agent address) for binding on ASI side
+    const userEmail = process.env.ASI_USER_EMAIL || '';
+    const agentAddress = process.env.ASI_AGENT_ADDRESS || '';
+    requestBody.metadata = {
+      user_email: userEmail,
+      agent_address: agentAddress
+    };
+
     // Always attach tools when requested; provider should ignore if unsupported
     if (tools) {
       requestBody.tools = ASI_ONE_TOOLS;
@@ -51,6 +59,8 @@ export async function POST(request: NextRequest, parsedData?: any) {
     const headers: Record<string, string> = {
       'Authorization': `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
+      'x-user-email': userEmail,
+      'x-agent-address': agentAddress,
     };
 
     // Ensure session ID for agentic models on first request
