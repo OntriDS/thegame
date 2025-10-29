@@ -388,9 +388,9 @@ export enum ArtworkSubType {
 
 /** Print Item SubTypes */
 export enum PrintSubType {
-  GICLEE_PRINT = "Gicleé Print",
+  GICLEE_PRINT = "Giclee Print",
   STANDARD_PRINT = "Standard Print",
-  GICLEE_PRINT_ON_FRAME = "Gicleé Print on Frame"
+  GICLEE_PRINT_ON_FRAME = "Giclee Print on Frame"
 }
 
 /** Sticker Item SubTypes */
