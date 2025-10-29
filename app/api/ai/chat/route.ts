@@ -4,7 +4,9 @@ import { POST as asiOneHandler } from '../asi-one/route';
 
 export async function POST(request: NextRequest) {
   try {
-    const { message, model = 'openai/gpt-oss-120b', provider } = await request.json();
+    // Clone the request before reading the body to avoid "Body is unusable" error
+    const clonedRequest = request.clone();
+    const { message, model = 'openai/gpt-oss-120b', provider } = await clonedRequest.json();
     
     // Determine which provider to use based on model or explicit provider
     const isAsiOne = provider === 'asi-one' || model.startsWith('asi1-');
