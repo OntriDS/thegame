@@ -186,8 +186,8 @@ export function PlayerLogTab({ playerLog, onReload, isReloading }: PlayerLogTabP
 
                     {/* Source Information */}
                     {(entry.sourceId) && (
-                      <span className="text-sm text-muted-foreground truncate">
-                        from {entry.sourceType}: {
+                      <span className="text-xs text-muted-foreground min-w-0 flex-shrink-0">
+                        source: {
                           sourceNameCache[entry.sourceId] || 
                           entry.sourceId.substring(0, 8) + '...'
                         }
