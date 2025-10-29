@@ -83,15 +83,14 @@ export function SitesLogTab({ sitesLog, onReload, isReloading }: SitesLogTabProp
                   <p className="text-muted-foreground text-center py-4">No site lifecycle events found</p>
                 ) : (
                   processedSitesLog.entries.map((entry: any, index: number) => {
-                    const data = entry?.data || {};
-                    const status = data.status || entry.status || SiteStatus.INACTIVE;
+                    const status = entry.status || SiteStatus.INACTIVE;
                     // Use displayName from normalization, fallback to entry data
-                    const siteName = entry.displayName || data.name || 'Site';
-                    const siteType = data.metadata?.type || SiteType.PHYSICAL;
-                    const businessType = data.metadata?.businessType || '—';
-                    const settlement = data.metadata?.settlement || '—';
-                    const digitalType = data.metadata?.digitalType || '—';
-                    const purpose = data.metadata?.purpose || '—';
+                    const siteName = entry.displayName || entry.name || 'Site';
+                    const siteType = entry.type || SiteType.PHYSICAL;
+                    const businessType = '—';
+                    const settlement = '—';
+                    const digitalType = '—';
+                    const purpose = '—';
                     const date = entry.displayDate || entry.timestamp || '';
 
                     return (

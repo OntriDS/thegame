@@ -133,23 +133,22 @@ export function SalesLogTab({ salesLog, onReload, isReloading }: SalesLogTabProp
           ) : (
             entries.map((entry: any, index: number) => {
               // Extract data from the rich logging structure
-              const data = entry.data || {};
-              const status: string = entry.status || data.saleStatus || data.status || 'Unknown';
+              const status: string = entry.status || 'Unknown';
               // Use displayName from normalization, fallback to entry data
-              const name: string = entry.displayName || entry.name || entry.saleName || data.saleName || data.name || entry.message || '—';
-              const type: string = entry.type || entry.saleType || data.saleType || data.type || '—';
-              const station: string = formatStation(entry.station || data.station);
-              const category: string = formatCategory(entry.category || data.category);
+              const name: string = entry.displayName || entry.name || entry.saleName || entry.message || '—';
+              const type: string = entry.type || entry.saleType || '—';
+              const station: string = formatStation(entry.station);
+              const category: string = formatCategory(entry.category);
               const date: string = entry.displayDate || entry.timestamp || '';
-              const siteName: string = data.siteName || data.site || '';
-              const customerName: string = data.customerName || data.customer || '';
+              const siteName: string = entry.siteName || entry.site || '';
+              const customerName: string = entry.customerName || entry.customer || '';
 
               // Financial information - extract from totals or direct values
-              const subtotal = data.totals?.subtotal || data.subtotal || 0;
-              const discountTotal = data.totals?.discountTotal || data.discountTotal || 0;
-              const taxTotal = data.totals?.taxTotal || data.taxTotal || 0;
-              const revenue = data.totals?.totalRevenue || data.revenue || data.totalRevenue || 0;
-              const cost = data.totals?.totalCost || data.cost || 0;
+              const subtotal = entry.totals?.subtotal || entry.subtotal || 0;
+              const discountTotal = entry.totals?.discountTotal || entry.discountTotal || 0;
+              const taxTotal = entry.totals?.taxTotal || entry.taxTotal || 0;
+              const revenue = entry.totals?.totalRevenue || entry.revenue || entry.totalRevenue || 0;
+              const cost = entry.totals?.totalCost || entry.cost || 0;
               const profit = revenue - cost;
 
               // Helper function to get color for financial values
@@ -240,9 +239,9 @@ export function SalesLogTab({ salesLog, onReload, isReloading }: SalesLogTabProp
                       onClick={async () => {
                         try {
                           const { ClientAPI } = await import('@/lib/client-api');
-                          const links = await ClientAPI.getLinksFor({ type: EntityType.SALE, id: data.entityId });
+                          const links = await ClientAPI.getLinksFor({ type: EntityType.SALE, id: entry.entityId });
                           setSaleLinks(links);
-                          setSelectedSaleId(data.entityId);
+                          setSelectedSaleId(entry.entityId);
                           setSelectedLogEntry(entry);
                           setShowLinksModal(true);
                         } catch (error) {

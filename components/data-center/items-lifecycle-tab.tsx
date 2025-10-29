@@ -42,9 +42,8 @@ export function ItemsLifecycleTab({ itemsLog, onReload, isReloading }: ItemsLife
       
       // Collect all sourceIds that need lookup
       entries.forEach((entry: any) => {
-        const data = entry?.data || {};
-        const sourceId = data.sourceId || entry.sourceId;
-        const sourceType = data.sourceType || entry.sourceType;
+        const sourceId = entry.sourceId;
+        const sourceType = entry.sourceType;
         if (sourceId && sourceType && !sourceNameCache[sourceId]) {
           sourceIds.add(sourceId);
         }
@@ -188,7 +187,6 @@ export function ItemsLifecycleTab({ itemsLog, onReload, isReloading }: ItemsLife
                 <p className="text-muted-foreground text-center py-4">No item lifecycle events found</p>
               ) : (
                 processedItemsLog.entries.map((entry: any, index: number) => {
-                  const data = entry?.data || {};
                   
                   // Extract status with proper normalization
                   const statusRaw: string = entry.event || entry.action || entry.type || entry.status || 'unknown';
@@ -205,16 +203,16 @@ export function ItemsLifecycleTab({ itemsLog, onReload, isReloading }: ItemsLife
                   }
                   
                   // Extract item fields - use displayName from normalization
-                  const name = entry.displayName || data.name || entry.name || entry.itemName || 'Unnamed Item';
-                  const itemType = data.itemType || entry.itemType || '—';
-                  const station = data.station || entry.station || '—';
-                  const subItemType = data.subItemType || entry.subItemType || '—';
-                  const collection = data.collection || entry.collection || '—';
-                  const quantity = data.quantity || entry.quantity;
-                  const unitCost = data.unitCost || entry.unitCost || entry.cost || 0;
-                  const price = data.price || entry.price || 0;
-                  const sourceType = data.sourceType || entry.sourceType;
-                  const sourceId = data.sourceId || entry.sourceId;
+                  const name = entry.displayName || entry.name || entry.itemName || 'Unnamed Item';
+                  const itemType = entry.itemType || '—';
+                  const station = entry.station || '—';
+                  const subItemType = entry.subItemType || '—';
+                  const collection = entry.collection || '—';
+                  const quantity = entry.quantity;
+                  const unitCost = entry.unitCost || entry.cost || 0;
+                  const price = entry.price || 0;
+                  const sourceType = entry.sourceType;
+                  const sourceId = entry.sourceId;
                   const date = entry.displayDate || entry.timestamp || '';
                   
                   // Get source name from cache
@@ -222,9 +220,9 @@ export function ItemsLifecycleTab({ itemsLog, onReload, isReloading }: ItemsLife
                   
                   // Handle bulk operations
                   if (statusRaw === 'BULK_IMPORT' || statusRaw === 'BULK_EXPORT') {
-                    const count = data.count || 0;
-                    const source = data.source || 'backup folder';
-                    const importMode = data.importMode;
+                    const count = entry.count || 0;
+                    const source = entry.source || 'backup folder';
+                    const importMode = entry.importMode;
                     
                     return (
                       <div key={index} className="flex items-center gap-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors">
@@ -339,9 +337,9 @@ export function ItemsLifecycleTab({ itemsLog, onReload, isReloading }: ItemsLife
                           onClick={async () => {
                             try {
                               const { ClientAPI } = await import('@/lib/client-api');
-                              const links = await ClientAPI.getLinksFor({ type: EntityType.ITEM, id: data.entityId || entry.entityId });
+                              const links = await ClientAPI.getLinksFor({ type: EntityType.ITEM, id: entry.entityId });
                               setItemLinks(links);
-                              setSelectedItemId(data.entityId || entry.entityId);
+                              setSelectedItemId(entry.entityId);
                               setSelectedLogEntry(entry);
                               setShowLinksModal(true);
                             } catch (error) {

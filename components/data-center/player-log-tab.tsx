@@ -170,8 +170,7 @@ export function PlayerLogTab({ playerLog, onReload, isReloading }: PlayerLogTabP
         ) : (
           <div className="space-y-2">
             {sortedEntries.map((entry: any, index: number) => {
-              const data = entry.data || {};
-              const playerId = data.entityId || PLAYER_ONE_ID;
+              const playerId = entry.entityId || PLAYER_ONE_ID;
               
               return (
                 <div 
@@ -186,27 +185,27 @@ export function PlayerLogTab({ playerLog, onReload, isReloading }: PlayerLogTabP
                     </Badge>
 
                     {/* Source Information */}
-                    {(entry.sourceId || entry.data?.sourceId) && (
+                    {(entry.sourceId) && (
                       <span className="text-sm text-muted-foreground truncate">
-                        from {entry.sourceType || entry.data?.sourceType}: {
-                          sourceNameCache[entry.sourceId || entry.data?.sourceId] || 
-                          (entry.sourceId || entry.data?.sourceId).substring(0, 8) + '...'
+                        from {entry.sourceType}: {
+                          sourceNameCache[entry.sourceId] || 
+                          entry.sourceId.substring(0, 8) + '...'
                         }
                       </span>
                     )}
 
                     {/* Player name (for non-points events) */}
-                    {!entry.points && !entry.data?.points && (
+                    {!entry.points && (
                       <span className="text-sm font-medium truncate">
                         {entry.displayName || 'Player activity'}
                       </span>
                     )}
                     
                     {/* Points Display - DRY using helper */}
-                    {(entry.points || data.points) && (
+                    {(entry.points) && (
                       <div className="flex items-center gap-2">
                         {getPointsMetadata().map((pointType) => {
-                          const points = entry.points || data.points;
+                          const points = entry.points;
                           const pointValue = points[pointType.key.toLowerCase() as keyof typeof points] || 0;
                           const colorClasses = {
                             'XP': 'border-orange-600 text-orange-600',
@@ -241,15 +240,14 @@ export function PlayerLogTab({ playerLog, onReload, isReloading }: PlayerLogTabP
                         const { ClientAPI } = await import('@/lib/client-api');
                         
                         // Smart link fetching: detect if this is a financial record effect entry
-                        const data = entry?.data || {};
                         let links: any[] = [];
                         let linkType = 'player';
                         let entityId = PLAYER_ONE_ID; // Default to main player
                         
                         // Check if this is a financial record effect entry (has description starting with "Record")
-                        if (data.description?.startsWith('Points from record:') || entry.description?.startsWith('Record points:')) {
+                        if (entry.description?.startsWith('Points from record:') || entry.description?.startsWith('Record points:')) {
                           linkType = 'financial';
-                          entityId = data.entityId || entry.entityId; // Use the financial record ID
+                          entityId = entry.entityId; // Use the financial record ID
                           const response = await fetch(`/api/links?entityType=financial&entityId=${entityId}`);
                           links = await response.json();
                           console.log(`[PlayerLogTab] 🔍 Detected financial record effect entry, fetching financial links for financial ${entityId}:`, {

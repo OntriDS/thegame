@@ -198,39 +198,38 @@ export function TasksLifecycleTab({ tasksLog, onReload, isReloading }: TasksLife
               ) : (
                 processedTasksLog.entries.map((entry: any, index: number) => {
                   // Extract data from the rich logging structure
-                  const data = entry.data || {};
-                  const status: string = entry.event || data.taskStatus || 'Unknown';
+                  const status: string = entry.event || 'Unknown';
                   // Use displayName from normalization, fallback to entry data
-                  const name: string = entry.displayName || entry.name || entry.taskName || data.taskName || data.name || entry.message || '—';
-                  const description: string = data.description || entry.description || '';
-                  const type: string = entry.taskType || data.taskType || '—';
-                  const station: string = formatStation(entry.station || data.station);
-                  const priority: string = formatPriority(entry.priority || data.priority);
-                  const sourceSaleId = data.sourceSaleId || entry.sourceSaleId;
+                  const name: string = entry.displayName || entry.name || entry.taskName || entry.message || '—';
+                  const description: string = entry.description || '';
+                  const type: string = entry.taskType || '—';
+                  const station: string = formatStation(entry.station);
+                  const priority: string = formatPriority(entry.priority);
+                  const sourceSaleId = entry.sourceSaleId;
                   const truncatedSourceName = sourceSaleId ? sourceNameCache[sourceSaleId] || '' : '';
-                  const dueDate = data.dueDate || entry.dueDate;
-                  const frequencyConfig = data.frequencyConfig || entry.frequencyConfig;
+                  const dueDate = entry.dueDate;
+                  const frequencyConfig = entry.frequencyConfig;
                   
-                  const progress: number = data.progress || 0;
-                  const cost: number = data.cost || 0;
-                  const revenue: number = data.revenue || 0;
+                  const progress: number = 0;
+                  const cost: number = 0;
+                  const revenue: number = 0;
                   const date: string = entry.displayDate || entry.timestamp || '';
 
                   // Handle special cases for different log types
                   let statusBadge = status;
                   let renameInfo = '';
                   
-                  if (status === 'renamed' && data.oldValue && data.newValue) {
+                  if (status === 'renamed' && entry.oldValue && entry.newValue) {
                     statusBadge = 'Renamed';
-                    renameInfo = `Changed from: "${data.oldValue}"`;
+                    renameInfo = `Changed from: "${entry.oldValue}"`;
                   } else if (status === LogEventType.UPDATED) {
                     statusBadge = 'Updated';
                     // Check if it's a field update or status change
-                    if (data.field && data.oldValue !== undefined && data.newValue !== undefined) {
-                      renameInfo = `${data.field}: "${data.oldValue}" → "${data.newValue}"`;
-                    } else if (data.newStatus) {
-                      renameInfo = data.oldStatus ? `Changed from: "${data.oldStatus}"` : '';
-                      statusBadge = data.newStatus || 'Status Changed';
+                    if (entry.field && entry.oldValue !== undefined && entry.newValue !== undefined) {
+                      renameInfo = `${entry.field}: "${entry.oldValue}" → "${entry.newValue}"`;
+                    } else if (entry.newStatus) {
+                      renameInfo = entry.oldStatus ? `Changed from: "${entry.oldStatus}"` : '';
+                      statusBadge = entry.newStatus || 'Status Changed';
                     }
                   } else if (status === LogEventType.CREATED) {
                     statusBadge = 'Created';
@@ -240,13 +239,13 @@ export function TasksLifecycleTab({ tasksLog, onReload, isReloading }: TasksLife
                     statusBadge = 'Collected';
                   } else if (status === 'BULK_IMPORT') {
                     statusBadge = 'Bulk Import';
-                    const count = data.count || 0;
-                    const source = data.source || 'backup folder';
-                    const importMode = data.importMode;
+                    const count = entry.count || 0;
+                    const source = entry.source || 'backup folder';
+                    const importMode = entry.importMode;
                     renameInfo = `${count} tasks from ${source} (${importMode || 'merge'} mode)`;
                   } else if (status === 'BULK_EXPORT') {
                     statusBadge = 'Bulk Export';
-                    const count = data.count || 0;
+                    const count = entry.count || 0;
                     renameInfo = `${count} tasks to backup folder`;
                   }
                   

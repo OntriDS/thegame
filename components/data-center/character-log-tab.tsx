@@ -71,44 +71,43 @@ export function CharacterLogTab({ characterLog, onReload, isReloading }: Charact
             <p className="text-muted-foreground text-center py-4">No character activity logged</p>
           ) : (
             processedCharacterLog.entries.map((entry: any, index: number) => {
-              const data = entry?.data || {};
               const statusRaw: string = entry.event || 'unknown';
               const status = statusRaw.charAt(0).toUpperCase() + statusRaw.slice(1);
               
               // Use displayName from normalization, fallback to entry data (standardized with other log tabs)
-              const name: string = entry.displayName || data.name || entry.name || entry.title || 'Character Activity';
+              const name: string = entry.displayName || entry.name || entry.title || 'Character Activity';
               const date: string = entry.displayDate || entry.timestamp || '';
               
               // Character native fields
-              const isFounder = data.roles && Array.isArray(data.roles) && data.roles.includes(CharacterRole.FOUNDER);
+              const isFounder = entry.roles && Array.isArray(entry.roles) && entry.roles.includes(CharacterRole.FOUNDER);
               const characterInfo = [];
               
               // ALWAYS show roles - they're the primary character identifier
-              const roles = data.roles || entry.roles;
+              const roles = entry.roles;
               if (roles && Array.isArray(roles) && roles.length > 0) {
                 characterInfo.push(`Roles: ${roles.join(', ')}`);
               }
               
               // Show native fields only when present
-              if (data.commColor) characterInfo.push(`CommColor: ${data.commColor}`);
-              if (data.description) characterInfo.push(`Description: ${data.description}`);
-              if (data.contactEmail) characterInfo.push(`Email: ${data.contactEmail}`);
-              if (data.contactPhone) characterInfo.push(`Phone: ${data.contactPhone}`);
-              if (data.isActive !== undefined) characterInfo.push(`Active: ${data.isActive ? 'Yes' : 'No'}`);
+              if (entry.commColor) characterInfo.push(`CommColor: ${entry.commColor}`);
+              if (entry.description) characterInfo.push(`Description: ${entry.description}`);
+              if (entry.contactEmail) characterInfo.push(`Email: ${entry.contactEmail}`);
+              if (entry.contactPhone) characterInfo.push(`Phone: ${entry.contactPhone}`);
+              if (entry.isActive !== undefined) characterInfo.push(`Active: ${entry.isActive ? 'Yes' : 'No'}`);
               
               // Event-specific details (show when present)
               if (statusRaw === 'REQUESTED_TASK') {
-                if (data.taskName) characterInfo.push(`Task: ${data.taskName}`);
-                if (data.taskType) characterInfo.push(`Type: ${data.taskType}`);
-                if (data.station) characterInfo.push(`Station: ${data.station}`);
+                if (entry.taskName) characterInfo.push(`Task: ${entry.taskName}`);
+                if (entry.taskType) characterInfo.push(`Type: ${entry.taskType}`);
+                if (entry.station) characterInfo.push(`Station: ${entry.station}`);
               } else if (statusRaw === 'OWNS_ITEM') {
-                if (data.itemName) characterInfo.push(`Item: ${data.itemName}`);
-                if (data.itemType) characterInfo.push(`Type: ${data.itemType}`);
-                if (data.sourceTaskName) characterInfo.push(`From: ${data.sourceTaskName}`);
+                if (entry.itemName) characterInfo.push(`Item: ${entry.itemName}`);
+                if (entry.itemType) characterInfo.push(`Type: ${entry.itemType}`);
+                if (entry.sourceTaskName) characterInfo.push(`From: ${entry.sourceTaskName}`);
               } else if (statusRaw === 'PURCHASED') {
-                if (data.saleName) characterInfo.push(`Sale: ${data.saleName}`);
-                if (data.saleType) characterInfo.push(`Type: ${data.saleType}`);
-                if (data.totalRevenue) characterInfo.push(`Revenue: $${data.totalRevenue.toFixed(2)}`);
+                if (entry.saleName) characterInfo.push(`Sale: ${entry.saleName}`);
+                if (entry.saleType) characterInfo.push(`Type: ${entry.saleType}`);
+                if (entry.totalRevenue) characterInfo.push(`Revenue: $${entry.totalRevenue.toFixed(2)}`);
               }
               
               const characterInfoText = characterInfo.join(' • ');
@@ -154,12 +153,12 @@ export function CharacterLogTab({ characterLog, onReload, isReloading }: Charact
                         const { ClientAPI } = await import('@/lib/client-api');
                         
                         // Smart link fetching: detect if this is a financial record effect entry
-                        const entityId = data.entityId || entry.entityId;
+                        const entityId = entry.entityId;
                         let links: any[] = [];
                         let linkType = 'character';
                         
                         // Check if this is a financial record effect entry (has description starting with "Record")
-                        if (data.description?.startsWith('Jungle Coins from record:') || entry.description?.startsWith('Record Jungle Coins:')) {
+                        if (entry.description?.startsWith('Jungle Coins from record:') || entry.description?.startsWith('Record Jungle Coins:')) {
                             linkType = 'financial';
                             links = await ClientAPI.getLinksFor({ type: EntityType.FINANCIAL, id: entityId });
                             console.log(`[CharacterLogTab] 🔍 Detected financial record effect entry, fetching financial links for financial ${entityId}:`, {

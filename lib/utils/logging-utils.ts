@@ -11,7 +11,6 @@ export interface LogEntry {
   entityType: EntityType;
   status: string;
   timestamp: string;
-  data: any;
   description?: string;
   orgId?: string; // Phase 6: Multi-user scaffolding
   userId?: string; // Phase 6: Multi-user scaffolding
@@ -331,13 +330,11 @@ export function buildLatestStatusMap(entries: any[]): Record<string, string> {
 
 /** Extract a best-effort display name from a log entry */
 export function extractEntryName(entry: any): string | undefined {
-  const d = entry?.data || {};
   return (
     entry?.name ||
-    d.name ||
-    entry?.taskName || d.taskName ||
-    entry?.itemName || d.itemName ||
-    entry?.saleName || d.saleName ||
+    entry?.taskName ||
+    entry?.itemName ||
+    entry?.saleName ||
     undefined
   );
 }

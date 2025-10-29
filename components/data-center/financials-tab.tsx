@@ -65,14 +65,13 @@ export function FinancialsTab({ financialsLog, onReload, isReloading }: Financia
   };
 
   const computeAmounts = (entry: FinancialLogEntry) => {
-    const data = entry?.data || {};
     
-    const isNotPaid = Boolean(entry.isNotPaid ?? data.isNotPaid);
-    const isNotCharged = Boolean(entry.isNotCharged ?? data.isNotCharged);
+    const isNotPaid = Boolean(entry.isNotPaid);
+    const isNotCharged = Boolean(entry.isNotCharged);
     
     // Check entry level first, then data level
-    const rawCost = Number(entry.cost ?? data.cost ?? 0);
-    const rawRevenue = Number(entry.revenue ?? data.revenue ?? 0);
+    const rawCost = Number(entry.cost ?? 0);
+    const rawRevenue = Number(entry.revenue ?? 0);
     
     const cost = isNotPaid ? 0 : rawCost;
     const revenue = isNotCharged ? 0 : rawRevenue;
@@ -84,13 +83,12 @@ export function FinancialsTab({ financialsLog, onReload, isReloading }: Financia
 
   // Shared render function
   const renderFinancialEntry = ({ entry, amounts }: { entry: any, amounts: ReturnType<typeof computeAmounts> }, index: number) => {
-    const data = entry?.data || {};
     
     // Extract financial fields properly - use displayName from normalization
-    const name = entry.displayName || entry.name || entry.taskName || entry.recordName || data.name || data.taskName || data.recordName || entry.description || entry.message || 'Unnamed';
-    const financialType = data.type || entry.type || '—';
-    const station = formatStation(entry.station || data.station);
-    const category = entry.category || data.category || '—';
+    const name = entry.displayName || entry.name || entry.taskName || entry.recordName || entry.description || entry.message || 'Unnamed';
+    const financialType = entry.type || '—';
+    const station = formatStation(entry.station);
+    const category = entry.category || '—';
     const date = entry.displayDate || entry.timestamp || '';
     
     // Extract financial amounts
@@ -184,11 +182,11 @@ export function FinancialsTab({ financialsLog, onReload, isReloading }: Financia
               try {
                 const { ClientAPI } = await import('@/lib/client-api');
                 
-                const entityId = data.entityId || entry.entityId;
+                const entityId = entry.entityId;
                 let links: any[] = [];
                 let linkType = 'financial';
                 
-                if (data.financialDescription === 'Sale revenue' || data.type === 'sale_financial') {
+                if (entry.financialDescription === 'Sale revenue' || entry.type === 'sale_financial') {
                   linkType = 'sale';
                   links = await ClientAPI.getLinksFor({ type: EntityType.SALE, id: entityId });
                 } else {
