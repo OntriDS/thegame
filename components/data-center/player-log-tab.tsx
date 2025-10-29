@@ -183,23 +183,6 @@ export function PlayerLogTab({ playerLog, onReload, isReloading }: PlayerLogTabP
                     <Badge variant="outline" className="capitalize shrink-0">
                       {getActionLabel(entry)}
                     </Badge>
-
-                    {/* Source Information */}
-                    {(entry.sourceId) && (
-                      <span className="text-xs text-muted-foreground min-w-0 flex-shrink-0">
-                        source: {
-                          sourceNameCache[entry.sourceId] || 
-                          entry.sourceId.substring(0, 8) + '...'
-                        }
-                      </span>
-                    )}
-
-                    {/* Player name (for non-points events) */}
-                    {!entry.points && (
-                      <span className="text-sm font-medium truncate">
-                        {entry.displayName || 'Player activity'}
-                      </span>
-                    )}
                     
                     {/* Points Display - DRY using helper */}
                     {(entry.points) && (
@@ -224,6 +207,23 @@ export function PlayerLogTab({ playerLog, onReload, isReloading }: PlayerLogTabP
                           );
                         })}
                       </div>
+                    )}
+
+                    {/* Player name (for non-points events) */}
+                      {!entry.points && (
+                      <span className="text-sm font-medium truncate">
+                        {entry.displayName || 'Player activity'}
+                      </span>
+                    )}
+
+                      {/* Source Information */}
+                        {(entry.sourceId) && (
+                        <span className="text-xs text-muted-foreground min-w-0 flex-shrink-0">
+                        source: {
+                          sourceNameCache[entry.sourceId] || 
+                          entry.sourceId.substring(0, 8) + '...'
+                        }
+                      </span>
                     )}
                     
                     <span className="text-xs text-muted-foreground ml-auto shrink-0">
