@@ -46,6 +46,34 @@ export const ASI_ONE_TOOLS = [
   {
     type: "function",
     function: {
+      name: "check_account_connection_status",
+      description: "Check whether the current chat is connected to the user's ASI agent account.",
+      parameters: {
+        type: "object",
+        properties: {
+          handle: { type: "string", description: "Expected user handle, e.g. pixelbrain" }
+        },
+        required: ["handle"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "agent_verification",
+      description: "Verify agent connectivity details (no-op helper when using non-agentic models).",
+      parameters: {
+        type: "object",
+        properties: {
+          expected_address: { type: "string", description: "Expected agent address (if known)" },
+          action: { type: "string", description: "Verification action requested" }
+        }
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
       name: "get_project_status",
       description: "Get current project status, sprint information, and system state from PROJECT-STATUS.json",
       parameters: {
@@ -270,6 +298,12 @@ export async function executeTool(toolName: string, args: any): Promise<any> {
       
       case "generate_structured_data":
         return await generateStructuredData(args.output_type, args.data_source, args.format_schema);
+      
+      case "check_account_connection_status":
+        return await checkAccountConnectionStatus(args.handle);
+      
+      case "agent_verification":
+        return await agentVerification(args.expected_address, args.action);
       
       default:
         throw new Error(`Unknown tool: ${toolName}`);
@@ -732,4 +766,25 @@ async function generateStructuredData(outputType: string, dataSource?: string, f
   } catch (error) {
     return { error: `Failed to generate ${outputType}: ${error}` };
   }
+}
+
+// Helper tools to make non-agentic models respond clearly when user expects agent behavior
+async function checkAccountConnectionStatus(handle: string): Promise<any> {
+  const recommendation = "Use an agentic model like 'asi1-extended-agentic' for account-linked actions.";
+  return {
+    handle,
+    connected: false,
+    model_type: "non-agentic-or-unknown",
+    message: "This chat is not connected to an ASI agent session.",
+    recommendation
+  };
+}
+
+async function agentVerification(expectedAddress?: string, action?: string): Promise<any> {
+  return {
+    verified: false,
+    expected_address: expectedAddress || null,
+    action: action || null,
+    message: "Agent verification requires an agentic model session. Switch to 'asi1-extended-agentic' and retry.",
+  };
 }

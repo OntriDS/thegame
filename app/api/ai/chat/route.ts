@@ -12,8 +12,8 @@ export async function POST(request: NextRequest) {
     const isAsiOne = provider === 'asi-one' || model.startsWith('asi1-');
     
     if (isAsiOne) {
-      // Direct function call to ASI:One handler
-      return await asiOneHandler(request);
+      // Pass parsed data directly to ASI:One handler
+      return await asiOneHandler(request, { message, model, provider });
     } else {
       // Direct function call to Groq handler
       return await groqHandler(request);

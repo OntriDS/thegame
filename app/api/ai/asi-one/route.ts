@@ -2,9 +2,9 @@ import { NextRequest } from 'next/server';
 import { ASI_ONE_TOOLS, executeTool } from './tools';
 import { SessionManager, getSessionIdFromHeaders, createSessionHeaders } from '@/lib/utils/session-manager';
 
-export async function POST(request: NextRequest) {
+export async function POST(request: NextRequest, parsedData?: any) {
   try {
-    const { message, model = 'asi1-mini', tools = true, sessionId } = await request.json();
+    const { message, model = 'asi1-mini', tools = true, sessionId } = parsedData || await request.json();
     
     // Get API key from environment
     const apiKey = process.env.ASI_ONE_API_KEY;
@@ -28,6 +28,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Prepare messages array
+    // For agentic models: don't add system message - the agent already knows the user
+    // For regular models: no system message needed - tools are available if needed
     const messages = [
       ...sessionMessages,
       { role: 'user', content: message }
@@ -40,8 +42,8 @@ export async function POST(request: NextRequest) {
       temperature: 0.7,
     };
 
-    // Add tools for models that support them
-    if (tools && (model.startsWith('asi1-mini') || model.startsWith('asi1-fast') || model.startsWith('asi1-extended'))) {
+    // Always attach tools when requested; provider should ignore if unsupported
+    if (tools) {
       requestBody.tools = ASI_ONE_TOOLS;
     }
 
@@ -51,8 +53,12 @@ export async function POST(request: NextRequest) {
       'Content-Type': 'application/json',
     };
 
-    // Add session ID for agentic models
-    if (currentSessionId && (model.includes('agentic') || model.includes('extended'))) {
+    // Ensure session ID for agentic models on first request
+    if (model.includes('agentic') || model.includes('extended')) {
+      if (!currentSessionId) {
+        const session = await SessionManager.createSession('akiles', 'THEGAME');
+        currentSessionId = session.id;
+      }
       headers['x-session-id'] = currentSessionId;
     }
 
