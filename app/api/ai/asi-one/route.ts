@@ -1,8 +1,10 @@
 import { NextRequest } from 'next/server';
+import { ASI_ONE_TOOLS, executeTool } from './tools';
+import { SessionManager, getSessionIdFromHeaders, createSessionHeaders } from '@/lib/utils/session-manager';
 
 export async function POST(request: NextRequest) {
   try {
-    const { message, model = 'asi1-mini' } = await request.json();
+    const { message, model = 'asi1-mini', tools = true, sessionId } = await request.json();
     
     // Get API key from environment
     const apiKey = process.env.ASI_ONE_API_KEY;
@@ -14,18 +16,51 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Handle session management for agentic models
+    let currentSessionId = sessionId || getSessionIdFromHeaders(request.headers);
+    let sessionMessages: any[] = [];
+    
+    if (currentSessionId) {
+      const session = await SessionManager.getSession(currentSessionId);
+      if (session) {
+        sessionMessages = await SessionManager.getSessionMessages(currentSessionId);
+      }
+    }
+
+    // Prepare messages array
+    const messages = [
+      ...sessionMessages,
+      { role: 'user', content: message }
+    ];
+
+    // Prepare request body
+    const requestBody: any = {
+      model: model || 'asi1-mini',
+      messages,
+      temperature: 0.7,
+    };
+
+    // Add tools for models that support them
+    if (tools && (model.startsWith('asi1-mini') || model.startsWith('asi1-fast') || model.startsWith('asi1-extended'))) {
+      requestBody.tools = ASI_ONE_TOOLS;
+    }
+
+    // Prepare headers
+    const headers: Record<string, string> = {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    };
+
+    // Add session ID for agentic models
+    if (currentSessionId && (model.includes('agentic') || model.includes('extended'))) {
+      headers['x-session-id'] = currentSessionId;
+    }
+
     // Use ASI:One API (OpenAI-compatible)
     const response = await fetch('https://api.asi1.ai/v1/chat/completions', {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: model || 'asi1-mini',
-        messages: [{ role: 'user', content: message }],
-        temperature: 0.7,
-      }),
+      headers,
+      body: JSON.stringify(requestBody),
     });
 
     if (!response.ok) {
@@ -47,10 +82,108 @@ export async function POST(request: NextRequest) {
     }
 
     const data = await response.json();
-    
+    const messageContent = data.choices[0].message;
+
+    // Handle tool calls
+    if (messageContent.tool_calls && messageContent.tool_calls.length > 0) {
+      // Create or get session for tool calls
+      if (!currentSessionId) {
+        const session = await SessionManager.createSession('akiles', 'THEGAME');
+        currentSessionId = session.id;
+      }
+
+      // Add assistant message with tool calls to session
+      await SessionManager.addMessage(
+        currentSessionId,
+        'assistant',
+        messageContent.content || '',
+        messageContent.tool_calls
+      );
+
+      // Execute tool calls
+      const toolResults: any[] = [];
+      for (const toolCall of messageContent.tool_calls) {
+        try {
+          const args = JSON.parse(toolCall.function.arguments);
+          const result = await executeTool(toolCall.function.name, args);
+          
+          toolResults.push({
+            tool_call_id: toolCall.id,
+            name: toolCall.function.name,
+            content: JSON.stringify(result)
+          });
+
+          // Add tool result to session
+          await SessionManager.addMessage(
+            currentSessionId,
+            'tool',
+            JSON.stringify(result),
+            undefined,
+            [{ id: toolCall.id, result }]
+          );
+        } catch (error) {
+          console.error(`Tool execution error for ${toolCall.function.name}:`, error);
+          toolResults.push({
+            tool_call_id: toolCall.id,
+            name: toolCall.function.name,
+            content: JSON.stringify({ error: `Tool execution failed: ${error}` })
+          });
+        }
+      }
+
+      // Send tool results back to ASI:One
+      const toolMessages = [
+        ...messages,
+        messageContent,
+        ...toolResults.map(result => ({
+          role: 'tool',
+          content: result.content,
+          tool_call_id: result.tool_call_id
+        }))
+      ];
+
+      const finalResponse = await fetch('https://api.asi1.ai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+          ...createSessionHeaders(currentSessionId)
+        },
+        body: JSON.stringify({
+          model: model || 'asi1-mini',
+          messages: toolMessages,
+          temperature: 0.7,
+        }),
+      });
+
+      if (!finalResponse.ok) {
+        throw new Error('Failed to get final response from ASI:One');
+      }
+
+      const finalData = await finalResponse.json();
+      const finalContent = finalData.choices[0].message.content;
+
+      // Add final response to session
+      await SessionManager.addMessage(currentSessionId, 'assistant', finalContent);
+
+      return Response.json({ 
+        response: finalContent,
+        model: data.model,
+        sessionId: currentSessionId,
+        toolCalls: messageContent.tool_calls,
+        toolResults: toolResults
+      });
+    }
+
+    // Regular response without tool calls
+    if (currentSessionId) {
+      await SessionManager.addMessage(currentSessionId, 'assistant', messageContent.content || '');
+    }
+
     return Response.json({ 
-      response: data.choices[0].message.content,
-      model: data.model
+      response: messageContent.content,
+      model: data.model,
+      sessionId: currentSessionId
     });
   } catch (error) {
     console.error('ASI:One API error:', error);

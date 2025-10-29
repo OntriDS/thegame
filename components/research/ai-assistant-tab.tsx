@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Bot, Send, Trash2, Loader2, Settings } from 'lucide-react';
+import { Bot, Send, Trash2, Loader2, Settings, Wrench, Database } from 'lucide-react';
 import { useAIChat, ChatMessage } from '@/lib/hooks/use-ai-chat';
 
 interface GroqModel {
@@ -16,7 +16,7 @@ interface GroqModel {
 }
 
 export function AIAssistantTab() {
-  const { messages, isLoading, error, sendMessage, clearMessages, selectedModel, setSelectedModel, selectedProvider, rateLimits } = useAIChat();
+  const { messages, isLoading, error, sendMessage, clearMessages, clearSession, selectedModel, setSelectedModel, selectedProvider, rateLimits, sessionId, toolExecution } = useAIChat();
   const [availableModels, setAvailableModels] = useState<GroqModel[]>([]);
   const [showModelSelect, setShowModelSelect] = useState(false);
   const [input, setInput] = useState('');
@@ -78,15 +78,29 @@ export function AIAssistantTab() {
             </CardDescription>
           </div>
           {messages.length > 0 && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={clearMessages}
-              className="gap-2"
-            >
-              <Trash2 className="h-4 w-4" />
-              Clear
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={clearMessages}
+                className="gap-2"
+              >
+                <Trash2 className="h-4 w-4" />
+                Clear
+              </Button>
+              {sessionId && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={clearSession}
+                  className="gap-2"
+                  title="Clear session and start fresh"
+                >
+                  <Database className="h-4 w-4" />
+                  New Session
+                </Button>
+              )}
+            </div>
           )}
         </div>
       </CardHeader>
@@ -158,6 +172,30 @@ export function AIAssistantTab() {
                   </div>
                 </div>
               )}
+              
+              {/* Tool Execution Status */}
+              {toolExecution.isExecuting && (
+                <div className="flex justify-start">
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-2 flex items-center gap-2">
+                    <Wrench className="h-4 w-4 text-blue-600" />
+                    <span className="text-blue-800">
+                      Executing tool: {toolExecution.currentTool}
+                    </span>
+                  </div>
+                </div>
+              )}
+              
+              {/* Session Status */}
+              {sessionId && (
+                <div className="flex justify-start">
+                  <div className="bg-green-50 border border-green-200 rounded-lg px-3 py-1 flex items-center gap-2 text-xs">
+                    <Database className="h-3 w-3 text-green-600" />
+                    <span className="text-green-800">
+                      Session: {sessionId.substring(0, 8)}...
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </ScrollArea>
@@ -168,6 +206,24 @@ export function AIAssistantTab() {
             {error}
           </div>
         )}
+
+          {/* Input Form */}
+          <form onSubmit={handleSubmit} className="flex gap-2">
+          <Input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Ask me anything about your project..."
+            disabled={isLoading}
+            className="flex-1"
+          />
+          <Button type="submit" disabled={isLoading || !input.trim()}>
+            {isLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4" />
+            )}
+          </Button>
+        </form>
 
         {/* Quick Prompts */}
         {messages.length === 0 && (
@@ -190,23 +246,7 @@ export function AIAssistantTab() {
           </div>
         )}
 
-        {/* Input Form */}
-        <form onSubmit={handleSubmit} className="flex gap-2">
-          <Input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask me anything about your project..."
-            disabled={isLoading}
-            className="flex-1"
-          />
-          <Button type="submit" disabled={isLoading || !input.trim()}>
-            {isLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
-          </Button>
-        </form>
+
       </CardContent>
     </Card>
   );
