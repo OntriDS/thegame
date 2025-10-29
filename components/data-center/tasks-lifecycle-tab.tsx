@@ -339,9 +339,9 @@ export function TasksLifecycleTab({ tasksLog, onReload, isReloading }: TasksLife
                           onClick={async () => {
                             try {
                               const { ClientAPI } = await import('@/lib/client-api');
-                              const links = await ClientAPI.getLinksFor({ type: EntityType.TASK, id: data.entityId });
+                              const links = await ClientAPI.getLinksFor({ type: EntityType.TASK, id: entry.entityId });
                               setTaskLinks(links);
-                              setSelectedTaskId(data.entityId);
+                              setSelectedTaskId(entry.entityId);
                               setSelectedLogEntry(entry); // Pass the log entry context
                               setShowLinksModal(true);
                             } catch (error) {
