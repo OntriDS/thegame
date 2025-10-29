@@ -126,7 +126,7 @@ export function ItemsLifecycleTab({ itemsLog, onReload, isReloading }: ItemsLife
       'damaged': ItemStatus.DAMAGED,
       'idle': ItemStatus.IDLE,
       'collected': ItemStatus.COLLECTED,
-      'consigned': ItemStatus.CONSIGNED,
+      'consignment': ItemStatus.CONSIGNMENT,
     };
     
     const mappedStatus = statusMap[normalizedStatus];

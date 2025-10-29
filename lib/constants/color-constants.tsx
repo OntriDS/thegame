@@ -60,7 +60,7 @@ export const ITEM_STATUS_COLORS = {
   [ItemStatus.COLLECTED]: { light: STATUS_COLOR_BASE.COLLECTED, dark: STATUS_COLOR_BASE.COLLECTED },
   [ItemStatus.STORED]: { light: STATUS_COLOR_BASE.STORED, dark: STATUS_COLOR_BASE.STORED },
   [ItemStatus.TO_REPAIR]: { light: STATUS_COLOR_BASE.TO_REPAIR, dark: STATUS_COLOR_BASE.TO_REPAIR },
-  [ItemStatus.CONSIGNED]: { light: STATUS_COLOR_BASE.FINISHING, dark: STATUS_COLOR_BASE.FINISHING },
+  [ItemStatus.CONSIGNMENT]: { light: STATUS_COLOR_BASE.FINISHING, dark: STATUS_COLOR_BASE.FINISHING },
 } as const;
 
 /** Site Status Colors - Light & Dark Mode with border contrast */
