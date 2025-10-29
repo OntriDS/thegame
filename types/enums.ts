@@ -327,7 +327,7 @@ export enum ItemStatus {
   TO_DO       = 'To Do',
   GIFTED      = 'Gifted',
   RESERVED    = 'Reserved',
-  CONSIGNED   = 'Consigned',
+  CONSIGNMENT = 'Consignment',
   OBSOLETE    = 'Obsolete',
   DAMAGED     = 'Damaged',
   IDLE        = 'Idle',
@@ -388,9 +388,9 @@ export enum ArtworkSubType {
 
 /** Print Item SubTypes */
 export enum PrintSubType {
-  GICLEE_PRINT = "Giclee Print",
+  GICLEE_PRINT = "Gicleé Print",
   STANDARD_PRINT = "Standard Print",
-  CONSIGNMENT = "Consignment"
+  GICLEE_PRINT_ON_FRAME = "Gicleé Print on Frame"
 }
 
 /** Sticker Item SubTypes */
