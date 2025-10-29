@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
     console.error('Error fetching models:', error);
     return Response.json(
       { error: 'Failed to fetch models' },
-      { status: 500放在 }
+      { status: 500 }
     );
   }
 }
