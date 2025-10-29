@@ -297,7 +297,8 @@ export async function upsertSite(site: Site): Promise<Site> {
   const saved = await repoUpsertSite(site);
   const { onSiteUpsert } = await import('@/workflows/entities-workflows/site.workflow');
   await onSiteUpsert(saved, previous || undefined);
-  await processLinkEntity(saved, EntityType.SITE);
+  // NOTE: Sites don't create links when saved - they're link targets only
+  // SITE_SITE links are created explicitly by movement operations (workflows/site-movement-utils.ts)
   return saved;
 }
 
