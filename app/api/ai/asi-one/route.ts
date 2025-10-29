@@ -27,13 +27,30 @@ export async function POST(request: NextRequest, parsedData?: any) {
       }
     }
 
+    // Attach identity metadata (email + agent address) for binding on ASI side
+    const userEmail = process.env.ASI_USER_EMAIL || '';
+    const agentAddress = process.env.ASI_AGENT_ADDRESS || '';
+    
+    // Check if this is an agentic model
+    const isAgenticModel = model.includes('agentic') || model.includes('extended');
+    
     // Prepare messages array
-    // For agentic models: don't add system message - the agent already knows the user
+    // For agentic models: add system message identifying Pixel and agent address
+    // This forces ASI:One to load the specific agent context
     // For regular models: no system message needed - tools are available if needed
-    const messages = [
-      ...sessionMessages,
-      { role: 'user', content: message }
-    ];
+    const messages = isAgenticModel && agentAddress
+      ? [
+          {
+            role: 'system',
+            content: `You are Pixel, Akiles' agent. Active agent: ${agentAddress}`
+          },
+          ...sessionMessages,
+          { role: 'user', content: message }
+        ]
+      : [
+          ...sessionMessages,
+          { role: 'user', content: message }
+        ];
 
     // Prepare request body
     const requestBody: any = {
@@ -41,10 +58,6 @@ export async function POST(request: NextRequest, parsedData?: any) {
       messages,
       temperature: 0.7,
     };
-
-    // Attach identity metadata (email + agent address) for binding on ASI side
-    const userEmail = process.env.ASI_USER_EMAIL || '';
-    const agentAddress = process.env.ASI_AGENT_ADDRESS || '';
     requestBody.metadata = {
       user_email: userEmail,
       agent_address: agentAddress
