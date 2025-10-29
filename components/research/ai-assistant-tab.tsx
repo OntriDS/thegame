@@ -16,18 +16,20 @@ interface GroqModel {
 }
 
 export function AIAssistantTab() {
-  const { messages, isLoading, error, sendMessage, clearMessages, selectedModel, setSelectedModel, rateLimits } = useAIChat();
+  const { messages, isLoading, error, sendMessage, clearMessages, selectedModel, setSelectedModel, selectedProvider, rateLimits } = useAIChat();
   const [availableModels, setAvailableModels] = useState<GroqModel[]>([]);
   const [showModelSelect, setShowModelSelect] = useState(false);
   const [input, setInput] = useState('');
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
-  // Fetch available models
+  // Fetch available models from both providers
   useEffect(() => {
-    fetch('/api/ai/models')
-      .then(res => res.json())
-      .then(data => setAvailableModels(data.models || []))
-      .catch(err => console.error('Failed to fetch models:', err));
+    Promise.all([
+      fetch('/api/ai/groq/models').then(res => res.json()).catch(() => ({ models: [] })),
+      fetch('/api/ai/asi-one/models').then(res => res.json()).catch(() => ({ models: [] }))
+    ]).then(([groqData, asiOneData]) => {
+      setAvailableModels([...(groqData.models || []), ...(asiOneData.models || [])]);
+    });
   }, []);
 
   // Auto-scroll to bottom when new messages arrive

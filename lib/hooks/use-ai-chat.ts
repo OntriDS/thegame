@@ -18,6 +18,7 @@ export function useAIChat() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedModel, setSelectedModel] = useState<string>('openai/gpt-oss-120b');
+  const [selectedProvider, setSelectedProvider] = useState<string>('groq');
   const [rateLimits, setRateLimits] = useState<RateLimitInfo | null>(null);
 
   const sendMessage = async (message: string, model?: string) => {
@@ -34,10 +35,14 @@ export function useAIChat() {
     setError(null);
 
     try {
+      // Determine provider based on model
+      const modelToUse = model || selectedModel;
+      const provider = modelToUse.startsWith('asi1-') ? 'asi-one' : 'groq';
+
       const response = await fetch('/api/ai/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message, model: model || selectedModel }),
+        body: JSON.stringify({ message, model: modelToUse, provider }),
       });
 
       if (!response.ok) {
@@ -80,6 +85,8 @@ export function useAIChat() {
     clearMessages,
     selectedModel,
     setSelectedModel,
+    selectedProvider,
+    setSelectedProvider,
     rateLimits,
   };
 }
