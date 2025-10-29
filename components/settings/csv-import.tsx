@@ -398,16 +398,16 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
     // Get valid collections from enums to ensure template examples are always current
     const collections = Object.values(Collection);
     
-            const template = `ItemType,SubItemType,Name,TotalQuantity,Site,Status,Collection,UnitCost,Price,Year,ImageUrl,OriginalFiles,AccessoryFiles,Width,Height,Size
-    "Digital","${digitalSubtypes[0]}","Organic Imaginary Digital",0,"Digital Space","Idle","${collections[1]}",0.00,25.00,2024,https://example.com/organic-imaginary-digital.jpg,,,,,,
-    "Artwork","${artworkSubtypes[0]}","Organic Imaginary Canvas",1,"Home","For Sale","${collections[1]}",5.00,150.00,2024,https://example.com/organic-imaginary-canvas.jpg,,,,30,40,
-    "Print","${printSubtypes[0]}","Organic Imaginary Print",0,"None","To Order","${collections[1]}",5.00,25.00,2024,https://example.com/organic-imaginary-canvas.jpg,,,,30,40,
-    "Sticker","${stickerSubtypes[0]}","Red Dope Crew Sticker",100,"Feria Box","For Sale","${collections[6]}",0.30,2.50,2024,https://example.com/red-dope-crew-sticker.jpg,,,,5,5,
-    "Bundle","${bundleSubtypes[0]}","Smoking Lounge Stickers",80,"Smoking Lounge","For Sale","${collections[6]}",0.30,2.50,2024,https://example.com/smoking-lounge-bundle.jpg,,,,,,
-    "Merch","${merchSubtypes[0]}","Dope Crew T-Shirt",35,"Home","For Sale","${collections[6]}",8.00,25.00,2024,https://example.com/dope-crew-tshirt.jpg,,,,,M,
-    "Merch","${merchSubtypes[2]}","Dope Crew Shoes",20,"Home","For Sale","${collections[6]}",15.00,45.00,2024,https://example.com/dope-crew-tshirt.jpg,,,,,7.5,
-    "Material","${materialSubtypes[0]}","Acrylic Paint Set",10,"Home","For Sale","Art Supplies",15.00,25.00,2024,https://example.com/acrylic-paint-set.jpg,,,,,,
-    "Equipment","${equipmentSubtypes[0]}","Canvas Stretcher",2,"Home","For Sale","Art Tools",45.00,75.00,2024,https://example.com/acrylic-paint-set.jpg,,,,,`;
+            const template = `ItemType,SubItemType,Name,TotalQuantity,Site,Status,Collection,UnitCost,AdditionalCost,Price,Value,QuantitySold,TargetAmount,SoldThisMonth,LastRestockDate,SourceTaskId,Year,ImageUrl,OriginalFiles,AccessoryFiles,Width,Height,Size
+    "Digital","${digitalSubtypes[0]}","Organic Imaginary Digital",0,"Digital Space","Idle","${collections[1]}",0.00,0.00,25.00,0.00,0,,,,"",2024,https://example.com/organic-imaginary-digital.jpg,,,,,
+    "Artwork","${artworkSubtypes[0]}","Organic Imaginary Canvas",1,"Home","For Sale","${collections[1]}",5.00,0.00,150.00,0.00,0,,,,"",2024,https://example.com/organic-imaginary-canvas.jpg,,,,30,40,
+    "Print","${printSubtypes[0]}","Organic Imaginary Print",0,"None","To Order","${collections[1]}",5.00,0.00,25.00,0.00,0,,,,"",2024,https://example.com/organic-imaginary-canvas.jpg,,,,30,40,
+    "Sticker","${stickerSubtypes[0]}","Red Dope Crew Sticker",100,"Feria Box","For Sale","${collections[6]}",0.30,0.00,2.50,0.00,0,,,,"",2024,https://example.com/red-dope-crew-sticker.jpg,,,,5,5,
+    "Bundle","${bundleSubtypes[0]}","Smoking Lounge Stickers",80,"Smoking Lounge","For Sale","${collections[6]}",0.30,0.00,2.50,0.00,0,,,,"",2024,https://example.com/smoking-lounge-bundle.jpg,,,,,,,
+    "Merch","${merchSubtypes[0]}","Dope Crew T-Shirt",35,"Home","For Sale","${collections[6]}",8.00,0.00,25.00,0.00,0,,,,"",2024,https://example.com/dope-crew-tshirt.jpg,,,,,M,
+    "Merch","${merchSubtypes[2]}","Dope Crew Shoes",20,"Home","For Sale","${collections[6]}",15.00,0.00,45.00,0.00,0,,,,"",2024,https://example.com/dope-crew-tshirt.jpg,,,,,7.5,
+    "Material","${materialSubtypes[0]}","Acrylic Paint Set",10,"Home","For Sale","Art Supplies",15.00,0.00,25.00,0.00,0,,,,"",2024,https://example.com/acrylic-paint-set.jpg,,,,,,,
+    "Equipment","${equipmentSubtypes[0]}","Canvas Stretcher",2,"Home","For Sale","Art Tools",45.00,0.00,75.00,0.00,0,,,,"",2024,https://example.com/acrylic-paint-set.jpg,,,,,`;
     
     const blob = new Blob([template], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
