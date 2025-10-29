@@ -141,19 +141,6 @@ export function SitesLogTab({ sitesLog, onReload, isReloading }: SitesLogTabProp
                               </span>
                             )}
                             
-                            {/* View Metadata (sideways dropdown) */}
-                            {data.metadata && Object.keys(data.metadata).length > 0 && (
-                              <details className="inline-flex items-center text-xs text-muted-foreground hover:text-foreground cursor-pointer">
-                                <summary className="list-none">
-                                  {'{metadata}'}
-                                </summary>
-                                <div className="absolute z-50 mt-2 p-2 bg-popover border rounded-md shadow-lg max-w-xs">
-                                  <pre className="text-xs overflow-x-auto">
-                                    {JSON.stringify(data.metadata, null, 2)}
-                                  </pre>
-                                </div>
-                              </details>
-                            )}
                           </div>
                         </div>
                         
