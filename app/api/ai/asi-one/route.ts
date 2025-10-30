@@ -155,9 +155,19 @@ export async function POST(request: NextRequest, parsedData?: any) {
     }
     
     const messageContent = data.choices[0].message;
+    
+    console.log('[ASI:One] Message content:', {
+      hasContent: !!messageContent.content,
+      contentLength: messageContent.content?.length || 0,
+      hasToolCalls: !!messageContent.tool_calls,
+      toolCallsCount: messageContent.tool_calls?.length || 0,
+      finishReason: data.choices[0].finish_reason
+    });
 
     // Handle tool calls
     if (messageContent.tool_calls && messageContent.tool_calls.length > 0) {
+      console.log('[ASI:One] Processing tool calls:', messageContent.tool_calls.length);
+      
       // Create or get session for tool calls
       if (!currentSessionId) {
         const session = await SessionManager.createSession('akiles', 'THEGAME');
@@ -175,9 +185,11 @@ export async function POST(request: NextRequest, parsedData?: any) {
       // Execute tool calls
       const toolResults: any[] = [];
       for (const toolCall of messageContent.tool_calls) {
+        console.log('[ASI:One] Executing tool:', toolCall.function.name);
         try {
           const args = JSON.parse(toolCall.function.arguments);
           const result = await executeTool(toolCall.function.name, args);
+          console.log('[ASI:One] Tool result:', toolCall.function.name, 'success');
           
           toolResults.push({
             tool_call_id: toolCall.id,
@@ -203,6 +215,8 @@ export async function POST(request: NextRequest, parsedData?: any) {
         }
       }
 
+      console.log('[ASI:One] Tool execution complete. Results:', toolResults.length);
+      
       // Send tool results back to ASI:One
       const toolMessages = [
         ...messages,
@@ -213,6 +227,8 @@ export async function POST(request: NextRequest, parsedData?: any) {
           tool_call_id: result.tool_call_id
         }))
       ];
+      
+      console.log('[ASI:One] Sending tool results back to ASI:One. Total messages:', toolMessages.length);
 
       // Prepare headers for final response (include identity headers and session)
       const finalHeaders: Record<string, string> = {
@@ -246,11 +262,19 @@ export async function POST(request: NextRequest, parsedData?: any) {
         finalRequestBody.tools = ASI_ONE_TOOLS;
       }
 
+      console.log('[ASI:One] Final request body:', {
+        model: finalRequestBody.model,
+        messageCount: finalRequestBody.messages.length,
+        hasMetadata: !!finalRequestBody.metadata
+      });
+      
       const finalResponse = await fetch('https://api.asi1.ai/v1/chat/completions', {
         method: 'POST',
         headers: finalHeaders,
         body: JSON.stringify(finalRequestBody),
       });
+      
+      console.log('[ASI:One] Final response status:', finalResponse.status, finalResponse.statusText);
 
       if (!finalResponse.ok) {
         const errorText = await finalResponse.text();
