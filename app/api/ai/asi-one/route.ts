@@ -65,17 +65,17 @@ export async function POST(request: NextRequest, parsedData?: any) {
     // For regular models: no system message needed - tools are available if needed
     const messages = isAgenticModel && agentAddress
       ? [
-          {
-            role: 'system',
+      { 
+        role: 'system', 
             content: `You are Pixel, Akiles' agent. Active agent: ${agentAddress}`
-          },
-          ...sessionMessages,
-          { role: 'user', content: message }
+      },
+      ...sessionMessages,
+      { role: 'user', content: message }
         ]
       : [
           ...sessionMessages,
           { role: 'user', content: message }
-        ];
+    ];
 
     // Prepare request body
     const requestBody: any = {
@@ -233,7 +233,7 @@ export async function POST(request: NextRequest, parsedData?: any) {
       }
 
       console.log('[ASI:One] Tool execution complete. Results:', toolResults.length);
-      
+
       // Send tool results back to ASI:One
       const toolMessages = [
         ...messages,
@@ -284,7 +284,7 @@ export async function POST(request: NextRequest, parsedData?: any) {
         messageCount: finalRequestBody.messages.length,
         hasMetadata: !!finalRequestBody.metadata
       });
-      
+
       const finalResponse = await fetch('https://api.asi1.ai/v1/chat/completions', {
         method: 'POST',
         headers: finalHeaders,

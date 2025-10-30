@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Bot, Send, Trash2, Loader2, Settings, Wrench, Database } from 'lucide-react';
+import SessionManagerModal from '@/components/modals/SessionManagerModal';
 import { useAIChat, ChatMessage } from '@/lib/hooks/use-ai-chat';
 
 interface GroqModel {
@@ -21,6 +22,7 @@ export function AIAssistantTab() {
   const [showModelSelect, setShowModelSelect] = useState(false);
   const [input, setInput] = useState('');
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const [showSessionMgr, setShowSessionMgr] = useState(false);
 
   // Fetch available models from both providers
   useEffect(() => {
@@ -75,10 +77,14 @@ export function AIAssistantTab() {
                 <Settings className="h-3 w-3" />
                 {selectedModel.replace('llama-', 'Llama ').replace('openai/', '').replace('-', '.')}
               </Button>
+              {sessionId && (
+                <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded bg-green-50 border border-green-200 text-green-800">
+                  <Database className="h-3 w-3" /> {sessionId.substring(0, 8)}...
+                </span>
+              )}
             </CardDescription>
           </div>
-          {messages.length > 0 && (
-            <div className="flex gap-2">
+          <div className="flex gap-2">
               <Button
                 variant="outline"
                 size="sm"
@@ -89,6 +95,7 @@ export function AIAssistantTab() {
                 Clear
               </Button>
               {sessionId && (
+              <>
                 <Button
                   variant="outline"
                   size="sm"
@@ -99,9 +106,19 @@ export function AIAssistantTab() {
                   <Database className="h-4 w-4" />
                   New Session
                 </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setShowSessionMgr(true)}
+                  className="gap-2"
+                  title="Open Session Manager"
+                >
+                  Session Manager
+                </Button>
+              </>
               )}
             </div>
-          )}
+          
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -248,6 +265,7 @@ export function AIAssistantTab() {
 
 
       </CardContent>
+      <SessionManagerModal open={showSessionMgr} onOpenChange={setShowSessionMgr} />
     </Card>
   );
 }
