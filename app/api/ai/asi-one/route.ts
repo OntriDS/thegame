@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { ASI_ONE_TOOLS, executeTool } from './tools';
 import { SessionManager, getSessionIdFromHeaders, createSessionHeaders } from '@/lib/utils/session-manager';
+import { kvGet, kvSet } from '@/data-store/kv';
 
 export async function POST(request: NextRequest, parsedData?: any) {
   try {
@@ -26,8 +27,15 @@ export async function POST(request: NextRequest, parsedData?: any) {
       );
     }
 
-    // Handle session management for agentic models
+    // Handle session management for agentic models (persist across requests even if client forgets to send)
     let currentSessionId = sessionId || getSessionIdFromHeaders(request.headers);
+    const activeSessionKey = 'asi_active_session:akiles';
+    if (!currentSessionId) {
+      const savedSessionId = await kvGet<string>(activeSessionKey);
+      if (savedSessionId) {
+        currentSessionId = savedSessionId;
+      }
+    }
     let sessionMessages: any[] = [];
     
     if (currentSessionId) {
@@ -94,6 +102,8 @@ export async function POST(request: NextRequest, parsedData?: any) {
       if (!currentSessionId) {
         const session = await SessionManager.createSession('akiles', 'THEGAME');
         currentSessionId = session.id;
+        // Persist the active session so subsequent requests can reuse it
+        await kvSet(activeSessionKey, currentSessionId);
       }
       headers['x-session-id'] = currentSessionId;
     }
@@ -172,6 +182,7 @@ export async function POST(request: NextRequest, parsedData?: any) {
       if (!currentSessionId) {
         const session = await SessionManager.createSession('akiles', 'THEGAME');
         currentSessionId = session.id;
+        await kvSet(activeSessionKey, currentSessionId);
       }
 
       // Add assistant message with tool calls to session
