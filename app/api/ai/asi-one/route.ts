@@ -292,7 +292,33 @@ export async function POST(request: NextRequest, parsedData?: any) {
       }
 
       const finalData = await finalResponse.json();
-      const finalContent = finalData.choices[0].message.content;
+      // Log final data for diagnostics
+      console.log('[ASI:One] Final data received:', {
+        model: finalData.model,
+        hasChoices: !!finalData.choices,
+        choicesLength: finalData.choices?.length,
+        firstChoice: finalData.choices?.[0]
+      });
+
+      const finalMessage = finalData.choices?.[0]?.message || {};
+      let finalContent: string = finalMessage.content || '';
+
+      // Fallback: if model returned empty content, synthesize a short reply from tool results
+      if (!finalContent || (typeof finalContent === 'string' && finalContent.trim() === '')) {
+        try {
+          const summarized = (toolResults || [])
+            .map(r => {
+              const body = (() => { try { return JSON.parse(r.content); } catch { return r.content; } })();
+              const text = typeof body === 'string' ? body : JSON.stringify(body);
+              return `${r.name}: ${text}`;
+            })
+            .join(' | ');
+          finalContent = summarized || 'Completed tool execution with no additional content.';
+          console.warn('[ASI:One] Final assistant content was empty. Using synthesized summary.');
+        } catch (e) {
+          finalContent = 'Completed tool execution.';
+        }
+      }
 
       // Add final response to session
       await SessionManager.addMessage(currentSessionId, 'assistant', finalContent);
