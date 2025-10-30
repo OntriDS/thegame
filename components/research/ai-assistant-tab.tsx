@@ -109,7 +109,7 @@ export function AIAssistantTab() {
                   New Session
                 </Button>
                 <Button
-                  variant="secondary"
+                  variant="outline"
                   size="sm"
                   onClick={() => setShowSessionMgr(true)}
                   className="gap-2"
