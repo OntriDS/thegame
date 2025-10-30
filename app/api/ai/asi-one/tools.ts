@@ -46,6 +46,14 @@ export const ASI_ONE_TOOLS = [
   {
     type: "function",
     function: {
+      name: "get_site_names",
+      description: "Return a list of all site names in the project.",
+      parameters: { type: "object", properties: {} }
+    }
+  },
+  {
+    type: "function",
+    function: {
       name: "check_account_connection_status",
       description: "Check whether the current chat is connected to the user's ASI agent account.",
       parameters: {
@@ -298,6 +306,9 @@ export async function executeTool(toolName: string, args: any): Promise<any> {
       
       case "generate_structured_data":
         return await generateStructuredData(args.output_type, args.data_source, args.format_schema);
+      
+      case "get_site_names":
+        return await getSiteNames();
       
       case "check_account_connection_status":
         return await checkAccountConnectionStatus(args.handle);
@@ -569,6 +580,14 @@ async function getSystemState(includeEntities: boolean, includeLinks: boolean, i
   }
   
   return state;
+}
+
+async function getSiteNames(): Promise<any> {
+  const sites = await getAllSites();
+  return {
+    count: sites.length,
+    names: sites.map((s: any) => s.name).filter((n: any) => !!n)
+  };
 }
 
 async function searchProjectData(query: string, searchScope?: string[], entityTypes?: string[], limit: number = 50): Promise<any> {

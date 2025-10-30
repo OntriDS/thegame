@@ -3,6 +3,12 @@ import { ASI_ONE_TOOLS, executeTool } from './tools';
 import { SessionManager, getSessionIdFromHeaders, createSessionHeaders } from '@/lib/utils/session-manager';
 import { kvGet, kvSet } from '@/data-store/kv';
 
+// Remove hidden chain-of-thought from responses
+function stripThink(content: string | undefined): string {
+  if (!content) return '';
+  return content.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+}
+
 export async function POST(request: NextRequest, parsedData?: any) {
   try {
     const requestData = parsedData || await request.json();
@@ -332,10 +338,10 @@ export async function POST(request: NextRequest, parsedData?: any) {
       }
 
       // Add final response to session
-      await SessionManager.addMessage(currentSessionId, 'assistant', finalContent);
+      await SessionManager.addMessage(currentSessionId, 'assistant', stripThink(finalContent));
 
       return Response.json({ 
-        response: finalContent,
+        response: stripThink(finalContent),
         model: data.model,
         sessionId: currentSessionId,
         toolCalls: messageContent.tool_calls,
@@ -344,7 +350,7 @@ export async function POST(request: NextRequest, parsedData?: any) {
     }
 
     // Regular response without tool calls
-    const responseContent = messageContent.content;
+    const responseContent = stripThink(messageContent.content);
     
     if (!responseContent || (typeof responseContent === 'string' && responseContent.trim() === '')) {
       console.error('[ASI:One] Empty response content:', messageContent);
