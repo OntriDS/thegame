@@ -27,9 +27,10 @@ export async function POST(request: NextRequest, parsedData?: any) {
       }
     }
 
-    // Attach identity metadata (email + agent address) for binding on ASI side
+    // Attach identity metadata (email + agent address + handle) for binding on ASI side
     const userEmail = process.env.ASI_USER_EMAIL || '';
     const agentAddress = process.env.ASI_AGENT_ADDRESS || '';
+    const handle = process.env.ASI_HANDLE || 'pixelbrain'; // Default to pixelbrain if not set
     
     // Check if this is an agentic model
     const isAgenticModel = model.includes('agentic') || model.includes('extended');
@@ -60,7 +61,8 @@ export async function POST(request: NextRequest, parsedData?: any) {
     };
     requestBody.metadata = {
       user_email: userEmail,
-      agent_address: agentAddress
+      agent_address: agentAddress,
+      handle: handle
     };
 
     // Always attach tools when requested; provider should ignore if unsupported
@@ -74,6 +76,7 @@ export async function POST(request: NextRequest, parsedData?: any) {
       'Content-Type': 'application/json',
       'x-user-email': userEmail,
       'x-agent-address': agentAddress,
+      'x-handle': handle,
     };
 
     // Ensure session ID for agentic models on first request
@@ -171,22 +174,57 @@ export async function POST(request: NextRequest, parsedData?: any) {
         }))
       ];
 
+      // Prepare headers for final response (include identity headers and session)
+      const finalHeaders: Record<string, string> = {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'x-user-email': userEmail,
+        'x-agent-address': agentAddress,
+        'x-handle': handle,
+        ...createSessionHeaders(currentSessionId)
+      };
+
+      // Ensure session ID for agentic models
+      if (isAgenticModel && currentSessionId) {
+        finalHeaders['x-session-id'] = currentSessionId;
+      }
+
+      // Prepare final request body with metadata
+      const finalRequestBody: any = {
+        model: model || 'asi1-mini',
+        messages: toolMessages,
+        temperature: 0.7,
+        metadata: {
+          user_email: userEmail,
+          agent_address: agentAddress,
+          handle: handle
+        }
+      };
+
+      // Add tools to final request if enabled
+      if (tools) {
+        finalRequestBody.tools = ASI_ONE_TOOLS;
+      }
+
       const finalResponse = await fetch('https://api.asi1.ai/v1/chat/completions', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-          ...createSessionHeaders(currentSessionId)
-        },
-        body: JSON.stringify({
-          model: model || 'asi1-mini',
-          messages: toolMessages,
-          temperature: 0.7,
-        }),
+        headers: finalHeaders,
+        body: JSON.stringify(finalRequestBody),
       });
 
       if (!finalResponse.ok) {
-        throw new Error('Failed to get final response from ASI:One');
+        const errorText = await finalResponse.text();
+        console.error('ASI:One API error (final response):', errorText);
+        let errorMessage = 'Failed to get final response from ASI:One';
+        
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.error?.message || errorText;
+        } catch {
+          errorMessage = errorText || 'Failed to get final response from ASI:One';
+        }
+        
+        throw new Error(errorMessage);
       }
 
       const finalData = await finalResponse.json();
