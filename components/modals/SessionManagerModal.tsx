@@ -58,7 +58,7 @@ export default function SessionManagerModal({ open, onOpenChange }: Props) {
         <div className="flex gap-2 mb-4">
           <Button size="sm" disabled={loading} onClick={async () => { await createSession(); await load(); }}>New Session</Button>
           <Button size="sm" variant="outline" disabled={loading} onClick={async () => { await clearActiveSession(); await load(); }}>Clear Active</Button>
-          <Button size="sm" variant="secondary" disabled={loading} onClick={load}>Refresh</Button>
+          <Button size="sm" variant="outline" disabled={loading} onClick={load}>Refresh</Button>
         </div>
 
         <div>
