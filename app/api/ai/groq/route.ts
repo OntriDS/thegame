@@ -1,8 +1,11 @@
 import { NextRequest } from 'next/server';
+import { SessionManager } from '@/lib/utils/session-manager';
+import { kvGet, kvSet } from '@/data-store/kv';
+import { GROQ_TOOLS, executeTool } from './tools-registry';
 
 export async function POST(request: NextRequest) {
   try {
-    const { message, model = 'openai/gpt-oss-120b' } = await request.json();
+    const { message, model = 'openai/gpt-oss-120b', sessionId, enableTools = false } = await request.json();
     
     // Get API key from environment
     const apiKey = process.env.GROQ_API_KEY;
@@ -14,6 +17,36 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Handle session management
+    let currentSessionId = sessionId;
+    const activeSessionKey = 'groq_active_session:akiles';
+    
+    // If no session ID provided, try to get active session
+    if (!currentSessionId) {
+      const savedSessionId = await kvGet<string>(activeSessionKey);
+      if (savedSessionId) {
+        currentSessionId = savedSessionId;
+      }
+    }
+
+    // Load session messages if session exists
+    let sessionMessages: any[] = [];
+    if (currentSessionId) {
+      const session = await SessionManager.getSession(currentSessionId);
+      if (session) {
+        sessionMessages = await SessionManager.getSessionMessages(currentSessionId);
+      } else {
+        // Session expired or invalid, create new one
+        currentSessionId = null;
+      }
+    }
+
+    // Prepare messages array for Groq API (last 20 messages to stay within token limits)
+    const messagesToSend = [
+      ...sessionMessages.slice(-20),
+      { role: 'user', content: message }
+    ];
+
     // Use Groq API
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
@@ -23,7 +56,7 @@ export async function POST(request: NextRequest) {
       },
       body: JSON.stringify({
         model: model || 'openai/gpt-oss-120b',
-        messages: [{ role: 'user', content: message }],
+        messages: messagesToSend,
         temperature: 0.7,
       }),
     });
@@ -55,11 +88,27 @@ export async function POST(request: NextRequest) {
       remainingTokens: response.headers.get('x-ratelimit-remaining-tokens'),
       limitTokens: response.headers.get('x-ratelimit-limit-tokens'),
     };
+
+    const assistantResponse = data.choices[0].message.content;
+
+    // Save session messages
+    if (currentSessionId) {
+      await SessionManager.addMessage(currentSessionId, 'user', message);
+      await SessionManager.addMessage(currentSessionId, 'assistant', assistantResponse);
+    } else {
+      // Create new session and save messages
+      const session = await SessionManager.createSession('akiles', 'THEGAME');
+      currentSessionId = session.id;
+      await kvSet(activeSessionKey, currentSessionId);
+      await SessionManager.addMessage(currentSessionId, 'user', message);
+      await SessionManager.addMessage(currentSessionId, 'assistant', assistantResponse);
+    }
     
     return Response.json({ 
-      response: data.choices[0].message.content,
+      response: assistantResponse,
       model: data.model,
-      rateLimits: rateLimitInfo
+      rateLimits: rateLimitInfo,
+      sessionId: currentSessionId
     });
   } catch (error) {
     console.error('Groq API error:', error);

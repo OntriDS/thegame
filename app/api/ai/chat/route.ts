@@ -1,23 +1,10 @@
 import { NextRequest } from 'next/server';
 import { POST as groqHandler } from '../groq/route';
-import { POST as asiOneHandler } from '../asi-one/route';
 
 export async function POST(request: NextRequest) {
   try {
-    // Clone the request before reading the body to avoid "Body is unusable" error
-    const clonedRequest = request.clone();
-    const { message, model = 'openai/gpt-oss-120b', provider } = await clonedRequest.json();
-    
-    // Determine which provider to use based on model or explicit provider
-    const isAsiOne = provider === 'asi-one' || model.startsWith('asi1-');
-    
-    if (isAsiOne) {
-      // Pass parsed data directly to ASI:One handler
-      return await asiOneHandler(request, { message, model, provider });
-    } else {
-      // Direct function call to Groq handler
-      return await groqHandler(request);
-    }
+    // Always route to Groq
+    return await groqHandler(request);
   } catch (error) {
     console.error('AI chat routing error:', error);
     return Response.json(

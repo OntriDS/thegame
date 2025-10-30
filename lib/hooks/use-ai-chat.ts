@@ -61,7 +61,7 @@ export function useAIChat() {
     try {
       // Determine provider based on model
       const modelToUse = model || selectedModel;
-      const provider = modelToUse.startsWith('asi1-') ? 'asi-one' : 'groq';
+      const provider = 'groq'; // Always use Groq now
 
       const requestBody: any = { 
         message, 
@@ -69,8 +69,8 @@ export function useAIChat() {
         provider 
       };
 
-      // Add session ID for ASI:One models
-      if (provider === 'asi-one' && sessionId) {
+      // Add session ID for Groq models
+      if (sessionId) {
         requestBody.sessionId = sessionId;
       }
 

@@ -24,14 +24,16 @@ export function AIAssistantTab() {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const [showSessionMgr, setShowSessionMgr] = useState(false);
 
-  // Fetch available models from both providers
+  // Fetch available models from Groq only
   useEffect(() => {
-    Promise.all([
-      fetch('/api/ai/groq/models').then(res => res.json()).catch(() => ({ models: [] })),
-      fetch('/api/ai/asi-one/models').then(res => res.json()).catch(() => ({ models: [] }))
-    ]).then(([groqData, asiOneData]) => {
-      setAvailableModels([...(groqData.models || []), ...(asiOneData.models || [])]);
-    });
+    fetch('/api/ai/groq/models')
+      .then(res => res.json())
+      .then(data => {
+        setAvailableModels([...(data.models || [])]);
+      })
+      .catch(() => {
+        setAvailableModels([]);
+      });
   }, []);
 
   // Auto-scroll to bottom when new messages arrive

@@ -22,7 +22,7 @@ export interface SessionData {
   expiresAt: Date;
 }
 
-const SESSION_PREFIX = 'asi_session:';
+const SESSION_PREFIX = 'groq_session:';
 const SESSION_TTL = 24 * 60 * 60; // 24 hours in seconds
 
 export class SessionManager {
@@ -49,7 +49,7 @@ export class SessionManager {
         user: userId,
         project,
         preferences: {
-          ai_assistant: 'Pixel (ASI:One)',
+          ai_assistant: 'Groq',
           communication_style: 'Direct and technical'
         }
       },
@@ -136,7 +136,7 @@ export class SessionManager {
   }
 
   /**
-   * Get session messages formatted for ASI:One API
+   * Get session messages formatted for Groq API
    */
   static async getSessionMessages(sessionId: string): Promise<any[]> {
     const session = await this.getSession(sessionId);

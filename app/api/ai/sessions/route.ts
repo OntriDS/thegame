@@ -2,8 +2,8 @@ import { NextRequest } from 'next/server';
 import { SessionManager } from '@/lib/utils/session-manager';
 import { kvGet, kvSet } from '@/data-store/kv';
 
-const ACTIVE_KEY = 'asi_active_session:akiles';
-const INDEX_KEY = 'asi_session_index:akiles'; // stores array of recent sessionIds
+const ACTIVE_KEY = 'groq_active_session:akiles';
+const INDEX_KEY = 'groq_session_index:akiles'; // stores array of recent sessionIds
 const MAX_INDEX = 20;
 
 export async function GET(request: NextRequest) {

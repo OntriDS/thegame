@@ -144,10 +144,21 @@ Use existing MCP infrastructure to:
 ## ✅ IMPLEMENTATION COMPLETE
 
 **What Was Built:**
-1. ✅ API Route: `app/api/ai/chat/route.ts` - Secure AI proxy
-2. ✅ Hook: `lib/hooks/use-ai-chat.ts` - React chat logic
-3. ✅ Component: `components/research/ai-assistant-tab.tsx` - Beautiful chat UI
-4. ✅ Integration: Added AI Assistant tab to Research page
+1. ✅ API Route: `app/api/ai/chat/route.ts` - Secure AI proxy (routes to Groq)
+2. ✅ API Route: `app/api/ai/groq/route.ts` - Groq integration with session management
+3. ✅ Hook: `lib/hooks/use-ai-chat.ts` - React chat logic
+4. ✅ Component: `components/research/ai-assistant-tab.tsx` - Beautiful chat UI
+5. ✅ Session Management: `lib/utils/session-manager.ts` - Persistent conversation memory
+6. ✅ Session Manager Modal: `components/modals/SessionManagerModal.tsx` - Visual session management
+7. ✅ Tools Registry: `app/api/ai/groq/tools-registry.ts` - Read-only tools for AI assistant
+8. ✅ Groq Model Selection: `app/api/ai/groq/models/route.ts` - Available models
+
+**Recent Changes (January 2025):**
+- ✅ Removed ASI:One dependency (disabled runtime, kept files for reference)
+- ✅ Enabled Groq-only provider with persistent sessions
+- ✅ Added SessionManager for conversation memory across requests
+- ✅ Created secure read-only tools registry for project data access
+- ✅ Simplified chat routing to always use Groq API
 
 **Next Steps for You:**
 
