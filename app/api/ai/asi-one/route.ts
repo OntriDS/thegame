@@ -4,7 +4,17 @@ import { SessionManager, getSessionIdFromHeaders, createSessionHeaders } from '@
 
 export async function POST(request: NextRequest, parsedData?: any) {
   try {
-    const { message, model = 'asi1-mini', tools = true, sessionId } = parsedData || await request.json();
+    const requestData = parsedData || await request.json();
+    const { message, model = 'asi1-mini', tools = true, sessionId } = requestData;
+    
+    // Log request for debugging
+    console.log('[ASI:One] Request received:', {
+      model,
+      hasMessage: !!message,
+      messageLength: message?.length,
+      toolsEnabled: tools,
+      hasSessionId: !!sessionId
+    });
     
     // Get API key from environment
     const apiKey = process.env.ASI_ONE_API_KEY;
@@ -88,12 +98,25 @@ export async function POST(request: NextRequest, parsedData?: any) {
       headers['x-session-id'] = currentSessionId;
     }
 
+    // Log request details for debugging
+    console.log('[ASI:One] Sending request:', {
+      model: requestBody.model,
+      messageCount: requestBody.messages.length,
+      hasMetadata: !!requestBody.metadata,
+      metadata: requestBody.metadata,
+      hasTools: !!requestBody.tools,
+      sessionId: currentSessionId,
+      headers: Object.keys(headers)
+    });
+
     // Use ASI:One API (OpenAI-compatible)
     const response = await fetch('https://api.asi1.ai/v1/chat/completions', {
       method: 'POST',
       headers,
       body: JSON.stringify(requestBody),
     });
+    
+    console.log('[ASI:One] Response status:', response.status, response.statusText);
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -114,6 +137,23 @@ export async function POST(request: NextRequest, parsedData?: any) {
     }
 
     const data = await response.json();
+    
+    // Log response for debugging
+    console.log('[ASI:One] Response received:', {
+      model: data.model,
+      hasChoices: !!data.choices,
+      choicesLength: data.choices?.length,
+      firstChoice: data.choices?.[0]
+    });
+    
+    if (!data.choices || data.choices.length === 0) {
+      console.error('[ASI:One] No choices in response:', data);
+      return Response.json(
+        { error: 'No response from AI model. Please try again.' },
+        { status: 500 }
+      );
+    }
+    
     const messageContent = data.choices[0].message;
 
     // Handle tool calls
@@ -243,12 +283,22 @@ export async function POST(request: NextRequest, parsedData?: any) {
     }
 
     // Regular response without tool calls
+    const responseContent = messageContent.content;
+    
+    if (!responseContent || (typeof responseContent === 'string' && responseContent.trim() === '')) {
+      console.error('[ASI:One] Empty response content:', messageContent);
+      return Response.json(
+        { error: 'AI model returned empty response. Please try again.' },
+        { status: 500 }
+      );
+    }
+    
     if (currentSessionId) {
-      await SessionManager.addMessage(currentSessionId, 'assistant', messageContent.content || '');
+      await SessionManager.addMessage(currentSessionId, 'assistant', responseContent || '');
     }
 
     return Response.json({ 
-      response: messageContent.content,
+      response: responseContent,
       model: data.model,
       sessionId: currentSessionId
     });
