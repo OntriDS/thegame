@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useThemeColors } from '@/lib/hooks/use-theme-colors';
 import { ClientAPI } from '@/lib/client-api';
 import { Item, Site } from '@/types/entities';
-import { ItemType, ItemStatus, Collection, SiteType, PhysicalBusinessType } from '@/types/enums';
+import { ItemType, ItemStatus, Collection, SiteType, PhysicalBusinessType, SiteStatus } from '@/types/enums';
 import { getSubTypesForItemType } from '@/lib/utils/item-utils';
 import type { Station, Area, SubItemType } from '@/types/type-aliases';
 import { CM_TO_M2_CONVERSION } from '@/lib/constants/app-constants';
@@ -169,13 +169,11 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
               links: [],
               metadata: {
                 type: SiteType.PHYSICAL, // Default to physical site
-                isActive: true,
                 businessType: PhysicalBusinessType.STORAGE,
                 settlementId: 'default-settlement', // Default settlement
                 googleMapsAddress: 'TBD'
               },
-              isActive: true,
-              status: 'ACTIVE'
+              status: SiteStatus.ACTIVE
             };
             
             try {

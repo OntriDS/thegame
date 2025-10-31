@@ -11,7 +11,7 @@
 **Solution**: Create a Founder-only log management system with explicit enable/disable controls, standardized across all entity logs, with proper audit trail.
 
 **Key Requirements**:
-- **FOUNDER + PLAYER** role required for access
+- **FOUNDER** role required for access
 - Hidden by default - must enable from Settings
 - Standardized for all 7 core entity logs
 - Safe, audit-trail tracked modifications
@@ -68,18 +68,17 @@ The user experiences occasional "little issues" requiring log corrections:
 
 **Access Requirements**:
 ```typescript
-// Character must have BOTH roles
-const hasPermission = character.roles.includes(CharacterRole.FOUNDER) 
-                   && character.roles.includes(CharacterRole.PLAYER);
+// Character must have FOUNDER role
+const hasPermission = character.roles.includes(CharacterRole.FOUNDER);
 
-// V0.1 Reality: Only Player One qualifies (has both roles)
-// V0.2 Future: Other founders (with both roles) could access
+// V0.1 Reality: Only Player One qualifies (has FOUNDER role)
+// V0.2 Future: Other characters with FOUNDER role could access
 ```
 
 **Current Player One**:
 - Character ID: `PLAYER_ONE_ID` (from `types/enums.ts`)
 - Roles: `[FOUNDER, PLAYER]` (immutable, system-assigned)
-- **This is the ONLY character that can access log management**
+- **V0.1: Single-user system - authenticated admin = Player One = FOUNDER**
 
 ### 2.2 UI Visibility Control
 
@@ -409,9 +408,6 @@ async function checkFounderPermissions() {
 }
 ```
 
-**V0.1 Simplified**: Current auth is passphrase-based. All authenticated users = Player One = Founder.
-**Future Enhancement**: V0.2 will add proper character session management in JWT.
-
 **Server-Side Check** (API):
 ```typescript
 // New API route
@@ -426,26 +422,28 @@ GET /api/auth/check-founder
 // Implementation
 export async function GET(request: NextRequest) {
   // ✅ Auth already verified by requireAdminAuth middleware
-  // Simply fetch Player One's Character from KV (only one with FOUNDER+PLAYER roles in V0.1)
+  
+  // V0.1 Simple check: authenticated admin = Player One = FOUNDER
   const { kvGet } = await import('@/data-store/kv');
   const { buildDataKey } = await import('@/data-store/keys');
+  const { PLAYER_ONE_ID, CharacterRole } = await import('@/types/enums');
   
-  const characterData = await kvGet(buildDataKey('character', PLAYER_ONE_ID));
-  const character = characterData;
+  const character = await kvGet(buildDataKey('character', PLAYER_ONE_ID));
   
-  const isAuthorized = character?.roles.includes(CharacterRole.FOUNDER) 
-                    && character?.roles.includes(CharacterRole.PLAYER);
+  const isAuthorized = character?.roles.includes(CharacterRole.FOUNDER);
   
   return NextResponse.json({
     isAuthorized,
-    characterId: isAuthorized ? character.id : undefined
+    characterId: isAuthorized ? PLAYER_ONE_ID : undefined
   });
 }
 ```
 
-**Note**: Current JWT only stores `{sub: 'admin', role: 'admin'}` - doesn't include character ID.
-**V0.1 Reality**: Only Player One (character ID: `PLAYER_ONE_ID`) has FOUNDER+PLAYER roles.
-**Solution**: Hardcode `PLAYER_ONE_ID` check until proper user session management in V0.2.
+**V0.1 Reality**: Single-user system
+- Admin passphrase auth → JWT token
+- Authenticated user = Player One = FOUNDER role
+- No character session management yet
+- Just check: authenticated + Player One has FOUNDER role
 
 ---
 
@@ -572,8 +570,7 @@ export async function GET(request: NextRequest) {
 1. ✅ Create `LOG_EDITING_SYSTEM.md` (this document)
 2. Add `id` field generation to `appendEntityLog()` in `workflows/entities-logging.ts`
 3. Create `ensureLogEntryId()` helper function
-4. Create `/api/auth/check-founder` route (simple hardcoded PLAYER_ONE_ID check for V0.1)
-5. Note: `verifyFounderPermissions()` will be simplified - just check if user is authenticated admin
+4. Create `/api/auth/check-founder` route (fetch Player One from KV, check FOUNDER role)
 
 **Files Modified**:
 - `workflows/entities-logging.ts` (extend existing)
@@ -581,11 +578,10 @@ export async function GET(request: NextRequest) {
 
 **Testing**:
 - Verify new entries get unique IDs
-- Verify permission check works for Player One
-- Verify permission check returns false for unauthorized access
+- Verify permission check works when authenticated as admin
+- Verify Player One character has FOUNDER role
 
-**Important**: V0.1 uses simplified auth - no character session yet, just admin passphrase.
-**V0.2**: Proper character-based permissions with full triforce (Account+Player+Character) session.
+**Important**: V0.1 is single-user. Authenticated admin = Player One = FOUNDER. Just check FOUNDER role.
 
 ### Phase 2: Core Functions (3-4 hours)
 
@@ -717,16 +713,16 @@ export async function POST(request: NextRequest) {
 
 ## 7. CONFUSING POINTS CLARIFIED
 
-### 7.1 Why FOUNDER + PLAYER?
+### 7.1 Why FOUNDER Role?
 
-**Question**: Why require BOTH roles, not just FOUNDER?
+**Question**: Why require FOUNDER role?
 
-**Answer**: FOUNDER is a system role (god rights), PLAYER is the active identity. Combined, they ensure:
-1. Only authorized system admins (FOUNDER)
-2. With active game participation (PLAYER)
-3. Can modify sensitive audit data
+**Answer**: FOUNDER is an immutable system role (god rights) assigned at initialization. It ensures:
+1. Only authorized system admins can modify sensitive audit data
+2. Role is immutable (cannot be removed or changed)
+3. Clear permission boundary for dangerous operations
 
-**V0.1 Reality**: Only Player One qualifies (has both roles automatically).
+**V0.1 Reality**: Single-user system. Authenticated admin = Player One = FOUNDER. Just check FOUNDER role.
 
 ### 7.2 Why Not Just Clear All Logs?
 
@@ -801,7 +797,7 @@ export async function POST(request: NextRequest) {
 ## 8. SUCCESS CRITERIA
 
 ### Functional Requirements
-- ✅ FOUNDER + PLAYER role check enforced
+- ✅ FOUNDER role check enforced
 - ✅ Enable/disable toggle in System Settings
 - ✅ Edit/delete actions work on all 7 log types
 - ✅ Audit trail captures all changes
