@@ -274,12 +274,15 @@ export function SettingsPanel({ onStatusUpdate }: SettingsPanelProps) {
           // data field contains the array of entities (can be direct array or nested)
           const backupData = backupResult.data;
           let records: any[] = [];
+          let fullBackupData: any = null; // Store full backup structure for settlements check
           
           if (Array.isArray(backupData.data)) {
             // Direct array format
             records = backupData.data;
+            fullBackupData = backupData.data;
           } else if (backupData.data && typeof backupData.data === 'object') {
             // Try nested format: data[entityType] (uses singular enum value)
+            fullBackupData = backupData.data;
             if (Array.isArray(backupData.data[entityType])) {
               records = backupData.data[entityType];
             } else {
@@ -297,6 +300,41 @@ export function SettingsPanel({ onStatusUpdate }: SettingsPanelProps) {
               errors: ['No records found in backup']
             });
             continue;
+          }
+
+          // Special handling for sites: import settlements first if they exist in the backup
+          if (entityType === 'site' && fullBackupData && typeof fullBackupData === 'object') {
+            // Check if backup contains settlements (could be at backupData.data.settlements or backupData.settlements)
+            const settlements = fullBackupData.settlements || backupData.settlements;
+            if (settlements && Array.isArray(settlements) && settlements.length > 0) {
+              console.log(`[SettingsPanel] Found ${settlements.length} settlements in backup, importing first...`);
+              
+              // Import settlements individually (they're reference data, no workflows)
+              let settlementsImported = 0;
+              let settlementsSkipped = 0;
+              
+              for (const settlement of settlements) {
+                try {
+                  // Check if settlement already exists
+                  const existing = await ClientAPI.getSettlementById(settlement.id);
+                  
+                  if (!existing) {
+                    await ClientAPI.upsertSettlement({
+                      ...settlement,
+                      createdAt: settlement.createdAt ? new Date(settlement.createdAt) : new Date(),
+                      updatedAt: settlement.updatedAt ? new Date(settlement.updatedAt) : new Date()
+                    });
+                    settlementsImported++;
+                  } else {
+                    settlementsSkipped++;
+                  }
+                } catch (error) {
+                  console.error(`[SettingsPanel] Failed to import settlement ${settlement.id}:`, error);
+                }
+              }
+              
+              console.log(`[SettingsPanel] Imported ${settlementsImported} settlements${settlementsSkipped > 0 ? `, skipped ${settlementsSkipped} duplicates` : ''}`);
+            }
           }
 
           // Call unified bulk operation endpoint with merge mode

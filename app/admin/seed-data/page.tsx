@@ -36,7 +36,7 @@ export default function SeedDataPage() {
   const [selectedEntity, setSelectedEntity] = useState<string>('');
   const [showImportModal, setShowImportModal] = useState(false);
   const [importMode, setImportMode] = useState<'add' | 'merge' | 'replace'>('merge');
-  const [pendingImport, setPendingImport] = useState<{ entityType: string; data: any[]; count: number; filename: string } | null>(null);
+  const [pendingImport, setPendingImport] = useState<{ entityType: string; data: any[]; count: number; filename: string; fullParsedData?: any } | null>(null);
   const [showExportModal, setShowExportModal] = useState(false);
   const [pendingExport, setPendingExport] = useState<string | null>(null);
 
@@ -147,7 +147,8 @@ export default function SeedDataPage() {
       }
 
       // Set pending import and show modal
-      setPendingImport({ entityType, data: actualData, count, filename: file.name });
+      // Store full parsed data to allow access to settlements when importing sites
+      setPendingImport({ entityType, data: actualData, count, filename: file.name, fullParsedData: data });
       setShowImportModal(true);
       
     } catch (error) {
@@ -249,7 +250,50 @@ export default function SeedDataPage() {
     setStatus('⏳ Importing... Please wait.');
     
     try {
-      const { entityType, data, count, filename } = pendingImport;
+      const { entityType, data, count, filename, fullParsedData } = pendingImport;
+      
+      // Special handling for sites: import settlements first if they exist in the backup file
+      if (entityType === 'sites' && fullParsedData) {
+        // If the backup file contains settlements, import them first
+        if (fullParsedData.settlements && Array.isArray(fullParsedData.settlements) && fullParsedData.settlements.length > 0) {
+          setStatus(`⏳ Importing ${fullParsedData.settlements.length} settlements first...`);
+          
+          // Import settlements individually (they're reference data, no workflows)
+          let settlementsImported = 0;
+          let settlementsSkipped = 0;
+          const settlementErrors: string[] = [];
+          
+          for (const settlement of fullParsedData.settlements) {
+            try {
+              // Check if settlement already exists
+              const existing = await ClientAPI.getSettlementById(settlement.id);
+              
+              if (!existing || importMode !== 'add') {
+                await ClientAPI.upsertSettlement({
+                  ...settlement,
+                  createdAt: settlement.createdAt ? new Date(settlement.createdAt) : new Date(),
+                  updatedAt: settlement.updatedAt ? new Date(settlement.updatedAt) : new Date()
+                });
+                settlementsImported++;
+              } else {
+                settlementsSkipped++;
+              }
+            } catch (error) {
+              const errorMsg = `Settlement ${settlement.id || settlement.name || 'unknown'}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+              console.error(`Failed to import settlement:`, errorMsg);
+              settlementErrors.push(errorMsg);
+            }
+          }
+          
+          const settlementStatus = `⏳ Imported ${settlementsImported} settlements${settlementsSkipped > 0 ? `, skipped ${settlementsSkipped} duplicates` : ''}${settlementErrors.length > 0 ? `, ${settlementErrors.length} errors` : ''}. Now importing sites...`;
+          setStatus(settlementStatus);
+          
+          // Log settlement import errors if any
+          if (settlementErrors.length > 0) {
+            console.warn('Settlement import errors:', settlementErrors);
+          }
+        }
+      }
       
       // Convert plural UI form to EntityType enum value (uses EntityType enum as source of truth)
       const entityTypeEnum = pluralToEntityType(entityType);

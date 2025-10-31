@@ -36,8 +36,7 @@ interface SiteModalProps {
 export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [isActive, setIsActive] = useState(true);
-  const [status, setStatus] = useState<SiteStatus>(SiteStatus.CREATED);
+  const [status, setStatus] = useState<SiteStatus>(SiteStatus.ACTIVE);
   const [siteType, setSiteType] = useState<SiteType>(SiteType.PHYSICAL);
   
   // Physical site fields
@@ -84,8 +83,7 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
     if (site) {
       setName(site.name || '');
       setDescription(site.description || '');
-      setIsActive(site.isActive !== undefined ? site.isActive : true);
-      setStatus((site.status as SiteStatus) || SiteStatus.CREATED);
+      setStatus((site.status as SiteStatus) || SiteStatus.ACTIVE);
       setSiteType(site.metadata.type);
       
       // Load type-specific fields
@@ -106,8 +104,7 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
       // Reset form for new site
       setName('');
       setDescription('');
-      setIsActive(true);
-      setStatus(SiteStatus.CREATED);
+      setStatus(SiteStatus.ACTIVE);
       setSiteType(SiteType.PHYSICAL);
       setSettlementId('');
       setBusinessType(PhysicalBusinessType.STORAGE);
@@ -129,7 +126,6 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
       if (siteType === SiteType.PHYSICAL) {
         metadata = {
           type: SiteType.PHYSICAL,
-          isActive,
           businessType,
           settlementId,
           googleMapsAddress
@@ -137,14 +133,12 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
       } else if (siteType === SiteType.DIGITAL) {
         metadata = {
           type: SiteType.DIGITAL,
-          isActive,
           digitalType,
           url: digitalUrl
         } as DigitalSiteMetadata & { url: string };
       } else {
         metadata = {
           type: SiteType.SYSTEM,
-          isActive,
           systemType: systemPurpose
         } as SystemSiteMetadata;
       }
@@ -153,7 +147,6 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
         id: site?.id || `site-${name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')}`,
         name,
         description,
-        isActive,
         status,
         metadata,
         createdAt: site?.createdAt || new Date(),
@@ -270,19 +263,16 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
               </div>
 
               <div className="space-y-2">
-                <Label className="text-xs">Status Toggle</Label>
-                <Button
-                  size="sm"
-                  variant={isActive ? "default" : "outline"}
-                  onClick={() => {
-                    const newIsActive = !isActive;
-                    setIsActive(newIsActive);
-                    setStatus(newIsActive ? SiteStatus.ACTIVE : SiteStatus.INACTIVE);
-                  }}
-                  className="h-8 text-xs w-full"
-                >
-                  {isActive ? "Active" : "Inactive"}
-                </Button>
+                <Label className="text-xs">Status</Label>
+                <Select value={status} onValueChange={(v) => setStatus(v as SiteStatus)}>
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={SiteStatus.ACTIVE}>Active</SelectItem>
+                    <SelectItem value={SiteStatus.INACTIVE}>Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 

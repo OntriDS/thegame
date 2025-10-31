@@ -2,9 +2,8 @@
 // Validation utilities for entity records before bulk operations
 // Prevents corrupt data from entering the system
 
-import { EntityType } from '@/types/enums';
+import { EntityType, SiteType, SiteStatus } from '@/types/enums';
 import type { Site, Item, Task, Sale, FinancialRecord, Character, Player } from '@/types/entities';
-import { SiteType } from '@/types/enums';
 
 /**
  * Validation result for a single record
@@ -67,15 +66,24 @@ export function validateSite(site: any, index: number): ValidationResult {
     }
   }
 
-  // Ensure required base fields
-  if (typeof site.isActive !== 'boolean') {
-    warnings.push(`Missing 'isActive' field, defaulting to true`);
-    fixed.isActive = true;
+  // Ensure required status field - Sites start as Active
+  if (!site.status || !Object.values(SiteStatus).includes(site.status as SiteStatus)) {
+    warnings.push(`Missing or invalid 'status' field, defaulting to 'Active'`);
+    fixed.status = SiteStatus.ACTIVE;
   }
 
-  if (!site.status) {
-    warnings.push(`Missing 'status' field, defaulting to 'Created'`);
-    fixed.status = 'Created';
+  // Remove isActive and isArchived fields if present (migrated to status)
+  if ('isActive' in fixed) {
+    delete fixed.isActive;
+  }
+  if ('isArchived' in fixed) {
+    delete fixed.isArchived;
+  }
+  
+  // Remove isActive from metadata if present
+  if (fixed.metadata && 'isActive' in fixed.metadata) {
+    const { isActive, ...metadataWithoutActive } = fixed.metadata;
+    fixed.metadata = metadataWithoutActive;
   }
 
   return {

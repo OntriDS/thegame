@@ -9,6 +9,7 @@ import {
   Collection,
   Currency,
   SiteType,
+  SiteStatus,
   PhysicalBusinessType,
   CharacterRole,
   DigitalSiteType,
@@ -95,7 +96,6 @@ export interface StockPoint {
 /** Site Metadata Interfaces */
 export interface BaseSiteMetadata {
   type: SiteType;
-  isActive: boolean;
 }
 
 export interface PhysicalSiteMetadata extends BaseSiteMetadata {
@@ -125,8 +125,7 @@ export interface Site extends BaseEntity {
   name: string;
   description?: string;
   metadata: SiteMetadata;
-  isActive: boolean;
-  status: string; // SiteStatus enum
+  status: SiteStatus; // SiteStatus enum - Active or Inactive
   // links inherited from BaseEntity as Link[]
 }
 

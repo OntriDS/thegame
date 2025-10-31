@@ -9,11 +9,11 @@ import { MapPin, Wrench, Building2, Settings, Cloud, Sparkles } from "lucide-rea
 import { ClientAPI } from "@/lib/client-api";
 import { SiteModal } from "@/components/modals/site-modal";
 import type { Site } from "@/types/entities";
-import { SiteType } from "@/types/enums";
+import { SiteType, SiteStatus } from "@/types/enums";
 
 export default function MapPage() {
   const [activeView, setActiveView] = useState('world-map');
-  const [siteFilter, setSiteFilter] = useState<'all' | SiteType>('all');
+  const [siteFilter, setSiteFilter] = useState<'all' | SiteType | 'inactive'>('all');
   const [sites, setSites] = useState<Site[]>([]);
   const [showSiteModal, setShowSiteModal] = useState(false);
   const [selectedSite, setSelectedSite] = useState<Site | null>(null);
@@ -207,26 +207,39 @@ export default function MapPage() {
                   </Button>
                 </div>
               ) : (
-                <Tabs value={siteFilter} onValueChange={(v) => setSiteFilter(v as 'all' | SiteType)} className="w-full">
-                  <TabsList className="grid w-full grid-cols-4 mb-4">
-                    <TabsTrigger value="all">All ({sites.length})</TabsTrigger>
+                <Tabs value={siteFilter} onValueChange={(v) => setSiteFilter(v as 'all' | SiteType | 'inactive')} className="w-full">
+                  <TabsList className="grid w-full grid-cols-5 mb-4">
+                    <TabsTrigger value="all">All ({sites.filter(s => s.status === SiteStatus.ACTIVE).length})</TabsTrigger>
                     <TabsTrigger value={SiteType.PHYSICAL}>
                       <MapPin className="h-4 w-4 mr-1" />
-                      Physical ({sites.filter(s => s.metadata.type === SiteType.PHYSICAL).length})
+                      Physical ({sites.filter(s => s.metadata.type === SiteType.PHYSICAL && s.status === SiteStatus.ACTIVE).length})
                     </TabsTrigger>
                     <TabsTrigger value={SiteType.DIGITAL}>
                       <Cloud className="h-4 w-4 mr-1" />
-                      Digital ({sites.filter(s => s.metadata.type === SiteType.DIGITAL).length})
+                      Digital ({sites.filter(s => s.metadata.type === SiteType.DIGITAL && s.status === SiteStatus.ACTIVE).length})
                     </TabsTrigger>
                     <TabsTrigger value={SiteType.SYSTEM}>
                       <Sparkles className="h-4 w-4 mr-1" />
-                      System ({sites.filter(s => s.metadata.type === SiteType.SYSTEM).length})
+                      System ({sites.filter(s => s.metadata.type === SiteType.SYSTEM && s.status === SiteStatus.ACTIVE).length})
+                    </TabsTrigger>
+                    <TabsTrigger value="inactive">
+                      Inactive ({sites.filter(s => s.status === SiteStatus.INACTIVE).length})
                     </TabsTrigger>
                   </TabsList>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {sites
-                      .filter(site => siteFilter === 'all' || site.metadata.type === siteFilter)
+                      .filter(site => {
+                        if (siteFilter === 'inactive') {
+                          return site.status === SiteStatus.INACTIVE;
+                        }
+                        // For "all" and type-specific tabs, only show Active sites
+                        const isActive = site.status === SiteStatus.ACTIVE;
+                        if (siteFilter === 'all') {
+                          return isActive;
+                        }
+                        return isActive && site.metadata.type === siteFilter;
+                      })
                       .map(site => (
                         <Card 
                           key={site.id} 
@@ -246,8 +259,8 @@ export default function MapPage() {
                               <p className="text-sm text-muted-foreground line-clamp-2">{site.description}</p>
                             )}
                             <div className="flex items-center gap-2 text-xs">
-                              <div className={`w-2 h-2 rounded-full ${site.isActive ? 'bg-green-500' : 'bg-gray-400'}`} />
-                              <span className="text-muted-foreground">{site.isActive ? 'Active' : 'Inactive'}</span>
+                              <div className={`w-2 h-2 rounded-full ${site.status === 'Active' ? 'bg-green-500' : 'bg-gray-400'}`} />
+                              <span className="text-muted-foreground">{site.status || 'Active'}</span>
                             </div>
                             {site.metadata.type === SiteType.PHYSICAL && 'settlementId' in site.metadata && (
                               <div className="text-xs text-muted-foreground">

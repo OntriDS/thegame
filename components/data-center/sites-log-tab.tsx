@@ -116,14 +116,29 @@ export function SitesLogTab({ sitesLog, onReload, isReloading }: SitesLogTabProp
                       );
                     }
                     
-                    const status = entry.status || SiteStatus.INACTIVE;
+                    // Handle ACTIVATED/DEACTIVATED events (status changes)
+                    const eventType = entry.event || '';
+                    const isActivated = eventType === 'ACTIVATED';
+                    const isDeactivated = eventType === 'DEACTIVATED';
+                    const isCreated = eventType === 'CREATED';
+                    
+                    // Determine status for display - use entry status or infer from event type
+                    let status = entry.status || SiteStatus.ACTIVE;
+                    if (isActivated) {
+                      status = SiteStatus.ACTIVE;
+                    } else if (isDeactivated) {
+                      status = SiteStatus.INACTIVE;
+                    } else if (isCreated && !entry.status) {
+                      // New sites default to Active
+                      status = SiteStatus.ACTIVE;
+                    }
                     // Use displayName from normalization, fallback to entry data
                     const siteName = entry.displayName || entry.name || 'Site';
                     const siteType = entry.type || SiteType.PHYSICAL;
-                    const businessType = '—';
-                    const settlement = '—';
-                    const digitalType = '—';
-                    const purpose = '—';
+                    const businessType = entry.businessType || '—';
+                    const settlement = entry.settlementId || '—';
+                    const digitalType = entry.digitalType || '—';
+                    const purpose = entry.systemType || '—';
                     const date = entry.displayDate || entry.timestamp || '';
 
                     return (

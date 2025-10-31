@@ -1,14 +1,14 @@
 // workflows/entities-workflows/site.workflow.ts
 // Site-specific workflow with ACTIVATED, DEACTIVATED events
 
-import { EntityType, LogEventType } from '@/types/enums';
+import { EntityType, LogEventType, SiteStatus } from '@/types/enums';
 import type { Site } from '@/types/entities';
 import { appendEntityLog, updateEntityLogField } from '../entities-logging';
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
 import { EffectKeys } from '@/data-store/keys';
 import { getLinksFor, removeLink } from '@/links/link-registry';
 
-const STATE_FIELDS = ['isActive', 'status'];
+const STATE_FIELDS = ['status'];
 const DESCRIPTIVE_FIELDS = ['name', 'description', 'metadata'];
 
 export async function onSiteUpsert(site: Site, previousSite?: Site): Promise<void> {
@@ -19,10 +19,9 @@ export async function onSiteUpsert(site: Site, previousSite?: Site): Promise<voi
     
     // Build CREATED log payload with standard pattern (name, type, status, then type-specific fields)
     const logPayload: any = {
-      name: site.name,
-      type: site.metadata?.type,
-      status: site.status,
-      isActive: site.isActive
+      name: site.name || 'Unnamed Site',
+      type: site.metadata?.type || 'UNKNOWN',
+      status: site.status || SiteStatus.ACTIVE
     };
     
     // Add description if present
@@ -49,29 +48,19 @@ export async function onSiteUpsert(site: Site, previousSite?: Site): Promise<voi
     return;
   }
   
-  // Activation status changes
-  if (previousSite.isActive !== site.isActive) {
-    if (site.isActive) {
+  // Status changes (Active <-> Inactive) - log as ACTIVATED or DEACTIVATED
+  if (previousSite.status !== site.status) {
+    if (site.status === SiteStatus.ACTIVE) {
       await appendEntityLog(EntityType.SITE, site.id, LogEventType.ACTIVATED, {
         name: site.name,
         activatedAt: new Date().toISOString()
       });
-    } else {
+    } else if (site.status === SiteStatus.INACTIVE) {
       await appendEntityLog(EntityType.SITE, site.id, LogEventType.DEACTIVATED, {
         name: site.name,
         deactivatedAt: new Date().toISOString()
       });
     }
-  }
-  
-  // Status changes - UPDATED event
-  if (previousSite.status !== site.status) {
-    await appendEntityLog(EntityType.SITE, site.id, LogEventType.UPDATED, {
-      name: site.name,
-      type: site.metadata?.type,
-      oldStatus: previousSite.status,
-      newStatus: site.status
-    });
   }
   
   // Descriptive changes - update in-place

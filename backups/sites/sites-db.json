@@ -249,19 +249,17 @@
     {
       "id": "site-home",
       "name": "Home",
-      "description": "PHYSICAL site - Home",
+      "description": "Home - HQ",
       "metadata": {
         "type": "PHYSICAL",
         "businessType": "HQ",
         "settlementId": "settlement-uvita",
-        "googleMapsAddress": "Home Location",
-        "isActive": true
+        "googleMapsAddress": "Home Location"
       },
-      "isActive": true,
       "createdAt": "2025-10-09T15:38:54.596Z",
       "updatedAt": "2025-10-09T15:38:54.596Z",
-      "isArchived": false,
-      "links": []
+      "links": [],
+      "status": "Active"
     },
     {
       "id": "site-feria-box",
@@ -271,14 +269,12 @@
         "type": "PHYSICAL",
         "businessType": "storage",
         "settlementId": "settlement-uvita",
-        "googleMapsAddress": "Feria Box Location",
-        "isActive": true
+        "googleMapsAddress": "Feria Box Location"
       },
-      "isActive": true,
       "createdAt": "2025-10-09T15:38:54.596Z",
       "updatedAt": "2025-10-09T15:38:54.596Z",
-      "isArchived": false,
-      "links": []
+      "links": [],
+      "status": "Active"
     },
     {
       "id": "site-smoking-lounge",
@@ -288,14 +284,12 @@
         "type": "PHYSICAL",
         "businessType": "consignment",
         "settlementId": "settlement-uvita",
-        "googleMapsAddress": "Smoking Lounge Location",
-        "isActive": true
+        "googleMapsAddress": "Smoking Lounge Location"
       },
-      "isActive": true,
       "createdAt": "2025-10-09T15:38:54.596Z",
       "updatedAt": "2025-10-09T15:38:54.596Z",
-      "isArchived": false,
-      "links": []
+      "links": [],
+      "status": "Active"
     },
     {
       "id": "site-tagua",
@@ -305,14 +299,12 @@
         "type": "PHYSICAL",
         "businessType": "consignment",
         "settlementId": "settlement-ojochal",
-        "googleMapsAddress": "Tagua Location",
-        "isActive": true
+        "googleMapsAddress": "Tagua Location"
       },
-      "isActive": true,
       "createdAt": "2025-10-09T15:38:54.596Z",
       "updatedAt": "2025-10-09T15:38:54.596Z",
-      "isArchived": false,
-      "links": []
+      "links": [],
+      "status": "Active"
     },
     {
       "id": "site-cafe-vivo",
@@ -322,14 +314,12 @@
         "type": "PHYSICAL",
         "businessType": "consignment",
         "settlementId": "settlement-uvita",
-        "googleMapsAddress": "Cafe Vivo Location",
-        "isActive": true
+        "googleMapsAddress": "Cafe Vivo Location"
       },
-      "isActive": true,
       "createdAt": "2025-10-09T15:38:54.596Z",
       "updatedAt": "2025-10-09T15:38:54.596Z",
-      "isArchived": false,
-      "links": []
+      "links": [],
+      "status": "Active"
     },
     {
       "id": "site-xiva",
@@ -339,14 +329,12 @@
         "type": "PHYSICAL",
         "businessType": "consignment",
         "settlementId": "settlement-uvita",
-        "googleMapsAddress": "XIVA Location",
-        "isActive": true
+        "googleMapsAddress": "XIVA Location"
       },
-      "isActive": true,
       "createdAt": "2025-10-09T15:38:54.596Z",
       "updatedAt": "2025-10-09T15:38:54.596Z",
-      "isArchived": false,
-      "links": []
+      "links": [],
+      "status": "Active"
     },
     {
       "id": "site-perezoso-feliz",
@@ -356,14 +344,12 @@
         "type": "PHYSICAL",
         "businessType": "selling point",
         "settlementId": "settlement-uvita",
-        "googleMapsAddress": "Perezoso Feliz Location",
-        "isActive": true
+        "googleMapsAddress": "Perezoso Feliz Location"
       },
-      "isActive": true,
       "createdAt": "2025-10-09T15:38:54.596Z",
       "updatedAt": "2025-10-09T15:38:54.596Z",
-      "isArchived": false,
-      "links": []
+      "links": [],
+      "status": "Active"
     },
     {
       "id": "site-el-hornito",
@@ -373,14 +359,12 @@
         "type": "PHYSICAL",
         "businessType": "selling point",
         "settlementId": "settlement-uvita",
-        "googleMapsAddress": "El Hornito Location",
-        "isActive": true
+        "googleMapsAddress": "El Hornito Location"
       },
-      "isActive": true,
       "createdAt": "2025-10-09T15:38:54.596Z",
       "updatedAt": "2025-10-09T15:38:54.596Z",
-      "isArchived": false,
-      "links": []
+      "links": [],
+      "status": "Active"
     },
     {
       "id": "site-jungle-academy",
@@ -390,14 +374,12 @@
         "type": "PHYSICAL",
         "businessType": "teaching space",
         "settlementId": "settlement-ojochal",
-        "googleMapsAddress": "Jungle Academy Location",
-        "isActive": true
+        "googleMapsAddress": "Jungle Academy Location"
       },
-      "isActive": true,
       "createdAt": "2025-10-09T15:38:54.596Z",
       "updatedAt": "2025-10-09T15:38:54.596Z",
-      "isArchived": false,
-      "links": []
+      "links": [],
+      "status": "Active"
     },
     {
       "id": "site-la-tribu",
@@ -407,14 +389,12 @@
         "type": "PHYSICAL",
         "businessType": "teaching space",
         "settlementId": "settlement-uvita",
-        "googleMapsAddress": "La Tribu Location",
-        "isActive": true
+        "googleMapsAddress": "La Tribu Location"
       },
-      "isActive": true,
       "createdAt": "2025-10-09T15:38:54.596Z",
       "updatedAt": "2025-10-09T15:38:54.596Z",
-      "isArchived": false,
-      "links": []
+      "links": [],
+      "status": "Active"
     },
     {
       "id": "site-osa-de-rio",
@@ -424,14 +404,12 @@
         "type": "PHYSICAL",
         "businessType": "storage",
         "settlementId": "settlement-uvita",
-        "googleMapsAddress": "Osa de Rio Location",
-        "isActive": true
+        "googleMapsAddress": "Osa de Rio Location"
       },
-      "isActive": true,
       "createdAt": "2025-10-09T15:38:54.596Z",
       "updatedAt": "2025-10-09T15:38:54.596Z",
-      "isArchived": false,
-      "links": []
+      "links": [],
+      "status": "Active"
     },
     {
       "id": "site-gallery-1084",
@@ -441,14 +419,12 @@
         "type": "PHYSICAL",
         "businessType": "art gallery",
         "settlementId": "settlement-uvita",
-        "googleMapsAddress": "Gallery 1084 Location",
-        "isActive": true
+        "googleMapsAddress": "Gallery 1084 Location"
       },
-      "isActive": true,
       "createdAt": "2025-10-09T15:38:54.596Z",
       "updatedAt": "2025-10-09T15:38:54.596Z",
-      "isArchived": false,
-      "links": []
+      "links": [],
+      "status": "Active"
     },
     {
       "id": "site-cat-cafe",
@@ -458,14 +434,12 @@
         "type": "PHYSICAL",
         "businessType": "selling point",
         "settlementId": "settlement-uvita",
-        "googleMapsAddress": "Cat Cafe Location",
-        "isActive": true
+        "googleMapsAddress": "Cat Cafe Location"
       },
-      "isActive": true,
       "createdAt": "2025-10-09T15:38:54.596Z",
       "updatedAt": "2025-10-09T15:38:54.596Z",
-      "isArchived": false,
-      "links": []
+      "links": [],
+      "status": "Active"
     },
     {
       "id": "site-eco-feria",
@@ -475,14 +449,12 @@
         "type": "PHYSICAL",
         "businessType": "feria",
         "settlementId": "settlement-dominical",
-        "googleMapsAddress": "Eco Feria Location",
-        "isActive": true
+        "googleMapsAddress": "Eco Feria Location"
       },
-      "isActive": true,
       "createdAt": "2025-10-09T15:38:54.596Z",
       "updatedAt": "2025-10-09T15:38:54.596Z",
-      "isArchived": false,
-      "links": []
+      "links": [],
+      "status": "Active"
     },
     {
       "id": "site-escuela-verde",
@@ -492,14 +464,12 @@
         "type": "PHYSICAL",
         "businessType": "selling point",
         "settlementId": "settlement-uvita",
-        "googleMapsAddress": "Escuela Verde Location",
-        "isActive": true
+        "googleMapsAddress": "Escuela Verde Location"
       },
-      "isActive": true,
       "createdAt": "2025-10-09T15:38:54.596Z",
       "updatedAt": "2025-10-09T15:38:54.596Z",
-      "isArchived": false,
-      "links": []
+      "links": [],
+      "status": "Active"
     },
     {
       "id": "site-print-masters",
@@ -509,211 +479,183 @@
         "type": "PHYSICAL",
         "businessType": "selling point",
         "settlementId": "settlement-uvita",
-        "googleMapsAddress": "Print Masters Location",
-        "isActive": true
+        "googleMapsAddress": "Print Masters Location"
       },
-      "isActive": true,
       "createdAt": "2025-10-09T15:38:54.596Z",
       "updatedAt": "2025-10-09T15:38:54.596Z",
-      "isArchived": false,
-      "links": []
+      "links": [],
+      "status": "Active"
     },
     {
       "id": "site-google-drive",
       "name": "Google Drive",
-      "description": "CLOUD site - Google Drive",
+      "description": "DIGITAL site - Google Drive",
       "metadata": {
-        "type": "CLOUD",
-        "digitalType": "digital storage",
-        "isActive": true
+        "type": "DIGITAL",
+        "digitalType": "digital storage"
       },
-      "isActive": true,
       "createdAt": "2025-10-09T15:38:54.596Z",
       "updatedAt": "2025-10-09T15:38:54.596Z",
-      "isArchived": false,
-      "links": []
+      "links": [],
+      "status": "Active"
     },
     {
       "id": "site-github",
       "name": "Github",
-      "description": "CLOUD site - Github",
+      "description": "DIGITAL site - Github",
       "metadata": {
-        "type": "CLOUD",
-        "digitalType": "repository",
-        "isActive": true
+        "type": "DIGITAL",
+        "digitalType": "repository"
       },
-      "isActive": true,
       "createdAt": "2025-10-09T15:38:54.596Z",
       "updatedAt": "2025-10-09T15:38:54.596Z",
-      "isArchived": false,
-      "links": []
+      "links": [],
+      "status": "Active"
     },
     {
       "id": "site-magic-eden",
       "name": "Magic Eden",
-      "description": "CLOUD site - Magic Eden",
+      "description": "DIGITAL site - Magic Eden",
       "metadata": {
-        "type": "CLOUD",
-        "digitalType": "nft wallet",
-        "isActive": true
+        "type": "DIGITAL",
+        "digitalType": "nft wallet"
       },
-      "isActive": true,
       "createdAt": "2025-10-09T15:38:54.596Z",
       "updatedAt": "2025-10-09T15:38:54.596Z",
-      "isArchived": false,
-      "links": []
+      "links": [],
+      "status": "Active"
     },
     {
       "id": "site-opensea",
       "name": "OpenSea",
-      "description": "CLOUD site - OpenSea",
+      "description": "DIGITAL site - OpenSea",
       "metadata": {
-        "type": "CLOUD",
-        "digitalType": "nft wallet",
-        "isActive": true
+        "type": "DIGITAL",
+        "digitalType": "nft wallet"
       },
-      "isActive": true,
       "createdAt": "2025-10-09T15:38:54.596Z",
       "updatedAt": "2025-10-09T15:38:54.596Z",
-      "isArchived": false,
-      "links": []
+      "links": [],
+      "status": "Active"
     },
     {
       "id": "site-world",
       "name": "World",
-      "description": "SPECIAL site - World",
+      "description": "SYSTEM site - World",
       "metadata": {
-        "type": "SPECIAL",
-        "purpose": "universal tracking",
-        "isActive": true
+        "type": "SYSTEM",
+        "systemType": "universal tracking"
       },
-      "isActive": true,
       "createdAt": "2025-10-09T15:38:54.596Z",
       "updatedAt": "2025-10-09T15:38:54.596Z",
-      "isArchived": false,
-      "links": []
+      "links": [],
+      "status": "Active"
     },
     {
       "id": "site-sold-items",
       "name": "Sold Items",
-      "description": "SPECIAL site - Sold Items",
+      "description": "SYSTEM site - Sold Items",
       "metadata": {
-        "type": "SPECIAL",
-        "purpose": "sold items",
-        "isActive": true
+        "type": "SYSTEM",
+        "systemType": "sold items"
       },
-      "isActive": true,
       "createdAt": "2025-10-09T15:38:54.596Z",
       "updatedAt": "2025-10-09T15:38:54.596Z",
-      "isArchived": false,
-      "links": []
+      "links": [],
+      "status": "Active"
     },
     {
       "id": "site-archived",
       "name": "Archived",
-      "description": "SPECIAL site - Archived",
+      "description": "SYSTEM site - Archived",
       "metadata": {
-        "type": "SPECIAL",
-        "purpose": "archived",
-        "isActive": true
+        "type": "SYSTEM",
+        "systemType": "archived"
       },
-      "isActive": true,
       "createdAt": "2025-10-09T15:38:54.596Z",
       "updatedAt": "2025-10-09T15:38:54.596Z",
-      "isArchived": false,
-      "links": []
+      "links": [],
+      "status": "Active"
     },
     {
       "id": "site-deleted-items",
       "name": "Deleted Items",
-      "description": "SPECIAL site - Deleted Items",
+      "description": "SYSTEM site - Deleted Items",
       "metadata": {
-        "type": "SPECIAL",
-        "purpose": "universal tracking",
-        "isActive": true
+        "type": "SYSTEM",
+        "systemType": "deleted"
       },
-      "isActive": true,
+      "status": "Active",
       "createdAt": "2025-10-09T15:38:54.596Z",
       "updatedAt": "2025-10-09T15:38:54.596Z",
-      "isArchived": false,
       "links": []
     },
     {
       "id": "site-digital-space",
       "name": "Digital Space",
-      "description": "CLOUD site - Digital Space",
+      "description": "DIGITAL site - Digital Space",
       "metadata": {
-        "type": "CLOUD",
-        "digitalType": "digital storage",
-        "isActive": true
+        "type": "DIGITAL",
+        "digitalType": "digital storage"
       },
-      "isActive": true,
       "createdAt": "2025-10-09T15:38:54.596Z",
       "updatedAt": "2025-10-09T15:38:54.596Z",
-      "isArchived": false,
-      "links": []
+      "links": [],
+      "status": "Active"
     },
     {
       "id": "site-desktop-pc",
       "name": "Desktop PC",
-      "description": "CLOUD site - Desktop PC",
+      "description": "DIGITAL site - Desktop PC",
       "metadata": {
-        "type": "CLOUD",
-        "digitalType": "digital storage",
-        "isActive": true
+        "type": "DIGITAL",
+        "digitalType": "digital storage"
       },
-      "isActive": true,
       "createdAt": "2025-10-09T15:38:54.596Z",
       "updatedAt": "2025-10-09T15:38:54.596Z",
-      "isArchived": false,
-      "links": []
+      "links": [],
+      "status": "Active"
     },
     {
       "id": "site-laptop",
       "name": "Laptop",
-      "description": "CLOUD site - Laptop",
+      "description": "DIGITAL site - Laptop",
       "metadata": {
-        "type": "CLOUD",
-        "digitalType": "digital storage",
-        "isActive": true
+        "type": "DIGITAL",
+        "digitalType": "digital storage"
       },
-      "isActive": true,
       "createdAt": "2025-10-09T15:38:54.596Z",
       "updatedAt": "2025-10-09T15:38:54.596Z",
-      "isArchived": false,
-      "links": []
+      "links": [],
+      "status": "Active"
     },
     {
       "id": "site-none",
       "name": "None",
-      "description": "SPECIAL site - None",
+      "description": "SYSTEM site - None",
       "metadata": {
-        "type": "SPECIAL",
-        "purpose": "universal tracking",
-        "isActive": false
+        "type": "SYSTEM",
+        "systemType": "universal tracking"
       },
-      "isActive": false,
       "createdAt": "2025-10-09T15:38:54.596Z",
       "updatedAt": "2025-10-09T15:38:54.596Z",
-      "isArchived": false,
-      "links": []
+      "links": [],
+      "status": "Inactive"
     },
     {
       "id": "site-el-ranchito",
       "name": "El Ranchito",
       "description": "Home - Residency at the moment",
-      "isActive": true,
       "metadata": {
         "type": "PHYSICAL",
-        "isActive": true,
         "businessType": "storage",
         "settlementId": "settlement-uvita",
         "googleMapsAddress": "https://maps.app.goo.gl/TqJyKeWN6Wwy6JscA"
       },
       "createdAt": "2025-10-09T17:23:12.743Z",
       "updatedAt": "2025-10-09T17:23:12.743Z",
-      "isArchived": false,
-      "links": []
+      "links": [],
+      "status": "Active"
     }
   ]
 }

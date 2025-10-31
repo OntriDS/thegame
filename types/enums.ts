@@ -100,7 +100,6 @@ export enum SystemSiteType {
   UNIVERSAL_TRACKING = 'universal tracking', // Items no longer at specific sites
   SOLD_ITEMS         = 'sold items',         // Sold items tracking
   ARCHIVED           = 'archived',           // Archived/historical items
-  DELETED            = 'deleted'             // Deleted items
 }
 
 /** SiteType enum for backward compatibility with entities */
@@ -112,10 +111,8 @@ export enum SiteType {
 
 /** Status of Sites - controls state */
 export enum SiteStatus {
-  CREATED  = 'Created',   // First created
-  ACTIVE   = 'Active',    // Has Item or Task links
-  UPDATED  = 'Updated',   // Data edited
-  INACTIVE = 'Inactive',  // No relationships
+  ACTIVE   = 'Active',    // Site is in use
+  INACTIVE = 'Inactive',  // Site is not being used
 }
 
 // /** Site Structure - Single source of truth for sites and their types */
@@ -181,7 +178,6 @@ export const SITE_CATEGORIES = {
     SystemSiteType.UNIVERSAL_TRACKING,
     SystemSiteType.SOLD_ITEMS,
     SystemSiteType.ARCHIVED,
-    SystemSiteType.DELETED
   ]
 } as const;
 

@@ -4,7 +4,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdminAuth } from '@/lib/api-auth';
-import { EntityType, SaleStatus } from '@/types/enums';
+import { EntityType, SaleStatus, SiteStatus } from '@/types/enums';
 import {
   getAllItems, upsertItem, removeItem,
   getAllTasks, upsertTask, removeTask,
@@ -233,7 +233,11 @@ async function handleBulkOperation<T>(
                 if (record.isNotPaid === undefined) record.isNotPaid = true;
                 if (record.isNotCharged === undefined) record.isNotCharged = true;
                 break;
-              // Items, Sites, Characters, Players: any status is safe (no side effects)
+              case EntityType.SITE:
+                // Sites: default to "Active" (sites start as Active, not Created)
+                record.status = record.status || SiteStatus.ACTIVE;
+                break;
+              // Items, Characters, Players: any status is safe (no side effects)
             }
           } else {
             // Even if status is provided, ensure safe payment flags for Sales and Financials

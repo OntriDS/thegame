@@ -536,10 +536,8 @@ export class ResetDataWorkflow {
         {
           id: 'hq',
           name: 'HQ',
-          type: SiteType.PHYSICAL.toLowerCase(),
-          status: SiteStatus.ACTIVE.toLowerCase(),
-          metadata: { type: SiteType.PHYSICAL, businessType: PhysicalBusinessType.STORAGE },
-          isActive: true,
+          status: SiteStatus.ACTIVE,
+          metadata: { type: SiteType.PHYSICAL, businessType: PhysicalBusinessType.STORAGE, settlementId: '', googleMapsAddress: '' },
           createdAt: new Date(),
           updatedAt: new Date(),
           links: []
@@ -547,10 +545,8 @@ export class ResetDataWorkflow {
         {
           id: 'drive',
           name: 'Drive',
-          type: SiteType.DIGITAL.toLowerCase(),
-          status: SiteStatus.ACTIVE.toLowerCase(),
+          status: SiteStatus.ACTIVE,
           metadata: { type: SiteType.DIGITAL, digitalType: DigitalSiteType.REPOSITORY },
-          isActive: true,
           createdAt: new Date(),
           updatedAt: new Date(),
           links: []
@@ -558,10 +554,8 @@ export class ResetDataWorkflow {
         {
           id: 'none',
           name: 'None',
-          type: SiteType.SYSTEM.toLowerCase(),
-          status: SiteStatus.ACTIVE.toLowerCase(),
+          status: SiteStatus.ACTIVE,
           metadata: { type: SiteType.SYSTEM, systemType: SystemSiteType.UNIVERSAL_TRACKING },
-          isActive: true,
           createdAt: new Date(),
           updatedAt: new Date(),
           links: []

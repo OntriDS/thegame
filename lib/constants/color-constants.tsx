@@ -65,9 +65,7 @@ export const ITEM_STATUS_COLORS = {
 
 /** Site Status Colors - Light & Dark Mode with border contrast */
 export const SITE_STATUS_COLORS = {
-  [SiteStatus.CREATED]: { light: STATUS_COLOR_BASE.CREATED, dark: STATUS_COLOR_BASE.CREATED },
   [SiteStatus.ACTIVE]: { light: STATUS_COLOR_BASE.ACTIVE, dark: STATUS_COLOR_BASE.ACTIVE },
-  [SiteStatus.UPDATED]: { light: STATUS_COLOR_BASE.UPDATED, dark: STATUS_COLOR_BASE.UPDATED },
   [SiteStatus.INACTIVE]: { light: STATUS_COLOR_BASE.INACTIVE, dark: STATUS_COLOR_BASE.INACTIVE },
 } as const;
 
