@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ClientAPI } from '@/lib/client-api';
 
 export interface ChatMessage {
@@ -27,7 +27,7 @@ export function useAIChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedModel, setSelectedModel] = useState<string>('openai/gpt-oss-120b');
+  const [selectedModel, setSelectedModel] = useState<string>('');
   const [selectedProvider, setSelectedProvider] = useState<string>('groq');
   const [rateLimits, setRateLimits] = useState<RateLimitInfo | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -37,6 +37,29 @@ export function useAIChat() {
     toolCalls: [],
     toolResults: []
   });
+
+  // Hydrate model from active session on mount
+  useEffect(() => {
+    const hydrateFromActiveSession = async () => {
+      try {
+        const res = await fetch('/api/ai/sessions', { cache: 'no-store' });
+        if (!res.ok) return;
+        const data = await res.json();
+        const activeId = data?.activeSessionId;
+        if (!activeId) return;
+        const sessionRes = await fetch(`/api/ai/sessions/${activeId}`, { cache: 'no-store' });
+        if (!sessionRes.ok) return;
+        const session = await sessionRes.json();
+        if (session?.model) {
+          setSelectedModel(session.model);
+          setSessionId(activeId);
+        }
+      } catch {
+        // silent fail; session will be created with backend default when first message is sent
+      }
+    };
+    hydrateFromActiveSession();
+  }, []);
 
   const sendMessage = async (message: string, model?: string) => {
     if (!message.trim()) return;
