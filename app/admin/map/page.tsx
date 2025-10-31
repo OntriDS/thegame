@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Wrench, Building2, Settings, Cloud, Sparkles } from "lucide-react";
+import { MapPin, Wrench, Building2, Settings, Cloud, Sparkles, Plus } from "lucide-react";
 import { ClientAPI } from "@/lib/client-api";
 import { SiteModal } from "@/components/modals/site-modal";
 import type { Site } from "@/types/entities";
@@ -192,8 +192,8 @@ export default function MapPage() {
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Sites Database</CardTitle>
               <Button onClick={handleManageSites} size="sm">
-                <Settings className="w-4 w-4 mr-2" />
-                Manage Sites
+                <Plus className="w-4 h-4 mr-2" />
+                Add Site
               </Button>
             </CardHeader>
             <CardContent>
@@ -203,7 +203,8 @@ export default function MapPage() {
                   <p className="text-lg font-medium">No sites yet</p>
                   <p className="text-sm">Sites will be initialized on first app load</p>
                   <Button onClick={handleManageSites} className="mt-4">
-                    Initialize Sites
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Site
                   </Button>
                 </div>
               ) : (
