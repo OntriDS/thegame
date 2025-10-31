@@ -115,6 +115,20 @@ export class SessionManager {
   }
 
   /**
+   * Update session model
+   */
+  static async updateSessionModel(sessionId: string, model: string): Promise<AISession> {
+    const session = await this.getSession(sessionId);
+    if (!session) {
+      throw new Error('Session not found');
+    }
+    session.model = model;
+    session.updatedAt = new Date();
+    await upsertSession(session);
+    return session;
+  }
+
+  /**
    * Add a message to the session
    */
   static async addMessage(

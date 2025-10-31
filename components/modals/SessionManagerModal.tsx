@@ -188,29 +188,50 @@ export default function SessionManagerModal({ open, onOpenChange, onSessionLoad 
               >
                 <div className="flex-1 min-w-0">
                   {editingId === session.id ? (
-                    <div className="flex items-center gap-2">
-                      <Input
-                        value={editName}
-                        onChange={(e) => setEditName(e.target.value)}
-                        className="h-8 text-sm bg-background"
-                        autoFocus
-                      />
-                      <Button size="sm" variant="ghost" onClick={() => {
-                        if (editName.trim()) {
-                          void handleRename(session.id, editName.trim());
-                        } else {
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                      <div className="flex items-center gap-2">
+                        <Input
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          className="h-8 text-sm bg-background"
+                          autoFocus
+                        />
+                        <Select value={session.model} onValueChange={async (m) => {
+                          try {
+                            await ClientAPI.updateSessionModel(session.id, m);
+                            await load();
+                          } catch (e) {
+                            console.error('Failed to update model', e);
+                          }
+                        }}>
+                          <SelectTrigger className="h-8 w-[240px]">
+                            <SelectValue placeholder="Select Model" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {availableModels.map((m: any) => (
+                              <SelectItem key={m.id} value={m.id}>{m.id}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button size="sm" variant="ghost" onClick={() => {
+                          if (editName.trim()) {
+                            void handleRename(session.id, editName.trim());
+                          } else {
+                            setEditingId(null);
+                            setEditName('');
+                          }
+                        }}>
+                          <Check className="h-4 w-4" />
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => {
                           setEditingId(null);
                           setEditName('');
-                        }
-                      }}>
-                        <Check className="h-4 w-4" />
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={() => {
-                        setEditingId(null);
-                        setEditName('');
-                      }}>
-                        <X className="h-4 w-4" />
-                      </Button>
+                        }}>
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   ) : (
                     <>

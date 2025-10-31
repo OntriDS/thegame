@@ -31,12 +31,18 @@ export async function PUT(
   }
 
   try {
-    const { name } = await request.json();
-    if (!name) {
-      return Response.json({ error: 'Name is required' }, { status: 400 });
+    const { name, model } = await request.json();
+    if (!name && !model) {
+      return Response.json({ error: 'Name or model is required' }, { status: 400 });
     }
-    
-    await SessionManager.updateSessionName(params.id, name);
+
+    if (name) {
+      await SessionManager.updateSessionName(params.id, name);
+    }
+    if (model) {
+      await SessionManager.updateSessionModel(params.id, model);
+    }
+
     const session = await SessionManager.getSession(params.id);
     return Response.json(session);
   } catch (error) {
