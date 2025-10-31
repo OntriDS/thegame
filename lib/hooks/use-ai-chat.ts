@@ -60,10 +60,15 @@ export function useAIChat() {
     });
 
     try {
-      // Determine provider based on model
+      // Use the passed model, or selectedModel from state (which should be the session's model if loaded)
       const modelToUse = model || selectedModel;
 
       const data = await ClientAPI.sendChatMessage(message, modelToUse, sessionId || undefined);
+      
+      // Update model if returned from API (in case it used session's model)
+      if (data.model) {
+        setSelectedModel(data.model);
+      }
       
       // Store rate limit info if available
       if (data.rateLimits) {

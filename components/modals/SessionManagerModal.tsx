@@ -5,6 +5,7 @@ import { getSessions, createSession, setActiveSession } from '@/lib/client/sessi
 import { ClientAPI } from '@/lib/client-api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
   DialogContent,
@@ -12,7 +13,7 @@ import {
   DialogTitle,
   DialogDescription
 } from '@/components/ui/dialog';
-import { Trash2, Edit2, Check, X, Plus } from 'lucide-react';
+import { Trash2, Edit2, Check, X, Plus, Bot } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { AISession } from '@/types/entities';
 
@@ -213,18 +214,20 @@ export default function SessionManagerModal({ open, onOpenChange, onSessionLoad 
                     </div>
                   ) : (
                     <>
-                      <div className="text-sm font-medium truncate flex items-center gap-2">
+                      <div className="text-sm font-medium truncate flex items-center gap-2 flex-wrap">
                         {session.name}
                         {data.activeSessionId === session.id && (
-                          <span className="text-xs px-2 py-0.5 rounded bg-accent text-accent-foreground">Active</span>
+                          <Badge variant="default" className="text-xs">Active</Badge>
                         )}
+                        <Badge variant="outline" className="text-xs flex items-center gap-1">
+                          <Bot className="h-3 w-3" />
+                          {session.model?.replace('openai/', '').replace('llama-', 'Llama ') || 'Unknown'}
+                        </Badge>
                       </div>
                       <div className="text-xs text-muted-foreground flex items-center gap-3 mt-1">
                         <span>{session.messageCount} messages</span>
                         <span>•</span>
                         <span>{formatDate(session.lastAccessedAt)}</span>
-                        <span>•</span>
-                        <span>{session.model}</span>
                       </div>
                     </>
                   )}

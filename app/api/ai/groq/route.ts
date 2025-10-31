@@ -31,10 +31,15 @@ export async function POST(request: NextRequest) {
 
     // Load session messages if session exists
     let sessionMessages: any[] = [];
+    let modelToUse = model || 'openai/gpt-oss-120b';
     if (currentSessionId) {
       const session = await SessionManager.getSession(currentSessionId);
       if (session) {
         sessionMessages = await SessionManager.getSessionMessages(currentSessionId);
+        // Use the session's saved model if available
+        if (session.model) {
+          modelToUse = session.model;
+        }
       } else {
         // Session expired or invalid, create new one
         currentSessionId = null;
@@ -55,7 +60,7 @@ export async function POST(request: NextRequest) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: model || 'openai/gpt-oss-120b',
+        model: modelToUse,
         messages: messagesToSend,
         temperature: 0.7,
       }),
@@ -97,7 +102,7 @@ export async function POST(request: NextRequest) {
       await SessionManager.addMessage(currentSessionId, 'assistant', assistantResponse);
     } else {
       // Create new session and save messages
-      const session = await SessionManager.createSession('akiles', 'THEGAME', model);
+      const session = await SessionManager.createSession('akiles', 'THEGAME', modelToUse);
       currentSessionId = session.id;
       await kvSet(activeSessionKey, currentSessionId);
       await SessionManager.addMessage(currentSessionId, 'user', message);
@@ -106,7 +111,7 @@ export async function POST(request: NextRequest) {
     
     return Response.json({ 
       response: assistantResponse,
-      model: data.model,
+      model: modelToUse, // Return the model that was actually used (session's model)
       rateLimits: rateLimitInfo,
       sessionId: currentSessionId
     });
