@@ -16,6 +16,7 @@ import {
 } from '@/data-store/datastore';
 import { getBusinessKey } from '@/lib/utils/business-keys';
 import { appendBulkOperationLog } from '@/workflows/entities-logging';
+import { validateEntities } from '@/lib/utils/entity-validation';
 import type { Item, Task, Sale, FinancialRecord, Character, Player, Site } from '@/types/entities';
 
 export const dynamic = 'force-dynamic';
@@ -150,6 +151,32 @@ async function handleBulkOperation<T>(
       }
     }
 
+    // Validate all records before processing
+    console.log(`[Bulk API] Validating ${records.length} records for ${entityType}...`);
+    const validation = validateEntities(entityType, records);
+    
+    // Report validation results
+    if (validation.invalid.length > 0) {
+      console.warn(`[Bulk API] ⚠️ ${validation.invalid.length} invalid records detected, will be skipped`);
+      validation.invalid.forEach(inv => {
+        console.warn(`[Bulk API] Row ${inv.index}: ${inv.errors.join('; ')}`);
+      });
+    }
+    
+    if (validation.fixed.length > 0) {
+      console.log(`[Bulk API] ✅ ${validation.fixed.length} records normalized/fixed`);
+    }
+    
+    // Use validated and fixed records for processing
+    const recordsToProcess = validation.valid;
+    
+    // Add validation errors to error list
+    validation.invalid.forEach(inv => {
+      const errorMsg = `Row ${inv.index}: ${inv.errors.join('; ')}${inv.warnings.length > 0 ? ` (Warnings: ${inv.warnings.join(', ')})` : ''}`;
+      errors.push(errorMsg);
+      counts.failed++;
+    });
+
     // Load existing entities and map by business key (for add-only and merge modes)
     const existingByKey = new Map<string, T>();
     if (mode !== 'replace') {
@@ -167,8 +194,8 @@ async function handleBulkOperation<T>(
     // Process records in batches
     const seenThisBatch = new Set<string>();
     
-    for (let batchStart = 0; batchStart < records.length; batchStart += BATCH_SIZE) {
-      const batch = records.slice(batchStart, batchStart + BATCH_SIZE);
+    for (let batchStart = 0; batchStart < recordsToProcess.length; batchStart += BATCH_SIZE) {
+      const batch = recordsToProcess.slice(batchStart, batchStart + BATCH_SIZE);
       
       for (let i = 0; i < batch.length; i++) {
         const record = batch[i];

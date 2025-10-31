@@ -519,20 +519,6 @@
       "links": []
     },
     {
-      "id": "site-akiles",
-      "name": "Akiles",
-      "description": "undefined site - Akiles",
-      "metadata": {
-        "role": "founder",
-        "isActive": true
-      },
-      "isActive": true,
-      "createdAt": "2025-10-09T15:38:54.596Z",
-      "updatedAt": "2025-10-09T15:38:54.596Z",
-      "isArchived": false,
-      "links": []
-    },
-    {
       "id": "site-google-drive",
       "name": "Google Drive",
       "description": "CLOUD site - Google Drive",

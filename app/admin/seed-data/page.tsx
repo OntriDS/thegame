@@ -242,10 +242,11 @@ export default function SeedDataPage() {
 
 
   const handleImportData = async () => {
-    if (!pendingImport) return;
+    if (!pendingImport || isSeeding) return;
 
     setIsSeeding(true);
     setShowImportModal(false);
+    setStatus('⏳ Importing... Please wait.');
     
     try {
       const { entityType, data, count, filename } = pendingImport;
@@ -283,7 +284,8 @@ export default function SeedDataPage() {
         setStatus(messages.length > 0 ? messages.join(', ') : '✅ Import completed');
       }
 
-      loadEntityStats(); // Refresh stats
+      // Refresh stats after successful import
+      await loadEntityStats();
     } catch (error) {
       setStatus(`❌ Import failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
@@ -356,16 +358,28 @@ export default function SeedDataPage() {
                   
                   
                   <div className="flex gap-2">
-                    <label className="cursor-pointer flex-1">
+                    <label className={`cursor-pointer flex-1 ${isSeeding ? 'pointer-events-none opacity-50' : ''}`}>
                       <input
                         type="file"
                         accept=".json"
                         className="hidden"
                         onChange={(e) => handleFileUpload(e, key)}
+                        disabled={isSeeding}
                       />
-                      <div className="flex items-center justify-center gap-2 px-3 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors text-sm">
-                        <Upload className="h-4 w-4" />
-                        Upload
+                      <div className={`flex items-center justify-center gap-2 px-3 py-2 bg-primary text-primary-foreground rounded-md transition-colors text-sm ${
+                        isSeeding ? 'opacity-50 cursor-not-allowed' : 'hover:bg-primary/90 cursor-pointer'
+                      }`}>
+                        {isSeeding ? (
+                          <>
+                            <span className="animate-spin">⏳</span>
+                            Loading...
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="h-4 w-4" />
+                            Upload
+                          </>
+                        )}
                       </div>
                     </label>
                     <Button
@@ -376,6 +390,7 @@ export default function SeedDataPage() {
                         handleExportData(key);
                       }}
                       className="flex-1"
+                      disabled={isSeeding}
                     >
                       <Download className="h-4 w-4" />
                     </Button>
@@ -447,7 +462,14 @@ export default function SeedDataPage() {
       )}
 
       {/* Import Modal */}
-      <Dialog open={showImportModal} onOpenChange={setShowImportModal}>
+      <Dialog open={showImportModal} onOpenChange={(open) => {
+        if (!isSeeding) {
+          setShowImportModal(open);
+          if (!open) {
+            setPendingImport(null);
+          }
+        }
+      }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Import {pendingImport?.entityType}</DialogTitle>
@@ -459,8 +481,12 @@ export default function SeedDataPage() {
           <div className="space-y-4">
             <div>
               <label className="text-sm font-medium">Import Mode</label>
-              <Select value={importMode} onValueChange={(value: 'add' | 'merge' | 'replace') => setImportMode(value)}>
-                <SelectTrigger className="mt-1">
+              <Select 
+                value={importMode} 
+                onValueChange={(value: 'add' | 'merge' | 'replace') => setImportMode(value)}
+                disabled={isSeeding}
+              >
+                <SelectTrigger className="mt-1" disabled={isSeeding}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -485,16 +511,19 @@ export default function SeedDataPage() {
             <Button
               variant="outline"
               onClick={() => {
-                setShowImportModal(false);
-                setPendingImport(null);
+                if (!isSeeding) {
+                  setShowImportModal(false);
+                  setPendingImport(null);
+                }
               }}
+              disabled={isSeeding}
             >
               Cancel
             </Button>
             <Button
               onClick={handleImportData}
               disabled={isSeeding}
-              className="bg-green-600 hover:bg-green-700 text-white"
+              className="bg-green-600 hover:bg-green-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSeeding ? (
                 <>
