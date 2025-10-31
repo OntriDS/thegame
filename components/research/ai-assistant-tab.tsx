@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Bot, Send, Trash2, Loader2, Settings, Wrench, Database } from 'lucide-react';
 import SessionManagerModal from '@/components/modals/SessionManagerModal';
 import { useAIChat, ChatMessage } from '@/lib/hooks/use-ai-chat';
+import { ClientAPI } from '@/lib/client-api';
 
 interface GroqModel {
   id: string;
@@ -26,8 +27,7 @@ export function AIAssistantTab() {
 
   // Fetch available models from Groq only
   useEffect(() => {
-    fetch('/api/ai/groq/models')
-      .then(res => res.json())
+    ClientAPI.getGroqModels()
       .then(data => {
         setAvailableModels([...(data.models || [])]);
       })

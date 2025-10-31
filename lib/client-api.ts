@@ -719,11 +719,90 @@ export const ClientAPI = {
     if (!res.ok) throw new Error('Failed to delete session');
   },
 
+  clearActiveSession: async (): Promise<void> => {
+    const res = await fetch('/api/ai/sessions', { method: 'DELETE' });
+    if (!res.ok) throw new Error('Failed to clear active session');
+  },
+
   getSessionMessages: async (id: string): Promise<any[]> => {
     const session = await fetch(`/api/ai/sessions/${id}`);
     if (!session.ok) return [];
     const data = await session.json();
     return data.messages || [];
+  },
+
+  // ============================================================================
+  // AI CHAT - AI chat and model operations
+  // ============================================================================
+  getGroqModels: async (): Promise<{ models: any[] }> => {
+    const res = await fetch('/api/ai/groq/models');
+    if (!res.ok) throw new Error('Failed to fetch Groq models');
+    return await res.json();
+  },
+
+  sendChatMessage: async (message: string, model?: string, sessionId?: string, enableTools?: boolean): Promise<any> => {
+    const res = await fetch('/api/ai/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message,
+        model: model || 'openai/gpt-oss-120b',
+        provider: 'groq',
+        sessionId,
+        enableTools
+      })
+    });
+    if (!res.ok) throw new Error('Failed to get AI response');
+    return await res.json();
+  },
+
+  // ============================================================================
+  // PLAYER LOG - Player log operations
+  // ============================================================================
+  getPlayerLog: async (): Promise<{ entries: any[] }> => {
+    const res = await fetch('/api/player-log');
+    if (!res.ok) throw new Error('Failed to fetch player log');
+    return await res.json();
+  },
+
+  // ============================================================================
+  // RESEARCH SYNC - Research logs sync operations
+  // ============================================================================
+  getResearchSyncStatus: async (): Promise<any> => {
+    const res = await fetch('/api/sync-research-logs');
+    if (!res.ok) throw new Error('Failed to fetch research sync status');
+    return await res.json();
+  },
+
+  syncResearchLogs: async (logType: string, strategyOverride?: 'replace' | 'merge'): Promise<any> => {
+    const res = await fetch('/api/sync-research-logs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ logType, strategyOverride })
+    });
+    if (!res.ok) throw new Error('Failed to sync research logs');
+    return await res.json();
+  },
+
+  // ============================================================================
+  // PROJECT STATUS - Phase status operations
+  // ============================================================================
+  updatePhaseStatus: async (phaseKey: string, newStatus: string): Promise<any> => {
+    const res = await fetch('/api/project-status', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phaseKey, newStatus })
+    });
+    if (!res.ok) throw new Error('Failed to update phase status');
+    return await res.json();
+  },
+
+  // ============================================================================
+  // AUTH - Authentication operations
+  // ============================================================================
+  logout: async (): Promise<void> => {
+    const res = await fetch('/admin/logout', { method: 'POST' });
+    if (!res.ok) throw new Error('Failed to logout');
   },
 };
 

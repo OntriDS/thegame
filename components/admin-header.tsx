@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import { showKeyboardShortcutsHelp } from '@/lib/hooks/use-keyboard-shortcuts'
 import { Button } from '@/components/ui/button'
 import { Keyboard } from 'lucide-react'
+import { ClientAPI } from '@/lib/client-api'
 
 export function AdminHeader() {
   const router = useRouter();
@@ -44,7 +45,7 @@ export function AdminHeader() {
           type="button"
           onClick={async () => {
             try {
-              await fetch('/admin/logout', { method: 'POST' });
+              await ClientAPI.logout();
             } finally {
               router.push('/');
             }

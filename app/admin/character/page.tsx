@@ -53,15 +53,14 @@ export default function CharactersPage() {
       
       isLoadingDataRef.current = true;
       try {
-        const [playerLogResponse, ratesData, charactersData, playersData, personalAssets] = await Promise.all([
-          fetch('/api/player-log'),  // ✅ Points come from Player Log now
+        const [playerLogData, ratesData, charactersData, playersData, personalAssets] = await Promise.all([
+          ClientAPI.getPlayerLog(),  // ✅ Points come from Player Log now
           ClientAPI.getPlayerConversionRates(),
           ClientAPI.getCharacters(),
           ClientAPI.getPlayers(),
           ClientAPI.getPersonalAssets()
         ]);
         
-        const playerLogData = await playerLogResponse.json();
         const playerLogEntries = playerLogData.entries || [];
         
         // Get current player points (not sum of all log entries)
@@ -115,15 +114,14 @@ export default function CharactersPage() {
       
       isLoadingDataRef.current = true;
       try {
-        const [playerLogResponse, ratesData, charactersData, playersData, personalAssets] = await Promise.all([
-          fetch('/api/player-log'),
+        const [playerLogData, ratesData, charactersData, playersData, personalAssets] = await Promise.all([
+          ClientAPI.getPlayerLog(),
           ClientAPI.getPlayerConversionRates(),
           ClientAPI.getCharacters(),
           ClientAPI.getPlayers(),
           ClientAPI.getPersonalAssets()
         ]);
         
-        const playerLogData = await playerLogResponse.json();
         const playerLogEntries = playerLogData.entries || [];
         const mainPlayer = playersData.find((p: Player) => p.id === PLAYER_ONE_ID) || playersData[0];
         const pointsData = mainPlayer?.points || { xp: 0, rp: 0, fp: 0, hp: 0 };

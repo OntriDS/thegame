@@ -1,4 +1,4 @@
-import { ClientAPI } from './client-api';
+import { ClientAPI } from '@/lib/client-api';
 
 export async function getSessions() {
   return await ClientAPI.getSessions();
@@ -13,9 +13,7 @@ export async function setActiveSession(sessionId: string) {
 }
 
 export async function clearActiveSession() {
-  const res = await fetch('/api/ai/sessions', { method: 'DELETE' });
-  if (!res.ok) throw new Error('Failed to clear active session');
-  return await res.json();
+  return await ClientAPI.clearActiveSession();
 }
 
 

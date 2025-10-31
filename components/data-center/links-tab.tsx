@@ -27,8 +27,7 @@ export function LinksTab({ onReload, isReloading }: LinksTabProps) {
   // Load all links and entity names
   const loadLinks = useCallback(async () => {
     try {
-      const response = await fetch('/api/links');
-      const allLinks = await response.json();
+      const allLinks = await ClientAPI.getAllLinks();
       setLinks(allLinks);
       
       // Only load entity names once

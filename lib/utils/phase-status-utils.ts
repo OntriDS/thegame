@@ -1,6 +1,7 @@
 import { DevSprintStatus } from '@/types/enums';
 import { DEV_SPRINT_STATUS_COLORS } from '@/lib/constants/status-colors';
 import { formatDateDDMMYYYY } from '@/lib/constants/date-constants';
+import { ClientAPI } from '@/lib/client-api';
 
 /**
  * Get the appropriate badge props for a phase status
@@ -43,25 +44,12 @@ export const getPhaseStatusBadgeProps = (status: string, phaseKey: string, onCyc
  */
 export const updatePhaseStatus = async (phaseKey: string, newStatus: string, projectStatus: any) => {
   try {
-    const response = await fetch('/api/project-status', {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        phaseKey,
-        newStatus,
-      }),
-    });
-
-    if (response.ok) {
-      // Log phase completion if status is "Done"
-      if (newStatus === DevSprintStatus.DONE) {
-        const phaseName = projectStatus.phasePlan[phaseKey].phaseName || projectStatus.phasePlan[phaseKey].name;
-        await logPhaseCompletion(phaseKey, phaseName);
-      }
-    } else {
-      console.error('Failed to update phase status');
+    await ClientAPI.updatePhaseStatus(phaseKey, newStatus);
+    
+    // Log phase completion if status is "Done"
+    if (newStatus === DevSprintStatus.DONE) {
+      const phaseName = projectStatus.phasePlan[phaseKey].phaseName || projectStatus.phasePlan[phaseKey].name;
+      await logPhaseCompletion(phaseKey, phaseName);
     }
   } catch (error) {
     console.error('Error updating phase status:', error);

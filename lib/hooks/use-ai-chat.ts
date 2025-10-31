@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ClientAPI } from '@/lib/client-api';
 
 export interface ChatMessage {
   role: 'user' | 'assistant';
@@ -61,30 +62,8 @@ export function useAIChat() {
     try {
       // Determine provider based on model
       const modelToUse = model || selectedModel;
-      const provider = 'groq'; // Always use Groq now
 
-      const requestBody: any = { 
-        message, 
-        model: modelToUse, 
-        provider 
-      };
-
-      // Add session ID for Groq models
-      if (sessionId) {
-        requestBody.sessionId = sessionId;
-      }
-
-      const response = await fetch('/api/ai/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to get AI response');
-      }
-
-      const data = await response.json();
+      const data = await ClientAPI.sendChatMessage(message, modelToUse, sessionId || undefined);
       
       // Store rate limit info if available
       if (data.rateLimits) {

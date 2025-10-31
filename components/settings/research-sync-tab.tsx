@@ -19,6 +19,7 @@ import {
   Download
 } from 'lucide-react';
 import { SYNC_STRATEGIES, SyncResult } from '@/workflows/settings/research-sync';
+import { ClientAPI } from '@/lib/client-api';
 
 interface SyncStatus {
   needsSync: string[];
@@ -41,11 +42,8 @@ export function ResearchSyncTab() {
 
   const loadSyncStatus = async () => {
     try {
-      const response = await fetch('/api/sync-research-logs');
-      if (response.ok) {
-        const data = await response.json();
-        setSyncStatus(data.status);
-      }
+      const data = await ClientAPI.getResearchSyncStatus();
+      setSyncStatus(data.status);
     } catch (error) {
       console.error('Failed to load sync status:', error);
     }
@@ -54,16 +52,7 @@ export function ResearchSyncTab() {
   const handleSync = async (logType: string) => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/sync-research-logs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          logType,
-          strategyOverride: strategyOverrides[logType] // Pass override if set
-        })
-      });
-
-      const result = await response.json();
+      const result = await ClientAPI.syncResearchLogs(logType, strategyOverrides[logType]);
       
       if (result.success) {
         setSyncResults(prev => ({ ...prev, [logType]: result.results }));

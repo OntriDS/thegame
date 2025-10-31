@@ -814,6 +814,6 @@ export interface AISession extends BaseEntity {
   context: {
     user: string;
     project: string;
-    preferences: any;
+    preferences?: Record<string, any>; // User preferences stored as key-value pairs
   };
 }
