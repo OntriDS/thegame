@@ -1,0 +1,932 @@
+{
+  "metadata": {
+    "exportDate": "2025-09-28T23:16:26.344Z",
+    "version": "1.0",
+    "totalTasks": 21,
+    "summary": {
+      "total": 21,
+      "missions": 2,
+      "milestones": 2,
+      "goals": 6,
+      "assignments": 0,
+      "recurrentParents": 1,
+      "recurrentTemplates": 2,
+      "recurrentInstances": 8,
+      "recurrentLegacy": 0
+    }
+  },
+  "tasks": [
+    {
+      "id": "1a0c39fe-2c65-4c01-8b9b-e8901ae73fba",
+      "name": "Bring Mom to CR",
+      "description": "",
+      "status": "In Progress",
+      "priority": "Normal",
+      "type": "Mission",
+      "station": "PERSONAL",
+      "category": "Family",
+      "progress": 0,
+      "dueDate": "2026-03-04T06:00:00.000Z",
+      "cost": 0,
+      "revenue": 0,
+      "siteId": "None",
+      "targetSiteId": "None",
+      "outputQuantity": 1,
+      "outputUnitCost": 0,
+      "isNewItem": false,
+      "rewards": {
+        "jungleCoins": 0,
+        "points": {
+          "hp": 0,
+          "fp": 10,
+          "rp": 0,
+          "xp": 0
+        }
+      },
+      "effects": {
+        "player": {
+          "description": "Points earned from completing task: Bring Mom to CR"
+        }
+      },
+      "createdAt": "2025-09-22T02:11:00.140Z",
+      "updatedAt": "2025-09-22T02:11:29.353Z",
+      "isArchived": false,
+      "order": 1758507060140,
+      "parentId": null,
+      "isRecurrentParent": false,
+      "isTemplate": false,
+      "outputItemId": null
+    },
+    {
+      "id": "ca3468d9-e6e6-4e9d-8d6f-2ffb5ff8f5c3",
+      "name": "Mom Visa Approved",
+      "description": "Visa de Reunificación Familiar",
+      "status": "Not Started",
+      "priority": "Normal",
+      "type": "Milestone",
+      "station": "PERSONAL",
+      "category": "Family",
+      "progress": 0,
+      "cost": 0,
+      "revenue": 0,
+      "siteId": "None",
+      "targetSiteId": "None",
+      "outputQuantity": 1,
+      "outputUnitCost": 0,
+      "isNewItem": false,
+      "rewards": {
+        "jungleCoins": 0,
+        "points": {
+          "hp": 0,
+          "fp": 5,
+          "rp": 0,
+          "xp": 0
+        }
+      },
+      "effects": {
+        "player": {
+          "description": "Points earned from completing task: Mom Visa Approved"
+        }
+      },
+      "createdAt": "2025-09-22T02:12:26.911Z",
+      "updatedAt": "2025-09-22T02:12:26.911Z",
+      "isArchived": false,
+      "order": 1758507146911,
+      "parentId": "1a0c39fe-2c65-4c01-8b9b-e8901ae73fba",
+      "isRecurrentParent": false,
+      "isTemplate": false,
+      "outputItemId": null
+    },
+    {
+      "id": "3abc377b-5c6b-4a41-835d-321897c5c374",
+      "name": "Permanent Resident Id",
+      "description": "My Permanent Residency Id",
+      "status": "Not Started",
+      "priority": "Normal",
+      "type": "Milestone",
+      "station": "PERSONAL",
+      "category": "Family",
+      "progress": 0,
+      "dueDate": "2025-10-15T06:00:00.000Z",
+      "cost": 0,
+      "revenue": 0,
+      "siteId": "None",
+      "targetSiteId": "None",
+      "outputQuantity": 1,
+      "outputUnitCost": 0,
+      "isNewItem": false,
+      "rewards": {
+        "jungleCoins": 0,
+        "points": {
+          "hp": 0,
+          "fp": 5,
+          "rp": 0,
+          "xp": 0
+        }
+      },
+      "effects": {
+        "player": {
+          "description": "Points earned from completing task: Permanent Resident Id"
+        }
+      },
+      "createdAt": "2025-09-22T02:29:58.851Z",
+      "updatedAt": "2025-09-22T02:29:58.851Z",
+      "isArchived": false,
+      "order": 1758508198851,
+      "parentId": "1a0c39fe-2c65-4c01-8b9b-e8901ae73fba",
+      "isRecurrentParent": false,
+      "isTemplate": false,
+      "outputItemId": null
+    },
+    {
+      "id": "3b524060-efc6-4b55-b424-33dc5a77a594",
+      "name": "Permanent Residency Approved",
+      "description": "",
+      "status": "In Progress",
+      "priority": "Normal",
+      "type": "Goal",
+      "station": "PERSONAL",
+      "category": "Family",
+      "progress": 0,
+      "dueDate": "2025-09-16T06:00:00.000Z",
+      "cost": 0,
+      "revenue": 0,
+      "siteId": "None",
+      "targetSiteId": "None",
+      "outputQuantity": 1,
+      "outputUnitCost": 0,
+      "isNewItem": false,
+      "rewards": {
+        "jungleCoins": 0,
+        "points": {
+          "hp": 0,
+          "fp": 1,
+          "rp": 0,
+          "xp": 0
+        }
+      },
+      "effects": {
+        "player": {
+          "description": "Points earned from completing task: Permanent Residency Approved"
+        }
+      },
+      "createdAt": "2025-09-22T02:39:45.182Z",
+      "updatedAt": "2025-09-22T02:44:15.585Z",
+      "isArchived": false,
+      "order": 1758508785182,
+      "parentId": "3abc377b-5c6b-4a41-835d-321897c5c374",
+      "isRecurrentParent": false,
+      "isTemplate": false,
+      "outputItemId": null
+    },
+    {
+      "id": "c77a3cff-5a71-42c6-b3ef-26c9df5d7129",
+      "name": "Final Lawyer Payments",
+      "description": "Second $300 Payment",
+      "status": "Done",
+      "priority": "Normal",
+      "type": "Goal",
+      "station": "PERSONAL",
+      "category": "Family",
+      "progress": 0,
+      "dueDate": "2025-09-16T06:00:00.000Z",
+      "cost": 300,
+      "revenue": 0,
+      "siteId": "None",
+      "targetSiteId": "None",
+      "outputQuantity": 1,
+      "outputUnitCost": 0,
+      "isNewItem": false,
+      "rewards": {
+        "jungleCoins": 0,
+        "points": {
+          "hp": 0,
+          "fp": 0,
+          "rp": 0,
+          "xp": 0
+        }
+      },
+      "createdAt": "2025-09-22T02:45:08.125Z",
+      "updatedAt": "2025-09-22T03:39:54.365Z",
+      "isArchived": false,
+      "order": 1758509108125,
+      "parentId": "3abc377b-5c6b-4a41-835d-321897c5c374",
+      "isRecurrentParent": false,
+      "isTemplate": false,
+      "outputItemId": null,
+      "doneAt": "2025-09-22T03:39:54.365Z"
+    },
+    {
+      "id": "22a93814-8f1a-40f1-80fc-7c99bcf615e4",
+      "name": "Week Sale EVENT",
+      "description": "Residency Approval Sale Week Event",
+      "status": "In Progress",
+      "priority": "Normal",
+      "type": "Mission",
+      "station": "SALES",
+      "category": "Store",
+      "progress": 0,
+      "dueDate": "2025-09-26T06:00:00.000Z",
+      "cost": 0,
+      "revenue": 0,
+      "siteId": "None",
+      "targetSiteId": "None",
+      "outputQuantity": 1,
+      "outputUnitCost": 0,
+      "isNewItem": false,
+      "rewards": {
+        "jungleCoins": 0,
+        "points": {
+          "hp": 0,
+          "fp": 10,
+          "rp": 0,
+          "xp": 0
+        }
+      },
+      "effects": {
+        "player": {
+          "description": "Points earned from completing task: Week Sale EVENT"
+        }
+      },
+      "createdAt": "2025-09-22T02:46:33.150Z",
+      "updatedAt": "2025-09-24T03:15:57.498Z",
+      "isArchived": false,
+      "order": 1758509193150,
+      "parentId": null,
+      "isRecurrentParent": false,
+      "isTemplate": false,
+      "outputItemId": null
+    },
+    {
+      "id": "752ba594-cb2e-42f1-8dda-fc82f7cccb51",
+      "name": "Reach $1000 in Sales : Achieved",
+      "description": "- $100 Stickers: El Hornito (paid)\n- $100 Gift: Richard (paid)\n- $200 Artwork: Mushland 2: Reise Parents (paid)\n- $100 Artwork: Temascal: Bruce (paid)\n-$100 Prints: Bruce (paid)\n\n- $30 stickers : Jungle Academy (paid)\n- $76 stickers : Tagua (paid)\n- $80 Prints: Congo, KillBill: Jungle Matt, Mounted (paid)\n- $10 Stickers: Jungle Matt (paid)\n- $25 Print: Condor: Gaby (paid)\n- $100 Gift: Liz (paid)\n- $300 Artwork Code of Life : Shawnna (paid)\ntotal= $1221   paid= $1221",
+      "status": "Not Started",
+      "priority": "Normal",
+      "type": "Goal",
+      "station": "SALES",
+      "category": "Store",
+      "progress": 100,
+      "dueDate": "2025-09-26T06:00:00.000Z",
+      "cost": 0,
+      "revenue": 0,
+      "isNotPaid": false,
+      "isNotCharged": false,
+      "siteId": "None",
+      "targetSiteId": "None",
+      "outputQuantity": 1,
+      "outputUnitCost": 0,
+      "outputItemPrice": 0,
+      "isNewItem": false,
+      "isSold": false,
+      "rewards": {
+        "jungleCoins": 0,
+        "points": {
+          "hp": 0,
+          "fp": 1,
+          "rp": 0,
+          "xp": 0
+        }
+      },
+      "effects": {
+        "player": {
+          "description": "Points earned from completing task: Reach $1000 in Sales : Achieved"
+        }
+      },
+      "createdAt": "2025-09-22T03:18:05.720Z",
+      "updatedAt": "2025-09-26T04:15:17.419Z",
+      "isArchived": false,
+      "order": 1758511085720,
+      "parentId": "22a93814-8f1a-40f1-80fc-7c99bcf615e4",
+      "isRecurrentParent": false,
+      "isTemplate": false,
+      "outputItemId": null
+    },
+    {
+      "id": "3101baa2-eb3a-4cb5-a906-09f9c26532d9",
+      "name": "Teach at Jungle Academy",
+      "description": "",
+      "status": "Not Started",
+      "priority": "Normal",
+      "type": "Recurrent Parent",
+      "station": "RESEARCH",
+      "category": "Classes",
+      "progress": 0,
+      "frequencyConfig": {
+        "type": "Once",
+        "interval": 1,
+        "repeatMode": "periodically"
+      },
+      "cost": 0,
+      "revenue": 0,
+      "siteId": "Jungle Academy",
+      "targetSiteId": "None",
+      "outputQuantity": 1,
+      "outputUnitCost": 0,
+      "isNewItem": false,
+      "rewards": {
+        "jungleCoins": 0,
+        "points": {
+          "hp": 0,
+          "fp": 0,
+          "rp": 0,
+          "xp": 0
+        }
+      },
+      "createdAt": "2025-09-23T02:09:39.816Z",
+      "updatedAt": "2025-09-23T02:09:39.816Z",
+      "isArchived": false,
+      "order": 1758593379816,
+      "parentId": null,
+      "isRecurrentParent": false,
+      "isTemplate": false,
+      "outputItemId": null
+    },
+    {
+      "id": "1e2ca761-9ffe-40c9-b071-c3547bd99239",
+      "name": "Art Classes Jungle Academy",
+      "description": "4 Art Classes per Day at $25 each = $100 per day",
+      "status": "Not Started",
+      "priority": "Normal",
+      "type": "Recurrent Template",
+      "station": "RESEARCH",
+      "category": "Classes",
+      "progress": 0,
+      "dueDate": "2025-09-24T06:00:00.000Z",
+      "frequencyConfig": {
+        "type": "Weekly",
+        "interval": 1,
+        "repeatMode": "periodically",
+        "customDays": [
+          "2025-08-27T06:00:00.000Z"
+        ]
+      },
+      "cost": 0,
+      "revenue": 0,
+      "siteId": "Jungle Academy",
+      "targetSiteId": "None",
+      "outputQuantity": 1,
+      "outputUnitCost": 0,
+      "isNewItem": false,
+      "rewards": {
+        "jungleCoins": 0,
+        "points": {
+          "hp": 0,
+          "fp": 0,
+          "rp": 0,
+          "xp": 4
+        }
+      },
+      "effects": {
+        "player": {
+          "description": "Points earned from completing task: Art Classes Jungle Academy"
+        }
+      },
+      "createdAt": "2025-09-23T02:17:30.370Z",
+      "updatedAt": "2025-09-23T02:36:19.449Z",
+      "isArchived": false,
+      "order": 1758593850370,
+      "parentId": "3101baa2-eb3a-4cb5-a906-09f9c26532d9",
+      "isRecurrentParent": false,
+      "isTemplate": false,
+      "outputItemId": null
+    },
+    {
+      "id": "acc5c878-c80d-4b4f-9914-285c902713f6",
+      "name": "Art Classes Jungle Academy - Aug 2025",
+      "description": "4 Art Classes x Day\n$25 each x class = $100\n1 RP x class = 4 RP",
+      "status": "Done",
+      "priority": "Normal",
+      "type": "Recurrent Instance",
+      "station": "RESEARCH",
+      "category": "Classes",
+      "progress": 0,
+      "dueDate": "2025-08-27T06:00:00.000Z",
+      "cost": 0,
+      "revenue": 100,
+      "isNotPaid": false,
+      "isNotCharged": false,
+      "siteId": "Jungle Academy",
+      "targetSiteId": "None",
+      "outputQuantity": 1,
+      "outputUnitCost": 0,
+      "outputItemPrice": 0,
+      "isNewItem": false,
+      "isSold": false,
+      "rewards": {
+        "jungleCoins": 0,
+        "points": {
+          "hp": 0,
+          "fp": 0,
+          "rp": 4,
+          "xp": 0
+        }
+      },
+      "effects": {
+        "player": {
+          "description": "Points earned from completing task: Art Classes Jungle Academy - Aug 2025"
+        }
+      },
+      "createdAt": "2025-09-23T02:17:31.957Z",
+      "updatedAt": "2025-09-26T04:21:36.817Z",
+      "isArchived": false,
+      "order": 1758593850370,
+      "parentId": "1e2ca761-9ffe-40c9-b071-c3547bd99239",
+      "isRecurrentParent": false,
+      "isTemplate": false,
+      "outputItemId": null,
+      "doneAt": "2025-09-26T04:21:36.817Z"
+    },
+    {
+      "id": "25b8c1d5-b203-4306-b3f2-6d22252d2bad",
+      "name": "Art Classes Jungle Academy - Sept 2025",
+      "description": "4 Art Classes x Day\n$25 each x class = $100\n1 RP x class = 4 RP",
+      "status": "Done",
+      "priority": "Normal",
+      "type": "Recurrent Instance",
+      "station": "RESEARCH",
+      "category": "Classes",
+      "progress": 0,
+      "dueDate": "2025-09-03T06:00:00.000Z",
+      "cost": 0,
+      "revenue": 100,
+      "isNotPaid": false,
+      "isNotCharged": false,
+      "siteId": "Jungle Academy",
+      "targetSiteId": "None",
+      "outputQuantity": 1,
+      "outputUnitCost": 0,
+      "outputItemPrice": 0,
+      "isNewItem": false,
+      "isSold": false,
+      "rewards": {
+        "jungleCoins": 0,
+        "points": {
+          "hp": 0,
+          "fp": 0,
+          "rp": 4,
+          "xp": 0
+        }
+      },
+      "effects": {
+        "player": {
+          "description": "Points earned from completing task: Art Classes Jungle Academy - Sept 2025"
+        }
+      },
+      "createdAt": "2025-09-23T02:17:31.957Z",
+      "updatedAt": "2025-09-26T04:21:41.264Z",
+      "isArchived": false,
+      "order": 1758593850370,
+      "parentId": "1e2ca761-9ffe-40c9-b071-c3547bd99239",
+      "isRecurrentParent": false,
+      "isTemplate": false,
+      "outputItemId": null,
+      "doneAt": "2025-09-26T04:21:41.264Z"
+    },
+    {
+      "id": "671444f2-9a9f-4143-95f0-0985a465e921",
+      "name": "Art Classes Jungle Academy - Sept 2025",
+      "description": "4 Art Classes x Day\n$25 each x class = $100\n1 RP x class = 4 RP",
+      "status": "Done",
+      "priority": "Normal",
+      "type": "Recurrent Instance",
+      "station": "RESEARCH",
+      "category": "Classes",
+      "progress": 0,
+      "dueDate": "2025-09-10T06:00:00.000Z",
+      "cost": 0,
+      "revenue": 100,
+      "isNotPaid": false,
+      "isNotCharged": false,
+      "siteId": "Jungle Academy",
+      "targetSiteId": "None",
+      "outputQuantity": 1,
+      "outputUnitCost": 0,
+      "outputItemPrice": 0,
+      "isNewItem": false,
+      "isSold": false,
+      "rewards": {
+        "jungleCoins": 0,
+        "points": {
+          "hp": 0,
+          "fp": 0,
+          "rp": 4,
+          "xp": 0
+        }
+      },
+      "effects": {
+        "player": {
+          "description": "Points earned from completing task: Art Classes Jungle Academy - Sept 2025"
+        }
+      },
+      "createdAt": "2025-09-23T02:17:31.957Z",
+      "updatedAt": "2025-09-26T04:21:52.485Z",
+      "isArchived": false,
+      "order": 1758593850370,
+      "parentId": "1e2ca761-9ffe-40c9-b071-c3547bd99239",
+      "isRecurrentParent": false,
+      "isTemplate": false,
+      "outputItemId": null,
+      "doneAt": "2025-09-26T04:21:52.485Z"
+    },
+    {
+      "id": "7e10a731-c41f-4bf8-8934-ff6c636e775c",
+      "name": "Art Classes Jungle Academy - Sept 2025",
+      "description": "4 Art Classes x Day\n$25 each x class = $100\n1 RP x class = 4 RP",
+      "status": "Done",
+      "priority": "Normal",
+      "type": "Recurrent Instance",
+      "station": "RESEARCH",
+      "category": "Classes",
+      "progress": 0,
+      "dueDate": "2025-09-17T06:00:00.000Z",
+      "cost": 0,
+      "revenue": 100,
+      "isNotPaid": false,
+      "isNotCharged": false,
+      "siteId": "Jungle Academy",
+      "targetSiteId": "None",
+      "outputQuantity": 1,
+      "outputUnitCost": 0,
+      "outputItemPrice": 0,
+      "isNewItem": false,
+      "isSold": false,
+      "rewards": {
+        "jungleCoins": 0,
+        "points": {
+          "hp": 0,
+          "fp": 0,
+          "rp": 4,
+          "xp": 0
+        }
+      },
+      "effects": {
+        "player": {
+          "description": "Points earned from completing task: Art Classes Jungle Academy - Sept 2025"
+        }
+      },
+      "createdAt": "2025-09-23T02:17:31.957Z",
+      "updatedAt": "2025-09-26T04:21:55.695Z",
+      "isArchived": false,
+      "order": 1758593850370,
+      "parentId": "1e2ca761-9ffe-40c9-b071-c3547bd99239",
+      "isRecurrentParent": false,
+      "isTemplate": false,
+      "outputItemId": null,
+      "doneAt": "2025-09-26T04:21:55.695Z"
+    },
+    {
+      "id": "30ee8d03-9aa0-4de9-bbe3-de60fcc382ff",
+      "name": "Art Classes Jungle Academy - Sept 2025",
+      "description": "4 Art Classes x Day\n$25 each x class = $100\n1 RP x class = 4 RP",
+      "status": "Done",
+      "priority": "Normal",
+      "type": "Recurrent Instance",
+      "station": "RESEARCH",
+      "category": "Classes",
+      "progress": 0,
+      "dueDate": "2025-09-24T06:00:00.000Z",
+      "cost": 0,
+      "revenue": 100,
+      "isNotPaid": false,
+      "isNotCharged": false,
+      "siteId": "Jungle Academy",
+      "targetSiteId": "None",
+      "outputQuantity": 1,
+      "outputUnitCost": 0,
+      "outputItemPrice": 0,
+      "isNewItem": false,
+      "isSold": false,
+      "rewards": {
+        "jungleCoins": 0,
+        "points": {
+          "hp": 0,
+          "fp": 0,
+          "rp": 4,
+          "xp": 0
+        }
+      },
+      "effects": {
+        "player": {
+          "description": "Points earned from completing task: Art Classes Jungle Academy - Sept 2025"
+        }
+      },
+      "createdAt": "2025-09-23T02:17:31.957Z",
+      "updatedAt": "2025-09-26T04:22:02.536Z",
+      "isArchived": false,
+      "order": 1758593850370,
+      "parentId": "1e2ca761-9ffe-40c9-b071-c3547bd99239",
+      "isRecurrentParent": false,
+      "isTemplate": false,
+      "outputItemId": null,
+      "doneAt": "2025-09-26T04:22:02.536Z"
+    },
+    {
+      "id": "b717b5bc-a38f-4775-9417-500bc46864c2",
+      "name": "Teach at La Tribu",
+      "description": "Extra class at La Tribu School of 1 hr\n$10 per student x class\nStudent varies x class",
+      "status": "Not Started",
+      "priority": "Normal",
+      "type": "Recurrent Template",
+      "station": "RESEARCH",
+      "category": "Classes",
+      "progress": 0,
+      "dueDate": "2025-09-29T06:00:00.000Z",
+      "frequencyConfig": {
+        "type": "Weekly",
+        "interval": 1,
+        "repeatMode": "periodically",
+        "customDays": [
+          "2025-09-15T06:00:00.000Z"
+        ]
+      },
+      "cost": 0,
+      "revenue": 0,
+      "siteId": "La Tribu",
+      "targetSiteId": "None",
+      "outputQuantity": 1,
+      "outputUnitCost": 0,
+      "isNewItem": false,
+      "rewards": {
+        "jungleCoins": 0,
+        "points": {
+          "hp": 0,
+          "fp": 0,
+          "rp": 0,
+          "xp": 0
+        }
+      },
+      "createdAt": "2025-09-23T02:29:41.782Z",
+      "updatedAt": "2025-09-23T02:30:06.923Z",
+      "isArchived": false,
+      "order": 1758594581782,
+      "parentId": null,
+      "isRecurrentParent": false,
+      "isTemplate": false,
+      "outputItemId": null
+    },
+    {
+      "id": "46cdc8ff-3e44-41d7-ae73-c8ba977bd026",
+      "name": "Teach at La Tribu - Sept 2025",
+      "description": "Extra class at La Tribu School of 1 hr\n$10 per student x class\nStudents: 2",
+      "status": "Done",
+      "priority": "Normal",
+      "type": "Recurrent Instance",
+      "station": "RESEARCH",
+      "category": "Classes",
+      "progress": 0,
+      "dueDate": "2025-09-15T06:00:00.000Z",
+      "cost": 0,
+      "revenue": 20,
+      "siteId": "La Tribu",
+      "targetSiteId": "None",
+      "outputQuantity": 1,
+      "outputUnitCost": 0,
+      "isNewItem": false,
+      "rewards": {
+        "jungleCoins": 0,
+        "points": {
+          "hp": 0,
+          "fp": 0,
+          "rp": 2,
+          "xp": 0
+        }
+      },
+      "effects": {
+        "player": {
+          "description": "Points earned from completing task: Teach at La Tribu - Sept 2025"
+        }
+      },
+      "createdAt": "2025-09-23T02:30:06.927Z",
+      "updatedAt": "2025-09-23T02:34:06.671Z",
+      "isArchived": false,
+      "order": 1758594581782,
+      "parentId": "b717b5bc-a38f-4775-9417-500bc46864c2",
+      "isRecurrentParent": false,
+      "isTemplate": false,
+      "outputItemId": null,
+      "doneAt": "2025-09-23T02:34:06.671Z"
+    },
+    {
+      "id": "83510ca9-e6da-4953-976c-ae9175482b93",
+      "name": "Teach at La Tribu - Sept 2025",
+      "description": "Extra class at La Tribu School \n1 hr x class\n$10 x student\n1 RP x student\nQ Student: 3\n",
+      "status": "Not Started",
+      "priority": "Normal",
+      "type": "Recurrent Instance",
+      "station": "RESEARCH",
+      "category": "Classes",
+      "progress": 0,
+      "dueDate": "2025-09-22T06:00:00.000Z",
+      "cost": 0,
+      "revenue": 30,
+      "isNotPaid": false,
+      "isNotCharged": true,
+      "siteId": "La Tribu",
+      "targetSiteId": "None",
+      "outputQuantity": 1,
+      "outputUnitCost": 0,
+      "outputItemPrice": 0,
+      "isNewItem": false,
+      "isSold": false,
+      "rewards": {
+        "jungleCoins": 0,
+        "points": {
+          "hp": 0,
+          "fp": 0,
+          "rp": 3,
+          "xp": 0
+        }
+      },
+      "effects": {
+        "player": {
+          "description": "Points earned from completing task: Teach at La Tribu - Sept 2025"
+        }
+      },
+      "createdAt": "2025-09-23T02:30:06.927Z",
+      "updatedAt": "2025-09-26T04:20:30.011Z",
+      "isArchived": false,
+      "order": 1758594581782,
+      "parentId": "b717b5bc-a38f-4775-9417-500bc46864c2",
+      "isRecurrentParent": false,
+      "isTemplate": false,
+      "outputItemId": null
+    },
+    {
+      "id": "28b17525-adb5-4be8-b9fa-0df250b72733",
+      "name": "Teach at La Tribu - Sept 2025",
+      "description": "Extra class at La Tribu School of 1 hr\n$10 per student x class\nStudent varies x class",
+      "status": "Not Started",
+      "priority": "Normal",
+      "type": "Recurrent Instance",
+      "station": "RESEARCH",
+      "category": "Classes",
+      "progress": 0,
+      "dueDate": "2025-09-29T06:00:00.000Z",
+      "cost": 0,
+      "revenue": 0,
+      "siteId": "La Tribu",
+      "targetSiteId": "None",
+      "outputQuantity": 1,
+      "outputUnitCost": 0,
+      "isNewItem": false,
+      "rewards": {
+        "jungleCoins": 0,
+        "points": {
+          "hp": 0,
+          "fp": 0,
+          "rp": 0,
+          "xp": 0
+        }
+      },
+      "createdAt": "2025-09-23T02:30:06.927Z",
+      "updatedAt": "2025-09-23T02:30:06.927Z",
+      "isArchived": false,
+      "order": 1758594581782,
+      "parentId": "b717b5bc-a38f-4775-9417-500bc46864c2",
+      "isRecurrentParent": false,
+      "isTemplate": false,
+      "outputItemId": null
+    },
+    {
+      "id": "f06f3b17-9c04-4e32-a346-d655237971b1",
+      "name": "Build Crafting Table",
+      "description": "",
+      "status": "Done",
+      "priority": "Normal",
+      "type": "Goal",
+      "station": "RESEARCH",
+      "category": "Classes",
+      "progress": 0,
+      "dueDate": "2025-09-23T06:00:00.000Z",
+      "cost": 0,
+      "revenue": 0,
+      "siteId": "Home",
+      "targetSiteId": "Home",
+      "outputItemType": "Equipment",
+      "outputQuantity": 1,
+      "outputUnitCost": 0,
+      "outputItemName": "Crafting Table",
+      "isNewItem": true,
+      "rewards": {
+        "jungleCoins": 0,
+        "points": {
+          "hp": 0,
+          "fp": 0,
+          "rp": 0,
+          "xp": 1
+        }
+      },
+      "effects": {
+        "player": {
+          "description": "Points earned from completing task: Build Crafting Table"
+        }
+      },
+      "createdAt": "2025-09-24T03:06:55.463Z",
+      "updatedAt": "2025-09-26T01:06:11.391Z",
+      "isArchived": false,
+      "order": 1758683215463,
+      "parentId": "22a93814-8f1a-40f1-80fc-7c99bcf615e4",
+      "isRecurrentParent": false,
+      "isTemplate": false,
+      "outputItemId": null,
+      "doneAt": "2025-09-26T01:06:11.391Z"
+    },
+    {
+      "id": "e6d47b9e-af62-47ad-a4f8-98a6cf57d3cc",
+      "name": "Print : El Spot : Bruce",
+      "description": "Print : El Spot\n+ Mounting",
+      "status": "Done",
+      "priority": "Normal",
+      "type": "Goal",
+      "station": "PRODUCTION",
+      "category": "Prints",
+      "progress": 0,
+      "cost": 12.5,
+      "revenue": 100,
+      "isNotPaid": false,
+      "isNotCharged": false,
+      "siteId": "Print Masters",
+      "targetSiteId": "Home",
+      "outputItemType": "Print",
+      "outputQuantity": 1,
+      "outputUnitCost": 12.5,
+      "outputItemName": "El Spot",
+      "outputItemCollection": "Animal Kingdom",
+      "outputItemPrice": 50,
+      "isNewItem": true,
+      "isSold": false,
+      "rewards": {
+        "jungleCoins": 0,
+        "points": {
+          "hp": 0,
+          "fp": 0,
+          "rp": 0,
+          "xp": 2
+        }
+      },
+      "effects": {
+        "player": {
+          "description": "Points earned from completing task: Print : El Spot : Bruce"
+        }
+      },
+      "createdAt": "2025-09-24T03:23:06.718Z",
+      "updatedAt": "2025-09-27T03:45:50.460Z",
+      "isArchived": false,
+      "order": 1758684186718,
+      "parentId": null,
+      "isRecurrentParent": false,
+      "isTemplate": false,
+      "outputItemId": null,
+      "doneAt": "2025-09-27T03:45:50.460Z"
+    },
+    {
+      "id": "4b0565ad-ad63-4b12-a602-cadab10217f0",
+      "name": "Print : Morning Rebirth : Bruce",
+      "description": "Print - Morning Rebirth\n+ Mounting",
+      "status": "Done",
+      "priority": "Normal",
+      "type": "Goal",
+      "station": "PRODUCTION",
+      "category": "Prints",
+      "progress": 0,
+      "cost": 12.5,
+      "revenue": 100,
+      "isNotPaid": false,
+      "isNotCharged": false,
+      "siteId": "Print Masters",
+      "targetSiteId": "Home",
+      "outputItemType": "Print",
+      "outputQuantity": 1,
+      "outputUnitCost": 12.5,
+      "outputItemName": "Morning Rebirth",
+      "outputItemCollection": "No Collection",
+      "outputItemPrice": 50,
+      "isNewItem": true,
+      "isSold": false,
+      "rewards": {
+        "jungleCoins": 0,
+        "points": {
+          "hp": 0,
+          "fp": 0,
+          "rp": 0,
+          "xp": 1
+        }
+      },
+      "effects": {
+        "player": {
+          "description": "Points earned from completing task: Print : Morning Rebirth : Bruce"
+        }
+      },
+      "createdAt": "2025-09-25T16:32:50.390Z",
+      "updatedAt": "2025-09-27T00:35:35.700Z",
+      "isArchived": false,
+      "order": 1758684186718,
+      "parentId": null,
+      "isRecurrentParent": false,
+      "isTemplate": false,
+      "outputItemId": null,
+      "doneAt": "2025-09-27T00:35:35.700Z"
+    }
+  ]
+}

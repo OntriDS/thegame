@@ -331,6 +331,8 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
       // Handle different import modes
       let success = false;
       let importedCount = 0;
+      let skippedCount = 0;
+      let operationErrors: string[] = [];
       
       try {
         switch (importMode) {
@@ -345,16 +347,38 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
             break;
             
           case 'add-only':
-            const result = await ClientAPI.bulkAddItemsOnly(items);
+            // Use new unified bulk operation endpoint
+            const result = await ClientAPI.bulkOperation({
+              entityType: 'item',
+              mode: 'add-only',
+              source: 'csv',
+              records: items
+            });
             success = result.success;
-            importedCount = result.addedCount;
+            importedCount = result.counts.added || 0;
+            skippedCount = result.counts.skipped || 0;
+            operationErrors = result.errors || [];
             break;
         }
         
-        if (success) {
+        if (success || importedCount > 0) {
+          // Build success message with detailed breakdown
+          const messages: string[] = [];
+          if (importedCount > 0) {
+            messages.push(`✅ Added ${importedCount} new item${importedCount !== 1 ? 's' : ''}`);
+          }
+          if (skippedCount > 0) {
+            messages.push(`⏭️ Skipped ${skippedCount} duplicate${skippedCount !== 1 ? 's' : ''}`);
+          }
+          
+          // Combine errors and success messages
+          const allMessages = operationErrors.length > 0 
+            ? [...operationErrors, ...messages]
+            : messages;
+          
           setImportResult({
             success: importedCount,
-            errors: []
+            errors: allMessages.length > 0 ? allMessages : []
           });
           setCsvData('');
           
@@ -365,7 +389,9 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
         } else {
           setImportResult({
             success: 0,
-            errors: ['Import operation failed - check console for details']
+            errors: operationErrors.length > 0 
+              ? operationErrors 
+              : ['Import operation failed - check console for details']
           });
         }
       } catch (operationError) {

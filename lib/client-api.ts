@@ -604,6 +604,31 @@ export const ClientAPI = {
     return { success: false, addedCount: 0 };
   },
 
+  bulkOperation: async ({ entityType, mode, source, records }: {
+    entityType: string;
+    mode: 'add-only' | 'merge' | 'replace';
+    source: string;
+    records: any[];
+  }): Promise<{ success: boolean; mode: string; counts: { added: number; updated?: number; skipped?: number }; errors?: string[] }> => {
+    try {
+      const res = await fetch('/api/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ entityType, mode, source, records })
+      });
+
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(error.error || 'Bulk operation failed');
+      }
+
+      return await res.json();
+    } catch (error) {
+      console.error('[ClientAPI] bulkOperation failed:', error);
+      throw error;
+    }
+  },
+
   getAccounts: async (): Promise<Account[]> => {
     const res = await fetch('/api/accounts');
     if (!res.ok) {

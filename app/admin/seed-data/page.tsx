@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Upload, Download, CheckCircle, FileJson, Database } from 'lucide-react';
 import { ClientAPI } from '@/lib/client-api';
+import { pluralToEntityType } from '@/lib/utils/entity-type-utils';
 import {
   Dialog,
   DialogContent,
@@ -249,57 +250,39 @@ export default function SeedDataPage() {
     try {
       const { entityType, data, count, filename } = pendingImport;
       
-      // Handle replace mode - clear existing data first
-      if (importMode === 'replace') {
-        // Get all existing entities and delete them
-        let existingData: any[] = [];
-        if (entityType === 'tasks') existingData = await ClientAPI.getTasks();
-        else if (entityType === 'items') existingData = await ClientAPI.getItems();
-        else if (entityType === 'financials') existingData = await ClientAPI.getFinancialRecords();
-        else if (entityType === 'sites') existingData = await ClientAPI.getSites();
-        else if (entityType === 'characters') existingData = await ClientAPI.getCharacters();
-        else if (entityType === 'players') existingData = await ClientAPI.getPlayers();
-        else if (entityType === 'sales') existingData = await ClientAPI.getSales();
-        
-        // Delete existing entities
-        for (const entity of existingData) {
-          if (entityType === 'tasks') await ClientAPI.deleteTask(entity.id);
-          else if (entityType === 'items') await ClientAPI.deleteItem(entity.id);
-          else if (entityType === 'financials') await ClientAPI.deleteFinancialRecord(entity.id);
-          else if (entityType === 'sites') await ClientAPI.deleteSite(entity.id);
-          else if (entityType === 'characters') await ClientAPI.deleteCharacter(entity.id);
-          else if (entityType === 'players') await ClientAPI.deletePlayer(entity.id);
-          else if (entityType === 'sales') await ClientAPI.deleteSale(entity.id);
-        }
-      }
+      // Convert plural UI form to EntityType enum value (uses EntityType enum as source of truth)
+      const entityTypeEnum = pluralToEntityType(entityType);
       
-      // Import the data using ClientAPI - Links creation is handled server-side automatically
-      for (const entity of data) {
-        if (entityType === 'tasks') {
-          await ClientAPI.upsertTask(entity);
-        } else if (entityType === 'items') {
-          await ClientAPI.upsertItem(entity);
-        } else if (entityType === 'financials') {
-          await ClientAPI.upsertFinancialRecord(entity);
-        } else if (entityType === 'sites') {
-          await ClientAPI.upsertSite(entity);
-        } else if (entityType === 'characters') {
-          await ClientAPI.upsertCharacter(entity);
-        } else if (entityType === 'players') {
-          await ClientAPI.upsertPlayer(entity);
-        } else if (entityType === 'sales') {
-          await ClientAPI.upsertSale(entity);
-        }
-      }
-
-      // Log the bulk import operation
-      await ClientAPI.logBulkImport(entityType, {
-        count,
-        source: filename,
-        importMode
+      // Map import mode to bulk operation mode
+      const mode = importMode === 'add' ? 'add-only' : importMode === 'merge' ? 'merge' : 'replace';
+      
+      // Use unified bulk operation endpoint
+      const result = await ClientAPI.bulkOperation({
+        entityType: entityTypeEnum,
+        mode,
+        source: filename || 'seed-ui',
+        records: data
       });
 
-      setStatus(`✅ Successfully imported ${count} ${entityType} (${importMode} mode)!`);
+      // Build detailed success message
+      const messages: string[] = [];
+      if (result.counts.added > 0) {
+        messages.push(`✅ Added ${result.counts.added} new record${result.counts.added !== 1 ? 's' : ''}`);
+      }
+      if (result.counts.updated && result.counts.updated > 0) {
+        messages.push(`🔄 Updated ${result.counts.updated} existing record${result.counts.updated !== 1 ? 's' : ''}`);
+      }
+      if (result.counts.skipped && result.counts.skipped > 0) {
+        messages.push(`⏭️ Skipped ${result.counts.skipped} duplicate${result.counts.skipped !== 1 ? 's' : ''}`);
+      }
+
+      if (result.errors && result.errors.length > 0) {
+        messages.push(`⚠️ ${result.errors.length} error${result.errors.length !== 1 ? 's' : ''} occurred`);
+        setStatus(`${messages.join(', ')}\n\nErrors:\n${result.errors.slice(0, 5).join('\n')}${result.errors.length > 5 ? `\n...and ${result.errors.length - 5} more` : ''}`);
+      } else {
+        setStatus(messages.length > 0 ? messages.join(', ') : '✅ Import completed');
+      }
+
       loadEntityStats(); // Refresh stats
     } catch (error) {
       setStatus(`❌ Import failed: ${error instanceof Error ? error.message : 'Unknown error'}`);

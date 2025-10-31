@@ -24,6 +24,7 @@ import {
   STATUS_DISPLAY_SHORT 
 } from '@/lib/constants/app-constants';
 import ItemsImportExport from '@/components/settings/items-import-export';
+import { ClientAPI } from '@/lib/client-api';
 
 interface SettingsPanelProps {
   onStatusUpdate?: (status: string) => void;
@@ -235,30 +236,149 @@ export function SettingsPanel({ onStatusUpdate }: SettingsPanelProps) {
 
       if (selectedEntityTypes.length === 0) {
         updateStatus('❌ Please select at least one entity type to seed', true);
+        setIsLoading(false);
         return;
       }
 
-      const response = await fetch('/api/settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          action: 'seed-data',
-          parameters: { 
-            source: 'backup',
-            entityTypes: selectedEntityTypes
+      // Aggregate results from all entity types
+      const results: Array<{
+        entityType: string;
+        success: boolean;
+        counts: { added: number; updated?: number; skipped?: number };
+        errors?: string[];
+      }> = [];
+      const allErrors: string[] = [];
+
+      // Process each selected entity type
+      // Note: selectedEntityTypes are already in singular EntityType enum format (e.g., 'task', 'item')
+      // because the backup list API returns EntityType enum values
+      for (const entityType of selectedEntityTypes) {
+        try {
+          // Fetch backup data for this entity type
+          const backupResponse = await fetch(`/api/backups?entity=${entityType}`);
+          const backupResult = await backupResponse.json();
+
+          if (!backupResult.success || !backupResult.data) {
+            allErrors.push(`${entityType}: No backup data available`);
+            results.push({
+              entityType: entityType,
+              success: false,
+              counts: { added: 0, updated: 0, skipped: 0 },
+              errors: ['No backup data available']
+            });
+            continue;
           }
-        })
-      });
-      
-      const result = await response.json();
-      
-      if (result.success) {
-        updateStatus(`✅ ${result.message}`);
+
+          // Extract entity records from backup
+          // Backup structure: { entityType, data, metadata }
+          // data field contains the array of entities (can be direct array or nested)
+          const backupData = backupResult.data;
+          let records: any[] = [];
+          
+          if (Array.isArray(backupData.data)) {
+            // Direct array format
+            records = backupData.data;
+          } else if (backupData.data && typeof backupData.data === 'object') {
+            // Try nested format: data[entityType] (uses singular enum value)
+            if (Array.isArray(backupData.data[entityType])) {
+              records = backupData.data[entityType];
+            } else {
+              // Try to find any array in the data object
+              records = Object.values(backupData.data).find(v => Array.isArray(v)) as any[] || [];
+            }
+          }
+
+          if (!Array.isArray(records) || records.length === 0) {
+            allErrors.push(`${entityType}: No records found in backup`);
+            results.push({
+              entityType: entityType,
+              success: false,
+              counts: { added: 0, updated: 0, skipped: 0 },
+              errors: ['No records found in backup']
+            });
+            continue;
+          }
+
+          // Call unified bulk operation endpoint with merge mode
+          const bulkResult = await ClientAPI.bulkOperation({
+            entityType: entityType,
+            mode: 'merge',
+            source: 'backup-seed',
+            records
+          });
+
+          results.push({
+            entityType: entityType,
+            success: bulkResult.success,
+            counts: bulkResult.counts,
+            errors: bulkResult.errors
+          });
+
+          if (bulkResult.errors && bulkResult.errors.length > 0) {
+            allErrors.push(...bulkResult.errors.map(err => `${entityType}: ${err}`));
+          }
+        } catch (error) {
+          const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+          allErrors.push(`${entityType}: ${errorMsg}`);
+          results.push({
+            entityType: entityType,
+            success: false,
+            counts: { added: 0, updated: 0, skipped: 0 },
+            errors: [errorMsg]
+          });
+        }
+      }
+
+      // Build detailed success message per entity type
+      const messages: string[] = [];
+      let totalAdded = 0;
+      let totalUpdated = 0;
+      let totalSkipped = 0;
+
+      for (const result of results) {
+        const parts: string[] = [];
+        if (result.counts.added > 0) {
+          parts.push(`✅ Added ${result.counts.added}`);
+          totalAdded += result.counts.added;
+        }
+        if (result.counts.updated && result.counts.updated > 0) {
+          parts.push(`🔄 Updated ${result.counts.updated}`);
+          totalUpdated += result.counts.updated || 0;
+        }
+        if (result.counts.skipped && result.counts.skipped > 0) {
+          parts.push(`⏭️ Skipped ${result.counts.skipped}`);
+          totalSkipped += result.counts.skipped || 0;
+        }
+
+        if (parts.length > 0) {
+          messages.push(`${result.entityType}: ${parts.join(', ')}`);
+        } else if (result.errors && result.errors.length > 0) {
+          messages.push(`${result.entityType}: ❌ ${result.errors[0]}`);
+        }
+      }
+
+      // Combine summary and errors
+      const summaryParts: string[] = [];
+      if (totalAdded > 0) summaryParts.push(`Added ${totalAdded}`);
+      if (totalUpdated > 0) summaryParts.push(`Updated ${totalUpdated}`);
+      if (totalSkipped > 0) summaryParts.push(`Skipped ${totalSkipped}`);
+
+      let finalMessage = '';
+      if (summaryParts.length > 0) {
+        finalMessage = `✅ Seed completed: ${summaryParts.join(', ')}\n\n${messages.join('\n')}`;
+      } else if (allErrors.length > 0) {
+        finalMessage = `❌ Seed failed:\n${allErrors.slice(0, 5).join('\n')}${allErrors.length > 5 ? `\n...and ${allErrors.length - 5} more` : ''}`;
       } else {
-        updateStatus(`❌ ${result.message}`, true);
+        finalMessage = '✅ Seed completed (no changes)';
+      }
+
+      if (allErrors.length > 0) {
+        updateStatus(finalMessage, true);
+      } else {
+        updateStatus(finalMessage);
       }
     } catch (error) {
-      updateStatus('❌ Failed to seed data. Please try again.', true);
+      updateStatus(`❌ Failed to seed data: ${error instanceof Error ? error.message : 'Unknown error'}`, true);
     } finally {
       setIsLoading(false);
     }
