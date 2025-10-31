@@ -170,6 +170,35 @@ export function PlayerLogTab({ playerLog, onReload, isReloading }: PlayerLogTabP
         ) : (
           <div className="space-y-2">
             {sortedEntries.map((entry: any, index: number) => {
+              // Handle BULK_IMPORT and BULK_EXPORT entries
+              const eventRaw = entry.event || entry.status || '';
+              const statusRaw = String(eventRaw).toUpperCase();
+              
+              if (statusRaw === 'BULK_IMPORT' || statusRaw === 'BULK_EXPORT') {
+                const operation = statusRaw === 'BULK_IMPORT' ? 'Bulk Import' : 'Bulk Export';
+                const count = entry.count || 0;
+                const source = entry.source || 'unknown';
+                const mode = entry.importMode || entry.exportFormat || '';
+                const date = entry.timestamp ? formatDisplayDate(new Date(entry.timestamp)) : 'No date';
+                
+                return (
+                  <div key={entry.id || index} className="flex items-center justify-between p-3 border rounded-lg bg-muted/30">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <Badge variant="outline" className="capitalize shrink-0">
+                        {operation}
+                      </Badge>
+                      <span className="text-sm font-medium">
+                        {count} player{count !== 1 ? 's' : ''} from {source}
+                        {mode && ` (${mode})`}
+                      </span>
+                      <span className="text-xs text-muted-foreground ml-auto shrink-0">
+                        {date}
+                      </span>
+                    </div>
+                  </div>
+                );
+              }
+              
               const playerId = entry.entityId || PLAYER_ONE_ID;
               
               return (

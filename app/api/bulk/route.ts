@@ -264,12 +264,12 @@ async function handleBulkOperation<T>(
               counts.skipped++;
               continue;
             }
-            // Add new - skip workflow effects (CREATED logs) during bulk operations
+            // Add new - ALWAYS skip workflow effects during bulk operations (no individual CREATED logs)
             await upsertFn(record as T, { skipWorkflowEffects: true });
             counts.added++;
             existingByKey.set(businessKey, record as T);
           } else if (mode === 'merge') {
-            // Update if exists, add if new - skip workflow effects during bulk operations
+            // Update if exists, add if new - ALWAYS skip workflow effects during bulk operations
             if (existing) {
               // Preserve identity fields: id, createdAt, links
               const merged: T = {
@@ -289,7 +289,7 @@ async function handleBulkOperation<T>(
               existingByKey.set(businessKey, record as T);
             }
           } else if (mode === 'replace') {
-            // Just add (replace mode already deleted everything) - skip workflow effects during bulk operations
+            // Just add (replace mode already deleted everything) - ALWAYS skip workflow effects during bulk operations
             await upsertFn(record as T, { skipWorkflowEffects: true });
             counts.added++;
           }

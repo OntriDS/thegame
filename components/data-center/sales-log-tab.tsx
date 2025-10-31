@@ -132,6 +132,42 @@ export function SalesLogTab({ salesLog, onReload, isReloading }: SalesLogTabProp
             <p className="text-muted-foreground text-center py-4">No sales log entries found</p>
           ) : (
             entries.map((entry: any, index: number) => {
+              // Handle BULK_IMPORT and BULK_EXPORT entries
+              const eventRaw = entry.event || entry.status || '';
+              const statusRaw = String(eventRaw).toUpperCase();
+              
+              if (statusRaw === 'BULK_IMPORT' || statusRaw === 'BULK_EXPORT') {
+                const operation = statusRaw === 'BULK_IMPORT' ? 'Bulk Import' : 'Bulk Export';
+                const count = entry.count || 0;
+                const source = entry.source || 'unknown';
+                const mode = entry.importMode || entry.exportFormat || '';
+                const date = entry.displayDate || entry.timestamp || '';
+                
+                return (
+                  <div key={index} className="flex items-center gap-3 p-3 border rounded-lg bg-muted/30">
+                    <div className="flex-shrink-0">
+                      {getSaleTypeIcon('DIRECT')}
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 text-sm">
+                        <Badge variant="outline" className="font-semibold">
+                          {operation}
+                        </Badge>
+                        <span className="font-medium">
+                          {count} sale{count !== 1 ? 's' : ''} from {source}
+                          {mode && ` (${mode})`}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex-shrink-0">
+                      <span className="text-xs text-muted-foreground whitespace-nowrap">
+                        {date}
+                      </span>
+                    </div>
+                  </div>
+                );
+              }
+              
               // Extract data from the rich logging structure
               const status: string = entry.status || 'Unknown';
               // Use displayName from normalization, fallback to entry data
