@@ -29,7 +29,7 @@ import { FileReference } from '@/types/entities';
 import EntityRelationshipsModal from './submodals/entity-relationships-submodal';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
 import CharacterSelectorModal from './submodals/owner-character-selector-submodal';
-import { dispatchEntityUpdated } from '@/lib/ui/ui-events';
+import { dispatchEntityUpdated, entityTypeToKind } from '@/lib/ui/ui-events';
 
 interface ItemModalProps {
   item?: Item;
@@ -472,7 +472,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
       await onSave(newItem);
       
       // Dispatch UI update events AFTER successful save
-      dispatchEntityUpdated('item');
+      dispatchEntityUpdated(entityTypeToKind(EntityType.ITEM));
       
       // Refresh links after save (Links are created by Ribosome)
       setTimeout(async () => {
@@ -884,7 +884,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
     <DeleteModal
       open={showDeleteModal}
       onOpenChange={setShowDeleteModal}
-      entityType="item"
+      entityType={EntityType.ITEM}
       entities={(item || (selectedItemId && existingItems.find(i => i.id === selectedItemId))) ? [item || existingItems.find(i => i.id === selectedItemId)!] : []}
       onComplete={async () => {
         setShowDeleteModal(false);

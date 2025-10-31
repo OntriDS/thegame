@@ -14,16 +14,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Sale, SaleLine, Item, Discount, Site, Character, Task } from '@/types/entities';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
-import { SaleType, SaleStatus, PaymentMethod, Currency, ItemType, ItemStatus, TaskType, TaskPriority, Collection, STATION_CATEGORIES, CharacterRole } from '@/types/enums';
+import { SaleType, SaleStatus, PaymentMethod, Currency, ItemType, ItemStatus, TaskType, TaskPriority, Collection, STATION_CATEGORIES, CharacterRole, EntityType, PLAYER_ONE_ID } from '@/types/enums';
 import { getSubTypesForItemType } from '@/lib/utils/item-utils';
 import type { Station } from '@/types/type-aliases';
 import { createSiteOptionsWithCategories } from '@/lib/utils/site-options-utils';
 import { createCharacterOptions, createStationCategoryOptions, createTaskParentOptions, createItemTypeSubTypeOptions, getItemTypeFromCombined, createItemOptions, getCategoryFromCombined } from '@/lib/utils/searchable-select-utils';
 import { getAreaForStation } from '@/lib/utils/business-structure-utils';
 import { ClientAPI } from '@/lib/client-api';
-import { dispatchEntityUpdated } from '@/lib/ui/ui-events';
+import { dispatchEntityUpdated, entityTypeToKind } from '@/lib/ui/ui-events';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
-import { PLAYER_ONE_ID } from '@/types/enums';
 import PlayerCharacterSelectorModal from './submodals/player-character-selector-submodal';
 // Side effects handled by parent component via API calls
 import { v4 as uuid } from 'uuid';
@@ -540,7 +539,7 @@ export default function SalesModal({
       await onSave(saleData);
       
       // Dispatch events AFTER successful save
-      dispatchEntityUpdated('sale');
+      dispatchEntityUpdated(entityTypeToKind(EntityType.SALE));
       
       onOpenChange(false);
     } catch (error) {
@@ -1808,8 +1807,8 @@ export default function SalesModal({
           <DeleteModal
             open={showDeleteModal}
             onOpenChange={setShowDeleteModal}
-            entityType={'sale' as any}
-            entities={sale ? [sale as any] : []}
+            entityType={EntityType.SALE}
+            entities={sale ? [sale] : []}
             onComplete={() => {
               setShowDeleteModal(false);
               onOpenChange(false);

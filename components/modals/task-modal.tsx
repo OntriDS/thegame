@@ -18,7 +18,7 @@ import EntityRelationshipsModal from './submodals/entity-relationships-submodal'
 import { Task, Item } from '@/types/entities';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
 import { getPointsMetadata } from '@/lib/utils/points-utils';
-import { TaskType, TaskStatus, TaskPriority, STATION_CATEGORIES, ItemType, RecurrentFrequency, Collection, ItemStatus, CharacterRole, PLAYER_ONE_ID } from '@/types/enums';
+import { TaskType, TaskStatus, TaskPriority, STATION_CATEGORIES, ItemType, RecurrentFrequency, Collection, ItemStatus, CharacterRole, PLAYER_ONE_ID, EntityType } from '@/types/enums';
 import { getSubTypesForItemType } from '@/lib/utils/item-utils';
 import { getCategoryForItemType, getCategoryForTaskType, createStationCategoryOptions, getStationFromCombined, getCategoryFromCombined, createTaskParentOptions, createItemTypeSubTypeOptions, getItemTypeFromCombined, getSubTypeFromCombined, createCharacterOptions } from '@/lib/utils/searchable-select-utils';
 import { getAreaForStation } from '@/lib/utils/business-structure-utils';
@@ -33,7 +33,7 @@ import { cascadeStatusToInstances, getUndoneInstancesCount } from '@/lib/utils/r
 import { ClientAPI } from '@/lib/client-api';
 import CharacterSelectorModal from './submodals/owner-character-selector-submodal';
 import PlayerCharacterSelectorModal from './submodals/player-character-selector-submodal';
-import { dispatchEntityUpdated } from '@/lib/ui/ui-events';
+import { dispatchEntityUpdated, entityTypeToKind } from '@/lib/ui/ui-events';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
 
 interface TaskModalProps {
@@ -478,7 +478,7 @@ export default function TaskModal({
       await onSave(newTask);
       
       // Dispatch UI update events AFTER successful save
-      dispatchEntityUpdated('task');
+      dispatchEntityUpdated(entityTypeToKind(EntityType.TASK));
       
       onOpenChange(false);
     } catch (error) {
@@ -1316,7 +1316,7 @@ export default function TaskModal({
       <DeleteModal
         open={showDeleteModal}
         onOpenChange={setShowDeleteModal}
-        entityType="task"
+        entityType={EntityType.TASK}
         entities={task ? [task] : []}
         onComplete={() => {
           setShowDeleteModal(false);

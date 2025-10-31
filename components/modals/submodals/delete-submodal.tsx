@@ -5,21 +5,48 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Task, Item, FinancialRecord, Sale } from '@/types/entities';
+import { Task, Item, FinancialRecord, Sale, Site } from '@/types/entities';
+import { EntityType } from '@/types/enums';
 import { Trash2 } from 'lucide-react';
 import { ClientAPI } from '@/lib/client-api';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
 // Side effects handled by parent component via API calls
 
-type EntityType = 'task' | 'item' | 'record' | 'sale';
+import { Character } from '@/types/entities';
+
+// Supported entity types for deletion (subset of EntityType enum)
+type DeletableEntityType = EntityType.TASK | EntityType.ITEM | EntityType.FINANCIAL | EntityType.SALE | EntityType.SITE | EntityType.CHARACTER;
 
 interface DeleteModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  entityType: EntityType;
-  entities: (Task | Item | FinancialRecord | Sale)[];
+  entityType: DeletableEntityType;
+  entities: (Task | Item | FinancialRecord | Sale | Site | Character)[];
   onComplete?: () => void; // Optional callback after successful deletion
 }
+
+// Entity type to display label mapping (UI labels, not enum values)
+const ENTITY_TYPE_LABELS: Record<DeletableEntityType, { singular: string; plural: string }> = {
+  [EntityType.TASK]: { singular: 'Task', plural: 'Tasks' },
+  [EntityType.ITEM]: { singular: 'Item', plural: 'Items' },
+  [EntityType.FINANCIAL]: { singular: 'Record', plural: 'Records' }, // UI uses "Record" for FinancialRecord
+  [EntityType.SALE]: { singular: 'Sale', plural: 'Sales' },
+  [EntityType.SITE]: { singular: 'Site', plural: 'Sites' },
+  [EntityType.CHARACTER]: { singular: 'Character', plural: 'Characters' },
+};
+
+// Entity type to lowercase label for warnings
+const ENTITY_TYPE_WARNING_LABELS: Record<DeletableEntityType, string> = {
+  [EntityType.TASK]: 'task',
+  [EntityType.ITEM]: 'item',
+  [EntityType.FINANCIAL]: 'record',
+  [EntityType.SALE]: 'sale',
+  [EntityType.SITE]: 'site',
+  [EntityType.CHARACTER]: 'character',
+};
+
+// Entity types that can have related items (for checking sourceTaskId/sourceRecordId)
+const ENTITY_TYPES_WITH_RELATED_ITEMS: DeletableEntityType[] = [EntityType.TASK, EntityType.FINANCIAL];
 
 export default function DeleteModal({ 
   open, 
@@ -36,16 +63,16 @@ export default function DeleteModal({
   // Check for related items when modal opens
   useEffect(() => {
     const checkRelatedItems = async () => {
-      if (open && (entityType === 'task' || entityType === 'record')) {
+      if (open && ENTITY_TYPES_WITH_RELATED_ITEMS.includes(entityType)) {
         const allRelatedItems: Item[] = [];
         
         for (const entity of entities) {
           const items = await ClientAPI.getItems();
           let createdItems: Item[] = [];
           
-          if (entityType === 'task') {
+          if (entityType === EntityType.TASK) {
             createdItems = items.filter(item => item.sourceTaskId === entity.id);
-          } else if (entityType === 'record') {
+          } else if (entityType === EntityType.FINANCIAL) {
             createdItems = items.filter(item => item.sourceRecordId === entity.id);
           }
           
@@ -67,8 +94,8 @@ export default function DeleteModal({
     
     try {
       // Special handling for task deletion - check for created items
-      if (entityType === 'task') {
-        for (const task of entities) {
+      if (entityType === EntityType.TASK) {
+        for (const task of entities as Task[]) {
           // Find items created by this task
           const items = await ClientAPI.getItems();
           const createdItems = items.filter(item => item.sourceTaskId === task.id);
@@ -94,9 +121,9 @@ export default function DeleteModal({
           // Delete the task with side effects (log cleanup handled by DataStore)
           await ClientAPI.deleteTask(task.id);
         }
-      } else if (entityType === 'record') {
+      } else if (entityType === EntityType.FINANCIAL) {
         // Special handling for record deletion - check for created items
-        for (const record of entities) {
+        for (const record of entities as FinancialRecord[]) {
           // Find items created by this record
           const items = await ClientAPI.getItems();
           const createdItems = items.filter(item => item.sourceRecordId === record.id);
@@ -122,23 +149,28 @@ export default function DeleteModal({
           // Delete the record with side effects (log cleanup handled by DataStore)
           await ClientAPI.deleteFinancialRecord(record.id);
         }
-      } else if (entityType === 'sale') {
+      } else if (entityType === EntityType.SALE) {
         for (const sale of entities as Sale[]) {
           await ClientAPI.deleteSale(sale.id);
           // Sale deletion cleanup is handled by the DataStore side effects via removeSaleEffectsOnDelete
         }
-      } else {
-        // Regular deletion for non-task entities
-        for (const entity of entities) {
-          switch (entityType) {
-            case 'item':
-              await ClientAPI.deleteItem(entity.id);
-              break;
-            default:
-              console.warn('Unknown entity type for deletion:', entityType);
-              break;
-          }
+      } else if (entityType === EntityType.SITE) {
+        for (const site of entities as Site[]) {
+          await ClientAPI.deleteSite(site.id);
+          // Site deletion cleanup is handled by the DataStore side effects via removeSiteEffectsOnDelete
         }
+      } else if (entityType === EntityType.CHARACTER) {
+        for (const character of entities as Character[]) {
+          await ClientAPI.deleteCharacter(character.id);
+          // Character deletion cleanup is handled by the DataStore side effects via removeCharacterEffectsOnDelete
+        }
+      } else if (entityType === EntityType.ITEM) {
+        // Regular deletion for items
+        for (const item of entities as Item[]) {
+          await ClientAPI.deleteItem(item.id);
+        }
+      } else {
+        console.warn('Unknown entity type for deletion:', entityType);
       }
 
       // Note: Log cleanup is handled by the workflow functions (removeTaskLogEntriesOnDelete, removeRecordEffectsOnDelete)
@@ -156,64 +188,60 @@ export default function DeleteModal({
     }
   };
 
-  const getEntityDisplayName = (entity: Task | Item | FinancialRecord | Sale) => {
+  const getEntityDisplayName = (entity: Task | Item | FinancialRecord | Sale | Site | Character): string => {
     switch (entityType) {
-      case 'task':
+      case EntityType.TASK:
         return (entity as Task).name;
-      case 'item':
+      case EntityType.ITEM:
         return (entity as Item).name;
-      case 'record':
+      case EntityType.FINANCIAL:
         return (entity as FinancialRecord).name;
-      case 'sale':
+      case EntityType.SALE:
         return (entity as Sale).name;
+      case EntityType.SITE:
+        return (entity as Site).name;
+      case EntityType.CHARACTER:
+        return (entity as Character).name;
       default:
         return 'Unknown';
     }
   };
 
-  const getBulkTitle = () => {
+  const getBulkTitle = (): string => {
     const count = entities.length;
-    const entityLabel = entityType === 'item' ? 'Item' : 
-                       entityType === 'task' ? 'Task' : 
-                       entityType === 'record' ? 'Record' : 'Sale';
-    return `Delete ${count} ${entityLabel}${count > 1 ? 's' : ''}`;
+    const label = ENTITY_TYPE_LABELS[entityType];
+    return `Delete ${count} ${count > 1 ? label.plural : label.singular}`;
   };
 
-  const getEntityDescription = (entity: Task | Item | FinancialRecord | Sale) => {
+  const getEntityDescription = (entity: Task | Item | FinancialRecord | Sale | Site | Character): string => {
     switch (entityType) {
-      case 'task':
+      case EntityType.TASK:
         return (entity as Task).description || 'No description';
-      case 'item':
+      case EntityType.ITEM:
         return `${(entity as Item).type} • ${(entity as Item).stock?.reduce((s, stock) => s + stock.quantity, 0) || 0} units`;
-      case 'record':
+      case EntityType.FINANCIAL:
         return `${(entity as FinancialRecord).type} • ${(entity as FinancialRecord).station}`;
-      case 'sale':
+      case EntityType.SALE:
         return `${(entity as Sale).type} • ${(entity as Sale).siteId}`;
+      case EntityType.SITE:
+        const site = entity as Site;
+        return `${site.metadata.type} • ${site.status}`;
+      case EntityType.CHARACTER:
+        const character = entity as Character;
+        return `${character.roles?.join(', ') || 'No roles'}`;
       default:
         return '';
     }
   };
 
-  const getEntityTypeLabel = () => {
-    switch (entityType) {
-      case 'task':
-        return entities.length === 1 ? 'Task' : 'Tasks';
-      case 'item':
-        return entities.length === 1 ? 'Item' : 'Items';
-      case 'record':
-        return entities.length === 1 ? 'Record' : 'Records';
-      case 'sale':
-        return entities.length === 1 ? 'Sale' : 'Sales';
-      default:
-        return 'Items';
-    }
+  const getEntityTypeLabel = (): string => {
+    const label = ENTITY_TYPE_LABELS[entityType];
+    return entities.length === 1 ? label.singular : label.plural;
   };
 
-  const getWarningMessage = () => {
+  const getWarningMessage = (): string => {
     const count = entities.length;
-    const entityLabel = entityType === 'item' ? 'item' : 
-                       entityType === 'task' ? 'task' : 
-                       entityType === 'record' ? 'record' : 'sale';
+    const entityLabel = ENTITY_TYPE_WARNING_LABELS[entityType];
     const plural = count > 1 ? 's' : '';
     const thisOrThese = count > 1 ? 'These' : 'This';
     
@@ -267,10 +295,10 @@ export default function DeleteModal({
           </div>
           
           {/* Show related items checkbox for tasks and records with related items */}
-          {(entityType === 'task' || entityType === 'record') && relatedItems.length > 0 && (
+          {ENTITY_TYPES_WITH_RELATED_ITEMS.includes(entityType) && relatedItems.length > 0 && (
             <div className="border-t pt-3">
               <div className="text-sm text-muted-foreground mb-2">
-                This {entityType} created {relatedItems.length} item{relatedItems.length > 1 ? 's' : ''}:
+                This {ENTITY_TYPE_LABELS[entityType].singular.toLowerCase()} created {relatedItems.length} item{relatedItems.length > 1 ? 's' : ''}:
               </div>
               <div className="space-y-1 mb-3 max-h-20 overflow-y-auto">
                 {relatedItems.map(item => (

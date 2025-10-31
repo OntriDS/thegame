@@ -7,6 +7,8 @@
  * Architecture: Modal dispatches → Parent listens → UI refreshes immediately
  */
 
+import { EntityType } from '@/types/enums';
+
 export type EntityKind = 'task' | 'item' | 'financial' | 'sale' | 'site' | 'character' | 'player';
 
 const EVENT_MAP: Record<EntityKind, string> = {
@@ -18,6 +20,36 @@ const EVENT_MAP: Record<EntityKind, string> = {
   character: 'charactersUpdated',
   player: 'playersUpdated',
 } as const;
+
+/**
+ * Maps EntityType enum to EntityKind string for UI events
+ * This ensures we use enums as the single source of truth
+ * 
+ * Note: LINK and SESSION are system entities that don't trigger UI updates
+ */
+export function entityTypeToKind(entityType: EntityType): EntityKind {
+  const map: Partial<Record<EntityType, EntityKind>> = {
+    [EntityType.TASK]: 'task',
+    [EntityType.ITEM]: 'item',
+    [EntityType.FINANCIAL]: 'financial',
+    [EntityType.SALE]: 'sale',
+    [EntityType.SITE]: 'site',
+    [EntityType.CHARACTER]: 'character',
+    [EntityType.PLAYER]: 'player',
+    [EntityType.ACCOUNT]: 'character', // Accounts update character events
+    [EntityType.SETTLEMENT]: 'site', // Settlements update site events
+    // LINK and SESSION don't trigger UI updates - they're system entities
+    // If you need to dispatch updates for these, add explicit mappings above
+  };
+  
+  // Ensure all EntityTypes that should trigger UI updates are explicitly mapped - fail fast if new type added
+  const mapped = map[entityType];
+  if (mapped === undefined) {
+    throw new Error(`EntityType ${entityType} does not have a corresponding EntityKind mapping. Please add it to entityTypeToKind function.`);
+  }
+  
+  return mapped;
+}
 
 /**
  * Dispatches entity-specific update event and linksUpdated event

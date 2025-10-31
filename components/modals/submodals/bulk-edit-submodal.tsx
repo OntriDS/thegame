@@ -413,7 +413,7 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
       <DeleteModal
         open={showDeleteModal}
         onOpenChange={setShowDeleteModal}
-        entityType="item"
+        entityType={EntityType.ITEM}
         entities={items.filter(item => selectedItems.has(item.id))}
         onComplete={async () => {
           setShowDeleteModal(false);

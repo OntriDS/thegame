@@ -15,7 +15,8 @@ import {
   PhysicalBusinessType, 
   DigitalSiteType, 
   SystemSiteType, 
-  LOCATION_HIERARCHY
+  LOCATION_HIERARCHY,
+  EntityType
 } from '@/types/enums';
 import { createSettlementOptions } from '@/lib/utils/searchable-select-utils';
 import SettlementSubmodal from './submodals/settlement-submodal';
@@ -23,7 +24,7 @@ import { MapPin, Cloud, Sparkles, Trash2 } from 'lucide-react';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
 // No complex categorization needed for site fields
 import DeleteModal from './submodals/delete-submodal';
-import { dispatchEntityUpdated } from '@/lib/ui/ui-events';
+import { dispatchEntityUpdated, entityTypeToKind } from '@/lib/ui/ui-events';
 // Side effects handled by parent component via API calls
 
 interface SiteModalProps {
@@ -157,7 +158,7 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
       await onSave(siteData);
       
       // Dispatch UI update events AFTER successful save
-      dispatchEntityUpdated('site');
+      dispatchEntityUpdated(entityTypeToKind(EntityType.SITE));
       
       onOpenChange(false);
     } catch (error) {
@@ -203,6 +204,8 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
   
   const handleDeleteComplete = () => {
     setShowDeleteModal(false);
+    // Dispatch UI update event after successful deletion
+    dispatchEntityUpdated(entityTypeToKind(EntityType.SITE));
     onOpenChange(false);
   };
   
@@ -230,12 +233,8 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
           {/* Content Area - Fixed Height with Internal Scroll */}
           <div className="px-6 overflow-y-auto space-y-4" style={{ maxHeight: 'calc(90vh - 280px)' }}>
             {/* Column Headers */}
-            <div className="grid grid-cols-2 gap-4 mb-2">
-              <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">🧬 Native</div>
-              <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">🧬 Native</div>
-            </div>
 
-            {/* Row 1: Name, Type, and Active Button in 4-column grid */}
+            {/* Row 1: Name and Type in 4-column grid */}
             <div className="grid grid-cols-4 gap-4">
               <div className="col-span-2 space-y-2">
                 <Label htmlFor="name" className="text-xs">Name *</Label>
@@ -248,7 +247,7 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
                 />
               </div>
               
-              <div className="space-y-2">
+              <div className="col-span-2 space-y-2">
                 <Label htmlFor="siteType" className="text-xs">Type *</Label>
                 <Select value={siteType} onValueChange={(v) => setSiteType(v as SiteType)}>
                   <SelectTrigger id="siteType" className="h-8 text-sm">
@@ -258,19 +257,6 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
                     <SelectItem value={SiteType.PHYSICAL}>Physical</SelectItem>
                     <SelectItem value={SiteType.DIGITAL}>Digital</SelectItem>
                     <SelectItem value={SiteType.SYSTEM}>System</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-xs">Status</Label>
-                <Select value={status} onValueChange={(v) => setStatus(v as SiteStatus)}>
-                  <SelectTrigger className="h-8 text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={SiteStatus.ACTIVE}>Active</SelectItem>
-                    <SelectItem value={SiteStatus.INACTIVE}>Inactive</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -464,8 +450,8 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
         <DeleteModal
           open={showDeleteModal}
           onOpenChange={setShowDeleteModal}
-          entityType="item"
-          entities={[site as any]}
+          entityType={EntityType.SITE}
+          entities={[site]}
           onComplete={handleDeleteComplete}
         />
       )}

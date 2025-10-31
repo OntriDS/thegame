@@ -7,9 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { User, Network, Coins, Target, TrendingUp, Flag } from 'lucide-react';
 import { Player, Character } from '@/types/entities';
+import { EntityType } from '@/types/enums';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
 import { ClientAPI } from '@/lib/client-api';
-import { dispatchEntityUpdated } from '@/lib/ui/ui-events';
+import { dispatchEntityUpdated, entityTypeToKind } from '@/lib/ui/ui-events';
 
 // Submodal imports
 import PersonalDataModal from './submodals/player-personal-data-submodal';
@@ -236,7 +237,7 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
             setShowPersonalData(false);
             
             // Dispatch events AFTER successful save
-            dispatchEntityUpdated('player');
+            dispatchEntityUpdated(entityTypeToKind(EntityType.PLAYER));
           } catch (error) {
             console.error('Save failed:', error);
             // Keep modal open on error
@@ -311,8 +312,8 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
             );
             
             // Trigger financials update event AFTER successful save
-            dispatchEntityUpdated('player');
-            dispatchEntityUpdated('financial');
+            dispatchEntityUpdated(entityTypeToKind(EntityType.PLAYER));
+            dispatchEntityUpdated(entityTypeToKind(EntityType.FINANCIAL));
           } catch (error) {
             console.error('Save failed:', error);
             // Keep modal open on error

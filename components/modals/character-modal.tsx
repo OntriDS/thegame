@@ -11,14 +11,14 @@ import { Textarea } from '@/components/ui/textarea';
 import NumericInput from '@/components/ui/numeric-input';
 
 import type { Character } from '@/types/entities';
-import { CharacterRole, CHARACTER_ROLE_TYPES } from '@/types/enums';
+import { CharacterRole, CHARACTER_ROLE_TYPES, EntityType, PLAYER_ONE_ID } from '@/types/enums';
 import { ROLE_COLORS } from '@/lib/constants/color-constants';
 import { useTheme } from '@/lib/hooks/use-theme';
-import { PLAYER_ONE_ID } from '@/types/enums';
 import { ROLE_BEHAVIORS, canViewAccountInfo } from '@/lib/game-mechanics/roles-rules';
 import { Info } from 'lucide-react';
 import { ClientAPI } from '@/lib/client-api';
-import { dispatchEntityUpdated } from '@/lib/ui/ui-events';
+import { dispatchEntityUpdated, entityTypeToKind } from '@/lib/ui/ui-events';
+import DeleteModal from './submodals/delete-submodal';
 // Side effects handled by parent component via API calls
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
 
@@ -49,6 +49,9 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
 
   // Loading state
   const [isSaving, setIsSaving] = useState(false);
+  
+  // Delete modal
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   // V0.1 Core - Game Mechanics (Character-specific only!)
   const [jungleCoins, setJungleCoins] = useState<number>(0);
@@ -208,7 +211,7 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
       await onSave(newCharacter);
       
       // Dispatch events AFTER successful save
-      dispatchEntityUpdated('character');
+      dispatchEntityUpdated(entityTypeToKind(EntityType.CHARACTER));
       
       onOpenChange(false);
     } catch (error) {
@@ -217,6 +220,18 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
     } finally {
       setIsSaving(false);
     }
+  };
+  
+  const handleDelete = () => {
+    if (!character) return;
+    setShowDeleteModal(true);
+  };
+  
+  const handleDeleteComplete = () => {
+    setShowDeleteModal(false);
+    // Dispatch UI update event after successful deletion
+    dispatchEntityUpdated(entityTypeToKind(EntityType.CHARACTER));
+    onOpenChange(false);
   };
 
   return (
@@ -422,18 +437,31 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
         </div>
 
         <DialogFooter className="flex items-center justify-between">
-          {/* Account Info Button - Only for FOUNDER/ADMIN roles */}
-          {character && canViewAccountInfo(roles) && (
-            <Button 
-              variant="ghost" 
-              size="sm"
-              onClick={() => setShowAccountInfo(true)}
-              className="h-8 text-xs"
-              title="View Account Information"
-            >
-              <Info className="h-4 w-4" />
-            </Button>
-          )}
+          <div className="flex items-center gap-4">
+            {/* Account Info Button - Only for FOUNDER/ADMIN roles */}
+            {character && canViewAccountInfo(roles) && (
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => setShowAccountInfo(true)}
+                className="h-8 text-xs"
+                title="View Account Information"
+              >
+                <Info className="h-4 w-4" />
+              </Button>
+            )}
+            
+            {/* Delete Button - Only when editing existing character */}
+            {character && (
+              <Button
+                variant="outline"
+                onClick={handleDelete}
+                className="h-8 text-xs text-muted-foreground hover:text-foreground"
+              >
+                Delete
+              </Button>
+            )}
+          </div>
           
           <div className="flex items-center gap-2 ml-auto">
             <Button variant="outline" onClick={() => onOpenChange(false)} className="h-8 text-xs" disabled={isSaving}>Cancel</Button>
@@ -469,6 +497,17 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
         character={character}
         open={showAccountInfo}
         onOpenChange={setShowAccountInfo}
+      />
+    )}
+    
+    {/* Delete Confirmation Modal */}
+    {character && (
+      <DeleteModal
+        open={showDeleteModal}
+        onOpenChange={setShowDeleteModal}
+        entityType={EntityType.CHARACTER}
+        entities={[character]}
+        onComplete={handleDeleteComplete}
       />
     )}
     </>

@@ -247,21 +247,6 @@
   ],
   "sites": [
     {
-      "id": "site-home",
-      "name": "Home",
-      "description": "Home - HQ",
-      "metadata": {
-        "type": "PHYSICAL",
-        "businessType": "HQ",
-        "settlementId": "settlement-uvita",
-        "googleMapsAddress": "Home Location"
-      },
-      "createdAt": "2025-10-09T15:38:54.596Z",
-      "updatedAt": "2025-10-09T15:38:54.596Z",
-      "links": [],
-      "status": "Active"
-    },
-    {
       "id": "site-feria-box",
       "name": "Feria Box",
       "description": "PHYSICAL site - Feria Box",
@@ -578,19 +563,6 @@
       "status": "Active"
     },
     {
-      "id": "site-deleted-items",
-      "name": "Deleted Items",
-      "description": "SYSTEM site - Deleted Items",
-      "metadata": {
-        "type": "SYSTEM",
-        "systemType": "deleted"
-      },
-      "status": "Active",
-      "createdAt": "2025-10-09T15:38:54.596Z",
-      "updatedAt": "2025-10-09T15:38:54.596Z",
-      "links": []
-    },
-    {
       "id": "site-digital-space",
       "name": "Digital Space",
       "description": "DIGITAL site - Digital Space",
@@ -628,19 +600,6 @@
       "updatedAt": "2025-10-09T15:38:54.596Z",
       "links": [],
       "status": "Active"
-    },
-    {
-      "id": "site-none",
-      "name": "None",
-      "description": "SYSTEM site - None",
-      "metadata": {
-        "type": "SYSTEM",
-        "systemType": "universal tracking"
-      },
-      "createdAt": "2025-10-09T15:38:54.596Z",
-      "updatedAt": "2025-10-09T15:38:54.596Z",
-      "links": [],
-      "status": "Inactive"
     },
     {
       "id": "site-el-ranchito",
