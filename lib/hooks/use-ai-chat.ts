@@ -147,6 +147,11 @@ export function useAIChat() {
       const { ClientAPI } = await import('@/lib/client-api');
       const sessionData = await ClientAPI.getSessionById(id);
       if (sessionData) {
+        // Set the model from the session
+        if (sessionData.model) {
+          setSelectedModel(sessionData.model);
+        }
+        
         // Convert session messages to ChatMessage format
         const loadedMessages: ChatMessage[] = sessionData.messages.map(msg => ({
           role: msg.role as 'user' | 'assistant',

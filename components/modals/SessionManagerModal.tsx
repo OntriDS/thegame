@@ -13,6 +13,7 @@ import {
   DialogDescription
 } from '@/components/ui/dialog';
 import { Trash2, Edit2, Check, X, Plus } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { AISession } from '@/types/entities';
 
 interface Props {
@@ -27,6 +28,9 @@ export default function SessionManagerModal({ open, onOpenChange, onSessionLoad 
   const [data, setData] = useState<{ activeSessionId?: string; activeStats?: any; sessions?: AISession[] }>({});
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
+  const [showNewSessionForm, setShowNewSessionForm] = useState(false);
+  const [selectedModel, setSelectedModel] = useState<string>('openai/gpt-oss-120b');
+  const [availableModels, setAvailableModels] = useState<any[]>([]);
 
   const load = async () => {
     setLoading(true);
@@ -42,7 +46,17 @@ export default function SessionManagerModal({ open, onOpenChange, onSessionLoad 
   };
 
   useEffect(() => {
-    if (open) void load();
+    if (open) {
+      void load();
+      // Load available models
+      ClientAPI.getGroqModels()
+        .then(data => {
+          setAvailableModels([...(data.models || [])]);
+        })
+        .catch(() => {
+          setAvailableModels([]);
+        });
+    }
   }, [open]);
 
   const sessions = data.sessions || [];
@@ -76,7 +90,9 @@ export default function SessionManagerModal({ open, onOpenChange, onSessionLoad 
 
   const handleNewSession = async () => {
     try {
-      await createSession();
+      await createSession(selectedModel);
+      setShowNewSessionForm(false);
+      setSelectedModel('openai/gpt-oss-120b'); // Reset to default
       await load();
     } catch (error) {
       console.error('Failed to create session:', error);
@@ -123,10 +139,36 @@ export default function SessionManagerModal({ open, onOpenChange, onSessionLoad 
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <div className="text-sm font-medium">All Sessions</div>
-            <Button size="sm" disabled={loading} onClick={handleNewSession} className="gap-2">
-              <Plus className="h-4 w-4" />
-              New Session
-            </Button>
+            {!showNewSessionForm ? (
+              <Button size="sm" disabled={loading} onClick={() => setShowNewSessionForm(true)} className="gap-2">
+                <Plus className="h-4 w-4" />
+                New Session
+              </Button>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Select value={selectedModel} onValueChange={setSelectedModel}>
+                  <SelectTrigger className="w-[250px]">
+                    <SelectValue placeholder="Select AI Model" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableModels.map((model) => (
+                      <SelectItem key={model.id} value={model.id}>
+                        {model.id}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button size="sm" onClick={handleNewSession} className="gap-2">
+                  Create
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => {
+                  setShowNewSessionForm(false);
+                  setSelectedModel('openai/gpt-oss-120b');
+                }}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
           </div>
 
           <div className="border border-border rounded-md divide-y max-h-96 overflow-auto bg-background">
