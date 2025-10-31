@@ -212,8 +212,8 @@ export async function DELETE(req: NextRequest) {
  }
 
  try {
-   const body = await req.json();
-   const { noteId } = body;
+  const body = await req.json();
+  const { id: noteId } = body;
 
    if (!noteId) {
      return NextResponse.json({ error: 'Note ID is required' }, { status: 400 });

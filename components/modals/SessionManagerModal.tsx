@@ -106,7 +106,7 @@ export default function SessionManagerModal({ open, onOpenChange, onSessionLoad 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent zIndexLayer={'MODALS'} className="w-full max-w-2xl max-h-[80vh]">
+      <DialogContent zIndexLayer={'MODALS'} className="w-full max-w-2xl max-h-[80vh] bg-background text-foreground">
         <DialogHeader>
           <DialogTitle>Session Manager</DialogTitle>
           <DialogDescription>
@@ -129,7 +129,7 @@ export default function SessionManagerModal({ open, onOpenChange, onSessionLoad 
             </Button>
           </div>
 
-          <div className="border rounded-md divide-y max-h-96 overflow-auto">
+          <div className="border border-border rounded-md divide-y max-h-96 overflow-auto bg-background">
             {loading && sessions.length === 0 && (
               <div className="p-3 text-sm text-muted-foreground text-center">Loading sessions...</div>
             )}
@@ -139,14 +139,17 @@ export default function SessionManagerModal({ open, onOpenChange, onSessionLoad 
             )}
 
             {sessions.map(session => (
-              <div key={session.id} className={`p-3 flex items-center justify-between hover:bg-muted/50 transition-colors ${data.activeSessionId === session.id ? 'bg-green-50 border-l-4 border-green-500' : ''}`}>
+              <div
+                key={session.id}
+                className={`p-3 flex items-center justify-between hover:bg-muted/50 transition-colors ${data.activeSessionId === session.id ? 'bg-accent/40 dark:bg-accent/20 border-l-4 border-accent' : ''}`}
+              >
                 <div className="flex-1 min-w-0">
                   {editingId === session.id ? (
                     <div className="flex items-center gap-2">
                       <Input
                         value={editName}
                         onChange={(e) => setEditName(e.target.value)}
-                        className="h-8 text-sm"
+                        className="h-8 text-sm bg-background"
                         autoFocus
                       />
                       <Button size="sm" variant="ghost" onClick={() => {
@@ -171,7 +174,7 @@ export default function SessionManagerModal({ open, onOpenChange, onSessionLoad 
                       <div className="text-sm font-medium truncate flex items-center gap-2">
                         {session.name}
                         {data.activeSessionId === session.id && (
-                          <span className="text-xs px-2 py-0.5 rounded bg-green-100 text-green-800">Active</span>
+                          <span className="text-xs px-2 py-0.5 rounded bg-accent text-accent-foreground">Active</span>
                         )}
                       </div>
                       <div className="text-xs text-muted-foreground flex items-center gap-3 mt-1">
