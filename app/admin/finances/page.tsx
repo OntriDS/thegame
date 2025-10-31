@@ -1020,7 +1020,7 @@ export default function FinancesPage() {
                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
                  {getPersonalAreas().flatMap(area => 
                    BUSINESS_STRUCTURE[area].map(station => {
-                     const breakdown = aggregatedCategoryData?.categoryBreakdown[station];
+                     const breakdown = personalSummary?.categoryBreakdown[station];
                      const net = breakdown ? breakdown.net : 0;
                       
                      return (
