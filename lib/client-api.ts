@@ -12,7 +12,7 @@
  * from @/data-store/datastore, which is server-side only.
  */
 
-import type { Task, Item, Sale, FinancialRecord, Character, Player, Site, Account, Settlement } from '@/types/entities';
+import type { Task, Item, Sale, FinancialRecord, Character, Player, Site, Account, Settlement, AISession } from '@/types/entities';
 
 export const ClientAPI = {
   // ============================================================================
@@ -668,6 +668,62 @@ export const ClientAPI = {
   clearQueue: async (): Promise<void> => {
     const res = await fetch('/api/queue/clear', { method: 'POST' });
     if (!res.ok) throw new Error('Failed to clear queue');
+  },
+
+  // ============================================================================
+  // AI SESSIONS - Session management operations
+  // ============================================================================
+  getSessions: async (): Promise<any> => {
+    const res = await fetch('/api/ai/sessions');
+    if (!res.ok) throw new Error('Failed to fetch sessions');
+    return await res.json();
+  },
+
+  getSessionById: async (id: string): Promise<AISession | null> => {
+    const res = await fetch(`/api/ai/sessions/${id}`);
+    if (!res.ok) return null;
+    return await res.json();
+  },
+
+  createSession: async (model?: string): Promise<any> => {
+    const res = await fetch('/api/ai/sessions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'create', model })
+    });
+    if (!res.ok) throw new Error('Failed to create session');
+    return await res.json();
+  },
+
+  setActiveSession: async (sessionId: string): Promise<void> => {
+    const res = await fetch('/api/ai/sessions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'set-active', sessionId })
+    });
+    if (!res.ok) throw new Error('Failed to set active session');
+  },
+
+  updateSessionName: async (id: string, name: string): Promise<AISession> => {
+    const res = await fetch(`/api/ai/sessions/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name })
+    });
+    if (!res.ok) throw new Error('Failed to update session name');
+    return await res.json();
+  },
+
+  deleteSession: async (id: string): Promise<void> => {
+    const res = await fetch(`/api/ai/sessions/${id}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Failed to delete session');
+  },
+
+  getSessionMessages: async (id: string): Promise<any[]> => {
+    const session = await fetch(`/api/ai/sessions/${id}`);
+    if (!session.ok) return [];
+    const data = await session.json();
+    return data.messages || [];
   },
 };
 

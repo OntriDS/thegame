@@ -159,6 +159,31 @@ export function useAIChat() {
     });
   };
 
+  const loadSession = async (id: string) => {
+    setSessionId(id);
+    setError(null);
+    
+    // Load session messages from the session
+    try {
+      const { ClientAPI } = await import('@/lib/client-api');
+      const sessionData = await ClientAPI.getSessionById(id);
+      if (sessionData) {
+        // Convert session messages to ChatMessage format
+        const loadedMessages: ChatMessage[] = sessionData.messages.map(msg => ({
+          role: msg.role as 'user' | 'assistant',
+          content: msg.content,
+          timestamp: new Date(msg.timestamp),
+          toolCalls: msg.toolCalls,
+          toolResults: msg.toolResults
+        }));
+        setMessages(loadedMessages);
+      }
+    } catch (error) {
+      console.error('Error loading session:', error);
+      setMessages([]);
+    }
+  };
+
   return {
     messages,
     isLoading,
@@ -166,6 +191,7 @@ export function useAIChat() {
     sendMessage,
     clearMessages,
     clearSession,
+    loadSession,
     selectedModel,
     setSelectedModel,
     selectedProvider,

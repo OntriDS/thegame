@@ -64,8 +64,7 @@ export async function POST(req: NextRequest) {
  }
 
  try {
-   const body = await req.json();
-   const { note } = body;
+   const note = await req.json();
 
    if (!note) {
      return NextResponse.json({ error: 'Note data is required' }, { status: 400 });
@@ -137,8 +136,7 @@ export async function PUT(req: NextRequest) {
  }
 
  try {
-   const body = await req.json();
-   const { note } = body;
+   const note = await req.json();
 
    if (!note || !note.id) {
      return NextResponse.json({ error: 'Note data with ID is required' }, { status: 400 });

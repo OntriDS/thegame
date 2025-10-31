@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
 
     // Handle session management
     let currentSessionId = sessionId;
-    const activeSessionKey = 'groq_active_session:akiles';
+    const activeSessionKey = 'active:session:akiles';
     
     // If no session ID provided, try to get active session
     if (!currentSessionId) {
@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
       await SessionManager.addMessage(currentSessionId, 'assistant', assistantResponse);
     } else {
       // Create new session and save messages
-      const session = await SessionManager.createSession('akiles', 'THEGAME');
+      const session = await SessionManager.createSession('akiles', 'THEGAME', model);
       currentSessionId = session.id;
       await kvSet(activeSessionKey, currentSessionId);
       await SessionManager.addMessage(currentSessionId, 'user', message);

@@ -1,17 +1,25 @@
 import { NextRequest } from 'next/server';
 import { SessionManager } from '@/lib/utils/session-manager';
 import { kvGet, kvSet } from '@/data-store/kv';
+import { requireAdminAuth } from '@/lib/api-auth';
 
-const ACTIVE_KEY = 'groq_active_session:akiles';
-const INDEX_KEY = 'groq_session_index:akiles'; // stores array of recent sessionIds
-const MAX_INDEX = 20;
+const ACTIVE_KEY = 'active:session:akiles';
 
 export async function GET(request: NextRequest) {
+  if (!(await requireAdminAuth(request))) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const activeSessionId = await kvGet<string>(ACTIVE_KEY);
-    const index: string[] = (await kvGet<string[]>(INDEX_KEY)) || [];
+    const sessions = await SessionManager.getRecentSessions();
     const stats = activeSessionId ? await SessionManager.getSessionStats(activeSessionId) : null;
-    return Response.json({ activeSessionId, activeStats: stats, recentSessionIds: index });
+    
+    return Response.json({ 
+      activeSessionId, 
+      activeStats: stats, 
+      sessions 
+    });
   } catch (error) {
     console.error('[Sessions API][GET] error:', error);
     return Response.json({ error: 'Failed to load sessions' }, { status: 500 });
@@ -19,16 +27,17 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  if (!(await requireAdminAuth(request))) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
-    const { action, sessionId } = await request.json();
+    const { action, sessionId, model } = await request.json();
 
     if (action === 'create') {
-      const session = await SessionManager.createSession('akiles', 'THEGAME');
+      const session = await SessionManager.createSession('akiles', 'THEGAME', model || 'openai/gpt-oss-120b');
       await kvSet(ACTIVE_KEY, session.id);
-      const index: string[] = (await kvGet<string[]>(INDEX_KEY)) || [];
-      const updated = [session.id, ...index.filter(id => id !== session.id)].slice(0, MAX_INDEX);
-      await kvSet(INDEX_KEY, updated);
-      return Response.json({ sessionId: session.id });
+      return Response.json({ sessionId: session.id, session });
     }
 
     if (action === 'set-active') {
@@ -36,9 +45,6 @@ export async function POST(request: NextRequest) {
       const isValid = await SessionManager.isValidSession(sessionId);
       if (!isValid) return Response.json({ error: 'Invalid sessionId' }, { status: 400 });
       await kvSet(ACTIVE_KEY, sessionId);
-      const index: string[] = (await kvGet<string[]>(INDEX_KEY)) || [];
-      const updated = [sessionId, ...index.filter(id => id !== sessionId)].slice(0, MAX_INDEX);
-      await kvSet(INDEX_KEY, updated);
       return Response.json({ sessionId });
     }
 

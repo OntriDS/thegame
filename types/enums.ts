@@ -657,6 +657,11 @@ export enum LinkType {
 
 /** Entity Types for Link System */
 export enum EntityType {
+  // ULTRA ENTITIES - System Foundation
+  ACCOUNT       = 'account',       // Accounts entity for authentication login and are character and player linked
+  LINK          = 'link',          // Links entity for tracking relationships between entities
+  
+  // CORE ENTITIES - Business Logic
   TASK          = 'task',            // Tasks Missions, Milestones, Goals, Assignments, and Recurrents Tree
   ITEM          = 'item',            // Items with Inventory and Stock tracking
   SALE          = 'sale',            // Sales with lines and Payment Methods
@@ -664,7 +669,10 @@ export enum EntityType {
   CHARACTER     = 'character',   // Main entity - Characters can have multiple roles (FOUNDER, PLAYER, CUSTOMER, etc.)
   SITE          = 'site',            // Sites and locations can now be linked to Tasks, Sales and other entities
   PLAYER        = 'player',        // Players are real people with authentication and progression
-  ACCOUNT       = 'account',       // Accounts entity for authentication login and are character and player linked
+  
+  // INFRA ENTITIES - Supporting Data
+  SESSION       = 'session',        // AI assistant conversation sessions
+  SETTLEMENT    = 'settlement',     // Settlement reference data for Sites
 }
 
 // ============================================================================

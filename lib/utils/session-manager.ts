@@ -1,7 +1,11 @@
 // lib/utils/session-manager.ts
 import { v4 as uuidv4 } from 'uuid';
-import { kvGet, kvSet, kvDel } from '@/data-store/kv';
+import type { AISession } from '@/types/entities';
+import { getSessionById, getAllSessions, upsertSession, deleteSession as repoDeleteSession } from '@/data-store/repositories/session.repo';
 
+const SESSION_TTL = 24 * 60 * 60; // 24 hours in seconds
+
+// Legacy SessionData interface for backward compatibility
 export interface SessionData {
   id: string;
   userId: string;
@@ -22,9 +26,6 @@ export interface SessionData {
   expiresAt: Date;
 }
 
-const SESSION_PREFIX = 'groq_session:';
-const SESSION_TTL = 24 * 60 * 60; // 24 hours in seconds
-
 export class SessionManager {
   /**
    * Generate a new session ID
@@ -36,14 +37,22 @@ export class SessionManager {
   /**
    * Create a new session
    */
-  static async createSession(userId: string = 'akiles', project: string = 'THEGAME'): Promise<SessionData> {
+  static async createSession(userId: string = 'akiles', project: string = 'THEGAME', model: string = 'openai/gpt-oss-120b'): Promise<AISession> {
     const sessionId = this.generateSessionId();
     const now = new Date();
     const expiresAt = new Date(now.getTime() + SESSION_TTL * 1000);
 
-    const session: SessionData = {
+    // Generate default name based on timestamp
+    const defaultName = `Session ${now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}`;
+
+    const session: AISession = {
       id: sessionId,
+      name: defaultName,
+      description: '',
+      links: [],
       userId,
+      model,
+      messageCount: 0,
       messages: [],
       context: {
         user: userId,
@@ -54,21 +63,21 @@ export class SessionManager {
         }
       },
       createdAt: now,
+      updatedAt: now,
       lastAccessedAt: now,
       expiresAt
     };
 
-    await this.saveSession(session);
+    await upsertSession(session);
     return session;
   }
 
   /**
    * Get an existing session by ID
    */
-  static async getSession(sessionId: string): Promise<SessionData | null> {
+  static async getSession(sessionId: string): Promise<AISession | null> {
     try {
-      const key = `${SESSION_PREFIX}${sessionId}`;
-      const session = await kvGet<SessionData>(key);
+      const session = await getSessionById(sessionId);
       
       if (!session) {
         return null;
@@ -82,7 +91,8 @@ export class SessionManager {
 
       // Update last accessed time
       session.lastAccessedAt = new Date();
-      await this.saveSession(session);
+      session.updatedAt = new Date();
+      await upsertSession(session);
 
       return session;
     } catch (error) {
@@ -94,10 +104,10 @@ export class SessionManager {
   /**
    * Save session data to KV store
    */
-  static async saveSession(session: SessionData): Promise<void> {
+  static async saveSession(session: AISession): Promise<void> {
     try {
-      const key = `${SESSION_PREFIX}${session.id}`;
-      await kvSet(key, session);
+      session.updatedAt = new Date();
+      await upsertSession(session);
     } catch (error) {
       console.error('Error saving session:', error);
       throw error;
@@ -132,6 +142,9 @@ export class SessionManager {
       session.messages = session.messages.slice(-50);
     }
 
+    // Update message count
+    session.messageCount = session.messages.length;
+
     await this.saveSession(session);
   }
 
@@ -155,7 +168,7 @@ export class SessionManager {
   /**
    * Update session context
    */
-  static async updateSessionContext(sessionId: string, context: Partial<SessionData['context']>): Promise<void> {
+  static async updateSessionContext(sessionId: string, context: Partial<AISession['context']>): Promise<void> {
     const session = await this.getSession(sessionId);
     if (!session) {
       throw new Error('Session not found');
@@ -170,10 +183,10 @@ export class SessionManager {
    */
   static async deleteSession(sessionId: string): Promise<void> {
     try {
-      const key = `${SESSION_PREFIX}${sessionId}`;
-      await kvDel(key);
+      await repoDeleteSession(sessionId);
     } catch (error) {
       console.error('Error deleting session:', error);
+      throw error;
     }
   }
 
@@ -189,7 +202,7 @@ export class SessionManager {
   /**
    * Get or create session for user
    */
-  static async getOrCreateSession(sessionId?: string, userId: string = 'akiles'): Promise<SessionData> {
+  static async getOrCreateSession(sessionId?: string, userId: string = 'akiles', model: string = 'openai/gpt-oss-120b'): Promise<AISession> {
     if (sessionId) {
       const existingSession = await this.getSession(sessionId);
       if (existingSession) {
@@ -198,7 +211,7 @@ export class SessionManager {
     }
 
     // Create new session if none exists or provided ID is invalid
-    return await this.createSession(userId);
+    return await this.createSession(userId, 'THEGAME', model);
   }
 
   /**
@@ -220,13 +233,44 @@ export class SessionManager {
 
     return {
       id: session.id,
+      name: session.name,
       userId: session.userId,
-      messageCount: session.messages.length,
+      model: session.model,
+      messageCount: session.messageCount,
       createdAt: session.createdAt,
       lastAccessedAt: session.lastAccessedAt,
       expiresAt: session.expiresAt,
       isExpired: new Date() > session.expiresAt
     };
+  }
+
+  /**
+   * Get all sessions
+   */
+  static async getAllSessions(): Promise<AISession[]> {
+    return await getAllSessions();
+  }
+
+  /**
+   * Get recent sessions sorted by lastAccessedAt
+   */
+  static async getRecentSessions(limit?: number): Promise<AISession[]> {
+    const sessions = await this.getAllSessions();
+    const sorted = sessions.sort((a, b) => b.lastAccessedAt.getTime() - a.lastAccessedAt.getTime());
+    return limit ? sorted.slice(0, limit) : sorted;
+  }
+
+  /**
+   * Update session name
+   */
+  static async updateSessionName(sessionId: string, name: string): Promise<void> {
+    const session = await this.getSession(sessionId);
+    if (!session) {
+      throw new Error('Session not found');
+    }
+
+    session.name = name;
+    await this.saveSession(session);
   }
 }
 

@@ -17,7 +17,7 @@ interface GroqModel {
 }
 
 export function AIAssistantTab() {
-  const { messages, isLoading, error, sendMessage, clearMessages, clearSession, selectedModel, setSelectedModel, selectedProvider, rateLimits, sessionId, toolExecution } = useAIChat();
+  const { messages, isLoading, error, sendMessage, clearMessages, clearSession, loadSession, selectedModel, setSelectedModel, selectedProvider, rateLimits, sessionId, toolExecution } = useAIChat();
   const [availableModels, setAvailableModels] = useState<GroqModel[]>([]);
   const [showModelSelect, setShowModelSelect] = useState(false);
   const [input, setInput] = useState('');
@@ -97,7 +97,6 @@ export function AIAssistantTab() {
                 Clear
               </Button>
               {sessionId && (
-              <>
                 <Button
                   variant="outline"
                   size="sm"
@@ -108,17 +107,16 @@ export function AIAssistantTab() {
                   <Database className="h-4 w-4" />
                   New Session
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowSessionMgr(true)}
-                  className="gap-2"
-                  title="Open Session Manager"
-                >
-                  Session Manager
-                </Button>
-              </>
               )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowSessionMgr(true)}
+                className="gap-2"
+                title="Manage all sessions"
+              >
+                Session Manager
+              </Button>
             </div>
           
         </div>
@@ -267,7 +265,7 @@ export function AIAssistantTab() {
 
 
       </CardContent>
-      <SessionManagerModal open={showSessionMgr} onOpenChange={setShowSessionMgr} />
+      <SessionManagerModal open={showSessionMgr} onOpenChange={setShowSessionMgr} onSessionLoad={loadSession} />
     </Card>
   );
 }

@@ -792,3 +792,28 @@ export interface Note extends BaseEntity {
   isHidden: boolean;
   tags: string[]; // NoteTag values
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SECTION 10: AI SESSION INFRA ENTITY
+// ═══════════════════════════════════════════════════════════════════════════
+
+/** AI Session - Conversation sessions for AI assistant */
+export interface AISession extends BaseEntity {
+  userId: string;
+  model: string; // AI model used (e.g., 'openai/gpt-oss-120b')
+  messageCount: number;
+  lastAccessedAt: Date;
+  expiresAt: Date;
+  messages: Array<{
+    role: 'user' | 'assistant' | 'tool';
+    content: string;
+    timestamp: Date;
+    toolCalls?: any[];
+    toolResults?: any[];
+  }>;
+  context: {
+    user: string;
+    project: string;
+    preferences: any;
+  };
+}
