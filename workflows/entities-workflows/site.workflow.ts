@@ -17,11 +17,34 @@ export async function onSiteUpsert(site: Site, previousSite?: Site): Promise<voi
     const effectKey = EffectKeys.created('site', site.id);
     if (await hasEffect(effectKey)) return;
     
-    await appendEntityLog(EntityType.SITE, site.id, LogEventType.CREATED, { 
-      name: site.name, 
-      type: site.metadata.type,
+    // Build CREATED log payload with standard pattern (name, type, status, then type-specific fields)
+    const logPayload: any = {
+      name: site.name,
+      type: site.metadata?.type,
+      status: site.status,
       isActive: site.isActive
-    });
+    };
+    
+    // Add description if present
+    if (site.description) {
+      logPayload.description = site.description;
+    }
+    
+    // Add type-specific metadata fields based on site type
+    if (site.metadata) {
+      if (site.metadata.type === 'PHYSICAL' && 'businessType' in site.metadata) {
+        logPayload.businessType = site.metadata.businessType;
+        if (site.metadata.settlementId) {
+          logPayload.settlementId = site.metadata.settlementId;
+        }
+      } else if (site.metadata.type === 'DIGITAL' && 'digitalType' in site.metadata) {
+        logPayload.digitalType = site.metadata.digitalType;
+      } else if (site.metadata.type === 'SYSTEM' && 'systemType' in site.metadata) {
+        logPayload.systemType = site.metadata.systemType;
+      }
+    }
+    
+    await appendEntityLog(EntityType.SITE, site.id, LogEventType.CREATED, logPayload);
     await markEffect(effectKey);
     return;
   }
@@ -45,6 +68,7 @@ export async function onSiteUpsert(site: Site, previousSite?: Site): Promise<voi
   if (previousSite.status !== site.status) {
     await appendEntityLog(EntityType.SITE, site.id, LogEventType.UPDATED, {
       name: site.name,
+      type: site.metadata?.type,
       oldStatus: previousSite.status,
       newStatus: site.status
     });

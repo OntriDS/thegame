@@ -66,11 +66,15 @@ import { processLinkEntity } from '@/links/links-workflows';
 import { appendEntityLog } from '@/workflows/entities-logging';
 
 // TASKS
-export async function upsertTask(task: Task): Promise<Task> {
+export async function upsertTask(task: Task, options?: { skipWorkflowEffects?: boolean }): Promise<Task> {
   const previous = await repoGetTaskById(task.id);
   const saved = await repoUpsertTask(task);
-  const { onTaskUpsert } = await import('@/workflows/entities-workflows/task.workflow');
-  await onTaskUpsert(saved, previous || undefined);
+  
+  if (!options?.skipWorkflowEffects) {
+    const { onTaskUpsert } = await import('@/workflows/entities-workflows/task.workflow');
+    await onTaskUpsert(saved, previous || undefined);
+  }
+  
   await processLinkEntity(saved, EntityType.TASK);
   return saved;
 }
@@ -98,11 +102,15 @@ export async function removeTask(id: string): Promise<void> {
 // - If workflows fail, the item still exists in the database
 // - This prevents data loss but may cause 500 errors if workflows throw
 // - API routes MUST have try/catch to handle workflow failures gracefully
-export async function upsertItem(item: Item): Promise<Item> {
+export async function upsertItem(item: Item, options?: { skipWorkflowEffects?: boolean }): Promise<Item> {
   const previous = await repoGetItemById(item.id);
   const saved = await repoUpsertItem(item);  // ✅ Item persisted here
-  const { onItemUpsert } = await import('@/workflows/entities-workflows/item.workflow');
-  await onItemUpsert(saved, previous || undefined);  // ⚠️ Can throw
+  
+  if (!options?.skipWorkflowEffects) {
+    const { onItemUpsert } = await import('@/workflows/entities-workflows/item.workflow');
+    await onItemUpsert(saved, previous || undefined);  // ⚠️ Can throw
+  }
+  
   await processLinkEntity(saved, EntityType.ITEM);   // ⚠️ Can throw
   return saved;
 }
@@ -135,11 +143,15 @@ export async function removeItem(id: string): Promise<void> {
 }
 
 // FINANCIALS
-export async function upsertFinancial(financial: FinancialRecord): Promise<FinancialRecord> {
+export async function upsertFinancial(financial: FinancialRecord, options?: { skipWorkflowEffects?: boolean }): Promise<FinancialRecord> {
   const previous = await repoGetFinancialById(financial.id);
   const saved = await repoUpsertFinancial(financial);
-  const { onFinancialUpsert } = await import('@/workflows/entities-workflows/financial.workflow');
-  await onFinancialUpsert(saved, previous || undefined);
+  
+  if (!options?.skipWorkflowEffects) {
+    const { onFinancialUpsert } = await import('@/workflows/entities-workflows/financial.workflow');
+    await onFinancialUpsert(saved, previous || undefined);
+  }
+  
   await processLinkEntity(saved, EntityType.FINANCIAL);
   return saved;
 }
@@ -168,11 +180,15 @@ export async function removeFinancial(id: string): Promise<void> {
 }
 
 // SALES
-export async function upsertSale(sale: Sale): Promise<Sale> {
+export async function upsertSale(sale: Sale, options?: { skipWorkflowEffects?: boolean }): Promise<Sale> {
   const previous = await repoGetSaleById(sale.id);
   const saved = await repoUpsertSale(sale);
-  const { onSaleUpsert } = await import('@/workflows/entities-workflows/sale.workflow');
-  await onSaleUpsert(saved, previous || undefined);
+  
+  if (!options?.skipWorkflowEffects) {
+    const { onSaleUpsert } = await import('@/workflows/entities-workflows/sale.workflow');
+    await onSaleUpsert(saved, previous || undefined);
+  }
+  
   await processLinkEntity(saved, EntityType.SALE);
   return saved;
 }
@@ -292,11 +308,15 @@ export async function removeAccount(id: string): Promise<void> {
 }
 
 // SITES
-export async function upsertSite(site: Site): Promise<Site> {
+export async function upsertSite(site: Site, options?: { skipWorkflowEffects?: boolean }): Promise<Site> {
   const previous = await repoGetSiteById(site.id);
   const saved = await repoUpsertSite(site);
-  const { onSiteUpsert } = await import('@/workflows/entities-workflows/site.workflow');
-  await onSiteUpsert(saved, previous || undefined);
+  
+  if (!options?.skipWorkflowEffects) {
+    const { onSiteUpsert } = await import('@/workflows/entities-workflows/site.workflow');
+    await onSiteUpsert(saved, previous || undefined);
+  }
+  
   // NOTE: Sites don't create links when saved - they're link targets only
   // SITE_SITE links are created explicitly by movement operations (workflows/site-movement-utils.ts)
   return saved;

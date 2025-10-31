@@ -127,7 +127,7 @@ async function handleBulkOperation<T>(
   records: any[],
   source: string,
   getAllFn: () => Promise<T[]>,
-  upsertFn: (entity: T) => Promise<T>,
+  upsertFn: (entity: T, options?: { skipWorkflowEffects?: boolean }) => Promise<T>,
   removeFn: (id: string) => Promise<void>
 ): Promise<NextResponse> {
   const counts = {
@@ -232,12 +232,12 @@ async function handleBulkOperation<T>(
               counts.skipped++;
               continue;
             }
-            // Add new
-            await upsertFn(record as T);
+            // Add new - skip workflow effects (CREATED logs) during bulk operations
+            await upsertFn(record as T, { skipWorkflowEffects: true });
             counts.added++;
             existingByKey.set(businessKey, record as T);
           } else if (mode === 'merge') {
-            // Update if exists, add if new
+            // Update if exists, add if new - skip workflow effects during bulk operations
             if (existing) {
               // Preserve identity fields: id, createdAt, links
               const merged: T = {
@@ -248,17 +248,17 @@ async function handleBulkOperation<T>(
                 links: (existing as any).links || [],
                 updatedAt: new Date()
               } as T;
-              await upsertFn(merged);
+              await upsertFn(merged, { skipWorkflowEffects: true });
               counts.updated++;
               existingByKey.set(businessKey, merged);
             } else {
-              await upsertFn(record as T);
+              await upsertFn(record as T, { skipWorkflowEffects: true });
               counts.added++;
               existingByKey.set(businessKey, record as T);
             }
           } else if (mode === 'replace') {
-            // Just add (replace mode already deleted everything)
-            await upsertFn(record as T);
+            // Just add (replace mode already deleted everything) - skip workflow effects during bulk operations
+            await upsertFn(record as T, { skipWorkflowEffects: true });
             counts.added++;
           }
         } catch (error) {

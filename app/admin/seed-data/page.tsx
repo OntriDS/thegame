@@ -306,17 +306,23 @@ export default function SeedDataPage() {
 
   return (
     <div className="container mx-auto px-6 space-y-6">
-
-
-      {/* Status Message */}
-      {status && (
+      {/* Status Message - Always visible at top */}
+      {(status || isSeeding) && (
         <Card className={
-          status.includes('✅') ? 'border-green-500 bg-green-50 dark:bg-green-950' :
-          status.includes('❌') ? 'border-red-500 bg-red-50 dark:bg-red-950' :
+          status?.includes('✅') ? 'border-green-500 bg-green-50 dark:bg-green-950' :
+          status?.includes('❌') ? 'border-red-500 bg-red-50 dark:bg-red-950' :
+          status?.includes('⏳') || isSeeding ? 'border-blue-500 bg-blue-50 dark:bg-blue-950' :
           'border-yellow-500 bg-yellow-50 dark:bg-yellow-950'
         }>
           <CardContent className="py-4">
-            <p className="text-sm font-medium">{status}</p>
+            <div className="flex items-center gap-3">
+              {isSeeding && (
+                <span className="animate-spin text-lg">⏳</span>
+              )}
+              <p className="text-sm font-medium whitespace-pre-line">
+                {status || '⏳ Importing... Please wait.'}
+              </p>
+            </div>
           </CardContent>
         </Card>
       )}

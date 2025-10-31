@@ -158,7 +158,8 @@ Response:
    - Update CSV Import UI and Seed Data UI to call the unified method
 6. Bulk logging:
    - Use `appendBulkOperationLog(entityType, 'import', { count, source, importMode, extra })`
-   - Do not alter regular per-entity workflow logs
+   - Skip individual CREATED logs during bulk operations (use `skipWorkflowEffects: true`)
+   - Only ONE aggregate BULK_IMPORT entry per bulk operation, not individual CREATED entries
 7. Guardrails & UX:
    - Replace mode: confirmation gates/messages
    - Progress feedback for large payloads (phase 2)
