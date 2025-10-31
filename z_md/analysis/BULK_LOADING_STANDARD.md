@@ -160,7 +160,13 @@ Response:
    - Use `appendBulkOperationLog(entityType, 'import', { count, source, importMode, extra })`
    - Skip individual CREATED logs during bulk operations (use `skipWorkflowEffects: true`)
    - Only ONE aggregate BULK_IMPORT entry per bulk operation, not individual CREATED entries
-7. Guardrails & UX:
+7. Safe default statuses for bulk loading:
+   - **Tasks**: Default to `"Created"` to avoid triggering item/financial creation (status "Done" triggers side effects)
+   - **Sales**: Default to `"PENDING"` with `isNotPaid: true` and `isNotCharged: true` to avoid points/lines processing
+   - **Financials**: Default to `"Created"` with `isNotPaid: true` and `isNotCharged: true` to avoid side effects
+   - **Items, Sites, Characters, Players**: Any status is safe (no status-based side effects)
+   - Even if status is provided, bulk API ensures safe payment flags for Sales and Financials
+8. Guardrails & UX:
    - Replace mode: confirmation gates/messages
    - Progress feedback for large payloads (phase 2)
 
@@ -208,23 +214,28 @@ Response:
 - If duplicate found within batch, use the last one (skip earlier ones)
 - If existing entity has same business key, update it (merge mode) or skip (add-only mode)
 
-#### 10.8 Bulk logging - current implementation status
+#### 10.8 Bulk logging - current implementation status ✅ DECIDED
 **Status**: ✅ **Bulk logging infrastructure EXISTS and WORKS**
 - `appendBulkOperationLog()` exists and works (workflows/entities-logging.ts lines 103-133)
-- `ClientAPI.logBulkImport()` exists and calls `/api/logs/bulk` (client-api.ts lines 619-630)
-- `/api/logs/bulk` route exists and validates (app/api/logs/bulk/route.ts)
-- Seed Data page calls `ClientAPI.logBulkImport()` after import (seed-data/page.tsx line 296)
+- New bulk endpoint calls `appendBulkOperationLog()` directly (KV-only, no HTTP)
+- Skip individual CREATED logs during bulk operations using `skipWorkflowEffects: true`
+- Only ONE aggregate BULK_IMPORT entry per bulk operation
 
-**Action**: New bulk endpoint should call `appendBulkOperationLog()` directly (KV-only, no HTTP)
-- Do NOT use `ClientAPI.logBulkImport()` from server-side (that would be anti-pattern)
+#### 10.9 Default statuses for bulk loading ✅ DECIDED
+**Decision**: Set safe default statuses to avoid side effects during bulk load
+- **Tasks**: `"Created"` (status "Done" triggers item/financial creation)
+- **Sales**: `"PENDING"` with `isNotPaid: true` and `isNotCharged: true` (prevents points/lines processing)
+- **Financials**: `"Created"` with `isNotPaid: true` and `isNotCharged: true` (prevents side effects)
+- **Items, Sites, Characters, Players**: Any status safe (no status-based side effects)
+- Implementation: Defaults applied in `/api/bulk` before processing records
 
-#### 10.9 Seed button in General tab
+#### 10.10 Seed button in General tab
 **Missing investigation:**
 - Need to verify: Does General tab "Seed" button use same pattern as Seed Data tab?
 - Location: `app/admin/settings/page.tsx` - lines 199-265 reference seed operations
 - **Action needed**: Verify how Settings "Seed" button works and ensure it uses unified bulk endpoint
 
-#### 10.10 Entity-specific validation requirements
+#### 10.11 Entity-specific validation requirements
 **Missing details:**
 - What are required fields per entity type?
 - What enum validations exist per entity?

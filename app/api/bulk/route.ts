@@ -4,7 +4,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdminAuth } from '@/lib/api-auth';
-import { EntityType } from '@/types/enums';
+import { EntityType, SaleStatus } from '@/types/enums';
 import {
   getAllItems, upsertItem, removeItem,
   getAllTasks, upsertTask, removeTask,
@@ -212,6 +212,38 @@ async function handleBulkOperation<T>(
           // Generate ID if missing
           if (!record.id) {
             record.id = `imported-${Date.now()}-${recordIndex}`;
+          }
+
+          // Set safe default statuses to avoid side effects during bulk load
+          if (!record.status) {
+            switch (entityType) {
+              case EntityType.TASK:
+                // Tasks: default to "Created" to avoid triggering item/financial creation
+                record.status = 'Created';
+                break;
+              case EntityType.SALE:
+                // Sales: default to "PENDING" with safe payment flags to avoid points/lines processing
+                record.status = SaleStatus.PENDING;
+                if (record.isNotPaid === undefined) record.isNotPaid = true;
+                if (record.isNotCharged === undefined) record.isNotCharged = true;
+                break;
+              case EntityType.FINANCIAL:
+                // Financials: default to "Created" with safe payment flags
+                record.status = record.status || 'Created';
+                if (record.isNotPaid === undefined) record.isNotPaid = true;
+                if (record.isNotCharged === undefined) record.isNotCharged = true;
+                break;
+              // Items, Sites, Characters, Players: any status is safe (no side effects)
+            }
+          } else {
+            // Even if status is provided, ensure safe payment flags for Sales and Financials
+            if (entityType === EntityType.SALE) {
+              if (record.isNotPaid === undefined) record.isNotPaid = true;
+              if (record.isNotCharged === undefined) record.isNotCharged = true;
+            } else if (entityType === EntityType.FINANCIAL) {
+              if (record.isNotPaid === undefined) record.isNotPaid = true;
+              if (record.isNotCharged === undefined) record.isNotCharged = true;
+            }
           }
 
           // Generate business key

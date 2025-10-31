@@ -43,19 +43,6 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
     });
     await markEffect(effectKey);
     
-    // Points awarding - on sale creation with revenue
-    // Use sale.playerCharacterId directly as playerId (unified ID)
-    if (sale.totals.totalRevenue > 0) {
-      const pointsEffectKey = EffectKeys.sideEffect('sale', sale.id, 'pointsAwarded');
-      if (!(await hasEffect(pointsEffectKey))) {
-        console.log(`[onSaleUpsert] Awarding points from sale revenue: ${sale.counterpartyName}`);
-        const points = calculatePointsFromRevenue(sale.totals.totalRevenue);
-        const playerId = sale.playerCharacterId || PLAYER_ONE_ID;
-        await awardPointsToPlayer(playerId, points, sale.id, EntityType.SALE);
-        await markEffect(pointsEffectKey);
-        console.log(`[onSaleUpsert] ✅ Points awarded to player ${playerId} for sale: ${sale.counterpartyName}`);
-      }
-    }
     
     return;
   }
@@ -79,7 +66,7 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
         cancelledAt: sale.cancelledAt || new Date().toISOString()
       });
     } else if (wasPending && !nowPending) {
-      // Transitioned from PENDING to DONE (both paid and charged)
+      // Transitioned from PENDING to CHARGED (both paid and charged)
       await appendEntityLog(EntityType.SALE, sale.id, LogEventType.DONE, {
         type: sale.type,
         status: sale.status,
@@ -95,10 +82,24 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
         completedAt: new Date().toISOString()
       });
       
-      // Process sale lines when sale transitions to DONE
+      // Points awarding - ONLY when sale transitions to CHARGED (both paid and charged)
+      // Use sale.playerCharacterId directly as playerId (unified ID)
+      if (sale.totals.totalRevenue > 0) {
+        const pointsEffectKey = EffectKeys.sideEffect('sale', sale.id, 'pointsAwarded');
+        if (!(await hasEffect(pointsEffectKey))) {
+          console.log(`[onSaleUpsert] Awarding points from charged sale: ${sale.counterpartyName}`);
+          const points = calculatePointsFromRevenue(sale.totals.totalRevenue);
+          const playerId = sale.playerCharacterId || PLAYER_ONE_ID;
+          await awardPointsToPlayer(playerId, points, sale.id, EntityType.SALE);
+          await markEffect(pointsEffectKey);
+          console.log(`[onSaleUpsert] ✅ Points awarded to player ${playerId} for charged sale: ${sale.counterpartyName}`);
+        }
+      }
+      
+      // Process sale lines when sale transitions to CHARGED
       const linesProcessedKey = `sale:${sale.id}:linesProcessed`;
       if (!(await hasEffect(linesProcessedKey))) {
-        console.log(`[onSaleUpsert] Processing sale lines for completed sale: ${sale.counterpartyName}`);
+        console.log(`[onSaleUpsert] Processing sale lines for charged sale: ${sale.counterpartyName}`);
         await processSaleLines(sale);
         await markEffect(linesProcessedKey);
         console.log(`[onSaleUpsert] ✅ Sale lines processed and effect marked: ${sale.counterpartyName}`);
