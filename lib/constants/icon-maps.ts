@@ -1,5 +1,5 @@
 import { TaskType, ItemType, EntityType } from '@/types/enums';
-import { Box, Boxes, Brush, CheckSquare, Cpu, CircleDollarSign, FilePlus, FileText, Package, Receipt, Scan ,ShoppingCart, Target, Truck, Award, Trophy, Gamepad, Bolt, Anvil, CalendarSync, AlarmCheck, MapPin, Folder, Zap, BarChart3, DollarSign, Coins, User } from 'lucide-react';
+import { Box, Boxes, Brush, CheckSquare, Cpu, CircleDollarSign, FilePlus, FileText, Package, Receipt, Scan ,ShoppingCart, Target, Truck, Award, Trophy, Gamepad, Bolt, Anvil, CalendarSync, AlarmCheck, MapPin, Folder, Zap, BarChart3, DollarSign, Coins, User, Link as LinkIcon, MessageSquare, Building2 } from 'lucide-react';
 
 export const TASK_TYPE_ICONS: Record<TaskType, React.ElementType> = {
   [TaskType.GOAL]: Target,
@@ -32,6 +32,9 @@ export const FINANCIAL_ENTRY_ICONS: Record<EntityType, React.ElementType> = {
   site: MapPin,
   player: Gamepad,
   account: User,
+  link: LinkIcon,
+  session: MessageSquare,
+  settlement: Building2,
 };
 
 export const PLAYER_ENTRY_ICON = Gamepad;
