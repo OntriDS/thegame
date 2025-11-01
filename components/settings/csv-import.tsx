@@ -116,11 +116,11 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
         return validStations.includes(station as Station);
       };
 
-  const convertToItems = async (csvData: any[]): Promise<{ items: (Item | null)[], warnings: string[] }> => {
+  const convertToItems = async (csvData: any[], sitesToUse: Site[] = sites): Promise<{ items: (Item | null)[], warnings: string[] }> => {
     const warnings: string[] = [];
     
     // Find "None" site once as default for invalid/missing sites
-    const noneSite = sites.find(s => s.name === 'None' || s.id === 'none');
+    const noneSite = sitesToUse.find(s => s.name === 'None' || s.id === 'none');
     
     const items = await Promise.all(csvData.map(async (row, index) => {
       // Parse dimensions if they exist
@@ -160,7 +160,7 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
         
         if (siteName && siteName.trim() !== '') {
           // Find matching site using proper site validation (including "None" if it exists as a site)
-          const matchingSite = getSiteByName(sites, siteName);
+          const matchingSite = getSiteByName(sitesToUse, siteName);
           
           if (matchingSite) {
             // Site exists - assign stock to it
@@ -272,8 +272,23 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
     setImportResult(null);
 
     try {
+      // Ensure sites are loaded before processing CSV (needed for "None" site lookup)
+      if (sites.length === 0) {
+        try {
+          const allSites = await ClientAPI.getSites();
+          setSites(allSites);
+          // Wait a moment for state to update
+          await new Promise(resolve => setTimeout(resolve, 100));
+        } catch (error) {
+          console.error('Failed to load sites before import:', error);
+          // Continue anyway - sites might load during processing
+        }
+      }
+      
       const parsedData = parseCSV(csvData);
-      const { items: itemsWithNulls, warnings: siteWarnings } = await convertToItems(parsedData);
+      // Use current sites state (may have just been updated)
+      const currentSites = sites.length > 0 ? sites : await ClientAPI.getSites();
+      const { items: itemsWithNulls, warnings: siteWarnings } = await convertToItems(parsedData, currentSites);
       const items = itemsWithNulls.filter((item): item is Item => item !== null);
       
       // Validate items before import
