@@ -3,11 +3,12 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreVertical, Trash2 } from 'lucide-react';
+import { MoreVertical, Trash2, Edit2 } from 'lucide-react';
 import { FounderOnlyWrapper } from '@/components/common/founder-only-wrapper';
 import { EntityType } from '@/types/enums';
 import { useLogManagement } from '@/lib/hooks/use-log-management';
 import { LogDeleteConfirmDialog } from './log-delete-confirm-dialog';
+import { LogEntryEditModal } from './log-entry-edit-modal';
 
 interface LogManagementActionsProps {
   entityType: EntityType;
@@ -19,7 +20,7 @@ interface LogManagementActionsProps {
 /**
  * LogManagementActions - Dropdown menu for log entry actions
  * 
- * Shows delete/restore actions based on entry state.
+ * Shows edit/delete/restore actions based on entry state.
  * Only visible when log management is enabled and user has Founder permissions.
  */
 export function LogManagementActions({ 
@@ -29,7 +30,8 @@ export function LogManagementActions({
   logManagementEnabled 
 }: LogManagementActionsProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const { handleDeleteEntry, handleRestoreEntry, isManaging } = useLogManagement({ onReload });
+  const [showEditModal, setShowEditModal] = useState(false);
+  const { handleDeleteEntry, handleRestoreEntry, handleEditEntry, isManaging } = useLogManagement({ onReload });
 
   const entryName = entry.displayName || entry.name || 'Entry';
 
@@ -44,6 +46,15 @@ export function LogManagementActions({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              {!entry.isDeleted && (
+                <DropdownMenuItem 
+                  onClick={() => setShowEditModal(true)}
+                  className="text-blue-600"
+                >
+                  <Edit2 className="h-4 w-4 mr-2" />
+                  Edit Entry
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem 
                 onClick={() => {
                   if (entry.isDeleted) {
@@ -68,6 +79,19 @@ export function LogManagementActions({
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+
+          {/* Edit Modal */}
+          <LogEntryEditModal
+            open={showEditModal}
+            onOpenChange={setShowEditModal}
+            entry={entry}
+            entityType={entityType}
+            onSave={async (updates, reason) => {
+              await handleEditEntry(entityType, entry, updates, reason);
+              setShowEditModal(false);
+            }}
+            isSaving={isManaging}
+          />
 
           {/* Delete Confirmation Dialog */}
           <LogDeleteConfirmDialog

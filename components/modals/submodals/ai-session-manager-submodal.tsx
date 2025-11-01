@@ -23,7 +23,7 @@ interface Props {
   onSessionLoad?: (sessionId: string) => Promise<void>;
 }
 
-export default function SessionManagerModal({ open, onOpenChange, onSessionLoad }: Props) {
+export default function AiSessionManagerSubmodal({ open, onOpenChange, onSessionLoad }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<{ activeSessionId?: string; activeStats?: any; sessions?: AISession[] }>({});
@@ -123,7 +123,7 @@ export default function SessionManagerModal({ open, onOpenChange, onSessionLoad 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent zIndexLayer={'MODALS'} className="w-full max-w-2xl max-h-[80vh] bg-background text-foreground">
+      <DialogContent zIndexLayer={'SUB_MODALS'} className="w-full max-w-2xl max-h-[80vh] bg-background text-foreground">
         <DialogHeader>
           <DialogTitle>Session Manager</DialogTitle>
           <DialogDescription>
@@ -293,3 +293,4 @@ export default function SessionManagerModal({ open, onOpenChange, onSessionLoad 
     </Dialog>
   );
 }
+

@@ -83,17 +83,23 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
   if (previousTask && previousTask.status !== task.status) {
     console.log(`[onTaskUpsert] Task status changed: ${previousTask.status} → ${task.status}`);
     
-    // Log status change with transition context (using UPDATED event)
-    await appendEntityLog(EntityType.TASK, task.id, LogEventType.UPDATED, {
-      name: task.name,
-      taskType: task.type,
-      station: task.station,
-      priority: task.priority,
-      oldStatus: previousTask!.status,
-      newStatus: task.status,
-      transition: `${previousTask!.status} → ${task.status}`,
-      changedAt: new Date().toISOString()
-    });
+    // Skip UPDATED logging for special status changes - they have their own events:
+    // - Done → DONE event (logged below)
+    // - Collected → COLLECTED event (logged below)
+    const skipUpdatedForStatuses = ['Done', 'Collected'];
+    if (!skipUpdatedForStatuses.includes(task.status)) {
+      // Log status change with transition context (using UPDATED event)
+      await appendEntityLog(EntityType.TASK, task.id, LogEventType.UPDATED, {
+        name: task.name,
+        taskType: task.type,
+        station: task.station,
+        priority: task.priority,
+        oldStatus: previousTask!.status,
+        newStatus: task.status,
+        transition: `${previousTask!.status} → ${task.status}`,
+        changedAt: new Date().toISOString()
+      });
+    }
     
     // Handle uncompletion (Done → Other status)
     if (previousTask!.status === 'Done' && task.status !== 'Done' && task.status !== 'Collected') {

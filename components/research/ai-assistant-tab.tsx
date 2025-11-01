@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Bot, Send, Trash2, Loader2, Settings, Wrench, Database } from 'lucide-react';
-import SessionManagerModal from '@/components/modals/SessionManagerModal';
+import AiSessionManagerSubmodal from '@/components/modals/submodals/ai-session-manager-submodal';
 import { useAIChat, ChatMessage } from '@/lib/hooks/use-ai-chat';
 import { ClientAPI } from '@/lib/client-api';
 
@@ -265,7 +265,7 @@ export function AIAssistantTab() {
 
 
       </CardContent>
-      <SessionManagerModal open={showSessionMgr} onOpenChange={setShowSessionMgr} onSessionLoad={loadSession} />
+      <AiSessionManagerSubmodal open={showSessionMgr} onOpenChange={setShowSessionMgr} onSessionLoad={loadSession} />
     </Card>
   );
 }

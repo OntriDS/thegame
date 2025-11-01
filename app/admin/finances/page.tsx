@@ -75,8 +75,8 @@ const formatMonthYear = (year: number, month: number) => {
 };
 
 export default function FinancesPage() {
-  const { getPreference, setPreference } = useUserPreferences();
-  const [filterByMonth, setFilterByMonth] = useState(() => getPreference('finances-filter-by-month', true));
+  const { getPreference, setPreference, isLoading: preferencesLoading } = useUserPreferences();
+  const [filterByMonth, setFilterByMonth] = useState(true); // Default to true, will sync from preferences
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [currentMonth, setCurrentMonth] = useState(getCurrentMonth());
   const [companySummary, setCompanySummary] = useState<CompanyMonthlySummary | null>(null);
@@ -110,6 +110,14 @@ export default function FinancesPage() {
     type: 'company' | 'personal';
     section: 'monetary' | 'jungleCoins' | 'inventories' | 'otherAssets';
   } | null>(null);
+
+  // Load saved filter preference once preferences are loaded
+  useEffect(() => {
+    if (!preferencesLoading) {
+      const savedFilter = getPreference('finances-filter-by-month', true);
+      setFilterByMonth(savedFilter);
+    }
+  }, [preferencesLoading, getPreference]);
 
   // Handle filter toggle
   const handleFilterToggle = (checked: boolean) => {

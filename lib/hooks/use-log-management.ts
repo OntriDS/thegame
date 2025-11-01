@@ -26,16 +26,11 @@ export function useLogManagement({ onReload }: UseLogManagementOptions) {
 
   const handleDeleteEntry = useCallback(async (
     entityType: EntityType,
-    entry: LogEntry
+    entry: LogEntry,
+    reason?: string
   ) => {
     if (!entry.id) {
       console.error('Entry has no ID, cannot delete');
-      return;
-    }
-
-    // Confirmation dialog
-    const entryName = entry.name || entry.displayName || 'Entry';
-    if (!confirm(`Are you sure you want to delete this log entry?\n\n${entryName}`)) {
       return;
     }
 
@@ -48,7 +43,7 @@ export function useLogManagement({ onReload }: UseLogManagementOptions) {
           logType: entityType,
           action: 'delete',
           entryId: entry.id,
-          reason: 'User requested deletion'
+          reason: reason || 'User requested deletion'
         })
       });
 
@@ -109,7 +104,8 @@ export function useLogManagement({ onReload }: UseLogManagementOptions) {
   const handleEditEntry = useCallback(async (
     entityType: EntityType,
     entry: LogEntry,
-    updates: Record<string, any>
+    updates: Record<string, any>,
+    reason?: string
   ) => {
     if (!entry.id) {
       console.error('Entry has no ID, cannot edit');
@@ -126,7 +122,7 @@ export function useLogManagement({ onReload }: UseLogManagementOptions) {
           action: 'edit',
           entryId: entry.id,
           updates,
-          reason: 'User requested edit'
+          reason: reason || 'User requested edit'
         })
       });
 
