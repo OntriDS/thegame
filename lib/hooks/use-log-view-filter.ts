@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useUserPreferences } from './use-user-preferences';
-import type { LogViewFilterValue } from '@/components/logs/log-view-filter';
+import type { LogViewFilterValue } from '@/components/log-management/log-view-filter';
 
 interface UseLogViewFilterOptions {
   entityType: string;

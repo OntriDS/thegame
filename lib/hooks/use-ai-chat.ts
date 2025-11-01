@@ -48,6 +48,8 @@ export function useAIChat() {
         const activeId = data?.activeSessionId;
         if (!activeId) return;
         const sessionRes = await fetch(`/api/ai/sessions/${activeId}`, { cache: 'no-store' });
+        // Handle 404 gracefully - session was deleted (expected after reset)
+        if (sessionRes.status === 404) return;
         if (!sessionRes.ok) return;
         const session = await sessionRes.json();
         if (session?.model) {

@@ -13,9 +13,9 @@ import { processLogData } from '@/lib/utils/logging-utils';
 import { SaleType, SaleStatus } from '@/types/enums';
 import { FINANCIAL_ENTRY_ICONS, FINANCIAL_ABBREVIATIONS } from '@/lib/constants/icon-maps';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
-import { LogViewFilter } from '@/components/logs/log-view-filter';
+import { LogViewFilter } from '@/components/log-management/log-view-filter';
 import { useLogViewFilter } from '@/lib/hooks/use-log-view-filter';
-import { LogManagementActions } from '@/components/logs/log-management-actions';
+import { LogManagementActions } from '@/components/log-management/log-management-actions';
 
 interface SalesLogTabProps {
   salesLog: any;

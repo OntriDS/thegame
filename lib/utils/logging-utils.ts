@@ -1,6 +1,7 @@
 // lib/utils/logging-utils.ts
 import { formatDateDDMMYYYY } from '@/lib/constants/date-constants';
 import { EntityType } from '@/types/enums';
+import { ensureLogEntryId } from '@/workflows/entities-logging';
 
 /**
  * Generic log entry interface for all entity types
@@ -377,12 +378,17 @@ export function processLogData(log: any, order: 'newest' | 'oldest' = 'newest', 
   // Sort entries
   processedEntries = sortLogEntries(processedEntries, order);
   
-  // Format entries
-  processedEntries = processedEntries.map((e: any) => ({
-    ...formatLogEntry(e),
-    currentStatus: latestStatusMap[e.entityId || e.id],
-    displayName: latestNameMap[e.entityId || e.id]
-  }));
+  // Format entries - ensure all entries have IDs for log management
+  processedEntries = processedEntries.map((e: any) => {
+    // Ensure entry has ID before formatting (defensive check for edge cases)
+    const entryId = e.id || ensureLogEntryId(e);
+    return {
+      ...formatLogEntry(e),
+      id: entryId, // Explicitly preserve ID for log management actions
+      currentStatus: latestStatusMap[e.entityId || entryId],
+      displayName: latestNameMap[e.entityId || entryId]
+    };
+  });
   
   // Get counts
   const counts = getLogEntryCounts(log.entries);

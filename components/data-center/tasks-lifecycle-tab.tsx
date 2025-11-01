@@ -14,9 +14,9 @@ import { useThemeColors } from '@/lib/hooks/use-theme-colors';
 import { processLogData } from '@/lib/utils/logging-utils';
 import { TASK_TYPE_ICONS, LOG_DISPLAY_ICONS, FINANCIAL_ABBREVIATIONS } from '@/lib/constants/icon-maps';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
-import { LogViewFilter } from '@/components/logs/log-view-filter';
+import { LogViewFilter } from '@/components/log-management/log-view-filter';
 import { useLogViewFilter } from '@/lib/hooks/use-log-view-filter';
-import { LogManagementActions } from '@/components/logs/log-management-actions';
+import { LogManagementActions } from '@/components/log-management/log-management-actions';
 
 interface TasksLifecycleTabProps {
   tasksLog: any;

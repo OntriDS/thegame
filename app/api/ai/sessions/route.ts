@@ -11,9 +11,19 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const activeSessionId = await kvGet<string>(ACTIVE_KEY);
+    let activeSessionId = await kvGet<string>(ACTIVE_KEY);
     const sessions = await SessionManager.getRecentSessions();
-    const stats = activeSessionId ? await SessionManager.getSessionStats(activeSessionId) : null;
+    
+    // Validate active session exists - clear stale reference if session was deleted
+    let stats = null;
+    if (activeSessionId) {
+      stats = await SessionManager.getSessionStats(activeSessionId);
+      // If session doesn't exist, clear the stale activeSessionId reference
+      if (!stats) {
+        await kvSet(ACTIVE_KEY, '');
+        activeSessionId = null;
+      }
+    }
     
     return Response.json({ 
       activeSessionId, 

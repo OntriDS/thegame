@@ -15,9 +15,9 @@ import { ITEM_STATUS_COLORS } from '@/lib/constants/color-constants';
 import { useThemeColors } from '@/lib/hooks/use-theme-colors';
 import { ITEM_TYPE_ICONS } from '@/lib/constants/icon-maps';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
-import { LogViewFilter } from '@/components/logs/log-view-filter';
+import { LogViewFilter } from '@/components/log-management/log-view-filter';
 import { useLogViewFilter } from '@/lib/hooks/use-log-view-filter';
-import { LogManagementActions } from '@/components/logs/log-management-actions';
+import { LogManagementActions } from '@/components/log-management/log-management-actions';
 
 interface ItemsLifecycleTabProps {
   itemsLog: any;

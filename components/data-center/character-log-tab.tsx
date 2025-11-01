@@ -9,9 +9,9 @@ import { processLogData } from '@/lib/utils/logging-utils';
 import { LinksSubModal } from '@/components/modals/submodals/links-submodal';
 import { CharacterRole, EntityType } from '@/types/enums';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
-import { LogViewFilter } from '@/components/logs/log-view-filter';
+import { LogViewFilter } from '@/components/log-management/log-view-filter';
 import { useLogViewFilter } from '@/lib/hooks/use-log-view-filter';
-import { LogManagementActions } from '@/components/logs/log-management-actions';
+import { LogManagementActions } from '@/components/log-management/log-management-actions';
 
 interface CharacterLogTabProps {
   characterLog: any;
