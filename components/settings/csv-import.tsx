@@ -149,8 +149,16 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
        const quantitySold = parseInt(row.QuantitySold || row.quantitySold || '0');
        const targetAmount = row.TargetAmount ? parseInt(row.TargetAmount) : undefined;
        const soldThisMonth = row.SoldThisMonth ? parseInt(row.SoldThisMonth) : undefined;
-       const lastRestockDate = row.LastRestockDate ? new Date(row.LastRestockDate) : undefined;
-       const sourceTaskId = row.SourceTaskId || null;
+      const lastRestockDate = row.LastRestockDate ? new Date(row.LastRestockDate) : undefined;
+      // Validate sourceTaskId - set to null if empty, "0", invalid, or not found
+      const rawSourceTaskId = row.SourceTaskId || row.sourceTaskId || '';
+      const sourceTaskId = (rawSourceTaskId && 
+                            rawSourceTaskId.trim() !== '' && 
+                            rawSourceTaskId !== '0' && 
+                            rawSourceTaskId !== 'null' &&
+                            !isNaN(Number(rawSourceTaskId)) && Number(rawSourceTaskId) > 0)
+                            ? rawSourceTaskId.trim() 
+                            : null;
        
                             // Parse site from CSV - simple and clean approach
           let stock: { siteId: string; quantity: number }[] = [];
