@@ -8,7 +8,7 @@ import { RefreshCw, ShoppingCart, DollarSign, Calendar, Link as LinkIcon, ArrowU
 import { formatDisplayDate } from '@/lib/utils/date-utils';
 import { EntityType } from '@/types/enums';
 import { LinksSubModal } from '@/components/modals/submodals/links-submodal';
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { processLogData } from '@/lib/utils/logging-utils';
 import { SaleType, SaleStatus } from '@/types/enums';
 import { FINANCIAL_ENTRY_ICONS, FINANCIAL_ABBREVIATIONS } from '@/lib/constants/icon-maps';
@@ -45,8 +45,8 @@ export function SalesLogTab({ salesLog, onReload, isReloading }: SalesLogTabProp
   const { getPreference } = useUserPreferences();
   const { filter, setFilter, getVisibleEntries } = useLogViewFilter({ entityType: EntityType.SALE });
 
-  // Process sales log data using the same pattern as other logs
-  const processedSalesLog = useMemo(() => processLogData(salesLog, logOrder), [salesLog, logOrder]);
+  // Process sales log data
+  const processedSalesLog = processLogData(salesLog, logOrder);
   const entries = processedSalesLog?.entries || [];
   
   // Apply view filter to entries
@@ -117,7 +117,7 @@ export function SalesLogTab({ salesLog, onReload, isReloading }: SalesLogTabProp
           </CardDescription>
         </div>
         <div className="flex items-center gap-2">
-          <LogViewFilter value={filter} onChange={setFilter} />
+          {logManagementEnabled && <LogViewFilter value={filter} onChange={setFilter} />}
           <Button 
             variant="outline" 
             size="sm" 

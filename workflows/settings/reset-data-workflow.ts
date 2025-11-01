@@ -6,6 +6,7 @@ import { buildDataKey, buildIndexKey, buildLogKey, buildLinksIndexKey } from '@/
 import { EntityType, SiteType, SiteStatus, PhysicalBusinessType, DigitalSiteType, SystemSiteType } from '@/types/enums';
 import { kvScan } from '@/data-store/kv';
 import { TransactionManager } from './transaction-manager';
+import { clearAllEffects, clearProcessingStack } from '@/data-store/effects-registry';
 
 // Centralized list of entity types for reset operations
 const RESETTABLE_ENTITY_TYPES = [
@@ -111,7 +112,7 @@ export class ResetDataWorkflow {
 
       const startTime = Date.now();
       const TIMEOUT_MS = 4 * 60 * 1000; // 4 minutes (leaving 1 minute buffer for API timeout)
-      const totalOperations = 6; // entity data + links + logs + system state + player init + sites
+      const totalOperations = 7; // entity data + links + logs + effects + system state + player init + sites
       let currentOperation = 0;
 
       // Helper function to check timeout and report progress
@@ -142,8 +143,10 @@ export class ResetDataWorkflow {
         // 1. Clear entities
         // 2. Clear links  
         // 3. Clear logs - BEFORE entity creation
-        // 4. Create Player One (The Triforce) - AFTER log clearing
-        // 5. Seed default sites
+        // 4. Clear Effects Registry and Processing Stack - CRITICAL for idempotency
+        // 5. Clear System State (assets)
+        // 6. Initialize Player One (The Triforce) - AFTER log clearing
+        // 7. Seed default sites
 
         // Step 1: Clear all entity data
         try {
@@ -191,7 +194,25 @@ export class ResetDataWorkflow {
           currentOperation++; // Count as completed even if skipped
         }
 
-        // Step 3.5: Clear System State (assets, project status)
+        // Step 4: Clear Effects Registry and Processing Stack (CRITICAL for idempotency)
+        try {
+          checkTimeoutAndProgress('Clearing Effects Registry');
+          console.log('[ResetDataWorkflow] 🧹 Clearing Effects Registry and Processing Stack...');
+          await clearAllEffects();
+          await clearProcessingStack();
+          results.push('Cleared Effects Registry and Processing Stack');
+          console.log('[ResetDataWorkflow] ✅ Cleared Effects Registry and Processing Stack');
+        } catch (error) {
+          if (error instanceof Error && error.message.includes('timeout')) {
+            throw error;
+          }
+          const errorMsg = `Failed to clear Effects Registry: ${error instanceof Error ? error.message : 'Unknown error'}`;
+          errors.push(errorMsg);
+          console.error(`[ResetDataWorkflow] ❌ ${errorMsg}`);
+          throw new Error(errorMsg);
+        }
+
+        // Step 5: Clear System State (assets, project status)
         try {
           checkTimeoutAndProgress('Clearing System State');
           await this.clearSystemState(results, errors);
@@ -205,7 +226,7 @@ export class ResetDataWorkflow {
           throw new Error(errorMsg);
         }
 
-        // Step 4: Initialize Player One (The Triforce) AFTER log clearing
+        // Step 6: Initialize Player One (The Triforce) AFTER log clearing
         if (mode === 'defaults') {
           try {
             checkTimeoutAndProgress('Initializing Player One');
@@ -225,7 +246,7 @@ export class ResetDataWorkflow {
           currentOperation++; // Count as completed even if skipped
         }
 
-        // Step 5: Seed default sites if requested (AFTER player initialization)
+        // Step 7: Seed default sites if requested (AFTER player initialization)
         if (options.seedSites) {
           try {
             checkTimeoutAndProgress('Seeding default sites');

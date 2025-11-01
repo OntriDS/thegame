@@ -41,7 +41,6 @@ export function PlayerLogTab({ playerLog, onReload, isReloading }: PlayerLogTabP
   const [selectedPlayerId, setSelectedPlayerId] = useState<string>('');
   const [playerLinks, setPlayerLinks] = useState<any[]>([]);
   const [selectedLogEntry, setSelectedLogEntry] = useState<any>(null);
-  const [selectedEntityType, setSelectedEntityType] = useState<string>(EntityType.PLAYER);
   const [sourceNameCache, setSourceNameCache] = useState<Record<string, string>>({});
   const { getPreference } = useUserPreferences();
   const { filter, setFilter, getVisibleEntries } = useLogViewFilter({ entityType: EntityType.PLAYER });
@@ -153,7 +152,7 @@ export function PlayerLogTab({ playerLog, onReload, isReloading }: PlayerLogTabP
           </CardDescription>
         </div>
         <div className="flex items-center gap-2">
-          <LogViewFilter value={filter} onChange={setFilter} />
+          {logManagementEnabled && <LogViewFilter value={filter} onChange={setFilter} />}
           <Button
             variant="outline"
             size="sm"
@@ -281,40 +280,13 @@ export function PlayerLogTab({ playerLog, onReload, isReloading }: PlayerLogTabP
                       try {
                         const { ClientAPI } = await import('@/lib/client-api');
                         
-                        // Smart link fetching: detect if this is a financial record effect entry
-                        let links: any[] = [];
-                        let linkType = 'player';
-                        let entityId = PLAYER_ONE_ID; // Default to main player
-                        
-                        // Check if this is a financial record effect entry (has description starting with "Record")
-                        if (entry.description?.startsWith('Points from record:') || entry.description?.startsWith('Record points:')) {
-                          linkType = 'financial';
-                          entityId = entry.entityId; // Use the financial record ID
-                          const response = await fetch(`/api/links?entityType=financial&entityId=${entityId}`);
-                          links = await response.json();
-                          console.log(`[PlayerLogTab] 🔍 Detected financial record effect entry, fetching financial links for financial ${entityId}:`, {
-                            totalLinks: links.length,
-                            linkTypes: links.map(l => l.linkType)
-                          });
-                        } else {
-                          // Default behavior: always fetch links for the main player
-                          linkType = 'player';
-                          entityId = PLAYER_ONE_ID;
-                          const response = await fetch(`/api/links?entityType=player&entityId=${entityId}`);
-                          links = await response.json();
-                          console.log(`[PlayerLogTab] 🔍 Fetched links for player ${entityId}:`, {
-                            totalLinks: links.length,
-                            linkTypes: links.map(l => l.linkType),
-                            taskPlayerLinks: links.filter(l => l.linkType === 'TASK_PLAYER'),
-                            entryDescription: entry.description,
-                            note: 'Always fetching for main player, not task entity'
-                          });
-                        }
+                        // Always fetch links for the main player
+                        const response = await fetch(`/api/links?entityType=player&entityId=${PLAYER_ONE_ID}`);
+                        const links = await response.json();
                         
                         setPlayerLinks(links);
-                        setSelectedPlayerId(entityId);
-                        setSelectedEntityType(linkType); // Set the correct entity type
-                        setSelectedLogEntry(entry); // Pass the log entry context
+                        setSelectedPlayerId(PLAYER_ONE_ID);
+                        setSelectedLogEntry(entry);
                         setShowLinksModal(true);
                       } catch (error) {
                         console.error('Failed to fetch player links:', error);
@@ -342,9 +314,9 @@ export function PlayerLogTab({ playerLog, onReload, isReloading }: PlayerLogTabP
         <LinksSubModal
           open={showLinksModal}
           onOpenChange={setShowLinksModal}
-          entityType={selectedEntityType}
+          entityType="player"
           entityId={selectedPlayerId}
-          entityName={selectedEntityType === 'financial' ? 'Financial Record' : 'Player'}
+          entityName="Player"
           links={playerLinks}
           logEntry={selectedLogEntry}
         />

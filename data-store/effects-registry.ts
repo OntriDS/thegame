@@ -1,7 +1,7 @@
 // data-store/effects-registry.ts
 // Idempotency registry stored in KV. Avoids global flags and server HTTP loops.
 
-import { kvGet, kvSet } from './kv';
+import { kvGet, kvSet, kvScan, kvDelMany } from './kv';
 import { buildEffectKey } from './keys';
 import { PROCESSING_CONSTANTS } from '@/lib/constants/app-constants';
 
@@ -140,4 +140,37 @@ export async function clearProcessingStack(): Promise<void> {
   console.log(`[CircuitBreaker] Cleared processing stack`);
 }
 
+/**
+ * Clear all effects from the registry (used during reset operations)
+ */
+export async function clearAllEffects(): Promise<void> {
+  try {
+    console.log('[clearAllEffects] Clearing all effects...');
+    const effectKeys = await kvScan('effects:');
+    
+    if (effectKeys.length > 0) {
+      console.log(`[clearAllEffects] Found ${effectKeys.length} effects to clear`);
+      
+      const BATCH_SIZE = 100;
+      const totalBatches = Math.ceil(effectKeys.length / BATCH_SIZE);
+      
+      for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
+        const startIndex = batchIndex * BATCH_SIZE;
+        const endIndex = Math.min(startIndex + BATCH_SIZE, effectKeys.length);
+        const batchKeys = effectKeys.slice(startIndex, endIndex);
+        
+        console.log(`[clearAllEffects] Clearing batch ${batchIndex + 1}/${totalBatches}`);
+        
+        await kvDelMany(batchKeys);
+      }
+      
+      console.log(`[clearAllEffects] ✅ Cleared ${effectKeys.length} effects successfully`);
+    } else {
+      console.log('[clearAllEffects] No effects to clear');
+    }
+  } catch (error) {
+    console.error('[clearAllEffects] ❌ Failed to clear all effects:', error);
+    throw error;
+  }
+}
 

@@ -184,7 +184,7 @@ export function TasksLifecycleTab({ tasksLog, onReload, isReloading }: TasksLife
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
-              <LogViewFilter value={filter} onChange={setFilter} />
+              {logManagementEnabled && <LogViewFilter value={filter} onChange={setFilter} />}
               <Button
                 variant="outline"
                 size="sm"

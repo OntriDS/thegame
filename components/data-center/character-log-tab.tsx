@@ -36,7 +36,6 @@ export function CharacterLogTab({ characterLog, onReload, isReloading }: Charact
   const [selectedCharacterId, setSelectedCharacterId] = useState<string>('');
   const [characterLinks, setCharacterLinks] = useState<any[]>([]);
   const [selectedLogEntry, setSelectedLogEntry] = useState<any>(null);
-  const [selectedEntityType, setSelectedEntityType] = useState<string>(EntityType.CHARACTER);
   const { getPreference } = useUserPreferences();
   const { filter, setFilter, getVisibleEntries } = useLogViewFilter({ entityType: EntityType.CHARACTER });
 
@@ -58,7 +57,7 @@ export function CharacterLogTab({ characterLog, onReload, isReloading }: Charact
           </CardDescription>
         </div>
         <div className="flex items-center gap-2">
-          <LogViewFilter value={filter} onChange={setFilter} />
+          {logManagementEnabled && <LogViewFilter value={filter} onChange={setFilter} />}
           <Button
             variant="outline"
             size="sm"
@@ -197,41 +196,21 @@ export function CharacterLogTab({ characterLog, onReload, isReloading }: Charact
                       variant="ghost"
                       size="sm"
                       className="h-6 w-6 p-0"
-                      onClick={async () => {
-                        try {
-                        const { ClientAPI } = await import('@/lib/client-api');
-                        
-                        // Smart link fetching: detect if this is a financial record effect entry
-                        const entityId = entry.entityId;
-                        let links: any[] = [];
-                        let linkType = 'character';
-                        
-                        // Check if this is a financial record effect entry (has description starting with "Record")
-                        if (entry.description?.startsWith('Jungle Coins from record:') || entry.description?.startsWith('Record Jungle Coins:')) {
-                            linkType = 'financial';
-                            links = await ClientAPI.getLinksFor({ type: EntityType.FINANCIAL, id: entityId });
-                            console.log(`[CharacterLogTab] 🔍 Detected financial record effect entry, fetching financial links for financial ${entityId}:`, {
-                              totalLinks: links.length,
-                              linkTypes: links.map(l => l.linkType)
-                            });
-                        } else {
-                            linkType = 'character';
-                            links = await ClientAPI.getLinksFor({ type: EntityType.CHARACTER, id: entityId });
-                            console.log(`[CharacterLogTab] 🔍 Fetching character links for character ${entityId}:`, {
-                              totalLinks: links.length,
-                              linkTypes: links.map(l => l.linkType)
-                            });
-                        }
-                          
-                          setCharacterLinks(links);
-                          setSelectedCharacterId(entityId);
-                          setSelectedEntityType(linkType); // Set the correct entity type
-                          setSelectedLogEntry(entry); // Pass the log entry context
-                          setShowLinksModal(true);
-                        } catch (error) {
-                          console.error('Failed to fetch character links:', error);
-                        }
-                      }}
+                        onClick={async () => {
+                          try {
+                            const { ClientAPI } = await import('@/lib/client-api');
+                            
+                            // Always fetch links for the character entity
+                            const links = await ClientAPI.getLinksFor({ type: EntityType.CHARACTER, id: entry.entityId });
+                            
+                            setCharacterLinks(links);
+                            setSelectedCharacterId(entry.entityId);
+                            setSelectedLogEntry(entry);
+                            setShowLinksModal(true);
+                          } catch (error) {
+                            console.error('Failed to fetch character links:', error);
+                          }
+                        }}
                     >
                       <LinkIcon className="h-4 w-4 text-muted-foreground hover:text-foreground" />
                     </Button>
@@ -259,9 +238,9 @@ export function CharacterLogTab({ characterLog, onReload, isReloading }: Charact
         <LinksSubModal
           open={showLinksModal}
           onOpenChange={setShowLinksModal}
-          entityType={selectedEntityType}
+          entityType="character"
           entityId={selectedCharacterId}
-          entityName={selectedEntityType === 'financial' ? 'Financial Record' : 'Character'}
+          entityName="Character"
           links={characterLinks}
           logEntry={selectedLogEntry}
         />

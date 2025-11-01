@@ -84,7 +84,6 @@ Thumbs.db
 # Logs
 logs/
 *.log
-!components/logs/
 
 # Backup files
 *.backup
