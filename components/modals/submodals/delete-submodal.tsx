@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Task, Item, FinancialRecord, Sale, Site } from '@/types/entities';
-import { EntityType } from '@/types/enums';
+import { EntityType, SiteType } from '@/types/enums';
 import { Trash2 } from 'lucide-react';
 import { ClientAPI } from '@/lib/client-api';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
@@ -156,8 +156,9 @@ export default function DeleteModal({
         }
       } else if (entityType === EntityType.SITE) {
         for (const site of entities as Site[]) {
-          // Block deletion of "None" site - it's a system site
-          if (site.name === 'None' || site.id === 'none') {
+          // Block deletion of "None" site - it's a protected system site
+          const isNoneSite = site.metadata.type === SiteType.SYSTEM && (site.name === 'None' || site.id === 'none');
+          if (isNoneSite) {
             console.warn('Cannot delete "None" site - it is a protected system site');
             alert('Cannot delete "None" site. It is a protected system site used as the default location.');
             continue;

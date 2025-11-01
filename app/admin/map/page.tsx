@@ -68,9 +68,14 @@ export default function MapPage() {
     setShowSiteModal(true);
   };
 
+  // Helper to check if site is the protected "None" system site
+  const isNoneSite = (site: Site): boolean => {
+    return site.metadata.type === SiteType.SYSTEM && (site.name === 'None' || site.id === 'none');
+  };
+
   const handleEditSite = (site: Site) => {
     // Block editing of "None" site - it's a protected system site
-    if (site.name === 'None' || site.id === 'none') {
+    if (isNoneSite(site)) {
       console.log('Cannot edit "None" site - it is a protected system site');
       return;
     }
@@ -247,13 +252,13 @@ export default function MapPage() {
                         return isActive && site.metadata.type === siteFilter;
                       })
                       .map(site => {
-                        const isNoneSite = site.name === 'None' || site.id === 'none';
+                        const isNone = isNoneSite(site);
                         return (
                         <Card 
                           key={site.id} 
-                          className={isNoneSite ? "cursor-not-allowed opacity-75" : "cursor-pointer hover:bg-muted/50 transition-colors"}
+                          className={isNone ? "cursor-not-allowed opacity-75" : "cursor-pointer hover:bg-muted/50 transition-colors"}
                           onClick={() => handleEditSite(site)}
-                          title={isNoneSite ? '"None" is a protected system site and cannot be edited' : undefined}
+                          title={isNone ? '"None" is a protected system site and cannot be edited' : undefined}
                         >
                           <CardHeader className="pb-3">
                             <div className="flex items-center justify-between">
