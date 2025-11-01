@@ -156,6 +156,12 @@ export default function DeleteModal({
         }
       } else if (entityType === EntityType.SITE) {
         for (const site of entities as Site[]) {
+          // Block deletion of "None" site - it's a system site
+          if (site.name === 'None' || site.id === 'none') {
+            console.warn('Cannot delete "None" site - it is a protected system site');
+            alert('Cannot delete "None" site. It is a protected system site used as the default location.');
+            continue;
+          }
           await ClientAPI.deleteSite(site.id);
           // Site deletion cleanup is handled by the DataStore side effects via removeSiteEffectsOnDelete
         }

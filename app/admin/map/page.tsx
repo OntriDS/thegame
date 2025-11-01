@@ -69,6 +69,11 @@ export default function MapPage() {
   };
 
   const handleEditSite = (site: Site) => {
+    // Block editing of "None" site - it's a protected system site
+    if (site.name === 'None' || site.id === 'none') {
+      console.log('Cannot edit "None" site - it is a protected system site');
+      return;
+    }
     setSelectedSite(site);
     setShowSiteModal(true);
   };
@@ -241,11 +246,14 @@ export default function MapPage() {
                         }
                         return isActive && site.metadata.type === siteFilter;
                       })
-                      .map(site => (
+                      .map(site => {
+                        const isNoneSite = site.name === 'None' || site.id === 'none';
+                        return (
                         <Card 
                           key={site.id} 
-                          className="cursor-pointer hover:bg-muted/50 transition-colors" 
+                          className={isNoneSite ? "cursor-not-allowed opacity-75" : "cursor-pointer hover:bg-muted/50 transition-colors"}
                           onClick={() => handleEditSite(site)}
+                          title={isNoneSite ? '"None" is a protected system site and cannot be edited' : undefined}
                         >
                           <CardHeader className="pb-3">
                             <div className="flex items-center justify-between">
@@ -274,7 +282,8 @@ export default function MapPage() {
                             </div>
                           </CardContent>
                         </Card>
-                      ))}
+                        );
+                      })}
                   </div>
                 </Tabs>
               )}

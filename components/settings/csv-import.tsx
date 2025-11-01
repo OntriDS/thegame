@@ -116,7 +116,12 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
         return validStations.includes(station as Station);
       };
 
-  const convertToItems = async (csvData: any[]): Promise<(Item | null)[]> => {
+  const convertToItems = async (csvData: any[]): Promise<{ items: (Item | null)[], warnings: string[] }> => {
+    const warnings: string[] = [];
+    
+    // Find "None" site once as default for invalid/missing sites
+    const noneSite = sites.find(s => s.name === 'None' || s.id === 'none');
+    
     const items = await Promise.all(csvData.map(async (row, index) => {
       // Parse dimensions if they exist
       const width = parseFloat(row.Width || row.width || '0');
@@ -154,46 +159,31 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
           const siteName = row.Site || row.site || row.Locations || row.locations || row.Location || row.location || '';
         
         if (siteName && siteName.trim() !== '') {
-          // Find matching site using proper site validation
-          let matchingSite = getSiteByName(sites, siteName);
+          // Find matching site using proper site validation (including "None" if it exists as a site)
+          const matchingSite = getSiteByName(sites, siteName);
           
-          if (!matchingSite) {
-            // Site doesn't exist - create it
-            console.log(`Creating new site: "${siteName}"`);
-            const newSite: Site = {
-              id: `site-${siteName.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
-              name: siteName,
-              description: `Site created from CSV import`,
-              createdAt: new Date(),
-              updatedAt: new Date(),
-              links: [],
-              metadata: {
-                type: SiteType.PHYSICAL, // Default to physical site
-                businessType: PhysicalBusinessType.STORAGE,
-                settlementId: 'default-settlement', // Default settlement
-                googleMapsAddress: 'TBD'
-              },
-              status: SiteStatus.ACTIVE
-            };
-            
-            try {
-              // Create the site via API
-              const createdSite = await ClientAPI.upsertSite(newSite);
-              matchingSite = createdSite;
-              // Add to local sites array
-              setSites(prev => [...prev, createdSite]);
-              console.log(`Successfully created site: "${siteName}"`);
-            } catch (error) {
-              console.error(`Failed to create site "${siteName}":`, error);
-              // Fallback: use the site name as ID for now
-              matchingSite = { ...newSite, id: siteName };
+          if (matchingSite) {
+            // Site exists - assign stock to it
+            stock = [{ siteId: matchingSite.id, quantity: quantity }];
+          } else {
+            // Site doesn't exist - default to "None" site if available, otherwise skip assignment
+            const itemName = row.Name || row.name || `Row ${index + 1}`;
+            if (noneSite) {
+              warnings.push(`Row ${index + 1} (${itemName}): Site "${siteName}" does not exist. Item will be assigned to "None" site.`);
+              stock = [{ siteId: noneSite.id, quantity: quantity }];
+            } else {
+              warnings.push(`Row ${index + 1} (${itemName}): Site "${siteName}" does not exist and "None" site not found. Item will be imported without site assignment.`);
+              stock = [];
             }
           }
-          
-          stock = [{ siteId: matchingSite.id, quantity: quantity }];
         } else {
-          // No site specified - create item without stock (for ideation items)
-          stock = [];
+          // No site specified - default to "None" site if available
+          if (noneSite) {
+            stock = [{ siteId: noneSite.id, quantity: quantity }];
+          } else {
+            // No "None" site found - create item without stock (for ideation items)
+            stock = [];
+          }
         }
       
       // Stock is already properly set above based on site validation
@@ -269,7 +259,7 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
       };
     }));
     
-    return items;
+    return { items, warnings };
   };
 
   const handleImport = async () => {
@@ -283,7 +273,7 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
 
     try {
       const parsedData = parseCSV(csvData);
-      const itemsWithNulls = await convertToItems(parsedData);
+      const { items: itemsWithNulls, warnings: siteWarnings } = await convertToItems(parsedData);
       const items = itemsWithNulls.filter((item): item is Item => item !== null);
       
       // Validate items before import
@@ -296,10 +286,10 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
         if (!item.type || !Object.values(ItemType).includes(item.type)) {
           validationErrors.push(`Row ${index + 1}: Missing or invalid type "${item.type}"`);
         }
-        // Allow items without stock (ideation - only validate if stock exists
+            // Allow items without stock (ideation - only validate if stock exists
         if (item.stock && item.stock.length > 0) {
           item.stock.forEach((stockPoint, stockIndex) => {
-            // Note: Sites will be created automatically if they don't exist, so no validation needed
+            // Note: Items with invalid sites will be imported without site assignment
             if (stockPoint.quantity < 0) {
               validationErrors.push(`Row ${index + 1}, Stock ${stockIndex + 1}: Quantity cannot be negative`);
             }
@@ -369,10 +359,17 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
             messages.push(`⏭️ Skipped ${skippedCount} duplicate${skippedCount !== 1 ? 's' : ''}`);
           }
           
-          // Combine errors and success messages
-          const allMessages = operationErrors.length > 0 
-            ? [...operationErrors, ...messages]
-            : messages;
+          // Add site warnings if any
+          if (siteWarnings.length > 0) {
+            messages.push(`⚠️ ${siteWarnings.length} item${siteWarnings.length !== 1 ? 's' : ''} imported without site assignment (site${siteWarnings.length !== 1 ? 's' : ''} not found)`);
+          }
+          
+          // Combine errors, warnings, and success messages
+          const allMessages = [
+            ...(operationErrors.length > 0 ? operationErrors : []),
+            ...(siteWarnings.length > 0 ? siteWarnings : []),
+            ...messages
+          ];
           
           setImportResult({
             success: importedCount,

@@ -118,6 +118,14 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
 
   const handleSave = async () => {
     if (isSaving) return;
+    
+    // Block saving changes to "None" site - it's a protected system site
+    if (site && (site.name === 'None' || site.id === 'none')) {
+      console.warn('Cannot save changes to "None" site - it is a protected system site');
+      alert('Cannot save changes to "None" site. It is a protected system site.');
+      return;
+    }
+    
     setIsSaving(true);
     
     try {
@@ -233,6 +241,11 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
           {/* Content Area - Fixed Height with Internal Scroll */}
           <div className="px-6 overflow-y-auto space-y-4" style={{ maxHeight: 'calc(90vh - 280px)' }}>
             {/* Column Headers */}
+            {site && (site.name === 'None' || site.id === 'none') && (
+              <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md text-sm text-amber-800 dark:text-amber-200">
+                ⚠️ "None" is a protected system site. This site cannot be edited or deactivated.
+              </div>
+            )}
 
             {/* Row 1: Name and Type in 4-column grid */}
             <div className="grid grid-cols-4 gap-4">
@@ -244,12 +257,17 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
                   onChange={(e) => setName(e.target.value)}
                   placeholder="New Site"
                   className="h-8 text-sm"
+                  disabled={site && (site.name === 'None' || site.id === 'none')}
                 />
               </div>
               
               <div className="col-span-2 space-y-2">
                 <Label htmlFor="siteType" className="text-xs">Type *</Label>
-                <Select value={siteType} onValueChange={(v) => setSiteType(v as SiteType)}>
+                <Select 
+                  value={siteType} 
+                  onValueChange={(v) => setSiteType(v as SiteType)}
+                  disabled={site && (site.name === 'None' || site.id === 'none')}
+                >
                   <SelectTrigger id="siteType" className="h-8 text-sm">
                     <SelectValue />
                   </SelectTrigger>
@@ -275,6 +293,7 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
                       options={settlementOptions}
                       className="h-8 text-sm flex-1"
                       autoGroupByCategory={true}
+                      disabled={site && (site.name === 'None' || site.id === 'none')}
                     />
                     <Button
                       type="button"
@@ -282,6 +301,7 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
                       size="sm"
                       onClick={() => setShowSettlementModal(true)}
                       className="h-8 px-3"
+                      disabled={site && (site.name === 'None' || site.id === 'none')}
                     >
                       + New
                     </Button>
@@ -293,6 +313,7 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
                   <Select
                     value={businessType}
                     onValueChange={(v) => setBusinessType(v as PhysicalBusinessType)}
+                    disabled={site && (site.name === 'None' || site.id === 'none')}
                   >
                     <SelectTrigger className="h-8 text-sm">
                       <SelectValue placeholder="Select business type..." />
@@ -316,6 +337,7 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
                   <Select
                     value={digitalType}
                     onValueChange={(v) => setDigitalType(v as DigitalSiteType)}
+                    disabled={site && (site.name === 'None' || site.id === 'none')}
                   >
                     <SelectTrigger className="h-8 text-sm">
                       <SelectValue placeholder="Select digital type..." />
@@ -338,6 +360,7 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
                     onChange={(e) => setDigitalUrl(e.target.value)}
                     placeholder="https://..."
                     className="h-8 text-sm"
+                    disabled={site && (site.name === 'None' || site.id === 'none')}
                   />
                 </div>
               </div>
@@ -350,6 +373,7 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
                   <Select
                     value={systemPurpose}
                     onValueChange={(v) => setSystemPurpose(v as SystemSiteType)}
+                    disabled={site && (site.name === 'None' || site.id === 'none')}
                   >
                     <SelectTrigger className="h-8 text-sm">
                       <SelectValue placeholder="Select purpose..." />
@@ -376,6 +400,7 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
                   onChange={(e) => setGoogleMapsAddress(e.target.value)}
                   placeholder="Google Maps URL or coordinates"
                   className="h-8 text-sm"
+                  disabled={site && (site.name === 'None' || site.id === 'none')}
                 />
               </div>
             )}
@@ -400,6 +425,7 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
                     placeholder="Optional notes about this site..."
                     rows={3}
                     className="resize-none text-sm"
+                    disabled={site && (site.name === 'None' || site.id === 'none')}
                   />
                 </div>
               )}
@@ -408,7 +434,7 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
 
           <DialogFooter className="flex items-center justify-between py-2 border-t px-6">
             <div className="flex items-center gap-4">
-              {site && (
+              {site && site.name !== 'None' && site.id !== 'none' && (
                 <Button
                   variant="outline"
                   onClick={handleDelete}
@@ -417,27 +443,42 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
                   Delete
                 </Button>
               )}
+              {site && (site.name === 'None' || site.id === 'none') && (
+                <div className="text-xs text-muted-foreground italic">
+                  "None" is a protected system site and cannot be deleted
+                </div>
+              )}
             </div>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
                 <div className="hidden sm:block">
                   <Label className="text-xs">Status</Label>
                 </div>
-                <Select value={status} onValueChange={(v) => setStatus(v as SiteStatus)}>
-                  <SelectTrigger className="h-8 text-sm w-[160px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.values(SiteStatus).map(s => (
-                      <SelectItem key={s} value={s}>{s}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {(site && (site.name === 'None' || site.id === 'none')) ? (
+                  <div className="text-xs text-muted-foreground italic px-3 py-2 border rounded-md bg-muted/50">
+                    Always Active
+                  </div>
+                ) : (
+                  <Select value={status} onValueChange={(v) => setStatus(v as SiteStatus)}>
+                    <SelectTrigger className="h-8 text-sm w-[160px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.values(SiteStatus).map(s => (
+                        <SelectItem key={s} value={s}>{s}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
               <Button variant="outline" onClick={() => onOpenChange(false)} className="h-8 text-xs" disabled={isSaving}>
                 Cancel
               </Button>
-              <Button onClick={handleSave} className="h-8 text-xs" disabled={!name.trim() || isSaving}>
+              <Button 
+                onClick={handleSave} 
+                className="h-8 text-xs" 
+                disabled={!name.trim() || isSaving || (site && (site.name === 'None' || site.id === 'none'))}
+              >
                 {isSaving ? 'Saving...' : (site ? 'Update' : 'Create')} Site
               </Button>
             </div>
