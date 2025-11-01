@@ -6,9 +6,14 @@ import { Button } from '@/components/ui/button';
 import { ArrowUpDown, RefreshCw, Link, MapPin, Cloud, Home, Sparkles } from 'lucide-react';
 import { useState } from 'react';
 import { processLogData } from '@/lib/utils/logging-utils';
-import { SiteStatus, SiteType } from '@/types/enums';
+import { SiteStatus, SiteType, EntityType } from '@/types/enums';
 import { SITE_STATUS_COLORS } from '@/lib/constants/color-constants';
 import { useThemeColors } from '@/lib/hooks/use-theme-colors';
+import { LinksSubModal } from '@/components/modals/submodals/links-submodal';
+import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
+import { LogViewFilter } from '@/components/logs/log-view-filter';
+import { useLogViewFilter } from '@/lib/hooks/use-log-view-filter';
+import { LogManagementActions } from '@/components/logs/log-management-actions';
 
 interface SitesLogTabProps {
   sitesLog: any;
@@ -19,9 +24,18 @@ interface SitesLogTabProps {
 export function SitesLogTab({ sitesLog, onReload, isReloading }: SitesLogTabProps) {
   const { isDarkMode } = useThemeColors();
   const [logOrder, setLogOrder] = useState<'newest' | 'oldest'>('newest');
+  const [showLinksModal, setShowLinksModal] = useState(false);
+  const [selectedSiteId, setSelectedSiteId] = useState<string>('');
+  const [siteLinks, setSiteLinks] = useState<any[]>([]);
+  const [selectedLogEntry, setSelectedLogEntry] = useState<any>(null);
+  const { getPreference } = useUserPreferences();
+  const { filter, setFilter, getVisibleEntries } = useLogViewFilter({ entityType: EntityType.SITE });
 
   // Process sites log data
   const processedSitesLog = processLogData(sitesLog, logOrder);
+  
+  // Apply view filter to entries
+  const visibleEntries = getVisibleEntries(processedSitesLog.entries || []);
 
   const getSiteStatusBadgeColor = (status: string) => {
     const siteStatus = Object.values(SiteStatus).find(ss => ss === status);
@@ -48,7 +62,11 @@ export function SitesLogTab({ sitesLog, onReload, isReloading }: SitesLogTabProp
     }
   };
 
+  // Check if log management is enabled
+  const logManagementEnabled = getPreference('log-management-enabled', false);
+
   return (
+    <>
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <div>
@@ -58,6 +76,7 @@ export function SitesLogTab({ sitesLog, onReload, isReloading }: SitesLogTabProp
           </CardDescription>
         </div>
         <div className="flex items-center gap-2">
+          <LogViewFilter value={filter} onChange={setFilter} />
           <Button
             variant="outline"
             size="sm"
@@ -79,10 +98,10 @@ export function SitesLogTab({ sitesLog, onReload, isReloading }: SitesLogTabProp
       </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                {processedSitesLog.entries.length === 0 ? (
+                {visibleEntries.length === 0 ? (
                   <p className="text-muted-foreground text-center py-4">No site lifecycle events found</p>
                 ) : (
-                  processedSitesLog.entries.map((entry: any, index: number) => {
+                  visibleEntries.map((entry: any, index: number) => {
                     // Handle BULK_IMPORT and BULK_EXPORT entries
                     const eventRaw = entry.event || entry.status || '';
                     const statusRaw = String(eventRaw).toUpperCase();
@@ -192,8 +211,37 @@ export function SitesLogTab({ sitesLog, onReload, isReloading }: SitesLogTabProp
                           </div>
                         </div>
                         
-                        {/* Right Side: Date */}
+                        {/* Right Side: Links + Actions + Date */}
                         <div className="flex items-center gap-2 flex-shrink-0">
+                          {/* Links Icon */}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0"
+                            onClick={async () => {
+                              try {
+                                const { ClientAPI } = await import('@/lib/client-api');
+                                const links = await ClientAPI.getLinksFor({ type: EntityType.SITE, id: entry.entityId });
+                                setSiteLinks(links);
+                                setSelectedSiteId(entry.entityId);
+                                setSelectedLogEntry(entry);
+                                setShowLinksModal(true);
+                              } catch (error) {
+                                console.error('Failed to fetch links:', error);
+                              }
+                            }}
+                          >
+                            <Link className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                          </Button>
+
+                          {/* Log Management Actions */}
+                          <LogManagementActions
+                            entityType={EntityType.SITE}
+                            entry={entry}
+                            onReload={onReload}
+                            logManagementEnabled={logManagementEnabled}
+                          />
+                          
                           {/* Date */}
                           <span className="text-xs text-muted-foreground whitespace-nowrap">
                             {date}
@@ -206,5 +254,17 @@ export function SitesLogTab({ sitesLog, onReload, isReloading }: SitesLogTabProp
               </div>
             </CardContent>
           </Card>
+
+      {/* Links Modal */}
+      <LinksSubModal
+        open={showLinksModal}
+        onOpenChange={setShowLinksModal}
+        entityType="site"
+        entityId={selectedSiteId}
+        entityName="Site"
+        links={siteLinks}
+        logEntry={selectedLogEntry}
+      />
+    </>
   );
 }

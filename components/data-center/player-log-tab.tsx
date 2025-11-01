@@ -13,6 +13,10 @@ import { ClientAPI } from '@/lib/client-api';
 import { cn } from '@/lib/utils';
 import { processLogData } from '@/lib/utils/logging-utils';
 import { PLAYER_ONE_ID } from '@/types/enums';
+import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
+import { LogViewFilter } from '@/components/logs/log-view-filter';
+import { useLogViewFilter } from '@/lib/hooks/use-log-view-filter';
+import { LogManagementActions } from '@/components/logs/log-management-actions';
 
 interface PlayerLogTabProps {
   playerLog: any;
@@ -39,10 +43,15 @@ export function PlayerLogTab({ playerLog, onReload, isReloading }: PlayerLogTabP
   const [selectedLogEntry, setSelectedLogEntry] = useState<any>(null);
   const [selectedEntityType, setSelectedEntityType] = useState<string>(EntityType.PLAYER);
   const [sourceNameCache, setSourceNameCache] = useState<Record<string, string>>({});
+  const { getPreference } = useUserPreferences();
+  const { filter, setFilter, getVisibleEntries } = useLogViewFilter({ entityType: EntityType.PLAYER });
 
   // Process player log data using normalized approach
   const processedPlayerLog = processLogData(playerLog, logOrder);
   const sortedEntries = processedPlayerLog.entries || [];
+  
+  // Apply view filter to entries
+  const visibleEntries = getVisibleEntries(sortedEntries);
 
   // Fetch source names for entries that need them
   useEffect(() => {
@@ -128,6 +137,9 @@ export function PlayerLogTab({ playerLog, onReload, isReloading }: PlayerLogTabP
     }
   };
 
+  // Check if log management is enabled
+  const logManagementEnabled = getPreference('log-management-enabled', false);
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -141,6 +153,7 @@ export function PlayerLogTab({ playerLog, onReload, isReloading }: PlayerLogTabP
           </CardDescription>
         </div>
         <div className="flex items-center gap-2">
+          <LogViewFilter value={filter} onChange={setFilter} />
           <Button
             variant="outline"
             size="sm"
@@ -161,7 +174,7 @@ export function PlayerLogTab({ playerLog, onReload, isReloading }: PlayerLogTabP
         </div>
       </CardHeader>
       <CardContent className="space-y-2">
-        {sortedEntries.length === 0 ? (
+        {visibleEntries.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground">
             <User className="h-12 w-12 mx-auto mb-4 opacity-50" />
             <p>No player log entries yet</p>
@@ -169,7 +182,7 @@ export function PlayerLogTab({ playerLog, onReload, isReloading }: PlayerLogTabP
           </div>
         ) : (
           <div className="space-y-2">
-            {sortedEntries.map((entry: any, index: number) => {
+            {visibleEntries.map((entry: any, index: number) => {
               // Handle BULK_IMPORT and BULK_EXPORT entries
               const eventRaw = entry.event || entry.status || '';
               const statusRaw = String(eventRaw).toUpperCase();
@@ -311,6 +324,14 @@ export function PlayerLogTab({ playerLog, onReload, isReloading }: PlayerLogTabP
                   >
                     <LinkIcon className="h-4 w-4" />
                   </Button>
+
+                  {/* Log Management Actions */}
+                  <LogManagementActions
+                    entityType={EntityType.PLAYER}
+                    entry={entry}
+                    onReload={onReload}
+                    logManagementEnabled={logManagementEnabled}
+                  />
                 </div>
               );
             })}

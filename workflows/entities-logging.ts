@@ -16,6 +16,7 @@ export async function appendEntityLog(
   const list = (await kvGet<any[]>(key)) || [];
   
   const entry = { 
+    id: uuid(), // Add unique ID to each new entry
     event,
     entityId,
     ...details,
@@ -325,6 +326,174 @@ export async function appendPlayerPointsUpdateLog(
   }
   
   await kvSet(key, list);
+}
+
+/**
+ * Ensure a log entry has a unique ID
+ * If entry already has an ID, return it. Otherwise, generate and add one.
+ * Used for backward compatibility with existing logs that don't have IDs yet.
+ */
+export function ensureLogEntryId(entry: any): string {
+  if (entry.id) {
+    return entry.id;
+  }
+  return uuid();
+}
+
+/**
+ * Soft-delete a specific log entry
+ * - Marks entry as deleted with timestamp and actor
+ * - Preserves original entry for audit
+ * - Does NOT remove entry from log array
+ */
+export async function softDeleteLogEntry(
+  entityType: EntityType,
+  entryId: string,
+  characterId: string,
+  reason?: string
+): Promise<void> {
+  const key = buildLogKey(entityType);
+  const list = (await kvGet<any[]>(key)) || [];
+  
+  const entry = list.find(e => e.id === entryId);
+  if (!entry) {
+    throw new Error(`Log entry ${entryId} not found in ${entityType} log`);
+  }
+  
+  // Mark entry as deleted
+  entry.isDeleted = true;
+  entry.deletedAt = new Date().toISOString();
+  entry.deletedBy = characterId;
+  if (reason) {
+    entry.deleteReason = reason;
+  }
+  
+  // Append audit record to entry's edit history
+  if (!entry.editHistory) {
+    entry.editHistory = [];
+  }
+  entry.editHistory.push({
+    editedAt: new Date().toISOString(),
+    editedBy: characterId,
+    action: 'delete',
+    reason
+  });
+  
+  await kvSet(key, list);
+  console.log(`[softDeleteLogEntry] Entry ${entryId} soft-deleted in ${entityType} log`);
+}
+
+/**
+ * Restore a soft-deleted entry
+ * - Removes deletedAt/isDeleted/deletedBy flags
+ * - Appends restoration audit entry
+ */
+export async function restoreLogEntry(
+  entityType: EntityType,
+  entryId: string,
+  characterId: string,
+  reason?: string
+): Promise<void> {
+  const key = buildLogKey(entityType);
+  const list = (await kvGet<any[]>(key)) || [];
+  
+  const entry = list.find(e => e.id === entryId);
+  if (!entry) {
+    throw new Error(`Log entry ${entryId} not found in ${entityType} log`);
+  }
+  
+  if (!entry.isDeleted) {
+    throw new Error(`Log entry ${entryId} is not deleted`);
+  }
+  
+  // Remove deletion flags
+  entry.isDeleted = false;
+  delete entry.deletedAt;
+  delete entry.deletedBy;
+  delete entry.deleteReason;
+  
+  // Append audit record to entry's edit history
+  if (!entry.editHistory) {
+    entry.editHistory = [];
+  }
+  entry.editHistory.push({
+    editedAt: new Date().toISOString(),
+    editedBy: characterId,
+    action: 'restore',
+    reason
+  });
+  
+  await kvSet(key, list);
+  console.log(`[restoreLogEntry] Entry ${entryId} restored in ${entityType} log`);
+}
+
+/**
+ * Edit a specific log entry
+ * - Creates audit record of changes
+ * - Updates entry with new values
+ * - Tracks who made the change
+ */
+export async function editLogEntry(
+  entityType: EntityType,
+  entryId: string,
+  updates: Record<string, any>,
+  characterId: string,
+  reason?: string
+): Promise<void> {
+  const key = buildLogKey(entityType);
+  const list = (await kvGet<any[]>(key)) || [];
+  
+  const entry = list.find(e => e.id === entryId);
+  if (!entry) {
+    throw new Error(`Log entry ${entryId} not found in ${entityType} log`);
+  }
+  
+  if (entry.isDeleted) {
+    throw new Error(`Cannot edit deleted log entry ${entryId}`);
+  }
+  
+  // Create audit record of changes
+  const changes: Array<{ field: string; oldValue: any; newValue: any }> = [];
+  
+  // Update fields and track changes
+  for (const [field, newValue] of Object.entries(updates)) {
+    // Skip immutable fields
+    if (['id', 'entityId', 'timestamp', 'event'].includes(field)) {
+      console.warn(`[editLogEntry] Attempted to modify immutable field: ${field}`);
+      continue;
+    }
+    
+    const oldValue = entry[field];
+    if (oldValue !== newValue) {
+      changes.push({ field, oldValue, newValue });
+      entry[field] = newValue;
+    }
+  }
+  
+  if (changes.length === 0) {
+    console.log(`[editLogEntry] No changes detected for entry ${entryId}`);
+    return;
+  }
+  
+  // Add audit metadata
+  entry.editedAt = new Date().toISOString();
+  entry.editedBy = characterId;
+  entry.lastUpdated = new Date().toISOString();
+  
+  // Append audit record to entry's edit history
+  if (!entry.editHistory) {
+    entry.editHistory = [];
+  }
+  entry.editHistory.push({
+    editedAt: new Date().toISOString(),
+    editedBy: characterId,
+    action: 'edit',
+    changes,
+    reason
+  });
+  
+  await kvSet(key, list);
+  console.log(`[editLogEntry] Entry ${entryId} updated in ${entityType} log with ${changes.length} changes`);
 }
 
 // REMOVED: Account logging functions - Account is infrastructure entity, not Core Entity

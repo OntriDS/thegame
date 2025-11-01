@@ -11,6 +11,10 @@ import { FINANCIAL_ENTRY_ICONS, LOG_DISPLAY_ICONS, FINANCIAL_ABBREVIATIONS } fro
 import { FINANCIAL_COLORS } from '@/lib/constants/color-constants';
 import { LinksSubModal } from '@/components/modals/submodals/links-submodal';
 import { EntityType } from '@/types/enums';
+import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
+import { LogViewFilter } from '@/components/logs/log-view-filter';
+import { useLogViewFilter } from '@/lib/hooks/use-log-view-filter';
+import { LogManagementActions } from '@/components/logs/log-management-actions';
 
 interface FinancialLogEntry {
   id?: string;
@@ -49,9 +53,14 @@ export function FinancialsTab({ financialsLog, onReload, isReloading }: Financia
   const [financialLinks, setFinancialLinks] = useState<any[]>([]);
   const [selectedLogEntry, setSelectedLogEntry] = useState<any>(null);
   const [selectedEntityType, setSelectedEntityType] = useState<string>(EntityType.FINANCIAL);
+  const { getPreference } = useUserPreferences();
+  const { filter, setFilter, getVisibleEntries } = useLogViewFilter({ entityType: EntityType.FINANCIAL });
 
   // Process financials log data
   const processedFinancialsLog = processLogData(financialsLog, logOrder);
+  
+  // Apply view filter to entries
+  const visibleEntries = getVisibleEntries(processedFinancialsLog.entries || []);
 
   const formatStation = (station: string | undefined) => {
     if (!station) return '—';
@@ -242,6 +251,14 @@ export function FinancialsTab({ financialsLog, onReload, isReloading }: Financia
             <LinkIcon className="h-4 w-4 text-muted-foreground hover:text-foreground" />
           </Button>
           
+          {/* Log Management Actions */}
+          <LogManagementActions
+            entityType={EntityType.FINANCIAL}
+            entry={entry}
+            onReload={onReload}
+            logManagementEnabled={logManagementEnabled}
+          />
+          
           {/* Date */}
           <span className="text-xs text-muted-foreground whitespace-nowrap">
             {date}
@@ -251,11 +268,13 @@ export function FinancialsTab({ financialsLog, onReload, isReloading }: Financia
     );
   };
 
-  // Get all entries (no filtering)
+  // Check if log management is enabled
+  const logManagementEnabled = getPreference('log-management-enabled', false);
+
+  // Get all entries with filtering
   const allEntries = useMemo(() => {
-    const entries = processedFinancialsLog.entries as FinancialLogEntry[];
-    return entries.map(entry => ({ entry, amounts: computeAmounts(entry) }));
-  }, [processedFinancialsLog.entries]);
+    return visibleEntries.map((entry: any) => ({ entry, amounts: computeAmounts(entry) }));
+  }, [visibleEntries]);
 
   return (
     <>
@@ -275,6 +294,7 @@ export function FinancialsTab({ financialsLog, onReload, isReloading }: Financia
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
+              <LogViewFilter value={filter} onChange={setFilter} />
               <Button
                 variant="outline"
                 size="sm"
@@ -296,14 +316,14 @@ export function FinancialsTab({ financialsLog, onReload, isReloading }: Financia
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {allEntries.length === 0 ? (
+              {visibleEntries.length === 0 ? (
                 <div className="text-center py-8">
                   <p className="text-muted-foreground mb-2">
                     No financial records found
                   </p>
                 </div>
               ) : (
-                allEntries.map((entryData, index) => renderFinancialEntry(entryData, index))
+                visibleEntries.map((entryData, index) => renderFinancialEntry(entryData, index))
               )}
             </div>
           </CardContent>

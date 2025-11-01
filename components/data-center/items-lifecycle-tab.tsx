@@ -14,6 +14,10 @@ import { ItemStatus, ItemType } from '@/types/enums';
 import { ITEM_STATUS_COLORS } from '@/lib/constants/color-constants';
 import { useThemeColors } from '@/lib/hooks/use-theme-colors';
 import { ITEM_TYPE_ICONS } from '@/lib/constants/icon-maps';
+import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
+import { LogViewFilter } from '@/components/logs/log-view-filter';
+import { useLogViewFilter } from '@/lib/hooks/use-log-view-filter';
+import { LogManagementActions } from '@/components/logs/log-management-actions';
 
 interface ItemsLifecycleTabProps {
   itemsLog: any;
@@ -30,9 +34,14 @@ export function ItemsLifecycleTab({ itemsLog, onReload, isReloading }: ItemsLife
   const [itemLinks, setItemLinks] = useState<any[]>([]);
   const [selectedLogEntry, setSelectedLogEntry] = useState<any>(null);
   const [sourceNameCache, setSourceNameCache] = useState<Record<string, string>>({});
+  const { getPreference } = useUserPreferences();
+  const { filter, setFilter, getVisibleEntries } = useLogViewFilter({ entityType: EntityType.ITEM });
 
   // Process items log data
   const processedItemsLog = processLogData(itemsLog, logOrder);
+  
+  // Apply view filter to entries
+  const visibleEntries = getVisibleEntries(processedItemsLog.entries || []);
 
   // Fetch source names for entries that need them
   useEffect(() => {
@@ -145,6 +154,9 @@ export function ItemsLifecycleTab({ itemsLog, onReload, isReloading }: ItemsLife
     return <Icon className="h-4 w-4 text-muted-foreground" />;
   };
 
+  // Check if log management is enabled
+  const logManagementEnabled = getPreference('log-management-enabled', false);
+
   return (
     <Tabs value={activeSubTab} onValueChange={setActiveSubTab} className="space-y-4">
       <TabsList className="grid w-full grid-cols-2">
@@ -162,6 +174,7 @@ export function ItemsLifecycleTab({ itemsLog, onReload, isReloading }: ItemsLife
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
+              <LogViewFilter value={filter} onChange={setFilter} />
               <Button
                 variant="outline"
                 size="sm"
@@ -183,10 +196,10 @@ export function ItemsLifecycleTab({ itemsLog, onReload, isReloading }: ItemsLife
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {processedItemsLog.entries.length === 0 ? (
+              {visibleEntries.length === 0 ? (
                 <p className="text-muted-foreground text-center py-4">No item lifecycle events found</p>
               ) : (
-                processedItemsLog.entries.map((entry: any, index: number) => {
+                visibleEntries.map((entry: any, index: number) => {
                   
                   // Extract status with proper normalization
                   const statusRaw: string = entry.event || entry.action || entry.type || entry.status || 'unknown';
@@ -349,6 +362,14 @@ export function ItemsLifecycleTab({ itemsLog, onReload, isReloading }: ItemsLife
                         >
                           <Link className="h-4 w-4 text-muted-foreground hover:text-foreground" />
                         </Button>
+
+                        {/* Log Management Actions */}
+                        <LogManagementActions
+                          entityType={EntityType.ITEM}
+                          entry={entry}
+                          onReload={onReload}
+                          logManagementEnabled={logManagementEnabled}
+                        />
                         
                         {/* Date */}
                         <span className="text-xs text-muted-foreground whitespace-nowrap">

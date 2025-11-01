@@ -12,6 +12,10 @@ import { useState, useMemo } from 'react';
 import { processLogData } from '@/lib/utils/logging-utils';
 import { SaleType, SaleStatus } from '@/types/enums';
 import { FINANCIAL_ENTRY_ICONS, FINANCIAL_ABBREVIATIONS } from '@/lib/constants/icon-maps';
+import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
+import { LogViewFilter } from '@/components/logs/log-view-filter';
+import { useLogViewFilter } from '@/lib/hooks/use-log-view-filter';
+import { LogManagementActions } from '@/components/logs/log-management-actions';
 
 interface SalesLogTabProps {
   salesLog: any;
@@ -38,10 +42,15 @@ export function SalesLogTab({ salesLog, onReload, isReloading }: SalesLogTabProp
   const [selectedSaleId, setSelectedSaleId] = useState<string>('');
   const [saleLinks, setSaleLinks] = useState<any[]>([]);
   const [selectedLogEntry, setSelectedLogEntry] = useState<any>(null);
+  const { getPreference } = useUserPreferences();
+  const { filter, setFilter, getVisibleEntries } = useLogViewFilter({ entityType: EntityType.SALE });
 
   // Process sales log data using the same pattern as other logs
   const processedSalesLog = useMemo(() => processLogData(salesLog, logOrder), [salesLog, logOrder]);
   const entries = processedSalesLog?.entries || [];
+  
+  // Apply view filter to entries
+  const visibleEntries = getVisibleEntries(entries);
 
   // Helper functions
   const getSaleTypeIcon = (saleType: string | undefined) => {
@@ -84,6 +93,9 @@ export function SalesLogTab({ salesLog, onReload, isReloading }: SalesLogTabProp
     return lower.charAt(0).toUpperCase() + lower.slice(1);
   };
 
+  // Check if log management is enabled
+  const logManagementEnabled = getPreference('log-management-enabled', false);
+
   return (
     <>
     <Tabs value={activeSubTab} onValueChange={setActiveSubTab} className="space-y-4">
@@ -105,6 +117,7 @@ export function SalesLogTab({ salesLog, onReload, isReloading }: SalesLogTabProp
           </CardDescription>
         </div>
         <div className="flex items-center gap-2">
+          <LogViewFilter value={filter} onChange={setFilter} />
           <Button 
             variant="outline" 
             size="sm" 
@@ -128,10 +141,10 @@ export function SalesLogTab({ salesLog, onReload, isReloading }: SalesLogTabProp
       </CardHeader>
       <CardContent>
         <div className="space-y-2">
-          {entries.length === 0 ? (
+          {visibleEntries.length === 0 ? (
             <p className="text-muted-foreground text-center py-4">No sales log entries found</p>
           ) : (
-            entries.map((entry: any, index: number) => {
+            visibleEntries.map((entry: any, index: number) => {
               // Handle BULK_IMPORT and BULK_EXPORT entries
               const eventRaw = entry.event || entry.status || '';
               const statusRaw = String(eventRaw).toUpperCase();
@@ -287,6 +300,14 @@ export function SalesLogTab({ salesLog, onReload, isReloading }: SalesLogTabProp
                     >
                       <LinkIcon className="h-4 w-4 text-muted-foreground hover:text-foreground" />
                     </Button>
+
+                    {/* Log Management Actions */}
+                    <LogManagementActions
+                      entityType={EntityType.SALE}
+                      entry={entry}
+                      onReload={onReload}
+                      logManagementEnabled={logManagementEnabled}
+                    />
                     
                     {/* Date */}
                     <span className="text-xs text-muted-foreground whitespace-nowrap">

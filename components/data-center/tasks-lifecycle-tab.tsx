@@ -13,6 +13,10 @@ import { calculateTaskProfitPercentage } from '@/lib/utils/business-utils';
 import { useThemeColors } from '@/lib/hooks/use-theme-colors';
 import { processLogData } from '@/lib/utils/logging-utils';
 import { TASK_TYPE_ICONS, LOG_DISPLAY_ICONS, FINANCIAL_ABBREVIATIONS } from '@/lib/constants/icon-maps';
+import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
+import { LogViewFilter } from '@/components/logs/log-view-filter';
+import { useLogViewFilter } from '@/lib/hooks/use-log-view-filter';
+import { LogManagementActions } from '@/components/logs/log-management-actions';
 
 interface TasksLifecycleTabProps {
   tasksLog: any;
@@ -29,9 +33,14 @@ export function TasksLifecycleTab({ tasksLog, onReload, isReloading }: TasksLife
   const [taskLinks, setTaskLinks] = useState<any[]>([]);
   const [selectedLogEntry, setSelectedLogEntry] = useState<any>(null);
   const [sourceNameCache, setSourceNameCache] = useState<Record<string, string>>({});
+  const { getPreference } = useUserPreferences();
+  const { filter, setFilter, getVisibleEntries } = useLogViewFilter({ entityType: EntityType.TASK });
 
   // Process tasks log data
   const processedTasksLog = processLogData(tasksLog, logOrder);
+
+  // Apply view filter to entries
+  const visibleEntries = getVisibleEntries(processedTasksLog.entries || []);
 
   // Fetch source names for entries that need them
   useEffect(() => {
@@ -149,6 +158,9 @@ export function TasksLifecycleTab({ tasksLog, onReload, isReloading }: TasksLife
     return lower.charAt(0).toUpperCase() + lower.slice(1);
   };
 
+  // Check if log management is enabled
+  const logManagementEnabled = getPreference('log-management-enabled', false);
+
   const formatPriority = (value: string | undefined) => {
     if (!value || typeof value !== 'string' || value === '—') return '—';
     const lower = value.toLowerCase();
@@ -172,6 +184,7 @@ export function TasksLifecycleTab({ tasksLog, onReload, isReloading }: TasksLife
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
+              <LogViewFilter value={filter} onChange={setFilter} />
               <Button
                 variant="outline"
                 size="sm"
@@ -193,10 +206,10 @@ export function TasksLifecycleTab({ tasksLog, onReload, isReloading }: TasksLife
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {processedTasksLog.entries.length === 0 ? (
+              {visibleEntries.length === 0 ? (
                 <p className="text-muted-foreground text-center py-4">No task lifecycle events found</p>
               ) : (
-                processedTasksLog.entries.map((entry: any, index: number) => {
+                visibleEntries.map((entry: any, index: number) => {
                   // Extract data from the rich logging structure
                   const status: string = entry.event || 'Unknown';
                   // Use displayName from normalization, fallback to entry data
@@ -329,7 +342,7 @@ export function TasksLifecycleTab({ tasksLog, onReload, isReloading }: TasksLife
                         </div>
                       </div>
                       
-                      {/* Right Side: Links Icon + Date */}
+                      {/* Right Side: Actions + Date */}
                       <div className="flex items-center gap-2 flex-shrink-0">
                         {/* Links Icon */}
                         <Button
@@ -351,6 +364,14 @@ export function TasksLifecycleTab({ tasksLog, onReload, isReloading }: TasksLife
                         >
                           <Link className="h-4 w-4 text-muted-foreground hover:text-foreground" />
                         </Button>
+
+                        {/* Log Management Actions */}
+                        <LogManagementActions
+                          entityType={EntityType.TASK}
+                          entry={entry}
+                          onReload={onReload}
+                          logManagementEnabled={logManagementEnabled}
+                        />
                         
                         {/* Date */}
                         <span className="text-xs text-muted-foreground whitespace-nowrap">
