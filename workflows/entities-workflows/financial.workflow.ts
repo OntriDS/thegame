@@ -9,19 +9,18 @@ import { EffectKeys } from '@/data-store/keys';
 import { getLinksFor, removeLink } from '@/links/link-registry';
 import { getAllFinancials } from '@/data-store/repositories/financial.repo';
 import { getAllPlayers } from '@/data-store/repositories/player.repo';
-import { getAllCharacters } from '@/data-store/repositories/character.repo';
 import { createItemFromRecord, removeItemsCreatedByRecord } from '../item-creation-utils';
-import { awardPointsToPlayer, removePointsFromPlayer, removeJungleCoinsFromCharacter } from '../points-rewards-utils';
+import { awardPointsToPlayer, removePointsFromPlayer } from '../points-rewards-utils';
 import { 
   updateTasksFromFinancialRecord, 
   updateItemsCreatedByRecord, 
   updatePlayerPointsFromSource,
-  updateCharacterJungleCoinsFromRecord,
   hasFinancialPropsChanged,
   hasOutputPropsChanged,
-  hasRewardsChanged,
-  hasJungleCoinsChanged
+  hasRewardsChanged
 } from '../update-propagation-utils';
+import { createCharacterFromFinancial } from '../character-creation-utils';
+import { upsertFinancial } from '@/data-store/datastore';
 
 const STATE_FIELDS = ['isNotPaid', 'isNotCharged', 'isCollected'];
 const DESCRIPTIVE_FIELDS = ['name', 'description', 'cost', 'revenue', 'jungleCoins', 'notes'];
@@ -42,6 +41,22 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
       isNotCharged: financial.isNotCharged
     });
     await markEffect(effectKey);
+    
+    // Character creation from emissary fields - when newCustomerName is provided
+    if (financial.newCustomerName && !financial.customerCharacterId) {
+      const characterEffectKey = EffectKeys.sideEffect('financial', financial.id, 'characterCreated');
+      if (!(await hasEffect(characterEffectKey))) {
+        console.log(`[onFinancialUpsert] Creating character from financial record emissary fields: ${financial.name}`);
+        const createdCharacter = await createCharacterFromFinancial(financial);
+        if (createdCharacter) {
+          // Update financial record with the created character ID
+          const updatedFinancial = { ...financial, customerCharacterId: createdCharacter.id };
+          await upsertFinancial(updatedFinancial, { skipWorkflowEffects: true });
+          await markEffect(characterEffectKey);
+          console.log(`[onFinancialUpsert] ✅ Character created and financial record updated: ${createdCharacter.name}`);
+        }
+      }
+    }
     
     // Item creation from emissary fields - on record creation
     if (financial.outputItemType && financial.outputQuantity) {
@@ -73,9 +88,6 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
         console.log(`[onFinancialUpsert] ✅ Points awarded to player ${playerId} for record: ${financial.name}`);
       }
     }
-    
-    // REMOVED: Jungle coins awarding - Financial records don't create jungle coins
-    // Only players can convert points to J$ through the points system
     
     return;
   }
@@ -140,11 +152,6 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
       await updatePlayerPointsFromSource(EntityType.FINANCIAL, financial, previousFinancial);
     }
     
-    // Propagate to Character (jungle coins delta)
-    if (hasJungleCoinsChanged(financial, previousFinancial)) {
-      console.log(`[onFinancialUpsert] Propagating jungle coins changes to character: ${financial.name}`);
-      await updateCharacterJungleCoinsFromRecord(financial, previousFinancial);
-    }
   }
   
   // Descriptive changes - update in-place
@@ -169,10 +176,7 @@ export async function removeRecordEffectsOnDelete(recordId: string): Promise<voi
     // 2. Remove player points that were awarded by this record (if points were badly given)
     await removePlayerPointsFromRecord(recordId);
     
-    // 3. Remove jungle coins that were awarded by this record
-    await removeJungleCoinsFromRecord(recordId);
-    
-    // 4. Remove all Links related to this record
+    // 3. Remove all Links related to this record
     const recordLinks = await getLinksFor({ type: EntityType.FINANCIAL, id: recordId });
     console.log(`[removeRecordEffectsOnDelete] Found ${recordLinks.length} links to remove`);
     
@@ -185,15 +189,15 @@ export async function removeRecordEffectsOnDelete(recordId: string): Promise<voi
       }
     }
     
-    // 5. Clear effects registry
+    // 4. Clear effects registry
     await clearEffect(EffectKeys.created('financial', recordId));
+    await clearEffect(EffectKeys.sideEffect('financial', recordId, 'characterCreated'));
     await clearEffect(EffectKeys.sideEffect('financial', recordId, 'itemCreated'));
     await clearEffect(EffectKeys.sideEffect('financial', recordId, 'pointsAwarded'));
-    await clearEffect(EffectKeys.sideEffect('financial', recordId, 'jungleCoinsAwarded'));
     await clearEffectsByPrefix(EntityType.FINANCIAL, recordId, 'pointsLogged:');
     await clearEffectsByPrefix(EntityType.FINANCIAL, recordId, 'financialLogged:');
     
-    // 6. Remove log entries from all relevant logs
+    // 5. Remove log entries from all relevant logs
     console.log(`[removeRecordEffectsOnDelete] Starting log entry removal for record: ${recordId}`);
     
     // TODO: Implement server-side log removal or remove these calls
@@ -263,46 +267,5 @@ async function removePlayerPointsFromRecord(recordId: string): Promise<void> {
     
   } catch (error) {
     console.error(`[removePlayerPointsFromRecord] ❌ Failed to remove player points for record ${recordId}:`, error);
-  }
-}
-
-/**
- * Remove jungle coins that were awarded by a specific financial record
- * This is used when rolling back a record that incorrectly awarded jungle coins
- */
-async function removeJungleCoinsFromRecord(recordId: string): Promise<void> {
-  try {
-    console.log(`[removeJungleCoinsFromRecord] Removing jungle coins for record: ${recordId}`);
-    
-    // Get the record to find what jungle coins were awarded
-    const records = await getAllFinancials();
-    const record = records.find(r => r.id === recordId);
-    
-    if (!record || !record.jungleCoins || record.jungleCoins <= 0) {
-      console.log(`[removeJungleCoinsFromRecord] Record ${recordId} has no jungle coins to remove`);
-      return;
-    }
-    
-    // Get the character from the record (if there's a customerCharacterId)
-    const characterId = record.customerCharacterId;
-    if (!characterId) {
-      console.log(`[removeJungleCoinsFromRecord] Record ${recordId} has no customerCharacterId, skipping`);
-      return;
-    }
-    
-    const characters = await getAllCharacters();
-    const character = characters.find(c => c.id === characterId);
-    
-    if (!character) {
-      console.log(`[removeJungleCoinsFromRecord] Character ${characterId} not found, skipping jungle coins removal`);
-      return;
-    }
-    
-    // Remove the jungle coins from the character
-    await removeJungleCoinsFromCharacter(characterId, record.jungleCoins);
-    console.log(`[removeJungleCoinsFromRecord] ✅ Removed ${record.jungleCoins} jungle coins from character`);
-    
-  } catch (error) {
-    console.error(`[removeJungleCoinsFromRecord] ❌ Failed to remove jungle coins for record ${recordId}:`, error);
   }
 }

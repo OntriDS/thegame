@@ -13,6 +13,8 @@ import { getLinksFor, removeLink } from '@/links/link-registry';
 import { createItemFromTask, removeItemsCreatedByTask } from '../item-creation-utils';
 import { awardPointsToPlayer, removePointsFromPlayer } from '../points-rewards-utils';
 import { createFinancialRecordFromTask, updateFinancialRecordFromTask, removeFinancialRecordsCreatedByTask } from '../financial-record-utils';
+import { createCharacterFromTask } from '../character-creation-utils';
+import { upsertTask } from '@/data-store/datastore';
 import { DEFAULT_POINTS_CONVERSION_RATES } from '@/lib/constants/financial-constants';
 import type { PointsConversionRates } from '@/lib/constants/financial-constants';
 import { getCategoryForTaskType } from '@/lib/utils/searchable-select-utils';
@@ -142,6 +144,22 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
       oldTargetSiteId: previousTask!.targetSiteId,
       newTargetSiteId: task.targetSiteId
     });
+  }
+  
+  // Character creation from emissary fields - when newCustomerName is provided
+  if (task.newCustomerName && !task.customerCharacterId) {
+    const effectKey = EffectKeys.sideEffect('task', task.id, 'characterCreated');
+    if (!(await hasEffect(effectKey))) {
+      console.log(`[onTaskUpsert] Creating character from task emissary fields: ${task.name}`);
+      const createdCharacter = await createCharacterFromTask(task);
+      if (createdCharacter) {
+        // Update task with the created character ID
+        const updatedTask = { ...task, customerCharacterId: createdCharacter.id };
+        await upsertTask(updatedTask, { skipWorkflowEffects: true });
+        await markEffect(effectKey);
+        console.log(`[onTaskUpsert] ✅ Character created and task updated: ${createdCharacter.name}`);
+      }
+    }
   }
   
   // Item creation from emissary fields - when task is completed
@@ -279,6 +297,7 @@ export async function removeTaskLogEntriesOnDelete(task: Task): Promise<void> {
     
     // 4. Clear effects registry
     await clearEffect(EffectKeys.created('task', task.id));
+    await clearEffect(EffectKeys.sideEffect('task', task.id, 'characterCreated'));
     await clearEffect(EffectKeys.sideEffect('task', task.id, 'itemCreated'));
     await clearEffect(EffectKeys.sideEffect('task', task.id, 'financialCreated'));
     await clearEffect(EffectKeys.sideEffect('task', task.id, 'pointsAwarded'));

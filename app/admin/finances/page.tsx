@@ -24,6 +24,8 @@ import { MONTHS, getYearRange, getMonthName, getCurrentMonth } from '@/lib/const
 import { BUSINESS_STRUCTURE, ItemType } from '@/types/enums';
 import { getCompanyAreas, getPersonalAreas, isCompanyStation, getAreaForStation } from '@/lib/utils/business-structure-utils';
 import { CompanyRecordsList, PersonalRecordsList } from '@/components/finances/financial-records-components';
+import { Switch } from '@/components/ui/switch';
+import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
 import { 
   aggregateRecordsByStation, 
   calculateTotals,
@@ -73,6 +75,8 @@ const formatMonthYear = (year: number, month: number) => {
 };
 
 export default function FinancesPage() {
+  const { getPreference, setPreference } = useUserPreferences();
+  const [filterByMonth, setFilterByMonth] = useState(() => getPreference('finances-filter-by-month', true));
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [currentMonth, setCurrentMonth] = useState(getCurrentMonth());
   const [companySummary, setCompanySummary] = useState<CompanyMonthlySummary | null>(null);
@@ -107,6 +111,12 @@ export default function FinancesPage() {
     section: 'monetary' | 'jungleCoins' | 'inventories' | 'otherAssets';
   } | null>(null);
 
+  // Handle filter toggle
+  const handleFilterToggle = (checked: boolean) => {
+    setFilterByMonth(checked);
+    setPreference('finances-filter-by-month', checked);
+  };
+
   // Load conversion rates
   useEffect(() => {
     const loadConversionRates = async () => {
@@ -124,16 +134,18 @@ export default function FinancesPage() {
 
   const loadSummaries = useCallback(async () => {
     const records = await ClientAPI.getFinancialRecords();
-    const companyRecords = records.filter(r => 
-      r.year === currentYear && 
-      r.month === currentMonth && 
-      r.type === 'company'
-    );
-    const personalRecords = records.filter(r => 
-      r.year === currentYear && 
-      r.month === currentMonth && 
-      r.type === 'personal'
-    );
+    const companyRecords = records.filter(r => {
+      if (filterByMonth) {
+        return r.year === currentYear && r.month === currentMonth && r.type === 'company';
+      }
+      return r.type === 'company';
+    });
+    const personalRecords = records.filter(r => {
+      if (filterByMonth) {
+        return r.year === currentYear && r.month === currentMonth && r.type === 'personal';
+      }
+      return r.type === 'personal';
+    });
     
     // Aggregate company records by station using DRY utility
     const companyStations = getCompanyAreas().flatMap(area => BUSINESS_STRUCTURE[area]);
@@ -171,7 +183,7 @@ export default function FinancesPage() {
     setAggregatedFinancialData(companyTotals);
     setAggregatedCategoryData({ categoryBreakdown: companyBreakdown });
     setRecordsRefreshKey(prev => prev + 1);
-  }, [currentYear, currentMonth, refreshKey]);
+  }, [currentYear, currentMonth, refreshKey, filterByMonth]);
 
   // Load summaries for current month
   useEffect(() => {
@@ -438,12 +450,19 @@ export default function FinancesPage() {
         </div>
         
         <div className="flex items-center gap-4">
-        <MonthYearSelector
+          <MonthYearSelector
             currentYear={currentYear}
             currentMonth={currentMonth}
             onYearChange={setCurrentYear}
             onMonthChange={setCurrentMonth}
           />
+          <div className="flex items-center gap-2 border rounded-md px-3 py-1.5">
+            <Switch
+              checked={filterByMonth}
+              onCheckedChange={handleFilterToggle}
+            />
+            <span className="text-sm text-muted-foreground">Filter by month</span>
+          </div>
           <Button 
             onClick={() => setShowFinancialsModal(true)}
             size="sm"
@@ -991,8 +1010,8 @@ export default function FinancesPage() {
             <TabsContent value="records" className="space-y-4">
               <CompanyRecordsList 
                 key={`company-${recordsRefreshKey}`}
-                year={currentYear} 
-                month={currentMonth} 
+                year={filterByMonth ? currentYear : 0} 
+                month={filterByMonth ? currentMonth : 0} 
                 onRecordUpdated={loadSummaries}
                 onRecordEdit={(record) => {
                   // This is handled by CompanyRecordsList component
@@ -1058,8 +1077,8 @@ export default function FinancesPage() {
              <TabsContent value="records" className="space-y-4">
                <PersonalRecordsList 
                  key={`personal-${recordsRefreshKey}`}
-                 year={currentYear} 
-                 month={currentMonth} 
+                 year={filterByMonth ? currentYear : 0} 
+                 month={filterByMonth ? currentMonth : 0} 
                  onRecordUpdated={loadSummaries}
                  onRecordEdit={(record) => {
                    // This is handled by PersonalRecordsList component

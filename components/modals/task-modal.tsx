@@ -362,38 +362,6 @@ export default function TaskModal({
       }
     }
 
-    // Handle new customer character creation
-    let finalCustomerCharacterId = customerCharacterId;
-    if (isNewCustomer && newCustomerName.trim()) {
-      try {
-        // Create new customer character
-        const newCharacter = {
-          id: `character-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          name: newCustomerName.trim(),
-          description: `Customer character created from task: ${name}`,
-          roles: [CharacterRole.CUSTOMER],
-          inventory: [],
-          achievementsCharacter: [],
-          jungleCoins: 0,
-          purchasedAmount: 0,
-          playerId: PLAYER_ONE_ID, // Default to Player One for now
-          lastActiveAt: new Date(),
-          isActive: true,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          links: []
-        };
-        
-        await ClientAPI.upsertCharacter(newCharacter);
-        
-        finalCustomerCharacterId = newCharacter.id;
-      } catch (error) {
-        console.error('[TaskModal] ❌ Failed to create customer character:', error);
-        alert('Warning: Failed to create customer character. Continuing without customer link.');
-        // Continue with null customer if creation fails
-        finalCustomerCharacterId = null;
-      }
-    }
 
     // Fallback playerCharacterId to PLAYER_ONE_ID if still null
     const finalPlayerCharacterId = playerCharacterId || PLAYER_ONE_ID;
@@ -425,7 +393,8 @@ export default function TaskModal({
       isNewItem,
       isSold,
       outputItemStatus,
-      customerCharacterId: finalCustomerCharacterId,  // Emissary: Pass customer to created item
+      customerCharacterId: isNewCustomer ? null : customerCharacterId,  // Ambassador: Existing customer
+      newCustomerName: isNewCustomer ? newCustomerName : undefined,  // EMISSARY: Name for new customer character creation
       playerCharacterId: finalPlayerCharacterId,  // AMBASSADOR: Player character who owns this task
       rewards: {
         points: {

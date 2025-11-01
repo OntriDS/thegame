@@ -420,40 +420,6 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
     if (isSaving) return;
     setIsSaving(true);
     
-    // Handle new customer character creation
-    let finalCustomerCharacterId = formData.customerCharacterId;
-    if (formData.isNewCustomer && formData.newCustomerName.trim()) {
-      try {
-        // Create new customer character
-        const newCharacter = {
-          id: `character-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          name: formData.newCustomerName.trim(),
-          description: `Customer character created from financial record: ${formData.name || 'New Record'}`,
-          roles: [CharacterRole.CUSTOMER],
-          inventory: [],
-          achievementsCharacter: [],
-          jungleCoins: 0,
-          purchasedAmount: 0,
-          playerId: PLAYER_ONE_ID, // Default to Player One for now
-          lastActiveAt: new Date(),
-          isActive: true,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          links: []
-        };
-        
-        await ClientAPI.upsertCharacter(newCharacter);
-        
-        finalCustomerCharacterId = newCharacter.id;
-        console.log(`[FinancialModal] ✅ Created new customer character: ${newCharacter.name} (${newCharacter.id})`);
-      } catch (error) {
-        console.error('[FinancialModal] ❌ Failed to create customer character:', error);
-        alert('Warning: Failed to create customer character. Continuing without customer link.');
-        // Continue with null customer if creation fails
-        finalCustomerCharacterId = null;
-      }
-    }
-    
     const recordId = record?.id || uuid();
     const station = formData.station;
     
@@ -469,7 +435,8 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
       type: isCompany ? 'company' : 'personal',
       siteId: formData.site || null,
       targetSiteId: formData.targetSite || null,
-      customerCharacterId: finalCustomerCharacterId || null,
+      customerCharacterId: formData.isNewCustomer ? null : formData.customerCharacterId,  // Ambassador: Existing customer
+      newCustomerName: formData.isNewCustomer ? formData.newCustomerName : undefined,  // EMISSARY: Name for new customer character creation
       playerCharacterId: playerCharacterId,
       cost: formData.cost,
       revenue: formData.revenue,

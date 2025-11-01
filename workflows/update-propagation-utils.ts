@@ -455,58 +455,6 @@ export async function updatePlayerPointsFromSource(
 }
 
 // ============================================================================
-// FINANCIAL → CHARACTER PROPAGATION (Jungle Coins Delta)
-// ============================================================================
-
-export async function updateCharacterJungleCoinsFromRecord(
-  record: FinancialRecord,
-  previousRecord: FinancialRecord
-): Promise<void> {
-  try {
-    console.log(`[updateCharacterJungleCoinsFromRecord] Updating character jungle coins for record: ${record.name}`);
-    
-    // Calculate jungle coins delta
-    const newJungleCoins = record.jungleCoins || 0;
-    const oldJungleCoins = previousRecord.jungleCoins || 0;
-    const jungleCoinsDelta = newJungleCoins - oldJungleCoins;
-    
-    if (jungleCoinsDelta === 0) {
-      console.log(`[updateCharacterJungleCoinsFromRecord] No jungle coins change detected`);
-      return;
-    }
-    
-    // Find characters related to this financial record
-    const allCharacters = await getAllCharacters();
-    const relatedCharacters = allCharacters.filter(char => 
-      char.id === record.customerCharacterId
-    );
-    
-    for (const character of relatedCharacters) {
-      const updateKey = `updateCharacterJungleCoins:${record.id}:${character.id}:${record.updatedAt?.getTime()}`;
-      
-      if (await hasEffect(updateKey)) {
-        console.log(`[updateCharacterJungleCoinsFromRecord] ⏭️ Already updated character: ${character.id}`);
-        continue;
-      }
-      
-      // Update character jungle coins
-      const updatedCharacter = {
-        ...character,
-        jungleCoins: (character.jungleCoins || 0) + jungleCoinsDelta,
-        updatedAt: new Date()
-      };
-      
-      await upsertCharacter(updatedCharacter);
-      await markEffect(updateKey);
-      
-      console.log(`[updateCharacterJungleCoinsFromRecord] ✅ Updated character jungle coins: ${character.id}`);
-    }
-  } catch (error) {
-    console.error(`[updateCharacterJungleCoinsFromRecord] Error updating character jungle coins:`, error);
-  }
-}
-
-// ============================================================================
 // PROPERTY CHANGE DETECTION HELPERS
 // ============================================================================
 
@@ -541,10 +489,6 @@ export function hasRewardsChanged(newEntity: any, oldEntity: any): boolean {
     newRewards.fp !== oldRewards.fp ||
     newRewards.hp !== oldRewards.hp
   );
-}
-
-export function hasJungleCoinsChanged(newEntity: any, oldEntity: any): boolean {
-  return (newEntity.jungleCoins || 0) !== (oldEntity.jungleCoins || 0);
 }
 
 export function hasRevenueChanged(newEntity: any, oldEntity: any): boolean {

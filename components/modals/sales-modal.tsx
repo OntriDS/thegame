@@ -328,39 +328,6 @@ export default function SalesModal({
       return;
     }
 
-    // Handle new customer character creation
-    let finalCustomerId: string | null = customerId;
-    if (isNewCustomer && newCustomerName.trim()) {
-      try {
-        // Create new customer character
-        const newCharacter = {
-          id: `character-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          name: newCustomerName.trim(),
-          description: `Customer character created from sale: ${name || 'New Sale'}`,
-          roles: [CharacterRole.CUSTOMER],
-          inventory: [],
-          achievementsCharacter: [],
-          jungleCoins: 0,
-          purchasedAmount: 0,
-          playerId: PLAYER_ONE_ID, // Default to Player One for now
-          lastActiveAt: new Date(),
-          isActive: true,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          links: []
-        };
-        
-        await ClientAPI.upsertCharacter(newCharacter);
-        
-        finalCustomerId = newCharacter.id;
-        console.log(`[SalesModal] ✅ Created new customer character: ${newCharacter.name} (${newCharacter.id})`);
-      } catch (error) {
-        console.error('[SalesModal] ❌ Failed to create customer character:', error);
-        alert('Warning: Failed to create customer character. Continuing without customer link.');
-        // Continue with null customer if creation fails
-        finalCustomerId = null;
-      }
-    }
 
     // Validate: Check for conflicting data (product fields filled while service lines exist, or vice versa)
     
@@ -507,7 +474,8 @@ export default function SalesModal({
       status,
       siteId,
       counterpartyName: counterpartyName.trim() || undefined,
-      customerId: finalCustomerId || null,  // Ambassador: Customer character who bought items
+      customerId: isNewCustomer ? null : customerId,  // Ambassador: Existing customer
+      newCustomerName: isNewCustomer ? newCustomerName : undefined,  // EMISSARY: Name for new customer character creation
       playerCharacterId: playerCharacterId,
       isNotPaid,
       isNotCharged,

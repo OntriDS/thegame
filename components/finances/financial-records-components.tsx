@@ -26,7 +26,13 @@ export function CompanyRecordsList({
 
   useEffect(() => {
     const loadRecords = async () => {
-      const companyRecords = await ClientAPI.getFinancialRecordsByMonth(year, month, 'company');
+      let companyRecords: FinancialRecord[];
+      if (year === 0 || month === 0) {
+        const allRecords = await ClientAPI.getFinancialRecords();
+        companyRecords = allRecords.filter(r => r.type === 'company');
+      } else {
+        companyRecords = await ClientAPI.getFinancialRecordsByMonth(year, month, 'company');
+      }
       setRecords(companyRecords);
     };
     loadRecords();
@@ -35,7 +41,13 @@ export function CompanyRecordsList({
   // Listen for financial record updates to refresh the list
   useEntityUpdates('financial', () => {
     const loadRecords = async () => {
-      const companyRecords = await ClientAPI.getFinancialRecordsByMonth(year, month, 'company');
+      let companyRecords: FinancialRecord[];
+      if (year === 0 || month === 0) {
+        const allRecords = await ClientAPI.getFinancialRecords();
+        companyRecords = allRecords.filter(r => r.type === 'company');
+      } else {
+        companyRecords = await ClientAPI.getFinancialRecordsByMonth(year, month, 'company');
+      }
       setRecords(companyRecords);
     };
     loadRecords();
@@ -50,7 +62,11 @@ export function CompanyRecordsList({
       {records.length === 0 ? (
         <Card>
           <CardContent className="text-center py-8">
-            <p className="text-muted-foreground">No company records for {formatMonthYear(new Date(year, month - 1))}</p>
+            <p className="text-muted-foreground">
+              {year === 0 || month === 0 
+                ? 'No company records' 
+                : `No company records for ${formatMonthYear(new Date(year, month - 1))}`}
+            </p>
           </CardContent>
         </Card>
       ) : (
@@ -174,7 +190,13 @@ export function PersonalRecordsList({
 
   useEffect(() => {
     const loadRecords = async () => {
-      const personalRecords = await ClientAPI.getFinancialRecordsByMonth(year, month, 'personal');
+      let personalRecords: FinancialRecord[];
+      if (year === 0 || month === 0) {
+        const allRecords = await ClientAPI.getFinancialRecords();
+        personalRecords = allRecords.filter(r => r.type === 'personal');
+      } else {
+        personalRecords = await ClientAPI.getFinancialRecordsByMonth(year, month, 'personal');
+      }
       setRecords(personalRecords);
     };
     loadRecords();
@@ -183,7 +205,13 @@ export function PersonalRecordsList({
   // 🚨 FIX: Listen for financial record updates to refresh the list
   useEntityUpdates('financial', () => {
     const loadRecords = async () => {
-      const personalRecords = await ClientAPI.getFinancialRecordsByMonth(year, month, 'personal');
+      let personalRecords: FinancialRecord[];
+      if (year === 0 || month === 0) {
+        const allRecords = await ClientAPI.getFinancialRecords();
+        personalRecords = allRecords.filter(r => r.type === 'personal');
+      } else {
+        personalRecords = await ClientAPI.getFinancialRecordsByMonth(year, month, 'personal');
+      }
       setRecords(personalRecords);
     };
     loadRecords();
@@ -230,7 +258,11 @@ This action cannot be undone.`);
       {records.length === 0 ? (
         <Card>
           <CardContent className="text-center py-8">
-            <p className="text-muted-foreground">No personal records for {formatMonthYear(new Date(year, month - 1))}</p>
+            <p className="text-muted-foreground">
+              {year === 0 || month === 0 
+                ? 'No personal records' 
+                : `No personal records for ${formatMonthYear(new Date(year, month - 1))}`}
+            </p>
           </CardContent>
         </Card>
       ) : (

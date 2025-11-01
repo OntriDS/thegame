@@ -1,11 +1,10 @@
 // thegame/workflows/points-rewards-utils.ts
-import type { Player, Character, Rewards } from '@/types/entities';
+import type { Player, Rewards } from '@/types/entities';
 import { getAllPlayers, upsertPlayer } from '@/data-store/datastore';
-import { getAllCharacters, upsertCharacter } from '@/data-store/datastore';
 import { makeLink } from '@/links/links-workflows';
 import { createLink } from '@/links/link-registry';
 import { LinkType, EntityType, PLAYER_ONE_ID } from '@/types/enums';
-import { appendPlayerPointsLog, appendCharacterJungleCoinsLog } from './entities-logging';
+import { appendPlayerPointsLog } from './entities-logging';
 
 /**
  * Awards points to a player with idempotency and proper tracking
@@ -152,98 +151,6 @@ export async function removePointsFromPlayer(
 
   } catch (error) {
     console.error(`[removePointsFromPlayer] ❌ Failed to remove points:`, error);
-    throw error;
-  }
-}
-
-/**
- * Awards jungle coins to a character
- * @param characterId - ID of the character to award jungle coins to
- * @param amount - Amount of jungle coins to award
- * @param sourceId - ID of the entity that triggered the award
- * @param sourceType - Type of entity (task, financial, sale)
- */
-export async function awardJungleCoinsToCharacter(
-  characterId: string, 
-  amount: number, 
-  sourceId: string, 
-  sourceType: string
-): Promise<void> {
-  try {
-    console.log(`[awardJungleCoinsToCharacter] Awarding ${amount} J$ to character ${characterId} from ${sourceType} ${sourceId}`);
-    
-    if (amount <= 0) {
-      console.log(`[awardJungleCoinsToCharacter] No jungle coins to award, skipping`);
-      return;
-    }
-
-    // Get the character
-    const characters = await getAllCharacters();
-    const character = characters.find(c => c.id === characterId);
-    if (!character) {
-      console.log(`[awardJungleCoinsToCharacter] Character ${characterId} not found, skipping`);
-      return;
-    }
-
-    // Update character jungle coins
-    const updatedCharacter: Character = {
-      ...character,
-      jungleCoins: (character.jungleCoins || 0) + amount,
-      updatedAt: new Date()
-    };
-
-    // Save updated character
-    await upsertCharacter(updatedCharacter);
-    // Add dedicated character jungle coins log with source attribution
-    await appendCharacterJungleCoinsLog(characterId, amount, sourceId, sourceType);
-
-    // NOTE: J$ (Jungle Coins) are CURRENCY that belongs to FINANCIALS
-    // They can be borrowed as AMBASSADOR by Player and Character, but don't belong to them
-    // No link creation needed here - J$ are handled by the Financial system
-
-  } catch (error) {
-    console.error(`[awardJungleCoinsToCharacter] ❌ Failed to award jungle coins:`, error);
-    throw error;
-  }
-}
-
-/**
- * Removes jungle coins from a character (rollback function)
- * @param characterId - ID of the character to remove jungle coins from
- * @param amount - Amount of jungle coins to remove
- */
-export async function removeJungleCoinsFromCharacter(
-  characterId: string, 
-  amount: number
-): Promise<void> {
-  try {
-    console.log(`[removeJungleCoinsFromCharacter] Removing ${amount} J$ from character ${characterId}`);
-    
-    if (amount <= 0) {
-      console.log(`[removeJungleCoinsFromCharacter] No jungle coins to remove, skipping`);
-      return;
-    }
-
-    // Get the character
-    const characters = await getAllCharacters();
-    const character = characters.find(c => c.id === characterId);
-    if (!character) {
-      console.log(`[removeJungleCoinsFromCharacter] Character ${characterId} not found, skipping`);
-      return;
-    }
-
-    // Update character jungle coins (ensure they don't go negative)
-    const updatedCharacter: Character = {
-      ...character,
-      jungleCoins: Math.max(0, (character.jungleCoins || 0) - amount),
-      updatedAt: new Date()
-    };
-
-    // Save updated character
-    await upsertCharacter(updatedCharacter);
-
-  } catch (error) {
-    console.error(`[removeJungleCoinsFromCharacter] ❌ Failed to remove jungle coins:`, error);
     throw error;
   }
 }

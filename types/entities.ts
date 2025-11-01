@@ -205,6 +205,9 @@ export interface Item extends BaseEntity {
   ownerCharacterId?: string | null;  // Character who owns this item (customer, team member, etc.)
   //sku?: string;                 // optional – acts as business-friendly id
 
+  // Emissary Fields
+  newOwnerName?: string;           // EMISSARY: Name for new owner character creation
+
   // Archive field
   isCollected: boolean;            // Item collected (monthly close)
 }
@@ -259,6 +262,7 @@ export interface Task extends BaseEntity {
   // Emissary Fields (Conditional entity creation - pass to created entities)
   customerCharacterId?: string | null;  // Customer for service tasks - passed to created items
   playerCharacterId?: string | null;    // AMBASSADOR: Player character who owns this task
+  newCustomerName?: string;             // EMISSARY: Name for new customer character creation
   
   // Item output (DNA for RNA - creates TASK_ITEM links)
   outputItemType?: string;          // Type of item this task creates
@@ -312,6 +316,9 @@ export interface FinancialRecord extends BaseEntity {
   playerCharacterId?: string | null;   // Player character who owns this record
   sourceTaskId?: string | null;     // Task that generated this financial record (optional)
   sourceSaleId?: string | null;     // Sale that generated this financial record (optional)
+  
+  // Emissary Fields
+  newCustomerName?: string;         // EMISSARY: Name for new customer character creation
   
   // Financial data - SOURCE OF TRUTH for accounting
   // These are the REAL values, copied from Task/Sale DNA via RNA
@@ -485,6 +492,9 @@ export interface Sale extends BaseEntity {
   counterpartyName?: string;        // client/store/partner name
   customerId?: string | null;       // Character who is the customer (for tracking purchases)
   playerCharacterId?: string | null; // Player character who owns this sale
+  
+  // Emissary Fields
+  newCustomerName?: string;         // EMISSARY: Name for new customer character creation
 
   // Financial DNA (Permanent Ambassadors / Temporary Snapshots)
   // These fields are "instructions" that get copied via RNA to create FinancialRecord entity

@@ -18,6 +18,8 @@ import {
   hasRevenueChanged,
   hasLinesChanged
 } from '../update-propagation-utils';
+import { createCharacterFromSale } from '../character-creation-utils';
+import { upsertSale } from '@/data-store/datastore';
 
 const STATE_FIELDS = ['status', 'isNotPaid', 'isNotCharged', 'isCollected', 'postedAt', 'doneAt', 'cancelledAt'];
 const DESCRIPTIVE_FIELDS = ['counterpartyName', 'totals'];
@@ -43,6 +45,21 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
     });
     await markEffect(effectKey);
     
+    // Character creation from emissary fields - when newCustomerName is provided
+    if (sale.newCustomerName && !sale.customerId) {
+      const characterEffectKey = EffectKeys.sideEffect('sale', sale.id, 'characterCreated');
+      if (!(await hasEffect(characterEffectKey))) {
+        console.log(`[onSaleUpsert] Creating character from sale emissary fields: ${sale.counterpartyName}`);
+        const createdCharacter = await createCharacterFromSale(sale);
+        if (createdCharacter) {
+          // Update sale with the created character ID
+          const updatedSale = { ...sale, customerId: createdCharacter.id };
+          await upsertSale(updatedSale, { skipWorkflowEffects: true });
+          await markEffect(characterEffectKey);
+          console.log(`[onSaleUpsert] ✅ Character created and sale updated: ${createdCharacter.name}`);
+        }
+      }
+    }
     
     return;
   }
@@ -194,6 +211,12 @@ export async function removeSaleEffectsOnDelete(saleId: string): Promise<void> {
     // 3. Clear effects registry
     await clearEffectsByPrefix(EntityType.SALE, saleId, 'sale:');
     await clearEffectsByPrefix(EntityType.SALE, saleId, 'pointsAwarded:');
+    
+    // Clear specific effects
+    const { clearEffect } = await import('@/data-store/effects-registry');
+    await clearEffect(EffectKeys.created('sale', saleId));
+    await clearEffect(EffectKeys.sideEffect('sale', saleId, 'characterCreated'));
+    await clearEffect(EffectKeys.sideEffect('sale', saleId, 'pointsAwarded'));
     
     // 4. Remove log entries from all relevant logs
     console.log(`[removeSaleEffectsOnDelete] Starting log entry removal for sale: ${saleId}`);

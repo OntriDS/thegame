@@ -232,33 +232,6 @@ export async function upsertPlayerPointsChangedLog(
 }
 
 /**
- * Log character jungle coins award with source tracking
- * Used for jungle coins awarded from financial records
- */
-export async function appendCharacterJungleCoinsLog(
-  characterId: string,
-  amount: number,
-  sourceId: string,
-  sourceType: string
-): Promise<void> {
-  const key = buildLogKey(EntityType.CHARACTER);
-  const list = (await kvGet<any[]>(key)) || [];
-  
-  const logEntry = {
-    event: LogEventType.UPDATED,
-    entityId: characterId,
-    jungleCoins: amount,
-    sourceId: sourceId,
-    sourceType: sourceType,
-    description: `Jungle coins awarded from ${sourceType}: +${amount} J$`,
-    timestamp: new Date().toISOString()
-  };
-  
-  list.push(logEntry);
-  await kvSet(key, list);
-}
-
-/**
  * Log player points update with change tracking
  * Used when task rewards change and points need to be updated
  * This function UPDATES existing log entries in-place instead of creating new ones

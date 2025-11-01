@@ -8,6 +8,8 @@ import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data
 import { EffectKeys } from '@/data-store/keys';
 import { getLinksFor, removeLink } from '@/links/link-registry';
 import { getCategoryForItemType } from '@/lib/utils/searchable-select-utils';
+import { createCharacterFromItem } from '../character-creation-utils';
+import { upsertItem } from '@/data-store/datastore';
 
 const STATE_FIELDS = ['status', 'stock', 'quantitySold', 'isCollected'];
 const DESCRIPTIVE_FIELDS = ['name', 'description', 'price', 'unitCost', 'additionalCost', 'value'];
@@ -38,6 +40,23 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
     });
     
     await markEffect(effectKey);
+    
+    // Character creation from emissary fields - when newOwnerName is provided
+    if (item.newOwnerName && !item.ownerCharacterId) {
+      const characterEffectKey = EffectKeys.sideEffect('item', item.id, 'characterCreated');
+      if (!(await hasEffect(characterEffectKey))) {
+        console.log(`[onItemUpsert] Creating character from item emissary fields: ${item.name}`);
+        const createdCharacter = await createCharacterFromItem(item);
+        if (createdCharacter) {
+          // Update item with the created character ID
+          const updatedItem = { ...item, ownerCharacterId: createdCharacter.id };
+          await upsertItem(updatedItem, { skipWorkflowEffects: true });
+          await markEffect(characterEffectKey);
+          console.log(`[onItemUpsert] ✅ Character created and item updated: ${createdCharacter.name}`);
+        }
+      }
+    }
+    
     return;
   }
   
@@ -115,7 +134,8 @@ export async function removeItemEffectsOnDelete(itemId: string): Promise<void> {
     }
     
     // 2. Clear all effects for this item
-    await clearEffect(`item:${itemId}:created`);
+    await clearEffect(EffectKeys.created('item', itemId));
+    await clearEffect(EffectKeys.sideEffect('item', itemId, 'characterCreated'));
     await clearEffectsByPrefix(EntityType.ITEM, itemId, 'financialLogged:');
     await clearEffectsByPrefix(EntityType.ITEM, itemId, 'pointsLogged:');
     
