@@ -1134,8 +1134,8 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
                                   }}
                                   onBlur={() => setEditingField(null)}
                                   className="h-6 w-16 px-1 py-0 text-center"
-                                  step="1"
-                                  min="0"
+                                  step={1}
+                                  min={0}
                                 />
                               ) : (
                                 <span 
