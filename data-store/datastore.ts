@@ -66,7 +66,7 @@ import { processLinkEntity } from '@/links/links-workflows';
 import { appendEntityLog } from '@/workflows/entities-logging';
 
 // TASKS
-export async function upsertTask(task: Task, options?: { skipWorkflowEffects?: boolean }): Promise<Task> {
+export async function upsertTask(task: Task, options?: { skipWorkflowEffects?: boolean; skipLinkEffects?: boolean }): Promise<Task> {
   const previous = await repoGetTaskById(task.id);
   const saved = await repoUpsertTask(task);
   
@@ -75,7 +75,10 @@ export async function upsertTask(task: Task, options?: { skipWorkflowEffects?: b
     await onTaskUpsert(saved, previous || undefined);
   }
   
-  await processLinkEntity(saved, EntityType.TASK);
+  if (!options?.skipLinkEffects) {
+    await processLinkEntity(saved, EntityType.TASK);
+  }
+  
   return saved;
 }
 
@@ -102,7 +105,7 @@ export async function removeTask(id: string): Promise<void> {
 // - If workflows fail, the item still exists in the database
 // - This prevents data loss but may cause 500 errors if workflows throw
 // - API routes MUST have try/catch to handle workflow failures gracefully
-export async function upsertItem(item: Item, options?: { skipWorkflowEffects?: boolean }): Promise<Item> {
+export async function upsertItem(item: Item, options?: { skipWorkflowEffects?: boolean; skipLinkEffects?: boolean }): Promise<Item> {
   const previous = await repoGetItemById(item.id);
   const saved = await repoUpsertItem(item);  // ✅ Item persisted here
   
@@ -111,7 +114,10 @@ export async function upsertItem(item: Item, options?: { skipWorkflowEffects?: b
     await onItemUpsert(saved, previous || undefined);  // ⚠️ Can throw
   }
   
-  await processLinkEntity(saved, EntityType.ITEM);   // ⚠️ Can throw
+  if (!options?.skipLinkEffects) {
+    await processLinkEntity(saved, EntityType.ITEM);   // ⚠️ Can throw
+  }
+  
   return saved;
 }
 
@@ -143,7 +149,7 @@ export async function removeItem(id: string): Promise<void> {
 }
 
 // FINANCIALS
-export async function upsertFinancial(financial: FinancialRecord, options?: { skipWorkflowEffects?: boolean }): Promise<FinancialRecord> {
+export async function upsertFinancial(financial: FinancialRecord, options?: { skipWorkflowEffects?: boolean; skipLinkEffects?: boolean }): Promise<FinancialRecord> {
   const previous = await repoGetFinancialById(financial.id);
   const saved = await repoUpsertFinancial(financial);
   
@@ -152,7 +158,10 @@ export async function upsertFinancial(financial: FinancialRecord, options?: { sk
     await onFinancialUpsert(saved, previous || undefined);
   }
   
-  await processLinkEntity(saved, EntityType.FINANCIAL);
+  if (!options?.skipLinkEffects) {
+    await processLinkEntity(saved, EntityType.FINANCIAL);
+  }
+  
   return saved;
 }
 
@@ -180,7 +189,7 @@ export async function removeFinancial(id: string): Promise<void> {
 }
 
 // SALES
-export async function upsertSale(sale: Sale, options?: { skipWorkflowEffects?: boolean }): Promise<Sale> {
+export async function upsertSale(sale: Sale, options?: { skipWorkflowEffects?: boolean; skipLinkEffects?: boolean }): Promise<Sale> {
   const previous = await repoGetSaleById(sale.id);
   const saved = await repoUpsertSale(sale);
   
@@ -189,7 +198,10 @@ export async function upsertSale(sale: Sale, options?: { skipWorkflowEffects?: b
     await onSaleUpsert(saved, previous || undefined);
   }
   
-  await processLinkEntity(saved, EntityType.SALE);
+  if (!options?.skipLinkEffects) {
+    await processLinkEntity(saved, EntityType.SALE);
+  }
+  
   return saved;
 }
 
@@ -212,13 +224,16 @@ export async function removeSale(id: string): Promise<void> {
 }
 
 // CHARACTERS
-export async function upsertCharacter(character: Character, options?: { skipWorkflowEffects?: boolean }): Promise<Character> {
+export async function upsertCharacter(character: Character, options?: { skipWorkflowEffects?: boolean; skipLinkEffects?: boolean }): Promise<Character> {
   const previous = await repoGetCharacterById(character.id);
   const saved = await repoUpsertCharacter(character);
   
   if (!options?.skipWorkflowEffects) {
     const { onCharacterUpsert } = await import('@/workflows/entities-workflows/character.workflow');
     await onCharacterUpsert(saved, previous || undefined);
+  }
+  
+  if (!options?.skipLinkEffects) {
     await processLinkEntity(saved, EntityType.CHARACTER);
   }
   
@@ -244,13 +259,16 @@ export async function removeCharacter(id: string): Promise<void> {
 }
 
 // PLAYERS
-export async function upsertPlayer(player: Player, options?: { skipWorkflowEffects?: boolean }): Promise<Player> {
+export async function upsertPlayer(player: Player, options?: { skipWorkflowEffects?: boolean; skipLinkEffects?: boolean }): Promise<Player> {
   const previous = await repoGetPlayerById(player.id);
   const saved = await repoUpsertPlayer(player);
   
   if (!options?.skipWorkflowEffects) {
     const { onPlayerUpsert } = await import('@/workflows/entities-workflows/player.workflow');
     await onPlayerUpsert(saved, previous || undefined);
+  }
+  
+  if (!options?.skipLinkEffects) {
     await processLinkEntity(saved, EntityType.PLAYER);
   }
   
@@ -276,13 +294,16 @@ export async function removePlayer(id: string): Promise<void> {
 }
 
 // ACCOUNTS
-export async function upsertAccount(account: Account, options?: { skipWorkflowEffects?: boolean }): Promise<Account> {
+export async function upsertAccount(account: Account, options?: { skipWorkflowEffects?: boolean; skipLinkEffects?: boolean }): Promise<Account> {
   const previous = await repoGetAccountById(account.id);
   const saved = await repoUpsertAccount(account);
   
   if (!options?.skipWorkflowEffects) {
     const { onAccountUpsert } = await import('@/workflows/entities-workflows/account.workflow');
     await onAccountUpsert(saved, previous || undefined);
+  }
+  
+  if (!options?.skipLinkEffects) {
     await processLinkEntity(saved, EntityType.ACCOUNT);
   }
   

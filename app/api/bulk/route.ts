@@ -20,6 +20,8 @@ import { validateEntities } from '@/lib/utils/entity-validation';
 import type { Item, Task, Sale, FinancialRecord, Character, Player, Site } from '@/types/entities';
 
 export const dynamic = 'force-dynamic';
+// Increased timeout for large bulk operations (CSV imports, seed data)
+export const maxDuration = 300; // 5 minutes
 
 // Phase 2: All core entities, all modes
 const SUPPORTED_ENTITY_TYPES = [

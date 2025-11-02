@@ -8,7 +8,6 @@ import { appendLinkLog } from './links-logging';
 import { getAllItems } from '@/data-store/repositories/item.repo';
 import { getAllCharacters, getAllTasks } from '@/data-store/datastore';
 import { v4 as uuid } from 'uuid';
-import { isProcessing, startProcessing, endProcessing } from '@/data-store/effects-registry';
 import { appendEntityLog } from '@/workflows/entities-logging';
 
 export function makeLink(linkType: LinkType, source: { type: EntityType; id: string }, target: { type: EntityType; id: string }, metadata?: Record<string, any>): Link {
@@ -23,43 +22,31 @@ export function makeLink(linkType: LinkType, source: { type: EntityType; id: str
 }
 
 export async function processLinkEntity(entity: any, entityType: EntityType): Promise<void> {
-  // Check for circular reference
-  if (await isProcessing(entityType, entity.id)) {
-    console.warn(`[CircuitBreaker] Already processing ${entityType}:${entity.id} - skipping to prevent circular reference`);
-    return;
-  }
-  
-  try {
-    await startProcessing(entityType, entity.id);
-    
-    switch (entityType) {
-      case EntityType.TASK:
-        await processTaskEffects(entity as Task);
-        break;
-      case EntityType.ITEM:
-        await processItemEffects(entity as Item);
-        break;
-      case EntityType.SALE:
-        await processSaleEffects(entity as Sale);
-        break;
-      case EntityType.FINANCIAL:
-        await processFinancialEffects(entity as FinancialRecord);
-        break;
-      case EntityType.CHARACTER:
-        await processCharacterEffects(entity as Character);
-        break;
-      case EntityType.PLAYER:
-        await processPlayerEffects(entity as Player);
-        break;
-      case EntityType.SITE:
-        // Sites don't create links when saved - they're link targets only
-        // SITE_SITE links created by movement operations (workflows/site-movement-utils.ts)
-        break;
-      default:
-        return;
-    }
-  } finally {
-    await endProcessing(entityType, entity.id);
+  switch (entityType) {
+    case EntityType.TASK:
+      await processTaskEffects(entity as Task);
+      break;
+    case EntityType.ITEM:
+      await processItemEffects(entity as Item);
+      break;
+    case EntityType.SALE:
+      await processSaleEffects(entity as Sale);
+      break;
+    case EntityType.FINANCIAL:
+      await processFinancialEffects(entity as FinancialRecord);
+      break;
+    case EntityType.CHARACTER:
+      await processCharacterEffects(entity as Character);
+      break;
+    case EntityType.PLAYER:
+      await processPlayerEffects(entity as Player);
+      break;
+    case EntityType.SITE:
+      // Sites don't create links when saved - they're link targets only
+      // SITE_SITE links created by movement operations (workflows/site-movement-utils.ts)
+      break;
+    default:
+      return;
   }
 }
 
