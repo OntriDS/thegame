@@ -10,6 +10,7 @@ import { EntityType, SiteType } from '@/types/enums';
 import { Trash2 } from 'lucide-react';
 import { ClientAPI } from '@/lib/client-api';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
+import { dispatchEntityUpdated, entityTypeToKind } from '@/lib/ui/ui-events';
 // Side effects handled by parent component via API calls
 
 import { Character } from '@/types/entities';
@@ -181,6 +182,10 @@ export default function DeleteModal({
       }
 
       // Note: Log cleanup is handled by the workflow functions (removeTaskLogEntriesOnDelete, removeRecordEffectsOnDelete)
+
+      // Dispatch entity update event to trigger UI refresh
+      const entityKind = entityTypeToKind(entityType);
+      dispatchEntityUpdated(entityKind);
 
       // Call completion callback if provided
       if (onComplete) {
