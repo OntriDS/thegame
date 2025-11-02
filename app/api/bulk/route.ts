@@ -129,7 +129,7 @@ async function handleBulkOperation<T>(
   records: any[],
   source: string,
   getAllFn: () => Promise<T[]>,
-  upsertFn: (entity: T, options?: { skipWorkflowEffects?: boolean }) => Promise<T>,
+  upsertFn: (entity: T, options?: { skipWorkflowEffects?: boolean; skipLinkEffects?: boolean }) => Promise<T>,
   removeFn: (id: string) => Promise<void>
 ): Promise<NextResponse> {
   const counts = {
@@ -270,12 +270,12 @@ async function handleBulkOperation<T>(
               counts.skipped++;
               continue;
             }
-            // Add new - ALWAYS skip workflow effects during bulk operations (no individual CREATED logs)
-            await upsertFn(record as T, { skipWorkflowEffects: true });
+            // Add new - ALWAYS skip workflow effects and links during bulk operations (no individual CREATED logs, no link creation)
+            await upsertFn(record as T, { skipWorkflowEffects: true, skipLinkEffects: true });
             counts.added++;
             existingByKey.set(businessKey, record as T);
           } else if (mode === 'merge') {
-            // Update if exists, add if new - ALWAYS skip workflow effects during bulk operations
+            // Update if exists, add if new - ALWAYS skip workflow effects and links during bulk operations
             if (existing) {
               // Preserve identity fields: id, createdAt, links
               const merged: T = {
@@ -286,17 +286,17 @@ async function handleBulkOperation<T>(
                 links: (existing as any).links || [],
                 updatedAt: new Date()
               } as T;
-              await upsertFn(merged, { skipWorkflowEffects: true });
+              await upsertFn(merged, { skipWorkflowEffects: true, skipLinkEffects: true });
               counts.updated++;
               existingByKey.set(businessKey, merged);
             } else {
-              await upsertFn(record as T, { skipWorkflowEffects: true });
+              await upsertFn(record as T, { skipWorkflowEffects: true, skipLinkEffects: true });
               counts.added++;
               existingByKey.set(businessKey, record as T);
             }
           } else if (mode === 'replace') {
-            // Just add (replace mode already deleted everything) - ALWAYS skip workflow effects during bulk operations
-            await upsertFn(record as T, { skipWorkflowEffects: true });
+            // Just add (replace mode already deleted everything) - ALWAYS skip workflow effects and links during bulk operations
+            await upsertFn(record as T, { skipWorkflowEffects: true, skipLinkEffects: true });
             counts.added++;
           }
         } catch (error) {
@@ -308,21 +308,28 @@ async function handleBulkOperation<T>(
       }
     }
 
-    // Log bulk operation
-    const totalProcessed = counts.added + counts.updated + counts.skipped + counts.failed;
-    const importMode = mode === 'add-only' ? 'add' : mode === 'merge' ? 'merge' : 'replace';
-    await appendBulkOperationLog(entityType, 'import', {
-      count: totalProcessed,
-      source,
-      importMode,
-      extra: {
-        added: counts.added,
-        updated: counts.updated,
-        skipped: counts.skipped,
-        failed: counts.failed,
-        errors: errors.length > 0 ? errors.slice(0, 10) : undefined
+    // Log bulk operation (success case)
+    try {
+      const totalProcessed = counts.added + counts.updated + counts.skipped + counts.failed;
+      if (totalProcessed > 0) {
+        const importMode = mode === 'add-only' ? 'add' : mode === 'merge' ? 'merge' : 'replace';
+        await appendBulkOperationLog(entityType, 'import', {
+          count: totalProcessed,
+          source,
+          importMode,
+          extra: {
+            added: counts.added,
+            updated: counts.updated,
+            skipped: counts.skipped,
+            failed: counts.failed,
+            errors: errors.length > 0 ? errors.slice(0, 10) : undefined
+          }
+        });
+        console.log(`[Bulk API] ✅ Logged bulk operation: ${totalProcessed} ${entityType} processed`);
       }
-    });
+    } catch (logError) {
+      console.error(`[Bulk API] Failed to log bulk operation:`, logError);
+    }
 
     // Return response
     const success = counts.failed === 0;
@@ -338,10 +345,37 @@ async function handleBulkOperation<T>(
     });
   } catch (error) {
     console.error(`[Bulk API] Fatal error in handleBulkOperation for ${entityType}:`, error);
+    const errorMsg = error instanceof Error ? error.message : 'Fatal error during bulk operation';
+    errors.push(`Fatal error: ${errorMsg}`);
+    
+    // Log bulk operation even on fatal error (with partial progress)
+    try {
+      const totalProcessed = counts.added + counts.updated + counts.skipped + counts.failed;
+      if (totalProcessed > 0) {
+        const importMode = mode === 'add-only' ? 'add' : mode === 'merge' ? 'merge' : 'replace';
+        await appendBulkOperationLog(entityType, 'import', {
+          count: totalProcessed,
+          source,
+          importMode,
+          extra: {
+            added: counts.added,
+            updated: counts.updated,
+            skipped: counts.skipped,
+            failed: counts.failed,
+            errors: errors.length > 0 ? errors.slice(0, 10) : undefined,
+            fatalError: errorMsg
+          }
+        });
+        console.log(`[Bulk API] ✅ Logged bulk operation (with error): ${totalProcessed} ${entityType} processed`);
+      }
+    } catch (logError) {
+      console.error(`[Bulk API] Failed to log bulk operation on error:`, logError);
+    }
+    
     return NextResponse.json(
       { 
         success: false,
-        error: error instanceof Error ? error.message : 'Fatal error during bulk operation',
+        error: errorMsg,
         mode,
         counts: {
           added: counts.added,

@@ -346,76 +346,65 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
       let operationErrors: string[] = [];
       
       try {
-        switch (importMode) {
-          case 'replace':
-            success = await ClientAPI.bulkImportItems(items);
-            importedCount = items.length;
-            break;
-            
-          case 'merge':
-            success = await ClientAPI.bulkMergeItems(items);
-            importedCount = items.length;
-            break;
-            
-          case 'add-only':
-            // Use new unified bulk operation endpoint
-            const result = await ClientAPI.bulkOperation({
-              entityType: 'item',
-              mode: 'add-only',
-              source: 'csv',
-              records: items
-            });
-            success = result.success;
-            importedCount = result.counts.added || 0;
-            skippedCount = result.counts.skipped || 0;
-            operationErrors = result.errors || [];
-            break;
-        }
-        
-        if (success || importedCount > 0) {
-          // Build success message with detailed breakdown
-          const messages: string[] = [];
-          if (importedCount > 0) {
-            messages.push(`✅ Added ${importedCount} new item${importedCount !== 1 ? 's' : ''}`);
-          }
-          if (skippedCount > 0) {
-            messages.push(`⏭️ Skipped ${skippedCount} duplicate${skippedCount !== 1 ? 's' : ''}`);
-          }
-          
-          // Add site warnings if any
-          if (siteWarnings.length > 0) {
-            messages.push(`⚠️ ${siteWarnings.length} item${siteWarnings.length !== 1 ? 's' : ''} imported without site assignment (site${siteWarnings.length !== 1 ? 's' : ''} not found)`);
-          }
-          
-          // Combine errors, warnings, and success messages
-          const allMessages = [
-            ...(operationErrors.length > 0 ? operationErrors : []),
-            ...(siteWarnings.length > 0 ? siteWarnings : []),
-            ...messages
-          ];
-          
-          setImportResult({
-            success: importedCount,
-            errors: allMessages.length > 0 ? allMessages : []
-          });
-          setCsvData('');
-          
-          // Ensure the UI refreshes by adding a small delay
-          setTimeout(() => {
-            onImportComplete?.();
-          }, 100);
-        } else {
-          setImportResult({
-            success: 0,
-            errors: operationErrors.length > 0 
-              ? operationErrors 
-              : ['Import operation failed - check console for details']
-          });
-        }
-      } catch (operationError) {
+        // Use unified bulk operation endpoint for all import modes
+        const result = await ClientAPI.bulkOperation({
+          entityType: 'item',
+          mode: importMode === 'replace' ? 'replace' : importMode === 'merge' ? 'merge' : 'add-only',
+          source: 'csv',
+          records: items
+        });
+        success = result.success;
+        importedCount = result.counts.added || 0;
+        skippedCount = result.counts.skipped || 0;
+        operationErrors = result.errors || [];
+      } catch (error) {
+        console.error('[CSV Import] Failed to import items:', error);
         setImportResult({
           success: 0,
-          errors: [`Import operation failed: ${operationError instanceof Error ? operationError.message : 'Unknown error'}`]
+          errors: [`Failed to import items: ${error instanceof Error ? error.message : 'Unknown error'}`]
+        });
+        setIsImporting(false);
+        return;
+      }
+      
+      if (success || importedCount > 0) {
+        // Build success message with detailed breakdown
+        const messages: string[] = [];
+        if (importedCount > 0) {
+          messages.push(`✅ Added ${importedCount} new item${importedCount !== 1 ? 's' : ''}`);
+        }
+        if (skippedCount > 0) {
+          messages.push(`⏭️ Skipped ${skippedCount} duplicate${skippedCount !== 1 ? 's' : ''}`);
+        }
+        
+        // Add site warnings if any
+        if (siteWarnings.length > 0) {
+          messages.push(`⚠️ ${siteWarnings.length} item${siteWarnings.length !== 1 ? 's' : ''} imported without site assignment (site${siteWarnings.length !== 1 ? 's' : ''} not found)`);
+        }
+        
+        // Combine errors, warnings, and success messages
+        const allMessages = [
+          ...(operationErrors.length > 0 ? operationErrors : []),
+          ...(siteWarnings.length > 0 ? siteWarnings : []),
+          ...messages
+        ];
+        
+        setImportResult({
+          success: importedCount,
+          errors: allMessages.length > 0 ? allMessages : []
+        });
+        setCsvData('');
+        
+        // Ensure the UI refreshes by adding a small delay
+        setTimeout(() => {
+          onImportComplete?.();
+        }, 100);
+      } else {
+        setImportResult({
+          success: 0,
+          errors: operationErrors.length > 0 
+            ? operationErrors 
+            : ['Import operation failed - check console for details']
         });
       }
     } catch (error) {
@@ -428,7 +417,7 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
     }
   };
 
-    const getCSVTemplate = () => {
+  const getCSVTemplate = () => {
     // Get valid subtypes from enums to ensure template examples are always current
     const digitalSubtypes = getSubTypesForItemType(ItemType.DIGITAL);
     const artworkSubtypes = getSubTypesForItemType(ItemType.ARTWORK);
