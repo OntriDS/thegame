@@ -125,7 +125,7 @@ export function SalesLogTab({ salesLog, onReload, isReloading }: SalesLogTabProp
             className="flex items-center gap-2"
           >
             <ArrowUpDown className="h-4 w-4" />
-            {logOrder === 'newest' ? 'Oldest First' : 'Newest First'}
+            {logOrder === 'oldest' ? 'Oldest First' : 'Newest First'}
           </Button>
           <Button 
             variant="outline" 

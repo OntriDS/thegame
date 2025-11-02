@@ -83,7 +83,7 @@ export function SitesLogTab({ sitesLog, onReload, isReloading }: SitesLogTabProp
             onClick={() => setLogOrder(logOrder === 'newest' ? 'oldest' : 'newest')}
           >
             <ArrowUpDown className="h-4 w-4 mr-2" />
-            {logOrder === 'newest' ? 'Oldest First' : 'Newest First'}
+            {logOrder === 'oldest' ? 'Oldest First' : 'Newest First'}
           </Button>
           <Button
             variant="outline"
