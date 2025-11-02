@@ -31,3 +31,23 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to fetch player log' }, { status: 500 });
   }
 }
+
+export async function POST(request: NextRequest) {
+  if (!(await requireAdminAuth(request))) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    const body = await request.json();
+    const { entityId, event, details } = body || {};
+    if (!entityId || !event) {
+      return NextResponse.json({ error: 'Missing entityId or event' }, { status: 400 });
+    }
+    const { appendEntityLog } = await import('@/workflows/entities-logging');
+    await appendEntityLog(EntityType.PLAYER, String(entityId), event, details || {});
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Error appending player log:', error);
+    return NextResponse.json({ error: 'Failed to append player log' }, { status: 500 });
+  }
+}

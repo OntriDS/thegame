@@ -295,14 +295,11 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
             setPersonalAssets(updatedAssets);
             setShowExchangeModal(false);
             
-            // Log the points-to-J$ conversion
+            // Log the points-to-J$ conversion via API to keep client-side code clean
             const totalPointsExchanged = pointsToExchange.xp + pointsToExchange.rp + pointsToExchange.fp + pointsToExchange.hp;
-            const { appendEntityLog } = await import('@/workflows/entities-logging');
-            const { EntityType, LogEventType } = await import('@/types/enums');
-            await appendEntityLog(
-              EntityType.PLAYER,
+            await ClientAPI.appendPlayerLog(
               playerData.id,
-              LogEventType.UPDATED,
+              'UPDATED',
               {
                 name: playerData.name,
                 pointsExchanged: pointsToExchange,

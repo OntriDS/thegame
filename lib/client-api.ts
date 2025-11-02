@@ -844,6 +844,15 @@ export const ClientAPI = {
     return await res.json();
   },
 
+  appendPlayerLog: async (entityId: string, event: string, details: any): Promise<void> => {
+    const res = await fetch('/api/player-log', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ entityId, event, details }),
+    });
+    if (!res.ok) throw new Error('Failed to append player log');
+  },
+
   // ============================================================================
   // RESEARCH SYNC - Research logs sync operations
   // ============================================================================
