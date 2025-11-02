@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { NumericInput } from '@/components/ui/numeric-input';
 import { Coins } from 'lucide-react';
 import { Player } from '@/types/entities';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
@@ -123,13 +124,12 @@ export default function ExchangePointsModal({ player, open, onOpenChange, onExch
               ].map((point) => (
                 <div key={point.key} className="flex items-center gap-3">
                   <div className="w-16 text-sm font-medium">{point.label}</div>
-                  <input
-                    type="number"
-                    min="0"
+                  <NumericInput
+                    min={0}
                     max={point.max}
                     value={point.value}
-                    onChange={(e) => point.setValue(parseInt(e.target.value) || 0)}
-                    className="flex-1 px-3 py-2 border rounded-md bg-background text-foreground"
+                    onChange={(value) => point.setValue(Math.floor(value) || 0)}
+                    className="flex-1 px-3 py-2"
                   />
                   <div className="w-20 text-xs text-muted-foreground">
                     Max: {point.max}

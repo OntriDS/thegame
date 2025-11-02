@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { NumericInput } from '@/components/ui/numeric-input';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -210,13 +211,12 @@ export default function MoveItemsModal({ open, onOpenChange, items, sites, onCom
           
           <div className="space-y-2">
             <Label htmlFor="quantity">Quantity to Move</Label>
-            <Input
+            <NumericInput
               id="quantity"
-              type="number"
-              value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
+              value={quantity ? parseFloat(quantity) : 1}
+              onChange={(value) => setQuantity(value.toString())}
               placeholder="1"
-              min="1"
+              min={1}
             />
           </div>
           

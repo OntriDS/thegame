@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { NumericInput } from '@/components/ui/numeric-input';
 import { Label } from '@/components/ui/label';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
 import { PRICE_STEP, DECIMAL_STEP } from '@/lib/constants/app-constants';
@@ -52,30 +53,6 @@ export default function AssetsEditModal({ isOpen, onClose, onSave, section, init
     onSave(formData);
   };
 
-  // Number field handlers for zero deletion/replacement (same as task modal)
-  const handleNumberFieldChange = (value: string, setString: (value: string) => void, setNumber: (value: number) => void, min: number = 0) => {
-    setString(value);
-    // Allow any input while typing, including partial decimals
-    const numValue = parseFloat(value);
-    if (!isNaN(numValue) && numValue >= min) {
-      setNumber(numValue);
-    }
-  };
-
-  const handleNumberFieldBlur = (value: string, setString: (value: string) => void, setNumber: (value: number) => void, min: number = 0) => {
-    const numValue = parseFloat(value);
-    if (isNaN(numValue) || numValue < min) {
-      // Reset to minimum value if invalid
-      setString(min.toString());
-      setNumber(min);
-    } else {
-      // Format the number properly and update both states
-      const formattedValue = formatDecimal(numValue);
-      setString(formattedValue);
-      setNumber(numValue);
-    }
-  };
-
   const renderMonetaryFields = () => (
     <div className="space-y-4">
       {/* Cash Row */}
@@ -85,39 +62,28 @@ export default function AssetsEditModal({ isOpen, onClose, onSave, section, init
         </div>
         <div>
           <Label htmlFor="cash" className="flex justify-center pb-1">$</Label>
-          <Input
+          <NumericInput
             id="cash"
-            type="number"
-            value={cashString}
-            onChange={(e) => handleNumberFieldChange(
-              e.currentTarget.value,
-              setCashString,
-              (value) => setFormData({ ...formData, cash: value })
-            )}
-            onBlur={(e) => handleNumberFieldBlur(
-              e.currentTarget.value,
-              setCashString,
-              (value) => setFormData({ ...formData, cash: value })
-            )}
+            value={formData.cash || 0}
+            onChange={(value) => {
+              setFormData({ ...formData, cash: value });
+              setCashString(value.toString());
+            }}
             placeholder="0"
             step={DECIMAL_STEP}
-            min="0"
+            min={0}
             className="px-3 py-2"
           />
         </div>
         <div>
           <Label htmlFor="cash-colones" className="flex justify-center pb-1">₡</Label>
-          <Input
+          <NumericInput
             id="cash-colones"
-            type="number"
             value={formData.cashColones || 0}
-            onChange={(e) => {
-              const colones = parseFloat(e.target.value) || 0;
-              setFormData({ ...formData, cashColones: colones });
-            }}
+            onChange={(value) => setFormData({ ...formData, cashColones: value })}
             placeholder="0"
             step={DECIMAL_STEP}
-            min="0"
+            min={0}
             className="px-3 py-2"
           />
         </div>
@@ -140,39 +106,28 @@ export default function AssetsEditModal({ isOpen, onClose, onSave, section, init
         </div>
         <div>
           <Label htmlFor="bank" className="flex justify-center pb-1">$</Label>
-          <Input
+          <NumericInput
             id="bank"
-            type="number"
-            value={bankString}
-            onChange={(e) => handleNumberFieldChange(
-              e.currentTarget.value,
-              setBankString,
-              (value) => setFormData({ ...formData, bank: value })
-            )}
-            onBlur={(e) => handleNumberFieldBlur(
-              e.currentTarget.value,
-              setBankString,
-              (value) => setFormData({ ...formData, bank: value })
-            )}
+            value={formData.bank || 0}
+            onChange={(value) => {
+              setFormData({ ...formData, bank: value });
+              setBankString(value.toString());
+            }}
             placeholder="0"
             step={DECIMAL_STEP}
-            min="0"
+            min={0}
             className="px-3 py-2"
           />
         </div>
         <div>
           <Label htmlFor="bank-colones" className="flex justify-center pb-1">₡</Label>
-          <Input
+          <NumericInput
             id="bank-colones"
-            type="number"
             value={formData.bankColones || 0}
-            onChange={(e) => {
-              const colones = parseFloat(e.target.value) || 0;
-              setFormData({ ...formData, bankColones: colones });
-            }}
+            onChange={(value) => setFormData({ ...formData, bankColones: value })}
             placeholder="0"
             step={DECIMAL_STEP}
-            min="0"
+            min={0}
             className="px-3 py-2"
           />
         </div>
@@ -195,39 +150,28 @@ export default function AssetsEditModal({ isOpen, onClose, onSave, section, init
         </div>
         <div>
           <Label htmlFor="bitcoin" className="flex justify-center pb-1">$</Label>
-          <Input
+          <NumericInput
             id="bitcoin"
-            type="number"
-            value={bitcoinString}
-            onChange={(e) => handleNumberFieldChange(
-              e.currentTarget.value,
-              setBitcoinString,
-              (value) => setFormData({ ...formData, bitcoin: value })
-            )}
-            onBlur={(e) => handleNumberFieldBlur(
-              e.currentTarget.value,
-              setBitcoinString,
-              (value) => setFormData({ ...formData, bitcoin: value })
-            )}
+            value={formData.bitcoin || 0}
+            onChange={(value) => {
+              setFormData({ ...formData, bitcoin: value });
+              setBitcoinString(value.toString());
+            }}
             placeholder="0"
             step={DECIMAL_STEP}
-            min="0"
+            min={0}
             className="px-3 py-2"
           />
         </div>
         <div>
           <Label htmlFor="bitcoin-sats" className="flex justify-center pb-1">₿ (sats)</Label>
-          <Input
+          <NumericInput
             id="bitcoin-sats"
-            type="number"
             value={formData.bitcoinSats || 0}
-            onChange={(e) => {
-              const sats = parseFloat(e.target.value) || 0;
-              setFormData({ ...formData, bitcoinSats: sats });
-            }}
+            onChange={(value) => setFormData({ ...formData, bitcoinSats: value })}
             placeholder="0"
             step={DECIMAL_STEP}
-            min="0"
+            min={0}
             className="px-3 py-2"
           />
         </div>
@@ -251,23 +195,16 @@ export default function AssetsEditModal({ isOpen, onClose, onSave, section, init
           </div>
           <div>
             <Label htmlFor="crypto" className="flex justify-center pb-1">$</Label>
-            <Input
+            <NumericInput
               id="crypto"
-              type="number"
-              value={cryptoString}
-              onChange={(e) => handleNumberFieldChange(
-                e.currentTarget.value,
-                setCryptoString,
-                (value) => setFormData({ ...formData, crypto: value })
-              )}
-              onBlur={(e) => handleNumberFieldBlur(
-                e.currentTarget.value,
-                setCryptoString,
-                (value) => setFormData({ ...formData, crypto: value })
-              )}
+              value={formData.crypto || 0}
+              onChange={(value) => {
+                setFormData({ ...formData, crypto: value });
+                setCryptoString(value.toString());
+              }}
               placeholder="0"
               step={DECIMAL_STEP}
-              min="0"
+              min={0}
             />
           </div>
           <div>
@@ -301,39 +238,28 @@ export default function AssetsEditModal({ isOpen, onClose, onSave, section, init
         </div>
         <div>
           <Label htmlFor="toCharge" className="flex justify-center pb-1">$</Label>
-          <Input
+          <NumericInput
             id="toCharge"
-            type="number"
-            value={toChargeString}
-            onChange={(e) => handleNumberFieldChange(
-              e.currentTarget.value,
-              setToChargeString,
-              (value) => setFormData({ ...formData, toCharge: value })
-            )}
-            onBlur={(e) => handleNumberFieldBlur(
-              e.currentTarget.value,
-              setToChargeString,
-              (value) => setFormData({ ...formData, toCharge: value })
-            )}
+            value={formData.toCharge || 0}
+            onChange={(value) => {
+              setFormData({ ...formData, toCharge: value });
+              setToChargeString(value.toString());
+            }}
             placeholder="0"
             step={DECIMAL_STEP}
-            min="0"
+            min={0}
             className="px-3 py-2"
           />
         </div>
         <div>
           <Label htmlFor="toCharge-colones" className="flex justify-center pb-1">₡</Label>
-          <Input
+          <NumericInput
             id="toCharge-colones"
-            type="number"
             value={formData.toChargeColones || 0}
-            onChange={(e) => {
-              const colones = parseFloat(e.target.value) || 0;
-              setFormData({ ...formData, toChargeColones: colones });
-            }}
+            onChange={(value) => setFormData({ ...formData, toChargeColones: value })}
             placeholder="0"
             step={DECIMAL_STEP}
-            min="0"
+            min={0}
             className="px-3 py-2"
           />
         </div>
@@ -356,39 +282,28 @@ export default function AssetsEditModal({ isOpen, onClose, onSave, section, init
         </div>
         <div>
           <Label htmlFor="toPay" className="flex justify-center pb-1">$</Label>
-          <Input
+          <NumericInput
             id="toPay"
-            type="number"
-            value={toPayString}
-            onChange={(e) => handleNumberFieldChange(
-              e.currentTarget.value,
-              setToPayString,
-              (value) => setFormData({ ...formData, toPay: value })
-            )}
-            onBlur={(e) => handleNumberFieldBlur(
-              e.currentTarget.value,
-              setToPayString,
-              (value) => setFormData({ ...formData, toPay: value })
-            )}
+            value={formData.toPay || 0}
+            onChange={(value) => {
+              setFormData({ ...formData, toPay: value });
+              setToPayString(value.toString());
+            }}
             placeholder="0"
             step={DECIMAL_STEP}
-            min="0"
+            min={0}
             className="px-3 py-2"
           />
         </div>
         <div>
           <Label htmlFor="toPay-colones" className="flex justify-center pb-1">₡</Label>
-          <Input
+          <NumericInput
             id="toPay-colones"
-            type="number"
             value={formData.toPayColones || 0}
-            onChange={(e) => {
-              const colones = parseFloat(e.target.value) || 0;
-              setFormData({ ...formData, toPayColones: colones });
-            }}
+            onChange={(value) => setFormData({ ...formData, toPayColones: value })}
             placeholder="0"
             step={DECIMAL_STEP}
-            min="0"
+            min={0}
             className="px-3 py-2"
           />
         </div>
@@ -411,12 +326,10 @@ export default function AssetsEditModal({ isOpen, onClose, onSave, section, init
       <Label htmlFor="jungleCoins">
         {section.type === 'company' ? 'Company J$' : 'Personal J$'}
       </Label>
-      <Input
+      <NumericInput
         id="jungleCoins"
-        type="number"
         value={section.type === 'company' ? formData.companyJ$ : formData.personalJ$}
-        onChange={(e) => {
-          const value = parseFloat(e.target.value) || 0;
+        onChange={(value) => {
           if (section.type === 'company') {
             setFormData({ companyJ$: value });
           } else {
@@ -425,7 +338,7 @@ export default function AssetsEditModal({ isOpen, onClose, onSave, section, init
         }}
         placeholder="0"
         step={PRICE_STEP}
-        min="0"
+        min={0}
       />
       <p className="text-xs text-muted-foreground mt-1">
         Value in USD: ${((section.type === 'company' ? formData.companyJ$ : formData.personalJ$) * exchangeRates.j$ToUSD).toLocaleString()}
@@ -441,32 +354,30 @@ export default function AssetsEditModal({ isOpen, onClose, onSave, section, init
           <div className="grid grid-cols-2 gap-2">
             <div>
               <Label htmlFor={`${key}-value`} className="text-xs">Value</Label>
-              <Input
+              <NumericInput
                 id={`${key}-value`}
-                type="number"
                 value={item.value}
-                onChange={(e) => setFormData({
+                onChange={(value) => setFormData({
                   ...formData,
-                  [key]: { ...item, value: parseFloat(e.target.value) || 0 }
+                  [key]: { ...item, value }
                 })}
                 placeholder="0.00"
                 step={DECIMAL_STEP}
-                min="0"
+                min={0}
               />
             </div>
             <div>
               <Label htmlFor={`${key}-cost`} className="text-xs">Cost</Label>
-              <Input
+              <NumericInput
                 id={`${key}-cost`}
-                type="number"
                 value={item.cost}
-                onChange={(e) => setFormData({
+                onChange={(value) => setFormData({
                   ...formData,
-                  [key]: { ...item, cost: parseFloat(e.target.value) || 0 }
+                  [key]: { ...item, cost: value }
                 })}
                 placeholder="0.00"
                 step={DECIMAL_STEP}
-                min="0"
+                min={0}
               />
             </div>
           </div>
@@ -479,50 +390,46 @@ export default function AssetsEditModal({ isOpen, onClose, onSave, section, init
     <div className="space-y-4">
       <div>
         <Label htmlFor="vehicle">Vehicle</Label>
-        <Input
+        <NumericInput
           id="vehicle"
-          type="number"
-          value={formData.vehicle}
-          onChange={(e) => setFormData({ ...formData, vehicle: parseFloat(e.target.value) || 0 })}
+          value={formData.vehicle || 0}
+          onChange={(value) => setFormData({ ...formData, vehicle: value })}
           placeholder="0.00"
           step={DECIMAL_STEP}
-          min="0"
+          min={0}
         />
       </div>
       <div>
         <Label htmlFor="properties">Properties</Label>
-        <Input
+        <NumericInput
           id="properties"
-          type="number"
-          value={formData.properties}
-          onChange={(e) => setFormData({ ...formData, properties: parseFloat(e.target.value) || 0 })}
+          value={formData.properties || 0}
+          onChange={(value) => setFormData({ ...formData, properties: value })}
           placeholder="0.00"
           step={DECIMAL_STEP}
-          min="0"
+          min={0}
         />
       </div>
       <div>
         <Label htmlFor="nfts">NFTs</Label>
-        <Input
+        <NumericInput
           id="nfts"
-          type="number"
-          value={formData.nfts}
-          onChange={(e) => setFormData({ ...formData, nfts: parseFloat(e.target.value) || 0 })}
+          value={formData.nfts || 0}
+          onChange={(value) => setFormData({ ...formData, nfts: value })}
           placeholder="0.00"
           step={DECIMAL_STEP}
-          min="0"
+          min={0}
         />
       </div>
       <div>
         <Label htmlFor="other">Other</Label>
-        <Input
+        <NumericInput
           id="other"
-          type="number"
-          value={formData.other}
-          onChange={(e) => setFormData({ ...formData, other: parseFloat(e.target.value) || 0 })}
+          value={formData.other || 0}
+          onChange={(value) => setFormData({ ...formData, other: value })}
           placeholder="0.00"
           step={DECIMAL_STEP}
-          min="0"
+          min={0}
         />
       </div>
     </div>

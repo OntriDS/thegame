@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { NumericInput } from '@/components/ui/numeric-input';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -188,10 +189,9 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
       
       default:
         return (
-          <Input
-            type="number"
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
+          <NumericInput
+            value={typeof value === 'number' ? value : parseFloat(value) || 0}
+            onChange={(numValue) => setValue(numValue.toString())}
             placeholder={field === 'price' ? '0.00' : '0'}
             step={PRICE_STEP}
             min={DEFAULT_MIN_VALUE}

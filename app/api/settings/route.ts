@@ -7,8 +7,7 @@ import {
   ClearCacheWorkflow,
   BackfillLogsWorkflow,
   ExportDataWorkflow,
-  ImportDataWorkflow,
-  SeedDataWorkflow
+  ImportDataWorkflow
 } from '@/workflows/settings';
 
 // Force dynamic rendering since this route accesses request cookies for auth
@@ -54,15 +53,6 @@ export async function POST(request: NextRequest) {
 
       case 'backfill-logs': {
         const result = await BackfillLogsWorkflow.execute();
-        return NextResponse.json({
-          success: result.success,
-          message: result.message,
-          data: result.data
-        }, { status: result.success ? 200 : 500 });
-      }
-
-      case 'seed-data': {
-        const result = await SeedDataWorkflow.execute(parameters?.source || 'backup', parameters?.entityTypes);
         return NextResponse.json({
           success: result.success,
           message: result.message,

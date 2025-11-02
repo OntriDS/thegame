@@ -566,12 +566,11 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <Label htmlFor="quantity" className="text-xs">Quantity *</Label>
-                <Input
+                <NumericInput
                   id="quantity"
-                  type="number"
                   value={quantity}
-                  onChange={(e) => setQuantity(parseFloat(e.target.value) || 0)}
-                  min="0"
+                  onChange={(value) => setQuantity(value)}
+                  min={0}
                   className="h-8 text-sm mt-1"
                 />
                 {item && (
@@ -583,12 +582,11 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
 
               <div>
                 <Label htmlFor="targetAmount" className="text-xs">Target Q</Label>
-                <Input
+                <NumericInput
                   id="targetAmount"
-                  type="number"
-                  value={targetAmount}
-                  onChange={(e) => setTargetAmount(e.target.value)}
-                  min="0"
+                  value={targetAmount ? parseFloat(targetAmount) : 0}
+                  onChange={(value) => setTargetAmount(value.toString())}
+                  min={0}
                   placeholder="Target"
                   className="h-8 text-sm mt-1"
                 />
@@ -635,13 +633,11 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
 
               <div>
                 <Label htmlFor="year" className="text-xs">Year</Label>
-                <Input
+                <NumericInput
                   id="year"
-                  type="number"
                   value={year}
-                  onChange={(e) => setYear(parseInt(e.target.value) || new Date().getFullYear())}
+                  onChange={(value) => setYear(Math.max(YEAR_MIN, Math.min(YEAR_MAX, Math.floor(value))))}
                   min={YEAR_MIN}
-                  max={YEAR_MAX}
                   className="h-8 text-sm mt-1"
                   placeholder={new Date().getFullYear().toString()}
                 />
@@ -728,25 +724,23 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
                 <>
                   <div>
                     <Label htmlFor="width" className="text-xs">Width (cm)</Label>
-                    <Input
+                    <NumericInput
                       id="width"
-                      type="number"
-                      value={width}
-                      onChange={(e) => setWidth(e.target.value)}
-                      min="0"
-                      step="0.1"
+                      value={width ? parseFloat(width) : 0}
+                      onChange={(value) => setWidth(value.toString())}
+                      min={0}
+                      step={0.1}
                       className="h-8 text-sm mt-1"
                     />
                   </div>
                   <div>
                     <Label htmlFor="height" className="text-xs">Height (cm)</Label>
-                    <Input
+                    <NumericInput
                       id="height"
-                      type="number"
-                      value={height}
-                      onChange={(e) => setHeight(e.target.value)}
-                      min="0"
-                      step="0.1"
+                      value={height ? parseFloat(height) : 0}
+                      onChange={(value) => setHeight(value.toString())}
+                      min={0}
+                      step={0.1}
                       className="h-8 text-sm mt-1"
                     />
                   </div>

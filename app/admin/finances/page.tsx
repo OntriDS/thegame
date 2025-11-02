@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { NumericInput } from '@/components/ui/numeric-input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SearchableSelect } from '@/components/ui/searchable-select';
@@ -889,12 +890,11 @@ export default function FinancesPage() {
                   
                   <div className="flex items-center gap-1">
                     <span>₡</span>
-                    <Input
-                      type="number"
+                    <NumericInput
                       value={exchangeRates.colonesToUsd}
-                      onChange={(e) => setExchangeRates(prev => ({ ...prev, colonesToUsd: parseFloat(e.target.value) || DEFAULT_CURRENCY_EXCHANGE_RATES.colonesToUsd }))}
+                      onChange={(value) => setExchangeRates(prev => ({ ...prev, colonesToUsd: value || DEFAULT_CURRENCY_EXCHANGE_RATES.colonesToUsd }))}
                       className="w-16 h-6 text-xs"
-                      min="1"
+                      min={1}
                     />
                     <span>= $1</span>
                   </div>
@@ -904,12 +904,11 @@ export default function FinancesPage() {
                   <span>Bitcoin:</span>
                   <div className="flex items-center gap-1">
                     <span>$</span>
-                    <Input
-                      type="number"
+                    <NumericInput
                       value={exchangeRates.bitcoinToUsd}
-                      onChange={(e) => setExchangeRates(prev => ({ ...prev, bitcoinToUsd: parseFloat(e.target.value) || FALLBACK_BITCOIN_PRICE }))}
+                      onChange={(value) => setExchangeRates(prev => ({ ...prev, bitcoinToUsd: value || FALLBACK_BITCOIN_PRICE }))}
                       className="w-20 h-6 text-xs"
-                      min="1"
+                      min={1}
                     />
                     <Button
                       size="sm"
@@ -927,12 +926,11 @@ export default function FinancesPage() {
                   <span>J$:</span>
                   <div className="flex items-center gap-1">
                     <span>1 J$ = $</span>
-                    <Input
-                      type="number"
+                    <NumericInput
                       value={exchangeRates.j$ToUSD}
-                      onChange={(e) => setExchangeRates(prev => ({ ...prev, j$ToUSD: parseFloat(e.target.value) || DEFAULT_CURRENCY_EXCHANGE_RATES.j$ToUSD }))}
+                      onChange={(value) => setExchangeRates(prev => ({ ...prev, j$ToUSD: value || DEFAULT_CURRENCY_EXCHANGE_RATES.j$ToUSD }))}
                       className="w-16 h-6 text-xs"
-                      min="1"
+                      min={1}
                     />
                   </div>
                 </div>

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { NumericInput } from '@/components/ui/numeric-input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Settlement } from '@/types/entities';
@@ -161,25 +162,23 @@ export default function SettlementSubmodal({
               Coordinates (Optional - for future map features)
             </Label>
             <div className="grid grid-cols-2 gap-2">
-              <Input
+              <NumericInput
                 placeholder="Latitude"
-                type="number"
                 step="any"
-                value={coordinates?.lat || ''}
-                onChange={(e) => setCoordinates(prev => ({
-                  lat: parseFloat(e.target.value) || 0,
+                value={coordinates?.lat || 0}
+                onChange={(value) => setCoordinates(prev => ({
+                  lat: value,
                   lng: prev?.lng || 0
                 }))}
                 className="h-9"
               />
-              <Input
+              <NumericInput
                 placeholder="Longitude"
-                type="number"
                 step="any"
-                value={coordinates?.lng || ''}
-                onChange={(e) => setCoordinates(prev => ({
+                value={coordinates?.lng || 0}
+                onChange={(value) => setCoordinates(prev => ({
                   lat: prev?.lat || 0,
-                  lng: parseFloat(e.target.value) || 0
+                  lng: value
                 }))}
                 className="h-9"
               />

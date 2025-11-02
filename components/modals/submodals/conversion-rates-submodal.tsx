@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { NumericInput } from '@/components/ui/numeric-input';
 import { Label } from '@/components/ui/label';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
 import { getPointsConversionMetadata } from '@/lib/utils/points-utils';
@@ -60,11 +61,10 @@ export default function ConversionRatesModal({ isOpen, onClose, onSave, initialR
                 <div key={key} className="space-y-1">
                   <label className="block text-sm font-medium">{label}</label>
                   <div className="text-xs text-muted-foreground">{description}</div>
-                  <Input
-                    type="number"
+                  <NumericInput
                     value={pointsRates[key as keyof typeof pointsRates]}
-                    onChange={(e) => setPointsRates({ ...pointsRates, [key]: parseInt(e.target.value) || 0 })}
-                    min="1"
+                    onChange={(value) => setPointsRates({ ...pointsRates, [key]: Math.floor(value) || 0 })}
+                    min={1}
                     className="h-8"
                   />
                 </div>
@@ -73,11 +73,10 @@ export default function ConversionRatesModal({ isOpen, onClose, onSave, initialR
               <div className="space-y-1">
                 <label className="block text-sm font-medium">J$ to USD</label>
                 <div className="text-xs text-muted-foreground">Jungle Coins</div>
-                <Input
-                  type="number"
+                <NumericInput
                   value={pointsRates.j$ToUSD}
-                  onChange={(e) => setPointsRates({ ...pointsRates, j$ToUSD: parseInt(e.target.value) || 0 })}
-                  min="1"
+                  onChange={(value) => setPointsRates({ ...pointsRates, j$ToUSD: Math.floor(value) || 0 })}
+                  min={1}
                   className="h-8"
                 />
               </div>
@@ -95,12 +94,11 @@ export default function ConversionRatesModal({ isOpen, onClose, onSave, initialR
                 <div key={key} className="space-y-1">
                   <label className="block text-sm font-medium">{label}</label>
                   <div className="text-xs text-muted-foreground">{desc}</div>
-                  <Input
-                    type="number"
+                  <NumericInput
                     value={currencyRates[key as keyof typeof currencyRates]}
-                    onChange={(e) => setCurrencyRates({ ...currencyRates, [key]: parseFloat(e.target.value) || 0 })}
-                    min="0.01"
-                    step="0.01"
+                    onChange={(value) => setCurrencyRates({ ...currencyRates, [key]: value || 0 })}
+                    min={0.01}
+                    step={0.01}
                     className="h-8"
                   />
                 </div>

@@ -142,8 +142,6 @@ export async function removeItemEffectsOnDelete(itemId: string): Promise<void> {
     // 3. Remove log entries from items log only (Items don't have financial/player effects)
     console.log(`[removeItemEffectsOnDelete] Starting log entry removal for item: ${itemId}`);
     
-    // TODO: Implement server-side log removal or remove this call
-    // const result = await ClientAPI.removeLogEntry(EntityType.ITEM, itemId);
     console.log(`[removeItemEffectsOnDelete] ⚠️ Log entry removal skipped - needs server-side implementation`);
     
     console.log(`[removeItemEffectsOnDelete] ✅ Cleared effects, removed links, and removed log entries for item ${itemId}`);

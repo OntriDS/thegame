@@ -9,6 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import * as PopoverPrimitive from '@radix-ui/react-popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
+import { NumericInput } from '@/components/ui/numeric-input';
 import { Label } from '@/components/ui/label';
 import { DateInput } from '@/components/ui/date-input';
 import { RecurrentFrequency } from '@/types/enums';
@@ -234,13 +235,12 @@ export function FrequencyCalendar({
                       {config.type === RecurrentFrequency.ONCE ? 'N/A' : 'Continuous'}
                     </div>
                   ) : config.type !== RecurrentFrequency.CUSTOM ? (
-                    <Input
-                      type="number"
-                      min="1"
+                    <NumericInput
+                      min={1}
                       value={config.interval}
-                      onChange={(e) =>
+                      onChange={(value) =>
                         handleConfigChange({
-                          interval: Number.parseInt(e.currentTarget.value || '1', 10) || 1,
+                          interval: Math.floor(value) || 1,
                         })
                       }
                       className="h-8 text-sm"
@@ -329,15 +329,14 @@ export function FrequencyCalendar({
                       {config.type === RecurrentFrequency.ONCE ? 'N/A' : 'Continuous'}
                     </div>
                   ) : config.stopsAfter?.type === 'times' ? (
-                    <Input
-                      type="number"
-                      min="1"
+                    <NumericInput
+                      min={1}
                       value={config.stopsAfter.value as number}
-                      onChange={(e) =>
+                      onChange={(value) =>
                         handleConfigChange({
                           stopsAfter: {
                             type: 'times',
-                            value: Number.parseInt(e.currentTarget.value || '1', 10) || 1,
+                            value: Math.floor(value) || 1,
                           },
                         })
                       }

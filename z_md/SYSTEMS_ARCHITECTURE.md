@@ -13,6 +13,7 @@
 - Authentication System
 - UI Component System
 - Data Persistence System
+- Critical Anti-Patterns to Avoid
 - Z-Index Management System
 - File Attachment System
 - Implementation Roadmap
@@ -433,6 +434,132 @@ Client → ClientAPI → API routes → DataStore → Repository (KV) → Workfl
 - **Character Logging**: Character logs its own Jungle Coins and roles
 - **Player Logging**: Player logs its own points and progression
 - **Links System**: Handles relationships between all entities
+
+#### Critical Anti-Patterns to Avoid
+
+**These architectural violations cause runtime errors and system failures:**
+
+##### 1. Server-Client Boundary Violation ❌
+
+**The Anti-Pattern:**
+```typescript
+// ❌ WRONG: Server-side workflow calling client API
+// workflows/entities-workflows/sale.workflow.ts
+import { ClientAPI } from '@/lib/client-api';
+
+export async function processSaleEffects(sale: Sale) {
+  // This runs on SERVER, but ClientAPI is CLIENT-ONLY!
+  const players = await ClientAPI.getPlayers(); // ❌ FAILS!
+  // Error: "Attempted to call getPlayers() from the server but getPlayers is on the client"
+}
+```
+
+**Why It Fails:**
+- `ClientAPI` is marked `'use client'` and uses `fetch()` for HTTP calls
+- Server-side code (workflows, API routes) cannot call client-only functions
+- Results in runtime errors: `Error: Attempted to call X() from the server but X is on the client`
+
+**The Correct Pattern:**
+```typescript
+// ✅ CORRECT: Server-side workflow uses datastore directly
+// workflows/entities-workflows/sale.workflow.ts
+import { getAllPlayers, getAllFinancials } from '@/data-store/datastore';
+
+export async function processSaleEffects(sale: Sale) {
+  // Direct server-side function calls - no HTTP overhead
+  const players = await getAllPlayers(); // ✅ Works!
+  const financials = await getAllFinancials(); // ✅ Works!
+}
+```
+
+**Rule of Thumb:**
+- **Client Code** (components, hooks): Use `ClientAPI` → `fetch('/api/...')`
+- **Server Code** (workflows, API routes): Use `datastore` → repositories → KV
+- **Never mix**: Client functions should never be imported in server context
+
+##### 2. Server→Server HTTP Anti-Pattern ❌
+
+**The Anti-Pattern:**
+```typescript
+// ❌ WRONG: Server making HTTP calls to own API
+// workflows/some-workflow.ts
+export async function doSomething() {
+  // Making HTTP call to own server - unnecessary overhead!
+  const response = await fetch('/api/tasks', {
+    method: 'POST',
+    body: JSON.stringify(task)
+  });
+  const data = await response.json();
+}
+```
+
+**Why It's Bad:**
+- **Performance**: Unnecessary network overhead (localhost HTTP calls are slower than direct function calls)
+- **Complexity**: Harder to debug (extra layers of HTTP middleware, error handling)
+- **Coupling**: Server logic depends on HTTP plumbing instead of core repositories
+- **Risk**: Circular calls, hidden side-effects, timeout issues
+
+**The Correct Pattern:**
+```typescript
+// ✅ CORRECT: Direct function calls
+// workflows/some-workflow.ts
+import { upsertTask } from '@/data-store/datastore';
+
+export async function doSomething() {
+  // Direct function call - fast, simple, debuggable
+  const saved = await upsertTask(task); // ✅ No HTTP overhead!
+}
+```
+
+**Rule of Thumb:**
+- **API Routes**: For browser→server communication only
+- **Server Code**: Always use direct function calls to `datastore` or repositories
+- **Never**: Server code calling its own API routes via HTTP
+
+**Note**: The bulk operations system (`/api/bulk`) explicitly avoids this anti-pattern and uses KV-only direct calls.
+
+##### 3. `type="number"` Input Anti-Pattern ❌
+
+**The Anti-Pattern:**
+```typescript
+// ❌ WRONG: Causes "can't delete zero" UX pain
+<input 
+  type="number" 
+  value={cost} 
+  onChange={(e) => setCost(e.target.value)} 
+/>
+```
+
+**Why It's Bad:**
+- **UX Pain**: Users cannot easily delete "0" or clear numeric fields
+- **Browser Behavior**: Browsers prevent clearing numeric input fields
+- **Financial Data Entry**: Particularly problematic for cost/revenue/price fields where users need to clear values
+
+**The Correct Pattern:**
+```typescript
+// ✅ CORRECT: Use NumericInput component
+import { NumericInput } from '@/components/ui/numeric-input';
+
+<NumericInput 
+  value={cost} 
+  onChange={setCost} 
+  placeholder="0.00" 
+/>
+```
+
+**Rule of Thumb:**
+- **Always**: Use `NumericInput` component for all numeric fields
+- **Never**: Use HTML `type="number"` attribute
+- **Applies to**: Cost, revenue, price, quantities, dimensions, exchange rates, etc.
+
+**Implementation**: The `NumericInput` component provides proper numeric validation and UX while allowing users to clear fields easily.
+
+---
+
+**Summary**: These three anti-patterns are the most common architectural mistakes that cause runtime failures and poor user experience. Always follow the correct patterns:
+1. **Server code** uses `datastore`, **client code** uses `ClientAPI`
+2. **Server code** uses direct function calls, never HTTP to own API
+3. **All numeric inputs** use `NumericInput` component, never `type="number"`
 
 ### 8. Z-Index Management System
 

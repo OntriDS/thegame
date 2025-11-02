@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { NumericInput } from '@/components/ui/numeric-input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ClientAPI } from '@/lib/client-api';
@@ -1124,11 +1125,9 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
                             <div className="flex items-center gap-1">
                               <span className="text-muted-foreground">Quantity:</span>
                               {editingField?.itemId === bundle.id && editingField?.field === 'quantity' ? (
-                                <Input 
-                                  type="number"
+                                <NumericInput 
                                   value={bundle.stock?.reduce((s, stock) => s + stock.quantity, 0) || 0}
-                                  onChange={async (e: React.ChangeEvent<HTMLInputElement>) => {
-                                    const quantity = Number(e.target.value) || 0;
+                                  onChange={async (quantity) => {
                                     const siteId = bundle.stock.length > 0 ? bundle.stock[0].siteId : 'Home';
                                     const updated = await ClientAPI.updateStockAtSite(bundle.id, siteId, quantity);
                                     handleSaveItem(updated);
@@ -1187,11 +1186,9 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
                         <div className="flex flex-col items-end gap-2 text-right">
                           <div className="text-sm">
                             {editingField?.itemId === bundle.id && editingField?.field === 'price' ? (
-                                                              <Input 
-                                  type="number"
-                                  value={bundle.price}
-                                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                                    const price = Number(e.target.value) || 0;
+                                                              <NumericInput 
+                                  value={bundle.price || 0}
+                                  onChange={(price) => {
                                     const updated = { ...bundle, price, value: price * (bundle.stock?.reduce((s, stock) => s + stock.quantity, 0) || 0) };
                                     handleSaveItem(updated);
                                   }}
@@ -1823,13 +1820,12 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
                    Yellow Warning (Low Stock)
                  </label>
                  <div className="flex items-center gap-2">
-                   <Input
-                     type="number"
+                   <NumericInput
                      value={yellowThreshold}
-                     onChange={(e) => setYellowThreshold(Number(e.target.value) || DEFAULT_YELLOW_THRESHOLD)}
+                     onChange={(value) => setYellowThreshold(value || DEFAULT_YELLOW_THRESHOLD)}
                      className="w-24"
-                     min="1"
-                     step="1"
+                     min={1}
+                     step={1}
                    />
                    <span className="text-sm text-muted-foreground">units</span>
                  </div>
@@ -1844,13 +1840,12 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
                    Red Warning (Critical Stock)
                  </label>
                  <div className="flex items-center gap-2">
-                   <Input
-                     type="number"
+                   <NumericInput
                      value={redThreshold}
-                     onChange={(e) => setRedThreshold(Number(e.target.value) || 5)}
+                     onChange={(value) => setRedThreshold(value || 5)}
                      className="w-24"
-                     min="1"
-                     step="1"
+                     min={1}
+                     step={1}
                    />
                    <span className="text-sm text-muted-foreground">units</span>
                  </div>
