@@ -248,7 +248,8 @@ export async function createTriforceAtomic(
       characterId: PLAYER_ONE_ID
     };
     const savedAccount = await upsertAccount(completeAccount, { 
-      skipWorkflowEffects: true // Skip workflows
+      skipWorkflowEffects: true,
+      skipLinkEffects: true // Skip link creation - we'll create links manually in STEP 4
     });
     console.log('[createTriforceAtomic] ✅ Account created (workflows skipped)');
     
@@ -260,7 +261,8 @@ export async function createTriforceAtomic(
       characterIds: [PLAYER_ONE_ID]
     };
     const savedPlayer = await upsertPlayer(completePlayer, { 
-      skipWorkflowEffects: true // Skip workflows
+      skipWorkflowEffects: true,
+      skipLinkEffects: true // Skip link creation - prevents creating PLAYER_CHARACTER before Character exists
     });
     console.log('[createTriforceAtomic] ✅ Player created (workflows skipped)');
     
@@ -272,7 +274,8 @@ export async function createTriforceAtomic(
       playerId: PLAYER_ONE_ID
     };
     const savedCharacter = await upsertCharacter(completeCharacter, { 
-      skipWorkflowEffects: true // Skip workflows
+      skipWorkflowEffects: true,
+      skipLinkEffects: true // Skip link creation - prevents creating CHARACTER_PLAYER
     });
     console.log('[createTriforceAtomic] ✅ Character created (workflows skipped)');
     
