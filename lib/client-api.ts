@@ -329,6 +329,16 @@ export const ClientAPI = {
     return await res.json();
   },
 
+  createLink: async (link: any): Promise<{ success: boolean }> => {
+    const res = await fetch('/api/links', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(link),
+    });
+    if (!res.ok) throw new Error('Failed to create link');
+    return await res.json();
+  },
+
   removeLink: async (linkId: string): Promise<void> => {
     const res = await fetch(`/api/links/${linkId}`, { method: 'DELETE' });
     if (!res.ok) throw new Error('Failed to remove link');

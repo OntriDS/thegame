@@ -8,7 +8,7 @@ import { NumericInput } from '@/components/ui/numeric-input';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ItemStatus, SiteType } from '@/types/enums';
+import { ItemStatus, SiteType, EntityType, LinkType } from '@/types/enums';
 import { ClientAPI } from '@/lib/client-api';
 import { Item } from '@/types/entities';
 import { Package, MapPin, Cloud, Globe } from 'lucide-react';
@@ -92,17 +92,21 @@ export default function MoveItemsModal({ open, onOpenChange, items, sites, onCom
         // Save the updated item with side effects
         await ClientAPI.upsertItem(updatedSourceItem);
         
-        // Create SITE_SITE link using standalone utility
-        const { createSiteMovementLink } = await import('@/workflows/site-movement-utils');
-        await createSiteMovementLink(
-          item.stock[0]?.siteId || 'Home',
-          destination,
-          {
+        // Create SITE_SITE link via API (avoid importing server-only modules in client)
+        const link = {
+          id: crypto.randomUUID(),
+          linkType: LinkType.SITE_SITE,
+          source: { type: EntityType.SITE, id: item.stock[0]?.siteId || 'Home' },
+          target: { type: EntityType.SITE, id: destination },
+          createdAt: new Date(),
+          metadata: {
+            reason: 'inventory_movement',
             itemId: item.id,
             quantity: quantityToMove,
-            movedAt: new Date()
-          }
-        );
+            movedAt: new Date(),
+          },
+        } as any;
+        await ClientAPI.createLink(link);
       }
       
       onComplete();
