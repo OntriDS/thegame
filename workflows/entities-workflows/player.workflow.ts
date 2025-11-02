@@ -7,7 +7,8 @@ import { appendEntityLog, updateEntityLogField, appendPlayerPointsChangedLog, up
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
 import { EffectKeys } from '@/data-store/keys';
 import { getLinksFor, removeLink } from '@/links/link-registry';
-import { getAllPlayers, upsertPlayer } from '@/data-store/repositories/player.repo';
+import { getPlayerById } from '@/data-store/datastore';
+import { upsertPlayer } from '@/data-store/repositories/player.repo';
 import { appendPlayerPointsLog, appendPlayerPointsUpdateLog } from '../entities-logging';
 import type { Task, FinancialRecord } from '@/types/entities';
 
@@ -263,8 +264,7 @@ export async function updatePlayerPointsFromTask(task: Task, oldTask: Task): Pro
     
     // Get main player
     const mainPlayerId = PLAYER_ONE_ID;
-    const players = await getAllPlayers();
-    const mainPlayer = players.find(p => p.id === mainPlayerId);
+    const mainPlayer = await getPlayerById(mainPlayerId);
     
     if (!mainPlayer) {
       console.log('[updatePlayerPointsFromTask] Main player not found, skipping');

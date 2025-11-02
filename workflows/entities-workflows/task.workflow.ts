@@ -7,8 +7,7 @@ import { appendEntityLog, updateEntityLogField } from '../entities-logging';
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
 import { EffectKeys } from '@/data-store/keys';
 import { getPlayerConversionRates, getPersonalAssets, savePersonalAssets } from '@/data-store/datastore';
-import { getAllTasks } from '@/data-store/repositories/task.repo';
-import { getAllPlayers } from '@/data-store/repositories/player.repo';
+import { getTaskById, getPlayerById } from '@/data-store/datastore';
 import { getLinksFor, removeLink } from '@/links/link-registry';
 import { createItemFromTask, removeItemsCreatedByTask } from '../item-creation-utils';
 import { awardPointsToPlayer, removePointsFromPlayer } from '../points-rewards-utils';
@@ -392,8 +391,7 @@ async function removePlayerPointsFromTask(task: Task): Promise<void> {
     
     // Get the player from the task (same logic as creation)
     const playerId = task.playerCharacterId || PLAYER_ONE_ID;
-    const players = await getAllPlayers();
-    const player = players.find(p => p.id === playerId);
+    const player = await getPlayerById(playerId);
     
     if (!player) {
       console.log(`[removePlayerPointsFromTask] Player ${playerId} not found, skipping removal`);
@@ -519,8 +517,7 @@ export async function uncompleteTask(taskId: string): Promise<void> {
     console.log(`[uncompleteTask] Uncompleting task: ${taskId}`);
     
     // Get the task
-    const tasks = await getAllTasks();
-    const task = tasks.find(t => t.id === taskId);
+    const task = await getTaskById(taskId);
     
     if (!task) {
       console.log(`[uncompleteTask] Task ${taskId} not found`);

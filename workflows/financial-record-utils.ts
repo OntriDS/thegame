@@ -97,8 +97,8 @@ export async function updateFinancialRecordFromTask(task: Task, previousTask: Ta
     console.log(`[updateFinancialRecordFromTask] Updating financial record for task: ${task.name} (${task.id})`);
     
     // Find the existing financial record created by this task
-    const allFinancials = await getAllFinancials();
-    const existingFinrec = allFinancials.find(fr => fr.sourceTaskId === task.id);
+    const taskFinancials = await getFinancialsBySourceTaskId(task.id);
+    const existingFinrec = taskFinancials.length > 0 ? taskFinancials[0] : null;
     
     if (!existingFinrec) {
       console.log(`[updateFinancialRecordFromTask] No financial record found for task ${task.id}, creating new one`);

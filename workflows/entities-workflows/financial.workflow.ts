@@ -9,7 +9,7 @@ import { EffectKeys, buildLogKey } from '@/data-store/keys';
 import { kvGet, kvSet } from '@/data-store/kv';
 import { getLinksFor, removeLink } from '@/links/link-registry';
 import { getAllFinancials } from '@/data-store/repositories/financial.repo';
-import { getAllPlayers } from '@/data-store/repositories/player.repo';
+import { getPlayerById } from '@/data-store/datastore';
 import { createItemFromRecord, removeItemsCreatedByRecord } from '../item-creation-utils';
 import { awardPointsToPlayer, removePointsFromPlayer } from '../points-rewards-utils';
 import { 
@@ -233,8 +233,7 @@ async function removePlayerPointsFromRecord(recordId: string): Promise<void> {
     
     // Get the player from the record (same logic as creation)
     const playerId = record.playerCharacterId || PLAYER_ONE_ID;
-    const players = await getAllPlayers();
-    const player = players.find(p => p.id === playerId);
+    const player = await getPlayerById(playerId);
     
     if (!player) {
       console.log(`[removePlayerPointsFromRecord] Player ${playerId} not found, skipping points removal`);

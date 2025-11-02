@@ -2,12 +2,12 @@
 // Comprehensive update propagation across ALL entity relationships
 
 import type { Task, Item, Sale, FinancialRecord, Character, Player } from '@/types/entities';
-import { EntityType } from '@/types/enums';
+import { EntityType, PLAYER_ONE_ID } from '@/types/enums';
 import { hasEffect, markEffect } from '@/data-store/effects-registry';
-import { getFinancialsBySourceTaskId, getAllFinancials, upsertFinancial } from '@/data-store/datastore';
-import { getItemsBySourceTaskId, getItemsBySourceRecordId, getAllItems, upsertItem } from '@/data-store/datastore';
-import { getAllTasks, upsertTask } from '@/data-store/datastore';
-import { getAllPlayers, upsertPlayer } from '@/data-store/datastore';
+import { getFinancialsBySourceTaskId, getFinancialsBySourceSaleId, upsertFinancial } from '@/data-store/datastore';
+import { getItemsBySourceTaskId, getItemsBySourceRecordId, getItemById, upsertItem } from '@/data-store/datastore';
+import { getTaskById, upsertTask } from '@/data-store/datastore';
+import { getPlayerById, upsertPlayer } from '@/data-store/datastore';
 import { getAllCharacters, upsertCharacter } from '@/data-store/datastore';
 
 // ============================================================================
@@ -75,9 +75,20 @@ export async function updateTasksFromFinancialRecord(
   try {
     console.log(`[updateTasksFromFinancialRecord] Updating tasks for financial record: ${record.name}`);
     
-    // Find tasks that created this financial record
-    const allTasks = await getAllTasks();
-    const relatedTasks = allTasks.filter(task => task.id === record.sourceTaskId);
+    // Find task that created this financial record
+    if (!record.sourceTaskId) {
+      console.log(`[updateTasksFromFinancialRecord] No sourceTaskId, skipping`);
+      return;
+    }
+    
+    const task = await getTaskById(record.sourceTaskId);
+    if (!task) {
+      console.log(`[updateTasksFromFinancialRecord] Task ${record.sourceTaskId} not found, skipping`);
+      return;
+    }
+    
+    // Create array with single task for compatibility with rest of code
+    const relatedTasks = [task];
     
     for (const task of relatedTasks) {
       const updateKey = `updateTaskFromFinancial:${record.id}:${task.id}:${record.updatedAt?.getTime()}`;
@@ -265,8 +276,7 @@ export async function updateFinancialRecordsFromSale(
     console.log(`[updateFinancialRecordsFromSale] Updating financial records for sale: ${sale.name}`);
     
     // Find financial records created from this sale
-    const allFinancials = await getAllFinancials();
-    const relatedRecords = allFinancials.filter(record => record.sourceSaleId === sale.id);
+    const relatedRecords = await getFinancialsBySourceSaleId(sale.id);
     
     for (const record of relatedRecords) {
       const updateKey = `updateFinancialFromSale:${sale.id}:${record.id}:${sale.updatedAt?.getTime()}`;
@@ -334,8 +344,7 @@ export async function updateItemsFromSale(
         }
         
         // Get the item
-        const allItems = await getAllItems();
-        const item = allItems.find(i => i.id === line.itemId);
+        const item = await getItemById(line.itemId);
         if (!item) {
           console.warn(`[updateItemsFromSale] Item not found: ${line.itemId}`);
           continue;
@@ -405,12 +414,12 @@ export async function updatePlayerPointsFromSource(
       return;
     }
     
-    // Find the player (assuming single player for now)
-    const players = await getAllPlayers();
-    const player = players[0]; // Simplified - in real system, find by source relationship
+    // Find the player (using PLAYER_ONE_ID for V0.1)
+    const playerId = PLAYER_ONE_ID;
+    const player = await getPlayerById(playerId);
     
     if (!player) {
-      console.warn(`[updatePlayerPointsFromSource] No player found`);
+      console.warn(`[updatePlayerPointsFromSource] Player ${playerId} not found`);
       return;
     }
     

@@ -8,7 +8,7 @@ import { hasEffect, markEffect, clearEffectsByPrefix } from '@/data-store/effect
 import { EffectKeys } from '@/data-store/keys';
 import { getLinksFor, removeLink } from '@/links/link-registry';
 import { getAllSales } from '@/data-store/repositories/sale.repo';
-import { getAllPlayers } from '@/data-store/repositories/player.repo';
+import { getPlayerById } from '@/data-store/datastore';
 import { awardPointsToPlayer, removePointsFromPlayer, calculatePointsFromRevenue } from '../points-rewards-utils';
 import { processSaleLines } from '../sale-line-utils';
 import { 
@@ -259,8 +259,7 @@ async function removePlayerPointsFromSale(saleId: string): Promise<void> {
     
     // Get the player from the sale (same logic as creation)
     const playerId = sale.playerCharacterId || PLAYER_ONE_ID;
-    const players = await getAllPlayers();
-    const player = players.find(p => p.id === playerId);
+    const player = await getPlayerById(playerId);
     
     if (!player) {
       console.log(`[removePlayerPointsFromSale] Player ${playerId} not found, skipping points removal`);

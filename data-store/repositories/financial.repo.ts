@@ -35,6 +35,20 @@ export async function getFinancialsBySourceTaskId(sourceTaskId: string): Promise
   return financials.filter((financial): financial is FinancialRecord => financial !== null && financial !== undefined);
 }
 
+/**
+ * Get financial records by sourceSaleId using an index
+ * OPTIMIZED: Only loads records created by this sale, not all records
+ */
+export async function getFinancialsBySourceSaleId(sourceSaleId: string): Promise<FinancialRecord[]> {
+  const indexKey = `index:${ENTITY}:sourceSaleId:${sourceSaleId}`;
+  const ids = await kvSMembers(indexKey);
+  if (ids.length === 0) return [];
+  
+  const keys = ids.map(id => buildDataKey(ENTITY, id));
+  const financials = await kvMGet<FinancialRecord>(keys);
+  return financials.filter((financial): financial is FinancialRecord => financial !== null && financial !== undefined);
+}
+
 export async function upsertFinancial(financial: FinancialRecord): Promise<FinancialRecord> {
   const key = buildDataKey(ENTITY, financial.id);
   const indexKey = buildIndexKey(ENTITY);
@@ -57,6 +71,18 @@ export async function upsertFinancial(financial: FinancialRecord): Promise<Finan
     await kvSRem(oldSourceTaskIndexKey, financial.id);
   }
   
+  // Maintain sourceSaleId index
+  if (financial.sourceSaleId) {
+    const sourceSaleIndexKey = `index:${ENTITY}:sourceSaleId:${financial.sourceSaleId}`;
+    await kvSAdd(sourceSaleIndexKey, financial.id);
+  }
+  
+  // Clean up old sourceSaleId index if it changed or was removed
+  if (previousFinancial?.sourceSaleId && previousFinancial.sourceSaleId !== financial.sourceSaleId) {
+    const oldSourceSaleIndexKey = `index:${ENTITY}:sourceSaleId:${previousFinancial.sourceSaleId}`;
+    await kvSRem(oldSourceSaleIndexKey, financial.id);
+  }
+  
   return financial;
 }
 
@@ -64,11 +90,15 @@ export async function deleteFinancial(id: string): Promise<void> {
   const key = buildDataKey(ENTITY, id);
   const indexKey = buildIndexKey(ENTITY);
   
-  // Get financial to clean up sourceTaskId index
+  // Get financial to clean up indexes
   const financial = await kvGet<FinancialRecord>(key);
   if (financial?.sourceTaskId) {
     const sourceTaskIndexKey = `index:${ENTITY}:sourceTaskId:${financial.sourceTaskId}`;
     await kvSRem(sourceTaskIndexKey, id);
+  }
+  if (financial?.sourceSaleId) {
+    const sourceSaleIndexKey = `index:${ENTITY}:sourceSaleId:${financial.sourceSaleId}`;
+    await kvSRem(sourceSaleIndexKey, id);
   }
   
   await kvDel(key);

@@ -1,6 +1,6 @@
 // thegame/workflows/points-rewards-utils.ts
 import type { Player, Rewards } from '@/types/entities';
-import { getAllPlayers, upsertPlayer } from '@/data-store/datastore';
+import { getPlayerById, upsertPlayer } from '@/data-store/datastore';
 import { makeLink } from '@/links/links-workflows';
 import { createLink } from '@/links/link-registry';
 import { LinkType, EntityType, PLAYER_ONE_ID } from '@/types/enums';
@@ -23,8 +23,7 @@ export async function awardPointsToPlayer(
     console.log(`[awardPointsToPlayer] Awarding points to player ${playerId} from ${sourceType} ${sourceId}`);
     
     // Get the player
-    const players = await getAllPlayers();
-    const player = players.find(p => p.id === playerId);
+    const player = await getPlayerById(playerId);
     if (!player) {
       console.log(`[awardPointsToPlayer] Player ${playerId} not found, skipping`);
       return;
@@ -117,8 +116,7 @@ export async function removePointsFromPlayer(
     console.log(`[removePointsFromPlayer] Removing points from player ${playerId}`);
     
     // Get the player
-    const players = await getAllPlayers();
-    const player = players.find(p => p.id === playerId);
+    const player = await getPlayerById(playerId);
     if (!player) {
       console.log(`[removePointsFromPlayer] Player ${playerId} not found, skipping`);
       return;

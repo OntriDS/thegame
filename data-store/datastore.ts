@@ -23,7 +23,8 @@ import {
   getAllFinancials as repoGetAllFinancials,
   getFinancialById as repoGetFinancialById,
   deleteFinancial as repoDeleteFinancial,
-  getFinancialsBySourceTaskId as repoGetFinancialsBySourceTaskId
+  getFinancialsBySourceTaskId as repoGetFinancialsBySourceTaskId,
+  getFinancialsBySourceSaleId as repoGetFinancialsBySourceSaleId
 } from './repositories/financial.repo';
 import { 
   upsertSale as repoUpsertSale,
@@ -184,6 +185,11 @@ export async function getFinancialById(id: string): Promise<FinancialRecord | nu
 // OPTIMIZED: Indexed queries - only load financials created by specific tasks
 export async function getFinancialsBySourceTaskId(taskId: string): Promise<FinancialRecord[]> {
   return await repoGetFinancialsBySourceTaskId(taskId);
+}
+
+// OPTIMIZED: Indexed queries - only load financials created by specific sales
+export async function getFinancialsBySourceSaleId(saleId: string): Promise<FinancialRecord[]> {
+  return await repoGetFinancialsBySourceSaleId(saleId);
 }
 
 export async function removeFinancial(id: string): Promise<void> {

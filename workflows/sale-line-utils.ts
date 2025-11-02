@@ -3,7 +3,7 @@
 
 import type { Sale, ItemSaleLine, BundleSaleLine, ServiceLine, Task } from '@/types/entities';
 import { LinkType, EntityType, LogEventType } from '@/types/enums';
-import { getAllItems, upsertItem } from '@/data-store/datastore';
+import { getItemById, upsertItem } from '@/data-store/datastore';
 import { upsertTask } from '@/data-store/datastore';
 import { makeLink } from '@/links/links-workflows';
 import { createLink } from '@/links/link-registry';
@@ -68,8 +68,7 @@ export async function processItemSaleLine(line: ItemSaleLine, sale: Sale): Promi
     }
     
     // Get the item
-    const items = await getAllItems();
-    const item = items.find(i => i.id === line.itemId);
+    const item = await getItemById(line.itemId);
     
     if (!item) {
       console.error(`[processItemSaleLine] Item not found: ${line.itemId}`);
