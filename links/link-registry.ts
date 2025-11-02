@@ -7,7 +7,7 @@ import { kvGet, kvSet, kvDel, kvSAdd, kvSRem, kvSMembers, kvScan } from '@/data-
 import { buildLinkKey, buildLinksIndexKey } from '@/data-store/keys';
 import { validateLink } from './link-validation';
 
-export async function createLink(link: Link, options?: { skipValidation?: boolean }): Promise<void> {
+export async function createLink(link: Link, options?: { skipValidation?: boolean }): Promise<boolean> {
   if (!options?.skipValidation) {
     const validation = await validateLink(link.linkType, link.source, link.target, link.metadata);
     if (!validation.isValid) {
@@ -19,13 +19,15 @@ export async function createLink(link: Link, options?: { skipValidation?: boolea
   const existing = await getLinksFor(link.source);
   const dup = existing.find(l => l.linkType===link.linkType && l.target.type===link.target.type && l.target.id===link.target.id);
   if (dup) {
-    return; // Idempotent: silently skip duplicates
+    return false; // Idempotent: silently skip duplicates, return false
   }
   
   await kvSet(buildLinkKey(link.id), link);
   
   await kvSAdd(buildLinksIndexKey(link.source.type, link.source.id), link.id);
   await kvSAdd(buildLinksIndexKey(link.target.type, link.target.id), link.id);
+  
+  return true; // Link was created
 }
 
 export async function getLinksFor(entity: { type: EntityType; id: string }): Promise<Link[]> {

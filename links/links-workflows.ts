@@ -5,8 +5,9 @@ import { EntityType, LinkType, LogEventType } from '@/types/enums';
 import type { Task, Item, Sale, FinancialRecord, Character, Player, Site, Link } from '@/types/entities';
 import { createLink, removeLink, getLinksFor } from './link-registry';
 import { appendLinkLog } from './links-logging';
-import { getAllItems } from '@/data-store/repositories/item.repo';
-import { getAllCharacters, getAllTasks } from '@/data-store/datastore';
+import { getItemsBySourceTaskId, getItemsBySourceRecordId } from '@/data-store/repositories/item.repo';
+import { getCharacterById } from '@/data-store/repositories/character.repo';
+import { getTaskById } from '@/data-store/repositories/task.repo';
 import { v4 as uuid } from 'uuid';
 import { appendEntityLog } from '@/workflows/entities-logging';
 
@@ -65,24 +66,18 @@ export async function processTaskEffects(task: Task): Promise<void> {
   // TASK_CHARACTER link (from customerCharacterId)
   // NOTE: playerCharacterId is internal assignment, not logged as a character action
   if (task.customerCharacterId) {
-    // Check if link already exists to prevent duplicates
-    const existingLinks = await getLinksFor({ type: EntityType.TASK, id: task.id });
-    const linkExists = existingLinks.some(
-      link => link.linkType === LinkType.TASK_CHARACTER && link.target.id === task.customerCharacterId
+    const l = makeLink(
+      LinkType.TASK_CHARACTER,
+      { type: EntityType.TASK, id: task.id },
+      { type: EntityType.CHARACTER, id: task.customerCharacterId }
     );
+    const wasCreated = await createLink(l);
     
-    if (!linkExists) {
-      const l = makeLink(
-        LinkType.TASK_CHARACTER,
-        { type: EntityType.TASK, id: task.id },
-        { type: EntityType.CHARACTER, id: task.customerCharacterId }
-      );
-      await createLink(l);
+    if (wasCreated) {
       await appendLinkLog(l, 'created');
       
       // Get character name and roles for logging
-      const characters = await getAllCharacters();
-      const character = characters.find((c: Character) => c.id === task.customerCharacterId);
+      const character = await getCharacterById(task.customerCharacterId);
       
       // Log in character log (customer requested task)
       await appendEntityLog(EntityType.CHARACTER, task.customerCharacterId, LogEventType.REQUESTED_TASK, {
@@ -98,9 +93,9 @@ export async function processTaskEffects(task: Task): Promise<void> {
   
   // Create TASK_ITEM link for items created from task emissary fields
   if (task.outputItemType && task.outputQuantity && task.status === 'Done') {
-    // Find the item created by this task
-    const items = await getAllItems();
-    const createdItem = items.find(item => item.sourceTaskId === task.id && item.type === task.outputItemType);
+    // Find the item created by this task (optimized query)
+    const taskItems = await getItemsBySourceTaskId(task.id);
+    const createdItem = taskItems.find(item => item.type === task.outputItemType);
     
     if (createdItem) {
       const l = makeLink(
@@ -161,29 +156,23 @@ export async function processItemEffects(item: Item): Promise<void> {
   
   // ITEM_CHARACTER link
   if (item.ownerCharacterId) {
-    // Check if link already exists to prevent duplicates
-    const linkExists = existingLinks.some(
-      link => link.linkType === LinkType.ITEM_CHARACTER && link.target.id === item.ownerCharacterId
+    const l = makeLink(
+      LinkType.ITEM_CHARACTER,
+      { type: EntityType.ITEM, id: item.id },
+      { type: EntityType.CHARACTER, id: item.ownerCharacterId }
     );
+    const wasCreated = await createLink(l);
     
-    if (!linkExists) {
-      const l = makeLink(
-        LinkType.ITEM_CHARACTER,
-        { type: EntityType.ITEM, id: item.id },
-        { type: EntityType.CHARACTER, id: item.ownerCharacterId }
-      );
-      await createLink(l);
+    if (wasCreated) {
       await appendLinkLog(l, 'created');
       
       // Get character name, roles and source task info for logging
-      const characters = await getAllCharacters();
-      const character = characters.find((c: Character) => c.id === item.ownerCharacterId);
+      const character = await getCharacterById(item.ownerCharacterId);
       let sourceTaskName: string | undefined;
       
       // Get source task name if available
       if (item.sourceTaskId) {
-        const tasks = await getAllTasks();
-        const sourceTask = tasks.find((t: Task) => t.id === item.sourceTaskId);
+        const sourceTask = await getTaskById(item.sourceTaskId);
         if (sourceTask) {
           sourceTaskName = sourceTask.name;
         }
@@ -224,23 +213,18 @@ export async function processSaleEffects(sale: Sale): Promise<void> {
   
   // SALE_CHARACTER link
   if (sale.customerId) {
-    // Check if link already exists to prevent duplicates
-    const linkExists = existingLinks.some(
-      link => link.linkType === LinkType.SALE_CHARACTER && link.target.id === sale.customerId
+    const l = makeLink(
+      LinkType.SALE_CHARACTER,
+      { type: EntityType.SALE, id: sale.id },
+      { type: EntityType.CHARACTER, id: sale.customerId }
     );
+    const wasCreated = await createLink(l);
     
-    if (!linkExists) {
-      const l = makeLink(
-        LinkType.SALE_CHARACTER,
-        { type: EntityType.SALE, id: sale.id },
-        { type: EntityType.CHARACTER, id: sale.customerId }
-      );
-      await createLink(l);
+    if (wasCreated) {
       await appendLinkLog(l, 'created');
       
       // Get character for roles
-      const characters = await getAllCharacters();
-      const character = characters.find((c: Character) => c.id === sale.customerId);
+      const character = await getCharacterById(sale.customerId);
       
       // Log in character log (customer purchased)
       await appendEntityLog(EntityType.CHARACTER, sale.customerId, LogEventType.PURCHASED, {
@@ -296,23 +280,18 @@ export async function processFinancialEffects(fin: FinancialRecord): Promise<voi
   
   // FINREC_CHARACTER link
   if (fin.customerCharacterId) {
-    // Check if link already exists to prevent duplicates
-    const linkExists = existingLinks.some(
-      link => link.linkType === LinkType.FINREC_CHARACTER && link.target.id === fin.customerCharacterId
+    const l = makeLink(
+      LinkType.FINREC_CHARACTER,
+      { type: EntityType.FINANCIAL, id: fin.id },
+      { type: EntityType.CHARACTER, id: fin.customerCharacterId }
     );
+    const wasCreated = await createLink(l);
     
-    if (!linkExists) {
-      const l = makeLink(
-        LinkType.FINREC_CHARACTER,
-        { type: EntityType.FINANCIAL, id: fin.id },
-        { type: EntityType.CHARACTER, id: fin.customerCharacterId }
-      );
-      await createLink(l);
+    if (wasCreated) {
       await appendLinkLog(l, 'created');
       
       // Get character for roles
-      const characters = await getAllCharacters();
-      const character = characters.find((c: Character) => c.id === fin.customerCharacterId);
+      const character = await getCharacterById(fin.customerCharacterId);
       
       // Log in character log (customer transacted)
       await appendEntityLog(EntityType.CHARACTER, fin.customerCharacterId, LogEventType.TRANSACTED, {
@@ -329,9 +308,9 @@ export async function processFinancialEffects(fin: FinancialRecord): Promise<voi
   
   // Create FINREC_ITEM link for items created from financial record emissary fields
   if (fin.outputItemType && fin.outputQuantity) {
-    // Find the item created by this financial record
-    const items = await getAllItems();
-    const createdItem = items.find(item => item.sourceRecordId === fin.id && item.type === fin.outputItemType);
+    // Find the item created by this financial record (optimized query)
+    const recordItems = await getItemsBySourceRecordId(fin.id);
+    const createdItem = recordItems.find(item => item.type === fin.outputItemType);
     
     if (createdItem) {
       const l = makeLink(

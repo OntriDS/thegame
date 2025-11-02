@@ -3,14 +3,14 @@
 // Migrated from lib/game-mechanics/workflow-integration.ts
 
 import { LinkType, EntityType } from '@/types/enums';
-import { getAllTasks } from '@/data-store/repositories/task.repo';
-import { getAllItems } from '@/data-store/repositories/item.repo';
-import { getAllFinancials } from '@/data-store/repositories/financial.repo';
-import { getAllSales } from '@/data-store/repositories/sale.repo';
-import { getAllCharacters } from '@/data-store/repositories/character.repo';
-import { getAllPlayers } from '@/data-store/repositories/player.repo';
-import { getAllAccounts } from '@/data-store/repositories/account.repo';
-import { getAllSites } from '@/data-store/repositories/site.repo';
+import { getTaskById } from '@/data-store/repositories/task.repo';
+import { getItemById } from '@/data-store/repositories/item.repo';
+import { getSaleById } from '@/data-store/repositories/sale.repo';
+import { getCharacterById } from '@/data-store/repositories/character.repo';
+import { getPlayerById } from '@/data-store/repositories/player.repo';
+import { getAccountById } from '@/data-store/repositories/account.repo';
+import { kvGet } from '@/data-store/kv';
+import { buildDataKey } from '@/data-store/keys';
 
 /**
  * Link validation result interface
@@ -214,46 +214,13 @@ async function validateEntityExistsWithRetry(t: EntityType, id: string, retries=
 
 /**
  * Validate that entity exists in the system
+ * OPTIMIZED: Direct KV lookup instead of loading all entities
  */
 export async function validateEntityExists(entityType: EntityType, entityId: string): Promise<boolean> {
   try {
-    switch (entityType) {
-      case EntityType.TASK:
-        const tasks = await getAllTasks();
-        const task = tasks.find(t => t.id === entityId);
-        return !!task;
-      case EntityType.ITEM:
-        const items = await getAllItems();
-        const item = items.find(i => i.id === entityId);
-        return !!item;
-      case EntityType.FINANCIAL:
-        const financialRecords = await getAllFinancials();
-        const financial = financialRecords.find(f => f.id === entityId);
-        return !!financial;
-      case EntityType.SALE:
-        const sales = await getAllSales();
-        const sale = sales.find(s => s.id === entityId);
-        return !!sale;
-      case EntityType.CHARACTER:
-        const characters = await getAllCharacters();
-        const character = characters.find(c => c.id === entityId);
-        return !!character;
-      case EntityType.PLAYER:
-        const players = await getAllPlayers();
-        const player = players.find(p => p.id === entityId);
-        return !!player;
-      case EntityType.SITE:
-        const sites = await getAllSites();
-        const site = sites.find(s => s.id === entityId);
-        return !!site;
-      case EntityType.ACCOUNT:
-        const accounts = await getAllAccounts();
-        const account = accounts.find(a => a.id === entityId);
-        return !!account;
-      default:
-        console.warn(`[validateEntityExists] Unknown entity type: ${entityType}`);
-        return false;
-    }
+    const key = buildDataKey(entityType, entityId);
+    const entity = await kvGet(key);
+    return !!entity;
   } catch (error) {
     console.error(`[validateEntityExists] Error validating entity ${entityType}:${entityId}:`, error);
     return false;
@@ -275,8 +242,7 @@ export async function validateBusinessRules(
     switch (linkType) {
       case 'PLAYER_CHARACTER':
         // Validate that character has valid playerId
-        const characters = await getAllCharacters();
-        const character = characters.find(c => c.id === source.id);
+        const character = await getCharacterById(source.id);
         if (character && character.playerId !== target.id) {
           warnings.push(`Character playerId (${character.playerId}) does not match target player ID (${target.id})`);
         }
@@ -284,8 +250,7 @@ export async function validateBusinessRules(
 
       case 'TASK_SITE':
         // Validate that task has valid siteId
-        const tasks = await getAllTasks();
-        const task = tasks.find(t => t.id === source.id);
+        const task = await getTaskById(source.id);
         if (task && task.siteId !== target.id) {
           warnings.push(`Task siteId (${task.siteId}) does not match target site ID (${target.id})`);
         }
@@ -293,8 +258,7 @@ export async function validateBusinessRules(
 
       case 'ITEM_SITE':
         // Validate item stock location
-        const items = await getAllItems();
-        const item = items.find(i => i.id === source.id);
+        const item = await getItemById(source.id);
         if (item && item.stock) {
           const hasStockAtSite = item.stock.some((stock: any) => stock.siteId === target.id);
           if (!hasStockAtSite) {
@@ -305,8 +269,7 @@ export async function validateBusinessRules(
 
       case 'SALE_ITEM':
         // Validate sale contains the item
-        const sales = await getAllSales();
-        const sale = sales.find(s => s.id === source.id);
+        const sale = await getSaleById(source.id);
         if (sale && sale.lines) {
           const hasItemInSale = sale.lines.some((line: any) => line.kind === 'item' && line.itemId === target.id);
           if (!hasItemInSale) {
@@ -317,8 +280,7 @@ export async function validateBusinessRules(
 
       case 'CHARACTER_PLAYER':
         // Validate that character belongs to the player
-        const charForPlayer = await getAllCharacters();
-        const char = charForPlayer.find(c => c.id === source.id);
+        const char = await getCharacterById(source.id);
         if (char && char.playerId !== target.id) {
           warnings.push(`Character playerId (${char.playerId}) does not match target player ID (${target.id})`);
         }
@@ -326,8 +288,7 @@ export async function validateBusinessRules(
 
       case 'SALE_CHARACTER':
         // Validate that character is the customer
-        const saleForChar = await getAllSales();
-        const saleWithChar = saleForChar.find(s => s.id === source.id);
+        const saleWithChar = await getSaleById(source.id);
         if (saleWithChar && saleWithChar.customerId !== target.id) {
           warnings.push(`Sale customerId (${saleWithChar.customerId}) does not match target character ID (${target.id})`);
         }
@@ -335,8 +296,7 @@ export async function validateBusinessRules(
 
       case 'ACCOUNT_PLAYER':
         // Validate that player belongs to the account
-        const playersForAccount = await getAllPlayers();
-        const playerForAccount = playersForAccount.find(p => p.id === target.id);
+        const playerForAccount = await getPlayerById(target.id);
         if (playerForAccount && playerForAccount.accountId !== source.id) {
           warnings.push(`Player accountId (${playerForAccount.accountId}) does not match source account ID (${source.id})`);
         }
@@ -344,8 +304,7 @@ export async function validateBusinessRules(
 
       case 'ACCOUNT_CHARACTER':
         // Validate that character belongs to the account
-        const charactersForAccount = await getAllCharacters();
-        const characterForAccount = charactersForAccount.find(c => c.id === target.id);
+        const characterForAccount = await getCharacterById(target.id);
         if (characterForAccount && characterForAccount.accountId !== source.id) {
           warnings.push(`Character accountId (${characterForAccount.accountId}) does not match source account ID (${source.id})`);
         }
@@ -353,8 +312,7 @@ export async function validateBusinessRules(
 
       case 'PLAYER_ACCOUNT':
         // Validate that player belongs to the account
-        const playerAccount = await getAllPlayers();
-        const playerWithAccount = playerAccount.find(p => p.id === source.id);
+        const playerWithAccount = await getPlayerById(source.id);
         if (playerWithAccount && playerWithAccount.accountId !== target.id) {
           warnings.push(`Player accountId (${playerWithAccount.accountId}) does not match target account ID (${target.id})`);
         }
@@ -362,8 +320,7 @@ export async function validateBusinessRules(
 
       case 'CHARACTER_ACCOUNT':
         // Validate that character belongs to the account
-        const characterAccount = await getAllCharacters();
-        const characterWithAccount = characterAccount.find(c => c.id === source.id);
+        const characterWithAccount = await getCharacterById(source.id);
         if (characterWithAccount && characterWithAccount.accountId !== target.id) {
           warnings.push(`Character accountId (${characterWithAccount.accountId}) does not match target account ID (${target.id})`);
         }
