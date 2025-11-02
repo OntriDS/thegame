@@ -26,9 +26,7 @@ type KVClient = {
 
 const hasUpstash = !!process.env.UPSTASH_REDIS_REST_URL && !!process.env.UPSTASH_REDIS_REST_TOKEN;
 
-// Only validate on server-side - browser bundles don't have access to these env vars
-// This prevents crashes during bundling when client-side code imports datastore
-if (typeof window === 'undefined' && !hasUpstash) {
+if (!hasUpstash) {
   throw new Error('CRITICAL: UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN must be set. This is a KV-only production environment.');
 }
 

@@ -29,7 +29,6 @@ import { PROGRESS_MAX, PROGRESS_STEP, PRICE_STEP } from '@/lib/constants/app-con
 import { Network, User } from 'lucide-react';
 import { getEmissaryFields } from '@/types/diplomatic-fields';
 import CascadeStatusConfirmationModal from './submodals/cascade-status-confirmation-submodal';
-import { cascadeStatusToInstances, getUndoneInstancesCount } from '@/lib/utils/recurrent-task-utils';
 import { ClientAPI } from '@/lib/client-api';
 import CharacterSelectorModal from './submodals/owner-character-selector-submodal';
 import PlayerCharacterSelectorModal from './submodals/player-character-selector-submodal';
@@ -418,7 +417,7 @@ export default function TaskModal({
     // Check for cascade status change for Recurrent Templates
     if (type === TaskType.RECURRENT_TEMPLATE && task && task.status !== status) {
       try {
-        const affectedCount = await getUndoneInstancesCount(task.id, status);
+        const affectedCount = await ClientAPI.getUndoneInstancesCount(task.id, status);
         
         if (affectedCount > 0) {
           const isReversal = task.status === 'Done' && status !== 'Done';
@@ -464,7 +463,7 @@ export default function TaskModal({
     
     try {
       // Apply cascade to instances
-      await cascadeStatusToInstances(task.id, cascadeData.newStatus, cascadeData.oldStatus);
+      await ClientAPI.cascadeStatusToInstances(task.id, cascadeData.newStatus, cascadeData.oldStatus);
       
       // Now save the template with the new status
       const newTask: Task = {

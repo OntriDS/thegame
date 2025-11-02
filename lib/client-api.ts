@@ -45,6 +45,23 @@ export const ClientAPI = {
     if (!res.ok) throw new Error('Failed to delete task');
   },
 
+  cascadeStatusToInstances: async (templateId: string, newStatus: string, oldStatus: string): Promise<{ updated: Task[], count: number }> => {
+    const res = await fetch('/api/tasks/cascade-status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ templateId, newStatus, oldStatus })
+    });
+    if (!res.ok) throw new Error('Failed to cascade status');
+    return await res.json();
+  },
+
+  getUndoneInstancesCount: async (templateId: string, targetStatus: string): Promise<number> => {
+    const res = await fetch(`/api/tasks/cascade-status?templateId=${encodeURIComponent(templateId)}&targetStatus=${encodeURIComponent(targetStatus)}`);
+    if (!res.ok) throw new Error('Failed to get undone instances count');
+    const data = await res.json();
+    return data.count;
+  },
+
   // QUEUED OPERATIONS - Safety belt for real money operations
   // These operations go through a queue system for additional safety
   upsertTaskQueued: async (task: Task, priority: number = 1): Promise<string> => {
