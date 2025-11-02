@@ -1,5 +1,6 @@
 // data-store/kv.ts
 // KV client wrapper for Upstash Redis (production-only environment)
+import 'server-only';
 
 import { Redis } from '@upstash/redis';
 

@@ -10,7 +10,6 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Link as LinkIcon, ArrowRight, Network, Trash2 } from 'lucide-react';
 import { Link } from '@/types/entities';
 import { EntityType, LinkType } from '@/types/enums';
-import { getLinksFor, removeLink } from '@/links/link-registry';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
 import { ClientAPI } from '@/lib/client-api';
 
@@ -33,7 +32,7 @@ export default function EntityRelationshipsModal({
   const loadLinks = useCallback(async () => {
     try {
       setLoading(true);
-      const entityLinks = await getLinksFor(entity);
+      const entityLinks = await ClientAPI.getLinksFor({ type: entity.type, id: entity.id });
       setLinks(entityLinks);
       
       // Fetch entity names for all linked entities
@@ -90,7 +89,7 @@ export default function EntityRelationshipsModal({
   const handleDeleteLink = async (linkId: string) => {
     if (confirm('Remove this relationship link?')) {
       try {
-        await removeLink(linkId);
+        await ClientAPI.removeLink(linkId);
         await loadLinks();
       } catch (error) {
         console.error('Failed to delete link:', error);

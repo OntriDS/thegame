@@ -1,5 +1,6 @@
 // links/link-registry.ts
 // The Rosetta Stone storage and query layer (KV only)
+import 'server-only';
 
 import { LinkType, EntityType } from '@/types/enums';
 import type { Link } from '@/types/entities';
