@@ -8,6 +8,7 @@ interface NumericInputProps {
   value: number;
   onChange: (value: number) => void;
   min?: number;
+  max?: number;
   step?: number | string;
   placeholder?: string;
   className?: string;
@@ -17,7 +18,7 @@ interface NumericInputProps {
 }
 
 // NumericInput allows free typing (including empty string) while keeping a numeric value in parent state.
-export function NumericInput({ id, value, onChange, min = 0, step = 1, placeholder, className, disabled, title, onBlur }: NumericInputProps) {
+export function NumericInput({ id, value, onChange, min = 0, max, step = 1, placeholder, className, disabled, title, onBlur }: NumericInputProps) {
   const [raw, setRaw] = useState<string>(Number.isFinite(value) ? String(value) : '');
   const isEditingRef = useRef(false);
 
@@ -33,6 +34,7 @@ export function NumericInput({ id, value, onChange, min = 0, step = 1, placehold
       type="number"
       inputMode="decimal"
       min={min}
+      max={max}
       step={step}
       value={raw}
       disabled={disabled}
@@ -41,7 +43,10 @@ export function NumericInput({ id, value, onChange, min = 0, step = 1, placehold
       onBlur={() => {
         isEditingRef.current = false;
         const parsed = parseFloat(raw);
-        const normalized = isNaN(parsed) || parsed < min ? min : parsed;
+        let normalized = isNaN(parsed) || parsed < min ? min : parsed;
+        if (max !== undefined && normalized > max) {
+          normalized = max;
+        }
         setRaw(String(normalized));
         onChange(normalized);
         onBlur?.();
