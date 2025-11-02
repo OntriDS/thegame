@@ -397,6 +397,9 @@ export class ResetDataWorkflow {
           } else {
             results.push(`No ${entityType} entities to clear`);
           }
+          
+          // Clear secondary indexes for entities that have them
+          await this.clearSecondaryIndexes(entityType, results, errors);
         } catch (error) {
           const errorMsg = `Failed to clear ${entityType}: ${error instanceof Error ? error.message : 'Unknown error'}`;
           errors.push(errorMsg);
@@ -405,6 +408,64 @@ export class ResetDataWorkflow {
       }
     } catch (error) {
       const errorMsg = `Failed to clear entity data: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      errors.push(errorMsg);
+      console.error(`[ResetDataWorkflow] ❌ ${errorMsg}`);
+    }
+  }
+  
+  /**
+   * Clear secondary indexes for entities that have them
+   */
+  private static async clearSecondaryIndexes(entityType: string, results: string[], errors: string[]): Promise<void> {
+    try {
+      // Only clear secondary indexes for entities that have them
+      if (entityType === EntityType.ITEM) {
+        // Clear item type indexes and ambassador indexes
+        const typeIndexKeys = await kvScan('index:item:type:');
+        const sourceTaskIndexKeys = await kvScan('index:item:sourceTaskId:');
+        const sourceRecordIndexKeys = await kvScan('index:item:sourceRecordId:');
+        
+        const allItemIndexKeys = [...typeIndexKeys, ...sourceTaskIndexKeys, ...sourceRecordIndexKeys];
+        
+        if (allItemIndexKeys.length > 0) {
+          const BATCH_SIZE = 100;
+          const totalBatches = Math.ceil(allItemIndexKeys.length / BATCH_SIZE);
+          
+          for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
+            const startIndex = batchIndex * BATCH_SIZE;
+            const endIndex = Math.min(startIndex + BATCH_SIZE, allItemIndexKeys.length);
+            const batchKeys = allItemIndexKeys.slice(startIndex, endIndex);
+            
+            await kvDelMany(batchKeys);
+            console.log(`[ResetDataWorkflow] ✅ Cleared item secondary index batch ${batchIndex + 1}/${totalBatches}`);
+          }
+          
+          results.push(`Cleared ${allItemIndexKeys.length} item secondary indexes`);
+          console.log(`[ResetDataWorkflow] ✅ Cleared ${allItemIndexKeys.length} item secondary indexes`);
+        }
+      } else if (entityType === EntityType.FINANCIAL) {
+        // Clear financial sourceTaskId indexes
+        const sourceTaskIndexKeys = await kvScan('index:financial:sourceTaskId:');
+        
+        if (sourceTaskIndexKeys.length > 0) {
+          const BATCH_SIZE = 100;
+          const totalBatches = Math.ceil(sourceTaskIndexKeys.length / BATCH_SIZE);
+          
+          for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
+            const startIndex = batchIndex * BATCH_SIZE;
+            const endIndex = Math.min(startIndex + BATCH_SIZE, sourceTaskIndexKeys.length);
+            const batchKeys = sourceTaskIndexKeys.slice(startIndex, endIndex);
+            
+            await kvDelMany(batchKeys);
+            console.log(`[ResetDataWorkflow] ✅ Cleared financial secondary index batch ${batchIndex + 1}/${totalBatches}`);
+          }
+          
+          results.push(`Cleared ${sourceTaskIndexKeys.length} financial secondary indexes`);
+          console.log(`[ResetDataWorkflow] ✅ Cleared ${sourceTaskIndexKeys.length} financial secondary indexes`);
+        }
+      }
+    } catch (error) {
+      const errorMsg = `Failed to clear secondary indexes for ${entityType}: ${error instanceof Error ? error.message : 'Unknown error'}`;
       errors.push(errorMsg);
       console.error(`[ResetDataWorkflow] ❌ ${errorMsg}`);
     }
