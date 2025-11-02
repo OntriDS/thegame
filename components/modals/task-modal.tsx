@@ -338,39 +338,16 @@ export default function TaskModal({
     return createCharacterOptions(characters);
   };
 
-  const handleSave = async () => {
-    if (isSaving) return;
-    setIsSaving(true);
-    
-    // Validation for Recurrent Template: require due date and a valid frequency selection
-    if (type === TaskType.RECURRENT_TEMPLATE) {
-      if (!dueDate) {
-        setValidationMessage('Recurrent Templates require a Due Date to set the safety limit for instance creation.');
-        setShowValidationModal(true);
-        setIsSaving(false);
-        return;
-      }
-      const freq = frequencyConfig;
-      const isUnsetFrequency = !freq || freq.type === RecurrentFrequency.ONCE ||
-        (freq.type === RecurrentFrequency.CUSTOM && (!freq.customDays || freq.customDays.length === 0));
-      if (isUnsetFrequency) {
-        setValidationMessage('Please select a Frequency for this template (e.g., Daily, Weekly, Monthly, or fill Custom days).');
-        setShowValidationModal(true);
-        setIsSaving(false);
-        return;
-      }
-    }
-
-
-    // Fallback playerCharacterId to PLAYER_ONE_ID if still null
+  // Helper function to build task from form state - eliminates duplication
+  const buildTaskFromForm = (statusOverride?: TaskStatus): Task => {
     const finalPlayerCharacterId = playerCharacterId || PLAYER_ONE_ID;
-
-    // Build task entity from form data
-    const newTask: Task = {
+    const finalStatus = statusOverride !== undefined ? statusOverride : status;
+    
+    return {
       id: task?.id || uuid(),
       name,
       description,
-      status,
+      status: finalStatus,
       priority,
       type,
       station,
@@ -413,6 +390,34 @@ export default function TaskModal({
       outputItemId: task?.outputItemId || null,
       links: task?.links || [],  // Initialize links for Rosetta Stone
     };
+  };
+
+  const handleSave = async () => {
+    if (isSaving) return;
+    setIsSaving(true);
+    
+    // Validation for Recurrent Template: require due date and a valid frequency selection
+    if (type === TaskType.RECURRENT_TEMPLATE) {
+      if (!dueDate) {
+        setValidationMessage('Recurrent Templates require a Due Date to set the safety limit for instance creation.');
+        setShowValidationModal(true);
+        setIsSaving(false);
+        return;
+      }
+      const freq = frequencyConfig;
+      const isUnsetFrequency = !freq || freq.type === RecurrentFrequency.ONCE ||
+        (freq.type === RecurrentFrequency.CUSTOM && (!freq.customDays || freq.customDays.length === 0));
+      if (isUnsetFrequency) {
+        setValidationMessage('Please select a Frequency for this template (e.g., Daily, Weekly, Monthly, or fill Custom days).');
+        setShowValidationModal(true);
+        setIsSaving(false);
+        return;
+      }
+    }
+
+
+    // Build task entity from form data
+    const newTask = buildTaskFromForm();
 
     // Check for cascade status change for Recurrent Templates
     if (type === TaskType.RECURRENT_TEMPLATE && task && task.status !== status) {
@@ -462,57 +467,10 @@ export default function TaskModal({
     if (!cascadeData || !task) return;
     
     try {
-      // Apply cascade to instances
-      await ClientAPI.cascadeStatusToInstances(task.id, cascadeData.newStatus, cascadeData.oldStatus);
-      
-      // Now save the template with the new status
-      const newTask: Task = {
-        id: task.id,
-        name,
-        description,
-        status: cascadeData.newStatus,
-        priority,
-        type,
-        station,
-        progress,
-        dueDate,
-        frequencyConfig: (type === TaskType.RECURRENT_GROUP || type === TaskType.RECURRENT_TEMPLATE) ? frequencyConfig : undefined,
-        cost,
-        revenue,
-        isNotPaid,
-        isNotCharged,
-        siteId: formData.site,
-        targetSiteId: formData.targetSite,
-        outputItemType: (outputItemType || undefined) as ItemType | undefined,
-        outputItemSubType: (outputItemSubType || undefined) as SubItemType | undefined,
-        outputQuantity,
-        outputUnitCost,
-        outputItemName: outputItemName || undefined,
-        outputItemPrice,
-        isNewItem,
-        isSold,
-      outputItemStatus,
-      customerCharacterId: task.customerCharacterId,
-      playerCharacterId: playerCharacterId || PLAYER_ONE_ID,
-      rewards: {
-          points: {
-            xp: rewards.points.xp,
-            rp: rewards.points.rp,
-            fp: rewards.points.fp,
-            hp: rewards.points.hp,
-          },
-        },
-        createdAt: task.createdAt,
-        updatedAt: new Date(),
-        isCollected: task.isCollected,
-        order: task.order,
-        parentId,
-        isRecurrentGroup,
-        isTemplate,
-        outputItemId: task.outputItemId,
-        links: task.links,
-      };
+      // Build task with status override - workflow will handle cascading automatically
+      const newTask = buildTaskFromForm(cascadeData.newStatus);
 
+      // Workflow will automatically cascade the status change
       await onSave(newTask);
       dispatchEntityUpdated('task');
       onOpenChange(false);
@@ -525,12 +483,32 @@ export default function TaskModal({
     }
   };
 
-  const handleCascadeCancel = () => {
-    // Just save the template without cascading
+  const handleCascadeCancel = async () => {
+    // Save the template without cascading (use _skipCascade metadata)
     setShowCascadeModal(false);
-    setCascadeData(null);
-    // Continue with normal save
-    handleSave();
+    
+    if (!cascadeData || !task) {
+      setCascadeData(null);
+      handleSave();
+      return;
+    }
+    
+    try {
+      // Build task with status override and skip cascade flag
+      const newTask = {
+        ...buildTaskFromForm(cascadeData.newStatus),
+        _skipCascade: true, // Tell workflow to skip cascading
+      } as Task & { _skipCascade?: boolean };
+      
+      await onSave(newTask as Task);
+      dispatchEntityUpdated('task');
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Save failed:', error);
+    } finally {
+      setCascadeData(null);
+      setIsSaving(false);
+    }
   };
 
   const handleStationChange = (newStation: Station) => {

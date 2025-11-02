@@ -242,13 +242,33 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
         }
       }
 
-      // Detect template status reversal (uncascade)
-      const statusReverted = previousTask.status === 'Done' && task.status !== 'Done';
+      // Handle status changes for Recurrent Templates
+      const statusChanged = previousTask.status !== task.status;
       
-      if (statusReverted) {
-        console.log(`[onTaskUpsert] Template status reverted, uncascading instances: ${task.name}`);
-        const { reverted } = await uncascadeStatusFromInstances(task.id, task.status);
-        console.log(`[onTaskUpsert] ✅ Reverted ${reverted.length} instances to ${task.status}`);
+      if (statusChanged) {
+        // Check if user requested to skip cascading (via temporary metadata)
+        const skipCascade = (task as any)._skipCascade === true;
+        
+        if (skipCascade) {
+          console.log(`[onTaskUpsert] User requested to skip cascade for template: ${task.name}`);
+        } else {
+          // Detect template status reversal (uncascade)
+          const statusReverted = previousTask.status === 'Done' && task.status !== 'Done';
+          
+          if (statusReverted) {
+            console.log(`[onTaskUpsert] Template status reverted, uncascading instances: ${task.name}`);
+            const { reverted } = await uncascadeStatusFromInstances(task.id, task.status);
+            console.log(`[onTaskUpsert] ✅ Reverted ${reverted.length} instances to ${task.status}`);
+          } else {
+            // Forward cascade: cascade status to instances
+            const undoneCount = await getUndoneInstancesCount(task.id, task.status);
+            if (undoneCount > 0) {
+              console.log(`[onTaskUpsert] Template status changed, cascading to ${undoneCount} instances: ${task.name}`);
+              const { updated } = await cascadeStatusToInstances(task.id, task.status, previousTask.status);
+              console.log(`[onTaskUpsert] ✅ Cascaded ${updated.length} instances to ${task.status}`);
+            }
+          }
+        }
       }
     }
   }
