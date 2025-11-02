@@ -5,7 +5,8 @@ import { EntityType, LogEventType } from '@/types/enums';
 import type { Item } from '@/types/entities';
 import { appendEntityLog, updateEntityLogField } from '../entities-logging';
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
-import { EffectKeys } from '@/data-store/keys';
+import { EffectKeys, buildLogKey } from '@/data-store/keys';
+import { kvGet, kvSet } from '@/data-store/kv';
 import { getLinksFor, removeLink } from '@/links/link-registry';
 import { getCategoryForItemType } from '@/lib/utils/searchable-select-utils';
 import { createCharacterFromItem } from '../character-creation-utils';
@@ -139,10 +140,15 @@ export async function removeItemEffectsOnDelete(itemId: string): Promise<void> {
     await clearEffectsByPrefix(EntityType.ITEM, itemId, 'financialLogged:');
     await clearEffectsByPrefix(EntityType.ITEM, itemId, 'pointsLogged:');
     
-    // 3. Remove log entries from items log only (Items don't have financial/player effects)
-    console.log(`[removeItemEffectsOnDelete] Starting log entry removal for item: ${itemId}`);
-    
-    console.log(`[removeItemEffectsOnDelete] ⚠️ Log entry removal skipped - needs server-side implementation`);
+    // 3. Remove log entries from items log
+    console.log(`[removeItemEffectsOnDelete] Removing log entries for item: ${itemId}`);
+    const itemsLogKey = buildLogKey(EntityType.ITEM);
+    const itemsLog = (await kvGet<any[]>(itemsLogKey)) || [];
+    const filteredItemsLog = itemsLog.filter(entry => entry.entityId !== itemId);
+    if (filteredItemsLog.length !== itemsLog.length) {
+      await kvSet(itemsLogKey, filteredItemsLog);
+      console.log(`[removeItemEffectsOnDelete] ✅ Removed ${itemsLog.length - filteredItemsLog.length} entries from items log`);
+    }
     
     console.log(`[removeItemEffectsOnDelete] ✅ Cleared effects, removed links, and removed log entries for item ${itemId}`);
   } catch (error) {

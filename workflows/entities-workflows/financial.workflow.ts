@@ -5,7 +5,8 @@ import { EntityType, LogEventType, PLAYER_ONE_ID } from '@/types/enums';
 import type { FinancialRecord } from '@/types/entities';
 import { appendEntityLog, updateEntityLogField } from '../entities-logging';
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
-import { EffectKeys } from '@/data-store/keys';
+import { EffectKeys, buildLogKey } from '@/data-store/keys';
+import { kvGet, kvSet } from '@/data-store/kv';
 import { getLinksFor, removeLink } from '@/links/link-registry';
 import { getAllFinancials } from '@/data-store/repositories/financial.repo';
 import { getAllPlayers } from '@/data-store/repositories/player.repo';
@@ -197,20 +198,14 @@ export async function removeRecordEffectsOnDelete(recordId: string): Promise<voi
     await clearEffectsByPrefix(EntityType.FINANCIAL, recordId, 'pointsLogged:');
     await clearEffectsByPrefix(EntityType.FINANCIAL, recordId, 'financialLogged:');
     
-    // 5. Remove log entries from all relevant logs
-    console.log(`[removeRecordEffectsOnDelete] Starting log entry removal for record: ${recordId}`);
-    
-    // TODO: Implement server-side log removal or remove these calls
-    console.log(`[removeRecordEffectsOnDelete] ⚠️ Log entry removal skipped - needs server-side implementation`);
-    
-    const removals: { success: boolean; message?: string }[] = []; // Placeholder for removed log calls
-
-    console.log(`[removeRecordEffectsOnDelete] All removal results:`, removals);
-    const failed = removals.filter(r => !r.success);
-    if (failed.length > 0) {
-      console.error('[removeRecordEffectsOnDelete] Some log removals failed:', failed);
-    } else {
-      console.log(`[removeRecordEffectsOnDelete] ✅ All log entries removed successfully for record: ${recordId}`);
+    // 5. Remove log entries from financials log
+    console.log(`[removeRecordEffectsOnDelete] Removing log entries for record: ${recordId}`);
+    const financialsLogKey = buildLogKey(EntityType.FINANCIAL);
+    const financialsLog = (await kvGet<any[]>(financialsLogKey)) || [];
+    const filteredFinancialsLog = financialsLog.filter(entry => entry.entityId !== recordId);
+    if (filteredFinancialsLog.length !== financialsLog.length) {
+      await kvSet(financialsLogKey, filteredFinancialsLog);
+      console.log(`[removeRecordEffectsOnDelete] ✅ Removed ${financialsLog.length - filteredFinancialsLog.length} entries from financials log`);
     }
     
     console.log(`[removeRecordEffectsOnDelete] ✅ Cleared effects, removed links, deleted created items, and removed log entries for record ${recordId}`);
