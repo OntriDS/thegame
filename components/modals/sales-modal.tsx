@@ -18,7 +18,7 @@ import { SaleType, SaleStatus, PaymentMethod, Currency, ItemType, ItemStatus, Ta
 import { getSubTypesForItemType } from '@/lib/utils/item-utils';
 import type { Station } from '@/types/type-aliases';
 import { createSiteOptionsWithCategories } from '@/lib/utils/site-options-utils';
-import { createCharacterOptions, createStationCategoryOptions, createTaskParentOptions, createItemTypeSubTypeOptions, getItemTypeFromCombined, createItemOptions, getCategoryFromCombined } from '@/lib/utils/searchable-select-utils';
+import { createCharacterOptions, createStationCategoryOptions, createTaskParentOptions, createItemTypeSubTypeOptions, getItemTypeFromCombined, createItemOptions, getCategoryFromCombined, getStationFromCombined } from '@/lib/utils/searchable-select-utils';
 import { getAreaForStation } from '@/lib/utils/business-structure-utils';
 import { ClientAPI } from '@/lib/client-api';
 import { dispatchEntityUpdated, entityTypeToKind } from '@/lib/ui/ui-events';
@@ -54,7 +54,7 @@ export default function SalesModal({
   // Helper function to get the correct value format for SearchableSelect
   const getStationValue = (station: Station): string => {
     const area = getAreaForStation(station);
-    return `${area}:${station}`;
+    return `${station}:${area}`;
   };
 
   // Form state
@@ -1413,7 +1413,7 @@ export default function SalesModal({
                     <SearchableSelect
                       value={getStationValue(taskStation)}
                       onValueChange={(value) => {
-                        const [, station] = value.split(':');
+                        const station = getStationFromCombined(value);
                         setTaskStation(station as Station);
                       }}
                       placeholder="Select station..."
@@ -1582,7 +1582,7 @@ export default function SalesModal({
                       <SearchableSelect
                         value={getStationValue(taskStation)}
                         onValueChange={(value) => {
-                          const [, station] = value.split(':');
+                          const station = getStationFromCombined(value);
                           setTaskStation(station as Station);
                         }}
                         placeholder="Select station..."
