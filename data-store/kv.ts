@@ -24,12 +24,6 @@ type KVClient = {
   };
 };
 
-const hasUpstash = !!process.env.UPSTASH_REDIS_REST_URL && !!process.env.UPSTASH_REDIS_REST_TOKEN;
-
-if (!hasUpstash) {
-  throw new Error('CRITICAL: UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN must be set. This is a KV-only production environment.');
-}
-
 export const kv: KVClient = Redis.fromEnv() as unknown as KVClient;
 
 export async function kvGet<T>(key: string): Promise<T | null> {
