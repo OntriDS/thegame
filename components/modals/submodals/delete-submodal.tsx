@@ -68,13 +68,12 @@ export default function DeleteModal({
         const allRelatedItems: Item[] = [];
         
         for (const entity of entities) {
-          const items = await ClientAPI.getItems();
           let createdItems: Item[] = [];
           
           if (entityType === EntityType.TASK) {
-            createdItems = items.filter(item => item.sourceTaskId === entity.id);
+            createdItems = await ClientAPI.getItemsBySourceTaskId(entity.id);
           } else if (entityType === EntityType.FINANCIAL) {
-            createdItems = items.filter(item => item.sourceRecordId === entity.id);
+            createdItems = await ClientAPI.getItemsBySourceRecordId(entity.id);
           }
           
           allRelatedItems.push(...createdItems);
@@ -98,8 +97,7 @@ export default function DeleteModal({
       if (entityType === EntityType.TASK) {
         for (const task of entities as Task[]) {
           // Find items created by this task
-          const items = await ClientAPI.getItems();
-          const createdItems = items.filter(item => item.sourceTaskId === task.id);
+          const createdItems = await ClientAPI.getItemsBySourceTaskId(task.id);
           
           if (createdItems.length > 0) {
             // Use checkbox state instead of window.confirm
@@ -126,8 +124,7 @@ export default function DeleteModal({
         // Special handling for record deletion - check for created items
         for (const record of entities as FinancialRecord[]) {
           // Find items created by this record
-          const items = await ClientAPI.getItems();
-          const createdItems = items.filter(item => item.sourceRecordId === record.id);
+          const createdItems = await ClientAPI.getItemsBySourceRecordId(record.id);
           
           if (createdItems.length > 0) {
             // Use checkbox state instead of window.confirm

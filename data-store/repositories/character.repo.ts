@@ -1,5 +1,5 @@
 // data-store/repositories/character.repo.ts
-import { kvGet, kvSet, kvDel, kvSAdd, kvSRem, kvSMembers } from '../kv';
+import { kvGet, kvMGet, kvSet, kvDel, kvSAdd, kvSRem, kvSMembers } from '../kv';
 import { buildDataKey, buildIndexKey } from '../keys';
 import { EntityType } from '@/types/enums';
 import type { Character } from '@/types/entities';
@@ -11,14 +11,9 @@ export async function getAllCharacters(): Promise<Character[]> {
   const ids = await kvSMembers(indexKey);
   if (ids.length === 0) return [];
   
-  const characters: Character[] = [];
-  for (const id of ids) {
-    const key = buildDataKey(ENTITY, id);
-    const character = await kvGet<Character>(key);
-    if (character) characters.push(character);
-  }
-  
-  return characters;
+  const keys = ids.map(id => buildDataKey(ENTITY, id));
+  const characters = await kvMGet<Character>(keys);
+  return characters.filter((character): character is Character => character !== null && character !== undefined);
 }
 
 export async function getCharacterById(id: string): Promise<Character | null> {

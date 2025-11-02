@@ -61,8 +61,13 @@ export const ClientAPI = {
   // ============================================================================
   // ITEMS - Item management operations
   // ============================================================================
-  getItems: async (): Promise<Item[]> => {
-    const res = await fetch('/api/items');
+  getItems: async (itemTypes?: string | string[]): Promise<Item[]> => {
+    let url = '/api/items';
+    if (itemTypes) {
+      const types = Array.isArray(itemTypes) ? itemTypes.join(',') : itemTypes;
+      url += `?type=${encodeURIComponent(types)}`;
+    }
+    const res = await fetch(url);
     if (!res.ok) throw new Error('Failed to fetch items');
     return await res.json();
   },
@@ -86,6 +91,18 @@ export const ClientAPI = {
   deleteItem: async (id: string): Promise<void> => {
     const res = await fetch(`/api/items/${id}`, { method: 'DELETE' });
     if (!res.ok) throw new Error('Failed to delete item');
+  },
+
+  getItemsBySourceTaskId: async (taskId: string): Promise<Item[]> => {
+    const res = await fetch(`/api/items/by-task/${taskId}`);
+    if (!res.ok) return [];
+    return await res.json();
+  },
+
+  getItemsBySourceRecordId: async (recordId: string): Promise<Item[]> => {
+    const res = await fetch(`/api/items/by-record/${recordId}`);
+    if (!res.ok) return [];
+    return await res.json();
   },
 
   upsertItemQueued: async (item: Item, priority: number = 1): Promise<string> => {

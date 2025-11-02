@@ -4,6 +4,15 @@
 import { kv } from '@/data-store/kv';
 import { buildDataKey, buildIndexKey } from '@/data-store/keys';
 import { EntityType, SiteType, SiteStatus, PhysicalBusinessType, DigitalSiteType, SystemSiteType } from '@/types/enums';
+import {
+  upsertItem,
+  upsertTask,
+  upsertSale,
+  upsertFinancial,
+  upsertCharacter,
+  upsertPlayer,
+  upsertSite
+} from '@/data-store/datastore';
 
 export interface SettingsResult {
   success: boolean;
@@ -114,6 +123,7 @@ export class SeedDataWorkflow {
   
   /**
    * Seed from backup KV keys
+   * Uses datastore functions to ensure all indexes are properly maintained
    */
   private static async seedFromBackup(entityTypes: string[], results: string[], errors: string[]): Promise<void> {
     try {
@@ -137,22 +147,69 @@ export class SeedDataWorkflow {
             continue;
           }
           
-          // Seed each entity
+          // Use datastore functions to ensure indexes are maintained (type indexes, source indexes, etc.)
+          // Skip workflow effects during bulk seed to avoid creating logs/links for each entity
+          let seededCount = 0;
+          let failedCount = 0;
+          
           for (const entity of entities) {
             try {
-              const dataKey = buildDataKey(entityType, entity.id);
-              await kv.set(dataKey, JSON.stringify(entity));
+              // Parse dates if they exist
+              if (entity.createdAt && typeof entity.createdAt === 'string') {
+                entity.createdAt = new Date(entity.createdAt);
+              }
+              if (entity.updatedAt && typeof entity.updatedAt === 'string') {
+                entity.updatedAt = new Date(entity.updatedAt);
+              }
+              if (entity.lastRestockDate && typeof entity.lastRestockDate === 'string') {
+                entity.lastRestockDate = new Date(entity.lastRestockDate);
+              }
               
-              // Add to index
-              const indexKey = buildIndexKey(entityType);
-              await kv.sadd(indexKey, entity.id);
+              // Route to appropriate datastore function based on entity type
+              switch (entityType) {
+                case EntityType.ITEM:
+                  await upsertItem(entity, { skipWorkflowEffects: true, skipLinkEffects: true });
+                  seededCount++;
+                  break;
+                case EntityType.TASK:
+                  await upsertTask(entity, { skipWorkflowEffects: true, skipLinkEffects: true });
+                  seededCount++;
+                  break;
+                case EntityType.SALE:
+                  await upsertSale(entity, { skipWorkflowEffects: true, skipLinkEffects: true });
+                  seededCount++;
+                  break;
+                case EntityType.FINANCIAL:
+                  await upsertFinancial(entity, { skipWorkflowEffects: true, skipLinkEffects: true });
+                  seededCount++;
+                  break;
+                case EntityType.CHARACTER:
+                  await upsertCharacter(entity, { skipWorkflowEffects: true, skipLinkEffects: true });
+                  seededCount++;
+                  break;
+                case EntityType.PLAYER:
+                  await upsertPlayer(entity, { skipWorkflowEffects: true, skipLinkEffects: true });
+                  seededCount++;
+                  break;
+                case EntityType.SITE:
+                  await upsertSite(entity, { skipWorkflowEffects: true });
+                  seededCount++;
+                  break;
+                default:
+                  console.warn(`[SeedDataWorkflow] ⚠️ Unknown entity type: ${entityType}, skipping`);
+                  failedCount++;
+              }
             } catch (error) {
+              failedCount++;
               console.warn(`[SeedDataWorkflow] ⚠️ Failed to seed ${entityType} ${entity.id}:`, error);
+              errors.push(`${entityType} ${entity.id}: ${error instanceof Error ? error.message : 'Unknown error'}`);
             }
           }
           
-          results.push(`Seeded ${entities.length} ${entityType} entities from backup`);
-          console.log(`[SeedDataWorkflow] ✅ Seeded ${entities.length} ${entityType} entities`);
+          if (seededCount > 0) {
+            results.push(`Seeded ${seededCount} ${entityType} entities from backup${failedCount > 0 ? ` (${failedCount} failed)` : ''}`);
+            console.log(`[SeedDataWorkflow] ✅ Seeded ${seededCount} ${entityType} entities`);
+          }
           
         } catch (error) {
           const errorMsg = `Failed to seed ${entityType} from backup: ${error instanceof Error ? error.message : 'Unknown error'}`;

@@ -2,7 +2,7 @@
 // Orchestration layer: repositories → workflows → links → logging
 
 import type { Task, Item, FinancialRecord, Sale, Character, Player, Site, Settlement, Account } from '@/types/entities';
-import { EntityType } from '@/types/enums';
+import { EntityType, ItemType } from '@/types/enums';
 import { 
   upsertTask as repoUpsertTask,
   getAllTasks as repoGetAllTasks,
@@ -15,7 +15,8 @@ import {
   getItemById as repoGetItemById,
   deleteItem as repoDeleteItem,
   getItemsBySourceTaskId as repoGetItemsBySourceTaskId,
-  getItemsBySourceRecordId as repoGetItemsBySourceRecordId
+  getItemsBySourceRecordId as repoGetItemsBySourceRecordId,
+  getItemsByType as repoGetItemsByType
 } from './repositories/item.repo';
 import { 
   upsertFinancial as repoUpsertFinancial,
@@ -136,6 +137,13 @@ export async function getItemsBySourceTaskId(taskId: string): Promise<Item[]> {
 
 export async function getItemsBySourceRecordId(recordId: string): Promise<Item[]> {
   return await repoGetItemsBySourceRecordId(recordId);
+}
+
+export async function getItemsByType(itemTypes: string | string[]): Promise<Item[]> {
+  const types = Array.isArray(itemTypes) 
+    ? itemTypes.map(t => t as ItemType)
+    : (itemTypes as ItemType);
+  return await repoGetItemsByType(types);
 }
 
 export async function removeItem(id: string): Promise<void> {

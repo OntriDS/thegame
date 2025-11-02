@@ -4,6 +4,15 @@
 import { kv, kvDelMany } from '@/data-store/kv';
 import { buildDataKey, buildIndexKey, buildLogKey } from '@/data-store/keys';
 import { EntityType } from '@/types/enums';
+import {
+  upsertItem,
+  upsertTask,
+  upsertSale,
+  upsertFinancial,
+  upsertCharacter,
+  upsertPlayer,
+  upsertSite
+} from '@/data-store/datastore';
 
 // Centralized list of entity types for import operations
 const IMPORTABLE_ENTITY_TYPES = [
@@ -327,43 +336,64 @@ export class ImportDataWorkflow {
         return;
       }
 
-      // Batch import entities in chunks to avoid overwhelming KV
-      const BATCH_SIZE = 50;
+      // Process entities using proper upsert functions to maintain all indexes
       let importedCount = 0;
-      const totalBatches = Math.ceil(validEntities.length / BATCH_SIZE);
 
-      for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
-        const startIndex = batchIndex * BATCH_SIZE;
-        const endIndex = Math.min(startIndex + BATCH_SIZE, validEntities.length);
-        const batch = validEntities.slice(startIndex, endIndex);
-
-        console.log(`[ImportDataWorkflow] 🔄 Processing batch ${batchIndex + 1}/${totalBatches} for ${entityType} (${batch.length} entities)`);
-
+      for (const entity of validEntities) {
         try {
-          // Prepare batch operations for this chunk
-          const pipeline = kv.multi();
-
-          for (const entity of batch) {
-            const dataKey = buildDataKey(entityType, entity.id);
-            pipeline.set(dataKey, JSON.stringify(entity));
+          // Parse dates if they exist
+          if (entity.createdAt && typeof entity.createdAt === 'string') {
+            entity.createdAt = new Date(entity.createdAt);
+          }
+          if (entity.updatedAt && typeof entity.updatedAt === 'string') {
+            entity.updatedAt = new Date(entity.updatedAt);
+          }
+          if (entity.lastRestockDate && typeof entity.lastRestockDate === 'string') {
+            entity.lastRestockDate = new Date(entity.lastRestockDate);
           }
 
-          // Add all entity IDs to index in a single operation
-          const entityIds = batch.map(entity => entity.id);
-          pipeline.sadd(indexKey, ...entityIds);
-
-          // Execute batch
-          await pipeline.exec();
-          importedCount += batch.length;
-
-          console.log(`[ImportDataWorkflow] ✅ Batch ${batchIndex + 1}/${totalBatches} completed for ${entityType}`);
+          // Route to appropriate datastore function based on entity type
+          // This ensures all indexes are maintained (type indexes, sourceTaskId indexes, etc.)
+          switch (entityType) {
+            case EntityType.ITEM:
+              await upsertItem(entity, { skipWorkflowEffects: true, skipLinkEffects: true });
+              importedCount++;
+              break;
+            case EntityType.TASK:
+              await upsertTask(entity, { skipWorkflowEffects: true, skipLinkEffects: true });
+              importedCount++;
+              break;
+            case EntityType.SALE:
+              await upsertSale(entity, { skipWorkflowEffects: true, skipLinkEffects: true });
+              importedCount++;
+              break;
+            case EntityType.FINANCIAL:
+              await upsertFinancial(entity, { skipWorkflowEffects: true, skipLinkEffects: true });
+              importedCount++;
+              break;
+            case EntityType.CHARACTER:
+              await upsertCharacter(entity, { skipWorkflowEffects: true, skipLinkEffects: true });
+              importedCount++;
+              break;
+            case EntityType.PLAYER:
+              await upsertPlayer(entity, { skipWorkflowEffects: true, skipLinkEffects: true });
+              importedCount++;
+              break;
+            case EntityType.SITE:
+              await upsertSite(entity, { skipWorkflowEffects: true });
+              importedCount++;
+              break;
+            default:
+              console.warn(`[ImportDataWorkflow] ⚠️ Unknown entity type: ${entityType}, skipping`);
+          }
         } catch (error) {
-          console.error(`[ImportDataWorkflow] ❌ Batch ${batchIndex + 1} failed for ${entityType}:`, error);
-          // Continue with next batch instead of failing completely
+          const errorMsg = `Failed to import ${entityType} ${entity.id}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+          errors.push(errorMsg);
+          console.error(`[ImportDataWorkflow] ❌ ${errorMsg}`);
         }
       }
 
-      results.push(`Imported ${importedCount} ${entityType} entities in ${totalBatches} batches`);
+      results.push(`Imported ${importedCount} ${entityType} entities`);
       console.log(`[ImportDataWorkflow] ✅ Imported ${importedCount} ${entityType} entities`);
 
     } catch (error) {

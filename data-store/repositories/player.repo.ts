@@ -1,5 +1,5 @@
 // data-store/repositories/player.repo.ts
-import { kvGet, kvSet, kvDel, kvSAdd, kvSRem, kvSMembers } from '../kv';
+import { kvGet, kvMGet, kvSet, kvDel, kvSAdd, kvSRem, kvSMembers } from '../kv';
 import { buildDataKey, buildIndexKey } from '../keys';
 import { EntityType } from '@/types/enums';
 import type { Player } from '@/types/entities';
@@ -11,14 +11,9 @@ export async function getAllPlayers(): Promise<Player[]> {
   const ids = await kvSMembers(indexKey);
   if (ids.length === 0) return [];
   
-  const players: Player[] = [];
-  for (const id of ids) {
-    const key = buildDataKey(ENTITY, id);
-    const player = await kvGet<Player>(key);
-    if (player) players.push(player);
-  }
-  
-  return players;
+  const keys = ids.map(id => buildDataKey(ENTITY, id));
+  const players = await kvMGet<Player>(keys);
+  return players.filter((player): player is Player => player !== null && player !== undefined);
 }
 
 export async function getPlayerById(id: string): Promise<Player | null> {

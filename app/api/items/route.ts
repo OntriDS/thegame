@@ -2,7 +2,7 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { v4 as uuid } from 'uuid';
 import type { Item } from '@/types/entities';
-import { getAllItems, upsertItem } from '@/data-store/datastore';
+import { getAllItems, getItemsByType, upsertItem } from '@/data-store/datastore';
 import { requireAdminAuth } from '@/lib/api-auth';
 
 // Force dynamic rendering - this route accesses cookies
@@ -12,7 +12,21 @@ export const maxDuration = 300; // 5 minutes
 
 export async function GET(req: NextRequest) {
   if (!(await requireAdminAuth(req))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const items = await getAllItems();
+  
+  // Check for type filter in query params
+  const searchParams = req.nextUrl.searchParams;
+  const typeFilter = searchParams.get('type');
+  
+  let items: Item[];
+  if (typeFilter) {
+    // Support comma-separated types: ?type=Sticker,Print
+    const types = typeFilter.split(',').map(t => t.trim());
+    items = await getItemsByType(types);
+  } else {
+    // No filter - get all items
+    items = await getAllItems();
+  }
+  
   return NextResponse.json(items);
 }
 

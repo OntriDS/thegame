@@ -1,15 +1,12 @@
 // data-store/repositories/session.repo.ts
 import type { AISession } from '@/types/entities';
-import { kvGet, kvSet, kvDel, kvSMembers, kvSAdd, kvSRem } from '@/data-store/kv';
+import { kvGet, kvMGet, kvSet, kvDel, kvSMembers, kvSAdd, kvSRem } from '@/data-store/kv';
 import { buildDataKey, buildIndexKey } from '@/data-store/keys';
 import { EntityType } from '@/types/enums';
 
 const ENTITY = EntityType.SESSION;
 
-export async function getSessionById(id: string): Promise<AISession | null> {
-  const session = await kvGet<AISession>(buildDataKey(ENTITY, id));
-  if (!session) return null;
-  
+function reviveSessionDates(session: AISession): AISession {
   // Revive Date objects from strings after KV deserialization
   return {
     ...session,
@@ -24,10 +21,22 @@ export async function getSessionById(id: string): Promise<AISession | null> {
   };
 }
 
+export async function getSessionById(id: string): Promise<AISession | null> {
+  const session = await kvGet<AISession>(buildDataKey(ENTITY, id));
+  if (!session) return null;
+  return reviveSessionDates(session);
+}
+
 export async function getAllSessions(): Promise<AISession[]> {
-  const ids = await kvSMembers(buildIndexKey(ENTITY));
-  const sessions = await Promise.all(ids.map(id => getSessionById(id)));
-  return sessions.filter(Boolean) as AISession[];
+  const indexKey = buildIndexKey(ENTITY);
+  const ids = await kvSMembers(indexKey);
+  if (ids.length === 0) return [];
+  
+  const keys = ids.map(id => buildDataKey(ENTITY, id));
+  const sessions = await kvMGet<AISession>(keys);
+  return sessions
+    .filter((session): session is AISession => session !== null && session !== undefined)
+    .map(reviveSessionDates);
 }
 
 export async function upsertSession(session: AISession): Promise<AISession> {

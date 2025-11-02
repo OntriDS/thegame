@@ -1,5 +1,5 @@
 // data-store/repositories/account.repo.ts
-import { kvGet, kvSet, kvDel, kvSAdd, kvSRem, kvSMembers } from '../kv';
+import { kvGet, kvMGet, kvSet, kvDel, kvSAdd, kvSRem, kvSMembers } from '../kv';
 import { buildDataKey, buildIndexKey } from '../keys';
 import { EntityType } from '@/types/enums';
 import type { Account } from '@/types/entities';
@@ -11,14 +11,9 @@ export async function getAllAccounts(): Promise<Account[]> {
   const ids = await kvSMembers(indexKey);
   if (ids.length === 0) return [];
   
-  const accounts: Account[] = [];
-  for (const id of ids) {
-    const key = buildDataKey(ENTITY, id);
-    const account = await kvGet<Account>(key);
-    if (account) accounts.push(account);
-  }
-  
-  return accounts;
+  const keys = ids.map(id => buildDataKey(ENTITY, id));
+  const accounts = await kvMGet<Account>(keys);
+  return accounts.filter((account): account is Account => account !== null && account !== undefined);
 }
 
 export async function getAccountById(id: string): Promise<Account | null> {

@@ -1,6 +1,5 @@
 // data-store/kv.ts
-// Thin server-only wrappers around a KV client. Prefers @vercel/kv when env vars are present,
-// falls back to an in-memory implementation for local development.
+// KV client wrapper for Upstash Redis (production-only environment)
 
 import { Redis } from '@upstash/redis';
 
@@ -9,6 +8,7 @@ type KVClient = {
   set: (key: string, value: unknown) => Promise<void>;
   del: (key: string, ...keys: string[]) => Promise<void>;
   mget: (keys: string[]) => Promise<(unknown | null)[]>;
+  mset: (keyValues: Record<string, unknown>) => Promise<void>;
   scan: (cursor: number, options?: { match?: string; count?: number }) => Promise<[string, string[]]>;
   sadd: (key: string, ...members: string[]) => Promise<void>;
   srem: (key: string, ...members: string[]) => Promise<void>;
@@ -24,113 +24,13 @@ type KVClient = {
   };
 };
 
-function createLocalKV(): KVClient {
-  const kvStore = new Map<string, unknown>();
-  const setStore = new Map<string, Set<string>>();
-  const listStore = new Map<string, string[]>();
-
-  const api: KVClient = {
-    async get<T>(key: string) {
-      return (kvStore.has(key) ? (kvStore.get(key) as T) : null) as T | null;
-    },
-    async set(key: string, value: unknown) {
-      kvStore.set(key, value);
-    },
-    async del(key: string, ...keys: string[]) {
-      const allKeys = [key, ...keys];
-      allKeys.forEach(k => {
-        kvStore.delete(k);
-        setStore.delete(k);
-        listStore.delete(k);
-      });
-    },
-    async mget(keys: string[]) {
-      return keys.map((k) => (kvStore.has(k) ? kvStore.get(k)! : null));
-    },
-    async scan(cursor: number, options?: { match?: string; count?: number }) {
-      const prefix = options?.match?.replace(/\*$/, '') || '';
-      const allKeys = Array.from(kvStore.keys()).filter(key => key.startsWith(prefix));
-      // For local implementation, we just return all matching keys with cursor 0 (done)
-      return ['0', allKeys] as [string, string[]];
-    },
-    async sadd(key: string, ...members: string[]) {
-      const set = setStore.get(key) ?? new Set<string>();
-      members.forEach((m) => set.add(m));
-      setStore.set(key, set);
-    },
-    async srem(key: string, ...members: string[]) {
-      const set = setStore.get(key);
-      if (!set) return;
-      members.forEach((m) => set.delete(m));
-      if (set.size === 0) setStore.delete(key);
-    },
-    async smembers(key: string) {
-      const set = setStore.get(key);
-      return set ? Array.from(set) : [];
-    },
-    async lpush(key: string, ...values: string[]) {
-      const list = listStore.get(key) ?? [];
-      list.unshift(...values); // Add to beginning (like Redis lpush)
-      listStore.set(key, list);
-    },
-    async lrange(key: string, start: number, stop: number) {
-      const list = listStore.get(key) ?? [];
-      const end = stop === -1 ? list.length : stop + 1;
-      return list.slice(start, end);
-    },
-    async keys(pattern: string) {
-      const regex = new RegExp(pattern.replace(/\*/g, '.*'));
-      const allKeys = [
-        ...kvStore.keys(),
-        ...setStore.keys(),
-        ...listStore.keys()
-      ];
-      return allKeys.filter(key => regex.test(key));
-    },
-    multi() {
-      const operations: Array<() => void> = [];
-      return {
-        del: (key: string, ...keys: string[]) => {
-          const allKeys = [key, ...keys];
-          operations.push(() => {
-            allKeys.forEach(k => {
-              kvStore.delete(k);
-              setStore.delete(k);
-              listStore.delete(k);
-            });
-          });
-        },
-        set: (key: string, value: unknown) => {
-          operations.push(() => {
-            kvStore.set(key, value);
-          });
-        },
-        sadd: (key: string, ...members: string[]) => {
-          operations.push(() => {
-            const set = setStore.get(key) ?? new Set<string>();
-            members.forEach((m) => set.add(m));
-            setStore.set(key, set);
-          });
-        },
-        exec: async () => {
-          operations.forEach(op => op());
-        }
-      };
-    },
-  };
-
-  return api;
-}
-
 const hasUpstash = !!process.env.UPSTASH_REDIS_REST_URL && !!process.env.UPSTASH_REDIS_REST_TOKEN;
 
-export const kv: KVClient = hasUpstash
-  ? (() => {
-      return Redis.fromEnv() as unknown as KVClient;
-    })()
-  : (() => {
-      return createLocalKV();
-    })();
+if (!hasUpstash) {
+  throw new Error('CRITICAL: UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN must be set. This is a KV-only production environment.');
+}
+
+export const kv: KVClient = Redis.fromEnv() as unknown as KVClient;
 
 export async function kvGet<T>(key: string): Promise<T | null> {
   return (await kv.get<T>(key)) ?? null;
@@ -147,6 +47,23 @@ export async function kvDel(key: string): Promise<void> {
 export async function kvMGet<T>(keys: string[]): Promise<(T | null)[]> {
   const res = await kv.mget(keys);
   return (res as any[]).map(v => (v ?? null));
+}
+
+/**
+ * Bulk SET operation - sets multiple key-value pairs in a single operation
+ * More efficient than multiple kvSet() calls for bulk operations
+ * 
+ * @param keyValues - Object with key-value pairs to set
+ * 
+ * @example
+ * await kvMSet({
+ *   'data:item:1': item1,
+ *   'data:item:2': item2,
+ *   'data:item:3': item3
+ * });
+ */
+export async function kvMSet<T>(keyValues: Record<string, T>): Promise<void> {
+  await kv.mset(keyValues as Record<string, unknown>);
 }
 
 export async function kvScan(prefix: string, limit = 100): Promise<string[]> {

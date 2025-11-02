@@ -1,5 +1,5 @@
 // data-store/repositories/sale.repo.ts
-import { kvGet, kvSet, kvDel, kvSAdd, kvSRem, kvSMembers } from '../kv';
+import { kvGet, kvMGet, kvSet, kvDel, kvSAdd, kvSRem, kvSMembers } from '../kv';
 import { buildDataKey, buildIndexKey } from '../keys';
 import { EntityType } from '@/types/enums';
 import type { Sale } from '@/types/entities';
@@ -11,14 +11,9 @@ export async function getAllSales(): Promise<Sale[]> {
   const ids = await kvSMembers(indexKey);
   if (ids.length === 0) return [];
   
-  const sales: Sale[] = [];
-  for (const id of ids) {
-    const key = buildDataKey(ENTITY, id);
-    const sale = await kvGet<Sale>(key);
-    if (sale) sales.push(sale);
-  }
-  
-  return sales;
+  const keys = ids.map(id => buildDataKey(ENTITY, id));
+  const sales = await kvMGet<Sale>(keys);
+  return sales.filter((sale): sale is Sale => sale !== null && sale !== undefined);
 }
 
 export async function getSaleById(id: string): Promise<Sale | null> {

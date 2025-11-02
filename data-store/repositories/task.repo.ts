@@ -1,6 +1,6 @@
 // data-store/repositories/task.repo.ts
 import type { Task } from '@/types/entities';
-import { kvGet, kvSet, kvDel, kvSMembers, kvSAdd } from '@/data-store/kv';
+import { kvGet, kvMGet, kvSet, kvDel, kvSMembers, kvSAdd, kvSRem } from '@/data-store/kv';
 import { buildDataKey, buildIndexKey } from '@/data-store/keys';
 import { EntityType } from '@/types/enums';
 
@@ -11,9 +11,13 @@ export async function getTaskById(id: string): Promise<Task | null> {
 }
 
 export async function getAllTasks(): Promise<Task[]> {
-  const ids = await kvSMembers(buildIndexKey(ENTITY));
-  const rows = await Promise.all(ids.map(id => kvGet<Task>(buildDataKey(ENTITY, id))));
-  return rows.filter(Boolean) as Task[];
+  const indexKey = buildIndexKey(ENTITY);
+  const ids = await kvSMembers(indexKey);
+  if (ids.length === 0) return [];
+  
+  const keys = ids.map(id => buildDataKey(ENTITY, id));
+  const tasks = await kvMGet<Task>(keys);
+  return tasks.filter((task): task is Task => task !== null && task !== undefined);
 }
 
 export async function upsertTask(task: Task): Promise<Task> {
@@ -23,7 +27,11 @@ export async function upsertTask(task: Task): Promise<Task> {
 }
 
 export async function deleteTask(id: string): Promise<void> {
-  await kvDel(buildDataKey(ENTITY, id));
+  const key = buildDataKey(ENTITY, id);
+  const indexKey = buildIndexKey(ENTITY);
+  
+  await kvDel(key);
+  await kvSRem(indexKey, id);
 }
 
 
