@@ -87,14 +87,15 @@ export function LinksSubModal({
       const names: Record<string, string> = {};
       
       // Define entity type mappings using EntityType enum as source of truth
+      // ✅ FIXED: Using ClientAPI instead of direct datastore import (HTTP pattern)
       const entityTypeConfigs = [
-        { singular: EntityType.TASK, fetcher: () => import('@/data-store/datastore').then(m => m.getAllTasks()) },
-        { singular: EntityType.ITEM, fetcher: () => import('@/data-store/datastore').then(m => m.getAllItems()) },
-        { singular: EntityType.SITE, fetcher: () => import('@/data-store/datastore').then(m => m.getAllSites()) },
-        { singular: EntityType.CHARACTER, fetcher: () => import('@/data-store/datastore').then(m => m.getAllCharacters()) },
-        { singular: EntityType.PLAYER, fetcher: () => import('@/data-store/datastore').then(m => m.getAllPlayers()) },
-        { singular: EntityType.SALE, fetcher: () => import('@/data-store/datastore').then(m => m.getAllSales()) },
-        { singular: EntityType.FINANCIAL, fetcher: () => import('@/data-store/datastore').then(m => m.getAllFinancials()) }
+        { singular: EntityType.TASK, fetcher: () => ClientAPI.getTasks() },
+        { singular: EntityType.ITEM, fetcher: () => ClientAPI.getItems() },
+        { singular: EntityType.SITE, fetcher: () => ClientAPI.getSites() },
+        { singular: EntityType.CHARACTER, fetcher: () => ClientAPI.getCharacters() },
+        { singular: EntityType.PLAYER, fetcher: () => ClientAPI.getPlayers() },
+        { singular: EntityType.SALE, fetcher: () => ClientAPI.getSales() },
+        { singular: EntityType.FINANCIAL, fetcher: () => ClientAPI.getFinancialRecords() }
       ];
 
       for (const config of entityTypeConfigs) {
