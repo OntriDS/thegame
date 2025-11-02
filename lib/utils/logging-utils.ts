@@ -1,7 +1,12 @@
 // lib/utils/logging-utils.ts
 import { formatDateDDMMYYYY } from '@/lib/constants/date-constants';
 import { EntityType } from '@/types/enums';
-import { ensureLogEntryId } from '@/workflows/entities-logging';
+// IMPORTANT: Do not import server-only logging module here.
+// We provide a tiny local helper to ensure an ID without touching KV.
+import { v4 as uuid } from 'uuid';
+function ensureLogEntryIdLocal(entry: any): string {
+  return entry?.id ?? uuid();
+}
 
 /**
  * Generic log entry interface for all entity types
@@ -381,7 +386,7 @@ export function processLogData(log: any, order: 'newest' | 'oldest' = 'newest', 
   // Format entries - ensure all entries have IDs for log management
   processedEntries = processedEntries.map((e: any) => {
     // Ensure entry has ID before formatting (defensive check for edge cases)
-    const entryId = e.id || ensureLogEntryId(e);
+    const entryId = e.id || ensureLogEntryIdLocal(e);
     return {
       ...formatLogEntry(e),
       id: entryId, // Explicitly preserve ID for log management actions
