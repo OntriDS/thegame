@@ -1,7 +1,7 @@
 // data-store/effects-registry.ts
 // Idempotency registry stored in KV. Avoids global flags and server HTTP loops.
 
-import { kvGet, kvSet, kvScan, kvDelMany } from './kv';
+import { kvGet, kvSet, kvScan, kvDelMany, kvMGet } from './kv';
 import { buildEffectKey } from './keys';
 import { PROCESSING_CONSTANTS } from '@/lib/constants/app-constants';
 
@@ -9,6 +9,18 @@ export async function hasEffect(effectKey: string): Promise<boolean> {
   const key = buildEffectKey(effectKey);
   const val = await kvGet<boolean>(key);
   return val === true;
+}
+
+/**
+ * Batch check multiple effects in one KV call for better performance
+ * Returns array of booleans in same order as input keys
+ */
+export async function hasEffects(effectKeys: string[]): Promise<boolean[]> {
+  if (effectKeys.length === 0) return [];
+  
+  const keys = effectKeys.map(effectKey => buildEffectKey(effectKey));
+  const values = await kvMGet<boolean>(keys);
+  return values.map(val => val === true);
 }
 
 export async function markEffect(effectKey: string, ttl?: number): Promise<void> {

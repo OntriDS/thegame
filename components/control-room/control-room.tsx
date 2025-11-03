@@ -474,6 +474,9 @@ export default function ControlRoom() {
               // Parent only calls DataStore - Adapter processes through Link Connector automatically
               const finalTask = await ClientAPI.upsertTask(task);
               
+              // Update taskToEdit with fresh data BEFORE modal closes (fixes stale UI issue)
+              setTaskToEdit(finalTask);
+              
               // Reload tasks immediately after save to reflect changes
               await loadTasks();
               

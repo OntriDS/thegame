@@ -274,6 +274,9 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
       // Parent only calls DataStore - API routes handle side effects
       const finalItem = await ClientAPI.upsertItem(item);
       
+      // Update editingItem with fresh data BEFORE modal closes (fixes stale UI issue)
+      setEditingItem(finalItem);
+      
       // Refresh all data (including sticker bundles)
       loadItems();
       

@@ -12,7 +12,7 @@ import { NotesTab } from '@/components/research/notes-tab';
 import { RoadmapsTab } from '@/components/research/roadmaps-tab';
 import { DiagramsTab } from '@/components/research/diagrams-tab';
 import { SystemDevelopmentTab } from '@/components/research/system-development-tab';
-import { DevSprintsTab } from '@/components/data-center/dev-sprints-tab';
+import { DevSprintsTab } from '@/components/research/dev-sprints-tab';
 import { AIAssistantTab } from '@/components/research/ai-assistant-tab';
 
 function ResearchPageContent() {

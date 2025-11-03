@@ -51,12 +51,13 @@ export default function MapPage() {
       const isNew = !selectedSite;
       
       // Save site using ClientAPI (workflows handled server-side)
-      await ClientAPI.upsertSite(site);
+      const finalSite = await ClientAPI.upsertSite(site);
       
 
       
       setShowSiteModal(false);
-      setSelectedSite(null);
+      // Update selectedSite with fresh data BEFORE modal closes (fixes stale UI issue)
+      setSelectedSite(finalSite);
     } catch (error) {
       console.error('Failed to save site:', error);
       alert('Failed to save site');

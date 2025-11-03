@@ -129,10 +129,12 @@ export default function SalesPage() {
 
   const handleSaveSale = async (sale: Sale) => {
     try {
-      await ClientAPI.upsertSale(sale);
+      const finalSale = await ClientAPI.upsertSale(sale);
+      
+      // Update editingSale with fresh data BEFORE modal closes (fixes stale UI issue)
+      setEditingSale(finalSale);
       
       setShowSalesModal(false);
-      setEditingSale(null);
       await loadSales(); // Refresh the list
       
 

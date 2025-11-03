@@ -170,10 +170,11 @@ export default function CharactersPage() {
       const isNew = !characters.find(c => c.id === character.id);
       
       // Always trigger workflow processing for both create and update (includes logging)
-      await ClientAPI.upsertCharacter(character);
+      const finalCharacter = await ClientAPI.upsertCharacter(character);
       
       setShowCharacterModal(false);
-      setSelectedCharacter(null);
+      // Update selectedCharacter with fresh data BEFORE modal closes (fixes stale UI issue)
+      setSelectedCharacter(finalCharacter);
       
 
     } catch (error) {

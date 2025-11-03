@@ -152,7 +152,8 @@ export function CompanyRecordsList({
                   const companyRecords = await ClientAPI.getFinancialRecordsByMonth(year, month, 'company');
                   setRecords(companyRecords);
                   onRecordUpdated();
-                  setRecordToEdit(null);
+                  // Update recordToEdit with fresh data BEFORE modal closes (fixes stale UI issue)
+                  setRecordToEdit(finalRecord);
                   
 
                 } catch (error) {
@@ -348,7 +349,8 @@ This action cannot be undone.`);
                   const personalRecords = await ClientAPI.getFinancialRecordsByMonth(year, month, 'personal');
                   setRecords(personalRecords);
                   onRecordUpdated();
-                  setRecordToEdit(null);
+                  // Update recordToEdit with fresh data BEFORE modal closes (fixes stale UI issue)
+                  setRecordToEdit(finalRecord);
                   
 
                 } catch (error) {

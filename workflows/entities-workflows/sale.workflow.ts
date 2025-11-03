@@ -7,8 +7,7 @@ import { appendEntityLog, updateEntityLogField } from '../entities-logging';
 import { hasEffect, markEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
 import { EffectKeys } from '@/data-store/keys';
 import { getLinksFor, removeLink } from '@/links/link-registry';
-import { getAllSales } from '@/data-store/repositories/sale.repo';
-import { getPlayerById } from '@/data-store/datastore';
+import { getPlayerById, getSaleById } from '@/data-store/datastore';
 import { awardPointsToPlayer, removePointsFromPlayer, calculatePointsFromRevenue } from '../points-rewards-utils';
 import { processSaleLines } from '../sale-line-utils';
 import { 
@@ -249,8 +248,7 @@ async function removePlayerPointsFromSale(saleId: string): Promise<void> {
     console.log(`[removePlayerPointsFromSale] Removing points for sale: ${saleId}`);
     
     // Get the sale to find what points were awarded
-    const sales = await getAllSales();
-    const sale = sales.find(s => s.id === saleId);
+    const sale = await getSaleById(saleId);
     
     if (!sale || sale.totals.totalRevenue <= 0) {
       console.log(`[removePlayerPointsFromSale] Sale ${saleId} has no revenue to remove points from`);

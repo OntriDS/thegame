@@ -159,19 +159,32 @@ export function DevSprintsTab({
       const dateA = parseDate(a.completedAt);
       const dateB = parseDate(b.completedAt);
      
-      // If dates are the same, ensure the logical order (sprint vs phase) is respected
+      // If dates are the same, use numeric ID as tie-breaker
       if (dateA.getTime() === dateB.getTime()) {
-        if (a.type === 'phase' && b.type === 'sprint') {
-          // 'oldest' order: phase comes before sprint (-1)
-          // 'newest' order: phase comes after sprint (1)
-          return logOrder === 'oldest' ? -1 : 1;
+        // Extract numeric parts for proper numeric sorting (supports decimals like 1.1, 1.2, etc.)
+        const extractNumericId = (id: string) => {
+          // Keep digits and dots for decimal numbers like "1.1", "11.2", etc.
+          const numericPart = id.replace(/[^0-9.]/g, '');
+          if (!numericPart) return 0;
+          
+          // Handle decimal numbers (e.g., "11.1" = 11.1, "1.2" = 1.2)
+          if (numericPart.includes('.')) {
+            return parseFloat(numericPart);
+          }
+          
+          // Handle whole numbers
+          return parseInt(numericPart, 10);
+        };
+        
+        const numA = extractNumericId(a.id);
+        const numB = extractNumericId(b.id);
+        
+        // Numeric comparison: for 'oldest' order, lower numbers first; for 'newest', higher first
+        if (logOrder === 'oldest') {
+          return numA - numB;
+        } else {
+          return numB - numA;
         }
-        if (a.type === 'sprint' && b.type === 'phase') {
-          // 'oldest' order: sprint comes after phase (1)
-          // 'newest' order: sprint comes before phase (-1)
-          return logOrder === 'oldest' ? 1 : -1;
-        }
-        return 0; // Same type, keep order
       }
      
       // Different dates - sort by chronological order
