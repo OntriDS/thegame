@@ -519,7 +519,6 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
           <div className={`grid gap-4 ${emissaryColumnExpanded ? 'grid-cols-4' : 'grid-cols-3'}`}>
             {/* Column 1: NATIVE (Basic Info) */}
             <div className="space-y-3">
-              <h3 className="text-sm font-semibold text-muted-foreground border-b pb-1">🧬 NATIVE</h3>
               
               <div className="space-y-2">
                 <Label htmlFor="name" className="text-xs">Name *</Label>
