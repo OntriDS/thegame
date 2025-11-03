@@ -50,7 +50,8 @@ export async function onPlayerUpsert(player: Player, previousPlayer?: Player): P
   const pointsChangedOverall = totalPointsChanged || pointsChanged;
   
   if (pointsChangedOverall) {
-    await upsertPlayerPointsChangedLog(player.id, player.totalPoints, player.points);
+    // Append new POINTS_CHANGED entry for each change (do not upsert/update existing ones)
+    await appendPlayerPointsChangedLog(player.id, player.totalPoints, player.points);
   }
   
   // General updates - UPDATED event

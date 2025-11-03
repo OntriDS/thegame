@@ -5,7 +5,8 @@ import { EntityType, LogEventType, PLAYER_ONE_ID } from '@/types/enums';
 import type { Sale } from '@/types/entities';
 import { appendEntityLog, updateEntityLogField } from '../entities-logging';
 import { hasEffect, markEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
-import { EffectKeys } from '@/data-store/keys';
+import { EffectKeys, buildLogKey } from '@/data-store/keys';
+import { kvGet, kvSet } from '@/data-store/kv';
 import { getLinksFor, removeLink } from '@/links/link-registry';
 import { getPlayerById, getSaleById } from '@/data-store/datastore';
 import { awardPointsToPlayer, removePointsFromPlayer, calculatePointsFromRevenue } from '../points-rewards-utils';
@@ -220,17 +221,34 @@ export async function removeSaleEffectsOnDelete(saleId: string): Promise<void> {
     // 4. Remove log entries from all relevant logs
     console.log(`[removeSaleEffectsOnDelete] Starting log entry removal for sale: ${saleId}`);
     
-    // TODO: Implement server-side log removal or remove these calls
-    console.log(`[removeSaleEffectsOnDelete] ⚠️ Log entry removal skipped - needs server-side implementation`);
+    // Remove from sales log
+    const salesLogKey = buildLogKey(EntityType.SALE);
+    const salesLog = (await kvGet<any[]>(salesLogKey)) || [];
+    const filteredSalesLog = salesLog.filter(entry => entry.entityId !== saleId);
+    if (filteredSalesLog.length !== salesLog.length) {
+      await kvSet(salesLogKey, filteredSalesLog);
+      console.log(`[removeSaleEffectsOnDelete] ✅ Removed ${salesLog.length - filteredSalesLog.length} entries from sales log`);
+    }
     
-    const removals: { success: boolean; message?: string }[] = []; // Placeholder for removed log calls
-
-    console.log(`[removeSaleEffectsOnDelete] All removal results:`, removals);
-    const failed = removals.filter(r => !r.success);
-    if (failed.length > 0) {
-      console.error('[removeSaleEffectsOnDelete] Some log removals failed:', failed);
-    } else {
-      console.log(`[removeSaleEffectsOnDelete] ✅ All log entries removed successfully for sale: ${saleId}`);
+    // Also check and remove from player log if this sale awarded points
+    const sale = await getSaleById(saleId);
+    if (sale && sale.totals.totalRevenue > 0) {
+      const playerLogKey = buildLogKey(EntityType.PLAYER);
+      const playerLog = (await kvGet<any[]>(playerLogKey)) || [];
+      const filteredPlayerLog = playerLog.filter(entry => entry.sourceId !== saleId && entry.sourceSaleId !== saleId);
+      if (filteredPlayerLog.length !== playerLog.length) {
+        await kvSet(playerLogKey, filteredPlayerLog);
+        console.log(`[removeSaleEffectsOnDelete] ✅ Removed ${playerLog.length - filteredPlayerLog.length} entries from player log`);
+      }
+    }
+    
+    // Check and remove from character log if this sale was purchased by a character
+    const characterLogKey = buildLogKey(EntityType.CHARACTER);
+    const characterLog = (await kvGet<any[]>(characterLogKey)) || [];
+    const filteredCharacterLog = characterLog.filter(entry => entry.saleId !== saleId && entry.sourceSaleId !== saleId);
+    if (filteredCharacterLog.length !== characterLog.length) {
+      await kvSet(characterLogKey, filteredCharacterLog);
+      console.log(`[removeSaleEffectsOnDelete] ✅ Removed ${characterLog.length - filteredCharacterLog.length} entries from character log`);
     }
     
     console.log(`[removeSaleEffectsOnDelete] ✅ Cleared effects, removed links, and removed log entries for sale ${saleId}`);

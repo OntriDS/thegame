@@ -226,6 +226,15 @@ export async function removeRecordEffectsOnDelete(recordId: string): Promise<voi
       console.log(`[removeRecordEffectsOnDelete] ✅ Removed ${financialsLog.length - filteredFinancialsLog.length} entries from financials log`);
     }
     
+    // Check and remove from character log if this record was linked to a character
+    const characterLogKey = buildLogKey(EntityType.CHARACTER);
+    const characterLog = (await kvGet<any[]>(characterLogKey)) || [];
+    const filteredCharacterLog = characterLog.filter(entry => entry.financialId !== recordId && entry.sourceFinancialId !== recordId);
+    if (filteredCharacterLog.length !== characterLog.length) {
+      await kvSet(characterLogKey, filteredCharacterLog);
+      console.log(`[removeRecordEffectsOnDelete] ✅ Removed ${characterLog.length - filteredCharacterLog.length} entries from character log`);
+    }
+    
     console.log(`[removeRecordEffectsOnDelete] ✅ Cleared effects, removed links, deleted created items, and removed log entries for record ${recordId}`);
   } catch (error) {
     console.error('Error removing record effects:', error);

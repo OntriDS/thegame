@@ -150,6 +150,15 @@ export async function removeItemEffectsOnDelete(itemId: string): Promise<void> {
       console.log(`[removeItemEffectsOnDelete] ✅ Removed ${itemsLog.length - filteredItemsLog.length} entries from items log`);
     }
     
+    // Check and remove from character log if this item is owned by a character
+    const characterLogKey = buildLogKey(EntityType.CHARACTER);
+    const characterLog = (await kvGet<any[]>(characterLogKey)) || [];
+    const filteredCharacterLog = characterLog.filter(entry => entry.itemId !== itemId && entry.sourceItemId !== itemId);
+    if (filteredCharacterLog.length !== characterLog.length) {
+      await kvSet(characterLogKey, filteredCharacterLog);
+      console.log(`[removeItemEffectsOnDelete] ✅ Removed ${characterLog.length - filteredCharacterLog.length} entries from character log`);
+    }
+    
     console.log(`[removeItemEffectsOnDelete] ✅ Cleared effects, removed links, and removed log entries for item ${itemId}`);
   } catch (error) {
     console.error('Error removing item effects:', error);

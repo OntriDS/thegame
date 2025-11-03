@@ -391,6 +391,15 @@ export async function removeTaskLogEntriesOnDelete(task: Task): Promise<void> {
       console.log(`[removeTaskLogEntriesOnDelete] ✅ Removed ${financialsLog.length - filteredFinancialsLog.length} entries from financials log`);
     }
     
+    // Check and remove from character log if this task was requested by a character
+    const characterLogKey = buildLogKey(EntityType.CHARACTER);
+    const characterLog = (await kvGet<any[]>(characterLogKey)) || [];
+    const filteredCharacterLog = characterLog.filter(entry => entry.taskId !== task.id && entry.sourceTaskId !== task.id);
+    if (filteredCharacterLog.length !== characterLog.length) {
+      await kvSet(characterLogKey, filteredCharacterLog);
+      console.log(`[removeTaskLogEntriesOnDelete] ✅ Removed ${characterLog.length - filteredCharacterLog.length} entries from character log`);
+    }
+    
     console.log(`[removeTaskLogEntriesOnDelete] ✅ Cleared effects, removed links, and removed log entries for task ${task.id}`);
   } catch (error) {
     console.error('Error removing task effects:', error);
