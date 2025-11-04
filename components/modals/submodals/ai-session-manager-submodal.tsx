@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { getSessions, createSession, setActiveSession } from '@/lib/client/sessions';
 import { ClientAPI } from '@/lib/client-api';
 import { Button } from '@/components/ui/button';
@@ -13,7 +13,7 @@ import {
   DialogTitle,
   DialogDescription
 } from '@/components/ui/dialog';
-import { Trash2, Edit2, Check, X, Plus, Bot } from 'lucide-react';
+import { Trash2, Edit2, Check, X, Plus, Bot, Download, Upload } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { AISession } from '@/types/entities';
 
@@ -31,6 +31,7 @@ export default function AiSessionManagerSubmodal({ open, onOpenChange, onSession
   const [editName, setEditName] = useState('');
   const [showNewSessionForm, setShowNewSessionForm] = useState(false);
   const [selectedModel, setSelectedModel] = useState<string>('openai/gpt-oss-120b');
+  const fileInputRef = useRef<HTMLInputElement>(null);
   // Curated model list with tiers (same as AI Assistant Tab)
   const availableModels = [
     // TIER 1: Reasoners
@@ -135,6 +136,43 @@ export default function AiSessionManagerSubmodal({ open, onOpenChange, onSession
     }
   };
 
+  const handleExportSession = async (sessionId: string) => {
+    try {
+      const sessionData = await ClientAPI.exportSession(sessionId);
+      const blob = new Blob([sessionData], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `ai-session-${sessionId.substring(0, 8)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Failed to export session:', error);
+      alert('Failed to export session');
+    }
+  };
+
+  const handleImportSession = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      await ClientAPI.importSession(text);
+      await load();
+      alert('Session imported successfully!');
+    } catch (error) {
+      console.error('Failed to import session:', error);
+      alert('Failed to import session: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    } finally {
+      // Reset the input
+      event.target.value = '';
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent zIndexLayer={'SUB_MODALS'} className="w-full max-w-2xl max-h-[80vh] bg-background text-foreground flex flex-col">
@@ -153,59 +191,71 @@ export default function AiSessionManagerSubmodal({ open, onOpenChange, onSession
 
         <div className="space-y-4 flex-1 min-h-0">
           <div className="flex justify-between items-center">
-            <div className="text-sm font-medium">All Sessions</div>
-            {!showNewSessionForm ? (
-              <Button size="sm" disabled={loading} onClick={() => setShowNewSessionForm(true)} className="gap-2">
-                <Plus className="h-4 w-4" />
-                New Session
+            <div className="text-sm font-medium">All Sessions ({sessions.length}/20)</div>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => fileInputRef.current?.click()}
+                className="gap-2"
+                title="Import Session"
+              >
+                <Upload className="h-4 w-4" />
+                Import
               </Button>
-            ) : (
-              <div className="flex items-center gap-2">
-                        <Select value={selectedModel} onValueChange={setSelectedModel}>
-                  <SelectTrigger className="w-[250px]">
-                    <SelectValue placeholder="Select AI Model" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {/* Group models by category */}
-                    <div className="p-2">
-                      {['Reasoners', 'Specialists', 'Speed'].map(category => {
-                        const categoryModels = availableModels.filter(model => model.category === category);
-                        return (
-                          <div key={category} className="mb-4 last:mb-0">
-                            <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2 px-2">
-                              {category}
-                            </div>
-                            <div className="space-y-1">
-                              {categoryModels.map((model) => (
-                                <SelectItem key={model.id} value={model.id} className="pl-4">
-                                  {model.displayName}
-                                </SelectItem>
-                              ))}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </SelectContent>
-                </Select>
-                <Button size="sm" onClick={handleNewSession} className="gap-2">
-                  Create
+              {!showNewSessionForm ? (
+                <Button size="sm" disabled={loading} onClick={() => setShowNewSessionForm(true)} className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  New Session
                 </Button>
-                <Button size="sm" variant="ghost" onClick={() => {
-                  setShowNewSessionForm(false);
-                  setSelectedModel('openai/gpt-oss-120b');
-                }}>
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            )}
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Select value={selectedModel} onValueChange={setSelectedModel}>
+                    <SelectTrigger className="w-[250px]">
+                      <SelectValue placeholder="Select AI Model" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {/* Group models by category */}
+                      <div className="p-2">
+                        {['Reasoners', 'Specialists', 'Speed'].map(category => {
+                          const categoryModels = availableModels.filter(model => model.category === category);
+                          return (
+                            <div key={category} className="mb-4 last:mb-0">
+                              <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2 px-2">
+                                {category}
+                              </div>
+                              <div className="space-y-1">
+                                {categoryModels.map((model) => (
+                                  <SelectItem key={model.id} value={model.id} className="pl-4">
+                                    {model.displayName}
+                                  </SelectItem>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </SelectContent>
+                  </Select>
+                  <Button size="sm" onClick={handleNewSession} className="gap-2">
+                    Create
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => {
+                    setShowNewSessionForm(false);
+                    setSelectedModel('openai/gpt-oss-120b');
+                  }}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="border border-border rounded-md divide-y flex-1 overflow-auto bg-background min-h-0">
             {loading && sessions.length === 0 && (
               <div className="p-3 text-sm text-muted-foreground text-center">Loading sessions...</div>
             )}
-            
+
             {!loading && sessions.length === 0 && (
               <div className="p-3 text-sm text-muted-foreground text-center">No sessions yet. Create one to get started.</div>
             )}
@@ -316,6 +366,14 @@ export default function AiSessionManagerSubmodal({ open, onOpenChange, onSession
                         <Button
                           size="sm"
                           variant="ghost"
+                          onClick={() => handleExportSession(session.id)}
+                          title="Export Session"
+                        >
+                          <Download className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
                           onClick={() => {
                             setEditingId(session.id);
                             setEditName(session.name);
@@ -339,6 +397,15 @@ export default function AiSessionManagerSubmodal({ open, onOpenChange, onSession
             ))}
           </div>
         </div>
+
+        {/* Hidden file input for importing sessions */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".json"
+          style={{ display: 'none' }}
+          onChange={handleImportSession}
+        />
       </DialogContent>
     </Dialog>
   );

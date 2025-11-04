@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import type { AISession } from '@/types/entities';
 import { getSessionById, getAllSessions, upsertSession, deleteSession as repoDeleteSession } from '@/data-store/repositories/session.repo';
 
-const SESSION_TTL = 24 * 60 * 60; // 24 hours in seconds
+const MAX_SESSIONS = 20; // Maximum number of sessions allowed
 
 // Legacy SessionData interface for backward compatibility
 export interface SessionData {
@@ -38,9 +38,14 @@ export class SessionManager {
    * Create a new session
    */
   static async createSession(userId: string = 'akiles', project: string = 'THEGAME', model: string = 'openai/gpt-oss-120b'): Promise<AISession> {
+    // Check if we've reached the maximum number of sessions
+    const existingSessions = await getAllSessions();
+    if (existingSessions.length >= MAX_SESSIONS) {
+      throw new Error(`Maximum of ${MAX_SESSIONS} sessions reached. Please delete some sessions before creating new ones.`);
+    }
+
     const sessionId = this.generateSessionId();
     const now = new Date();
-    const expiresAt = new Date(now.getTime() + SESSION_TTL * 1000);
 
     // Generate default name based on timestamp
     const defaultName = `Session ${now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}`;
@@ -65,7 +70,7 @@ export class SessionManager {
       createdAt: now,
       updatedAt: now,
       lastAccessedAt: now,
-      expiresAt
+      expiresAt: new Date('2099-12-31') // Far future date to effectively disable TTL
     };
 
     await upsertSession(session);
@@ -78,14 +83,8 @@ export class SessionManager {
   static async getSession(sessionId: string): Promise<AISession | null> {
     try {
       const session = await getSessionById(sessionId);
-      
-      if (!session) {
-        return null;
-      }
 
-      // Check if session has expired
-      if (new Date() > session.expiresAt) {
-        await this.deleteSession(sessionId);
+      if (!session) {
         return null;
       }
 
@@ -201,6 +200,75 @@ export class SessionManager {
     } catch (error) {
       console.error('Error deleting session:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Export a session to JSON
+   */
+  static async exportSession(sessionId: string): Promise<string> {
+    const session = await this.getSession(sessionId);
+    if (!session) {
+      throw new Error('Session not found');
+    }
+
+    const exportData = {
+      version: '1.0',
+      exportedAt: new Date().toISOString(),
+      session: {
+        ...session,
+        // Convert dates to ISO strings for JSON serialization
+        createdAt: session.createdAt.toISOString(),
+        updatedAt: session.updatedAt.toISOString(),
+        lastAccessedAt: session.lastAccessedAt.toISOString(),
+        expiresAt: session.expiresAt.toISOString()
+      }
+    };
+
+    return JSON.stringify(exportData, null, 2);
+  }
+
+  /**
+   * Import a session from JSON
+   */
+  static async importSession(jsonData: string): Promise<AISession> {
+    try {
+      const importData = JSON.parse(jsonData);
+
+      if (!importData.session || importData.version !== '1.0') {
+        throw new Error('Invalid session export format');
+      }
+
+      const sessionData = importData.session;
+
+      // Check session limit before importing
+      const existingSessions = await getAllSessions();
+      if (existingSessions.length >= MAX_SESSIONS) {
+        throw new Error(`Maximum of ${MAX_SESSIONS} sessions reached. Please delete some sessions before importing.`);
+      }
+
+      // Create session object with proper date conversion and new ID
+      const session: AISession = {
+        id: this.generateSessionId(),
+        name: sessionData.name,
+        description: sessionData.description,
+        links: sessionData.links,
+        userId: sessionData.userId,
+        model: sessionData.model,
+        messageCount: sessionData.messageCount,
+        messages: sessionData.messages,
+        context: sessionData.context,
+        createdAt: new Date(sessionData.createdAt),
+        updatedAt: new Date(), // Fresh timestamp for import
+        lastAccessedAt: new Date(), // Fresh timestamp for import
+        expiresAt: new Date(sessionData.expiresAt)
+      };
+
+      await upsertSession(session);
+      return session;
+    } catch (error) {
+      console.error('Error importing session:', error);
+      throw new Error('Failed to import session: ' + (error instanceof Error ? error.message : 'Unknown error'));
     }
   }
 

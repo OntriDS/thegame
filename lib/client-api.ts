@@ -810,6 +810,22 @@ export const ClientAPI = {
     return data.messages || [];
   },
 
+  exportSession: async (sessionId: string): Promise<string> => {
+    const res = await fetch(`/api/ai/sessions/${sessionId}/export`);
+    if (!res.ok) throw new Error('Failed to export session');
+    return await res.text();
+  },
+
+  importSession: async (sessionData: string): Promise<AISession> => {
+    const res = await fetch('/api/ai/sessions/import', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionData })
+    });
+    if (!res.ok) throw new Error('Failed to import session');
+    return await res.json();
+  },
+
   // ============================================================================
   // AI CHAT - AI chat and model operations
   // ============================================================================
