@@ -242,8 +242,23 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
     reloadItems();
   }, [activeTab]);
 
+  // Helper function for consistent item sorting
+  const sortItems = (items: Item[]): Item[] => {
+    return [...items].sort((a, b) => {
+      // Primary: alphabetical by name (case-insensitive)
+      const nameCompare = a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+      if (nameCompare !== 0) return nameCompare;
+      
+      // Secondary: by creation date (oldest first) for items with same name
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return dateA - dateB;
+    });
+  };
+
   const getFilteredItems = (itemType: ItemType) => {
-    return items.filter(item => item.type === itemType);
+    const filtered = items.filter(item => item.type === itemType);
+    return sortItems(filtered);
   };
 
   const getFilteredItemsByCategory = (category: ItemCategory) => {
@@ -660,6 +675,11 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
       return acc;
     }, {} as Record<string, Item[]>);
 
+    // Sort items within each group
+    Object.keys(groupedItems).forEach(key => {
+      groupedItems[key] = sortItems(groupedItems[key]);
+    });
+
     // Sort groups for consistent ordering
     const sortedGroupKeys = Object.keys(groupedItems).sort((a, b) => {
       if (stickersViewBy === 'model') {
@@ -1064,6 +1084,11 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
       return acc;
     }, {} as Record<string, Item[]>);
 
+    // Sort items within each group
+    Object.keys(groupedBundles).forEach(key => {
+      groupedBundles[key] = sortItems(groupedBundles[key]);
+    });
+
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between">
@@ -1370,6 +1395,11 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
       return acc;
     }, {} as Record<string, Item[]>);
     
+    // Sort items within each group
+    Object.keys(groupedArtworks).forEach(key => {
+      groupedArtworks[key] = sortItems(groupedArtworks[key]);
+    });
+    
     const viewOptions: { value: 'collection' | 'subtype' | 'location'; label: string }[] = [
       { value: 'location', label: 'Location' },
       { value: 'collection', label: 'Collection' },
@@ -1441,6 +1471,11 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
       return acc;
     }, {} as Record<string, Item[]>);
 
+    // Sort items within each group
+    Object.keys(groupedMerch).forEach(key => {
+      groupedMerch[key] = sortItems(groupedMerch[key]);
+    });
+
     const viewOptions: { value: 'collection' | 'subtype' | 'location'; label: string }[] = [
       { value: 'location', label: 'Location' },
       { value: 'collection', label: 'Collection' },
@@ -1508,6 +1543,11 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
       acc[key].push(print);
       return acc;
     }, {} as Record<string, Item[]>);
+
+    // Sort items within each group
+    Object.keys(groupedPrints).forEach(key => {
+      groupedPrints[key] = sortItems(groupedPrints[key]);
+    });
 
     const viewOptions: { value: 'collection' | 'subtype' | 'location'; label: string }[] = [
       { value: 'collection', label: 'Collection' },
