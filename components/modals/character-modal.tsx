@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { v4 as uuid } from 'uuid';
 
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -15,10 +15,11 @@ import { CharacterRole, CHARACTER_ROLE_TYPES, EntityType, PLAYER_ONE_ID } from '
 import { ROLE_COLORS } from '@/lib/constants/color-constants';
 import { useTheme } from '@/lib/hooks/use-theme';
 import { ROLE_BEHAVIORS, canViewAccountInfo } from '@/lib/game-mechanics/roles-rules';
-import { Info } from 'lucide-react';
+import { Network, Info, Trash2 } from 'lucide-react';
 import { ClientAPI } from '@/lib/client-api';
 import { dispatchEntityUpdated, entityTypeToKind } from '@/lib/ui/ui-events';
 import DeleteModal from './submodals/delete-submodal';
+import LinksRelationshipsModal from './submodals/links-relationships-submodal';
 // Side effects handled by parent component via API calls
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
 
@@ -53,11 +54,15 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
   // Delete modal
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
+  // Guard for one-time initialization of new characters
+  const didInitRef = useRef(false);
+
   // V0.1 Core - Game Mechanics (Character-specific only!)
   const [jungleCoins, setJungleCoins] = useState<number>(0);
   const [purchasedAmount, setPurchasedAmount] = useState<number>(0);
   const [CP, setCP] = useState<number | undefined>(undefined);
   const [achievementsCharacter, setAchievementsCharacter] = useState<string[]>([]);
+  const [showRelationshipsModal, setShowRelationshipsModal] = useState(false);
 
   // Initialize when opening
   useEffect(() => {
@@ -93,8 +98,12 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
           setPurchasedAmount(character?.purchasedAmount ?? 0);
           setCP(character?.CP);
           setAchievementsCharacter(character?.achievementsCharacter || []);
-        } else {
-          // Creating new character - initialize with empty/default values
+          
+          // Reset init guard when editing
+          didInitRef.current = false;
+        } else if (!didInitRef.current) {
+          // Creating new character - initialize once only (don't reset again while user edits)
+          didInitRef.current = true;
           setName('');
           setDescription('');
           setContactPhone('');
@@ -106,10 +115,15 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
           setAchievementsCharacter([]);
         }
       }
+      
+      // Reset init guard when modal closes (allows fresh init on next open)
+      if (!open) {
+        didInitRef.current = false;
+      }
     };
     
     loadData();
-  }, [open, character]);
+  }, [open, character]); // open needed for async loading, character for data changes
 
   const toggleRole = (role: CharacterRole, checked: boolean) => {
     if (checked) setRoles(prev => (prev.includes(role) ? prev : [...prev, role]));
@@ -440,8 +454,8 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
           <div className="flex items-center gap-4">
             {/* Account Info Button - Only for FOUNDER/ADMIN roles */}
             {character && canViewAccountInfo(roles) && (
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 size="sm"
                 onClick={() => setShowAccountInfo(true)}
                 className="h-8 text-xs"
@@ -450,7 +464,19 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
                 <Info className="h-4 w-4" />
               </Button>
             )}
-            
+
+            {/* Links Button - Only when editing existing character */}
+            {character && (
+              <Button
+                variant="outline"
+                onClick={() => setShowRelationshipsModal(true)}
+                className="h-8 text-xs"
+              >
+                <Network className="w-3 h-3 mr-1" />
+                Links
+              </Button>
+            )}
+
             {/* Delete Button - Only when editing existing character */}
             {character && (
               <Button

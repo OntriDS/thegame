@@ -9,7 +9,7 @@
 export const BUSINESS_STRUCTURE = {
   ADMIN:      ['Strategy', 'Projects', 'Inventory', 'Transport', 'Team', 'Materials', 'Equipment', 'Rent', 'Director'],
   RESEARCH:   ['Classes', 'Studies', 'Development'],
-  DESIGN:     ['Digital Art', 'Art Creative Processes', 'Game Design', '3D Modeling', 'Animation'],
+  DESIGN:     ['Digital Art', 'Creative Process', 'Game Design', '3D Modeling', 'Animation'],
   PRODUCTION: ['Artworks', 'Murals', 'Prints', 'Stickers', 'Merch', 'Woodworks', 'NFTs'],
   SALES:      ['Direct Sales', 'Feria Sales', 'Network Sales', 'Online Sales', 'Store Sales', 'Marketing', 'Bookings', 'Other Sales'],
   PERSONAL:   ['Health', 'Family', 'Food', 'Home', 'Transport P', 'Rent P', 'Other P']
@@ -114,47 +114,6 @@ export enum SiteStatus {
   ACTIVE   = 'Active',    // Site is in use
   INACTIVE = 'Inactive',  // Site is not being used
 }
-
-// /** Site Structure - Single source of truth for sites and their types */
-// const SITE_STRUCTURE = {
-//   PHYSICAL: {
-//     HOME: 'Home',
-//     FERIA_BOX: 'Feria Box',
-//     SMOKING_LOUNGE: 'Smoking Lounge',
-//     TAGUA: 'Tagua',
-//     CAFE_VIVO: 'Cafe Vivo',
-//     XIVA: 'Xiva',
-//     PEREZOSO_FELIZ: 'Perezoso Feliz',
-//     EL_HORNITO: 'El Hornito',
-//     JUNGLE_ACADEMY: 'Jungle Academy',
-//     LA_TRIBU: 'La Tribu',
-//     OSA_DE_RIO: 'Osa de Rio',
-//     GALLERY_1084: 'Gallery 1084',
-//     CAT_CAFE: 'Cat Cafe',
-//     ECO_FERIA: 'Eco Feria',
-//     ESCUELA_VERDE: 'Escuela Verde',
-//     PRINT_MASTERS: 'Print Masters',
-//   },
-//   CLOUD: {
-//     DIGITAL_SPACE: 'Digital Space',
-//     DESKTOP_PC: 'Desktop PC',
-//     LAPTOP: 'Laptop',
-//     GOOGLE_DRIVE: 'Google Drive',
-//     GITHUB: 'Github',
-//     MAGIC_EDEN: 'Magic Eden',
-//     OPENSEA: 'OpenSea',
-//   },
-//   SPECIAL: {
-//     NONE: 'None',
-//     WORLD: 'World',
-//     SOLD_ITEMS_THIS_MONTH: 'Sold Items',
-//     ARCHIVED_HISTORICAL: 'Archived',
-//     DELETED_ITEMS_THIS_MONTH: 'Deleted Items',
-//   }
-// } as const;
-
-// // Export the structure for components to use
-// export const SITE_GROUPS = SITE_STRUCTURE;
 
 /** Site categories for UI organization and SearchableSelect grouping */
 export const SITE_CATEGORIES = {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,6 +24,7 @@ import { MapPin, Cloud, Sparkles, Trash2 } from 'lucide-react';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
 // No complex categorization needed for site fields
 import DeleteModal from './submodals/delete-submodal';
+import LinksRelationshipsModal from './submodals/links-relationships-submodal';
 import { dispatchEntityUpdated, entityTypeToKind } from '@/lib/ui/ui-events';
 // Side effects handled by parent component via API calls
 
@@ -58,6 +59,7 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
   
   // Special site fields
   const [systemPurpose, setSystemPurpose] = useState<SystemSiteType>(SystemSiteType.UNIVERSAL_TRACKING);
+  const [showRelationshipsModal, setShowRelationshipsModal] = useState(false);
   
   // Delete modal
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -65,6 +67,9 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
   
   // Settlement submodal
   const [showSettlementModal, setShowSettlementModal] = useState(false);
+  
+  // Guard for one-time initialization of new sites
+  const didInitRef = useRef(false);
   
   // UI state
   const [showDescription, setShowDescription] = useState(false);
@@ -107,8 +112,12 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
         const systemMeta = site.metadata as SystemSiteMetadata;
         setSystemPurpose(systemMeta.systemType || SystemSiteType.UNIVERSAL_TRACKING);
       }
-    } else {
-      // Reset form for new site
+      
+      // Reset init guard when editing
+      didInitRef.current = false;
+    } else if (!didInitRef.current) {
+      // New site - initialize once only (don't reset again while user edits)
+      didInitRef.current = true;
       setName('');
       setDescription('');
       setStatus(SiteStatus.ACTIVE);
@@ -120,7 +129,12 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
       setDigitalType(DigitalSiteType.DIGITAL_STORAGE);
       setSystemPurpose(SystemSiteType.UNIVERSAL_TRACKING);
     }
-  }, [site, open]);
+    
+    // Reset init guard when modal closes (allows fresh init on next open)
+    if (!open) {
+      didInitRef.current = false;
+    }
+  }, [site, open]); // open needed for init guard reset, site for data changes
 
   const handleSave = async () => {
     if (isSaving) return;

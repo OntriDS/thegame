@@ -15,7 +15,8 @@ import { dispatchEntityUpdated, entityTypeToKind } from '@/lib/ui/ui-events';
 // Submodal imports
 import PersonalDataModal from './submodals/player-personal-data-submodal';
 import PlayerCharacterModal from './submodals/player-character-submodal';
-import RelationshipsModal from './submodals/player-relationships-submodal';
+import PlayerCharactersRelationshipsModal from './submodals/player-characters-relationships-submodal';
+import LinksRelationshipsModal from './submodals/links-relationships-submodal';
 import ExchangePointsModal from './submodals/exchange-points-submodal';
 
 // Import tab content components
@@ -35,6 +36,7 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
   const [showPersonalData, setShowPersonalData] = useState(false);
   const [showPlayerCharacter, setShowPlayerCharacter] = useState(false);
   const [showRelationships, setShowRelationships] = useState(false);
+  const [showLinks, setShowLinks] = useState(false);
   const [showExchangeModal, setShowExchangeModal] = useState(false);
   const [activeTab, setActiveTab] = useState('state');
 
@@ -208,7 +210,16 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
                 className="flex items-center gap-2"
               >
                 <Network className="h-4 w-4" />
-                Relationships
+                Characters
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowLinks(true)}
+                className="flex items-center gap-2"
+              >
+                <Network className="h-4 w-4" />
+                Links
               </Button>
               <Button
                 variant="outline"
@@ -252,12 +263,21 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
         onOpenChange={setShowPlayerCharacter}
       />
 
-      {/* Relationships Submodal */}
-      <RelationshipsModal
+      {/* Player Character Relationships Submodal */}
+      <PlayerCharactersRelationshipsModal
         player={playerData}
         open={showRelationships}
         onOpenChange={setShowRelationships}
       />
+
+      {/* Links Relationships Modal */}
+      {playerData && showLinks && (
+        <LinksRelationshipsModal
+          entity={{ type: EntityType.PLAYER, id: playerData.id, name: playerData.name }}
+          open={showLinks}
+          onClose={() => setShowLinks(false)}
+        />
+      )}
 
 
       {/* Exchange Points Modal */}

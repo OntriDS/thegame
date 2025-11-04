@@ -13,17 +13,17 @@ import { EntityType, LinkType } from '@/types/enums';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
 import { ClientAPI } from '@/lib/client-api';
 
-interface EntityRelationshipsModalProps {
+interface LinksRelationshipsModalProps {
   entity: { type: EntityType; id: string; name?: string };
   open: boolean;
   onClose: () => void;
 }
 
-export default function EntityRelationshipsModal({
+export default function LinksRelationshipsModal({
   entity,
   open,
   onClose
-}: EntityRelationshipsModalProps) {
+}: LinksRelationshipsModalProps) {
   const [links, setLinks] = useState<Link[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all');

@@ -1,12 +1,11 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import NumericInput from '@/components/ui/numeric-input';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
-import { LinksSubModal } from './submodals/links-submodal';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -21,12 +20,12 @@ import type { Station, SubItemType } from '@/types/type-aliases';
 import { CM_TO_M2_CONVERSION, PRICE_STEP, YEAR_MIN, YEAR_MAX } from '@/lib/constants/app-constants';
 import { v4 as uuid } from 'uuid';
 import { createSiteOptionsWithCategories } from '@/lib/utils/site-options-utils';
-import { Package, Trash2, User } from 'lucide-react';
+import { Package, Trash2, User, Network } from 'lucide-react';
 import { ClientAPI } from '@/lib/client-api';
 import MoveItemsModal from './submodals/move-items-submodal';
 import DeleteModal from './submodals/delete-submodal';
 import { FileReference } from '@/types/entities';
-import EntityRelationshipsModal from './submodals/entity-relationships-submodal';
+import LinksRelationshipsModal from './submodals/links-relationships-submodal';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
 import CharacterSelectorModal from './submodals/owner-character-selector-submodal';
 import { dispatchEntityUpdated, entityTypeToKind } from '@/lib/ui/ui-events';
@@ -73,7 +72,6 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
   const [showMoreFields, setShowMoreFields] = useState(false);
   const [showLinksModal, setShowLinksModal] = useState(false);
   const [showCharacterSelector, setShowCharacterSelector] = useState(false);
-  const [itemLinks, setItemLinks] = useState<any[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [ownerCharacterId, setOwnerCharacterId] = useState<string | null>(null);
   const [ownerCharacterName, setOwnerCharacterName] = useState<string>('');
@@ -92,6 +90,9 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
   // File attachment states
   const [originalFiles, setOriginalFiles] = useState('');
   const [accessoryFiles, setAccessoryFiles] = useState('');
+
+  // Guard for one-time initialization of new items
+  const didInitRef = useRef(false);
 
   // Save form data to preferences when modal closes
   const saveFormDataToStorage = useCallback(() => {
@@ -167,6 +168,10 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
     if (open && !item) {
       loadFormDataFromStorage();
     }
+    // Reset init guard when modal closes (allows fresh init on next open)
+    if (!open) {
+      didInitRef.current = false;
+    }
   }, [open, item, loadFormDataFromStorage]);
 
   const handleStationCategoryChange = (newStationCategory: string) => {
@@ -190,19 +195,6 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
     setPreference(prefKey, newItemTypeSubType);
   };
 
-  // Load links for the current item
-  const loadItemLinks = useCallback(async () => {
-    if (item) {
-      try {
-        const links = await ClientAPI.getLinksFor({ type: EntityType.ITEM, id: item.id });
-        setItemLinks(links);
-      } catch (error) {
-        console.error('Failed to load item links:', error);
-        setItemLinks([]);
-      }
-    }
-  }, [item]);
-
   // Load existing items and sites for selection
   useEffect(() => {
     const loadUIData = async () => {
@@ -222,54 +214,59 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
     loadUIData();
   }, []);
 
-  // Effect to reset and populate state when the item prop changes
+  // Effect to populate state when the item prop changes
+  // Only resets when editing an existing item; new items initialize once
   useEffect(() => {
-    setName(item?.name || '');
-    setDescription(item?.description || '');
-    const itemType = item?.type || defaultItemType || ItemType.STICKER;
-    const itemSubType = item?.subItemType || '';
-    setType(itemType);
-    setSubItemType(itemSubType);
-    setItemTypeSubType(`${itemType}:${itemSubType}`);
-    
-    const itemStation = item?.station || 'Strategy';
-    setStation(itemStation);
-    const area = getAreaForStation(itemStation);
-    setStationCategory(`${area || 'ADMIN'}:${itemStation}`);
-    setCollection(item?.collection || Collection.NO_COLLECTION);
-    setStatus(item?.status || ItemStatus.FOR_SALE);
-    setQuantity(item ? (item.stock?.reduce((s, stock) => s + stock.quantity, 0) || 0) : 0);
-    setUnitCost(item?.unitCost || 0);
-    setPrice(item?.price || 0);
-    setYear(item?.year || new Date().getFullYear());
-    setImageUrl(item?.imageUrl || '');
-    setWidth(item?.dimensions?.width?.toString() || '');
-    setHeight(item?.dimensions?.height?.toString() || '');
-    setSize(item?.size || '');
-    setTargetAmount(item?.targetAmount?.toString() || '');
-    // Handle both old (site name) and new (site UUID) references
-    const itemSiteId = item?.stock?.[0]?.siteId || 'Home';
-    setSite(itemSiteId);
-    
-    // Parse file attachments for display
-    const formatFileReferences = (files?: FileReference[]): string => {
-      if (!files || files.length === 0) return '';
-      return files.map(f => `${f.url || 'symbolic'}:${f.type}`).join(';');
-    };
-    
-    setOriginalFiles(formatFileReferences(item?.originalFiles));
-    setAccessoryFiles(formatFileReferences(item?.accessoryFiles));
-    
-    // Set owner character ID
-    setOwnerCharacterId(item?.ownerCharacterId || null);
-    
-    // Load links for existing item
     if (item) {
-      loadItemLinks();
-    } else {
-      setItemLinks([]);
+      // Editing existing item - populate from item
+      setName(item.name || '');
+      setDescription(item.description || '');
+      const itemType = item.type || defaultItemType || ItemType.STICKER;
+      const itemSubType = item.subItemType || '';
+      setType(itemType);
+      setSubItemType(itemSubType);
+      setItemTypeSubType(`${itemType}:${itemSubType}`);
+      
+      const itemStation = item.station || 'Strategy';
+      setStation(itemStation);
+      const area = getAreaForStation(itemStation);
+      setStationCategory(`${area || 'ADMIN'}:${itemStation}`);
+      setCollection(item.collection || Collection.NO_COLLECTION);
+      setStatus(item.status || ItemStatus.FOR_SALE);
+      setQuantity(item.stock?.reduce((s, stock) => s + stock.quantity, 0) || 0);
+      setUnitCost(item.unitCost || 0);
+      setPrice(item.price || 0);
+      setYear(item.year || new Date().getFullYear());
+      setImageUrl(item.imageUrl || '');
+      setWidth(item.dimensions?.width?.toString() || '');
+      setHeight(item.dimensions?.height?.toString() || '');
+      setSize(item.size || '');
+      setTargetAmount(item.targetAmount?.toString() || '');
+      const itemSiteId = item.stock?.[0]?.siteId || 'Home';
+      setSite(itemSiteId);
+      
+      // Parse file attachments for display
+      const formatFileReferences = (files?: FileReference[]): string => {
+        if (!files || files.length === 0) return '';
+        return files.map(f => `${f.url || 'symbolic'}:${f.type}`).join(';');
+      };
+      
+      setOriginalFiles(formatFileReferences(item.originalFiles));
+      setAccessoryFiles(formatFileReferences(item.accessoryFiles));
+      setOwnerCharacterId(item.ownerCharacterId || null);
+      
+      // Reset init guard when editing
+      didInitRef.current = false;
+    } else if (!didInitRef.current) {
+      // New item - initialize once only (don't reset again while user edits)
+      didInitRef.current = true;
+      const lastStation = getLastUsedStation();
+      setStation(lastStation);
+      const area = getAreaForStation(lastStation);
+      setStationCategory(`${area || 'ADMIN'}:${lastStation}`);
+      // Other fields remain as-is or are loaded from persisted draft via loadFormDataFromStorage
     }
-  }, [item, defaultItemType, loadItemLinks]);
+  }, [item]); // Removed defaultItemType dependency - use current value when effect runs
 
   // Effect to handle auto-select of subtype when modal opens for new items
   useEffect(() => {
@@ -474,15 +471,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
       // Dispatch UI update events AFTER successful save
       dispatchEntityUpdated(entityTypeToKind(EntityType.ITEM));
       
-      // Refresh links after save (Links are created by Ribosome)
-      setTimeout(async () => {
-        try {
-          const links = await ClientAPI.getLinksFor({ type: EntityType.ITEM, id: newItem.id });
-          setItemLinks(links);
-        } catch (error) {
-          console.error('Failed to refresh links after save:', error);
-        }
-      }, 100); // Small delay to ensure Ribosome has processed the entity
+      // Links are loaded on-demand when user clicks "View Links" button
       
       onOpenChange(false);
     } catch (error) {
@@ -777,25 +766,14 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
                   Delete
                 </Button>
                 
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="sm"
-                  onClick={async () => {
-                    if (item) {
-                      try {
-                        const links = await ClientAPI.getLinksFor({ type: EntityType.ITEM, id: item.id });
-                        setItemLinks(links);
-                        setShowLinksModal(true);
-                      } catch (error) {
-                        console.error('Failed to fetch links:', error);
-                        setItemLinks([]);
-                        setShowLinksModal(true);
-                      }
-                    }
-                  }}
-                  className="flex items-center gap-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-300 h-8 text-xs"
+                  onClick={() => setShowLinksModal(true)}
+                  className="h-8 text-xs"
                 >
-                  🔗 View Links ({itemLinks.length})
+                  <Network className="w-3 h-3 mr-1" />
+                  Links
                 </Button>
                 
                 <Button 
@@ -923,15 +901,6 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
       </div>
     )}
 
-    {/* Links SubModal */}
-    <LinksSubModal
-      open={showLinksModal}
-      onOpenChange={setShowLinksModal}
-      entityType="item"
-      entityId={item?.id || ''}
-      entityName={item?.name || 'Item'}
-      links={itemLinks}
-    />
     
     {/* Character Selector Modal */}
     <CharacterSelectorModal

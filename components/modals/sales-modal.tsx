@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -28,7 +28,7 @@ import PlayerCharacterSelectorModal from './submodals/player-character-selector-
 import { v4 as uuid } from 'uuid';
 import { Plus, Trash2, Package, DollarSign, Network, ListPlus, Wallet, Gift, User } from 'lucide-react';
 import DeleteModal from './submodals/delete-submodal';
-import EntityRelationshipsModal from './submodals/entity-relationships-submodal';
+import LinksRelationshipsModal from './submodals/links-relationships-submodal';
 import SaleItemsSubModal, { SaleItemLine } from './submodals/sale-items-submodal';
 import SalePaymentsSubModal, { SalePaymentLine } from './submodals/sale-payments-submodal';
 import ItemEmissarySubModal, { ItemCreationData } from './submodals/item-emissary-submodal';
@@ -131,6 +131,9 @@ export default function SalesModal({
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [manualLines, setManualLines] = useState(false);
 
+  // Guard for one-time initialization of new sales
+  const didInitRef = useRef(false);
+
   const toggleAdvanced = () => {
     const newValue = !showAdvanced;
     setShowAdvanced(newValue);
@@ -225,7 +228,12 @@ export default function SalesModal({
       
       // Initialize player character
       setPlayerCharacterId(sale.playerCharacterId || PLAYER_ONE_ID);
-    } else {
+      
+      // Reset init guard when editing
+      didInitRef.current = false;
+    } else if (!didInitRef.current) {
+      // New sale - initialize once only (don't reset again while user edits)
+      didInitRef.current = true;
       resetForm();
       // Initialize player character for new sale
       setPlayerCharacterId(PLAYER_ONE_ID);
@@ -1788,10 +1796,10 @@ export default function SalesModal({
           />
         )}
 
-        {/* Entity Relationships Modal */}
+        {/* Links Relationships Modal */}
         {sale && showRelationshipsModal && (
-          <EntityRelationshipsModal
-            entity={{ type: 'sale' as any, id: sale.id, name: sale.name }}
+          <LinksRelationshipsModal
+            entity={{ type: EntityType.SALE, id: sale.id, name: sale.name }}
             open={showRelationshipsModal}
             onClose={() => setShowRelationshipsModal(false)}
           />

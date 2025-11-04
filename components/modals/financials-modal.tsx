@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import DeleteModal from './submodals/delete-submodal';
-import EntityRelationshipsModal from './submodals/entity-relationships-submodal';
+import LinksRelationshipsModal from './submodals/links-relationships-submodal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import NumericInput from '@/components/ui/numeric-input';
@@ -144,6 +144,9 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
   const [playerCharacterId, setPlayerCharacterId] = useState<string | null>(null);
   const [showPlayerCharacterSelector, setShowPlayerCharacterSelector] = useState(false);
   
+  // Guard for one-time initialization of new records
+  const didInitRef = useRef(false);
+  
   // Emissary column expansion state with persistence
   const [emissaryColumnExpanded, setEmissaryColumnExpanded] = useState(false);
 
@@ -259,12 +262,16 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
       
       // Initialize item status
       setOutputItemStatus(record.isSold ? ItemStatus.SOLD : ItemStatus.FOR_SALE);
-    } else {
-      // Reset form for new record
+      
+      // Reset init guard when editing
+      didInitRef.current = false;
+    } else if (!didInitRef.current) {
+      // New record - initialize once only (don't reset again while user edits)
+      didInitRef.current = true;
       setFormData({
         name: '',
         description: '',
-        station: 'Strategy',
+        station: getLastUsedStation(),
         cost: 0,
         costString: '0',
         revenue: 0,
@@ -942,10 +949,10 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
       />
     )}
 
-    {/* Entity Relationships Modal */}
+    {/* Links Relationships Modal */}
     {record && showRelationshipsModal && (
-      <EntityRelationshipsModal
-        entity={{ type: 'financial' as any, id: record.id, name: record.name }}
+      <LinksRelationshipsModal
+        entity={{ type: EntityType.FINANCIAL, id: record.id, name: record.name }}
         open={showRelationshipsModal}
         onClose={() => setShowRelationshipsModal(false)}
       />

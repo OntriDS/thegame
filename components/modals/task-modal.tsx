@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import NumericInput from '@/components/ui/numeric-input';
@@ -14,7 +14,7 @@ import { FrequencyCalendar, FrequencyConfig } from '@/components/ui/frequency-ca
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import DeleteModal from './submodals/delete-submodal';
-import EntityRelationshipsModal from './submodals/entity-relationships-submodal';
+import LinksRelationshipsModal from './submodals/links-relationships-submodal';
 import { Task, Item } from '@/types/entities';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
 import { getPointsMetadata } from '@/lib/utils/points-utils';
@@ -177,6 +177,9 @@ export default function TaskModal({
   const [sites, setSites] = useState<any[]>([]);
   const [dataLoaded, setDataLoaded] = useState(false);
 
+  // Guard for one-time initialization of new tasks
+  const didInitRef = useRef(false);
+
   // Load UI data for form dropdowns
   useEffect(() => {
     const loadUIData = async () => {
@@ -212,6 +215,7 @@ export default function TaskModal({
   
   useEffect(() => {
     if (task && task.id) {
+      // Editing existing task - populate from task
       setName(task.name);
       setDescription(task.description || '');
       setStatus(task.status);
@@ -269,7 +273,12 @@ export default function TaskModal({
         },
       });
       setParentId(task.parentId || null);
-    } else {
+      
+      // Reset init guard when editing
+      didInitRef.current = false;
+    } else if (!didInitRef.current) {
+      // New task - initialize once only (don't reset again while user edits)
+      didInitRef.current = true;
       setName('');
       setDescription('');
       setStatus(TaskStatus.CREATED);
@@ -308,7 +317,7 @@ export default function TaskModal({
       setNewCustomerName('');
       setPlayerCharacterId(null);
     }
-  }, [task, getLastUsedType]);
+  }, [task]); 
 
   // Load customer character name when customerCharacterId changes
   useEffect(() => {
@@ -1292,10 +1301,10 @@ export default function TaskModal({
         </DialogContent>
       </Dialog>
 
-      {/* Entity Relationships Modal */}
+      {/* Links Relationships Modal */}
       {task && (
-        <EntityRelationshipsModal
-          entity={{ type: 'task' as any, id: task.id, name: task.name }}
+        <LinksRelationshipsModal
+          entity={{ type: EntityType.TASK, id: task.id, name: task.name }}
           open={showRelationshipsModal}
           onClose={() => setShowRelationshipsModal(false)}
         />
