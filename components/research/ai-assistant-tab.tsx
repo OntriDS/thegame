@@ -3,10 +3,10 @@
 import { useState, useRef, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Bot, Send, Trash2, Loader2, Settings, Wrench, Database } from 'lucide-react';
+import { Bot, Send, Trash2, Loader2, Settings, Wrench, Database, Zap } from 'lucide-react';
 import AiSessionManagerSubmodal from '@/components/modals/submodals/ai-session-manager-submodal';
 import { useAIChat, ChatMessage } from '@/lib/hooks/use-ai-chat';
 import { ClientAPI } from '@/lib/client-api';
@@ -22,7 +22,9 @@ export function AIAssistantTab() {
   const [showModelSelect, setShowModelSelect] = useState(false);
   const [input, setInput] = useState('');
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [showSessionMgr, setShowSessionMgr] = useState(false);
+  const [enableTools, setEnableTools] = useState(false);
 
   // Curated model list with tiers
   const availableModels = [
@@ -54,12 +56,53 @@ export function AIAssistantTab() {
     }
   }, [messages]);
 
+  // Auto-resize textarea
+  const adjustTextareaHeight = () => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.style.height = 'auto';
+      const scrollHeight = textarea.scrollHeight;
+      const maxHeight = 10 * 24; // 10 lines * 24px line height
+      textarea.style.height = Math.min(scrollHeight, maxHeight) + 'px';
+    }
+  };
+
+  // Handle textarea input
+  const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInput(e.target.value);
+    adjustTextareaHeight();
+  };
+
+  // Handle keyboard events
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter') {
+      if (e.shiftKey) {
+        // Shift+Enter: Allow new line
+        return;
+      } else {
+        // Enter: Send message
+        e.preventDefault();
+        if (!input.trim() || isLoading) return;
+        sendMessage(input, undefined, enableTools);
+        setInput('');
+        // Reset textarea height
+        if (textareaRef.current) {
+          textareaRef.current.style.height = 'auto';
+        }
+      }
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
-    
-    sendMessage(input);
+
+    sendMessage(input, undefined, enableTools);
     setInput('');
+    // Reset textarea height
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+    }
   };
 
   const quickPrompts = [
@@ -89,6 +132,16 @@ export function AIAssistantTab() {
                 >
                 <Settings className="h-3 w-3" />
                 {getModelDisplayName(selectedModel)}
+              </Button>
+              <Button
+                variant={enableTools ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setEnableTools(!enableTools)}
+                className={`gap-1 h-6 text-xs ${enableTools ? 'bg-blue-600 hover:bg-blue-700' : ''}`}
+                title={enableTools ? "Tools Enabled - AI can read project data" : "Tools Disabled - Basic chat only"}
+              >
+                <Zap className="h-3 w-3" />
+                Tools {enableTools ? 'ON' : 'OFF'}
               </Button>
               {sessionId && (
                 <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded bg-green-50 border border-green-200 text-green-800">
@@ -165,8 +218,10 @@ export function AIAssistantTab() {
                         </div>
                         <div className="space-y-1">
                           {categoryModels.map((model) => (
-                            <SelectItem key={model.id} value={model.id} className="pl-4">
-                              {model.displayName}
+                            <SelectItem key={model.id} value={model.id} className="pl-4 pr-8">
+                              <div className="flex items-center justify-between w-full">
+                                <span className="truncate">{model.displayName}</span>
+                              </div>
                             </SelectItem>
                           ))}
                         </div>
@@ -252,12 +307,15 @@ export function AIAssistantTab() {
 
           {/* Input Form */}
           <form onSubmit={handleSubmit} className="flex gap-2">
-          <Input
+          <Textarea
+            ref={textareaRef}
             value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask me anything about your project..."
+            onChange={handleTextareaChange}
+            onKeyDown={handleKeyDown}
+            placeholder="Ask me anything about your project... (Shift+Enter for new line)"
             disabled={isLoading}
-            className="flex-1"
+            className="flex-1 min-h-[40px] max-h-[240px] resize-none"
+            rows={1}
           />
           <Button type="submit" disabled={isLoading || !input.trim()}>
             {isLoading ? (
@@ -278,7 +336,7 @@ export function AIAssistantTab() {
                   key={idx}
                   variant="outline"
                   size="sm"
-                  onClick={() => sendMessage(prompt)}
+                  onClick={() => sendMessage(prompt, undefined, enableTools)}
                   disabled={isLoading}
                   className="text-xs"
                 >

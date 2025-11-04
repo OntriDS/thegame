@@ -52,6 +52,19 @@ export async function POST(request: NextRequest) {
       { role: 'user', content: message }
     ];
 
+    // Prepare request body with optional tools
+    const requestBody: any = {
+      model: modelToUse,
+      messages: messagesToSend,
+      temperature: 0.7,
+    };
+
+    // Add tools if enabled (only for OpenAI models on Groq)
+    if (enableTools && modelToUse.startsWith('openai/')) {
+      requestBody.tools = GROQ_TOOLS;
+      requestBody.tool_choice = 'auto';
+    }
+
     // Use Groq API
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
@@ -59,11 +72,7 @@ export async function POST(request: NextRequest) {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        model: modelToUse,
-        messages: messagesToSend,
-        temperature: 0.7,
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     if (!response.ok) {
@@ -85,7 +94,7 @@ export async function POST(request: NextRequest) {
     }
 
     const data = await response.json();
-    
+
     // Extract rate limit info from headers
     const rateLimitInfo = {
       remainingRequests: response.headers.get('x-ratelimit-remaining-requests'),
@@ -94,12 +103,77 @@ export async function POST(request: NextRequest) {
       limitTokens: response.headers.get('x-ratelimit-limit-tokens'),
     };
 
-    const assistantResponse = data.choices[0].message.content;
+    let assistantResponse = data.choices[0].message.content;
+    let toolCalls = data.choices[0].message.tool_calls;
 
-    // Save session messages
+    // Handle tool calls if present
+    if (toolCalls && toolCalls.length > 0) {
+      // Add the assistant's message with tool calls to conversation
+      const assistantMessage = data.choices[0].message;
+      messagesToSend.push(assistantMessage);
+
+      // Execute tools and collect results
+      const toolResults = [];
+      for (const toolCall of toolCalls) {
+        try {
+          const result = await executeTool(toolCall.function.name, JSON.parse(toolCall.function.arguments || '{}'));
+          toolResults.push({
+            tool_call_id: toolCall.id,
+            role: 'tool',
+            content: JSON.stringify(result)
+          });
+        } catch (error) {
+          console.error(`Tool execution error for ${toolCall.function.name}:`, error);
+          toolResults.push({
+            tool_call_id: toolCall.id,
+            role: 'tool',
+            content: JSON.stringify({ error: `Failed to execute ${toolCall.function.name}: ${error instanceof Error ? error.message : 'Unknown error'}` })
+          });
+        }
+      }
+
+      // Add tool results to conversation
+      messagesToSend.push(...toolResults);
+
+      // Make follow-up request to get final response
+      const followupResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: modelToUse,
+          messages: messagesToSend,
+          temperature: 0.7,
+        }),
+      });
+
+      if (followupResponse.ok) {
+        const followupData = await followupResponse.json();
+        assistantResponse = followupData.choices[0].message.content;
+
+        // Save the followup response to session
+        if (currentSessionId) {
+          await SessionManager.addMessage(currentSessionId, 'assistant', assistantResponse);
+        }
+      } else {
+        assistantResponse = "I used some tools but encountered an error getting the final response. The tools were executed successfully though.";
+      }
+    }
+
+    // Save session messages (skip if already saved during tool execution)
     if (currentSessionId) {
-      await SessionManager.addMessage(currentSessionId, 'user', message);
-      await SessionManager.addMessage(currentSessionId, 'assistant', assistantResponse);
+      // Only save if we didn't already save during tool execution
+      const session = await SessionManager.getSession(currentSessionId);
+      if (session) {
+        const messageCount = await SessionManager.getSessionMessages(currentSessionId);
+        if (messageCount.length === 0) {
+          await SessionManager.addMessage(currentSessionId, 'user', message);
+          await SessionManager.addMessage(currentSessionId, 'assistant', assistantResponse);
+        }
+        // If messages already exist, they were saved during tool execution
+      }
     } else {
       // Create new session and save messages
       const session = await SessionManager.createSession('akiles', 'THEGAME', modelToUse);

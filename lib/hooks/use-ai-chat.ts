@@ -63,7 +63,7 @@ export function useAIChat() {
     hydrateFromActiveSession();
   }, []);
 
-  const sendMessage = async (message: string, model?: string) => {
+  const sendMessage = async (message: string, model?: string, enableTools: boolean = false) => {
     if (!message.trim()) return;
 
     // Add user message
@@ -88,7 +88,7 @@ export function useAIChat() {
       // Use the passed model, or selectedModel from state (which should be the session's model if loaded)
       const modelToUse = model || selectedModel;
 
-      const data = await ClientAPI.sendChatMessage(message, modelToUse, sessionId || undefined);
+      const data = await ClientAPI.sendChatMessage(message, modelToUse, sessionId || undefined, enableTools);
       
       // Update model if returned from API (in case it used session's model)
       if (data.model) {

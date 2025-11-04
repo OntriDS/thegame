@@ -333,14 +333,16 @@ export default function AiSessionManagerSubmodal({ open, onOpenChange, onSession
                     <div className="flex-1">
                       {/* Session info and metadata on top */}
                       <div className="flex items-center justify-between mb-3">
-                        <div className="text-sm font-medium truncate flex items-center gap-2 flex-wrap">
+                        <div className="text-sm font-medium truncate">
                           {session.name}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="text-xs text-muted-foreground">
+                            {session.messageCount} messages • {formatDate(session.lastAccessedAt)}
+                          </div>
                           {data.activeSessionId === session.id && (
                             <Badge variant="default" className="text-xs">Active</Badge>
                           )}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {session.messageCount} messages • {formatDate(session.lastAccessedAt)}
                         </div>
                       </div>
 

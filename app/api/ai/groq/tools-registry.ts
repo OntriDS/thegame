@@ -15,38 +15,79 @@ const MAX_OUTPUT_LENGTH = 5000;
 const MAX_RESULTS = 50;
 
 /**
- * Registry of available tools with their descriptions
+ * Registry of available tools in OpenAI format
  */
 export const GROQ_TOOLS = [
   {
-    name: 'get_project_status',
-    description: 'Get current project status and sprint information from PROJECT-STATUS.json',
-    parameters: {
-      include_roadmap: { type: 'boolean', description: 'Include roadmap information' }
+    type: 'function',
+    function: {
+      name: 'get_project_status',
+      description: 'Get current project status and sprint information from PROJECT-STATUS.json',
+      parameters: {
+        type: 'object',
+        properties: {
+          include_roadmap: {
+            type: 'boolean',
+            description: 'Include roadmap information'
+          }
+        }
+      }
     }
   },
   {
-    name: 'inventory_summary',
-    description: 'Get summary of all items in inventory (counts, types, status)',
-    parameters: {}
-  },
-  {
-    name: 'task_summary',
-    description: 'Get summary of all tasks (counts by status, priority breakdown)',
-    parameters: {}
-  },
-  {
-    name: 'search_docs',
-    description: 'Search documentation files in z_md directory',
-    parameters: {
-      query: { type: 'string', description: 'Search query' },
-      doc_type: { type: 'string', enum: ['wiki', 'analysis', 'refs'], description: 'Documentation type' }
+    type: 'function',
+    function: {
+      name: 'inventory_summary',
+      description: 'Get summary of all items in inventory (counts, types, status)',
+      parameters: {
+        type: 'object',
+        properties: {}
+      }
     }
   },
   {
-    name: 'get_links_summary',
-    description: 'Get summary of entity relationships and links',
-    parameters: {}
+    type: 'function',
+    function: {
+      name: 'task_summary',
+      description: 'Get summary of all tasks (counts by status, priority breakdown)',
+      parameters: {
+        type: 'object',
+        properties: {}
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'search_docs',
+      description: 'Search documentation files in z_md directory',
+      parameters: {
+        type: 'object',
+        properties: {
+          query: {
+            type: 'string',
+            description: 'Search query'
+          },
+          doc_type: {
+            type: 'string',
+            enum: ['wiki', 'analysis', 'refs'],
+            description: 'Documentation type'
+          }
+        },
+        required: ['query']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'get_links_summary',
+      description: 'Get summary of entity relationships and links',
+      parameters: {
+        type: 'object',
+        properties: {}
+      }
+    }
   }
 ];
 
