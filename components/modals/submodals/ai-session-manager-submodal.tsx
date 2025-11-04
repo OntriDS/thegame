@@ -31,7 +31,22 @@ export default function AiSessionManagerSubmodal({ open, onOpenChange, onSession
   const [editName, setEditName] = useState('');
   const [showNewSessionForm, setShowNewSessionForm] = useState(false);
   const [selectedModel, setSelectedModel] = useState<string>('openai/gpt-oss-120b');
-  const [availableModels, setAvailableModels] = useState<any[]>([]);
+  // Curated model list with tiers (same as AI Assistant Tab)
+  const availableModels = [
+    // TIER 1: Reasoners
+    { id: 'openai/gpt-oss-120b', displayName: 'gpt-oss-120b (Top reasoning)', category: 'Reasoners' },
+    { id: 'llama-3.3-70b-versatile', displayName: 'llama-3.3-70b (Versatile)', category: 'Reasoners' },
+
+    // TIER 2: Specialists
+    { id: 'moonshotai/kimi-k2-instruct-0905', displayName: 'moonshotai-kimi-1000B-32b (Analysis, Large)', category: 'Specialists' },
+    { id: 'qwen/qwen3-32b', displayName: 'qwen3-32b (Balance)', category: 'Specialists' },
+    { id: 'meta-llama/llama-4-maverick-17b-128e-instruct', displayName: 'llama-4-128e-17b (Creative, Large)', category: 'Specialists' },
+
+    // TIER 3: Speed
+    { id: 'openai/gpt-oss-20b', displayName: 'gpt-oss-20b (Performance)', category: 'Speed' },
+    { id: 'groq/compound', displayName: 'groq/compound (Fast)', category: 'Speed' },
+    { id: 'meta-llama/llama-4-scout-17b-16e-instruct', displayName: 'llama-4-scout-16e-17b (Info gathering)', category: 'Speed' }
+  ];
 
   const load = async () => {
     setLoading(true);
@@ -49,18 +64,17 @@ export default function AiSessionManagerSubmodal({ open, onOpenChange, onSession
   useEffect(() => {
     if (open) {
       void load();
-      // Load available models
-      ClientAPI.getGroqModels()
-        .then(data => {
-          setAvailableModels([...(data.models || [])]);
-        })
-        .catch(() => {
-          setAvailableModels([]);
-        });
     }
   }, [open]);
 
   const sessions = data.sessions || [];
+
+  // Helper function to get display name for a model
+  const getModelDisplayName = (modelId: string) => {
+    const model = availableModels.find(m => m.id === modelId);
+    return model ? model.displayName : modelId.replace('openai/', '').replace('llama-', 'Llama ');
+  };
+
   const formatDate = (date: string | Date) => {
     const d = new Date(date);
     const now = new Date();
@@ -123,7 +137,7 @@ export default function AiSessionManagerSubmodal({ open, onOpenChange, onSession
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent zIndexLayer={'SUB_MODALS'} className="w-full max-w-2xl max-h-[80vh] bg-background text-foreground">
+      <DialogContent zIndexLayer={'SUB_MODALS'} className="w-full max-w-2xl max-h-[80vh] bg-background text-foreground flex flex-col">
         <DialogHeader>
           <DialogTitle>Session Manager</DialogTitle>
           <DialogDescription>
@@ -137,7 +151,7 @@ export default function AiSessionManagerSubmodal({ open, onOpenChange, onSession
           </div>
         )}
 
-        <div className="space-y-4">
+        <div className="space-y-4 flex-1 min-h-0">
           <div className="flex justify-between items-center">
             <div className="text-sm font-medium">All Sessions</div>
             {!showNewSessionForm ? (
@@ -147,16 +161,31 @@ export default function AiSessionManagerSubmodal({ open, onOpenChange, onSession
               </Button>
             ) : (
               <div className="flex items-center gap-2">
-                <Select value={selectedModel} onValueChange={setSelectedModel}>
+                        <Select value={selectedModel} onValueChange={setSelectedModel}>
                   <SelectTrigger className="w-[250px]">
                     <SelectValue placeholder="Select AI Model" />
                   </SelectTrigger>
                   <SelectContent>
-                    {availableModels.map((model) => (
-                      <SelectItem key={model.id} value={model.id}>
-                        {model.id}
-                      </SelectItem>
-                    ))}
+                    {/* Group models by category */}
+                    <div className="p-2">
+                      {['Reasoners', 'Specialists', 'Speed'].map(category => {
+                        const categoryModels = availableModels.filter(model => model.category === category);
+                        return (
+                          <div key={category} className="mb-4 last:mb-0">
+                            <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2 px-2">
+                              {category}
+                            </div>
+                            <div className="space-y-1">
+                              {categoryModels.map((model) => (
+                                <SelectItem key={model.id} value={model.id} className="pl-4">
+                                  {model.displayName}
+                                </SelectItem>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </SelectContent>
                 </Select>
                 <Button size="sm" onClick={handleNewSession} className="gap-2">
@@ -172,7 +201,7 @@ export default function AiSessionManagerSubmodal({ open, onOpenChange, onSession
             )}
           </div>
 
-          <div className="border border-border rounded-md divide-y max-h-96 overflow-auto bg-background">
+          <div className="border border-border rounded-md divide-y flex-1 overflow-auto bg-background min-h-0">
             {loading && sessions.length === 0 && (
               <div className="p-3 text-sm text-muted-foreground text-center">Loading sessions...</div>
             )}
@@ -208,9 +237,26 @@ export default function AiSessionManagerSubmodal({ open, onOpenChange, onSession
                             <SelectValue placeholder="Select Model" />
                           </SelectTrigger>
                           <SelectContent>
-                            {availableModels.map((m: any) => (
-                              <SelectItem key={m.id} value={m.id}>{m.id}</SelectItem>
-                            ))}
+                            {/* Group models by category */}
+                            <div className="p-2">
+                              {['Reasoners', 'Specialists', 'Speed'].map(category => {
+                                const categoryModels = availableModels.filter(model => model.category === category);
+                                return (
+                                  <div key={category} className="mb-4 last:mb-0">
+                                    <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2 px-2">
+                                      {category}
+                                    </div>
+                                    <div className="space-y-1">
+                                      {categoryModels.map((model) => (
+                                        <SelectItem key={model.id} value={model.id} className="pl-4">
+                                          {model.displayName}
+                                        </SelectItem>
+                                      ))}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
                           </SelectContent>
                         </Select>
                       </div>
@@ -234,57 +280,61 @@ export default function AiSessionManagerSubmodal({ open, onOpenChange, onSession
                       </div>
                     </div>
                   ) : (
-                    <>
-                      <div className="text-sm font-medium truncate flex items-center gap-2 flex-wrap">
-                        {session.name}
-                        {data.activeSessionId === session.id && (
-                          <Badge variant="default" className="text-xs">Active</Badge>
-                        )}
+                    <div className="flex-1">
+                      {/* Session info and metadata on top */}
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="text-sm font-medium truncate flex items-center gap-2 flex-wrap">
+                          {session.name}
+                          {data.activeSessionId === session.id && (
+                            <Badge variant="default" className="text-xs">Active</Badge>
+                          )}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {session.messageCount} messages • {formatDate(session.lastAccessedAt)}
+                        </div>
+                      </div>
+
+                      {/* Model info */}
+                      <div className="mb-2">
                         <Badge variant="outline" className="text-xs flex items-center gap-1">
                           <Bot className="h-3 w-3" />
-                          {session.model?.replace('openai/', '').replace('llama-', 'Llama ') || 'Unknown'}
+                          {getModelDisplayName(session.model || 'Unknown')}
                         </Badge>
                       </div>
-                      <div className="text-xs text-muted-foreground flex items-center gap-3 mt-1">
-                        <span>{session.messageCount} messages</span>
-                        <span>•</span>
-                        <span>{formatDate(session.lastAccessedAt)}</span>
+
+                      {/* Action buttons */}
+                      <div className="flex gap-1">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={async () => {
+                            await handleLoadSession(session.id);
+                          }}
+                        >
+                          Load
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            setEditingId(session.id);
+                            setEditName(session.name);
+                          }}
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleDelete(session.id)}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
-                    </>
+                    </div>
                   )}
                 </div>
-                
-                {editingId !== session.id && (
-                  <div className="flex gap-1 ml-2">
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      onClick={async () => {
-                        await handleLoadSession(session.id);
-                      }}
-                    >
-                      Load
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      variant="ghost" 
-                      onClick={() => {
-                        setEditingId(session.id);
-                        setEditName(session.name);
-                      }}
-                    >
-                      <Edit2 className="h-4 w-4" />
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      variant="ghost" 
-                      onClick={() => handleDelete(session.id)}
-                      className="text-destructive hover:text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
               </div>
             ))}
           </div>

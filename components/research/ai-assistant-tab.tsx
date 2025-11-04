@@ -19,22 +19,33 @@ interface GroqModel {
 
 export function AIAssistantTab() {
   const { messages, isLoading, error, sendMessage, clearMessages, clearSession, loadSession, selectedModel, setSelectedModel, selectedProvider, rateLimits, sessionId, toolExecution } = useAIChat();
-  const [availableModels, setAvailableModels] = useState<GroqModel[]>([]);
   const [showModelSelect, setShowModelSelect] = useState(false);
   const [input, setInput] = useState('');
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const [showSessionMgr, setShowSessionMgr] = useState(false);
 
-  // Fetch available models from Groq only
-  useEffect(() => {
-    ClientAPI.getGroqModels()
-      .then(data => {
-        setAvailableModels([...(data.models || [])]);
-      })
-      .catch(() => {
-        setAvailableModels([]);
-      });
-  }, []);
+  // Curated model list with tiers
+  const availableModels = [
+    // TIER 1: Reasoners
+    { id: 'openai/gpt-oss-120b', displayName: 'gpt-oss-120b (Top reasoning)', category: 'Reasoners' },
+    { id: 'llama-3.3-70b-versatile', displayName: 'llama-3.3-70b (Versatile)', category: 'Reasoners' },
+
+    // TIER 2: Specialists
+    { id: 'moonshotai/kimi-k2-instruct-0905', displayName: 'moonshotai-kimi-1000B-32b (Analysis, Large)', category: 'Specialists' },
+    { id: 'qwen/qwen3-32b', displayName: 'qwen3-32b (Balance)', category: 'Specialists' },
+    { id: 'meta-llama/llama-4-maverick-17b-128e-instruct', displayName: 'llama-4-128e-17b (Creative, Large)', category: 'Specialists' },
+
+    // TIER 3: Speed
+    { id: 'openai/gpt-oss-20b', displayName: 'gpt-oss-20b (Performance)', category: 'Speed' },
+    { id: 'groq/compound', displayName: 'groq/compound (Fast)', category: 'Speed' },
+    { id: 'meta-llama/llama-4-scout-17b-16e-instruct', displayName: 'llama-4-scout-16e-17b (Info gathering)', category: 'Speed' }
+  ];
+
+  // Helper function to get display name for a model
+  const getModelDisplayName = (modelId: string) => {
+    const model = availableModels.find(m => m.id === modelId);
+    return model ? model.displayName : modelId.replace('openai/', '').replace('llama-', 'Llama ');
+  };
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -77,7 +88,7 @@ export function AIAssistantTab() {
                 title="Select AI Model"
                 >
                 <Settings className="h-3 w-3" />
-                {selectedModel.replace('llama-', 'Llama ').replace('openai/', '').replace('-', '.')}
+                {getModelDisplayName(selectedModel)}
               </Button>
               {sessionId && (
                 <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded bg-green-50 border border-green-200 text-green-800">
@@ -143,11 +154,26 @@ export function AIAssistantTab() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {availableModels.map((model) => (
-                  <SelectItem key={model.id} value={model.id}>
-                    {model.id} {model.owned_by && `(${model.owned_by})`}
-                  </SelectItem>
-                ))}
+                {/* Group models by category */}
+                <div className="p-2">
+                  {['Reasoners', 'Specialists', 'Speed'].map(category => {
+                    const categoryModels = availableModels.filter(model => model.category === category);
+                    return (
+                      <div key={category} className="mb-4 last:mb-0">
+                        <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2 px-2">
+                          {category}
+                        </div>
+                        <div className="space-y-1">
+                          {categoryModels.map((model) => (
+                            <SelectItem key={model.id} value={model.id} className="pl-4">
+                              {model.displayName}
+                            </SelectItem>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </SelectContent>
             </Select>
           </div>
