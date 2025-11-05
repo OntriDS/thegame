@@ -218,7 +218,15 @@ export function AIAssistantTab() {
                         </div>
                         <div className="space-y-1">
                           {categoryModels.map((model) => (
-                            <SelectItem key={model.id} value={model.id} className="pl-4 pr-8">
+                            <SelectItem
+                              key={model.id}
+                              value={model.id}
+                              className={`pl-4 pr-8 cursor-pointer transition-colors ${
+                                selectedModel === model.id
+                                  ? 'bg-primary/10 border border-primary/20 text-primary font-medium [&>span:first-child]:hidden'
+                                  : 'hover:bg-muted/50'
+                              }`}
+                            >
                               <div className="flex items-center justify-between w-full">
                                 <span className="truncate">{model.displayName}</span>
                               </div>
