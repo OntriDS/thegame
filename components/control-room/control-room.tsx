@@ -94,7 +94,18 @@ export default function ControlRoom() {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [selectedNode, setSelectedNode] = useState<TreeNode | null>(null);
   const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
-  const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_DEFAULT_WIDTH);
+  // Sidebar width with persistence
+  const getInitialSidebarWidth = () => {
+    const saved = getPreference('control-room-sidebar-width');
+    return saved ? parseInt(saved, 10) : SIDEBAR_DEFAULT_WIDTH;
+  };
+
+  const [sidebarWidth, setSidebarWidthState] = useState(getInitialSidebarWidth);
+
+  const setSidebarWidth = (width: number) => {
+    setSidebarWidthState(width);
+    setPreference('control-room-sidebar-width', width.toString());
+  };
   const [isMounted, setIsMounted] = useState(false);
   
   // Filter State
@@ -123,6 +134,17 @@ export default function ControlRoom() {
   useEffect(() => {
     // DataStore initialization handled automatically in KV-only architecture
   }, []);
+
+  // Load sidebar width from preferences when they become available
+  useEffect(() => {
+    const savedWidth = getPreference('control-room-sidebar-width');
+    if (savedWidth) {
+      const width = parseInt(savedWidth, 10);
+      if (width >= SIDEBAR_MIN_WIDTH && width <= SIDEBAR_MAX_WIDTH) {
+        setSidebarWidthState(width);
+      }
+    }
+  }, [getPreference]);
 
   // Data loading
   const loadTasks = useCallback(async () => {
