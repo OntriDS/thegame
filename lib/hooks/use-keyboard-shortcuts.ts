@@ -44,7 +44,7 @@ export function useKeyboardShortcuts({
     const handleKeyDown = (event: KeyboardEvent) => {
       const { ctrlKey, altKey, shiftKey, key } = event;
 
-      // Alt+D: Insert bullet character (-) in input fields
+      // Alt+D: Insert bullet character (•) in input fields
       if (altKey && !ctrlKey && !shiftKey && key.toLowerCase() === 'd') {
         const target = event.target as HTMLElement;
 
@@ -53,10 +53,10 @@ export function useKeyboardShortcuts({
           const start = target.selectionStart || 0;
           const end = target.selectionEnd || 0;
           const value = target.value;
-          const newValue = value.substring(0, start) + '-' + value.substring(end);
+          const newValue = value.substring(0, start) + '•' + value.substring(end);
           target.value = newValue;
           target.setSelectionRange(start + 1, start + 1);
-          target.dispatchEvent(new Event('input', { bubbles: true }));
+          // Don't dispatch input event to avoid duplication
           return;
         }
 
@@ -66,7 +66,7 @@ export function useKeyboardShortcuts({
           if (selection && selection.rangeCount > 0) {
             const range = selection.getRangeAt(0);
             range.deleteContents();
-            const textNode = document.createTextNode('-');
+            const textNode = document.createTextNode('•');
             range.insertNode(textNode);
             range.collapse(true);
             selection.removeAllRanges();
@@ -214,7 +214,7 @@ export function showKeyboardShortcutsHelp() {
     'Alt + E = Settings Section',
     '',
     '=== TEXT INPUT ===',
-    'Alt + D = Insert bullet character (-)',
+    'Alt + D = Insert bullet character (•)',
     '',
     '=== TASK REORDERING ===',
     '↑ / ↓ = Move selected task up/down (within siblings)',

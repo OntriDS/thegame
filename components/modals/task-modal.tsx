@@ -875,7 +875,7 @@ export default function TaskModal({
                     value={parentId || ''}
                     onValueChange={(val) => setParentId(val || null)}
                     placeholder="No Parent"
-                    options={createTaskParentOptions(tasks, task?.id, isRecurrentModal, task?.type || type)}
+                    options={createTaskParentOptions(tasks, task?.id, isRecurrentModal, type)}
                     autoGroupByCategory={true}
                     className="h-8 text-sm"
                     persistentCollapsible={true}
