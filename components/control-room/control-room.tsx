@@ -97,10 +97,6 @@ export default function ControlRoom() {
   const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_DEFAULT_WIDTH);
   const [isMounted, setIsMounted] = useState(false);
   
-  // Keyboard shortcuts for modal navigation
-  useKeyboardShortcuts({
-    onOpenTaskModal: () => setTaskToEdit({} as Task),
-  });
   // Filter State
   const [stationFilters, setStationFilters] = useState<Set<Station>>(new Set());
   const [typeFilter, setTypeFilter] = useState<TaskType | 'all'>('all');
@@ -198,6 +194,275 @@ export default function ControlRoom() {
     loadTasks();
   }, [loadTasks]);
 
+  // Helper function to check if a task type can be parent of another (Mission tree)
+  const canBeParentMission = (parentType: TaskType, childType: TaskType): boolean => {
+    if (parentType === TaskType.MISSION) {
+      return [TaskType.MILESTONE, TaskType.GOAL, TaskType.ASSIGNMENT].includes(childType);
+    }
+    if (parentType === TaskType.MILESTONE) {
+      return [TaskType.GOAL, TaskType.ASSIGNMENT].includes(childType);
+    }
+    if (parentType === TaskType.GOAL) {
+      return childType === TaskType.ASSIGNMENT;
+    }
+    return false;
+  };
+
+  // Helper function to check if a task type can be parent of another (Recurrent tree)
+  const canBeParentRecurrent = (parentType: TaskType, childType: TaskType): boolean => {
+    if (parentType === TaskType.RECURRENT_GROUP) {
+      return [TaskType.RECURRENT_TEMPLATE, TaskType.RECURRENT_INSTANCE].includes(childType);
+    }
+    if (parentType === TaskType.RECURRENT_TEMPLATE) {
+      return childType === TaskType.RECURRENT_INSTANCE;
+    }
+    return false;
+  };
+
+  // Helper function to reindex siblings when gaps are exhausted
+  const reindexSiblings = (siblings: Task[], startOrder: number = 0): Task[] => {
+    return siblings.map((task, index) => ({
+      ...task,
+      order: startOrder + (index * ORDER_INCREMENT),
+    }));
+  };
+
+  // Helper function to find all visible tasks (flat list from tree)
+  const getAllVisibleTasks = (nodes: TreeNode[]): Task[] => {
+    const result: Task[] = [];
+    const traverse = (ns: TreeNode[]) => {
+      for (const node of ns) {
+        result.push(node.task);
+        if (expanded.has(node.task.id) && node.children.length > 0) {
+          traverse(node.children);
+        }
+      }
+    };
+    traverse(nodes);
+    return result;
+  };
+
+  // Move selection up handler
+  const handleMoveUp = useCallback(async (options: { alt: boolean }) => {
+    if (!selectedNode) return;
+
+    try {
+      const allTasks = reviveDates<Task[]>(await ClientAPI.getTasks());
+      const selectedTask = selectedNode.task;
+      
+      if (options.alt) {
+        // Reparent to previous parent at same level
+        const allVisibleTasks = getAllVisibleTasks(tree);
+        const currentIndex = allVisibleTasks.findIndex(t => t.id === selectedTask.id);
+        
+        if (currentIndex <= 0) return; // Already at top
+        
+        // Find previous task at same or parent level
+        let targetParent: Task | null = null;
+        for (let i = currentIndex - 1; i >= 0; i--) {
+          const candidate = allVisibleTasks[i];
+          
+          // Check hierarchy rules based on active tab
+          const canBeParent = activeSubTab === 'recurrent-tasks'
+            ? canBeParentRecurrent(candidate.type, selectedTask.type)
+            : canBeParentMission(candidate.type, selectedTask.type);
+          
+          if (canBeParent) {
+            targetParent = candidate;
+            break;
+          }
+        }
+        
+        if (targetParent) {
+          // Get target parent's children to determine order
+          const targetChildren = allTasks
+            .filter(t => t.parentId === targetParent!.id)
+            .sort((a, b) => (a.order || 0) - (b.order || 0));
+          
+          const newOrder = targetChildren.length > 0
+            ? (targetChildren[targetChildren.length - 1].order || 0) + ORDER_INCREMENT
+            : Date.now();
+          
+          const updatedTask: Task = {
+            ...selectedTask,
+            parentId: targetParent.id,
+            order: newOrder,
+          };
+          
+          await ClientAPI.upsertTask(updatedTask);
+          
+          // Refresh tasks and update selection
+          const refreshedTasks = reviveDates<Task[]>(await ClientAPI.getTasks());
+          const updatedTaskData = refreshedTasks.find(t => t.id === selectedTask.id);
+          if (updatedTaskData) {
+            const newTree = buildTaskTree(refreshedTasks);
+            const findNode = (nodes: TreeNode[]): TreeNode | null => {
+              for (const node of nodes) {
+                if (node.task.id === updatedTaskData.id) return node;
+                const found = findNode(node.children);
+                if (found) return found;
+              }
+              return null;
+            };
+            const foundNode = findNode(newTree);
+            if (foundNode) setSelectedNode(foundNode);
+          }
+          
+          await loadTasks();
+        }
+      } else {
+        // Reorder within siblings
+        const parentId = selectedTask.parentId;
+        const siblings = allTasks
+          .filter(t => (t.parentId || null) === (parentId || null))
+          .sort((a, b) => (a.order || 0) - (b.order || 0));
+        
+        const currentIndex = siblings.findIndex(t => t.id === selectedTask.id);
+        if (currentIndex <= 0) return; // Already at top
+        
+        const previousSibling = siblings[currentIndex - 1];
+        const previousOrder = previousSibling.order || 0;
+        const currentOrder = selectedTask.order || 0;
+        
+        // Check if there's a gap
+        const gap = previousOrder + ORDER_INCREMENT;
+        if (gap < currentOrder) {
+          // Use the gap
+          const updatedTask: Task = {
+            ...selectedTask,
+            order: gap,
+          };
+          await ClientAPI.upsertTask(updatedTask);
+        } else {
+          // Reindex all siblings
+          const reindexed = reindexSiblings(siblings, previousOrder);
+          // Update all siblings
+          for (const task of reindexed) {
+            await ClientAPI.upsertTask(task);
+          }
+        }
+        
+        await loadTasks();
+      }
+    } catch (error) {
+      console.error('Failed to move task up:', error);
+    }
+  }, [selectedNode, tree, expanded, activeSubTab, loadTasks]);
+
+  // Move selection down handler
+  const handleMoveDown = useCallback(async (options: { alt: boolean }) => {
+    if (!selectedNode) return;
+
+    try {
+      const allTasks = reviveDates<Task[]>(await ClientAPI.getTasks());
+      const selectedTask = selectedNode.task;
+      
+      if (options.alt) {
+        // Reparent to next parent at same level
+        const allVisibleTasks = getAllVisibleTasks(tree);
+        const currentIndex = allVisibleTasks.findIndex(t => t.id === selectedTask.id);
+        
+        if (currentIndex >= allVisibleTasks.length - 1) return; // Already at bottom
+        
+        // Find next task at same or parent level
+        let targetParent: Task | null = null;
+        for (let i = currentIndex + 1; i < allVisibleTasks.length; i++) {
+          const candidate = allVisibleTasks[i];
+          
+          // Check hierarchy rules based on active tab
+          const canBeParent = activeSubTab === 'recurrent-tasks'
+            ? canBeParentRecurrent(candidate.type, selectedTask.type)
+            : canBeParentMission(candidate.type, selectedTask.type);
+          
+          if (canBeParent) {
+            targetParent = candidate;
+            break;
+          }
+        }
+        
+        if (targetParent) {
+          // Get target parent's children to determine order
+          const targetChildren = allTasks
+            .filter(t => t.parentId === targetParent!.id)
+            .sort((a, b) => (a.order || 0) - (b.order || 0));
+          
+          const newOrder = targetChildren.length > 0
+            ? (targetChildren[targetChildren.length - 1].order || 0) + ORDER_INCREMENT
+            : Date.now();
+          
+          const updatedTask: Task = {
+            ...selectedTask,
+            parentId: targetParent.id,
+            order: newOrder,
+          };
+          
+          await ClientAPI.upsertTask(updatedTask);
+          
+          // Refresh tasks and update selection
+          const refreshedTasks = reviveDates<Task[]>(await ClientAPI.getTasks());
+          const updatedTaskData = refreshedTasks.find(t => t.id === selectedTask.id);
+          if (updatedTaskData) {
+            const newTree = buildTaskTree(refreshedTasks);
+            const findNode = (nodes: TreeNode[]): TreeNode | null => {
+              for (const node of nodes) {
+                if (node.task.id === updatedTaskData.id) return node;
+                const found = findNode(node.children);
+                if (found) return found;
+              }
+              return null;
+            };
+            const foundNode = findNode(newTree);
+            if (foundNode) setSelectedNode(foundNode);
+          }
+          
+          await loadTasks();
+        }
+      } else {
+        // Reorder within siblings
+        const parentId = selectedTask.parentId;
+        const siblings = allTasks
+          .filter(t => (t.parentId || null) === (parentId || null))
+          .sort((a, b) => (a.order || 0) - (b.order || 0));
+        
+        const currentIndex = siblings.findIndex(t => t.id === selectedTask.id);
+        if (currentIndex >= siblings.length - 1) return; // Already at bottom
+        
+        const nextSibling = siblings[currentIndex + 1];
+        const nextOrder = nextSibling.order || 0;
+        const currentOrder = selectedTask.order || 0;
+        
+        // Check if there's a gap
+        const gap = nextOrder - ORDER_INCREMENT;
+        if (gap > currentOrder) {
+          // Use the gap
+          const updatedTask: Task = {
+            ...selectedTask,
+            order: gap,
+          };
+          await ClientAPI.upsertTask(updatedTask);
+        } else {
+          // Reindex all siblings
+          const reindexed = reindexSiblings(siblings, currentOrder + ORDER_INCREMENT);
+          // Update all siblings
+          for (const task of reindexed) {
+            await ClientAPI.upsertTask(task);
+          }
+        }
+        
+        await loadTasks();
+      }
+    } catch (error) {
+      console.error('Failed to move task down:', error);
+    }
+  }, [selectedNode, tree, expanded, activeSubTab, loadTasks]);
+
+  // Keyboard shortcuts for modal navigation and task reordering
+  useKeyboardShortcuts({
+    onOpenTaskModal: () => setTaskToEdit({} as Task),
+    onMoveSelectionUp: handleMoveUp,
+    onMoveSelectionDown: handleMoveDown,
+  });
+
   // Load preferences on mount
   useEffect(() => {
     const savedSubTab = getPreference('control-room-active-sub-tab', 'mission-tree');
@@ -265,45 +530,40 @@ export default function ControlRoom() {
 
     const draggedId = active.id as string;
     const targetId = over.id as string;
-    const allTasks = await ClientAPI.getTasks();
+    const allTasks = reviveDates<Task[]>(await ClientAPI.getTasks());
     
     const draggedTask = allTasks.find(t => t.id === draggedId);
     const targetTask = allTasks.find(t => t.id === targetId);
     
     if (!draggedTask || !targetTask) return;
 
-    // Hierarchy rules: Mission > Milestone > Goal > Assignment
-    // Only allow valid parent-child relationships
-    const canBeParent = (() => {
-      if (targetTask.type === TaskType.MISSION) {
-        // Mission can accept Milestone, Goal, Assignment
-        return [TaskType.MILESTONE, TaskType.GOAL, TaskType.ASSIGNMENT].includes(draggedTask.type);
-      }
-      if (targetTask.type === TaskType.MILESTONE) {
-        // Milestone can accept Goal, Assignment
-        return [TaskType.GOAL, TaskType.ASSIGNMENT].includes(draggedTask.type);
-      }
-      if (targetTask.type === TaskType.GOAL) {
-        // Goal can accept Assignment only
-        return draggedTask.type === TaskType.ASSIGNMENT;
-      }
-      // Assignment cannot accept any children
-      return false;
-    })();
+    // Check hierarchy rules based on active tab
+    const canBeParent = activeSubTab === 'recurrent-tasks'
+      ? canBeParentRecurrent(targetTask.type, draggedTask.type)
+      : canBeParentMission(targetTask.type, draggedTask.type);
     
     if (canBeParent) {
       // NESTING: Make target the parent
+      // Get target parent's children to determine order
+      const targetChildren = allTasks
+        .filter(t => t.parentId === targetTask.id)
+        .sort((a, b) => (a.order || 0) - (b.order || 0));
+      
+      const newOrder = targetChildren.length > 0
+        ? (targetChildren[targetChildren.length - 1].order || 0) + ORDER_INCREMENT
+        : Date.now();
+      
       const updatedTask: Task = {
         ...draggedTask,
         parentId: targetTask.id,
-        order: Date.now(),
+        order: newOrder,
       };
       await ClientAPI.upsertTask(updatedTask);
     } else {
       // REORDERING: Keep same parent, just change order
       const parentId = targetTask.parentId;
       const siblings = allTasks
-        .filter(t => t.parentId === parentId)
+        .filter(t => (t.parentId || null) === (parentId || null))
         .sort((a, b) => (a.order || 0) - (b.order || 0));
       
       const oldIndex = siblings.findIndex(t => t.id === draggedId);
