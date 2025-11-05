@@ -37,6 +37,8 @@ export function useAIChat() {
     toolCalls: [],
     toolResults: []
   });
+  const [systemPrompt, setSystemPrompt] = useState<string | undefined>(undefined);
+  const [systemPreset, setSystemPreset] = useState<'analyst' | 'strategist' | 'assistant' | 'accounter' | 'empty' | 'custom' | undefined>(undefined);
 
   // Hydrate model from active session on mount
   useEffect(() => {
@@ -160,6 +162,8 @@ export function useAIChat() {
     setSessionId(null);
     setMessages([]);
     setError(null);
+    setSystemPrompt(undefined);
+    setSystemPreset(undefined);
     setToolExecution({
       isExecuting: false,
       currentTool: null,
@@ -191,6 +195,10 @@ export function useAIChat() {
           toolResults: msg.toolResults
         }));
         setMessages(loadedMessages);
+
+        // Load system prompt data
+        setSystemPrompt(sessionData.systemPrompt);
+        setSystemPreset(sessionData.systemPreset);
       }
     } catch (error) {
       console.error('Error loading session:', error);
@@ -241,6 +249,8 @@ export function useAIChat() {
     rateLimits,
     sessionId,
     toolExecution,
+    systemPrompt,
+    systemPreset,
   };
 }
 

@@ -31,9 +31,9 @@ export async function PUT(
   }
 
   try {
-    const { name, model, messages } = await request.json();
-    if (!name && !model && !messages) {
-      return Response.json({ error: 'Name, model, or messages is required' }, { status: 400 });
+    const { name, model, messages, systemPrompt, systemPreset } = await request.json();
+    if (!name && !model && !messages && systemPrompt === undefined && systemPreset === undefined) {
+      return Response.json({ error: 'Name, model, messages, systemPrompt, or systemPreset is required' }, { status: 400 });
     }
 
     if (name) {
@@ -44,6 +44,9 @@ export async function PUT(
     }
     if (messages) {
       await SessionManager.updateSessionMessages(params.id, messages);
+    }
+    if (systemPrompt !== undefined || systemPreset !== undefined) {
+      await SessionManager.updateSessionSystemPrompt(params.id, systemPrompt, systemPreset);
     }
 
     const session = await SessionManager.getSession(params.id);

@@ -6,8 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Bot, Send, Trash2, Loader2, Settings, Wrench, Database, Zap } from 'lucide-react';
+import { Bot, Send, Trash2, Loader2, Settings, Wrench, Database, Zap, MessageSquare } from 'lucide-react';
 import AiSessionManagerSubmodal from '@/components/modals/submodals/ai-session-manager-submodal';
+import SystemPromptSubmodal from '@/components/modals/submodals/system-prompt-submodal';
 import { useAIChat, ChatMessage } from '@/lib/hooks/use-ai-chat';
 import { ClientAPI } from '@/lib/client-api';
 
@@ -18,12 +19,13 @@ interface GroqModel {
 }
 
 export function AIAssistantTab() {
-  const { messages, isLoading, error, sendMessage, clearMessages, clearSession, loadSession, saveSession, selectedModel, setSelectedModel, selectedProvider, rateLimits, sessionId, toolExecution } = useAIChat();
+  const { messages, isLoading, error, sendMessage, clearMessages, clearSession, loadSession, saveSession, selectedModel, setSelectedModel, selectedProvider, rateLimits, sessionId, toolExecution, systemPrompt, systemPreset } = useAIChat();
   const [showModelSelect, setShowModelSelect] = useState(false);
   const [input, setInput] = useState('');
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [showSessionMgr, setShowSessionMgr] = useState(false);
+  const [showSystemPrompt, setShowSystemPrompt] = useState(false);
   const [enableTools, setEnableTools] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -230,6 +232,21 @@ export function AIAssistantTab() {
                   <Button
                     variant="outline"
                     size="sm"
+                    onClick={() => setShowSystemPrompt(true)}
+                    className="gap-2"
+                    title="Configure system prompt"
+                  >
+                    <MessageSquare className="h-4 w-4" />
+                    System Prompt
+                    {systemPreset && systemPreset !== 'empty' && (
+                      <span className="ml-1 px-1.5 py-0.5 text-xs rounded bg-primary/10 text-primary border border-primary/20">
+                        {systemPreset}
+                      </span>
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={clearSession}
                     className="gap-2"
                     title="Clear session and start fresh"
@@ -425,6 +442,29 @@ export function AIAssistantTab() {
 
       </CardContent>
       <AiSessionManagerSubmodal open={showSessionMgr} onOpenChange={setShowSessionMgr} onSessionLoad={loadSession} />
+      {sessionId && (
+        <SystemPromptSubmodal
+          open={showSystemPrompt}
+          onOpenChange={setShowSystemPrompt}
+          sessionId={sessionId}
+          currentPrompt={systemPrompt}
+          currentPreset={systemPreset}
+          onSaved={async () => {
+            // Reload session to get updated system prompt data
+            if (sessionId) {
+              try {
+                const sessionData = await ClientAPI.getSessionById(sessionId);
+                if (sessionData) {
+                  // Update the hook's internal state by reloading the session
+                  await loadSession(sessionId);
+                }
+              } catch (error) {
+                console.error('Error refreshing session after prompt update:', error);
+              }
+            }
+          }}
+        />
+      )}
     </Card>
   );
 }

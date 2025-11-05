@@ -825,4 +825,6 @@ export interface AISession extends BaseEntity {
     project: string;
     preferences?: Record<string, any>; // User preferences stored as key-value pairs
   };
+  systemPrompt?: string; // Custom system prompt text
+  systemPreset?: 'analyst' | 'strategist' | 'assistant' | 'accounter' | 'empty' | 'custom'; // Preset type for system prompt
 }

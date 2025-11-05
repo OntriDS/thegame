@@ -803,6 +803,16 @@ export const ClientAPI = {
     return await res.json();
   },
 
+  updateSessionPrompt: async (id: string, systemPrompt?: string, systemPreset?: 'analyst' | 'strategist' | 'assistant' | 'accounter' | 'empty' | 'custom'): Promise<AISession> => {
+    const res = await fetch(`/api/ai/sessions/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ systemPrompt, systemPreset })
+    });
+    if (!res.ok) throw new Error('Failed to update session prompt');
+    return await res.json();
+  },
+
   deleteSession: async (id: string): Promise<void> => {
     const res = await fetch(`/api/ai/sessions/${id}`, { method: 'DELETE' });
     if (!res.ok) throw new Error('Failed to delete session');

@@ -32,9 +32,11 @@ export async function POST(request: NextRequest) {
     // Load session messages if session exists
     let sessionMessages: any[] = [];
     let modelToUse = model || 'openai/gpt-oss-120b';
+    let currentSession: any = null;
     if (currentSessionId) {
       const session = await SessionManager.getSession(currentSessionId);
       if (session) {
+        currentSession = session;
         sessionMessages = await SessionManager.getSessionMessages(currentSessionId);
         // Use the session's saved model if available
         if (session.model) {
@@ -46,11 +48,22 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Get system message from session (if any)
+    const systemMessage = SessionManager.getSystemMessage(currentSession);
+
     // Prepare messages array for Groq API (last 20 messages to stay within token limits)
-    const messagesToSend = [
+    const messagesToSend: any[] = [];
+    
+    // Add system message first if it exists
+    if (systemMessage) {
+      messagesToSend.push({ role: 'system', content: systemMessage });
+    }
+    
+    // Add conversation history and current message
+    messagesToSend.push(
       ...sessionMessages.slice(-20),
       { role: 'user', content: message }
-    ];
+    );
 
     // Prepare request body with optional tools
     const requestBody: any = {
@@ -136,6 +149,13 @@ export async function POST(request: NextRequest) {
       messagesToSend.push(...toolResults);
 
       // Make follow-up request to get final response
+      // Ensure system message is included in follow-up request
+      const followupMessages: any[] = [];
+      if (systemMessage) {
+        followupMessages.push({ role: 'system', content: systemMessage });
+      }
+      followupMessages.push(...messagesToSend.filter(m => m.role !== 'system'));
+      
       const followupResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -144,7 +164,7 @@ export async function POST(request: NextRequest) {
         },
         body: JSON.stringify({
           model: modelToUse,
-          messages: messagesToSend,
+          messages: followupMessages,
           temperature: 0.7,
         }),
       });

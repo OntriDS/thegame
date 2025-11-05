@@ -368,6 +368,57 @@ export class SessionManager {
     session.name = name;
     await this.saveSession(session);
   }
+
+  /**
+   * Update session system prompt
+   */
+  static async updateSessionSystemPrompt(sessionId: string, systemPrompt: string | undefined, systemPreset: 'analyst' | 'strategist' | 'assistant' | 'accounter' | 'empty' | 'custom' | undefined): Promise<void> {
+    const session = await this.getSession(sessionId);
+    if (!session) {
+      throw new Error('Session not found');
+    }
+
+    session.systemPrompt = systemPrompt;
+    session.systemPreset = systemPreset;
+    await this.saveSession(session);
+  }
+
+  /**
+   * Get system message content from session
+   * Returns the system prompt text based on preset or custom prompt
+   */
+  static getSystemMessage(session: AISession | null): string | null {
+    if (!session) return null;
+
+    // If preset is 'empty', return null (no system message)
+    if (session.systemPreset === 'empty') {
+      return null;
+    }
+
+    // If custom prompt is provided, use it
+    if (session.systemPreset === 'custom' && session.systemPrompt) {
+      return session.systemPrompt;
+    }
+
+    // Use preset templates
+    switch (session.systemPreset) {
+      case 'analyst':
+        return 'You are a precise analyst for a creative project management app. Format your responses using markdown for clarity: use ## headings for sections, **bold** for key terms, bullet points for lists, and a final "Action Items" section when applicable. Keep answers concise, structured, and data-driven.';
+      
+      case 'strategist':
+        return 'You are a strategic planning assistant for a creative project management app. Format your responses using markdown: use ## headings for major sections, bullet points for lists, and include sections for Objectives, Phases, Risks/Mitigations, and Success Metrics when planning. Provide clear, actionable strategic guidance.';
+      
+      case 'assistant':
+        return 'You are an organizational assistant for a creative project management app. Format your responses using markdown with checklists, priorities, and next steps. Use - [ ] for checkboxes, **bold** for priorities, and structured bullet points. Focus on actionable, organizational tasks.';
+      
+      case 'accounter':
+        return 'You are a financial accountant and asset management specialist for a creative project management app. You have deep knowledge of finances, assets, inventory, sales, and financial records. Format your responses using markdown: use ## headings for sections, **bold** for key financial terms and amounts, bullet points for lists, and tables for financial data when applicable. Always include relevant financial metrics, asset valuations, and clear financial insights. Focus on financial analysis, budgeting, asset tracking, and financial planning.';
+      
+      default:
+        // If no preset or custom, return null (no system message)
+        return null;
+    }
+  }
 }
 
 // Helper function to get session ID from request headers
