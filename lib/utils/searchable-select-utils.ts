@@ -203,9 +203,11 @@ export function getCategoryFromCombined(combinedValue: string): string {
  * Creates task parent options with TASK_CATEGORIES for SearchableSelect
  * @param tasks Array of available tasks
  * @param currentTaskId Current task ID to exclude from parent options
+ * @param isRecurrentModal Whether we're in recurrent task modal (affects filtering)
+ * @param currentTaskType The type of the current task being edited (for hierarchy validation)
  * @returns Array of task parent options with proper TASK_CATEGORIES grouping
  */
-export function createTaskParentOptions(tasks: any[], currentTaskId?: string) {
+export function createTaskParentOptions(tasks: any[], currentTaskId?: string, isRecurrentModal: boolean = false, currentTaskType?: string) {
   const options: Array<{
     value: string;
     label: string;
@@ -219,38 +221,93 @@ export function createTaskParentOptions(tasks: any[], currentTaskId?: string) {
   }
   
   // Filter out current task and add remaining tasks with their proper category
-  const availableTasks = tasks.filter(task => task && task.id && task.id !== currentTaskId);
-  
-  // Group tasks by their TASK_CATEGORIES
-  const groupedTasks: Record<string, any[]> = {};
-  
-  for (const task of availableTasks) {
-    const category = getCategoryForTaskType(task.type || 'ASSIGNMENT');
-    if (!groupedTasks[category]) {
-      groupedTasks[category] = [];
-    }
-    groupedTasks[category].push(task);
+  let availableTasks = tasks.filter(task => task && task.id && task.id !== currentTaskId);
+
+  // Filter by tree type (Mission vs Recurrent)
+  if (isRecurrentModal) {
+    // In recurrent modal, only show recurrent tasks
+    availableTasks = availableTasks.filter(task =>
+      task.type === 'Recurrent Group' ||
+      task.type === 'Recurrent Template' ||
+      task.type === 'Recurrent Instance'
+    );
+  } else {
+    // In mission modal, only show mission tree tasks
+    availableTasks = availableTasks.filter(task =>
+      task.type === 'Mission' ||
+      task.type === 'Milestone' ||
+      task.type === 'Goal' ||
+      task.type === 'Assignment'
+    );
+  }
+
+  // Apply hierarchy rules based on current task type
+  if (currentTaskType) {
+    availableTasks = availableTasks.filter(task => {
+      // Helper function to check if task can be a parent of current task type
+      const canBeParent = (parentType: string, childType: string): boolean => {
+        if (isRecurrentModal) {
+          // Recurrent hierarchy rules
+          switch (childType) {
+            case 'Recurrent Group':
+              return false; // Groups can't have parents
+            case 'Recurrent Template':
+              return parentType === 'Recurrent Group'; // Templates can only have groups as parents
+            case 'Recurrent Instance':
+              return parentType === 'Recurrent Group' || parentType === 'Recurrent Template'; // Instances can have both
+            default:
+              return false;
+          }
+        } else {
+          // Mission hierarchy rules
+          switch (childType) {
+            case 'Mission':
+              return false; // Missions can't have parents
+            case 'Milestone':
+              return parentType === 'Mission'; // Milestones can only have missions as parents
+            case 'Goal':
+              return parentType === 'Mission' || parentType === 'Milestone'; // Goals can have missions or milestones
+            case 'Assignment':
+              return parentType === 'Mission' || parentType === 'Milestone' || parentType === 'Goal'; // Assignments can have any level except themselves
+            default:
+              return false;
+          }
+        }
+      };
+
+      return canBeParent(task.type, currentTaskType);
+    });
   }
   
-  // Add tasks in specific order: Mission, Milestone, Goal, Assignment, then Recurrent types
-  const taskTypeOrder = ['Mission', 'Milestone', 'Goal', 'Assignment', 'Recurrent Parent', 'Recurrent Template', 'Recurrent Instance'];
-  const addedTaskIds = new Set<string>(); // Track added tasks to prevent duplicates
+  // Group tasks by their specific type (not broader categories)
+  const groupedTasks: Record<string, any[]> = {};
+
+  for (const task of availableTasks) {
+    const taskType = task.type || 'Assignment';
+    if (!groupedTasks[taskType]) {
+      groupedTasks[taskType] = [];
+    }
+    groupedTasks[taskType].push(task);
+  }
   
+  // Add tasks in specific order: Mission types first, then Recurrent types
+  const taskTypeOrder = ['Mission', 'Milestone', 'Goal', 'Assignment', 'Recurrent Group', 'Recurrent Template', 'Recurrent Instance'];
+  const addedTaskIds = new Set<string>(); // Track added tasks to prevent duplicates
+
   for (const taskType of taskTypeOrder) {
-    const category = getCategoryForTaskType(taskType);
-    if (groupedTasks[category]) {
-      // Sort tasks within category by name for consistency
-      const sortedTasks = groupedTasks[category].sort((a, b) => 
+    if (groupedTasks[taskType]) {
+      // Sort tasks within type by name for consistency
+      const sortedTasks = groupedTasks[taskType].sort((a, b) =>
         (a.name || '').localeCompare(b.name || '')
       );
-      
+
       sortedTasks.forEach(task => {
         // Only add task if not already added
         if (!addedTaskIds.has(task.id)) {
           options.push({
             value: task.id,
             label: task.name || 'Unnamed Task',
-            category: category
+            category: taskType
           });
           addedTaskIds.add(task.id);
         }

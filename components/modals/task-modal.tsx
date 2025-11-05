@@ -100,7 +100,7 @@ export default function TaskModal({
   const [status, setStatus] = useState<TaskStatus>(TaskStatus.CREATED);
   const [priority, setPriority] = useState<TaskPriority>(TaskPriority.NORMAL);
   const [type, setType] = useState<TaskType>(getLastUsedType());
-  const [station, setStation] = useState<Station>(getLastUsedStation());
+  const [station, setStation] = useState<Station>('Strategy' as Station);
   const getInitialStationCategory = (): string => {
     const lastStation = getLastUsedStation();
     const area = getAreaForStation(lastStation);
@@ -211,6 +211,12 @@ export default function TaskModal({
       setEmissaryColumnExpanded(false);
     }
     // If savedEmissary is null, keep default (false)
+
+    // Initialize station from preferences (fixes persistence issue)
+    const savedStation = getPreference('task-modal-last-station');
+    if (savedStation) {
+      setStation(savedStation as Station);
+    }
   }, [getPreference]);
   
   useEffect(() => {
@@ -869,7 +875,7 @@ export default function TaskModal({
                     value={parentId || ''}
                     onValueChange={(val) => setParentId(val || null)}
                     placeholder="No Parent"
-                    options={createTaskParentOptions(tasks, task?.id)}
+                    options={createTaskParentOptions(tasks, task?.id, isRecurrentModal, task?.type || type)}
                     autoGroupByCategory={true}
                     className="h-8 text-sm"
                     persistentCollapsible={true}
