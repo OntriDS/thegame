@@ -793,6 +793,16 @@ export const ClientAPI = {
     return await res.json();
   },
 
+  updateSessionMessages: async (id: string, messages: any[]): Promise<AISession> => {
+    const res = await fetch(`/api/ai/sessions/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages })
+    });
+    if (!res.ok) throw new Error('Failed to update session messages');
+    return await res.json();
+  },
+
   deleteSession: async (id: string): Promise<void> => {
     const res = await fetch(`/api/ai/sessions/${id}`, { method: 'DELETE' });
     if (!res.ok) throw new Error('Failed to delete session');

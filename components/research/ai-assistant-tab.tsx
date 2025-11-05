@@ -18,13 +18,15 @@ interface GroqModel {
 }
 
 export function AIAssistantTab() {
-  const { messages, isLoading, error, sendMessage, clearMessages, clearSession, loadSession, selectedModel, setSelectedModel, selectedProvider, rateLimits, sessionId, toolExecution } = useAIChat();
+  const { messages, isLoading, error, sendMessage, clearMessages, clearSession, loadSession, saveSession, selectedModel, setSelectedModel, selectedProvider, rateLimits, sessionId, toolExecution } = useAIChat();
   const [showModelSelect, setShowModelSelect] = useState(false);
   const [input, setInput] = useState('');
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [showSessionMgr, setShowSessionMgr] = useState(false);
   const [enableTools, setEnableTools] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Curated model list with tiers
   const availableModels = [
@@ -55,6 +57,54 @@ export function AIAssistantTab() {
       scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
     }
   }, [messages]);
+
+  // Track unsaved changes
+  useEffect(() => {
+    // Mark as having unsaved changes when there are messages and a session
+    // This will be reset when session is saved or cleared
+    if (messages.length > 0 && sessionId) {
+      setHasUnsavedChanges(true);
+    } else {
+      setHasUnsavedChanges(false);
+    }
+  }, [messages, sessionId]);
+
+  // Warn before leaving with unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = 'You have unsaved changes in your AI session. Are you sure you want to leave?';
+        return e.returnValue;
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
+
+  // Handle manual session save
+  const handleSaveSession = async () => {
+    if (!sessionId || messages.length === 0) {
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const success = await saveSession();
+      if (success) {
+        setHasUnsavedChanges(false);
+        // Could add a toast notification here
+      } else {
+        console.error('Failed to save session');
+        // Could add an error toast here
+      }
+    } catch (error) {
+      console.error('Error saving session:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   // Auto-resize textarea
   const adjustTextareaHeight = () => {
@@ -161,16 +211,33 @@ export function AIAssistantTab() {
                 Clear
               </Button>
               {sessionId && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={clearSession}
-                  className="gap-2"
-                  title="Clear session and start fresh"
-                >
-                  <Database className="h-4 w-4" />
-                  New Session
-                </Button>
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSaveSession}
+                    disabled={isSaving || messages.length === 0}
+                    className="gap-2"
+                    title="Save current session"
+                  >
+                    {isSaving ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Database className="h-4 w-4" />
+                    )}
+                    {isSaving ? 'Saving...' : 'Save Session'}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={clearSession}
+                    className="gap-2"
+                    title="Clear session and start fresh"
+                  >
+                    <Database className="h-4 w-4" />
+                    New Session
+                  </Button>
+                </>
               )}
               <Button
                 variant="outline"

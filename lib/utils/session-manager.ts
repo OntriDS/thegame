@@ -343,6 +343,20 @@ export class SessionManager {
   }
 
   /**
+   * Update session messages
+   */
+  static async updateSessionMessages(sessionId: string, messages: any[]): Promise<void> {
+    const session = await this.getSession(sessionId);
+    if (!session) {
+      throw new Error('Session not found');
+    }
+
+    session.messages = messages;
+    session.messageCount = messages.length;
+    await this.saveSession(session);
+  }
+
+  /**
    * Update session name
    */
   static async updateSessionName(sessionId: string, name: string): Promise<void> {

@@ -171,7 +171,7 @@ export function useAIChat() {
   const loadSession = async (id: string) => {
     setSessionId(id);
     setError(null);
-    
+
     // Load session messages from the session
     try {
       const { ClientAPI } = await import('@/lib/client-api');
@@ -181,7 +181,7 @@ export function useAIChat() {
         if (sessionData.model) {
           setSelectedModel(sessionData.model);
         }
-        
+
         // Convert session messages to ChatMessage format
         const loadedMessages: ChatMessage[] = sessionData.messages.map(msg => ({
           role: msg.role as 'user' | 'assistant',
@@ -198,6 +198,33 @@ export function useAIChat() {
     }
   };
 
+  const saveSession = async () => {
+    if (!sessionId || messages.length === 0) {
+      return false; // Nothing to save
+    }
+
+    try {
+      // Save current messages to the session
+      const { ClientAPI } = await import('@/lib/client-api');
+
+      // Convert messages to session format
+      const sessionMessages = messages.map(msg => ({
+        role: msg.role,
+        content: msg.content,
+        timestamp: msg.timestamp.toISOString(),
+        toolCalls: msg.toolCalls,
+        toolResults: msg.toolResults
+      }));
+
+      // Update session with current messages
+      await ClientAPI.updateSessionMessages(sessionId, sessionMessages);
+      return true;
+    } catch (error) {
+      console.error('Error saving session:', error);
+      return false;
+    }
+  };
+
   return {
     messages,
     isLoading,
@@ -206,6 +233,7 @@ export function useAIChat() {
     clearMessages,
     clearSession,
     loadSession,
+    saveSession,
     selectedModel,
     setSelectedModel,
     selectedProvider,

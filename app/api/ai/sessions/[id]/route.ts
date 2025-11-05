@@ -31,9 +31,9 @@ export async function PUT(
   }
 
   try {
-    const { name, model } = await request.json();
-    if (!name && !model) {
-      return Response.json({ error: 'Name or model is required' }, { status: 400 });
+    const { name, model, messages } = await request.json();
+    if (!name && !model && !messages) {
+      return Response.json({ error: 'Name, model, or messages is required' }, { status: 400 });
     }
 
     if (name) {
@@ -41,6 +41,9 @@ export async function PUT(
     }
     if (model) {
       await SessionManager.updateSessionModel(params.id, model);
+    }
+    if (messages) {
+      await SessionManager.updateSessionMessages(params.id, messages);
     }
 
     const session = await SessionManager.getSession(params.id);
