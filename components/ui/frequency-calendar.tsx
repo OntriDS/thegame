@@ -72,8 +72,33 @@ export function FrequencyCalendar({
 
   React.useEffect(() => {
     if (value) {
-      setConfig(value);
-      setCustomDays(value.customDays || []);
+      // Convert customDays strings to Date objects if needed (from JSON serialization)
+      const normalizedConfig = { ...value };
+      if (normalizedConfig.customDays && Array.isArray(normalizedConfig.customDays)) {
+        normalizedConfig.customDays = normalizedConfig.customDays.map((day: any) => {
+          if (day instanceof Date) {
+            return day;
+          }
+          if (typeof day === 'string') {
+            const date = new Date(day);
+            return isNaN(date.getTime()) ? null : date;
+          }
+          return day;
+        }).filter((day: any) => day instanceof Date && !isNaN(day.getTime())) as Date[];
+      }
+      
+      // Also normalize stopsAfter.value if it's a date string
+      if (normalizedConfig.stopsAfter?.type === 'date' && normalizedConfig.stopsAfter.value) {
+        if (typeof normalizedConfig.stopsAfter.value === 'string') {
+          const date = new Date(normalizedConfig.stopsAfter.value);
+          if (!isNaN(date.getTime())) {
+            normalizedConfig.stopsAfter.value = date;
+          }
+        }
+      }
+      
+      setConfig(normalizedConfig);
+      setCustomDays(normalizedConfig.customDays || []);
     }
   }, [value]);
 
@@ -111,7 +136,13 @@ export function FrequencyCalendar({
     if (config.stopsAfter.type === 'times') {
       return `After ${config.stopsAfter.value} times`;
     }
-    return `Until ${formatDisplayDate(config.stopsAfter.value as Date)}`;
+    // Ensure value is a Date object before formatting
+    const dateValue = config.stopsAfter.value instanceof Date 
+      ? config.stopsAfter.value 
+      : typeof config.stopsAfter.value === 'string' 
+        ? new Date(config.stopsAfter.value) 
+        : new Date();
+    return `Until ${formatDisplayDate(dateValue)}`;
   };
 
   return (
@@ -178,11 +209,11 @@ export function FrequencyCalendar({
                       <Button variant="outline" className="w-full justify-start h-8 text-sm">
                         <CalendarIcon className="mr-2 h-3 w-3" />
                         {config.type === RecurrentFrequency.DAILY ? 
-                          (customDays.length > 0 ? customDays[0]?.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }) : 'Select starting day') :
+                          (customDays.length > 0 && customDays[0] instanceof Date ? customDays[0].toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }) : 'Select starting day') :
                          config.type === RecurrentFrequency.WEEKLY ?
-                          (customDays.length > 0 ? customDays[0]?.toLocaleDateString('en-US', { weekday: 'long' }) : 'Select starting day of week') :
+                          (customDays.length > 0 && customDays[0] instanceof Date ? customDays[0].toLocaleDateString('en-US', { weekday: 'long' }) : 'Select starting day of week') :
                          config.type === RecurrentFrequency.MONTHLY ? 
-                          (customDays.length > 0 ? `Day ${customDays[0]?.getDate()}` : 'Select starting day of month') :
+                          (customDays.length > 0 && customDays[0] instanceof Date ? `Day ${customDays[0].getDate()}` : 'Select starting day of month') :
                           (customDays.length > 0 ? `${customDays.length} day${customDays.length !== 1 ? 's' : ''} selected` : 'Select custom days')
                         }
                       </Button>
@@ -344,7 +375,13 @@ export function FrequencyCalendar({
                     />
                   ) : config.stopsAfter?.type === 'date' ? (
                     <DateInput
-                      value={(config.stopsAfter.value as Date) || new Date()}
+                      value={
+                        config.stopsAfter.value instanceof Date
+                          ? config.stopsAfter.value
+                          : typeof config.stopsAfter.value === 'string'
+                            ? new Date(config.stopsAfter.value)
+                            : new Date()
+                      }
                       onChange={(date) =>
                         handleConfigChange({
                           stopsAfter: {
