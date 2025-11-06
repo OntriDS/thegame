@@ -30,7 +30,8 @@ export interface RecurrentTaskConfig {
 export function createRecurrentGroup(
   name: string,
   description: string,
-  station: string
+  station: string,
+  parentId?: string | null
 ): Task {
   return {
     id: uuid(),
@@ -42,6 +43,7 @@ export function createRecurrentGroup(
     station: station as any,
     progress: 0,
     order: 0,
+    parentId: parentId || null,
     isRecurrentGroup: true,
     isTemplate: false,
     cost: 0,
@@ -323,29 +325,50 @@ export async function handleTemplateInstanceCreation(template: Task): Promise<Ta
 }
 
 /**
- * Deletes a recurrent group and all its child templates and instances.
+ * Deletes a recurrent group and all its child templates, instances, and nested groups.
  */
 export async function deleteGroupCascade(groupId: string): Promise<number> {
   const tasks = await getAllTasks();
+  const toDelete = new Set<string>([groupId]);
 
-  // Find all child templates of this group
-  const childTemplates = tasks.filter((t: Task) =>
-    t.parentId === groupId && t.type === TaskType.RECURRENT_TEMPLATE
-  );
+  // Recursive function to collect all descendants
+  const collectDescendants = (parentId: string) => {
+    // Find all child groups (nested groups)
+    const childGroups = tasks.filter((t: Task) =>
+      t.parentId === parentId && t.type === TaskType.RECURRENT_GROUP
+    );
+    
+    // Find all child templates
+    const childTemplates = tasks.filter((t: Task) =>
+      t.parentId === parentId && t.type === TaskType.RECURRENT_TEMPLATE
+    );
 
-  // Find all instances of those templates
-  const templateIds = childTemplates.map(t => t.id);
-  const childInstances = tasks.filter((t: Task) =>
-    templateIds.includes(t.parentId || '') && t.type === TaskType.RECURRENT_INSTANCE
-  );
+    // Add child groups and recursively process them
+    childGroups.forEach(g => {
+      toDelete.add(g.id);
+      collectDescendants(g.id); // Recursively process nested groups
+    });
+    
+    // Add templates
+    childTemplates.forEach(t => toDelete.add(t.id));
 
-  // Delete all: group, templates, instances
-  const toDelete = [groupId, ...templateIds, ...childInstances.map(t => t.id)];
+    // Find all instances of those templates
+    const templateIds = childTemplates.map(t => t.id);
+    const childInstances = tasks.filter((t: Task) =>
+      templateIds.includes(t.parentId || '') && t.type === TaskType.RECURRENT_INSTANCE
+    );
+    childInstances.forEach(i => toDelete.add(i.id));
+  };
+
+  // Start recursive collection from the root group
+  collectDescendants(groupId);
+
+  // Delete all collected tasks
   for (const taskId of toDelete) {
     await deleteTask(taskId);
   }
 
-  return toDelete.length;
+  return toDelete.size;
 }
 
 /**

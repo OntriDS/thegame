@@ -9,6 +9,7 @@ import { EntityType } from '@/types/enums';
 import { useLogManagement } from '@/lib/hooks/use-log-management';
 import { LogDeleteConfirmDialog } from './log-delete-confirm-dialog';
 import { LogEntryEditModal } from './log-entry-edit-modal';
+import ConfirmationModal from '../modals/submodals/confirmation-submodal';
 
 interface LogManagementActionsProps {
   entityType: EntityType;
@@ -31,7 +32,16 @@ export function LogManagementActions({
 }: LogManagementActionsProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const { handleDeleteEntry, handleRestoreEntry, handlePermanentDeleteEntry, handleEditEntry, isManaging } = useLogManagement({ onReload });
+  const {
+    handleDeleteEntry,
+    handleRestoreEntry,
+    handlePermanentDeleteEntry,
+    handleEditEntry,
+    isManaging,
+    showPermanentDeleteConfirm,
+    setShowPermanentDeleteConfirm,
+    confirmPermanentDelete
+  } = useLogManagement({ onReload });
 
   const entryName = entry.displayName || entry.name || 'Entry';
 
@@ -112,6 +122,19 @@ export function LogManagementActions({
               setShowDeleteConfirm(false);
             }}
             isDeleting={isManaging}
+          />
+
+          {/* Permanent Delete Confirmation Modal */}
+          <ConfirmationModal
+            open={!!showPermanentDeleteConfirm}
+            onOpenChange={(open) => !open && setShowPermanentDeleteConfirm(null)}
+            title="Permanently Delete Log Entry"
+            description={`Are you sure you want to permanently delete this log entry? This action cannot be undone and the entry will be completely removed from the system.`}
+            confirmText="Permanently Delete"
+            cancelText="Cancel"
+            variant="destructive"
+            onConfirm={confirmPermanentDelete}
+            isLoading={isManaging}
           />
         </>
       )}

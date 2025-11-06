@@ -327,15 +327,33 @@ export async function removeTaskLogEntriesOnDelete(task: Task): Promise<void> {
           (t.parentId === task.id && t.type === TaskType.RECURRENT_INSTANCE)
         );
       } else if (task.type === TaskType.RECURRENT_GROUP) {
-        // Delete group + all child templates + all their instances
-        const childTemplates = tasks.filter(t =>
-          t.parentId === task.id && t.type === TaskType.RECURRENT_TEMPLATE
-        );
-        const templateIds = childTemplates.map(t => t.id);
-        const childInstances = tasks.filter(t =>
-          templateIds.includes(t.parentId || '') && t.type === TaskType.RECURRENT_INSTANCE
-        );
-        toDelete = [task, ...childTemplates, ...childInstances];
+        // Collect all tasks that will be deleted (before deletion) for log cleanup
+        // This includes nested groups, templates, and instances
+        toDelete = [task];
+        
+        // Recursive function to collect all descendants
+        const collectDescendants = (parentId: string) => {
+          const childGroups = tasks.filter((t: Task) =>
+            t.parentId === parentId && t.type === TaskType.RECURRENT_GROUP
+          );
+          const childTemplates = tasks.filter((t: Task) =>
+            t.parentId === parentId && t.type === TaskType.RECURRENT_TEMPLATE
+          );
+          
+          childGroups.forEach(g => {
+            toDelete.push(g);
+            collectDescendants(g.id); // Recursively process nested groups
+          });
+          childTemplates.forEach(t => {
+            toDelete.push(t);
+            const templateInstances = tasks.filter((i: Task) =>
+              i.parentId === t.id && i.type === TaskType.RECURRENT_INSTANCE
+            );
+            toDelete.push(...templateInstances);
+          });
+        };
+        
+        collectDescendants(task.id);
       }
 
       // Delete all tasks first

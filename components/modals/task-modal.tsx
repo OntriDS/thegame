@@ -411,22 +411,35 @@ export default function TaskModal({
     if (isSaving) return;
     setIsSaving(true);
     
-    // Validation for Recurrent Template: require due date and a valid frequency selection
+    // Validation for Recurrent Template
     if (type === TaskType.RECURRENT_TEMPLATE) {
-      if (!dueDate) {
-        setValidationMessage('Recurrent Templates require a Due Date to set the safety limit for instance creation.');
-        setShowValidationModal(true);
-        setIsSaving(false);
-        return;
-      }
       const freq = frequencyConfig;
-      const isUnsetFrequency = !freq || freq.type === RecurrentFrequency.ONCE ||
-        (freq.type === RecurrentFrequency.CUSTOM && (!freq.customDays || freq.customDays.length === 0));
-      if (isUnsetFrequency) {
-        setValidationMessage('Please select a Frequency for this template (e.g., Daily, Weekly, Monthly, or fill Custom days).');
-        setShowValidationModal(true);
-        setIsSaving(false);
-        return;
+      
+      // Allow ONCE frequency without any restrictions (it's just one instance, no infinite loop risk)
+      if (freq?.type === RecurrentFrequency.ONCE) {
+        // ONCE is always allowed - no validation needed
+      } else {
+        // For other frequencies, check if there's a stop condition
+        const hasStopCondition = freq?.stopsAfter && 
+          (freq.stopsAfter.type === 'times' || freq.stopsAfter.type === 'date');
+        
+        // Only require dueDate if there's no stop condition (infinite loop risk)
+        if (!hasStopCondition && !dueDate) {
+          setValidationMessage('Recurrent Templates require a Due Date to set the safety limit for instance creation when "Stops After" is set to "Never".');
+          setShowValidationModal(true);
+          setIsSaving(false);
+          return;
+        }
+        
+        // Validate frequency is set (but ONCE is already handled above)
+        const isUnsetFrequency = !freq ||
+          (freq.type === RecurrentFrequency.CUSTOM && (!freq.customDays || freq.customDays.length === 0));
+        if (isUnsetFrequency) {
+          setValidationMessage('Please select a Frequency for this template (e.g., Once, Daily, Weekly, Monthly, or fill Custom days).');
+          setShowValidationModal(true);
+          setIsSaving(false);
+          return;
+        }
       }
     }
 

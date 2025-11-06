@@ -262,7 +262,7 @@ export function createTaskParentOptions(tasks: any[], currentTaskId?: string, is
           // Recurrent hierarchy rules
           switch (childType) {
             case 'Recurrent Group':
-              return false; // Groups can't have parents
+              return parentType === 'Recurrent Group'; // Groups can have other groups as parents
             case 'Recurrent Template':
               return parentType === 'Recurrent Group'; // Templates can only have groups as parents
             case 'Recurrent Instance':

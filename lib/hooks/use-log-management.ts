@@ -142,6 +142,12 @@ export function useLogManagement({ onReload }: UseLogManagementOptions) {
     }
   }, [onReload]);
 
+  const [showPermanentDeleteConfirm, setShowPermanentDeleteConfirm] = useState<{
+    entry: LogEntry;
+    entityType: EntityType;
+    reason?: string;
+  } | null>(null);
+
   const handlePermanentDeleteEntry = useCallback(async (
     entityType: EntityType,
     entry: LogEntry,
@@ -152,9 +158,14 @@ export function useLogManagement({ onReload }: UseLogManagementOptions) {
       return;
     }
 
-    if (!confirm('Are you sure you want to permanently delete this entry? This action cannot be undone.')) {
-      return;
-    }
+    // Show confirmation modal instead of browser confirm
+    setShowPermanentDeleteConfirm({ entry, entityType, reason });
+  }, []);
+
+  const confirmPermanentDelete = useCallback(async () => {
+    if (!showPermanentDeleteConfirm) return;
+
+    const { entry, entityType, reason } = showPermanentDeleteConfirm;
 
     try {
       setIsManaging(true);
@@ -182,15 +193,20 @@ export function useLogManagement({ onReload }: UseLogManagementOptions) {
       alert('Failed to permanently delete entry');
     } finally {
       setIsManaging(false);
+      setShowPermanentDeleteConfirm(null);
     }
-  }, [onReload]);
+  }, [showPermanentDeleteConfirm, onReload]);
 
   return {
     handleDeleteEntry,
     handleRestoreEntry,
     handlePermanentDeleteEntry,
     handleEditEntry,
-    isManaging
+    isManaging,
+    // Confirmation modal state
+    showPermanentDeleteConfirm,
+    setShowPermanentDeleteConfirm,
+    confirmPermanentDelete
   };
 }
 
