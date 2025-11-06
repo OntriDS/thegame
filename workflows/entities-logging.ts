@@ -401,6 +401,32 @@ export async function restoreLogEntry(
 }
 
 /**
+ * Permanently delete a log entry
+ * - Removes entry from log array completely
+ * - Cannot be undone
+ */
+export async function permanentDeleteLogEntry(
+  entityType: EntityType,
+  entryId: string,
+  characterId: string,
+  reason?: string
+): Promise<void> {
+  const key = buildLogKey(entityType);
+  const list = (await kvGet<any[]>(key)) || [];
+
+  const entryIndex = list.findIndex(e => e.id === entryId);
+  if (entryIndex === -1) {
+    throw new Error(`Log entry ${entryId} not found in ${entityType} log`);
+  }
+
+  // Remove entry from array completely
+  list.splice(entryIndex, 1);
+
+  await kvSet(key, list);
+  console.log(`[permanentDeleteLogEntry] Entry ${entryId} permanently deleted from ${entityType} log`);
+}
+
+/**
  * Edit a specific log entry
  * - Creates audit record of changes
  * - Updates entry with new values

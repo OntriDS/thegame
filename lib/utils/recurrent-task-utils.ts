@@ -3,7 +3,7 @@
 
 import { Task } from '@/types/entities';
 import { TaskType, RecurrentFrequency } from '@/types/enums';
-import { getAllTasks as getTasks, upsertTask } from '@/data-store/repositories/task.repo';
+import { getAllTasks, upsertTask } from '@/data-store/repositories/task.repo';
 import { removeTask as deleteTask } from '@/data-store/datastore';
 import { hasEffect, markEffect } from '@/data-store/effects-registry';
 import { appendEntityLog } from '@/workflows/entities-logging';
@@ -129,9 +129,24 @@ export function calculateNextDueDates(
   let currentDate: Date;
   const config = template.frequencyConfig;
 
+  // Normalize customDays to Date objects (defensive check - they might be strings from JSON)
+  let normalizedCustomDays: Date[] = [];
+  if (config.customDays && Array.isArray(config.customDays)) {
+    normalizedCustomDays = config.customDays.map((day: any) => {
+      if (day instanceof Date) {
+        return day;
+      }
+      if (typeof day === 'string') {
+        const date = new Date(day);
+        return isNaN(date.getTime()) ? null : date;
+      }
+      return day;
+    }).filter((day: any) => day instanceof Date && !isNaN(day.getTime())) as Date[];
+  }
+
   // Use starting day from customDays if available, otherwise use startDate
-  if (config.customDays && config.customDays.length > 0) {
-    currentDate = new Date(config.customDays[0]);
+  if (normalizedCustomDays.length > 0) {
+    currentDate = new Date(normalizedCustomDays[0]);
   } else {
     currentDate = new Date(startDate);
   }
@@ -159,10 +174,10 @@ export function calculateNextDueDates(
         currentDate.setMonth(currentDate.getMonth() + (config.interval || 1));
         break;
       case RecurrentFrequency.CUSTOM:
-        // For custom frequency, use the custom days
-        if (config.customDays && config.customDays.length > 0) {
+        // For custom frequency, use the normalized custom days
+        if (normalizedCustomDays.length > 0) {
           // Find next custom day
-          const nextCustomDay = config.customDays.find((day: Date) => day.getTime() > currentDate.getTime());
+          const nextCustomDay = normalizedCustomDays.find((day: Date) => day.getTime() > currentDate.getTime());
           if (nextCustomDay) {
             currentDate = new Date(nextCustomDay);
           } else {
@@ -220,7 +235,7 @@ export async function getRecurrentHierarchy(parentId: string): Promise<{
   templates: Task[];
   instances: Task[];
 }> {
-  const tasks = await getTasks();
+  const tasks = await getAllTasks();
   
   const parent = tasks.find(t => t.id === parentId && t.isRecurrentGroup) || null;
   const templates = tasks.filter(t => t.parentId === parentId && t.isTemplate);
@@ -233,9 +248,9 @@ export async function getRecurrentHierarchy(parentId: string): Promise<{
  * Archives completed instances (for monthly close)
  */
 export async function archiveCompletedInstances(parentId: string): Promise<Task[]> {
-  const tasks = await getTasks();
-  const instances = tasks.filter(t => 
-    t.parentId === parentId && 
+  const tasks = await getAllTasks();
+  const instances = tasks.filter((t: Task) =>
+    t.parentId === parentId &&
     t.type === TaskType.RECURRENT_INSTANCE &&
     (t.status === 'Done' || t.status === 'Collected')
   );
@@ -266,19 +281,37 @@ export async function handleTemplateInstanceCreation(template: Task): Promise<Ta
     return [];
   }
 
+  // Normalize frequencyConfig.customDays to Date objects (defensive check - they might be strings from JSON)
+  let normalizedTemplate = { ...template };
+  if (normalizedTemplate.frequencyConfig?.customDays && Array.isArray(normalizedTemplate.frequencyConfig.customDays)) {
+    normalizedTemplate.frequencyConfig = {
+      ...normalizedTemplate.frequencyConfig,
+      customDays: normalizedTemplate.frequencyConfig.customDays.map((day: any) => {
+        if (day instanceof Date) {
+          return day;
+        }
+        if (typeof day === 'string') {
+          const date = new Date(day);
+          return isNaN(date.getTime()) ? null : date;
+        }
+        return day;
+      }).filter((day: any) => day instanceof Date && !isNaN(day.getTime())) as Date[]
+    };
+  }
+
   // Get existing instances for this template
-  const tasks = await getTasks();
+  const tasks = await getAllTasks();
   const existingInstances = tasks.filter(
-    t => t.parentId === template.id && t.type === TaskType.RECURRENT_INSTANCE
+    (t: Task) => t.parentId === template.id && t.type === TaskType.RECURRENT_INSTANCE
   );
 
   // Generate new instances based on template's frequency
-  const newInstances = spawnInstancesForTemplate(template);
+  const newInstances = spawnInstancesForTemplate(normalizedTemplate);
 
   // Filter out instances that already exist (by due date)
-  const existingDueDates = new Set(existingInstances.map(i => i.dueDate?.getTime()));
+  const existingDueDates = new Set(existingInstances.map((i: Task) => i.dueDate?.getTime()));
   const uniqueNewInstances = newInstances.filter(
-    instance => !existingDueDates.has(instance.dueDate?.getTime())
+    (instance: Task) => !existingDueDates.has(instance.dueDate?.getTime())
   );
 
   // Save new instances
@@ -290,11 +323,37 @@ export async function handleTemplateInstanceCreation(template: Task): Promise<Ta
 }
 
 /**
+ * Deletes a recurrent group and all its child templates and instances.
+ */
+export async function deleteGroupCascade(groupId: string): Promise<number> {
+  const tasks = await getAllTasks();
+
+  // Find all child templates of this group
+  const childTemplates = tasks.filter((t: Task) =>
+    t.parentId === groupId && t.type === TaskType.RECURRENT_TEMPLATE
+  );
+
+  // Find all instances of those templates
+  const templateIds = childTemplates.map(t => t.id);
+  const childInstances = tasks.filter((t: Task) =>
+    templateIds.includes(t.parentId || '') && t.type === TaskType.RECURRENT_INSTANCE
+  );
+
+  // Delete all: group, templates, instances
+  const toDelete = [groupId, ...templateIds, ...childInstances.map(t => t.id)];
+  for (const taskId of toDelete) {
+    await deleteTask(taskId);
+  }
+
+  return toDelete.length;
+}
+
+/**
  * Deletes a template and all its direct instances.
  */
 export async function deleteTemplateCascade(templateId: string): Promise<number> {
-  const tasks = await getTasks();
-  const toDelete = tasks.filter(t => t.id === templateId || (t.parentId === templateId && t.type === TaskType.RECURRENT_INSTANCE));
+  const tasks = await getAllTasks();
+  const toDelete = tasks.filter((t: Task) => t.id === templateId || (t.parentId === templateId && t.type === TaskType.RECURRENT_INSTANCE));
   for (const t of toDelete) {
     await deleteTask(t.id);
   }
@@ -316,9 +375,9 @@ export async function cascadeStatusToInstances(
     return { updated: [], count: 0 };
   }
 
-  const tasks = await getTasks();
-  const instances = tasks.filter(t => 
-    t.parentId === templateId && 
+  const tasks = await getAllTasks();
+  const instances = tasks.filter((t: Task) =>
+    t.parentId === templateId &&
     t.type === TaskType.RECURRENT_INSTANCE &&
     t.status !== newStatus // Only update instances that don't already have the target status
   );
@@ -355,7 +414,7 @@ export async function cascadeStatusToInstances(
  * Gets count of instances that are not at the target status
  */
 export async function getUndoneInstancesCount(templateId: string, targetStatus: string): Promise<number> {
-  const tasks = await getTasks();
+  const tasks = await getAllTasks();
   return tasks.filter(t => 
     t.parentId === templateId && 
     t.type === TaskType.RECURRENT_INSTANCE &&
@@ -377,7 +436,7 @@ export async function uncascadeStatusFromInstances(
     return { reverted: [], count: 0 };
   }
 
-  const tasks = await getTasks();
+  const tasks = await getAllTasks();
   const instances = tasks.filter(t => 
     t.parentId === templateId && 
     t.type === TaskType.RECURRENT_INSTANCE &&

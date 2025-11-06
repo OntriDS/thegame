@@ -40,7 +40,7 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
   const [editingItem, setEditingItem] = useState<Item | undefined>(undefined);
   const [defaultItemType, setDefaultItemType] = useState<ItemType>(ItemType.STICKER);
   
-  // Keyboard shortcuts for modal navigation
+  // Keyboard shortcuts for modal navigation (uses global scope, no need for custom scope)
   useKeyboardShortcuts({
     onOpenItemModal: () => setShowItemModal(true),
   });

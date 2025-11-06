@@ -142,9 +142,53 @@ export function useLogManagement({ onReload }: UseLogManagementOptions) {
     }
   }, [onReload]);
 
+  const handlePermanentDeleteEntry = useCallback(async (
+    entityType: EntityType,
+    entry: LogEntry,
+    reason?: string
+  ) => {
+    if (!entry.id) {
+      console.error('Entry has no ID, cannot permanently delete');
+      return;
+    }
+
+    if (!confirm('Are you sure you want to permanently delete this entry? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      setIsManaging(true);
+      const response = await fetch('/api/logs/manage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          logType: entityType,
+          action: 'permanent-delete',
+          entryId: entry.id,
+          reason: reason || 'User requested permanent deletion'
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        alert(`Failed to permanently delete entry: ${error.error || 'Unknown error'}`);
+        return;
+      }
+
+      // Reload log data
+      onReload();
+    } catch (error) {
+      console.error('Error permanently deleting entry:', error);
+      alert('Failed to permanently delete entry');
+    } finally {
+      setIsManaging(false);
+    }
+  }, [onReload]);
+
   return {
     handleDeleteEntry,
     handleRestoreEntry,
+    handlePermanentDeleteEntry,
     handleEditEntry,
     isManaging
   };

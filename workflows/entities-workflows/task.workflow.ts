@@ -7,7 +7,7 @@ import { appendEntityLog, updateEntityLogField } from '../entities-logging';
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
 import { EffectKeys } from '@/data-store/keys';
 import { getPlayerConversionRates, getPersonalAssets, savePersonalAssets } from '@/data-store/datastore';
-import { getTaskById, getPlayerById } from '@/data-store/datastore';
+import { getTaskById, getPlayerById, getAllTasks } from '@/data-store/datastore';
 import { getLinksFor, removeLink } from '@/links/link-registry';
 import { createItemFromTask, removeItemsCreatedByTask } from '../item-creation-utils';
 import { awardPointsToPlayer, removePointsFromPlayer } from '../points-rewards-utils';
@@ -27,9 +27,10 @@ import {
   hasOutputPropsChanged,
   hasRewardsChanged
 } from '../update-propagation-utils';
-import { 
+import {
   handleTemplateInstanceCreation,
   deleteTemplateCascade,
+  deleteGroupCascade,
   cascadeStatusToInstances,
   uncascadeStatusFromInstances,
   getUndoneInstancesCount
@@ -312,11 +313,97 @@ export async function removeTaskLogEntriesOnDelete(task: Task): Promise<void> {
     console.log(`[removeTaskLogEntriesOnDelete] Starting cleanup for task: ${task.id}`);
     
     // Handle recurrent template cascade deletion
-    if (task.type === TaskType.RECURRENT_TEMPLATE) {
-      console.log(`[removeTaskLogEntriesOnDelete] Cascading delete for template: ${task.name}`);
-      const deletedCount = await deleteTemplateCascade(task.id);
+    if (task.type === TaskType.RECURRENT_TEMPLATE || task.type === TaskType.RECURRENT_GROUP) {
+      console.log(`[removeTaskLogEntriesOnDelete] Cascading delete for ${task.type}: ${task.name}`);
+
+      // Get all tasks that will be deleted (template/group + instances + child templates)
+      const tasks = await getAllTasks();
+      let toDelete: Task[] = [];
+
+      if (task.type === TaskType.RECURRENT_TEMPLATE) {
+        // Delete template + its instances
+        toDelete = tasks.filter(t =>
+          t.id === task.id ||
+          (t.parentId === task.id && t.type === TaskType.RECURRENT_INSTANCE)
+        );
+      } else if (task.type === TaskType.RECURRENT_GROUP) {
+        // Delete group + all child templates + all their instances
+        const childTemplates = tasks.filter(t =>
+          t.parentId === task.id && t.type === TaskType.RECURRENT_TEMPLATE
+        );
+        const templateIds = childTemplates.map(t => t.id);
+        const childInstances = tasks.filter(t =>
+          templateIds.includes(t.parentId || '') && t.type === TaskType.RECURRENT_INSTANCE
+        );
+        toDelete = [task, ...childTemplates, ...childInstances];
+      }
+
+      // Delete all tasks first
+      const deletedCount = task.type === TaskType.RECURRENT_TEMPLATE
+        ? await deleteTemplateCascade(task.id)
+        : await deleteGroupCascade(task.id);
       console.log(`[removeTaskLogEntriesOnDelete] ✅ Cascade deleted ${deletedCount} tasks`);
-      return; // Skip normal deletion flow
+
+      // Now clean up logs for ALL deleted tasks
+      const taskIds = toDelete.map(t => t.id);
+      console.log(`[removeTaskLogEntriesOnDelete] Cleaning up logs for ${taskIds.length} tasks`);
+
+      // Remove from tasks log for all deleted tasks
+      const tasksLogKey = buildLogKey(EntityType.TASK);
+      const tasksLog = (await kvGet<any[]>(tasksLogKey)) || [];
+      const filteredTasksLog = tasksLog.filter(entry => !taskIds.includes(entry.entityId));
+      if (filteredTasksLog.length !== tasksLog.length) {
+        await kvSet(tasksLogKey, filteredTasksLog);
+        console.log(`[removeTaskLogEntriesOnDelete] ✅ Removed ${tasksLog.length - filteredTasksLog.length} entries from tasks log`);
+      }
+
+      // Clean up other logs (player, items, financials, character) for all deleted tasks
+      for (const deletedTask of toDelete) {
+        // Check and remove from player log
+        if (deletedTask.rewards?.points) {
+          const playerLogKey = buildLogKey(EntityType.PLAYER);
+          const playerLog = (await kvGet<any[]>(playerLogKey)) || [];
+          const filteredPlayerLog = playerLog.filter(entry =>
+            entry.sourceId !== deletedTask.id && entry.sourceTaskId !== deletedTask.id
+          );
+          if (filteredPlayerLog.length !== playerLog.length) {
+            await kvSet(playerLogKey, filteredPlayerLog);
+            console.log(`[removeTaskLogEntriesOnDelete] ✅ Removed player log entries for task ${deletedTask.id}`);
+          }
+        }
+
+        // Check and remove from items log
+        const itemsLogKey = buildLogKey(EntityType.ITEM);
+        const itemsLog = (await kvGet<any[]>(itemsLogKey)) || [];
+        const filteredItemsLog = itemsLog.filter(entry => entry.sourceTaskId !== deletedTask.id);
+        if (filteredItemsLog.length !== itemsLog.length) {
+          await kvSet(itemsLogKey, filteredItemsLog);
+          console.log(`[removeTaskLogEntriesOnDelete] ✅ Removed items log entries for task ${deletedTask.id}`);
+        }
+
+        // Check and remove from financials log
+        const financialsLogKey = buildLogKey(EntityType.FINANCIAL);
+        const financialsLog = (await kvGet<any[]>(financialsLogKey)) || [];
+        const filteredFinancialsLog = financialsLog.filter(entry => entry.sourceTaskId !== deletedTask.id);
+        if (filteredFinancialsLog.length !== financialsLog.length) {
+          await kvSet(financialsLogKey, filteredFinancialsLog);
+          console.log(`[removeTaskLogEntriesOnDelete] ✅ Removed financials log entries for task ${deletedTask.id}`);
+        }
+
+        // Check and remove from character log
+        const characterLogKey = buildLogKey(EntityType.CHARACTER);
+        const characterLog = (await kvGet<any[]>(characterLogKey)) || [];
+        const filteredCharacterLog = characterLog.filter(entry =>
+          entry.taskId !== deletedTask.id && entry.sourceTaskId !== deletedTask.id
+        );
+        if (filteredCharacterLog.length !== characterLog.length) {
+          await kvSet(characterLogKey, filteredCharacterLog);
+          console.log(`[removeTaskLogEntriesOnDelete] ✅ Removed character log entries for task ${deletedTask.id}`);
+        }
+      }
+
+      console.log(`[removeTaskLogEntriesOnDelete] ✅ Completed log cleanup for ${task.type.toLowerCase()} and ${toDelete.length - 1} child tasks`);
+      return;
     }
     
     // 1. Remove items created by this task

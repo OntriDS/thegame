@@ -46,9 +46,9 @@ export async function POST(req: NextRequest) {
     }
 
     // Validate action
-    if (!['edit', 'delete', 'restore'].includes(action)) {
+    if (!['edit', 'delete', 'restore', 'permanent-delete'].includes(action)) {
       return NextResponse.json(
-        { error: 'Invalid action. Supported: edit, delete, restore' },
+        { error: 'Invalid action. Supported: edit, delete, restore, permanent-delete' },
         { status: 400 }
       );
     }
@@ -74,6 +74,17 @@ export async function POST(req: NextRequest) {
         auditEntry = {
           entryId,
           action: 'restore',
+          timestamp: new Date().toISOString(),
+          editedBy: characterId
+        };
+        break;
+
+      case 'permanent-delete':
+        const { permanentDeleteLogEntry } = await import('@/workflows/entities-logging');
+        await permanentDeleteLogEntry(logType, entryId, characterId, reason);
+        auditEntry = {
+          entryId,
+          action: 'permanent-delete',
           timestamp: new Date().toISOString(),
           editedBy: characterId
         };

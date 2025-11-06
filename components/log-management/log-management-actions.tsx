@@ -31,7 +31,7 @@ export function LogManagementActions({
 }: LogManagementActionsProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const { handleDeleteEntry, handleRestoreEntry, handleEditEntry, isManaging } = useLogManagement({ onReload });
+  const { handleDeleteEntry, handleRestoreEntry, handlePermanentDeleteEntry, handleEditEntry, isManaging } = useLogManagement({ onReload });
 
   const entryName = entry.displayName || entry.name || 'Entry';
 
@@ -77,6 +77,15 @@ export function LogManagementActions({
                   </>
                 )}
               </DropdownMenuItem>
+              {entry.isDeleted && (
+                <DropdownMenuItem
+                  onClick={() => handlePermanentDeleteEntry(entityType, entry)}
+                  className="text-red-700"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Permanently Delete
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
 

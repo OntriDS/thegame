@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { DndContext, closestCenter, DragEndEvent } from '@dnd-kit/core';
 import { useSensors, useSensor, PointerSensor } from '@dnd-kit/core';
 import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
@@ -14,6 +14,7 @@ import { buildTaskTree, TreeNode } from '@/lib/utils/tree-utils';
 import { useThemeColors } from '@/lib/hooks/use-theme-colors';
 import { useKeyboardShortcuts } from '@/lib/hooks/use-keyboard-shortcuts';
 import { useEntityUpdates } from '@/lib/hooks/use-entity-updates';
+import { useShortcutScope } from '@/lib/shortcuts/keyboard-shortcuts-provider';
 import TaskModal from '@/components/modals/task-modal';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { ORDER_INCREMENT, SIDEBAR_MIN_WIDTH, SIDEBAR_MAX_WIDTH, SIDEBAR_DEFAULT_WIDTH, DRAG_ACTIVATION_DISTANCE } from '@/lib/constants/app-constants';
@@ -127,8 +128,18 @@ export default function ControlRoom() {
   );
 
   const { activeBg, readableTextColor } = useThemeColors();
+  const { setActiveScope } = useShortcutScope();
 
   useEffect(() => setIsMounted(true), []);
+
+  // Set active scope to control-room when component mounts
+  useEffect(() => {
+    setActiveScope('control-room');
+    return () => {
+      // Reset to global scope when unmounting
+      setActiveScope('global');
+    };
+  }, [setActiveScope]);
 
   // Initialize DataStore
   useEffect(() => {
@@ -264,9 +275,18 @@ export default function ControlRoom() {
     return result;
   };
 
+  // Reentrancy guard for move operations
+  const isMovingRef = useRef(false);
+
   // Move selection up handler
   const handleMoveUp = useCallback(async (options: { alt: boolean }) => {
     if (!selectedNode) return;
+    
+    // Reentrancy guard: prevent concurrent move operations
+    if (isMovingRef.current) {
+      return;
+    }
+    isMovingRef.current = true;
 
     try {
       const allTasks = reviveDates<Task[]>(await ClientAPI.getTasks());
@@ -368,12 +388,20 @@ export default function ControlRoom() {
       }
     } catch (error) {
       console.error('Failed to move task up:', error);
+    } finally {
+      isMovingRef.current = false;
     }
   }, [selectedNode, tree, expanded, activeSubTab, loadTasks]);
 
   // Move selection down handler
   const handleMoveDown = useCallback(async (options: { alt: boolean }) => {
     if (!selectedNode) return;
+    
+    // Reentrancy guard: prevent concurrent move operations
+    if (isMovingRef.current) {
+      return;
+    }
+    isMovingRef.current = true;
 
     try {
       const allTasks = reviveDates<Task[]>(await ClientAPI.getTasks());
@@ -475,11 +503,14 @@ export default function ControlRoom() {
       }
     } catch (error) {
       console.error('Failed to move task down:', error);
+    } finally {
+      isMovingRef.current = false;
     }
   }, [selectedNode, tree, expanded, activeSubTab, loadTasks]);
 
-  // Keyboard shortcuts for modal navigation and task reordering
+  // Keyboard shortcuts for modal navigation and task reordering (control-room scope)
   useKeyboardShortcuts({
+    scope: 'control-room',
     onOpenTaskModal: () => setTaskToEdit({} as Task),
     onMoveSelectionUp: handleMoveUp,
     onMoveSelectionDown: handleMoveDown,
