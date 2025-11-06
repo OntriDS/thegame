@@ -2,7 +2,8 @@
 
 import { TreeNode } from '@/lib/utils/tree-utils';
 import { Task } from '@/types/entities';
-import { TaskType, TaskStatus, TaskPriority, STATION_CATEGORIES } from '@/types/enums';
+import { TaskType, TaskStatus, TaskPriority } from '@/types/enums';
+import { getAllStationNames } from '@/lib/utils/searchable-select-utils';
 import { TASK_STATUS_COLORS } from '@/lib/constants/color-constants';
 import { TASK_TYPE_ICONS } from '@/lib/constants/icon-maps';
 import { getPointsMetadata, hasAnyPoints } from '@/lib/utils/points-utils';
@@ -52,6 +53,8 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate }: TaskD
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [prefillTemplateTask, setPrefillTemplateTask] = useState<Task | null>(null);
+  const [showMissionTreeModal, setShowMissionTreeModal] = useState(false);
+  const [prefillMissionTreeTask, setPrefillMissionTreeTask] = useState<Task | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // No initialization needed for ClientAPI
@@ -200,6 +203,42 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate }: TaskD
     setShowTemplateModal(true);
   };
 
+  // Open Mission Tree Modal with appropriate type and parent
+  const handleOpenMissionTreeTask = (taskType: TaskType) => {
+    if (!node) return;
+    const parent = node.task;
+    const prefill: Task = {
+      id: crypto.randomUUID(),
+      name: taskType === TaskType.MILESTONE ? `${parent.name} • Milestone` :
+            taskType === TaskType.GOAL ? `${parent.name} • Goal` : 'New Task',
+      description: '',
+      type: taskType,
+      status: TaskStatus.CREATED,
+      priority: parent.priority || TaskPriority.NORMAL,
+      station: parent.station as any,
+      progress: 0,
+      order: Date.now(),
+      parentId: parent.id,
+      isRecurrentGroup: false,
+      isTemplate: false,
+      frequencyConfig: undefined,
+      dueDate: undefined,
+      siteId: parent.siteId,
+      targetSiteId: parent.targetSiteId,
+      cost: 0,
+      revenue: 0,
+      isNotPaid: false,
+      isNotCharged: false,
+      rewards: { points: { xp: 0, rp: 0, fp: 0, hp: 0 } },
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      isCollected: false,
+      links: [] // ✅ Initialize links array (The Rosetta Stone)
+    };
+    setPrefillMissionTreeTask(prefill);
+    setShowMissionTreeModal(true);
+  };
+
   if (!node) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-muted/20">
@@ -260,16 +299,38 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate }: TaskD
           </div>
           <div className="flex gap-2">
             {task.type === TaskType.RECURRENT_GROUP && (
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 size="sm"
                 onClick={handleOpenTemplateFromParent}
               >
                 Template
               </Button>
             )}
-            <Button 
-              variant="outline" 
+            {(task.type === TaskType.MISSION || task.type === TaskType.MILESTONE) && (
+              <>
+                {task.type === TaskType.MISSION && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleOpenMissionTreeTask(TaskType.MILESTONE)}
+                  >
+                    <Target className="h-4 w-4 mr-2" />
+                    Milestone
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleOpenMissionTreeTask(TaskType.GOAL)}
+                >
+                  <Award className="h-4 w-4 mr-2" />
+                  Goal
+                </Button>
+              </>
+            )}
+            <Button
+              variant="outline"
               size="sm"
               onClick={() => setShowDuplicateModal(true)}
               className={showDuplicateSuccess ? `${TASK_STATUS_COLORS[TaskStatus.DONE][isDarkMode ? 'dark' : 'light']} border-green-300` : ""}
@@ -406,7 +467,7 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate }: TaskD
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.keys(STATION_CATEGORIES).map((station) => (
+                  {getAllStationNames().map((station) => (
                     <SelectItem key={station} value={station} className="text-xs">
                       {station}
                     </SelectItem>
@@ -558,6 +619,21 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate }: TaskD
             // Save as new template, do not set side effects beyond creation flag
             await ClientAPI.upsertTask(newTask);
             setShowTemplateModal(false);
+            onTaskUpdate?.();
+          }}
+        />
+      )}
+
+      {/* Create Mission Tree Task Modal (prefilled from parent) */}
+      {showMissionTreeModal && (
+        <TaskModal
+          task={prefillMissionTreeTask}
+          open={showMissionTreeModal}
+          onOpenChange={setShowMissionTreeModal}
+          onSave={async (newTask) => {
+            // Save as new Mission Tree task, do not set side effects beyond creation flag
+            await ClientAPI.upsertTask(newTask);
+            setShowMissionTreeModal(false);
             onTaskUpdate?.();
           }}
         />

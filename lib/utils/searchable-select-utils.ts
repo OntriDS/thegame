@@ -167,7 +167,7 @@ export function createStationCategoryOptions() {
     label: string;
     category: string;
   }> = [];
-  
+
   for (const [area, stations] of Object.entries(STATION_CATEGORIES)) {
     for (const station of stations as readonly string[]) {
       options.push({
@@ -177,8 +177,20 @@ export function createStationCategoryOptions() {
       });
     }
   }
-  
+
   return options;
+}
+
+/**
+ * Gets all available station names (not areas) for simple selection
+ * @returns Array of all station names
+ */
+export function getAllStationNames(): string[] {
+  const stations: string[] = [];
+  for (const stationsInArea of Object.values(STATION_CATEGORIES)) {
+    stations.push(...stationsInArea);
+  }
+  return stations;
 }
 
 /**
