@@ -26,9 +26,11 @@ import MoveItemsModal from './submodals/move-items-submodal';
 import DeleteModal from './submodals/delete-submodal';
 import { FileReference } from '@/types/entities';
 import LinksRelationshipsModal from './submodals/links-relationships-submodal';
+import OwnersManagerSubmodal from './submodals/owners-manager-submodal';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
 import CharacterSelectorModal from './submodals/owner-character-selector-submodal';
 import { dispatchEntityUpdated, entityTypeToKind } from '@/lib/ui/ui-events';
+import { LinkType } from '@/types/enums';
 
 interface ItemModalProps {
   item?: Item;
@@ -72,6 +74,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
   const [showMoreFields, setShowMoreFields] = useState(false);
   const [showLinksModal, setShowLinksModal] = useState(false);
   const [showCharacterSelector, setShowCharacterSelector] = useState(false);
+  const [showOwnersModal, setShowOwnersModal] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [ownerCharacterId, setOwnerCharacterId] = useState<string | null>(null);
   const [ownerCharacterName, setOwnerCharacterName] = useState<string>('');
@@ -788,7 +791,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
               </>
             )}
             
-            {/* Set Owner button - available for both creating and editing */}
+            {/* Set Primary Owner button - available for both creating and editing */}
             <Button 
               variant="outline" 
               size="sm"
@@ -796,8 +799,21 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
               className="flex items-center gap-2 h-8 text-xs"
             >
               <User className="h-3 w-3" />
-              {ownerCharacterId ? `Owner: ${ownerCharacterName}` : 'Set Owner'}
+              {ownerCharacterId ? `Primary Owner: ${ownerCharacterName}` : 'Set Primary Owner'}
             </Button>
+            
+            {/* Additional Owners button - only when editing existing item */}
+            {item && (
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setShowOwnersModal(true)}
+                className="flex items-center gap-2 h-8 text-xs"
+              >
+                <User className="h-3 w-3" />
+                Additional Owners
+              </Button>
+            )}
           </div>
 
           <div className="flex gap-2 items-center">
@@ -909,6 +925,31 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
       onSelect={handleSetOwner}
       currentOwnerId={ownerCharacterId}
     />
+
+    {/* Links Relationships Modal */}
+    {item && (
+      <LinksRelationshipsModal
+        entity={{ type: EntityType.ITEM, id: item.id, name: item.name }}
+        open={showLinksModal}
+        onClose={() => setShowLinksModal(false)}
+      />
+    )}
+
+    {/* Additional Owners Manager Modal */}
+    {item && (
+      <OwnersManagerSubmodal
+        open={showOwnersModal}
+        onOpenChange={setShowOwnersModal}
+        entityType={EntityType.ITEM}
+        entityId={item.id}
+        entityName={item.name}
+        linkType={LinkType.ITEM_CHARACTER}
+        onOwnersChanged={() => {
+          // Refresh UI if needed
+          dispatchEntityUpdated(entityTypeToKind(EntityType.ITEM));
+        }}
+      />
+    )}
     </>
   );
 }

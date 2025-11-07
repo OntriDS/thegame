@@ -140,7 +140,41 @@ Entity (DNA) → Diplomatic Fields → Links (RNA) → Ribosome (Workflows) → 
 
 **The Links System handles relationships** - no more bloated logs!
 
-### 4. No Side Effect Flags ✅ **IMPLEMENTED**
+### 4. Link Directionality Policy (Canonical, Unidirectional) ✅
+
+Links are semantically unidirectional but queried bidirectionally. The `getLinksFor()` query searches both source and target, so we avoid creating duplicate reverse links for the same relationship.
+
+Policy:
+- Choose ONE canonical link type per relationship to prevent duplicates.
+- Example: Ownership (canonical direction is FROM the owned entity TO the owner)
+  - Item ownership canonical link: `ITEM_CHARACTER` (Item → Character)
+  - Site ownership canonical link: `SITE_CHARACTER` (Site → Character)
+- Reverse types (e.g., `CHARACTER_ITEM`, `CHARACTER_SITE`) are considered semantically equivalent at query-time (the graph is navigable both ways), but workflows should NOT create both directions for the same edge.
+- Validation prevents reverse-duplicates for the same pair and semantics.
+
+Examples (DO vs DON'T):
+
+```ts
+// ✅ DO: Create only canonical link
+createLink('ITEM_CHARACTER', { type: 'item', id: itemId }, { type: 'character', id: ownerId });
+
+// ❌ DON'T: Also create the reverse link for the same pair
+createLink('CHARACTER_ITEM', { type: 'character', id: ownerId }, { type: 'item', id: itemId });
+
+// ✅ DO: For sites, canonical ownership link (one or many owners)
+createLink('SITE_CHARACTER', { type: 'site', id: siteId }, { type: 'character', id: ownerId });
+// If multiple owners:
+createLink('SITE_CHARACTER', { type: 'site', id: siteId }, { type: 'character', id: anotherOwnerId });
+
+// ❌ DON'T: Create CHARACTER_SITE for the same pair if SITE_CHARACTER exists
+```
+
+Query Behavior:
+- `getLinksFor()` searches both source and target, so consumers can ask from either side (Item or Character; Site or Character) and still “see” the relationship without storing two physical links.
+
+This keeps link graphs clean, reduces duplication, and simplifies validation and reasoning while preserving bidirectional querying behavior.
+
+### 5. No Side Effect Flags ✅ **IMPLEMENTED**
 
 **Old Pattern** (Manual Flags) - REMOVED:
 ```typescript

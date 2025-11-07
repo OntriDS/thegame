@@ -15,11 +15,12 @@ import { CharacterRole, CHARACTER_ROLE_TYPES, EntityType, PLAYER_ONE_ID } from '
 import { ROLE_COLORS } from '@/lib/constants/color-constants';
 import { useTheme } from '@/lib/hooks/use-theme';
 import { ROLE_BEHAVIORS, canViewAccountInfo } from '@/lib/game-mechanics/roles-rules';
-import { Network, Info, Trash2 } from 'lucide-react';
+import { Network, Info, Trash2, Package } from 'lucide-react';
 import { ClientAPI } from '@/lib/client-api';
 import { dispatchEntityUpdated, entityTypeToKind } from '@/lib/ui/ui-events';
 import DeleteModal from './submodals/delete-submodal';
 import LinksRelationshipsModal from './submodals/links-relationships-submodal';
+import CharacterInventorySubmodal from './submodals/character-inventory-submodal';
 // Side effects handled by parent component via API calls
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
 
@@ -63,6 +64,7 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
   const [CP, setCP] = useState<number | undefined>(undefined);
   const [achievementsCharacter, setAchievementsCharacter] = useState<string[]>([]);
   const [showRelationshipsModal, setShowRelationshipsModal] = useState(false);
+  const [showInventoryModal, setShowInventoryModal] = useState(false);
 
   // Initialize when opening
   useEffect(() => {
@@ -477,6 +479,18 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
               </Button>
             )}
 
+            {/* Inventory Button - Only when editing existing character */}
+            {character && (
+              <Button
+                variant="outline"
+                onClick={() => setShowInventoryModal(true)}
+                className="h-8 text-xs"
+              >
+                <Package className="w-3 h-3 mr-1" />
+                Inventory
+              </Button>
+            )}
+
             {/* Delete Button - Only when editing existing character */}
             {character && (
               <Button
@@ -534,6 +548,25 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
         entityType={EntityType.CHARACTER}
         entities={[character]}
         onComplete={handleDeleteComplete}
+      />
+    )}
+
+    {/* Links Relationships Modal */}
+    {character && (
+      <LinksRelationshipsModal
+        entity={{ type: EntityType.CHARACTER, id: character.id, name: character.name }}
+        open={showRelationshipsModal}
+        onClose={() => setShowRelationshipsModal(false)}
+      />
+    )}
+
+    {/* Character Inventory Submodal */}
+    {character && (
+      <CharacterInventorySubmodal
+        open={showInventoryModal}
+        onOpenChange={setShowInventoryModal}
+        characterId={character.id}
+        characterName={character.name}
       />
     )}
     </>

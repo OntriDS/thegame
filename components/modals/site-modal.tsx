@@ -20,12 +20,14 @@ import {
 } from '@/types/enums';
 import { createSettlementOptions } from '@/lib/utils/searchable-select-utils';
 import SettlementSubmodal from './submodals/settlement-submodal';
-import { MapPin, Cloud, Sparkles, Trash2 } from 'lucide-react';
+import { MapPin, Cloud, Sparkles, Trash2, Network, User } from 'lucide-react';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
 // No complex categorization needed for site fields
 import DeleteModal from './submodals/delete-submodal';
 import LinksRelationshipsModal from './submodals/links-relationships-submodal';
+import OwnersManagerSubmodal from './submodals/owners-manager-submodal';
 import { dispatchEntityUpdated, entityTypeToKind } from '@/lib/ui/ui-events';
+import { LinkType } from '@/types/enums';
 // Side effects handled by parent component via API calls
 
 interface SiteModalProps {
@@ -60,6 +62,7 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
   // Special site fields
   const [systemPurpose, setSystemPurpose] = useState<SystemSiteType>(SystemSiteType.UNIVERSAL_TRACKING);
   const [showRelationshipsModal, setShowRelationshipsModal] = useState(false);
+  const [showOwnersModal, setShowOwnersModal] = useState(false);
   
   // Delete modal
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -444,18 +447,50 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
                 </div>
               )}
             </div>
+
+            {/* Owners Section */}
+            {site && (
+              <div className="mt-4">
+                <div className="flex items-center justify-between mb-2">
+                  <Label className="text-xs font-semibold">Owners</Label>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowOwnersModal(true)}
+                    className="h-7 text-xs"
+                    disabled={isNoneSite(site)}
+                  >
+                    <User className="w-3 h-3 mr-1" />
+                    Manage Owners
+                  </Button>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Site owners are managed via links. Click "Manage Owners" to add or remove owners.
+                </div>
+              </div>
+            )}
           </div>
 
           <DialogFooter className="flex items-center justify-between py-2 border-t px-6">
             <div className="flex items-center gap-4">
               {site && !isNoneSite(site) && (
-                <Button
-                  variant="outline"
-                  onClick={handleDelete}
-                  className="h-8 text-xs text-muted-foreground hover:text-foreground"
-                >
-                  Delete
-                </Button>
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowRelationshipsModal(true)}
+                    className="h-8 text-xs"
+                  >
+                    <Network className="w-3 h-3 mr-1" />
+                    Links
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleDelete}
+                    className="h-8 text-xs text-muted-foreground hover:text-foreground"
+                  >
+                    Delete
+                  </Button>
+                </>
               )}
               {isNoneSite(site) && (
                 <div className="text-xs text-muted-foreground italic">
@@ -517,6 +552,31 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
         onOpenChange={setShowSettlementModal}
         onSave={handleSettlementSave}
       />
+
+      {/* Links Relationships Modal */}
+      {site && (
+        <LinksRelationshipsModal
+          entity={{ type: EntityType.SITE, id: site.id, name: site.name }}
+          open={showRelationshipsModal}
+          onClose={() => setShowRelationshipsModal(false)}
+        />
+      )}
+
+      {/* Owners Manager Modal */}
+      {site && (
+        <OwnersManagerSubmodal
+          open={showOwnersModal}
+          onOpenChange={setShowOwnersModal}
+          entityType={EntityType.SITE}
+          entityId={site.id}
+          entityName={site.name}
+          linkType={LinkType.SITE_CHARACTER}
+          onOwnersChanged={() => {
+            // Refresh UI if needed
+            dispatchEntityUpdated(entityTypeToKind(EntityType.SITE));
+          }}
+        />
+      )}
     </>
   );
 }

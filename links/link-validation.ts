@@ -11,6 +11,7 @@ import { getPlayerById } from '@/data-store/repositories/player.repo';
 import { getAccountById } from '@/data-store/repositories/account.repo';
 import { kvGet } from '@/data-store/kv';
 import { buildDataKey } from '@/data-store/keys';
+import { getLinksFor } from './link-registry';
 
 /**
  * Link validation result interface
@@ -228,6 +229,110 @@ export async function validateEntityExists(entityType: EntityType, entityId: str
 }
 
 /**
+ * Check if a reverse duplicate link already exists (canonical direction policy)
+ * Prevents creating CHARACTER_ITEM if ITEM_CHARACTER exists, etc.
+ */
+async function checkReverseDuplicate(
+  linkType: LinkType,
+  source: { type: EntityType; id: string },
+  target: { type: EntityType; id: string }
+): Promise<LinkValidationResult> {
+  // Define canonical link types and their reverse pairs
+  const canonicalPairs: Record<LinkType, LinkType | null> = {
+    // Ownership: canonical is ITEM_CHARACTER, reverse is CHARACTER_ITEM
+    [LinkType.ITEM_CHARACTER]: null, // Canonical - no reverse check needed
+    [LinkType.CHARACTER_ITEM]: LinkType.ITEM_CHARACTER, // Reverse - check if canonical exists
+    
+    // Ownership: canonical is SITE_CHARACTER, reverse is CHARACTER_SITE
+    [LinkType.SITE_CHARACTER]: null, // Canonical - no reverse check needed
+    [LinkType.CHARACTER_SITE]: LinkType.SITE_CHARACTER, // Reverse - check if canonical exists
+    
+    // Add other reverse pairs as needed
+    [LinkType.TASK_ITEM]: null,
+    [LinkType.ITEM_TASK]: null,
+    [LinkType.TASK_FINREC]: null,
+    [LinkType.FINREC_TASK]: null,
+    [LinkType.TASK_SALE]: null,
+    [LinkType.SALE_TASK]: null,
+    [LinkType.TASK_PLAYER]: null,
+    [LinkType.PLAYER_TASK]: null,
+    [LinkType.TASK_CHARACTER]: null,
+    [LinkType.CHARACTER_TASK]: null,
+    [LinkType.TASK_SITE]: null,
+    [LinkType.SITE_TASK]: null,
+    [LinkType.ITEM_SALE]: null,
+    [LinkType.SALE_ITEM]: null,
+    [LinkType.ITEM_FINREC]: null,
+    [LinkType.FINREC_ITEM]: null,
+    [LinkType.ITEM_PLAYER]: null,
+    [LinkType.PLAYER_ITEM]: null,
+    [LinkType.ITEM_SITE]: null,
+    [LinkType.SITE_ITEM]: null,
+    [LinkType.SALE_FINREC]: null,
+    [LinkType.FINREC_SALE]: null,
+    [LinkType.SALE_PLAYER]: null,
+    [LinkType.PLAYER_SALE]: null,
+    [LinkType.SALE_CHARACTER]: null,
+    [LinkType.CHARACTER_SALE]: null,
+    [LinkType.SALE_SITE]: null,
+    [LinkType.SITE_SALE]: null,
+    [LinkType.FINREC_PLAYER]: null,
+    [LinkType.PLAYER_FINREC]: null,
+    [LinkType.FINREC_CHARACTER]: null,
+    [LinkType.CHARACTER_FINREC]: null,
+    [LinkType.FINREC_SITE]: null,
+    [LinkType.SITE_FINREC]: null,
+    [LinkType.CHARACTER_PLAYER]: null,
+    [LinkType.PLAYER_CHARACTER]: null,
+    [LinkType.SITE_SITE]: null,
+    [LinkType.ACCOUNT_PLAYER]: null,
+    [LinkType.PLAYER_ACCOUNT]: null,
+    [LinkType.ACCOUNT_CHARACTER]: null,
+    [LinkType.CHARACTER_ACCOUNT]: null
+  };
+
+  const canonicalType = canonicalPairs[linkType];
+  
+  // If this is a reverse link type, check if canonical already exists
+  if (canonicalType) {
+    // For reverse links, we need to check if canonical exists
+    // Example: CHARACTER_ITEM (reverse) -> check if ITEM_CHARACTER (canonical) exists
+    // The canonical link would have ITEM as source and CHARACTER as target
+    // So we check links for both entities to find the canonical link
+    
+    // Get links for both entities to find canonical link
+    const sourceLinks = await getLinksFor(source);
+    const targetLinks = await getLinksFor(target);
+    const allRelevantLinks = [...sourceLinks, ...targetLinks];
+    
+    // Check if canonical link exists connecting the same entities
+    const canonicalExists = allRelevantLinks.some((link: any) => {
+      if (link.linkType !== canonicalType) return false;
+      
+      // Check if canonical link connects the same two entities (in either direction)
+      // For ITEM_CHARACTER canonical: source=ITEM, target=CHARACTER
+      // For CHARACTER_ITEM reverse: source=CHARACTER, target=ITEM
+      // We need to match the entity pair regardless of direction
+      const linkConnectsSource = (link.source.type === source.type && link.source.id === source.id) ||
+                                 (link.target.type === source.type && link.target.id === source.id);
+      const linkConnectsTarget = (link.source.type === target.type && link.source.id === target.id) ||
+                                 (link.target.type === target.type && link.target.id === target.id);
+      
+      return linkConnectsSource && linkConnectsTarget;
+    });
+    
+    if (canonicalExists) {
+      return {
+        isValid: false,
+        reason: `Cannot create reverse link ${linkType}. Canonical link ${canonicalType} already exists for this relationship. Links are semantically unidirectional - use the canonical direction.`
+      };
+    }
+  }
+
+  return { isValid: true };
+}
+
+/**
  * Validate business rules specific to link types
  */
 export async function validateBusinessRules(
@@ -239,6 +344,13 @@ export async function validateBusinessRules(
   const warnings: string[] = [];
 
   try {
+    // Check for reverse duplicate links (canonical direction policy)
+    // If canonical link exists, reject reverse link creation
+    const reverseDuplicateCheck = await checkReverseDuplicate(linkType, source, target);
+    if (!reverseDuplicateCheck.isValid) {
+      return reverseDuplicateCheck;
+    }
+
     switch (linkType) {
       case 'PLAYER_CHARACTER':
         // Validate that character has valid playerId
