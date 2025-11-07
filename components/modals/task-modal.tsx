@@ -81,10 +81,10 @@ export default function TaskModal({
     setPreference('task-modal-emissary-expanded', String(newValue));
   };
 
-  const getLastUsedStation = (): Station => {
+  const getLastUsedStation = useCallback((): Station => {
     const saved = getPreference('task-modal-last-station');
     return (saved as Station) || ('Strategy' as Station);
-  };
+  }, [getPreference]);
 
   const getLastUsedType = useCallback((): TaskType => {
     if (isRecurrentModal) {
@@ -104,7 +104,7 @@ export default function TaskModal({
   const getInitialStationCategory = (): string => {
     const lastStation = getLastUsedStation();
     const area = getAreaForStation(lastStation);
-    return `${area || 'ADMIN'}:${lastStation}`;
+    return `${lastStation}:${area || 'ADMIN'}`;
   };
   const [stationCategory, setStationCategory] = useState<string>(getInitialStationCategory());
   const [progress, setProgress] = useState(0);
@@ -177,8 +177,8 @@ export default function TaskModal({
   const [sites, setSites] = useState<any[]>([]);
   const [dataLoaded, setDataLoaded] = useState(false);
 
-  // Guard for one-time initialization of new tasks
-  const didInitRef = useRef(false);
+  const hasInitializedRef = useRef(false);
+  const initializedTaskIdRef = useRef<string | null>(null);
 
   // Load UI data for form dropdowns
   useEffect(() => {
@@ -213,117 +213,149 @@ export default function TaskModal({
     // If savedEmissary is null, keep default (false)
 
     // Initialize station from preferences (fixes persistence issue)
-    const savedStation = getPreference('task-modal-last-station');
-    if (savedStation) {
-      setStation(savedStation as Station);
-    }
   }, [getPreference]);
-  
-  useEffect(() => {
-    if (task && task.id) {
-      // Editing existing task - populate from task
-      setName(task.name);
-      setDescription(task.description || '');
-      setStatus(task.status);
-      setPriority(task.priority);
-      setType(task.type);
-      setStation(task.station);
-      setProgress(task.progress);
-      setDueDate(task.dueDate ? new Date(task.dueDate) : undefined);
-      setFrequencyConfig(task.frequencyConfig || undefined);
-      setCost(task.cost);
-      setCostString(task.cost.toString());
-      setRevenue(task.revenue);
-      setRevenueString(task.revenue.toString());
-      setIsNotPaid(task.isNotPaid || false);
-      setIsNotCharged(task.isNotCharged || false);
-      setIsRecurrentGroup(task.isRecurrentGroup || false);
-      setIsTemplate(task.isTemplate || false);
-      setFormData({
-        site: task.siteId || 'none',
-        targetSite: task.targetSiteId || 'none',
-      });
-      const taskItemType = (task.outputItemType as ItemType) || '';
-      const taskSubType = task.outputItemSubType || '';
-      setOutputItemType(taskItemType);
-      setOutputItemSubType(taskSubType);
-      setOutputItemTypeSubType(taskItemType ? `${taskItemType}:${taskSubType}` : 'none:');
-      setOutputQuantity(task.outputQuantity || 1);
-      setOutputQuantityString((task.outputQuantity || 1).toString());
-      setOutputUnitCost(task.outputUnitCost || 0);
-      setOutputUnitCostString((task.outputUnitCost || 0).toString());
-      setOutputItemName(task.outputItemName || '');
-      setOutputItemPrice(task.outputItemPrice || 0);
-      setOutputItemPriceString((task.outputItemPrice || 0).toString());
-      setIsNewItem(task.isNewItem || false);
-      setIsSold(task.isSold || false);
-      setOutputItemStatus(task.outputItemStatus || ItemStatus.FOR_SALE);
-      setCustomerCharacterId(task.customerCharacterId || null);
-      setIsNewCustomer(!task.customerCharacterId); // Toggle to "Existing" if customer exists
-      setNewCustomerName(''); // Clear new customer name
-      setPlayerCharacterId(task.playerCharacterId || PLAYER_ONE_ID);
-      setRewards({
-        points: {
-          xp: task.rewards?.points?.xp || 0,
-          rp: task.rewards?.points?.rp || 0,
-          fp: task.rewards?.points?.fp || 0,
-          hp: task.rewards?.points?.hp || 0,
-        },
-      });
-      setRewardsStrings({
-        points: {
-          xp: (task.rewards?.points?.xp || 0).toString(),
-          rp: (task.rewards?.points?.rp || 0).toString(),
-          fp: (task.rewards?.points?.fp || 0).toString(),
-          hp: (task.rewards?.points?.hp || 0).toString(),
-        },
-      });
-      setParentId(task.parentId || null);
-      
-      // Reset init guard when editing
-      didInitRef.current = false;
-    } else if (!didInitRef.current) {
-      // New task - initialize once only (don't reset again while user edits)
-      didInitRef.current = true;
-      setName('');
-      setDescription('');
-      setStatus(TaskStatus.CREATED);
-      setPriority(TaskPriority.NORMAL);
-      setType(getLastUsedType());
-      const lastStation = getLastUsedStation();
-      setStation(lastStation);
-      const area = getAreaForStation(lastStation);
-      setStationCategory(`${area || 'ADMIN'}:${lastStation}`);
-      setProgress(0);
-      setDueDate(undefined);
-      setCost(0);
-      setCostString('0');
-      setRevenue(0);
-      setRevenueString('0');
-      setIsNotPaid(false);
-      setIsNotCharged(false);
-      setIsRecurrentGroup(false);
-      setIsTemplate(false);
-      setFormData({ site: 'none', targetSite: 'none' });
-      setOutputItemType('');
-      setOutputItemSubType('');
-      setOutputQuantity(1);
-      setOutputQuantityString('1');
-      setOutputUnitCost(0);
-      setOutputUnitCostString('0');
-      setOutputItemName('');
-      setIsNewItem(false);
-      setIsSold(false);
-      setOutputItemStatus(ItemStatus.FOR_SALE);
-      setRewards({ points: { xp: 0, rp: 0, fp: 0, hp: 0 } });
-      setRewardsStrings({ points: { xp: '0', rp: '0', fp: '0', hp: '0' } });
-      setParentId(null);
-      setCustomerCharacterId(null);
-      setIsNewCustomer(true);
-      setNewCustomerName('');
-      setPlayerCharacterId(null);
+  const computeStationCategoryValue = useCallback((stationValue: Station | null): string => {
+    if (!stationValue) {
+      return 'none:';
     }
-  }, [task]); 
+    const area = getAreaForStation(stationValue);
+    return `${stationValue}:${area || 'ADMIN'}`;
+  }, []);
+
+  const initializeFromTask = useCallback((existingTask: Task) => {
+    setName(existingTask.name);
+    setDescription(existingTask.description || '');
+    setStatus(existingTask.status);
+    setPriority(existingTask.priority);
+    setType(existingTask.type);
+    setStation(existingTask.station);
+    setStationCategory(computeStationCategoryValue(existingTask.station));
+    setProgress(existingTask.progress);
+    setDueDate(existingTask.dueDate ? new Date(existingTask.dueDate) : undefined);
+    setFrequencyConfig(existingTask.frequencyConfig || undefined);
+    setCost(existingTask.cost);
+    setCostString(existingTask.cost.toString());
+    setRevenue(existingTask.revenue);
+    setRevenueString(existingTask.revenue.toString());
+    setIsNotPaid(existingTask.isNotPaid || false);
+    setIsNotCharged(existingTask.isNotCharged || false);
+    setIsRecurrentGroup(existingTask.isRecurrentGroup || false);
+    setIsTemplate(existingTask.isTemplate || false);
+    setFormData({
+      site: existingTask.siteId || 'none',
+      targetSite: existingTask.targetSiteId || 'none',
+    });
+    const taskItemType = (existingTask.outputItemType as ItemType) || '';
+    const taskSubType = existingTask.outputItemSubType || '';
+    setOutputItemType(taskItemType);
+    setOutputItemSubType(taskSubType);
+    setOutputItemTypeSubType(taskItemType ? `${taskItemType}:${taskSubType}` : 'none:');
+    setOutputQuantity(existingTask.outputQuantity || 1);
+    setOutputQuantityString((existingTask.outputQuantity || 1).toString());
+    setOutputUnitCost(existingTask.outputUnitCost || 0);
+    setOutputUnitCostString((existingTask.outputUnitCost || 0).toString());
+    setOutputItemName(existingTask.outputItemName || '');
+    setOutputItemPrice(existingTask.outputItemPrice || 0);
+    setOutputItemPriceString((existingTask.outputItemPrice || 0).toString());
+    setIsNewItem(existingTask.isNewItem || false);
+    setIsSold(existingTask.isSold || false);
+    setOutputItemStatus(existingTask.outputItemStatus || ItemStatus.FOR_SALE);
+    setSelectedItemId(existingTask.outputItemId || '');
+    setCustomerCharacterId(existingTask.customerCharacterId || null);
+    const isUsingExistingCustomer = Boolean(existingTask.customerCharacterId);
+    setIsNewCustomer(!isUsingExistingCustomer);
+    setNewCustomerName(existingTask.newCustomerName || '');
+    setPlayerCharacterId(existingTask.playerCharacterId || PLAYER_ONE_ID);
+    setRewards({
+      points: {
+        xp: existingTask.rewards?.points?.xp || 0,
+        rp: existingTask.rewards?.points?.rp || 0,
+        fp: existingTask.rewards?.points?.fp || 0,
+        hp: existingTask.rewards?.points?.hp || 0,
+      },
+    });
+    setRewardsStrings({
+      points: {
+        xp: (existingTask.rewards?.points?.xp || 0).toString(),
+        rp: (existingTask.rewards?.points?.rp || 0).toString(),
+        fp: (existingTask.rewards?.points?.fp || 0).toString(),
+        hp: (existingTask.rewards?.points?.hp || 0).toString(),
+      },
+    });
+    setParentId(existingTask.parentId || null);
+  }, [computeStationCategoryValue]);
+
+  const initializeForNewTask = useCallback(() => {
+    setName('');
+    setDescription('');
+    setStatus(TaskStatus.CREATED);
+    setPriority(TaskPriority.NORMAL);
+    const defaultType = getLastUsedType();
+    setType(defaultType);
+    const lastStation = getLastUsedStation();
+    setStation(lastStation);
+    setStationCategory(computeStationCategoryValue(lastStation));
+    setProgress(0);
+    setDueDate(undefined);
+    setFrequencyConfig(isRecurrentModal ? {
+      type: RecurrentFrequency.ONCE,
+      interval: 1,
+      repeatMode: 'periodically',
+    } : undefined);
+    setCost(0);
+    setCostString('0');
+    setRevenue(0);
+    setRevenueString('0');
+    setIsNotPaid(false);
+    setIsNotCharged(false);
+    setIsRecurrentGroup(false);
+    setIsTemplate(false);
+    setFormData({ site: 'none', targetSite: 'none' });
+    setOutputItemType('');
+    setOutputItemSubType('');
+    setOutputItemTypeSubType('none:');
+    setOutputQuantity(1);
+    setOutputQuantityString('1');
+    setOutputUnitCost(0);
+    setOutputUnitCostString('0');
+    setOutputItemName('');
+    setOutputItemPrice(0);
+    setOutputItemPriceString('0');
+    setIsNewItem(false);
+    setIsSold(false);
+    setOutputItemStatus(ItemStatus.FOR_SALE);
+    setSelectedItemId('');
+    setCustomerCharacterId(null);
+    setIsNewCustomer(true);
+    setNewCustomerName('');
+    setPlayerCharacterId(null);
+    setRewards({ points: { xp: 0, rp: 0, fp: 0, hp: 0 } });
+    setRewardsStrings({ points: { xp: '0', rp: '0', fp: '0', hp: '0' } });
+    setParentId(null);
+  }, [computeStationCategoryValue, getLastUsedStation, getLastUsedType, isRecurrentModal]);
+
+  useEffect(() => {
+    if (!open) {
+      hasInitializedRef.current = false;
+      initializedTaskIdRef.current = null;
+      return;
+    }
+
+    const currentTaskId = task?.id || null;
+    const alreadyInitialized = hasInitializedRef.current && initializedTaskIdRef.current === currentTaskId;
+    if (alreadyInitialized) {
+      return;
+    }
+
+    if (task && task.id) {
+      initializeFromTask(task);
+    } else {
+      initializeForNewTask();
+    }
+
+    hasInitializedRef.current = true;
+    initializedTaskIdRef.current = currentTaskId;
+  }, [open, task, initializeForNewTask, initializeFromTask]);
 
   // Load customer character name when customerCharacterId changes
   useEffect(() => {

@@ -39,6 +39,7 @@ export function LinksSubModal({
 
     const description = logEntry.description || '';
     const timestamp = logEntry.timestamp;
+    const sourceId = (logEntry as any).sourceId as string | undefined;
 
     // For player logs, we want to show:
     // 1. What created this link (source entity)
@@ -48,12 +49,19 @@ export function LinksSubModal({
     // Group links by relationship type and show the most relevant ones
     const linkGroups = {
       // Activity-based links (dynamic relationships from actions/events)
-      activity: links.filter(link => 
-        link.linkType.includes('TASK') || 
-        link.linkType.includes('FINREC') || 
-        link.linkType.includes('SALE') ||
-        link.linkType.includes('ITEM')
-      ),
+      activity: links
+        .filter(link => 
+          link.linkType.includes('TASK') || 
+          link.linkType.includes('FINREC') || 
+          link.linkType.includes('SALE') ||
+          link.linkType.includes('ITEM')
+        )
+        // If the log entry has a sourceId (e.g., WIN_POINTS from task/record/sale),
+        // prioritize showing only the links that match that specific source
+        .filter(link => {
+          if (!sourceId) return true;
+          return link.source?.id === sourceId || link.target?.id === sourceId;
+        }),
       // Structural links (static organizational relationships)
       structural: links.filter(link => 
         link.linkType.includes('ACCOUNT') || 

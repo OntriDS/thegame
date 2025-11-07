@@ -379,6 +379,26 @@ export async function updatePlayerPointsFromSource(
 ): Promise<void> {
   try {
     console.log(`[updatePlayerPointsFromSource] Updating player points from ${sourceType}: ${newSource.name}`);
+    // Guardrails: Only propagate points when the source is truly finalized
+    // - Task: must be Done in both old and new versions
+    // - Sale: must be charged (paid and charged) in both old and new versions
+    if (sourceType === EntityType.TASK) {
+      const wasCompleted = oldSource?.status === 'Done' && !!oldSource?.doneAt;
+      const isCompleted = newSource?.status === 'Done' && !!newSource?.doneAt;
+      if (!wasCompleted || !isCompleted) {
+        console.log('[updatePlayerPointsFromSource] Task not completed in both versions, skipping delta');
+        return;
+      }
+    }
+
+    if (sourceType === EntityType.SALE) {
+      const wasCharged = oldSource && !oldSource.isNotPaid && !oldSource.isNotCharged;
+      const isCharged = newSource && !newSource.isNotPaid && !newSource.isNotCharged;
+      if (!wasCharged || !isCharged) {
+        console.log('[updatePlayerPointsFromSource] Sale not charged in both versions, skipping delta');
+        return;
+      }
+    }
     
     // Calculate points delta
     let pointsDelta = { xp: 0, rp: 0, fp: 0, hp: 0 };
