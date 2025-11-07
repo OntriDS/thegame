@@ -155,7 +155,7 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate }: TaskD
       progress: 0,
       createdAt: new Date(),
       updatedAt: new Date(),
-      parentId: null, // Remove parent relationship for duplicate
+      parentId: node.task.parentId || null,
     };
     
     // Save the task first - logging is handled server-side automatically

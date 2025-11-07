@@ -158,7 +158,7 @@ export default function SaleItemsSubModal({
             ClientAPI.upsertItem({
               ...originalItem,
               price: line.unitPrice,
-              updatedAt: new Date().toISOString(),
+              updatedAt: new Date(),
             })
           );
         }
