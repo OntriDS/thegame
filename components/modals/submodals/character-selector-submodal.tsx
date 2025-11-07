@@ -8,7 +8,6 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Character } from '@/types/entities';
 import { Search, User, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { getInteractiveSubModalZIndex } from '@/lib/utils/z-index-utils';
 
 interface CharacterSelectorModalProps {
   open: boolean;
@@ -76,8 +75,8 @@ export default function CharacterSelectorSubmodal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
+        zIndexLayer={'SUB_MODALS'}
         className="max-w-2xl"
-        style={{ zIndex: getInteractiveSubModalZIndex() }}
       >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">

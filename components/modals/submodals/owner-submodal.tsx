@@ -9,7 +9,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Character, Link } from '@/types/entities';
 import { Search, User, X, Plus, Crown } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { getInteractiveSubModalZIndex } from '@/lib/utils/z-index-utils';
 import { ClientAPI } from '@/lib/client-api';
 import { EntityType, LinkType } from '@/types/enums';
 
@@ -253,8 +252,8 @@ export default function OwnerSubmodal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
+        zIndexLayer={'SUB_MODALS'}
         className="max-w-4xl max-h-[80vh]"
-        style={{ zIndex: getInteractiveSubModalZIndex() }}
       >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
