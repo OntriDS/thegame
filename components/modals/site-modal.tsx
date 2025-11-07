@@ -25,7 +25,7 @@ import { getZIndexClass } from '@/lib/utils/z-index-utils';
 // No complex categorization needed for site fields
 import DeleteModal from './submodals/delete-submodal';
 import LinksRelationshipsModal from './submodals/links-relationships-submodal';
-import OwnersManagerSubmodal from './submodals/owners-manager-submodal';
+import OwnerSubmodal from './submodals/owner-submodal';
 import { dispatchEntityUpdated, entityTypeToKind } from '@/lib/ui/ui-events';
 import { LinkType } from '@/types/enums';
 // Side effects handled by parent component via API calls
@@ -448,33 +448,21 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
               )}
             </div>
 
-            {/* Owners Section */}
-            {site && (
-              <div className="mt-4">
-                <div className="flex items-center justify-between mb-2">
-                  <Label className="text-xs font-semibold">Owners</Label>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowOwnersModal(true)}
-                    className="h-7 text-xs"
-                    disabled={isNoneSite(site)}
-                  >
-                    <User className="w-3 h-3 mr-1" />
-                    Manage Owners
-                  </Button>
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  Site owners are managed via links. Click "Manage Owners" to add or remove owners.
-                </div>
-              </div>
-            )}
           </div>
 
           <DialogFooter className="flex items-center justify-between py-2 border-t px-6">
             <div className="flex items-center gap-4">
               {site && !isNoneSite(site) && (
                 <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowOwnersModal(true)}
+                    className="flex items-center gap-2 h-8 text-xs"
+                  >
+                    <User className="h-3 w-3" />
+                    Owner
+                  </Button>
                   <Button
                     variant="outline"
                     onClick={() => setShowRelationshipsModal(true)}
@@ -562,16 +550,20 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
         />
       )}
 
-      {/* Owners Manager Modal */}
+      {/* Owner Submodal */}
       {site && (
-        <OwnersManagerSubmodal
+        <OwnerSubmodal
           open={showOwnersModal}
           onOpenChange={setShowOwnersModal}
           entityType={EntityType.SITE}
           entityId={site.id}
           entityName={site.name}
           linkType={LinkType.SITE_CHARACTER}
-          onOwnersChanged={() => {
+          onPrimaryOwnerChanged={() => {
+            // Refresh UI if needed
+            dispatchEntityUpdated(entityTypeToKind(EntityType.SITE));
+          }}
+          onAdditionalOwnersChanged={() => {
             // Refresh UI if needed
             dispatchEntityUpdated(entityTypeToKind(EntityType.SITE));
           }}

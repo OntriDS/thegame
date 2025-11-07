@@ -26,9 +26,8 @@ import MoveItemsModal from './submodals/move-items-submodal';
 import DeleteModal from './submodals/delete-submodal';
 import { FileReference } from '@/types/entities';
 import LinksRelationshipsModal from './submodals/links-relationships-submodal';
-import OwnersManagerSubmodal from './submodals/owners-manager-submodal';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
-import CharacterSelectorModal from './submodals/owner-character-selector-submodal';
+import OwnerSubmodal from './submodals/owner-submodal';
 import { dispatchEntityUpdated, entityTypeToKind } from '@/lib/ui/ui-events';
 import { LinkType } from '@/types/enums';
 
@@ -73,8 +72,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [showMoreFields, setShowMoreFields] = useState(false);
   const [showLinksModal, setShowLinksModal] = useState(false);
-  const [showCharacterSelector, setShowCharacterSelector] = useState(false);
-  const [showOwnersModal, setShowOwnersModal] = useState(false);
+  const [showOwnerModal, setShowOwnerModal] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [ownerCharacterId, setOwnerCharacterId] = useState<string | null>(null);
   const [ownerCharacterName, setOwnerCharacterName] = useState<string>('');
@@ -791,29 +789,16 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
               </>
             )}
             
-            {/* Set Primary Owner button - available for both creating and editing */}
-            <Button 
-              variant="outline" 
+            {/* Owner button - available for both creating and editing */}
+            <Button
+              variant="outline"
               size="sm"
-              onClick={() => setShowCharacterSelector(true)}
+              onClick={() => setShowOwnerModal(true)}
               className="flex items-center gap-2 h-8 text-xs"
             >
               <User className="h-3 w-3" />
-              {ownerCharacterId ? `Primary Owner: ${ownerCharacterName}` : 'Set Primary Owner'}
+              {ownerCharacterId ? `Owner: ${ownerCharacterName}` : 'Set Owner'}
             </Button>
-            
-            {/* Additional Owners button - only when editing existing item */}
-            {item && (
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => setShowOwnersModal(true)}
-                className="flex items-center gap-2 h-8 text-xs"
-              >
-                <User className="h-3 w-3" />
-                Additional Owners
-              </Button>
-            )}
           </div>
 
           <div className="flex gap-2 items-center">
@@ -918,13 +903,6 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
     )}
 
     
-    {/* Character Selector Modal */}
-    <CharacterSelectorModal
-      open={showCharacterSelector}
-      onOpenChange={setShowCharacterSelector}
-      onSelect={handleSetOwner}
-      currentOwnerId={ownerCharacterId}
-    />
 
     {/* Links Relationships Modal */}
     {item && (
@@ -935,16 +913,23 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
       />
     )}
 
-    {/* Additional Owners Manager Modal */}
+    {/* Owner Submodal */}
     {item && (
-      <OwnersManagerSubmodal
-        open={showOwnersModal}
-        onOpenChange={setShowOwnersModal}
+      <OwnerSubmodal
+        open={showOwnerModal}
+        onOpenChange={setShowOwnerModal}
         entityType={EntityType.ITEM}
         entityId={item.id}
         entityName={item.name}
         linkType={LinkType.ITEM_CHARACTER}
-        onOwnersChanged={() => {
+        currentPrimaryOwnerId={ownerCharacterId}
+        onPrimaryOwnerChanged={(characterId, characterName) => {
+          setOwnerCharacterId(characterId);
+          setOwnerCharacterName(characterName || '');
+          // Refresh UI
+          dispatchEntityUpdated(entityTypeToKind(EntityType.ITEM));
+        }}
+        onAdditionalOwnersChanged={() => {
           // Refresh UI if needed
           dispatchEntityUpdated(entityTypeToKind(EntityType.ITEM));
         }}

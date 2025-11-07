@@ -30,7 +30,7 @@ import { Network, User } from 'lucide-react';
 import { getEmissaryFields } from '@/types/diplomatic-fields';
 import CascadeStatusConfirmationModal from './submodals/cascade-status-confirmation-submodal';
 import { ClientAPI } from '@/lib/client-api';
-import CharacterSelectorModal from './submodals/owner-character-selector-submodal';
+import CharacterSelectorSubmodal from './submodals/character-selector-submodal';
 import PlayerCharacterSelectorModal from './submodals/player-character-selector-submodal';
 import { dispatchEntityUpdated, entityTypeToKind } from '@/lib/ui/ui-events';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
@@ -1329,8 +1329,8 @@ export default function TaskModal({
         />
       )}
       
-      {/* Character Selector Modal */}
-      <CharacterSelectorModal
+      {/* Character Selector Submodal */}
+      <CharacterSelectorSubmodal
         open={showCharacterSelector}
         onOpenChange={setShowCharacterSelector}
         onSelect={handleSetCustomer}

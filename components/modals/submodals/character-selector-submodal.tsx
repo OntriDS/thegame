@@ -8,16 +8,23 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Character } from '@/types/entities';
 import { Search, User, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { getZIndexClass } from '@/lib/utils/z-index-utils';
+import { getInteractiveSubModalZIndex } from '@/lib/utils/z-index-utils';
 
 interface CharacterSelectorModalProps {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   onSelect: (characterId: string | null) => void;
   currentOwnerId?: string | null;
+  title?: string;
 }
 
-export default function CharacterSelectorModal({ open, onOpenChange, onSelect, currentOwnerId }: CharacterSelectorModalProps) {
+export default function CharacterSelectorSubmodal({
+  open,
+  onOpenChange,
+  onSelect,
+  currentOwnerId,
+  title = "Select Character"
+}: CharacterSelectorModalProps) {
   const [characters, setCharacters] = useState<Character[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(currentOwnerId || null);
@@ -34,13 +41,13 @@ export default function CharacterSelectorModal({ open, onOpenChange, onSelect, c
   const loadCharacters = async () => {
     try {
       setLoading(true);
-      
+
       const { ClientAPI } = await import('@/lib/client-api');
       const allCharacters = await ClientAPI.getCharacters();
-      
+
       // Filter only active characters
       const activeCharacters = allCharacters.filter((c: Character) => c.isActive);
-      
+
       setCharacters(activeCharacters);
     } catch (error) {
       console.error('Failed to load characters:', error);
@@ -50,12 +57,11 @@ export default function CharacterSelectorModal({ open, onOpenChange, onSelect, c
   };
 
   // Filter characters based on search term
-  const filteredCharacters = characters.filter((c: Character) => 
+  const filteredCharacters = characters.filter((c: Character) =>
     c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     c.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     c.contactEmail?.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
 
   const handleSelect = () => {
     onSelect(selectedId);
@@ -69,11 +75,14 @@ export default function CharacterSelectorModal({ open, onOpenChange, onSelect, c
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent zIndexLayer={'SUB_MODALS'} className="max-w-2xl">
+      <DialogContent
+        className="max-w-2xl"
+        style={{ zIndex: getInteractiveSubModalZIndex() }}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <User className="h-5 w-5" />
-            Select Item Owner
+            {title}
           </DialogTitle>
         </DialogHeader>
 
@@ -105,7 +114,7 @@ export default function CharacterSelectorModal({ open, onOpenChange, onSelect, c
               {filteredCharacters.map((character) => {
                 const isSelected = selectedId === character.id;
                 const isCurrent = currentOwnerId === character.id;
-                
+
                 return (
                   <button
                     key={character.id}
@@ -113,8 +122,8 @@ export default function CharacterSelectorModal({ open, onOpenChange, onSelect, c
                     className={`
                       w-full p-4 rounded-lg border-2 transition-all text-left
                       hover:border-primary/50 hover:bg-accent/50
-                      ${isSelected 
-                        ? 'border-primary bg-accent' 
+                      ${isSelected
+                        ? 'border-primary bg-accent'
                         : 'border-border bg-card'
                       }
                     `}
@@ -125,17 +134,17 @@ export default function CharacterSelectorModal({ open, onOpenChange, onSelect, c
                           <p className="font-medium truncate">{character.name}</p>
                           {isCurrent && (
                             <Badge variant="outline" className="text-xs">
-                              Current Owner
+                              Current
                             </Badge>
                           )}
                         </div>
-                        
+
                         {character.description && (
                           <p className="text-sm text-muted-foreground line-clamp-1 mb-2">
                             {character.description}
                           </p>
                         )}
-                        
+
                         <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
                           {character.roles && character.roles.length > 0 && (
                             <span className="flex items-center gap-1">
@@ -149,7 +158,7 @@ export default function CharacterSelectorModal({ open, onOpenChange, onSelect, c
                               )}
                             </span>
                           )}
-                          
+
                           {character.contactEmail && (
                             <span className="truncate max-w-[200px]">
                               {character.contactEmail}
@@ -157,7 +166,7 @@ export default function CharacterSelectorModal({ open, onOpenChange, onSelect, c
                           )}
                         </div>
                       </div>
-                      
+
                       {isSelected && (
                         <div className="ml-2 flex-shrink-0">
                           <div className="h-5 w-5 rounded-full bg-primary flex items-center justify-center">
@@ -184,11 +193,11 @@ export default function CharacterSelectorModal({ open, onOpenChange, onSelect, c
                 className="flex items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50"
               >
                 <X className="h-3 w-3" />
-                Remove Owner
+                Remove Selection
               </Button>
             )}
           </div>
-          
+
           <div className="flex gap-2">
             <Button
               variant="outline"
@@ -200,7 +209,7 @@ export default function CharacterSelectorModal({ open, onOpenChange, onSelect, c
               onClick={handleSelect}
               disabled={!selectedId || selectedId === currentOwnerId}
             >
-              Set Owner
+              Select
             </Button>
           </div>
         </DialogFooter>
@@ -208,4 +217,3 @@ export default function CharacterSelectorModal({ open, onOpenChange, onSelect, c
     </Dialog>
   );
 }
-
