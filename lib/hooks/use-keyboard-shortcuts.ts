@@ -55,9 +55,10 @@ export function useKeyboardShortcuts({
         const start = target.selectionStart || 0;
         const end = target.selectionEnd || 0;
         const value = target.value;
-        const newValue = value.substring(0, start) + '•' + value.substring(end);
+        const insertion = '• ';
+        const newValue = value.substring(0, start) + insertion + value.substring(end);
         target.value = newValue;
-        target.setSelectionRange(start + 1, start + 1);
+        target.setSelectionRange(start + insertion.length, start + insertion.length);
         return;
       }
 
@@ -66,8 +67,9 @@ export function useKeyboardShortcuts({
         if (selection && selection.rangeCount > 0) {
           const range = selection.getRangeAt(0);
           range.deleteContents();
-          const textNode = document.createTextNode('•');
+          const textNode = document.createTextNode('• ');
           range.insertNode(textNode);
+          range.setStartAfter(textNode);
           range.collapse(true);
           selection.removeAllRanges();
           selection.addRange(range);

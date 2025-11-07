@@ -14,7 +14,9 @@ import { Badge } from '@/components/ui/badge';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { v4 as uuid } from 'uuid';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
-import { getCompanyAreas, getPersonalAreas } from '@/lib/utils/business-structure-utils';
+import { getAreaForStation } from '@/lib/utils/business-structure-utils';
+import { createStationCategoryOptions, getStationFromCombined, getCategoryFromCombined } from '@/lib/utils/searchable-select-utils';
+import type { Station } from '@/types/type-aliases';
 
 export interface SalePaymentLine {
   id: string;
@@ -446,15 +448,18 @@ export default function SalePaymentsSubModal({
                   </div>
                   <div className="col-span-3" onClick={(e) => e.stopPropagation()}>
                     <SearchableSelect
-                      value={exchangeCategory}
-                      onValueChange={setExchangeCategory}
+                      value={exchangeCategory ? `${exchangeCategory}:${getAreaForStation(exchangeCategory as Station)}` : ''}
+                      onValueChange={(value) => {
+                        const station = getStationFromCombined(value);
+                        setExchangeCategory(station);
+                      }}
                       placeholder="Select Category"
-                      options={[
-                        ...getCompanyAreas().map(cat => ({ value: cat, label: cat, category: 'Company' })),
-                        ...getPersonalAreas().map(cat => ({ value: cat, label: cat, category: 'Personal' }))
-                      ]}
+                      options={createStationCategoryOptions()}
                       autoGroupByCategory={true}
+                      getCategoryForValue={(value) => getCategoryFromCombined(value)}
                       className={`h-8 text-xs ${selectedMethod !== 'exchange' ? 'opacity-50 pointer-events-none' : ''}`}
+                      persistentCollapsible={true}
+                      instanceId="exchange-category"
                     />
                   </div>
                   <div className="col-span-1 flex justify-center">
@@ -521,7 +526,7 @@ export default function SalePaymentsSubModal({
                 <ul className="text-xs text-blue-800 dark:text-blue-200 space-y-1">
                   <li>• <strong>Click on a row</strong> to select your payment method</li>
                   <li>• <strong>Gift:</strong> Auto-fill from revenue, reduces total revenue by gift amount</li>
-                  <li>• <strong>Exchange:</strong> Describe what was exchanged, sets category to &ldquo;Other Sales&rdquo;</li>
+                  <li>• <strong>Exchange:</strong> Describe what was exchanged, select the appropriate financial category</li>
                   <li>• <strong>Other:</strong> Custom payment method with specified name and amount</li>
                 </ul>
               </div>

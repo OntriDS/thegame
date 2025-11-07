@@ -833,24 +833,20 @@ export default function SalesModal({
                 <span>Station: <span className="font-medium text-foreground">SALES</span></span>
                 <div className="flex items-center gap-1">
                   <span>Station:</span>
-                  <Select
-                    value={taskStation}
-                    onValueChange={(value) => setTaskStation(value as Station)}
-                  >
-                    <SelectTrigger className="w-32 h-6 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {(() => {
-                        const area = getAreaForStation(taskStation);
-                        return area ? STATION_CATEGORIES[area] : [];
-                      })().map((category) => (
-                        <SelectItem key={category} value={category}>
-                          {category}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SearchableSelect
+                    value={getStationValue(taskStation)}
+                    onValueChange={(value) => {
+                      const station = getStationFromCombined(value);
+                      setTaskStation(station as Station);
+                    }}
+                    placeholder="Station"
+                    options={createStationCategoryOptions()}
+                    autoGroupByCategory={true}
+                    getCategoryForValue={(value) => getCategoryFromCombined(value)}
+                    className="w-32 h-6 text-xs"
+                    persistentCollapsible={true}
+                    instanceId="sales-modal-header-station"
+                  />
                 </div>
               </div>
               
