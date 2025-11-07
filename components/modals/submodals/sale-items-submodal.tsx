@@ -43,6 +43,7 @@ export default function SaleItemsSubModal({
   const [sites, setSites] = useState<any[]>([]);
   const [lines, setLines] = useState<SaleItemLine[]>([]);
   const [selectedSiteId, setSelectedSiteId] = useState<string>(defaultSiteId);
+  const [isSaving, setIsSaving] = useState(false);
 
   const loadData = async () => {
     try {
@@ -134,11 +135,56 @@ export default function SaleItemsSubModal({
     setLines(prev => prev.filter(line => line.id !== lineId));
   };
 
-  const handleSave = () => {
-    // Filter out empty lines
-    const validLines = lines.filter(line => line.itemId && line.quantity > 0);
-    onSave(validLines);
-    onOpenChange(false);
+  const handleSave = async () => {
+    if (isSaving) return;
+    setIsSaving(true);
+
+    try {
+      // Filter out empty lines
+      const validLines = lines.filter(line => line.itemId && line.quantity > 0);
+
+      if (validLines.length === 0) {
+        onSave(validLines);
+        onOpenChange(false);
+        return;
+      }
+
+      const updates: Promise<Item | void>[] = [];
+
+      validLines.forEach(line => {
+        const originalItem = items.find(item => item.id === line.itemId);
+        if (originalItem && originalItem.price !== line.unitPrice) {
+          updates.push(
+            ClientAPI.upsertItem({
+              ...originalItem,
+              price: line.unitPrice,
+              updatedAt: new Date().toISOString(),
+            })
+          );
+        }
+      });
+
+      if (updates.length > 0) {
+        await Promise.all(updates);
+        setItems(prev =>
+          prev.map(item => {
+            const line = validLines.find(l => l.itemId === item.id);
+            if (line && item.price !== line.unitPrice) {
+              return { ...item, price: line.unitPrice };
+            }
+            return item;
+          })
+        );
+      }
+
+      onSave(validLines);
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Failed to save sale item changes:', error);
+      alert('Failed to save items. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const totalQuantity = lines.reduce((sum, line) => sum + (line.quantity || 0), 0);
@@ -258,8 +304,8 @@ export default function SaleItemsSubModal({
             <Button variant="outline" onClick={() => onOpenChange(false)} className="h-8 text-xs">
               Cancel
             </Button>
-            <Button onClick={handleSave} className="h-8 text-xs">
-              Save Items
+            <Button onClick={handleSave} className="h-8 text-xs" disabled={isSaving}>
+              {isSaving ? 'Saving...' : 'Save Items'}
             </Button>
           </div>
         </DialogFooter>

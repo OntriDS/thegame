@@ -315,9 +315,15 @@ export enum Collection {
 
 /** Item categories for UI organization and SearchableSelect grouping */
 export const ITEM_CATEGORIES = {
-  MODEL_ITEM: ['DIGITAL', 'ARTWORK', 'PRINT', 'STICKER', 'MERCH'],
-  BUNDLE_ITEM: ['BUNDLE'],
-  RESOURCE_ITEM: ['MATERIAL', 'EQUIPMENT']
+  MODEL_ITEM: [
+    ItemType.DIGITAL,
+    ItemType.ARTWORK,
+    ItemType.PRINT,
+    ItemType.STICKER,
+    ItemType.MERCH,
+  ],
+  BUNDLE_ITEM: [ItemType.BUNDLE],
+  RESOURCE_ITEM: [ItemType.MATERIAL, ItemType.EQUIPMENT],
 } as const;
 
 // ============================================================================
