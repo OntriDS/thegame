@@ -57,9 +57,11 @@ interface TreeNodeProps {
   selectedNode: TreeNode | null;
   onToggle: (nodeId: string) => void;
   onSelectNode: (node: TreeNode) => void;
+  position: number;
+  count: number;
 }
 
-function TreeNodeComponent({ node, depth, expanded, selectedNode, onToggle, onSelectNode }: TreeNodeProps) {
+function TreeNodeComponent({ node, depth, expanded, selectedNode, onToggle, onSelectNode, position, count }: TreeNodeProps) {
   const nodeId = node.task.id;
   const isExpanded = expanded.has(nodeId);
   const isSelected = selectedNode?.task.id === nodeId;
@@ -114,6 +116,11 @@ function TreeNodeComponent({ node, depth, expanded, selectedNode, onToggle, onSe
           {/* Category Icon */}
           <Icon className="h-4 w-4 text-muted-foreground" />
 
+          {/* Ordinal badge */}
+          <span className="text-[0.625rem] px-1 py-0.5 rounded bg-muted text-muted-foreground">
+            {position + 1}/{count}
+          </span>
+
           {/* Name */}
           <span className="flex-1 truncate text-sm font-medium">{node.task.name}</span>
         </button>
@@ -122,7 +129,7 @@ function TreeNodeComponent({ node, depth, expanded, selectedNode, onToggle, onSe
       {/* Children */}
       {hasChildren && isExpanded && (
         <div>
-          {node.children.map(child => (
+          {node.children.map((child, idx) => (
             <TreeNodeComponent
               key={child.task.id}
               node={child}
@@ -131,6 +138,8 @@ function TreeNodeComponent({ node, depth, expanded, selectedNode, onToggle, onSe
               selectedNode={selectedNode}
               onToggle={onToggle}
               onSelectNode={onSelectNode}
+              position={idx}
+              count={node.children.length}
             />
           ))}
         </div>
@@ -345,7 +354,7 @@ export default function TaskTree({
       </div>
       
       <div className="flex-1 overflow-y-auto p-2 space-y-1">
-        {tree.map(root => (
+        {tree.map((root, idx) => (
           <TreeNodeComponent
             key={root.task.id}
             node={root}
@@ -354,6 +363,8 @@ export default function TaskTree({
             selectedNode={props.selectedNode}
             onToggle={onToggle}
             onSelectNode={props.onSelectNode}
+            position={idx}
+            count={tree.length}
           />
         ))}
       </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { DndContext, closestCenter, DragEndEvent } from '@dnd-kit/core';
+import { DndContext, closestCenter, DragEndEvent, DragOverEvent } from '@dnd-kit/core';
 import { useSensors, useSensor, PointerSensor } from '@dnd-kit/core';
 import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
 import { Task } from '@/types/entities';
@@ -22,6 +22,19 @@ import TaskTree from './task-tree';
 import TaskDetailView from './task-detail-view';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
+
+const findNodeInTree = (nodes: TreeNode[], taskId: string): TreeNode | null => {
+  for (const node of nodes) {
+    if (node.task.id === taskId) {
+      return node;
+    }
+    const found = findNodeInTree(node.children, taskId);
+    if (found) {
+      return found;
+    }
+  }
+  return null;
+};
 
 // Custom resizable sidebar component
 const ResizableSidebar = ({ 
@@ -158,7 +171,7 @@ export default function ControlRoom() {
   }, [getPreference]);
 
   // Data loading
-  const loadTasks = useCallback(async () => {
+  const loadTasks = useCallback(async (): Promise<TreeNode[]> => {
     try {
       let tasks = reviveDates<Task[]>(await ClientAPI.getTasks());
 
@@ -218,8 +231,11 @@ export default function ControlRoom() {
 
     const newTree = buildTaskTree(tasks);
     setTree(newTree);
+    return newTree;
     } catch (error) {
       console.error('Failed to load tasks:', error);
+      setTree([]);
+      return [];
     }
   }, [stationFilters, typeFilter, activeSubTab, refreshKey]);
 
@@ -252,28 +268,24 @@ export default function ControlRoom() {
     return false;
   };
 
-  // Helper function to reindex siblings when gaps are exhausted
-  const reindexSiblings = (siblings: Task[], startOrder: number = 0): Task[] => {
-    return siblings.map((task, index) => ({
-      ...task,
-      order: startOrder + (index * ORDER_INCREMENT),
-    }));
-  };
+  const normalizeSiblings = useCallback(async (parentId: string | null, sourceTasks?: Task[]) => {
+    const tasks = sourceTasks ? [...sourceTasks] : reviveDates<Task[]>(await ClientAPI.getTasks());
+    const siblings = tasks
+      .filter(task => (task.parentId || null) === parentId)
+      .sort((a, b) => (a.order || 0) - (b.order || 0));
 
-  // Helper function to find all visible tasks (flat list from tree)
-  const getAllVisibleTasks = (nodes: TreeNode[]): Task[] => {
-    const result: Task[] = [];
-    const traverse = (ns: TreeNode[]) => {
-      for (const node of ns) {
-        result.push(node.task);
-        if (expanded.has(node.task.id) && node.children.length > 0) {
-          traverse(node.children);
+    await Promise.all(
+      siblings.map((task, index) => {
+        const desiredOrder = (index + 1) * ORDER_INCREMENT;
+        if ((task.order || 0) !== desiredOrder) {
+          return ClientAPI.upsertTask({ ...task, order: desiredOrder });
         }
-      }
-    };
-    traverse(nodes);
-    return result;
-  };
+        return Promise.resolve();
+      })
+    );
+  }, []);
+
+  const dropIntentRef = useRef<{ targetId: string; intent: 'before' | 'after' | 'nest' } | null>(null);
 
   // Reentrancy guard for move operations
   const isMovingRef = useRef(false);
@@ -281,8 +293,7 @@ export default function ControlRoom() {
   // Move selection up handler
   const handleMoveUp = useCallback(async (options: { alt: boolean }) => {
     if (!selectedNode) return;
-    
-    // Reentrancy guard: prevent concurrent move operations
+
     if (isMovingRef.current) {
       return;
     }
@@ -291,113 +302,95 @@ export default function ControlRoom() {
     try {
       const allTasks = reviveDates<Task[]>(await ClientAPI.getTasks());
       const selectedTask = selectedNode.task;
-      
+
       if (options.alt) {
-        // Reparent to previous parent at same level
-        const allVisibleTasks = getAllVisibleTasks(tree);
-        const currentIndex = allVisibleTasks.findIndex(t => t.id === selectedTask.id);
-        
-        if (currentIndex <= 0) return; // Already at top
-        
-        // Find previous task at same or parent level
-        let targetParent: Task | null = null;
-        for (let i = currentIndex - 1; i >= 0; i--) {
-          const candidate = allVisibleTasks[i];
-          
-          // Check hierarchy rules based on active tab
-          const canBeParent = activeSubTab === 'recurrent-tasks'
-            ? canBeParentRecurrent(candidate.type, selectedTask.type)
-            : canBeParentMission(candidate.type, selectedTask.type);
-          
-          if (canBeParent) {
-            targetParent = candidate;
-            break;
-          }
-        }
-        
-        if (targetParent) {
-          // Get target parent's children to determine order
-          const targetChildren = allTasks
-            .filter(t => t.parentId === targetParent!.id)
-            .sort((a, b) => (a.order || 0) - (b.order || 0));
-          
-          const newOrder = targetChildren.length > 0
-            ? (targetChildren[targetChildren.length - 1].order || 0) + ORDER_INCREMENT
-            : Date.now();
-          
-          const updatedTask: Task = {
-            ...selectedTask,
-            parentId: targetParent.id,
-            order: newOrder,
-          };
-          
-          await ClientAPI.upsertTask(updatedTask);
-          
-          // Refresh tasks and update selection
-          const refreshedTasks = reviveDates<Task[]>(await ClientAPI.getTasks());
-          const updatedTaskData = refreshedTasks.find(t => t.id === selectedTask.id);
-          if (updatedTaskData) {
-            const newTree = buildTaskTree(refreshedTasks);
-            const findNode = (nodes: TreeNode[]): TreeNode | null => {
-              for (const node of nodes) {
-                if (node.task.id === updatedTaskData.id) return node;
-                const found = findNode(node.children);
-                if (found) return found;
-              }
-              return null;
-            };
-            const foundNode = findNode(newTree);
-            if (foundNode) setSelectedNode(foundNode);
-          }
-          
-          await loadTasks();
-        }
-      } else {
-        // Reorder within siblings
-        const parentId = selectedTask.parentId;
-        const siblings = allTasks
-          .filter(t => (t.parentId || null) === (parentId || null))
+        if (!selectedTask.parentId) return;
+
+        const parent = allTasks.find(task => task.id === selectedTask.parentId);
+        if (!parent) return;
+
+        const grandParentId = parent.parentId || null;
+        const grandParentSiblings = allTasks
+          .filter(task => (task.parentId || null) === grandParentId)
           .sort((a, b) => (a.order || 0) - (b.order || 0));
-        
-        const currentIndex = siblings.findIndex(t => t.id === selectedTask.id);
-        if (currentIndex <= 0) return; // Already at top
-        
-        const previousSibling = siblings[currentIndex - 1];
-        const previousOrder = previousSibling.order || 0;
-        const currentOrder = selectedTask.order || 0;
-        
-        // Check if there's a gap
-        const gap = previousOrder + ORDER_INCREMENT;
-        if (gap < currentOrder) {
-          // Use the gap
-          const updatedTask: Task = {
-            ...selectedTask,
-            order: gap,
-          };
-          await ClientAPI.upsertTask(updatedTask);
-        } else {
-          // Reindex all siblings
-          const reindexed = reindexSiblings(siblings, previousOrder);
-          // Update all siblings
-          for (const task of reindexed) {
-            await ClientAPI.upsertTask(task);
-          }
+        const parentIndex = grandParentSiblings.findIndex(task => task.id === parent.id);
+        if (parentIndex === -1) return;
+
+        const beforeSibling = parentIndex > 0 ? grandParentSiblings[parentIndex - 1] : null;
+        const newOrder = beforeSibling
+          ? ((beforeSibling.order || 0) + (parent.order || 0)) / 2
+          : (parent.order || 0) - ORDER_INCREMENT;
+
+        await ClientAPI.upsertTask({
+          ...selectedTask,
+          parentId: grandParentId,
+          order: newOrder,
+        });
+
+        await normalizeSiblings(grandParentId, [
+          ...allTasks.filter(task => task.id !== selectedTask.id),
+          { ...selectedTask, parentId: grandParentId, order: newOrder },
+        ]);
+
+        const newTree = await loadTasks();
+        const updatedNode = findNodeInTree(newTree, selectedTask.id);
+        if (updatedNode) {
+          setSelectedNode(updatedNode);
         }
-        
-        await loadTasks();
+        return;
+      }
+
+      const parentId = selectedTask.parentId || null;
+      const siblings = allTasks
+        .filter(task => (task.parentId || null) === parentId)
+        .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+      const currentIndex = siblings.findIndex(task => task.id === selectedTask.id);
+      if (currentIndex <= 0) return;
+
+      const previousSibling = siblings[currentIndex - 1];
+      const previousOrder = previousSibling.order || 0;
+      const currentOrder = selectedTask.order || 0;
+
+      let updatedTasks = [...allTasks];
+
+      if (previousOrder + ORDER_INCREMENT < currentOrder) {
+        const midpoint = (previousOrder + currentOrder) / 2;
+        await ClientAPI.upsertTask({ ...selectedTask, order: midpoint });
+        updatedTasks = updatedTasks.map(task =>
+          task.id === selectedTask.id ? { ...selectedTask, order: midpoint } : task
+        );
+      } else {
+        await ClientAPI.upsertTask({ ...previousSibling, order: currentOrder });
+        await ClientAPI.upsertTask({ ...selectedTask, order: previousOrder });
+        updatedTasks = updatedTasks.map(task => {
+          if (task.id === previousSibling.id) {
+            return { ...previousSibling, order: currentOrder };
+          }
+          if (task.id === selectedTask.id) {
+            return { ...selectedTask, order: previousOrder };
+          }
+          return task;
+        });
+      }
+
+      await normalizeSiblings(parentId, updatedTasks);
+      const newTree = await loadTasks();
+      const updatedNode = findNodeInTree(newTree, selectedTask.id);
+      if (updatedNode) {
+        setSelectedNode(updatedNode);
       }
     } catch (error) {
       console.error('Failed to move task up:', error);
     } finally {
       isMovingRef.current = false;
     }
-  }, [selectedNode, tree, expanded, activeSubTab, loadTasks]);
+  }, [selectedNode, normalizeSiblings, loadTasks]);
 
   // Move selection down handler
   const handleMoveDown = useCallback(async (options: { alt: boolean }) => {
     if (!selectedNode) return;
-    
-    // Reentrancy guard: prevent concurrent move operations
+
     if (isMovingRef.current) {
       return;
     }
@@ -406,107 +399,90 @@ export default function ControlRoom() {
     try {
       const allTasks = reviveDates<Task[]>(await ClientAPI.getTasks());
       const selectedTask = selectedNode.task;
-      
+
       if (options.alt) {
-        // Reparent to next parent at same level
-        const allVisibleTasks = getAllVisibleTasks(tree);
-        const currentIndex = allVisibleTasks.findIndex(t => t.id === selectedTask.id);
-        
-        if (currentIndex >= allVisibleTasks.length - 1) return; // Already at bottom
-        
-        // Find next task at same or parent level
-        let targetParent: Task | null = null;
-        for (let i = currentIndex + 1; i < allVisibleTasks.length; i++) {
-          const candidate = allVisibleTasks[i];
-          
-          // Check hierarchy rules based on active tab
-          const canBeParent = activeSubTab === 'recurrent-tasks'
-            ? canBeParentRecurrent(candidate.type, selectedTask.type)
-            : canBeParentMission(candidate.type, selectedTask.type);
-          
-          if (canBeParent) {
-            targetParent = candidate;
-            break;
-          }
-        }
-        
-        if (targetParent) {
-          // Get target parent's children to determine order
-          const targetChildren = allTasks
-            .filter(t => t.parentId === targetParent!.id)
-            .sort((a, b) => (a.order || 0) - (b.order || 0));
-          
-          const newOrder = targetChildren.length > 0
-            ? (targetChildren[targetChildren.length - 1].order || 0) + ORDER_INCREMENT
-            : Date.now();
-          
-          const updatedTask: Task = {
-            ...selectedTask,
-            parentId: targetParent.id,
-            order: newOrder,
-          };
-          
-          await ClientAPI.upsertTask(updatedTask);
-          
-          // Refresh tasks and update selection
-          const refreshedTasks = reviveDates<Task[]>(await ClientAPI.getTasks());
-          const updatedTaskData = refreshedTasks.find(t => t.id === selectedTask.id);
-          if (updatedTaskData) {
-            const newTree = buildTaskTree(refreshedTasks);
-            const findNode = (nodes: TreeNode[]): TreeNode | null => {
-              for (const node of nodes) {
-                if (node.task.id === updatedTaskData.id) return node;
-                const found = findNode(node.children);
-                if (found) return found;
-              }
-              return null;
-            };
-            const foundNode = findNode(newTree);
-            if (foundNode) setSelectedNode(foundNode);
-          }
-          
-          await loadTasks();
-        }
-      } else {
-        // Reorder within siblings
-        const parentId = selectedTask.parentId;
-        const siblings = allTasks
-          .filter(t => (t.parentId || null) === (parentId || null))
+        if (!selectedTask.parentId) return;
+
+        const parent = allTasks.find(task => task.id === selectedTask.parentId);
+        if (!parent) return;
+
+        const grandParentId = parent.parentId || null;
+        const grandParentSiblings = allTasks
+          .filter(task => (task.parentId || null) === grandParentId)
           .sort((a, b) => (a.order || 0) - (b.order || 0));
-        
-        const currentIndex = siblings.findIndex(t => t.id === selectedTask.id);
-        if (currentIndex >= siblings.length - 1) return; // Already at bottom
-        
-        const nextSibling = siblings[currentIndex + 1];
-        const nextOrder = nextSibling.order || 0;
-        const currentOrder = selectedTask.order || 0;
-        
-        // Check if there's a gap
-        const gap = nextOrder - ORDER_INCREMENT;
-        if (gap > currentOrder) {
-          // Use the gap
-          const updatedTask: Task = {
-            ...selectedTask,
-            order: gap,
-          };
-          await ClientAPI.upsertTask(updatedTask);
-        } else {
-          // Reindex all siblings
-          const reindexed = reindexSiblings(siblings, currentOrder + ORDER_INCREMENT);
-          // Update all siblings
-          for (const task of reindexed) {
-            await ClientAPI.upsertTask(task);
-          }
+        const parentIndex = grandParentSiblings.findIndex(task => task.id === parent.id);
+        if (parentIndex === -1) return;
+
+        const afterSibling = parentIndex < grandParentSiblings.length - 1 ? grandParentSiblings[parentIndex + 1] : null;
+        const newOrder = afterSibling
+          ? ((afterSibling.order || 0) + (parent.order || 0)) / 2
+          : (parent.order || 0) + ORDER_INCREMENT;
+
+        await ClientAPI.upsertTask({
+          ...selectedTask,
+          parentId: grandParentId,
+          order: newOrder,
+        });
+
+        await normalizeSiblings(grandParentId, [
+          ...allTasks.filter(task => task.id !== selectedTask.id),
+          { ...selectedTask, parentId: grandParentId, order: newOrder },
+        ]);
+
+        const newTree = await loadTasks();
+        const updatedNode = findNodeInTree(newTree, selectedTask.id);
+        if (updatedNode) {
+          setSelectedNode(updatedNode);
         }
-        
-        await loadTasks();
+        return;
+      }
+
+      const parentId = selectedTask.parentId || null;
+      const siblings = allTasks
+        .filter(task => (task.parentId || null) === parentId)
+        .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+      const currentIndex = siblings.findIndex(task => task.id === selectedTask.id);
+      if (currentIndex >= siblings.length - 1) return;
+
+      const nextSibling = siblings[currentIndex + 1];
+      const nextOrder = nextSibling.order || 0;
+      const currentOrder = selectedTask.order || 0;
+
+      let updatedTasks = [...allTasks];
+
+      if (nextOrder - ORDER_INCREMENT > currentOrder) {
+        const midpoint = (nextOrder + currentOrder) / 2;
+        await ClientAPI.upsertTask({ ...selectedTask, order: midpoint });
+        updatedTasks = updatedTasks.map(task =>
+          task.id === selectedTask.id ? { ...selectedTask, order: midpoint } : task
+        );
+      } else {
+        await ClientAPI.upsertTask({ ...nextSibling, order: currentOrder });
+        await ClientAPI.upsertTask({ ...selectedTask, order: nextOrder });
+        updatedTasks = updatedTasks.map(task => {
+          if (task.id === nextSibling.id) {
+            return { ...nextSibling, order: currentOrder };
+          }
+          if (task.id === selectedTask.id) {
+            return { ...selectedTask, order: nextOrder };
+          }
+          return task;
+        });
+      }
+
+      await normalizeSiblings(parentId, updatedTasks);
+      const newTree = await loadTasks();
+      const updatedNode = findNodeInTree(newTree, selectedTask.id);
+      if (updatedNode) {
+        setSelectedNode(updatedNode);
       }
     } catch (error) {
       console.error('Failed to move task down:', error);
     } finally {
       isMovingRef.current = false;
     }
-  }, [selectedNode, tree, expanded, activeSubTab, loadTasks]);
+  }, [selectedNode, normalizeSiblings, loadTasks]);
 
   // Keyboard shortcuts for modal navigation and task reordering (control-room scope)
   useKeyboardShortcuts({
@@ -577,64 +553,150 @@ export default function ControlRoom() {
   }
 
   // Drag and Drop Handler
+  const handleDragOver = useCallback((event: DragOverEvent) => {
+    const { over, active } = event;
+    if (!over) {
+      dropIntentRef.current = null;
+      return;
+    }
+
+    const overRect = over.rect;
+    const activeRect = active.rect.current?.translated ?? active.rect.current?.initial;
+    if (!overRect || !activeRect) {
+      dropIntentRef.current = { targetId: over.id as string, intent: 'after' };
+      return;
+    }
+
+    const pointerY = activeRect.top + activeRect.height / 2;
+    const ratio = (pointerY - overRect.top) / overRect.height;
+
+    let intent: 'before' | 'after' | 'nest';
+    if (ratio <= 0.25) {
+      intent = 'before';
+    } else if (ratio >= 0.75) {
+      intent = 'after';
+    } else {
+      intent = 'nest';
+    }
+
+    dropIntentRef.current = { targetId: over.id as string, intent };
+  }, []);
+
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
-    if (!over || active.id === over.id) return;
+    if (!over || active.id === over.id) {
+      dropIntentRef.current = null;
+      return;
+    }
 
     const draggedId = active.id as string;
     const targetId = over.id as string;
     const allTasks = reviveDates<Task[]>(await ClientAPI.getTasks());
-    
-    const draggedTask = allTasks.find(t => t.id === draggedId);
-    const targetTask = allTasks.find(t => t.id === targetId);
-    
-    if (!draggedTask || !targetTask) return;
 
-    // Check hierarchy rules based on active tab
+    const draggedTask = allTasks.find(task => task.id === draggedId);
+    const targetTask = allTasks.find(task => task.id === targetId);
+
+    if (!draggedTask || !targetTask) {
+      dropIntentRef.current = null;
+      return;
+    }
+
+    let intent: 'before' | 'after' | 'nest' = 'after';
+    if (dropIntentRef.current && dropIntentRef.current.targetId === targetId) {
+      intent = dropIntentRef.current.intent;
+    }
+
     const canBeParent = activeSubTab === 'recurrent-tasks'
       ? canBeParentRecurrent(targetTask.type, draggedTask.type)
       : canBeParentMission(targetTask.type, draggedTask.type);
-    
-    if (canBeParent) {
-      // NESTING: Make target the parent
-      // Get target parent's children to determine order
+
+    if (intent === 'nest' && !canBeParent) {
+      intent = 'after';
+    }
+
+    let newParentId: string | null = draggedTask.parentId || null;
+    let updatedTasks = [...allTasks];
+
+    if (intent === 'nest' && canBeParent) {
+      newParentId = targetTask.id;
       const targetChildren = allTasks
-        .filter(t => t.parentId === targetTask.id)
+        .filter(task => task.parentId === targetTask.id && task.id !== draggedTask.id)
         .sort((a, b) => (a.order || 0) - (b.order || 0));
-      
+
       const newOrder = targetChildren.length > 0
         ? (targetChildren[targetChildren.length - 1].order || 0) + ORDER_INCREMENT
-        : Date.now();
-      
-      const updatedTask: Task = {
+        : ORDER_INCREMENT;
+
+      await ClientAPI.upsertTask({
         ...draggedTask,
         parentId: targetTask.id,
         order: newOrder,
-      };
-      await ClientAPI.upsertTask(updatedTask);
-    } else {
-      // REORDERING: Keep same parent, just change order
-      const parentId = targetTask.parentId;
-      const siblings = allTasks
-        .filter(t => (t.parentId || null) === (parentId || null))
-        .sort((a, b) => (a.order || 0) - (b.order || 0));
-      
-      const oldIndex = siblings.findIndex(t => t.id === draggedId);
-      const newIndex = siblings.findIndex(t => t.id === targetId);
-      
-      if (oldIndex !== -1 && newIndex !== -1) {
-        // Simple reordering: place after target
-        const newOrder = (targetTask.order || 0) + ORDER_INCREMENT;
-        const updatedTask: Task = {
-          ...draggedTask,
-          parentId: targetTask.parentId,
-          order: newOrder,
-        };
-        await ClientAPI.upsertTask(updatedTask);
+      });
+
+      updatedTasks = updatedTasks.map(task => {
+        if (task.id === draggedTask.id) {
+          return { ...draggedTask, parentId: targetTask.id, order: newOrder };
+        }
+        return task;
+      });
+
+      await normalizeSiblings(targetTask.id, updatedTasks);
+      const newTree = await loadTasks();
+      const updatedNode = findNodeInTree(newTree, draggedId);
+      if (updatedNode) {
+        setSelectedNode(updatedNode);
       }
+      dropIntentRef.current = null;
+      return;
     }
-    
-    loadTasks();
+
+    newParentId = targetTask.parentId || null;
+    const siblings = allTasks
+      .filter(task => (task.parentId || null) === newParentId && task.id !== draggedTask.id)
+      .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+    const targetIndex = siblings.findIndex(task => task.id === targetId);
+    if (targetIndex === -1) {
+      dropIntentRef.current = null;
+      return;
+    }
+
+    const targetOrder = targetTask.order || 0;
+    let newOrder: number;
+
+    if (intent === 'before') {
+      const beforeSibling = targetIndex > 0 ? siblings[targetIndex - 1] : null;
+      newOrder = beforeSibling
+        ? ((beforeSibling.order || 0) + targetOrder) / 2
+        : targetOrder - ORDER_INCREMENT;
+    } else {
+      const afterSibling = targetIndex < siblings.length - 1 ? siblings[targetIndex + 1] : null;
+      newOrder = afterSibling
+        ? ((afterSibling.order || 0) + targetOrder) / 2
+        : targetOrder + ORDER_INCREMENT;
+    }
+
+    await ClientAPI.upsertTask({
+      ...draggedTask,
+      parentId: newParentId,
+      order: newOrder,
+    });
+
+    updatedTasks = updatedTasks.map(task => {
+      if (task.id === draggedTask.id) {
+        return { ...draggedTask, parentId: newParentId, order: newOrder };
+      }
+      return task;
+    });
+
+    await normalizeSiblings(newParentId, updatedTasks);
+    const newTree = await loadTasks();
+    const updatedNode = findNodeInTree(newTree, draggedId);
+    if (updatedNode) {
+      setSelectedNode(updatedNode);
+    }
+
+    dropIntentRef.current = null;
   };
 
   return (
@@ -643,6 +705,8 @@ export default function ControlRoom() {
         collisionDetection={closestCenter}
         modifiers={[restrictToVerticalAxis]}
         sensors={sensors}
+        autoScroll={true}
+        onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
       >
         <div className="flex flex-col border-2 border-muted shadow-2xl rounded-xl h-[calc(100vh-12rem)] min-h-[600px] bg-background">
