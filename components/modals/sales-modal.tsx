@@ -33,6 +33,7 @@ import SaleItemsSubModal, { SaleItemLine } from './submodals/sale-items-submodal
 import SalePaymentsSubModal, { SalePaymentLine } from './submodals/sale-payments-submodal';
 import ItemEmissarySubModal, { ItemCreationData } from './submodals/item-emissary-submodal';
 import PointsEmissarySubModal, { PointsData } from './submodals/points-emissary-submodal';
+import ConfirmationModal from './submodals/confirmation-submodal';
 
 interface SalesModalProps {
   sale?: Sale | null;
@@ -105,6 +106,9 @@ export default function SalesModal({
   const [taskDueDate, setTaskDueDate] = useState<Date | undefined>(undefined);
   const [oneItemMultiple, setOneItemMultiple] = useState<'one' | 'multiple'>('one');
   const [taskStation, setTaskStation] = useState<Station>('SALES' as Station);
+  const [showValidationModal, setShowValidationModal] = useState(false);
+  const [validationMessage, setValidationMessage] = useState('');
+  const [showClearLinesModal, setShowClearLinesModal] = useState(false);
 
   // Mini-submodal states for Task data
   const [showTaskItemSubModal, setShowTaskItemSubModal] = useState(false);
@@ -328,24 +332,25 @@ export default function SalesModal({
     // Validation: Sales must have either product (item) OR service (task)
     const hasProductLines = lines.some(line => line.kind === 'item' || line.kind === 'bundle');
     const hasServiceLines = lines.some(line => line.kind === 'service');
-    const hasProductFields = selectedItemId || quickRows.some(r => r.quantity > 0);
+    const hasProductFields = Boolean(selectedItemId) || quickRows.some(r => r.quantity > 0);
+    const hasSelectedItems = selectedItems.length > 0;
+    const hasAnyProductSelection = hasProductLines || hasProductFields || hasSelectedItems;
     
-    if (!hasProductLines && !hasServiceLines && !hasProductFields) {
-      alert('Please add at least one product (item) or service (task) to the sale.');
-      setIsSaving(false);
+    if (!hasAnyProductSelection && !hasServiceLines) {
+      showValidationError('Please add at least one product (item) or service (task) to the sale.', true);
       return;
     }
 
 
     // Validate: Check for conflicting data (product fields filled while service lines exist, or vice versa)
     
-    if (hasServiceLines && hasProductFields) {
-      alert('Conflicting data detected! You have service lines but also product fields filled. Please clear one before saving.');
+    if (hasServiceLines && (hasProductFields || hasSelectedItems)) {
+      showValidationError('Conflicting data detected! You have service lines but also product fields filled. Please clear one before saving.', true);
       return;
     }
     
-    if (hasProductLines && whatKind === 'service') {
-      alert('Conflicting data detected! You have product lines but are in Service mode. Please clear the product lines or switch to Product mode.');
+    if (hasAnyProductSelection && whatKind === 'service' && !hasServiceLines) {
+      showValidationError('Conflicting data detected! You have product lines but are in Service mode. Please clear the product lines or switch to Product mode.', true);
       return;
     }
 
@@ -421,7 +426,7 @@ export default function SalesModal({
     }
 
     if (effectiveLines.length === 0 && status === SaleStatus.ON_HOLD) {
-      alert('Posting requires at least one sale line. Use Quick Count or Manual Lines.');
+      showValidationError('Posting requires at least one sale line. Use Quick Count or Manual Lines.', true);
       return;
     }
 
@@ -547,7 +552,7 @@ export default function SalesModal({
 
   const addItemLine = () => {
     if (!canAddLineType('item')) {
-      alert('Cannot mix product and service lines in the same sale. Please clear existing lines first.');
+      showValidationError('Cannot mix product and service lines in the same sale. Please clear existing lines first.');
       return;
     }
     
@@ -572,6 +577,14 @@ export default function SalesModal({
   };
   const removeQuickRow = (id: string) => {
     setQuickRows(prev => prev.filter(r => r.id !== id));
+  };
+
+  const showValidationError = (message: string, resetSaving: boolean = false) => {
+    if (resetSaving) {
+      setIsSaving(false);
+    }
+    setValidationMessage(message);
+    setShowValidationModal(true);
   };
 
   const applyQuickRowsToLines = () => {
@@ -612,7 +625,7 @@ export default function SalesModal({
 
   const addBundleLine = () => {
     if (!canAddLineType('bundle')) {
-      alert('Cannot mix product and service lines in the same sale. Please clear existing lines first.');
+      showValidationError('Cannot mix product and service lines in the same sale. Please clear existing lines first.');
       return;
     }
     
@@ -632,7 +645,7 @@ export default function SalesModal({
 
   const addServiceLine = () => {
     if (!canAddLineType('service')) {
-      alert('Cannot mix product and service lines in the same sale. Please clear existing lines first.');
+      showValidationError('Cannot mix product and service lines in the same sale. Please clear existing lines first.');
       return;
     }
     
@@ -661,10 +674,12 @@ export default function SalesModal({
 
   const clearAllLines = () => {
     if (lines.length === 0) return;
-    
-    if (confirm(`Are you sure you want to clear all ${lines.length} line(s)? This action cannot be undone.`)) {
-      setLines([]);
-    }
+    setShowClearLinesModal(true);
+  };
+
+  const handleConfirmClearLines = () => {
+    setLines([]);
+    setShowClearLinesModal(false);
   };
 
   const addPayment = () => {
@@ -871,12 +886,12 @@ export default function SalesModal({
                   const existingKinds = new Set(lines.map(line => line.kind));
                   
                   if (newKind === 'product' && existingKinds.has('service')) {
-                    alert('Cannot switch to Product mode. This sale already has service lines. Please clear all lines first.');
+                    showValidationError('Cannot switch to Product mode. This sale already has service lines. Please clear all lines first.');
                     return;
                   }
                   
                   if (newKind === 'service' && (existingKinds.has('item') || existingKinds.has('bundle'))) {
-                    alert('Cannot switch to Service mode. This sale already has product lines. Please clear all lines first.');
+                    showValidationError('Cannot switch to Service mode. This sale already has product lines. Please clear all lines first.');
                     return;
                   }
                 }
@@ -1849,6 +1864,40 @@ export default function SalesModal({
         />
 
       </DialogContent>
+
+      {/* Validation Modal */}
+      <Dialog open={showValidationModal} onOpenChange={setShowValidationModal}>
+        <DialogContent zIndexLayer={'MODALS'} className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Missing Required Information</DialogTitle>
+            <DialogDescription>
+              {validationMessage}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowValidationModal(false)}
+              className="h-8 text-xs"
+            >
+              Okay
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Clear Lines Confirmation */}
+      <ConfirmationModal
+        open={showClearLinesModal}
+        onOpenChange={setShowClearLinesModal}
+        title="Clear Sale Lines"
+        description={`Are you sure you want to clear all ${lines.length} line(s)? This action cannot be undone.`}
+        confirmText="Clear Lines"
+        cancelText="Keep Lines"
+        variant="destructive"
+        onConfirm={handleConfirmClearLines}
+        onCancel={() => setShowClearLinesModal(false)}
+      />
     </Dialog>
   );
 }

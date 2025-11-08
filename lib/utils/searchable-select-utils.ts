@@ -15,6 +15,13 @@ import {
 import { getAllSettlements } from '@/lib/utils/settlement-utils';
 import { getItemCategory, getSubTypesForItemType } from '@/lib/utils/item-utils';
 
+const ITEM_TYPE_ORDER = Object.values(ItemType);
+
+function getItemTypeSortIndex(type: string): number {
+  const index = ITEM_TYPE_ORDER.indexOf(type as ItemType);
+  return index === -1 ? ITEM_TYPE_ORDER.length : index;
+}
+
 /**
  * Generic function to get category for any enum value based on categories structure
  * @param value The enum value to categorize
@@ -477,6 +484,12 @@ export function createItemOptions(
       category: item.type
     });
   }
+
+  options.sort((a, b) => {
+    const typeComparison = getItemTypeSortIndex(a.category) - getItemTypeSortIndex(b.category);
+    if (typeComparison !== 0) return typeComparison;
+    return a.label.localeCompare(b.label);
+  });
   
   return options;
 }
@@ -518,6 +531,12 @@ export function createItemOptionsForSite(
       category: item.type
     });
   }
+
+  options.sort((a, b) => {
+    const typeComparison = getItemTypeSortIndex(a.category) - getItemTypeSortIndex(b.category);
+    if (typeComparison !== 0) return typeComparison;
+    return a.label.localeCompare(b.label);
+  });
   
   return options;
 }
