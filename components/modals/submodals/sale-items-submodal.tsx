@@ -69,12 +69,47 @@ export default function SaleItemsSubModal({
   }), [selectedSiteId]);
 
   useEffect(() => {
-    if (open) {
-      loadData();
-      setLines(initialItems.length > 0 ? initialItems : [createEmptyLine()]);
-      setSelectedSiteId(defaultSiteId);
+    if (!open) {
+      return;
+    }
+
+    loadData();
+
+    const initialSiteId =
+      defaultSiteId ||
+      (initialItems.length > 0 ? initialItems[0].siteId : '') ||
+      '';
+
+    setSelectedSiteId(initialSiteId);
+
+    if (initialItems.length > 0) {
+      setLines(
+        initialItems.map((line) => ({
+          ...line,
+          siteId: initialSiteId || line.siteId || '',
+        }))
+      );
+    } else {
+      setLines([createEmptyLine()]);
     }
   }, [open, initialItems, defaultSiteId, createEmptyLine]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    setLines((prev) =>
+      prev.map((line) =>
+        line.siteId === selectedSiteId
+          ? line
+          : {
+              ...line,
+              siteId: selectedSiteId,
+            }
+      )
+    );
+  }, [selectedSiteId, open]);
 
   const getItemOptions = (lineId: string) => {
     if (selectedSiteId) {
