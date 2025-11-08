@@ -428,7 +428,7 @@ export default function ControlRoom() {
     } catch (error) {
       console.error('Failed to change task order:', error);
     }
-  }, [loadTasks, setSelectedNode]);
+  }, [loadTasks]);
 
   // Move selection down handler
   const handleMoveDown = useCallback(async (options: { alt: boolean }) => {
@@ -830,6 +830,9 @@ export default function ControlRoom() {
                   typeFilter={typeFilter}
                   onTypeFilterChange={setTypeFilter}
                   activeSubTab={activeSubTab}
+                  onChangeOrder={handleChangeOrder}
+                  activeSubTab={activeSubTab}
+                  onChangeOrder={handleChangeOrder}
                 />
               </ResizableSidebar>
             ) : (
