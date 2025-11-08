@@ -387,6 +387,49 @@ export default function ControlRoom() {
     }
   }, [selectedNode, normalizeSiblings, loadTasks]);
 
+  const handleChangeOrder = useCallback(async (taskId: string, parentId: string | null, newPosition: number) => {
+    if (newPosition < 1) return;
+
+    try {
+      const allTasks = reviveDates<Task[]>(await ClientAPI.getTasks());
+      const targetTask = allTasks.find(task => task.id === taskId);
+      if (!targetTask) return;
+
+      const normalizedParentId = parentId || null;
+      const siblings = allTasks
+        .filter(task => (task.parentId || null) === normalizedParentId)
+        .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+      const currentIndex = siblings.findIndex(task => task.id === taskId);
+      if (currentIndex === -1) return;
+
+      const boundedIndex = Math.min(Math.max(newPosition - 1, 0), siblings.length - 1);
+      if (boundedIndex === currentIndex) return;
+
+      const reordered = [...siblings];
+      const [moved] = reordered.splice(currentIndex, 1);
+      reordered.splice(boundedIndex, 0, moved);
+
+      await Promise.all(
+        reordered.map((task, index) => {
+          const desiredOrder = (index + 1) * ORDER_INCREMENT;
+          if ((task.order || 0) !== desiredOrder) {
+            return ClientAPI.upsertTask({ ...task, order: desiredOrder });
+          }
+          return Promise.resolve();
+        })
+      );
+
+      const newTree = await loadTasks();
+      const updatedNode = findNodeInTree(newTree, taskId);
+      if (updatedNode) {
+        setSelectedNode(updatedNode);
+      }
+    } catch (error) {
+      console.error('Failed to change task order:', error);
+    }
+  }, [loadTasks, setSelectedNode]);
+
   // Move selection down handler
   const handleMoveDown = useCallback(async (options: { alt: boolean }) => {
     if (!selectedNode) return;
@@ -748,6 +791,7 @@ export default function ControlRoom() {
                   typeFilter={typeFilter}
                   onTypeFilterChange={setTypeFilter}
                   activeSubTab={activeSubTab}
+                  onChangeOrder={handleChangeOrder}
                 />
               </ResizableSidebar>
             ) : (

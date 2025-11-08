@@ -28,6 +28,7 @@ interface TaskTreeProps {
   onTypeFilterChange: (value: TaskType | 'all') => void;
   // --- NEW Tab Props ---
   activeSubTab: 'mission-tree' | 'recurrent-tasks' | 'schedule' | 'calendar';
+  onChangeOrder: (taskId: string, parentId: string | null, newPosition: number) => Promise<void> | void;
 }
 
 // Helper to get root stations (all stations are root level now)
@@ -59,9 +60,10 @@ interface TreeNodeProps {
   onSelectNode: (node: TreeNode) => void;
   position: number;
   count: number;
+  onChangeOrder: (taskId: string, parentId: string | null, newPosition: number) => Promise<void> | void;
 }
 
-function TreeNodeComponent({ node, depth, expanded, selectedNode, onToggle, onSelectNode, position, count }: TreeNodeProps) {
+function TreeNodeComponent({ node, depth, expanded, selectedNode, onToggle, onSelectNode, position, count, onChangeOrder }: TreeNodeProps) {
   const nodeId = node.task.id;
   const isExpanded = expanded.has(nodeId);
   const isSelected = selectedNode?.task.id === nodeId;
@@ -82,6 +84,24 @@ function TreeNodeComponent({ node, depth, expanded, selectedNode, onToggle, onSe
     : '';
 
   const Icon = TASK_TYPE_ICONS[node.task.type as keyof typeof TASK_TYPE_ICONS] || TASK_TYPE_ICONS[TaskType.ASSIGNMENT];
+  const [isEditingOrder, setIsEditingOrder] = useState(false);
+  const [orderInput, setOrderInput] = useState(String(position + 1));
+
+  useEffect(() => {
+    setOrderInput(String(position + 1));
+  }, [position, count]);
+
+  const submitOrderChange = async () => {
+    const parsed = parseInt(orderInput, 10);
+    if (!Number.isNaN(parsed) && parsed >= 1 && parsed <= count) {
+      try {
+        await onChangeOrder(node.task.id, node.task.parentId || null, parsed);
+      } catch (error) {
+        console.error('Failed to change order:', error);
+      }
+    }
+    setIsEditingOrder(false);
+  };
 
   return (
     <div ref={droppableRef} style={style} className={`relative ${dropLine}`}>
@@ -117,9 +137,53 @@ function TreeNodeComponent({ node, depth, expanded, selectedNode, onToggle, onSe
           <Icon className="h-4 w-4 text-muted-foreground" />
 
           {/* Ordinal badge */}
-          <span className="text-[0.625rem] px-1 py-0.5 rounded bg-muted text-muted-foreground">
-            {position + 1}/{count}
-          </span>
+          <div className="flex items-center">
+            {isEditingOrder ? (
+              <div
+                className="flex items-center gap-1"
+                onPointerDown={(e) => e.stopPropagation()}
+              >
+                <input
+                  type="number"
+                  className="w-10 h-5 text-[0.625rem] px-1 border rounded bg-background"
+                  value={orderInput}
+                  min={1}
+                  max={count}
+                  onChange={(e) => setOrderInput(e.target.value)}
+                  onBlur={submitOrderChange}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      submitOrderChange();
+                    } else if (e.key === 'Escape') {
+                      e.preventDefault();
+                      setOrderInput(String(position + 1));
+                      setIsEditingOrder(false);
+                    }
+                  }}
+                  autoFocus
+                />
+                <span className="text-[0.625rem] text-muted-foreground whitespace-nowrap">
+                  /{count}
+                </span>
+              </div>
+            ) : (
+              <span
+                className="text-[0.625rem] px-1 py-0.5 rounded bg-muted text-muted-foreground cursor-text"
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setOrderInput(String(position + 1));
+                  setIsEditingOrder(true);
+                }}
+              >
+                {position + 1}/{count}
+              </span>
+            )}
+          </div>
 
           {/* Name */}
           <span className="flex-1 truncate text-sm font-medium">{node.task.name}</span>
@@ -140,6 +204,7 @@ function TreeNodeComponent({ node, depth, expanded, selectedNode, onToggle, onSe
               onSelectNode={onSelectNode}
               position={idx}
               count={node.children.length}
+              onChangeOrder={onChangeOrder}
             />
           ))}
         </div>
@@ -159,6 +224,7 @@ export default function TaskTree({
   typeFilter,
   onTypeFilterChange,
   activeSubTab,
+  onChangeOrder,
   ...props 
 }: TaskTreeProps) {
   return (
@@ -365,6 +431,7 @@ export default function TaskTree({
             onSelectNode={props.onSelectNode}
             position={idx}
             count={tree.length}
+            onChangeOrder={onChangeOrder}
           />
         ))}
       </div>

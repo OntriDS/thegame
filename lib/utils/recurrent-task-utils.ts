@@ -10,6 +10,7 @@ import { appendEntityLog } from '@/workflows/entities-logging';
 import { EntityType, LogEventType } from '@/types/enums';
 import { FrequencyConfig } from '@/components/ui/frequency-calendar';
 import { v4 as uuid } from 'uuid';
+import { ORDER_INCREMENT } from '@/lib/constants/app-constants';
 
 export interface RecurrentTaskConfig {
   type: RecurrentFrequency;
@@ -97,10 +98,17 @@ export function spawnRecurrentInstance(
   template: Task,
   dueDate: Date
 ): Task {
+  const formattedDate = dueDate.toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: '2-digit'
+  }).replace(/\s/, '\u00A0'); // keep day-month together
+  const separator = ' \u2022 ';
+  const instanceOrder = dueDate.getTime();
   return {
     ...template,
     id: uuid(),
-    name: `${template.name} - ${dueDate.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })}`,
+    name: `${template.name}${separator}${formattedDate}`,
     type: TaskType.RECURRENT_INSTANCE,
     dueDate,
     parentId: template.id, // Instance points to its template
@@ -109,6 +117,7 @@ export function spawnRecurrentInstance(
     frequencyConfig: undefined, // Instances don't have frequency config
     createdAt: new Date(),
     updatedAt: new Date(),
+    order: instanceOrder,
     links: [] // ✅ Initialize links array (The Rosetta Stone) - new instance gets fresh links
   };
 }
@@ -303,8 +312,18 @@ export async function handleTemplateInstanceCreation(template: Task): Promise<Ta
 
   // Get existing instances for this template
   const tasks = await getAllTasks();
-  const existingInstances = tasks.filter(
-    (t: Task) => t.parentId === template.id && t.type === TaskType.RECURRENT_INSTANCE
+  const existingInstances = tasks
+    .filter((t: Task) => t.parentId === template.id && t.type === TaskType.RECURRENT_INSTANCE)
+    .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+  await Promise.all(
+    existingInstances.map((instance, index) => {
+      const desiredOrder = (index + 1) * ORDER_INCREMENT;
+      if ((instance.order || 0) !== desiredOrder) {
+        return upsertTask({ ...instance, order: desiredOrder });
+      }
+      return Promise.resolve();
+    })
   );
 
   // Generate new instances based on template's frequency
@@ -316,12 +335,18 @@ export async function handleTemplateInstanceCreation(template: Task): Promise<Ta
     (instance: Task) => !existingDueDates.has(instance.dueDate?.getTime())
   );
 
-  // Save new instances
+  // Save new instances with sequential order appended after existing ones
+  let nextIndex = existingInstances.length;
+  const createdInstances: Task[] = [];
   for (const instance of uniqueNewInstances) {
-    await upsertTask(instance);
+    nextIndex += 1;
+    const desiredOrder = nextIndex * ORDER_INCREMENT;
+    const instanceWithOrder: Task = { ...instance, order: desiredOrder };
+    await upsertTask(instanceWithOrder);
+    createdInstances.push(instanceWithOrder);
   }
 
-  return uniqueNewInstances;
+  return createdInstances;
 }
 
 /**
