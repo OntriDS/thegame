@@ -831,8 +831,6 @@ export default function ControlRoom() {
                   onTypeFilterChange={setTypeFilter}
                   activeSubTab={activeSubTab}
                   onChangeOrder={handleChangeOrder}
-                  activeSubTab={activeSubTab}
-                  onChangeOrder={handleChangeOrder}
                 />
               </ResizableSidebar>
             ) : (
