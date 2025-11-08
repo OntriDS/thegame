@@ -182,6 +182,15 @@ export default function SalesModal({
     }
   }, [open]);
 
+  useEffect(() => {
+    setSelectedItems((prev) =>
+      prev.map((item) => ({
+        ...item,
+        siteId: siteId || '',
+      }))
+    );
+  }, [siteId]);
+
   // Initialize form when sale changes
   useEffect(() => {
     if (sale) {

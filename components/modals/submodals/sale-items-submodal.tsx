@@ -1,18 +1,16 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import NumericInput from '@/components/ui/numeric-input';
 import { Item } from '@/types/entities';
-import { createSiteOptionsWithCategories } from '@/lib/utils/site-options-utils';
 import { createItemOptions, createItemOptionsForSite } from '@/lib/utils/searchable-select-utils';
 import { ClientAPI } from '@/lib/client-api';
 import { Trash2, Plus } from 'lucide-react';
 import { v4 as uuid } from 'uuid';
-import { getZIndexClass } from '@/lib/utils/z-index-utils';
 
 export interface SaleItemLine {
   id: string;
@@ -40,19 +38,15 @@ export default function SaleItemsSubModal({
   defaultSiteId = ''
 }: SaleItemsSubModalProps) {
   const [items, setItems] = useState<Item[]>([]);
-  const [sites, setSites] = useState<any[]>([]);
   const [lines, setLines] = useState<SaleItemLine[]>([]);
   const [selectedSiteId, setSelectedSiteId] = useState<string>(defaultSiteId);
   const [isSaving, setIsSaving] = useState(false);
+  const hasInitializedRef = useRef(false);
 
   const loadData = async () => {
     try {
-      const [itemsData, sitesData] = await Promise.all([
-        ClientAPI.getItems(),
-        ClientAPI.getSites()
-      ]);
+      const itemsData = await ClientAPI.getItems();
       setItems(itemsData);
-      setSites(sitesData);
     } catch (error) {
       console.error('Failed to load data:', error);
     }
@@ -69,30 +63,37 @@ export default function SaleItemsSubModal({
   }), [selectedSiteId]);
 
   useEffect(() => {
-    if (!open) {
+    if (open) {
+      loadData();
+      hasInitializedRef.current = false;
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (!open || hasInitializedRef.current) {
       return;
     }
 
-    loadData();
+    const siteId = defaultSiteId || '';
+    const initialLines =
+      initialItems.length > 0 ? initialItems : [createEmptyLine()];
 
-    const initialSiteId =
-      defaultSiteId ||
-      (initialItems.length > 0 ? initialItems[0].siteId : '') ||
-      '';
+    setLines(
+      initialLines.map((line) => ({
+        ...line,
+        siteId: siteId || line.siteId || '',
+      }))
+    );
 
-    setSelectedSiteId(initialSiteId);
-
-    if (initialItems.length > 0) {
-      setLines(
-        initialItems.map((line) => ({
-          ...line,
-          siteId: initialSiteId || line.siteId || '',
-        }))
-      );
-    } else {
-      setLines([createEmptyLine()]);
-    }
+    hasInitializedRef.current = true;
   }, [open, initialItems, defaultSiteId, createEmptyLine]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    setSelectedSiteId(defaultSiteId || '');
+  }, [defaultSiteId, open]);
 
   useEffect(() => {
     if (!open) {
@@ -100,14 +101,10 @@ export default function SaleItemsSubModal({
     }
 
     setLines((prev) =>
-      prev.map((line) =>
-        line.siteId === selectedSiteId
-          ? line
-          : {
-              ...line,
-              siteId: selectedSiteId,
-            }
-      )
+      prev.map((line) => ({
+        ...line,
+        siteId: selectedSiteId || '',
+      }))
     );
   }, [selectedSiteId, open]);
 
@@ -233,19 +230,6 @@ export default function SaleItemsSubModal({
         </DialogHeader>
 
         <div className="space-y-4 overflow-y-auto max-h-[60vh] px-1">
-          {/* Site Selector */}
-          <div className="space-y-2">
-            <Label htmlFor="site" className="text-xs">Site</Label>
-            <SearchableSelect
-              value={selectedSiteId}
-              onValueChange={setSelectedSiteId}
-              options={createSiteOptionsWithCategories(sites)}
-              autoGroupByCategory={true}
-              placeholder="Select site..."
-              className="h-8 text-sm"
-            />
-          </div>
-
           {/* Items Table */}
           <div className="space-y-2">
             <div className="grid grid-cols-12 gap-2 text-xs font-semibold text-muted-foreground px-2">
