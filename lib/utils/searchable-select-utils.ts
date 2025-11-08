@@ -441,11 +441,11 @@ export function createSiteTypeOptionsWithCategories() {
 
 /**
  * Creates item options with automatic category grouping for SearchableSelect
- * Uses ItemCategory for proper categorization
+ * Uses ItemType for proper categorization
  * @param items Array of available items
  * @param showPrice Optional flag to include price in label (default: true)
  * @param showQuantity Optional flag to include total quantity in label (default: true)
- * @returns Array of item options with ItemCategory grouping
+ * @returns Array of item options with ItemType grouping
  */
 export function createItemOptions(
   items: any[], 
@@ -474,7 +474,7 @@ export function createItemOptions(
     options.push({
       value: item.id,
       label: label,
-      category: getItemCategory(item.type)
+      category: item.type
     });
   }
   
@@ -486,7 +486,7 @@ export function createItemOptions(
  * @param items Array of available items
  * @param siteId The site ID to show quantities for
  * @param showPrice Optional flag to include price in label (default: true)
- * @returns Array of item options with site-specific quantities
+ * @returns Array of item options with site-specific quantities grouped by ItemType
  */
 export function createItemOptionsForSite(
   items: any[], 
@@ -515,7 +515,7 @@ export function createItemOptionsForSite(
     options.push({
       value: item.id,
       label: label,
-      category: getItemCategory(item.type)
+      category: item.type
     });
   }
   

@@ -974,14 +974,7 @@ export default function SalesModal({
             {whatKind === 'product' && oneItemMultiple === 'one' && (
               <>
                 {/* Column Headers */}
-                <div className={`grid gap-4 ${emissaryColumnExpanded ? 'grid-cols-4' : 'grid-cols-3'} mb-2`}>
-                  <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Ambassadors</div>
-                  <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Ambassadors</div>
-                  <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Ambassadors</div>
-                  {emissaryColumnExpanded && (
-                    <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Emissaries</div>
-                  )}
-                </div>
+
                 
                 <div className={`grid gap-4 ${emissaryColumnExpanded ? 'grid-cols-4' : 'grid-cols-3'}`}>
                 {/* Column 1: Ambassadors - Site & Customer */}
