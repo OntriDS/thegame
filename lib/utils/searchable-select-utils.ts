@@ -2,7 +2,6 @@
 // Universal utilities for SearchableSelect category grouping
 
 import { 
-  ITEM_CATEGORIES, 
   SITE_CATEGORIES, 
   STATION_CATEGORIES,
   TASK_CATEGORIES,
@@ -14,12 +13,12 @@ import {
   Skill
 } from '@/types/enums';
 import { getAllSettlements } from '@/lib/utils/settlement-utils';
-import { getSubTypesForItemType } from '@/lib/utils/item-utils';
+import { getItemCategory, getSubTypesForItemType } from '@/lib/utils/item-utils';
 
 /**
  * Generic function to get category for any enum value based on categories structure
  * @param value The enum value to categorize
- * @param categories The categories structure (e.g., ITEM_CATEGORIES, SITE_CATEGORIES)
+ * @param categories The categories structure (e.g., SITE_CATEGORIES)
  * @returns The category name or 'Other' if not found
  */
 export function getCategoryForValue(
@@ -38,7 +37,7 @@ export function getCategoryForValue(
  * @returns The category string
  */
 export function getCategoryForItemType(itemTypeValue: string): string {
-  return getCategoryForValue(itemTypeValue, ITEM_CATEGORIES);
+  return getItemCategory(itemTypeValue as ItemType);
 }
 
 /**
@@ -442,11 +441,11 @@ export function createSiteTypeOptionsWithCategories() {
 
 /**
  * Creates item options with automatic category grouping for SearchableSelect
- * Uses ITEM_CATEGORIES for proper categorization
+ * Uses ItemCategory for proper categorization
  * @param items Array of available items
  * @param showPrice Optional flag to include price in label (default: true)
  * @param showQuantity Optional flag to include total quantity in label (default: true)
- * @returns Array of item options with proper ITEM_CATEGORIES grouping
+ * @returns Array of item options with ItemCategory grouping
  */
 export function createItemOptions(
   items: any[], 
@@ -475,7 +474,7 @@ export function createItemOptions(
     options.push({
       value: item.id,
       label: label,
-      category: getCategoryForItemType(item.type)
+      category: getItemCategory(item.type)
     });
   }
   
@@ -516,7 +515,7 @@ export function createItemOptionsForSite(
     options.push({
       value: item.id,
       label: label,
-      category: getCategoryForItemType(item.type)
+      category: getItemCategory(item.type)
     });
   }
   

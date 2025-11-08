@@ -313,19 +313,6 @@ export enum Collection {
   EXILIADO          = 'Exiliado',
 }
 
-/** Item categories for UI organization and SearchableSelect grouping */
-export const ITEM_CATEGORIES = {
-  MODEL_ITEM: [
-    ItemType.DIGITAL,
-    ItemType.ARTWORK,
-    ItemType.PRINT,
-    ItemType.STICKER,
-    ItemType.MERCH,
-  ],
-  BUNDLE_ITEM: [ItemType.BUNDLE],
-  RESOURCE_ITEM: [ItemType.MATERIAL, ItemType.EQUIPMENT],
-} as const;
-
 // ============================================================================
 // ITEM SUBTYPES ENUMS
 // ============================================================================
