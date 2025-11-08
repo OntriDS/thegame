@@ -6,14 +6,22 @@ import type { Task } from '@/types/entities';
 import { appendEntityLog, updateEntityLogField } from '../entities-logging';
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
 import { EffectKeys } from '@/data-store/keys';
-import { getPlayerConversionRates, getPersonalAssets, savePersonalAssets } from '@/data-store/datastore';
-import { getTaskById, getPlayerById, getAllTasks } from '@/data-store/datastore';
+import {
+  getPlayerConversionRates,
+  getPersonalAssets,
+  savePersonalAssets,
+  getTaskById,
+  getPlayerById,
+  getAllTasks,
+  upsertTask,
+  getItemById,
+  upsertItem
+} from '@/data-store/datastore';
 import { getLinksFor, removeLink } from '@/links/link-registry';
 import { createItemFromTask, removeItemsCreatedByTask } from '../item-creation-utils';
 import { awardPointsToPlayer, removePointsFromPlayer } from '../points-rewards-utils';
 import { createFinancialRecordFromTask, updateFinancialRecordFromTask, removeFinancialRecordsCreatedByTask } from '../financial-record-utils';
 import { createCharacterFromTask } from '../character-creation-utils';
-import { upsertTask } from '@/data-store/datastore';
 import { DEFAULT_POINTS_CONVERSION_RATES } from '@/lib/constants/financial-constants';
 import type { PointsConversionRates } from '@/lib/constants/financial-constants';
 import { getCategoryForTaskType } from '@/lib/utils/searchable-select-utils';
@@ -38,6 +46,12 @@ import {
 
 const STATE_FIELDS = ['status', 'progress', 'doneAt', 'collectedAt', 'siteId', 'targetSiteId'];
 const DESCRIPTIVE_FIELDS = ['name', 'description', 'cost', 'revenue', 'rewards', 'priority'];
+
+const resolveTaskOutputSite = (task: Task): string | null => {
+  if (task.targetSiteId && task.targetSiteId !== 'none') return task.targetSiteId;
+  if (task.siteId && task.siteId !== 'none') return task.siteId;
+  return null;
+};
 
 export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<void> {
   // New task creation
@@ -666,6 +680,42 @@ export async function uncompleteTask(taskId: string): Promise<void> {
     }
     
     console.log(`[uncompleteTask] Reversing completion for task: ${task.name}`);
+    
+    if (!task.isNewItem && task.outputItemId) {
+      const quantityToRemove = task.outputQuantity || 0;
+      if (quantityToRemove > 0) {
+        const existingItem = await getItemById(task.outputItemId);
+        if (existingItem) {
+          const preferredSiteId = resolveTaskOutputSite(task) || existingItem.stock?.[0]?.siteId || 'hq';
+          const updatedStock = Array.isArray(existingItem.stock)
+            ? existingItem.stock.map(stockPoint => ({ ...stockPoint }))
+            : [];
+          
+          const stockIndex = updatedStock.findIndex(stockPoint => stockPoint.siteId === preferredSiteId);
+          if (stockIndex >= 0) {
+            const newQuantity = updatedStock[stockIndex].quantity - quantityToRemove;
+            if (newQuantity <= 0) {
+              updatedStock.splice(stockIndex, 1);
+            } else {
+              updatedStock[stockIndex] = { ...updatedStock[stockIndex], quantity: newQuantity };
+            }
+            
+            const updatedItem = {
+              ...existingItem,
+              stock: updatedStock,
+              updatedAt: new Date()
+            };
+            
+            await upsertItem(updatedItem);
+            console.log(`[uncompleteTask] ♻️ Reverted stock for existing item ${existingItem.id} (-${quantityToRemove} @ ${preferredSiteId})`);
+          } else {
+            console.warn(`[uncompleteTask] Expected stock point ${preferredSiteId} not found when reverting existing item ${existingItem.id}`);
+          }
+        } else {
+          console.warn(`[uncompleteTask] Existing item ${task.outputItemId} not found while reverting task ${task.id}`);
+        }
+      }
+    }
     
     // 1. Remove items created by this task
     await removeItemsCreatedByTask(taskId);

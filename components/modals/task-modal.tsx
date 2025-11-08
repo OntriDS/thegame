@@ -434,7 +434,7 @@ export default function TaskModal({
       parentId,
       isRecurrentGroup,
       isTemplate,
-      outputItemId: task?.outputItemId || null,
+      outputItemId: isNewItem ? null : (selectedItemId || task?.outputItemId || null),
       links: task?.links || [],  // Initialize links for Rosetta Stone
     };
   };
@@ -618,7 +618,12 @@ export default function TaskModal({
 
   const handleNewItemChange = (checked: boolean) => {
     setIsNewItem(checked);
-    if (!checked) setOutputItemName('');
+    if (checked) {
+      setSelectedItemId('');
+      setOutputItemName('');
+    } else {
+      setOutputItemName('');
+    }
   };
 
   // Handle item selection from SearchableSelect
@@ -627,6 +632,7 @@ export default function TaskModal({
     if (itemId) {
       const selectedItem = items.find(item => item.id === itemId);
       if (selectedItem) {
+        setIsNewItem(false);
         setOutputItemName(selectedItem.name);
         setOutputItemType(selectedItem.type);
         setOutputItemSubType(''); // Items don't have subType property

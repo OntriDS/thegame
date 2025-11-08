@@ -4,7 +4,7 @@
 
 import type { Task, Item, FinancialRecord } from '@/types/entities';
 import { ItemStatus, ItemType, LinkType, EntityType } from '@/types/enums';
-import { upsertItem, getAllItems, removeItem, getItemsBySourceTaskId, getItemsBySourceRecordId } from '@/data-store/datastore';
+import { upsertItem, removeItem, getItemsBySourceTaskId, getItemsBySourceRecordId, getItemById } from '@/data-store/datastore';
 import { hasEffect, markEffect } from '@/data-store/effects-registry';
 // links are created by processLinkEntity()
 import { v4 as uuid } from 'uuid';
@@ -35,6 +35,45 @@ export async function createItemFromTask(task: Task): Promise<Item | null> {
     console.log(`[createItemFromTask] outputItemType: ${task.outputItemType}`);
     console.log(`[createItemFromTask] outputQuantity: ${task.outputQuantity}`);
     
+    if (task.outputItemId && !task.isNewItem) {
+      console.log(`[createItemFromTask] Existing item detected (outputItemId=${task.outputItemId}) - updating stock`);
+      const existingItem = await getItemById(task.outputItemId);
+      if (existingItem) {
+        const destinationSiteId =
+          (task.targetSiteId && task.targetSiteId !== 'none' ? task.targetSiteId :
+          (task.siteId && task.siteId !== 'none' ? task.siteId : null)) ||
+          existingItem.stock?.[0]?.siteId ||
+          'hq';
+
+        const quantityToAdd = task.outputQuantity || 1;
+        const updatedStock = Array.isArray(existingItem.stock)
+          ? existingItem.stock.map(stockPoint => ({ ...stockPoint }))
+          : [];
+
+        const stockIndex = updatedStock.findIndex(stockPoint => stockPoint.siteId === destinationSiteId);
+        if (stockIndex >= 0) {
+          updatedStock[stockIndex].quantity += quantityToAdd;
+        } else {
+          updatedStock.push({
+            siteId: destinationSiteId,
+            quantity: quantityToAdd
+          });
+        }
+
+        const updatedItem: Item = {
+          ...existingItem,
+          stock: updatedStock,
+          updatedAt: new Date()
+        };
+
+        const savedItem = await upsertItem(updatedItem);
+        console.log(`[createItemFromTask] ✅ Incremented existing item stock: ${savedItem.id} (+${quantityToAdd} at ${destinationSiteId})`);
+        return savedItem;
+      } else {
+        console.warn(`[createItemFromTask] outputItemId=${task.outputItemId} not found. Falling back to new item creation.`);
+      }
+    }
+
     if (!task.outputItemType) {
       console.error('Cannot create item: outputItemType is required');
       return null;

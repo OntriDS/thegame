@@ -5,7 +5,7 @@ import type { Task, Item, Sale, FinancialRecord, Character, Player } from '@/typ
 import { EntityType, PLAYER_ONE_ID } from '@/types/enums';
 import { hasEffect, markEffect } from '@/data-store/effects-registry';
 import { getFinancialsBySourceTaskId, getFinancialsBySourceSaleId, upsertFinancial } from '@/data-store/datastore';
-import { getItemsBySourceTaskId, getItemsBySourceRecordId, getItemById, upsertItem } from '@/data-store/datastore';
+import { getItemsBySourceTaskId, getItemsBySourceRecordId, getItemById, upsertItem, removeItem } from '@/data-store/datastore';
 import { getTaskById, upsertTask } from '@/data-store/datastore';
 import { getPlayerById, upsertPlayer } from '@/data-store/datastore';
 import { getAllCharacters, upsertCharacter } from '@/data-store/datastore';
@@ -143,53 +143,159 @@ export async function updateItemsCreatedByTask(
     
     // OPTIMIZED: Only load items created by this task (already filtered by index)
     const relatedItems = await getItemsBySourceTaskId(task.id);
-    
-    for (const item of relatedItems) {
-      const updateKey = `updateItemFromTask:${task.id}:${item.id}:${task.updatedAt?.getTime()}`;
-      
-      if (await hasEffect(updateKey)) {
-        console.log(`[updateItemsCreatedByTask] ⏭️ Already updated item: ${item.id}`);
-        continue;
-      }
-      
-      // Check if output properties changed
-      const outputPropsChanged = 
-        task.outputQuantity !== previousTask.outputQuantity ||
-        task.outputItemName !== previousTask.outputItemName ||
-        task.outputUnitCost !== previousTask.outputUnitCost ||
-        task.outputItemPrice !== previousTask.outputItemPrice ||
-        task.station !== previousTask.station;
-      
-      if (outputPropsChanged) {
-        const updatedItem = {
-          ...item,
-          name: task.outputItemName || item.name,
-          unitCost: task.outputUnitCost || item.unitCost,
-          price: task.outputItemPrice || item.price,
-          station: task.station || item.station,
-          updatedAt: new Date()
-        };
-        
-        // Update stock quantity if it changed
-        if (task.outputQuantity !== previousTask.outputQuantity) {
-          const quantityDiff = (task.outputQuantity || 0) - (previousTask.outputQuantity || 0);
-          if (quantityDiff !== 0) {
-            // Update the first stock point (or create one if none exists)
-            if (updatedItem.stock && updatedItem.stock.length > 0) {
-              updatedItem.stock[0].quantity += quantityDiff;
-            } else {
-            updatedItem.stock = [{
-              siteId: task.siteId || 'default',
-              quantity: quantityDiff
-            }];
-            }
+
+    if (!task.isNewItem && previousTask.isNewItem && relatedItems.length > 0) {
+      const removalKey = `removeTaskCreatedItems:${task.id}:${task.updatedAt?.getTime()}`;
+      if (!(await hasEffect(removalKey))) {
+        for (const item of relatedItems) {
+          try {
+            await removeItem(item.id);
+            console.log(`[updateItemsCreatedByTask] 🗑️ Removed task-created item ${item.id} after switching to existing inventory`);
+          } catch (error) {
+            console.error(`[updateItemsCreatedByTask] ❌ Failed to remove task-created item ${item.id}:`, error);
           }
         }
+        await markEffect(removalKey);
+      }
+    }
+
+    if (task.isNewItem || previousTask.isNewItem) {
+      for (const item of relatedItems) {
+        const updateKey = `updateItemFromTask:${task.id}:${item.id}:${task.updatedAt?.getTime()}`;
         
-        await upsertItem(updatedItem);
-        await markEffect(updateKey);
+        if (await hasEffect(updateKey)) {
+          console.log(`[updateItemsCreatedByTask] ⏭️ Already updated item: ${item.id}`);
+          continue;
+        }
         
-        console.log(`[updateItemsCreatedByTask] ✅ Updated item: ${item.id}`);
+        // Check if output properties changed
+        const outputPropsChanged = 
+          task.outputQuantity !== previousTask.outputQuantity ||
+          task.outputItemName !== previousTask.outputItemName ||
+          task.outputUnitCost !== previousTask.outputUnitCost ||
+          task.outputItemPrice !== previousTask.outputItemPrice ||
+          task.station !== previousTask.station;
+        
+        if (outputPropsChanged) {
+          const updatedItem = {
+            ...item,
+            name: task.outputItemName || item.name,
+            unitCost: task.outputUnitCost || item.unitCost,
+            price: task.outputItemPrice || item.price,
+            station: task.station || item.station,
+            updatedAt: new Date()
+          };
+          
+          // Update stock quantity if it changed
+          if (task.outputQuantity !== previousTask.outputQuantity) {
+            const quantityDiff = (task.outputQuantity || 0) - (previousTask.outputQuantity || 0);
+            if (quantityDiff !== 0) {
+              // Update the first stock point (or create one if none exists)
+              if (updatedItem.stock && updatedItem.stock.length > 0) {
+                updatedItem.stock[0].quantity += quantityDiff;
+              } else {
+                updatedItem.stock = [{
+                  siteId: task.siteId || 'default',
+                  quantity: quantityDiff
+                }];
+              }
+            }
+          }
+          
+          await upsertItem(updatedItem);
+          await markEffect(updateKey);
+          
+          console.log(`[updateItemsCreatedByTask] ✅ Updated item: ${item.id}`);
+        }
+      }
+    }
+
+    const resolveSiteFromTask = (t: Task): string | null => {
+      if (t.targetSiteId && t.targetSiteId !== 'none') return t.targetSiteId;
+      if (t.siteId && t.siteId !== 'none') return t.siteId;
+      return null;
+    };
+
+    const adjustExistingItem = async (
+      itemId: string,
+      preferredSiteId: string | null,
+      quantityDelta: number,
+      effectLabel: string
+    ): Promise<void> => {
+      if (!itemId || quantityDelta === 0) return;
+
+      const existingItem = await getItemById(itemId);
+      if (!existingItem) {
+        console.warn(`[updateItemsCreatedByTask] Existing item ${itemId} not found, skipping stock adjustment`);
+        return;
+      }
+
+      const siteId = preferredSiteId || existingItem.stock?.[0]?.siteId || 'hq';
+      const updateKey = `updateExistingItemFromTask:${task.id}:${itemId}:${siteId}:${effectLabel}:${task.updatedAt?.getTime()}`;
+
+      if (await hasEffect(updateKey)) {
+        console.log(`[updateItemsCreatedByTask] ⏭️ Already adjusted existing item ${itemId} @ ${siteId}`);
+        return;
+      }
+
+      const updatedStock = Array.isArray(existingItem.stock)
+        ? existingItem.stock.map(stockPoint => ({ ...stockPoint }))
+        : [];
+
+      const stockIndex = updatedStock.findIndex(stockPoint => stockPoint.siteId === siteId);
+      if (stockIndex >= 0) {
+        const newQuantity = updatedStock[stockIndex].quantity + quantityDelta;
+        if (newQuantity <= 0) {
+          updatedStock.splice(stockIndex, 1);
+        } else {
+          updatedStock[stockIndex] = { ...updatedStock[stockIndex], quantity: newQuantity };
+        }
+      } else if (quantityDelta > 0) {
+        updatedStock.push({ siteId, quantity: quantityDelta });
+      } else {
+        console.warn(`[updateItemsCreatedByTask] Attempted to subtract ${Math.abs(quantityDelta)} from site ${siteId} on item ${itemId}, but site not found. Skipping.`);
+        return;
+      }
+
+      const updatedItem = {
+        ...existingItem,
+        stock: updatedStock,
+        updatedAt: new Date()
+      };
+
+      await upsertItem(updatedItem);
+      await markEffect(updateKey);
+      console.log(`[updateItemsCreatedByTask] ✅ Adjusted stock for existing item ${itemId} (Δ${quantityDelta} @ ${siteId})`);
+    };
+
+    const currentExistingItemId = (!task.isNewItem && task.outputItemId) ? task.outputItemId : null;
+    const previousExistingItemId = (!previousTask.isNewItem && previousTask.outputItemId) ? previousTask.outputItemId : null;
+
+    if (currentExistingItemId || previousExistingItemId) {
+      const currentSite = resolveSiteFromTask(task);
+      const previousSite = resolveSiteFromTask(previousTask);
+      const currentQuantity = task.outputQuantity || 0;
+      const previousQuantity = previousTask.outputQuantity || 0;
+
+      if (currentExistingItemId && previousExistingItemId && currentExistingItemId === previousExistingItemId) {
+        if (currentSite === previousSite) {
+          const delta = currentQuantity - previousQuantity;
+          await adjustExistingItem(currentExistingItemId, currentSite, delta, 'same');
+        } else {
+          if (previousQuantity !== 0) {
+            await adjustExistingItem(previousExistingItemId, previousSite, -previousQuantity, 'site-prev');
+          }
+          if (currentQuantity !== 0) {
+            await adjustExistingItem(currentExistingItemId, currentSite, currentQuantity, 'site-new');
+          }
+        }
+      } else {
+        if (previousExistingItemId && previousQuantity !== 0) {
+          await adjustExistingItem(previousExistingItemId, previousSite, -previousQuantity, 'switch-prev');
+        }
+        if (currentExistingItemId && currentQuantity !== 0) {
+          await adjustExistingItem(currentExistingItemId, currentSite, currentQuantity, 'switch-new');
+        }
       }
     }
   } catch (error) {
