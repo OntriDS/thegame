@@ -9,6 +9,7 @@ export const TASK_TYPE_ICONS: Record<TaskType, React.ElementType> = {
   [TaskType.RECURRENT_GROUP]: CalendarSync,
   [TaskType.RECURRENT_TEMPLATE]: Anvil,
   [TaskType.RECURRENT_INSTANCE]: AlarmCheck,
+  [TaskType.AUTOMATION]: Zap
 };
 
 export const ITEM_TYPE_ICONS: Record<string, React.ElementType> = {
