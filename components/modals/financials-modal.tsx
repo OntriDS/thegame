@@ -14,7 +14,7 @@ import { SearchableSelect } from '@/components/ui/searchable-select';
 import { ItemNameField } from '@/components/ui/item-name-field';
 import { Network, User } from 'lucide-react';
 import PlayerCharacterSelectorModal from './submodals/player-character-selector-submodal';
-import { FinancialRecord } from '@/types/entities';
+import { FinancialRecord, Item, Site } from '@/types/entities';
 import { 
   BUSINESS_STRUCTURE
 } from '@/types/enums';
@@ -131,10 +131,10 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
     outputItemId: null as string | null
   });
 
-  const [items, setItems] = useState<any[]>([]);
-  const [existingItems, setExistingItems] = useState<any[]>([]);
+  const [items, setItems] = useState<Item[]>([]);
+  const [existingItems, setExistingItems] = useState<Item[]>([]);
   const [characters, setCharacters] = useState<any[]>([]);
-  const [sites, setSites] = useState<any[]>([]);
+  const [sites, setSites] = useState<Site[]>([]);
   const [selectedItemId, setSelectedItemId] = useState('');
   const [outputItemTypeSubType, setOutputItemTypeSubType] = useState<string>('none:');
   const [outputItemStatus, setOutputItemStatus] = useState<ItemStatus>(ItemStatus.FOR_SALE);
@@ -242,7 +242,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
         outputUnitCostString: (record.outputUnitCost || 0).toString(),
         outputItemName: record.outputItemName || '',
         outputItemCollection: record.outputItemCollection || undefined,
-        outputItemSubType: record.outputItemSubType || undefined,
+        outputItemSubType: (record.outputItemSubType ?? undefined) as SubItemType | undefined,
         outputItemPrice: record.outputItemPrice || 0,
         outputItemPriceString: (record.outputItemPrice || 0).toString(),
         isNewItem: record.isNewItem || false,
@@ -333,10 +333,11 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
     } else {
       setOutputItemTypeSubType(newItemTypeSubType);
       const [itemType, subType] = newItemTypeSubType.split(':');
-      setFormData({ 
-        ...formData, 
-        outputItemType: itemType as ItemType, 
-        outputItemSubType: subType as SubItemType 
+      const typedSubType = subType ? (subType as SubItemType) : undefined;
+      setFormData({
+        ...formData,
+        outputItemType: itemType as ItemType,
+        outputItemSubType: typedSubType,
       });
     }
   };
@@ -363,14 +364,14 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
           outputItemId: selectedItem.id,
           outputItemName: selectedItem.name,
           outputItemType: selectedItem.type,
-          outputItemSubType: selectedItem.subItemType || '',
+          outputItemSubType: selectedItem.subItemType ?? undefined,
           outputUnitCost: selectedItem.unitCost,
           outputItemPrice: selectedItem.price,
           outputItemCollection: selectedItem.collection || undefined,
         }));
       }
     } else {
-      setFormData(prev => ({ ...prev, outputItemName: '', outputItemId: null }));
+      setFormData(prev => ({ ...prev, outputItemName: '', outputItemId: null, outputItemSubType: undefined }));
     }
   };
 
@@ -866,6 +867,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
                         isNewItem={formData.isNewItem}
                         onNewItemToggle={handleNewItemChange}
                         label="Item Name"
+                        sites={sites}
                       />
                       <div>
                         <Label htmlFor="output-item-collection" className="text-xs">Collection</Label>

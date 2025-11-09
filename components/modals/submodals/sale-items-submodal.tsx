@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import NumericInput from '@/components/ui/numeric-input';
-import { Item } from '@/types/entities';
+import { Item, Site } from '@/types/entities';
 import { createItemOptions, createItemOptionsForSite } from '@/lib/utils/searchable-select-utils';
 import { ClientAPI } from '@/lib/client-api';
 import { Trash2, Plus } from 'lucide-react';
@@ -39,14 +39,19 @@ export default function SaleItemsSubModal({
 }: SaleItemsSubModalProps) {
   const [items, setItems] = useState<Item[]>([]);
   const [lines, setLines] = useState<SaleItemLine[]>([]);
+  const [sites, setSites] = useState<Site[]>([]);
   const [selectedSiteId, setSelectedSiteId] = useState<string>(defaultSiteId);
   const [isSaving, setIsSaving] = useState(false);
   const hasInitializedRef = useRef(false);
 
   const loadData = async () => {
     try {
-      const itemsData = await ClientAPI.getItems();
+      const [itemsData, sitesData] = await Promise.all([
+        ClientAPI.getItems(),
+        ClientAPI.getSites()
+      ]);
       setItems(itemsData);
+      setSites(sitesData);
     } catch (error) {
       console.error('Failed to load data:', error);
     }
@@ -110,9 +115,9 @@ export default function SaleItemsSubModal({
 
   const getItemOptions = (lineId: string) => {
     if (selectedSiteId) {
-      return createItemOptionsForSite(items, selectedSiteId, true);
+      return createItemOptionsForSite(items, selectedSiteId, true, sites);
     } else {
-      return createItemOptions(items, true, false);
+      return createItemOptions(items, true, false, sites);
     }
   };
 

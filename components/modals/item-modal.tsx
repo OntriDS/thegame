@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { ItemNameField } from '@/components/ui/item-name-field';
-import { Item, StockPoint } from '@/types/entities';
+import { Item, Site, StockPoint } from '@/types/entities';
 import { ItemType, ItemStatus, Collection, EntityType, STATION_CATEGORIES } from '@/types/enums';
 import { getSubTypesForItemType } from '@/lib/utils/item-utils';
 import { getCategoryForItemType, createStationCategoryOptions, getStationFromCombined, getCategoryFromCombined, createItemTypeSubTypeOptions, getItemTypeFromCombined, getSubTypeFromCombined } from '@/lib/utils/searchable-select-utils';
@@ -81,7 +81,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
   const [isNewItem, setIsNewItem] = useState(true);
   const [selectedItemId, setSelectedItemId] = useState('');
   const [existingItems, setExistingItems] = useState<Item[]>([]);
-  const [sites, setSites] = useState<any[]>([]);
+  const [sites, setSites] = useState<Site[]>([]);
   const [statusModalConfig, setStatusModalConfig] = useState<{
     title: string;
     message: string;
@@ -517,6 +517,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
                 isNewItem={isNewItem}
                 onNewItemToggle={setIsNewItem}
                 label="Item Name"
+                sites={sites}
               />
             </div>
             

@@ -17,7 +17,7 @@ import { Package } from 'lucide-react';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { ItemNameField } from '@/components/ui/item-name-field';
 import { ClientAPI } from '@/lib/client-api';
-import { Item } from '@/types/entities';
+import { Item, Site } from '@/types/entities';
 
 interface ItemCreationData {
   outputItemType: ItemType | '';
@@ -66,7 +66,7 @@ export default function ItemEmissarySubModal({
   
   // State for existing items and sites
   const [existingItems, setExistingItems] = useState<Item[]>([]);
-  const [sites, setSites] = useState<any[]>([]);
+  const [sites, setSites] = useState<Site[]>([]);
   const [selectedItemId, setSelectedItemId] = useState<string>(initialData.existingItemId || '');
 
   // Load existing items and sites when modal opens
@@ -342,6 +342,7 @@ export default function ItemEmissarySubModal({
                 }
               }}
               label="Item Name"
+              sites={sites}
             />
 
             <div className="space-y-2">

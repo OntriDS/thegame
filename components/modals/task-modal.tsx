@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import DeleteModal from './submodals/delete-submodal';
 import LinksRelationshipsModal from './submodals/links-relationships-submodal';
-import { Task, Item } from '@/types/entities';
+import { Task, Item, Site } from '@/types/entities';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
 import { getPointsMetadata } from '@/lib/utils/points-utils';
 import { TaskType, TaskStatus, TaskPriority, STATION_CATEGORIES, ItemType, RecurrentFrequency, Collection, ItemStatus, CharacterRole, PLAYER_ONE_ID, EntityType } from '@/types/enums';
@@ -171,10 +171,10 @@ export default function TaskModal({
   const [validationMessage, setValidationMessage] = useState('');
 
   // UI data loading for form functionality
-  const [items, setItems] = useState<any[]>([]);
+  const [items, setItems] = useState<Item[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [characters, setCharacters] = useState<any[]>([]);
-  const [sites, setSites] = useState<any[]>([]);
+  const [sites, setSites] = useState<Site[]>([]);
   const [dataLoaded, setDataLoaded] = useState(false);
 
   const hasInitializedRef = useRef(false);
@@ -1228,6 +1228,7 @@ export default function TaskModal({
                       isNewItem={isNewItem}
                       onNewItemToggle={setIsNewItem}
                       label="Item Name"
+                      sites={sites}
                     />
                   </div>
                 </>

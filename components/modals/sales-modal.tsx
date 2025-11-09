@@ -731,7 +731,7 @@ export default function SalesModal({
   };
 
   const getItemOptions = () => {
-    return createItemOptions(items, true, true);
+    return createItemOptions(items, true, true, sites);
   };
 
   const getSelectedItem = () => {

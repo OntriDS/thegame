@@ -14,6 +14,7 @@ import {
 } from '@/types/enums';
 import { getAllSettlements } from '@/lib/utils/settlement-utils';
 import { getItemCategory, getSubTypesForItemType } from '@/lib/utils/item-utils';
+import type { Item, Site } from '@/types/entities';
 
 const ITEM_TYPE_ORDER = Object.values(ItemType);
 
@@ -455,15 +456,17 @@ export function createSiteTypeOptionsWithCategories() {
  * @returns Array of item options with ItemType grouping
  */
 export function createItemOptions(
-  items: any[], 
+  items: Item[], 
   showPrice: boolean = true, 
-  showQuantity: boolean = true
+  showQuantity: boolean = true,
+  sites: Site[] = []
 ) {
   const options: Array<{
     value: string;
     label: string;
     category: string;
   }> = [];
+  const siteNameMap = new Map(sites.map(site => [site.id, site.name]));
   
   for (const item of items) {
     let label = item.name;
@@ -476,6 +479,16 @@ export function createItemOptions(
       const ClientAPI = require('@/lib/client-api').ClientAPI;
       const qty = ClientAPI.getItemTotalQuantity(item.id, items);
       label += ` (Qty: ${qty})`;
+    }
+
+    const stockPoints = (item.stock ?? []).filter(stockPoint => stockPoint.quantity > 0);
+    if (stockPoints.length > 0) {
+      const stockSummary = stockPoints
+        .map(stockPoint => `${siteNameMap.get(stockPoint.siteId) ?? stockPoint.siteId}: ${stockPoint.quantity}`)
+        .join(', ');
+      if (stockSummary) {
+        label += ` • Stock: ${stockSummary}`;
+      }
     }
     
     options.push({
@@ -502,9 +515,10 @@ export function createItemOptions(
  * @returns Array of item options with site-specific quantities grouped by ItemType
  */
 export function createItemOptionsForSite(
-  items: any[], 
+  items: Item[], 
   siteId: string,
-  showPrice: boolean = true
+  showPrice: boolean = true,
+  sites: Site[] = []
 ) {
   const options: Array<{
     value: string;
@@ -513,6 +527,7 @@ export function createItemOptionsForSite(
   }> = [];
   
   const ClientAPI = require('@/lib/client-api').ClientAPI;
+  const siteNameMap = new Map(sites.map(site => [site.id, site.name]));
   
   for (const item of items) {
     const qtyAtSite = siteId ? ClientAPI.getQuantityAtSite(item, siteId) : 0;
@@ -522,8 +537,19 @@ export function createItemOptionsForSite(
     if (showPrice && item.price !== undefined) {
       label += ` - $${item.price}`;
     }
-    
-    label += ` (Qty: ${qtyAtSite})`;
+    const primarySiteName = siteNameMap.get(siteId) ?? siteId;
+    label += ` (Qty @ ${primarySiteName}: ${qtyAtSite})`;
+
+    const stockPoints = (item.stock ?? []).filter(stockPoint => stockPoint.quantity > 0);
+    const otherStock = stockPoints.filter(stockPoint => stockPoint.siteId !== siteId);
+    if (otherStock.length > 0) {
+      const otherSummary = otherStock
+        .map(stockPoint => `${siteNameMap.get(stockPoint.siteId) ?? stockPoint.siteId}: ${stockPoint.quantity}`)
+        .join(', ');
+      if (otherSummary) {
+        label += ` • Other: ${otherSummary}`;
+      }
+    }
     
     options.push({
       value: item.id,
