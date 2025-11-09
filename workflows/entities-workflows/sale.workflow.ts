@@ -61,7 +61,13 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
         }
       }
     }
-    
+
+    const isCharged =
+      sale.status === 'CHARGED' && !sale.isNotPaid && !sale.isNotCharged;
+    if (isCharged) {
+      await processChargedSaleLines(sale);
+    }
+
     await maybeArchiveSaleSnapshot(sale);
     return;
   }
@@ -116,14 +122,7 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
       }
       
       // Process sale lines when sale transitions to CHARGED
-      const linesProcessedKey = `sale:${sale.id}:linesProcessed`;
-      if (!(await hasEffect(linesProcessedKey))) {
-        console.log(`[onSaleUpsert] Processing sale lines for charged sale: ${sale.counterpartyName}`);
-        await processSaleLines(sale);
-        await markEffect(linesProcessedKey);
-        console.log(`[onSaleUpsert] ✅ Sale lines processed and effect marked: ${sale.counterpartyName}`);
-        await archiveSoldItemsFromSale(sale);
-      }
+      await processChargedSaleLines(sale);
     } else if (!wasPending && nowPending) {
       // Reverted from DONE to PENDING (became unpaid or uncharged)
       await appendEntityLog(EntityType.SALE, sale.id, LogEventType.PENDING, {
@@ -186,6 +185,19 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
       await updateEntityLogField(EntityType.SALE, sale.id, field, (previousSale as any)[field], (sale as any)[field]);
     }
   }
+}
+
+async function processChargedSaleLines(sale: Sale): Promise<void> {
+  const linesProcessedKey = `sale:${sale.id}:linesProcessed`;
+  if (await hasEffect(linesProcessedKey)) {
+    return;
+  }
+
+  console.log(`[onSaleUpsert] Processing sale lines for charged sale: ${sale.counterpartyName}`);
+  await processSaleLines(sale);
+  await markEffect(linesProcessedKey);
+  console.log(`[onSaleUpsert] ✅ Sale lines processed and effect marked: ${sale.counterpartyName}`);
+  await archiveSoldItemsFromSale(sale);
 }
 
 async function maybeArchiveSaleSnapshot(sale: Sale, previousSale?: Sale): Promise<void> {
