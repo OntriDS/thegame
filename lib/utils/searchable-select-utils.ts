@@ -474,7 +474,7 @@ export function createItemOptions(
   };
 
   for (const item of items) {
-    const trimmedName = trimWithEllipsis(item.name, 10);
+    const trimmedName = trimWithEllipsis(item.name, 15);
     let label = trimmedName;
     
     if (showPrice && item.price !== undefined) {
@@ -492,7 +492,7 @@ export function createItemOptions(
       const stockSummary = stockPoints
         .map(stockPoint => {
           const siteName = siteNameMap.get(stockPoint.siteId) ?? stockPoint.siteId;
-          const trimmedSite = trimWithEllipsis(siteName, 6);
+          const trimmedSite = trimWithEllipsis(siteName, 10);
           return `${trimmedSite}: ${stockPoint.quantity}`;
         })
         .join(', ');
@@ -546,14 +546,14 @@ export function createItemOptionsForSite(
   for (const item of items) {
     const qtyAtSite = siteId ? ClientAPI.getQuantityAtSite(item, siteId) : 0;
     
-    const trimmedName = trimWithEllipsis(item.name, 10);
+    const trimmedName = trimWithEllipsis(item.name, 15);
     let label = trimmedName;
     
     if (showPrice && item.price !== undefined) {
       label += ` $${item.price}`;
     }
     const primarySiteName = siteNameMap.get(siteId) ?? siteId;
-    const trimmedPrimary = trimWithEllipsis(primarySiteName, 6);
+    const trimmedPrimary = trimWithEllipsis(primarySiteName, 10);
     label += ` ${trimmedPrimary}: ${qtyAtSite}`;
 
     const stockPoints = (item.stock ?? []).filter(stockPoint => stockPoint.quantity > 0);
@@ -562,7 +562,7 @@ export function createItemOptionsForSite(
       const otherSummary = otherStock
         .map(stockPoint => {
           const siteName = siteNameMap.get(stockPoint.siteId) ?? stockPoint.siteId;
-          const trimmedSite = trimWithEllipsis(siteName, 6);
+          const trimmedSite = trimWithEllipsis(siteName, 10);
           return `${trimmedSite}: ${stockPoint.quantity}`;
         })
         .join(', ');
