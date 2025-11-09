@@ -6,7 +6,8 @@ import {
   DATE_FORMAT_INPUT, 
   DATE_FORMAT_LONG, 
   DATE_FORMAT_SHORT, 
-  DATE_FORMAT_MONTH_YEAR 
+  DATE_FORMAT_MONTH_YEAR,
+  DATE_FORMAT_MONTH_KEY
 } from '@/lib/constants/app-constants';
 
 /**
@@ -97,6 +98,34 @@ export function formatMonthYear(date: Date | string | null | undefined): string 
   } catch {
     return '';
   }
+}
+
+/**
+ * Format a date into the archive month key (MM-YY)
+ * @param date - Date object or date string
+ * @returns Formatted month key (e.g., 06-25)
+ */
+export function formatMonthKey(date: Date | string | null | undefined): string {
+  try {
+    const dateObj = !date
+      ? new Date()
+      : typeof date === 'string'
+        ? parseISO(date)
+        : date;
+
+    return isValid(dateObj)
+      ? format(dateObj, DATE_FORMAT_MONTH_KEY)
+      : format(new Date(), DATE_FORMAT_MONTH_KEY);
+  } catch {
+    return format(new Date(), DATE_FORMAT_MONTH_KEY);
+  }
+}
+
+/**
+ * Get the current month key (MM-YY) for archive buckets
+ */
+export function getCurrentMonthKey(): string {
+  return format(new Date(), DATE_FORMAT_MONTH_KEY);
 }
 
 /**

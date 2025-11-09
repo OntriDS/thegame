@@ -27,7 +27,7 @@ interface TaskTreeProps {
   typeFilter: TaskType | 'all';
   onTypeFilterChange: (value: TaskType | 'all') => void;
   // --- NEW Tab Props ---
-  activeSubTab: 'mission-tree' | 'recurrent-tasks' | 'schedule' | 'calendar';
+  activeSubTab: 'mission-tree' | 'recurrent-tasks' | 'automation-tree' | 'schedule' | 'calendar';
   onChangeOrder: (taskId: string, parentId: string | null, newPosition: number) => Promise<void> | void;
 }
 
@@ -227,6 +227,19 @@ export default function TaskTree({
   onChangeOrder,
   ...props 
 }: TaskTreeProps) {
+  const typeOptions: TaskType[] =
+    activeSubTab === 'recurrent-tasks'
+      ? [TaskType.RECURRENT_GROUP, TaskType.RECURRENT_TEMPLATE, TaskType.RECURRENT_INSTANCE]
+      : activeSubTab === 'automation-tree'
+        ? [TaskType.AUTOMATION]
+        : Object.values(TaskType).filter(
+            (t) =>
+              t !== TaskType.RECURRENT_GROUP &&
+              t !== TaskType.RECURRENT_TEMPLATE &&
+              t !== TaskType.RECURRENT_INSTANCE &&
+              t !== TaskType.AUTOMATION
+          );
+
   return (
     <aside className="w-full h-full border-b sm:border-b-0 sm:border-r bg-muted/20 flex flex-col overflow-hidden">
       <div className="p-3 border-b space-y-3">
@@ -403,16 +416,11 @@ export default function TaskTree({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Types</SelectItem>
-                {activeSubTab === 'recurrent-tasks' 
-                  ? [
-                      <SelectItem key={TaskType.RECURRENT_GROUP} value={TaskType.RECURRENT_GROUP}>Recurrent Group</SelectItem>,
-                      <SelectItem key={TaskType.RECURRENT_TEMPLATE} value={TaskType.RECURRENT_TEMPLATE}>Recurrent Template</SelectItem>,
-                      <SelectItem key={TaskType.RECURRENT_INSTANCE} value={TaskType.RECURRENT_INSTANCE}>Recurrent Instance</SelectItem>,
-                    ]
-                  : Object.values(TaskType)
-                      .filter(t => t !== TaskType.RECURRENT_GROUP && t !== TaskType.RECURRENT_TEMPLATE && t !== TaskType.RECURRENT_INSTANCE)
-                      .map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)
-                }
+                {typeOptions.map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {type}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

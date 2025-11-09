@@ -29,6 +29,8 @@ interface ItemCreationData {
   outputItemPrice: number;
   targetSite: string;
   outputItemStatus: ItemStatus;
+  existingItemId?: string | null;
+  isNewItem?: boolean;
 }
 
 interface ItemEmissarySubModalProps {
@@ -58,13 +60,14 @@ export default function ItemEmissarySubModal({
   const [outputUnitCost, setOutputUnitCost] = useState<number>(initialData.outputUnitCost || 0);
   const [outputItemCollection, setOutputItemCollection] = useState<Collection | ''>(initialData.outputItemCollection || '');
   const [outputItemPrice, setOutputItemPrice] = useState<number>(initialData.outputItemPrice || 0);
-  const [targetSite, setTargetSite] = useState<string>('');
-  const [outputItemStatus, setOutputItemStatus] = useState<ItemStatus>(ItemStatus.FOR_SALE);
+  const [targetSite, setTargetSite] = useState<string>(initialData.targetSite || '');
+  const [outputItemStatus, setOutputItemStatus] = useState<ItemStatus>(initialData.outputItemStatus || ItemStatus.FOR_SALE);
+  const [isNewItem, setIsNewItem] = useState<boolean>(initialData.isNewItem ?? false);
   
   // State for existing items and sites
   const [existingItems, setExistingItems] = useState<Item[]>([]);
   const [sites, setSites] = useState<any[]>([]);
-  const [selectedItemId, setSelectedItemId] = useState<string>('');
+  const [selectedItemId, setSelectedItemId] = useState<string>(initialData.existingItemId || '');
 
   // Load existing items and sites when modal opens
   useEffect(() => {
@@ -97,7 +100,13 @@ export default function ItemEmissarySubModal({
       setOutputItemPrice(initialData.outputItemPrice || 0);
       setTargetSite(initialData.targetSite || '');
       setOutputItemStatus(initialData.outputItemStatus || ItemStatus.FOR_SALE);
-      setSelectedItemId(''); // Reset selected item
+      setIsNewItem(initialData.isNewItem ?? false);
+      setSelectedItemId(initialData.existingItemId || '');
+      if (initialData.outputItemType) {
+        setOutputItemTypeSubType(`${initialData.outputItemType}:${initialData.outputItemSubType || ''}`);
+      } else {
+        setOutputItemTypeSubType('none:');
+      }
     }
   }, [open, initialData]);
 
@@ -133,20 +142,24 @@ export default function ItemEmissarySubModal({
     if (itemId) {
       const selectedItem = existingItems.find(item => item.id === itemId);
       if (selectedItem) {
+        setIsNewItem(false);
         setOutputItemName(selectedItem.name);
         setOutputItemType(selectedItem.type);
         setOutputItemSubType(''); // Items don't have subType property
         setOutputUnitCost(selectedItem.unitCost);
         setOutputItemPrice(selectedItem.price);
         setOutputItemCollection(selectedItem.collection || '');
+        setOutputItemTypeSubType(`${selectedItem.type}:`);
       }
     } else {
+      setIsNewItem(true);
       setOutputItemName('');
       setOutputItemType('');
       setOutputItemSubType('');
       setOutputUnitCost(0);
       setOutputItemPrice(0);
       setOutputItemCollection('');
+      setOutputItemTypeSubType('none:');
     }
   };
 
@@ -180,6 +193,8 @@ export default function ItemEmissarySubModal({
       outputItemPrice,
       targetSite,
       outputItemStatus,
+      existingItemId: isNewItem ? null : (selectedItemId || null),
+      isNewItem,
     };
     onSave(data);
     onOpenChange(false);
@@ -309,6 +324,23 @@ export default function ItemEmissarySubModal({
               items={existingItems}
               selectedItemId={selectedItemId}
               onItemSelect={handleItemSelect}
+              isNewItem={isNewItem}
+              onNewItemToggle={(value) => {
+                setIsNewItem(value);
+                if (value) {
+                  setSelectedItemId('');
+                  setOutputItemName('');
+                  setOutputItemType('');
+                  setOutputItemSubType('');
+                  setOutputUnitCost(0);
+                  setOutputItemPrice(0);
+                  setOutputItemCollection('');
+                  setOutputItemTypeSubType('none:');
+                }
+                if (!value) {
+                  setOutputItemName('');
+                }
+              }}
               label="Item Name"
             />
 

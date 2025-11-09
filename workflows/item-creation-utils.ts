@@ -135,6 +135,51 @@ export async function createItemFromRecord(record: FinancialRecord): Promise<Ite
     console.log(`[createItemFromRecord] Starting item creation for record: ${record.name} (${record.id})`);
     console.log(`[createItemFromRecord] outputItemType: ${record.outputItemType}`);
     console.log(`[createItemFromRecord] outputQuantity: ${record.outputQuantity}`);
+
+    const isValidSite = (siteId: string | null | undefined) =>
+      Boolean(siteId && siteId !== 'None' && siteId !== 'none');
+
+    const resolvedOwnerCharacterId = record.customerCharacterId || null;
+
+    if (record.outputItemId && !record.isNewItem) {
+      console.log(`[createItemFromRecord] Existing item detected (outputItemId=${record.outputItemId}) - updating stock`);
+      const existingItem = await getItemById(record.outputItemId);
+      if (existingItem) {
+        const destinationSiteId =
+          (isValidSite(record.targetSiteId) ? record.targetSiteId as string :
+          (isValidSite(record.siteId) ? record.siteId as string : null)) ||
+          existingItem.stock?.[0]?.siteId ||
+          'None';
+
+        const quantityToAdd = record.outputQuantity || 1;
+        const updatedStock = Array.isArray(existingItem.stock)
+          ? existingItem.stock.map(stockPoint => ({ ...stockPoint }))
+          : [];
+
+        const stockIndex = updatedStock.findIndex(stockPoint => stockPoint.siteId === destinationSiteId);
+        if (stockIndex >= 0) {
+          updatedStock[stockIndex].quantity += quantityToAdd;
+        } else {
+          updatedStock.push({
+            siteId: destinationSiteId,
+            quantity: quantityToAdd
+          });
+        }
+
+        const updatedItem: Item = {
+          ...existingItem,
+          stock: updatedStock,
+          updatedAt: new Date(),
+          ownerCharacterId: existingItem.ownerCharacterId || resolvedOwnerCharacterId || null,
+        };
+
+        const savedItem = await upsertItem(updatedItem);
+        console.log(`[createItemFromRecord] ✅ Incremented existing item stock: ${savedItem.id} (+${quantityToAdd} at ${destinationSiteId})`);
+        return savedItem;
+      } else {
+        console.warn(`[createItemFromRecord] outputItemId=${record.outputItemId} not found. Falling back to new item creation.`);
+      }
+    }
     
     if (!record.outputItemType) {
       console.error('Cannot create item: outputItemType is required');
@@ -145,6 +190,11 @@ export async function createItemFromRecord(record: FinancialRecord): Promise<Ite
     // The workflow only calls this when hasEffect('record:{id}:itemCreated') === false
     console.log(`[createItemFromRecord] Creating new item (Effect Registry confirmed no existing item)`);
     
+    const resolvedSiteId =
+      (isValidSite(record.targetSiteId) ? record.targetSiteId as string :
+      (isValidSite(record.siteId) ? record.siteId as string : null)) ||
+      'None';
+
     const newItem: Item = {
       id: `item-${record.id}-${Date.now()}`, // More predictable ID based on record ID
       name: record.outputItemName || `${record.outputItemType} from ${record.name}`,
@@ -159,6 +209,7 @@ export async function createItemFromRecord(record: FinancialRecord): Promise<Ite
       value: 0,
       quantitySold: 0,
       sourceRecordId: record.id, // Link item back to the record that created it
+      ownerCharacterId: resolvedOwnerCharacterId,
       isCollected: false,
       year: record.year, // Use record's year
       createdAt: new Date(),
@@ -166,7 +217,7 @@ export async function createItemFromRecord(record: FinancialRecord): Promise<Ite
       links: [],  // Initialize links array (The Rosetta Stone)
       stock: [
         {
-          siteId: (record.siteId && record.siteId !== 'None' ? record.siteId : null) || 'hq', // Default to HQ
+          siteId: resolvedSiteId, // Default to None (no site) when not provided
           quantity: record.outputQuantity || 1
         }
       ]

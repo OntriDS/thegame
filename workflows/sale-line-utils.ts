@@ -209,6 +209,9 @@ export async function processServiceLine(line: ServiceLine, sale: Sale): Promise
       siteId: sale.siteId,
       targetSiteId: line.taskTargetSiteId || undefined,
       sourceSaleId: sale.id, // Link task back to sale
+      customerCharacterId: sale.customerId || null,
+      playerCharacterId: sale.playerCharacterId || null,
+      newCustomerName: sale.newCustomerName || undefined,
       // Additional fields from service line
       parentId: line.taskParentId || undefined,
       dueDate: line.taskDueDate || undefined,
@@ -220,9 +223,10 @@ export async function processServiceLine(line: ServiceLine, sale: Sale): Promise
       outputUnitCost: line.outputUnitCost || undefined,
       outputItemCollection: line.outputItemCollection || undefined,
       outputItemPrice: line.outputItemPrice || undefined,
-      isNewItem: line.isNewOutputItem || false,
+      outputItemId: line.outputItemId || null,
+      isNewItem: (line.isNewItem ?? line.isNewOutputItem) ?? true,
       isSold: line.isSold || false,
-      outputItemStatus: 'Created' as any
+      outputItemStatus: (line.outputItemStatus as any) || (line.isSold ? 'SOLD' as any : 'Created' as any)
     };
     
     // Save the task

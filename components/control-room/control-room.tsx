@@ -23,6 +23,8 @@ import TaskDetailView from './task-detail-view';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
 
+type ControlRoomTab = 'mission-tree' | 'recurrent-tasks' | 'automation-tree' | 'schedule' | 'calendar';
+
 const findNodeInTree = (nodes: TreeNode[], taskId: string): TreeNode | null => {
   for (const node of nodes) {
     if (node.task.id === taskId) {
@@ -126,7 +128,7 @@ export default function ControlRoom() {
   const [stationFilters, setStationFilters] = useState<Set<Station>>(new Set());
   const [typeFilter, setTypeFilter] = useState<TaskType | 'all'>('all');
   // Sub-tab State
-  const [activeSubTab, setActiveSubTab] = useState<'mission-tree' | 'recurrent-tasks' | 'schedule' | 'calendar'>('mission-tree');
+  const [activeSubTab, setActiveSubTab] = useState<ControlRoomTab>('mission-tree');
   const [refreshKey, setRefreshKey] = useState(0);
 
   // Define sensors with an activation constraint
@@ -170,6 +172,12 @@ export default function ControlRoom() {
     }
   }, [getPreference]);
 
+  useEffect(() => {
+    if (activeSubTab === 'automation-tree') {
+      setTypeFilter('all');
+    }
+  }, [activeSubTab]);
+
   // Data loading
   const loadTasks = useCallback(async (): Promise<TreeNode[]> => {
     try {
@@ -183,12 +191,15 @@ export default function ControlRoom() {
         task.type === TaskType.RECURRENT_TEMPLATE || 
         task.type === TaskType.RECURRENT_INSTANCE
       );
+    } else if (activeSubTab === 'automation-tree') {
+      tasks = tasks.filter(task => task.type === TaskType.AUTOMATION);
     } else {
-      // Mission Tree tab: exclude RECURRENT tasks
+      // Mission tree (and default views): exclude RECURRENT and AUTOMATION tasks
       tasks = tasks.filter(task => 
         task.type !== TaskType.RECURRENT_GROUP && 
         task.type !== TaskType.RECURRENT_TEMPLATE && 
-        task.type !== TaskType.RECURRENT_INSTANCE
+        task.type !== TaskType.RECURRENT_INSTANCE &&
+        task.type !== TaskType.AUTOMATION
       );
     }
 
@@ -527,10 +538,14 @@ export default function ControlRoom() {
     }
   }, [selectedNode, normalizeSiblings, loadTasks]);
 
+  const handleNewTask = useCallback(() => {
+    setTaskToEdit({} as Task);
+  }, []);
+
   // Keyboard shortcuts for modal navigation and task reordering (control-room scope)
   useKeyboardShortcuts({
     scope: 'control-room',
-    onOpenTaskModal: () => setTaskToEdit({} as Task),
+    onOpenTaskModal: handleNewTask,
     onMoveSelectionUp: handleMoveUp,
     onMoveSelectionDown: handleMoveDown,
   });
@@ -538,7 +553,8 @@ export default function ControlRoom() {
   // Load preferences on mount
   useEffect(() => {
     const savedSubTab = getPreference('control-room-active-sub-tab', 'mission-tree');
-    setActiveSubTab(savedSubTab as 'mission-tree' | 'recurrent-tasks' | 'schedule' | 'calendar');
+    const allowedTabs: ControlRoomTab[] = ['mission-tree', 'automation-tree', 'recurrent-tasks', 'schedule', 'calendar'];
+    setActiveSubTab(allowedTabs.includes(savedSubTab as ControlRoomTab) ? savedSubTab as ControlRoomTab : 'mission-tree');
   }, [getPreference]);
 
   // Update selectedNode when tasks change (avoid render loops by only updating on real changes)
@@ -585,10 +601,6 @@ export default function ControlRoom() {
 
   const handleSelectNode = (node: TreeNode) => {
     setSelectedNode(node);
-  };
-
-  const handleNewTask = () => {
-    setTaskToEdit({} as Task); // Use empty object to trigger modal for new task
   };
 
   const handleEditTask = (task: Task) => {
@@ -649,9 +661,12 @@ export default function ControlRoom() {
       intent = dropIntentRef.current.intent;
     }
 
-    const canBeParent = activeSubTab === 'recurrent-tasks'
-      ? canBeParentRecurrent(targetTask.type, draggedTask.type)
-      : canBeParentMission(targetTask.type, draggedTask.type);
+    let canBeParent = false;
+    if (activeSubTab === 'recurrent-tasks') {
+      canBeParent = canBeParentRecurrent(targetTask.type, draggedTask.type);
+    } else if (activeSubTab === 'mission-tree') {
+      canBeParent = canBeParentMission(targetTask.type, draggedTask.type);
+    }
 
     if (intent === 'nest' && !canBeParent) {
       intent = 'after';
@@ -756,14 +771,15 @@ export default function ControlRoom() {
           
           {/* Sub-tabs */}
           <Tabs value={activeSubTab} onValueChange={(value) => {
-            const newTab = value as 'mission-tree' | 'recurrent-tasks' | 'schedule' | 'calendar';
+            const newTab = value as ControlRoomTab;
             setActiveSubTab(newTab);
             setPreference('control-room-active-sub-tab', newTab);
           }} className="flex flex-col h-full">
             <div className="border-b bg-muted/20 py-0">
-              <TabsList className="grid w-full grid-cols-4 h-10">
+              <TabsList className="grid w-full grid-cols-5 h-10">
                 <TabsTrigger value="mission-tree" className="py-2">Mission Tree</TabsTrigger>
                 <TabsTrigger value="recurrent-tasks" className="py-2">Recurrent Tree</TabsTrigger>
+                <TabsTrigger value="automation-tree" className="py-2">Automation Tree</TabsTrigger>
                 <TabsTrigger value="schedule" className="py-2">Schedule</TabsTrigger>
                 <TabsTrigger value="calendar" className="py-2">Calendar</TabsTrigger>
               </TabsList>
@@ -790,7 +806,7 @@ export default function ControlRoom() {
                   onStationFilterChange={setStationFilters}
                   typeFilter={typeFilter}
                   onTypeFilterChange={setTypeFilter}
-                  activeSubTab={activeSubTab}
+                  activeSubTab="mission-tree"
                   onChangeOrder={handleChangeOrder}
                 />
               </ResizableSidebar>
@@ -808,7 +824,6 @@ export default function ControlRoom() {
             </div>
               </TabsContent>
 
-              {/* Recurrent Tree Content */}
               <TabsContent value="recurrent-tasks" className="mt-0 p-0 data-[state=active]:flex flex-col sm:flex-row flex-1 min-h-0">
             {/* Left Panel: Resizable Tree Sidebar */}
             {isMounted ? (
@@ -829,7 +844,7 @@ export default function ControlRoom() {
                   onStationFilterChange={setStationFilters}
                   typeFilter={typeFilter}
                   onTypeFilterChange={setTypeFilter}
-                  activeSubTab={activeSubTab}
+                  activeSubTab="recurrent-tasks"
                   onChangeOrder={handleChangeOrder}
                 />
               </ResizableSidebar>
@@ -846,6 +861,44 @@ export default function ControlRoom() {
               />
             </div>
             </TabsContent>
+
+              <TabsContent value="automation-tree" className="mt-0 p-0 data-[state=active]:flex flex-col sm:flex-row flex-1 min-h-0">
+            {/* Left Panel: Resizable Tree Sidebar */}
+            {isMounted ? (
+              <ResizableSidebar
+                width={sidebarWidth}
+                onResize={setSidebarWidth}
+                minWidth={SIDEBAR_MIN_WIDTH}
+                maxWidth={SIDEBAR_MAX_WIDTH}
+              >
+                <TaskTree
+                  tree={tree}
+                  expanded={expanded}
+                  selectedNode={selectedNode}
+                  onToggle={handleToggle}
+                  onSelectNode={handleSelectNode}
+                  onNewTask={handleNewTask}
+                  stationFilters={stationFilters}
+                  onStationFilterChange={setStationFilters}
+                  typeFilter={typeFilter}
+                  onTypeFilterChange={setTypeFilter}
+                  activeSubTab="automation-tree"
+                  onChangeOrder={handleChangeOrder}
+                />
+              </ResizableSidebar>
+            ) : (
+              <div className="w-80 h-full bg-muted/20 animate-pulse" />
+            )}
+
+            {/* Right Panel: Detail View */}
+            <div className="flex-1 flex flex-col w-full overflow-y-auto">
+              <TaskDetailView
+                node={selectedNode}
+                onEditTask={handleEditTask}
+                onTaskUpdate={loadTasks}
+              />
+            </div>
+              </TabsContent>
 
             {/* Schedule Tab Content */}
             <TabsContent value="schedule" className="mt-0 p-0 data-[state=active]:flex flex-col flex-1 min-h-0">

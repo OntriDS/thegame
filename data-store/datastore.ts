@@ -62,10 +62,18 @@ import {
   getSitesBySettlement as repoGetSitesBySettlement,
   getSitesByRadius as repoGetSitesByRadius
 } from './repositories/site.repo';
+import * as archiveRepo from './repositories/archive.repo';
 import { kvGet, kvSet } from './kv';
 // Import workflow functions dynamically to break circular dependency
 import { processLinkEntity } from '@/links/links-workflows';
-import { appendEntityLog } from '@/workflows/entities-logging';
+import {
+  appendEntityLog,
+  getEntityLogs as workflowGetEntityLogs,
+  rotateEntityLogsToMonth as workflowRotateEntityLogsToMonth,
+  getEntityLogMonths as workflowGetEntityLogMonths
+} from '@/workflows/entities-logging';
+import { getCurrentMonthKey } from '@/lib/utils/date-utils';
+import type { PlayerArchiveRow } from '@/types/archive';
 
 // TASKS
 export async function upsertTask(task: Task, options?: { skipWorkflowEffects?: boolean; skipLinkEffects?: boolean }): Promise<Task> {
@@ -85,7 +93,8 @@ export async function upsertTask(task: Task, options?: { skipWorkflowEffects?: b
 }
 
 export async function getAllTasks(): Promise<Task[]> {
-  return await repoGetAllTasks();
+  const tasks = await repoGetAllTasks();
+  return tasks.filter(task => !task.isCollected);
 }
 
 export async function getTaskById(id: string): Promise<Task | null> {
@@ -175,7 +184,8 @@ export async function upsertFinancial(financial: FinancialRecord, options?: { sk
 }
 
 export async function getAllFinancials(): Promise<FinancialRecord[]> {
-  return await repoGetAllFinancials();
+  const financials = await repoGetAllFinancials();
+  return financials.filter(financial => !financial.isCollected);
 }
 
 export async function getFinancialById(id: string): Promise<FinancialRecord | null> {
@@ -220,7 +230,8 @@ export async function upsertSale(sale: Sale, options?: { skipWorkflowEffects?: b
 }
 
 export async function getAllSales(): Promise<Sale[]> {
-  return await repoGetAllSales();
+  const sales = await repoGetAllSales();
+  return sales.filter(sale => !sale.isCollected);
 }
 
 export async function getSaleById(id: string): Promise<Sale | null> {
@@ -409,6 +420,176 @@ export async function getSitesByRadius(
   radiusMeters: number
 ): Promise<Site[]> {
   return await repoGetSitesByRadius(centerLat, centerLng, radiusMeters);
+}
+
+// ============================================================================
+// LOGS
+// ============================================================================
+
+export async function getEntityLogs(
+  entityType: EntityType,
+  options?: { month?: string }
+): Promise<any[]> {
+  return await workflowGetEntityLogs(entityType, options);
+}
+
+export async function rotateEntityLogs(
+  entityType: EntityType,
+  mmyy: string
+): Promise<number> {
+  return await workflowRotateEntityLogsToMonth(entityType, mmyy);
+}
+
+export async function getEntityLogMonths(entityType: EntityType): Promise<string[]> {
+  return await workflowGetEntityLogMonths(entityType);
+}
+
+// ============================================================================
+// ARCHIVE ACCESSORS
+// ============================================================================
+
+export async function archiveTaskSnapshot(task: Task, mmyy: string): Promise<void> {
+  await archiveRepo.addEntityToArchive(EntityType.TASK, mmyy, task);
+}
+
+export async function archiveItemSnapshot(item: Item, mmyy: string): Promise<void> {
+  await archiveRepo.addEntityToArchive(EntityType.ITEM, mmyy, item);
+}
+
+export async function archiveSaleSnapshot(sale: Sale, mmyy: string): Promise<void> {
+  await archiveRepo.addEntityToArchive(EntityType.SALE, mmyy, sale);
+}
+
+export async function archiveFinancialRecordSnapshot(
+  financial: FinancialRecord,
+  mmyy: string
+): Promise<void> {
+  await archiveRepo.addEntityToArchive(EntityType.FINANCIAL, mmyy, financial);
+}
+
+export async function getArchivedTasksByMonth(mmyy: string): Promise<Task[]> {
+  return await archiveRepo.getArchivedEntitiesByMonth<Task>(EntityType.TASK, mmyy);
+}
+
+export async function getArchivedItemsByMonth(mmyy: string): Promise<Item[]> {
+  return await archiveRepo.getArchivedEntitiesByMonth<Item>(EntityType.ITEM, mmyy);
+}
+
+export async function getArchivedSalesByMonth(mmyy: string): Promise<Sale[]> {
+  return await archiveRepo.getArchivedEntitiesByMonth<Sale>(EntityType.SALE, mmyy);
+}
+
+export async function getArchivedFinancialRecordsByMonth(mmyy: string): Promise<FinancialRecord[]> {
+  return await archiveRepo.getArchivedEntitiesByMonth<FinancialRecord>(EntityType.FINANCIAL, mmyy);
+}
+
+export async function getAvailableArchiveMonths(): Promise<string[]> {
+  return await archiveRepo.getAvailableArchiveMonths();
+}
+
+export async function getCurrentMonthArchivedTasks(): Promise<Task[]> {
+  return await getArchivedTasksByMonth(getCurrentMonthKey());
+}
+
+export async function getCurrentMonthArchivedItems(): Promise<Item[]> {
+  return await getArchivedItemsByMonth(getCurrentMonthKey());
+}
+
+export async function getCurrentMonthArchivedSales(): Promise<Sale[]> {
+  return await getArchivedSalesByMonth(getCurrentMonthKey());
+}
+
+export async function getCurrentMonthArchivedFinancials(): Promise<FinancialRecord[]> {
+  return await getArchivedFinancialRecordsByMonth(getCurrentMonthKey());
+}
+
+function resolveMonthKeyDate(mmyy: string): Date {
+  const [mm, yy] = mmyy.split('-');
+  const year = 2000 + parseInt(yy, 10);
+  const month = Math.max(0, parseInt(mm, 10) - 1);
+  return new Date(year, month, 1);
+}
+
+export function formatArchiveMonthLabel(mmyy: string): string {
+  const date = resolveMonthKeyDate(mmyy);
+  return new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' }).format(date);
+}
+
+const hasPoints = (points?: {
+  hp?: number;
+  fp?: number;
+  rp?: number;
+  xp?: number;
+}) => {
+  if (!points) return false;
+  return Boolean(points.hp || points.fp || points.rp || points.xp);
+};
+
+export async function getPlayerArchiveEventsByMonth(mmyy: string): Promise<PlayerArchiveRow[]> {
+  const [tasks, financials, sales] = await Promise.all([
+    getArchivedTasksByMonth(mmyy),
+    getArchivedFinancialRecordsByMonth(mmyy),
+    getArchivedSalesByMonth(mmyy),
+  ]);
+
+  const rows: PlayerArchiveRow[] = [];
+
+  tasks.forEach((task) => {
+    if (hasPoints(task.rewards?.points)) {
+      rows.push({
+        id: `task:${task.id}`,
+        sourceType: 'task',
+        sourceId: task.id,
+        description: task.name,
+        date: (task.collectedAt ?? task.doneAt ?? new Date()).toISOString(),
+        points: {
+          hp: task.rewards?.points?.hp ?? 0,
+          fp: task.rewards?.points?.fp ?? 0,
+          rp: task.rewards?.points?.rp ?? 0,
+          xp: task.rewards?.points?.xp ?? 0,
+        },
+      });
+    }
+  });
+
+  financials.forEach((financial) => {
+    if (hasPoints(financial.rewards?.points)) {
+      rows.push({
+        id: `financial:${financial.id}`,
+        sourceType: 'financial',
+        sourceId: financial.id,
+        description: financial.name,
+        date: new Date(financial.year, Math.max(0, financial.month - 1), 1).toISOString(),
+        points: {
+          hp: financial.rewards?.points?.hp ?? 0,
+          fp: financial.rewards?.points?.fp ?? 0,
+          rp: financial.rewards?.points?.rp ?? 0,
+          xp: financial.rewards?.points?.xp ?? 0,
+        },
+      });
+    }
+  });
+
+  if (sales.length > 0) {
+    const { calculatePointsFromRevenue } = await import('@/workflows/points-rewards-utils');
+    sales.forEach((sale) => {
+      if (sale.totals?.totalRevenue > 0) {
+        const points = calculatePointsFromRevenue(sale.totals.totalRevenue);
+        if (points.xp || points.fp || points.rp || points.hp) {
+          rows.push({
+            id: `sale:${sale.id}`,
+            sourceType: 'sale',
+            sourceId: sale.id,
+            description: sale.counterpartyName ?? 'Sale',
+            date: (sale.collectedAt ?? sale.saleDate ?? new Date()).toISOString(),
+            points,
+          });
+        }
+      }
+    });
+  }
+
+  return rows;
 }
 
 // PLAYER CONVERSION RATES

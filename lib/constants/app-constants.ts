@@ -1,7 +1,7 @@
 // lib/constants/app-constants.ts
 // Application constants used throughout the system
 import { Currency, TaskType } from '@/types/enums';
-import { Target, Award, CheckSquare, Flag } from 'lucide-react';
+import { Target, Award, CheckSquare, Flag, Zap } from 'lucide-react';
 
 export const ORDER_INCREMENT = 1000; // Used for task ordering
 export const DRAG_Z_INDEX = 1000; // Z-index for dragging elements
@@ -40,6 +40,7 @@ export const DATE_FORMAT_INPUT = 'yyyy-MM-dd'; // Input format: 2024-12-25 (HTML
 export const DATE_FORMAT_LONG = 'dd MMMM yyyy'; // Long format: 25 December 2024
 export const DATE_FORMAT_SHORT = 'dd/MM/yy'; // Short format: 25/12/24
 export const DATE_FORMAT_MONTH_YEAR = 'MMMM yyyy'; // Month year: December 2024
+export const DATE_FORMAT_MONTH_KEY = 'MM-yy'; // Archive key format: 12-24
 
 // Currency and financial constants
 export const J$_TO_USD_RATE = 10; // 1 Jungle Dollar = $10 USD
@@ -58,6 +59,7 @@ export const TASK_TYPE_ICONS: Record<TaskType, React.ElementType> = {
   [TaskType.RECURRENT_GROUP]: Award,
   [TaskType.RECURRENT_TEMPLATE]: Flag,
   [TaskType.RECURRENT_INSTANCE]: Target,
+  [TaskType.AUTOMATION]: Zap
 };
 
 // Z-Index Layer System - Unified, production-safe layering

@@ -153,15 +153,17 @@ export enum TaskType {
   MILESTONE             = 'Milestone',
   GOAL                  = 'Goal',
   ASSIGNMENT            = 'Assignment',
-  RECURRENT_GROUP       = 'Recurrent Group',      // NEW: Folder/container for recurrent tasks
-  RECURRENT_TEMPLATE    = 'Recurrent Template',   // NEW: Sets frequency pattern
-  RECURRENT_INSTANCE    = 'Recurrent Instance'    // NEW: Spawned with due date
+  RECURRENT_GROUP       = 'Recurrent Group',      // Folder/container for recurrent tasks
+  RECURRENT_TEMPLATE    = 'Recurrent Template',   // Sets frequency pattern for instances
+  RECURRENT_INSTANCE    = 'Recurrent Instance',    // Spawned with due date from templates or Individual creation
+  AUTOMATION            = 'Automation'            // Automation tasks (e.g., monthly close) for User and Agents
 }
 
 /** Task categories for UI organization and SearchableSelect grouping */
 export const TASK_CATEGORIES = {
   MISSION: ['Mission', 'Milestone', 'Goal', 'Assignment'],
-  RECURRENT: ['Recurrent Group', 'Recurrent Template', 'Recurrent Instance']
+  RECURRENT: ['Recurrent Group', 'Recurrent Template', 'Recurrent Instance'],
+  AUTOMATION: ['Automation']
 } as const;
 
 /** Recurrent task frequency options */

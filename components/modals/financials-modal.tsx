@@ -127,7 +127,8 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
     outputItemPrice: 0,
     outputItemPriceString: '0',
     isNewItem: false,
-    isSold: false
+    isSold: false,
+    outputItemId: null as string | null
   });
 
   const [items, setItems] = useState<any[]>([]);
@@ -245,11 +246,13 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
         outputItemPrice: record.outputItemPrice || 0,
         outputItemPriceString: (record.outputItemPrice || 0).toString(),
         isNewItem: record.isNewItem || false,
-        isSold: record.isSold || false
+        isSold: record.isSold || false,
+        outputItemId: record.outputItemId || null
       });
       
       // Initialize player character
       setPlayerCharacterId(record.playerCharacterId || PLAYER_ONE_ID);
+      setSelectedItemId(record.outputItemId || '');
       
       // Initialize combined item type/subtype field
       if (record.outputItemType && record.outputItemSubType) {
@@ -298,7 +301,8 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
         outputItemPrice: 0,
         outputItemPriceString: '0',
         isNewItem: false,
-        isSold: false
+        isSold: false,
+        outputItemId: null
       });
       
       // Initialize player character for new record
@@ -338,9 +342,12 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
   };
 
   const handleNewItemChange = (checked: boolean) => {
-    setFormData({ ...formData, isNewItem: checked });
+    setFormData(prev => ({ ...prev, isNewItem: checked, outputItemId: checked ? null : prev.outputItemId }));
     if (!checked) {
       setFormData(prev => ({ ...prev, outputItemName: '' }));
+    }
+    if (checked) {
+      setSelectedItemId('');
     }
   };
 
@@ -352,6 +359,8 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
       if (selectedItem) {
         setFormData(prev => ({
           ...prev,
+          isNewItem: false,
+          outputItemId: selectedItem.id,
           outputItemName: selectedItem.name,
           outputItemType: selectedItem.type,
           outputItemSubType: selectedItem.subItemType || '',
@@ -361,7 +370,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
         }));
       }
     } else {
-      setFormData(prev => ({ ...prev, outputItemName: '' }));
+      setFormData(prev => ({ ...prev, outputItemName: '', outputItemId: null }));
     }
   };
 
@@ -468,7 +477,8 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
       outputItemCollection: formData.outputItemCollection || undefined,
       outputItemSubType: formData.outputItemSubType || undefined,
       outputItemPrice: formData.outputItemPrice || undefined,
-      isNewItem: formData.isNewItem || undefined,
+      outputItemId: formData.isNewItem ? null : (selectedItemId || formData.outputItemId || null),
+      isNewItem: formData.isNewItem,
       isSold: outputItemStatus === ItemStatus.SOLD,
       netCashflow: formData.revenue - formData.cost,
       jungleCoinsValue: formData.jungleCoins * J$_TO_USD_RATE,
@@ -854,7 +864,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
                         selectedItemId={selectedItemId}
                         onItemSelect={handleItemSelect}
                         isNewItem={formData.isNewItem}
-                        onNewItemToggle={(isNew) => setFormData({ ...formData, isNewItem: isNew })}
+                        onNewItemToggle={handleNewItemChange}
                         label="Item Name"
                       />
                       <div>

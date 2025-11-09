@@ -53,6 +53,7 @@ export interface BaseEntity {
   createdAt: Date;
   updatedAt: Date;
   links: Link[];            // The Rosetta Stone - Relationship tracking
+  archiveMetadata?: Record<string, any>; // Optional provenance metadata for archive snapshots
 }
 
 /** Link Entity - The Rosetta Stone of Relationships */
@@ -308,6 +309,7 @@ export interface FinancialRecord extends BaseEntity {
   month: number; // 1-12
   station: Station;                 // Main area: ADMIN, DESIGN, PRODUCTION, SALES, PERSONAL
   type: 'company' | 'personal';
+  outputItemId?: string | null;     // Reuse existing inventory item when present
   
   // Ambassador Fields (Links System)
   siteId?: string | null;           // Site where financial activity occurred (optional)
@@ -360,6 +362,7 @@ export interface FinancialRecord extends BaseEntity {
   
   // Archive field
   isCollected: boolean;             // Financial record collected (monthly close)
+  collectedAt?: Date;               // When record was collected
 }
 
 /** Company financial summary for a month */
@@ -475,8 +478,11 @@ export interface ServiceLine extends SaleLineBase {
   outputUnitCost?: number;
   outputItemCollection?: Collection;
   outputItemPrice?: number;
+  outputItemId?: string | null;
+  isNewItem?: boolean;
   isNewOutputItem?: boolean;
   isSold?: boolean;
+  outputItemStatus?: ItemStatus;
 }
 
 export type SaleLine = ItemSaleLine | BundleSaleLine | ServiceLine;
@@ -532,6 +538,7 @@ export interface Sale extends BaseEntity {
   
   // Archive field
   isCollected: boolean;          // Sale collected (monthly close)
+  collectedAt?: Date;            // When sale was collected/archive-ready
 }
 
 

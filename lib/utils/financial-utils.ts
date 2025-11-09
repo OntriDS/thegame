@@ -1,3 +1,23 @@
+const currencyFormatters = new Map<string, Intl.NumberFormat>();
+
+function getFormatter(currency: string) {
+  if (!currencyFormatters.has(currency)) {
+    currencyFormatters.set(
+      currency,
+      new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency,
+        maximumFractionDigits: 2,
+      })
+    );
+  }
+  return currencyFormatters.get(currency)!;
+}
+
+export function formatCurrency(amount: number, currency: string = "USD"): string {
+  const formatter = getFormatter(currency);
+  return formatter.format(amount ?? 0);
+}
 // lib/utils/financial-utils.ts
 // Consolidated financial utilities following DRY principles
 

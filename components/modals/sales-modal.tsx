@@ -123,6 +123,8 @@ export default function SalesModal({
     outputItemPrice: 0,
     targetSite: '',
     outputItemStatus: ItemStatus.FOR_SALE,
+    existingItemId: null,
+    isNewItem: true,
   });
   const [taskPointsData, setTaskPointsData] = useState<PointsData>({
     points: { xp: 0, rp: 0, fp: 0, hp: 0 },
@@ -229,7 +231,9 @@ export default function SalesModal({
             outputItemCollection: serviceLine.outputItemCollection || '',
             outputItemPrice: serviceLine.outputItemPrice || 0,
             targetSite: serviceLine.taskTargetSiteId || '',
-            outputItemStatus: ItemStatus.FOR_SALE, // Default status since ServiceLine doesn't have this field
+            outputItemStatus: serviceLine.isSold ? ItemStatus.SOLD : ItemStatus.FOR_SALE,
+            existingItemId: serviceLine.outputItemId || null,
+            isNewItem: serviceLine.isNewItem ?? !serviceLine.outputItemId,
           });
 
           // Initialize task points data from service line
@@ -318,17 +322,19 @@ export default function SalesModal({
     setWhatKind('product');
     
     // Reset mini-submodal data
-          setTaskItemData({
-            outputItemType: '',
-            outputItemSubType: '',
-            outputItemQuantity: 1,
-            outputItemName: '',
-            outputUnitCost: 0,
-            outputItemCollection: '',
-            outputItemPrice: 0,
-            targetSite: '',
-            outputItemStatus: ItemStatus.FOR_SALE,
-          });
+    setTaskItemData({
+      outputItemType: '',
+      outputItemSubType: '',
+      outputItemQuantity: 1,
+      outputItemName: '',
+      outputUnitCost: 0,
+      outputItemCollection: '',
+      outputItemPrice: 0,
+      targetSite: '',
+      outputItemStatus: ItemStatus.FOR_SALE,
+      existingItemId: null,
+      isNewItem: true,
+    });
     setTaskPointsData({
       points: { xp: 0, rp: 0, fp: 0, hp: 0 },
     });
@@ -415,6 +421,10 @@ export default function SalesModal({
         outputItemPrice: taskItemData.outputItemPrice || undefined,
         targetSite: taskItemData.targetSite || undefined,
         outputItemStatus: taskItemData.outputItemStatus || undefined,
+        outputItemId: taskItemData.isNewItem ? undefined : (taskItemData.existingItemId || undefined),
+        isNewItem: taskItemData.isNewItem,
+        isNewOutputItem: taskItemData.isNewItem,
+        isSold: taskItemData.outputItemStatus === ItemStatus.SOLD,
       } as any];
       
     } else if (!manualLines && quickRows.length > 0) {

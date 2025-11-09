@@ -969,10 +969,12 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
                           </div>
                         </div>
                         
-                        {/* Column 6: Size */}
-                        <div className="text-center flex-shrink-0 w-20">
+                        {/* Column 6: Dimensions */}
+                        <div className="text-center flex-shrink-0 w-24">
                           <div className="text-sm font-bold">
-                            {renderEditableField(sticker, 'size', sticker.size || '', 'text')}
+                            {sticker.dimensions
+                              ? `${sticker.dimensions.width}×${sticker.dimensions.height} cm`
+                              : 'N/A'}
                           </div>
                         </div>
                         
@@ -1035,8 +1037,10 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
                         {/* Column 4: Station Label */}
                         <div className="text-xs text-muted-foreground text-center flex-shrink-0 w-32">Station</div>
                         
-                        {/* Column 5: Size Label */}
-                        <div className="text-xs text-muted-foreground text-center flex-shrink-0 w-20">Size</div>
+                        {/* Column 5: Dimensions Label */}
+                        <div className="text-xs text-muted-foreground text-center flex-shrink-0 w-24">
+                          Dimensions (cm)
+                        </div>
                         
                         {/* Column 6: Price Label */}
                         <div className="text-xs text-muted-foreground text-center flex-shrink-0 w-24">Price ($)</div>

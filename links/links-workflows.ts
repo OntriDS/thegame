@@ -5,7 +5,7 @@ import { EntityType, LinkType, LogEventType } from '@/types/enums';
 import type { Task, Item, Sale, FinancialRecord, Character, Player, Site, Link } from '@/types/entities';
 import { createLink, removeLink, getLinksFor } from './link-registry';
 import { appendLinkLog } from './links-logging';
-import { getItemsBySourceTaskId, getItemsBySourceRecordId } from '@/data-store/repositories/item.repo';
+import { getItemsBySourceTaskId, getItemsBySourceRecordId, getItemById } from '@/data-store/repositories/item.repo';
 import { getCharacterById } from '@/data-store/repositories/character.repo';
 import { getTaskById } from '@/data-store/repositories/task.repo';
 import { v4 as uuid } from 'uuid';
@@ -307,10 +307,24 @@ export async function processFinancialEffects(fin: FinancialRecord): Promise<voi
   }
   
   // Create FINREC_ITEM link for items created from financial record emissary fields
-  if (fin.outputItemType && fin.outputQuantity) {
-    // Find the item created by this financial record (optimized query)
-    const recordItems = await getItemsBySourceRecordId(fin.id);
-    const createdItem = recordItems.find(item => item.type === fin.outputItemType);
+  if ((fin.outputItemType || fin.outputItemId) && fin.outputQuantity) {
+    // Remove previous FINREC_ITEM links to avoid duplicates when switching items
+    const existingItemLinks = existingLinks.filter(link => link.linkType === LinkType.FINREC_ITEM);
+    for (const link of existingItemLinks) {
+      await removeLink(link.id);
+      await appendLinkLog(link, 'removed');
+    }
+
+    let createdItem: Item | undefined;
+
+    if (fin.outputItemId) {
+      createdItem = await getItemById(fin.outputItemId) || undefined;
+    }
+
+    if (!createdItem) {
+      const recordItems = await getItemsBySourceRecordId(fin.id);
+      createdItem = recordItems.find(item => item.type === fin.outputItemType);
+    }
     
     if (createdItem) {
       const l = makeLink(
@@ -321,7 +335,7 @@ export async function processFinancialEffects(fin: FinancialRecord): Promise<voi
           quantity: fin.outputQuantity,
           unitCost: fin.outputUnitCost,
           price: fin.outputItemPrice,
-          itemType: fin.outputItemType
+          itemType: fin.outputItemType || createdItem.type
         }
       );
       await createLink(l);

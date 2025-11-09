@@ -1,10 +1,35 @@
 // workflows/entities-logging.ts
 // Append-only lifecycle logs + in-place field updates for descriptive changes
 
-import { kvGet, kvSet } from '@/data-store/kv';
-import { buildLogKey } from '@/data-store/keys';
+import { kvGet, kvSet, kvSAdd, kvSMembers } from '@/data-store/kv';
+import { buildLogActiveKey, buildLogMonthKey, buildLogMonthsIndexKey } from '@/data-store/keys';
 import { EntityType, LogEventType } from '@/types/enums';
 import { v4 as uuid } from 'uuid';
+
+function normalizeLogEntry(entry: any): any {
+  if (entry?.id) {
+    return entry;
+  }
+  return { ...entry, id: ensureLogEntryId(entry) };
+}
+
+function sortMonthsDesc(months: string[]): string[] {
+  return [...months].sort((a, b) => {
+    const [amStr, ayStr] = a.split('-');
+    const [bmStr, byStr] = b.split('-');
+
+    const ay = parseInt(`20${ayStr}`, 10);
+    const by = parseInt(`20${byStr}`, 10);
+    const am = parseInt(amStr, 10);
+    const bm = parseInt(bmStr, 10);
+
+    if (ay !== by) {
+      return by - ay;
+    }
+
+    return bm - am;
+  });
+}
 
 export async function appendEntityLog(
   entityType: EntityType, 
@@ -12,7 +37,7 @@ export async function appendEntityLog(
   event: LogEventType,
   details: Record<string, any>
 ): Promise<void> {
-  const key = buildLogKey(entityType);
+  const key = buildLogActiveKey(entityType);
   const list = (await kvGet<any[]>(key)) || [];
   
   const entry = { 
@@ -34,7 +59,7 @@ export async function updateEntityLogField(
   oldValue: any,
   newValue: any
 ): Promise<void> {
-  const key = buildLogKey(entityType);
+  const key = buildLogActiveKey(entityType);
   const list = (await kvGet<any[]>(key)) || [];
   
   // For CREATED entries specifically, update only the CREATED entry
@@ -68,7 +93,7 @@ export async function updateCreatedEntryFields(
   entityId: string,
   partial: Record<string, any>
 ): Promise<void> {
-  const key = buildLogKey(entityType);
+  const key = buildLogActiveKey(entityType);
   const list = (await kvGet<any[]>(key)) || [];
   const createdEntry = list.find(entry => 
     entry.entityId === entityId && 
@@ -87,7 +112,7 @@ export async function updateLatestEventFields(
   eventKind: string,
   partial: Record<string, any>
 ): Promise<void> {
-  const key = buildLogKey(entityType);
+  const key = buildLogActiveKey(entityType);
   const list = (await kvGet<any[]>(key)) || [];
   const kind = eventKind.toLowerCase();
   for (let i = list.length - 1; i >= 0; i--) {
@@ -112,7 +137,7 @@ export async function appendBulkOperationLog(
     extra?: any;
   }
 ): Promise<void> {
-  const key = buildLogKey(entityType);
+  const key = buildLogActiveKey(entityType);
   const list = (await kvGet<any[]>(key)) || [];
   
   const event: LogEventType = operation === 'import' ? LogEventType.BULK_IMPORT : LogEventType.BULK_EXPORT;
@@ -145,7 +170,7 @@ export async function appendPlayerPointsLog(
   sourceId: string,
   sourceType: string
 ): Promise<void> {
-  const key = buildLogKey(EntityType.PLAYER);
+  const key = buildLogActiveKey(EntityType.PLAYER);
   const list = (await kvGet<any[]>(key)) || [];
   
   const logEntry = {
@@ -171,7 +196,7 @@ export async function appendPlayerPointsChangedLog(
   totalPoints: { xp: number; rp: number; fp: number; hp: number },
   points: { xp: number; rp: number; fp: number; hp: number }
 ): Promise<void> {
-  const key = buildLogKey(EntityType.PLAYER);
+  const key = buildLogActiveKey(EntityType.PLAYER);
   const list = (await kvGet<any[]>(key)) || [];
   
   const logEntry = {
@@ -196,7 +221,7 @@ export async function upsertPlayerPointsChangedLog(
   totalPoints: { xp: number; rp: number; fp: number; hp: number },
   points: { xp: number; rp: number; fp: number; hp: number }
 ): Promise<void> {
-  const key = buildLogKey(EntityType.PLAYER);
+  const key = buildLogActiveKey(EntityType.PLAYER);
   const list = (await kvGet<any[]>(key)) || [];
   
   // Find the most recent POINTS_CHANGED entry
@@ -242,7 +267,7 @@ export async function appendPlayerPointsUpdateLog(
   newPoints: { xp: number; rp: number; fp: number; hp: number },
   sourceId: string
 ): Promise<void> {
-  const key = buildLogKey(EntityType.PLAYER);
+  const key = buildLogActiveKey(EntityType.PLAYER);
   const list = (await kvGet<any[]>(key)) || [];
   
   // 1. Find and update the existing "Win Points" entry for this source task
@@ -325,7 +350,7 @@ export async function softDeleteLogEntry(
   characterId: string,
   reason?: string
 ): Promise<void> {
-  const key = buildLogKey(entityType);
+  const key = buildLogActiveKey(entityType);
   const list = (await kvGet<any[]>(key)) || [];
   
   const entry = list.find(e => e.id === entryId);
@@ -367,7 +392,7 @@ export async function restoreLogEntry(
   characterId: string,
   reason?: string
 ): Promise<void> {
-  const key = buildLogKey(entityType);
+  const key = buildLogActiveKey(entityType);
   const list = (await kvGet<any[]>(key)) || [];
   
   const entry = list.find(e => e.id === entryId);
@@ -411,7 +436,7 @@ export async function permanentDeleteLogEntry(
   characterId: string,
   reason?: string
 ): Promise<void> {
-  const key = buildLogKey(entityType);
+  const key = buildLogActiveKey(entityType);
   const list = (await kvGet<any[]>(key)) || [];
 
   const entryIndex = list.findIndex(e => e.id === entryId);
@@ -439,7 +464,7 @@ export async function editLogEntry(
   characterId: string,
   reason?: string
 ): Promise<void> {
-  const key = buildLogKey(entityType);
+  const key = buildLogActiveKey(entityType);
   const list = (await kvGet<any[]>(key)) || [];
   
   const entry = list.find(e => e.id === entryId);
@@ -497,3 +522,58 @@ export async function editLogEntry(
 
 // REMOVED: Account logging functions - Account is infrastructure entity, not Core Entity
 // Account only handles: triforce creation, player linking, character linking
+
+export async function getEntityLogs(
+  entityType: EntityType,
+  options?: { month?: string }
+): Promise<any[]> {
+  const key = options?.month
+    ? buildLogMonthKey(entityType, options.month)
+    : buildLogActiveKey(entityType);
+  const logs = await kvGet<any[]>(key);
+  if (!logs) return [];
+  return logs.map(normalizeLogEntry);
+}
+
+export async function rotateEntityLogsToMonth(
+  entityType: EntityType,
+  mmyy: string
+): Promise<number> {
+  const activeKey = buildLogActiveKey(entityType);
+  const monthKey = buildLogMonthKey(entityType, mmyy);
+  const monthsIndexKey = buildLogMonthsIndexKey(entityType);
+
+  const activeLogs = ((await kvGet<any[]>(activeKey)) || []).map(normalizeLogEntry);
+  const existingLogs = ((await kvGet<any[]>(monthKey)) || []).map(normalizeLogEntry);
+
+  if (activeLogs.length === 0 && existingLogs.length === 0) {
+    return 0;
+  }
+
+  const merged = [...existingLogs];
+  const seenIds = new Set(existingLogs.map(entry => entry.id));
+
+  for (const entry of activeLogs) {
+    if (!seenIds.has(entry.id)) {
+      seenIds.add(entry.id);
+      merged.push(entry);
+    }
+  }
+
+  if (merged.length > 0) {
+    await kvSet(monthKey, merged);
+    await kvSAdd(monthsIndexKey, mmyy);
+  }
+
+  if (activeLogs.length > 0) {
+    await kvSet(activeKey, []);
+  }
+
+  return activeLogs.length;
+}
+
+export async function getEntityLogMonths(entityType: EntityType): Promise<string[]> {
+  const monthsIndexKey = buildLogMonthsIndexKey(entityType);
+  const months = await kvSMembers(monthsIndexKey);
+  return sortMonthsDesc(months);
+}

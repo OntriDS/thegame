@@ -45,6 +45,8 @@ export async function createFinancialRecordFromTask(task: Task): Promise<Financi
       jungleCoins: 0, // J$ no longer awarded as task rewards
       isNotPaid: task.isNotPaid,       // Copy payment status from Task
       isNotCharged: task.isNotCharged, // Copy payment status from Task
+      outputItemId: task.isNewItem ? null : (task.outputItemId || null),
+      isNewItem: task.isNewItem,
       rewards: undefined, // ← FIXED: Don't copy rewards when created from task
       netCashflow: (task.revenue || 0) - (task.cost || 0),
       jungleCoinsValue: 0, // J$ no longer awarded as task rewards
@@ -112,6 +114,8 @@ export async function updateFinancialRecordFromTask(task: Task, previousTask: Ta
       previousTask.revenue !== task.revenue ||
       previousTask.isNotPaid !== task.isNotPaid ||
       previousTask.isNotCharged !== task.isNotCharged ||
+    previousTask.outputItemId !== task.outputItemId ||
+    previousTask.isNewItem !== task.isNewItem ||
       previousTask.name !== task.name ||
       previousTask.station !== task.station ||
       previousTask.siteId !== task.siteId ||
@@ -134,6 +138,8 @@ export async function updateFinancialRecordFromTask(task: Task, previousTask: Ta
       targetSiteId: task.targetSiteId,
       isNotPaid: task.isNotPaid,
       isNotCharged: task.isNotCharged,
+      outputItemId: task.isNewItem ? null : (task.outputItemId || null),
+      isNewItem: task.isNewItem,
       rewards: task.rewards,
       netCashflow: (task.revenue || 0) - (task.cost || 0),
       updatedAt: new Date()

@@ -61,3 +61,28 @@ This prevents “Bastidores (task copy)”–style duplicates and respects the s
 - Manual regression is still required: open a task with an existing output item, complete it, confirm the stock increments, then undo the task to verify the stock rolls back.
 - Watch the effects registry when flipping between “new” and “existing” to ensure we don’t leave stale clones or duplicate adjustments.
 
+---
+
+## 6. Item Output Standardization (Financials & Sales)
+
+- **Financial modal parity**
+  - Captures `outputItemId` + `isNewItem` alongside the existing `ItemNameField` toggle.
+  - Saves reuse intent through `handleSave`, so `createItemFromRecord()` can merge stock into the chosen item instead of cloning.
+  - Reopening a record rehydrates the selected inventory entry so the toggle reflects reality.
+- **Service sale hand-off**
+  - The item emissary submodal returns `existingItemId`/`isNewItem` and the service line stores them.
+  - Sale workflow propagates the flags into the generated task, letting the task workflow reuse inventory when a service reuses stock.
+- **Workflow updates**
+  - `createItemFromRecord()` mirrors the task branch: it increments existing stock when `outputItemId` is present.
+  - Financial link processing (`processFinancialEffects`) now links reused items without relying on `sourceRecordId`.
+
+### Regression checklist
+
+1. **Financial reuse**: Pick an existing item in the Financial modal, mark it as “existing”, save, and verify:
+   - Item stock increments at the correct site.
+   - Items log shows the MOVED event with the updated quantity.
+   - Financial log keeps a single entry and the Links panel shows the reused item.
+2. **Financial new item**: Toggle to `New`, enter a fresh name, save, and ensure a new item is created (CREATED log entry appears).
+3. **Service sale reuse**: From the Sales modal, open the item emissary, select an existing item, post the sale, and confirm the spawned task references the same `outputItemId` (no duplicate item is created).
+4. **Task modal regression**: Complete a task with an existing item to ensure the reuse flow still adjusts stock and logging.
+

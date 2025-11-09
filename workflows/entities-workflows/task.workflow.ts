@@ -1,7 +1,7 @@
 // workflows/entities-workflows/task.workflow.ts
 // Task-specific workflow with state vs descriptive field detection
 
-import { EntityType, LogEventType, TaskType, PLAYER_ONE_ID } from '@/types/enums';
+import { EntityType, LogEventType, TaskStatus, TaskType, PLAYER_ONE_ID } from '@/types/enums';
 import type { Task } from '@/types/entities';
 import { appendEntityLog, updateEntityLogField } from '../entities-logging';
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
@@ -17,6 +17,7 @@ import {
   getItemById,
   upsertItem
 } from '@/data-store/datastore';
+import { archiveTaskSnapshot } from '@/data-store/datastore';
 import { getLinksFor, removeLink } from '@/links/link-registry';
 import { createItemFromTask, removeItemsCreatedByTask } from '../item-creation-utils';
 import { awardPointsToPlayer, removePointsFromPlayer } from '../points-rewards-utils';
@@ -27,6 +28,7 @@ import type { PointsConversionRates } from '@/lib/constants/financial-constants'
 import { getCategoryForTaskType } from '@/lib/utils/searchable-select-utils';
 import { kvGet, kvSet } from '@/data-store/kv';
 import { buildLogKey } from '@/data-store/keys';
+import { formatMonthKey } from '@/lib/utils/date-utils';
 import { 
   updateFinancialRecordsFromTask, 
   updateItemsCreatedByTask, 
@@ -151,6 +153,40 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
       priority: task.priority,
       collectedAt: task.collectedAt
     });
+  }
+
+  const statusBecameCollected =
+    task.status === TaskStatus.COLLECTED &&
+    (!previousTask || previousTask.status !== TaskStatus.COLLECTED);
+  const flagBecameCollected =
+    !!task.isCollected && (!previousTask || !previousTask.isCollected);
+
+  if (statusBecameCollected || flagBecameCollected) {
+    const collectedAt = task.collectedAt ?? new Date();
+    const monthKey = formatMonthKey(collectedAt);
+    const archivedEffectKey = EffectKeys.sideEffect('task', task.id, `archived:${monthKey}`);
+
+    if (!(await hasEffect(archivedEffectKey))) {
+      const normalizedTask: Task = {
+        ...task,
+        isCollected: true,
+        collectedAt,
+        archiveMetadata: {
+          monthKey,
+          parentId: task.parentId ?? null,
+          siteId: resolveTaskOutputSite(task),
+          sourceSaleId: task.sourceSaleId ?? null
+        }
+      };
+
+      if (!task.isCollected || !task.collectedAt) {
+        await upsertTask(normalizedTask, { skipWorkflowEffects: true, skipLinkEffects: true });
+      }
+
+      await archiveTaskSnapshot(normalizedTask, monthKey);
+      await markEffect(archivedEffectKey);
+      console.log(`[onTaskUpsert] Archived task ${task.name} into archive box ${monthKey}`);
+    }
   }
   
   // Site changes - MOVED event

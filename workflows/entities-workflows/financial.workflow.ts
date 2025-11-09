@@ -20,7 +20,8 @@ import {
   hasRewardsChanged
 } from '../update-propagation-utils';
 import { createCharacterFromFinancial } from '../character-creation-utils';
-import { upsertFinancial } from '@/data-store/datastore';
+import { archiveFinancialRecordSnapshot, upsertFinancial } from '@/data-store/datastore';
+import { formatMonthKey } from '@/lib/utils/date-utils';
 
 const STATE_FIELDS = ['isNotPaid', 'isNotCharged', 'isCollected'];
 const DESCRIPTIVE_FIELDS = ['name', 'description', 'cost', 'revenue', 'jungleCoins', 'notes'];
@@ -107,7 +108,37 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
     
     // Wait for all side effects to complete
     await Promise.all(sideEffects);
-    
+
+    if (financial.isCollected) {
+      const collectedAt = financial.collectedAt ?? new Date();
+      const monthAnchor = financial.collectedAt ?? new Date(financial.year, Math.max(0, financial.month - 1), 1);
+      const monthKey = formatMonthKey(monthAnchor);
+      const archiveEffectKey = EffectKeys.sideEffect('financial', financial.id, `archived:${monthKey}`);
+
+      if (!(await hasEffect(archiveEffectKey))) {
+        const normalizedFinancial: FinancialRecord = {
+          ...financial,
+          isCollected: true,
+          collectedAt,
+          archiveMetadata: {
+            monthKey,
+            year: financial.year,
+            month: financial.month,
+            sourceSaleId: financial.sourceSaleId ?? null,
+            sourceTaskId: financial.sourceTaskId ?? null
+          }
+        };
+
+        if (!financial.collectedAt) {
+          await upsertFinancial(normalizedFinancial, { skipWorkflowEffects: true, skipLinkEffects: true });
+        }
+
+        await archiveFinancialRecordSnapshot(normalizedFinancial, monthKey);
+        await markEffect(archiveEffectKey);
+        console.log(`[onFinancialUpsert] Archived financial record ${financial.name} into archive box ${monthKey}`);
+      }
+    }
+
     return;
   }
   
@@ -149,6 +180,34 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
       station: financial.station,
       collectedAt: new Date().toISOString()
     });
+
+    const collectedAt = financial.collectedAt ?? new Date();
+    const monthAnchor = financial.collectedAt ?? new Date(financial.year, Math.max(0, financial.month - 1), 1);
+    const monthKey = formatMonthKey(monthAnchor);
+    const archiveEffectKey = EffectKeys.sideEffect('financial', financial.id, `archived:${monthKey}`);
+
+    if (!(await hasEffect(archiveEffectKey))) {
+      const normalizedFinancial: FinancialRecord = {
+        ...financial,
+        isCollected: true,
+          collectedAt,
+          archiveMetadata: {
+            monthKey,
+            year: financial.year,
+            month: financial.month,
+            sourceSaleId: financial.sourceSaleId ?? null,
+            sourceTaskId: financial.sourceTaskId ?? null
+          }
+      };
+
+      if (!financial.collectedAt) {
+        await upsertFinancial(normalizedFinancial, { skipWorkflowEffects: true, skipLinkEffects: true });
+      }
+
+      await archiveFinancialRecordSnapshot(normalizedFinancial, monthKey);
+      await markEffect(archiveEffectKey);
+      console.log(`[onFinancialUpsert] Archived financial record ${financial.name} into archive box ${monthKey}`);
+    }
   }
   
   // COMPREHENSIVE UPDATE PROPAGATION - when financial record properties change
