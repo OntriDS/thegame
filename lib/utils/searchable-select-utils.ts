@@ -470,7 +470,7 @@ export function createItemOptions(
   
   const trimWithEllipsis = (value: string, maxLength: number) => {
     if (!value) return value;
-    return value.length > maxLength ? `${value.slice(0, maxLength - 2)}..` : value;
+    return value.length > maxLength ? `${value.slice(0, maxLength - 2)}.. ` : value;
   };
 
   for (const item of items) {
@@ -478,7 +478,7 @@ export function createItemOptions(
     let label = trimmedName;
     
     if (showPrice && item.price !== undefined) {
-      label += ` $${item.price}`;
+      label += `• $${item.price} • `;
     }
     
     if (showQuantity) {
