@@ -39,7 +39,7 @@ export function ItemNameField({
   label = "Item Name",
   sites = [],
   showPriceInOptions = true,
-  showQuantityInOptions = true,
+  showQuantityInOptions = false,
 }: ItemNameFieldProps) {
   const [internalIsNewItem, setInternalIsNewItem] = useState(isNewItem);
   const [internalSelectedItemId, setInternalSelectedItemId] = useState(selectedItemId);

@@ -468,11 +468,17 @@ export function createItemOptions(
   }> = [];
   const siteNameMap = new Map(sites.map(site => [site.id, site.name]));
   
+  const trimWithEllipsis = (value: string, maxLength: number) => {
+    if (!value) return value;
+    return value.length > maxLength ? `${value.slice(0, maxLength - 2)}..` : value;
+  };
+
   for (const item of items) {
-    let label = item.name;
+    const trimmedName = trimWithEllipsis(item.name, 10);
+    let label = trimmedName;
     
     if (showPrice && item.price !== undefined) {
-      label += ` - $${item.price}`;
+      label += ` $${item.price}`;
     }
     
     if (showQuantity) {
@@ -484,10 +490,14 @@ export function createItemOptions(
     const stockPoints = (item.stock ?? []).filter(stockPoint => stockPoint.quantity > 0);
     if (stockPoints.length > 0) {
       const stockSummary = stockPoints
-        .map(stockPoint => `${siteNameMap.get(stockPoint.siteId) ?? stockPoint.siteId}: ${stockPoint.quantity}`)
+        .map(stockPoint => {
+          const siteName = siteNameMap.get(stockPoint.siteId) ?? stockPoint.siteId;
+          const trimmedSite = trimWithEllipsis(siteName, 6);
+          return `${trimmedSite}: ${stockPoint.quantity}`;
+        })
         .join(', ');
       if (stockSummary) {
-        label += ` • Stock: ${stockSummary}`;
+        label += ` ${stockSummary}`;
       }
     }
     
@@ -528,26 +538,36 @@ export function createItemOptionsForSite(
   
   const ClientAPI = require('@/lib/client-api').ClientAPI;
   const siteNameMap = new Map(sites.map(site => [site.id, site.name]));
+  const trimWithEllipsis = (value: string, maxLength: number) => {
+    if (!value) return value;
+    return value.length > maxLength ? `${value.slice(0, maxLength - 2)}..` : value;
+  };
   
   for (const item of items) {
     const qtyAtSite = siteId ? ClientAPI.getQuantityAtSite(item, siteId) : 0;
     
-    let label = item.name;
+    const trimmedName = trimWithEllipsis(item.name, 10);
+    let label = trimmedName;
     
     if (showPrice && item.price !== undefined) {
-      label += ` - $${item.price}`;
+      label += ` $${item.price}`;
     }
     const primarySiteName = siteNameMap.get(siteId) ?? siteId;
-    label += ` (Qty @ ${primarySiteName}: ${qtyAtSite})`;
+    const trimmedPrimary = trimWithEllipsis(primarySiteName, 6);
+    label += ` ${trimmedPrimary}: ${qtyAtSite}`;
 
     const stockPoints = (item.stock ?? []).filter(stockPoint => stockPoint.quantity > 0);
     const otherStock = stockPoints.filter(stockPoint => stockPoint.siteId !== siteId);
     if (otherStock.length > 0) {
       const otherSummary = otherStock
-        .map(stockPoint => `${siteNameMap.get(stockPoint.siteId) ?? stockPoint.siteId}: ${stockPoint.quantity}`)
+        .map(stockPoint => {
+          const siteName = siteNameMap.get(stockPoint.siteId) ?? stockPoint.siteId;
+          const trimmedSite = trimWithEllipsis(siteName, 6);
+          return `${trimmedSite}: ${stockPoint.quantity}`;
+        })
         .join(', ');
       if (otherSummary) {
-        label += ` • Other: ${otherSummary}`;
+        label += ` ${otherSummary}`;
       }
     }
     
