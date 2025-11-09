@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
-  DropdownMenuCheckboxItem,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ChevronDown, Clipboard, Loader2 } from "lucide-react";
@@ -354,15 +354,26 @@ function renderTable<Row>(
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-48">
-              {columns.map((column) => (
-                <DropdownMenuCheckboxItem
-                  key={column.key}
-                  checked={tabState.visibleColumns.has(column.key)}
-                  onCheckedChange={() => onToggleColumn(column.key)}
-                >
-                  {column.label}
-                </DropdownMenuCheckboxItem>
-              ))}
+              {columns.map((column) => {
+                const isVisible = tabState.visibleColumns.has(column.key);
+                const isLastVisible = isVisible && tabState.visibleColumns.size === 1;
+                return (
+                  <DropdownMenuItem
+                    key={column.key}
+                    onSelect={(event) => {
+                      event.preventDefault();
+                      if (isLastVisible) return;
+                      onToggleColumn(column.key);
+                    }}
+                    className="flex items-center justify-between"
+                  >
+                    <span>{column.label}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {isVisible ? "✓" : ""}
+                    </span>
+                  </DropdownMenuItem>
+                );
+              })}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

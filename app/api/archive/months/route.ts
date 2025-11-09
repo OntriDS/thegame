@@ -1,6 +1,4 @@
-'use server';
-
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { requireAdminAuth } from '@/lib/api-auth';
 import {
   getAvailableArchiveMonths,
@@ -15,8 +13,8 @@ import type { AvailableArchiveMonth } from '@/types/archive';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(request: Request) {
-  if (!(await requireAdminAuth())) {
+export async function GET(request: NextRequest) {
+  if (!(await requireAdminAuth(request))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
