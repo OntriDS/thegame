@@ -12,7 +12,7 @@ import NumericInput from '@/components/ui/numeric-input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Sale, SaleLine, Item, Discount, Site, Character, Task } from '@/types/entities';
+import { Sale, SaleLine, Item, Discount, Site, Character, Task, ItemSaleLine, BundleSaleLine } from '@/types/entities';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
 import { SaleType, SaleStatus, PaymentMethod, Currency, ItemType, ItemStatus, TaskType, TaskPriority, Collection, STATION_CATEGORIES, CharacterRole, EntityType, PLAYER_ONE_ID } from '@/types/enums';
 import { getSubTypesForItemType } from '@/lib/utils/item-utils';
@@ -256,6 +256,73 @@ export default function SalesModal({
       setPlayerCharacterId(PLAYER_ONE_ID);
     }
   }, [sale]);
+
+  useEffect(() => {
+    if (!sale || didInitRef.current) {
+      return;
+    }
+
+    const saleLines = sale.lines ?? [];
+    const itemLines = saleLines.filter(
+      (line): line is ItemSaleLine => line.kind === 'item'
+    );
+    const bundleLines = saleLines.filter(
+      (line): line is BundleSaleLine => line.kind === 'bundle'
+    );
+    const hasServiceLines = saleLines.some(line => line.kind === 'service');
+
+    const getItemName = (line: ItemSaleLine) => {
+      const itemEntity = items.find(item => item.id === line.itemId);
+      if (itemEntity?.name) {
+        return itemEntity.name;
+      }
+      if (line.description) {
+        return line.description.replace(/^Sale of\s+/i, '').trim();
+      }
+      return line.itemId;
+    };
+
+    if (hasServiceLines) {
+      setWhatKind('service');
+      setOneItemMultiple('one');
+      didInitRef.current = true;
+      return;
+    }
+
+    if (itemLines.length === 1 && bundleLines.length === 0) {
+      const [line] = itemLines;
+      setWhatKind('product');
+      setOneItemMultiple('one');
+      setSelectedItemId(line.itemId);
+      setSelectedItemQuantity(line.quantity || 1);
+      setSelectedItemPrice(line.unitPrice || 0);
+      setSelectedItems([]);
+      setManualLines(false);
+    } else if (itemLines.length > 0) {
+      setWhatKind('product');
+      setOneItemMultiple('multiple');
+      setManualLines(false);
+      const mappedItems = itemLines.map(line => ({
+        id: line.lineId || line.itemId,
+        itemId: line.itemId,
+        itemName: getItemName(line),
+        siteId: sale.siteId || '',
+        quantity: line.quantity || 0,
+        unitPrice: line.unitPrice || 0,
+        total: (line.quantity || 0) * (line.unitPrice || 0),
+      }));
+      setSelectedItems(mappedItems);
+      setSelectedItemId('');
+    } else if (bundleLines.length > 0) {
+      setWhatKind('product');
+      setOneItemMultiple('multiple');
+      setManualLines(true);
+    } else {
+      setSelectedItems([]);
+    }
+
+    didInitRef.current = true;
+  }, [sale, items]);
 
   // Load preferences after hydration to prevent SSR mismatches
   useEffect(() => {
