@@ -186,34 +186,6 @@ export default function SaleItemsSubModal({
         return;
       }
 
-      const updates: Promise<Item | void>[] = [];
-
-      validLines.forEach(line => {
-        const originalItem = items.find(item => item.id === line.itemId);
-        if (originalItem && originalItem.price !== line.unitPrice) {
-          updates.push(
-            ClientAPI.upsertItem({
-              ...originalItem,
-              price: line.unitPrice,
-              updatedAt: new Date(),
-            })
-          );
-        }
-      });
-
-      if (updates.length > 0) {
-        await Promise.all(updates);
-        setItems(prev =>
-          prev.map(item => {
-            const line = validLines.find(l => l.itemId === item.id);
-            if (line && item.price !== line.unitPrice) {
-              return { ...item, price: line.unitPrice };
-            }
-            return item;
-          })
-        );
-      }
-
       onSave(validLines);
       onOpenChange(false);
     } catch (error) {

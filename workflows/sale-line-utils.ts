@@ -87,11 +87,47 @@ export async function processItemSaleLine(line: ItemSaleLine, sale: Sale): Promi
     const updatedItem = {
       ...item,
       quantitySold: item.quantitySold + line.quantity,
-      updatedAt: new Date()
+      updatedAt: new Date(),
+      stock: item.stock ? item.stock.map(stockPoint => ({ ...stockPoint })) : []
     };
     
+    let remainingToDeduct = line.quantity;
+    
+    const deductFromStockIndex = (index: number) => {
+      if (index < 0 || index >= updatedItem.stock.length || remainingToDeduct <= 0) return;
+      const stockPoint = updatedItem.stock[index];
+      const available = stockPoint.quantity;
+      const deduction = Math.min(available, remainingToDeduct);
+      if (deduction <= 0) return;
+      updatedItem.stock[index] = { ...stockPoint, quantity: available - deduction };
+      remainingToDeduct -= deduction;
+    };
+    
+    // Prefer deducting stock from the sale site, if available
+    if (sale.siteId) {
+      const saleSiteIndex = updatedItem.stock.findIndex(stockPoint => stockPoint.siteId === sale.siteId);
+      deductFromStockIndex(saleSiteIndex);
+    }
+    
+    // Deduct remaining quantities from other stock points
+    for (let i = 0; i < updatedItem.stock.length && remainingToDeduct > 0; i++) {
+      if (sale.siteId && updatedItem.stock[i].siteId === sale.siteId) continue;
+      deductFromStockIndex(i);
+    }
+    
+    if (remainingToDeduct > 0) {
+      console.warn(
+        `[processItemSaleLine] Remaining quantity could not be deducted for item ${item.id}. Remaining: ${remainingToDeduct}`
+      );
+    }
+    
+    // Remove empty stock points
+    updatedItem.stock = updatedItem.stock.filter(stockPoint => stockPoint.quantity > 0);
+    
+    const totalRemainingQuantity = updatedItem.stock.reduce((sum, stockPoint) => sum + stockPoint.quantity, 0);
+    
     // Mark item as SOLD if all stock is sold
-    if (updatedItem.quantitySold >= totalAvailableQuantity) {
+    if (totalRemainingQuantity <= 0) {
       updatedItem.status = 'SOLD' as any;
     }
     
@@ -116,6 +152,7 @@ export async function processItemSaleLine(line: ItemSaleLine, sale: Sale): Promi
     await createLink(link);
     
     // Mark effect as complete
+    await markEffect(stockDecrementedKey);
     await markEffect(`sale:${sale.id}:${stockDecrementedKey}`);
     
     // Log the effect
