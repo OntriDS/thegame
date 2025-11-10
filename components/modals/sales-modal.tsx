@@ -414,11 +414,27 @@ export default function SalesModal({
     // Validation: Sales must have either product (item) OR service (task)
     const hasProductLines = lines.some(line => line.kind === 'item' || line.kind === 'bundle');
     const hasServiceLines = lines.some(line => line.kind === 'service');
+    const hasServiceFieldInput =
+      whatKind === 'service' &&
+      oneItemMultiple === 'one' &&
+      !manualLines &&
+      (
+        Boolean(selectedTaskId) ||
+        Boolean(taskName?.trim()) ||
+        (Number.isFinite(taskRevenue) && taskRevenue > 0) ||
+        (Number.isFinite(taskCost) && taskCost > 0) ||
+        Boolean(taskItemData.outputItemType) ||
+        Boolean(taskItemData.outputItemName?.trim()) ||
+        (taskPointsData?.points
+          ? Object.values(taskPointsData.points).some(value => Number.isFinite(value) && value > 0)
+          : false)
+      );
+    const hasServiceSelection = hasServiceLines || hasServiceFieldInput;
     const hasProductFields = Boolean(selectedItemId) || quickRows.some(r => r.quantity > 0);
     const hasSelectedItems = selectedItems.length > 0;
     const hasAnyProductSelection = hasProductLines || hasProductFields || hasSelectedItems;
     
-    if (!hasAnyProductSelection && !hasServiceLines) {
+    if (!hasAnyProductSelection && !hasServiceSelection) {
       showValidationError('Please add at least one product (item) or service (task) to the sale.', true);
       return;
     }
@@ -426,12 +442,12 @@ export default function SalesModal({
 
     // Validate: Check for conflicting data (product fields filled while service lines exist, or vice versa)
     
-    if (hasServiceLines && (hasProductFields || hasSelectedItems)) {
+    if (hasServiceSelection && (hasProductFields || hasSelectedItems)) {
       showValidationError('Conflicting data detected! You have service lines but also product fields filled. Please clear one before saving.', true);
       return;
     }
     
-    if (hasAnyProductSelection && whatKind === 'service' && !hasServiceLines) {
+    if (hasAnyProductSelection && whatKind === 'service' && !hasServiceSelection) {
       showValidationError('Conflicting data detected! You have product lines but are in Service mode. Please clear the product lines or switch to Product mode.', true);
       return;
     }
