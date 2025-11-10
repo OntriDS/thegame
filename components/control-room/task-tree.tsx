@@ -4,10 +4,11 @@ import { TreeNode } from '@/lib/utils/tree-utils';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { TaskType, STATION_CATEGORIES } from '@/types/enums';
+import { TaskType, STATION_CATEGORIES, TaskStatus, TaskPriority } from '@/types/enums';
 import type { Station } from '@/types/type-aliases';
 import { ChevronRight, ChevronDown, PlusCircle, Filter } from 'lucide-react';
 import { DRAG_Z_INDEX, MIN_WIDTH_150, TRANSITION_DURATION_150, TASK_TYPE_ICONS } from '@/lib/constants/app-constants';
+import { TASK_PRIORITY_ICON_COLORS, TASK_STATUS_ICON_COLORS } from '@/lib/constants/color-constants';
 import { getInteractiveInnerModalZIndex, getInteractiveSubModalZIndex } from '@/lib/utils/z-index-utils';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
@@ -84,6 +85,20 @@ function TreeNodeComponent({ node, depth, expanded, selectedNode, onToggle, onSe
     : '';
 
   const Icon = TASK_TYPE_ICONS[node.task.type as keyof typeof TASK_TYPE_ICONS] || TASK_TYPE_ICONS[TaskType.ASSIGNMENT];
+  const getTaskIconColorClass = (task: TreeNode['task']): string => {
+    if (task.status === TaskStatus.DONE) {
+      return TASK_STATUS_ICON_COLORS[TaskStatus.DONE];
+    }
+
+    const priority = task.priority as TaskPriority | undefined;
+    if (priority && priority !== TaskPriority.NORMAL) {
+      const color = TASK_PRIORITY_ICON_COLORS[priority as keyof typeof TASK_PRIORITY_ICON_COLORS];
+      if (color) return color;
+    }
+
+    return 'text-muted-foreground';
+  };
+  const iconColorClass = getTaskIconColorClass(node.task);
   const [isEditingOrder, setIsEditingOrder] = useState(false);
   const [orderInput, setOrderInput] = useState(String(position + 1));
 
@@ -134,7 +149,7 @@ function TreeNodeComponent({ node, depth, expanded, selectedNode, onToggle, onSe
           </div>
 
           {/* Category Icon */}
-          <Icon className="h-4 w-4 text-muted-foreground" />
+          <Icon className={`h-4 w-4 ${iconColorClass}`} />
 
           {/* Ordinal badge */}
           <div className="flex items-center">

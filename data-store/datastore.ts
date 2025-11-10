@@ -2,7 +2,7 @@
 // Orchestration layer: repositories → workflows → links → logging
 
 import type { Task, Item, FinancialRecord, Sale, Character, Player, Site, Settlement, Account } from '@/types/entities';
-import { EntityType, ItemType } from '@/types/enums';
+import { EntityType, ItemType, TaskPriority, TaskStatus } from '@/types/enums';
 import { 
   upsertTask as repoUpsertTask,
   getAllTasks as repoGetAllTasks,
@@ -78,7 +78,11 @@ import type { PlayerArchiveRow } from '@/types/archive';
 // TASKS
 export async function upsertTask(task: Task, options?: { skipWorkflowEffects?: boolean; skipLinkEffects?: boolean }): Promise<Task> {
   const previous = await repoGetTaskById(task.id);
-  const saved = await repoUpsertTask(task);
+  const normalizedTask =
+    task.status === TaskStatus.DONE
+      ? { ...task, priority: TaskPriority.NORMAL }
+      : task;
+  const saved = await repoUpsertTask(normalizedTask);
   
   if (!options?.skipWorkflowEffects) {
     const { onTaskUpsert } = await import('@/workflows/entities-workflows/task.workflow');
