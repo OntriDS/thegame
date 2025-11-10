@@ -107,7 +107,21 @@ export default function ControlRoom() {
   // ————— state —————
   const { getPreference, setPreference } = useUserPreferences();
   const [tree, setTree] = useState<TreeNode[]>([]);
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const expandedPreferenceKey = 'control-room-expanded-nodes';
+  const parseExpandedPreference = () => {
+    const saved = getPreference(expandedPreferenceKey);
+    if (!saved) return new Set<string>();
+    try {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) {
+        return new Set<string>(parsed.filter((id): id is string => typeof id === 'string'));
+      }
+    } catch (error) {
+      console.warn('[ControlRoom] Failed to parse expanded preference', error);
+    }
+    return new Set<string>();
+  };
+  const [expanded, setExpanded] = useState<Set<string>>(parseExpandedPreference);
   const [selectedNode, setSelectedNode] = useState<TreeNode | null>(null);
   const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
   // Sidebar width with persistence
@@ -595,6 +609,7 @@ export default function ControlRoom() {
       } else {
         next.add(nodeId);
       }
+      setPreference(expandedPreferenceKey, JSON.stringify(Array.from(next)));
       return next;
     });
   };

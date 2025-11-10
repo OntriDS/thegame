@@ -92,10 +92,10 @@ export const POINTS_COLORS = {
 
 /** Task Priority Icon Colors */
 export const TASK_PRIORITY_ICON_COLORS = {
-  [TaskPriority.URGENT]: 'text-red-600 dark:text-red-400',
-  [TaskPriority.IMPORTANT]: 'text-purple-600 dark:text-purple-300',
-  [TaskPriority.NOT_NOW]: 'text-gray-900 dark:text-gray-200',
-  [TaskPriority.SLOW]: 'text-amber-900 dark:text-amber-400',
+  [TaskPriority.URGENT]: 'text-red-600 dark:text-red-300',
+  [TaskPriority.IMPORTANT]: 'text-amber-600 dark:text-amber-300',
+  [TaskPriority.NOT_NOW]: 'text-gray-200 dark:text-gray-800',
+  [TaskPriority.SLOW]: 'text-purple-600 dark:text-purple-300',
 } as const;
 
 /** Task Status Icon Colors */
