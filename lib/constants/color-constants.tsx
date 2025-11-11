@@ -95,7 +95,7 @@ export const TASK_PRIORITY_ICON_COLORS = {
   [TaskPriority.URGENT]: 'text-red-600 dark:text-red-300',
   [TaskPriority.IMPORTANT]: 'text-amber-600 dark:text-amber-300',
   [TaskPriority.NOT_NOW]: 'text-gray-200 dark:text-gray-800',
-  [TaskPriority.SLOW]: 'text-purple-600 dark:text-purple-300',
+  [TaskPriority.SLOW]: 'text-purple-400 dark:text-purple-600',
 } as const;
 
 /** Task Status Icon Colors */

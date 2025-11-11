@@ -189,18 +189,7 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
     }
   }
   
-  // Site changes - MOVED event
-  if (previousTask && (previousTask.siteId !== task.siteId || previousTask.targetSiteId !== task.targetSiteId)) {
-    await appendEntityLog(EntityType.TASK, task.id, LogEventType.MOVED, {
-      name: task.name,
-      taskType: task.type,
-      station: task.station,
-      oldSiteId: previousTask!.siteId,
-      newSiteId: task.siteId,
-      oldTargetSiteId: previousTask!.targetSiteId,
-      newTargetSiteId: task.targetSiteId
-    });
-  }
+  // Tasks are not physical entities; skip MOVED logging even if site references change.
   
   // Character creation from emissary fields - when newCustomerName is provided
   if (task.newCustomerName && !task.customerCharacterId) {
