@@ -78,6 +78,78 @@ export function useKeyboardShortcuts({
     },
   });
 
+  // Alt+Y: Insert check mark (✅) in input fields
+  useRegisterShortcut({
+    scope,
+    combo: 'alt+y',
+    allowInInputs: true,
+    priority: 100,
+    handler: (event) => {
+      const target = event.target as HTMLElement;
+
+      if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) {
+        const start = target.selectionStart || 0;
+        const end = target.selectionEnd || 0;
+        const value = target.value;
+        const insertion = '✅ ';
+        const newValue = value.substring(0, start) + insertion + value.substring(end);
+        target.value = newValue;
+        target.setSelectionRange(start + insertion.length, start + insertion.length);
+        return;
+      }
+
+      if (target.contentEditable === 'true') {
+        const selection = window.getSelection();
+        if (selection && selection.rangeCount > 0) {
+          const range = selection.getRangeAt(0);
+          range.deleteContents();
+          const textNode = document.createTextNode('✅ ');
+          range.insertNode(textNode);
+          range.setStartAfter(textNode);
+          range.collapse(true);
+          selection.removeAllRanges();
+          selection.addRange(range);
+        }
+      }
+    },
+  });
+
+  // Alt+N: Insert cross mark (❌) in input fields
+  useRegisterShortcut({
+    scope,
+    combo: 'alt+n',
+    allowInInputs: true,
+    priority: 100,
+    handler: (event) => {
+      const target = event.target as HTMLElement;
+
+      if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) {
+        const start = target.selectionStart || 0;
+        const end = target.selectionEnd || 0;
+        const value = target.value;
+        const insertion = '❌ ';
+        const newValue = value.substring(0, start) + insertion + value.substring(end);
+        target.value = newValue;
+        target.setSelectionRange(start + insertion.length, start + insertion.length);
+        return;
+      }
+
+      if (target.contentEditable === 'true') {
+        const selection = window.getSelection();
+        if (selection && selection.rangeCount > 0) {
+          const range = selection.getRangeAt(0);
+          range.deleteContents();
+          const textNode = document.createTextNode('❌ ');
+          range.insertNode(textNode);
+          range.setStartAfter(textNode);
+          range.collapse(true);
+          selection.removeAllRanges();
+          selection.addRange(range);
+        }
+      }
+    },
+  });
+
   // Arrow Key Navigation (ArrowUp/ArrowDown for task reordering)
   // Register handlers that check for Alt key in the event
   useRegisterShortcut({
@@ -266,6 +338,8 @@ export function showKeyboardShortcutsHelp() {
     '',
     '=== TEXT INPUT ===',
     'Alt + D = Insert bullet character (•)',
+    'Alt + Y = Insert check mark (✅)',
+    'Alt + N = Insert cross mark (❌)',
     '',
     '=== TASK REORDERING ===',
     '↑ / ↓ = Move selected task up/down (within siblings)',
