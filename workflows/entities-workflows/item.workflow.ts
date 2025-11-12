@@ -61,27 +61,53 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
     return;
   }
   
-  // Stock changes - MOVED event
+  // Stock changes - MOVED event (only log when Move Items Submodal is used)
   const stockChanged = JSON.stringify(previousItem.stock) !== JSON.stringify(item.stock);
   if (stockChanged) {
-    await appendEntityLog(EntityType.ITEM, item.id, LogEventType.MOVED, {
-      name: item.name,
-      itemType: item.type,
-      collection: item.collection,
-      oldStock: previousItem.stock,
-      newStock: item.stock
-    });
+    // Check if this was moved via the Move Items Submodal (temporary flag)
+    const movedViaSubmodal = (item as any)._movedViaSubmodal === true;
+    
+    if (movedViaSubmodal) {
+      await appendEntityLog(EntityType.ITEM, item.id, LogEventType.MOVED, {
+        name: item.name,
+        itemType: item.type,
+        collection: item.collection,
+        oldStock: previousItem.stock,
+        newStock: item.stock
+      });
+      
+      // Remove temporary flag (clean up)
+      delete (item as any)._movedViaSubmodal;
+    }
   }
   
   // Quantity sold changes - SOLD event
   if (previousItem.quantitySold !== item.quantitySold && item.quantitySold > previousItem.quantitySold) {
-    await appendEntityLog(EntityType.ITEM, item.id, LogEventType.SOLD, {
+    const soldLogDetails: Record<string, any> = {
       name: item.name,
       itemType: item.type,
       collection: item.collection,
       quantitySold: item.quantitySold,
       oldQuantitySold: previousItem.quantitySold
-    });
+    };
+
+    if (item.station !== undefined) {
+      soldLogDetails.station = item.station;
+    }
+    if (item.subItemType !== undefined) {
+      soldLogDetails.subItemType = item.subItemType;
+    }
+    if (item.unitCost !== undefined) {
+      soldLogDetails.unitCost = item.unitCost;
+    }
+    if (item.price !== undefined) {
+      soldLogDetails.price = item.price;
+    }
+    if (item.status !== undefined) {
+      soldLogDetails.status = item.status;
+    }
+
+    await appendEntityLog(EntityType.ITEM, item.id, LogEventType.SOLD, soldLogDetails);
   }
   
   // Collection status - COLLECTED event
@@ -94,17 +120,6 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
     });
   }
 
-  // Status changes - UPDATED event
-  if (previousItem.status !== item.status) {
-    await appendEntityLog(EntityType.ITEM, item.id, LogEventType.UPDATED, {
-      name: item.name,
-      itemType: item.type,
-      collection: item.collection,
-      oldStatus: previousItem.status,
-      newStatus: item.status
-    });
-  }
-  
   // Descriptive changes - update in-place
   for (const field of DESCRIPTIVE_FIELDS) {
     if ((previousItem as any)[field] !== (item as any)[field]) {

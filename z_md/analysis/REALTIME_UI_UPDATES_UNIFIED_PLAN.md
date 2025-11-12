@@ -189,7 +189,7 @@ const handleSaveSale = async (sale: Sale) => {
 
 **Rationale:** Keep both synchronous and event-driven patterns temporarily to ensure no regression while we verify the unified pattern works.
 
-**2. Character Page** (`app/admin/character/page.tsx`)
+**2. Personas Page** (`app/admin/personas/page.tsx`)
 
 **Current Pattern:**
 ```typescript

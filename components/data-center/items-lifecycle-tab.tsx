@@ -202,19 +202,47 @@ export function ItemsLifecycleTab({ itemsLog, onReload, isReloading }: ItemsLife
                 visibleEntries.map((entry: any, index: number) => {
                   
                   // Extract status with proper normalization
-                  const statusRaw: string = entry.event || entry.action || entry.type || entry.status || 'unknown';
-                  let status = statusRaw;
-                  let statusDisplayName = statusRaw;
-                  
-                  // Normalize status display name
-                  if (statusRaw.toLowerCase() === LogEventType.CREATED.toLowerCase()) {
-                    statusDisplayName = 'Created';
-                  } else if (statusRaw.toLowerCase() === LogEventType.UPDATED.toLowerCase()) {
-                    statusDisplayName = 'Updated';
-                  } else if (statusRaw.toLowerCase() === LogEventType.COLLECTED.toLowerCase()) {
-                    statusDisplayName = 'Collected';
-                  }
-                  
+                  const eventKindRaw: string = entry.event || entry.action || entry.type || entry.status || 'unknown';
+                  const eventKind = eventKindRaw.toLowerCase();
+
+                  const getStatusDisplayName = () => {
+                    switch (eventKind) {
+                      case LogEventType.CREATED.toLowerCase():
+                        return 'Created';
+                      case LogEventType.SOLD.toLowerCase():
+                        return 'Sold';
+                      case LogEventType.MOVED.toLowerCase():
+                        return 'Moved';
+                      case LogEventType.COLLECTED.toLowerCase():
+                        return 'Collected';
+                      case LogEventType.BULK_IMPORT.toLowerCase():
+                        return 'Bulk Import';
+                      case LogEventType.BULK_EXPORT.toLowerCase():
+                        return 'Bulk Export';
+                      case LogEventType.UPDATED.toLowerCase():
+                        return 'Updated';
+                      default:
+                        return eventKindRaw.charAt(0).toUpperCase() + eventKindRaw.slice(1);
+                    }
+                  };
+
+                  const statusDisplayName = getStatusDisplayName();
+
+                  const getEventBadgeClasses = () => {
+                    switch (eventKind) {
+                      case LogEventType.CREATED.toLowerCase():
+                        return getItemStatusBadgeColor(ItemStatus.CREATED);
+                      case LogEventType.SOLD.toLowerCase():
+                        return getItemStatusBadgeColor(ItemStatus.SOLD);
+                      case LogEventType.COLLECTED.toLowerCase():
+                        return getItemStatusBadgeColor(ItemStatus.COLLECTED);
+                      default:
+                        return 'border-muted text-muted-foreground';
+                    }
+                  };
+
+                  const badgeClasses = getEventBadgeClasses();
+
                   // Extract item fields - use displayName from normalization
                   const name = entry.displayName || entry.name || entry.itemName || 'Unnamed Item';
                   const itemType = entry.itemType || '—';
@@ -222,8 +250,8 @@ export function ItemsLifecycleTab({ itemsLog, onReload, isReloading }: ItemsLife
                   const subItemType = entry.subItemType || '—';
                   const collection = entry.collection || '—';
                   const quantity = entry.quantity;
-                  const unitCost = entry.unitCost || entry.cost || 0;
-                  const price = entry.price || 0;
+                  const unitCost = entry.unitCost ?? entry.cost;
+                  const price = entry.price;
                   const sourceType = entry.sourceType;
                   const sourceId = entry.sourceId;
                   const date = entry.displayDate || entry.timestamp || '';
@@ -232,10 +260,14 @@ export function ItemsLifecycleTab({ itemsLog, onReload, isReloading }: ItemsLife
                   const truncatedSourceName = sourceId ? sourceNameCache[sourceId] || '' : '';
                   
                   // Handle bulk operations
-                  if (statusRaw === 'BULK_IMPORT' || statusRaw === 'BULK_EXPORT') {
+                  if (
+                    eventKind === LogEventType.BULK_IMPORT.toLowerCase() ||
+                    eventKind === LogEventType.BULK_EXPORT.toLowerCase()
+                  ) {
                     const count = entry.count || 0;
                     const source = entry.source || 'backup folder';
                     const importMode = entry.importMode;
+                    const bulkLabel = eventKind === LogEventType.BULK_IMPORT.toLowerCase() ? 'Bulk Import' : 'Bulk Export';
                     
                     return (
                       <div key={index} className="flex items-center gap-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors">
@@ -244,11 +276,11 @@ export function ItemsLifecycleTab({ itemsLog, onReload, isReloading }: ItemsLife
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-3 text-sm">
-                            <div className={`inline-flex items-center rounded-full border px-2 py-1 text-xs font-semibold transition-colors ${getItemStatusBadgeColor(status)}`}>
-                              {statusRaw === 'BULK_IMPORT' ? 'Bulk Import' : 'Bulk Export'}
+                            <div className="inline-flex items-center rounded-full border px-2 py-1 text-xs font-semibold transition-colors border-muted text-muted-foreground">
+                              {bulkLabel}
                             </div>
                             <span className="font-medium text-foreground">
-                              {statusRaw === 'BULK_IMPORT' 
+                              {eventKind === LogEventType.BULK_IMPORT.toLowerCase() 
                                 ? `${count} items imported from ${source} (${importMode || 'merge'} mode)`
                                 : `${count} items exported to backup folder`}
                             </span>
@@ -273,7 +305,7 @@ export function ItemsLifecycleTab({ itemsLog, onReload, isReloading }: ItemsLife
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-3 text-sm">
                           {/* Status Badge */}
-                          <div className={`inline-flex items-center rounded-full border px-2 py-1 text-xs font-semibold transition-colors ${getItemStatusBadgeColor(status)}`}>
+                          <div className={`inline-flex items-center rounded-full border px-2 py-1 text-xs font-semibold transition-colors ${badgeClasses}`}>
                             {statusDisplayName}
                           </div>
                           
@@ -311,23 +343,70 @@ export function ItemsLifecycleTab({ itemsLog, onReload, isReloading }: ItemsLife
                           )}
                           
                           {/* Quantity */}
-                          {quantity !== undefined && quantity > 0 && (
+                          {/* Event-specific details */}
+                          {eventKind === LogEventType.CREATED.toLowerCase() && quantity !== undefined && quantity > 0 && (
                             <span className="text-muted-foreground min-w-0 flex-shrink-0">
                               Q: {quantity}
                             </span>
                           )}
                           
-                          {/* Unit Cost */}
-                          {unitCost !== undefined && (
+                          {eventKind === LogEventType.CREATED.toLowerCase() && unitCost !== undefined && (
                             <span className="text-muted-foreground min-w-0 flex-shrink-0">
                               Cost: ${unitCost}
                             </span>
                           )}
-                          
-                          {/* Price */}
-                          {price !== undefined && (
+
+                          {eventKind === LogEventType.CREATED.toLowerCase() && price !== undefined && (
                             <span className="text-muted-foreground min-w-0 flex-shrink-0">
                               ${price}
+                            </span>
+                          )}
+
+                          {eventKind === LogEventType.SOLD.toLowerCase() && (() => {
+                            const qtySold = typeof entry.quantitySold === 'number' ? entry.quantitySold : undefined;
+                            const oldQtySold = typeof entry.oldQuantitySold === 'number' ? entry.oldQuantitySold : undefined;
+                            const delta = qtySold !== undefined && oldQtySold !== undefined ? qtySold - oldQtySold : undefined;
+                            return (
+                              <>
+                                {delta !== undefined && (
+                                  <span className="text-muted-foreground min-w-0 flex-shrink-0">
+                                    Sold: +{delta} (total {qtySold})
+                                  </span>
+                                )}
+                                {unitCost !== undefined && (
+                                  <span className="text-muted-foreground min-w-0 flex-shrink-0">
+                                    Cost: ${unitCost}
+                                  </span>
+                                )}
+                                {price !== undefined && (
+                                  <span className="text-muted-foreground min-w-0 flex-shrink-0">
+                                    ${price}
+                                  </span>
+                                )}
+                              </>
+                            );
+                          })()}
+
+                          {eventKind === LogEventType.MOVED.toLowerCase() && (() => {
+                            const formatStock = (stock: Array<{ siteId?: string; quantity: number }> | undefined) => {
+                              if (!Array.isArray(stock) || stock.length === 0) return '-';
+                              return stock
+                                .map(point => `${point.siteId || '—'}:${point.quantity}`)
+                                .join(', ');
+                            };
+                            const oldStockSummary = formatStock(entry.oldStock);
+                            const newStockSummary = formatStock(entry.newStock);
+                            if (oldStockSummary === '-' && newStockSummary === '-') return null;
+                            return (
+                              <span className="text-muted-foreground min-w-0 flex-shrink-0">
+                                stock: {oldStockSummary} → {newStockSummary}
+                              </span>
+                            );
+                          })()}
+
+                          {eventKind === LogEventType.COLLECTED.toLowerCase() && entry.collectedAt && (
+                            <span className="text-muted-foreground min-w-0 flex-shrink-0">
+                              collected at: {new Date(entry.collectedAt).toLocaleDateString()}
                             </span>
                           )}
                           

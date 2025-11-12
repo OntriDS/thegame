@@ -5,7 +5,7 @@
 ### ✅ What's Actually Complete:
 - Character entity definition (`types/entities.ts`)
 - Character CRUD methods in DataStore/Adapters
-- Character admin page UI (`app/admin/character/page.tsx`)
+- Character admin page UI (`app/admin/personas/page.tsx`)
 - Character modal UI (`components/character-modal.tsx`)
 - Link types updated in enums (`TASK_CHARACTER`, `SALE_CHARACTER`, etc.)
 - API endpoint (`/api/character-log`)
@@ -391,7 +391,7 @@ Link {
 - Entity renamed: `Player` → `Character` in types
 - Link types: `*_PLAYER` → `*_CHARACTER` in enums
 - DataStore methods: `getPlayers()` → `getCharacters()`
-- Admin page: `/admin/character/` exists
+- Admin page: `/admin/personas/` exists
 - Character modal: `components/character-modal.tsx` exists
 
 **❌ Not Yet Done:**

@@ -180,6 +180,7 @@ export interface Item extends BaseEntity {
   additionalCost: number;       // additional selling costs (commission, booth rental, etc.)
   price: number;                // target selling price
   value: number;                // actual sale price (0 if not sold)
+  restockable?: boolean;        // whether item should be reordered when depleted (defaults by ItemType)
   
   // Inventory tracking - UNIFIED STOCK SYSTEM
   // totalQuantity = sum of all stock.quantity (computed property)

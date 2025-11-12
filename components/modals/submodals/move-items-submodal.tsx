@@ -89,7 +89,10 @@ export default function MoveItemsModal({ open, onOpenChange, items, sites, onCom
           quantityToMove
         );
         
-        // Save the updated item with side effects
+        // Add temporary flag to signal this is a move operation (workflow will log MOVED)
+        (updatedSourceItem as any)._movedViaSubmodal = true;
+        
+        // Save the updated item
         await ClientAPI.upsertItem(updatedSourceItem);
         
         // Create SITE_SITE link via API (avoid importing server-only modules in client)

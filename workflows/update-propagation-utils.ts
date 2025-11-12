@@ -9,6 +9,7 @@ import { getItemsBySourceTaskId, getItemsBySourceRecordId, getItemById, upsertIt
 import { getTaskById, upsertTask } from '@/data-store/datastore';
 import { getPlayerById, upsertPlayer } from '@/data-store/datastore';
 import { getAllCharacters, upsertCharacter } from '@/data-store/datastore';
+import { resolveToPlayerIdMaybeCharacter } from './points-rewards-utils';
 
 // ============================================================================
 // TASK → FINANCIAL RECORD PROPAGATION
@@ -540,8 +541,9 @@ export async function updatePlayerPointsFromSource(
       return;
     }
     
-    // Find the player (using PLAYER_ONE_ID for V0.1)
-    const playerId = PLAYER_ONE_ID;
+    // Find the target player (resolve from playerCharacterId when present)
+    const playerIdCandidate = newSource?.playerCharacterId || oldSource?.playerCharacterId || PLAYER_ONE_ID;
+    const playerId = await resolveToPlayerIdMaybeCharacter(playerIdCandidate);
     const player = await getPlayerById(playerId);
     
     if (!player) {

@@ -1,10 +1,30 @@
 // thegame/workflows/points-rewards-utils.ts
 import type { Player, Rewards } from '@/types/entities';
-import { getPlayerById, upsertPlayer } from '@/data-store/datastore';
+import { getPlayerById, getCharacterById, upsertPlayer } from '@/data-store/datastore';
 import { makeLink } from '@/links/links-workflows';
 import { createLink } from '@/links/link-registry';
 import { LinkType, EntityType, PLAYER_ONE_ID } from '@/types/enums';
 import { appendPlayerPointsLog } from './entities-logging';
+
+/**
+ * Resolve a candidate id (playerId or characterId) to a valid playerId.
+ * - If it's already a player id, return as-is.
+ * - Else, if it's a character id, return character.playerId.
+ * - Else, fallback to PLAYER_ONE_ID.
+ */
+export async function resolveToPlayerIdMaybeCharacter(candidateId?: string | null): Promise<string> {
+  try {
+    if (candidateId) {
+      const asPlayer = await getPlayerById(candidateId);
+      if (asPlayer) return candidateId;
+      const asCharacter = await getCharacterById(candidateId);
+      if (asCharacter?.playerId) return asCharacter.playerId;
+    }
+  } catch (e) {
+    console.warn('[resolveToPlayerIdMaybeCharacter] Resolution error, falling back:', e);
+  }
+  return PLAYER_ONE_ID;
+}
 
 /**
  * Awards points to a player with idempotency and proper tracking
@@ -20,12 +40,16 @@ export async function awardPointsToPlayer(
   sourceType: string
 ): Promise<void> {
   try {
-    console.log(`[awardPointsToPlayer] Awarding points to player ${playerId} from ${sourceType} ${sourceId}`);
+    const resolvedPlayerId = await resolveToPlayerIdMaybeCharacter(playerId);
+    if (resolvedPlayerId !== playerId) {
+      console.log(`[awardPointsToPlayer] Mapped id ${playerId} → player ${resolvedPlayerId}`);
+    }
+    console.log(`[awardPointsToPlayer] Awarding points to player ${resolvedPlayerId} from ${sourceType} ${sourceId}`);
     
     // Get the player
-    const player = await getPlayerById(playerId);
+    const player = await getPlayerById(resolvedPlayerId);
     if (!player) {
-      console.log(`[awardPointsToPlayer] Player ${playerId} not found, skipping`);
+      console.log(`[awardPointsToPlayer] Player ${resolvedPlayerId} not found, skipping`);
       return;
     }
 
@@ -85,7 +109,7 @@ export async function awardPointsToPlayer(
     const link = makeLink(
       linkType,
       { type: sourceEntityType, id: sourceId },
-      { type: EntityType.PLAYER, id: playerId },
+      { type: EntityType.PLAYER, id: resolvedPlayerId },
       {
         points: points,
         sourceType: sourceType,
@@ -95,7 +119,7 @@ export async function awardPointsToPlayer(
 
     await createLink(link);
     // Add dedicated player points log with source attribution
-    await appendPlayerPointsLog(playerId, points, sourceId, sourceType);
+    await appendPlayerPointsLog(resolvedPlayerId, points, sourceId, sourceType);
 
   } catch (error) {
     console.error(`[awardPointsToPlayer] ❌ Failed to award points:`, error);

@@ -15,9 +15,20 @@
 - `awardPointsToPlayer` (`workflows/points-rewards-utils.ts`, lines 16-104) immediately does `getPlayerById(playerId)`. Passing a character id returns `null`, so the helper logs and returns without side effects.
 - Result: any task/record/sale linked to a character whose id differs from its parent player never awards points, doesn’t log, and no link is created.
 
+#### COMPARE: Proposed vs Reality (Problem 1)
+| Aspect | Reality | Proposed | Implemented |
+|---|---|---|---|
+| ID passed into award | `playerCharacterId` (character id) | Accept either id; resolve to player | ✅ `resolveToPlayerIdMaybeCharacter()` in `workflows/points-rewards-utils.ts` |
+| Lookup behavior | Fails `getPlayerById` and exits | If not a player, map character → `character.playerId`; fallback to founder | ✅ `awardPointsToPlayer` now resolves before applying |
+| Delta updater source | Hardcoded `PLAYER_ONE_ID` | Resolve from `playerCharacterId` when present | ✅ `updatePlayerPointsFromSource` now resolves via helper |
+
+Status: FIXED. Both immediate awarding and delta reconciliation now resolve character ids to the correct player id, with safe fallback to `PLAYER_ONE_ID`.
+
 ### 2. Delta Updater Reinforces the Founder-Only Path
 - `updatePlayerPointsFromSource` (`workflows/update-propagation-utils.ts`, lines 481-586) always uses `const playerId = PLAYER_ONE_ID;`.
 - Even if we fix the direct awarding path, edits (e.g. changing task rewards) will continue to ignore other players, so reconciliation stays wrong.
+
+Status: FIXED. The updater now derives a candidate from `source.playerCharacterId` (new or old), then resolves to the actual player id using the shared helper.
 
 ### 3. Metrics & Log Drift
 - Player modal tabs (`components/modals/modals-tabs/player-state-tab.tsx` & `player-stats-tab.tsx`) label “All Points Ever Earned” but sum `playerData.points`, i.e. the *current spendable* balance.
