@@ -18,7 +18,8 @@ import {
   CompanyFinancialCategory, 
   PersonalFinancialCategory,
   CompanyMonthlySummary,
-  PersonalMonthlySummary
+  PersonalMonthlySummary,
+  Item,
 } from '@/types/entities';
 import { Plus, DollarSign, TrendingUp, TrendingDown, Building2, User } from 'lucide-react';
 import { MONTHS, getYearRange, getMonthName, getCurrentMonth } from '@/lib/constants/date-constants';
@@ -74,6 +75,64 @@ const formatMonthYear = (year: number, month: number) => {
   const monthName = getMonthName(month);
   return `${monthName} ${year}`;
 };
+
+type InventoryBucketTotals = Record<
+  'materials' | 'equipment' | 'artworks' | 'prints' | 'stickers' | 'merch',
+  { value: number; cost: number }
+>;
+
+const EMPTY_INVENTORY_TOTALS: InventoryBucketTotals = {
+  materials: { value: 0, cost: 0 },
+  equipment: { value: 0, cost: 0 },
+  artworks: { value: 0, cost: 0 },
+  prints: { value: 0, cost: 0 },
+  stickers: { value: 0, cost: 0 },
+  merch: { value: 0, cost: 0 },
+};
+
+const ITEM_TYPE_TO_BUCKET: Partial<Record<ItemType, keyof InventoryBucketTotals>> = {
+  [ItemType.MATERIAL]: 'materials',
+  [ItemType.EQUIPMENT]: 'equipment',
+  [ItemType.ARTWORK]: 'artworks',
+  [ItemType.PRINT]: 'prints',
+  [ItemType.STICKER]: 'stickers',
+  [ItemType.MERCH]: 'merch',
+  [ItemType.DIGITAL]: 'artworks',
+  [ItemType.BUNDLE]: 'stickers',
+};
+
+function calculateInventoryTotalsFromItems(items: Item[]): InventoryBucketTotals {
+  const totals: InventoryBucketTotals = JSON.parse(JSON.stringify(EMPTY_INVENTORY_TOTALS));
+
+  items.forEach((item) => {
+    const bucketKey = ITEM_TYPE_TO_BUCKET[item.type as ItemType];
+    if (!bucketKey) return;
+
+    const quantity = (item.stock || []).reduce((sum, stockPoint) => sum + (Number(stockPoint.quantity) || 0), 0);
+    if (quantity <= 0) return;
+
+    const pricePerUnit = Number(item.price ?? item.value ?? 0);
+    const costPerUnit = Number(item.unitCost ?? 0) + Number(item.additionalCost ?? 0);
+
+    totals[bucketKey].value += pricePerUnit * quantity;
+    totals[bucketKey].cost += costPerUnit * quantity;
+  });
+
+  return totals;
+}
+
+function mergeInventoryTotalsIntoAssets(assets: any, inventoryTotals: InventoryBucketTotals) {
+  if (!assets) return assets;
+  return {
+    ...assets,
+    materials: inventoryTotals.materials,
+    equipment: inventoryTotals.equipment,
+    artworks: inventoryTotals.artworks,
+    prints: inventoryTotals.prints,
+    stickers: inventoryTotals.stickers,
+    merch: inventoryTotals.merch,
+  };
+}
 
 export default function FinancesPage() {
   const { getPreference, setPreference, isLoading: preferencesLoading } = useUserPreferences();
@@ -203,41 +262,17 @@ export default function FinancesPage() {
   const fetchBitcoinPrice = async () => {
     setIsFetchingBitcoin(true);
     try {
-      // Try multiple APIs for better reliability
-      const apis = [
-        'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd',
-        'https://api.coindesk.com/v1/bpi/currentprice.json',
-        'https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT'
-      ];
-      
-      for (const api of apis) {
-        try {
-          const response = await fetch(api);
-          const data = await response.json();
-          
-          let bitcoinPrice = 0;
-          if (api.includes('coingecko')) {
-            bitcoinPrice = data.bitcoin.usd;
-          } else if (api.includes('coindesk')) {
-            bitcoinPrice = data.bpi.USD.rate_float;
-          } else if (api.includes('binance')) {
-            bitcoinPrice = parseFloat(data.price);
-          }
-          
-          if (bitcoinPrice > 0) {
-            setExchangeRates(prev => ({ ...prev, bitcoinToUsd: bitcoinPrice }));
-            setIsFetchingBitcoin(false);
-            return; // Success, exit the loop
-          }
-        } catch (apiError) {
-          console.warn(`Failed to fetch from ${api}:`, apiError);
-          continue; // Try next API
-        }
+      const response = await fetch('/api/bitcoin/price', { cache: 'no-store' });
+      if (!response.ok) {
+        throw new Error(`Failed request: ${response.status}`);
       }
-      
-      // If all APIs fail, use a reasonable default
-      console.warn('All Bitcoin APIs failed, using default price');
-      setExchangeRates(prev => ({ ...prev, bitcoinToUsd: FALLBACK_BITCOIN_PRICE }));
+      const data = await response.json();
+      if (data?.price && data.price > 0) {
+        setExchangeRates(prev => ({ ...prev, bitcoinToUsd: data.price }));
+        setIsFetchingBitcoin(false);
+        return;
+      }
+      throw new Error('Invalid price payload');
     } catch (error) {
       console.error('Failed to fetch Bitcoin price:', error);
       setExchangeRates(prev => ({ ...prev, bitcoinToUsd: FALLBACK_BITCOIN_PRICE }));
@@ -250,9 +285,19 @@ export default function FinancesPage() {
       try {
         const [companyData, personalData] = await Promise.all([
           ClientAPI.getCompanyAssets(),
-          ClientAPI.getPersonalAssets()
+          ClientAPI.getPersonalAssets(),
         ]);
-        setCompanyAssets(companyData);
+
+        let mergedCompanyData = companyData;
+        try {
+          const items = await ClientAPI.getItems();
+          const inventoryTotals = calculateInventoryTotalsFromItems(items);
+          mergedCompanyData = mergeInventoryTotalsIntoAssets(companyData, inventoryTotals);
+        } catch (inventoryError) {
+          console.warn('Failed to compute inventory totals from items:', inventoryError);
+        }
+
+        setCompanyAssets(mergedCompanyData);
         setPersonalAssets(personalData);
         setIsHydrated(true);
       } catch (error) {
@@ -264,9 +309,19 @@ export default function FinancesPage() {
       try {
         const [companyData, personalData] = await Promise.all([
           ClientAPI.getCompanyAssets(),
-          ClientAPI.getPersonalAssets()
+          ClientAPI.getPersonalAssets(),
         ]);
-        setCompanyAssets(companyData);
+
+        let mergedCompanyData = companyData;
+        try {
+          const items = await ClientAPI.getItems();
+          const inventoryTotals = calculateInventoryTotalsFromItems(items);
+          mergedCompanyData = mergeInventoryTotalsIntoAssets(companyData, inventoryTotals);
+        } catch (inventoryError) {
+          console.warn('Failed to recompute inventory totals from items:', inventoryError);
+        }
+
+        setCompanyAssets(mergedCompanyData);
         setPersonalAssets(personalData);
       } catch (error) {
         console.error('Failed to update assets:', error);
@@ -275,10 +330,15 @@ export default function FinancesPage() {
 
     const handleItemsUpdate = async () => {
       try {
-        const companyData = await ClientAPI.getCompanyAssets();
-        setCompanyAssets(companyData);
+        const [companyData, items] = await Promise.all([
+          ClientAPI.getCompanyAssets(),
+          ClientAPI.getItems(),
+        ]);
+        const inventoryTotals = calculateInventoryTotalsFromItems(items);
+        const mergedCompanyData = mergeInventoryTotalsIntoAssets(companyData, inventoryTotals);
+        setCompanyAssets(mergedCompanyData);
       } catch (error) {
-        console.error('Failed to update company assets:', error);
+        console.error('Failed to update company inventory totals:', error);
       }
     };
 
@@ -736,7 +796,7 @@ export default function FinancesPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-3 gap-6">
+              <div className="grid grid-cols-2 gap-6">
                 {/* Monetary Assets Column */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
@@ -785,59 +845,28 @@ export default function FinancesPage() {
                       <div className="font-semibold border-t pt-1">Total</div>
                       <div className="font-semibold text-right border-t pt-1">T${formatDecimal(getPersonalMonetaryTotal())}</div>
                     </div>
-                  </div>
-                </div>
-
-                {/* Character Rewards Column */}
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-medium text-sm py-2">Character Rewards</h4>
-                  </div>
-                  <div className="space-y-3">
-                    {/* Points Not Collected Section */}
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm border rounded-lg p-3 bg-muted/30">
-                      <div className="font-medium">Points Not Collected</div>
-                      <div className="font-medium text-right">Amount</div>
-                      
-                      <div>HP</div>
-                      <div className="text-right">0</div>
-                      
-                      <div>FP</div>
-                      <div className="text-right">0</div>
-                      
-                      <div>RP</div>
-                      <div className="text-right">0</div>
-                      
-                      <div>XP</div>
-                      <div className="text-right">0</div>
-                      
-                      <div className="font-semibold border-t pt-1">Total</div>
-                      <div className="font-semibold text-right border-t pt-1">0</div>
-                    </div>
                     
                     {/* Digital Assets Section */}
-                    <div className="text-sm border rounded-lg p-3 bg-muted/30">
-                      <div className="grid grid-cols-3 gap-x-3 gap-y-1 text-xs">
-                        <div className="text-sm p-1 text-left">Digital Assets</div>
-                        <div className="text-sm p-1 text-right">Amount (Q)</div>
-                        <div className="text-sm p-1 text-right">Value ($)</div>
-                        
-                        <div>In-Game Currency (J$)</div>
-                        <div className="text-right">{personalAssets.personalJ$} J$</div>
-                        <div className="text-right">${((personalAssets.personalJ$ || VALIDATION_CONSTANTS.DEFAULT_NUMERIC_VALUE) * (exchangeRates.j$ToUSD || VALIDATION_CONSTANTS.DEFAULT_EXCHANGE_RATE)).toLocaleString()}</div>
-                        
-                        <div className="text-muted-foreground opacity-60">Bitcoin Zaps (Z₿)</div>
-                        <div className="text-right text-muted-foreground opacity-60">0 sats</div>
-                        <div className="text-right text-muted-foreground opacity-60">$0</div>
-                        
-                        <div className="text-muted-foreground opacity-60">In-Game NFTs</div>
-                        <div className="text-right text-muted-foreground opacity-60">0 NFTs</div>
-                        <div className="text-right text-muted-foreground opacity-60">$0</div>
-                        
-                        <div className="font-semibold border-t pt-1">Total</div>
-                        <div className="border-t pt-1"></div>
-                        <div className="font-semibold text-right border-t pt-1">${((personalAssets.personalJ$ || VALIDATION_CONSTANTS.DEFAULT_NUMERIC_VALUE) * (exchangeRates.j$ToUSD || VALIDATION_CONSTANTS.DEFAULT_EXCHANGE_RATE)).toLocaleString()}</div>
-                      </div>
+                    <div className="grid grid-cols-3 gap-x-4 gap-y-1 text-sm border rounded-lg p-3 bg-muted/30">
+                      <div className="font-medium">Digital Assets</div>
+                      <div className="font-medium text-right">Amount (Q)</div>
+                      <div className="font-medium text-right">Value ($)</div>
+                      
+                      <div>In-Game Currency (J$)</div>
+                      <div className="text-right">{personalAssets.personalJ$} J$</div>
+                      <div className="text-right">${((personalAssets.personalJ$ || VALIDATION_CONSTANTS.DEFAULT_NUMERIC_VALUE) * (exchangeRates.j$ToUSD || VALIDATION_CONSTANTS.DEFAULT_EXCHANGE_RATE)).toLocaleString()}</div>
+                      
+                      <div className="text-muted-foreground opacity-60">Bitcoin Zaps (Z₿)</div>
+                      <div className="text-right text-muted-foreground opacity-60">0 sats</div>
+                      <div className="text-right text-muted-foreground opacity-60">$0</div>
+                      
+                      <div className="text-muted-foreground opacity-60">In-Game NFTs</div>
+                      <div className="text-right text-muted-foreground opacity-60">0 NFTs</div>
+                      <div className="text-right text-muted-foreground opacity-60">$0</div>
+                      
+                      <div className="font-semibold border-t pt-1">Total</div>
+                      <div className="border-t pt-1"></div>
+                      <div className="font-semibold text-right border-t pt-1">${((personalAssets.personalJ$ || VALIDATION_CONSTANTS.DEFAULT_NUMERIC_VALUE) * (exchangeRates.j$ToUSD || VALIDATION_CONSTANTS.DEFAULT_EXCHANGE_RATE)).toLocaleString()}</div>
                     </div>
                   </div>
                 </div>
@@ -857,9 +886,6 @@ export default function FinancesPage() {
                   <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm border rounded-lg p-3 bg-muted/30">
                     <div className="font-medium">Asset</div>
                     <div className="font-medium text-right">Value</div>
-                    
-                    <div>Vehicle</div>
-                    <div className="text-right">${personalAssets?.vehicle?.toLocaleString() || '0'}</div>
                     
                     <div>Properties</div>
                     <div className="text-right">${personalAssets?.properties?.toLocaleString() || '0'}</div>

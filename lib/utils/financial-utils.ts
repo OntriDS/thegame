@@ -207,7 +207,7 @@ export const getInventoryCost = (inventory: InventoryAssets): number => {
 
 // Calculate other assets total
 export const getOtherAssetsTotal = (otherAssets: OtherAssets): number => {
-  return otherAssets.vehicle + otherAssets.properties + otherAssets.nfts + otherAssets.other;
+  return otherAssets.properties + otherAssets.nfts + otherAssets.other;
 };
 
 // Calculate total net worth for a complete asset set
