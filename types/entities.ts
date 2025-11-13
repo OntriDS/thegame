@@ -319,6 +319,7 @@ export interface FinancialRecord extends BaseEntity {
   playerCharacterId?: string | null;   // Player character who owns this record
   sourceTaskId?: string | null;     // Task that generated this financial record (optional)
   sourceSaleId?: string | null;     // Sale that generated this financial record (optional)
+  salesChannel?: Station | null;    // Sales channel station (for sales-derived records: 'Direct Sales', 'Network Sales', etc.)
   
   // Emissary Fields
   newCustomerName?: string;         // EMISSARY: Name for new customer character creation
@@ -499,6 +500,7 @@ export interface Sale extends BaseEntity {
   counterpartyName?: string;        // client/store/partner name
   customerId?: string | null;       // Character who is the customer (for tracking purchases)
   playerCharacterId?: string | null; // Player character who owns this sale
+  salesChannel?: Station | null;    // Sales channel station (e.g., 'Direct Sales', 'Network Sales', 'Feria Sales')
   
   // Emissary Fields
   newCustomerName?: string;         // EMISSARY: Name for new customer character creation

@@ -198,6 +198,7 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
       case InventoryTab.STICKERS: return ItemType.STICKER;
       case InventoryTab.PRINTS: return ItemType.PRINT;
       case InventoryTab.MERCH: return ItemType.MERCH;
+      case InventoryTab.CRAFT: return ItemType.CRAFT;
       case InventoryTab.MATERIALS: return ItemType.MATERIAL;
       case InventoryTab.EQUIPMENT: return ItemType.EQUIPMENT;
       case InventoryTab.BUNDLES: return ItemType.BUNDLE;
@@ -604,6 +605,8 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
         return 'Prints';
       case ItemType.MERCH:
         return 'Merch';
+      case ItemType.CRAFT:
+        return 'Craft';
       case ItemType.MATERIAL:
         return 'Materials';
       case ItemType.EQUIPMENT:
@@ -1525,6 +1528,69 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
     );
   };
 
+  // Compact Craft View - Organized by view selector
+  const renderCraftTab = () => {
+    const craftItems = getFilteredItems(ItemType.CRAFT);
+    
+    // Group items based on selected view
+    const groupedCraft = craftItems.reduce((acc, item) => {
+      let key: string;
+      switch (merchViewBy) { // Reuse merchViewBy state for craft
+        case 'location':
+          key = item.stock[0]?.siteId || 'Unknown Location';
+          break;
+        case 'subtype':
+          key = item.subItemType || 'Other';
+          break;
+        default: // collection
+          key = item.collection || 'Uncategorized';
+      }
+      
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(item);
+      return acc;
+    }, {} as Record<string, Item[]>);
+
+    // Sort items within each group
+    Object.keys(groupedCraft).forEach(key => {
+      groupedCraft[key] = sortItems(groupedCraft[key]);
+    });
+
+    const viewOptions: { value: 'collection' | 'subtype' | 'location'; label: string }[] = [
+      { value: 'location', label: 'Location' },
+      { value: 'collection', label: 'Collection' },
+      { value: 'subtype', label: 'Subtype' }
+    ];
+
+    return (
+      <div className="space-y-4">
+        {renderTabHeader(getTabDisplayName(ItemType.CRAFT), ItemType.CRAFT, merchViewBy, (value: 'collection' | 'subtype' | 'location') => setMerchViewBy(value), viewOptions)}
+        
+        {Object.entries(groupedCraft).map(([groupKey, groupItems]) => (
+          <div key={groupKey} className="space-y-2">
+            <h4 className="text-sm font-medium text-muted-foreground">{groupKey}</h4>
+            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+              {groupItems.map((item) => (
+                <div key={item.id} className="border rounded-lg p-3 hover:bg-accent cursor-pointer" onClick={() => handleEditItem(item)}>
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">{item.name}</p>
+                      <p className="text-xs text-muted-foreground">{item.subItemType || 'No subtype'}</p>
+                    </div>
+                    <div className="text-right ml-2">
+                      <p className="text-sm font-medium">${item.price || 0}</p>
+                      <p className="text-xs text-muted-foreground">Qty: {item.stock.reduce((sum, sp) => sum + sp.quantity, 0)}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   // Compact Prints View - Organized by view selector
   const renderPrintsTab = () => {
     const printItems = getFilteredItems(ItemType.PRINT);
@@ -1789,15 +1855,16 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
         setActiveTab(newTab);
         setPreference('inventory-active-tab', newTab);
       }} className="w-full">
-        <TabsList className="grid w-full grid-cols-8">
+        <TabsList className="grid w-full grid-cols-9">
           <TabsTrigger value={InventoryTab.DIGITAL}>Digital</TabsTrigger>
           <TabsTrigger value={InventoryTab.ARTWORKS}>Artworks</TabsTrigger>
           <TabsTrigger value={InventoryTab.STICKERS}>Stickers</TabsTrigger>
           <TabsTrigger value={InventoryTab.PRINTS}>Prints</TabsTrigger>
           <TabsTrigger value={InventoryTab.MERCH}>Merch</TabsTrigger>
+          <TabsTrigger value={InventoryTab.BUNDLES}>Bundles</TabsTrigger>
+          <TabsTrigger value={InventoryTab.CRAFT}>Craft</TabsTrigger>
           <TabsTrigger value={InventoryTab.MATERIALS}>Materials</TabsTrigger>
           <TabsTrigger value={InventoryTab.EQUIPMENT}>Equipment</TabsTrigger>
-          <TabsTrigger value={InventoryTab.BUNDLES}>Bundles</TabsTrigger>
         </TabsList>
         
         <TabsContent value={InventoryTab.DIGITAL} className="mt-4">
@@ -1819,6 +1886,14 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
         <TabsContent value={InventoryTab.MERCH} className="mt-4">
           {renderMerchTab()}
         </TabsContent>
+
+        <TabsContent value={InventoryTab.BUNDLES} className="mt-4">
+          {renderBundlesTab()}
+        </TabsContent>
+        
+        <TabsContent value={InventoryTab.CRAFT} className="mt-4">
+          {renderCraftTab()}
+        </TabsContent>
         
         <TabsContent value={InventoryTab.MATERIALS} className="mt-4">
           {renderMaterialsTab()}
@@ -1828,9 +1903,7 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
           {renderEquipmentTab()}
         </TabsContent>
         
-        <TabsContent value={InventoryTab.BUNDLES} className="mt-4">
-          {renderBundlesTab()}
-        </TabsContent>
+
       </Tabs>
 
       {/* Item Modal */}

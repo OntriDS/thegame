@@ -10,7 +10,7 @@ export const BUSINESS_STRUCTURE = {
   ADMIN:      ['Strategy', 'Projects', 'Inventory', 'Transport', 'Team', 'Materials', 'Equipment', 'Rent', 'Director'],
   RESEARCH:   ['Classes', 'Studies', 'Development'],
   DESIGN:     ['Digital Art', 'Creative Process', 'Game Design', '3D Modeling', 'Animation'],
-  PRODUCTION: ['Artworks', 'Murals', 'Prints', 'Stickers', 'Merch', 'Woodworks', 'NFTs'],
+  PRODUCTION: ['Buy Orders', 'Making', 'Dispatches'],
   SALES:      ['Direct Sales', 'Feria Sales', 'Network Sales', 'Online Sales', 'Store Sales', 'Marketing', 'Bookings', 'Other Sales'],
   PERSONAL:   ['Health', 'Family', 'Food', 'Home', 'Transport P', 'Rent P', 'Other P']
 } as const;
@@ -242,6 +242,7 @@ export enum ItemType {
   PRINT           = 'Print',
   STICKER         = 'Sticker',
   MERCH           = 'Merch',
+  CRAFT           = 'Craft',          
   
   // BUNDLE_ITEM - Business Logic Items that are Packs of the same Type of Item
   BUNDLE          = 'Bundle',            // Pack of Items (Stickers or Prints)
@@ -266,6 +267,7 @@ export enum InventoryTab {
   STICKERS    = 'stickers',
   PRINTS      = 'prints',
   MERCH       = 'merch',
+  CRAFT       = 'crafts',
   
   // BUNDLE_ITEM tabs
   BUNDLES     = 'bundles',    // Business Logic Items (Bundles)
@@ -331,7 +333,7 @@ export enum DigitalSubType {
 export enum ArtworkSubType {
   ACRYLIC_CANVAS = "Acrylic on Canvas",
   ACRYLIC_WOOD = "Acrylic on Wood",
-  ASSEMBLAGES = "Assemblages",
+  ASSEMBLAGE = "Assemblage",
   MURAL = "Mural",
   FURNITURE_ART = "Furniture Art"
 }
@@ -360,10 +362,16 @@ export enum MerchSubType {
   T_SHIRT_ALLOVER = "T-Shirt AllOver"
 }
 
+/** Craft Item SubTypes */
+export enum CraftSubType {
+  FRAME = "Frame",
+  FURNITURE = "Furniture",
+}
+
 /** Bundle Item SubTypes */
 export enum BundleSubType {
-  STICKERS = "Stickers",
-  PRINTS = "Prints"
+  STICKERS = "Sticker",
+  PRINTS = "Print"
 }
 
 /** Material Item SubTypes */

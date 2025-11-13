@@ -3,7 +3,7 @@
 
 import type { Sale, ItemSaleLine, BundleSaleLine, ServiceLine, Task } from '@/types/entities';
 import { LinkType, EntityType, LogEventType } from '@/types/enums';
-import { getItemById, upsertItem } from '@/data-store/datastore';
+import { getItemById, upsertItem, getAllItems, getItemsByType } from '@/data-store/datastore';
 import { upsertTask } from '@/data-store/datastore';
 import { makeLink } from '@/links/links-workflows';
 import { createLink } from '@/links/link-registry';
@@ -179,7 +179,7 @@ export async function processItemSaleLine(line: ItemSaleLine, sale: Sale): Promi
  */
 export async function processBundleSaleLine(line: BundleSaleLine, sale: Sale): Promise<void> {
   try {
-    console.log(`[processBundleSaleLine] Processing bundle sale: ${line.itemType}, quantity: ${line.quantity}`);
+    console.log(`[processBundleSaleLine] Processing bundle sale: ${line.itemType}, quantity: ${line.quantity} bundles, ${line.itemsPerBundle} items per bundle`);
     
     // Idempotency check
     const bundleProcessedKey = `sale:${sale.id}:bundleProcessed:${line.lineId}`;
@@ -190,17 +190,125 @@ export async function processBundleSaleLine(line: BundleSaleLine, sale: Sale): P
       return;
     }
     
-    // TODO: Implement bundle processing logic
-    // This would involve:
-    // 1. Finding bundle items of the specified type
-    // 2. Reducing their stock
-    // 3. Creating SALE_ITEM links
-    // 4. Handling itemsPerBundle logic
+    // Calculate total items needed
+    const totalItemsNeeded = line.quantity * line.itemsPerBundle;
     
-    console.log(`[processBundleSaleLine] Bundle processing not yet implemented for ${line.itemType}`);
+    // If a specific bundle item is specified, use it
+    if (line.itemId) {
+      const bundleItem = await getItemById(line.itemId);
+      if (!bundleItem) {
+        console.error(`[processBundleSaleLine] Bundle item ${line.itemId} not found`);
+        return;
+      }
+      
+      // Reduce bundle stock
+      const updatedStock = bundleItem.stock.map(stockPoint => {
+        if (stockPoint.siteId === line.siteId) {
+          const newQuantity = Math.max(0, stockPoint.quantity - line.quantity);
+          return { ...stockPoint, quantity: newQuantity };
+        }
+        return stockPoint;
+      });
+      
+      const updatedItem = {
+        ...bundleItem,
+        stock: updatedStock,
+        quantitySold: (bundleItem.quantitySold || 0) + line.quantity,
+        updatedAt: new Date()
+      };
+      
+      await upsertItem(updatedItem);
+      
+      // Create SALE_ITEM link for the bundle
+      const bundleLink = makeLink(
+        LinkType.SALE_ITEM,
+        { type: EntityType.SALE, id: sale.id },
+        { type: EntityType.ITEM, id: bundleItem.id },
+        {
+          quantity: line.quantity,
+          unitPrice: line.unitPrice,
+          itemsPerBundle: line.itemsPerBundle,
+          totalItems: totalItemsNeeded
+        }
+      );
+      await createLink(bundleLink);
+      
+      console.log(`[processBundleSaleLine] ✅ Processed bundle sale: ${line.quantity} bundles of ${bundleItem.name}`);
+    } else {
+      // Find individual items of the specified type at the site
+      const allItems = await getAllItems();
+      const itemsOfType = allItems.filter(item => 
+        item.type === line.itemType &&
+        item.stock.some(sp => sp.siteId === line.siteId && sp.quantity > 0)
+      );
+      
+      if (itemsOfType.length === 0) {
+        console.error(`[processBundleSaleLine] No items of type ${line.itemType} found at site ${line.siteId}`);
+        return;
+      }
+      
+      // Sort by stock quantity (descending) to prioritize items with more stock
+      itemsOfType.sort((a, b) => {
+        const aStock = a.stock.find(sp => sp.siteId === line.siteId)?.quantity || 0;
+        const bStock = b.stock.find(sp => sp.siteId === line.siteId)?.quantity || 0;
+        return bStock - aStock;
+      });
+      
+      let remainingToDeduct = totalItemsNeeded;
+      const processedItems: Array<{ item: typeof itemsOfType[0]; quantity: number }> = [];
+      
+      // Deduct stock from items until we have enough
+      for (const item of itemsOfType) {
+        if (remainingToDeduct <= 0) break;
+        
+        const stockPoint = item.stock.find(sp => sp.siteId === line.siteId);
+        if (!stockPoint || stockPoint.quantity <= 0) continue;
+        
+        const toDeduct = Math.min(remainingToDeduct, stockPoint.quantity);
+        remainingToDeduct -= toDeduct;
+        
+        // Update item stock
+        const updatedStock = item.stock.map(sp => {
+          if (sp.siteId === line.siteId) {
+            return { ...sp, quantity: sp.quantity - toDeduct };
+          }
+          return sp;
+        });
+        
+        const updatedItem = {
+          ...item,
+          stock: updatedStock,
+          quantitySold: (item.quantitySold || 0) + toDeduct,
+          updatedAt: new Date()
+        };
+        
+        await upsertItem(updatedItem);
+        processedItems.push({ item, quantity: toDeduct });
+        
+        // Create SALE_ITEM link for each item consumed
+        const itemLink = makeLink(
+          LinkType.SALE_ITEM,
+          { type: EntityType.SALE, id: sale.id },
+          { type: EntityType.ITEM, id: item.id },
+          {
+            quantity: toDeduct,
+            unitPrice: line.unitPrice / line.itemsPerBundle, // Price per individual item
+            bundleQuantity: line.quantity,
+            itemsPerBundle: line.itemsPerBundle,
+            fromBundle: true
+          }
+        );
+        await createLink(itemLink);
+      }
+      
+      if (remainingToDeduct > 0) {
+        console.warn(`[processBundleSaleLine] ⚠️ Insufficient stock: needed ${totalItemsNeeded}, only deducted ${totalItemsNeeded - remainingToDeduct}`);
+      }
+      
+      console.log(`[processBundleSaleLine] ✅ Processed bundle sale: ${line.quantity} bundles consuming ${totalItemsNeeded - remainingToDeduct} items from ${processedItems.length} items`);
+    }
     
-    // Mark effect as complete (even though not implemented)
-    await markEffect(`sale:${sale.id}:${bundleProcessedKey}`);
+    await markEffect(bundleProcessedKey);
     
   } catch (error) {
     console.error(`[processBundleSaleLine] ❌ Failed to process bundle sale line ${line.lineId}:`, error);

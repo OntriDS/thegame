@@ -19,6 +19,7 @@ export const ITEM_TYPE_ICONS: Record<string, React.ElementType> = {
   [ItemType.STICKER.toLowerCase()]: Box,
   [ItemType.BUNDLE.toLowerCase()]: Boxes,
   [ItemType.MERCH.toLowerCase()]: ShoppingCart,
+  [ItemType.CRAFT.toLowerCase()]: Anvil,
   [ItemType.MATERIAL.toLowerCase()]: Package,
   [ItemType.EQUIPMENT.toLowerCase()]: Truck,
   default: Package,

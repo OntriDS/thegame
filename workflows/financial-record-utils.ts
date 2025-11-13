@@ -1,13 +1,13 @@
 // workflows/financial-record-utils.ts
 // Financial record creation and management utilities
 
-import type { Task, FinancialRecord, Sale } from '@/types/entities';
+import type { Task, FinancialRecord, Sale, ItemSaleLine } from '@/types/entities';
 import { LinkType, EntityType, LogEventType } from '@/types/enums';
-import { upsertFinancial, getAllFinancials, getFinancialsBySourceTaskId, removeFinancial } from '@/data-store/datastore';
+import { upsertFinancial, getAllFinancials, getFinancialsBySourceTaskId, removeFinancial, getItemById } from '@/data-store/datastore';
 import { makeLink } from '@/links/links-workflows';
 import { createLink } from '@/links/link-registry';
 import { appendEntityLog } from './entities-logging';
-import { getFinancialTypeForStation } from '@/lib/utils/business-structure-utils';
+import { getFinancialTypeForStation, getSalesChannelFromSaleType } from '@/lib/utils/business-structure-utils';
 import type { Station } from '@/types/type-aliases';
 
 /**
@@ -227,17 +227,23 @@ export async function createFinancialRecordFromSale(sale: Sale): Promise<Financi
     console.log(`[createFinancialRecordFromSale] Creating new financial record (Effect Registry confirmed no existing record)`);
     
     const currentDate = new Date();
+    // Determine sales channel from Sale entity or derive from SaleType
+    const salesChannel = sale.salesChannel || getSalesChannelFromSaleType(sale.type) || ('Direct Sales' as Station);
+    // Use salesChannel as station for sales-derived financial records
+    const station = salesChannel;
+    
     const newFinrec: FinancialRecord = {
       id: `finrec-${sale.id}-${Date.now()}`,
       name: `Sale: ${sale.counterpartyName}`,
       description: `Financial record from sale: ${sale.counterpartyName}`,
       year: currentDate.getFullYear(),
       month: currentDate.getMonth() + 1,
-      station: 'Direct Sales' as Station,
-      type: getFinancialTypeForStation('Direct Sales' as Station),
+      station: station,
+      type: getFinancialTypeForStation(station),
       siteId: sale.siteId,
       targetSiteId: undefined,
       sourceSaleId: sale.id, // AMBASSADOR field - points back to Sale
+      salesChannel: salesChannel, // Persist sales channel explicitly
       cost: 0, // Sales typically don't have costs
       revenue: sale.totals.totalRevenue,
       jungleCoins: 0, // J$ no longer awarded as sale rewards
@@ -273,6 +279,33 @@ export async function createFinancialRecordFromSale(sale: Sale): Promise<Financi
     );
     
     await createLink(link);
+    
+    // Create FINREC_ITEM links for each sold item
+    if (sale.lines && sale.lines.length > 0) {
+      for (const line of sale.lines) {
+        if (line.kind === 'item' && 'itemId' in line && line.itemId) {
+          const itemLine = line as ItemSaleLine;
+          const item = await getItemById(itemLine.itemId);
+          
+          if (item) {
+            const itemLink = makeLink(
+              LinkType.FINREC_ITEM,
+              { type: EntityType.FINANCIAL, id: createdFinrec.id },
+              { type: EntityType.ITEM, id: itemLine.itemId },
+              {
+                quantity: itemLine.quantity,
+                unitPrice: itemLine.unitPrice,
+                totalRevenue: itemLine.quantity * itemLine.unitPrice,
+                itemType: item.type,
+                createdFrom: 'sale'
+              }
+            );
+            await createLink(itemLink);
+            console.log(`[createFinancialRecordFromSale] ✅ Created FINREC_ITEM link for item ${item.name} (${itemLine.quantity} @ ${itemLine.unitPrice})`);
+          }
+        }
+      }
+    }
     
     console.log(`[createFinancialRecordFromSale] ✅ Financial record created and SALE_FINREC link established: ${createdFinrec.name}`);
     

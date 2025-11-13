@@ -77,7 +77,7 @@ const formatMonthYear = (year: number, month: number) => {
 };
 
 type InventoryBucketTotals = Record<
-  'materials' | 'equipment' | 'artworks' | 'prints' | 'stickers' | 'merch',
+  'materials' | 'equipment' | 'artworks' | 'prints' | 'stickers' | 'merch' | 'crafts',
   { value: number; cost: number }
 >;
 
@@ -88,6 +88,7 @@ const EMPTY_INVENTORY_TOTALS: InventoryBucketTotals = {
   prints: { value: 0, cost: 0 },
   stickers: { value: 0, cost: 0 },
   merch: { value: 0, cost: 0 },
+  crafts: { value: 0, cost: 0 },
 };
 
 const ITEM_TYPE_TO_BUCKET: Partial<Record<ItemType, keyof InventoryBucketTotals>> = {
@@ -97,6 +98,7 @@ const ITEM_TYPE_TO_BUCKET: Partial<Record<ItemType, keyof InventoryBucketTotals>
   [ItemType.PRINT]: 'prints',
   [ItemType.STICKER]: 'stickers',
   [ItemType.MERCH]: 'merch',
+  [ItemType.CRAFT]: 'crafts',
   [ItemType.DIGITAL]: 'artworks',
   [ItemType.BUNDLE]: 'stickers',
 };
@@ -131,6 +133,7 @@ function mergeInventoryTotalsIntoAssets(assets: any, inventoryTotals: InventoryB
     prints: inventoryTotals.prints,
     stickers: inventoryTotals.stickers,
     merch: inventoryTotals.merch,
+    crafts: inventoryTotals.crafts,
   };
 }
 
@@ -426,14 +429,14 @@ export default function FinancesPage() {
     if (!companyAssets) return 0;
     return (companyAssets.materials?.value || 0) + (companyAssets.equipment?.value || 0) + 
            (companyAssets.artworks?.value || 0) + (companyAssets.prints?.value || 0) + 
-           (companyAssets.stickers?.value || 0) + (companyAssets.merch?.value || 0);
+           (companyAssets.stickers?.value || 0) + (companyAssets.merch?.value || 0) + (companyAssets.crafts?.value || 0);
   };
   
   const getCompanyInventoryCost = () => {
     if (!companyAssets) return 0;
     return (companyAssets.materials?.cost || 0) + (companyAssets.equipment?.cost || 0) + 
            (companyAssets.artworks?.cost || 0) + (companyAssets.prints?.cost || 0) + 
-           (companyAssets.stickers?.cost || 0) + (companyAssets.merch?.cost || 0);
+           (companyAssets.stickers?.cost || 0) + (companyAssets.merch?.cost || 0) + (companyAssets.crafts?.cost || 0);
   };
   
   const getCompanyTotal = () => getCompanyMonetaryTotal() + getJungleCoinsTotal(getCompanyJ$Total(), exchangeRates) + getCompanyInventoryTotal();
@@ -761,9 +764,13 @@ export default function FinancesPage() {
                       <div className="text-right">${companyAssets.equipment.value.toLocaleString()}</div>
                       <div className="text-right">${companyAssets.equipment.cost.toLocaleString()}</div>
                       
+                      <div>Crafts</div>
+                      <div className="text-right">${(companyAssets.crafts?.value || 0).toLocaleString()}</div>
+                      <div className="text-right">${(companyAssets.crafts?.cost || 0).toLocaleString()}</div>
+                      
                       <div className="font-semibold border-t pt-1">Total</div>
-                      <div className="font-semibold text-right border-t pt-1">${(companyAssets.materials.value + companyAssets.equipment.value).toLocaleString()}</div>
-                      <div className="font-semibold text-right border-t pt-1">${(companyAssets.materials.cost + companyAssets.equipment.cost).toLocaleString()}</div>
+                      <div className="font-semibold text-right border-t pt-1">${((companyAssets.materials.value + companyAssets.equipment.value) + (companyAssets.crafts?.value || 0)).toLocaleString()}</div>
+                      <div className="font-semibold text-right border-t pt-1">${((companyAssets.materials.cost + companyAssets.equipment.cost) + (companyAssets.crafts?.cost || 0)).toLocaleString()}</div>
                     </div>
                     
                     {/* Overall Inventory Total */}
@@ -1155,7 +1162,8 @@ export default function FinancesPage() {
             artworks: { value: companyAssets.artworks.value, cost: companyAssets.artworks.cost },
             prints: { value: companyAssets.prints.value, cost: companyAssets.prints.cost },
             stickers: { value: companyAssets.stickers.value, cost: companyAssets.stickers.cost },
-            merch: { value: companyAssets.merch.value, cost: companyAssets.merch.cost }
+            merch: { value: companyAssets.merch.value, cost: companyAssets.merch.cost },
+            crafts: { value: companyAssets.crafts.value, cost: companyAssets.crafts.cost }
           };
         default:
           return {};

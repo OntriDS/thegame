@@ -19,7 +19,7 @@ import { getSubTypesForItemType } from '@/lib/utils/item-utils';
 import type { Station } from '@/types/type-aliases';
 import { createSiteOptionsWithCategories } from '@/lib/utils/site-options-utils';
 import { createCharacterOptions, createStationCategoryOptions, createTaskParentOptions, createItemTypeSubTypeOptions, getItemTypeFromCombined, createItemOptions, getCategoryFromCombined, getStationFromCombined } from '@/lib/utils/searchable-select-utils';
-import { getAreaForStation } from '@/lib/utils/business-structure-utils';
+import { getAreaForStation, getSalesChannelFromSaleType } from '@/lib/utils/business-structure-utils';
 import { ClientAPI } from '@/lib/client-api';
 import { dispatchEntityUpdated, entityTypeToKind } from '@/lib/ui/ui-events';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
@@ -106,6 +106,7 @@ export default function SalesModal({
   const [taskDueDate, setTaskDueDate] = useState<Date | undefined>(undefined);
   const [oneItemMultiple, setOneItemMultiple] = useState<'one' | 'multiple'>('one');
   const [taskStation, setTaskStation] = useState<Station>('SALES' as Station);
+  const [salesChannel, setSalesChannel] = useState<Station | null>(null);
   const [showValidationModal, setShowValidationModal] = useState(false);
   const [validationMessage, setValidationMessage] = useState('');
   const [showClearLinesModal, setShowClearLinesModal] = useState(false);
@@ -211,6 +212,7 @@ export default function SalesModal({
       setOverallDiscount(sale.overallDiscount || {});
       setLines(sale.lines || []);
       setPayments(sale.payments || []);
+      setSalesChannel(sale.salesChannel || getSalesChannelFromSaleType(sale.type) || null);
       setQuickRows([]);
       
       // Determine if sale is product or service based on lines
@@ -381,6 +383,7 @@ export default function SalesModal({
     setStatus(SaleStatus.CHARGED);
     setSiteId('');
     setCounterpartyName('');
+    setSalesChannel(getSalesChannelFromSaleType(SaleType.DIRECT) || null);
     setIsNotPaid(false);
     setIsNotCharged(false);
     setOverallDiscount({});
@@ -592,6 +595,7 @@ export default function SalesModal({
       customerId: isNewCustomer ? null : customerId,  // Ambassador: Existing customer
       newCustomerName: isNewCustomer ? newCustomerName : undefined,  // EMISSARY: Name for new customer character creation
       playerCharacterId: playerCharacterId,
+      salesChannel: salesChannel || getSalesChannelFromSaleType(type) || null,
       isNotPaid,
       isNotCharged,
       overallDiscount: Object.keys(overallDiscount).length > 0 ? overallDiscount : undefined,
@@ -1035,18 +1039,10 @@ export default function SalesModal({
                     onClick={() => {
                       if (isDisabled) return;
                       setType(t as SaleType);
-                      // Auto-set category based on Sale Type but allow changes
-                      const categoryMap: Record<SaleType, Station> = {
-                        [SaleType.DIRECT]: STATION_CATEGORIES.SALES[0] as Station, // 'Direct Sales'
-                        [SaleType.FERIA]: STATION_CATEGORIES.SALES[1] as Station, // 'Feria Sales'
-                        [SaleType.BUNDLE_SALE]: STATION_CATEGORIES.SALES[2] as Station, // 'Network Sales'
-                        [SaleType.CONSIGNMENT]: STATION_CATEGORIES.SALES[2] as Station, // 'Network Sales'
-                        [SaleType.ONLINE]: STATION_CATEGORIES.SALES[3] as Station, // 'Online Sales'
-                        [SaleType.NFT]: STATION_CATEGORIES.SALES[3] as Station, // 'Online Sales'
-                      };
-                      const newStation = categoryMap[t as SaleType];
-                      if (newStation) {
-                        setTaskStation(newStation);
+                      // Auto-set salesChannel based on Sale Type
+                      const channel = getSalesChannelFromSaleType(t);
+                      if (channel) {
+                        setSalesChannel(channel);
                       }
                     }}
                     className={`h-8 text-xs px-2 ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}

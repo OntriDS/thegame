@@ -58,3 +58,23 @@ export function isPersonalStation(station: Station): boolean {
 export function getFinancialTypeForStation(station: Station): 'company' | 'personal' {
   return isCompanyStation(station) ? 'company' : 'personal';
 }
+
+/**
+ * Map SaleType to sales channel station
+ * Returns the appropriate SALES station based on sale type
+ */
+export function getSalesChannelFromSaleType(saleType: string): Station | null {
+  const salesStations = BUSINESS_STRUCTURE.SALES;
+  
+  // Map SaleType enum values to station names
+  const typeToChannel: Record<string, Station> = {
+    'DIRECT': 'Direct Sales' as Station,
+    'FERIA': 'Feria Sales' as Station,
+    'BUNDLE': 'Network Sales' as Station, // Bundle sales typically go through network
+    'CONSIGNMENT': 'Network Sales' as Station,
+    'ONLINE': 'Online Sales' as Station,
+    'NFT': 'Online Sales' as Station,
+  };
+  
+  return typeToChannel[saleType] || null;
+}
