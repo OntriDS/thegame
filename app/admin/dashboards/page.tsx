@@ -25,16 +25,10 @@ import {
   formatDecimal,
   formatCurrency,
 } from '@/lib/utils/financial-utils';
-import {
-  getProductPerformance,
-  getChannelPerformance,
-  getProductChannelMatrix,
-  getStationPerformance,
-  getCostsByProductStation,
-  getRevenuesByProductStation,
-  type ProductPerformance,
-  type ChannelPerformance,
-  type ProductChannelMatrix,
+import type {
+  ProductPerformance,
+  ChannelPerformance,
+  ProductChannelMatrix,
 } from '@/lib/analytics/financial-analytics';
 
 export default function DashboardsPage() {
@@ -122,31 +116,60 @@ export default function DashboardsPage() {
   const loadAnalytics = useCallback(async () => {
     setIsLoadingAnalytics(true);
     try {
-      const records = await ClientAPI.getFinancialRecords();
-      const filteredRecords = filterByMonth
-        ? records.filter(r => r.year === currentYear && r.month === currentMonth)
-        : records;
+      const params = {
+        year: currentYear,
+        month: currentMonth,
+        filterByMonth
+      };
 
-      // Load all analytics in parallel
+      // Load all analytics in parallel via API routes
       const [
-        products,
-        channels,
-        matrix,
-        costsByStation,
-        revenuesByStation
+        productsRes,
+        channelsRes,
+        matrixRes,
+        costsRes,
+        revenuesRes
       ] = await Promise.all([
-        getProductPerformance(filteredRecords, false),
-        getChannelPerformance(filteredRecords),
-        getProductChannelMatrix(filteredRecords),
-        getCostsByProductStation(filteredRecords),
-        getRevenuesByProductStation(filteredRecords)
+        fetch('/api/analytics/product-performance', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(params)
+        }),
+        fetch('/api/analytics/channel-performance', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(params)
+        }),
+        fetch('/api/analytics/product-channel-matrix', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(params)
+        }),
+        fetch('/api/analytics/costs-by-product-station', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(params)
+        }),
+        fetch('/api/analytics/revenues-by-product-station', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(params)
+        })
       ]);
 
-      setProductPerformance(products);
-      setChannelPerformance(channels);
-      setProductChannelMatrix(matrix);
-      setCostsByProductStation(costsByStation);
-      setRevenuesByProductStation(revenuesByStation);
+      const [productsData, channelsData, matrixData, costsData, revenuesData] = await Promise.all([
+        productsRes.json(),
+        channelsRes.json(),
+        matrixRes.json(),
+        costsRes.json(),
+        revenuesRes.json()
+      ]);
+
+      if (productsData.success) setProductPerformance(productsData.data);
+      if (channelsData.success) setChannelPerformance(channelsData.data);
+      if (matrixData.success) setProductChannelMatrix(matrixData.data);
+      if (costsData.success) setCostsByProductStation(costsData.data);
+      if (revenuesData.success) setRevenuesByProductStation(revenuesData.data);
     } catch (error) {
       console.error('Failed to load analytics:', error);
     } finally {
