@@ -3,12 +3,27 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { TrendingUp, TrendingDown, BarChart3, Grid3x3 } from 'lucide-react';
-import { getCurrentMonth } from '@/lib/constants/date-constants';
+import { Button } from '@/components/ui/button';
+import { ClientAPI } from '@/lib/client-api';
+import { 
+  FinancialRecord, 
+  CompanyMonthlySummary,
+  PersonalMonthlySummary,
+} from '@/types/entities';
+import { Building2, User, TrendingUp, TrendingDown, BarChart3, Grid3x3 } from 'lucide-react';
+import { MONTHS, getYearRange, getMonthName, getCurrentMonth } from '@/lib/constants/date-constants';
+import { formatMonthYear } from '@/lib/utils/date-utils';
+import { BUSINESS_STRUCTURE } from '@/types/enums';
+import { getCompanyAreas, getPersonalAreas } from '@/lib/utils/business-structure-utils';
 import { MonthYearSelector } from '@/components/ui/month-year-selector';
 import { Switch } from '@/components/ui/switch';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
-import { formatCurrency } from '@/lib/utils/financial-utils';
+import { 
+  aggregateRecordsByStation, 
+  calculateTotals,
+  formatDecimal,
+  formatCurrency,
+} from '@/lib/utils/financial-utils';
 import type {
   ProductPerformance,
   ChannelPerformance,
@@ -20,6 +35,9 @@ export default function DashboardsPage() {
   const [filterByMonth, setFilterByMonth] = useState(true);
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [currentMonth, setCurrentMonth] = useState(getCurrentMonth());
+  const [companySummary, setCompanySummary] = useState<CompanyMonthlySummary | null>(null);
+  const [personalSummary, setPersonalSummary] = useState<PersonalMonthlySummary | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
   
   // Analytics data
   const [productPerformance, setProductPerformance] = useState<ProductPerformance[]>([]);
@@ -41,6 +59,56 @@ export default function DashboardsPage() {
     setFilterByMonth(checked);
     setPreference('dashboards-filter-by-month', checked);
   };
+
+  const loadSummaries = useCallback(async () => {
+    const records = await ClientAPI.getFinancialRecords();
+    const companyRecords = records.filter(r => {
+      if (filterByMonth) {
+        return r.year === currentYear && r.month === currentMonth && r.type === 'company';
+      }
+      return r.type === 'company';
+    });
+    const personalRecords = records.filter(r => {
+      if (filterByMonth) {
+        return r.year === currentYear && r.month === currentMonth && r.type === 'personal';
+      }
+      return r.type === 'personal';
+    });
+    
+    // Aggregate company records by station
+    const companyStations = getCompanyAreas().flatMap(area => BUSINESS_STRUCTURE[area]);
+    const companyBreakdown = aggregateRecordsByStation(companyRecords, companyStations);
+    const companyTotals = calculateTotals(companyBreakdown);
+    
+    // Aggregate personal records by station
+    const personalStations = BUSINESS_STRUCTURE.PERSONAL;
+    const personalBreakdown = aggregateRecordsByStation(personalRecords, personalStations);
+    const personalTotals = calculateTotals(personalBreakdown);
+    
+    // Create summaries
+    const company: CompanyMonthlySummary = {
+      year: currentYear,
+      month: currentMonth,
+      totalRevenue: companyTotals.totalRevenue,
+      totalCost: companyTotals.totalCost,
+      netCashflow: companyTotals.net,
+      totalJungleCoins: companyTotals.totalJungleCoins,
+      categoryBreakdown: companyBreakdown
+    };
+    
+    const personal: PersonalMonthlySummary = {
+      year: currentYear,
+      month: currentMonth,
+      totalRevenue: personalTotals.totalRevenue,
+      totalCost: personalTotals.totalCost,
+      netCashflow: personalTotals.net,
+      totalJungleCoins: personalTotals.totalJungleCoins,
+      categoryBreakdown: personalBreakdown
+    };
+    
+    setCompanySummary(company);
+    setPersonalSummary(personal);
+  }, [currentYear, currentMonth, refreshKey, filterByMonth]);
 
   const loadAnalytics = useCallback(async () => {
     setIsLoadingAnalytics(true);
@@ -107,8 +175,9 @@ export default function DashboardsPage() {
   }, [currentYear, currentMonth, filterByMonth]);
 
   useEffect(() => {
+    loadSummaries();
     loadAnalytics();
-  }, [loadAnalytics]);
+  }, [loadSummaries, loadAnalytics]);
 
   return (
     <div className="space-y-6">
@@ -137,13 +206,227 @@ export default function DashboardsPage() {
         </div>
       </div>
 
-      <Tabs defaultValue="revenue-by-channel" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+      <Tabs defaultValue="company-monthly" className="w-full">
+        <TabsList className="grid w-full grid-cols-6">
+          <TabsTrigger value="company-monthly">Company Monthly</TabsTrigger>
+          <TabsTrigger value="personal-monthly">Personal Monthly</TabsTrigger>
           <TabsTrigger value="revenue-by-channel">Revenue by Channel</TabsTrigger>
           <TabsTrigger value="costs-by-product">Costs by Product</TabsTrigger>
           <TabsTrigger value="product-performance">Product Performance</TabsTrigger>
           <TabsTrigger value="channel-product-matrix">Channel × Product</TabsTrigger>
         </TabsList>
+
+        {/* Company Monthly Finances Tab */}
+        <TabsContent value="company-monthly" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Building2 className="h-5 w-5" />
+                Company Monthly Finances - {getMonthName(currentMonth)} {currentYear}
+              </CardTitle>
+              <CardDescription>
+                Financial breakdown by process station
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm">Total Revenue</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-green-600">
+                      {formatCurrency(companySummary?.totalRevenue || 0)}
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm">Total Cost</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-red-600">
+                      {formatCurrency(companySummary?.totalCost || 0)}
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm">Net Cashflow</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className={`text-2xl font-bold ${
+                      (companySummary?.netCashflow || 0) > 0 ? 'text-green-600' : 
+                      (companySummary?.netCashflow || 0) < 0 ? 'text-red-600' : 'text-muted-foreground'
+                    }`}>
+                      {formatCurrency(companySummary?.netCashflow || 0)}
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm">Jungle Coins</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {companySummary?.totalJungleCoins || 0} J$
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Company Stations by Area */}
+              {['ADMIN', 'RESEARCH', 'DESIGN', 'PRODUCTION', 'SALES'].map(area => {
+                const areaStations = BUSINESS_STRUCTURE[area as keyof typeof BUSINESS_STRUCTURE];
+                
+                return (
+                  <Card key={area} className="mb-4">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-lg">{area} Area</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                        {areaStations.map(station => {
+                          const breakdown = companySummary?.categoryBreakdown[station];
+                          const net = breakdown ? breakdown.net : 0;
+                           
+                          return (
+                            <Card key={station} className="border-muted">
+                              <CardHeader className="pb-2">
+                                <CardTitle className="text-sm">{station}</CardTitle>
+                              </CardHeader>
+                              <CardContent>
+                                <div className={`text-lg font-bold ${
+                                  net === 0 ? 'text-muted-foreground' : 
+                                  net > 0 ? 'text-green-600' : 'text-red-600'
+                                }`}>
+                                  {formatCurrency(net)}
+                                </div>
+                                <div className="text-xs text-muted-foreground mt-1">
+                                  {breakdown ? (
+                                    <>
+                                      <div>Revenue: {formatCurrency(breakdown.revenue)}</div>
+                                      <div>Cost: {formatCurrency(breakdown.cost)}</div>
+                                    </>
+                                  ) : (
+                                    'No data'
+                                  )}
+                                </div>
+                              </CardContent>
+                            </Card>
+                          );
+                        })}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Personal Monthly Finances Tab */}
+        <TabsContent value="personal-monthly" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <User className="h-5 w-5" />
+                Personal Monthly Finances - {getMonthName(currentMonth)} {currentYear}
+              </CardTitle>
+              <CardDescription>
+                Personal financial breakdown by category
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm">Total Revenue</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-green-600">
+                      {formatCurrency(personalSummary?.totalRevenue || 0)}
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm">Total Cost</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-red-600">
+                      {formatCurrency(personalSummary?.totalCost || 0)}
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm">Net Cashflow</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className={`text-2xl font-bold ${
+                      (personalSummary?.netCashflow || 0) > 0 ? 'text-green-600' : 
+                      (personalSummary?.netCashflow || 0) < 0 ? 'text-red-600' : 'text-muted-foreground'
+                    }`}>
+                      {formatCurrency(personalSummary?.netCashflow || 0)}
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm">Jungle Coins</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {personalSummary?.totalJungleCoins || 0} J$
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Personal Stations */}
+              <Card className="mb-4">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg">Personal Categories</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {BUSINESS_STRUCTURE.PERSONAL.map(station => {
+                      const breakdown = personalSummary?.categoryBreakdown[station];
+                      const net = breakdown ? breakdown.net : 0;
+                       
+                      return (
+                        <Card key={station} className="border-muted">
+                          <CardHeader className="pb-2">
+                            <CardTitle className="text-sm">{station}</CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <div className={`text-lg font-bold ${
+                              net === 0 ? 'text-muted-foreground' : 
+                              net > 0 ? 'text-green-600' : 'text-red-600'
+                            }`}>
+                              {formatCurrency(net)}
+                            </div>
+                            <div className="text-xs text-muted-foreground mt-1">
+                              {breakdown ? (
+                                <>
+                                  <div>Revenue: {formatCurrency(breakdown.revenue)}</div>
+                                  <div>Cost: {formatCurrency(breakdown.cost)}</div>
+                                </>
+                              ) : (
+                                'No data'
+                              )}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {/* Revenue by Sales Channel Tab */}
         <TabsContent value="revenue-by-channel" className="space-y-4">
