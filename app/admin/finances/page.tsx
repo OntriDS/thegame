@@ -156,7 +156,6 @@ export default function FinancesPage() {
     onOpenFinancialModal: () => setShowFinancialsModal(true),
   });
   const [activeTab, setActiveTab] = useState('assets');
-  const [activeSubTab, setActiveSubTab] = useState('finances');
 
   const [isHydrated, setIsHydrated] = useState(false);
    
@@ -982,149 +981,36 @@ export default function FinancesPage() {
 
         </TabsContent>
 
-        {/* Company Tab with nested tabs */}
+        {/* Company Tab - Records Only */}
         <TabsContent value="company" className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold">Company</h2>
+            <h2 className="text-xl font-semibold">Company Financial Records</h2>
           </div>
-
-          <Tabs value={activeSubTab} onValueChange={setActiveSubTab} className="space-y-4">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="finances">Monthly Company Finances</TabsTrigger>
-              <TabsTrigger value="records">Company Financial Records</TabsTrigger>
-            </TabsList>
-
-            {/* Company Finances Sub-tab */}
-            <TabsContent value="finances" className="space-y-4">
-              {/* Company Stations by Area */}
-              {['ADMIN', 'RESEARCH', 'DESIGN', 'PRODUCTION', 'SALES'].map(area => {
-                const areaStations = BUSINESS_STRUCTURE[area as keyof typeof BUSINESS_STRUCTURE];
-                
-                return (
-                  <Card key={area}>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-lg">{area} Area</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                        {areaStations.map(station => {
-                          const breakdown = aggregatedCategoryData?.categoryBreakdown[station];
-                          const net = breakdown ? breakdown.net : 0;
-                           
-                          return (
-                            <Card key={station} className="border-muted">
-                              <CardHeader className="pb-2">
-                                <CardTitle className="text-sm">{station}</CardTitle>
-                              </CardHeader>
-                              <CardContent>
-                                <div className={`text-lg font-bold ${
-                                  net === 0 ? 'text-muted-foreground' : 
-                                  net > 0 ? 'text-green-600' : 'text-red-600'
-                                }`}>
-                                  {formatCurrency(net)}
-                                </div>
-                                <div className="text-xs text-muted-foreground mt-1">
-                                  {breakdown ? (
-                                    <>
-                                      <div>Revenue: {formatCurrency(breakdown.revenue)}</div>
-                                      <div>Cost: {formatCurrency(breakdown.cost)}</div>
-                                      <div>J$: {breakdown.jungleCoins} ({formatCurrency(breakdown.jungleCoins * exchangeRates.j$ToUSD)})</div>
-                                    </>
-                                  ) : (
-                                    'No data'
-                                  )}
-                                </div>
-                              </CardContent>
-                            </Card>
-                          );
-                        })}
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-         </TabsContent>
-
-            {/* Company Financial Records Sub-tab */}
-            <TabsContent value="records" className="space-y-4">
-              <CompanyRecordsList 
-                key={`company-${recordsRefreshKey}`}
-                year={filterByMonth ? currentYear : 0} 
-                month={filterByMonth ? currentMonth : 0} 
-                onRecordUpdated={loadSummaries}
-                onRecordEdit={(record) => {
-                  // This is handled by CompanyRecordsList component
-                }}
-              />
-            </TabsContent>
-          </Tabs>
+          <CompanyRecordsList 
+            key={`company-${recordsRefreshKey}`}
+            year={filterByMonth ? currentYear : 0} 
+            month={filterByMonth ? currentMonth : 0} 
+            onRecordUpdated={loadSummaries}
+            onRecordEdit={(record) => {
+              // This is handled by CompanyRecordsList component
+            }}
+          />
         </TabsContent>
 
-         {/* Personal Tab with nested tabs */}
+         {/* Personal Tab - Records Only */}
          <TabsContent value="personal" className="space-y-4">
            <div className="flex items-center justify-between">
-             <h2 className="text-xl font-semibold">Personal</h2>
+             <h2 className="text-xl font-semibold">Personal Financial Records</h2>
            </div>
-
-           <Tabs value={activeSubTab} onValueChange={setActiveSubTab} className="space-y-4">
-             <TabsList className="grid w-full grid-cols-2">
-               <TabsTrigger value="finances">Monthly Personal Finances</TabsTrigger>
-               <TabsTrigger value="records">Personal Financial Records</TabsTrigger>
-             </TabsList>
-
-             {/* Personal Finances Sub-tab */}
-             <TabsContent value="finances" className="space-y-4">
-               {/* Personal Stations Grid */}
-               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-                 {getPersonalAreas().flatMap(area => 
-                   BUSINESS_STRUCTURE[area].map(station => {
-                     const breakdown = personalSummary?.categoryBreakdown[station];
-                     const net = breakdown ? breakdown.net : 0;
-                      
-                     return (
-                       <Card key={station}>
-                         <CardHeader className="pb-2">
-                           <CardTitle className="text-sm">{station}</CardTitle>
-                         </CardHeader>
-                         <CardContent>
-                           <div className={`text-lg font-bold ${
-                             net === 0 ? 'text-muted-foreground' : 
-                             net > 0 ? 'text-green-600' : 'text-red-600'
-                           }`}>
-                             {formatCurrency(net)}
-                           </div>
-                           <div className="text-xs text-muted-foreground mt-1">
-                             {breakdown ? (
-                               <>
-                                 <div>Revenue: {formatCurrency(breakdown.revenue)}</div>
-                                 <div>Cost: {formatCurrency(breakdown.cost)}</div>
-                                 <div>J$: {breakdown.jungleCoins} ({formatCurrency(breakdown.jungleCoins * exchangeRates.j$ToUSD)})</div>
-                               </>
-                             ) : (
-                               'No data'
-                             )}
-                           </div>
-                         </CardContent>
-                       </Card>
-                     );
-                   })
-                 )}
-               </div>
-         </TabsContent>
-
-             {/* Personal Financial Records Sub-tab */}
-             <TabsContent value="records" className="space-y-4">
-               <PersonalRecordsList 
-                 key={`personal-${recordsRefreshKey}`}
-                 year={filterByMonth ? currentYear : 0} 
-                 month={filterByMonth ? currentMonth : 0} 
-                 onRecordUpdated={loadSummaries}
-                 onRecordEdit={(record) => {
-                   // This is handled by PersonalRecordsList component
-                 }}
-               />
-             </TabsContent>
-           </Tabs>
+           <PersonalRecordsList 
+             key={`personal-${recordsRefreshKey}`}
+             year={filterByMonth ? currentYear : 0} 
+             month={filterByMonth ? currentMonth : 0} 
+             onRecordUpdated={loadSummaries}
+             onRecordEdit={(record) => {
+               // This is handled by PersonalRecordsList component
+             }}
+           />
           </TabsContent>
         </Tabs>
 
