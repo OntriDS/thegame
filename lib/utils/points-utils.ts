@@ -63,3 +63,39 @@ export function getPointsInOrder(points: { xp?: number; rp?: number; fp?: number
 export function hasAnyPoints(points: { xp?: number; rp?: number; fp?: number; hp?: number }): boolean {
   return (points.xp || 0) > 0 || (points.rp || 0) > 0 || (points.fp || 0) > 0 || (points.hp || 0) > 0;
 }
+
+/**
+ * Calculate J$ preview from points using conversion rates
+ * SINGLE SOURCE OF TRUTH for points to J$ conversion calculation
+ * 
+ * @param points - Points object with xp, rp, fp, hp values
+ * @param rates - Conversion rates object with xpToJ$, rpToJ$, fpToJ$, hpToJ$
+ * @returns Preview object with individual J$ values and total
+ */
+export function calculatePointsToJ$(
+  points: { xp?: number; rp?: number; fp?: number; hp?: number },
+  rates: { xpToJ$?: number; rpToJ$?: number; fpToJ$?: number; hpToJ$?: number }
+): {
+  xpPreview: number;
+  rpPreview: number;
+  fpPreview: number;
+  hpPreview: number;
+  totalPreview: number;
+} {
+  const safeDiv = (value: number, rate: number | undefined) =>
+    rate && rate > 0 ? value / rate : 0;
+
+  const xpPreview = safeDiv(points.xp || 0, rates.xpToJ$);
+  const rpPreview = safeDiv(points.rp || 0, rates.rpToJ$);
+  const fpPreview = safeDiv(points.fp || 0, rates.fpToJ$);
+  const hpPreview = safeDiv(points.hp || 0, rates.hpToJ$);
+  const totalPreview = xpPreview + rpPreview + fpPreview + hpPreview;
+
+  return {
+    xpPreview,
+    rpPreview,
+    fpPreview,
+    hpPreview,
+    totalPreview,
+  };
+}

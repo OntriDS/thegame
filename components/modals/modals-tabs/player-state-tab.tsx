@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Target, Coins } from 'lucide-react';
+import { calculatePointsToJ$ } from '@/lib/utils/points-utils';
 
 // Content-only component for embedding in parent modals
 export function PlayerStateContent({
@@ -23,33 +24,21 @@ export function PlayerStateContent({
     j$ToUSD?: number;
   };
 }) {
-  // Calculate J$ value from available points
-  const calculateJ$FromPoints = () => {
-    const rates = conversionRates || {
-      xpToJ$: 6,
-      rpToJ$: 12,
-      fpToJ$: 8,
-      hpToJ$: 10,
-      j$ToUSD: 10,
-    };
-    const safeDiv = (value: number, rate: number | undefined) =>
-      rate && rate > 0 ? value / rate : 0;
-
-    const xp = playerData?.points?.xp || 0;
-    const rp = playerData?.points?.rp || 0;
-    const fp = playerData?.points?.fp || 0;
-    const hp = playerData?.points?.hp || 0;
-
-    const xpPreview = safeDiv(xp, rates.xpToJ$);
-    const rpPreview = safeDiv(rp, rates.rpToJ$);
-    const fpPreview = safeDiv(fp, rates.fpToJ$);
-    const hpPreview = safeDiv(hp, rates.hpToJ$);
-
-    return xpPreview + rpPreview + fpPreview + hpPreview;
-  };
-
-  const j$Value = calculateJ$FromPoints();
-  const usdValue = j$Value * (conversionRates?.j$ToUSD || 10);
+  // Calculate J$ value from available points using shared utility
+  const preview = conversionRates 
+    ? calculatePointsToJ$(
+        {
+          xp: playerData?.points?.xp || 0,
+          rp: playerData?.points?.rp || 0,
+          fp: playerData?.points?.fp || 0,
+          hp: playerData?.points?.hp || 0,
+        },
+        conversionRates
+      )
+    : { totalPreview: 0 };
+  
+  const j$Value = preview.totalPreview;
+  const usdValue = conversionRates?.j$ToUSD ? j$Value * conversionRates.j$ToUSD : 0;
 
   return (
     <div className="space-y-4">
@@ -67,13 +56,17 @@ export function PlayerStateContent({
               <div className="text-4xl font-extrabold tracking-tight">
                 {((playerData?.points?.xp || 0) + (playerData?.points?.rp || 0) + (playerData?.points?.fp || 0) + (playerData?.points?.hp || 0))}
               </div>
-              <div className="text-2xl font-bold text-green-600">
-                ${usdValue.toFixed(2)}
+              {conversionRates?.j$ToUSD && (
+                <div className="text-2xl font-bold text-green-600">
+                  ${usdValue.toFixed(2)}
+                </div>
+              )}
+            </div>
+            {conversionRates?.j$ToUSD && (
+              <div className="text-xs text-muted-foreground mt-2">
+                ≈ {j$Value.toFixed(2)} J$ → ${conversionRates.j$ToUSD.toFixed(2)} USD
               </div>
-            </div>
-            <div className="text-xs text-muted-foreground mt-2">
-              ≈ {j$Value.toFixed(2)} J$ → ${(conversionRates?.j$ToUSD || 10).toFixed(2)} USD
-            </div>
+            )}
           </div>
           <div className="grid grid-cols-4 gap-4">
             {[

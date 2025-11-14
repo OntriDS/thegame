@@ -11,6 +11,7 @@ import { Coins, TrendingUp, User } from 'lucide-react';
 import { PlayerModal } from '@/components/modals/player-modal';
 import ConversionRatesModal from '@/components/modals/submodals/conversion-rates-submodal';
 import { useKeyboardShortcuts } from '@/lib/hooks/use-keyboard-shortcuts';
+import { calculatePointsToJ$ } from '@/lib/utils/points-utils';
 
 type PointMap = {
   xp: number;
@@ -71,24 +72,6 @@ function calculateUnexchangedPoints(entries: any[], monthStart: Date): PointMap 
   });
 }
 
-function calculatePreview(points: PointMap, rates: Record<string, number>) {
-  const safeDiv = (value: number, rate: number | undefined) =>
-    rate && rate > 0 ? value / rate : 0;
-
-  const xpPreview = safeDiv(points.xp, rates.xpToJ$);
-  const rpPreview = safeDiv(points.rp, rates.rpToJ$);
-  const fpPreview = safeDiv(points.fp, rates.fpToJ$);
-  const hpPreview = safeDiv(points.hp, rates.hpToJ$);
-  const totalPreview = xpPreview + rpPreview + fpPreview + hpPreview;
-
-  return {
-    xpPreview,
-    rpPreview,
-    fpPreview,
-    hpPreview,
-    totalPreview,
-  };
-}
 
 export default function PlayerPage() {
   const [players, setPlayers] = useState<Player[]>([]);
@@ -222,7 +205,7 @@ export default function PlayerPage() {
   }, [loadData]);
 
   const preview = useMemo(
-    () => calculatePreview(unexchangedPoints, conversionRates),
+    () => calculatePointsToJ$(unexchangedPoints, conversionRates),
     [unexchangedPoints, conversionRates],
   );
 
