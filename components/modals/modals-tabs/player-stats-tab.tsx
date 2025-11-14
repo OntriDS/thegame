@@ -3,7 +3,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { TrendingUp, BarChart3, Calendar, Target } from 'lucide-react';
+import { TrendingUp, BarChart3, Calendar, Target, DollarSign } from 'lucide-react';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
 import { POINT_TYPES, POINT_COLORS } from '@/lib/constants/app-constants';
 
@@ -172,6 +172,56 @@ export function PlayerStatsContent({
         </CardContent>
       </Card>
 
+      {/* Current Month Holdings */}
+      <Card className="border-2 border-blue-200 dark:border-blue-800">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <DollarSign className="h-5 w-5 text-blue-600" />
+            Current Month Holdings
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left py-2 px-3 font-medium">Asset Type</th>
+                  <th className="text-right py-2 px-3 font-medium">Amount</th>
+                  <th className="text-right py-2 px-3 font-medium">USD Value</th>
+                  <th className="text-right py-2 px-3 font-medium">Total Digital Assets (USD)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-b">
+                  <td className="py-2 px-3">Jungle Coins (J$)</td>
+                  <td className="text-right py-2 px-3">{(jungleCoinsBalance !== undefined ? jungleCoinsBalance : 0).toFixed(1)} J$</td>
+                  <td className="text-right py-2 px-3">${((jungleCoinsBalance !== undefined ? jungleCoinsBalance : 0) * 10).toFixed(2)}</td>
+                  <td className="text-right py-2 px-3 font-semibold text-blue-600">
+                    ${((jungleCoinsBalance !== undefined ? jungleCoinsBalance : 0) * 10).toFixed(2)}
+                  </td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2 px-3 text-muted-foreground opacity-60">Bitcoin Zaps (Z₿)</td>
+                  <td className="text-right py-2 px-3 text-muted-foreground opacity-60">0 sats</td>
+                  <td className="text-right py-2 px-3 text-muted-foreground opacity-60">$0.00</td>
+                  <td className="text-right py-2 px-3 font-semibold text-blue-600">
+                    ${((jungleCoinsBalance !== undefined ? jungleCoinsBalance : 0) * 10).toFixed(2)}
+                  </td>
+                </tr>
+                <tr>
+                  <td className="py-2 px-3 text-muted-foreground opacity-60">In-Game NFTs</td>
+                  <td className="text-right py-2 px-3 text-muted-foreground opacity-60">0 NFTs</td>
+                  <td className="text-right py-2 px-3 text-muted-foreground opacity-60">$0.00</td>
+                  <td className="text-right py-2 px-3 font-semibold text-blue-600">
+                    ${((jungleCoinsBalance !== undefined ? jungleCoinsBalance : 0) * 10).toFixed(2)}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Activity Statistics */}
       <Card className="border-2">
         <CardHeader className="pb-3">
@@ -317,6 +367,56 @@ export default function PlayerStatsTab({
                     <div className="text-sm text-muted-foreground">Conversion Rate</div>
                   </div>
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Current Month Holdings */}
+          <Card className="border-2 border-blue-200 dark:border-blue-800">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <DollarSign className="h-5 w-5 text-blue-600" />
+                Current Month Holdings
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-2 px-3 font-medium">Asset Type</th>
+                      <th className="text-right py-2 px-3 font-medium">Amount</th>
+                      <th className="text-right py-2 px-3 font-medium">USD Value</th>
+                      <th className="text-right py-2 px-3 font-medium">Total Digital Assets (USD)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="border-b">
+                      <td className="py-2 px-3">Jungle Coins (J$)</td>
+                      <td className="text-right py-2 px-3">{(jungleCoinsBalance ?? 0).toFixed(1)} J$</td>
+                      <td className="text-right py-2 px-3">${((jungleCoinsBalance ?? 0) * 10).toFixed(2)}</td>
+                      <td className="text-right py-2 px-3 font-semibold text-blue-600">
+                        ${((jungleCoinsBalance ?? 0) * 10).toFixed(2)}
+                      </td>
+                    </tr>
+                    <tr className="border-b">
+                      <td className="py-2 px-3 text-muted-foreground opacity-60">Bitcoin Zaps (Z₿)</td>
+                      <td className="text-right py-2 px-3 text-muted-foreground opacity-60">0 sats</td>
+                      <td className="text-right py-2 px-3 text-muted-foreground opacity-60">$0.00</td>
+                      <td className="text-right py-2 px-3 font-semibold text-blue-600">
+                        ${((jungleCoinsBalance ?? 0) * 10).toFixed(2)}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="py-2 px-3 text-muted-foreground opacity-60">In-Game NFTs</td>
+                      <td className="text-right py-2 px-3 text-muted-foreground opacity-60">0 NFTs</td>
+                      <td className="text-right py-2 px-3 text-muted-foreground opacity-60">$0.00</td>
+                      <td className="text-right py-2 px-3 font-semibold text-blue-600">
+                        ${((jungleCoinsBalance ?? 0) * 10).toFixed(2)}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </CardContent>
           </Card>
