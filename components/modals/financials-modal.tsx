@@ -312,7 +312,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
       setOutputItemTypeSubType('none:');
       setOutputItemStatus(ItemStatus.FOR_SALE);
     }
-  }, [record]);
+  }, [record, getLastUsedStation]);
 
   const handleStationChange = (newStation: Station) => {
     

@@ -372,7 +372,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
       setShowStatusModal(false);
       setStatusModalConfig(null);
     }
-  }, [dispatchEntityUpdated, onOpenChange]);
+  }, [onOpenChange]);
 
   const promptZeroStockPolicy = useCallback((snapshot: Item) => {
     const effectiveRestockable =
@@ -491,7 +491,6 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
   }, [
     executeArchiveOnlySale,
     executeQuickSale,
-    onOpenChange,
     quickSellItem,
     quickSellMode,
     quickSellQuantity,
@@ -618,7 +617,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
       setStationCategory(`${area || 'ADMIN'}:${lastStation}`);
       // Other fields remain as-is or are loaded from persisted draft via loadFormDataFromStorage
     }
-  }, [item]); // Removed defaultItemType dependency - use current value when effect runs
+  }, [item, defaultItemType, getLastUsedStation]);
 
   // Effect to handle auto-select of subtype when modal opens for new items
   useEffect(() => {

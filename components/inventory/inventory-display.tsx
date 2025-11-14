@@ -122,7 +122,7 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
   useEffect(() => {
     const savedActiveTab = getPreference('inventory-active-tab', InventoryTab.STICKERS);
     setActiveTab(savedActiveTab as InventoryTab);
-  }, []); // ← SOLUTION: Empty array = runs once on mount only
+  }, [getPreference]);
 
   // Initialize selectedLocationsForModel with default sites when sites are loaded
   useEffect(() => {
@@ -188,7 +188,7 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
 
     // Mark preferences as loaded to enable saving
     setPreferencesLoaded(true);
-  }, []); // ← SOLUTION: Empty array = runs once on mount only
+  }, [getPreference]);
 
   // Helper to get ItemType from InventoryTab
   const getItemTypeForTab = (tab: InventoryTab): ItemType => {
