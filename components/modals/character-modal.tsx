@@ -33,7 +33,7 @@ interface CharacterModalProps {
 
 /**
  * CharacterModal
- * Character management (Roles, Contact Info, CP, J$, Achievements)
+ * Character management (Roles, Contact Info, CP, Achievements)
  */
 export default function CharacterModal({ character, open, onOpenChange, onSave }: CharacterModalProps) {
   // Identity
@@ -59,7 +59,6 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
   const didInitRef = useRef(false);
 
   // V0.1 Core - Game Mechanics (Character-specific only!)
-  const [jungleCoins, setJungleCoins] = useState<number>(0);
   const [purchasedAmount, setPurchasedAmount] = useState<number>(0);
   const [CP, setCP] = useState<number | undefined>(undefined);
   const [achievementsCharacter, setAchievementsCharacter] = useState<string[]>([]);
@@ -96,7 +95,6 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
           
           setDescription(character?.description || '');
           setRoles(character?.roles || []);
-          setJungleCoins(character?.jungleCoins ?? 0);
           setPurchasedAmount(character?.purchasedAmount ?? 0);
           setCP(character?.CP);
           setAchievementsCharacter(character?.achievementsCharacter || []);
@@ -111,7 +109,6 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
           setContactPhone('');
           setContactEmail('');
           setRoles([CharacterRole.CUSTOMER]); // Default to CUSTOMER role for new characters
-          setJungleCoins(0);
           setPurchasedAmount(0);
           setCP(undefined);
           setAchievementsCharacter([]);
@@ -210,7 +207,6 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
         achievementsCharacter,
 
         // V0.1 required - Character-specific only
-        jungleCoins,
         purchasedAmount,
         inventory: character?.inventory || [], // Empty array for new characters
 
@@ -380,9 +376,6 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
                       // Hide if not assigned and role config says to hide
                       if (behavior.hideIfNotAssigned && !hasRole) return null;
                       
-                      // Hide if role requires jungleCoins and character has none
-                      if (behavior.requiresJungleCoins === true && !hasRole && jungleCoins === 0) return null;
-                      
                       // Determine if role is display-only (not toggleable)
                       const isDisplayOnly = behavior.isDisplayOnly;
                       
@@ -434,17 +427,6 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
                       placeholder="0.00"
                       className="h-8 text-sm"
                     />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="jungle-coins" className="text-xs">J$</Label>
-                    <NumericInput
-                      id="jungle-coins"
-                      value={jungleCoins}
-                      onChange={setJungleCoins}
-                      placeholder="0"
-                      className="h-8 text-sm"
-                    />
-                    <p className="text-xs text-muted-foreground">1 J$ = $10 USD</p>
                   </div>
                 </div>
               )}
