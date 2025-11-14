@@ -13,19 +13,19 @@ interface ConversionRatesModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (rates: {
-    hpToJ$: number;
-    fpToJ$: number;
-    rpToJ$: number;
     xpToJ$: number;
+    rpToJ$: number;
+    fpToJ$: number;
+    hpToJ$: number;
     j$ToUSD: number;
     colonesToUsd: number;
     bitcoinToUsd: number;
   }) => void;
   initialRates?: {
-    hpToJ$: number;
-    fpToJ$: number;
-    rpToJ$: number;
     xpToJ$: number;
+    rpToJ$: number;
+    fpToJ$: number;
+    hpToJ$: number;
     j$ToUSD: number;
     colonesToUsd: number;
     bitcoinToUsd: number;
@@ -34,11 +34,10 @@ interface ConversionRatesModalProps {
 
 export default function ConversionRatesModal({ isOpen, onClose, onSave, initialRates }: ConversionRatesModalProps) {
   const [pointsRates, setPointsRates] = useState({
-    hpToJ$: initialRates?.hpToJ$ || 1,
-    fpToJ$: initialRates?.fpToJ$ || 1,
-    rpToJ$: initialRates?.rpToJ$ || 1,
     xpToJ$: initialRates?.xpToJ$ || 1,
-    j$ToUSD: initialRates?.j$ToUSD || 10,
+    rpToJ$: initialRates?.rpToJ$ || 1,
+    fpToJ$: initialRates?.fpToJ$ || 1,
+    hpToJ$: initialRates?.hpToJ$ || 1,
   });
   const [currencyRates, setCurrencyRates] = useState({
     colonesToUsd: initialRates?.colonesToUsd || DEFAULT_CURRENCY_EXCHANGE_RATES.colonesToUsd,
@@ -50,10 +49,10 @@ export default function ConversionRatesModal({ isOpen, onClose, onSave, initialR
   useEffect(() => {
     if (initialRates) {
       setPointsRates({
-        hpToJ$: initialRates.hpToJ$ || 1,
-        fpToJ$: initialRates.fpToJ$ || 1,
-        rpToJ$: initialRates.rpToJ$ || 1,
         xpToJ$: initialRates.xpToJ$ || 1,
+        rpToJ$: initialRates.rpToJ$ || 1,
+        fpToJ$: initialRates.fpToJ$ || 1,
+        hpToJ$: initialRates.hpToJ$ || 1,
       });
       setCurrencyRates({
         colonesToUsd: initialRates.colonesToUsd || DEFAULT_CURRENCY_EXCHANGE_RATES.colonesToUsd,
