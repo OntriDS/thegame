@@ -99,6 +99,8 @@ export default function PlayerPage() {
     fpToJ$: 1,
     hpToJ$: 1,
     j$ToUSD: 10,
+    colonesToUsd: 500,
+    bitcoinToUsd: 100000,
   });
   const [personalAssets, setPersonalAssets] = useState<any | null>(null);
   const [jungleCoinsBalance, setJungleCoinsBalance] = useState<number | undefined>(undefined);
@@ -165,6 +167,8 @@ export default function PlayerPage() {
         fpToJ$: Number(ratesData?.fpToJ$ ?? prev.fpToJ$ ?? 1),
         hpToJ$: Number(ratesData?.hpToJ$ ?? prev.hpToJ$ ?? 1),
         j$ToUSD: Number(ratesData?.j$ToUSD ?? prev.j$ToUSD ?? 10),
+        colonesToUsd: Number(ratesData?.colonesToUsd ?? prev.colonesToUsd ?? 500),
+        bitcoinToUsd: Number(ratesData?.bitcoinToUsd ?? prev.bitcoinToUsd ?? 100000),
       }));
       setPlayers(playersData ?? []);
       setPersonalAssets(personalAssetsData ?? null);
@@ -332,6 +336,15 @@ export default function PlayerPage() {
                   ${(preview.totalPreview * conversionRates.j$ToUSD).toFixed(2)} USD
                 </div>
               </div>
+              <div className="p-3 bg-green-50 dark:bg-green-950/30 rounded-lg text-center border-2 border-green-200 dark:border-green-800">
+                <div className="text-xs text-muted-foreground mb-1">Unexchanged → USD</div>
+                <div className="text-lg font-semibold text-green-600">
+                  ${(preview.totalPreview * conversionRates.j$ToUSD).toFixed(2)}
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  {preview.totalPreview.toFixed(2)} J$ → $
+                </div>
+              </div>
             </div>
           </div>
         </CardContent>
@@ -383,6 +396,15 @@ export default function PlayerPage() {
         <ConversionRatesModal
           isOpen={showConversionRatesModal}
           onClose={() => setShowConversionRatesModal(false)}
+          initialRates={{
+            xpToJ$: conversionRates.xpToJ$,
+            rpToJ$: conversionRates.rpToJ$,
+            fpToJ$: conversionRates.fpToJ$,
+            hpToJ$: conversionRates.hpToJ$,
+            j$ToUSD: conversionRates.j$ToUSD,
+            colonesToUsd: conversionRates.colonesToUsd || 500,
+            bitcoinToUsd: conversionRates.bitcoinToUsd || 100000,
+          }}
           onSave={async (rates: any) => {
             try {
               await ClientAPI.savePlayerConversionRates(rates);

@@ -52,6 +52,9 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
   // Financial data
   const [personalAssets, setPersonalAssets] = useState<any>(null);
   const [jungleCoinsBalance, setJungleCoinsBalance] = useState<number>(0);
+  const [conversionRates, setConversionRates] = useState({
+    j$ToUSD: 10, // Default fallback
+  });
 
   // Current month metrics (for State tab)
   const [currentMonthMetrics, setCurrentMonthMetrics] = useState({
@@ -76,7 +79,7 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
           
           if (playerToLoad) {
             // Parallel data fetching for better performance
-            const [playerCharacters, assets, j$Balance] = await Promise.all([
+            const [playerCharacters, assets, j$Balance, ratesData] = await Promise.all([
               ClientAPI.getCharacters().then(chars => 
                 chars.filter(c => c.playerId === playerToLoad!.id)
               ).catch(error => {
@@ -92,6 +95,10 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
               ).catch(error => {
                 console.error('Failed to load Jungle Coins balance:', error);
                 return 0;
+              }),
+              ClientAPI.getPlayerConversionRates().catch(error => {
+                console.error('Failed to load conversion rates:', error);
+                return { j$ToUSD: 10 };
               })
             ]);
             
@@ -99,6 +106,9 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
             setCharacters(playerCharacters);
             setPersonalAssets(assets);
             setJungleCoinsBalance(j$Balance);
+            setConversionRates({
+              j$ToUSD: Number(ratesData?.j$ToUSD ?? 10),
+            });
           }
         } catch (error) {
           console.error('Failed to load player data:', error);
@@ -184,6 +194,7 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
                   playerData={playerData}
                   personalAssets={personalAssets}
                   jungleCoinsBalance={jungleCoinsBalance}
+                  conversionRates={conversionRates}
                   onViewTransactions={() => setShowTransactionHistory(true)}
                 />
               </TabsContent>

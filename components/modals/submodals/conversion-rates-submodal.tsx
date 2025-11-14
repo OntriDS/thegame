@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { NumericInput } from '@/components/ui/numeric-input';
@@ -33,14 +33,35 @@ interface ConversionRatesModalProps {
 }
 
 export default function ConversionRatesModal({ isOpen, onClose, onSave, initialRates }: ConversionRatesModalProps) {
-  const [pointsRates, setPointsRates] = useState(initialRates || {
-    hpToJ$: 1,
-    fpToJ$: 1,
-    rpToJ$: 1,
-    xpToJ$: 1,
-    j$ToUSD: 1,
+  const [pointsRates, setPointsRates] = useState({
+    hpToJ$: initialRates?.hpToJ$ || 1,
+    fpToJ$: initialRates?.fpToJ$ || 1,
+    rpToJ$: initialRates?.rpToJ$ || 1,
+    xpToJ$: initialRates?.xpToJ$ || 1,
+    j$ToUSD: initialRates?.j$ToUSD || 10,
   });
-  const [currencyRates, setCurrencyRates] = useState(initialRates || DEFAULT_CURRENCY_EXCHANGE_RATES);
+  const [currencyRates, setCurrencyRates] = useState({
+    colonesToUsd: initialRates?.colonesToUsd || DEFAULT_CURRENCY_EXCHANGE_RATES.colonesToUsd,
+    bitcoinToUsd: initialRates?.bitcoinToUsd || DEFAULT_CURRENCY_EXCHANGE_RATES.bitcoinToUsd,
+    j$ToUSD: initialRates?.j$ToUSD || DEFAULT_CURRENCY_EXCHANGE_RATES.j$ToUSD,
+  });
+
+  // Update state when initialRates changes (e.g., when modal opens with new data)
+  useEffect(() => {
+    if (initialRates) {
+      setPointsRates({
+        hpToJ$: initialRates.hpToJ$ || 1,
+        fpToJ$: initialRates.fpToJ$ || 1,
+        rpToJ$: initialRates.rpToJ$ || 1,
+        xpToJ$: initialRates.xpToJ$ || 1,
+      });
+      setCurrencyRates({
+        colonesToUsd: initialRates.colonesToUsd || DEFAULT_CURRENCY_EXCHANGE_RATES.colonesToUsd,
+        bitcoinToUsd: initialRates.bitcoinToUsd || DEFAULT_CURRENCY_EXCHANGE_RATES.bitcoinToUsd,
+        j$ToUSD: initialRates.j$ToUSD || DEFAULT_CURRENCY_EXCHANGE_RATES.j$ToUSD,
+      });
+    }
+  }, [initialRates, isOpen]);
 
   const handleSave = () => {
     onSave({ ...pointsRates, ...currencyRates });
@@ -69,17 +90,6 @@ export default function ConversionRatesModal({ isOpen, onClose, onSave, initialR
                   />
                 </div>
               ))}
-              {/* J$ to USD conversion (not part of points metadata) */}
-              <div className="space-y-1">
-                <label className="block text-sm font-medium">J$ to USD</label>
-                <div className="text-xs text-muted-foreground">J$</div>
-                <NumericInput
-                  value={pointsRates.j$ToUSD}
-                  onChange={(value) => setPointsRates({ ...pointsRates, j$ToUSD: Math.floor(value) || 0 })}
-                  min={1}
-                  className="h-8"
-                />
-              </div>
             </div>
           </div>
           

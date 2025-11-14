@@ -65,6 +65,7 @@ interface PlayerStatsContentProps {
   playerData: any;
   personalAssets: any;
   jungleCoinsBalance?: number;
+  conversionRates?: { j$ToUSD: number };
   onViewTransactions?: () => void;
 }
 
@@ -72,6 +73,7 @@ export function PlayerStatsContent({
   playerData,
   personalAssets,
   jungleCoinsBalance,
+  conversionRates = { j$ToUSD: 10 },
   onViewTransactions
 }: PlayerStatsContentProps) {
   return (
@@ -149,9 +151,9 @@ export function PlayerStatsContent({
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold">
-                  ${((jungleCoinsBalance !== undefined ? jungleCoinsBalance : 0) * 10).toFixed(2)}
+                  ${((jungleCoinsBalance !== undefined ? jungleCoinsBalance : 0) * conversionRates.j$ToUSD).toFixed(2)}
                 </div>
-                <div className="text-sm text-muted-foreground">USD Value (1 J$ = $10)</div>
+                <div className="text-sm text-muted-foreground">USD Value (1 J$ = ${conversionRates.j$ToUSD})</div>
               </div>
             </div>
             <div className="space-y-4">
@@ -197,7 +199,7 @@ export function PlayerStatsContent({
                   <td className="text-right py-2 px-3">{(jungleCoinsBalance !== undefined ? jungleCoinsBalance : 0).toFixed(1)} J$</td>
                   <td className="text-right py-2 px-3">${((jungleCoinsBalance !== undefined ? jungleCoinsBalance : 0) * 10).toFixed(2)}</td>
                   <td className="text-right py-2 px-3 font-semibold text-blue-600">
-                    ${((jungleCoinsBalance !== undefined ? jungleCoinsBalance : 0) * 10).toFixed(2)}
+                    ${((jungleCoinsBalance !== undefined ? jungleCoinsBalance : 0) * conversionRates.j$ToUSD).toFixed(2)}
                   </td>
                 </tr>
                 <tr className="border-b">
@@ -205,7 +207,7 @@ export function PlayerStatsContent({
                   <td className="text-right py-2 px-3 text-muted-foreground opacity-60">0 sats</td>
                   <td className="text-right py-2 px-3 text-muted-foreground opacity-60">$0.00</td>
                   <td className="text-right py-2 px-3 font-semibold text-blue-600">
-                    ${((jungleCoinsBalance !== undefined ? jungleCoinsBalance : 0) * 10).toFixed(2)}
+                    ${((jungleCoinsBalance !== undefined ? jungleCoinsBalance : 0) * conversionRates.j$ToUSD).toFixed(2)}
                   </td>
                 </tr>
                 <tr>
@@ -213,7 +215,7 @@ export function PlayerStatsContent({
                   <td className="text-right py-2 px-3 text-muted-foreground opacity-60">0 NFTs</td>
                   <td className="text-right py-2 px-3 text-muted-foreground opacity-60">$0.00</td>
                   <td className="text-right py-2 px-3 font-semibold text-blue-600">
-                    ${((jungleCoinsBalance !== undefined ? jungleCoinsBalance : 0) * 10).toFixed(2)}
+                    ${((jungleCoinsBalance !== undefined ? jungleCoinsBalance : 0) * conversionRates.j$ToUSD).toFixed(2)}
                   </td>
                 </tr>
               </tbody>
@@ -257,6 +259,7 @@ interface PlayerStatsTabProps {
   playerData: any;
   personalAssets: any;
   jungleCoinsBalance?: number;
+  conversionRates?: { j$ToUSD: number };
   onViewTransactions?: () => void;
 }
 
@@ -266,6 +269,7 @@ export default function PlayerStatsTab({
   playerData, 
   personalAssets,
   jungleCoinsBalance,
+  conversionRates = { j$ToUSD: 10 },
   onViewTransactions
 }: PlayerStatsTabProps) {
   return (
@@ -348,9 +352,9 @@ export default function PlayerStatsTab({
                   </div>
                   <div className="text-center">
                     <div className="text-2xl font-bold">
-                      ${((jungleCoinsBalance ?? 0) * 10).toFixed(2)}
+                      ${((jungleCoinsBalance ?? 0) * conversionRates.j$ToUSD).toFixed(2)}
                     </div>
-                    <div className="text-sm text-muted-foreground">USD Value (1 J$ = $10)</div>
+                    <div className="text-sm text-muted-foreground">USD Value (1 J$ = ${conversionRates.j$ToUSD})</div>
                   </div>
                 </div>
                 <div className="space-y-4">
@@ -396,7 +400,7 @@ export default function PlayerStatsTab({
                       <td className="text-right py-2 px-3">{(jungleCoinsBalance ?? 0).toFixed(1)} J$</td>
                       <td className="text-right py-2 px-3">${((jungleCoinsBalance ?? 0) * 10).toFixed(2)}</td>
                       <td className="text-right py-2 px-3 font-semibold text-blue-600">
-                        ${((jungleCoinsBalance ?? 0) * 10).toFixed(2)}
+                        ${((jungleCoinsBalance ?? 0) * conversionRates.j$ToUSD).toFixed(2)}
                       </td>
                     </tr>
                     <tr className="border-b">
@@ -404,7 +408,7 @@ export default function PlayerStatsTab({
                       <td className="text-right py-2 px-3 text-muted-foreground opacity-60">0 sats</td>
                       <td className="text-right py-2 px-3 text-muted-foreground opacity-60">$0.00</td>
                       <td className="text-right py-2 px-3 font-semibold text-blue-600">
-                        ${((jungleCoinsBalance ?? 0) * 10).toFixed(2)}
+                        ${((jungleCoinsBalance ?? 0) * conversionRates.j$ToUSD).toFixed(2)}
                       </td>
                     </tr>
                     <tr>
@@ -412,7 +416,7 @@ export default function PlayerStatsTab({
                       <td className="text-right py-2 px-3 text-muted-foreground opacity-60">0 NFTs</td>
                       <td className="text-right py-2 px-3 text-muted-foreground opacity-60">$0.00</td>
                       <td className="text-right py-2 px-3 font-semibold text-blue-600">
-                        ${((jungleCoinsBalance ?? 0) * 10).toFixed(2)}
+                        ${((jungleCoinsBalance ?? 0) * conversionRates.j$ToUSD).toFixed(2)}
                       </td>
                     </tr>
                   </tbody>
