@@ -9,12 +9,48 @@ import { Target, Coins } from 'lucide-react';
 export function PlayerStateContent({
   playerData,
   currentMonthMetrics,
-  personalAssets
+  personalAssets,
+  conversionRates
 }: {
   playerData: any;
   currentMonthMetrics: any;
   personalAssets: any;
+  conversionRates?: {
+    xpToJ$?: number;
+    rpToJ$?: number;
+    fpToJ$?: number;
+    hpToJ$?: number;
+    j$ToUSD?: number;
+  };
 }) {
+  // Calculate J$ value from available points
+  const calculateJ$FromPoints = () => {
+    const rates = conversionRates || {
+      xpToJ$: 6,
+      rpToJ$: 12,
+      fpToJ$: 8,
+      hpToJ$: 10,
+      j$ToUSD: 10,
+    };
+    const safeDiv = (value: number, rate: number | undefined) =>
+      rate && rate > 0 ? value / rate : 0;
+
+    const xp = playerData?.points?.xp || 0;
+    const rp = playerData?.points?.rp || 0;
+    const fp = playerData?.points?.fp || 0;
+    const hp = playerData?.points?.hp || 0;
+
+    const xpPreview = safeDiv(xp, rates.xpToJ$);
+    const rpPreview = safeDiv(rp, rates.rpToJ$);
+    const fpPreview = safeDiv(fp, rates.fpToJ$);
+    const hpPreview = safeDiv(hp, rates.hpToJ$);
+
+    return xpPreview + rpPreview + fpPreview + hpPreview;
+  };
+
+  const j$Value = calculateJ$FromPoints();
+  const usdValue = j$Value * (conversionRates?.j$ToUSD || 10);
+
   return (
     <div className="space-y-4">
       <Card className="border-2">
@@ -26,9 +62,17 @@ export function PlayerStateContent({
         </CardHeader>
         <CardContent>
           <div className="text-center mb-6">
-            <div className="text-sm text-muted-foreground">Available Points</div>
-            <div className="text-4xl font-extrabold tracking-tight">
-              {((playerData?.points?.xp || 0) + (playerData?.points?.rp || 0) + (playerData?.points?.fp || 0) + (playerData?.points?.hp || 0))}
+            <div className="text-sm text-muted-foreground mb-2">Available Points</div>
+            <div className="flex items-center justify-center gap-4">
+              <div className="text-4xl font-extrabold tracking-tight">
+                {((playerData?.points?.xp || 0) + (playerData?.points?.rp || 0) + (playerData?.points?.fp || 0) + (playerData?.points?.hp || 0))}
+              </div>
+              <div className="text-2xl font-bold text-green-600">
+                ${usdValue.toFixed(2)}
+              </div>
+            </div>
+            <div className="text-xs text-muted-foreground mt-2">
+              ≈ {j$Value.toFixed(2)} J$ → ${(conversionRates?.j$ToUSD || 10).toFixed(2)} USD
             </div>
           </div>
           <div className="grid grid-cols-4 gap-4">
