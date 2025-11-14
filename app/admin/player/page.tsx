@@ -301,29 +301,40 @@ export default function PlayerPage() {
               <Coins className="h-4 w-4 text-primary" />
               <span className="font-semibold text-sm">Exchange Preview — Current Month Points</span>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 text-sm">
-              {[
-                { key: 'xpPreview', label: 'XP → J$' },
-                { key: 'rpPreview', label: 'RP → J$' },
-                { key: 'fpPreview', label: 'FP → J$' },
-                { key: 'hpPreview', label: 'HP → J$' },
-              ].map((item) => (
-                <div key={item.key} className="p-3 bg-muted/20 rounded-lg text-center">
-                  <div className="text-xs text-muted-foreground mb-1">{item.label}</div>
-                  <div className="text-lg font-semibold">
-                    {preview[item.key as keyof typeof preview].toFixed(2)} J$
-                  </div>
-                </div>
-              ))}
-              <div className="p-3 bg-primary/10 rounded-lg text-center border-2 border-primary/20">
-                <div className="text-xs text-muted-foreground mb-1">Total Preview</div>
-                <div className="text-lg font-semibold text-primary">
-                  {preview.totalPreview.toFixed(2)} J$
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  ≈ ${(preview.totalPreview * conversionRates.j$ToUSD).toFixed(2)} USD
-                </div>
-              </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left py-2 px-3 font-medium">Point Type</th>
+                    <th className="text-right py-2 px-3 font-medium">J$ Preview</th>
+                    <th className="text-right py-2 px-3 font-medium">USD Preview</th>
+                    <th className="text-right py-2 px-3 font-medium">Total Preview (J$)</th>
+                    <th className="text-right py-2 px-3 font-medium">Total Preview (USD)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { key: 'xpPreview', label: 'XP' },
+                    { key: 'rpPreview', label: 'RP' },
+                    { key: 'fpPreview', label: 'FP' },
+                    { key: 'hpPreview', label: 'HP' },
+                  ].map((item) => {
+                    const j$Value = preview[item.key as keyof typeof preview];
+                    const usdValue = j$Value * conversionRates.j$ToUSD;
+                    return (
+                      <tr key={item.key} className="border-b border-muted/30">
+                        <td className="py-3 px-3 font-medium">{item.label}</td>
+                        <td className="text-right py-3 px-3">{j$Value.toFixed(2)} J$</td>
+                        <td className="text-right py-3 px-3">${usdValue.toFixed(2)}</td>
+                        <td className="text-right py-3 px-3 font-semibold">{preview.totalPreview.toFixed(2)} J$</td>
+                        <td className="text-right py-3 px-3 font-semibold text-primary">
+                          ${(preview.totalPreview * conversionRates.j$ToUSD).toFixed(2)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           </div>
         </CardContent>
