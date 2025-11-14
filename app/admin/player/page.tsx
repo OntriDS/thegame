@@ -269,7 +269,7 @@ export default function PlayerPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-4">
             {[
               { key: 'xp', label: 'XP', description: 'Experience' },
               { key: 'rp', label: 'RP', description: 'Research' },
@@ -283,7 +283,7 @@ export default function PlayerPage() {
               </div>
             ))}
             <div className="text-center p-3 bg-primary/10 rounded-lg border-2 border-primary/20">
-              <div className="text-xs font-medium text-muted-foreground mb-1">Jungle Coins</div>
+              <div className="text-xs font-medium text-muted-foreground mb-1">J$</div>
               <div className="text-xl font-bold text-primary">{jHoldings.toFixed(1)} J$</div>
               <div className="text-xs text-muted-foreground mt-1">
                 ${(jHoldings * conversionRates.j$ToUSD).toFixed(2)} USD
@@ -294,6 +294,11 @@ export default function PlayerPage() {
               <div className="text-xl font-bold text-muted-foreground">0 Z₿</div>
               <div className="text-xs text-muted-foreground mt-1">(Coming soon)</div>
             </div>
+            <div className="text-center p-3 bg-green-50 dark:bg-green-950/30 rounded-lg border-2 border-green-200 dark:border-green-800">
+              <div className="text-xs font-medium text-muted-foreground mb-1">Total Value $</div>
+              <div className="text-xl font-bold text-green-600">${(jHoldings * conversionRates.j$ToUSD).toFixed(2)}</div>
+              <div className="text-xs text-muted-foreground mt-1">Digital Assets</div>
+            </div>
           </div>
 
           <div className="border-t pt-4">
@@ -301,40 +306,32 @@ export default function PlayerPage() {
               <Coins className="h-4 w-4 text-primary" />
               <span className="font-semibold text-sm">Exchange Preview — Current Month Points</span>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-2 px-3 font-medium">Point Type</th>
-                    <th className="text-right py-2 px-3 font-medium">J$ Preview</th>
-                    <th className="text-right py-2 px-3 font-medium">USD Preview</th>
-                    <th className="text-right py-2 px-3 font-medium">Total Preview (J$)</th>
-                    <th className="text-right py-2 px-3 font-medium">Total Preview (USD)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {[
-                    { key: 'xpPreview', label: 'XP' },
-                    { key: 'rpPreview', label: 'RP' },
-                    { key: 'fpPreview', label: 'FP' },
-                    { key: 'hpPreview', label: 'HP' },
-                  ].map((item) => {
-                    const j$Value = preview[item.key as keyof typeof preview];
-                    const usdValue = j$Value * conversionRates.j$ToUSD;
-                    return (
-                      <tr key={item.key} className="border-b border-muted/30">
-                        <td className="py-3 px-3 font-medium">{item.label}</td>
-                        <td className="text-right py-3 px-3">{j$Value.toFixed(2)} J$</td>
-                        <td className="text-right py-3 px-3">${usdValue.toFixed(2)}</td>
-                        <td className="text-right py-3 px-3 font-semibold">{preview.totalPreview.toFixed(2)} J$</td>
-                        <td className="text-right py-3 px-3 font-semibold text-primary">
-                          ${(preview.totalPreview * conversionRates.j$ToUSD).toFixed(2)}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 text-sm">
+              {[
+                { key: 'xpPreview', label: 'XP → J$' },
+                { key: 'rpPreview', label: 'RP → J$' },
+                { key: 'fpPreview', label: 'FP → J$' },
+                { key: 'hpPreview', label: 'HP → J$' },
+              ].map((item) => (
+                <div key={item.key} className="p-3 bg-muted/20 rounded-lg text-center">
+                  <div className="text-xs text-muted-foreground mb-1">{item.label}</div>
+                  <div className="text-lg font-semibold">
+                    {preview[item.key as keyof typeof preview].toFixed(2)} J$
+                  </div>
+                  <div className="text-sm text-primary mt-1">
+                    ${(preview[item.key as keyof typeof preview] * conversionRates.j$ToUSD).toFixed(2)} USD
+                  </div>
+                </div>
+              ))}
+              <div className="p-3 bg-primary/10 rounded-lg text-center border-2 border-primary/20">
+                <div className="text-xs text-muted-foreground mb-1">Total Preview</div>
+                <div className="text-lg font-semibold text-primary">
+                  {preview.totalPreview.toFixed(2)} J$
+                </div>
+                <div className="text-sm text-primary font-medium">
+                  ${(preview.totalPreview * conversionRates.j$ToUSD).toFixed(2)} USD
+                </div>
+              </div>
             </div>
           </div>
         </CardContent>
