@@ -45,7 +45,6 @@ export async function createCharacterFromEntity(
       roles: [CharacterRole.CUSTOMER],
       inventory: [],
       achievementsCharacter: [],
-      jungleCoins: 0,
       purchasedAmount: 0,
       playerId: PLAYER_ONE_ID, // Default to Player One for now
       lastActiveAt: new Date(),
