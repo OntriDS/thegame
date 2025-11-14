@@ -112,12 +112,6 @@ export function PlayerStatsContent({
               {((playerData?.totalPoints?.xp || 0) + (playerData?.totalPoints?.rp || 0) + (playerData?.totalPoints?.fp || 0) + (playerData?.totalPoints?.hp || 0))}
             </div>
           </div>
-          <div className="mt-2 text-center">
-            <div className="text-xs text-muted-foreground">Currently Available:</div>
-            <div className="text-xl font-semibold text-primary/70">
-              {((playerData?.points?.xp || 0) + (playerData?.points?.rp || 0) + (playerData?.points?.fp || 0) + (playerData?.points?.hp || 0))}
-            </div>
-          </div>
         </CardContent>
       </Card>
 
@@ -278,7 +272,7 @@ export default function PlayerStatsTab({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-2xl">
             <TrendingUp className="h-6 w-6" />
-            Player Stats • {playerData?.name}
+            Player Historical Stats • {playerData?.name}
           </DialogTitle>
         </DialogHeader>
 
@@ -313,12 +307,7 @@ export default function PlayerStatsTab({
                   {((playerData?.totalPoints?.xp || 0) + (playerData?.totalPoints?.rp || 0) + (playerData?.totalPoints?.fp || 0) + (playerData?.totalPoints?.hp || 0))}
                 </div>
               </div>
-              <div className="mt-2 text-center">
-                <div className="text-xs text-muted-foreground">Currently Available:</div>
-                <div className="text-xl font-semibold text-primary/70">
-                  {((playerData?.points?.xp || 0) + (playerData?.points?.rp || 0) + (playerData?.points?.fp || 0) + (playerData?.points?.hp || 0))}
-                </div>
-              </div>
+              
             </CardContent>
           </Card>
 
@@ -425,12 +414,12 @@ export default function PlayerStatsTab({
             </CardContent>
           </Card>
 
-          {/* Activity Statistics */}
+          {/* All-Time Activity Statistics */}
           <Card className="border-2">
             <CardHeader className="pb-3">
               <CardTitle className="text-lg flex items-center gap-2">
                 <Calendar className="h-5 w-5 text-primary" />
-                Activity Statistics
+                All-Time Activity Statistics
               </CardTitle>
             </CardHeader>
             <CardContent>

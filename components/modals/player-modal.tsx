@@ -162,16 +162,16 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
             </DialogTitle>
           </DialogHeader>
 
-          {/* Tabs - State | Stats | Progression */}
+          {/* Tabs - Current State | Historical Stats | Progression */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="state" className="flex items-center gap-2">
                 <Target className="h-4 w-4" />
-                State
+                Current State
               </TabsTrigger>
               <TabsTrigger value="stats" className="flex items-center gap-2">
                 <TrendingUp className="h-4 w-4" />
-                Stats
+                Historical Stats
               </TabsTrigger>
               <TabsTrigger value="progression" className="flex items-center gap-2">
                 <Flag className="h-4 w-4" />
