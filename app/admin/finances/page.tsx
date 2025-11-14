@@ -255,7 +255,7 @@ export default function FinancesPage() {
     setAggregatedFinancialData(companyTotals);
     setAggregatedCategoryData({ categoryBreakdown: companyBreakdown });
     setRecordsRefreshKey(prev => prev + 1);
-  }, [currentYear, currentMonth, refreshKey, filterByMonth]);
+  }, [currentYear, currentMonth, filterByMonth]);
 
   // Load summaries for current month
   useEffect(() => {

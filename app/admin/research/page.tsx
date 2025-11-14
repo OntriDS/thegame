@@ -81,7 +81,7 @@ function ResearchPageContent() {
     };
 
     loadProjectStatus();
-  }, [isClient]);
+  }, [isClient, getPreference, setPreference]);
 
   // Load dev log from API (client-side only)
   useEffect(() => {
@@ -103,7 +103,7 @@ function ResearchPageContent() {
     };
 
     loadDevLog();
-  }, [isClient]);
+  }, [isClient, getPreference, setPreference]);
 
   // Initialize notebooks with persistence (client-side only)
   useEffect(() => {
@@ -215,7 +215,7 @@ function ResearchPageContent() {
     };
 
     loadNotebooks();
-  }, [isClient]);
+  }, [isClient, getPreference, setPreference]);
 
   // Load notes from API (client-side only)
   useEffect(() => {

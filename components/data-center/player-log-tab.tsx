@@ -111,7 +111,7 @@ export function PlayerLogTab({ playerLog, onReload, isReloading }: PlayerLogTabP
     };
     
     fetchSourceNames();
-  }, [processedPlayerLog.entries]);
+  }, [processedPlayerLog.entries, sourceNameCache]);
 
   // Helper function to determine action label based on entry type
   const getActionLabel = (entry: any): string => {

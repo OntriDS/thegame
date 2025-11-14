@@ -108,7 +108,7 @@ export default function DashboardsPage() {
     
     setCompanySummary(company);
     setPersonalSummary(personal);
-  }, [currentYear, currentMonth, refreshKey, filterByMonth]);
+  }, [currentYear, currentMonth, filterByMonth]);
 
   const loadAnalytics = useCallback(async () => {
     setIsLoadingAnalytics(true);

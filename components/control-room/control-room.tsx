@@ -262,7 +262,7 @@ export default function ControlRoom() {
       setTree([]);
       return [];
     }
-  }, [stationFilters, typeFilter, activeSubTab, refreshKey]);
+  }, [stationFilters, typeFilter, activeSubTab]);
 
   useEffect(() => {
     loadTasks();
