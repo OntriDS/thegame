@@ -70,14 +70,7 @@ export default function PlayerCharacterModal({ character, open, onOpenChange }: 
               </div>
             </div>
             
-            <div className="grid grid-cols-2 gap-3 pt-2 border-t">
-              <div>
-                <div className="text-xs text-muted-foreground">Jungle Coins</div>
-                <div className="mt-1 text-lg font-bold text-primary">
-                  {character.jungleCoins.toFixed(1)} J$
-                </div>
-              </div>
-              
+            <div className="pt-2 border-t">
               <div>
                 <div className="text-xs text-muted-foreground">Purchased Amount</div>
                 <div className="mt-1 text-lg font-bold">

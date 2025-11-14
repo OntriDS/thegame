@@ -436,7 +436,7 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="jungle-coins" className="text-xs">Jungle Coins (J$)</Label>
+                    <Label htmlFor="jungle-coins" className="text-xs">J$</Label>
                     <NumericInput
                       id="jungle-coins"
                       value={jungleCoins}

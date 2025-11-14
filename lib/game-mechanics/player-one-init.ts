@@ -76,7 +76,7 @@ const DEFAULT_PLAYER_ONE: Player = {
   level: 0,
   totalPoints: { xp: 0, rp: 0, fp: 0, hp: 0 },
   points: { xp: 0, rp: 0, fp: 0, hp: 0 },
-  jungleCoins: 0,
+  // J$ is stored in FinancialRecord ledger, not on Player entity
   
   // Character management
   characterIds: [PLAYER_ONE_ID],
@@ -132,7 +132,7 @@ const DEFAULT_CHARACTER_ONE: Character = {
   achievementsCharacter: [],
   
   // Business metrics
-  jungleCoins: 0,
+  // J$ is stored in FinancialRecord ledger, not on Character entity
   purchasedAmount: 0,
   inventory: [],
   

@@ -61,13 +61,19 @@ function PointShape({
 }
 
 // Content-only component for embedding in parent modals
-export function PlayerStatsContent({
-  playerData,
-  personalAssets
-}: {
+interface PlayerStatsContentProps {
   playerData: any;
   personalAssets: any;
-}) {
+  jungleCoinsBalance?: number;
+  onViewTransactions?: () => void;
+}
+
+export function PlayerStatsContent({
+  playerData,
+  personalAssets,
+  jungleCoinsBalance,
+  onViewTransactions
+}: PlayerStatsContentProps) {
   return (
     <div className="space-y-4">
       {/* Lifetime Points */}
@@ -81,10 +87,10 @@ export function PlayerStatsContent({
         <CardContent>
           <div className="grid grid-cols-4 gap-4">
             {[
-              { key: 'XP', label: 'Total XP', value: playerData?.points?.xp || 0 },
-              { key: 'RP', label: 'Total RP', value: playerData?.points?.rp || 0 },
-              { key: 'FP', label: 'Total FP', value: playerData?.points?.fp || 0 },
-              { key: 'HP', label: 'Total HP', value: playerData?.points?.hp || 0 }
+              { key: 'XP', label: 'Total XP', value: playerData?.totalPoints?.xp || 0 },
+              { key: 'RP', label: 'Total RP', value: playerData?.totalPoints?.rp || 0 },
+              { key: 'FP', label: 'Total FP', value: playerData?.totalPoints?.fp || 0 },
+              { key: 'HP', label: 'Total HP', value: playerData?.totalPoints?.hp || 0 }
             ].map((point) => (
               <div key={point.key} className="text-center">
                 <div className="mx-auto mb-2">
@@ -99,8 +105,14 @@ export function PlayerStatsContent({
             ))}
           </div>
           <div className="mt-4 text-center">
-            <div className="text-sm text-muted-foreground">All Points Ever Earned:</div>
+            <div className="text-sm text-muted-foreground">Lifetime Points Earned:</div>
             <div className="text-3xl font-bold text-primary">
+              {((playerData?.totalPoints?.xp || 0) + (playerData?.totalPoints?.rp || 0) + (playerData?.totalPoints?.fp || 0) + (playerData?.totalPoints?.hp || 0))}
+            </div>
+          </div>
+          <div className="mt-2 text-center">
+            <div className="text-xs text-muted-foreground">Currently Available:</div>
+            <div className="text-xl font-semibold text-primary/70">
               {((playerData?.points?.xp || 0) + (playerData?.points?.rp || 0) + (playerData?.points?.fp || 0) + (playerData?.points?.hp || 0))}
             </div>
           </div>
@@ -117,20 +129,31 @@ export function PlayerStatsContent({
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 gap-6">
-                            <div className="space-y-4">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-green-600">
-                      {personalAssets?.personalJ$?.toFixed(1) || '0.0'} J$
-                    </div>
-                    <div className="text-sm text-muted-foreground">Current J$</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold">
-                      ${((personalAssets?.personalJ$ || 0) * 10).toFixed(2)}
-                    </div>
-                    <div className="text-sm text-muted-foreground">USD Value (1 J$ = $10)</div>
-                  </div>
+            <div className="space-y-4">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-green-600">
+                  {(jungleCoinsBalance !== undefined ? jungleCoinsBalance : 0).toFixed(1)} J$
                 </div>
+                <div className="text-sm text-muted-foreground flex items-center justify-center gap-1">
+                  Current J$ (from Financial Records)
+                  {onViewTransactions && (
+                    <button
+                      onClick={onViewTransactions}
+                      className="text-primary hover:underline text-xs"
+                      type="button"
+                    >
+                      View History
+                    </button>
+                  )}
+                </div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold">
+                  ${((jungleCoinsBalance !== undefined ? jungleCoinsBalance : 0) * 10).toFixed(2)}
+                </div>
+                <div className="text-sm text-muted-foreground">USD Value (1 J$ = $10)</div>
+              </div>
+            </div>
             <div className="space-y-4">
               <div className="text-center">
                 <div className="text-2xl font-bold">
@@ -183,13 +206,17 @@ interface PlayerStatsTabProps {
   onOpenChange: (open: boolean) => void;
   playerData: any;
   personalAssets: any;
+  jungleCoinsBalance?: number;
+  onViewTransactions?: () => void;
 }
 
 export default function PlayerStatsTab({ 
   open, 
   onOpenChange, 
   playerData, 
-  personalAssets 
+  personalAssets,
+  jungleCoinsBalance,
+  onViewTransactions
 }: PlayerStatsTabProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -213,10 +240,10 @@ export default function PlayerStatsTab({
             <CardContent>
               <div className="grid grid-cols-4 gap-4">
                 {[
-                  { key: 'xp', label: 'Total XP', value: playerData?.points?.xp || 0, color: 'bg-blue-500' },
-                  { key: 'rp', label: 'Total RP', value: playerData?.points?.rp || 0, color: 'bg-green-500' },
-                  { key: 'fp', label: 'Total FP', value: playerData?.points?.fp || 0, color: 'bg-yellow-500' },
-                  { key: 'hp', label: 'Total HP', value: playerData?.points?.hp || 0, color: 'bg-red-500' }
+                  { key: 'xp', label: 'Total XP', value: playerData?.totalPoints?.xp || 0, color: 'bg-blue-500' },
+                  { key: 'rp', label: 'Total RP', value: playerData?.totalPoints?.rp || 0, color: 'bg-green-500' },
+                  { key: 'fp', label: 'Total FP', value: playerData?.totalPoints?.fp || 0, color: 'bg-yellow-500' },
+                  { key: 'hp', label: 'Total HP', value: playerData?.totalPoints?.hp || 0, color: 'bg-red-500' }
                 ].map((point) => (
                   <div key={point.key} className="text-center">
                     <div className={`w-16 h-16 rounded-full ${point.color} mx-auto mb-2 flex items-center justify-center text-white font-bold text-xl`}>
@@ -227,8 +254,14 @@ export default function PlayerStatsTab({
                 ))}
               </div>
               <div className="mt-4 text-center">
-                <div className="text-sm text-muted-foreground">All Points Ever Earned:</div>
+                <div className="text-sm text-muted-foreground">Lifetime Points Earned:</div>
                 <div className="text-3xl font-bold text-primary">
+                  {((playerData?.totalPoints?.xp || 0) + (playerData?.totalPoints?.rp || 0) + (playerData?.totalPoints?.fp || 0) + (playerData?.totalPoints?.hp || 0))}
+                </div>
+              </div>
+              <div className="mt-2 text-center">
+                <div className="text-xs text-muted-foreground">Currently Available:</div>
+                <div className="text-xl font-semibold text-primary/70">
                   {((playerData?.points?.xp || 0) + (playerData?.points?.rp || 0) + (playerData?.points?.fp || 0) + (playerData?.points?.hp || 0))}
                 </div>
               </div>
@@ -248,13 +281,24 @@ export default function PlayerStatsTab({
                 <div className="space-y-4">
                   <div className="text-center">
                     <div className="text-2xl font-bold text-green-600">
-                      {personalAssets?.personalJ$?.toFixed(1) || '0.0'} J$
+                      {(jungleCoinsBalance ?? 0).toFixed(1)} J$
                     </div>
-                    <div className="text-sm text-muted-foreground">Current J$</div>
+                    <div className="text-sm text-muted-foreground flex items-center justify-center gap-1">
+                      Current J$ (from Financial Records)
+                      {onViewTransactions && (
+                        <button
+                          onClick={onViewTransactions}
+                          className="text-primary hover:underline text-xs"
+                          type="button"
+                        >
+                          View History
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <div className="text-center">
                     <div className="text-2xl font-bold">
-                      ${((personalAssets?.personalJ$ || 0) * 10).toFixed(2)}
+                      ${((jungleCoinsBalance ?? 0) * 10).toFixed(2)}
                     </div>
                     <div className="text-sm text-muted-foreground">USD Value (1 J$ = $10)</div>
                   </div>

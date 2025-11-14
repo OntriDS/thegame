@@ -23,7 +23,7 @@ import {
 } from '@/types/entities';
 import { Plus, DollarSign, TrendingUp, TrendingDown, Building2, User } from 'lucide-react';
 import { MONTHS, getYearRange, getMonthName, getCurrentMonth } from '@/lib/constants/date-constants';
-import { BUSINESS_STRUCTURE, ItemType } from '@/types/enums';
+import { BUSINESS_STRUCTURE, ItemType, PLAYER_ONE_ID } from '@/types/enums';
 import { getCompanyAreas, getPersonalAreas, isCompanyStation, getAreaForStation } from '@/lib/utils/business-structure-utils';
 import { CompanyRecordsList, PersonalRecordsList } from '@/components/finances/financial-records-components';
 import { Switch } from '@/components/ui/switch';
@@ -162,6 +162,8 @@ export default function FinancesPage() {
   // Asset state management - now using data store
   const [companyAssets, setCompanyAssets] = useState<any>(null);
   const [personalAssets, setPersonalAssets] = useState<any>(null);
+  const [jungleCoinsBalance, setJungleCoinsBalance] = useState<number>(0);
+  const [treasuryData, setTreasuryData] = useState<any>(null);
   
   // Currency conversion state
   const [exchangeRates, setExchangeRates] = useState<CurrencyExchangeRates>(DEFAULT_CURRENCY_EXCHANGE_RATES);
@@ -301,6 +303,53 @@ export default function FinancesPage() {
 
         setCompanyAssets(mergedCompanyData);
         setPersonalAssets(personalData);
+        
+        // Get current user's player ID from session (multiplayer-ready)
+        let currentPlayerId: string | null = null;
+        try {
+          const authResponse = await fetch('/api/auth/check');
+          if (authResponse.ok) {
+            const authData = await authResponse.json();
+            if (authData.authenticated && authData.user?.sub) {
+              // Get account from session (sub is account ID)
+              const account = await ClientAPI.getAccount(authData.user.sub);
+              if (account?.playerId) {
+                currentPlayerId = account.playerId;
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Failed to get current user from session:', error);
+        }
+        
+        // Fallback to PLAYER_ONE_ID if no session player found (for development/single-user)
+        if (!currentPlayerId) {
+          const players = await ClientAPI.getPlayers().catch(() => []);
+          currentPlayerId = players.find((p: any) => p.id === PLAYER_ONE_ID)?.id || players[0]?.id || null;
+        }
+        
+        // Fetch J$ balance for current user's player only
+        if (currentPlayerId) {
+          try {
+            const j$BalanceData = await ClientAPI.getPlayerJungleCoinsBalance(currentPlayerId);
+            setJungleCoinsBalance(j$BalanceData?.totalJ$ ?? 0);
+          } catch (error) {
+            console.error('Failed to fetch J$ balance:', error);
+            setJungleCoinsBalance(0);
+          }
+        } else {
+          setJungleCoinsBalance(0);
+        }
+        
+        // Load treasury data
+        try {
+          const treasury = await ClientAPI.getCompanyJ$Treasury();
+          setTreasuryData(treasury);
+        } catch (error) {
+          console.error('Failed to fetch treasury data:', error);
+          setTreasuryData(null);
+        }
+        
         setIsHydrated(true);
       } catch (error) {
         console.error('Failed to load assets:', error);
@@ -476,7 +525,7 @@ export default function FinancesPage() {
     return getMonetaryTotal(personalAssets, exchangeRates, true);
   };
   
-  const getPersonalJ$Total = () => personalAssets?.personalJ$ || 0;
+  const getPersonalJ$Total = () => jungleCoinsBalance;
   
   const getPersonalOtherTotal = () => {
     if (!personalAssets) return 0;
@@ -707,6 +756,68 @@ export default function FinancesPage() {
                         <div className="font-semibold text-right border-t pt-1">${((companyAssets.companyJ$ || 0) * exchangeRates.j$ToUSD).toLocaleString()}</div>
                       </div>
                     </div>
+                    
+                    {/* Company J$ Treasury Section */}
+                    {treasuryData && (
+                      <Card className="border-2 border-green-200 dark:border-green-800">
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-lg flex items-center gap-2">
+                            <Building2 className="h-5 w-5 text-green-600" />
+                            Company J$ Treasury
+                          </CardTitle>
+                          <CardDescription>
+                            J$ bought back from players
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <div className="text-sm text-muted-foreground">Total J$ Bought Back</div>
+                              <div className="text-2xl font-bold text-green-600">
+                                {treasuryData.totalJ$BoughtBack.toFixed(2)} J$
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-sm text-muted-foreground">Total USD Spent</div>
+                              <div className="text-2xl font-bold">
+                                ${treasuryData.totalUSDCost.toFixed(2)}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {treasuryData.buybackCount} buyback transaction{treasuryData.buybackCount !== 1 ? 's' : ''}
+                          </div>
+                          
+                          {/* Buyback History */}
+                          {treasuryData.buybacks && treasuryData.buybacks.length > 0 && (
+                            <div className="mt-4 pt-4 border-t">
+                              <h5 className="font-semibold text-sm mb-3">Buyback History</h5>
+                              <div className="space-y-2 max-h-64 overflow-y-auto">
+                                {treasuryData.buybacks.map((buyback: any) => (
+                                  <div key={buyback.id} className="text-xs border rounded p-2 bg-muted/30">
+                                    <div className="flex justify-between items-start mb-1">
+                                      <div className="font-medium">{new Date(buyback.date).toLocaleDateString()}</div>
+                                      <div className="text-right">
+                                        <div className="font-semibold text-green-600">{buyback.j$BoughtBack.toFixed(2)} J$</div>
+                                        {buyback.cashOutType === 'USD' ? (
+                                          <div className="text-muted-foreground">${buyback.usdCost.toFixed(2)}</div>
+                                        ) : (
+                                          <div className="text-muted-foreground">{buyback.zapsCost?.toFixed(0) || 0} sats</div>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <div className="flex justify-between text-muted-foreground">
+                                      <span>{buyback.station} • {buyback.cashOutType}</span>
+                                      <span>{buyback.name}</span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    )}
                   </div>
                 </div>
 
@@ -859,8 +970,8 @@ export default function FinancesPage() {
                       <div className="font-medium text-right">Value ($)</div>
                       
                       <div>In-Game Currency (J$)</div>
-                      <div className="text-right">{personalAssets.personalJ$} J$</div>
-                      <div className="text-right">${((personalAssets.personalJ$ || VALIDATION_CONSTANTS.DEFAULT_NUMERIC_VALUE) * (exchangeRates.j$ToUSD || VALIDATION_CONSTANTS.DEFAULT_EXCHANGE_RATE)).toLocaleString()}</div>
+                      <div className="text-right">{jungleCoinsBalance.toFixed(1)} J$</div>
+                      <div className="text-right">${((jungleCoinsBalance || VALIDATION_CONSTANTS.DEFAULT_NUMERIC_VALUE) * (exchangeRates.j$ToUSD || VALIDATION_CONSTANTS.DEFAULT_EXCHANGE_RATE)).toLocaleString()}</div>
                       
                       <div className="text-muted-foreground opacity-60">Bitcoin Zaps (Z₿)</div>
                       <div className="text-right text-muted-foreground opacity-60">0 sats</div>
@@ -872,7 +983,7 @@ export default function FinancesPage() {
                       
                       <div className="font-semibold border-t pt-1">Total</div>
                       <div className="border-t pt-1"></div>
-                      <div className="font-semibold text-right border-t pt-1">${((personalAssets.personalJ$ || VALIDATION_CONSTANTS.DEFAULT_NUMERIC_VALUE) * (exchangeRates.j$ToUSD || VALIDATION_CONSTANTS.DEFAULT_EXCHANGE_RATE)).toLocaleString()}</div>
+                      <div className="font-semibold text-right border-t pt-1">${((jungleCoinsBalance || VALIDATION_CONSTANTS.DEFAULT_NUMERIC_VALUE) * (exchangeRates.j$ToUSD || VALIDATION_CONSTANTS.DEFAULT_EXCHANGE_RATE)).toLocaleString()}</div>
                     </div>
                   </div>
                 </div>

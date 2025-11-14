@@ -439,7 +439,7 @@ export default function AssetsEditModal({ isOpen, onClose, onSave, section, init
     const type = section.type === 'company' ? 'Company' : 'Personal';
     switch (section.section) {
       case 'monetary': return `${type} Monetary Assets`;
-      case 'jungleCoins': return `${type} Jungle Coins`;
+      case 'jungleCoins': return `${type} J$`;
       case 'inventories': return `${type} Inventories`;
       case 'otherAssets': return `${type} Other Assets`;
       default: return `${type} Assets`;

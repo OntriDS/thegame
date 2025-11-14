@@ -1,14 +1,15 @@
 // workflows/financial-record-utils.ts
 // Financial record creation and management utilities
 
-import type { Task, FinancialRecord, Sale, ItemSaleLine } from '@/types/entities';
-import { LinkType, EntityType, LogEventType } from '@/types/enums';
-import { upsertFinancial, getAllFinancials, getFinancialsBySourceTaskId, removeFinancial, getItemById } from '@/data-store/datastore';
+import type { Task, FinancialRecord, Sale, ItemSaleLine, Character } from '@/types/entities';
+import { LinkType, EntityType, LogEventType, BUSINESS_STRUCTURE, CharacterRole } from '@/types/enums';
+import { upsertFinancial, getAllFinancials, getFinancialsBySourceTaskId, removeFinancial, getItemById, getCharacterById, getFinancialConversionRates } from '@/data-store/datastore';
 import { makeLink } from '@/links/links-workflows';
 import { createLink } from '@/links/link-registry';
 import { appendEntityLog } from './entities-logging';
 import { getFinancialTypeForStation, getSalesChannelFromSaleType } from '@/lib/utils/business-structure-utils';
 import type { Station } from '@/types/type-aliases';
+import { BITCOIN_SATOSHIS_PER_BTC } from '@/lib/constants/financial-constants';
 
 /**
  * Create a financial record from a task (when task has cost or revenue)
@@ -324,4 +325,274 @@ export async function processFinancialRecordCreationWithLinks(record: FinancialR
   console.log(`[processFinancialRecordCreationWithLinks] Processing financial record creation: ${record.name} (${record.id})`);
   
   return record;
+}
+
+/**
+ * Create a financial record for points-to-J$ exchange
+ * This implements the exchange pattern: Points → J$ (FinancialRecord)
+ * IDEMPOTENT: Relies on Effects Registry to prevent duplicate creation
+ */
+export async function createFinancialRecordFromPointsExchange(
+  playerId: string,
+  playerCharacterId: string | null,
+  pointsExchanged: { xp: number; rp: number; fp: number; hp: number },
+  j$Received: number
+): Promise<FinancialRecord> {
+  try {
+    console.log(`[createFinancialRecordFromPointsExchange] Creating financial record for points exchange: ${j$Received} J$`);
+    
+    const currentDate = new Date();
+    // Use 'Rewards' station from BUSINESS_STRUCTURE.PERSONAL (single source of truth)
+    const rewardsStation = BUSINESS_STRUCTURE.PERSONAL.find(s => s === 'Rewards');
+    if (!rewardsStation) throw new Error('Rewards station not found in BUSINESS_STRUCTURE');
+    const station = rewardsStation as Station;
+    
+    const newFinrec: FinancialRecord = {
+      id: `finrec-exchange-${playerId}-${Date.now()}`,
+      name: `Points Exchange: ${pointsExchanged.xp + pointsExchanged.rp + pointsExchanged.fp + pointsExchanged.hp} points`,
+      description: `Points exchanged for J$: XP=${pointsExchanged.xp}, RP=${pointsExchanged.rp}, FP=${pointsExchanged.fp}, HP=${pointsExchanged.hp} → ${j$Received} J$`,
+      year: currentDate.getFullYear(),
+      month: currentDate.getMonth() + 1,
+      station: station,
+      type: 'personal', // Personal financial record
+      playerCharacterId: playerCharacterId, // Link to player's character
+      cost: 0, // No cost, just points exchange
+      revenue: 0, // No revenue, just currency exchange
+      jungleCoins: j$Received, // J$ received from exchange
+      isNotPaid: false,
+      isNotCharged: false,
+      rewards: { 
+        points: { 
+          xp: -pointsExchanged.xp, // Negative points (spent)
+          rp: -pointsExchanged.rp,
+          fp: -pointsExchanged.fp,
+          hp: -pointsExchanged.hp
+        } 
+      },
+      netCashflow: 0, // No cashflow, just currency exchange
+      jungleCoinsValue: j$Received * 10, // J$ value in USD (1 J$ = $10)
+      isCollected: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      links: []
+    };
+    
+    // Store the financial record
+    console.log(`[createFinancialRecordFromPointsExchange] Creating financial record:`, newFinrec);
+    const createdFinrec = await upsertFinancial(newFinrec);
+    
+    // Create PLAYER_FINREC link (always create link to player)
+    const linkMetadata = {
+      pointsExchanged: pointsExchanged,
+      j$Received: j$Received,
+      exchangeType: 'POINTS_TO_J$',
+      playerCharacterId: playerCharacterId || null,
+      createdAt: new Date().toISOString()
+    };
+    
+    const link = makeLink(
+      LinkType.PLAYER_FINREC,
+      { type: EntityType.PLAYER, id: playerId },
+      { type: EntityType.FINANCIAL, id: createdFinrec.id },
+      linkMetadata
+    );
+    
+    await createLink(link);
+    console.log(`[createFinancialRecordFromPointsExchange] ✅ Created PLAYER_FINREC link for player ${playerId}`);
+    
+    console.log(`[createFinancialRecordFromPointsExchange] ✅ Financial record created for points exchange: ${createdFinrec.name}`);
+    
+    return createdFinrec;
+    
+  } catch (error) {
+    console.error(`[createFinancialRecordFromPointsExchange] ❌ Failed to create financial record for points exchange:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Create financial records for J$ cash-out (J$ → USD or J$ → Zaps)
+ * Creates two FinancialRecords: personal (J$ deduction) and company (J$ buyback with USD cost)
+ */
+export async function createFinancialRecordFromJ$CashOut(
+  playerId: string,
+  playerCharacterId: string | null,
+  j$Sold: number,
+  j$Rate: number = 10, // Default: 1 J$ = $10 USD (for USD cash-out)
+  cashOutType: 'USD' | 'ZAPS' = 'USD',
+  zapsRate?: number // Optional: J$ to Zaps rate (sats per J$). If not provided, calculated from Bitcoin price
+): Promise<{ personalRecord: FinancialRecord; companyRecord: FinancialRecord }> {
+  try {
+    console.log(`[createFinancialRecordFromJ$CashOut] Creating financial records for cash-out: ${j$Sold} J$ for ${cashOutType}`);
+    
+    // Determine company station based on character role
+    let companyStation: Station;
+    if (playerCharacterId) {
+      const character = await getCharacterById(playerCharacterId);
+      if (character?.roles.includes(CharacterRole.FOUNDER)) {
+        const founderStation = BUSINESS_STRUCTURE.ADMIN.find(s => s === 'Founder');
+        if (!founderStation) throw new Error('Founder station not found in BUSINESS_STRUCTURE');
+        companyStation = founderStation as Station;
+      } else if (character?.roles.includes(CharacterRole.TEAM)) {
+        const teamStation = BUSINESS_STRUCTURE.ADMIN.find(s => s === 'Team');
+        if (!teamStation) throw new Error('Team station not found in BUSINESS_STRUCTURE');
+        companyStation = teamStation as Station;
+      } else {
+        // Default to Founder if role not found
+        const founderStation = BUSINESS_STRUCTURE.ADMIN.find(s => s === 'Founder');
+        if (!founderStation) throw new Error('Founder station not found in BUSINESS_STRUCTURE');
+        companyStation = founderStation as Station;
+      }
+    } else {
+      // Default to Founder if no character
+      const founderStation = BUSINESS_STRUCTURE.ADMIN.find(s => s === 'Founder');
+      if (!founderStation) throw new Error('Founder station not found in BUSINESS_STRUCTURE');
+      companyStation = founderStation as Station;
+    }
+    
+    // Calculate payment amount based on cash-out type
+    let amountPaid: number;
+    let amountLabel: string;
+    let calculatedZapsRate: number | undefined;
+    
+    if (cashOutType === 'USD') {
+      amountPaid = j$Sold * j$Rate; // USD amount
+      amountLabel = `${amountPaid} USD`;
+    } else {
+      // ZAPS: Calculate rate from REAL Bitcoin price (no fallback - must be fetched)
+      if (zapsRate === undefined) {
+        // Calculate: 1 J$ = $10 USD, convert to sats via REAL Bitcoin price
+        // Formula: (J$ value in USD) / (Bitcoin price in USD) * (sats per BTC) = sats per J$
+        const rates = await getFinancialConversionRates();
+        const bitcoinPrice = rates?.bitcoinToUsd;
+        
+        // REQUIRED: Real Bitcoin price must be available - no fallback
+        if (!bitcoinPrice || bitcoinPrice <= 0) {
+          throw new Error('Bitcoin price not available. Please fetch Bitcoin price before cashing out to Zaps.');
+        }
+        
+        const j$ValueInUSD = j$Rate; // Default: 10 USD per J$
+        
+        // Calculate sats per J$: (j$ValueInUSD / bitcoinPrice) * satsPerBTC
+        calculatedZapsRate = (j$ValueInUSD / bitcoinPrice) * BITCOIN_SATOSHIS_PER_BTC;
+        console.log(`[createFinancialRecordFromJ$CashOut] Calculated Zaps rate: ${calculatedZapsRate.toFixed(0)} sats per J$ (Bitcoin price: $${bitcoinPrice})`);
+      } else {
+        calculatedZapsRate = zapsRate;
+      }
+      amountPaid = j$Sold * calculatedZapsRate; // Zaps amount (sats)
+      amountLabel = `${amountPaid.toFixed(0)} sats`;
+    }
+    
+    const currentDate = new Date();
+    const exchangeType = cashOutType === 'USD' ? 'J$_TO_USD' : 'J$_TO_ZAPS';
+    
+    // Get Earnings station from BUSINESS_STRUCTURE.PERSONAL
+    const earningsStation = BUSINESS_STRUCTURE.PERSONAL.find(s => s === 'Earnings');
+    if (!earningsStation) throw new Error('Earnings station not found in BUSINESS_STRUCTURE');
+    const personalStation = earningsStation as Station;
+    
+    // Create personal FinancialRecord (J$ deduction)
+    const personalFinrec: FinancialRecord = {
+      id: `finrec-cashout-personal-${playerId}-${Date.now()}`,
+      name: `J$ Cash-Out: ${j$Sold} J$ → ${cashOutType}`,
+      description: `J$ cashed out for ${cashOutType}: ${j$Sold} J$ → ${amountLabel}`,
+      year: currentDate.getFullYear(),
+      month: currentDate.getMonth() + 1,
+      station: personalStation,
+      type: 'personal',
+      playerCharacterId: playerCharacterId,
+      cost: 0,
+      revenue: 0,
+      jungleCoins: -j$Sold, // Negative: J$ deducted from player
+      isNotPaid: false,
+      isNotCharged: false,
+      netCashflow: 0,
+      jungleCoinsValue: j$Sold * 10, // J$ value in USD
+      isCollected: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      links: []
+    };
+    
+    // Create company FinancialRecord (J$ buyback with cost)
+    const companyFinrec: FinancialRecord = {
+      id: `finrec-cashout-company-${playerId}-${Date.now()}`,
+      name: `J$ Buyback: ${j$Sold} J$ from Player`,
+      description: `Company bought back ${j$Sold} J$ from player for ${amountLabel}`,
+      year: currentDate.getFullYear(),
+      month: currentDate.getMonth() + 1,
+      station: companyStation,
+      type: 'company',
+      playerCharacterId: playerCharacterId,
+      cost: cashOutType === 'USD' ? amountPaid : 0, // USD cost for USD cash-out, 0 for Zaps (Zaps tracked separately)
+      revenue: 0,
+      jungleCoins: j$Sold, // Positive: J$ returns to company treasury
+      isNotPaid: false,
+      isNotCharged: false,
+      netCashflow: cashOutType === 'USD' ? -amountPaid : 0, // Negative cashflow for USD, 0 for Zaps
+      jungleCoinsValue: j$Sold * 10, // J$ value in USD
+      isCollected: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      links: []
+    };
+    
+    // Store both financial records
+    const createdPersonalFinrec = await upsertFinancial(personalFinrec);
+    const createdCompanyFinrec = await upsertFinancial(companyFinrec);
+    
+    // Create PLAYER_FINREC links for both records
+    const personalLinkMetadata = {
+      j$Sold: j$Sold,
+      amountPaid: amountPaid,
+      j$Rate: cashOutType === 'USD' ? j$Rate : undefined,
+      zapsRate: cashOutType === 'ZAPS' ? (calculatedZapsRate || zapsRate) : undefined,
+      cashOutType: cashOutType,
+      exchangeType: exchangeType,
+      playerCharacterId: playerCharacterId || null,
+      createdAt: new Date().toISOString()
+    };
+    
+    const personalLink = makeLink(
+      LinkType.PLAYER_FINREC,
+      { type: EntityType.PLAYER, id: playerId },
+      { type: EntityType.FINANCIAL, id: createdPersonalFinrec.id },
+      personalLinkMetadata
+    );
+    
+    const companyLinkMetadata = {
+      j$Sold: j$Sold,
+      amountPaid: amountPaid,
+      j$Rate: cashOutType === 'USD' ? j$Rate : undefined,
+      zapsRate: cashOutType === 'ZAPS' ? (calculatedZapsRate || zapsRate) : undefined,
+      cashOutType: cashOutType,
+      exchangeType: exchangeType,
+      playerCharacterId: playerCharacterId || null,
+      companyStation: companyStation,
+      createdAt: new Date().toISOString()
+    };
+    
+    const companyLink = makeLink(
+      LinkType.PLAYER_FINREC,
+      { type: EntityType.PLAYER, id: playerId },
+      { type: EntityType.FINANCIAL, id: createdCompanyFinrec.id },
+      companyLinkMetadata
+    );
+    
+    await createLink(personalLink);
+    await createLink(companyLink);
+    
+    console.log(`[createFinancialRecordFromJ$CashOut] ✅ Created PLAYER_FINREC links for both records`);
+    console.log(`[createFinancialRecordFromJ$CashOut] ✅ Personal record: ${createdPersonalFinrec.name}`);
+    console.log(`[createFinancialRecordFromJ$CashOut] ✅ Company record: ${createdCompanyFinrec.name}`);
+    
+    return {
+      personalRecord: createdPersonalFinrec,
+      companyRecord: createdCompanyFinrec
+    };
+    
+  } catch (error) {
+    console.error(`[createFinancialRecordFromJ$CashOut] ❌ Failed to create financial records for cash-out:`, error);
+    throw error;
+  }
 }

@@ -446,6 +446,87 @@ export const ClientAPI = {
     if (!res.ok) throw new Error('Failed to save company assets');
   },
   
+  exchangePointsForJungleCoins: async (
+    playerId: string,
+    playerCharacterId: string | null,
+    pointsToExchange: { xp: number; rp: number; fp: number; hp: number },
+    j$Received: number
+  ): Promise<any> => {
+    const res = await fetch('/api/player/exchange-points', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        playerId,
+        playerCharacterId,
+        pointsToExchange,
+        j$Received
+      })
+    });
+    if (!res.ok) throw new Error('Failed to exchange points');
+    return await res.json();
+  },
+
+  getPlayerJungleCoinsBalance: async (playerId: string): Promise<any> => {
+    const res = await fetch(`/api/player/${playerId}/jungle-coins`);
+    if (!res.ok) throw new Error('Failed to fetch player Jungle Coins balance');
+    return await res.json();
+  },
+
+  cashOutJ$: async (
+    playerId: string,
+    playerCharacterId: string | null,
+    j$Sold: number,
+    j$Rate: number = 10,
+    cashOutType: 'USD' | 'ZAPS' = 'USD',
+    zapsRate?: number
+  ): Promise<any> => {
+    const res = await fetch('/api/player/cash-out-j$', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        playerId,
+        playerCharacterId,
+        j$Sold,
+        j$Rate,
+        cashOutType,
+        zapsRate
+      })
+    });
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.error || 'Failed to cash out J$');
+    }
+    return await res.json();
+  },
+
+  getCompanyJ$Treasury: async (): Promise<{
+    totalJ$BoughtBack: number;
+    totalUSDCost: number;
+    totalZapsCost: number;
+    buybackCount: number;
+    buybacks: Array<{
+      id: string;
+      name: string;
+      date: string;
+      j$BoughtBack: number;
+      usdCost: number;
+      zapsCost?: number;
+      cashOutType: 'USD' | 'ZAPS';
+      station: 'Founder' | 'Team';
+      playerCharacterId?: string | null;
+    }>;
+  }> => {
+    const res = await fetch('/api/company/j$-treasury');
+    if (!res.ok) throw new Error('Failed to fetch company J$ treasury');
+    return await res.json();
+  },
+
+  getPlayerFinancialRecords: async (playerId: string): Promise<FinancialRecord[]> => {
+    const res = await fetch(`/api/player/${playerId}/financial-records`);
+    if (!res.ok) throw new Error('Failed to fetch player financial records');
+    return await res.json();
+  },
+
   getPersonalAssets: async (): Promise<any> => {
     const res = await fetch('/api/assets/personal');
     if (!res.ok) throw new Error('Failed to fetch personal assets');

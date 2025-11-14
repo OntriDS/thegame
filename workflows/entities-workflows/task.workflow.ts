@@ -8,8 +8,6 @@ import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data
 import { EffectKeys } from '@/data-store/keys';
 import {
   getPlayerConversionRates,
-  getPersonalAssets,
-  savePersonalAssets,
   getTaskById,
   getPlayerById,
   getAllTasks,
@@ -584,58 +582,15 @@ async function removePlayerPointsFromTask(task: Task): Promise<void> {
     
     console.log(`[removePlayerPointsFromTask] Task "${task.name}" awarded: XP:${pointsToRemove.xp || 0}, RP:${pointsToRemove.rp || 0}, FP:${pointsToRemove.fp || 0}, HP:${pointsToRemove.hp || 0}`);
     
-    // STEP 1: Calculate potential J$ from these points
-    const conversionRates = await getConversionRatesOrDefault();
-    const potentialJ$ = calculateJ$FromPoints(pointsToRemove, conversionRates);
+    // NOTE: We do NOT remove J$ here because:
+    // - J$ is only created when points are EXPLICITLY exchanged for J$ (via exchange flow)
+    // - Points awarded by tasks are NOT automatically converted to J$
+    // - If points were exchanged, that created a FinancialRecord with exchangeType 'POINTS_TO_J$'
+    // - Those FinancialRecords are the source of truth for J$, not personalAssets
+    // - If we need to reverse a points exchange, we should reverse the FinancialRecord, not modify personalAssets
+    console.log(`[removePlayerPointsFromTask] Skipping J$ removal - J$ is only created via explicit exchange, not from task rewards`);
     
-    console.log(`[removePlayerPointsFromTask] These points could convert to ${potentialJ$.toFixed(2)} J$`);
-    
-    // STEP 2: Remove J$ from personal assets FIRST (if any was converted)
-    try {
-      const personalAssets = await getPersonalAssets();
-      const currentJ$ = personalAssets?.personalJ$ || 0;
-      
-      console.log(`[removePlayerPointsFromTask] Player currently has ${currentJ$.toFixed(2)} J$`);
-      
-      // Calculate J$ to remove (can't remove more than player has)
-      const j$ToRemove = Math.min(potentialJ$, currentJ$);
-      
-      if (j$ToRemove > 0) {
-        console.log(`[removePlayerPointsFromTask] Removing ${j$ToRemove.toFixed(2)} J$ from personal assets`);
-        
-        // Update personal assets
-        const updatedAssets = {
-          ...personalAssets,
-          personalJ$: Math.max(0, currentJ$ - j$ToRemove)
-        };
-        
-        await savePersonalAssets(updatedAssets);
-        
-        // Log the J$ removal
-        await appendEntityLog(
-          EntityType.PLAYER,
-          playerId,
-          LogEventType.UPDATED,
-          {
-            name: player.name,
-            jungleCoinsRemoved: j$ToRemove,
-            reason: 'Task deletion - J$ rollback',
-            sourceTaskId: task.id,
-            taskName: task.name,
-            description: `Removed ${j$ToRemove.toFixed(2)} J$ due to task deletion: ${task.name}`
-          }
-        );
-        
-        console.log(`[removePlayerPointsFromTask] ✅ Successfully removed ${j$ToRemove.toFixed(2)} J$ from personal assets`);
-      } else {
-        console.log(`[removePlayerPointsFromTask] No J$ to remove (player has ${currentJ$.toFixed(2)} J$)`);
-      }
-    } catch (error) {
-      console.error(`[removePlayerPointsFromTask] ⚠️ Failed to remove J$:`, error);
-      // Continue with points removal even if J$ removal fails
-    }
-    
-    // STEP 3: Remove the points from the player
+    // Remove the points from the player
     console.log(`[removePlayerPointsFromTask] Now removing points from player...`);
     await removePointsFromPlayer(playerId, pointsToRemove);
     console.log(`[removePlayerPointsFromTask] ✅ Successfully removed points: XP:${pointsToRemove.xp || 0}, RP:${pointsToRemove.rp || 0}, FP:${pointsToRemove.fp || 0}, HP:${pointsToRemove.hp || 0}`);

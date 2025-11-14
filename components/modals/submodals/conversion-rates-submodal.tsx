@@ -72,7 +72,7 @@ export default function ConversionRatesModal({ isOpen, onClose, onSave, initialR
               {/* J$ to USD conversion (not part of points metadata) */}
               <div className="space-y-1">
                 <label className="block text-sm font-medium">J$ to USD</label>
-                <div className="text-xs text-muted-foreground">Jungle Coins</div>
+                <div className="text-xs text-muted-foreground">J$</div>
                 <NumericInput
                   value={pointsRates.j$ToUSD}
                   onChange={(value) => setPointsRates({ ...pointsRates, j$ToUSD: Math.floor(value) || 0 })}

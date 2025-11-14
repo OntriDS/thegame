@@ -18,6 +18,8 @@ import PlayerCharacterModal from './submodals/player-character-submodal';
 import PlayerCharactersRelationshipsModal from './submodals/player-characters-relationships-submodal';
 import LinksRelationshipsModal from './submodals/links-relationships-submodal';
 import ExchangePointsModal from './submodals/exchange-points-submodal';
+import CashOutJ$Modal from './submodals/cash-out-j$-submodal';
+import PlayerJ$TransactionsModal from './submodals/player-j$-transactions-submodal';
 
 // Import tab content components
 import { PlayerStateContent } from './modals-tabs/player-state-tab';
@@ -38,6 +40,8 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
   const [showRelationships, setShowRelationships] = useState(false);
   const [showLinks, setShowLinks] = useState(false);
   const [showExchangeModal, setShowExchangeModal] = useState(false);
+  const [showCashOutModal, setShowCashOutModal] = useState(false);
+  const [showTransactionHistory, setShowTransactionHistory] = useState(false);
   const [activeTab, setActiveTab] = useState('state');
 
   // Current player data
@@ -47,6 +51,7 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
 
   // Financial data
   const [personalAssets, setPersonalAssets] = useState<any>(null);
+  const [jungleCoinsBalance, setJungleCoinsBalance] = useState<number>(0);
 
   // Current month metrics (for State tab)
   const [currentMonthMetrics, setCurrentMonthMetrics] = useState({
@@ -56,7 +61,7 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
     itemsValue: 0,
   });
 
-  // Load player data and characters on modal open
+  // Load player data and characters on modal open (parallel fetching)
   useEffect(() => {
     if (open) {
       const loadData = async () => {
@@ -70,20 +75,30 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
           }
           
           if (playerToLoad) {
+            // Parallel data fetching for better performance
+            const [playerCharacters, assets, j$Balance] = await Promise.all([
+              ClientAPI.getCharacters().then(chars => 
+                chars.filter(c => c.playerId === playerToLoad!.id)
+              ).catch(error => {
+                console.error('Failed to load characters:', error);
+                return [];
+              }),
+              ClientAPI.getPersonalAssets().catch(error => {
+                console.error('Failed to load personal assets:', error);
+                return null;
+              }),
+              ClientAPI.getPlayerJungleCoinsBalance(playerToLoad.id).then(result => 
+                result.totalJ$ || 0
+              ).catch(error => {
+                console.error('Failed to load Jungle Coins balance:', error);
+                return 0;
+              })
+            ]);
+            
             setPlayerData(playerToLoad);
-            
-            // Load characters for this player
-            const playerCharacters = await ClientAPI.getCharacters();
-            const playerChars = playerCharacters.filter(c => c.playerId === playerToLoad!.id);
-            setCharacters(playerChars);
-            
-            // Load personal assets
-            try {
-              const assets = await ClientAPI.getPersonalAssets();
-              setPersonalAssets(assets);
-            } catch (error) {
-              console.error('Failed to load personal assets:', error);
-            }
+            setCharacters(playerCharacters);
+            setPersonalAssets(assets);
+            setJungleCoinsBalance(j$Balance);
           }
         } catch (error) {
           console.error('Failed to load player data:', error);
@@ -168,6 +183,8 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
                 <PlayerStatsContent 
                   playerData={playerData}
                   personalAssets={personalAssets}
+                  jungleCoinsBalance={jungleCoinsBalance}
+                  onViewTransactions={() => setShowTransactionHistory(true)}
                 />
               </TabsContent>
               
@@ -229,6 +246,16 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
               >
                 <Coins className="h-4 w-4" />
                 Exchange Points
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowCashOutModal(true)}
+                className="flex items-center gap-2"
+                disabled={jungleCoinsBalance <= 0}
+              >
+                <Coins className="h-4 w-4" />
+                Cash Out J$
               </Button>
             </div>
           </DialogFooter>
@@ -297,46 +324,84 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
             }
           };
           
-          // Update personal assets - Use correct property name personalJ$
-          const updatedAssets = {
-            ...personalAssets,
-            personalJ$: (personalAssets?.personalJ$ || 0) + j$Received,
-          };
+          // Get player's character ID (use first character if available)
+          const playerCharacterId = characters.length > 0 ? characters[0].id : null;
           
           try {
-            // Save player
+            // Create FinancialRecord for the exchange (moves J$ to financial system)
+            await ClientAPI.exchangePointsForJungleCoins(
+              playerData.id,
+              playerCharacterId,
+              pointsToExchange,
+              j$Received
+            );
+            
+            // Save player (points deducted)
             await ClientAPI.upsertPlayer(updatedPlayer);
             
-            // Save personal assets - THIS WAS MISSING!
-            await ClientAPI.savePersonalAssets(updatedAssets);
+            // Reload J$ balance from FinancialRecord entries
+            try {
+              const j$BalanceResult = await ClientAPI.getPlayerJungleCoinsBalance(playerData.id);
+              setJungleCoinsBalance(j$BalanceResult.totalJ$ || 0);
+            } catch (error) {
+              console.error('Failed to reload J$ balance:', error);
+            }
             
             // Update local state
             setPlayerData(updatedPlayer);
-            setPersonalAssets(updatedAssets);
             setShowExchangeModal(false);
-            
-            // Log the points-to-J$ conversion via API to keep client-side code clean
-            const totalPointsExchanged = pointsToExchange.xp + pointsToExchange.rp + pointsToExchange.fp + pointsToExchange.hp;
-            await ClientAPI.appendPlayerLog(
-              playerData.id,
-              'UPDATED',
-              {
-                name: playerData.name,
-                pointsExchanged: pointsToExchange,
-                jungleCoinsReceived: j$Received,
-                description: `Player exchanged ${totalPointsExchanged} points for ${j$Received} J$`
-              }
-            );
             
             // Trigger financials update event AFTER successful save
             dispatchEntityUpdated(entityTypeToKind(EntityType.PLAYER));
             dispatchEntityUpdated(entityTypeToKind(EntityType.FINANCIAL));
           } catch (error) {
-            console.error('Save failed:', error);
+            console.error('Exchange failed:', error);
+            alert('Exchange failed. Please try again.');
             // Keep modal open on error
           }
         }}
       />
+
+      {/* Cash Out J$ Modal */}
+      <CashOutJ$Modal
+        player={playerData}
+        playerCharacter={characters[0] || null}
+        currentJ$Balance={jungleCoinsBalance}
+        open={showCashOutModal}
+        onOpenChange={setShowCashOutModal}
+        onCashOut={async (j$Sold, cashOutType, j$Rate, zapsRate) => {
+          const playerCharacterId = characters.length > 0 ? characters[0].id : null;
+          try {
+            await ClientAPI.cashOutJ$(
+              playerData!.id,
+              playerCharacterId,
+              j$Sold,
+              j$Rate || 10,
+              cashOutType,
+              zapsRate
+            );
+            // Reload J$ balance
+            const j$BalanceResult = await ClientAPI.getPlayerJungleCoinsBalance(playerData!.id);
+            setJungleCoinsBalance(j$BalanceResult.totalJ$ || 0);
+            setShowCashOutModal(false);
+            // Dispatch update events
+            dispatchEntityUpdated(entityTypeToKind(EntityType.PLAYER));
+            dispatchEntityUpdated(entityTypeToKind(EntityType.FINANCIAL));
+          } catch (error) {
+            console.error('Cash-out failed:', error);
+            alert(error instanceof Error ? error.message : 'Cash-out failed. Please try again.');
+          }
+        }}
+      />
+
+      {/* Transaction History Modal */}
+      {playerData && (
+        <PlayerJ$TransactionsModal
+          playerId={playerData.id}
+          open={showTransactionHistory}
+          onOpenChange={setShowTransactionHistory}
+        />
+      )}
     </>
   );
 }

@@ -73,12 +73,12 @@ export function PlayerStateContent({
 }) {
   return (
     <div className="space-y-4">
-      {/* Current Points (Uncollected) */}
+      {/* Available Points */}
       <Card className="border-2">
         <CardHeader className="pb-3">
           <CardTitle className="text-lg flex items-center gap-2">
             <Coins className="h-5 w-5 text-primary" />
-            Current Points (Uncollected)
+            Available Points
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -101,9 +101,15 @@ export function PlayerStateContent({
             ))}
           </div>
           <div className="mt-4 text-center">
-            <div className="text-sm text-muted-foreground">All Points Ever Earned:</div>
+            <div className="text-sm text-muted-foreground">Available Points:</div>
             <div className="text-2xl font-bold text-primary">
               {((playerData?.points?.xp || 0) + (playerData?.points?.rp || 0) + (playerData?.points?.fp || 0) + (playerData?.points?.hp || 0))}
+            </div>
+          </div>
+          <div className="mt-2 text-center">
+            <div className="text-xs text-muted-foreground">Lifetime Earned:</div>
+            <div className="text-lg font-semibold text-primary/70">
+              {((playerData?.totalPoints?.xp || 0) + (playerData?.totalPoints?.rp || 0) + (playerData?.totalPoints?.fp || 0) + (playerData?.totalPoints?.hp || 0))}
             </div>
           </div>
         </CardContent>
@@ -196,12 +202,12 @@ export default function PlayerStateTab({
         </DialogHeader>
 
         <div className="space-y-4 overflow-y-auto max-h-[calc(90vh-8rem)] pr-2">
-          {/* Current Points (Uncollected) */}
+          {/* Available Points */}
           <Card className="border-2">
             <CardHeader className="pb-3">
               <CardTitle className="text-lg flex items-center gap-2">
                 <Coins className="h-5 w-5 text-primary" />
-                Current Points (Uncollected)
+                Available Points
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -221,9 +227,15 @@ export default function PlayerStateTab({
                 ))}
               </div>
               <div className="mt-4 text-center">
-                <div className="text-sm text-muted-foreground">All Points Ever Earned:</div>
+                <div className="text-sm text-muted-foreground">Available Points:</div>
                 <div className="text-2xl font-bold text-primary">
                   {((playerData?.points?.xp || 0) + (playerData?.points?.rp || 0) + (playerData?.points?.fp || 0) + (playerData?.points?.hp || 0))}
+                </div>
+              </div>
+              <div className="mt-2 text-center">
+                <div className="text-xs text-muted-foreground">Lifetime Earned:</div>
+                <div className="text-lg font-semibold text-primary/70">
+                  {((playerData?.totalPoints?.xp || 0) + (playerData?.totalPoints?.rp || 0) + (playerData?.totalPoints?.fp || 0) + (playerData?.totalPoints?.hp || 0))}
                 </div>
               </div>
             </CardContent>

@@ -614,7 +614,7 @@ export interface Player extends BaseEntity {
     rp: number;
     xp: number;
   };
-  jungleCoins: number;           // 🏛️ AMBASSADOR FIELD (belongs to Financial entity) - J$ ($10 each)
+  // J$ is stored in FinancialRecord ledger via PLAYER_FINREC links, not on Player entity
   
   // 3. RPG STATS - NOT YET IMPLEMENTED (V0.1 placeholders)
   skills?: PlayerSkillsMap;              // { DESIGN_THINKING: 9, PROGRAMMING: 4, ... } - V0.2
@@ -687,7 +687,7 @@ export interface Character extends BaseEntity {
   achievementsCharacter: string[];        // Character-specific achievements tree (different from Player achievements)
   
   // 7. BUSINESS METRICS
-  jungleCoins: number;           // 🏛️ AMBASSADOR FIELD (belongs to Financial entity) - J$ ($10 each)
+  // J$ is stored in FinancialRecord ledger via CHARACTER_FINREC links, not on Character entity
   purchasedAmount: number;       // What they've bought from the business (CUSTOMER role)
   inventory: string[];           // Item IDs they own/possess
   

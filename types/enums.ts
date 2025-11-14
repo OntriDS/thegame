@@ -7,12 +7,12 @@
 
 /** Business Structure - Single source of truth for sections and stations */
 export const BUSINESS_STRUCTURE = {
-  ADMIN:      ['Strategy', 'Projects', 'Inventory', 'Transport', 'Team', 'Materials', 'Equipment', 'Rent', 'Director'],
+  ADMIN:      ['Strategy', 'Projects', 'Inventory', 'Transport', 'Team', 'Materials', 'Equipment', 'Rent', 'Founder'],
   RESEARCH:   ['Classes', 'Studies', 'Development'],
   DESIGN:     ['Digital Art', 'Creative Process', 'Game Design', '3D Modeling', 'Animation'],
   PRODUCTION: ['Buy Orders', 'Making', 'Dispatches'],
   SALES:      ['Direct Sales', 'Feria Sales', 'Network Sales', 'Online Sales', 'Store Sales', 'Marketing', 'Bookings', 'Other Sales'],
-  PERSONAL:   ['Health', 'Family', 'Food', 'Home', 'Transport P', 'Rent P', 'Other P']
+  PERSONAL:   ['Health', 'Family', 'Food', 'Rewards', 'Earnings', 'Home', 'Transport P', 'Rent P', 'Other P' ]
 } as const;
 
 // Areas (top-level business areas)

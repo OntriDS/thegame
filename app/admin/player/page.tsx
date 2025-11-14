@@ -101,6 +101,7 @@ export default function PlayerPage() {
     j$ToUSD: 10,
   });
   const [personalAssets, setPersonalAssets] = useState<any | null>(null);
+  const [jungleCoinsBalance, setJungleCoinsBalance] = useState<number | undefined>(undefined);
   const [unexchangedPoints, setUnexchangedPoints] = useState<PointMap>(ZERO_POINTS);
   const [showPlayerModal, setShowPlayerModal] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
@@ -167,6 +168,20 @@ export default function PlayerPage() {
       }));
       setPlayers(playersData ?? []);
       setPersonalAssets(personalAssetsData ?? null);
+      
+      // Fetch J$ balance for the main player (multiplayer-ready)
+      const mainPlayerId = playersData?.find((p) => p.id === PLAYER_ONE_ID)?.id || playersData?.[0]?.id;
+      if (mainPlayerId) {
+        try {
+          const j$BalanceData = await ClientAPI.getPlayerJungleCoinsBalance(mainPlayerId);
+          setJungleCoinsBalance(j$BalanceData?.totalJ$ ?? 0);
+        } catch (error) {
+          console.error('Failed to fetch J$ balance:', error);
+          setJungleCoinsBalance(0);
+        }
+      } else {
+        setJungleCoinsBalance(0);
+      }
       computeAndSetUnexchanged(entries);
       setIsHydrated(true);
     } catch (error) {
@@ -207,7 +222,7 @@ export default function PlayerPage() {
     [unexchangedPoints, conversionRates],
   );
 
-  const jHoldings = personalAssets?.personalJ$ ?? 0;
+  const jHoldings = jungleCoinsBalance ?? 0;
 
   if (!isHydrated) {
     return (
