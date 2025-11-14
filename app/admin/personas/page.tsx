@@ -205,19 +205,12 @@ export default function PersonasPage() {
                       </div>
 
                       <div className="flex items-center gap-3 text-xs pt-2 border-t">
-                        {character.jungleCoins > 0 && (
-                          <div className="flex items-center gap-1">
-                            <span className="font-semibold text-yellow-600 dark:text-yellow-400">
-                              {character.jungleCoins} J$
-                            </span>
-                          </div>
-                        )}
                         {character.purchasedAmount > 0 && (
                           <div className="flex items-center gap-1 text-muted-foreground">
                             <span>Purchased: ${character.purchasedAmount.toFixed(0)}</span>
                           </div>
                         )}
-                        {!character.jungleCoins && !character.purchasedAmount && (
+                        {!character.purchasedAmount && (
                           <span className="text-muted-foreground">No activity yet</span>
                         )}
                       </div>
