@@ -1012,7 +1012,6 @@ export const ClientAPI = {
 };
 
 // Historical placement: keep alias methods at the end to avoid duplicate keys
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 ClientAPI.getAccounts = async (): Promise<Account[]> => {
   const res = await fetch('/api/accounts');

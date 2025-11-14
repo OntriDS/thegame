@@ -85,7 +85,7 @@ export function PlayerProgressionContent({
               </div>
               <span className="font-semibold">Skill System Coming in V0.2</span>
             </div>
-            <p className="text-muted-foreground">Allocate skill points to improve your character's abilities!</p>
+            <p className="text-muted-foreground">Allocate skill points to improve your character&apos;s abilities!</p>
           </div>
         </CardContent>
       </Card>
@@ -236,7 +236,7 @@ export default function PlayerProgressionTab({
                   </div>
                   <span className="font-semibold">Skill System Coming in V0.2</span>
                 </div>
-                <p className="text-muted-foreground">Allocate skill points to improve your character's abilities!</p>
+                <p className="text-muted-foreground">Allocate skill points to improve your character&apos;s abilities!</p>
               </div>
             </CardContent>
           </Card>

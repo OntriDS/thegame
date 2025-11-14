@@ -96,7 +96,7 @@ export default function CascadeStatusConfirmationModal({
           <DialogDescription className="text-sm text-muted-foreground">
             {isReversal ? (
               <>
-                The template <strong>"{templateName}"</strong> status changed from{' '}
+                The template <strong>&quot;{templateName}&quot;</strong> status changed from{' '}
                 <span className={`font-medium ${getStatusColor(oldStatus)}`}>
                   {oldStatus}
                 </span>{' '}
@@ -108,7 +108,7 @@ export default function CascadeStatusConfirmationModal({
               </>
             ) : (
               <>
-                Template <strong>"{templateName}"</strong> status changed from{' '}
+                Template <strong>&quot;{templateName}&quot;</strong> status changed from{' '}
                 <span className={`font-medium ${getStatusColor(oldStatus)}`}>
                   {oldStatus}
                 </span>{' '}

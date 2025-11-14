@@ -59,7 +59,29 @@ export function useEntityUpdates(kind: EntityKind, onUpdate: () => void | Promis
 export function useMultipleEntityUpdates(
   subscriptions: Array<{ kind: EntityKind; onUpdate: () => void | Promise<void> }>
 ) {
-  subscriptions.forEach(({ kind, onUpdate }) => {
-    useEntityUpdates(kind, onUpdate);
-  });
+  const callbacksRef = useRef(new Map<EntityKind, () => void | Promise<void>>());
+
+  useEffect(() => {
+    callbacksRef.current.clear();
+    subscriptions.forEach(({ kind, onUpdate }) => {
+      callbacksRef.current.set(kind, onUpdate);
+    });
+
+    const handlers = subscriptions.map(({ kind }) => {
+      const handler = () => {
+        const cb = callbacksRef.current.get(kind);
+        if (cb) void cb();
+      };
+      const eventName = getEventName(kind);
+      window.addEventListener(eventName, handler);
+      return { kind, handler };
+    });
+
+    return () => {
+      handlers.forEach(({ kind, handler }) => {
+        const eventName = getEventName(kind);
+        window.removeEventListener(eventName, handler);
+      });
+    };
+  }, [subscriptions]);
 }

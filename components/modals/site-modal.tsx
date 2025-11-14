@@ -266,7 +266,7 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
             {/* Column Headers */}
             {isNoneSite(site) && (
               <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md text-sm text-amber-800 dark:text-amber-200">
-                ⚠️ "None" is a protected system site. This site cannot be edited or deactivated.
+                ⚠️ &quot;None&quot; is a protected system site. This site cannot be edited or deactivated.
               </div>
             )}
 
@@ -482,7 +482,7 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
               )}
               {isNoneSite(site) && (
                 <div className="text-xs text-muted-foreground italic">
-                  "None" is a protected system site and cannot be deleted
+                  &quot;None&quot; is a protected system site and cannot be deleted
                 </div>
               )}
             </div>

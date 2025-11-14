@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -30,13 +30,7 @@ export default function CharacterInventorySubmodal({
   const [ownedSites, setOwnedSites] = useState<Site[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (open) {
-      loadInventory();
-    }
-  }, [open, characterId]);
-
-  const loadInventory = async () => {
+  const loadInventory = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -90,7 +84,13 @@ export default function CharacterInventorySubmodal({
     } finally {
       setLoading(false);
     }
-  };
+  }, [characterId]);
+
+  useEffect(() => {
+    if (open) {
+      loadInventory();
+    }
+  }, [open, loadInventory]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

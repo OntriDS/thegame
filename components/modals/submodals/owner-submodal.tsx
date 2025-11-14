@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -43,14 +43,7 @@ export default function OwnerSubmodal({
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<'primary' | 'additional'>('primary');
 
-  // Load data when modal opens
-  useEffect(() => {
-    if (open) {
-      loadData();
-    }
-  }, [open, entityId]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -83,7 +76,14 @@ export default function OwnerSubmodal({
     } finally {
       setLoading(false);
     }
-  };
+  }, [entityType, entityId, currentPrimaryOwnerId, linkType]);
+
+  // Load data when modal opens
+  useEffect(() => {
+    if (open) {
+      loadData();
+    }
+  }, [open, loadData]);
 
   // Filter characters based on search term
   const currentOwnerIds = new Set([

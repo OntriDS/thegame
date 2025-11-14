@@ -79,19 +79,29 @@ export function useKeyboardShortcuts({
     }
   };
 
-  const registerTextInsertionShortcut = (combo: string, insertion: string) => {
-    useRegisterShortcut({
-      scope,
-      combo,
-      allowInInputs: true,
-      priority: 100,
-      handler: (event) => insertTextAtSelection(event, insertion),
-    });
-  };
+  useRegisterShortcut({
+    scope,
+    combo: 'alt+d',
+    allowInInputs: true,
+    priority: 100,
+    handler: (event) => insertTextAtSelection(event, '• '),
+  });
 
-  registerTextInsertionShortcut('alt+d', '• ');
-  registerTextInsertionShortcut('alt+y', '✅ ');
-  registerTextInsertionShortcut('alt+n', '❌ ');
+  useRegisterShortcut({
+    scope,
+    combo: 'alt+y',
+    allowInInputs: true,
+    priority: 100,
+    handler: (event) => insertTextAtSelection(event, '✅ '),
+  });
+
+  useRegisterShortcut({
+    scope,
+    combo: 'alt+n',
+    allowInInputs: true,
+    priority: 100,
+    handler: (event) => insertTextAtSelection(event, '❌ '),
+  });
 
   // Arrow Key Navigation (ArrowUp/ArrowDown for task reordering)
   // Register handlers that check for Alt key in the event
