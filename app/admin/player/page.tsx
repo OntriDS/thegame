@@ -300,28 +300,28 @@ export default function PlayerPage() {
                 { key: 'fpPreview', label: 'FP → J$' },
                 { key: 'hpPreview', label: 'HP → J$' },
               ].map((item) => (
-                <div key={item.key} className="p-3 bg-muted/20 rounded-lg text-center">
+                <div key={item.key} className="p-3 bg-muted/10 rounded-lg text-center border border-muted">
                   <div className="text-xs text-muted-foreground mb-1">{item.label}</div>
-                  <div className="text-lg font-semibold">
+                  <div className="text-lg font-semibold text-muted-foreground">
                     {preview[item.key as keyof typeof preview].toFixed(2)} J$
                   </div>
-                  <div className="text-sm text-primary mt-1">
+                  <div className="text-sm text-muted-foreground mt-1">
                     ${(preview[item.key as keyof typeof preview] * conversionRates.j$ToUSD).toFixed(2)} USD
                   </div>
                 </div>
               ))}
-              <div className="p-3 bg-primary/10 rounded-lg text-center border-2 border-primary/20">
+              <div className="p-3 bg-muted/10 rounded-lg text-center border border-muted">
                 <div className="text-xs text-muted-foreground mb-1">Total Preview</div>
-                <div className="text-lg font-semibold text-primary">
+                <div className="text-lg font-semibold text-muted-foreground">
                   {preview.totalPreview.toFixed(2)} J$
                 </div>
-                <div className="text-sm text-primary font-medium">
+                <div className="text-sm text-muted-foreground font-medium">
                   ${(preview.totalPreview * conversionRates.j$ToUSD).toFixed(2)} USD
                 </div>
               </div>
-              <div className="p-3 bg-green-50 dark:bg-green-950/30 rounded-lg text-center border-2 border-green-200 dark:border-green-800">
+              <div className="p-3 bg-muted/10 rounded-lg text-center border border-muted">
                 <div className="text-xs text-muted-foreground mb-1">Unexchanged → USD</div>
-                <div className="text-lg font-semibold text-green-600">
+                <div className="text-lg font-semibold text-muted-foreground">
                   ${(preview.totalPreview * conversionRates.j$ToUSD).toFixed(2)}
                 </div>
                 <div className="text-xs text-muted-foreground mt-1">
