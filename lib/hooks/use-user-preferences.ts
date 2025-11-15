@@ -11,6 +11,7 @@ export function useUserPreferences() {
   const [isLoading, setIsLoading] = useState(true);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const pendingSavesRef = useRef<Map<string, any>>(new Map());
+  const preferencesRef = useRef<UserPreferences>({});
 
   // Load preferences from KV
   const loadPreferences = useCallback(async () => {
@@ -23,9 +24,12 @@ export function useUserPreferences() {
         if (response.ok) {
           const kvPrefs = await response.json();
           setPreferences(kvPrefs);
+          preferencesRef.current = kvPrefs;
         } else {
           // If KV fails, start with empty preferences
           setPreferences({});
+      preferencesRef.current = {};
+          preferencesRef.current = {};
         }
       } catch (error) {
         console.warn('Failed to load preferences from KV:', error);
@@ -65,7 +69,11 @@ export function useUserPreferences() {
   const setPreference = useCallback(async (key: string, value: any) => {
     try {
       // Update local state immediately (optimistic update)
-      setPreferences(prev => ({ ...prev, [key]: value }));
+      setPreferences(prev => {
+        const updated = { ...prev, [key]: value };
+        preferencesRef.current = updated;
+        return updated;
+      });
 
       // Add to pending saves
       pendingSavesRef.current.set(key, value);
@@ -87,8 +95,8 @@ export function useUserPreferences() {
 
   // Get a specific preference value
   const getPreference = useCallback((key: string, defaultValue?: any) => {
-    return preferences[key] ?? defaultValue;
-  }, [preferences]);
+    return preferencesRef.current[key] ?? defaultValue;
+  }, []);
 
   // Load preferences on mount
   useEffect(() => {
