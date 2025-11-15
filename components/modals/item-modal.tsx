@@ -53,10 +53,11 @@ const getDefaultRestockableForType = (itemType: ItemType): boolean => {
 export default function ItemModal({ item, defaultItemType, open, onOpenChange, onSave }: ItemModalProps) {
   const { getPreference, setPreference } = useUserPreferences();
   
-  const getLastUsedStation = (): Station => {
+  // Memoized to prevent dependency changes on every render
+  const getLastUsedStation = useCallback((): Station => {
     const saved = getPreference('item-modal-last-station');
     return (saved as Station) || ('Strategy' as Station);
-  };
+  }, [getPreference]);
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');

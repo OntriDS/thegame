@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import DeleteModal from './submodals/delete-submodal';
 import LinksRelationshipsModal from './submodals/links-relationships-submodal';
@@ -77,18 +77,18 @@ interface FinancialsModalProps {
 export default function FinancialsModal({ record, year, month, open, onOpenChange, onSave, onDelete }: FinancialsModalProps) {
   const { getPreference, setPreference } = useUserPreferences();
   
-  // User preference functions
-  const getLastUsedStation = (): Station => {
+  // User preference functions - memoized to prevent dependency changes
+  const getLastUsedStation = useCallback((): Station => {
     const saved = getPreference('finrec-modal-last-station');
     return (saved as Station) || ('Strategy' as Station);
-  };
+  }, [getPreference]);
 
-  const getLastUsedCategory = (station: Station): Station => {
+  const getLastUsedCategory = useCallback((station: Station): Station => {
     const saved = getPreference(`finrec-modal-last-category-${station}`);
     if (saved) return saved as Station;
     const categories = BUSINESS_STRUCTURE[station as keyof typeof BUSINESS_STRUCTURE];
     return categories && categories.length > 0 ? categories[0] : categories[0] as Station;
-  };
+  }, [getPreference]);
 
 
   // Helper function to get the correct value format for SearchableSelect
