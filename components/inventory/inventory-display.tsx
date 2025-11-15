@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { NumericInput } from '@/components/ui/numeric-input';
@@ -96,7 +96,7 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
       window.removeEventListener('importStarted', handleImportStarted);
       window.removeEventListener('importComplete', handleImportComplete);
     };
-  }, []);
+  }, [loadItems]);
 
   // Save thresholds to preferences when they change (but not during initial load)
   useEffect(() => {
@@ -206,7 +206,7 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
     }
   };
 
-  const loadItems = async () => {
+  const loadItems = useCallback(async () => {
     try {
       // First, load items for the active tab (fast, prioritized)
       const activeTabItemType = getItemTypeForTab(activeTab);
@@ -219,7 +219,7 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
     } catch (error) {
       console.error('Failed to load items:', error);
     }
-  };
+  }, [activeTab]);
 
   // Listen for item updates to refresh the list
   useEntityUpdates('item', loadItems);
