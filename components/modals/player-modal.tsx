@@ -53,11 +53,11 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
   const [personalAssets, setPersonalAssets] = useState<any>(null);
   const [jungleCoinsBalance, setJungleCoinsBalance] = useState<number>(0);
   const [conversionRates, setConversionRates] = useState({
-    xpToJ$: 6,
-    rpToJ$: 12,
-    fpToJ$: 8,
-    hpToJ$: 10,
-    j$ToUSD: 10, // Default fallback
+    xpToJ$: 1,
+    rpToJ$: 1,
+    fpToJ$: 1,
+    hpToJ$: 1,
+    j$ToUSD: 10,
   });
 
   // Current month metrics (for State tab)
@@ -103,10 +103,10 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
               ClientAPI.getPlayerConversionRates().catch(error => {
                 console.error('Failed to load conversion rates:', error);
                 return { 
-                  xpToJ$: 6,
-                  rpToJ$: 12,
-                  fpToJ$: 8,
-                  hpToJ$: 10,
+                  xpToJ$: 1,
+                  rpToJ$: 1,
+                  fpToJ$: 1,
+                  hpToJ$: 1,
                   j$ToUSD: 10 
                 };
               })
@@ -117,10 +117,10 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
             setPersonalAssets(assets);
             setJungleCoinsBalance(j$Balance);
             setConversionRates({
-              xpToJ$: Number(ratesData?.xpToJ$ ?? 6),
-              rpToJ$: Number(ratesData?.rpToJ$ ?? 12),
-              fpToJ$: Number(ratesData?.fpToJ$ ?? 8),
-              hpToJ$: Number(ratesData?.hpToJ$ ?? 10),
+              xpToJ$: Number(ratesData?.xpToJ$ ?? 1),
+              rpToJ$: Number(ratesData?.rpToJ$ ?? 1),
+              fpToJ$: Number(ratesData?.fpToJ$ ?? 1),
+              hpToJ$: Number(ratesData?.hpToJ$ ?? 1),
               j$ToUSD: Number(ratesData?.j$ToUSD ?? 10),
             });
           }

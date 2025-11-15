@@ -82,6 +82,37 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
   const [selectedColumns, setSelectedColumns] = useState<Set<string>>(new Set(['own', 'consignment']));
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
 
+  // Helper to get ItemType from InventoryTab
+  const getItemTypeForTab = (tab: InventoryTab): ItemType => {
+    switch (tab) {
+      case InventoryTab.DIGITAL: return ItemType.DIGITAL;
+      case InventoryTab.ARTWORKS: return ItemType.ARTWORK;
+      case InventoryTab.STICKERS: return ItemType.STICKER;
+      case InventoryTab.PRINTS: return ItemType.PRINT;
+      case InventoryTab.MERCH: return ItemType.MERCH;
+      case InventoryTab.CRAFT: return ItemType.CRAFT;
+      case InventoryTab.MATERIALS: return ItemType.MATERIAL;
+      case InventoryTab.EQUIPMENT: return ItemType.EQUIPMENT;
+      case InventoryTab.BUNDLES: return ItemType.BUNDLE;
+      default: return ItemType.STICKER;
+    }
+  };
+
+  const loadItems = useCallback(async () => {
+    try {
+      // First, load items for the active tab (fast, prioritized)
+      const activeTabItemType = getItemTypeForTab(activeTab);
+      const activeTabItems = await ClientAPI.getItems(activeTabItemType);
+      setItems(activeTabItems); // Show active tab immediately
+      
+      // Then load all items in the background (for instant tab switching)
+      const allItems = await ClientAPI.getItems();
+      setItems(allItems); // Update with all items once loaded
+    } catch (error) {
+      console.error('Failed to load items:', error);
+    }
+  }, [activeTab]);
+
   useEffect(() => {
     // Load items when component mounts
     loadItems();
@@ -189,37 +220,6 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
     // Mark preferences as loaded to enable saving
     setPreferencesLoaded(true);
   }, [getPreference]);
-
-  // Helper to get ItemType from InventoryTab
-  const getItemTypeForTab = (tab: InventoryTab): ItemType => {
-    switch (tab) {
-      case InventoryTab.DIGITAL: return ItemType.DIGITAL;
-      case InventoryTab.ARTWORKS: return ItemType.ARTWORK;
-      case InventoryTab.STICKERS: return ItemType.STICKER;
-      case InventoryTab.PRINTS: return ItemType.PRINT;
-      case InventoryTab.MERCH: return ItemType.MERCH;
-      case InventoryTab.CRAFT: return ItemType.CRAFT;
-      case InventoryTab.MATERIALS: return ItemType.MATERIAL;
-      case InventoryTab.EQUIPMENT: return ItemType.EQUIPMENT;
-      case InventoryTab.BUNDLES: return ItemType.BUNDLE;
-      default: return ItemType.STICKER;
-    }
-  };
-
-  const loadItems = useCallback(async () => {
-    try {
-      // First, load items for the active tab (fast, prioritized)
-      const activeTabItemType = getItemTypeForTab(activeTab);
-      const activeTabItems = await ClientAPI.getItems(activeTabItemType);
-      setItems(activeTabItems); // Show active tab immediately
-      
-      // Then load all items in the background (for instant tab switching)
-      const allItems = await ClientAPI.getItems();
-      setItems(allItems); // Update with all items once loaded
-    } catch (error) {
-      console.error('Failed to load items:', error);
-    }
-  }, [activeTab]);
 
   // Listen for item updates to refresh the list
   useEntityUpdates('item', loadItems);
