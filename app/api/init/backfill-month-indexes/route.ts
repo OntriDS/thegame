@@ -59,8 +59,12 @@ export async function POST(req: NextRequest) {
     // Financials: year/month
     const financials = await repoGetAllFinancials();
     for (const f of financials) {
-      if (!f.year || !f.month) continue;
-      const d = new Date(f.year, f.month - 1, 1);
+      // Prefer explicit year/month; otherwise fall back to createdAt
+      const fallbackDate = (f as any).createdAt ? new Date((f as any).createdAt) : null;
+      const d = (f.year && f.month)
+        ? new Date(f.year, f.month - 1, 1)
+        : fallbackDate;
+      if (!d) continue;
       const mmyy = formatMonthKey(d);
       await kvSAdd(buildMonthIndexKey(EntityType.FINANCIAL, mmyy), f.id);
       added++;

@@ -668,12 +668,10 @@ export const ClientAPI = {
   
   // Financial records filtering methods
   getFinancialRecordsByMonth: async (year: number, month: number, type: 'company' | 'personal'): Promise<FinancialRecord[]> => {
-    const allRecords = await ClientAPI.getFinancialRecords();
-    return allRecords.filter(record => 
-      record.year === year && 
-      record.month === month && 
-      record.type === type
-    );
+    // Delegate month/year filtering to the server (uses month indexes),
+    // then filter by type on the client.
+    const monthRecords = await ClientAPI.getFinancialRecords(month, year);
+    return monthRecords.filter(record => record.type === type);
   },
 
   // Additional methods needed by components
