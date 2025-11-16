@@ -32,6 +32,7 @@ interface SettingsPanelProps {
 export function SettingsPanel({ onStatusUpdate }: SettingsPanelProps) {
   const [status, setStatus] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
+  const [monthIndexBackfilled, setMonthIndexBackfilled] = useState(false);
   
   // Modal states
   const [showClearLogsModal, setShowClearLogsModal] = useState(false);
@@ -55,6 +56,27 @@ export function SettingsPanel({ onStatusUpdate }: SettingsPanelProps) {
         onStatusUpdate('');
       }
     }, DAY_IN_MS / 24 / 60 / 60 * timeout);
+  };
+
+  const handleBackfillMonthIndexes = async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch('/api/init/backfill-month-indexes', {
+        method: 'POST',
+        credentials: 'include'
+      });
+      const result = await res.json();
+      if (res.ok && result?.success) {
+        setMonthIndexBackfilled(true);
+        updateStatus(`✅ Month indexes backfilled (${result.indexed} indexed)`);
+      } else {
+        updateStatus(`❌ Failed to backfill month indexes`, true);
+      }
+    } catch (e) {
+      updateStatus('❌ Failed to backfill month indexes', true);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleClearLogs = async () => {
@@ -322,6 +344,15 @@ export function SettingsPanel({ onStatusUpdate }: SettingsPanelProps) {
             <Button onClick={handleClearLogs} variant="outline" disabled={isLoading}>
               <Trash2 className="h-4 w-4 mr-2" />
               Clear Logs
+            </Button>
+
+            <Button 
+              onClick={handleBackfillMonthIndexes} 
+              variant="outline" 
+              disabled={isLoading || monthIndexBackfilled}
+            >
+              <Database className="h-4 w-4 mr-2" />
+              {monthIndexBackfilled ? 'Month Indexes Backfilled' : 'Backfill Month Indexes (One-time)'}
             </Button>
             
             <Button onClick={handleClearCache} variant="outline" disabled={isLoading}>

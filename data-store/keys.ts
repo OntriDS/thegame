@@ -36,6 +36,11 @@ export function buildArchiveMonthsKey(): string {
   return 'archive:months';
 }
 
+export function buildMonthIndexKey(entity: string, mmyy: string): string {
+  const monthKey = normalizeMonthKey(mmyy);
+  return `index:${entity}:by-month:${monthKey}`;
+}
+
 export function buildLinksIndexKey(entityType: string, id: string): string {
   return `index:links:by-entity:${entityType}:${id}`; // set of link ids
 }

@@ -1,6 +1,7 @@
 // lib/utils/date-utils.ts
 // Centralized date formatting utilities using app constants
 import { format, parseISO, isValid } from 'date-fns';
+import type { Task, Sale, FinancialRecord, Item } from '@/types/entities';
 import { 
   DATE_FORMAT_DISPLAY, 
   DATE_FORMAT_INPUT, 
@@ -158,6 +159,73 @@ export function getCurrentDisplayDate(): string {
  */
 export function getCurrentInputDate(): string {
   return formatInputDate(new Date());
+}
+
+// ============================================================================
+// Active vs Archive: Canonical month field helpers
+// ============================================================================
+
+/**
+ * Get the month (1-12) for a given entity based on canonical month fields.
+ * - FinancialRecord: entity.month
+ * - Sale: saleDate (fallback createdAt)
+ * - Task: collectedAt → doneAt → createdAt
+ * - Item: createdAt (active inventory context)
+ */
+export function getEntityMonth(entity: Task | Sale | FinancialRecord | Item): number {
+  if ((entity as FinancialRecord).year !== undefined && (entity as FinancialRecord).month !== undefined) {
+    return (entity as FinancialRecord).month;
+  }
+  if ((entity as Sale).saleDate !== undefined) {
+    const date = (entity as Sale).saleDate || (entity as any).createdAt;
+    return date ? (new Date(date)).getMonth() + 1 : (new Date().getMonth() + 1);
+  }
+  if ((entity as any).collectedAt !== undefined || (entity as any).doneAt !== undefined || (entity as any).createdAt !== undefined) {
+    const anyEntity = entity as any;
+    const date: Date | string | null =
+      anyEntity.collectedAt || anyEntity.doneAt || anyEntity.createdAt || null;
+    return date ? (new Date(date)).getMonth() + 1 : (new Date().getMonth() + 1);
+  }
+  return new Date().getMonth() + 1;
+}
+
+/**
+ * Get the year (YYYY) for a given entity based on canonical month fields.
+ * - FinancialRecord: entity.year
+ * - Sale: saleDate (fallback createdAt)
+ * - Task: collectedAt → doneAt → createdAt
+ * - Item: createdAt (active inventory context)
+ */
+export function getEntityYear(entity: Task | Sale | FinancialRecord | Item): number {
+  if ((entity as FinancialRecord).year !== undefined && (entity as FinancialRecord).month !== undefined) {
+    return (entity as FinancialRecord).year;
+  }
+  if ((entity as Sale).saleDate !== undefined) {
+    const date = (entity as Sale).saleDate || (entity as any).createdAt;
+    return date ? (new Date(date)).getFullYear() : (new Date().getFullYear());
+  }
+  if ((entity as any).collectedAt !== undefined || (entity as any).doneAt !== undefined || (entity as any).createdAt !== undefined) {
+    const anyEntity = entity as any;
+    const date: Date | string | null =
+      anyEntity.collectedAt || anyEntity.doneAt || anyEntity.createdAt || null;
+    return date ? (new Date(date)).getFullYear() : (new Date().getFullYear());
+  }
+  return new Date().getFullYear();
+}
+
+/**
+ * Determine if an entity should be considered archived relative to a given (month, year).
+ * Archived when entity.isCollected is true AND (entity's month/year != provided month/year).
+ */
+export function isEntityArchived(
+  entity: Task | Sale | FinancialRecord | Item,
+  currentMonth: number,
+  currentYear: number
+): boolean {
+  if (!(entity as any).isCollected) return false;
+  const m = getEntityMonth(entity);
+  const y = getEntityYear(entity);
+  return m !== currentMonth || y !== currentYear;
 }
 
 /**

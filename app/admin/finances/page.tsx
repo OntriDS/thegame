@@ -205,19 +205,12 @@ export default function FinancesPage() {
   }, []);
 
   const loadSummaries = useCallback(async () => {
-    const records = await ClientAPI.getFinancialRecords();
-    const companyRecords = records.filter(r => {
-      if (filterByMonth) {
-        return r.year === currentYear && r.month === currentMonth && r.type === 'company';
-      }
-      return r.type === 'company';
-    });
-    const personalRecords = records.filter(r => {
-      if (filterByMonth) {
-        return r.year === currentYear && r.month === currentMonth && r.type === 'personal';
-      }
-      return r.type === 'personal';
-    });
+    const records = await ClientAPI.getFinancialRecords(
+      filterByMonth ? currentMonth : undefined,
+      filterByMonth ? currentYear : undefined
+    );
+    const companyRecords = records.filter(r => r.type === 'company');
+    const personalRecords = records.filter(r => r.type === 'personal');
     
     // Aggregate company records by station using DRY utility
     const companyStations = getCompanyAreas().flatMap(area => BUSINESS_STRUCTURE[area]);

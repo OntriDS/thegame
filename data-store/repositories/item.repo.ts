@@ -1,8 +1,9 @@
 // data-store/repositories/item.repo.ts
 import { kvGet, kvMGet, kvSet, kvDel, kvSAdd, kvSRem, kvSMembers } from '../kv';
-import { buildDataKey, buildIndexKey } from '../keys';
+import { buildDataKey, buildIndexKey, buildMonthIndexKey } from '../keys';
 import { EntityType, ItemType } from '@/types/enums';
 import type { Item } from '@/types/entities';
+import { formatMonthKey } from '@/lib/utils/date-utils';
 
 const ENTITY = EntityType.ITEM;
 
@@ -84,6 +85,12 @@ export async function upsertItem(item: Item): Promise<Item> {
   
   await kvSet(key, item);
   await kvSAdd(indexKey, item.id);
+
+  // Maintain month index (createdAt for active inventory context)
+  if (item.createdAt) {
+    const currentMonthKey = formatMonthKey(item.createdAt);
+    await kvSAdd(buildMonthIndexKey(ENTITY, currentMonthKey), item.id);
+  }
   
   // Maintain type index
   const typeIndexKey = `index:${ENTITY}:type:${item.type}`;
@@ -93,6 +100,15 @@ export async function upsertItem(item: Item): Promise<Item> {
   if (previousItem && previousItem.type !== item.type) {
     const oldTypeIndexKey = `index:${ENTITY}:type:${previousItem.type}`;
     await kvSRem(oldTypeIndexKey, item.id);
+  }
+
+  // Clean up old month index if month changed
+  if (previousItem?.createdAt && item.createdAt) {
+    const prevMonthKey = formatMonthKey(previousItem.createdAt);
+    const currMonthKey = formatMonthKey(item.createdAt);
+    if (prevMonthKey !== currMonthKey) {
+      await kvSRem(buildMonthIndexKey(ENTITY, prevMonthKey), item.id);
+    }
   }
   
   // Maintain sourceTaskId index
@@ -129,6 +145,10 @@ export async function deleteItem(id: string): Promise<void> {
   // Get item to clean up indexes
   const item = await kvGet<Item>(key);
   if (item) {
+    if (item.createdAt) {
+      const prevMonthKey = formatMonthKey(item.createdAt);
+      await kvSRem(buildMonthIndexKey(ENTITY, prevMonthKey), id);
+    }
     // Clean up type index
     const typeIndexKey = `index:${ENTITY}:type:${item.type}`;
     await kvSRem(typeIndexKey, id);

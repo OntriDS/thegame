@@ -18,8 +18,13 @@ export const ClientAPI = {
   // ============================================================================
   // TASKS - Task management operations
   // ============================================================================
-  getTasks: async (): Promise<Task[]> => {
-    const res = await fetch('/api/tasks');
+  getTasks: async (month?: number, year?: number): Promise<Task[]> => {
+    let url = '/api/tasks';
+    const params = new URLSearchParams();
+    if (typeof month === 'number') params.append('month', String(month));
+    if (typeof year === 'number') params.append('year', String(year));
+    if (params.toString()) url += `?${params.toString()}`;
+    const res = await fetch(url);
     if (!res.ok) throw new Error('Failed to fetch tasks');
     return await res.json();
   },
@@ -78,12 +83,16 @@ export const ClientAPI = {
   // ============================================================================
   // ITEMS - Item management operations
   // ============================================================================
-  getItems: async (itemTypes?: string | string[]): Promise<Item[]> => {
-    let url = '/api/items';
+  getItems: async (itemTypes?: string | string[], month?: number, year?: number): Promise<Item[]> => {
+    let base = '/api/items';
+    const params = new URLSearchParams();
     if (itemTypes) {
       const types = Array.isArray(itemTypes) ? itemTypes.join(',') : itemTypes;
-      url += `?type=${encodeURIComponent(types)}`;
+      params.append('type', types);
     }
+    if (typeof month === 'number') params.append('month', String(month));
+    if (typeof year === 'number') params.append('year', String(year));
+    const url = params.toString() ? `${base}?${params.toString()}` : base;
     const res = await fetch(url);
     if (!res.ok) throw new Error('Failed to fetch items');
     return await res.json();
@@ -136,8 +145,13 @@ export const ClientAPI = {
   // ============================================================================
   // SALES - Sales management operations
   // ============================================================================
-  getSales: async (): Promise<Sale[]> => {
-    const res = await fetch('/api/sales');
+  getSales: async (month?: number, year?: number): Promise<Sale[]> => {
+    let url = '/api/sales';
+    const params = new URLSearchParams();
+    if (typeof month === 'number') params.append('month', String(month));
+    if (typeof year === 'number') params.append('year', String(year));
+    if (params.toString()) url += `?${params.toString()}`;
+    const res = await fetch(url);
     if (!res.ok) throw new Error('Failed to fetch sales');
     return await res.json();
   },
@@ -177,8 +191,13 @@ export const ClientAPI = {
   // ============================================================================
   // FINANCIALS - Financial records management operations
   // ============================================================================
-  getFinancialRecords: async (): Promise<FinancialRecord[]> => {
-    const res = await fetch('/api/financials');
+  getFinancialRecords: async (month?: number, year?: number): Promise<FinancialRecord[]> => {
+    let url = '/api/financials';
+    const params = new URLSearchParams();
+    if (typeof month === 'number') params.append('month', String(month));
+    if (typeof year === 'number') params.append('year', String(year));
+    if (params.toString()) url += `?${params.toString()}`;
+    const res = await fetch(url);
     if (!res.ok) throw new Error('Failed to fetch financials');
     return await res.json();
   },

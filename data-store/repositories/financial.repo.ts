@@ -1,8 +1,9 @@
 // data-store/repositories/financial.repo.ts
 import { kvGet, kvMGet, kvSet, kvDel, kvSAdd, kvSRem, kvSMembers } from '../kv';
-import { buildDataKey, buildIndexKey } from '../keys';
+import { buildDataKey, buildIndexKey, buildMonthIndexKey } from '../keys';
 import { EntityType } from '@/types/enums';
 import type { FinancialRecord } from '@/types/entities';
+import { formatMonthKey } from '@/lib/utils/date-utils';
 
 const ENTITY = EntityType.FINANCIAL;
 
@@ -58,6 +59,13 @@ export async function upsertFinancial(financial: FinancialRecord): Promise<Finan
   
   await kvSet(key, financial);
   await kvSAdd(indexKey, financial.id);
+
+  // Maintain month index using explicit year/month
+  if (financial.year && financial.month) {
+    const monthDate = new Date(financial.year, (financial.month || 1) - 1, 1);
+    const currentMonthKey = formatMonthKey(monthDate);
+    await kvSAdd(buildMonthIndexKey(ENTITY, currentMonthKey), financial.id);
+  }
   
   // Maintain sourceTaskId index
   if (financial.sourceTaskId) {
@@ -82,6 +90,15 @@ export async function upsertFinancial(financial: FinancialRecord): Promise<Finan
     const oldSourceSaleIndexKey = `index:${ENTITY}:sourceSaleId:${previousFinancial.sourceSaleId}`;
     await kvSRem(oldSourceSaleIndexKey, financial.id);
   }
+
+  // Clean up old month index if month/year changed
+  if (previousFinancial?.year && previousFinancial?.month && financial.year && financial.month) {
+    const prevMonthKey = formatMonthKey(new Date(previousFinancial.year, previousFinancial.month - 1, 1));
+    const currMonthKey = formatMonthKey(new Date(financial.year, financial.month - 1, 1));
+    if (prevMonthKey !== currMonthKey) {
+      await kvSRem(buildMonthIndexKey(ENTITY, prevMonthKey), financial.id);
+    }
+  }
   
   return financial;
 }
@@ -99,6 +116,10 @@ export async function deleteFinancial(id: string): Promise<void> {
   if (financial?.sourceSaleId) {
     const sourceSaleIndexKey = `index:${ENTITY}:sourceSaleId:${financial.sourceSaleId}`;
     await kvSRem(sourceSaleIndexKey, id);
+  }
+  if (financial?.year && financial?.month) {
+    const prevMonthKey = formatMonthKey(new Date(financial.year, financial.month - 1, 1));
+    await kvSRem(buildMonthIndexKey(ENTITY, prevMonthKey), id);
   }
   
   await kvDel(key);

@@ -2,7 +2,7 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { v4 as uuid } from 'uuid';
 import type { Item } from '@/types/entities';
-import { getAllItems, getItemsByType, upsertItem } from '@/data-store/datastore';
+import { getAllItems, getItemsByType, upsertItem, getItemsForMonth } from '@/data-store/datastore';
 import { requireAdminAuth } from '@/lib/api-auth';
 
 // Force dynamic rendering - this route accesses cookies
@@ -16,15 +16,41 @@ export async function GET(req: NextRequest) {
   // Check for type filter in query params
   const searchParams = req.nextUrl.searchParams;
   const typeFilter = searchParams.get('type');
+  const monthParam = searchParams.get('month');
+  const yearParam = searchParams.get('year');
+
+  const normalizeYear = (y: string | null): number | null => {
+    if (!y) return null;
+    const n = parseInt(y, 10);
+    if (isNaN(n)) return null;
+    return n < 100 ? 2000 + n : n;
+  };
+  const parseMonth = (m: string | null): number | null => {
+    if (!m) return null;
+    const n = parseInt(m, 10);
+    if (isNaN(n) || n < 1 || n > 12) return null;
+    return n;
+  };
+
+  const month = parseMonth(monthParam);
+  const year = normalizeYear(yearParam);
   
   let items: Item[];
-  if (typeFilter) {
+  if (month && year) {
+    items = await getItemsForMonth(year, month);
+    // Apply optional type filter on top of month scope
+    if (typeFilter) {
+      const types = typeFilter.split(',').map(t => t.trim());
+      items = items.filter(i => types.includes(i.type as any));
+    }
+  } else if (typeFilter) {
     // Support comma-separated types: ?type=Sticker,Print
     const types = typeFilter.split(',').map(t => t.trim());
     items = await getItemsByType(types);
   } else {
-    // No filter - get all items
-    items = await getAllItems();
+    // Default to current month scope
+    const now = new Date();
+    items = await getItemsForMonth(now.getFullYear(), now.getMonth() + 1);
   }
   
   return NextResponse.json(items);

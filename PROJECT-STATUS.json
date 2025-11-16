@@ -5,18 +5,15 @@
   "phasePlan": {
     "phase13.1": {
       "phaseName": "Archive System Foundation and basic Calendar and Schedule",
-      "status": "Not Started",
-      "description": "Create archive structure and monthly close workflow",
+      "status": "In Progress",
+      "description": "Create archive structure with monthly organization and entity archival",
       "deliverables": [
         "Create archives/ folder structure with monthly organization",
         "Implement archives/index.json for archived months index",
-        "Create monthly close functionality to move completed data",
-        "Move Done tasks to archive with proper status preservation",
+        "Move Collected tasks to archive with proper status preservation",
         "Move Sold items to archive maintaining final status",
         "Move all records to archive (inherently completed data)",
-        "Create summary generation for archived months",
-        "Update DataStore to remove archived data from active storage",
-        "Keep only current working set in active DataStore"
+        "Design and implement Active vs Archive data strategy (filters and views for working set)"
       ]
     },
     "Phase13.2": {
@@ -55,14 +52,16 @@
     "phase13.4": {
       "phaseName": "AI Agent System, PixelBrain",
       "status": "Not Started",
-      "description": "",
+      "description": "Implement automation tasks and AI agents including monthly close workflow",
       "deliverables": [
         "Define and Develop 'Pixel Brain', a 'Manager Agent' to Manage a Set of 'AI Agents'",
         "Create one AI Agent for Time Planning, one for Prepare classes and one for Tasks Organization",
         "Create one AI Marketing Agent to Manage Social Media Apps, Marketing Campaings and Content Creation",
         "Create one AI Agent for Data Analysis and Reporting of Business Data with Performance Metrics",
         "Create one AI Agent for Game Design improvements, Player Analysis and UX, Game Balance and Game Mechanics",
-        "Create a set of Automations: Voice to Text. Image to Text, Text to Speech, PDF Converter, Image Creator. "
+        "Create a set of Automations: Voice to Text. Image to Text, Text to Speech, PDF Converter, Image Creator",
+        "Implement Monthly Close Automation Task (orchestrates archiving of all completed entities)",
+        "Implement automated monthly summary generation and analysis based on archive data (post Monthly Close)"
       ]
     }
   },

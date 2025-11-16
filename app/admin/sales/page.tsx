@@ -14,6 +14,9 @@ import { formatDateDDMMYYYY } from "@/lib/constants/date-constants";
 import { getAllSiteNames } from "@/lib/utils/site-options-utils";
 import { Plus, Calendar, DollarSign, Package, TrendingUp } from "lucide-react";
 import SalesModal from "@/components/modals/sales-modal";
+import { MonthYearSelector } from "@/components/ui/month-year-selector";
+import { getCurrentMonth } from "@/lib/constants/date-constants";
+import { Switch } from "@/components/ui/switch";
 
 export default function SalesPage() {
   const { activeBg } = useThemeColors();
@@ -26,11 +29,15 @@ export default function SalesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [showSalesModal, setShowSalesModal] = useState(false);
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
+  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
+  const [currentMonth, setCurrentMonth] = useState(getCurrentMonth());
+  const [filterByMonth, setFilterByMonth] = useState(true);
 
   // Load sales data
   useEffect(() => {
     loadSales();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentYear, currentMonth, filterByMonth]);
 
   // Filter sales based on selected criteria
   useEffect(() => {
@@ -55,7 +62,10 @@ export default function SalesPage() {
     try {
       setIsLoading(true);
       const [salesData, sitesData] = await Promise.all([
-        ClientAPI.getSales(),
+        ClientAPI.getSales(
+          filterByMonth ? currentMonth : undefined,
+          filterByMonth ? currentYear : undefined
+        ),
         ClientAPI.getSites()
       ]);
       setSales(salesData);
@@ -162,10 +172,25 @@ export default function SalesPage() {
             Track sales performance, analyze trends, and manage transactions
           </p>
         </div>
-        <Button className="flex items-center gap-2" onClick={handleNewSale}>
-          <Plus className="h-4 w-4" />
-          New Sale
-        </Button>
+        <div className="flex items-center gap-4">
+          <MonthYearSelector
+            currentYear={currentYear}
+            currentMonth={currentMonth}
+            onYearChange={setCurrentYear}
+            onMonthChange={setCurrentMonth}
+          />
+          <div className="flex items-center gap-2 border rounded-md px-3 py-1.5">
+            <Switch
+              checked={filterByMonth}
+              onCheckedChange={setFilterByMonth}
+            />
+            <span className="text-sm text-muted-foreground">Filter by month</span>
+          </div>
+          <Button className="flex items-center gap-2" onClick={handleNewSale}>
+            <Plus className="h-4 w-4" />
+            New Sale
+          </Button>
+        </div>
       </div>
 
       {/* Summary Cards */}

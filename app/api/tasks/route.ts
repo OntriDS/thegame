@@ -2,7 +2,7 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { v4 as uuid } from 'uuid';
 import type { Task } from '@/types/entities';
-import { getAllTasks, upsertTask } from '@/data-store/datastore';
+import { getAllTasks, upsertTask, getTasksForMonth } from '@/data-store/datastore';
 import { requireAdminAuth } from '@/lib/api-auth';
 
 // Force dynamic rendering - this route accesses cookies
@@ -10,8 +10,41 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   if (!(await requireAdminAuth(req))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const tasks = await getAllTasks();
-  return NextResponse.json(tasks);
+  const params = req.nextUrl.searchParams;
+  const monthParam = params.get('month');
+  const yearParam = params.get('year');
+
+  const normalizeYear = (y: string | null): number | null => {
+    if (!y) return null;
+    const n = parseInt(y, 10);
+    if (isNaN(n)) return null;
+    // Accept YY or YYYY
+    if (n < 100) return 2000 + n;
+    return n;
+  };
+
+  const parseMonth = (m: string | null): number | null => {
+    if (!m) return null;
+    const n = parseInt(m, 10);
+    if (isNaN(n) || n < 1 || n > 12) return null;
+    return n;
+  };
+
+  const month = parseMonth(monthParam);
+  const year = normalizeYear(yearParam);
+
+  try {
+    let data: Task[];
+    if (month && year) {
+      data = await getTasksForMonth(year, month);
+    } else {
+      const now = new Date();
+      data = await getTasksForMonth(now.getFullYear(), now.getMonth() + 1);
+    }
+    return NextResponse.json(data);
+  } catch (error) {
+    return NextResponse.json({ error: 'Failed to fetch tasks' }, { status: 500 });
+  }
 }
 
 export async function POST(req: NextRequest) {

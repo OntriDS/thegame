@@ -2,7 +2,7 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { v4 as uuid } from 'uuid';
 import type { FinancialRecord } from '@/types/entities';
-import { getAllFinancials, upsertFinancial } from '@/data-store/datastore';
+import { getAllFinancials, upsertFinancial, getFinancialsForMonth } from '@/data-store/datastore';
 import { requireAdminAuth } from '@/lib/api-auth';
 
 // Force dynamic rendering - this route accesses cookies
@@ -10,8 +10,38 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   if (!(await requireAdminAuth(req))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const financials = await getAllFinancials();
-  return NextResponse.json(financials);
+  const params = req.nextUrl.searchParams;
+  const monthParam = params.get('month');
+  const yearParam = params.get('year');
+
+  const normalizeYear = (y: string | null): number | null => {
+    if (!y) return null;
+    const n = parseInt(y, 10);
+    if (isNaN(n)) return null;
+    return n < 100 ? 2000 + n : n;
+  };
+  const parseMonth = (m: string | null): number | null => {
+    if (!m) return null;
+    const n = parseInt(m, 10);
+    if (isNaN(n) || n < 1 || n > 12) return null;
+    return n;
+  };
+
+  const month = parseMonth(monthParam);
+  const year = normalizeYear(yearParam);
+
+  try {
+    let data: FinancialRecord[];
+    if (month && year) {
+      data = await getFinancialsForMonth(year, month);
+    } else {
+      const now = new Date();
+      data = await getFinancialsForMonth(now.getFullYear(), now.getMonth() + 1);
+    }
+    return NextResponse.json(data);
+  } catch (error) {
+    return NextResponse.json({ error: 'Failed to fetch financial records' }, { status: 500 });
+  }
 }
 
 export async function POST(req: NextRequest) {

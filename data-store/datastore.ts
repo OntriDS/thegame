@@ -72,7 +72,9 @@ import {
   rotateEntityLogsToMonth as workflowRotateEntityLogsToMonth,
   getEntityLogMonths as workflowGetEntityLogMonths
 } from '@/workflows/entities-logging';
-import { getCurrentMonthKey } from '@/lib/utils/date-utils';
+import { getCurrentMonthKey, formatMonthKey } from '@/lib/utils/date-utils';
+import { kvMGet, kvSMembers } from './kv';
+import { buildDataKey, buildMonthIndexKey } from './keys';
 import type { PlayerArchiveRow } from '@/types/archive';
 
 // TASKS
@@ -99,6 +101,16 @@ export async function upsertTask(task: Task, options?: { skipWorkflowEffects?: b
 export async function getAllTasks(): Promise<Task[]> {
   const tasks = await repoGetAllTasks();
   return tasks.filter(task => !task.isCollected);
+}
+
+// Phase 1 helpers: month-scoped, filter-after-load
+export async function getTasksForMonth(year: number, month: number): Promise<Task[]> {
+  const mmyy = formatMonthKey(new Date(year, month - 1, 1));
+  const ids = await kvSMembers(buildMonthIndexKey(EntityType.TASK, mmyy));
+  if (ids.length === 0) return [];
+  const keys = ids.map(id => buildDataKey(EntityType.TASK, id));
+  const tasks = await kvMGet<Task>(keys);
+  return tasks.filter((t): t is Task => t !== null && t !== undefined);
 }
 
 export async function getTaskById(id: string): Promise<Task | null> {
@@ -138,6 +150,15 @@ export async function upsertItem(item: Item, options?: { skipWorkflowEffects?: b
 
 export async function getAllItems(): Promise<Item[]> {
   return await repoGetAllItems();
+}
+
+export async function getItemsForMonth(year: number, month: number): Promise<Item[]> {
+  const mmyy = formatMonthKey(new Date(year, month - 1, 1));
+  const ids = await kvSMembers(buildMonthIndexKey(EntityType.ITEM, mmyy));
+  if (ids.length === 0) return [];
+  const keys = ids.map(id => buildDataKey(EntityType.ITEM, id));
+  const items = await kvMGet<Item>(keys);
+  return items.filter((i): i is Item => i !== null && i !== undefined);
 }
 
 export async function getItemById(id: string): Promise<Item | null> {
@@ -192,6 +213,15 @@ export async function getAllFinancials(): Promise<FinancialRecord[]> {
   return financials.filter(financial => !financial.isCollected);
 }
 
+export async function getFinancialsForMonth(year: number, month: number): Promise<FinancialRecord[]> {
+  const mmyy = formatMonthKey(new Date(year, month - 1, 1));
+  const ids = await kvSMembers(buildMonthIndexKey(EntityType.FINANCIAL, mmyy));
+  if (ids.length === 0) return [];
+  const keys = ids.map(id => buildDataKey(EntityType.FINANCIAL, id));
+  const financials = await kvMGet<FinancialRecord>(keys);
+  return financials.filter((f): f is FinancialRecord => f !== null && f !== undefined);
+}
+
 export async function getFinancialById(id: string): Promise<FinancialRecord | null> {
   return await repoGetFinancialById(id);
 }
@@ -236,6 +266,15 @@ export async function upsertSale(sale: Sale, options?: { skipWorkflowEffects?: b
 export async function getAllSales(): Promise<Sale[]> {
   const sales = await repoGetAllSales();
   return sales.filter(sale => !sale.isCollected);
+}
+
+export async function getSalesForMonth(year: number, month: number): Promise<Sale[]> {
+  const mmyy = formatMonthKey(new Date(year, month - 1, 1));
+  const ids = await kvSMembers(buildMonthIndexKey(EntityType.SALE, mmyy));
+  if (ids.length === 0) return [];
+  const keys = ids.map(id => buildDataKey(EntityType.SALE, id));
+  const sales = await kvMGet<Sale>(keys);
+  return sales.filter((s): s is Sale => s !== null && s !== undefined);
 }
 
 export async function getSaleById(id: string): Promise<Sale | null> {
