@@ -177,7 +177,7 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
       }
 
       // Create TaskSnapshot using the new Archive-First approach
-      await createTaskSnapshot(normalizedTask, collectedAt, task.playerCharacterId);
+      await createTaskSnapshot(normalizedTask, collectedAt, task.playerCharacterId || undefined);
       await markEffect(snapshotEffectKey);
       console.log(`[onTaskUpsert] ✅ Created snapshot for collected task ${task.name}`);
     }
