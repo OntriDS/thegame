@@ -190,7 +190,7 @@ export default function ArchiveCollectionConfirmationModal({
               <div className="text-sm text-amber-800">
                 <p className="font-medium">Important Note</p>
                 <p className="mt-1">
-                  This action is part of the "Archive-First" lifecycle management.
+                  This action is part of the &ldquo;Archive-First&rdquo; lifecycle management.
                   The {getEntityTypeLabel(entityType).toLowerCase()} will remain accessible in the active system
                   but will be organized in its collected/sold section for better clarity.
                 </p>
