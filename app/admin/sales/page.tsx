@@ -91,11 +91,12 @@ export default function SalesPage() {
   useEntityUpdates('sale', loadSales);
 
   const getStatusBadge = (status: SaleStatus) => {
-    const statusColors = {
+    const statusColors: Record<SaleStatus, string> = {
       [SaleStatus.PENDING]: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
       [SaleStatus.ON_HOLD]: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
       [SaleStatus.CHARGED]: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
       [SaleStatus.CANCELLED]: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+      [SaleStatus.COLLECTED]: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
     };
 
     return (

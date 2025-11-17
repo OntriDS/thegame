@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { NumericInput } from '@/components/ui/numeric-input';
@@ -1408,7 +1409,13 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
                 {/* Item Image */}
                 <div className="w-16 h-16 mx-auto bg-muted rounded-md flex items-center justify-center">
                   {item.imageUrl ? (
-                    <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover rounded-md" />
+                    <Image 
+                      src={item.imageUrl} 
+                      alt={item.name} 
+                      width={64} 
+                      height={64} 
+                      className="w-full h-full object-cover rounded-md" 
+                    />
                   ) : (
                     <Package className="w-6 h-6 text-muted-foreground" />
                   )}
