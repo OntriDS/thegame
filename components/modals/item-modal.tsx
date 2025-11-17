@@ -31,6 +31,7 @@ import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
 import OwnerSubmodal from './submodals/owner-submodal';
 import { dispatchEntityUpdated, entityTypeToKind } from '@/lib/ui/ui-events';
 import { LinkType } from '@/types/enums';
+import ArchiveCollectionConfirmationModal from './submodals/archive-collection-confirmation-submodal';
 
 interface ItemModalProps {
   item?: Item;
@@ -96,6 +97,8 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
   const [quickSellMode, setQuickSellMode] = useState<'create-sale' | 'archive-only'>('create-sale');
   const [quickSellError, setQuickSellError] = useState<string>('');
   const [quickSellLoading, setQuickSellLoading] = useState(false);
+  const [showSoldConfirmation, setShowSoldConfirmation] = useState(false);
+  const [pendingSoldStatus, setPendingSoldStatus] = useState(false);
   
   // Item selection states for compound field
   const [isNewItem, setIsNewItem] = useState(true);
@@ -223,6 +226,15 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
   const handleStatusChange = useCallback((value: ItemStatus) => {
     if (value === ItemStatus.SOLD) {
       if (currentEditingItem) {
+        // Check if this is a manual status change (not via QuickSell)
+        const wasNotSold = currentEditingItem.status !== ItemStatus.SOLD;
+        if (wasNotSold) {
+          // Manual status change - show confirmation
+          setPendingSoldStatus(true);
+          setShowSoldConfirmation(true);
+          return;
+        }
+        // Otherwise proceed with QuickSell flow (automatic)
         openQuickSellFlow(currentEditingItem);
         return;
       }
@@ -1395,6 +1407,25 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         onAdditionalOwnersChanged={() => {
           // Refresh UI if needed
           dispatchEntityUpdated(entityTypeToKind(EntityType.ITEM));
+        }}
+      />
+    )}
+
+    {/* Archive Collection Confirmation Modal for manual SOLD status */}
+    {pendingSoldStatus && currentEditingItem && (
+      <ArchiveCollectionConfirmationModal
+        open={showSoldConfirmation}
+        onOpenChange={setShowSoldConfirmation}
+        entityType="item"
+        entityName={currentEditingItem.name || 'Untitled Item'}
+        onConfirm={() => {
+          setStatus(ItemStatus.SOLD);
+          setShowSoldConfirmation(false);
+          setPendingSoldStatus(false);
+        }}
+        onCancel={() => {
+          setPendingSoldStatus(false);
+          setShowSoldConfirmation(false);
         }}
       />
     )}

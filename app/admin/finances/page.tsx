@@ -26,6 +26,7 @@ import { MONTHS, getYearRange, getMonthName, getCurrentMonth } from '@/lib/const
 import { BUSINESS_STRUCTURE, ItemType, PLAYER_ONE_ID } from '@/types/enums';
 import { getCompanyAreas, getPersonalAreas, isCompanyStation, getAreaForStation } from '@/lib/utils/business-structure-utils';
 import { CompanyRecordsList, PersonalRecordsList } from '@/components/finances/financial-records-components';
+import { MonthlyHistoricalCashflows } from '@/components/finances/monthly-historical-cashflows';
 import { Switch } from '@/components/ui/switch';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
 import { 
@@ -663,6 +664,9 @@ export default function FinancesPage() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Monthly Historical Cashflows */}
+          <MonthlyHistoricalCashflows />
 
           {/* Company Assets */}
           <Card>

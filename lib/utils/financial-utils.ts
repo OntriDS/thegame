@@ -24,6 +24,7 @@ export function formatCurrency(amount: number, currency: string = "USD"): string
 import { FinancialRecord } from '@/types/entities';
 import type { Station } from '@/types/type-aliases';
 import { BITCOIN_SATOSHIS_PER_BTC } from '@/lib/constants/financial-constants';
+import { FinancialStatus } from '@/types/enums';
 
 // ============================================================================
 // SHARED TYPES
@@ -100,9 +101,14 @@ export function aggregateRecordsByStation(
       jungleCoins: 0
     };
   });
-  
-  // Aggregate records by station
+
+  // Aggregate records by station, excluding PENDING records
   records.forEach(record => {
+    // CRITICAL: Exclude PENDING records from cashflow calculations
+    if (record.status === FinancialStatus.PENDING) {
+      return; // Skip PENDING records
+    }
+
     if (breakdown[record.station]) {
       breakdown[record.station].revenue += record.revenue;
       breakdown[record.station].cost += record.cost;
@@ -110,7 +116,7 @@ export function aggregateRecordsByStation(
       breakdown[record.station].jungleCoins += record.jungleCoins;
     }
   });
-  
+
   return breakdown;
 }
 

@@ -61,7 +61,9 @@
         "Create one AI Agent for Game Design improvements, Player Analysis and UX, Game Balance and Game Mechanics",
         "Create a set of Automations: Voice to Text. Image to Text, Text to Speech, PDF Converter, Image Creator",
         "Implement Monthly Close Automation Task (orchestrates archiving of all completed entities)",
-        "Implement automated monthly summary generation and analysis based on archive data (post Monthly Close)"
+        "Implement automated monthly summary generation and analysis based on archive data (post Monthly Close)",
+        "Create one AI Agent for Data Integrity Validation that checks: Link consistency across all entity relationships",
+        "The Agent must checkCollected/Sold status consistency, Month index accuracy, Archive snapshot completeness"
       ]
     }
   },

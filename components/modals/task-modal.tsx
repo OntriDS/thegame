@@ -13,6 +13,7 @@ import { DatePicker } from '@/components/ui/date-picker';
 import { FrequencyCalendar, FrequencyConfig } from '@/components/ui/frequency-calendar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Checkbox } from '@/components/ui/checkbox';
 import DeleteModal from './submodals/delete-submodal';
 import LinksRelationshipsModal from './submodals/links-relationships-submodal';
 import { Task, Item, Site } from '@/types/entities';
@@ -29,6 +30,7 @@ import { PROGRESS_MAX, PROGRESS_STEP, PRICE_STEP } from '@/lib/constants/app-con
 import { Network, User } from 'lucide-react';
 import { getEmissaryFields } from '@/types/diplomatic-fields';
 import CascadeStatusConfirmationModal from './submodals/cascade-status-confirmation-submodal';
+import ArchiveCollectionConfirmationModal from './submodals/archive-collection-confirmation-submodal';
 import { ClientAPI } from '@/lib/client-api';
 import CharacterSelectorSubmodal from './submodals/character-selector-submodal';
 import PlayerCharacterSelectorModal from './submodals/player-character-selector-submodal';
@@ -124,6 +126,7 @@ export default function TaskModal({
   const [isNotCharged, setIsNotCharged] = useState(false);
   const [isRecurrentGroup, setIsRecurrentGroup] = useState(false);
   const [isTemplate, setIsTemplate] = useState(false);
+  const [isCollected, setIsCollected] = useState(false);
   
   // Cascade confirmation modal state
   const [showCascadeModal, setShowCascadeModal] = useState(false);
@@ -133,6 +136,8 @@ export default function TaskModal({
     affectedCount: number;
     isReversal: boolean;
   } | null>(null);
+  
+  // Archive collection confirmation modal state (for status selector only)
   const [formData, setFormData] = useState({
     site: 'none' as string,
     targetSite: 'none' as string,
@@ -169,6 +174,14 @@ export default function TaskModal({
   const [isSaving, setIsSaving] = useState(false);
   const [showValidationModal, setShowValidationModal] = useState(false);
   const [validationMessage, setValidationMessage] = useState('');
+
+  // Archive Collection Confirmation Modal state (for status change)
+  const [showArchiveCollectionModal, setShowArchiveCollectionModal] = useState(false);
+  const [pendingStatusChange, setPendingStatusChange] = useState<{
+    status: TaskStatus;
+    onConfirm: () => void;
+    onCancel: () => void;
+  } | null>(null);
 
   // UI data loading for form functionality
   const [items, setItems] = useState<Item[]>([]);
@@ -241,6 +254,7 @@ export default function TaskModal({
     setIsNotCharged(existingTask.isNotCharged || false);
     setIsRecurrentGroup(existingTask.isRecurrentGroup || false);
     setIsTemplate(existingTask.isTemplate || false);
+    setIsCollected(existingTask.isCollected || false);
     setFormData({
       site: existingTask.siteId || 'none',
       targetSite: existingTask.targetSiteId || 'none',
@@ -429,7 +443,7 @@ export default function TaskModal({
       },
       createdAt: task?.createdAt || new Date(),
       updatedAt: new Date(),
-      isCollected: task?.isCollected || false,
+      isCollected: status === TaskStatus.COLLECTED || isCollected,
       order: task?.order || Date.now(),
       parentId,
       isRecurrentGroup,
@@ -694,6 +708,7 @@ export default function TaskModal({
     // NOTE: Financial logging will be handled when user saves the modal
     // Removed inline financial logging to follow clean pattern
   };
+
 
   // NOTE: Financial logging removed from modal
   // Now handled by completion workflow to follow clean pattern
@@ -1282,8 +1297,31 @@ export default function TaskModal({
             <Label htmlFor="task-status-footer" className="text-xs text-muted-foreground">Status:</Label>
             <Select value={String(status)} onValueChange={(val) => {
               const newStatus = val as TaskStatus;
+
+              // Show confirmation for COLLECTED status
+              if (newStatus === TaskStatus.COLLECTED && status !== TaskStatus.COLLECTED) {
+                const originalStatus = status;
+
+                setPendingStatusChange({
+                  status: newStatus,
+                  onConfirm: () => {
+                    setStatus(newStatus);
+                    setProgress(100);
+                    setShowArchiveCollectionModal(false);
+                    setPendingStatusChange(null);
+                  },
+                  onCancel: () => {
+                    // Keep original status
+                    setShowArchiveCollectionModal(false);
+                    setPendingStatusChange(null);
+                  }
+                });
+                setShowArchiveCollectionModal(true);
+                return;
+              }
+
               setStatus(newStatus);
-              
+
               // Status-to-progress mechanic
               if (newStatus === TaskStatus.CREATED || newStatus === TaskStatus.ON_HOLD) {
                 setProgress(0);
@@ -1398,6 +1436,21 @@ export default function TaskModal({
           isReversal={cascadeData.isReversal}
         />
       )}
+
+      {/* Archive Collection Confirmation Modal */}
+      {pendingStatusChange && (
+        <ArchiveCollectionConfirmationModal
+          open={showArchiveCollectionModal}
+          onOpenChange={setShowArchiveCollectionModal}
+          entityType="task"
+          entityName={name}
+          pointsValue={rewards?.points || { xp: 0, rp: 0, fp: 0, hp: 0 }}
+          totalRevenue={revenue || 0}
+          onConfirm={pendingStatusChange.onConfirm}
+          onCancel={pendingStatusChange.onCancel}
+        />
+      )}
+
     </Dialog>
   );
 }

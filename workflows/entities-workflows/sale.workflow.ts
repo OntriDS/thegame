@@ -1,7 +1,7 @@
 // workflows/entities-workflows/sale.workflow.ts
 // Sale-specific workflow with CHARGED, CANCELLED, COLLECTED events
 
-import { EntityType, LogEventType, PLAYER_ONE_ID } from '@/types/enums';
+import { EntityType, LogEventType, PLAYER_ONE_ID, SaleStatus } from '@/types/enums';
 import type { Item, Sale } from '@/types/entities';
 import { appendEntityLog, updateEntityLogField } from '../entities-logging';
 import { hasEffect, markEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
@@ -11,16 +11,17 @@ import { getLinksFor, removeLink } from '@/links/link-registry';
 import { getPlayerById, getSaleById, getItemById } from '@/data-store/datastore';
 import { awardPointsToPlayer, removePointsFromPlayer, calculatePointsFromRevenue } from '../points-rewards-utils';
 import { processSaleLines } from '../sale-line-utils';
-import { 
-  updateFinancialRecordsFromSale, 
-  updateItemsFromSale, 
+import {
+  updateFinancialRecordsFromSale,
+  updateItemsFromSale,
   updatePlayerPointsFromSource,
   hasRevenueChanged,
   hasLinesChanged
 } from '../update-propagation-utils';
 import { createCharacterFromSale } from '../character-creation-utils';
-import { archiveItemSnapshot, archiveSaleSnapshot, upsertSale } from '@/data-store/datastore';
+import { archiveSaleSnapshot, upsertSale } from '@/data-store/datastore';
 import { formatMonthKey } from '@/lib/utils/date-utils';
+import { createItemSnapshot, createSaleSnapshot } from '../snapshot-workflows';
 
 const STATE_FIELDS = ['status', 'isNotPaid', 'isNotCharged', 'isCollected', 'postedAt', 'doneAt', 'cancelledAt'];
 const DESCRIPTIVE_FIELDS = ['counterpartyName', 'totals'];
@@ -68,7 +69,7 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
       await processChargedSaleLines(sale);
     }
 
-    await maybeArchiveSaleSnapshot(sale);
+    await maybeCreateSaleSnapshot(sale);
     return;
   }
   
@@ -142,8 +143,34 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
     }
   }
   
-  // Collection status - COLLECTED event (kept for completeness)
-  if (!previousSale.isCollected && sale.isCollected) {
+  // Collection detection - Dual detection: status OR flag change to COLLECTED
+  const statusBecameCollected =
+    sale.status === SaleStatus.COLLECTED &&
+    (!previousSale || previousSale.status !== SaleStatus.COLLECTED);
+
+  const flagBecameCollected =
+    !!sale.isCollected && (!previousSale || !previousSale.isCollected);
+
+  if (statusBecameCollected || flagBecameCollected) {
+    const collectedAt = sale.collectedAt ?? new Date();
+
+    // Normalize both status and flag for consistency
+    const normalizedSale = {
+      ...sale,
+      status: SaleStatus.COLLECTED,
+      isCollected: true,
+      collectedAt
+    };
+
+    // Check if sale was never CHARGED but has item lines - process them now
+    const wasNeverCharged = previousSale?.status !== 'CHARGED' && sale.status !== 'CHARGED';
+    const hasItems = sale.lines?.some(l => l.kind === 'item' || l.kind === 'bundle');
+    if (wasNeverCharged && hasItems) {
+      // Sale going directly to COLLECTED with items - process them first
+      // This ensures items are marked SOLD even if sale skips CHARGED status
+      await processChargedSaleLines(sale);
+    }
+
     await appendEntityLog(EntityType.SALE, sale.id, LogEventType.COLLECTED, {
       type: sale.type,
       counterpartyName: sale.counterpartyName,
@@ -153,10 +180,10 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
         taxTotal: sale.totals.taxTotal,
         totalRevenue: sale.totals.totalRevenue
       },
-      collectedAt: new Date().toISOString()
+      collectedAt: collectedAt.toISOString()
     });
   }
-  await maybeArchiveSaleSnapshot(sale, previousSale);
+  await maybeCreateSaleSnapshot(sale, previousSale);
   
   // COMPREHENSIVE UPDATE PROPAGATION - when sale properties change
   if (previousSale) {
@@ -197,93 +224,62 @@ async function processChargedSaleLines(sale: Sale): Promise<void> {
   await processSaleLines(sale);
   await markEffect(linesProcessedKey);
   console.log(`[onSaleUpsert] ✅ Sale lines processed and effect marked: ${sale.counterpartyName}`);
-  await archiveSoldItemsFromSale(sale);
+
+  // Create ItemSnapshots for sold items (Archive-First approach)
+  await createItemSnapshotsFromSale(sale);
 }
 
-async function maybeArchiveSaleSnapshot(sale: Sale, previousSale?: Sale): Promise<void> {
-  const becameCollected = sale.isCollected && (!previousSale || !previousSale.isCollected);
-  if (!becameCollected) {
+async function maybeCreateSaleSnapshot(sale: Sale, previousSale?: Sale): Promise<void> {
+  // Dual detection: status OR flag change to COLLECTED
+  const statusBecameCollected =
+    sale.status === SaleStatus.COLLECTED &&
+    (!previousSale || previousSale.status !== SaleStatus.COLLECTED);
+
+  const flagBecameCollected =
+    !!sale.isCollected && (!previousSale || !previousSale.isCollected);
+
+  if (!statusBecameCollected && !flagBecameCollected) {
     return;
   }
 
   const collectedAt = sale.collectedAt ?? new Date();
-  const monthKey = formatMonthKey(sale.saleDate ?? collectedAt);
-  const archiveEffectKey = EffectKeys.sideEffect('sale', sale.id, `archived:${monthKey}`);
+  const snapshotEffectKey = EffectKeys.sideEffect('sale', sale.id, `saleSnapshot:${formatMonthKey(collectedAt)}`);
 
-  if (await hasEffect(archiveEffectKey)) {
+  if (await hasEffect(snapshotEffectKey)) {
     return;
   }
 
-  const normalizedSale: Sale = {
-    ...sale,
-    isCollected: true,
-    collectedAt,
-    archiveMetadata: {
-      monthKey,
-      saleDate: sale.saleDate,
-      siteId: sale.siteId,
-      status: sale.status,
-      totals: sale.totals
-    }
-  };
-
-  if (!sale.collectedAt) {
-    await upsertSale(normalizedSale, { skipWorkflowEffects: true, skipLinkEffects: true });
-  }
-
-  await archiveSaleSnapshot(normalizedSale, monthKey);
-  await markEffect(archiveEffectKey);
-  console.log(`[maybeArchiveSaleSnapshot] Archived sale ${sale.id} into archive box ${monthKey}`);
+  // Create SaleSnapshot using the new Archive-First approach
+  await createSaleSnapshot(sale, collectedAt, sale.playerCharacterId || undefined);
+  await markEffect(snapshotEffectKey);
+  console.log(`[maybeCreateSaleSnapshot] ✅ Created snapshot for collected sale ${sale.id}`);
 }
 
-async function archiveSoldItemsFromSale(sale: Sale): Promise<void> {
+async function createItemSnapshotsFromSale(sale: Sale): Promise<void> {
   if (!sale.lines || sale.lines.length === 0) {
     return;
   }
 
-  const monthKey = formatMonthKey(sale.saleDate ?? new Date());
+  console.log(`[createItemSnapshotsFromSale] Creating snapshots for sold items in sale: ${sale.counterpartyName}`);
 
   for (const line of sale.lines) {
     if (line.kind !== 'item') continue;
 
-    const effectKey = EffectKeys.sideEffect('sale', sale.id, `soldSnapshot:${line.lineId}:${monthKey}`);
+    const effectKey = EffectKeys.sideEffect('sale', sale.id, `itemSnapshot:${line.lineId}`);
     if (await hasEffect(effectKey)) {
       continue;
     }
 
     const item = await getItemById(line.itemId);
     if (!item) {
-      console.warn(`[archiveSoldItemsFromSale] Item ${line.itemId} not found for sale ${sale.id}, skipping snapshot`);
+      console.warn(`[createItemSnapshotsFromSale] Item ${line.itemId} not found for sale ${sale.id}, skipping snapshot`);
       continue;
     }
 
-    const soldAt = sale.doneAt ?? sale.saleDate ?? new Date();
-    const snapshotId = `${item.id}:sale:${sale.id}:${line.lineId}`;
-    const snapshot: Item = {
-      ...item,
-      id: snapshotId,
-      stock: [{ siteId: sale.siteId, quantity: line.quantity }],
-      quantitySold: line.quantity,
-      value: line.unitPrice * line.quantity,
-      price: line.unitPrice,
-      isCollected: true,
-      createdAt: soldAt,
-      updatedAt: soldAt,
-      archiveMetadata: {
-        monthKey,
-        sourceSaleId: sale.id,
-        sourceItemId: item.id,
-        saleDate: sale.saleDate,
-        siteId: sale.siteId,
-        lineId: line.lineId,
-        quantity: line.quantity,
-        unitPrice: line.unitPrice
-      }
-    };
-
-    await archiveItemSnapshot(snapshot, monthKey);
+    // Create ItemSnapshot using the Archive-First approach
+    await createItemSnapshot(item, line.quantity, sale);
     await markEffect(effectKey);
-    console.log(`[archiveSoldItemsFromSale] Archived sold item snapshot ${snapshotId} into archive box ${monthKey}`);
+    console.log(`[createItemSnapshotsFromSale] ✅ Created snapshot for sold item ${item.name} (${line.quantity} units)`);
   }
 }
 

@@ -27,6 +27,7 @@ import PlayerCharacterSelectorModal from './submodals/player-character-selector-
 // Side effects handled by parent component via API calls
 import { v4 as uuid } from 'uuid';
 import { Plus, Trash2, Package, DollarSign, Network, ListPlus, Wallet, Gift, User } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 import DeleteModal from './submodals/delete-submodal';
 import LinksRelationshipsModal from './submodals/links-relationships-submodal';
 import SaleItemsSubModal, { SaleItemLine } from './submodals/sale-items-submodal';
@@ -34,6 +35,7 @@ import SalePaymentsSubModal, { SalePaymentLine } from './submodals/sale-payments
 import ItemEmissarySubModal, { ItemCreationData } from './submodals/item-emissary-submodal';
 import PointsEmissarySubModal, { PointsData } from './submodals/points-emissary-submodal';
 import ConfirmationModal from './submodals/confirmation-submodal';
+import ArchiveCollectionConfirmationModal from './submodals/archive-collection-confirmation-submodal';
 
 interface SalesModalProps {
   sale?: Sale | null;
@@ -98,6 +100,13 @@ export default function SalesModal({
   const [showRelationshipsModal, setShowRelationshipsModal] = useState(false);
   const [playerCharacterId, setPlayerCharacterId] = useState<string | null>(null);
   const [showPlayerCharacterSelector, setShowPlayerCharacterSelector] = useState(false);
+  const [isCollected, setIsCollected] = useState(false);
+  const [showArchiveCollectionModal, setShowArchiveCollectionModal] = useState(false);
+  const [pendingStatusChange, setPendingStatusChange] = useState<{
+    status: SaleStatus;
+    onConfirm: () => void;
+    onCancel: () => void;
+  } | null>(null);
   const [showItemsSubModal, setShowItemsSubModal] = useState(false);
   const [showPaymentsSubModal, setShowPaymentsSubModal] = useState(false);
   const [paymentsModalMode, setPaymentsModalMode] = useState<'payments' | 'other-methods'>('payments');
@@ -207,8 +216,9 @@ export default function SalesModal({
       setCustomerId(sale.customerId || '');
       setIsNewCustomer(!sale.customerId); // Toggle to "Existing" if customer exists
       setNewCustomerName(''); // Clear new customer name
-      setIsNotPaid(sale.isNotPaid || false);
-      setIsNotCharged(sale.isNotCharged || false);
+    setIsNotPaid(sale.isNotPaid || false);
+    setIsNotCharged(sale.isNotCharged || false);
+    setIsCollected(sale.isCollected || false);
       setOverallDiscount(sale.overallDiscount || {});
       setLines(sale.lines || []);
       setPayments(sale.payments || []);
@@ -412,8 +422,16 @@ export default function SalesModal({
 
   const handleSave = async () => {
     if (isSaving) return;
+
+    // Check if status is being changed to COLLECTED - show confirmation modal
+    const isBecomingCollected = status === SaleStatus.COLLECTED && sale?.status !== SaleStatus.COLLECTED;
+    if (isBecomingCollected) {
+      setShowArchiveCollectionModal(true);
+      return;
+    }
+
     setIsSaving(true);
-    
+
     // Validation: Sales must have either product (item) OR service (task)
     const hasProductLines = lines.some(line => line.kind === 'item' || line.kind === 'bundle');
     const hasServiceLines = lines.some(line => line.kind === 'service');
@@ -617,7 +635,7 @@ export default function SalesModal({
       createdTaskId: sale?.createdTaskId,
       createdAt: sale?.createdAt || new Date(),
       updatedAt: new Date(),
-      isCollected: sale?.isCollected || false,
+      isCollected: status === SaleStatus.COLLECTED || isCollected,
       links: sale?.links || [],  // NEW: Initialize links for Rosetta Stone
     };
 
@@ -787,6 +805,7 @@ export default function SalesModal({
     setLines([]);
     setShowClearLinesModal(false);
   };
+
 
   const addPayment = () => {
     const newPayment = {
@@ -1860,7 +1879,29 @@ export default function SalesModal({
               <div className="hidden sm:block">
                 <Label className="text-xs">Status</Label>
               </div>
-              <Select value={status} onValueChange={(value) => setStatus(value as any)}>
+              <Select value={status} onValueChange={(value) => {
+                const newStatus = value as SaleStatus;
+                
+                // Show confirmation for COLLECTED status
+                if (newStatus === SaleStatus.COLLECTED && status !== SaleStatus.COLLECTED) {
+                  setPendingStatusChange({
+                    status: newStatus,
+                    onConfirm: () => {
+                      setStatus(newStatus);
+                      setShowArchiveCollectionModal(false);
+                      setPendingStatusChange(null);
+                    },
+                    onCancel: () => {
+                      setShowArchiveCollectionModal(false);
+                      setPendingStatusChange(null);
+                    }
+                  });
+                  setShowArchiveCollectionModal(true);
+                  return;
+                }
+                
+                setStatus(newStatus);
+              }}>
                 <SelectTrigger className="h-8 text-sm w-[160px]">
                   <SelectValue />
                 </SelectTrigger>
@@ -1996,6 +2037,29 @@ export default function SalesModal({
         onConfirm={handleConfirmClearLines}
         onCancel={() => setShowClearLinesModal(false)}
       />
+
+      {/* Archive Collection Confirmation Modal for status selector */}
+      {pendingStatusChange && (
+        <ArchiveCollectionConfirmationModal
+          open={showArchiveCollectionModal}
+          onOpenChange={setShowArchiveCollectionModal}
+          entityType="sale"
+          entityName={counterpartyName || 'Untitled Sale'}
+          totalRevenue={(() => {
+            const subtotal = lines.reduce((sum, line) => {
+              if (line.kind === 'service') return sum + (line.revenue || 0);
+              return sum + ((line.quantity || 0) * (line.unitPrice || 0));
+            }, 0);
+            const discountAmount = overallDiscount.amount || 0;
+            const discountPercent = overallDiscount.percent ? subtotal * (overallDiscount.percent / 100) : 0;
+            const totalDiscount = discountAmount + discountPercent;
+            const taxTotal = lines.reduce((sum, line) => sum + (line.taxAmount || 0), 0);
+            return subtotal - totalDiscount + taxTotal;
+          })()}
+          onConfirm={pendingStatusChange.onConfirm}
+          onCancel={pendingStatusChange.onCancel}
+        />
+      )}
     </Dialog>
   );
 }

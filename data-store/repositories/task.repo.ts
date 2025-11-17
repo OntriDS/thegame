@@ -11,11 +11,17 @@ export async function getTaskById(id: string): Promise<Task | null> {
   return await kvGet<Task>(buildDataKey(ENTITY, id));
 }
 
+/**
+ * Get all tasks - SPECIAL CASE ONLY
+ * Use: Recurrent task template processing, AI analysis, bulk operations
+ * Performance Impact: Loads entire dataset into memory
+ * Alternative: Use getTasksForMonth(year, month) for UI components
+ */
 export async function getAllTasks(): Promise<Task[]> {
   const indexKey = buildIndexKey(ENTITY);
   const ids = await kvSMembers(indexKey);
   if (ids.length === 0) return [];
-  
+
   const keys = ids.map(id => buildDataKey(ENTITY, id));
   const tasks = await kvMGet<Task>(keys);
   return tasks.filter((task): task is Task => task !== null && task !== undefined);
@@ -28,7 +34,7 @@ export async function upsertTask(task: Task): Promise<Task> {
   await kvSet(key, task);
   await kvSAdd(buildIndexKey(ENTITY), task.id);
 
-  // Maintain month index (collectedAt -> doneAt -> createdAt)
+  // Maintain month index (collectedAt → doneAt → createdAt)
   const currentDate = (task as any).collectedAt || (task as any).doneAt || task.createdAt;
   if (currentDate) {
     const currentMonthKey = formatMonthKey(currentDate);

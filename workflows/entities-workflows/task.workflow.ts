@@ -27,14 +27,15 @@ import { getCategoryForTaskType } from '@/lib/utils/searchable-select-utils';
 import { kvGet, kvSet } from '@/data-store/kv';
 import { buildLogKey } from '@/data-store/keys';
 import { formatMonthKey } from '@/lib/utils/date-utils';
-import { 
-  updateFinancialRecordsFromTask, 
-  updateItemsCreatedByTask, 
+import {
+  updateFinancialRecordsFromTask,
+  updateItemsCreatedByTask,
   updatePlayerPointsFromSource,
   hasFinancialPropsChanged,
   hasOutputPropsChanged,
   hasRewardsChanged
 } from '../update-propagation-utils';
+import { createTaskSnapshot } from '../snapshot-workflows';
 import {
   handleTemplateInstanceCreation,
   deleteTemplateCascade,
@@ -161,29 +162,24 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
 
   if (statusBecameCollected || flagBecameCollected) {
     const collectedAt = task.collectedAt ?? new Date();
-    const monthKey = formatMonthKey(collectedAt);
-    const archivedEffectKey = EffectKeys.sideEffect('task', task.id, `archived:${monthKey}`);
+    const snapshotEffectKey = EffectKeys.sideEffect('task', task.id, `taskSnapshot:${formatMonthKey(collectedAt)}`);
 
-    if (!(await hasEffect(archivedEffectKey))) {
+    if (!(await hasEffect(snapshotEffectKey))) {
+      // Ensure task has proper collection fields
       const normalizedTask: Task = {
         ...task,
         isCollected: true,
-        collectedAt,
-        archiveMetadata: {
-          monthKey,
-          parentId: task.parentId ?? null,
-          siteId: resolveTaskOutputSite(task),
-          sourceSaleId: task.sourceSaleId ?? null
-        }
+        collectedAt
       };
 
       if (!task.isCollected || !task.collectedAt) {
         await upsertTask(normalizedTask, { skipWorkflowEffects: true, skipLinkEffects: true });
       }
 
-      await archiveTaskSnapshot(normalizedTask, monthKey);
-      await markEffect(archivedEffectKey);
-      console.log(`[onTaskUpsert] Archived task ${task.name} into archive box ${monthKey}`);
+      // Create TaskSnapshot using the new Archive-First approach
+      await createTaskSnapshot(normalizedTask, collectedAt, task.playerCharacterId);
+      await markEffect(snapshotEffectKey);
+      console.log(`[onTaskUpsert] ✅ Created snapshot for collected task ${task.name}`);
     }
   }
   

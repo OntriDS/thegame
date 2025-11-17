@@ -1,7 +1,7 @@
 // workflows/entities-workflows/financial.workflow.ts
 // Financial-specific workflow with CHARGED, COLLECTED events
 
-import { EntityType, LogEventType, PLAYER_ONE_ID } from '@/types/enums';
+import { EntityType, LogEventType, FinancialStatus, PLAYER_ONE_ID } from '@/types/enums';
 import type { FinancialRecord } from '@/types/entities';
 import { appendEntityLog, updateEntityLogField } from '../entities-logging';
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
@@ -22,6 +22,7 @@ import {
 import { createCharacterFromFinancial } from '../character-creation-utils';
 import { archiveFinancialRecordSnapshot, upsertFinancial } from '@/data-store/datastore';
 import { formatMonthKey } from '@/lib/utils/date-utils';
+import { createFinancialSnapshot } from '../snapshot-workflows';
 
 const STATE_FIELDS = ['isNotPaid', 'isNotCharged', 'isCollected'];
 const DESCRIPTIVE_FIELDS = ['name', 'description', 'cost', 'revenue', 'jungleCoins', 'notes'];
@@ -111,31 +112,24 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
 
     if (financial.isCollected) {
       const collectedAt = financial.collectedAt ?? new Date();
-      const monthAnchor = financial.collectedAt ?? new Date(financial.year, Math.max(0, financial.month - 1), 1);
-      const monthKey = formatMonthKey(monthAnchor);
-      const archiveEffectKey = EffectKeys.sideEffect('financial', financial.id, `archived:${monthKey}`);
+      const snapshotEffectKey = EffectKeys.sideEffect('financial', financial.id, `financialSnapshot:${formatMonthKey(collectedAt)}`);
 
-      if (!(await hasEffect(archiveEffectKey))) {
+      if (!(await hasEffect(snapshotEffectKey))) {
+        // Ensure financial record has proper collection fields
         const normalizedFinancial: FinancialRecord = {
           ...financial,
           isCollected: true,
-          collectedAt,
-          archiveMetadata: {
-            monthKey,
-            year: financial.year,
-            month: financial.month,
-            sourceSaleId: financial.sourceSaleId ?? null,
-            sourceTaskId: financial.sourceTaskId ?? null
-          }
+          collectedAt
         };
 
         if (!financial.collectedAt) {
           await upsertFinancial(normalizedFinancial, { skipWorkflowEffects: true, skipLinkEffects: true });
         }
 
-        await archiveFinancialRecordSnapshot(normalizedFinancial, monthKey);
-        await markEffect(archiveEffectKey);
-        console.log(`[onFinancialUpsert] Archived financial record ${financial.name} into archive box ${monthKey}`);
+        // Create FinancialSnapshot using the new Archive-First approach
+        await createFinancialSnapshot(normalizedFinancial, collectedAt, financial.playerCharacterId || undefined);
+        await markEffect(snapshotEffectKey);
+        console.log(`[onFinancialUpsert] ✅ Created snapshot for collected financial record ${financial.name}`);
       }
     }
 
@@ -172,8 +166,14 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
     });
   }
   
-  // Collection status - COLLECTED event (kept for completeness)
-  if (!previousFinancial.isCollected && financial.isCollected) {
+  // Collection detection - Dual detection: status OR flag change to COLLECTED
+  const statusBecameCollected =
+    financial.status === FinancialStatus.COLLECTED &&
+    (!previousFinancial || previousFinancial.status !== FinancialStatus.COLLECTED);
+  const flagBecameCollected =
+    !!financial.isCollected && (!previousFinancial || !previousFinancial.isCollected);
+
+  if (statusBecameCollected || flagBecameCollected) {
     await appendEntityLog(EntityType.FINANCIAL, financial.id, LogEventType.COLLECTED, {
       name: financial.name,
       type: financial.type,
@@ -182,31 +182,24 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
     });
 
     const collectedAt = financial.collectedAt ?? new Date();
-    const monthAnchor = financial.collectedAt ?? new Date(financial.year, Math.max(0, financial.month - 1), 1);
-    const monthKey = formatMonthKey(monthAnchor);
-    const archiveEffectKey = EffectKeys.sideEffect('financial', financial.id, `archived:${monthKey}`);
+    const snapshotEffectKey = EffectKeys.sideEffect('financial', financial.id, `financialSnapshot:${formatMonthKey(collectedAt)}`);
 
-    if (!(await hasEffect(archiveEffectKey))) {
+    if (!(await hasEffect(snapshotEffectKey))) {
+      // Ensure financial record has proper collection fields
       const normalizedFinancial: FinancialRecord = {
         ...financial,
         isCollected: true,
-          collectedAt,
-          archiveMetadata: {
-            monthKey,
-            year: financial.year,
-            month: financial.month,
-            sourceSaleId: financial.sourceSaleId ?? null,
-            sourceTaskId: financial.sourceTaskId ?? null
-          }
+        collectedAt
       };
 
       if (!financial.collectedAt) {
         await upsertFinancial(normalizedFinancial, { skipWorkflowEffects: true, skipLinkEffects: true });
       }
 
-      await archiveFinancialRecordSnapshot(normalizedFinancial, monthKey);
-      await markEffect(archiveEffectKey);
-      console.log(`[onFinancialUpsert] Archived financial record ${financial.name} into archive box ${monthKey}`);
+      // Create FinancialSnapshot using the new Archive-First approach
+      await createFinancialSnapshot(normalizedFinancial, collectedAt, financial.playerCharacterId || undefined);
+      await markEffect(snapshotEffectKey);
+      console.log(`[onFinancialUpsert] ✅ Created snapshot for collected financial record ${financial.name}`);
     }
   }
   

@@ -2,7 +2,7 @@
 // Orchestration layer: repositories → workflows → links → logging
 
 import type { Task, Item, FinancialRecord, Sale, Character, Player, Site, Settlement, Account } from '@/types/entities';
-import { EntityType, ItemType, TaskPriority, TaskStatus } from '@/types/enums';
+import { EntityType, ItemType, TaskPriority, TaskStatus, FinancialStatus } from '@/types/enums';
 import { 
   upsertTask as repoUpsertTask,
   getAllTasks as repoGetAllTasks,
@@ -210,7 +210,10 @@ export async function upsertFinancial(financial: FinancialRecord, options?: { sk
 
 export async function getAllFinancials(): Promise<FinancialRecord[]> {
   const financials = await repoGetAllFinancials();
-  return financials.filter(financial => !financial.isCollected);
+  return financials.filter(financial =>
+    !financial.isCollected &&
+    financial.status !== FinancialStatus.PENDING
+  );
 }
 
 export async function getFinancialsForMonth(year: number, month: number): Promise<FinancialRecord[]> {

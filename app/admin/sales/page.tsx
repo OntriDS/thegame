@@ -32,6 +32,7 @@ export default function SalesPage() {
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [currentMonth, setCurrentMonth] = useState(getCurrentMonth());
   const [filterByMonth, setFilterByMonth] = useState(true);
+  const [showCollected, setShowCollected] = useState(false); // false=Active, true=Collected
 
   // Load sales data
   useEffect(() => {
@@ -42,6 +43,15 @@ export default function SalesPage() {
   // Filter sales based on selected criteria
   useEffect(() => {
     let filtered = sales;
+
+    // Filter by Active vs Collected
+    if (showCollected) {
+      // Collected Sales: status === CHARGED && isCollected === true
+      filtered = filtered.filter(sale => sale.status === SaleStatus.CHARGED && sale.isCollected === true);
+    } else {
+      // Active Sales: status !== CHARGED || !isCollected
+      filtered = filtered.filter(sale => sale.status !== SaleStatus.CHARGED || sale.isCollected !== true);
+    }
 
     if (selectedType !== 'all') {
       filtered = filtered.filter(sale => sale.type === selectedType);
@@ -56,7 +66,7 @@ export default function SalesPage() {
     }
 
     setFilteredSales(filtered);
-  }, [sales, selectedType, selectedStatus, selectedSite]);
+  }, [sales, selectedType, selectedStatus, selectedSite, showCollected]);
 
   const loadSales = async () => {
     try {
@@ -186,6 +196,13 @@ export default function SalesPage() {
             />
             <span className="text-sm text-muted-foreground">Filter by month</span>
           </div>
+          <div className="flex items-center gap-2 border rounded-md px-3 py-1.5">
+            <Switch
+              checked={showCollected}
+              onCheckedChange={setShowCollected}
+            />
+            <span className="text-sm text-muted-foreground">Show Collected</span>
+          </div>
           <Button className="flex items-center gap-2" onClick={handleNewSale}>
             <Plus className="h-4 w-4" />
             New Sale
@@ -307,7 +324,13 @@ export default function SalesPage() {
       {/* Sales List */}
       <Card>
         <CardHeader>
-          <CardTitle>Sales List</CardTitle>
+          <CardTitle>{showCollected ? 'Collected Sales' : 'Active Sales'}</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            {showCollected
+              ? 'Sales that have been charged and collected (ready for archive)'
+              : 'Active sales in progress or not yet collected'
+            }
+          </p>
         </CardHeader>
         <CardContent>
           {isLoading ? (

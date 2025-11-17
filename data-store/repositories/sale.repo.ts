@@ -7,11 +7,17 @@ import { formatMonthKey } from '@/lib/utils/date-utils';
 
 const ENTITY = EntityType.SALE;
 
+/**
+ * Get all sales - SPECIAL CASE ONLY
+ * Use: Business analytics, bulk operations, system maintenance
+ * Performance Impact: Loads entire dataset into memory
+ * Alternative: Use getSalesForMonth(year, month) for UI components
+ */
 export async function getAllSales(): Promise<Sale[]> {
   const indexKey = buildIndexKey(ENTITY);
   const ids = await kvSMembers(indexKey);
   if (ids.length === 0) return [];
-  
+
   const keys = ids.map(id => buildDataKey(ENTITY, id));
   const sales = await kvMGet<Sale>(keys);
   return sales.filter((sale): sale is Sale => sale !== null && sale !== undefined);
@@ -31,15 +37,15 @@ export async function upsertSale(sale: Sale): Promise<Sale> {
   await kvSet(key, sale);
   await kvSAdd(indexKey, sale.id);
 
-  // Maintain month index (saleDate or createdAt)
-  const date = (sale as any).saleDate || (sale as any).createdAt;
+  // Maintain month index (collectedAt → saleDate → createdAt)
+  const date = (sale as any).collectedAt || (sale as any).saleDate || (sale as any).createdAt;
   if (date) {
     const monthKey = formatMonthKey(date);
     await kvSAdd(buildMonthIndexKey(ENTITY, monthKey), sale.id);
   }
 
   if (previous) {
-    const prevDate = (previous as any).saleDate || (previous as any).createdAt;
+    const prevDate = (previous as any).collectedAt || (previous as any).saleDate || (previous as any).createdAt;
     if (prevDate) {
       const prevMonthKey = formatMonthKey(prevDate);
       const currMonthKey = date ? formatMonthKey(date) : prevMonthKey;
@@ -58,7 +64,7 @@ export async function deleteSale(id: string): Promise<void> {
 
   const existing = await kvGet<Sale>(key);
   if (existing) {
-    const prevDate = (existing as any).saleDate || (existing as any).createdAt;
+    const prevDate = (existing as any).collectedAt || (existing as any).saleDate || (existing as any).createdAt;
     if (prevDate) {
       const prevMonthKey = formatMonthKey(prevDate);
       await kvSRem(buildMonthIndexKey(ENTITY, prevMonthKey), id);

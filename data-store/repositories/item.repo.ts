@@ -7,11 +7,17 @@ import { formatMonthKey } from '@/lib/utils/date-utils';
 
 const ENTITY = EntityType.ITEM;
 
+/**
+ * Get all items - SPECIAL CASE ONLY
+ * Use: Bulk operations, system maintenance, AI analysis
+ * Performance Impact: Loads entire dataset into memory
+ * Alternative: Use getItemsForMonth(year, month) for UI components
+ */
 export async function getAllItems(): Promise<Item[]> {
   const indexKey = buildIndexKey(ENTITY);
   const ids = await kvSMembers(indexKey);
   if (ids.length === 0) return [];
-  
+
   const keys = ids.map(id => buildDataKey(ENTITY, id));
   const items = await kvMGet<Item>(keys);
   return items.filter((item): item is Item => item !== null && item !== undefined);
@@ -86,9 +92,10 @@ export async function upsertItem(item: Item): Promise<Item> {
   await kvSet(key, item);
   await kvSAdd(indexKey, item.id);
 
-  // Maintain month index (createdAt for active inventory context)
-  if (item.createdAt) {
-    const currentMonthKey = formatMonthKey(item.createdAt);
+  // Maintain month index (soldAt → createdAt)
+  const dateForIndex = item.soldAt || item.createdAt;
+  if (dateForIndex) {
+    const currentMonthKey = formatMonthKey(dateForIndex);
     await kvSAdd(buildMonthIndexKey(ENTITY, currentMonthKey), item.id);
   }
   
@@ -103,11 +110,17 @@ export async function upsertItem(item: Item): Promise<Item> {
   }
 
   // Clean up old month index if month changed
-  if (previousItem?.createdAt && item.createdAt) {
-    const prevMonthKey = formatMonthKey(previousItem.createdAt);
-    const currMonthKey = formatMonthKey(item.createdAt);
-    if (prevMonthKey !== currMonthKey) {
-      await kvSRem(buildMonthIndexKey(ENTITY, prevMonthKey), item.id);
+  if (previousItem) {
+    const prevDateForIndex = previousItem.soldAt || previousItem.createdAt;
+    if (prevDateForIndex) {
+      const prevMonthKey = formatMonthKey(prevDateForIndex);
+      const currDateForIndex = item.soldAt || item.createdAt;
+      if (currDateForIndex) {
+        const currMonthKey = formatMonthKey(currDateForIndex);
+        if (prevMonthKey !== currMonthKey) {
+          await kvSRem(buildMonthIndexKey(ENTITY, prevMonthKey), item.id);
+        }
+      }
     }
   }
   
@@ -145,8 +158,9 @@ export async function deleteItem(id: string): Promise<void> {
   // Get item to clean up indexes
   const item = await kvGet<Item>(key);
   if (item) {
-    if (item.createdAt) {
-      const prevMonthKey = formatMonthKey(item.createdAt);
+    const dateForIndex = item.soldAt || item.createdAt;
+  if (dateForIndex) {
+      const prevMonthKey = formatMonthKey(dateForIndex);
       await kvSRem(buildMonthIndexKey(ENTITY, prevMonthKey), id);
     }
     // Clean up type index

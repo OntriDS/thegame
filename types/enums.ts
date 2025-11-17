@@ -203,8 +203,9 @@ export enum TaskPriority {
 
 /** Status of Records (completed tasks) */
 export enum FinancialStatus {
-  DONE = 'Done',        // as soon as they are created
-  COLLECTED = 'Collected', // they stay done until they are collected
+  PENDING = 'PENDING',  // When isNotPaid or isNotCharged - excluded from cashflow
+  DONE = 'Done',        // When paid/charged and processed
+  COLLECTED = 'Collected', // When archived for reporting
 }
 
 /** Status of Dev Sprints/Phases */
@@ -275,6 +276,9 @@ export enum InventoryTab {
   // RESOURCE_ITEM tabs
   MATERIALS   = 'materials',
   EQUIPMENT   = 'equipment',
+
+  // LIFECYCLE tabs
+  SOLD_ITEMS  = 'sold-items',  // Items that have been sold
 }
 
 /** Lifecycle state of ONE Item /SKU */
@@ -413,6 +417,7 @@ export enum SaleStatus {
   PENDING = 'PENDING',      // Sale isNotCharged
   ON_HOLD = 'ON_HOLD',      // Waiting for other reasons
   CHARGED = 'CHARGED',      // Sale is Charged
+  COLLECTED = 'COLLECTED',  // Sale is Collected for reporting
   CANCELLED = 'CANCELLED',  // Sale is Cancelled
 }
 

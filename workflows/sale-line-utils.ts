@@ -87,6 +87,8 @@ export async function processItemSaleLine(line: ItemSaleLine, sale: Sale): Promi
     const updatedItem = {
       ...item,
       quantitySold: item.quantitySold + line.quantity,
+      // Set soldAt on first sale (when item had no previous sales)
+      soldAt: item.quantitySold === 0 ? sale.saleDate : item.soldAt,
       updatedAt: new Date(),
       stock: item.stock ? item.stock.map(stockPoint => ({ ...stockPoint })) : []
     };

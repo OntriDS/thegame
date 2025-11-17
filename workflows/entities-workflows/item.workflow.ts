@@ -3,6 +3,7 @@
 
 import { EntityType, LogEventType } from '@/types/enums';
 import type { Item } from '@/types/entities';
+import { ItemStatus } from '@/types/enums';
 import { appendEntityLog, updateEntityLogField } from '../entities-logging';
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
 import { EffectKeys, buildLogKey } from '@/data-store/keys';
@@ -11,6 +12,7 @@ import { getLinksFor, removeLink } from '@/links/link-registry';
 import { getCategoryForItemType } from '@/lib/utils/searchable-select-utils';
 import { createCharacterFromItem } from '../character-creation-utils';
 import { upsertItem } from '@/data-store/datastore';
+import { createItemSnapshot } from '../snapshot-workflows';
 
 const STATE_FIELDS = ['status', 'stock', 'quantitySold', 'isCollected'];
 const DESCRIPTIVE_FIELDS = ['name', 'description', 'price', 'unitCost', 'additionalCost', 'value'];
@@ -81,7 +83,80 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
     }
   }
   
-  // Quantity sold changes - SOLD event
+  // Manual SOLD status change - detect when status changes to SOLD without quantitySold change (not via sale)
+  const statusChangedToSold = 
+    previousItem.status !== ItemStatus.SOLD && 
+    item.status === ItemStatus.SOLD &&
+    previousItem.quantitySold === item.quantitySold; // No quantitySold change means manual status change
+
+  if (statusChangedToSold) {
+    const manualSoldEffectKey = EffectKeys.sideEffect('item', item.id, 'manualSold');
+    if (await hasEffect(manualSoldEffectKey)) {
+      // Already processed
+      return;
+    }
+
+    console.log(`[onItemUpsert] Processing manual SOLD status change for item: ${item.name}`);
+
+    // Calculate remaining stock to sell
+    const totalStock = item.stock?.reduce((sum, stockPoint) => sum + stockPoint.quantity, 0) || 0;
+    const remainingStock = totalStock - item.quantitySold;
+    const quantityToSell = remainingStock;
+
+    if (quantityToSell <= 0) {
+      console.log(`[onItemUpsert] No remaining stock to sell for item ${item.name}, skipping manual SOLD processing`);
+      await markEffect(manualSoldEffectKey);
+      return;
+    }
+
+    // Create snapshot BEFORE updating item (capture current state)
+    const soldAt = item.soldAt || new Date();
+    await createItemSnapshot(item, quantityToSell, null, soldAt);
+    console.log(`[onItemUpsert] ✅ Created ItemSnapshot for manually sold item ${item.name} (${quantityToSell} units)`);
+
+    // Update item: deduct all remaining stock, update quantitySold, set soldAt
+    const updatedItem: Item = {
+      ...item,
+      quantitySold: item.quantitySold + quantityToSell,
+      soldAt: item.soldAt || new Date(),
+      stock: [], // All stock is sold
+      status: ItemStatus.SOLD,
+      updatedAt: new Date()
+    };
+
+    // Save updated item (skip workflow to avoid recursion)
+    await upsertItem(updatedItem, { skipWorkflowEffects: true });
+
+    // Log SOLD event
+    const soldLogDetails: Record<string, any> = {
+      name: item.name,
+      itemType: item.type,
+      collection: item.collection,
+      quantitySold: updatedItem.quantitySold,
+      oldQuantitySold: previousItem.quantitySold,
+      quantitySoldInThisTransaction: quantityToSell,
+      manualSale: true
+    };
+
+    if (item.station !== undefined) {
+      soldLogDetails.station = item.station;
+    }
+    if (item.subItemType !== undefined) {
+      soldLogDetails.subItemType = item.subItemType;
+    }
+    if (item.unitCost !== undefined) {
+      soldLogDetails.unitCost = item.unitCost;
+    }
+    if (item.price !== undefined) {
+      soldLogDetails.price = item.price;
+    }
+
+    await appendEntityLog(EntityType.ITEM, item.id, LogEventType.SOLD, soldLogDetails);
+    await markEffect(manualSoldEffectKey);
+    console.log(`[onItemUpsert] ✅ Processed manual SOLD for item ${item.name}: sold ${quantityToSell} units`);
+  }
+
+  // Quantity sold changes - SOLD event (via sale)
   if (previousItem.quantitySold !== item.quantitySold && item.quantitySold > previousItem.quantitySold) {
     const soldLogDetails: Record<string, any> = {
       name: item.name,

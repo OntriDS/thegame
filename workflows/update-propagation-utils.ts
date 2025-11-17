@@ -2,7 +2,7 @@
 // Comprehensive update propagation across ALL entity relationships
 
 import type { Task, Item, Sale, FinancialRecord, Character, Player } from '@/types/entities';
-import { EntityType, PLAYER_ONE_ID } from '@/types/enums';
+import { EntityType, PLAYER_ONE_ID, ItemStatus } from '@/types/enums';
 import { hasEffect, markEffect } from '@/data-store/effects-registry';
 import { getFinancialsBySourceTaskId, getFinancialsBySourceSaleId, upsertFinancial } from '@/data-store/datastore';
 import { getItemsBySourceTaskId, getItemsBySourceRecordId, getItemById, upsertItem, removeItem } from '@/data-store/datastore';
@@ -457,10 +457,15 @@ export async function updateItemsFromSale(
           continue;
         }
         
-        // Update quantity sold
+        // Update quantity sold and set soldAt date if this is the first sale
         const updatedItem = {
           ...item,
           quantitySold: (item.quantitySold || 0) + (line.quantity || 0),
+          soldAt: item.soldAt || (sale.doneAt || sale.saleDate || new Date()), // Set soldAt on first sale
+          value: line.unitPrice * line.quantity, // Update actual sale value
+          price: line.unitPrice, // Update unit price
+          isSold: true, // Mark as sold
+          status: ItemStatus.SOLD, // Set item status to SOLD
           updatedAt: new Date()
         };
         

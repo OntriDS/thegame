@@ -22,6 +22,7 @@ import {
   SaleType,
   SaleStatus,
   PaymentMethod,
+  FinancialStatus,
   LinkType,
   EntityType,
 } from './enums';
@@ -210,6 +211,9 @@ export interface Item extends BaseEntity {
   // Emissary Fields
   newOwnerName?: string;           // EMISSARY: Name for new owner character creation
 
+  // Sale tracking
+  soldAt?: Date;                   // When item was sold
+
   // Archive field
   isCollected: boolean;            // Item collected (monthly close)
 }
@@ -361,7 +365,10 @@ export interface FinancialRecord extends BaseEntity {
   // Calculated fields
   netCashflow: number;              // revenue - cost
   jungleCoinsValue: number;         // jungleCoins * 10 (for display)
-  
+
+  // Status field for Active/Archive lifecycle
+  status?: FinancialStatus;         // PENDING | DONE | COLLECTED
+
   // Archive field
   isCollected: boolean;             // Financial record collected (monthly close)
   collectedAt?: Date;               // When record was collected

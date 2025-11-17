@@ -22,6 +22,8 @@ import { getZIndexClass } from '@/lib/utils/z-index-utils';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
 import { useKeyboardShortcuts } from '@/lib/hooks/use-keyboard-shortcuts';
 import { getAreaForStation } from '@/lib/utils/business-structure-utils';
+import { MonthYearSelector } from '@/components/ui/month-year-selector';
+import { Switch } from '@/components/ui/switch';
 
 
 interface InventoryDisplayProps {
@@ -34,6 +36,11 @@ interface InventoryDisplayProps {
 export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatus }: InventoryDisplayProps) {
   const [items, setItems] = useState<Item[]>([]);
   const { getPreference, setPreference } = useUserPreferences();
+
+  // Month selector state for Sold Items tab
+  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
+  const [currentMonth, setCurrentMonth] = useState(new Date().getMonth() + 1);
+  const [filterSoldByMonth, setFilterSoldByMonth] = useState(false);
   
   const [activeTab, setActiveTab] = useState<InventoryTab>(InventoryTab.STICKERS);
   const [showItemModal, setShowItemModal] = useState(false);
@@ -83,7 +90,7 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
 
   // Helper to get ItemType from InventoryTab
-  const getItemTypeForTab = (tab: InventoryTab): ItemType => {
+  const getItemTypeForTab = (tab: InventoryTab): ItemType | 'all' => {
     switch (tab) {
       case InventoryTab.DIGITAL: return ItemType.DIGITAL;
       case InventoryTab.ARTWORKS: return ItemType.ARTWORK;
@@ -94,6 +101,7 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
       case InventoryTab.MATERIALS: return ItemType.MATERIAL;
       case InventoryTab.EQUIPMENT: return ItemType.EQUIPMENT;
       case InventoryTab.BUNDLES: return ItemType.BUNDLE;
+      case InventoryTab.SOLD_ITEMS: return 'all'; // Load all types for sold items
       default: return ItemType.STICKER;
     }
   };
@@ -102,16 +110,32 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
     try {
       // First, load items for the active tab (fast, prioritized)
       const activeTabItemType = getItemTypeForTab(activeTab);
-      const activeTabItems = await ClientAPI.getItems(activeTabItemType);
-      setItems(activeTabItems); // Show active tab immediately
-      
+
+      let items: Item[];
+
+      if (activeTab === InventoryTab.SOLD_ITEMS) {
+        // Always use month filter for sold items (more efficient - they're indexed by month)
+        const month = filterSoldByMonth ? currentMonth : new Date().getMonth() + 1;
+        const year = filterSoldByMonth ? currentYear : new Date().getFullYear();
+        const monthItems = await ClientAPI.getItems('all', month, year);
+        items = monthItems.filter(item => item.status === ItemStatus.SOLD);
+      } else if (activeTabItemType === 'all') {
+        // Load all items
+        items = await ClientAPI.getItems();
+      } else {
+        // Load specific item type
+        items = await ClientAPI.getItems(activeTabItemType);
+      }
+
+      setItems(items); // Show items immediately
+
       // Then load all items in the background (for instant tab switching)
       const allItems = await ClientAPI.getItems();
       setItems(allItems); // Update with all items once loaded
     } catch (error) {
       console.error('Failed to load items:', error);
     }
-  }, [activeTab]);
+  }, [activeTab, currentYear, currentMonth, filterSoldByMonth]);
 
   useEffect(() => {
     // Load items when component mounts
@@ -230,9 +254,25 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
       try {
         // First, load items for the active tab (fast, prioritized)
         const activeTabItemType = getItemTypeForTab(activeTab);
-        const activeTabItems = await ClientAPI.getItems(activeTabItemType);
-        setItems(activeTabItems); // Show active tab immediately
-        
+
+        let items: Item[];
+
+        if (activeTab === InventoryTab.SOLD_ITEMS) {
+          // Always use month filter for sold items (more efficient - they're indexed by month)
+          const month = filterSoldByMonth ? currentMonth : new Date().getMonth() + 1;
+          const year = filterSoldByMonth ? currentYear : new Date().getFullYear();
+          const monthItems = await ClientAPI.getItems('all', month, year);
+          items = monthItems.filter(item => item.status === ItemStatus.SOLD);
+        } else if (activeTabItemType === 'all') {
+          // Load all items
+          items = await ClientAPI.getItems();
+        } else {
+          // Load specific item type
+          items = await ClientAPI.getItems(activeTabItemType);
+        }
+
+        setItems(items); // Show items immediately
+
         // Then load all items in the background (for instant tab switching)
         const allItems = await ClientAPI.getItems();
         setItems(allItems); // Update with all items once loaded
@@ -241,7 +281,7 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
       }
     };
     reloadItems();
-  }, [activeTab]);
+  }, [activeTab, currentYear, currentMonth, filterSoldByMonth]);
 
   // Helper function for consistent item sorting
   const sortItems = (items: Item[]): Item[] => {
@@ -258,12 +298,16 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
   };
 
   const getFilteredItems = (itemType: ItemType) => {
-    const filtered = items.filter(item => item.type === itemType);
+    const filtered = items.filter(item =>
+      item.type === itemType && item.status !== ItemStatus.SOLD
+    );
     return sortItems(filtered);
   };
 
   const getFilteredItemsByCategory = (category: ItemCategory) => {
-    return items.filter(item => getItemCategory(item.type) === category);
+    return items.filter(item =>
+      getItemCategory(item.type) === category && item.status !== ItemStatus.SOLD
+    );
   };
 
   const formatCurrency = (amount: number, currency: string = 'USD') => {
@@ -1327,6 +1371,92 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
     );
   };
 
+  // Sold Items Tab - Lifecycle Management
+  const renderSoldItemsTab = () => {
+    const soldItems = items.filter(item => item.status === ItemStatus.SOLD);
+
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold">Sold Items</h3>
+          <div className="flex items-center gap-4">
+            <MonthYearSelector
+              currentYear={currentYear}
+              currentMonth={currentMonth}
+              onYearChange={setCurrentYear}
+              onMonthChange={setCurrentMonth}
+            />
+            <div className="flex items-center gap-2 border rounded-md px-3 py-1.5">
+              <Switch
+                checked={filterSoldByMonth}
+                onCheckedChange={setFilterSoldByMonth}
+              />
+              <span className="text-sm text-muted-foreground">Filter by month</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="text-sm text-muted-foreground mb-4">
+          Items that have been sold and are ready for archive. These are filtered out of active inventory.
+          Showing items from {currentMonth}/{currentYear} {filterSoldByMonth ? '(custom selection)' : '(current month)'}.
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-4 lg:grid-cols-6">
+          {soldItems.map(item => (
+            <div key={item.id} className="bg-card border rounded p-3 hover:bg-accent/50 cursor-pointer transition-colors" onClick={() => handleEditItem(item)}>
+              <div className="text-center space-y-2">
+                {/* Item Image */}
+                <div className="w-16 h-16 mx-auto bg-muted rounded-md flex items-center justify-center">
+                  {item.imageUrl ? (
+                    <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover rounded-md" />
+                  ) : (
+                    <Package className="w-6 h-6 text-muted-foreground" />
+                  )}
+                </div>
+
+                {/* Item Name */}
+                <div className="font-medium text-sm truncate">{item.name}</div>
+
+                {/* Item Type Badge */}
+                <div className="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 px-2 py-1 rounded">
+                  {item.type}
+                </div>
+
+                {/* Sale Info */}
+                <div className="text-xs space-y-1">
+                  <div className="font-semibold text-green-600">
+                    ${item.value?.toFixed(2) || '0.00'}
+                  </div>
+                  <div className="text-muted-foreground">
+                    Sold: {item.quantitySold || 0}
+                  </div>
+                  {item.soldAt && (
+                    <div className="text-muted-foreground">
+                      {new Date(item.soldAt).toLocaleDateString()}
+                    </div>
+                  )}
+                </div>
+
+                {/* Edit Button */}
+                <div className="pt-2">
+                  <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={(e) => { e.stopPropagation(); handleEditItem(item); }}>Edit</Button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {soldItems.length === 0 && (
+          <div className="text-center py-8 text-muted-foreground">
+            <Package className="w-12 h-12 mx-auto mb-4 opacity-50" />
+            <p>No sold items found.</p>
+            <p className="text-sm">Items will appear here after they are sold.</p>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   // Bundles Tab - Business Logic Items
   const renderBundlesTab = () => {
     return (
@@ -1855,7 +1985,7 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
         setActiveTab(newTab);
         setPreference('inventory-active-tab', newTab);
       }} className="w-full">
-        <TabsList className="grid w-full grid-cols-9">
+        <TabsList className="grid w-full grid-cols-10">
           <TabsTrigger value={InventoryTab.DIGITAL}>Digital</TabsTrigger>
           <TabsTrigger value={InventoryTab.ARTWORKS}>Artworks</TabsTrigger>
           <TabsTrigger value={InventoryTab.STICKERS}>Stickers</TabsTrigger>
@@ -1865,6 +1995,7 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
           <TabsTrigger value={InventoryTab.CRAFT}>Craft</TabsTrigger>
           <TabsTrigger value={InventoryTab.MATERIALS}>Materials</TabsTrigger>
           <TabsTrigger value={InventoryTab.EQUIPMENT}>Equipment</TabsTrigger>
+          <TabsTrigger value={InventoryTab.SOLD_ITEMS}>Sold Items</TabsTrigger>
         </TabsList>
         
         <TabsContent value={InventoryTab.DIGITAL} className="mt-4">
@@ -1902,7 +2033,10 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
         <TabsContent value={InventoryTab.EQUIPMENT} className="mt-4">
           {renderEquipmentTab()}
         </TabsContent>
-        
+
+        <TabsContent value={InventoryTab.SOLD_ITEMS} className="mt-4">
+          {renderSoldItemsTab()}
+        </TabsContent>
 
       </Tabs>
 

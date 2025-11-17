@@ -15,8 +15,9 @@ import { ItemNameField } from '@/components/ui/item-name-field';
 import { Network, User } from 'lucide-react';
 import PlayerCharacterSelectorModal from './submodals/player-character-selector-submodal';
 import { FinancialRecord, Item, Site } from '@/types/entities';
-import { 
-  BUSINESS_STRUCTURE
+import {
+  BUSINESS_STRUCTURE,
+  FinancialStatus
 } from '@/types/enums';
 import { getCompanyAreas, getPersonalAreas, isCompanyStation, isPersonalStation, getAreaForStation } from '@/lib/utils/business-structure-utils';
 import type { Station, SubItemType } from '@/types/type-aliases';
@@ -34,6 +35,7 @@ import { formatMonthYear } from '@/lib/utils/date-utils';
 import { ItemStatus } from '@/types/enums';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
 import { VALIDATION_CONSTANTS } from '@/lib/constants/financial-constants';
+import ArchiveCollectionConfirmationModal from './submodals/archive-collection-confirmation-submodal';
 
 // FinancialsModal: UI-only form for financial record data collection and validation
 // Side effects and persistence handled by parent component
@@ -109,6 +111,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
     jungleCoinsString: '0',
     isNotPaid: false,        // Payment status
     isNotCharged: false,     // Payment status
+    status: FinancialStatus.DONE as FinancialStatus,  // Status field with default
     site: 'Home',
     targetSite: 'Home',
     customerCharacterId: null as string | null,
@@ -144,7 +147,15 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
   const [showRelationshipsModal, setShowRelationshipsModal] = useState(false);
   const [playerCharacterId, setPlayerCharacterId] = useState<string | null>(null);
   const [showPlayerCharacterSelector, setShowPlayerCharacterSelector] = useState(false);
-  
+
+  // Archive Collection Confirmation Modal state
+  const [showArchiveCollectionModal, setShowArchiveCollectionModal] = useState(false);
+  const [pendingStatusChange, setPendingStatusChange] = useState<{
+    status: FinancialStatus;
+    onConfirm: () => void;
+    onCancel: () => void;
+  } | null>(null);
+
   // Guard for one-time initialization of new records
   const didInitRef = useRef(false);
   
@@ -218,6 +229,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
         jungleCoinsString: (record.jungleCoins || 0).toString(),
         isNotPaid: record.isNotPaid || false,
         isNotCharged: record.isNotCharged || false,
+        status: record.status || FinancialStatus.DONE,  // Load existing status or default
         site: record.siteId || 'Home',
         targetSite: record.targetSiteId || 'Home',
         customerCharacterId: record.customerCharacterId || null,
@@ -283,6 +295,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
         jungleCoinsString: '0',
         isNotPaid: false,
         isNotCharged: false,
+        status: FinancialStatus.DONE,  // Default status for new records
         site: 'Home',
         targetSite: 'Home',
         customerCharacterId: null,
@@ -313,6 +326,22 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
       setOutputItemStatus(ItemStatus.FOR_SALE);
     }
   }, [record, getLastUsedStation]);
+
+  // Auto-logic: Set status to PENDING when isNotPaid or isNotCharged is true
+  useEffect(() => {
+    if (formData.isNotPaid || formData.isNotCharged) {
+      setFormData(prev => ({
+        ...prev,
+        status: FinancialStatus.PENDING
+      }));
+    } else if (formData.status === FinancialStatus.PENDING) {
+      // Only auto-set to DONE if currently PENDING and both flags are false
+      setFormData(prev => ({
+        ...prev,
+        status: FinancialStatus.DONE
+      }));
+    }
+  }, [formData.isNotPaid, formData.isNotCharged, formData.status]);
 
   const handleStationChange = (newStation: Station) => {
     
@@ -460,7 +489,8 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
       jungleCoins: formData.jungleCoins,
       isNotPaid: formData.isNotPaid,
       isNotCharged: formData.isNotCharged,
-      isCollected: record?.isCollected || false,
+      status: formData.status,  // Include status field
+      isCollected: formData.status === FinancialStatus.COLLECTED || record?.isCollected || false,
       // Character points (only awarded if character has PLAYER role)
       rewards: {
         points: {
@@ -925,6 +955,46 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
               <User className="w-3 h-3 mr-1" />
               Player
             </Button>
+            {/* Status Selector */}
+            <div className="flex items-center gap-2">
+              <Label htmlFor="financial-status" className="text-xs">Status:</Label>
+              <Select
+                value={formData.status}
+                onValueChange={(value) => {
+                  const newStatus = value as FinancialStatus;
+
+                  // Show confirmation for COLLECTED status
+                  if (newStatus === FinancialStatus.COLLECTED && formData.status !== FinancialStatus.COLLECTED) {
+                    setPendingStatusChange({
+                      status: newStatus,
+                      onConfirm: () => {
+                        setFormData(prev => ({ ...prev, status: newStatus }));
+                        setShowArchiveCollectionModal(false);
+                        setPendingStatusChange(null);
+                      },
+                      onCancel: () => {
+                        // Keep original status
+                        setShowArchiveCollectionModal(false);
+                        setPendingStatusChange(null);
+                      }
+                    });
+                    setShowArchiveCollectionModal(true);
+                    return;
+                  }
+
+                  setFormData(prev => ({ ...prev, status: newStatus }));
+                }}
+              >
+                <SelectTrigger className="h-8 w-28 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={FinancialStatus.PENDING}>PENDING</SelectItem>
+                  <SelectItem value={FinancialStatus.DONE}>DONE</SelectItem>
+                  <SelectItem value={FinancialStatus.COLLECTED}>COLLECTED</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <Button
               variant="outline"
               onClick={toggleEmissaryColumn}
@@ -977,6 +1047,25 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
       onSelect={setPlayerCharacterId}
       currentPlayerCharacterId={playerCharacterId}
     />
+
+    {/* Archive Collection Confirmation Modal */}
+    {pendingStatusChange && (
+      <ArchiveCollectionConfirmationModal
+        open={showArchiveCollectionModal}
+        onOpenChange={setShowArchiveCollectionModal}
+        entityType="financial"
+        entityName={formData.name}
+        pointsValue={{
+          xp: Math.floor((formData.revenue || 0) / 100),
+          rp: Math.floor((formData.revenue || 0) / 200),
+          fp: Math.floor((formData.revenue || 0) / 150),
+          hp: Math.floor((formData.revenue || 0) / 300)
+        }}
+        totalRevenue={formData.revenue || 0}
+        onConfirm={pendingStatusChange.onConfirm}
+        onCancel={pendingStatusChange.onCancel}
+      />
+    )}
     </>
   );
 }

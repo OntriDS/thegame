@@ -17,6 +17,7 @@ export const taskStatusKeyMap: Record<TaskStatus, string> = {
 
 /** Financial status key mappings */
 export const financialStatusKeyMap: Record<FinancialStatus, string> = {
+  [FinancialStatus.PENDING]: 'pending',
   [FinancialStatus.DONE]: 'done',
   [FinancialStatus.COLLECTED]: 'collected',
 };

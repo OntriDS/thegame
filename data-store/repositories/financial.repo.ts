@@ -7,11 +7,17 @@ import { formatMonthKey } from '@/lib/utils/date-utils';
 
 const ENTITY = EntityType.FINANCIAL;
 
+/**
+ * Get all financial records - SPECIAL CASE ONLY
+ * Use: Business analytics, bulk operations, system maintenance
+ * Performance Impact: Loads entire dataset into memory
+ * Alternative: Use getFinancialsForMonth(year, month) for UI components
+ */
 export async function getAllFinancials(): Promise<FinancialRecord[]> {
   const indexKey = buildIndexKey(ENTITY);
   const ids = await kvSMembers(indexKey);
   if (ids.length === 0) return [];
-  
+
   const keys = ids.map(id => buildDataKey(ENTITY, id));
   const financials = await kvMGet<FinancialRecord>(keys);
   return financials.filter((financial): financial is FinancialRecord => financial !== null && financial !== undefined);
