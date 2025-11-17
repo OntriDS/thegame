@@ -183,42 +183,42 @@ export function MonthlyHistoricalCashflows({ className }: MonthlyHistoricalCashf
           <div className="space-y-6">
             {/* Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Card className="p-4">
+              <Card className="p-4 border border-border/50">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-muted-foreground">Total Revenue</p>
-                    <p className="text-2xl font-bold text-green-600">
+                    <p className="text-2xl font-semibold text-foreground">
                       {formatCurrency(monthlyData.totalRevenue)}
                     </p>
                   </div>
-                  <TrendingUp className="w-8 h-8 text-green-600" />
+                  <TrendingUp className="w-6 h-6 text-foreground/50" />
                 </div>
               </Card>
 
-              <Card className="p-4">
+              <Card className="p-4 border border-border/50">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-muted-foreground">Total Cost</p>
-                    <p className="text-2xl font-bold text-red-600">
+                    <p className="text-2xl font-semibold text-foreground/70">
                       {formatCurrency(monthlyData.totalCost)}
                     </p>
                   </div>
-                  <TrendingDown className="w-8 h-8 text-red-600" />
+                  <TrendingDown className="w-6 h-6 text-foreground/40" />
                 </div>
               </Card>
 
-              <Card className="p-4">
+              <Card className="p-4 border border-border/50">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-muted-foreground">Net Cashflow</p>
-                    <p className={`text-2xl font-bold ${monthlyData.netCashflow >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    <p className={`text-2xl font-semibold ${monthlyData.netCashflow >= 0 ? 'text-foreground' : 'text-foreground/70'}`}>
                       {formatCurrency(monthlyData.netCashflow)}
                     </p>
                   </div>
                   {monthlyData.netCashflow >= 0 ? (
-                    <TrendingUp className="w-8 h-8 text-green-600" />
+                    <TrendingUp className="w-6 h-6 text-foreground/50" />
                   ) : (
-                    <TrendingDown className="w-8 h-8 text-red-600" />
+                    <TrendingDown className="w-6 h-6 text-foreground/40" />
                   )}
                 </div>
               </Card>
@@ -227,25 +227,25 @@ export function MonthlyHistoricalCashflows({ className }: MonthlyHistoricalCashf
             {/* Detailed Breakdown */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Company Breakdown */}
-              <Card className="p-4">
-                <h3 className="font-semibold mb-3">Company Financials</h3>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span>Revenue:</span>
-                    <span className="font-medium text-green-600">
+              <Card className="p-4 border border-border/50">
+                <h3 className="font-medium mb-3 text-foreground/90">Company Financials</h3>
+                <div className="space-y-2.5">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Revenue:</span>
+                    <span className="font-medium text-foreground">
                       {formatCurrency(monthlyData.companyRevenue)}
                     </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span>Cost:</span>
-                    <span className="font-medium text-red-600">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Cost:</span>
+                    <span className="font-medium text-foreground/70">
                       {formatCurrency(monthlyData.companyCost)}
                     </span>
                   </div>
-                  <div className="border-t pt-2">
-                    <div className="flex justify-between font-semibold">
-                      <span>Net:</span>
-                      <span className={monthlyData.companyNet >= 0 ? 'text-green-600' : 'text-red-600'}>
+                  <div className="border-t border-border/50 pt-2.5 mt-2.5">
+                    <div className="flex justify-between font-semibold text-sm">
+                      <span className="text-foreground/80">Net:</span>
+                      <span className={monthlyData.companyNet >= 0 ? 'text-foreground' : 'text-foreground/70'}>
                         {formatCurrency(monthlyData.companyNet)}
                       </span>
                     </div>
@@ -254,25 +254,25 @@ export function MonthlyHistoricalCashflows({ className }: MonthlyHistoricalCashf
               </Card>
 
               {/* Personal Breakdown */}
-              <Card className="p-4">
-                <h3 className="font-semibold mb-3">Personal Financials</h3>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span>Revenue:</span>
-                    <span className="font-medium text-green-600">
+              <Card className="p-4 border border-border/50">
+                <h3 className="font-medium mb-3 text-foreground/90">Personal Financials</h3>
+                <div className="space-y-2.5">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Revenue:</span>
+                    <span className="font-medium text-foreground">
                       {formatCurrency(monthlyData.personalRevenue)}
                     </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span>Cost:</span>
-                    <span className="font-medium text-red-600">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Cost:</span>
+                    <span className="font-medium text-foreground/70">
                       {formatCurrency(monthlyData.personalCost)}
                     </span>
                   </div>
-                  <div className="border-t pt-2">
-                    <div className="flex justify-between font-semibold">
-                      <span>Net:</span>
-                      <span className={monthlyData.personalNet >= 0 ? 'text-green-600' : 'text-red-600'}>
+                  <div className="border-t border-border/50 pt-2.5 mt-2.5">
+                    <div className="flex justify-between font-semibold text-sm">
+                      <span className="text-foreground/80">Net:</span>
+                      <span className={monthlyData.personalNet >= 0 ? 'text-foreground' : 'text-foreground/70'}>
                         {formatCurrency(monthlyData.personalNet)}
                       </span>
                     </div>
@@ -282,10 +282,10 @@ export function MonthlyHistoricalCashflows({ className }: MonthlyHistoricalCashf
             </div>
 
             {/* Record Summary */}
-            <div className="flex items-center justify-between text-sm text-muted-foreground">
+            <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t border-border/30">
               <span>{monthlyData.recordCount} total records</span>
               {monthlyData.pendingCount > 0 && (
-                <span className="text-orange-600">
+                <span className="text-muted-foreground/70">
                   {monthlyData.pendingCount} pending records (excluded from totals)
                 </span>
               )}

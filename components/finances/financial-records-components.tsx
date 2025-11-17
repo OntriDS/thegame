@@ -86,11 +86,11 @@ export function CompanyRecordsList({
                       <span className="text-muted-foreground">•</span>
                       <span className="text-muted-foreground text-xs">{record.station}</span>
                       <span className="text-muted-foreground">•</span>
-                      <span className={record.cost > 0 ? "text-red-600 font-medium" : "text-muted-foreground"}>
+                      <span className={record.cost > 0 ? "text-muted-foreground font-medium" : "text-muted-foreground"}>
                         {record.cost > 0 ? `-$${record.cost}` : '$0'}
                       </span>
                       <span className="text-muted-foreground">•</span>
-                      <span className={record.revenue > 0 ? "text-green-600 font-medium" : "text-muted-foreground"}>
+                      <span className={record.revenue > 0 ? "text-foreground font-medium" : "text-muted-foreground"}>
                         {record.revenue > 0 ? `+$${record.revenue}` : '$0'}
                       </span>
                       {isWaiting && (
@@ -283,11 +283,11 @@ This action cannot be undone.`);
                       <span className="text-muted-foreground">•</span>
                       <span className="text-muted-foreground text-xs">{record.station}</span>
                       <span className="text-muted-foreground">•</span>
-                      <span className={record.cost > 0 ? "text-red-600 font-medium" : "text-muted-foreground"}>
+                      <span className={record.cost > 0 ? "text-muted-foreground font-medium" : "text-muted-foreground"}>
                         {record.cost > 0 ? `-$${record.cost}` : '$0'}
                       </span>
                       <span className="text-muted-foreground">•</span>
-                      <span className={record.revenue > 0 ? "text-green-600 font-medium" : "text-muted-foreground"}>
+                      <span className={record.revenue > 0 ? "text-foreground font-medium" : "text-muted-foreground"}>
                         {record.revenue > 0 ? `+$${record.revenue}` : '$0'}
                       </span>
                       {isWaiting && (
