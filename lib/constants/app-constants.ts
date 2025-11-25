@@ -7,9 +7,9 @@ export const ORDER_INCREMENT = 1000; // Used for task ordering
 export const DRAG_Z_INDEX = 1000; // Z-index for dragging elements
 export const CM_TO_M2_CONVERSION = 10000; // Convert cm² to m²
 export const DAY_IN_MS = 24 * 60 * 60 * 1000; // Milliseconds in a day
-export const SIDEBAR_MIN_WIDTH = 240; // Minimum sidebar width in pixels
-export const SIDEBAR_MAX_WIDTH = 500; // Maximum sidebar width in pixels
-export const SIDEBAR_DEFAULT_WIDTH = 320; // Default sidebar width in pixels
+export const SIDEBAR_MIN_WIDTH = 300; // Minimum sidebar width in pixels
+export const SIDEBAR_MAX_WIDTH = 800; // Maximum sidebar width in pixels
+export const SIDEBAR_DEFAULT_WIDTH = 450; // Default sidebar width in pixels
 export const DRAG_ACTIVATION_DISTANCE = 5; // Pixels to move before drag starts
 
 // Time-related constants for UI operations
@@ -75,7 +75,7 @@ export const Z_INDEX_LAYERS = {
   CRITICAL: 1000, // Highest priority modals (delete confirmations, critical alerts)
   DRAG: 1500, // For dragging elements
   MAX: 9999, // Emergency upper bound
-  
+
 } as const;
 
 // UI and interaction constants
@@ -101,7 +101,7 @@ export const PROCESSING_CONSTANTS = {
 // Point System Constants
 export const POINT_TYPES = {
   XP: 'xp',
-  RP: 'rp', 
+  RP: 'rp',
   FP: 'fp',
   HP: 'hp'
 } as const;
@@ -121,21 +121,21 @@ export const POINT_COLORS = {
     hex: '#3b82f6'
   },
   [POINT_TYPES.RP]: {
-    bg: 'bg-green-500', 
+    bg: 'bg-green-500',
     border: 'border-green-500',
     text: 'text-green-500',
     hex: '#10b981'
   },
   [POINT_TYPES.FP]: {
     bg: 'bg-yellow-500',
-    border: 'border-yellow-500', 
+    border: 'border-yellow-500',
     text: 'text-yellow-500',
     hex: '#f59e0b'
   },
   [POINT_TYPES.HP]: {
     bg: 'bg-red-500',
     border: 'border-red-500',
-    text: 'text-red-500', 
+    text: 'text-red-500',
     hex: '#ef4444'
   }
 } as const;

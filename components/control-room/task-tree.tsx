@@ -128,18 +128,15 @@ function TreeNodeComponent({ node, depth, expanded, selectedNode, onToggle, onSe
           {...attributes}
           onClick={() => onSelectNode(node)}
           style={{ paddingLeft: `${depth * 1.25}rem`, cursor: isDragging ? 'grabbing' : 'pointer' }}
-          className={`flex-1 text-left flex items-center gap-2 py-2 rounded-md transition-all duration-${TRANSITION_DURATION_150} ${
-            isSelected ? 'bg-primary/10' : 'hover:bg-muted/50'
-          } ${
-            isOver ? 'ring-2 ring-accent ring-offset-2 ring-offset-background bg-accent/10' : ''
-          } ${
-            isDragging ? 'shadow-lg scale-105' : ''
-          }`}
+          className={`flex-1 text-left flex items-center gap-3 py-3 rounded-md transition-all duration-${TRANSITION_DURATION_150} ${isSelected ? 'bg-primary/10' : 'hover:bg-muted/50'
+            } ${isOver ? 'ring-2 ring-accent ring-offset-2 ring-offset-background bg-accent/10' : ''
+            } ${isDragging ? 'shadow-lg scale-105' : ''
+            }`}
         >
           {/* Toggle Chevron */}
           <div className="w-6 h-6 flex items-center justify-center">
             {hasChildren && (
-              <span 
+              <span
                 onClick={(e) => { e.stopPropagation(); onToggle(nodeId); }}
                 className="p-1 hover:bg-muted/50 rounded cursor-pointer transition-colors"
               >
@@ -201,7 +198,7 @@ function TreeNodeComponent({ node, depth, expanded, selectedNode, onToggle, onSe
           </div>
 
           {/* Name */}
-          <span className="flex-1 truncate text-sm font-medium">{node.task.name}</span>
+          <span className="flex-1 truncate text-base font-medium">{node.task.name}</span>
         </button>
       </div>
 
@@ -229,18 +226,18 @@ function TreeNodeComponent({ node, depth, expanded, selectedNode, onToggle, onSe
 }
 
 
-export default function TaskTree({ 
-  tree, 
+export default function TaskTree({
+  tree,
   expanded,
   onToggle,
-  onNewTask, 
+  onNewTask,
   stationFilters,
   onStationFilterChange,
   typeFilter,
   onTypeFilterChange,
   activeSubTab,
   onChangeOrder,
-  ...props 
+  ...props
 }: TaskTreeProps) {
   const typeOptions: TaskType[] =
     activeSubTab === 'recurrent-tasks'
@@ -248,12 +245,12 @@ export default function TaskTree({
       : activeSubTab === 'automation-tree'
         ? [TaskType.AUTOMATION]
         : Object.values(TaskType).filter(
-            (t) =>
-              t !== TaskType.RECURRENT_GROUP &&
-              t !== TaskType.RECURRENT_TEMPLATE &&
-              t !== TaskType.RECURRENT_INSTANCE &&
-              t !== TaskType.AUTOMATION
-          );
+          (t) =>
+            t !== TaskType.RECURRENT_GROUP &&
+            t !== TaskType.RECURRENT_TEMPLATE &&
+            t !== TaskType.RECURRENT_INSTANCE &&
+            t !== TaskType.AUTOMATION
+        );
 
   return (
     <aside className="w-full h-full border-b sm:border-b-0 sm:border-r bg-muted/20 flex flex-col overflow-hidden">
@@ -268,7 +265,7 @@ export default function TaskTree({
               <>
                 {/* Mission Toggle */}
                 {collectNodesByType(tree, TaskType.MISSION).length > 0 && (
-                  <Button 
+                  <Button
                     variant={(() => {
                       const missionNodes = collectNodesByType(tree, TaskType.MISSION);
                       return missionNodes.length > 0 && missionNodes.every(node => expanded.has(node.task.id)) ? "default" : "ghost";
@@ -278,7 +275,7 @@ export default function TaskTree({
                     onClick={() => {
                       const missionNodes = collectNodesByType(tree, TaskType.MISSION);
                       const allMissionsExpanded = missionNodes.every(node => expanded.has(node.task.id));
-                      
+
                       if (allMissionsExpanded) {
                         missionNodes.forEach(node => onToggle(node.task.id));
                       } else {
@@ -294,7 +291,7 @@ export default function TaskTree({
                   </Button>
                 )}
                 {/* Milestone Toggle */}
-                <Button 
+                <Button
                   variant={(() => {
                     const milestoneNodes = collectNodesByType(tree, TaskType.MILESTONE);
                     return milestoneNodes.length > 0 && milestoneNodes.every(node => expanded.has(node.task.id)) ? "default" : "ghost";
@@ -305,7 +302,7 @@ export default function TaskTree({
                     const milestoneNodes = collectNodesByType(tree, TaskType.MILESTONE);
                     const missionNodes = collectNodesByType(tree, TaskType.MISSION);
                     const allMilestonesExpanded = milestoneNodes.length > 0 && milestoneNodes.every(node => expanded.has(node.task.id));
-                    
+
                     if (allMilestonesExpanded) {
                       // Turn OFF milestones
                       milestoneNodes.forEach(node => onToggle(node.task.id));
@@ -324,16 +321,16 @@ export default function TaskTree({
                       });
                     }
                   }}
-                  >
-                    {React.createElement(TASK_TYPE_ICONS[TaskType.MILESTONE] || TASK_TYPE_ICONS[TaskType.ASSIGNMENT], { className: "h-4 w-4" })}
-                  </Button>
+                >
+                  {React.createElement(TASK_TYPE_ICONS[TaskType.MILESTONE] || TASK_TYPE_ICONS[TaskType.ASSIGNMENT], { className: "h-4 w-4" })}
+                </Button>
               </>
             )}
             {activeSubTab === 'recurrent-tasks' && (
               <>
                 {/* Recurrent Group Toggle */}
                 {collectNodesByType(tree, TaskType.RECURRENT_GROUP).length > 0 && (
-                  <Button 
+                  <Button
                     variant={(() => {
                       const parentNodes = collectNodesByType(tree, TaskType.RECURRENT_GROUP);
                       return parentNodes.length > 0 && parentNodes.every(node => expanded.has(node.task.id)) ? "default" : "ghost";
@@ -343,7 +340,7 @@ export default function TaskTree({
                     onClick={() => {
                       const parentNodes = collectNodesByType(tree, TaskType.RECURRENT_GROUP);
                       const allParentsExpanded = parentNodes.every(node => expanded.has(node.task.id));
-                      
+
                       if (allParentsExpanded) {
                         parentNodes.forEach(node => onToggle(node.task.id));
                       } else {
@@ -360,7 +357,7 @@ export default function TaskTree({
                 )}
                 {/* Recurrent Template Toggle */}
                 {collectNodesByType(tree, TaskType.RECURRENT_TEMPLATE).length > 0 && (
-                  <Button 
+                  <Button
                     variant={(() => {
                       const templateNodes = collectNodesByType(tree, TaskType.RECURRENT_TEMPLATE);
                       return templateNodes.length > 0 && templateNodes.every(node => expanded.has(node.task.id)) ? "default" : "ghost";
@@ -371,7 +368,7 @@ export default function TaskTree({
                       const templateNodes = collectNodesByType(tree, TaskType.RECURRENT_TEMPLATE);
                       const parentNodes = collectNodesByType(tree, TaskType.RECURRENT_GROUP);
                       const allTemplatesExpanded = templateNodes.every(node => expanded.has(node.task.id));
-                      
+
                       if (allTemplatesExpanded) {
                         // Turn OFF templates
                         templateNodes.forEach(node => onToggle(node.task.id));
@@ -441,8 +438,8 @@ export default function TaskTree({
           </div>
         </div>
       </div>
-      
-      <div className="flex-1 overflow-y-auto p-2 space-y-1">
+
+      <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
         {tree.map((root, idx) => (
           <TreeNodeComponent
             key={root.task.id}
