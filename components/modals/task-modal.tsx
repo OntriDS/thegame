@@ -27,7 +27,7 @@ import { createSiteOptionsWithCategories, getSiteNameFromId } from '@/lib/utils/
 import type { Station, SubItemType } from '@/types/type-aliases';
 import { v4 as uuid } from 'uuid';
 import { PROGRESS_MAX, PROGRESS_STEP, PRICE_STEP } from '@/lib/constants/app-constants';
-import { Network, User, Calendar as CalendarIcon } from 'lucide-react';
+import { Network, User } from 'lucide-react';
 import { getEmissaryFields } from '@/types/diplomatic-fields';
 import CascadeStatusConfirmationModal from './submodals/cascade-status-confirmation-submodal';
 import ArchiveCollectionConfirmationModal from './submodals/archive-collection-confirmation-submodal';
@@ -833,89 +833,89 @@ export default function TaskModal({
   };
 
   return (
-    <React.Fragment>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent zIndexLayer={'MODALS'} className="w-full max-w-7xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{task ? 'Edit Task' : (isRecurrentModal ? 'Create New Recurrent Task' : 'Create New Task')}</DialogTitle>
-            <DialogDescription>
-              {task ? 'Modify the task details below' : (isRecurrentModal ? 'Set up a new recurring task pattern' : 'Fill in the task information to create a new task')}
-            </DialogDescription>
-          </DialogHeader>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent zIndexLayer={'MODALS'} className="w-full max-w-7xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{task ? 'Edit Task' : (isRecurrentModal ? 'Create New Recurrent Task' : 'Create New Task')}</DialogTitle>
+          <DialogDescription>
+            {task ? 'Modify the task details below' : (isRecurrentModal ? 'Set up a new recurring task pattern' : 'Fill in the task information to create a new task')}
+          </DialogDescription>
+        </DialogHeader>
 
-          {/* Content */}
-          <div className="px-6">
-            <div className="flex gap-4">
-              {/* Main columns container */}
-              <div className={`flex-1 grid gap-4 ${emissaryColumnExpanded ? 'grid-cols-4' : 'grid-cols-3'}`}>
-                {/* Column 1: NATIVE (Basic Info) */}
-                <div className="space-y-3">
-                  {/* <h3 className="text-sm font-semibold text-muted-foreground border-b pb-1">🧬 NATIVE</h3>*/}
-                  <div className="space-y-2">
-                    <Label htmlFor="task-name" className="text-xs">Name *</Label>
-                    <Input
-                      id="task-name"
-                      value={name}
-                      onChange={(e) => setName(e.currentTarget.value)}
-                      placeholder="Enter task name..."
-                      className="h-8 text-sm"
-                      autoFocus
-                    />
-                  </div>
+        {/* Content */}
+        <div className="px-6">
+          <div className="flex gap-4">
+            {/* Main columns container */}
+            <div className={`flex-1 grid gap-4 ${emissaryColumnExpanded ? 'grid-cols-4' : 'grid-cols-3'}`}>
+              {/* Column 1: NATIVE (Basic Info) */}
+              <div className="space-y-3">
+                {/* <h3 className="text-sm font-semibold text-muted-foreground border-b pb-1">🧬 NATIVE</h3>*/}
+                <div className="space-y-2">
+                  <Label htmlFor="task-name" className="text-xs">Name *</Label>
+                  <Input
+                    id="task-name"
+                    value={name}
+                    onChange={(e) => setName(e.currentTarget.value)}
+                    placeholder="Enter task name..."
+                    className="h-8 text-sm"
+                    autoFocus
+                  />
+                </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="task-description" className="text-xs">Description</Label>
-                    <Textarea
-                      id="task-description"
-                      placeholder="Describe the task objectives..."
-                      value={description}
-                      onChange={(e) => setDescription(e.currentTarget.value)}
-                      className="h-16 text-sm resize-none"
-                      onInput={handleDescriptionInput}
-                    />
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="task-description" className="text-xs">Description</Label>
+                  <Textarea
+                    id="task-description"
+                    placeholder="Describe the task objectives..."
+                    value={description}
+                    onChange={(e) => setDescription(e.currentTarget.value)}
+                    className="h-16 text-sm resize-none"
+                    onInput={handleDescriptionInput}
+                  />
+                </div>
 
-                  {/* Schedule Section - Compact */}
-                  <div className="space-y-2">
-                    <Label className="text-xs">Schedule</Label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="space-y-1">
-                        <Label className="text-xs text-muted-foreground">Start</Label>
-                        <div className="flex gap-1">
-                          <DatePicker
-                            value={scheduledStartDate}
-                            onChange={setScheduledStartDate}
-                            placeholder="Date"
-                            className="h-8 text-sm"
-                          />
-                          <Input
-                            type="time"
-                            value={scheduledStartTime}
-                            onChange={(e) => setScheduledStartTime(e.target.value)}
-                            className="h-8 text-sm"
-                          />
-                        </div>
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs text-muted-foreground">End</Label>
-                        <div className="flex gap-1">
-                          <DatePicker
-                            value={scheduledEndDate}
-                            onChange={(date) => {
-                              setScheduledEndDate(date);
-                              setDueDate(date);
-                            }}
-                            placeholder="Date"
-                            className="h-8 text-sm"
-                          />
-                          <Input
-                            type="time"
-                            value={scheduledEndTime}
-                            onChange={(e) => setScheduledEndTime(e.target.value)}
-                            className="h-8 text-sm"
-                          />
-                        </div>
-                      </div>
+                <div className="space-y-2">
+                  <Label htmlFor="task-due-date" className="text-xs">Due Date</Label>
+                  <DatePicker
+                    value={dueDate}
+                    onChange={setDueDate}
+                    placeholder="Select due date..."
+                  />
+                </div>
+
+                {/* Schedule Fields */}
+                <div className="space-y-2 border-t pt-2 mt-2">
+                  <Label className="text-xs font-semibold">Schedule</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <Label className="text-[10px] text-muted-foreground">Start</Label>
+                      <DatePicker
+                        value={scheduledStartDate}
+                        onChange={setScheduledStartDate}
+                        placeholder="Start Date"
+                        className="h-7 text-xs"
+                      />
+                      <Input
+                        type="time"
+                        value={scheduledStartTime}
+                        onChange={(e) => setScheduledStartTime(e.target.value)}
+                        className="h-7 text-xs"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[10px] text-muted-foreground">End</Label>
+                      <DatePicker
+                        value={scheduledEndDate}
+                        onChange={setScheduledEndDate}
+                        placeholder="End Date"
+                        className="h-7 text-xs"
+                      />
+                      <Input
+                        type="time"
+                        value={scheduledEndTime}
+                        onChange={(e) => setScheduledEndTime(e.target.value)}
+                        className="h-7 text-xs"
+                      />
                     </div>
                   </div>
                 </div>
@@ -1333,207 +1333,205 @@ export default function TaskModal({
               )}
             </div>
           </div>
+        </div>
 
 
-          <DialogFooter className="flex items-center justify-between pt-4 border-t px-6 pb-6">
-            <div className="flex items-center gap-4">
-              {task && (
-                <>
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowDeleteModal(true)}
-                    className="h-8 text-xs text-muted-foreground hover:text-foreground"
-                  >
-                    Delete
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowRelationshipsModal(true)}
-                    className="h-8 text-xs"
-                  >
-                    <Network className="w-3 h-3 mr-1" />
-                    Links
-                  </Button>
-                </>
-              )}
-              <Button
-                variant="outline"
-                onClick={() => setShowPlayerCharacterSelector(true)}
-                className="h-8 text-xs"
-              >
-                <User className="w-3 h-3 mr-1" />
-                Player
-              </Button>
-              <Button
-                variant="outline"
-                onClick={toggleEmissaryColumn}
-                className={`h-8 text-xs ${emissaryColumnExpanded ? 'bg-transparent text-white' : 'bg-muted text-muted-foreground'}`}
-              >
-                Emissaries
-              </Button>
-            </div>
+        <DialogFooter className="flex items-center justify-between pt-4 border-t px-6 pb-6">
+          <div className="flex items-center gap-4">
+            {task && (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowDeleteModal(true)}
+                  className="h-8 text-xs text-muted-foreground hover:text-foreground"
+                >
+                  Delete
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowRelationshipsModal(true)}
+                  className="h-8 text-xs"
+                >
+                  <Network className="w-3 h-3 mr-1" />
+                  Links
+                </Button>
+              </>
+            )}
+            <Button
+              variant="outline"
+              onClick={() => setShowPlayerCharacterSelector(true)}
+              className="h-8 text-xs"
+            >
+              <User className="w-3 h-3 mr-1" />
+              Player
+            </Button>
+            <Button
+              variant="outline"
+              onClick={toggleEmissaryColumn}
+              className={`h-8 text-xs ${emissaryColumnExpanded ? 'bg-transparent text-white' : 'bg-muted text-muted-foreground'}`}
+            >
+              Emissaries
+            </Button>
+          </div>
 
-            <div className="flex items-center gap-2">
-              <Label htmlFor="task-status-footer" className="text-xs text-muted-foreground">Status:</Label>
-              <Select value={String(status)} onValueChange={(val) => {
-                const newStatus = val as TaskStatus;
+          <div className="flex items-center gap-2">
+            <Label htmlFor="task-status-footer" className="text-xs text-muted-foreground">Status:</Label>
+            <Select value={String(status)} onValueChange={(val) => {
+              const newStatus = val as TaskStatus;
 
-                // Show confirmation for COLLECTED status
-                if (newStatus === TaskStatus.COLLECTED && status !== TaskStatus.COLLECTED) {
-                  const originalStatus = status;
+              // Show confirmation for COLLECTED status
+              if (newStatus === TaskStatus.COLLECTED && status !== TaskStatus.COLLECTED) {
+                const originalStatus = status;
 
-                  setPendingStatusChange({
-                    status: newStatus,
-                    onConfirm: () => {
-                      setStatus(newStatus);
-                      setProgress(100);
-                      setShowArchiveCollectionModal(false);
-                      setPendingStatusChange(null);
-                    },
-                    onCancel: () => {
-                      // Keep original status
-                      setShowArchiveCollectionModal(false);
-                      setPendingStatusChange(null);
+                setPendingStatusChange({
+                  status: newStatus,
+                  onConfirm: () => {
+                    setStatus(newStatus);
+                    setProgress(100);
+                    setShowArchiveCollectionModal(false);
+                    setPendingStatusChange(null);
+                  },
+                  onCancel: () => {
+                    // Keep original status
+                    setShowArchiveCollectionModal(false);
+                    setPendingStatusChange(null);
+                  }
+                });
+                setShowArchiveCollectionModal(true);
+                return;
+              }
+
+              setStatus(newStatus);
+
+              // Status-to-progress mechanic
+              if (newStatus === TaskStatus.CREATED || newStatus === TaskStatus.ON_HOLD) {
+                setProgress(0);
+              } else if (newStatus === TaskStatus.IN_PROGRESS) {
+                setProgress(25);
+              } else if (newStatus === TaskStatus.FINISHING) {
+                setProgress(75);
+              } else if (newStatus === TaskStatus.DONE) {
+                setProgress(100);
+              }
+            }}>
+              <SelectTrigger id="task-status-footer" className="h-8 w-36 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.values(TaskStatus)
+                  .filter((taskStatus) => {
+                    if (taskStatus === TaskStatus.COLLECTED && (isNotPaid || isNotCharged)) {
+                      return false;
                     }
-                  });
-                  setShowArchiveCollectionModal(true);
-                  return;
-                }
+                    return true;
+                  })
+                  .map((taskStatus) => (
+                    <SelectItem key={taskStatus} value={String(taskStatus)}>
+                      {String(taskStatus).replace('_', ' ')}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-                setStatus(newStatus);
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => onOpenChange(false)} className="h-8 text-xs" disabled={isSaving}>
+              Cancel
+            </Button>
+            <Button onClick={handleSave} className="h-8 text-xs" disabled={!name.trim() || isSaving}>
+              {isSaving ? 'Saving...' : (task ? 'Update' : 'Create')} Task
+            </Button>
+          </div>
+        </DialogFooter>
+      </DialogContent>
 
-                // Status-to-progress mechanic
-                if (newStatus === TaskStatus.CREATED || newStatus === TaskStatus.ON_HOLD) {
-                  setProgress(0);
-                } else if (newStatus === TaskStatus.IN_PROGRESS) {
-                  setProgress(25);
-                } else if (newStatus === TaskStatus.FINISHING) {
-                  setProgress(75);
-                } else if (newStatus === TaskStatus.DONE) {
-                  setProgress(100);
-                }
-              }}>
-                <SelectTrigger id="task-status-footer" className="h-8 w-36 text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.values(TaskStatus)
-                    .filter((taskStatus) => {
-                      if (taskStatus === TaskStatus.COLLECTED && (isNotPaid || isNotCharged)) {
-                        return false;
-                      }
-                      return true;
-                    })
-                    .map((taskStatus) => (
-                      <SelectItem key={taskStatus} value={String(taskStatus)}>
-                        {String(taskStatus).replace('_', ' ')}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-            </div>
+      <DeleteModal
+        open={showDeleteModal}
+        onOpenChange={setShowDeleteModal}
+        entityType={EntityType.TASK}
+        entities={task ? [task] : []}
+        onComplete={() => {
+          setShowDeleteModal(false);
+          onOpenChange(false);
+          onComplete?.();
+        }}
+      />
 
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => onOpenChange(false)} className="h-8 text-xs" disabled={isSaving}>
-                Cancel
-              </Button>
-              <Button onClick={handleSave} className="h-8 text-xs" disabled={!name.trim() || isSaving}>
-                {isSaving ? 'Saving...' : (task ? 'Update' : 'Create')} Task
-              </Button>
-            </div>
+      {/* Validation Modal */}
+      <Dialog open={showValidationModal} onOpenChange={setShowValidationModal}>
+        <DialogContent zIndexLayer={'MODALS'}>
+          <DialogHeader>
+            <DialogTitle>Missing Required Information</DialogTitle>
+            <DialogDescription>
+              {validationMessage}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowValidationModal(false)}
+              className="h-8 text-xs"
+            >
+              Okay
+            </Button>
           </DialogFooter>
         </DialogContent>
-
-        <DeleteModal
-          open={showDeleteModal}
-          onOpenChange={setShowDeleteModal}
-          entityType={EntityType.TASK}
-          entities={task ? [task] : []}
-          onComplete={() => {
-            setShowDeleteModal(false);
-            onOpenChange(false);
-            onComplete?.();
-          }}
-        />
-
-        {/* Validation Modal */}
-        <Dialog open={showValidationModal} onOpenChange={setShowValidationModal}>
-          <DialogContent zIndexLayer={'MODALS'}>
-            <DialogHeader>
-              <DialogTitle>Missing Required Information</DialogTitle>
-              <DialogDescription>
-                {validationMessage}
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setShowValidationModal(false)}
-                className="h-8 text-xs"
-              >
-                Okay
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* Links Relationships Modal */}
-        {
-          task && (
-            <LinksRelationshipsModal
-              entity={{ type: EntityType.TASK, id: task.id, name: task.name }}
-              open={showRelationshipsModal}
-              onClose={() => setShowRelationshipsModal(false)}
-            />
-          )
-        }
-
-        {/* Character Selector Submodal */}
-        <CharacterSelectorSubmodal
-          open={showCharacterSelector}
-          onOpenChange={setShowCharacterSelector}
-          onSelect={handleSetCustomer}
-          currentOwnerId={customerCharacterId}
-        />
-
-        {/* Player Character Selector Modal */}
-        <PlayerCharacterSelectorModal
-          open={showPlayerCharacterSelector}
-          onOpenChange={setShowPlayerCharacterSelector}
-          onSelect={setPlayerCharacterId}
-          currentPlayerCharacterId={playerCharacterId}
-        />
-
-        {/* Cascade Status Confirmation Modal */}
-        {cascadeData && (
-          <CascadeStatusConfirmationModal
-            open={showCascadeModal}
-            onOpenChange={setShowCascadeModal}
-            templateName={name}
-            newStatus={cascadeData.newStatus}
-            oldStatus={cascadeData.oldStatus}
-            affectedInstancesCount={cascadeData.affectedCount}
-            onConfirm={handleCascadeConfirm}
-            onCancel={handleCascadeCancel}
-            isReversal={cascadeData.isReversal}
-          />
-        )}
-
-        {/* Archive Collection Confirmation Modal */}
-        {pendingStatusChange && (
-          <ArchiveCollectionConfirmationModal
-            open={showArchiveCollectionModal}
-            onOpenChange={setShowArchiveCollectionModal}
-            entityType="task"
-            entityName={name}
-            pointsValue={rewards?.points || { xp: 0, rp: 0, fp: 0, hp: 0 }}
-            totalRevenue={revenue || 0}
-            onConfirm={pendingStatusChange.onConfirm}
-            onCancel={pendingStatusChange.onCancel}
-          />
-        )}
-
       </Dialog>
-    </React.Fragment>
+
+      {/* Links Relationships Modal */}
+      {task && (
+        <LinksRelationshipsModal
+          entity={{ type: EntityType.TASK, id: task.id, name: task.name }}
+          open={showRelationshipsModal}
+          onClose={() => setShowRelationshipsModal(false)}
+        />
+      )}
+
+      {/* Character Selector Submodal */}
+      <CharacterSelectorSubmodal
+        open={showCharacterSelector}
+        onOpenChange={setShowCharacterSelector}
+        onSelect={handleSetCustomer}
+        currentOwnerId={customerCharacterId}
+      />
+
+      {/* Player Character Selector Modal */}
+      <PlayerCharacterSelectorModal
+        open={showPlayerCharacterSelector}
+        onOpenChange={setShowPlayerCharacterSelector}
+        onSelect={setPlayerCharacterId}
+        currentPlayerCharacterId={playerCharacterId}
+      />
+
+      {/* Cascade Status Confirmation Modal */}
+      {cascadeData && (
+        <CascadeStatusConfirmationModal
+          open={showCascadeModal}
+          onOpenChange={setShowCascadeModal}
+          templateName={name}
+          newStatus={cascadeData.newStatus}
+          oldStatus={cascadeData.oldStatus}
+          affectedInstancesCount={cascadeData.affectedCount}
+          onConfirm={handleCascadeConfirm}
+          onCancel={handleCascadeCancel}
+          isReversal={cascadeData.isReversal}
+        />
+      )}
+
+      {/* Archive Collection Confirmation Modal */}
+      {pendingStatusChange && (
+        <ArchiveCollectionConfirmationModal
+          open={showArchiveCollectionModal}
+          onOpenChange={setShowArchiveCollectionModal}
+          entityType="task"
+          entityName={name}
+          pointsValue={rewards?.points || { xp: 0, rp: 0, fp: 0, hp: 0 }}
+          totalRevenue={revenue || 0}
+          onConfirm={pendingStatusChange.onConfirm}
+          onCancel={pendingStatusChange.onCancel}
+        />
+      )}
+
+    </Dialog>
   );
 }
