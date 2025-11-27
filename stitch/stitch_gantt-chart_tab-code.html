@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Schedule</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings:
+        'FILL' 0,
+        'wght' 400,
+        'GRAD' 0,
+        'opsz' 24
+      }
+    </style>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#5417cf",
+              "background-light": "#f6f6f8",
+              "background-dark": "#161121",
+            },
+            fontFamily: {
+              "display": ["Inter", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-display bg-background-light dark:bg-background-dark text-slate-800 dark:text-slate-200">
+<div class="flex h-screen w-full flex-col">
+<!-- Header -->
+<header class="flex shrink-0 items-center justify-between border-b border-slate-200/80 dark:border-slate-800/80 bg-background-light dark:bg-background-dark px-6 py-4">
+<h1 class="text-xl font-bold text-slate-900 dark:text-white">Schedule</h1>
+<div class="flex items-center gap-4">
+<button class="rounded-lg border border-slate-300 dark:border-slate-700 p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800">
+<span class="material-symbols-outlined">chevron_left</span>
+</button>
+<button class="rounded-lg border border-slate-300 dark:border-slate-700 px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">
+                    Today
+                </button>
+<button class="rounded-lg border border-slate-300 dark:border-slate-700 p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800">
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+<span class="text-base font-medium text-slate-600 dark:text-slate-400">October 26 – November 1, 2023</span>
+</div>
+<button class="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white">
+<span class="material-symbols-outlined text-base">add</span>
+                New Task
+            </button>
+</header>
+<!-- Main Content: Schedule View -->
+<div class="flex flex-1 overflow-hidden">
+<!-- Unscheduled Tasks Panel -->
+<aside class="w-72 shrink-0 border-r border-slate-200/80 dark:border-slate-800/80 bg-background-light dark:bg-background-dark p-4">
+<h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-4">Unscheduled</h2>
+<div class="space-y-3">
+<!-- Unscheduled Task Card 1 -->
+<div class="cursor-grab rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3">
+<p class="font-medium text-slate-800 dark:text-slate-200">Finalize Q4 Report</p>
+<div class="mt-2 flex items-center justify-between text-sm text-slate-500 dark:text-slate-400">
+<span class="rounded-full bg-blue-100 dark:bg-blue-900/40 px-2 py-0.5 text-xs font-medium text-blue-800 dark:text-blue-300">Business</span>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-base">schedule</span>
+<span>1h</span>
+</div>
+</div>
+</div>
+<!-- Unscheduled Task Card 2 -->
+<div class="cursor-grab rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3">
+<p class="font-medium text-slate-800 dark:text-slate-200">Design System Sync</p>
+<div class="mt-2 flex items-center justify-between text-sm text-slate-500 dark:text-slate-400">
+<span class="rounded-full bg-purple-100 dark:bg-purple-900/40 px-2 py-0.5 text-xs font-medium text-purple-800 dark:text-purple-300">Design</span>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-base">schedule</span>
+<span>30m</span>
+</div>
+</div>
+</div>
+<!-- Unscheduled Task Card 3 -->
+<div class="cursor-grab rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3">
+<p class="font-medium text-slate-800 dark:text-slate-200">Client Follow-up Calls</p>
+<div class="mt-2 flex items-center justify-between text-sm text-slate-500 dark:text-slate-400">
+<span class="rounded-full bg-green-100 dark:bg-green-900/40 px-2 py-0.5 text-xs font-medium text-green-800 dark:text-green-300">Sales</span>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-base">schedule</span>
+<span>1.5h</span>
+</div>
+</div>
+</div>
+</div>
+</aside>
+<!-- Kanban-style Schedule -->
+<main class="flex-1 overflow-x-auto">
+<div class="grid min-w-max" style="grid-template-columns: repeat(3, minmax(600px, 1fr));">
+<!-- Day Column -->
+<div class="grid grid-cols-1" style="grid-template-rows: auto 1fr;">
+<!-- Day Header -->
+<div class="sticky top-0 z-10 border-b border-slate-200/80 dark:border-slate-800/80 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-sm p-4 text-center">
+<p class="font-bold text-slate-900 dark:text-white">Today, Oct 26</p>
+</div>
+<!-- Hourly Grid -->
+<div class="relative grid border-r border-slate-200/80 dark:border-slate-800/80" style="grid-template-columns: 60px repeat(12, 1fr); grid-template-rows: 30px 1fr;">
+<!-- Time Gutter -->
+<div class="row-start-2 border-r border-slate-200/80 dark:border-slate-800/80 text-right text-xs text-slate-400 dark:text-slate-500 pr-2">
+<div class="h-24 pt-1">8 AM</div>
+<div class="h-24 pt-1">9 AM</div>
+<div class="h-24 pt-1">10 AM</div>
+<div class="h-24 pt-1">11 AM</div>
+<div class="h-24 pt-1">12 PM</div>
+<div class="h-24 pt-1">1 PM</div>
+</div>
+<!-- Hourly Columns -->
+<div class="col-start-2 col-span-12 row-start-2 grid grid-cols-12">
+<div class="h-full border-r border-slate-200/80 dark:border-slate-800/80"></div>
+<div class="h-full border-r border-slate-200/80 dark:border-slate-800/80"></div>
+<div class="h-full border-r border-slate-200/80 dark:border-slate-800/80"></div>
+<div class="h-full border-r border-slate-200/80 dark:border-slate-800/80"></div>
+<div class="h-full border-r border-slate-200/80 dark:border-slate-800/80"></div>
+<div class="h-full border-r border-slate-200/80 dark:border-slate-800/80"></div>
+<div class="h-full border-r border-slate-200/80 dark:border-slate-800/80"></div>
+<div class="h-full border-r border-slate-200/80 dark:border-slate-800/80"></div>
+<div class="h-full border-r border-slate-200/80 dark:border-slate-800/80"></div>
+<div class="h-full border-r border-slate-200/80 dark:border-slate-800/80"></div>
+<div class="h-full border-r border-slate-200/80 dark:border-slate-800/80"></div>
+<div class="h-full"></div>
+</div>
+<!-- "Now" Indicator -->
+<div class="absolute col-start-2 row-start-2 h-full w-0.5 bg-primary" style="left: calc( (100% - 60px) / 12 * 2.5 );">
+<div class="absolute -left-1.5 -top-1.5 h-3 w-3 rounded-full bg-primary"></div>
+</div>
+<!-- Scheduled Tasks -->
+<div class="absolute col-start-2 col-span-12 row-start-2 h-full w-full">
+<!-- Task 1: 9 AM, 1h -->
+<div class="absolute p-1" style="top: 96px; left: calc( (100% - 60px) / 12 * 1 ); width: calc((100% - 60px) / 12); height: 96px;">
+<div class="flex h-full flex-col justify-between rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-2">
+<p class="text-sm font-medium text-slate-800 dark:text-slate-200">Daily Standup</p>
+<span class="rounded-full bg-purple-100 dark:bg-purple-900/40 px-2 py-0.5 text-xs font-medium text-purple-800 dark:text-purple-300 self-start">Design</span>
+</div>
+</div>
+<!-- Task 2: 10:30 AM, 1.5h -->
+<div class="absolute p-1" style="top: 240px; left: calc( (100% - 60px) / 12 * 2.5 ); width: calc((100% - 60px) / 12 * 1.5); height: 144px;">
+<div class="flex h-full flex-col justify-between rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-2">
+<p class="text-sm font-medium text-slate-800 dark:text-slate-200">Project Alpha Kick-off</p>
+<span class="rounded-full bg-blue-100 dark:bg-blue-900/40 px-2 py-0.5 text-xs font-medium text-blue-800 dark:text-blue-300 self-start">Business</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Day Column -->
+<div class="grid grid-cols-1" style="grid-template-rows: auto 1fr;">
+<div class="sticky top-0 z-10 border-b border-slate-200/80 dark:border-slate-800/80 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-sm p-4 text-center">
+<p class="font-bold text-slate-900 dark:text-white">Tomorrow, Oct 27</p>
+</div>
+<div class="relative grid border-r border-slate-200/80 dark:border-slate-800/80" style="grid-template-columns: repeat(12, 1fr); grid-template-rows: 30px 1fr;">
+<div class="col-span-12 row-start-2 grid grid-cols-12">
+<div class="h-full border-r border-slate-200/80 dark:border-slate-800/80"></div>
+<div class="h-full border-r border-slate-200/80 dark:border-slate-800/80"></div>
+<div class="h-full border-r border-slate-200/80 dark:border-slate-800/80"></div>
+<div class="h-full border-r border-slate-200/80 dark:border-slate-800/80"></div>
+<div class="h-full border-r border-slate-200/80 dark:border-slate-800/80"></div>
+<div class="h-full border-r border-slate-200/80 dark:border-slate-800/80"></div>
+<div class="h-full border-r border-slate-200/80 dark:border-slate-800/80"></div>
+<div class="h-full border-r border-slate-200/80 dark:border-slate-800/80"></div>
+<div class="h-full border-r border-slate-200/80 dark:border-slate-800/80"></div>
+<div class="h-full border-r border-slate-200/80 dark:border-slate-800/80"></div>
+<div class="h-full border-r border-slate-200/80 dark:border-slate-800/80"></div>
+<div class="h-full"></div>
+</div>
+</div>
+</div>
+<!-- Day Column -->
+<div class="grid grid-cols-1" style="grid-template-rows: auto 1fr;">
+<div class="sticky top-0 z-10 border-b border-slate-200/80 dark:border-slate-800/80 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-sm p-4 text-center">
+<p class="font-bold text-slate-900 dark:text-white">Friday, Oct 28</p>
+</div>
+<div class="relative grid" style="grid-template-columns: repeat(12, 1fr); grid-template-rows: 30px 1fr;">
+<div class="col-span-12 row-start-2 grid grid-cols-12">
+<div class="h-full border-r border-slate-200/80 dark:border-slate-800/80"></div>
+<div class="h-full border-r border-slate-200/80 dark:border-slate-800/80"></div>
+<div class="h-full border-r border-slate-200/80 dark:border-slate-800/80"></div>
+<div class="h-full border-r border-slate-200/80 dark:border-slate-800/80"></div>
+<div class="h-full border-r border-slate-200/80 dark:border-slate-800/80"></div>
+<div class="h-full border-r border-slate-200/80 dark:border-slate-800/80"></div>
+<div class="h-full border-r border-slate-200/80 dark:border-slate-800/80"></div>
+<div class="h-full border-r border-slate-200/80 dark:border-slate-800/80"></div>
+<div class="h-full border-r border-slate-200/80 dark:border-slate-800/80"></div>
+<div class="h-full border-r border-slate-200/80 dark:border-slate-800/80"></div>
+<div class="h-full border-r border-slate-200/80 dark:border-slate-800/80"></div>
+<div class="h-full"></div>
+</div>
+<div class="absolute col-span-12 row-start-2 h-full w-full">
+<div class="flex items-center justify-center h-full text-slate-400 dark:text-slate-500">
+<p>Drag tasks here or click '+' to add a new one.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</div>
+</body></html>

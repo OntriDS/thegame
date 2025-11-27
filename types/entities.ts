@@ -251,6 +251,8 @@ export interface Task extends BaseEntity {
   station: Station;                 // Primary work station (e.g., 'Strategy', 'Digital Art', 'Prints')
   progress: number;                 // 0-100
   dueDate?: Date;
+  scheduledStart?: Date;            // For Weekly Schedule view
+  scheduledEnd?: Date;              // For Weekly Schedule view
   frequencyConfig?: any;            // For complex frequency configuration (includes type)
   order: number;                    // Represents sort order among siblings
 
