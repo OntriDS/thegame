@@ -132,9 +132,9 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask }: WeeklyS
                         </div>
 
                         {/* Days Columns */}
-                        <div className="flex-1 grid grid-cols-7 min-w-[1000px]">
+                        <div className="flex-1 grid grid-cols-7">
                             {weekDays.map(day => (
-                                <div key={day.toISOString()} className="flex flex-col border-r min-w-[140px]">
+                                <div key={day.toISOString()} className="flex flex-col border-r">
                                     {/* Day Header */}
                                     <div className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur p-3 text-center h-[60px] flex flex-col justify-center gap-1">
                                         <p className="font-bold text-sm">{format(day, 'EEE').toUpperCase()}</p>
