@@ -27,7 +27,7 @@ import { createSiteOptionsWithCategories, getSiteNameFromId } from '@/lib/utils/
 import type { Station, SubItemType } from '@/types/type-aliases';
 import { v4 as uuid } from 'uuid';
 import { PROGRESS_MAX, PROGRESS_STEP, PRICE_STEP } from '@/lib/constants/app-constants';
-import { Network, User } from 'lucide-react';
+import { Network, User, Calendar as CalendarIcon } from 'lucide-react';
 import { getEmissaryFields } from '@/types/diplomatic-fields';
 import CascadeStatusConfirmationModal from './submodals/cascade-status-confirmation-submodal';
 import ArchiveCollectionConfirmationModal from './submodals/archive-collection-confirmation-submodal';
@@ -860,62 +860,57 @@ export default function TaskModal({
                     className="h-8 text-sm"
                     autoFocus
                   />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="task-description" className="text-xs">Description</Label>
-                  <Textarea
-                    id="task-description"
-                    placeholder="Describe the task objectives..."
-                    value={description}
-                    onChange={(e) => setDescription(e.currentTarget.value)}
-                    className="h-16 text-sm resize-none"
-                    onInput={handleDescriptionInput}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="task-due-date" className="text-xs">Due Date</Label>
-                  <DatePicker
-                    value={dueDate}
-                    onChange={setDueDate}
-                    placeholder="Select due date..."
-                  />
-                </div>
-
-                {/* Schedule Fields */}
-                <div className="space-y-2 border-t pt-2 mt-2">
-                  <Label className="text-xs font-semibold">Schedule</Label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="space-y-1">
-                      <Label className="text-[10px] text-muted-foreground">Start</Label>
-                      <DatePicker
-                        value={scheduledStartDate}
-                        onChange={setScheduledStartDate}
-                        placeholder="Start Date"
-                        className="h-7 text-xs"
-                      />
-                      <Input
-                        type="time"
-                        value={scheduledStartTime}
-                        onChange={(e) => setScheduledStartTime(e.target.value)}
-                        className="h-7 text-xs"
-                      />
+                  {/* Schedule Section - Smart Simplicity: Primary Date/Time Input */}
+                  <div className="space-y-4 border rounded-lg p-4 bg-muted/10">
+                    <div className="flex items-center gap-2 mb-2">
+                      <CalendarIcon className="w-4 h-4 text-primary" />
+                      <h4 className="font-medium text-sm">Schedule</h4>
                     </div>
-                    <div className="space-y-1">
-                      <Label className="text-[10px] text-muted-foreground">End</Label>
-                      <DatePicker
-                        value={scheduledEndDate}
-                        onChange={setScheduledEndDate}
-                        placeholder="End Date"
-                        className="h-7 text-xs"
-                      />
-                      <Input
-                        type="time"
-                        value={scheduledEndTime}
-                        onChange={(e) => setScheduledEndTime(e.target.value)}
-                        className="h-7 text-xs"
-                      />
+
+                    <div className="grid grid-cols-2 gap-4">
+                      {/* Start Date & Time */}
+                      <div className="space-y-2">
+                        <Label className="text-xs text-muted-foreground">Start</Label>
+                        <div className="flex gap-2">
+                          <div className="flex-1">
+                            <DatePicker
+                              value={scheduledStartDate}
+                              onChange={setScheduledStartDate}
+                              placeholder="Start date"
+                            />
+                          </div>
+                          <Input
+                            type="time"
+                            value={scheduledStartTime}
+                            onChange={(e) => setScheduledStartTime(e.target.value)}
+                            className="w-24"
+                          />
+                        </div>
+                      </div>
+
+                      {/* End Date & Time (Syncs to Due Date) */}
+                      <div className="space-y-2">
+                        <Label className="text-xs text-muted-foreground">End</Label>
+                        <div className="flex gap-2">
+                          <div className="flex-1">
+                            <DatePicker
+                              value={scheduledEndDate}
+                              onChange={(date) => {
+                                setScheduledEndDate(date);
+                                // Smart Sync: Update Due Date to match End Date
+                                setDueDate(date);
+                              }}
+                              placeholder="End date"
+                            />
+                          </div>
+                          <Input
+                            type="time"
+                            value={scheduledEndTime}
+                            onChange={(e) => setScheduledEndTime(e.target.value)}
+                            className="w-24"
+                          />
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1479,13 +1474,15 @@ export default function TaskModal({
       </Dialog>
 
       {/* Links Relationships Modal */}
-      {task && (
-        <LinksRelationshipsModal
-          entity={{ type: EntityType.TASK, id: task.id, name: task.name }}
-          open={showRelationshipsModal}
-          onClose={() => setShowRelationshipsModal(false)}
-        />
-      )}
+      {
+        task && (
+          <LinksRelationshipsModal
+            entity={{ type: EntityType.TASK, id: task.id, name: task.name }}
+            open={showRelationshipsModal}
+            onClose={() => setShowRelationshipsModal(false)}
+          />
+        )
+      }
 
       {/* Character Selector Submodal */}
       <CharacterSelectorSubmodal
@@ -1504,34 +1501,38 @@ export default function TaskModal({
       />
 
       {/* Cascade Status Confirmation Modal */}
-      {cascadeData && (
-        <CascadeStatusConfirmationModal
-          open={showCascadeModal}
-          onOpenChange={setShowCascadeModal}
-          templateName={name}
-          newStatus={cascadeData.newStatus}
-          oldStatus={cascadeData.oldStatus}
-          affectedInstancesCount={cascadeData.affectedCount}
-          onConfirm={handleCascadeConfirm}
-          onCancel={handleCascadeCancel}
-          isReversal={cascadeData.isReversal}
-        />
-      )}
+      {
+        cascadeData && (
+          <CascadeStatusConfirmationModal
+            open={showCascadeModal}
+            onOpenChange={setShowCascadeModal}
+            templateName={name}
+            newStatus={cascadeData.newStatus}
+            oldStatus={cascadeData.oldStatus}
+            affectedInstancesCount={cascadeData.affectedCount}
+            onConfirm={handleCascadeConfirm}
+            onCancel={handleCascadeCancel}
+            isReversal={cascadeData.isReversal}
+          />
+        )
+      }
 
       {/* Archive Collection Confirmation Modal */}
-      {pendingStatusChange && (
-        <ArchiveCollectionConfirmationModal
-          open={showArchiveCollectionModal}
-          onOpenChange={setShowArchiveCollectionModal}
-          entityType="task"
-          entityName={name}
-          pointsValue={rewards?.points || { xp: 0, rp: 0, fp: 0, hp: 0 }}
-          totalRevenue={revenue || 0}
-          onConfirm={pendingStatusChange.onConfirm}
-          onCancel={pendingStatusChange.onCancel}
-        />
-      )}
+      {
+        pendingStatusChange && (
+          <ArchiveCollectionConfirmationModal
+            open={showArchiveCollectionModal}
+            onOpenChange={setShowArchiveCollectionModal}
+            entityType="task"
+            entityName={name}
+            pointsValue={rewards?.points || { xp: 0, rp: 0, fp: 0, hp: 0 }}
+            totalRevenue={revenue || 0}
+            onConfirm={pendingStatusChange.onConfirm}
+            onCancel={pendingStatusChange.onCancel}
+          />
+        )
+      }
 
-    </Dialog>
+    </Dialog >
   );
 }
