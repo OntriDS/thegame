@@ -122,7 +122,7 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask }: WeeklyS
                             <div className="sticky top-0 z-30 bg-background h-[60px] border-b" /> {/* Header spacer */}
                             <div className="flex-1 relative">
                                 {timeSlots.map(hour => (
-                                    <div key={hour} className="flex items-start justify-end pr-1 pt-1" style={{ height: `${CELL_HEIGHT}px` }}>
+                                    <div key={hour} className="flex items-start justify-end pr-1 pt-1 border-b border-transparent" style={{ height: `${CELL_HEIGHT}px` }}>
                                         <span className="text-[0.6rem] text-muted-foreground">
                                             {hour.toString().padStart(2, '0')}
                                         </span>
@@ -149,11 +149,9 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask }: WeeklyS
 
                                     {/* Day Content */}
                                     <div className="flex-1 relative">
-                                        {/* Grid Lines */}
+                                        {/* No Grid Lines - Just a clean background */}
                                         <div className="absolute inset-0 flex flex-col pointer-events-none">
-                                            {timeSlots.map((_, i) => (
-                                                <div key={i} className="border-b border-dashed border-muted/50" style={{ height: `${CELL_HEIGHT}px` }} />
-                                            ))}
+                                            {/* Optional: Subtle hour markers if needed, but removing for 'No Grid' request */}
                                         </div>
 
                                         {/* Tasks */}
