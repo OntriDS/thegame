@@ -27,8 +27,8 @@ export default function GanttChart({ tasks, onNewTask, onEditTask }: GanttChartP
     const [viewMode, setViewMode] = useState<ViewMode>('Week');
     const { activeBg } = useThemeColors();
 
-    const { startDate, endDate, ticks, cellWidth } = useMemo(() => {
-        let start: Date, end: Date, tickList: Date[], width: number;
+    const { startDate, endDate, ticks } = useMemo(() => {
+        let start: Date, end: Date, tickList: Date[];
 
         if (viewMode === 'Day') {
             start = startOfDay(currentDate);
@@ -38,20 +38,17 @@ export default function GanttChart({ tasks, onNewTask, onEditTask }: GanttChartP
                 d.setHours(i);
                 return d;
             });
-            width = CELL_WIDTH_DAY;
         } else if (viewMode === 'Week') {
             start = startOfWeek(currentDate, { weekStartsOn: 1 });
             end = endOfWeek(currentDate, { weekStartsOn: 1 });
             tickList = eachDayOfInterval({ start, end });
-            width = CELL_WIDTH_WEEK;
         } else {
             start = startOfMonth(currentDate);
             end = endOfMonth(currentDate);
             tickList = eachDayOfInterval({ start, end });
-            width = CELL_WIDTH_MONTH;
         }
 
-        return { startDate: start, endDate: end, ticks: tickList, cellWidth: width };
+        return { startDate: start, endDate: end, ticks: tickList };
     }, [currentDate, viewMode]);
 
     const scheduledTasks = useMemo(() => {
@@ -66,24 +63,22 @@ export default function GanttChart({ tasks, onNewTask, onEditTask }: GanttChartP
 
         if (taskEnd < startDate || taskStart > endDate) return { display: 'none' };
 
-        let offset = 0;
-        let duration = 0;
+        // Calculate total duration of the view in minutes
+        const totalViewMinutes = differenceInMinutes(endDate, startDate);
 
-        if (viewMode === 'Day') {
-            const startDiff = differenceInMinutes(taskStart, startDate);
-            const endDiff = differenceInMinutes(taskEnd, startDate);
-            offset = (startDiff / 60) * cellWidth;
-            duration = ((endDiff - startDiff) / 60) * cellWidth;
-        } else {
-            const startDiff = differenceInMinutes(taskStart, startDate);
-            const endDiff = differenceInMinutes(taskEnd, startDate);
-            offset = (startDiff / 1440) * cellWidth;
-            duration = ((endDiff - startDiff) / 1440) * cellWidth;
-        }
+        // Calculate task start relative to view start
+        const startDiff = differenceInMinutes(taskStart, startDate);
+
+        // Calculate task duration
+        const durationDiff = differenceInMinutes(taskEnd, taskStart);
+
+        // Convert to percentages
+        const left = (startDiff / totalViewMinutes) * 100;
+        const width = (durationDiff / totalViewMinutes) * 100;
 
         return {
-            left: `${Math.max(0, offset)}px`,
-            width: `${Math.max(duration, 4)}px`,
+            left: `${Math.max(0, left)}%`,
+            width: `${Math.max(width, 0.5)}%`, // Minimum width for visibility
         };
     };
 
@@ -174,27 +169,25 @@ export default function GanttChart({ tasks, onNewTask, onEditTask }: GanttChartP
                     </ScrollArea>
                 </div>
 
-                <ScrollArea className="flex-1">
-                    <div className="flex flex-col min-w-full">
-                        <div className="flex border-b bg-muted/5 sticky top-0 z-10" style={{ height: HEADER_HEIGHT }}>
-                            {ticks.map((tick, i) => (
-                                <div
-                                    key={i}
-                                    className="flex items-center justify-center border-r text-xs text-muted-foreground font-medium shrink-0"
-                                    style={{ width: cellWidth }}
-                                >
-                                    {viewMode === 'Day' ? format(tick, 'HH:mm') : format(tick, 'd MMM')}
-                                </div>
-                            ))}
-                        </div>
+                <div className="flex-1 flex flex-col min-w-0">
+                    <div className="flex border-b bg-muted/5 sticky top-0 z-10 w-full" style={{ height: HEADER_HEIGHT }}>
+                        {ticks.map((tick, i) => (
+                            <div
+                                key={i}
+                                className="flex-1 flex items-center justify-center border-r text-xs text-muted-foreground font-medium min-w-0 overflow-hidden"
+                            >
+                                {viewMode === 'Day' ? format(tick, 'HH:mm') : format(tick, 'd MMM')}
+                            </div>
+                        ))}
+                    </div>
 
-                        <div className="relative">
-                            <div className="absolute inset-0 flex pointer-events-none">
+                    <ScrollArea className="flex-1 w-full">
+                        <div className="relative w-full">
+                            <div className="absolute inset-0 flex pointer-events-none w-full">
                                 {ticks.map((_, i) => (
                                     <div
                                         key={i}
-                                        className="border-r h-full shrink-0 opacity-20"
-                                        style={{ width: cellWidth }}
+                                        className="flex-1 border-r h-full opacity-20"
                                     />
                                 ))}
                             </div>
@@ -202,7 +195,7 @@ export default function GanttChart({ tasks, onNewTask, onEditTask }: GanttChartP
                             {scheduledTasks.map((task) => (
                                 <div
                                     key={task.id}
-                                    className="relative border-b hover:bg-accent/10 transition-colors"
+                                    className="relative border-b hover:bg-accent/10 transition-colors w-full"
                                     style={{ height: ROW_HEIGHT }}
                                 >
                                     <div
@@ -215,9 +208,9 @@ export default function GanttChart({ tasks, onNewTask, onEditTask }: GanttChartP
                                 </div>
                             ))}
                         </div>
-                    </div>
-                    <ScrollBar orientation="horizontal" />
-                </ScrollArea>
+                        <ScrollBar orientation="vertical" />
+                    </ScrollArea>
+                </div>
             </div>
         </div>
     );

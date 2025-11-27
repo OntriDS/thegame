@@ -118,13 +118,13 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask }: WeeklyS
                 <main className="flex-1 overflow-x-auto">
                     <div className="flex h-full min-w-max">
                         {/* Time Column */}
-                        <div className="flex flex-col shrink-0 sticky left-0 z-20 bg-background shadow-sm border-r w-12">
+                        <div className="flex flex-col shrink-0 sticky left-0 z-20 bg-background shadow-sm border-r w-16">
                             <div className="sticky top-0 z-30 bg-background h-[60px] border-b" /> {/* Header spacer */}
                             <div className="flex-1 relative">
                                 {timeSlots.map(hour => (
-                                    <div key={hour} className="flex items-start justify-end pr-1 pt-1 border-b border-transparent" style={{ height: `${CELL_HEIGHT}px` }}>
-                                        <span className="text-[0.6rem] text-muted-foreground">
-                                            {hour.toString().padStart(2, '0')}
+                                    <div key={hour} className="flex items-start justify-end pr-2 border-b border-transparent" style={{ height: `${CELL_HEIGHT}px` }}>
+                                        <span className="text-xs font-medium text-muted-foreground -mt-2 bg-background px-1">
+                                            {hour.toString().padStart(2, '0')}:00
                                         </span>
                                     </div>
                                 ))}
@@ -132,9 +132,9 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask }: WeeklyS
                         </div>
 
                         {/* Days Columns */}
-                        <div className="flex-1 grid grid-cols-7">
+                        <div className="flex-1 grid grid-cols-7 min-w-0">
                             {weekDays.map(day => (
-                                <div key={day.toISOString()} className="flex flex-col border-r">
+                                <div key={day.toISOString()} className="flex flex-col border-r min-h-full">
                                     {/* Day Header */}
                                     <div className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur p-3 text-center h-[60px] flex flex-col justify-center gap-1">
                                         <p className="font-bold text-sm">{format(day, 'EEE').toUpperCase()}</p>
