@@ -36,6 +36,7 @@ import CharacterSelectorSubmodal from './submodals/character-selector-submodal';
 import PlayerCharacterSelectorModal from './submodals/player-character-selector-submodal';
 import { dispatchEntityUpdated, entityTypeToKind } from '@/lib/ui/ui-events';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
+import { format } from 'date-fns';
 
 interface TaskModalProps {
   task?: Task | null;
@@ -73,7 +74,7 @@ export default function TaskModal({
   isRecurrentModal = false,
 }: TaskModalProps) {
   const { getPreference, setPreference } = useUserPreferences();
-  
+
   // Collapsible Emissary Column state - persisted in preferences
   const [emissaryColumnExpanded, setEmissaryColumnExpanded] = useState(false); // Default to false
 
@@ -111,6 +112,10 @@ export default function TaskModal({
   const [stationCategory, setStationCategory] = useState<string>(getInitialStationCategory());
   const [progress, setProgress] = useState(0);
   const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
+  const [scheduledStartDate, setScheduledStartDate] = useState<Date | undefined>(undefined);
+  const [scheduledStartTime, setScheduledStartTime] = useState<string>('');
+  const [scheduledEndDate, setScheduledEndDate] = useState<Date | undefined>(undefined);
+  const [scheduledEndTime, setScheduledEndTime] = useState<string>('');
   const [frequencyConfig, setFrequencyConfig] = useState<FrequencyConfig | undefined>(
     task?.frequencyConfig || {
       type: RecurrentFrequency.ONCE,
@@ -127,7 +132,7 @@ export default function TaskModal({
   const [isRecurrentGroup, setIsRecurrentGroup] = useState(false);
   const [isTemplate, setIsTemplate] = useState(false);
   const [isCollected, setIsCollected] = useState(false);
-  
+
   // Cascade confirmation modal state
   const [showCascadeModal, setShowCascadeModal] = useState(false);
   const [cascadeData, setCascadeData] = useState<{
@@ -136,7 +141,7 @@ export default function TaskModal({
     affectedCount: number;
     isReversal: boolean;
   } | null>(null);
-  
+
   // Archive collection confirmation modal state (for status selector only)
   const [formData, setFormData] = useState({
     site: 'none' as string,
@@ -158,7 +163,7 @@ export default function TaskModal({
   const [isSold, setIsSold] = useState(false);
   const [outputItemStatus, setOutputItemStatus] = useState<ItemStatus>(ItemStatus.FOR_SALE);
   const [rewards, setRewards] = useState({ points: { xp: 0, rp: 0, fp: 0, hp: 0 } });
-  const [rewardsStrings, setRewardsStrings] = useState({ 
+  const [rewardsStrings, setRewardsStrings] = useState({
     points: { xp: '0', rp: '0', fp: '0', hp: '0' }
   });
   const [parentId, setParentId] = useState<string | null>(null);
@@ -245,6 +250,25 @@ export default function TaskModal({
     setStationCategory(computeStationCategoryValue(existingTask.station));
     setProgress(existingTask.progress);
     setDueDate(existingTask.dueDate ? new Date(existingTask.dueDate) : undefined);
+
+    if (existingTask.scheduledStart) {
+      const start = new Date(existingTask.scheduledStart);
+      setScheduledStartDate(start);
+      setScheduledStartTime(format(start, 'HH:mm'));
+    } else {
+      setScheduledStartDate(undefined);
+      setScheduledStartTime('');
+    }
+
+    if (existingTask.scheduledEnd) {
+      const end = new Date(existingTask.scheduledEnd);
+      setScheduledEndDate(end);
+      setScheduledEndTime(format(end, 'HH:mm'));
+    } else {
+      setScheduledEndDate(undefined);
+      setScheduledEndTime('');
+    }
+
     setFrequencyConfig(existingTask.frequencyConfig || undefined);
     setCost(existingTask.cost);
     setCostString(existingTask.cost.toString());
@@ -311,6 +335,10 @@ export default function TaskModal({
     setStationCategory(computeStationCategoryValue(lastStation));
     setProgress(0);
     setDueDate(undefined);
+    setScheduledStartDate(undefined);
+    setScheduledStartTime('');
+    setScheduledEndDate(undefined);
+    setScheduledEndTime('');
     setFrequencyConfig(isRecurrentModal ? {
       type: RecurrentFrequency.ONCE,
       interval: 1,
@@ -403,7 +431,21 @@ export default function TaskModal({
   const buildTaskFromForm = (statusOverride?: TaskStatus): Task => {
     const finalPlayerCharacterId = playerCharacterId || PLAYER_ONE_ID;
     const finalStatus = statusOverride !== undefined ? statusOverride : status;
-    
+
+    let finalScheduledStart: Date | undefined = undefined;
+    if (scheduledStartDate && scheduledStartTime) {
+      const [hours, minutes] = scheduledStartTime.split(':').map(Number);
+      finalScheduledStart = new Date(scheduledStartDate);
+      finalScheduledStart.setHours(hours, minutes);
+    }
+
+    let finalScheduledEnd: Date | undefined = undefined;
+    if (scheduledEndDate && scheduledEndTime) {
+      const [hours, minutes] = scheduledEndTime.split(':').map(Number);
+      finalScheduledEnd = new Date(scheduledEndDate);
+      finalScheduledEnd.setHours(hours, minutes);
+    }
+
     return {
       id: task?.id || uuid(),
       name,
@@ -414,6 +456,8 @@ export default function TaskModal({
       station,
       progress,
       dueDate,
+      scheduledStart: finalScheduledStart,
+      scheduledEnd: finalScheduledEnd,
       frequencyConfig: (type === TaskType.RECURRENT_GROUP || type === TaskType.RECURRENT_TEMPLATE) ? frequencyConfig : undefined,
       cost,
       revenue,
@@ -456,19 +500,19 @@ export default function TaskModal({
   const handleSave = async () => {
     if (isSaving) return;
     setIsSaving(true);
-    
+
     // Validation for Recurrent Template
     if (type === TaskType.RECURRENT_TEMPLATE) {
       const freq = frequencyConfig;
-      
+
       // Allow ONCE frequency without any restrictions (it's just one instance, no infinite loop risk)
       if (freq?.type === RecurrentFrequency.ONCE) {
         // ONCE is always allowed - no validation needed
       } else {
         // For other frequencies, check if there's a stop condition
-        const hasStopCondition = freq?.stopsAfter && 
+        const hasStopCondition = freq?.stopsAfter &&
           (freq.stopsAfter.type === 'times' || freq.stopsAfter.type === 'date');
-        
+
         // Only require dueDate if there's no stop condition (infinite loop risk)
         if (!hasStopCondition && !dueDate) {
           setValidationMessage('Recurrent Templates require a Due Date to set the safety limit for instance creation when "Stops After" is set to "Never".');
@@ -476,7 +520,7 @@ export default function TaskModal({
           setIsSaving(false);
           return;
         }
-        
+
         // Validate frequency is set (but ONCE is already handled above)
         const isUnsetFrequency = !freq ||
           (freq.type === RecurrentFrequency.CUSTOM && (!freq.customDays || freq.customDays.length === 0));
@@ -497,10 +541,10 @@ export default function TaskModal({
     if (type === TaskType.RECURRENT_TEMPLATE && task && task.status !== status) {
       try {
         const affectedCount = await ClientAPI.getUndoneInstancesCount(task.id, status);
-        
+
         if (affectedCount > 0) {
           const isReversal = task.status === 'Done' && status !== 'Done';
-          
+
           setCascadeData({
             newStatus: status,
             oldStatus: task.status,
@@ -523,10 +567,10 @@ export default function TaskModal({
     try {
       // Emit pure task entity - Links System handles all relationships automatically
       await onSave(newTask);
-      
+
       // Dispatch UI update events AFTER successful save
       dispatchEntityUpdated(entityTypeToKind(EntityType.TASK));
-      
+
       onOpenChange(false);
     } catch (error) {
       console.error('Save failed:', error);
@@ -539,7 +583,7 @@ export default function TaskModal({
   // Cascade confirmation handlers
   const handleCascadeConfirm = async () => {
     if (!cascadeData || !task) return;
-    
+
     try {
       // Build task with status override - workflow will handle cascading automatically
       const newTask = buildTaskFromForm(cascadeData.newStatus);
@@ -560,20 +604,20 @@ export default function TaskModal({
   const handleCascadeCancel = async () => {
     // Save the template without cascading (use _skipCascade metadata)
     setShowCascadeModal(false);
-    
+
     if (!cascadeData || !task) {
       setCascadeData(null);
       handleSave();
       return;
     }
-    
+
     try {
       // Build task with status override and skip cascade flag
       const newTask = {
         ...buildTaskFromForm(cascadeData.newStatus),
         _skipCascade: true, // Tell workflow to skip cascading
       } as Task & { _skipCascade?: boolean };
-      
+
       await onSave(newTask as Task);
       dispatchEntityUpdated('task');
       onOpenChange(false);
@@ -598,7 +642,7 @@ export default function TaskModal({
 
   const handleStationCategoryChange = (newStationCategory: string) => {
     const newStation = getStationFromCombined(newStationCategory) as Station;
-    
+
     setStationCategory(newStationCategory);
     setStation(newStation);
     setPreference('task-modal-last-station', newStation);
@@ -623,7 +667,7 @@ export default function TaskModal({
     } else {
       const newItemType = getItemTypeFromCombined(newItemTypeSubType) as ItemType;
       const newSubType = getSubTypeFromCombined(newItemTypeSubType) as SubItemType;
-      
+
       setOutputItemTypeSubType(newItemTypeSubType);
       setOutputItemType(newItemType);
       setOutputItemSubType(newSubType || '');
@@ -673,7 +717,7 @@ export default function TaskModal({
         setOutputUnitCost(calculatedUnitCost);
         setOutputUnitCostString(formatSmartDecimal(calculatedUnitCost));
       }
-      
+
       // Calculate price if revenue is available (check both revenue state and revenueString)
       const currentRevenue = revenue || parseFloat(revenueString) || 0;
       if (currentRevenue > 0) {
@@ -687,24 +731,24 @@ export default function TaskModal({
   // Handle checkbox changes and log financial effects when unchecked
   const handleNotPaidChange = async (checked: boolean) => {
     setIsNotPaid(checked);
-    
+
     // If checking (marking as not paid) and task is COLLECTED, change to DONE
     if (checked && status === TaskStatus.COLLECTED) {
       setStatus(TaskStatus.DONE);
     }
-    
+
     // NOTE: Financial logging will be handled when user saves the modal
     // Removed inline financial logging to follow clean pattern
   };
 
   const handleNotChargedChange = async (checked: boolean) => {
     setIsNotCharged(checked);
-    
+
     // If checking (marking as not charged) and task is COLLECTED, change to DONE
     if (checked && status === TaskStatus.COLLECTED) {
       setStatus(TaskStatus.DONE);
     }
-    
+
     // NOTE: Financial logging will be handled when user saves the modal
     // Removed inline financial logging to follow clean pattern
   };
@@ -750,19 +794,19 @@ export default function TaskModal({
   const handleRewardChange = (field: 'xp' | 'rp' | 'fp' | 'hp', value: string) => {
     const numValue = parseFloat(value);
     if (!isNaN(numValue) && numValue >= 0) {
-      setRewards({ 
-        ...rewards, 
-        points: { ...rewards.points, [field]: numValue } 
+      setRewards({
+        ...rewards,
+        points: { ...rewards.points, [field]: numValue }
       });
-      setRewardsStrings({ 
-        ...rewardsStrings, 
-        points: { ...rewardsStrings.points, [field]: value } 
+      setRewardsStrings({
+        ...rewardsStrings,
+        points: { ...rewardsStrings.points, [field]: value }
       });
     } else {
       // Update string only, don't update number until blur
-      setRewardsStrings({ 
-        ...rewardsStrings, 
-        points: { ...rewardsStrings.points, [field]: value } 
+      setRewardsStrings({
+        ...rewardsStrings,
+        points: { ...rewardsStrings.points, [field]: value }
       });
     }
   };
@@ -771,19 +815,19 @@ export default function TaskModal({
     const numValue = parseFloat(value);
     if (isNaN(numValue) || numValue < 0) {
       // Reset to 0 if invalid
-      setRewards({ 
-        ...rewards, 
-        points: { ...rewards.points, [field]: 0 } 
+      setRewards({
+        ...rewards,
+        points: { ...rewards.points, [field]: 0 }
       });
-      setRewardsStrings({ 
-        ...rewardsStrings, 
-        points: { ...rewardsStrings.points, [field]: '0' } 
+      setRewardsStrings({
+        ...rewardsStrings,
+        points: { ...rewardsStrings.points, [field]: '0' }
       });
     } else {
       // Ensure string matches the valid number
-      setRewardsStrings({ 
-        ...rewardsStrings, 
-        points: { ...rewardsStrings.points, [field]: numValue.toString() } 
+      setRewardsStrings({
+        ...rewardsStrings,
+        points: { ...rewardsStrings.points, [field]: numValue.toString() }
       });
     }
   };
@@ -803,429 +847,90 @@ export default function TaskModal({
           <div className="flex gap-4">
             {/* Main columns container */}
             <div className={`flex-1 grid gap-4 ${emissaryColumnExpanded ? 'grid-cols-4' : 'grid-cols-3'}`}>
-            {/* Column 1: NATIVE (Basic Info) */}
-            <div className="space-y-3">
-              {/* <h3 className="text-sm font-semibold text-muted-foreground border-b pb-1">🧬 NATIVE</h3>*/}
-              <div className="space-y-2">
-                <Label htmlFor="task-name" className="text-xs">Name *</Label>
-                <Input
-                  id="task-name"
-                  value={name}
-                  onChange={(e) => setName(e.currentTarget.value)}
-                  placeholder="Enter task name..."
-                  className="h-8 text-sm"
-                  autoFocus
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="task-description" className="text-xs">Description</Label>
-                <Textarea
-                  id="task-description"
-                  placeholder="Describe the task objectives..."
-                  value={description}
-                  onChange={(e) => setDescription(e.currentTarget.value)}
-                  className="h-16 text-sm resize-none"
-                  onInput={handleDescriptionInput}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="task-due-date" className="text-xs">Due Date</Label>
-                <DatePicker
-                  value={dueDate}
-                  onChange={setDueDate}
-                  placeholder="Select due date..."
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
+              {/* Column 1: NATIVE (Basic Info) */}
+              <div className="space-y-3">
+                {/* <h3 className="text-sm font-semibold text-muted-foreground border-b pb-1">🧬 NATIVE</h3>*/}
                 <div className="space-y-2">
-                  <Label htmlFor="task-priority" className="text-xs">Priority</Label>
-                  <Select value={String(priority)} onValueChange={(val) => setPriority(val as TaskPriority)}>
-                    <SelectTrigger className="h-8 text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.values(TaskPriority).map((taskPriority) => (
-                        <SelectItem key={taskPriority} value={String(taskPriority)}>
-                          {String(taskPriority)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="task-progress" className="text-xs">Progress: {progress}%</Label>
-                  <input
-                    id="task-progress"
-                    type="range"
-                    min="0"
-                    max={PROGRESS_MAX}
-                    step={PROGRESS_STEP}
-                    value={progress}
-                    onChange={(e) => {
-                      const newProgress = Number(e.currentTarget.value);
-                      setProgress(newProgress);
-                      
-                      // Progress-to-status mechanic
-                      if (newProgress === 0) {
-                        setStatus(TaskStatus.CREATED);
-                      } else if (newProgress === 25 || newProgress === 50) {
-                        setStatus(TaskStatus.IN_PROGRESS);
-                      } else if (newProgress === 75) {
-                        setStatus(TaskStatus.FINISHING);
-                      } else if (newProgress === 100) {
-                        setStatus(TaskStatus.DONE);
-                      }
-                    }}
-                    className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Column 2: NATIVE (Structure) */}
-            <div className="space-y-3">
-            {/* <h3 className="text-sm font-semibold text-muted-foreground border-b pb-1">🧬 NATIVE</h3>*/}
-              
-              <div className="space-y-2">
-                <Label htmlFor="task-station-category" className="text-xs">Station</Label>
-                <SearchableSelect
-                  value={getStationValue(station)}
-                  onValueChange={handleStationCategoryChange}
-                  options={createStationCategoryOptions()}
-                  autoGroupByCategory={true}
-                  getCategoryForValue={(value) => getCategoryFromCombined(value)}
-                  placeholder="Select station..."
-                  className="h-8 text-sm"
-                  persistentCollapsible={true}
-                  instanceId="task-modal-station-category"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="task-type" className="text-xs">Type</Label>
-                <Select value={String(type)} onValueChange={handleTypeChange}>
-                  <SelectTrigger className="h-8 text-sm">
-                    <SelectValue placeholder="Select task type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.values(TaskType)
-                      .filter((taskType) => {
-                        if (isRecurrentModal) {
-                          return taskType === TaskType.RECURRENT_GROUP || 
-                                 taskType === TaskType.RECURRENT_TEMPLATE || 
-                                 taskType === TaskType.RECURRENT_INSTANCE;
-                        } else {
-                          return taskType === TaskType.MISSION || 
-                                 taskType === TaskType.MILESTONE || 
-                                 taskType === TaskType.GOAL || 
-                                 taskType === TaskType.ASSIGNMENT;
-                        }
-                      })
-                      .map((taskType) => (
-                        <SelectItem key={taskType} value={String(taskType)}>
-                          {String(taskType)}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="parent-task" className="text-xs">Parent</Label>
-                {dataLoaded ? (
-                  <SearchableSelect
-                    value={parentId || ''}
-                    onValueChange={(val) => setParentId(val || null)}
-                    placeholder="No Parent"
-                    options={createTaskParentOptions(tasks, task?.id, isRecurrentModal, type)}
-                    autoGroupByCategory={true}
+                  <Label htmlFor="task-name" className="text-xs">Name *</Label>
+                  <Input
+                    id="task-name"
+                    value={name}
+                    onChange={(e) => setName(e.currentTarget.value)}
+                    placeholder="Enter task name..."
                     className="h-8 text-sm"
-                    persistentCollapsible={true}
-                    instanceId="task-modal-parent-task"
-                  />
-                ) : (
-                  <div className="h-8 text-sm text-muted-foreground flex items-center px-3 py-2 border rounded-md">
-                    Loading tasks...
-                  </div>
-                )}
-              </div>
-
-              {(type === TaskType.RECURRENT_GROUP || type === TaskType.RECURRENT_TEMPLATE) && (
-                <div className="space-y-2">
-                  <Label htmlFor="task-frequency" className="text-xs">Frequency</Label>
-                  <FrequencyCalendar
-                    value={frequencyConfig}
-                    onChange={setFrequencyConfig}
-                    allowAlways={type === TaskType.RECURRENT_GROUP}
+                    autoFocus
                   />
                 </div>
-              )}
-            </div>
 
-            {/* Column 3: AMBASSADORS */}
-            <div className="space-y-3">
-            {/* <h3 className="text-sm font-semibold text-muted-foreground border-b pb-1">🏛️ AMBASSADORS</h3>*/}
-              <div className="space-y-2">
-                <Label htmlFor="site" className="text-xs">Site</Label>
-                <SearchableSelect
-                  value={formData.site}
-                  onValueChange={(v) => setFormData({ ...formData, site: v })}
-                  placeholder="Select site..."
-                  options={createSiteOptionsWithCategories(sites)}
-                  autoGroupByCategory={true}
-                  className="h-8 text-sm"
-                  persistentCollapsible={true}
-                  instanceId="task-modal-site"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-2">
-                  <Label htmlFor="task-cost" className="text-xs">Cost ($)</Label>
-                  <NumericInput
-                    id="task-cost"
-                    value={cost}
-                    onChange={setCost}
-                    min={0}
-                    step={PRICE_STEP}
-                    className="h-8 text-sm"
+                  <Label htmlFor="task-description" className="text-xs">Description</Label>
+                  <Textarea
+                    id="task-description"
+                    placeholder="Describe the task objectives..."
+                    value={description}
+                    onChange={(e) => setDescription(e.currentTarget.value)}
+                    className="h-16 text-sm resize-none"
+                    onInput={handleDescriptionInput}
                   />
                 </div>
+
                 <div className="space-y-2">
-                  <Label htmlFor="task-revenue" className="text-xs">Revenue ($)</Label>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className="relative">
-                          <NumericInput
-                            id="task-revenue"
-                            value={revenue}
-                            onChange={setRevenue}
-                            min={0}
-                            step={PRICE_STEP}
-                            className="h-8 text-sm"
-                            disabled={!!task?.sourceSaleId}
-                          />
-                        </div>
-                      </TooltipTrigger>
-                      {task?.sourceSaleId && (
-                        <TooltipContent>
-                          <p>Revenue is managed by the source Sale - cannot edit here</p>
-                        </TooltipContent>
-                      )}
-                    </Tooltip>
-                  </TooltipProvider>
+                  <Label htmlFor="task-due-date" className="text-xs">Due Date</Label>
+                  <DatePicker
+                    value={dueDate}
+                    onChange={setDueDate}
+                    placeholder="Select due date..."
+                  />
                 </div>
-              </div>
 
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleNotPaidChange(!isNotPaid)}
-                  className={`h-8 text-xs ${isNotPaid ? 'border-orange-500 text-orange-600 hover:bg-orange-50' : ''}`}
-                >
-                  {isNotPaid ? "⚠ Not Paid" : "✓ Paid"}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleNotChargedChange(!isNotCharged)}
-                  className={`h-8 text-xs ${isNotCharged ? 'border-orange-500 text-orange-600 hover:bg-orange-50' : ''}`}
-                >
-                  {isNotCharged ? "⚠ Not Charged" : "✓ Charged"}
-                </Button>
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-xs">Point Rewards</Label>
-                <div className="grid grid-cols-4 gap-2">
-                  {getPointsMetadata().map((pointType) => (
-                    <div key={pointType.key}>
-                      <Label htmlFor={`reward-${pointType.key.toLowerCase()}`} className="text-xs">{pointType.label}</Label>
-                      <NumericInput
-                        id={`reward-${pointType.key.toLowerCase()}`}
-                        value={rewards.points[pointType.key.toLowerCase() as keyof typeof rewards.points]}
-                        onChange={(value) => setRewards({ 
-                          ...rewards, 
-                          points: { 
-                            ...rewards.points, 
-                            [pointType.key.toLowerCase()]: value 
-                          } 
-                        })}
-                        min={0}
-                        step={1}
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-             {/* Column 4: EMISSARIES (Collapsible) */}
-             {emissaryColumnExpanded && (
-            <div className="space-y-3">
-            {/* <h3 className="text-sm font-semibold text-muted-foreground border-b pb-1">📡 EMISSARIES</h3>*/}
-              
-              {/* Customer Character - Emissary field for service tasks */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="customer-character" className="text-xs">Customer</Label>
-                  {!task?.sourceSaleId && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setIsNewCustomer(!isNewCustomer)}
-                      className="h-6 text-xs px-2"
-                    >
-                      {isNewCustomer ? 'Existing' : 'New'}
-                    </Button>
-                  )}
-                </div>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div>
-                        {task?.sourceSaleId ? (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="w-full h-8 text-xs justify-start"
-                            disabled={true}
-                          >
-                            <User className="h-3 w-3 mr-2" />
-                            {customerCharacterId ? customerCharacterName : 'Customer from Sale'}
-                          </Button>
-                        ) : isNewCustomer ? (
-                          <Input
-                            id="customer-character"
-                            value={newCustomerName}
-                            onChange={(e) => setNewCustomerName(e.target.value)}
-                            placeholder="New customer name"
-                            className="h-8 text-sm"
-                          />
-                        ) : (
-                          <SearchableSelect
-                            value={customerCharacterId || ''}
-                            onValueChange={(value) => setCustomerCharacterId(value || null)}
-                            options={getCharacterOptions()}
-                            placeholder="Select customer"
-                            autoGroupByCategory={true}
-                            className="h-8 text-sm"
-                          />
-                        )}
-                      </div>
-                    </TooltipTrigger>
-                    {task?.sourceSaleId && (
-                      <TooltipContent>
-                        <p>Customer is managed by the source Sale - cannot edit here</p>
-                      </TooltipContent>
-                    )}
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="output-item-type-subtype" className="text-xs">Item Type & SubType</Label>
-                <SearchableSelect
-                  value={outputItemTypeSubType}
-                  onValueChange={handleOutputItemTypeSubTypeChange}
-                  placeholder="No Item Output"
-                  options={[
-                    { value: 'none:', label: 'No Item Output', category: 'None' },
-                    ...createItemTypeSubTypeOptions()
-                  ]}
-                  className="h-8 text-sm"
-                  autoGroupByCategory={true}
-                  getCategoryForValue={(value) => {
-                    if (value === 'none:') return 'None';
-                    return getItemTypeFromCombined(value);
-                  }}
-                />
-              </div>
-
-              {!!outputItemType && (
-                <>
-                  {/* Row 1: Quantity, Unit Cost, Price, Auto */}
-                  <div className="grid grid-cols-4 gap-2">
-                    <div className="space-y-2">
-                      <Label htmlFor="output-quantity" className="text-xs">Quantity</Label>
-                      <NumericInput
-                        id="output-quantity"
-                        value={outputQuantity}
-                        onChange={setOutputQuantity}
-                        min={1}
-                        step={1}
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="output-unit-cost" className="text-xs">U Cost $</Label>
-                      <NumericInput
-                        id="output-unit-cost"
-                        value={outputUnitCost}
-                        onChange={setOutputUnitCost}
-                        min={0}
-                        step={PRICE_STEP}
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="output-item-price" className="text-xs">Price $</Label>
-                      <NumericInput
-                        id="output-item-price"
-                        value={outputItemPrice}
-                        onChange={setOutputItemPrice}
-                        min={0}
-                        step={PRICE_STEP}
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                    <div className="flex justify-center items-end">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={handleAutoCalculateUnitCost}
-                        className="h-8 px-4 text-xs"
-                        title="Auto-calculate Unit Cost from Cost/Quantity and Price from Revenue/Quantity"
-                      >
-                        Auto
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Row 2: Target Site, Item Status */}
+                {/* Schedule Fields */}
+                <div className="space-y-2 border-t pt-2 mt-2">
+                  <Label className="text-xs font-semibold">Schedule</Label>
                   <div className="grid grid-cols-2 gap-2">
-                    <SearchableSelect
-                      value={formData.targetSite}
-                      onValueChange={(v) => setFormData({ ...formData, targetSite: v })}
-                      placeholder="Target Site"
-                      options={createSiteOptionsWithCategories(sites)}
-                      autoGroupByCategory={true}
-                      className="h-8 text-sm"
-                      persistentCollapsible={true}
-                      instanceId="task-modal-target-site"
-                    />
-                    <Select
-                      value={outputItemStatus}
-                      onValueChange={(value) => setOutputItemStatus(value as ItemStatus)}
-                    >
+                    <div className="space-y-1">
+                      <Label className="text-[10px] text-muted-foreground">Start</Label>
+                      <DatePicker
+                        value={scheduledStartDate}
+                        onChange={setScheduledStartDate}
+                        placeholder="Start Date"
+                        className="h-7 text-xs"
+                      />
+                      <Input
+                        type="time"
+                        value={scheduledStartTime}
+                        onChange={(e) => setScheduledStartTime(e.target.value)}
+                        className="h-7 text-xs"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[10px] text-muted-foreground">End</Label>
+                      <DatePicker
+                        value={scheduledEndDate}
+                        onChange={setScheduledEndDate}
+                        placeholder="End Date"
+                        className="h-7 text-xs"
+                      />
+                      <Input
+                        type="time"
+                        value={scheduledEndTime}
+                        onChange={(e) => setScheduledEndTime(e.target.value)}
+                        className="h-7 text-xs"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="task-priority" className="text-xs">Priority</Label>
+                    <Select value={String(priority)} onValueChange={(val) => setPriority(val as TaskPriority)}>
                       <SelectTrigger className="h-8 text-sm">
-                        <SelectValue placeholder="Status" />
+                        <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {Object.values(ItemStatus).map((status) => (
-                          <SelectItem key={status} value={status}>
-                            {status}
+                        {Object.values(TaskPriority).map((taskPriority) => (
+                          <SelectItem key={taskPriority} value={String(taskPriority)}>
+                            {String(taskPriority)}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -1233,23 +938,399 @@ export default function TaskModal({
                   </div>
 
                   <div className="space-y-2">
-                    <ItemNameField
-                      value={outputItemName}
-                      onChange={setOutputItemName}
-                      placeholder="Item name"
-                      items={items}
-                      selectedItemId={selectedItemId}
-                      onItemSelect={handleItemSelect}
-                      isNewItem={isNewItem}
-                      onNewItemToggle={setIsNewItem}
-                      label="Item Name"
-                      sites={sites}
+                    <Label htmlFor="task-progress" className="text-xs">Progress: {progress}%</Label>
+                    <input
+                      id="task-progress"
+                      type="range"
+                      min="0"
+                      max={PROGRESS_MAX}
+                      step={PROGRESS_STEP}
+                      value={progress}
+                      onChange={(e) => {
+                        const newProgress = Number(e.currentTarget.value);
+                        setProgress(newProgress);
+
+                        // Progress-to-status mechanic
+                        if (newProgress === 0) {
+                          setStatus(TaskStatus.CREATED);
+                        } else if (newProgress === 25 || newProgress === 50) {
+                          setStatus(TaskStatus.IN_PROGRESS);
+                        } else if (newProgress === 75) {
+                          setStatus(TaskStatus.FINISHING);
+                        } else if (newProgress === 100) {
+                          setStatus(TaskStatus.DONE);
+                        }
+                      }}
+                      className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer"
                     />
                   </div>
-                </>
+                </div>
+              </div>
+
+              {/* Column 2: NATIVE (Structure) */}
+              <div className="space-y-3">
+                {/* <h3 className="text-sm font-semibold text-muted-foreground border-b pb-1">🧬 NATIVE</h3>*/}
+
+                <div className="space-y-2">
+                  <Label htmlFor="task-station-category" className="text-xs">Station</Label>
+                  <SearchableSelect
+                    value={getStationValue(station)}
+                    onValueChange={handleStationCategoryChange}
+                    options={createStationCategoryOptions()}
+                    autoGroupByCategory={true}
+                    getCategoryForValue={(value) => getCategoryFromCombined(value)}
+                    placeholder="Select station..."
+                    className="h-8 text-sm"
+                    persistentCollapsible={true}
+                    instanceId="task-modal-station-category"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="task-type" className="text-xs">Type</Label>
+                  <Select value={String(type)} onValueChange={handleTypeChange}>
+                    <SelectTrigger className="h-8 text-sm">
+                      <SelectValue placeholder="Select task type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.values(TaskType)
+                        .filter((taskType) => {
+                          if (isRecurrentModal) {
+                            return taskType === TaskType.RECURRENT_GROUP ||
+                              taskType === TaskType.RECURRENT_TEMPLATE ||
+                              taskType === TaskType.RECURRENT_INSTANCE;
+                          } else {
+                            return taskType === TaskType.MISSION ||
+                              taskType === TaskType.MILESTONE ||
+                              taskType === TaskType.GOAL ||
+                              taskType === TaskType.ASSIGNMENT;
+                          }
+                        })
+                        .map((taskType) => (
+                          <SelectItem key={taskType} value={String(taskType)}>
+                            {String(taskType)}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="parent-task" className="text-xs">Parent</Label>
+                  {dataLoaded ? (
+                    <SearchableSelect
+                      value={parentId || ''}
+                      onValueChange={(val) => setParentId(val || null)}
+                      placeholder="No Parent"
+                      options={createTaskParentOptions(tasks, task?.id, isRecurrentModal, type)}
+                      autoGroupByCategory={true}
+                      className="h-8 text-sm"
+                      persistentCollapsible={true}
+                      instanceId="task-modal-parent-task"
+                    />
+                  ) : (
+                    <div className="h-8 text-sm text-muted-foreground flex items-center px-3 py-2 border rounded-md">
+                      Loading tasks...
+                    </div>
+                  )}
+                </div>
+
+                {(type === TaskType.RECURRENT_GROUP || type === TaskType.RECURRENT_TEMPLATE) && (
+                  <div className="space-y-2">
+                    <Label htmlFor="task-frequency" className="text-xs">Frequency</Label>
+                    <FrequencyCalendar
+                      value={frequencyConfig}
+                      onChange={setFrequencyConfig}
+                      allowAlways={type === TaskType.RECURRENT_GROUP}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Column 3: AMBASSADORS */}
+              <div className="space-y-3">
+                {/* <h3 className="text-sm font-semibold text-muted-foreground border-b pb-1">🏛️ AMBASSADORS</h3>*/}
+                <div className="space-y-2">
+                  <Label htmlFor="site" className="text-xs">Site</Label>
+                  <SearchableSelect
+                    value={formData.site}
+                    onValueChange={(v) => setFormData({ ...formData, site: v })}
+                    placeholder="Select site..."
+                    options={createSiteOptionsWithCategories(sites)}
+                    autoGroupByCategory={true}
+                    className="h-8 text-sm"
+                    persistentCollapsible={true}
+                    instanceId="task-modal-site"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="task-cost" className="text-xs">Cost ($)</Label>
+                    <NumericInput
+                      id="task-cost"
+                      value={cost}
+                      onChange={setCost}
+                      min={0}
+                      step={PRICE_STEP}
+                      className="h-8 text-sm"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="task-revenue" className="text-xs">Revenue ($)</Label>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="relative">
+                            <NumericInput
+                              id="task-revenue"
+                              value={revenue}
+                              onChange={setRevenue}
+                              min={0}
+                              step={PRICE_STEP}
+                              className="h-8 text-sm"
+                              disabled={!!task?.sourceSaleId}
+                            />
+                          </div>
+                        </TooltipTrigger>
+                        {task?.sourceSaleId && (
+                          <TooltipContent>
+                            <p>Revenue is managed by the source Sale - cannot edit here</p>
+                          </TooltipContent>
+                        )}
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleNotPaidChange(!isNotPaid)}
+                    className={`h-8 text-xs ${isNotPaid ? 'border-orange-500 text-orange-600 hover:bg-orange-50' : ''}`}
+                  >
+                    {isNotPaid ? "⚠ Not Paid" : "✓ Paid"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleNotChargedChange(!isNotCharged)}
+                    className={`h-8 text-xs ${isNotCharged ? 'border-orange-500 text-orange-600 hover:bg-orange-50' : ''}`}
+                  >
+                    {isNotCharged ? "⚠ Not Charged" : "✓ Charged"}
+                  </Button>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-xs">Point Rewards</Label>
+                  <div className="grid grid-cols-4 gap-2">
+                    {getPointsMetadata().map((pointType) => (
+                      <div key={pointType.key}>
+                        <Label htmlFor={`reward-${pointType.key.toLowerCase()}`} className="text-xs">{pointType.label}</Label>
+                        <NumericInput
+                          id={`reward-${pointType.key.toLowerCase()}`}
+                          value={rewards.points[pointType.key.toLowerCase() as keyof typeof rewards.points]}
+                          onChange={(value) => setRewards({
+                            ...rewards,
+                            points: {
+                              ...rewards.points,
+                              [pointType.key.toLowerCase()]: value
+                            }
+                          })}
+                          min={0}
+                          step={1}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Column 4: EMISSARIES (Collapsible) */}
+              {emissaryColumnExpanded && (
+                <div className="space-y-3">
+                  {/* <h3 className="text-sm font-semibold text-muted-foreground border-b pb-1">📡 EMISSARIES</h3>*/}
+
+                  {/* Customer Character - Emissary field for service tasks */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="customer-character" className="text-xs">Customer</Label>
+                      {!task?.sourceSaleId && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setIsNewCustomer(!isNewCustomer)}
+                          className="h-6 text-xs px-2"
+                        >
+                          {isNewCustomer ? 'Existing' : 'New'}
+                        </Button>
+                      )}
+                    </div>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div>
+                            {task?.sourceSaleId ? (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="w-full h-8 text-xs justify-start"
+                                disabled={true}
+                              >
+                                <User className="h-3 w-3 mr-2" />
+                                {customerCharacterId ? customerCharacterName : 'Customer from Sale'}
+                              </Button>
+                            ) : isNewCustomer ? (
+                              <Input
+                                id="customer-character"
+                                value={newCustomerName}
+                                onChange={(e) => setNewCustomerName(e.target.value)}
+                                placeholder="New customer name"
+                                className="h-8 text-sm"
+                              />
+                            ) : (
+                              <SearchableSelect
+                                value={customerCharacterId || ''}
+                                onValueChange={(value) => setCustomerCharacterId(value || null)}
+                                options={getCharacterOptions()}
+                                placeholder="Select customer"
+                                autoGroupByCategory={true}
+                                className="h-8 text-sm"
+                              />
+                            )}
+                          </div>
+                        </TooltipTrigger>
+                        {task?.sourceSaleId && (
+                          <TooltipContent>
+                            <p>Customer is managed by the source Sale - cannot edit here</p>
+                          </TooltipContent>
+                        )}
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="output-item-type-subtype" className="text-xs">Item Type & SubType</Label>
+                    <SearchableSelect
+                      value={outputItemTypeSubType}
+                      onValueChange={handleOutputItemTypeSubTypeChange}
+                      placeholder="No Item Output"
+                      options={[
+                        { value: 'none:', label: 'No Item Output', category: 'None' },
+                        ...createItemTypeSubTypeOptions()
+                      ]}
+                      className="h-8 text-sm"
+                      autoGroupByCategory={true}
+                      getCategoryForValue={(value) => {
+                        if (value === 'none:') return 'None';
+                        return getItemTypeFromCombined(value);
+                      }}
+                    />
+                  </div>
+
+                  {!!outputItemType && (
+                    <>
+                      {/* Row 1: Quantity, Unit Cost, Price, Auto */}
+                      <div className="grid grid-cols-4 gap-2">
+                        <div className="space-y-2">
+                          <Label htmlFor="output-quantity" className="text-xs">Quantity</Label>
+                          <NumericInput
+                            id="output-quantity"
+                            value={outputQuantity}
+                            onChange={setOutputQuantity}
+                            min={1}
+                            step={1}
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="output-unit-cost" className="text-xs">U Cost $</Label>
+                          <NumericInput
+                            id="output-unit-cost"
+                            value={outputUnitCost}
+                            onChange={setOutputUnitCost}
+                            min={0}
+                            step={PRICE_STEP}
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="output-item-price" className="text-xs">Price $</Label>
+                          <NumericInput
+                            id="output-item-price"
+                            value={outputItemPrice}
+                            onChange={setOutputItemPrice}
+                            min={0}
+                            step={PRICE_STEP}
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                        <div className="flex justify-center items-end">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={handleAutoCalculateUnitCost}
+                            className="h-8 px-4 text-xs"
+                            title="Auto-calculate Unit Cost from Cost/Quantity and Price from Revenue/Quantity"
+                          >
+                            Auto
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Row 2: Target Site, Item Status */}
+                      <div className="grid grid-cols-2 gap-2">
+                        <SearchableSelect
+                          value={formData.targetSite}
+                          onValueChange={(v) => setFormData({ ...formData, targetSite: v })}
+                          placeholder="Target Site"
+                          options={createSiteOptionsWithCategories(sites)}
+                          autoGroupByCategory={true}
+                          className="h-8 text-sm"
+                          persistentCollapsible={true}
+                          instanceId="task-modal-target-site"
+                        />
+                        <Select
+                          value={outputItemStatus}
+                          onValueChange={(value) => setOutputItemStatus(value as ItemStatus)}
+                        >
+                          <SelectTrigger className="h-8 text-sm">
+                            <SelectValue placeholder="Status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Object.values(ItemStatus).map((status) => (
+                              <SelectItem key={status} value={status}>
+                                {status}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <ItemNameField
+                          value={outputItemName}
+                          onChange={setOutputItemName}
+                          placeholder="Item name"
+                          items={items}
+                          selectedItemId={selectedItemId}
+                          onItemSelect={handleItemSelect}
+                          isNewItem={isNewItem}
+                          onNewItemToggle={setIsNewItem}
+                          label="Item Name"
+                          sites={sites}
+                        />
+                      </div>
+                    </>
+                  )}
+                </div>
               )}
-            </div>
-            )}
             </div>
           </div>
         </div>
@@ -1405,7 +1486,7 @@ export default function TaskModal({
           onClose={() => setShowRelationshipsModal(false)}
         />
       )}
-      
+
       {/* Character Selector Submodal */}
       <CharacterSelectorSubmodal
         open={showCharacterSelector}
@@ -1413,7 +1494,7 @@ export default function TaskModal({
         onSelect={handleSetCustomer}
         currentOwnerId={customerCharacterId}
       />
-      
+
       {/* Player Character Selector Modal */}
       <PlayerCharacterSelectorModal
         open={showPlayerCharacterSelector}
