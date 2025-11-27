@@ -880,24 +880,24 @@ export default function TaskModal({
                     <Label className="text-xs">Schedule</Label>
                     <div className="grid grid-cols-2 gap-2">
                       <div className="space-y-1">
-                        <Label className="text-[10px] text-muted-foreground">Start</Label>
+                        <Label className="text-xs text-muted-foreground">Start</Label>
                         <div className="flex gap-1">
                           <DatePicker
                             value={scheduledStartDate}
                             onChange={setScheduledStartDate}
                             placeholder="Date"
-                            className="h-7 text-xs"
+                            className="h-8 text-sm"
                           />
                           <Input
                             type="time"
                             value={scheduledStartTime}
                             onChange={(e) => setScheduledStartTime(e.target.value)}
-                            className="w-20 h-7 text-xs"
+                            className="h-8 text-sm"
                           />
                         </div>
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-[10px] text-muted-foreground">End</Label>
+                        <Label className="text-xs text-muted-foreground">End</Label>
                         <div className="flex gap-1">
                           <DatePicker
                             value={scheduledEndDate}
@@ -906,13 +906,13 @@ export default function TaskModal({
                               setDueDate(date);
                             }}
                             placeholder="Date"
-                            className="h-7 text-xs"
+                            className="h-8 text-sm"
                           />
                           <Input
                             type="time"
                             value={scheduledEndTime}
                             onChange={(e) => setScheduledEndTime(e.target.value)}
-                            className="w-20 h-7 text-xs"
+                            className="h-8 text-sm"
                           />
                         </div>
                       </div>
