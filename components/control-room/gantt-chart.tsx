@@ -2,11 +2,11 @@
 
 import { useState, useMemo } from 'react';
 import { Task } from '@/types/entities';
-import { format, addDays, startOfDay, getHours, differenceInMinutes, isSameDay } from 'date-fns';
-import { cn } from '@/lib/utils';
+import { format, addDays, startOfDay, differenceInMinutes, startOfWeek, endOfWeek, eachDayOfInterval, addWeeks, subWeeks, addMonths, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, Plus, Clock, Calendar as CalendarIcon } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useThemeColors } from '@/lib/hooks/use-theme-colors';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 
 interface GanttChartProps {
     tasks: Task[];
@@ -14,222 +14,210 @@ interface GanttChartProps {
     onEditTask: (task: Task) => void;
 }
 
-const HOURS_IN_DAY = 24;
-const START_HOUR = 6; // Start at 6 AM
-const CELL_HEIGHT = 60; // Height per hour
-const DAYS_TO_SHOW = 3;
+type ViewMode = 'Day' | 'Week' | 'Month';
+
+const CELL_WIDTH_DAY = 60;
+const CELL_WIDTH_WEEK = 150;
+const CELL_WIDTH_MONTH = 40;
+const HEADER_HEIGHT = 50;
+const ROW_HEIGHT = 48;
 
 export default function GanttChart({ tasks, onNewTask, onEditTask }: GanttChartProps) {
     const [currentDate, setCurrentDate] = useState(new Date());
+    const [viewMode, setViewMode] = useState<ViewMode>('Week');
     const { activeBg } = useThemeColors();
 
-    // Calculate days to show
-    const days = useMemo(() => {
-        return Array.from({ length: DAYS_TO_SHOW }).map((_, i) => addDays(startOfDay(currentDate), i));
-    }, [currentDate]);
+    const { startDate, endDate, ticks, cellWidth } = useMemo(() => {
+        let start: Date, end: Date, tickList: Date[], width: number;
 
-    // Split tasks into scheduled and unscheduled
-    const { scheduledTasks, unscheduledTasks } = useMemo(() => {
-        const scheduled: Task[] = [];
-        const unscheduled: Task[] = [];
+        if (viewMode === 'Day') {
+            start = startOfDay(currentDate);
+            end = addDays(start, 1);
+            tickList = Array.from({ length: 24 }).map((_, i) => {
+                const d = new Date(start);
+                d.setHours(i);
+                return d;
+            });
+            width = CELL_WIDTH_DAY;
+        } else if (viewMode === 'Week') {
+            start = startOfWeek(currentDate, { weekStartsOn: 1 });
+            end = endOfWeek(currentDate, { weekStartsOn: 1 });
+            tickList = eachDayOfInterval({ start, end });
+            width = CELL_WIDTH_WEEK;
+        } else {
+            start = startOfMonth(currentDate);
+            end = endOfMonth(currentDate);
+            tickList = eachDayOfInterval({ start, end });
+            width = CELL_WIDTH_MONTH;
+        }
 
-        tasks.forEach(task => {
-            if (task.scheduledStart && task.scheduledEnd) {
-                scheduled.push(task);
-            } else {
-                unscheduled.push(task);
-            }
-        });
+        return { startDate: start, endDate: end, ticks: tickList, cellWidth: width };
+    }, [currentDate, viewMode]);
 
-        return { scheduledTasks: scheduled, unscheduledTasks: unscheduled };
+    const scheduledTasks = useMemo(() => {
+        return tasks.filter(t => t.scheduledStart && t.scheduledEnd);
     }, [tasks]);
 
-    // Time slots for the gutter
-    const timeSlots = useMemo(() => {
-        return Array.from({ length: HOURS_IN_DAY - START_HOUR }).map((_, i) => START_HOUR + i);
-    }, []);
-
-    const getTaskStyle = (task: Task) => {
+    const getBarStyle = (task: Task) => {
         if (!task.scheduledStart || !task.scheduledEnd) return {};
 
-        const start = new Date(task.scheduledStart);
-        const end = new Date(task.scheduledEnd);
+        const taskStart = new Date(task.scheduledStart);
+        const taskEnd = new Date(task.scheduledEnd);
 
-        // Calculate minutes from start of day (relative to START_HOUR)
-        const startHour = getHours(start);
-        const startMin = start.getMinutes();
+        if (taskEnd < startDate || taskStart > endDate) return { display: 'none' };
 
-        // Adjust for start hour
-        let adjustedStartHour = startHour - START_HOUR;
-        // If before start hour, it might be from previous day or early morning
-        // For now, just hide or clip if it's way off, but let's assume tasks are within view
-        if (adjustedStartHour < 0) adjustedStartHour = 0; // Clamp for now
+        let offset = 0;
+        let duration = 0;
 
-        const top = (adjustedStartHour * 60 + startMin) * (CELL_HEIGHT / 60);
-        const durationMinutes = differenceInMinutes(end, start);
-        const height = Math.max(durationMinutes * (CELL_HEIGHT / 60), 30); // Min height 30px
-
-        // Random column for now to demonstrate "lanes" (0-11)
-        // In a real app, we'd calculate non-overlapping lanes
-        const lane = Math.floor(Math.random() * 6);
-        const width = 12 - lane; // Span remaining width
+        if (viewMode === 'Day') {
+            const startDiff = differenceInMinutes(taskStart, startDate);
+            const endDiff = differenceInMinutes(taskEnd, startDate);
+            offset = (startDiff / 60) * cellWidth;
+            duration = ((endDiff - startDiff) / 60) * cellWidth;
+        } else {
+            const startDiff = differenceInMinutes(taskStart, startDate);
+            const endDiff = differenceInMinutes(taskEnd, startDate);
+            offset = (startDiff / 1440) * cellWidth;
+            duration = ((endDiff - startDiff) / 1440) * cellWidth;
+        }
 
         return {
-            top: `${top}px`,
-            height: `${height}px`,
-            left: `calc((100% / 12) * ${lane})`,
-            width: `calc((100% / 12) * ${6})`, // Fixed width for now
+            left: `${Math.max(0, offset)}px`,
+            width: `${Math.max(duration, 4)}px`,
         };
     };
 
+    const handlePrev = () => {
+        if (viewMode === 'Day') setCurrentDate(addDays(currentDate, -1));
+        else if (viewMode === 'Week') setCurrentDate(subWeeks(currentDate, 1));
+        else setCurrentDate(subMonths(currentDate, 1));
+    };
+
+    const handleNext = () => {
+        if (viewMode === 'Day') setCurrentDate(addDays(currentDate, 1));
+        else if (viewMode === 'Week') setCurrentDate(addWeeks(currentDate, 1));
+        else setCurrentDate(addMonths(currentDate, 1));
+    };
+
     return (
-        <div className="flex h-full flex-col bg-background">
-            {/* Header */}
-            <header className="flex shrink-0 items-center justify-between border-b px-6 py-4 bg-card/50 backdrop-blur-sm">
+        <div className="flex h-full flex-col bg-background border rounded-lg overflow-hidden">
+            <header className="flex shrink-0 items-center justify-between border-b px-4 py-2 bg-muted/20">
                 <div className="flex items-center gap-4">
-                    <h2 className="text-xl font-bold flex items-center gap-2">
-                        <CalendarIcon className="w-5 h-5 text-primary" />
-                        Schedule View
-                    </h2>
-                    <div className="flex items-center gap-2 bg-muted/50 rounded-lg p-1">
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setCurrentDate(addDays(currentDate, -1))}>
+                    <div className="flex items-center gap-1 bg-muted rounded-md p-1">
+                        <Button
+                            variant={viewMode === 'Day' ? 'default' : 'ghost'}
+                            size="sm"
+                            onClick={() => setViewMode('Day')}
+                            className="h-7 text-xs"
+                        >
+                            Day
+                        </Button>
+                        <Button
+                            variant={viewMode === 'Week' ? 'default' : 'ghost'}
+                            size="sm"
+                            onClick={() => setViewMode('Week')}
+                            className="h-7 text-xs"
+                        >
+                            Week
+                        </Button>
+                        <Button
+                            variant={viewMode === 'Month' ? 'default' : 'ghost'}
+                            size="sm"
+                            onClick={() => setViewMode('Month')}
+                            className="h-7 text-xs"
+                        >
+                            Month
+                        </Button>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Button variant="outline" size="icon" className="h-7 w-7" onClick={handlePrev}>
                             <ChevronLeft className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="sm" className="h-8 font-medium" onClick={() => setCurrentDate(new Date())}>
-                            Today
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setCurrentDate(addDays(currentDate, 1))}>
+                        <span className="text-sm font-medium min-w-[120px] text-center">
+                            {viewMode === 'Day' && format(currentDate, 'MMM d, yyyy')}
+                            {viewMode === 'Week' && `Week of ${format(startDate, 'MMM d')}`}
+                            {viewMode === 'Month' && format(currentDate, 'MMMM yyyy')}
+                        </span>
+                        <Button variant="outline" size="icon" className="h-7 w-7" onClick={handleNext}>
                             <ChevronRight className="h-4 w-4" />
                         </Button>
+                        <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setCurrentDate(new Date())}>
+                            Today
+                        </Button>
                     </div>
-                    <span className="text-sm font-medium text-muted-foreground">
-                        {format(days[0], 'MMM d')} – {format(days[days.length - 1], 'MMM d, yyyy')}
-                    </span>
                 </div>
-                <Button onClick={onNewTask} className="gap-2">
-                    <Plus className="h-4 w-4" />
-                    New Task
-                </Button>
             </header>
 
-            <div className="flex flex-1 overflow-hidden">
-                {/* Unscheduled Tasks Sidebar */}
-                <aside className="w-80 shrink-0 border-r bg-muted/10 flex flex-col">
-                    <div className="p-4 border-b bg-muted/20">
-                        <h3 className="font-semibold flex items-center gap-2">
-                            <Clock className="w-4 h-4 text-muted-foreground" />
-                            Unscheduled
-                            <span className="ml-auto text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
-                                {unscheduledTasks.length}
-                            </span>
-                        </h3>
+            <div className="flex flex-1 min-h-0">
+                <div className="w-64 border-r flex flex-col shrink-0 bg-card z-10 shadow-sm">
+                    <div className="h-[50px] border-b flex items-center px-4 font-semibold text-sm bg-muted/10">
+                        Tasks
                     </div>
-                    <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                        {unscheduledTasks.map(task => (
-                            <div
-                                key={task.id}
-                                className="p-3 rounded-lg border bg-card shadow-sm hover:shadow-md transition-all cursor-grab active:cursor-grabbing group"
-                                onClick={() => onEditTask(task)}
-                            >
-                                <p className="font-medium text-sm group-hover:text-primary transition-colors">{task.name}</p>
-                                <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
-                                    <span className="px-2 py-0.5 rounded-full bg-muted font-medium uppercase text-[10px] tracking-wider">
-                                        {task.station}
-                                    </span>
-                                    {task.rewards?.points?.xp && (
-                                        <span className="flex items-center gap-1">
-                                            <span className="text-yellow-500">★</span> {task.rewards.points.xp} XP
-                                        </span>
-                                    )}
+                    <ScrollArea className="flex-1">
+                        <div className="flex flex-col">
+                            {scheduledTasks.map((task) => (
+                                <div
+                                    key={task.id}
+                                    className="flex items-center px-4 border-b truncate hover:bg-accent/50 cursor-pointer transition-colors"
+                                    style={{ height: ROW_HEIGHT }}
+                                    onClick={() => onEditTask(task)}
+                                >
+                                    <div className="truncate text-sm font-medium">{task.name}</div>
                                 </div>
+                            ))}
+                            {scheduledTasks.length === 0 && (
+                                <div className="p-4 text-xs text-muted-foreground text-center">
+                                    No scheduled tasks.
+                                </div>
+                            )}
+                        </div>
+                    </ScrollArea>
+                </div>
+
+                <ScrollArea className="flex-1">
+                    <div className="flex flex-col min-w-full">
+                        <div className="flex border-b bg-muted/5 sticky top-0 z-10" style={{ height: HEADER_HEIGHT }}>
+                            {ticks.map((tick, i) => (
+                                <div
+                                    key={i}
+                                    className="flex items-center justify-center border-r text-xs text-muted-foreground font-medium shrink-0"
+                                    style={{ width: cellWidth }}
+                                >
+                                    {viewMode === 'Day' ? format(tick, 'HH:mm') : format(tick, 'd MMM')}
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="relative">
+                            <div className="absolute inset-0 flex pointer-events-none">
+                                {ticks.map((_, i) => (
+                                    <div
+                                        key={i}
+                                        className="border-r h-full shrink-0 opacity-20"
+                                        style={{ width: cellWidth }}
+                                    />
+                                ))}
                             </div>
-                        ))}
-                    </div>
-                </aside>
 
-                {/* Main Schedule Area */}
-                <main className="flex-1 overflow-x-auto">
-                    <div className="flex min-w-max h-full">
-                        {days.map((day, index) => (
-                            <div
-                                key={day.toISOString()}
-                                className={cn(
-                                    "flex flex-col min-w-[400px] border-r h-full",
-                                    index === 0 ? "min-w-[460px]" : "" // Extra width for time labels
-                                )}
-                            >
-                                {/* Day Header */}
-                                <div className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur p-4 text-center h-[60px] flex items-center justify-center">
-                                    <p className={cn(
-                                        "font-bold",
-                                        isSameDay(day, new Date()) ? "text-primary" : ""
-                                    )}>
-                                        {isSameDay(day, new Date()) ? "Today, " : ""}
-                                        {format(day, 'EEE, MMM d')}
-                                    </p>
-                                </div>
-
-                                {/* Day Grid */}
-                                <div className="flex-1 relative overflow-y-auto">
-                                    <div className="grid h-full" style={{
-                                        gridTemplateColumns: index === 0 ? '60px 1fr' : '1fr',
-                                        gridTemplateRows: `repeat(${timeSlots.length}, ${CELL_HEIGHT}px)`
-                                    }}>
-                                        {/* Time Labels (Only for first day) */}
-                                        {index === 0 && (
-                                            <div className="border-r bg-muted/5 text-xs text-muted-foreground font-medium">
-                                                {timeSlots.map(hour => (
-                                                    <div key={hour} className="border-b flex items-start justify-end pr-2 pt-2" style={{ height: `${CELL_HEIGHT}px` }}>
-                                                        {hour}:00
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-
-                                        {/* Grid Content */}
-                                        <div className="relative border-r border-dashed border-border/50">
-                                            {/* Hour Lines */}
-                                            {timeSlots.map(hour => (
-                                                <div key={hour} className="border-b border-border/30 w-full absolute" style={{ top: `${(hour - START_HOUR) * CELL_HEIGHT}px`, height: '1px' }} />
-                                            ))}
-
-                                            {/* Tasks */}
-                                            {scheduledTasks
-                                                .filter(task => isSameDay(new Date(task.scheduledStart!), day))
-                                                .map(task => (
-                                                    <div
-                                                        key={task.id}
-                                                        className="absolute rounded-md border bg-primary/10 border-primary/20 p-2 text-xs hover:bg-primary/20 transition-colors cursor-pointer overflow-hidden shadow-sm hover:z-10"
-                                                        style={getTaskStyle(task)}
-                                                        onClick={() => onEditTask(task)}
-                                                    >
-                                                        <div className="flex flex-col h-full justify-between">
-                                                            <p className="font-semibold truncate text-primary-foreground/90">{task.name}</p>
-                                                            <span className="inline-flex self-start px-1.5 py-0.5 rounded-sm bg-background/50 text-[10px] font-medium uppercase text-muted-foreground">
-                                                                {task.station}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                ))}
-
-                                            {/* Current Time Indicator (if today) */}
-                                            {isSameDay(day, new Date()) && (
-                                                <div
-                                                    className="absolute w-full border-t-2 border-red-500 z-20 pointer-events-none flex items-center"
-                                                    style={{
-                                                        top: `${(getHours(new Date()) - START_HOUR) * CELL_HEIGHT + (new Date().getMinutes() * (CELL_HEIGHT / 60))}px`
-                                                    }}
-                                                >
-                                                    <div className="w-2 h-2 rounded-full bg-red-500 -ml-1" />
-                                                </div>
-                                            )}
-                                        </div>
+                            {scheduledTasks.map((task) => (
+                                <div
+                                    key={task.id}
+                                    className="relative border-b hover:bg-accent/10 transition-colors"
+                                    style={{ height: ROW_HEIGHT }}
+                                >
+                                    <div
+                                        className="absolute top-2 bottom-2 rounded-md bg-primary/80 hover:bg-primary cursor-pointer shadow-sm border border-primary-foreground/20 flex items-center px-2 overflow-hidden whitespace-nowrap text-[10px] text-primary-foreground font-medium transition-all"
+                                        style={getBarStyle(task)}
+                                        onClick={() => onEditTask(task)}
+                                    >
+                                        {task.name}
                                     </div>
                                 </div>
-                            </div>
-                        ))}
+                            ))}
+                        </div>
                     </div>
-                </main>
+                    <ScrollBar orientation="horizontal" />
+                </ScrollArea>
             </div>
         </div>
     );
