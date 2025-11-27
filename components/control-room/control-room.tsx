@@ -20,6 +20,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { ORDER_INCREMENT, SIDEBAR_MIN_WIDTH, SIDEBAR_MAX_WIDTH, SIDEBAR_DEFAULT_WIDTH, DRAG_ACTIVATION_DISTANCE } from '@/lib/constants/app-constants';
 import TaskTree from './task-tree';
 import WeeklySchedule from './weekly-schedule';
+import GanttChart from './gantt-chart';
 import TaskDetailView from './task-detail-view';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
@@ -199,7 +200,9 @@ export default function ControlRoom() {
       let tasks = reviveDates<Task[]>(await ClientAPI.getTasks());
 
       // Apply tab-based filtering
-      if (activeSubTab === 'recurrent-tasks') {
+      if (activeSubTab === 'gantt-chart') {
+        // No filtering for Gantt Chart - show all tasks
+      } else if (activeSubTab === 'recurrent-tasks') {
         // Only show RECURRENT tasks for Recurrent Tree tab
         tasks = tasks.filter(task =>
           task.type === TaskType.RECURRENT_GROUP ||
@@ -944,19 +947,11 @@ export default function ControlRoom() {
 
             {/* Gantt Chart Tab Content */}
             <TabsContent value="gantt-chart" className="mt-0 p-0 data-[state=active]:flex flex-col flex-1 min-h-0">
-              <div className="flex-1 flex flex-col w-full overflow-y-auto p-6">
-                <div className="space-y-4">
-                  <h2 className="text-2xl font-bold">Gantt Chart</h2>
-                  <p className="text-muted-foreground">
-                    Gantt Chart view for project timeline planning.
-                  </p>
-                  <div className="bg-muted/20 rounded-lg p-8 text-center">
-                    <p className="text-muted-foreground">
-                      Gantt Chart functionality coming soon...
-                    </p>
-                  </div>
-                </div>
-              </div>
+              <GanttChart
+                tasks={tree.flatMap(t => [t.task, ...t.children.flatMap(c => [c.task, ...c.children.map(gc => gc.task)])])}
+                onNewTask={handleNewTask}
+                onEditTask={handleEditTask}
+              />
             </TabsContent>
           </Tabs>
         </div>
