@@ -115,8 +115,8 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask }: WeeklyS
 
             <div className="flex flex-1 overflow-hidden">
                 {/* Main Grid */}
-                <main className="flex-1 overflow-x-auto">
-                    <div className="flex h-full min-w-max">
+                <main className="flex-1 overflow-auto">
+                    <div className="flex min-h-full min-w-max">
                         {/* Time Column */}
                         <div className="flex flex-col shrink-0 sticky left-0 z-20 bg-background shadow-sm border-r w-16">
                             <div className="sticky top-0 z-30 bg-background h-[60px] border-b" /> {/* Header spacer */}
