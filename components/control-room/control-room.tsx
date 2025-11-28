@@ -940,7 +940,7 @@ export default function ControlRoom() {
             {/* Weekly Schedule Tab Content */}
             <TabsContent value="weekly-schedule" className="mt-0 p-0 data-[state=active]:flex flex-col flex-1 min-h-0">
               <WeeklySchedule
-                tasks={tree.flatMap(node => [node.task, ...node.children.map(c => c.task)])} // Flatten tree for now, ideally pass full list
+                tasks={allTasks}
                 onNewTask={handleNewTask}
                 onEditTask={handleEditTask}
               />
@@ -958,7 +958,7 @@ export default function ControlRoom() {
             {/* Gantt Chart Tab Content */}
             <TabsContent value="gantt-chart" className="mt-0 p-0 data-[state=active]:flex flex-col flex-1 min-h-0">
               <GanttChart
-                tasks={tree.flatMap(t => [t.task, ...t.children.flatMap(c => [c.task, ...c.children.map(gc => gc.task)])])}
+                tasks={allTasks}
                 onNewTask={handleNewTask}
                 onEditTask={handleEditTask}
               />
