@@ -20,6 +20,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { ORDER_INCREMENT, SIDEBAR_MIN_WIDTH, SIDEBAR_MAX_WIDTH, SIDEBAR_DEFAULT_WIDTH, DRAG_ACTIVATION_DISTANCE } from '@/lib/constants/app-constants';
 import TaskTree from './task-tree';
 import WeeklySchedule from './weekly-schedule';
+import CalendarView from './calendar-view';
 import GanttChart from './gantt-chart';
 import TaskDetailView from './task-detail-view';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -146,6 +147,7 @@ export default function ControlRoom() {
   // Sub-tab State
   const [activeSubTab, setActiveSubTab] = useState<ControlRoomTab>('mission-tree');
   const [refreshKey, setRefreshKey] = useState(0);
+  const [allTasks, setAllTasks] = useState<Task[]>([]);
 
   // Define sensors with an activation constraint
   const sensors = useSensors(
@@ -187,6 +189,22 @@ export default function ControlRoom() {
       }
     }
   }, [getPreference]);
+
+  // Function to load all tasks for calendar view (unfiltered)
+  const loadAllTasks = useCallback(async (): Promise<Task[]> => {
+    try {
+      const tasks = reviveDates<Task[]>(await ClientAPI.getTasks());
+      return tasks;
+    } catch (error) {
+      console.error('Failed to load all tasks:', error);
+      return [];
+    }
+  }, []);
+
+  // Load all tasks for calendar view
+  useEffect(() => {
+    loadAllTasks().then(setAllTasks);
+  }, [loadAllTasks, refreshKey]);
 
   useEffect(() => {
     if (activeSubTab === 'automation-tree') {
@@ -930,19 +948,11 @@ export default function ControlRoom() {
 
             {/* Calendar Tab Content */}
             <TabsContent value="calendar" className="mt-0 p-0 data-[state=active]:flex flex-col flex-1 min-h-0">
-              <div className="flex-1 flex flex-col w-full overflow-y-auto p-6">
-                <div className="space-y-4">
-                  <h2 className="text-2xl font-bold">Calendar</h2>
-                  <p className="text-muted-foreground">
-                    Calendar view for visualizing tasks and deadlines.
-                  </p>
-                  <div className="bg-muted/20 rounded-lg p-8 text-center">
-                    <p className="text-muted-foreground">
-                      Calendar functionality coming soon...
-                    </p>
-                  </div>
-                </div>
-              </div>
+              <CalendarView
+                tasks={allTasks}
+                onNewTask={handleNewTask}
+                onEditTask={handleEditTask}
+              />
             </TabsContent>
 
             {/* Gantt Chart Tab Content */}

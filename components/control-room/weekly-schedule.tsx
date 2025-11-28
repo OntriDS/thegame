@@ -123,7 +123,7 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask }: WeeklyS
                             <div className="flex-1 relative">
                                 {timeSlots.map(hour => (
                                     <div key={hour} className="flex items-start justify-end pr-2 border-b border-transparent" style={{ height: `${CELL_HEIGHT}px` }}>
-                                        <span className="text-sm font-medium text-muted-foreground bg-background px-1 pt-2">
+                                        <span className="text-sm font-medium text-muted-foreground bg-background px-1 pt-4">
                                             {hour.toString().padStart(2, '0')}:00
                                         </span>
                                     </div>
