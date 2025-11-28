@@ -7,7 +7,7 @@ import NumericInput from '@/components/ui/numeric-input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import TimePicker from '@/components/ui/time-picker';
+import SimpleTimePicker from '@/components/ui/simple-time-picker';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { ItemNameField } from '@/components/ui/item-name-field';
 import { DatePicker } from '@/components/ui/date-picker';
@@ -896,10 +896,11 @@ export default function TaskModal({
                         placeholder="Start Date"
                         className="h-7 text-xs"
                       />
-                      <TimePicker
+                      <SimpleTimePicker
                         value={scheduledStartTime}
                         onChange={setScheduledStartTime}
-                        className="h-7"
+                        placeholder="Start time"
+                        className="h-10"
                       />
                     </div>
                     <div className="space-y-1">
@@ -910,10 +911,11 @@ export default function TaskModal({
                         placeholder="End Date"
                         className="h-7 text-xs"
                       />
-                      <TimePicker
+                      <SimpleTimePicker
                         value={scheduledEndTime}
                         onChange={setScheduledEndTime}
-                        className="h-7"
+                        placeholder="End time"
+                        className="h-10"
                       />
                     </div>
                   </div>
