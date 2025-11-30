@@ -12,7 +12,6 @@ import { SearchableSelect } from '@/components/ui/searchable-select';
 import { ItemNameField } from '@/components/ui/item-name-field';
 import { DatePicker } from '@/components/ui/date-picker';
 import { FrequencyCalendar, FrequencyConfig } from '@/components/ui/frequency-calendar';
-import { SmartScheduler } from '@/components/ui/smart-scheduler';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -876,36 +875,50 @@ export default function TaskModal({
                   />
                 </div>
 
+                <div className="space-y-2">
+                  <Label htmlFor="task-due-date" className="text-xs">Due Date</Label>
+                  <DatePicker
+                    value={dueDate}
+                    onChange={setDueDate}
+                    placeholder="Select due date..."
+                  />
+                </div>
+
                 {/* Schedule Fields */}
                 <div className="space-y-2 border-t pt-2 mt-2">
                   <Label className="text-xs font-semibold">Schedule</Label>
-                  <SmartScheduler
-                    value={{
-                      dueDate,
-                      scheduledStart: scheduledStartDate,
-                      scheduledEnd: scheduledEndDate,
-                      frequencyConfig: (type === TaskType.RECURRENT_GROUP || type === TaskType.RECURRENT_TEMPLATE) ? frequencyConfig : undefined
-                    }}
-                    onChange={(val) => {
-                      setDueDate(val.dueDate);
-                      setScheduledStartDate(val.scheduledStart);
-                      setScheduledStartTime(val.scheduledStart ? format(val.scheduledStart, 'HH:mm') : '');
-                      setScheduledEndDate(val.scheduledEnd);
-                      setScheduledEndTime(val.scheduledEnd ? format(val.scheduledEnd, 'HH:mm') : '');
-                      if (val.frequencyConfig) {
-                        setFrequencyConfig(val.frequencyConfig);
-                        // Auto-switch type if frequency is added and type is not recurrent
-                        if (type !== TaskType.RECURRENT_GROUP && type !== TaskType.RECURRENT_TEMPLATE) {
-                          // Default to RECURRENT_TEMPLATE if user adds frequency
-                          // But we need to be careful not to override user intent if they just want a one-off with frequency (which isn't really supported by enum but UI allows it)
-                          // For now, let's just set the config. The type selector is separate.
-                        }
-                      } else {
-                        setFrequencyConfig(undefined);
-                      }
-                    }}
-                    isRecurrent={type === TaskType.RECURRENT_GROUP || type === TaskType.RECURRENT_TEMPLATE}
-                  />
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <Label className="text-[10px] text-muted-foreground">Start</Label>
+                      <DatePicker
+                        value={scheduledStartDate}
+                        onChange={setScheduledStartDate}
+                        placeholder="Start Date"
+                        className="h-7 text-xs"
+                      />
+                      <SimpleTimePicker
+                        value={scheduledStartTime}
+                        onChange={setScheduledStartTime}
+                        placeholder="Start time"
+                        className="h-10"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[10px] text-muted-foreground">End</Label>
+                      <DatePicker
+                        value={scheduledEndDate}
+                        onChange={setScheduledEndDate}
+                        placeholder="End Date"
+                        className="h-7 text-xs"
+                      />
+                      <SimpleTimePicker
+                        value={scheduledEndTime}
+                        onChange={setScheduledEndTime}
+                        placeholder="End time"
+                        className="h-10"
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
@@ -1023,7 +1036,16 @@ export default function TaskModal({
                   )}
                 </div>
 
-                {/* Frequency moved to SmartScheduler */}
+                {(type === TaskType.RECURRENT_GROUP || type === TaskType.RECURRENT_TEMPLATE) && (
+                  <div className="space-y-2">
+                    <Label htmlFor="task-frequency" className="text-xs">Frequency</Label>
+                    <FrequencyCalendar
+                      value={frequencyConfig}
+                      onChange={setFrequencyConfig}
+                      allowAlways={type === TaskType.RECURRENT_GROUP}
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Column 3: AMBASSADORS */}

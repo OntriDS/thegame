@@ -13,12 +13,14 @@
         "Move Collected tasks to archive with proper status preservation",
         "Move Sold items to archive maintaining final status",
         "Move all records to archive (inherently completed data)",
-        "Design and implement Active vs Archive data strategy (filters and views for working set)"
+        "Design and implement Active vs Archive data strategy (filters and views for working set)",
+        "Implement the Weekly Schedule, Calendar and Gantt Chart Views in the Control Room",
+        "Create the Smart Scheduler"
       ]
     },
     "Phase13.2": {
       "phaseName": "Monthly Logging System",
-      "status": "Not Started",
+      "status": "In Progress",
       "description": "Implement comprehensive monthly logging for data lifecycle tracking",
       "deliverables": [
         "Create monthly log file structure (tasks-log-MM-YY.json format)",
