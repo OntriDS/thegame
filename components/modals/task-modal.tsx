@@ -12,7 +12,7 @@ import { SearchableSelect } from '@/components/ui/searchable-select';
 import { ItemNameField } from '@/components/ui/item-name-field';
 import { DatePicker } from '@/components/ui/date-picker';
 import { FrequencyCalendar, FrequencyConfig } from '@/components/ui/frequency-calendar';
-import { SmartScheduler } from '@/components/ui/smart-scheduler';
+import { SmartSchedulerSubmodal } from './submodals/smart-scheduler-submodal';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -29,7 +29,7 @@ import { createSiteOptionsWithCategories, getSiteNameFromId } from '@/lib/utils/
 import type { Station, SubItemType } from '@/types/type-aliases';
 import { v4 as uuid } from 'uuid';
 import { PROGRESS_MAX, PROGRESS_STEP, PRICE_STEP } from '@/lib/constants/app-constants';
-import { Network, User } from 'lucide-react';
+import { Network, User, Calendar as CalendarIcon, Repeat } from 'lucide-react';
 import { getEmissaryFields } from '@/types/diplomatic-fields';
 import CascadeStatusConfirmationModal from './submodals/cascade-status-confirmation-submodal';
 import ArchiveCollectionConfirmationModal from './submodals/archive-collection-confirmation-submodal';
@@ -178,6 +178,7 @@ export default function TaskModal({
   const [showPlayerCharacterSelector, setShowPlayerCharacterSelector] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showRelationshipsModal, setShowRelationshipsModal] = useState(false);
+  const [showScheduler, setShowScheduler] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showValidationModal, setShowValidationModal] = useState(false);
   const [validationMessage, setValidationMessage] = useState('');
@@ -879,33 +880,34 @@ export default function TaskModal({
                 {/* Schedule Fields */}
                 <div className="space-y-2 border-t pt-2 mt-2">
                   <Label className="text-xs font-semibold">Schedule</Label>
-                  <SmartScheduler
-                    value={{
-                      dueDate,
-                      scheduledStart: scheduledStartDate,
-                      scheduledEnd: scheduledEndDate,
-                      frequencyConfig: (type === TaskType.RECURRENT_GROUP || type === TaskType.RECURRENT_TEMPLATE) ? frequencyConfig : undefined
-                    }}
-                    onChange={(val) => {
-                      setDueDate(val.dueDate);
-                      setScheduledStartDate(val.scheduledStart);
-                      setScheduledStartTime(val.scheduledStart ? format(val.scheduledStart, 'HH:mm') : '');
-                      setScheduledEndDate(val.scheduledEnd);
-                      setScheduledEndTime(val.scheduledEnd ? format(val.scheduledEnd, 'HH:mm') : '');
-                      if (val.frequencyConfig) {
-                        setFrequencyConfig(val.frequencyConfig);
-                        // Auto-switch type if frequency is added and type is not recurrent
-                        if (type !== TaskType.RECURRENT_GROUP && type !== TaskType.RECURRENT_TEMPLATE) {
-                          // Default to RECURRENT_TEMPLATE if user adds frequency
-                          // But we need to be careful not to override user intent if they just want a one-off with frequency (which isn't really supported by enum but UI allows it)
-                          // For now, let's just set the config. The type selector is separate.
-                        }
-                      } else {
-                        setFrequencyConfig(undefined);
-                      }
-                    }}
-                    isRecurrent={type === TaskType.RECURRENT_GROUP || type === TaskType.RECURRENT_TEMPLATE}
-                  />
+                  <Button
+                    variant="outline"
+                    className={`w-full justify-start text-left font-normal h-auto py-2 px-3 ${!dueDate && !scheduledStartDate ? "text-muted-foreground" : ""}`}
+                    onClick={() => setShowScheduler(true)}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
+                    <div className="flex flex-col items-start gap-0.5 overflow-hidden">
+                      <span className="text-sm truncate w-full">
+                        {(() => {
+                          if (!dueDate && !scheduledStartDate) return 'Set Schedule';
+                          const dateStr = scheduledStartDate
+                            ? format(scheduledStartDate, 'MMM d')
+                            : (dueDate ? format(dueDate, 'MMM d') : '');
+                          const timeStr = scheduledStartDate
+                            ? `${format(scheduledStartDate, 'h:mm a')} - ${scheduledEndDate ? format(scheduledEndDate, 'h:mm a') : '...'}`
+                            : '';
+                          const freqStr = frequencyConfig ? ' (Repeat)' : '';
+                          return `${dateStr} ${timeStr}${freqStr}`;
+                        })()}
+                      </span>
+                      {frequencyConfig && (
+                        <span className="text-[10px] text-muted-foreground flex items-center">
+                          <Repeat className="w-3 h-3 mr-1" />
+                          Recurring
+                        </span>
+                      )}
+                    </div>
+                  </Button>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
@@ -1510,6 +1512,31 @@ export default function TaskModal({
           onCancel={pendingStatusChange.onCancel}
         />
       )}
+
+      {/* Smart Scheduler Submodal */}
+      <SmartSchedulerSubmodal
+        open={showScheduler}
+        onOpenChange={setShowScheduler}
+        value={{
+          dueDate,
+          scheduledStart: scheduledStartDate,
+          scheduledEnd: scheduledEndDate,
+          frequencyConfig: (type === TaskType.RECURRENT_GROUP || type === TaskType.RECURRENT_TEMPLATE) ? frequencyConfig : undefined
+        }}
+        onChange={(val) => {
+          setDueDate(val.dueDate);
+          setScheduledStartDate(val.scheduledStart);
+          setScheduledStartTime(val.scheduledStart ? format(val.scheduledStart, 'HH:mm') : '');
+          setScheduledEndDate(val.scheduledEnd);
+          setScheduledEndTime(val.scheduledEnd ? format(val.scheduledEnd, 'HH:mm') : '');
+          if (val.frequencyConfig) {
+            setFrequencyConfig(val.frequencyConfig);
+          } else {
+            setFrequencyConfig(undefined);
+          }
+        }}
+        isRecurrent={type === TaskType.RECURRENT_GROUP || type === TaskType.RECURRENT_TEMPLATE}
+      />
 
     </Dialog>
   );

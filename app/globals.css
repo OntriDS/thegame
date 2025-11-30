@@ -65,6 +65,9 @@
   * {
     @apply border-border;
   }
+  html {
+    font-size: 87.5%; /* 14px base */
+  }
   body {
     @apply bg-background text-foreground;
   }
