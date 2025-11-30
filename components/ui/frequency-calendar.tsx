@@ -34,6 +34,7 @@ interface FrequencyCalendarProps {
   onChange?: (config: FrequencyConfig | undefined) => void;
   className?: string;
   allowAlways?: boolean; // Only allow ALWAYS for Recurrent Parent
+  popoverZIndex?: string; // Optional z-index class for the popover content
 }
 
 export function FrequencyCalendar({
@@ -41,6 +42,7 @@ export function FrequencyCalendar({
   onChange,
   className,
   allowAlways = false,
+  popoverZIndex,
 }: FrequencyCalendarProps) {
   const [isOpen, setIsOpen] = React.useState(false);
   const [config, setConfig] = React.useState<FrequencyConfig>(
@@ -61,7 +63,7 @@ export function FrequencyCalendar({
     } else {
       safe = [];
     }
-    
+
     setCustomDays(safe);
     handleConfigChange({ customDays: safe });
     // Only close for single selection (Daily, Weekly, Monthly), keep open for Custom
@@ -86,7 +88,7 @@ export function FrequencyCalendar({
           return day;
         }).filter((day: any) => day instanceof Date && !isNaN(day.getTime())) as Date[];
       }
-      
+
       // Also normalize stopsAfter.value if it's a date string
       if (normalizedConfig.stopsAfter?.type === 'date' && normalizedConfig.stopsAfter.value) {
         if (typeof normalizedConfig.stopsAfter.value === 'string') {
@@ -96,7 +98,7 @@ export function FrequencyCalendar({
           }
         }
       }
-      
+
       setConfig(normalizedConfig);
       setCustomDays(normalizedConfig.customDays || []);
     }
@@ -137,10 +139,10 @@ export function FrequencyCalendar({
       return `After ${config.stopsAfter.value} times`;
     }
     // Ensure value is a Date object before formatting
-    const dateValue = config.stopsAfter.value instanceof Date 
-      ? config.stopsAfter.value 
-      : typeof config.stopsAfter.value === 'string' 
-        ? new Date(config.stopsAfter.value) 
+    const dateValue = config.stopsAfter.value instanceof Date
+      ? config.stopsAfter.value
+      : typeof config.stopsAfter.value === 'string'
+        ? new Date(config.stopsAfter.value)
         : new Date();
     return `Until ${formatDisplayDate(dateValue)}`;
   };
@@ -161,8 +163,8 @@ export function FrequencyCalendar({
           </Button>
         </PopoverTrigger>
         <PopoverPrimitive.Portal>
-          <PopoverContent 
-            className={`w-80 p-3 ${getInteractiveInnerModalZIndex()}`} 
+          <PopoverContent
+            className={`w-80 p-3 ${popoverZIndex || getInteractiveInnerModalZIndex()}`}
             align="start"
             side="bottom"
             avoidCollisions={true}
@@ -171,7 +173,7 @@ export function FrequencyCalendar({
             <div className="space-y-3">
               {/* Header */}
               <div className="text-sm font-medium">Frequency</div>
-              
+
               {/* 1. Frequency Type - Top */}
               <div className="space-y-1">
                 <Label className="text-xs text-muted-foreground">Frequency Type</Label>
@@ -200,33 +202,33 @@ export function FrequencyCalendar({
                 <div className="space-y-1">
                   <Label className="text-xs text-muted-foreground">
                     {config.type === RecurrentFrequency.DAILY ? 'Starting Day' :
-                     config.type === RecurrentFrequency.WEEKLY ? 'Starting Day of Week' :
-                     config.type === RecurrentFrequency.MONTHLY ? 'Starting Day of Month' :
-                     'Select Custom Days'}
+                      config.type === RecurrentFrequency.WEEKLY ? 'Starting Day of Week' :
+                        config.type === RecurrentFrequency.MONTHLY ? 'Starting Day of Month' :
+                          'Select Custom Days'}
                   </Label>
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button variant="outline" className="w-full justify-start h-8 text-sm">
                         <CalendarIcon className="mr-2 h-3 w-3" />
-                        {config.type === RecurrentFrequency.DAILY ? 
+                        {config.type === RecurrentFrequency.DAILY ?
                           (customDays.length > 0 && customDays[0] instanceof Date ? customDays[0].toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }) : 'Select starting day') :
-                         config.type === RecurrentFrequency.WEEKLY ?
-                          (customDays.length > 0 && customDays[0] instanceof Date ? customDays[0].toLocaleDateString('en-US', { weekday: 'long' }) : 'Select starting day of week') :
-                         config.type === RecurrentFrequency.MONTHLY ? 
-                          (customDays.length > 0 && customDays[0] instanceof Date ? `Day ${customDays[0].getDate()}` : 'Select starting day of month') :
-                          (customDays.length > 0 ? `${customDays.length} day${customDays.length !== 1 ? 's' : ''} selected` : 'Select custom days')
+                          config.type === RecurrentFrequency.WEEKLY ?
+                            (customDays.length > 0 && customDays[0] instanceof Date ? customDays[0].toLocaleDateString('en-US', { weekday: 'long' }) : 'Select starting day of week') :
+                            config.type === RecurrentFrequency.MONTHLY ?
+                              (customDays.length > 0 && customDays[0] instanceof Date ? `Day ${customDays[0].getDate()}` : 'Select starting day of month') :
+                              (customDays.length > 0 ? `${customDays.length} day${customDays.length !== 1 ? 's' : ''} selected` : 'Select custom days')
                         }
                       </Button>
                     </PopoverTrigger>
                     <PopoverPrimitive.Portal>
-                      <PopoverContent 
+                      <PopoverContent
                         className={`p-0 ${getInteractiveSubModalZIndex()}`}
                         align="start"
                         side="bottom"
                         avoidCollisions={true}
                         sideOffset={-28}
                         alignOffset={4}
-                        >
+                      >
                         <div className="w-[280px] min-h-[320px]">
                           {config.type === RecurrentFrequency.CUSTOM ? (
                             <Calendar
@@ -352,8 +354,8 @@ export function FrequencyCalendar({
                 <div className="space-y-1">
                   <Label className="text-xs text-muted-foreground">
                     {config.type === RecurrentFrequency.ONCE || config.type === RecurrentFrequency.ALWAYS ? 'Value' :
-                     config.stopsAfter?.type === 'times' ? 'Number of times' : 
-                     config.stopsAfter?.type === 'date' ? 'Until date' : 'Value'}
+                      config.stopsAfter?.type === 'times' ? 'Number of times' :
+                        config.stopsAfter?.type === 'date' ? 'Until date' : 'Value'}
                   </Label>
                   {config.type === RecurrentFrequency.ONCE || config.type === RecurrentFrequency.ALWAYS ? (
                     <div className="h-8 flex items-center text-xs text-muted-foreground">
