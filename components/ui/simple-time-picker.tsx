@@ -1,5 +1,6 @@
 'use client';
 
+import * as React from 'react';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +12,7 @@ interface SimpleTimePickerProps {
   onChange: (value: string) => void; // Receives "HH:mm" format
   placeholder?: string;
   className?: string;
+  startHour?: number; // Starting hour for dropdown (0-23), default 0 (midnight)
 }
 
 // Common time intervals in 30-minute increments
@@ -82,12 +84,8 @@ const parseTimeInput = (input: string): string | null => {
   let hours = parseInt(hStr, 10);
   let minutes = mStr ? parseInt(mStr, 10) : 0;
 
-  // Handle "840" case (hStr captures 840 if no separator) - wait, regex above expects separator or separate groups
-  // Let's refine regex for "840" case: ^(\d{1,2})(\d{2})\s*(a|p|am|pm)?$
-  // Actually, simpler to handle numeric only specially
-
   if (!mStr && hStr.length >= 3) {
-    // e.g. "830" -> h=8, m=30; "1400" -> h=14, m=0
+    // e.g. "830" -> h=8, m=30; "1400" -> h=14, m=00
     if (hStr.length === 3) {
       hours = parseInt(hStr.substring(0, 1), 10);
       minutes = parseInt(hStr.substring(1), 10);
@@ -99,16 +97,12 @@ const parseTimeInput = (input: string): string | null => {
 
   // Validation
   if (minutes >= 60) return null;
-  if (hours > 24) return null; // Allow 24h input
+  if (hours > 24) return null;
 
   // AM/PM logic
   if (period) {
     if (period.startsWith('p') && hours < 12) hours += 12;
     if (period.startsWith('a') && hours === 12) hours = 0;
-  } else {
-    // Guess AM/PM if ambiguous? No, standard behavior is 24h or AM if < 12 usually, but let's stick to 24h interpretation if no AM/PM
-    // Exception: "8" usually means 8:00 (AM), "20" means 8:00 PM.
-    // If user types "2", do they mean 2 AM or 2 PM? 24h standard says 2 AM.
   }
 
   // Clamp 24h
@@ -118,17 +112,29 @@ const parseTimeInput = (input: string): string | null => {
   return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
 };
 
-export default function SimpleTimePicker({ value, onChange, placeholder = "Select time...", className }: SimpleTimePickerProps) {
+export default function SimpleTimePicker({ value, onChange, placeholder = "Select time...", className, startHour = 0 }: SimpleTimePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [displayValue, setDisplayValue] = useState<string>('');
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Reorder TIME_OPTIONS based on startHour
+  const orderedTimeOptions = React.useMemo(() => {
+    // Find the index of the first option that matches or exceeds startHour
+    const startIndex = TIME_OPTIONS.findIndex(option => {
+      const time24 = to24Hour(option);
+      const hour = parseInt(time24.split(':')[0], 10);
+      return hour >= startHour;
+    });
+
+    if (startIndex === -1 || startIndex === 0) return TIME_OPTIONS;
+
+    // Rotate the array to start at startIndex
+    return [...TIME_OPTIONS.slice(startIndex), ...TIME_OPTIONS.slice(0, startIndex)];
+  }, [startHour]);
+
   // Initialize display value from prop
   useEffect(() => {
-    // Only update display value from prop if we're not currently editing (focused)
-    // Actually, we should update it if the prop changes externally, but we need to be careful not to overwrite user typing.
-    // For now, simple sync.
     if (document.activeElement !== inputRef.current) {
       setDisplayValue(to12Hour(value));
     }
@@ -150,11 +156,10 @@ export default function SimpleTimePicker({ value, onChange, placeholder = "Selec
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setDisplayValue(e.target.value);
-    setIsOpen(true); // Open dropdown while typing to show options? Or maybe not. Let's keep it open if they click.
+    setIsOpen(true);
   };
 
   const handleBlur = () => {
-    // Small delay to allow click on dropdown items to register
     setTimeout(() => {
       if (document.activeElement && containerRef.current?.contains(document.activeElement)) {
         return;
@@ -165,7 +170,6 @@ export default function SimpleTimePicker({ value, onChange, placeholder = "Selec
         onChange(parsed);
         setDisplayValue(to12Hour(parsed));
       } else {
-        // Revert to valid value if invalid
         setDisplayValue(to12Hour(value));
       }
       setIsOpen(false);
@@ -175,7 +179,7 @@ export default function SimpleTimePicker({ value, onChange, placeholder = "Selec
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      inputRef.current?.blur(); // Trigger blur logic
+      inputRef.current?.blur();
     } else if (e.key === 'ArrowDown') {
       e.preventDefault();
       setIsOpen(true);
@@ -208,7 +212,7 @@ export default function SimpleTimePicker({ value, onChange, placeholder = "Selec
               setIsOpen(true);
             }
           }}
-          tabIndex={-1} // Skip tab index as input handles focus
+          tabIndex={-1}
         >
           <Clock className="h-4 w-4" />
         </Button>
@@ -218,21 +222,17 @@ export default function SimpleTimePicker({ value, onChange, placeholder = "Selec
       {isOpen && (
         <div className="absolute top-full left-0 z-50 mt-1 w-full bg-background border rounded-md shadow-lg max-h-60 overflow-auto">
           <div className="p-1">
-            {/* Time Options Grid */}
             <div className="grid grid-cols-1 gap-0.5">
-              {TIME_OPTIONS.map((time) => {
+              {orderedTimeOptions.map((time) => {
                 const time24 = to24Hour(time);
                 const isSelected = time24 === value;
-
-                // Filter options if typing? Optional, but nice.
-                // For now, just show all or maybe scroll to closest?
 
                 return (
                   <button
                     key={time}
                     type="button"
                     onMouseDown={(e) => {
-                      e.preventDefault(); // Prevent blur on input
+                      e.preventDefault();
                       handleSelect(time);
                     }}
                     className={cn(

@@ -39,6 +39,7 @@ export function SmartSchedulerSubmodal({
     const [showFrequency, setShowFrequency] = React.useState(!!value.frequencyConfig);
     const [activeTab, setActiveTab] = React.useState<'schedule' | 'deadline'>('schedule');
     const [defaultDuration, setDefaultDuration] = React.useState(1); // Default to 1 hour
+    const [startHour, setStartHour] = React.useState(0); // Default start hour for dropdown
 
     // Initialize showFrequency based on incoming value
     React.useEffect(() => {
@@ -238,6 +239,7 @@ export function SmartSchedulerSubmodal({
                                         onChange={handleStartTimeChange}
                                         placeholder="Start"
                                         className="w-full h-8 text-sm bg-background"
+                                        startHour={startHour}
                                     />
                                 </div>
                                 <ArrowRight className="w-4 h-4 text-muted-foreground mt-5" />
@@ -248,6 +250,7 @@ export function SmartSchedulerSubmodal({
                                         onChange={handleEndTimeChange}
                                         placeholder="End"
                                         className="w-full h-8 text-sm bg-background"
+                                        startHour={startHour}
                                     />
                                 </div>
                             </div>
@@ -344,6 +347,21 @@ export function SmartSchedulerSubmodal({
                                 <option value={2}>2 hours</option>
                                 <option value={3}>3 hours</option>
                                 <option value={4}>4 hours</option>
+                            </select>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <span>Start:</span>
+                            <select
+                                value={startHour}
+                                onChange={(e) => setStartHour(Number(e.target.value))}
+                                className="h-7 px-2 rounded border bg-background text-foreground text-xs"
+                            >
+                                <option value={0}>12 AM</option>
+                                <option value={6}>6 AM</option>
+                                <option value={7}>7 AM</option>
+                                <option value={8}>8 AM</option>
+                                <option value={9}>9 AM</option>
+                                <option value={12}>12 PM</option>
                             </select>
                         </div>
                     </div>
