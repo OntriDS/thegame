@@ -137,7 +137,7 @@ export function SmartSchedulerSubmodal({
         });
     };
 
-    const applyPreset = (preset: 'today' | 'tomorrow' | 'next-week' | 'next-month') => {
+    const applyPreset = (preset: 'today' | 'tomorrow' | 'next-week' | 'next-month' | 'due-date') => {
         let date = startOfToday();
 
         switch (preset) {
@@ -152,6 +152,10 @@ export function SmartSchedulerSubmodal({
                 break;
             case 'next-month':
                 date = addDays(startOfToday(), 30);
+                break;
+            case 'due-date':
+                // Use the existing due date if available, otherwise use today
+                date = value.dueDate || startOfToday();
                 break;
         }
 
@@ -223,11 +227,21 @@ export function SmartSchedulerSubmodal({
                     {activeTab === 'schedule' ? (
                         <div className="space-y-4 animate-in fade-in slide-in-from-left-4 duration-200">
                             {/* 1. Quick Presets */}
-                            <div className="grid grid-cols-4 gap-2">
+                            <div className="grid grid-cols-5 gap-2">
                                 <Button variant="outline" size="sm" className="text-xs h-7" onClick={() => applyPreset('today')}>Today</Button>
                                 <Button variant="outline" size="sm" className="text-xs h-7" onClick={() => applyPreset('tomorrow')}>Tomorrow</Button>
                                 <Button variant="outline" size="sm" className="text-xs h-7" onClick={() => applyPreset('next-week')}>Next Week</Button>
                                 <Button variant="outline" size="sm" className="text-xs h-7" onClick={() => applyPreset('next-month')}>Next Month</Button>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="text-xs h-7"
+                                    onClick={() => applyPreset('due-date')}
+                                    disabled={!value.dueDate}
+                                    title={value.dueDate ? `Schedule for ${format(value.dueDate, 'MMM d')}` : 'Set a due date first'}
+                                >
+                                    Due Date
+                                </Button>
                             </div>
 
                             {/* 2. Time Selection */}
