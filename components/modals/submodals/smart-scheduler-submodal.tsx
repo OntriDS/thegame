@@ -38,6 +38,7 @@ export function SmartSchedulerSubmodal({
 }: SmartSchedulerSubmodalProps) {
     const [showFrequency, setShowFrequency] = React.useState(!!value.frequencyConfig);
     const [activeTab, setActiveTab] = React.useState<'schedule' | 'deadline'>('schedule');
+    const [defaultDuration, setDefaultDuration] = React.useState(1); // Default to 1 hour
 
     // Initialize showFrequency based on incoming value
     React.useEffect(() => {
@@ -59,16 +60,16 @@ export function SmartSchedulerSubmodal({
             newStart.setHours(9, 0, 0, 0);
         }
 
-        // Smart End Time: Maintain duration or default to +1 hour
+        // Smart End Time: Maintain duration or default to configured duration
         let newEnd = value.scheduledEnd;
         if (value.scheduledEnd && value.scheduledStart) {
             const duration = value.scheduledEnd.getTime() - value.scheduledStart.getTime();
             newEnd = new Date(newStart.getTime() + duration);
         } else {
-            newEnd = addHours(newStart, 1);
+            newEnd = addHours(newStart, defaultDuration);
         }
 
-        // Smart Due Date: If due date is missing or before new start, sync it (unless it's a recurrent template safety limit)
+        // Smart Due Date: If due date is missing or before new start, sync it
         let newDueDate = value.dueDate;
         if (!newDueDate || (isBefore(newDueDate, newStart) && !isSameDay(newDueDate, newStart))) {
             newDueDate = newStart;
@@ -98,10 +99,10 @@ export function SmartSchedulerSubmodal({
         const newStart = new Date(baseDate);
         newStart.setHours(hours, minutes);
 
-        // Smart End Time: Default to +1 hour if not set or if end is before new start
+        // Smart End Time: Use default duration if not set or if end is before new start
         let newEnd = value.scheduledEnd;
         if (!newEnd || isBefore(newEnd, newStart)) {
-            newEnd = addHours(newStart, 1);
+            newEnd = addHours(newStart, defaultDuration);
         } else {
             // Keep end date synced to start date if it was on the same day
             if (value.scheduledEnd && isSameDay(value.scheduledStart || new Date(), value.scheduledEnd)) {
@@ -135,7 +136,7 @@ export function SmartSchedulerSubmodal({
         });
     };
 
-    const applyPreset = (preset: 'today' | 'tomorrow' | 'weekend' | 'next-week') => {
+    const applyPreset = (preset: 'today' | 'tomorrow' | 'next-week' | 'next-month') => {
         let date = startOfToday();
 
         switch (preset) {
@@ -145,18 +146,18 @@ export function SmartSchedulerSubmodal({
             case 'tomorrow':
                 date = addDays(startOfToday(), 1);
                 break;
-            case 'weekend':
-                date = nextSaturday(startOfToday());
-                break;
             case 'next-week':
                 date = nextMonday(startOfToday());
                 break;
+            case 'next-month':
+                date = addDays(startOfToday(), 30);
+                break;
         }
 
-        // Default times for presets (9am - 10am)
+        // Default times for presets using default duration
         const start = new Date(date);
         start.setHours(9, 0, 0, 0);
-        const end = addHours(start, 1);
+        const end = addHours(start, defaultDuration);
 
         onChange({
             ...value,
@@ -224,8 +225,8 @@ export function SmartSchedulerSubmodal({
                             <div className="grid grid-cols-4 gap-2">
                                 <Button variant="outline" size="sm" className="text-xs h-7" onClick={() => applyPreset('today')}>Today</Button>
                                 <Button variant="outline" size="sm" className="text-xs h-7" onClick={() => applyPreset('tomorrow')}>Tomorrow</Button>
-                                <Button variant="outline" size="sm" className="text-xs h-7" onClick={() => applyPreset('weekend')}>Weekend</Button>
                                 <Button variant="outline" size="sm" className="text-xs h-7" onClick={() => applyPreset('next-week')}>Next Week</Button>
+                                <Button variant="outline" size="sm" className="text-xs h-7" onClick={() => applyPreset('next-month')}>Next Month</Button>
                             </div>
 
                             {/* 2. Time Selection */}
@@ -241,7 +242,7 @@ export function SmartSchedulerSubmodal({
                                 </div>
                                 <ArrowRight className="w-4 h-4 text-muted-foreground mt-5" />
                                 <div className="flex-1 space-y-1">
-                                    <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">End (+1h)</Label>
+                                    <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">End</Label>
                                     <SimpleTimePicker
                                         value={value.scheduledEnd ? format(value.scheduledEnd, 'HH:mm') : ''}
                                         onChange={handleEndTimeChange}
@@ -321,14 +322,31 @@ export function SmartSchedulerSubmodal({
                 </div>
 
                 <DialogFooter className="flex justify-between sm:justify-between items-center w-full p-4 bg-muted/20 border-t">
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 text-xs text-muted-foreground hover:text-destructive"
-                        onClick={() => onChange({ dueDate: undefined, scheduledStart: undefined, scheduledEnd: undefined, frequencyConfig: undefined })}
-                    >
-                        Clear
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 text-xs text-muted-foreground hover:text-destructive"
+                            onClick={() => onChange({ dueDate: undefined, scheduledStart: undefined, scheduledEnd: undefined, frequencyConfig: undefined })}
+                        >
+                            Clear
+                        </Button>
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground ml-2">
+                            <span>Default:</span>
+                            <select
+                                value={defaultDuration}
+                                onChange={(e) => setDefaultDuration(Number(e.target.value))}
+                                className="h-7 px-2 rounded border bg-background text-foreground text-xs"
+                            >
+                                <option value={0.5}>30 min</option>
+                                <option value={1}>1 hour</option>
+                                <option value={1.5}>1.5 hours</option>
+                                <option value={2}>2 hours</option>
+                                <option value={3}>3 hours</option>
+                                <option value={4}>4 hours</option>
+                            </select>
+                        </div>
+                    </div>
                     <div className="flex gap-2">
                         <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => onOpenChange(false)}>
                             Cancel
