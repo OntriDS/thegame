@@ -253,8 +253,15 @@ async function maybeCreateSaleSnapshot(sale: Sale, previousSale?: Sale): Promise
 
   // Create SaleSnapshot using the new Archive-First approach
   await createSaleSnapshot(sale, collectedAt, sale.playerCharacterId || undefined);
+
+  // Add to month-based collection index for efficient History Tab queries
+  const monthKey = formatMonthKey(collectedAt);
+  const { kvSAdd } = await import('@/data-store/kv');
+  const collectedIndexKey = `index:sales:collected:${monthKey}`;
+  await kvSAdd(collectedIndexKey, sale.id);
+
   await markEffect(snapshotEffectKey);
-  console.log(`[maybeCreateSaleSnapshot] ✅ Created snapshot for collected sale ${sale.id}`);
+  console.log(`[maybeCreateSaleSnapshot] ✅ Created snapshot for collected sale ${sale.id}, added to index ${monthKey}`);
 }
 
 async function createItemSnapshotsFromSale(sale: Sale): Promise<void> {
@@ -280,8 +287,16 @@ async function createItemSnapshotsFromSale(sale: Sale): Promise<void> {
 
     // Create ItemSnapshot using the Archive-First approach
     await createItemSnapshot(item, line.quantity, sale);
+
+    // Add to month-based sold index
+    const soldAt = sale.saleDate || new Date();
+    const monthKey = formatMonthKey(soldAt);
+    const { kvSAdd } = await import('@/data-store/kv');
+    const soldIndexKey = `index:items:sold:${monthKey}`;
+    await kvSAdd(soldIndexKey, item.id);
+
     await markEffect(effectKey);
-    console.log(`[createItemSnapshotsFromSale] ✅ Created snapshot for sold item ${item.name} (${line.quantity} units)`);
+    console.log(`[createItemSnapshotsFromSale] ✅ Created snapshot for sold item ${item.name} (${line.quantity} units), added to sold index ${monthKey}`);
   }
 }
 

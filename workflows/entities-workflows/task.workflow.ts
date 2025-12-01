@@ -174,36 +174,20 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
         collectedAt
       };
 
-      // 1. Create TaskSnapshot (Archive UI)
+      // 1. Create TaskSnapshot for Archive Vault statistics
       await createTaskSnapshot(normalizedTask, collectedAt, task.playerCharacterId || undefined);
 
-      // 2. Move to Task History (Clean up Active Tree)
-      // Save to archive:tasks:{id}
-      await kvSet(`archive:tasks:${task.id}`, normalizedTask);
-
-      // Remove from active tasks:{id} and index
-      // We use repoDeleteTask logic but manually here to avoid circular dependencies or side effects
-      // Actually, we can use the repo delete if we are careful, but let's do it safely here
-      // We need to import these from datastore/kv or similar if not available
-      // For now, we will rely on the fact that 'isCollected' flag filters it out from getAllTasks
-      // BUT the user specifically asked to "move" it.
-
-      // Let's use the repo delete logic but we need to be careful not to trigger "delete effects"
-      // The delete effects (removeTaskLogEntriesOnDelete) destroy logs, which we DO NOT WANT.
-      // So we must perform a "Silent Delete" from the active repo.
-
-      // We will use low-level KV to remove it from active data and index
-      // This mimics "moving" it to the archive namespace
-      const { buildDataKey, buildIndexKey } = await import('@/data-store/keys');
-      const { kvDel, kvSRem } = await import('@/data-store/kv');
-
-      await kvDel(buildDataKey(EntityType.TASK, task.id));
-      await kvSRem(buildIndexKey(EntityType.TASK), task.id);
-
-      console.log(`[onTaskUpsert] 📦 Moved task ${task.name} to History (archive:tasks:${task.id})`);
+      // 2. Add to month-based collection index for efficient History Tab queries
+      const monthKey = formatMonthKey(collectedAt);
+      const { kvSAdd } = await import('@/data-store/kv');
+      const collectedIndexKey = `index:tasks:collected:${monthKey}`;
+      await kvSAdd(collectedIndexKey, task.id);
 
       await markEffect(snapshotEffectKey);
-      console.log(`[onTaskUpsert] ✅ Created snapshot for collected task ${task.name}`);
+      console.log(`[onTaskUpsert] ✅ Task ${task.name} collected - snapshot created, added to index ${monthKey}`);
+
+      // Task stays at data:task:{id} with isCollected=true
+      // Mission Tree filters it out, History Tab queries from index
     }
   }
 

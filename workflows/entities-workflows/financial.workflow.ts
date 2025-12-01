@@ -128,8 +128,15 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
 
         // Create FinancialSnapshot using the new Archive-First approach
         await createFinancialSnapshot(normalizedFinancial, collectedAt, financial.playerCharacterId || undefined);
+
+        // Add to month-based collection index for efficient History Tab queries
+        const monthKey = formatMonthKey(collectedAt);
+        const { kvSAdd } = await import('@/data-store/kv');
+        const collectedIndexKey = `index:financials:collected:${monthKey}`;
+        await kvSAdd(collectedIndexKey, financial.id);
+
         await markEffect(snapshotEffectKey);
-        console.log(`[onFinancialUpsert] ✅ Created snapshot for collected financial record ${financial.name}`);
+        console.log(`[onFinancialUpsert] ✅ Created snapshot for collected financial ${financial.name}, added to index ${monthKey}`);
       }
     }
 
@@ -200,8 +207,15 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
 
       // Create FinancialSnapshot using the new Archive-First approach
       await createFinancialSnapshot(normalizedFinancial, collectedAt, financial.playerCharacterId || undefined);
+
+      // Add to month-based collection index for efficient History Tab queries
+      const monthKey = formatMonthKey(collectedAt);
+      const { kvSAdd } = await import('@/data-store/kv');
+      const collectedIndexKey = `index:financials:collected:${monthKey}`;
+      await kvSAdd(collectedIndexKey, financial.id);
+
       await markEffect(snapshotEffectKey);
-      console.log(`[onFinancialUpsert] ✅ Created snapshot for collected financial record ${financial.name}`);
+      console.log(`[onFinancialUpsert] ✅ Created snapshot for collected financial ${financial.name}, added to index ${monthKey}`);
     }
   }
 

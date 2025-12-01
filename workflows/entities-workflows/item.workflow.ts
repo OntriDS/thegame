@@ -13,6 +13,7 @@ import { getCategoryForItemType } from '@/lib/utils/searchable-select-utils';
 import { createCharacterFromItem } from '../character-creation-utils';
 import { upsertItem } from '@/data-store/datastore';
 import { createItemSnapshot } from '../snapshot-workflows';
+import { formatMonthKey } from '@/lib/utils/date-utils';
 
 const STATE_FIELDS = ['status', 'stock', 'quantitySold', 'isCollected'];
 const DESCRIPTIVE_FIELDS = ['name', 'description', 'price', 'unitCost', 'additionalCost', 'value'];
@@ -137,6 +138,13 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
 
     // Save updated item (skip workflow to avoid recursion)
     await upsertItem(updatedItem, { skipWorkflowEffects: true });
+
+    // Add to month-based sold index for efficient Sold Items Tab queries
+    const monthKey = formatMonthKey(soldAt);
+    const { kvSAdd } = await import('@/data-store/kv');
+    const soldIndexKey = `index:items:sold:${monthKey}`;
+    await kvSAdd(soldIndexKey, item.id);
+    console.log(`[onItemUpsert] ✅ Added item to sold index ${monthKey}`);
 
     // Log SOLD event
     const soldLogDetails: Record<string, any> = {

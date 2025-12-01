@@ -3,13 +3,13 @@
 
 import type { Task, Item, FinancialRecord, Sale, Character, Player, Site, Settlement, Account } from '@/types/entities';
 import { EntityType, ItemType, TaskPriority, TaskStatus, FinancialStatus } from '@/types/enums';
-import { 
+import {
   upsertTask as repoUpsertTask,
   getAllTasks as repoGetAllTasks,
   getTaskById as repoGetTaskById,
   deleteTask as repoDeleteTask
 } from './repositories/task.repo';
-import { 
+import {
   upsertItem as repoUpsertItem,
   getAllItems as repoGetAllItems,
   getItemById as repoGetItemById,
@@ -18,7 +18,7 @@ import {
   getItemsBySourceRecordId as repoGetItemsBySourceRecordId,
   getItemsByType as repoGetItemsByType
 } from './repositories/item.repo';
-import { 
+import {
   upsertFinancial as repoUpsertFinancial,
   getAllFinancials as repoGetAllFinancials,
   getFinancialById as repoGetFinancialById,
@@ -26,31 +26,31 @@ import {
   getFinancialsBySourceTaskId as repoGetFinancialsBySourceTaskId,
   getFinancialsBySourceSaleId as repoGetFinancialsBySourceSaleId
 } from './repositories/financial.repo';
-import { 
+import {
   upsertSale as repoUpsertSale,
   getAllSales as repoGetAllSales,
   getSaleById as repoGetSaleById,
   deleteSale as repoDeleteSale
 } from './repositories/sale.repo';
-import { 
+import {
   upsertCharacter as repoUpsertCharacter,
   getAllCharacters as repoGetAllCharacters,
   getCharacterById as repoGetCharacterById,
   deleteCharacter as repoDeleteCharacter
 } from './repositories/character.repo';
-import { 
+import {
   upsertPlayer as repoUpsertPlayer,
   getAllPlayers as repoGetAllPlayers,
   getPlayerById as repoGetPlayerById,
   deletePlayer as repoDeletePlayer
 } from './repositories/player.repo';
-import { 
+import {
   upsertAccount as repoUpsertAccount,
   getAllAccounts as repoGetAllAccounts,
   getAccountById as repoGetAccountById,
   deleteAccount as repoDeleteAccount
 } from './repositories/account.repo';
-import { 
+import {
   upsertSite as repoUpsertSite,
   getAllSites as repoGetAllSites,
   getSiteById as repoGetSiteById,
@@ -85,16 +85,16 @@ export async function upsertTask(task: Task, options?: { skipWorkflowEffects?: b
       ? { ...task, priority: TaskPriority.NORMAL }
       : task;
   const saved = await repoUpsertTask(normalizedTask);
-  
+
   if (!options?.skipWorkflowEffects) {
     const { onTaskUpsert } = await import('@/workflows/entities-workflows/task.workflow');
     await onTaskUpsert(saved, previous || undefined);
   }
-  
+
   if (!options?.skipLinkEffects) {
     await processLinkEntity(saved, EntityType.TASK);
   }
-  
+
   return saved;
 }
 
@@ -135,16 +135,16 @@ export async function removeTask(id: string): Promise<void> {
 export async function upsertItem(item: Item, options?: { skipWorkflowEffects?: boolean; skipLinkEffects?: boolean }): Promise<Item> {
   const previous = await repoGetItemById(item.id);
   const saved = await repoUpsertItem(item);  // ✅ Item persisted here
-  
+
   if (!options?.skipWorkflowEffects) {
     const { onItemUpsert } = await import('@/workflows/entities-workflows/item.workflow');
     await onItemUpsert(saved, previous || undefined);  // ⚠️ Can throw
   }
-  
+
   if (!options?.skipLinkEffects) {
     await processLinkEntity(saved, EntityType.ITEM);   // ⚠️ Can throw
   }
-  
+
   return saved;
 }
 
@@ -175,7 +175,7 @@ export async function getItemsBySourceRecordId(recordId: string): Promise<Item[]
 }
 
 export async function getItemsByType(itemTypes: string | string[]): Promise<Item[]> {
-  const types = Array.isArray(itemTypes) 
+  const types = Array.isArray(itemTypes)
     ? itemTypes.map(t => t as ItemType)
     : (itemTypes as ItemType);
   return await repoGetItemsByType(types);
@@ -195,16 +195,16 @@ export async function removeItem(id: string): Promise<void> {
 export async function upsertFinancial(financial: FinancialRecord, options?: { skipWorkflowEffects?: boolean; skipLinkEffects?: boolean }): Promise<FinancialRecord> {
   const previous = await repoGetFinancialById(financial.id);
   const saved = await repoUpsertFinancial(financial);
-  
+
   if (!options?.skipWorkflowEffects) {
     const { onFinancialUpsert } = await import('@/workflows/entities-workflows/financial.workflow');
     await onFinancialUpsert(saved, previous || undefined);
   }
-  
+
   if (!options?.skipLinkEffects) {
     await processLinkEntity(saved, EntityType.FINANCIAL);
   }
-  
+
   return saved;
 }
 
@@ -253,16 +253,16 @@ export async function removeFinancial(id: string): Promise<void> {
 export async function upsertSale(sale: Sale, options?: { skipWorkflowEffects?: boolean; skipLinkEffects?: boolean }): Promise<Sale> {
   const previous = await repoGetSaleById(sale.id);
   const saved = await repoUpsertSale(sale);
-  
+
   if (!options?.skipWorkflowEffects) {
     const { onSaleUpsert } = await import('@/workflows/entities-workflows/sale.workflow');
     await onSaleUpsert(saved, previous || undefined);
   }
-  
+
   if (!options?.skipLinkEffects) {
     await processLinkEntity(saved, EntityType.SALE);
   }
-  
+
   return saved;
 }
 
@@ -298,16 +298,16 @@ export async function removeSale(id: string): Promise<void> {
 export async function upsertCharacter(character: Character, options?: { skipWorkflowEffects?: boolean; skipLinkEffects?: boolean }): Promise<Character> {
   const previous = await repoGetCharacterById(character.id);
   const saved = await repoUpsertCharacter(character);
-  
+
   if (!options?.skipWorkflowEffects) {
     const { onCharacterUpsert } = await import('@/workflows/entities-workflows/character.workflow');
     await onCharacterUpsert(saved, previous || undefined);
   }
-  
+
   if (!options?.skipLinkEffects) {
     await processLinkEntity(saved, EntityType.CHARACTER);
   }
-  
+
   return saved;
 }
 
@@ -333,16 +333,16 @@ export async function removeCharacter(id: string): Promise<void> {
 export async function upsertPlayer(player: Player, options?: { skipWorkflowEffects?: boolean; skipLinkEffects?: boolean }): Promise<Player> {
   const previous = await repoGetPlayerById(player.id);
   const saved = await repoUpsertPlayer(player);
-  
+
   if (!options?.skipWorkflowEffects) {
     const { onPlayerUpsert } = await import('@/workflows/entities-workflows/player.workflow');
     await onPlayerUpsert(saved, previous || undefined);
   }
-  
+
   if (!options?.skipLinkEffects) {
     await processLinkEntity(saved, EntityType.PLAYER);
   }
-  
+
   return saved;
 }
 
@@ -368,16 +368,16 @@ export async function removePlayer(id: string): Promise<void> {
 export async function upsertAccount(account: Account, options?: { skipWorkflowEffects?: boolean; skipLinkEffects?: boolean }): Promise<Account> {
   const previous = await repoGetAccountById(account.id);
   const saved = await repoUpsertAccount(account);
-  
+
   if (!options?.skipWorkflowEffects) {
     const { onAccountUpsert } = await import('@/workflows/entities-workflows/account.workflow');
     await onAccountUpsert(saved, previous || undefined);
   }
-  
+
   if (!options?.skipLinkEffects) {
     await processLinkEntity(saved, EntityType.ACCOUNT);
   }
-  
+
   return saved;
 }
 
@@ -403,12 +403,12 @@ export async function removeAccount(id: string): Promise<void> {
 export async function upsertSite(site: Site, options?: { skipWorkflowEffects?: boolean }): Promise<Site> {
   const previous = await repoGetSiteById(site.id);
   const saved = await repoUpsertSite(site);
-  
+
   if (!options?.skipWorkflowEffects) {
     const { onSiteUpsert } = await import('@/workflows/entities-workflows/site.workflow');
     await onSiteUpsert(saved, previous || undefined);
   }
-  
+
   // NOTE: Sites don't create links when saved - they're link targets only
   // SITE_SITE links are created explicitly by movement operations (workflows/site-movement-utils.ts)
   return saved;
@@ -499,18 +499,18 @@ export async function archiveTaskSnapshot(task: Task, mmyy: string): Promise<voi
 }
 
 export async function archiveItemSnapshot(item: Item, mmyy: string): Promise<void> {
-  await archiveRepo.addEntityToArchive(EntityType.ITEM, mmyy, item);
+  await archiveRepo.addEntityToArchive('item-snapshots', mmyy, item);
 }
 
 export async function archiveSaleSnapshot(sale: Sale, mmyy: string): Promise<void> {
-  await archiveRepo.addEntityToArchive(EntityType.SALE, mmyy, sale);
+  await archiveRepo.addEntityToArchive('sale-snapshots', mmyy, sale);
 }
 
 export async function archiveFinancialRecordSnapshot(
   financial: FinancialRecord,
   mmyy: string
 ): Promise<void> {
-  await archiveRepo.addEntityToArchive(EntityType.FINANCIAL, mmyy, financial);
+  await archiveRepo.addEntityToArchive('financial-snapshots', mmyy, financial);
 }
 
 export async function getArchivedTasksByMonth(mmyy: string): Promise<Task[]> {

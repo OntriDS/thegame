@@ -56,15 +56,13 @@ export default function TaskHistoryView({ onSelectTask }: TaskHistoryViewProps) 
         const loadTasks = async () => {
             setIsLoading(true);
             try {
-                // Build month key in MM-YY format
-                const monthKey = `${currentMonth.toString().padStart(2, '0')}-${currentYear.toString().slice(-2)}`;
-                const response = await fetch(`/api/archive/tasks?month=${monthKey}`);
+                const response = await fetch(`/api/tasks/history?month=${currentMonth}&year=${currentYear}`);
                 if (response.ok) {
                     const data = await response.json();
                     setTasks(reviveDates(data));
                 }
             } catch (error) {
-                console.error('Failed to load archived tasks:', error);
+                console.error('Failed to load task history:', error);
                 setTasks([]);
             } finally {
                 setIsLoading(false);
