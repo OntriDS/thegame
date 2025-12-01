@@ -40,11 +40,13 @@ export async function GET(req: NextRequest) {
 
   // Strategy 1: Time-based fetching (Priority)
   // If we have a specific month, use the optimized month index
-  if (month && year && !statusFilter) {
+  // We prioritize this even if status filter is present, as it's efficient for monthly views
+  if (month && year) {
     items = await getItemsForMonth(year, month);
   }
   // Strategy 2: Type-based fetching (Optimized)
-  else if (typeFilter) {
+  // Ignore 'all' type filter as it's a client-side concept
+  else if (typeFilter && typeFilter !== 'all') {
     const types = typeFilter.split(',').map(t => t.trim());
     items = await getItemsByType(types);
   }
@@ -56,7 +58,7 @@ export async function GET(req: NextRequest) {
   // Apply filters in memory
 
   // 1. Type Filter (if not already applied by Strategy 2)
-  if (typeFilter && (month || !typeFilter)) {
+  if (typeFilter && typeFilter !== 'all' && (month || !typeFilter)) {
     // If we fetched by month, we still need to filter by type
     // If we fetched by type (Strategy 2), this is redundant but harmless
     const types = typeFilter.split(',').map(t => t.trim());
