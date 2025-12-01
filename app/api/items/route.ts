@@ -69,11 +69,12 @@ export async function GET(req: NextRequest) {
   // 2. Status Filter
   if (statusFilter) {
     // If status is explicitly requested (e.g. 'Sold'), filter by it
-    items = items.filter(item => item.status === statusFilter);
+    // Case-insensitive comparison to handle legacy data
+    items = items.filter(item => item.status?.toUpperCase() === statusFilter.toUpperCase());
   } else if (!month && !year) {
     // Default behavior for Active Inventory (no month/year specified):
     // Show only active items (unsold)
-    items = items.filter(item => item.status !== ItemStatus.SOLD);
+    items = items.filter(item => item.status?.toUpperCase() !== 'SOLD');
   }
   // Note: If month/year IS specified, we do NOT default filter by status.
   // This allows "Sold Items" tab to fetch items for a month without filtering them out.
