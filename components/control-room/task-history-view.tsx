@@ -116,11 +116,18 @@ export default function TaskHistoryView({ onSelectTask }: TaskHistoryViewProps) 
                                 <CardContent className="p-3 flex items-center gap-3">
                                     <Icon className="h-4 w-4 text-muted-foreground" />
                                     <div className="flex-1 min-w-0">
-                                        <div className="font-medium truncate">{task.name}</div>
+                                        <div className="font-medium truncate">{(task as any)?.name?.toString()?.trim() || '(Untitled Task)'}</div>
                                         <div className="text-xs text-muted-foreground flex gap-2">
-                                            <span>{task.station}</span>
+                                            <span>{(task as any)?.station?.toString()?.trim() || 'Unknown'}</span>
                                             <span>•</span>
-                                            <span>Collected: {task.collectedAt ? format(new Date(task.collectedAt), 'PP p') : 'Unknown'}</span>
+                                            <span>Collected: {
+                                                !task || !(task as any).collectedAt
+                                                  ? 'Unknown'
+                                                  : (() => {
+                                                      const d = new Date((task as any).collectedAt as any);
+                                                      return isNaN(d.getTime()) ? 'Unknown' : format(d, 'PP p');
+                                                    })()
+                                              }</span>
                                         </div>
                                     </div>
                                     <div className="text-xs font-mono bg-muted px-2 py-1 rounded">

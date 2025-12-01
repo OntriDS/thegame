@@ -8,7 +8,17 @@ import { formatMonthKey } from '@/lib/utils/date-utils';
 const ENTITY = EntityType.TASK;
 
 export async function getTaskById(id: string): Promise<Task | null> {
-  return await kvGet<Task>(buildDataKey(ENTITY, id));
+  const raw = await kvGet<Task | string>(buildDataKey(ENTITY, id));
+  if (raw === null || raw === undefined) return null;
+  if (typeof raw === 'string') {
+    try {
+      const parsed = JSON.parse(raw) as Task;
+      return parsed ?? null;
+    } catch {
+      return null;
+    }
+  }
+  return raw as Task;
 }
 
 /**
@@ -23,8 +33,17 @@ export async function getAllTasks(): Promise<Task[]> {
   if (ids.length === 0) return [];
 
   const keys = ids.map(id => buildDataKey(ENTITY, id));
-  const tasks = await kvMGet<Task>(keys);
-  return tasks.filter((task): task is Task => task !== null && task !== undefined);
+  const tasks = await kvMGet<Task | string>(keys);
+  const normalized = tasks
+    .map(t => {
+      if (t === null || t === undefined) return null;
+      if (typeof t === 'string') {
+        try { return JSON.parse(t) as Task; } catch { return null; }
+      }
+      return t as Task;
+    })
+    .filter((task): task is Task => task !== null);
+  return normalized;
 }
 
 export async function upsertTask(task: Task): Promise<Task> {

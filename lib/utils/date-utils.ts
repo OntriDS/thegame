@@ -244,7 +244,7 @@ export function reviveDates<T>(data: T): T {
   if (typeof data === 'object') {
     const revived = {} as T;
     for (const [key, value] of Object.entries(data)) {
-      if (key === 'createdAt' || key === 'updatedAt' || key === 'saleDate' || key === 'dueDate') {
+      if (key === 'createdAt' || key === 'updatedAt' || key === 'saleDate' || key === 'dueDate' || key === 'collectedAt' || key === 'doneAt') {
         (revived as any)[key] = value ? new Date(value) : value;
       } else {
         (revived as any)[key] = reviveDates(value);
