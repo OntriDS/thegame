@@ -38,8 +38,9 @@ export async function GET(req: NextRequest) {
     if (month && year) {
       data = await getTasksForMonth(year, month);
     } else {
-      const now = new Date();
-      data = await getTasksForMonth(now.getFullYear(), now.getMonth() + 1);
+      // Default: Return ALL active tasks (not collected)
+      // This supports the "Active Task Tree" view which is not time-bound
+      data = await getAllTasks();
     }
     return NextResponse.json(data);
   } catch (error) {
@@ -49,10 +50,10 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   if (!(await requireAdminAuth(req))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  
+
   try {
     const body = (await req.json()) as Task;
-    
+
     // Normalize frequencyConfig.customDays from strings to Date objects (JSON deserialization)
     let normalizedFrequencyConfig = body.frequencyConfig;
     if (normalizedFrequencyConfig?.customDays && Array.isArray(normalizedFrequencyConfig.customDays)) {
@@ -70,7 +71,7 @@ export async function POST(req: NextRequest) {
         }).filter((day: any) => day instanceof Date && !isNaN(day.getTime())) as Date[]
       };
     }
-    
+
     // Normalize stopsAfter.value if it's a date string
     if (normalizedFrequencyConfig?.stopsAfter?.type === 'date' && normalizedFrequencyConfig.stopsAfter.value) {
       if (typeof normalizedFrequencyConfig.stopsAfter.value === 'string') {
@@ -80,7 +81,7 @@ export async function POST(req: NextRequest) {
         }
       }
     }
-    
+
     const task = {
       ...body,
       id: body.id || uuid(),

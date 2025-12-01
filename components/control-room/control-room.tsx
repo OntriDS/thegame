@@ -23,10 +23,11 @@ import WeeklySchedule from './weekly-schedule';
 import CalendarView from './calendar-view';
 import GanttChart from './gantt-chart';
 import TaskDetailView from './task-detail-view';
+import TaskHistoryView from './task-history-view';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
 
-type ControlRoomTab = 'mission-tree' | 'recurrent-tasks' | 'automation-tree' | 'weekly-schedule' | 'calendar' | 'gantt-chart';
+type ControlRoomTab = 'mission-tree' | 'recurrent-tasks' | 'automation-tree' | 'weekly-schedule' | 'calendar' | 'gantt-chart' | 'task-history';
 
 const findNodeInTree = (nodes: TreeNode[], taskId: string): TreeNode | null => {
   for (const node of nodes) {
@@ -589,7 +590,7 @@ export default function ControlRoom() {
   // Load preferences on mount
   useEffect(() => {
     const savedSubTab = getPreference('control-room-active-sub-tab', 'mission-tree');
-    const allowedTabs: ControlRoomTab[] = ['mission-tree', 'automation-tree', 'recurrent-tasks', 'weekly-schedule', 'calendar', 'gantt-chart'];
+    const allowedTabs: ControlRoomTab[] = ['mission-tree', 'automation-tree', 'recurrent-tasks', 'weekly-schedule', 'calendar', 'gantt-chart', 'task-history'];
     setActiveSubTab(allowedTabs.includes(savedSubTab as ControlRoomTab) ? savedSubTab as ControlRoomTab : 'mission-tree');
   }, [getPreference]);
 
@@ -813,13 +814,14 @@ export default function ControlRoom() {
             setPreference('control-room-active-sub-tab', newTab);
           }} className="flex flex-col h-full">
             <div className="border-b bg-muted/20 py-0">
-              <TabsList className="grid w-full grid-cols-6 h-10">
+              <TabsList className="grid w-full grid-cols-7 h-10">
                 <TabsTrigger value="mission-tree" className="py-2">Mission Tree</TabsTrigger>
                 <TabsTrigger value="recurrent-tasks" className="py-2">Recurrent Tree</TabsTrigger>
                 <TabsTrigger value="automation-tree" className="py-2">Automation Tree</TabsTrigger>
                 <TabsTrigger value="weekly-schedule" className="py-2">Weekly Schedule</TabsTrigger>
                 <TabsTrigger value="calendar" className="py-2">Calendar</TabsTrigger>
                 <TabsTrigger value="gantt-chart" className="py-2">Gantt Chart</TabsTrigger>
+                <TabsTrigger value="task-history" className="py-2">History</TabsTrigger>
               </TabsList>
             </div>
 
@@ -961,6 +963,15 @@ export default function ControlRoom() {
                 tasks={allTasks}
                 onNewTask={handleNewTask}
                 onEditTask={handleEditTask}
+              />
+            </TabsContent>
+
+            {/* Task History Tab Content */}
+            <TabsContent value="task-history" className="mt-0 p-0 data-[state=active]:flex flex-col flex-1 min-h-0">
+              <TaskHistoryView
+                onSelectTask={(task) => {
+                  handleEditTask(task);
+                }}
               />
             </TabsContent>
           </Tabs>

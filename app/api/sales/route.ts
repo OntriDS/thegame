@@ -36,7 +36,9 @@ export async function GET(req: NextRequest) {
       data = await getSalesForMonth(year, month);
     } else {
       const now = new Date();
-      data = await getSalesForMonth(now.getFullYear(), now.getMonth() + 1);
+      // Adjust for UTC rollover (User is UTC-6)
+      const adjustedNow = new Date(now.getTime() - 6 * 60 * 60 * 1000);
+      data = await getSalesForMonth(adjustedNow.getFullYear(), adjustedNow.getMonth() + 1);
     }
     return NextResponse.json(data);
   } catch (error) {
@@ -46,7 +48,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   if (!(await requireAdminAuth(req))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  
+
   try {
     const body = (await req.json()) as Sale;
     const sale = {

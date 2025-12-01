@@ -130,10 +130,6 @@ export async function createSaleSnapshot(
   return snapshot;
 }
 
-
-/**
- * Batch create snapshots for multiple entities (e.g., bulk operations)
- */
 /**
  * Create ItemSnapshot when item is sold via CHARGED sale or manually set to SOLD
  * Items create snapshots when SOLD, following the same pattern as other entities
@@ -144,8 +140,10 @@ export async function createItemSnapshot(
   sale?: Sale | null,
   soldAt?: Date
 ): Promise<ItemSnapshot> {
-  const snapshotSoldAt = soldAt || (sale?.saleDate) || new Date();
-  
+  const now = new Date();
+  const adjustedNow = new Date(now.getTime() - 6 * 60 * 60 * 1000);
+  const snapshotSoldAt = soldAt || (sale?.saleDate) || adjustedNow;
+
   // Calculate cost (unitCost * total quantity or use existing cost)
   const totalQuantity = item.stock?.reduce((sum, sp) => sum + sp.quantity, 0) || 0;
   const itemCost = item.unitCost ? item.unitCost * totalQuantity : (item as any).cost || 0;
@@ -163,9 +161,7 @@ export async function createItemSnapshot(
       soldAt: snapshotSoldAt,
       saleId: sale?.id,
       quantitySold: soldQuantity,
-      cost: itemCost,
-      // Capture stock state at time of sale
-      stock: [...(item.stock || [])]
+      cost: itemCost
     },
     createdAt: new Date()
   };
@@ -177,7 +173,10 @@ export async function createItemSnapshot(
   return snapshot;
 }
 
-export async function createSnapshotsBatch(
+/**
+ * Batch create snapshots for multiple entities
+ */
+export async function createSnapshots(
   snapshots: Array<{
     type: 'task' | 'financial' | 'sale' | 'item';
     entity: Task | FinancialRecord | Sale | Item;

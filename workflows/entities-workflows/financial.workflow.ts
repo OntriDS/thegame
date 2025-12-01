@@ -11,9 +11,9 @@ import { getLinksFor, removeLink } from '@/links/link-registry';
 import { getPlayerById, getFinancialById } from '@/data-store/datastore';
 import { createItemFromRecord, removeItemsCreatedByRecord } from '../item-creation-utils';
 import { awardPointsToPlayer, removePointsFromPlayer } from '../points-rewards-utils';
-import { 
-  updateTasksFromFinancialRecord, 
-  updateItemsCreatedByRecord, 
+import {
+  updateTasksFromFinancialRecord,
+  updateItemsCreatedByRecord,
   updatePlayerPointsFromSource,
   hasFinancialPropsChanged,
   hasOutputPropsChanged,
@@ -32,9 +32,9 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
   if (!previousFinancial) {
     const effectKey = EffectKeys.created('financial', financial.id);
     if (await hasEffect(effectKey)) return;
-    
-    await appendEntityLog(EntityType.FINANCIAL, financial.id, LogEventType.CREATED, { 
-      name: financial.name, 
+
+    await appendEntityLog(EntityType.FINANCIAL, financial.id, LogEventType.CREATED, {
+      name: financial.name,
       type: financial.type,
       station: financial.station,
       cost: financial.cost,
@@ -43,7 +43,7 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
       isNotCharged: financial.isNotCharged
     });
     await markEffect(effectKey);
-    
+
     // Character creation from emissary fields - when newCustomerName is provided
     // This MUST run first because it updates the financial record
     if (financial.newCustomerName && !financial.customerCharacterId) {
@@ -60,11 +60,11 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
         }
       }
     }
-    
+
     // PARALLEL SIDE EFFECTS - item creation and points awarding can run concurrently
     // Run these independent side effects in parallel for 60-70% performance improvement
     const sideEffects: Promise<void>[] = [];
-    
+
     // Item creation from emissary fields - on record creation
     if (financial.outputItemType && financial.outputQuantity) {
       sideEffects.push(
@@ -81,7 +81,7 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
         })()
       );
     }
-    
+
     // Points awarding - on record creation with rewards
     // Use financial.playerCharacterId directly as playerId (unified ID)
     if (financial.rewards?.points) {
@@ -106,7 +106,7 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
         })()
       );
     }
-    
+
     // Wait for all side effects to complete
     await Promise.all(sideEffects);
 
@@ -135,11 +135,11 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
 
     return;
   }
-  
+
   // Payment status changes - PENDING (not paid or not charged) vs DONE (paid and charged)
   const wasPending = previousFinancial.isNotPaid || previousFinancial.isNotCharged;
   const nowPending = financial.isNotPaid || financial.isNotCharged;
-  
+
   if (wasPending && !nowPending) {
     // Transitioned from PENDING to DONE (both paid and charged)
     await appendEntityLog(EntityType.FINANCIAL, financial.id, LogEventType.DONE, {
@@ -165,7 +165,7 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
       pendingAt: new Date().toISOString()
     });
   }
-  
+
   // Collection detection - Dual detection: status OR flag change to COLLECTED
   const statusBecameCollected =
     financial.status === FinancialStatus.COLLECTED &&
@@ -181,7 +181,9 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
       collectedAt: new Date().toISOString()
     });
 
-    const collectedAt = financial.collectedAt ?? new Date();
+    const now = new Date();
+    const adjustedNow = new Date(now.getTime() - 6 * 60 * 60 * 1000);
+    const collectedAt = financial.collectedAt ?? adjustedNow;
     const snapshotEffectKey = EffectKeys.sideEffect('financial', financial.id, `financialSnapshot:${formatMonthKey(collectedAt)}`);
 
     if (!(await hasEffect(snapshotEffectKey))) {
@@ -202,7 +204,7 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
       console.log(`[onFinancialUpsert] ✅ Created snapshot for collected financial record ${financial.name}`);
     }
   }
-  
+
   // COMPREHENSIVE UPDATE PROPAGATION - when financial record properties change
   if (previousFinancial) {
     // Propagate to Tasks
@@ -210,21 +212,21 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
       console.log(`[onFinancialUpsert] Propagating financial changes to tasks: ${financial.name}`);
       await updateTasksFromFinancialRecord(financial, previousFinancial);
     }
-    
+
     // Propagate to Items
     if (hasOutputPropsChanged(financial, previousFinancial)) {
       console.log(`[onFinancialUpsert] Propagating output changes to items: ${financial.name}`);
       await updateItemsCreatedByRecord(financial, previousFinancial);
     }
-    
+
     // Propagate to Player (points delta)
     if (hasRewardsChanged(financial, previousFinancial)) {
       console.log(`[onFinancialUpsert] Propagating points changes to player: ${financial.name}`);
       await updatePlayerPointsFromSource(EntityType.FINANCIAL, financial, previousFinancial);
     }
-    
+
   }
-  
+
   // Descriptive changes - update in-place
   for (const field of DESCRIPTIVE_FIELDS) {
     if ((previousFinancial as any)[field] !== (financial as any)[field]) {
@@ -240,17 +242,17 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
 export async function removeRecordEffectsOnDelete(recordId: string): Promise<void> {
   try {
     console.log(`[removeRecordEffectsOnDelete] Starting cleanup for record: ${recordId}`);
-    
+
     // 1. Remove items created by this record
     await removeItemsCreatedByRecord(recordId);
-    
+
     // 2. Remove player points that were awarded by this record (if points were badly given)
     await removePlayerPointsFromRecord(recordId);
-    
+
     // 3. Remove all Links related to this record
     const recordLinks = await getLinksFor({ type: EntityType.FINANCIAL, id: recordId });
     console.log(`[removeRecordEffectsOnDelete] Found ${recordLinks.length} links to remove`);
-    
+
     for (const link of recordLinks) {
       try {
         await removeLink(link.id);
@@ -259,7 +261,7 @@ export async function removeRecordEffectsOnDelete(recordId: string): Promise<voi
         console.error(`[removeRecordEffectsOnDelete] ❌ Failed to remove link ${link.id}:`, error);
       }
     }
-    
+
     // 4. Clear effects registry
     await clearEffect(EffectKeys.created('financial', recordId));
     await clearEffect(EffectKeys.sideEffect('financial', recordId, 'characterCreated'));
@@ -267,7 +269,7 @@ export async function removeRecordEffectsOnDelete(recordId: string): Promise<voi
     await clearEffect(EffectKeys.sideEffect('financial', recordId, 'pointsAwarded'));
     await clearEffectsByPrefix(EntityType.FINANCIAL, recordId, 'pointsLogged:');
     await clearEffectsByPrefix(EntityType.FINANCIAL, recordId, 'financialLogged:');
-    
+
     // 5. Remove log entries from financials log
     console.log(`[removeRecordEffectsOnDelete] Removing log entries for record: ${recordId}`);
     const financialsLogKey = buildLogKey(EntityType.FINANCIAL);
@@ -277,7 +279,7 @@ export async function removeRecordEffectsOnDelete(recordId: string): Promise<voi
       await kvSet(financialsLogKey, filteredFinancialsLog);
       console.log(`[removeRecordEffectsOnDelete] ✅ Removed ${financialsLog.length - filteredFinancialsLog.length} entries from financials log`);
     }
-    
+
     // Check and remove from character log if this record was linked to a character
     const characterLogKey = buildLogKey(EntityType.CHARACTER);
     const characterLog = (await kvGet<any[]>(characterLogKey)) || [];
@@ -286,7 +288,7 @@ export async function removeRecordEffectsOnDelete(recordId: string): Promise<voi
       await kvSet(characterLogKey, filteredCharacterLog);
       console.log(`[removeRecordEffectsOnDelete] ✅ Removed ${characterLog.length - filteredCharacterLog.length} entries from character log`);
     }
-    
+
     console.log(`[removeRecordEffectsOnDelete] ✅ Cleared effects, removed links, deleted created items, and removed log entries for record ${recordId}`);
   } catch (error) {
     console.error('Error removing record effects:', error);
@@ -300,34 +302,34 @@ export async function removeRecordEffectsOnDelete(recordId: string): Promise<voi
 async function removePlayerPointsFromRecord(recordId: string): Promise<void> {
   try {
     console.log(`[removePlayerPointsFromRecord] Removing points for record: ${recordId}`);
-    
+
     // Get the record to find what points were awarded
     const record = await getFinancialById(recordId);
-    
+
     if (!record || !record.rewards?.points) {
       console.log(`[removePlayerPointsFromRecord] Record ${recordId} has no points to remove`);
       return;
     }
-    
+
     // Get the player from the record (same logic as creation)
     const playerId = record.playerCharacterId || PLAYER_ONE_ID;
     const player = await getPlayerById(playerId);
-    
+
     if (!player) {
       console.log(`[removePlayerPointsFromRecord] Player ${playerId} not found, skipping points removal`);
       return;
     }
-    
+
     // Check if any points were actually awarded
     const pointsToRemove = record.rewards.points;
-    const hasPoints = (pointsToRemove.xp || 0) > 0 || (pointsToRemove.rp || 0) > 0 || 
-                     (pointsToRemove.fp || 0) > 0 || (pointsToRemove.hp || 0) > 0;
-    
+    const hasPoints = (pointsToRemove.xp || 0) > 0 || (pointsToRemove.rp || 0) > 0 ||
+      (pointsToRemove.fp || 0) > 0 || (pointsToRemove.hp || 0) > 0;
+
     if (!hasPoints) {
       console.log(`[removePlayerPointsFromRecord] No points to remove from record ${recordId}`);
       return;
     }
-    
+
     // Remove the points from the player
     await removePointsFromPlayer(playerId, {
       xp: pointsToRemove.xp || 0,
@@ -336,7 +338,7 @@ async function removePlayerPointsFromRecord(recordId: string): Promise<void> {
       hp: pointsToRemove.hp || 0
     });
     console.log(`[removePlayerPointsFromRecord] ✅ Removed points from player: ${JSON.stringify(pointsToRemove)}`);
-    
+
   } catch (error) {
     console.error(`[removePlayerPointsFromRecord] ❌ Failed to remove player points for record ${recordId}:`, error);
   }

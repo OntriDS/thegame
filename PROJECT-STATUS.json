@@ -72,24 +72,24 @@
   "nextSprintPlan": {
     "phaseX.1": {
       "phaseName": "",
-      "status": "PixelBrain Development",
+      "status": "PixelBrain Apps and Agents Development",
       "description": "",
       "deliverables": []
     },
     "phaseX.2": {
       "phaseName": "",
-      "status": "Not Started",
+      "status": "Improve UI and Gameplay",
       "description": "",
       "deliverables": []
     },
     "phaseX.3": {
-      "phaseName": "",
+      "phaseName": "Complete every aspect of the game for version V0.1",
       "status": "Not Started",
       "description": "",
       "deliverables": []
     },
     "phaseX.4": {
-      "phaseName": "",
+      "phaseName": "Clean Code and Documentation",
       "status": "Not Started",
       "description": "",
       "deliverables": []
@@ -107,7 +107,7 @@
       "description": "Dashboard system for tracking key metrics and progress"
     },
     "controlRoom": {
-      "status": "Done",
+      "status": "Finishing",
       "version": "v0.1",
       "description": "Implemented with hierarchical task management"
     },
@@ -151,10 +151,15 @@
       "version": "v0.1",
       "description": "Player system for managing and tracking player data"
     },
+    "personas": {
+      "status": "Finishing",
+      "version": "v0.1",
+      "description": "Character system for managing and tracking characters data"
+    },
     "settings": {
       "status": "Done",
       "version": "v0.1",
-      "description": "Settings system for managing and tracking player data"
+      "description": "Settings system"
     }
   },
   "nextChallenges": {

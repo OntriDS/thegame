@@ -59,10 +59,10 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
   if (!previousTask) {
     const effectKey = EffectKeys.created('task', task.id);
     const alreadyLoggedCreated = await hasEffect(effectKey);
-    
+
     if (!alreadyLoggedCreated) {
       // Minimal, event-specific payload for CREATED
-      await appendEntityLog(EntityType.TASK, task.id, LogEventType.CREATED, { 
+      await appendEntityLog(EntityType.TASK, task.id, LogEventType.CREATED, {
         name: task.name,
         taskType: task.type,
         station: task.station,
@@ -93,11 +93,11 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
     }
     // Continue to DONE logging below if task is Done (whether CREATED just logged or was already there)
   }
-  
+
   // State changes - append new log
   if (previousTask && previousTask.status !== task.status) {
     console.log(`[onTaskUpsert] Task status changed: ${previousTask.status} → ${task.status}`);
-    
+
     // Skip UPDATED logging for special status changes - they have their own events:
     // - Done → DONE event (logged below)
     // - Collected → COLLECTED event (logged below)
@@ -115,17 +115,17 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
         changedAt: new Date().toISOString()
       });
     }
-    
+
     // Handle uncompletion (Done → Other status)
     if (previousTask!.status === 'Done' && task.status !== 'Done' && task.status !== 'Collected') {
       console.log(`[onTaskUpsert] Task uncompleted: ${task.name} (${previousTask!.status} → ${task.status})`);
-      
+
       // Uncomplete the task and remove effects
       await uncompleteTask(task.id);
     }
 
   }
-  
+
   // Log DONE event - either when status changes to Done OR when creating a task that's already Done
   if (task.status === 'Done' && task.doneAt) {
     const shouldLogDone = !previousTask || !previousTask.doneAt;
@@ -143,7 +143,7 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
       });
     }
   }
-  
+
   if (previousTask && !previousTask.collectedAt && task.collectedAt) {
     await appendEntityLog(EntityType.TASK, task.id, LogEventType.COLLECTED, {
       name: task.name,
@@ -161,7 +161,9 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
     !!task.isCollected && (!previousTask || !previousTask.isCollected);
 
   if (statusBecameCollected || flagBecameCollected) {
-    const collectedAt = task.collectedAt ?? new Date();
+    const now = new Date();
+    const adjustedNow = new Date(now.getTime() - 6 * 60 * 60 * 1000);
+    const collectedAt = task.collectedAt ?? adjustedNow;
     const snapshotEffectKey = EffectKeys.sideEffect('task', task.id, `taskSnapshot:${formatMonthKey(collectedAt)}`);
 
     if (!(await hasEffect(snapshotEffectKey))) {
@@ -172,19 +174,41 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
         collectedAt
       };
 
-      if (!task.isCollected || !task.collectedAt) {
-        await upsertTask(normalizedTask, { skipWorkflowEffects: true, skipLinkEffects: true });
-      }
-
-      // Create TaskSnapshot using the new Archive-First approach
+      // 1. Create TaskSnapshot (Archive UI)
       await createTaskSnapshot(normalizedTask, collectedAt, task.playerCharacterId || undefined);
+
+      // 2. Move to Task History (Clean up Active Tree)
+      // Save to archive:tasks:{id}
+      await kvSet(`archive:tasks:${task.id}`, normalizedTask);
+
+      // Remove from active tasks:{id} and index
+      // We use repoDeleteTask logic but manually here to avoid circular dependencies or side effects
+      // Actually, we can use the repo delete if we are careful, but let's do it safely here
+      // We need to import these from datastore/kv or similar if not available
+      // For now, we will rely on the fact that 'isCollected' flag filters it out from getAllTasks
+      // BUT the user specifically asked to "move" it.
+
+      // Let's use the repo delete logic but we need to be careful not to trigger "delete effects"
+      // The delete effects (removeTaskLogEntriesOnDelete) destroy logs, which we DO NOT WANT.
+      // So we must perform a "Silent Delete" from the active repo.
+
+      // We will use low-level KV to remove it from active data and index
+      // This mimics "moving" it to the archive namespace
+      const { buildDataKey, buildIndexKey } = await import('@/data-store/keys');
+      const { kvDel, kvSRem } = await import('@/data-store/kv');
+
+      await kvDel(buildDataKey(EntityType.TASK, task.id));
+      await kvSRem(buildIndexKey(EntityType.TASK), task.id);
+
+      console.log(`[onTaskUpsert] 📦 Moved task ${task.name} to History (archive:tasks:${task.id})`);
+
       await markEffect(snapshotEffectKey);
       console.log(`[onTaskUpsert] ✅ Created snapshot for collected task ${task.name}`);
     }
   }
-  
+
   // Tasks are not physical entities; skip MOVED logging even if site references change.
-  
+
   // Character creation from emissary fields - when newCustomerName is provided
   if (task.newCustomerName && !task.customerCharacterId) {
     const effectKey = EffectKeys.sideEffect('task', task.id, 'characterCreated');
@@ -200,12 +224,12 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
       }
     }
   }
-  
+
   // PARALLEL SIDE EFFECTS - when task is completed (Done)
   // Run all independent side effects concurrently for 60-70% performance improvement
   if (task.status === 'Done') {
     const sideEffects: Promise<void>[] = [];
-    
+
     // Item creation from emissary fields
     if (task.outputItemType && task.outputQuantity) {
       sideEffects.push(
@@ -222,7 +246,7 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
         })()
       );
     }
-    
+
     // Points awarding - when task is completed with rewards
     // Use task.playerCharacterId directly as playerId (they're the same now with unified 'creator' ID)
     if (task.rewards?.points) {
@@ -239,7 +263,7 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
         })()
       );
     }
-    
+
     // Financial record creation from task
     if (task.cost || task.revenue || task.rewards?.points) {
       sideEffects.push(
@@ -256,11 +280,11 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
         })()
       );
     }
-    
+
     // Wait for all side effects to complete
     await Promise.all(sideEffects);
   }
-  
+
   // COMPREHENSIVE UPDATE PROPAGATION - when task properties change
   if (previousTask) {
     // Propagate to Financial Records
@@ -268,13 +292,13 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
       console.log(`[onTaskUpsert] Propagating financial changes from task: ${task.name}`);
       await updateFinancialRecordsFromTask(task, previousTask);
     }
-    
+
     // Propagate to Items
     if (hasOutputPropsChanged(task, previousTask)) {
       console.log(`[onTaskUpsert] Propagating output changes from task: ${task.name}`);
       await updateItemsCreatedByTask(task, previousTask);
     }
-    
+
     // Propagate to Player (points delta)
     if (hasRewardsChanged(task, previousTask)) {
       console.log(`[onTaskUpsert] Propagating points changes from task: ${task.name}`);
@@ -285,7 +309,7 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
     if (task.type === TaskType.RECURRENT_TEMPLATE) {
       const frequencyChanged = JSON.stringify(previousTask.frequencyConfig) !== JSON.stringify(task.frequencyConfig);
       const dueDateChanged = previousTask.dueDate?.getTime() !== task.dueDate?.getTime();
-      
+
       if (frequencyChanged || dueDateChanged) {
         const instancesEffectKey = EffectKeys.sideEffect('task', task.id, 'instancesGenerated');
         if (!(await hasEffect(instancesEffectKey))) {
@@ -298,17 +322,17 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
 
       // Handle status changes for Recurrent Templates
       const statusChanged = previousTask.status !== task.status;
-      
+
       if (statusChanged) {
         // Check if user requested to skip cascading (via temporary metadata)
         const skipCascade = (task as any)._skipCascade === true;
-        
+
         if (skipCascade) {
           console.log(`[onTaskUpsert] User requested to skip cascade for template: ${task.name}`);
         } else {
           // Detect template status reversal (uncascade)
           const statusReverted = previousTask.status === 'Done' && task.status !== 'Done';
-          
+
           if (statusReverted) {
             console.log(`[onTaskUpsert] Template status reverted, uncascading instances: ${task.name}`);
             const { reverted } = await uncascadeStatusFromInstances(task.id, task.status);
@@ -326,7 +350,7 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
       }
     }
   }
-  
+
   // Descriptive changes - update in-place (only when there is a previous task to compare)
   if (previousTask) {
     for (const field of DESCRIPTIVE_FIELDS) {
@@ -344,7 +368,7 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
 export async function removeTaskLogEntriesOnDelete(task: Task): Promise<void> {
   try {
     console.log(`[removeTaskLogEntriesOnDelete] Starting cleanup for task: ${task.id}`);
-    
+
     // Handle recurrent template cascade deletion
     if (task.type === TaskType.RECURRENT_TEMPLATE || task.type === TaskType.RECURRENT_GROUP) {
       console.log(`[removeTaskLogEntriesOnDelete] Cascading delete for ${task.type}: ${task.name}`);
@@ -363,7 +387,7 @@ export async function removeTaskLogEntriesOnDelete(task: Task): Promise<void> {
         // Collect all tasks that will be deleted (before deletion) for log cleanup
         // This includes nested groups, templates, and instances
         toDelete = [task];
-        
+
         // Recursive function to collect all descendants
         const collectDescendants = (parentId: string) => {
           const childGroups = tasks.filter((t: Task) =>
@@ -372,7 +396,7 @@ export async function removeTaskLogEntriesOnDelete(task: Task): Promise<void> {
           const childTemplates = tasks.filter((t: Task) =>
             t.parentId === parentId && t.type === TaskType.RECURRENT_TEMPLATE
           );
-          
+
           childGroups.forEach(g => {
             toDelete.push(g);
             collectDescendants(g.id); // Recursively process nested groups
@@ -385,7 +409,7 @@ export async function removeTaskLogEntriesOnDelete(task: Task): Promise<void> {
             toDelete.push(...templateInstances);
           });
         };
-        
+
         collectDescendants(task.id);
       }
 
@@ -456,20 +480,20 @@ export async function removeTaskLogEntriesOnDelete(task: Task): Promise<void> {
       console.log(`[removeTaskLogEntriesOnDelete] ✅ Completed log cleanup for ${task.type.toLowerCase()} and ${toDelete.length - 1} child tasks`);
       return;
     }
-    
+
     // 1. Remove items created by this task
     await removeItemsCreatedByTask(task.id);
-    
+
     // 2. Remove financial records created by this task
     await removeFinancialRecordsCreatedByTask(task.id);
-    
+
     // 3. Remove player points that were awarded by this task (if points were badly given)
     await removePlayerPointsFromTask(task);
-    
+
     // 3. Remove all Links related to this task
     const taskLinks = await getLinksFor({ type: EntityType.TASK, id: task.id });
     console.log(`[removeTaskLogEntriesOnDelete] Found ${taskLinks.length} links to remove`);
-    
+
     for (const link of taskLinks) {
       try {
         await removeLink(link.id);
@@ -478,7 +502,7 @@ export async function removeTaskLogEntriesOnDelete(task: Task): Promise<void> {
         console.error(`[removeTaskLogEntriesOnDelete] ❌ Failed to remove link ${link.id}:`, error);
       }
     }
-    
+
     // 4. Clear effects registry
     await clearEffect(EffectKeys.created('task', task.id));
     await clearEffect(EffectKeys.sideEffect('task', task.id, 'characterCreated'));
@@ -487,10 +511,10 @@ export async function removeTaskLogEntriesOnDelete(task: Task): Promise<void> {
     await clearEffect(EffectKeys.sideEffect('task', task.id, 'pointsAwarded'));
     await clearEffectsByPrefix(EntityType.TASK, task.id, 'pointsLogged:');
     await clearEffectsByPrefix(EntityType.TASK, task.id, 'financialLogged:');
-    
+
     // 5. Remove log entries from all relevant logs
     console.log(`[removeTaskLogEntriesOnDelete] Removing log entries for task: ${task.id}`);
-    
+
     // Remove from tasks log
     const tasksLogKey = buildLogKey(EntityType.TASK);
     const tasksLog = (await kvGet<any[]>(tasksLogKey)) || [];
@@ -499,7 +523,7 @@ export async function removeTaskLogEntriesOnDelete(task: Task): Promise<void> {
       await kvSet(tasksLogKey, filteredTasksLog);
       console.log(`[removeTaskLogEntriesOnDelete] ✅ Removed ${tasksLog.length - filteredTasksLog.length} entries from tasks log`);
     }
-    
+
     // Also check and remove from player log if this task awarded points
     if (task.rewards?.points) {
       const playerLogKey = buildLogKey(EntityType.PLAYER);
@@ -510,7 +534,7 @@ export async function removeTaskLogEntriesOnDelete(task: Task): Promise<void> {
         console.log(`[removeTaskLogEntriesOnDelete] ✅ Removed ${playerLog.length - filteredPlayerLog.length} entries from player log`);
       }
     }
-    
+
     // Check and remove from items log if this task created items
     const itemsLogKey = buildLogKey(EntityType.ITEM);
     const itemsLog = (await kvGet<any[]>(itemsLogKey)) || [];
@@ -519,7 +543,7 @@ export async function removeTaskLogEntriesOnDelete(task: Task): Promise<void> {
       await kvSet(itemsLogKey, filteredItemsLog);
       console.log(`[removeTaskLogEntriesOnDelete] ✅ Removed ${itemsLog.length - filteredItemsLog.length} entries from items log`);
     }
-    
+
     // Check and remove from financials log if this task created financial records
     const financialsLogKey = buildLogKey(EntityType.FINANCIAL);
     const financialsLog = (await kvGet<any[]>(financialsLogKey)) || [];
@@ -528,7 +552,7 @@ export async function removeTaskLogEntriesOnDelete(task: Task): Promise<void> {
       await kvSet(financialsLogKey, filteredFinancialsLog);
       console.log(`[removeTaskLogEntriesOnDelete] ✅ Removed ${financialsLog.length - filteredFinancialsLog.length} entries from financials log`);
     }
-    
+
     // Check and remove from character log if this task was requested by a character
     const characterLogKey = buildLogKey(EntityType.CHARACTER);
     const characterLog = (await kvGet<any[]>(characterLogKey)) || [];
@@ -537,7 +561,7 @@ export async function removeTaskLogEntriesOnDelete(task: Task): Promise<void> {
       await kvSet(characterLogKey, filteredCharacterLog);
       console.log(`[removeTaskLogEntriesOnDelete] ✅ Removed ${characterLog.length - filteredCharacterLog.length} entries from character log`);
     }
-    
+
     console.log(`[removeTaskLogEntriesOnDelete] ✅ Cleared effects, removed links, and removed log entries for task ${task.id}`);
   } catch (error) {
     console.error('Error removing task effects:', error);
@@ -551,33 +575,33 @@ export async function removeTaskLogEntriesOnDelete(task: Task): Promise<void> {
 async function removePlayerPointsFromTask(task: Task): Promise<void> {
   try {
     console.log(`[removePlayerPointsFromTask] Starting removal of points AND J$ for task: ${task.id}`);
-    
+
     if (!task.rewards?.points) {
       console.log(`[removePlayerPointsFromTask] Task ${task.id} has no points to remove`);
       return;
     }
-    
+
     // Get the player from the task (same logic as creation)
     const playerId = task.playerCharacterId || PLAYER_ONE_ID;
     const player = await getPlayerById(playerId);
-    
+
     if (!player) {
       console.log(`[removePlayerPointsFromTask] Player ${playerId} not found, skipping removal`);
       return;
     }
-    
+
     // Check if any points were actually awarded
     const pointsToRemove = task.rewards.points;
-    const hasPoints = (pointsToRemove.xp || 0) > 0 || (pointsToRemove.rp || 0) > 0 || 
-                     (pointsToRemove.fp || 0) > 0 || (pointsToRemove.hp || 0) > 0;
-    
+    const hasPoints = (pointsToRemove.xp || 0) > 0 || (pointsToRemove.rp || 0) > 0 ||
+      (pointsToRemove.fp || 0) > 0 || (pointsToRemove.hp || 0) > 0;
+
     if (!hasPoints) {
       console.log(`[removePlayerPointsFromTask] No points to remove from task ${task.id}`);
       return;
     }
-    
+
     console.log(`[removePlayerPointsFromTask] Task "${task.name}" awarded: XP:${pointsToRemove.xp || 0}, RP:${pointsToRemove.rp || 0}, FP:${pointsToRemove.fp || 0}, HP:${pointsToRemove.hp || 0}`);
-    
+
     // NOTE: We do NOT remove J$ here because:
     // - J$ is only created when points are EXPLICITLY exchanged for J$ (via exchange flow)
     // - Points awarded by tasks are NOT automatically converted to J$
@@ -585,12 +609,12 @@ async function removePlayerPointsFromTask(task: Task): Promise<void> {
     // - Those FinancialRecords are the source of truth for J$, not personalAssets
     // - If we need to reverse a points exchange, we should reverse the FinancialRecord, not modify personalAssets
     console.log(`[removePlayerPointsFromTask] Skipping J$ removal - J$ is only created via explicit exchange, not from task rewards`);
-    
+
     // Remove the points from the player
     console.log(`[removePlayerPointsFromTask] Now removing points from player...`);
     await removePointsFromPlayer(playerId, pointsToRemove);
     console.log(`[removePlayerPointsFromTask] ✅ Successfully removed points: XP:${pointsToRemove.xp || 0}, RP:${pointsToRemove.rp || 0}, FP:${pointsToRemove.fp || 0}, HP:${pointsToRemove.hp || 0}`);
-    
+
   } catch (error) {
     console.error(`[removePlayerPointsFromTask] ❌ FAILED to remove player points/J$ for task ${task.id}:`, error);
     throw error; // Re-throw to see the error in console
@@ -609,11 +633,11 @@ function calculateJ$FromPoints(
   const rpJ$ = (points.rp || 0) / rates.rpToJ$;
   const fpJ$ = (points.fp || 0) / rates.fpToJ$;
   const hpJ$ = (points.hp || 0) / rates.hpToJ$;
-  
+
   const totalJ$ = xpJ$ + rpJ$ + fpJ$ + hpJ$;
-  
+
   console.log(`[calculateJ$FromPoints] XP:${points.xp || 0}→${xpJ$.toFixed(2)}J$, RP:${points.rp || 0}→${rpJ$.toFixed(2)}J$, FP:${points.fp || 0}→${fpJ$.toFixed(2)}J$, HP:${points.hp || 0}→${hpJ$.toFixed(2)}J$ = ${totalJ$.toFixed(2)}J$ total`);
-  
+
   return totalJ$;
 }
 
@@ -640,23 +664,23 @@ async function getConversionRatesOrDefault(): Promise<PointsConversionRates> {
 export async function uncompleteTask(taskId: string): Promise<void> {
   try {
     console.log(`[uncompleteTask] Uncompleting task: ${taskId}`);
-    
+
     // Get the task
     const task = await getTaskById(taskId);
-    
+
     if (!task) {
       console.log(`[uncompleteTask] Task ${taskId} not found`);
       return;
     }
-    
+
     // Check if task was previously completed (has doneAt)
     if (!task.doneAt) {
       console.log(`[uncompleteTask] Task ${taskId} was not completed, nothing to uncomplete`);
       return;
     }
-    
+
     console.log(`[uncompleteTask] Reversing completion for task: ${task.name}`);
-    
+
     if (!task.isNewItem && task.outputItemId) {
       const quantityToRemove = task.outputQuantity || 0;
       if (quantityToRemove > 0) {
@@ -666,7 +690,7 @@ export async function uncompleteTask(taskId: string): Promise<void> {
           const updatedStock = Array.isArray(existingItem.stock)
             ? existingItem.stock.map(stockPoint => ({ ...stockPoint }))
             : [];
-          
+
           const stockIndex = updatedStock.findIndex(stockPoint => stockPoint.siteId === preferredSiteId);
           if (stockIndex >= 0) {
             const newQuantity = updatedStock[stockIndex].quantity - quantityToRemove;
@@ -675,13 +699,13 @@ export async function uncompleteTask(taskId: string): Promise<void> {
             } else {
               updatedStock[stockIndex] = { ...updatedStock[stockIndex], quantity: newQuantity };
             }
-            
+
             const updatedItem = {
               ...existingItem,
               stock: updatedStock,
               updatedAt: new Date()
             };
-            
+
             await upsertItem(updatedItem);
             console.log(`[uncompleteTask] ♻️ Reverted stock for existing item ${existingItem.id} (-${quantityToRemove} @ ${preferredSiteId})`);
           } else {
@@ -692,30 +716,30 @@ export async function uncompleteTask(taskId: string): Promise<void> {
         }
       }
     }
-    
+
     // 1. Remove items created by this task
     await removeItemsCreatedByTask(taskId);
     console.log(`[uncompleteTask] ✅ Removed items created by task`);
-    
+
     // 2. Remove points awarded by this task
     await removePlayerPointsFromTask(task);
     console.log(`[uncompleteTask] ✅ Removed points awarded by task`);
-    
+
     // 3. Clear effects registry entries
     await clearEffect(EffectKeys.sideEffect('task', taskId, 'itemCreated'));
     await clearEffect(EffectKeys.sideEffect('task', taskId, 'financialCreated'));
     await clearEffect(EffectKeys.sideEffect('task', taskId, 'pointsAwarded'));
     console.log(`[uncompleteTask] ✅ Cleared effects registry entries (itemCreated, financialCreated, pointsAwarded)`);
-    
+
     // 4. Log UNCOMPLETED event
     await appendEntityLog(EntityType.TASK, taskId, LogEventType.UNCOMPLETED, {
       previousStatus: 'Done',
       uncompletedAt: new Date().toISOString()
     });
     console.log(`[uncompleteTask] ✅ Logged UNCOMPLETED event`);
-    
+
     console.log(`[uncompleteTask] ✅ Successfully uncompleted task: ${task.name}`);
-    
+
   } catch (error) {
     console.error(`[uncompleteTask] ❌ Failed to uncomplete task ${taskId}:`, error);
     throw error;

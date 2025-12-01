@@ -12,7 +12,7 @@ export const maxDuration = 300; // 5 minutes
 
 export async function GET(req: NextRequest) {
   if (!(await requireAdminAuth(req))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  
+
   // Check for type filter in query params
   const searchParams = req.nextUrl.searchParams;
   const typeFilter = searchParams.get('type');
@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
 
   const month = parseMonth(monthParam);
   const year = normalizeYear(yearParam);
-  
+
   let items: Item[];
   if (month && year) {
     items = await getItemsForMonth(year, month);
@@ -43,22 +43,20 @@ export async function GET(req: NextRequest) {
       const types = typeFilter.split(',').map(t => t.trim());
       items = items.filter(i => types.includes(i.type as any));
     }
-  } else if (typeFilter) {
-    // Support comma-separated types: ?type=Sticker,Print
-    const types = typeFilter.split(',').map(t => t.trim());
-    items = await getItemsByType(types);
   } else {
-    // Default to current month scope
-    const now = new Date();
-    items = await getItemsForMonth(now.getFullYear(), now.getMonth() + 1);
+    // Default: Return ALL active items (Inventory)
+    // This supports the "Active Inventory" view which is not time-bound
+    const allItems = await getAllItems();
+    // Filter out SOLD items to show only active inventory
+    items = allItems.filter(item => item.status !== 'Sold');
   }
-  
+
   return NextResponse.json(items);
 }
 
 export async function POST(req: NextRequest) {
   if (!(await requireAdminAuth(req))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  
+
   try {
     const body = (await req.json()) as Item;
     const item = {

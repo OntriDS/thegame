@@ -93,7 +93,9 @@ export async function POST(
       );
     }
 
-    const soldAt = soldAtIso ? new Date(soldAtIso) : new Date();
+    const now = new Date();
+    const adjustedNow = new Date(now.getTime() - 6 * 60 * 60 * 1000);
+    const soldAt = soldAtIso ? new Date(soldAtIso) : adjustedNow;
     const normalizedSnapshot: Item = {
       ...snapshot,
       createdAt: snapshot.createdAt ? new Date(snapshot.createdAt) : soldAt,
