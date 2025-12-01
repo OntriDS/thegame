@@ -116,8 +116,8 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
 
       if (activeTab === InventoryTab.SOLD_ITEMS) {
         // Use status filter for sold items
-        const month = filterSoldByMonth ? currentMonth : new Date().getMonth() + 1;
-        const year = filterSoldByMonth ? currentYear : new Date().getFullYear();
+        const month = filterSoldByMonth ? currentMonth : undefined;
+        const year = filterSoldByMonth ? currentYear : undefined;
         // We pass 'all' as type to search across all item types
         // But we rely on the API to filter by status='Sold' if we could pass it.
         // ClientAPI.getItems doesn't support status param yet in its signature, but we can append it manually or update ClientAPI.
