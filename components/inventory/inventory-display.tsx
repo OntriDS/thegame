@@ -148,9 +148,11 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
 
       setItems(items); // Show items immediately
 
-      // Then load all items in the background (for instant tab switching)
-      const allItems = await ClientAPI.getItems();
-      setItems(allItems); // Update with all items once loaded
+      // Then load additional items in the background (for instant tab switching)
+      if (activeTab !== InventoryTab.SOLD_ITEMS) {
+        const allItems = await ClientAPI.getItems();
+        setItems(allItems);
+      }
     } catch (error) {
       console.error('Failed to load items:', error);
     }
@@ -277,15 +279,10 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
         let items: Item[];
 
         if (activeTab === InventoryTab.SOLD_ITEMS) {
-          // Use status filter for sold items
-          const month = filterSoldByMonth ? currentMonth : new Date().getMonth() + 1;
-          const year = filterSoldByMonth ? currentYear : new Date().getFullYear();
-          const monthItems = await ClientAPI.getItems('all', month, year);
-          // Filter case-insensitively to handle 'Sold' (Enum) and 'SOLD' (Legacy/Bug) and "ItemStatus.SOLD" (User manual entry)
-          items = monthItems.filter(item => {
-            const s = item.status as string;
-            return s?.toUpperCase() === 'SOLD' || s === 'ItemStatus.SOLD';
-          });
+          // Use status filter for sold items; when month filter is off, fetch across all months
+          const month = filterSoldByMonth ? currentMonth : undefined;
+          const year = filterSoldByMonth ? currentYear : undefined;
+          items = await ClientAPI.getItems('all', month, year, 'Sold');
         } else if (activeTabItemType === 'all') {
           // Load all items
           items = await ClientAPI.getItems();
@@ -296,9 +293,11 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
 
         setItems(items); // Show items immediately
 
-        // Then load all items in the background (for instant tab switching)
-        const allItems = await ClientAPI.getItems();
-        setItems(allItems); // Update with all items once loaded
+        // Then load additional items in the background (for instant tab switching)
+        if (activeTab !== InventoryTab.SOLD_ITEMS) {
+          const allItems = await ClientAPI.getItems();
+          setItems(allItems);
+        }
       } catch (error) {
         console.error('Failed to load items:', error);
       }
