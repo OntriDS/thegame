@@ -21,7 +21,7 @@ import {
   DollarSign,
   CheckSquare
 } from 'lucide-react';
-import { getInteractiveSubModalZIndex } from '@/lib/utils/z-index-utils';
+import { Z_INDEX_LAYERS } from '@/lib/constants/app-constants';
 
 type EntityType = 'task' | 'sale' | 'financial' | 'item';
 
@@ -102,7 +102,7 @@ export default function ArchiveCollectionConfirmationModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className="sm:max-w-lg"
-        style={{ zIndex: getInteractiveSubModalZIndex() }}
+        style={{ zIndex: Z_INDEX_LAYERS.CRITICAL }}
       >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
