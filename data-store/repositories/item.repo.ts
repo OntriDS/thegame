@@ -1,7 +1,7 @@
 // data-store/repositories/item.repo.ts
 import { kvGet, kvMGet, kvSet, kvDel, kvSAdd, kvSRem, kvSMembers } from '../kv';
 import { buildDataKey, buildIndexKey, buildMonthIndexKey } from '../keys';
-import { EntityType, ItemType } from '@/types/enums';
+import { EntityType, ItemType, ItemStatus } from '@/types/enums';
 import type { Item } from '@/types/entities';
 import { formatMonthKey } from '@/lib/utils/date-utils';
 
@@ -89,23 +89,39 @@ export async function upsertItem(item: Item): Promise<Item> {
   // Get previous item to clean up old indexes if they changed
   const previousItem = await kvGet<Item>(key);
 
-  await kvSet(key, item);
+  // Normalize status to canonical enum values
+  const statusRaw = (item.status as any) as string | undefined;
+  let normalizedStatus = statusRaw;
+  if (statusRaw) {
+    const lc = statusRaw.toString().trim().toLowerCase();
+    const enumByLc = new Map<string, ItemStatus>();
+    for (const v of Object.values(ItemStatus)) {
+      enumByLc.set(v.toLowerCase(), v);
+    }
+    const direct = enumByLc.get(lc);
+    const alias = lc.startsWith('itemstatus.') ? enumByLc.get(lc.split('.').pop() || '') : undefined;
+    if (direct) normalizedStatus = direct;
+    else if (alias) normalizedStatus = alias;
+  }
+  const toSave: Item = normalizedStatus ? { ...item, status: normalizedStatus as any } : item;
+
+  await kvSet(key, toSave);
   await kvSAdd(indexKey, item.id);
 
   // Maintain month index (soldAt → createdAt)
   // CRITICAL: Sold items must be indexed by their soldAt date to appear in the correct "Sold Items" month tab
-  const dateForIndex = item.soldAt || item.createdAt;
+  const dateForIndex = toSave.soldAt || toSave.createdAt;
   if (dateForIndex) {
     const currentMonthKey = formatMonthKey(dateForIndex);
     await kvSAdd(buildMonthIndexKey(ENTITY, currentMonthKey), item.id);
   }
 
   // Maintain type index
-  const typeIndexKey = `index:${ENTITY}:type:${item.type}`;
+  const typeIndexKey = `index:${ENTITY}:type:${toSave.type}`;
   await kvSAdd(typeIndexKey, item.id);
 
   // Clean up old type index if type changed
-  if (previousItem && previousItem.type !== item.type) {
+  if (previousItem && previousItem.type !== toSave.type) {
     const oldTypeIndexKey = `index:${ENTITY}:type:${previousItem.type}`;
     await kvSRem(oldTypeIndexKey, item.id);
   }
@@ -113,7 +129,7 @@ export async function upsertItem(item: Item): Promise<Item> {
   // Clean up old month index if month changed
   if (previousItem) {
     const prevDateForIndex = previousItem.soldAt || previousItem.createdAt;
-    const currDateForIndex = item.soldAt || item.createdAt;
+    const currDateForIndex = toSave.soldAt || toSave.createdAt;
 
     if (prevDateForIndex && currDateForIndex) {
       const prevMonthKey = formatMonthKey(prevDateForIndex);

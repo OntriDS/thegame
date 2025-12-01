@@ -320,16 +320,18 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
   };
 
   const getFilteredItems = (itemType: ItemType) => {
-    const filtered = items.filter(item =>
-      item.type === itemType && item.status !== ItemStatus.SOLD
-    );
+    const filtered = items.filter(item => {
+      const s = (item.status || '').toString().toLowerCase();
+      return item.type === itemType && s !== 'sold' && (item.status as any) !== 'ItemStatus.SOLD';
+    });
     return sortItems(filtered);
   };
 
   const getFilteredItemsByCategory = (category: ItemCategory) => {
-    return items.filter(item =>
-      getItemCategory(item.type) === category && item.status !== ItemStatus.SOLD
-    );
+    return items.filter(item => {
+      const s = (item.status || '').toString().toLowerCase();
+      return getItemCategory(item.type) === category && s !== 'sold' && (item.status as any) !== 'ItemStatus.SOLD';
+    });
   };
 
   const formatCurrency = (amount: number, currency: string = 'USD') => {
@@ -1395,7 +1397,10 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
 
   // Sold Items Tab - Lifecycle Management
   const renderSoldItemsTab = () => {
-    const soldItems = items.filter(item => item.status === ItemStatus.SOLD);
+    const soldItems = items.filter(item => {
+      const s = (item.status || '').toString().toLowerCase();
+      return s === 'sold' || (item.status as any) === 'ItemStatus.SOLD';
+    });
 
     return (
       <div className="space-y-4">

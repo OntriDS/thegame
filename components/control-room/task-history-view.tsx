@@ -5,6 +5,7 @@ import { Task } from '@/types/entities';
 import { ClientAPI } from '@/lib/client-api';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { MonthYearSelector } from '@/components/ui/month-year-selector';
 import { format } from 'date-fns';
 import { Loader2, Calendar } from 'lucide-react';
 import { reviveDates } from '@/lib/utils/date-utils';
@@ -25,7 +26,8 @@ interface AvailableMonth {
 
 export default function TaskHistoryView({ onSelectTask }: TaskHistoryViewProps) {
     const [months, setMonths] = useState<AvailableMonth[]>([]);
-    const [selectedMonth, setSelectedMonth] = useState<string>('');
+    const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
+    const [currentMonth, setCurrentMonth] = useState(new Date().getMonth() + 1); // 1-12
     const [tasks, setTasks] = useState<Task[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [isLoadingMonths, setIsLoadingMonths] = useState(true);
@@ -38,9 +40,7 @@ export default function TaskHistoryView({ onSelectTask }: TaskHistoryViewProps) 
                 if (response.ok) {
                     const data = await response.json();
                     setMonths(data);
-                    if (data.length > 0) {
-                        setSelectedMonth(data[0].key);
-                    }
+                    // No need to set selectedMonth - we use currentMonth/currentYear state
                 }
             } catch (error) {
                 console.error('Failed to load archive months:', error);
@@ -51,14 +51,14 @@ export default function TaskHistoryView({ onSelectTask }: TaskHistoryViewProps) 
         loadMonths();
     }, []);
 
-    // Load tasks for selected month
+    // Load tasks for selected month/year
     useEffect(() => {
-        if (!selectedMonth) return;
-
         const loadTasks = async () => {
             setIsLoading(true);
             try {
-                const response = await fetch(`/api/archive/tasks?month=${selectedMonth}`);
+                // Build month key in MM-YY format
+                const monthKey = `${currentMonth.toString().padStart(2, '0')}-${currentYear.toString().slice(-2)}`;
+                const response = await fetch(`/api/archive/tasks?month=${monthKey}`);
                 if (response.ok) {
                     const data = await response.json();
                     setTasks(reviveDates(data));
@@ -72,7 +72,7 @@ export default function TaskHistoryView({ onSelectTask }: TaskHistoryViewProps) 
         };
 
         loadTasks();
-    }, [selectedMonth]);
+    }, [currentMonth, currentYear]);
 
     if (isLoadingMonths) {
         return (
@@ -89,20 +89,12 @@ export default function TaskHistoryView({ onSelectTask }: TaskHistoryViewProps) 
                     <Calendar className="h-5 w-5" />
                     Task History
                 </h2>
-                <div className="w-[200px]">
-                    <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                        <SelectTrigger>
-                            <SelectValue placeholder="Select Month" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {months.map((month) => (
-                                <SelectItem key={month.key} value={month.key}>
-                                    {month.label} ({month.summary.tasks})
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
+                <MonthYearSelector
+                    currentMonth={currentMonth}
+                    currentYear={currentYear}
+                    onMonthChange={setCurrentMonth}
+                    onYearChange={setCurrentYear}
+                />
             </div>
 
             <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-2">
