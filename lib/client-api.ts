@@ -67,8 +67,6 @@ export const ClientAPI = {
     return data.count;
   },
 
-  // QUEUED OPERATIONS - Safety belt for real money operations
-  // These operations go through a queue system for additional safety
   upsertTaskQueued: async (task: Task, priority: number = 1): Promise<string> => {
     const res = await fetch('/api/tasks/queued', {
       method: 'POST',
@@ -83,7 +81,7 @@ export const ClientAPI = {
   // ============================================================================
   // ITEMS - Item management operations
   // ============================================================================
-  getItems: async (itemTypes?: string | string[], month?: number, year?: number): Promise<Item[]> => {
+  getItems: async (itemTypes?: string | string[], month?: number, year?: number, status?: string): Promise<Item[]> => {
     let base = '/api/items';
     const params = new URLSearchParams();
     if (itemTypes) {
@@ -92,6 +90,8 @@ export const ClientAPI = {
     }
     if (typeof month === 'number') params.append('month', String(month));
     if (typeof year === 'number') params.append('year', String(year));
+    if (status) params.append('status', status);
+    
     const url = params.toString() ? `${base}?${params.toString()}` : base;
     const res = await fetch(url);
     if (!res.ok) throw new Error('Failed to fetch items');
@@ -142,19 +142,8 @@ export const ClientAPI = {
     return result.queueId;
   },
 
-  getArchivedItems: async (month: number, year: number): Promise<Item[]> => {
-    // Format month as MM-YY
-    const yy = year.toString().slice(-2);
-    const mm = month.toString().padStart(2, '0');
-    const mmyy = `${mm}-${yy}`;
-
-    const res = await fetch(`/api/archive/items?month=${mmyy}`);
-    if (!res.ok) throw new Error('Failed to fetch archived items');
-    return await res.json();
-  },
-
   // ============================================================================
-  // SALES - Sales management operations
+  // SALES - Sale management operations
   // ============================================================================
   getSales: async (month?: number, year?: number): Promise<Sale[]> => {
     let url = '/api/sales';

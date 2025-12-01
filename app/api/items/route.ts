@@ -14,12 +14,11 @@ export const maxDuration = 300; // 5 minutes
 export async function GET(req: NextRequest) {
   if (!(await requireAdminAuth(req))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  // Check for type filter in query params
-  const searchParams = req.nextUrl.searchParams;
+  const { searchParams } = new URL(req.url);
   const typeFilter = searchParams.get('type');
   const monthParam = searchParams.get('month');
   const yearParam = searchParams.get('year');
-  const statusFilter = searchParams.get('status'); // New: Allow filtering by status
+  const statusFilter = searchParams.get('status');
 
   const normalizeYear = (y: string | null): number | null => {
     if (!y) return null;
@@ -34,13 +33,14 @@ export async function GET(req: NextRequest) {
     return n;
   };
 
-  const month = parseMonth(monthParam);
   const year = normalizeYear(yearParam);
+  const month = parseMonth(monthParam);
 
   let items: Item[];
 
   // Strategy 1: Time-based fetching (Priority)
-  if (month && year) {
+  // If we have a specific month, use the optimized month index
+  if (month && year && !statusFilter) {
     items = await getItemsForMonth(year, month);
   }
   // Strategy 2: Type-based fetching (Optimized)
@@ -56,30 +56,47 @@ export async function GET(req: NextRequest) {
   // Apply filters in memory
 
   // 1. Type Filter (if not already applied by Strategy 2)
-  if (typeFilter && (month || !typeFilter)) { // If we fetched by month or fetched all, we still need to filter by type
-    // Note: If we used Strategy 2, items are already filtered by type, but double-checking doesn't hurt
-    // Actually, Strategy 2 uses getItemsByType which returns exactly what we want.
-    // But if we used Strategy 1 (Month), we definitely need to filter by type if requested.
-    if (month && year) {
-      const types = typeFilter.split(',').map(t => t.trim());
-      items = items.filter(i => types.includes(i.type as any));
-    }
+  if (typeFilter && (month || !typeFilter)) {
+    // If we fetched by month, we still need to filter by type
+    // If we fetched by type (Strategy 2), this is redundant but harmless
+    const types = typeFilter.split(',').map(t => t.trim());
+    items = items.filter(i => types.includes(i.type as any));
   }
 
   // 2. Status Filter
   if (statusFilter) {
-    // If status is explicitly requested (e.g. 'Sold'), filter by it
-    // Case-insensitive comparison to handle legacy data
-    items = items.filter(item => item.status?.toUpperCase() === statusFilter.toUpperCase());
+    // Case-insensitive status check
+    const targetStatus = statusFilter.toLowerCase();
+    items = items.filter(item => {
+      const itemStatus = (item.status || '').toString().toLowerCase();
+      // Check for exact match or "ItemStatus.SOLD" literal match
+      return itemStatus === targetStatus ||
+        (targetStatus === 'sold' && itemStatus === 'itemstatus.sold');
+    });
   } else if (!month && !year) {
     // Default behavior for Active Inventory (no month/year specified):
     // Show only active items (unsold)
-    items = items.filter(item => item.status?.toUpperCase() !== 'SOLD');
+    items = items.filter(item => item.status !== ItemStatus.SOLD);
   }
-  // Note: If month/year IS specified, we do NOT default filter by status.
-  // This allows "Sold Items" tab to fetch items for a month without filtering them out.
-  // The client is responsible for filtering if it wants specific status in month view,
-  // OR it can pass ?status=Sold explicitly.
+
+  // 3. Month Filter (if not using Strategy 1)
+  // If we fetched all items (e.g. because of status filter), we still need to filter by month if provided
+  if (month && year && (statusFilter || typeFilter)) {
+    // When filtering sold items by month, we use soldAt date
+    if (statusFilter?.toLowerCase() === 'sold') {
+      items = items.filter(item => {
+        if (!item.soldAt) return false;
+        const d = new Date(item.soldAt);
+        return d.getMonth() + 1 === month && d.getFullYear() === year;
+      });
+    } else {
+      // For other items, use createdAt or similar logic if needed
+      items = items.filter(item => {
+        const d = new Date(item.createdAt);
+        return d.getMonth() + 1 === month && d.getFullYear() === year;
+      });
+    }
+  }
 
   return NextResponse.json(items);
 }
