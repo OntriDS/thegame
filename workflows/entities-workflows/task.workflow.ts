@@ -197,6 +197,9 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
 
       // Task stays at data:task:{id} with isCollected=true
       // Mission Tree filters it out, History Tab queries from index
+
+      // COLLECTION CASCADE: Collect all child instances when parent is collected
+      await cascadeCollectionToChildren(task, collectedAt);
     }
   }
 
@@ -736,5 +739,87 @@ export async function uncompleteTask(taskId: string): Promise<void> {
   } catch (error) {
     console.error(`[uncompleteTask] ❌ Failed to uncomplete task ${taskId}:`, error);
     throw error;
+  }
+}
+
+/**
+ * Cascade collection to all child instances when a parent is collected
+ * Ensures complete collection workflow for parent-child hierarchies
+ */
+async function cascadeCollectionToChildren(parentTask: Task, collectedAt: Date): Promise<void> {
+  try {
+    console.log(`[cascadeCollectionToChildren] Starting collection cascade from parent: ${parentTask.name}`);
+
+    // Import functions we need
+    const { getAllTasks, upsertTask } = await import('@/data-store/datastore');
+    const { hasEffect, markEffect } = await import('@/data-store/effects-registry');
+    const { formatMonthKey } = await import('@/lib/utils/date-utils');
+    const { kvSAdd } = await import('@/data-store/kv');
+    const { appendEntityLog } = await import('@/workflows/entities-logging');
+    const { createTaskSnapshot } = await import('@/workflows/snapshot-workflows');
+
+    // Get all tasks to find children
+    const allTasks = await getAllTasks();
+
+    // Find all child instances of this parent
+    const childInstances = allTasks.filter(task =>
+      task.parentId === parentTask.id &&
+      task.type === TaskType.RECURRENT_INSTANCE &&
+      (!task.isCollected || task.status !== TaskStatus.COLLECTED)
+    );
+
+    if (childInstances.length === 0) {
+      console.log(`[cascadeCollectionToChildren] No collectable child instances found for parent: ${parentTask.name}`);
+      return;
+    }
+
+    console.log(`[cascadeCollectionToChildren] Found ${childInstances.length} child instances to collect`);
+
+    // Collect each child instance
+    for (const childInstance of childInstances) {
+      const childEffectKey = `task:${childInstance.id}:collectionCascaded:${parentTask.id}`;
+
+      if (!(await hasEffect(childEffectKey))) {
+        // Create child snapshot for Archive Vault
+        const normalizedChild: Task = {
+          ...childInstance,
+          isCollected: true,
+          collectedAt,
+          status: TaskStatus.COLLECTED
+        };
+
+        // 1. Create TaskSnapshot for child
+        await createTaskSnapshot(normalizedChild, collectedAt, childInstance.playerCharacterId || undefined);
+
+        // 2. Log COLLECTED event for child
+        await appendEntityLog(EntityType.TASK, childInstance.id, LogEventType.COLLECTED, {
+          name: childInstance.name,
+          taskType: childInstance.type,
+          station: childInstance.station,
+          priority: childInstance.priority,
+          collectedAt: collectedAt.toISOString(),
+          cascadedFrom: parentTask.id
+        });
+
+        // 3. Add child to month index
+        const childMonthKey = formatMonthKey(collectedAt);
+        const childCollectedIndexKey = `index:tasks:collected:${childMonthKey}`;
+        await kvSAdd(childCollectedIndexKey, childInstance.id);
+
+        // 4. Update child task with collection data
+        await upsertTask(normalizedChild);
+
+        // Mark cascade effect to prevent duplicates
+        await markEffect(childEffectKey);
+
+        console.log(`[cascadeCollectionToChildren] ✅ Cascaded collection for child: ${childInstance.name}`);
+      }
+    }
+
+    console.log(`[cascadeCollectionToChildren] ✅ Collection cascade completed from parent: ${parentTask.name}`);
+
+  } catch (error) {
+    console.error(`[cascadeCollectionToChildren] ❌ Failed to cascade collection from parent ${parentTask.name}:`, error);
+    // Don't throw error - parent collection should still succeed even if cascade fails
   }
 }
