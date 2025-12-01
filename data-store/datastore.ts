@@ -2,6 +2,7 @@
 // Orchestration layer: repositories → workflows → links → logging
 
 import type { Task, Item, FinancialRecord, Sale, Character, Player, Site, Settlement, Account } from '@/types/entities';
+import type { TaskSnapshot, ItemSnapshot, SaleSnapshot, FinancialSnapshot } from '@/types/archive';
 import { EntityType, ItemType, TaskPriority, TaskStatus, FinancialStatus } from '@/types/enums';
 import {
   upsertTask as repoUpsertTask,
@@ -514,19 +515,23 @@ export async function archiveFinancialRecordSnapshot(
 }
 
 export async function getArchivedTasksByMonth(mmyy: string): Promise<Task[]> {
-  return await archiveRepo.getArchivedEntitiesByMonth<Task>(EntityType.TASK, mmyy);
+  const snapshots = await archiveRepo.getArchivedEntitiesByMonth<TaskSnapshot>('task-snapshots', mmyy);
+  return snapshots.map(s => s.data as unknown as Task);
 }
 
 export async function getArchivedItemsByMonth(mmyy: string): Promise<Item[]> {
-  return await archiveRepo.getArchivedEntitiesByMonth<Item>(EntityType.ITEM, mmyy);
+  const snapshots = await archiveRepo.getArchivedEntitiesByMonth<ItemSnapshot>('item-snapshots', mmyy);
+  return snapshots.map(s => s.data as unknown as Item);
 }
 
 export async function getArchivedSalesByMonth(mmyy: string): Promise<Sale[]> {
-  return await archiveRepo.getArchivedEntitiesByMonth<Sale>(EntityType.SALE, mmyy);
+  const snapshots = await archiveRepo.getArchivedEntitiesByMonth<SaleSnapshot>('sale-snapshots', mmyy);
+  return snapshots.map(s => s.data as unknown as Sale);
 }
 
 export async function getArchivedFinancialRecordsByMonth(mmyy: string): Promise<FinancialRecord[]> {
-  return await archiveRepo.getArchivedEntitiesByMonth<FinancialRecord>(EntityType.FINANCIAL, mmyy);
+  const snapshots = await archiveRepo.getArchivedEntitiesByMonth<FinancialSnapshot>('financial-snapshots', mmyy);
+  return snapshots.map(s => s.data as unknown as FinancialRecord);
 }
 
 export async function getAvailableArchiveMonths(): Promise<string[]> {

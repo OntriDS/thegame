@@ -94,3 +94,4 @@ dev-log - copia.json
 .env
 .cursor
 
+tsconfig.tsbuildinfo

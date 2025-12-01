@@ -177,7 +177,16 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
       // 1. Create TaskSnapshot for Archive Vault statistics
       await createTaskSnapshot(normalizedTask, collectedAt, task.playerCharacterId || undefined);
 
-      // 2. Add to month-based collection index for efficient History Tab queries
+      // 2. Log COLLECTED event
+      await appendEntityLog(EntityType.TASK, task.id, LogEventType.COLLECTED, {
+        name: task.name,
+        taskType: task.type,
+        station: task.station,
+        priority: task.priority,
+        collectedAt
+      });
+
+      // 3. Add to month-based collection index for efficient History Tab queries
       const monthKey = formatMonthKey(collectedAt);
       const { kvSAdd } = await import('@/data-store/kv');
       const collectedIndexKey = `index:tasks:collected:${monthKey}`;
