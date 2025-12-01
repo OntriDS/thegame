@@ -34,23 +34,11 @@ export async function upsertTask(task: Task): Promise<Task> {
   await kvSet(key, task);
   await kvSAdd(buildIndexKey(ENTITY), task.id);
 
-  // Maintain month index (collectedAt → doneAt → createdAt)
-  const currentDate = (task as any).collectedAt || (task as any).doneAt || task.createdAt;
-  if (currentDate) {
-    const currentMonthKey = formatMonthKey(currentDate);
-    await kvSAdd(buildMonthIndexKey(ENTITY, currentMonthKey), task.id);
-  }
+  // Collection workflow handles month indexes via index:tasks:collected pattern
+  // No general month indexing needed here
 
-  if (previous) {
-    const prevDate = (previous as any).collectedAt || (previous as any).doneAt || previous.createdAt;
-    if (prevDate) {
-      const prevMonthKey = formatMonthKey(prevDate);
-      const currMonthKey = currentDate ? formatMonthKey(currentDate) : prevMonthKey;
-      if (prevMonthKey !== currMonthKey) {
-        await kvSRem(buildMonthIndexKey(ENTITY, prevMonthKey), task.id);
-      }
-    }
-  }
+  // Collection workflow handles collection indexes separately
+  // No need to manage month indexes here
 
   return task;
 }
@@ -59,14 +47,8 @@ export async function deleteTask(id: string): Promise<void> {
   const key = buildDataKey(ENTITY, id);
   const indexKey = buildIndexKey(ENTITY);
 
-  const existing = await kvGet<Task>(key);
-  if (existing) {
-    const prevDate = (existing as any).collectedAt || (existing as any).doneAt || existing.createdAt;
-    if (prevDate) {
-      const prevMonthKey = formatMonthKey(prevDate);
-      await kvSRem(buildMonthIndexKey(ENTITY, prevMonthKey), id);
-    }
-  }
+  // Collection workflow handles collection indexes separately
+  // No need to manage month indexes here
   
   await kvDel(key);
   await kvSRem(indexKey, id);

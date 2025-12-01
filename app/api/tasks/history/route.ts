@@ -38,13 +38,21 @@ export async function GET(request: NextRequest) {
         const collectedIndexKey = `index:tasks:collected:${monthKey}`;
         const taskIds = await kvSMembers(collectedIndexKey);
 
+        console.log(`[GET /api/tasks/history] Task IDs from index ${collectedIndexKey}:`, taskIds);
+
         // Fetch only those specific tasks
-        const tasks = await Promise.all(
-            taskIds.map(id => getTaskById(id))
+        const taskResults = await Promise.all(
+            taskIds.map(async (id) => {
+                const task = await getTaskById(id);
+                console.log(`[GET /api/tasks/history] Task ${id}:`, task ? 'FOUND' : 'NULL');
+                return { id, task };
+            })
         );
 
         // Filter out nulls (in case task was deleted)
-        const validTasks = tasks.filter(task => task !== null);
+        const validTasks = taskResults.filter(result => result.task !== null).map(result => result.task);
+
+        console.log(`[GET /api/tasks/history] Valid tasks count: ${validTasks.length}, Total IDs: ${taskIds.length}`);
 
         return NextResponse.json(validTasks);
     } catch (error) {
