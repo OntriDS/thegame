@@ -22,7 +22,7 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
   if (!previousItem) {
     const effectKey = EffectKeys.created('item', item.id);
     if (await hasEffect(effectKey)) return;
-    
+
     // Log item creation with standard pattern + source tracking
     const sourceType = item.sourceTaskId ? 'task' : item.sourceRecordId ? 'record' : 'direct';
     const sourceId = item.sourceTaskId || item.sourceRecordId || undefined;
@@ -41,9 +41,9 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
       subItemType: item.subItemType,
       description: `Item created from ${sourceType}: ${item.type} (${item.stock?.reduce((sum: number, stock: any) => sum + stock.quantity, 0) || 0}x)`
     });
-    
+
     await markEffect(effectKey);
-    
+
     // Character creation from emissary fields - when newOwnerName is provided
     if (item.newOwnerName && !item.ownerCharacterId) {
       const characterEffectKey = EffectKeys.sideEffect('item', item.id, 'characterCreated');
@@ -59,16 +59,16 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
         }
       }
     }
-    
+
     return;
   }
-  
+
   // Stock changes - MOVED event (only log when Move Items Submodal is used)
   const stockChanged = JSON.stringify(previousItem.stock) !== JSON.stringify(item.stock);
   if (stockChanged) {
     // Check if this was moved via the Move Items Submodal (temporary flag)
     const movedViaSubmodal = (item as any)._movedViaSubmodal === true;
-    
+
     if (movedViaSubmodal) {
       await appendEntityLog(EntityType.ITEM, item.id, LogEventType.MOVED, {
         name: item.name,
@@ -77,17 +77,16 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
         oldStock: previousItem.stock,
         newStock: item.stock
       });
-      
+
       // Remove temporary flag (clean up)
       delete (item as any)._movedViaSubmodal;
     }
   }
-  
+
   // Manual SOLD status change - detect when status changes to SOLD without quantitySold change (not via sale)
-  const statusChangedToSold = 
-    previousItem.status !== ItemStatus.SOLD && 
-    item.status === ItemStatus.SOLD &&
-    previousItem.quantitySold === item.quantitySold; // No quantitySold change means manual status change
+  const statusChangedToSold =
+    previousItem.status !== ItemStatus.SOLD &&
+    item.status === ItemStatus.SOLD; // No quantitySold change means manual status change
 
   if (statusChangedToSold) {
     const manualSoldEffectKey = EffectKeys.sideEffect('item', item.id, 'manualSold');
@@ -104,7 +103,19 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
     const quantityToSell = remainingStock;
 
     if (quantityToSell <= 0) {
-      console.log(`[onItemUpsert] No remaining stock to sell for item ${item.name}, skipping manual SOLD processing`);
+      console.log(`[onItemUpsert] No remaining stock to sell for item ${item.name}`);
+
+      // CRITICAL FIX: Even if no stock to sell, ensure soldAt is set if missing
+      if (!item.soldAt) {
+        console.log(`[onItemUpsert] Fixing missing soldAt for manually sold item ${item.name}`);
+        const fixedItem = {
+          ...item,
+          soldAt: item.updatedAt || new Date(),
+          updatedAt: new Date()
+        };
+        await upsertItem(fixedItem, { skipWorkflowEffects: true });
+      }
+
       await markEffect(manualSoldEffectKey);
       return;
     }
@@ -184,7 +195,7 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
 
     await appendEntityLog(EntityType.ITEM, item.id, LogEventType.SOLD, soldLogDetails);
   }
-  
+
   // Collection status - COLLECTED event
   if (item.isCollected && !previousItem.isCollected) {
     await appendEntityLog(EntityType.ITEM, item.id, LogEventType.COLLECTED, {
@@ -210,11 +221,11 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
 export async function removeItemEffectsOnDelete(itemId: string): Promise<void> {
   try {
     console.log(`[removeItemEffectsOnDelete] Starting cleanup for item: ${itemId}`);
-    
+
     // 1. Remove all Links related to this item
     const itemLinks = await getLinksFor({ type: EntityType.ITEM, id: itemId });
     console.log(`[removeItemEffectsOnDelete] Found ${itemLinks.length} links to remove`);
-    
+
     for (const link of itemLinks) {
       try {
         await removeLink(link.id);
@@ -223,13 +234,13 @@ export async function removeItemEffectsOnDelete(itemId: string): Promise<void> {
         console.error(`[removeItemEffectsOnDelete] ❌ Failed to remove link ${link.id}:`, error);
       }
     }
-    
+
     // 2. Clear all effects for this item
     await clearEffect(EffectKeys.created('item', itemId));
     await clearEffect(EffectKeys.sideEffect('item', itemId, 'characterCreated'));
     await clearEffectsByPrefix(EntityType.ITEM, itemId, 'financialLogged:');
     await clearEffectsByPrefix(EntityType.ITEM, itemId, 'pointsLogged:');
-    
+
     // 3. Remove log entries from items log
     console.log(`[removeItemEffectsOnDelete] Removing log entries for item: ${itemId}`);
     const itemsLogKey = buildLogKey(EntityType.ITEM);
@@ -239,7 +250,7 @@ export async function removeItemEffectsOnDelete(itemId: string): Promise<void> {
       await kvSet(itemsLogKey, filteredItemsLog);
       console.log(`[removeItemEffectsOnDelete] ✅ Removed ${itemsLog.length - filteredItemsLog.length} entries from items log`);
     }
-    
+
     // Check and remove from character log if this item is owned by a character
     const characterLogKey = buildLogKey(EntityType.CHARACTER);
     const characterLog = (await kvGet<any[]>(characterLogKey)) || [];
@@ -248,7 +259,7 @@ export async function removeItemEffectsOnDelete(itemId: string): Promise<void> {
       await kvSet(characterLogKey, filteredCharacterLog);
       console.log(`[removeItemEffectsOnDelete] ✅ Removed ${characterLog.length - filteredCharacterLog.length} entries from character log`);
     }
-    
+
     console.log(`[removeItemEffectsOnDelete] ✅ Cleared effects, removed links, and removed log entries for item ${itemId}`);
   } catch (error) {
     console.error('Error removing item effects:', error);
@@ -261,7 +272,7 @@ export async function removeItemEffectsOnDelete(itemId: string): Promise<void> {
  */
 export async function processItemCreationEffects(item: Item): Promise<void> {
   console.log(`[processItemCreationEffects] Processing item creation effects for: ${item.name} (${item.id})`);
-  
+
 
   // Items created from Item Modal have NO financial effects
   // Items are just inventory/assets - financial effects come from Tasks/Records

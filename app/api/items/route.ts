@@ -2,9 +2,10 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { v4 as uuid } from 'uuid';
 import type { Item } from '@/types/entities';
-import { getAllItems, getItemsByType, upsertItem, getItemsForMonth } from '@/data-store/datastore';
+import { getAllItems, getItemsByType, upsertItem, getItemsForMonth, getArchivedItemsByMonth } from '@/data-store/datastore';
 import { requireAdminAuth } from '@/lib/api-auth';
 import { ItemStatus } from '@/types/enums';
+import { formatMonthKey } from '@/lib/utils/date-utils';
 
 // Force dynamic rendering - this route accesses cookies
 export const dynamic = 'force-dynamic';
@@ -40,7 +41,6 @@ export async function GET(req: NextRequest) {
 
   // Strategy 1: Time-based fetching (Priority)
   // If we have a specific month, use the optimized month index
-  // We prioritize this even if status filter is present, as it's efficient for monthly views
   if (month && year) {
     items = await getItemsForMonth(year, month);
   }
@@ -87,8 +87,10 @@ export async function GET(req: NextRequest) {
     // When filtering sold items by month, we use soldAt date
     if (statusFilter?.toLowerCase() === 'sold') {
       items = items.filter(item => {
-        if (!item.soldAt) return false;
-        const d = new Date(item.soldAt);
+        // Fallback to updatedAt or createdAt if soldAt is missing (e.g. imported items)
+        const dateStr = item.soldAt || item.updatedAt || item.createdAt;
+        if (!dateStr) return false;
+        const d = new Date(dateStr);
         return d.getMonth() + 1 === month && d.getFullYear() === year;
       });
     } else {

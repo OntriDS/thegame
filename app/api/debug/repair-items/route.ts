@@ -1,48 +1,49 @@
+
 import { NextResponse } from 'next/server';
-import { getAllItems, upsertItem } from '@/data-store/datastore';
+import { getItemsForMonth, getAllItems, upsertItem } from '@/data-store/datastore';
+import { formatMonthKey } from '@/lib/utils/date-utils';
 import { ItemStatus } from '@/types/enums';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
+    const logs = [];
+    logs.push('--- Repairing Sold Items Index ---');
+
     try {
+        // 1. Find all sold items
         const allItems = await getAllItems();
-        let fixedCount = 0;
-        const fixedItems = [];
+        const soldItems = allItems.filter(i =>
+            i.status === ItemStatus.SOLD ||
+            (i.status as string) === 'Sold' ||
+            (i.status as string) === 'itemstatus.sold'
+        );
 
-        for (const item of allItems) {
-            let needsUpdate = false;
-            const updates: any = {};
+        logs.push(`Found ${soldItems.length} sold items out of ${allItems.length} total items.`);
 
-            // 1. Fix Status Case and "ItemStatus.SOLD" literal
-            // Check if status is a string and matches "SOLD" or "ItemStatus.SOLD"
-            const status = item.status as string;
-            if (status && (status.toUpperCase() === 'SOLD' || status === 'ItemStatus.SOLD') && status !== ItemStatus.SOLD) {
-                updates.status = ItemStatus.SOLD;
-                needsUpdate = true;
+        // 2. Re-save each sold item to trigger the index update logic
+        for (const item of soldItems) {
+            logs.push(`Repairing item: ${item.name} (${item.id})`);
+
+            // Ensure soldAt is set (if missing, use updatedAt or createdAt)
+            if (!item.soldAt) {
+                item.soldAt = item.updatedAt || item.createdAt || new Date();
+                logs.push(`- Fixed missing soldAt date: ${item.soldAt}`);
             }
 
-            // 2. Ensure soldAt exists for Sold items
-            if ((item.status === ItemStatus.SOLD || updates.status === ItemStatus.SOLD) && !item.soldAt) {
-                // Fallback to createdAt if soldAt is missing
-                updates.soldAt = item.createdAt;
-                needsUpdate = true;
-            }
+            // Force upsert to re-run indexing logic
+            // We skip workflow effects to avoid creating duplicate logs or side effects
+            await upsertItem(item, { skipWorkflowEffects: true, skipLinkEffects: true });
 
-            if (needsUpdate) {
-                const updatedItem = { ...item, ...updates };
-                await upsertItem(updatedItem); // This re-indexes the item correctly
-                fixedCount++;
-                fixedItems.push({ id: item.id, name: item.name, updates });
-            }
+            const targetMonthKey = formatMonthKey(new Date(item.soldAt));
+            logs.push(`- Re-indexed for month: ${targetMonthKey}`);
         }
 
-        return NextResponse.json({
-            message: 'Repair complete',
-            fixedCount,
-            fixedItems
-        });
-    } catch (error) {
-        return NextResponse.json({ error: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 });
+        logs.push('--- Repair Complete ---');
+
+    } catch (e) {
+        logs.push(`Error repairing items: ${e}`);
     }
+
+    return NextResponse.json({ logs });
 }
