@@ -42,12 +42,12 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth() + 1);
   const [filterSoldByMonth, setFilterSoldByMonth] = useState(false);
-  
+
   const [activeTab, setActiveTab] = useState<InventoryTab>(InventoryTab.STICKERS);
   const [showItemModal, setShowItemModal] = useState(false);
   const [editingItem, setEditingItem] = useState<Item | undefined>(undefined);
   const [defaultItemType, setDefaultItemType] = useState<ItemType>(ItemType.STICKER);
-  
+
   // Keyboard shortcuts for modal navigation (uses global scope, no need for custom scope)
   useKeyboardShortcuts({
     onOpenItemModal: () => setShowItemModal(true),
@@ -73,19 +73,19 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
   // Collapsible divisions state for Stickers Detailed view
   const [collapsedDivisions, setCollapsedDivisions] = useState<Set<string>>(new Set());
   const [allCollapsed, setAllCollapsed] = useState(true);
-  
+
   // Multi-location selection for Model view - will be initialized with actual site IDs
   const [selectedLocationsForModel, setSelectedLocationsForModel] = useState<Set<string>>(new Set());
   const [showLocationSelectionModal, setShowLocationSelectionModal] = useState(false);
-  
-     // Thresholds for low stock warnings in Model view
-   const [yellowThreshold, setYellowThreshold] = useState(DEFAULT_YELLOW_THRESHOLD);
-   
-   const [redThreshold, setRedThreshold] = useState(5);
-   
-   const [showThresholdModal, setShowThresholdModal] = useState(false);
+
+  // Thresholds for low stock warnings in Model view
+  const [yellowThreshold, setYellowThreshold] = useState(DEFAULT_YELLOW_THRESHOLD);
+
+  const [redThreshold, setRedThreshold] = useState(5);
+
+  const [showThresholdModal, setShowThresholdModal] = useState(false);
   const [isImporting, setIsImporting] = useState(false); // Flag to prevent status modals during import
-   
+
   // Column selection state for location modal
   const [selectedColumns, setSelectedColumns] = useState<Set<string>>(new Set(['own', 'consignment']));
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
@@ -115,9 +115,21 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
       let items: Item[];
 
       if (activeTab === InventoryTab.SOLD_ITEMS) {
-        // Always use month filter for sold items (more efficient - they're indexed by month)
+        // Use status filter for sold items
         const month = filterSoldByMonth ? currentMonth : new Date().getMonth() + 1;
         const year = filterSoldByMonth ? currentYear : new Date().getFullYear();
+        // We pass 'all' as type to search across all item types
+        // But we rely on the API to filter by status='Sold' if we could pass it.
+        // ClientAPI.getItems doesn't support status param yet in its signature, but we can append it manually or update ClientAPI.
+        // Let's update ClientAPI signature first or cast it.
+        // Actually, let's just update ClientAPI.getItems to accept an options object or just pass it in the query.
+        // For now, I'll assume I update ClientAPI.getItems to accept status.
+        // Wait, I can't update ClientAPI signature easily without breaking other calls.
+        // I'll use the existing getItems signature but I need to pass status.
+        // I will update ClientAPI.getItems to accept an options object in the next step.
+        // For now, I will revert to fetching by month and filtering on client, which is what the user expects for "Sold Items tab".
+        // The API now returns ALL items for the month (including sold ones) if I don't pass status.
+        // So I can just call getItems('all', month, year) and filter client-side.
         const monthItems = await ClientAPI.getItems('all', month, year);
         items = monthItems.filter(item => item.status === ItemStatus.SOLD);
       } else if (activeTabItemType === 'all') {
@@ -144,10 +156,10 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
     const handleItemsUpdated = () => loadItems();
     const handleImportStarted = () => setIsImporting(true);
     const handleImportComplete = () => setIsImporting(false);
-    
+
     window.addEventListener('importStarted', handleImportStarted);
     window.addEventListener('importComplete', handleImportComplete);
-    
+
     return () => {
       window.removeEventListener('importStarted', handleImportStarted);
       window.removeEventListener('importComplete', handleImportComplete);
@@ -259,7 +271,7 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
         let items: Item[];
 
         if (activeTab === InventoryTab.SOLD_ITEMS) {
-          // Always use month filter for sold items (more efficient - they're indexed by month)
+          // Use status filter for sold items
           const month = filterSoldByMonth ? currentMonth : new Date().getMonth() + 1;
           const year = filterSoldByMonth ? currentYear : new Date().getFullYear();
           const monthItems = await ClientAPI.getItems('all', month, year);
@@ -290,7 +302,7 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
       // Primary: alphabetical by name (case-insensitive)
       const nameCompare = a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
       if (nameCompare !== 0) return nameCompare;
-      
+
       // Secondary: by creation date (oldest first) for items with same name
       const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
       const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
@@ -334,15 +346,15 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
     try {
       // Parent only calls DataStore - API routes handle side effects
       const finalItem = await ClientAPI.upsertItem(item);
-      
+
       // Update editingItem with fresh data BEFORE modal closes (fixes stale UI issue)
       setEditingItem(finalItem);
-      
+
       // Refresh all data (including sticker bundles)
       loadItems();
-      
 
-      
+
+
       // Close modal after successful save
       setShowItemModal(false);
     } catch (error) {
@@ -385,9 +397,9 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
   const handleInlineSave = async (itemId: string, field: string, value: any) => {
     const item = items.find(i => i.id === itemId);
     if (!item) return;
-    
+
     let updatedItem = { ...item };
-    
+
     // Handle different field types properly
     switch (field) {
       case 'location':
@@ -396,31 +408,31 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
         const newSiteId = value;
         updatedItem = await ClientAPI.updateStockAtSite(item.id, newSiteId, currentQuantity);
         break;
-        
+
       case 'quantity':
         // Update quantity at the current location
-                 const siteId = item.stock.length > 0 ? item.stock[0].siteId : 'Home';
+        const siteId = item.stock.length > 0 ? item.stock[0].siteId : 'Home';
         // value is the NEW quantity the user wants, not the current total
         updatedItem = await ClientAPI.updateStockAtSite(item.id, siteId, value);
         break;
-        
+
       default:
         // Handle other fields normally
         updatedItem = { ...item, [field]: value };
     }
-    
+
     // Save using smart upsert (applies business rules)
     await ClientAPI.upsertItem(updatedItem);
-    
+
     // Check for status changes when quantity changes
     if (field === 'quantity') {
       checkQuantityZero(updatedItem, value);
     }
-    
+
     // Refresh data (including sticker bundles)
     loadItems();
     window.dispatchEvent(new Event('itemsUpdated'));
-    
+
     setEditingField(null);
   };
 
@@ -437,10 +449,10 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
       } else {
         newSet.add(divisionKey);
       }
-      
+
       // Save to preferences
       setPreference('inventory-divisions-collapsed', JSON.stringify(Array.from(newSet)));
-      
+
       return newSet;
     });
   };
@@ -477,11 +489,11 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
         });
       }
     }
-    
+
     // Update state immediately and synchronously
     setCollapsedDivisions(allKeys);
     setAllCollapsed(true);
-    
+
     // Save to preferences
     setPreference('inventory-divisions-collapsed', JSON.stringify(Array.from(allKeys)));
     setPreference('inventory-all-collapsed', 'true');
@@ -491,7 +503,7 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
     // Update state immediately and synchronously
     setCollapsedDivisions(new Set());
     setAllCollapsed(false);
-    
+
     // Save to preferences
     setPreference('inventory-divisions-collapsed', JSON.stringify([]));
     setPreference('inventory-all-collapsed', 'false');
@@ -502,14 +514,14 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
       // Use DataStore method for consistent model calculations
       return ClientAPI.getModelTotalQuantity(items, selectedLocationsForModel);
     }
-    
+
     return items.reduce((sum, item) => sum + (item.stock?.reduce((s, stock) => s + stock.quantity, 0) || 0), 0);
   };
 
   // Helper function to check if model group is low stock (only for Model view)
   const isLowStock = (modelItems: Item[]) => {
     if (stickersViewBy !== 'model') return false;
-    
+
     // Check if the total quantity for this model is below thresholds
     const totalQuantity = calculateDivisionTotal(modelItems);
     return totalQuantity < yellowThreshold;
@@ -518,7 +530,7 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
   // Helper function to get warning level (none, yellow, red)
   const getWarningLevel = (modelItems: Item[]) => {
     if (stickersViewBy !== 'model') return 'none';
-    
+
     const totalQuantity = calculateDivisionTotal(modelItems);
     if (totalQuantity < redThreshold) return 'red';
     if (totalQuantity < yellowThreshold) return 'yellow';
@@ -536,29 +548,29 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
       }
       return newSet;
     });
-    
+
     // Also check/uncheck all locations in that column
     const locationsInColumn = getLocationsInColumn(column);
     if (checked) {
-        // Add all locations in this column
-        setSelectedLocationsForModel(prev => {
-          const newSet = new Set(prev);
-          locationsInColumn.forEach(site => newSet.add(site));
-          
-          // Save to preferences
-          setPreference('inventory-selected-locations', JSON.stringify(Array.from(newSet)));
-          
-          return newSet;
-        });
+      // Add all locations in this column
+      setSelectedLocationsForModel(prev => {
+        const newSet = new Set(prev);
+        locationsInColumn.forEach(site => newSet.add(site));
+
+        // Save to preferences
+        setPreference('inventory-selected-locations', JSON.stringify(Array.from(newSet)));
+
+        return newSet;
+      });
     } else {
       // Remove all locations in this column
       setSelectedLocationsForModel(prev => {
         const newSet = new Set(prev);
         locationsInColumn.forEach(site => newSet.delete(site));
-        
+
         // Save to preferences
         setPreference('inventory-selected-locations', JSON.stringify(Array.from(newSet)));
-        
+
         return newSet;
       });
     }
@@ -568,7 +580,7 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
     // Define column groupings based on business logic - these could be moved to constants if they change frequently
     const OWN_SITE_NAMES = ['Akiles', 'Home', 'Feria Box'];
     const CONSIGNMENT_SITE_NAMES = ['Smoking Lounge', 'Tagua', 'Cafe Vivo'];
-    
+
     switch (column) {
       case 'own':
         return sites.filter(site => OWN_SITE_NAMES.includes(site.name)).map(site => site.id);
@@ -591,10 +603,10 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
       } else {
         newSet.delete(site);
       }
-      
+
       // Save to preferences
       setPreference('inventory-selected-locations', JSON.stringify(Array.from(newSet)));
-      
+
       return newSet;
     });
   };
@@ -602,7 +614,7 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
   // Helper function to render editable field
   const renderEditableField = (item: Item, field: string, value: any, type: 'text' | 'number' | 'select' = 'text', options: { value: string; label: string }[] = [], step?: string, min?: string) => {
     const isEditing = editingField?.itemId === item.id && editingField?.field === field;
-    
+
     if (isEditing) {
       return (
         <div className="w-full">
@@ -622,12 +634,12 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
     }
 
     return (
-      <div 
+      <div
         className="cursor-pointer hover:bg-blue-50 px-1 py-0.5 rounded transition-colors w-full text-center"
         onClick={() => handleInlineEdit(item.id, field)}
         title={`Click to edit ${field}`}
       >
-        {type === 'select' && options.length > 0 ? 
+        {type === 'select' && options.length > 0 ?
           options.find(opt => opt.value === value)?.label || value || 'None' :
           value
         }
@@ -687,7 +699,7 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
   // Helper function to filter items by selected locations for Model view
   const getFilteredItemsForModel = (items: Item[]) => {
     if (stickersViewBy !== 'model') return items;
-    
+
     // For Model view, we want ALL items, but we'll filter totals by selected locations
     // This ensures items stay grouped by model regardless of their individual locations
     return items;
@@ -696,10 +708,10 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
   // Stickers Detailed View - Restored original 6-column layout
   const renderStickersDetailedTab = () => {
     let stickerItems = getFilteredItems(ItemType.STICKER);
-    
+
     // Apply additional filtering for Model view
     stickerItems = getFilteredItemsForModel(stickerItems);
-    
+
     // Group items based on selected view
     const groupedItems = stickerItems.reduce((acc, sticker) => {
       let key: string;
@@ -717,7 +729,7 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
         default: // collection
           key = sticker.collection || 'Uncategorized';
       }
-      
+
       if (!acc[key]) acc[key] = [];
       acc[key].push(sticker);
       return acc;
@@ -734,21 +746,21 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
         // For Model view: sort by SubItem → Collection → Name (alphabetical)
         const partsA = a.split('|');
         const partsB = b.split('|');
-        
+
         if (partsA.length === 4 && partsB.length === 4) {
           const [, subItemA, nameA, collectionA] = partsA;
           const [, subItemB, nameB, collectionB] = partsB;
-          
+
           // First by SubItem
           if (subItemA !== subItemB) {
             return subItemA.localeCompare(subItemB);
           }
-          
+
           // Then by Collection
           if (collectionA !== collectionB) {
             return collectionA.localeCompare(collectionB);
           }
-          
+
           // Finally by Name (alphabetical)
           return nameA.localeCompare(nameB);
         }
@@ -756,21 +768,21 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
         // For Subtype view: sort by Collection → Name
         const partsA = a.split('|');
         const partsB = b.split('|');
-        
+
         if (partsA.length === 4 && partsB.length === 4) {
           const [, , nameA, collectionA] = partsA;
           const [, , nameB, collectionB] = partsB;
-          
+
           // First by Collection
           if (collectionA !== collectionB) {
             return collectionA.localeCompare(collectionB);
           }
-          
+
           // Then by Name
           return nameA.localeCompare(nameB);
         }
       }
-      
+
       // Default alphabetical sorting for other views
       return a.localeCompare(b);
     });
@@ -798,40 +810,40 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
                   ))}
                 </SelectContent>
               </Select>
-              
-                             {/* Global collapse/expand toggle + threshold field */}
-               <div className="flex items-center gap-2">
-                 <Button
-                   size="sm"
-                   variant="outline"
-                   onClick={() => {
-                     // Check actual collapsed state directly
-                     const hasCollapsedDivisions = collapsedDivisions.size > 0;
-                     if (hasCollapsedDivisions) {
-                       expandAllDivisions();
-                     } else {
-                       collapseAllDivisions();
-                     }
-                   }}
-                   className="h-8 px-3 text-xs"
-                 >
-                   {collapsedDivisions.size > 0 ? 'Collapsed' : 'Expanded'}
-                 </Button>
-                 
-                 {/* Threshold button for Model view */}
-                 {stickersViewBy === 'model' && (
-                   <Button
-                     size="sm"
-                     variant="outline"
-                     onClick={() => setShowThresholdModal(true)}
-                     className="h-8 px-3 text-xs"
-                   >
-                     Thresholds
-                   </Button>
-                 )}
-               </div>
+
+              {/* Global collapse/expand toggle + threshold field */}
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    // Check actual collapsed state directly
+                    const hasCollapsedDivisions = collapsedDivisions.size > 0;
+                    if (hasCollapsedDivisions) {
+                      expandAllDivisions();
+                    } else {
+                      collapseAllDivisions();
+                    }
+                  }}
+                  className="h-8 px-3 text-xs"
+                >
+                  {collapsedDivisions.size > 0 ? 'Collapsed' : 'Expanded'}
+                </Button>
+
+                {/* Threshold button for Model view */}
+                {stickersViewBy === 'model' && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setShowThresholdModal(true)}
+                    className="h-8 px-3 text-xs"
+                  >
+                    Thresholds
+                  </Button>
+                )}
+              </div>
             </div>
-            
+
             {/* Location selection for Model view */}
             {stickersViewBy === 'model' && (
               <div className="flex items-center gap-2">
@@ -881,231 +893,231 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
             </div>
           </div>
         </div>
-        
-                {sortedGroupKeys.map((groupKey) => {
+
+        {sortedGroupKeys.map((groupKey) => {
           const groupStickers = groupedItems[groupKey];
           return (
-          <div key={groupKey} className="border rounded-lg">
-            <div className="bg-muted/50 px-4 py-2 border-b">
-              <div className="flex items-center justify-between">
-                                 <h4 className="font-medium text-sm">
-                   {stickersViewBy === 'location' ? (
-                     <>
-                       <MapPin className="w-4 h-4 inline mr-1" />
-                       {groupKey}
-                     </>
-                   ) : stickersViewBy === 'model' ? (
-                     // Format model names to be more user-friendly
-                     (() => {
-                       const parts = groupKey.split('|');
-                       if (parts.length === 4) {
-                         const [itemType, subItemType, name, collection] = parts;
-                         return `${itemType} | ${subItemType} | ${collection} : ${name}`;
-                       }
-                       return groupKey;
-                     })()
-                   ) : (
-                     groupKey
-                   )}
-                 </h4>
-                                 <div className="flex items-center gap-3">
-                   {/* Division Total + Low Stock Warning */}
-                   <div className="flex items-center gap-2">
-                     {/* Low stock warning - only in Model view */}
-                     {stickersViewBy === 'model' && (() => {
-                       const warningLevel = getWarningLevel(groupStickers);
-                       if (warningLevel === 'none') return null;
-                       
-                       const isRed = warningLevel === 'red';
-                       const threshold = isRed ? redThreshold : yellowThreshold;
-                       const color = isRed ? 'text-red-500' : 'text-yellow-500';
-                       const title = isRed 
-                         ? `Critical stock: ${calculateDivisionTotal(groupStickers)} < ${redThreshold}`
-                         : `Low stock: ${calculateDivisionTotal(groupStickers)} < ${yellowThreshold}`;
-                       
-                       return (
-                         <div 
-                           className="flex items-center"
-                           title={title}
-                         >
-                           <AlertTriangle className={`w-4 h-4 ${color}`} />
-                         </div>
-                       );
-                     })()}
-                     <div className="text-sm font-bold text-muted-foreground">
-                       Total: {calculateDivisionTotal(groupStickers)}
-                     </div>
-                   </div>
-                   {/* Collapse/Expand Button */}
-                   <Button
-                     size="sm"
-                     variant="ghost"
-                     className="h-6 w-6 p-0"
-                     onClick={() => toggleDivision(groupKey)}
-                   >
-                     {isDivisionCollapsed(groupKey) ? (
-                       <ChevronRight className="w-4 h-4" />
-                     ) : (
-                       <ChevronDown className="w-4 h-4" />
-                     )}
-                   </Button>
-                 </div>
-              </div>
-            </div>
-            
-            {/* Items in group - only show if not collapsed */}
-            {!isDivisionCollapsed(groupKey) && (
-              <div className="p-4">
-                {/* Clean 1-column grid layout */}
-                <div className="grid grid-cols-1 gap-4">
-                  {groupStickers.map(sticker => (
-                    <div key={sticker.id} className="bg-card border rounded-lg p-3 hover:bg-accent/50 transition-colors">
-                      {/* Row 1: Name | Area | Station | Location | Qty | Size | Price | Status | Actions - 8 columns */}
-                      <div className="flex items-center gap-4 mb-2">
-                        {/* Column 1: Name */}
-                        <div className="font-medium text-sm truncate flex-1 min-w-0" title={sticker.name}>
-                          {sticker.name}
-                        </div>
-                        
-                        {/* Column 2: Area */}
-                        <div className="text-center flex-shrink-0 w-24">
-                          <div className="text-sm font-bold">
-                            {getAreaForStation(sticker.station) || 'N/A'}
+            <div key={groupKey} className="border rounded-lg">
+              <div className="bg-muted/50 px-4 py-2 border-b">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-medium text-sm">
+                    {stickersViewBy === 'location' ? (
+                      <>
+                        <MapPin className="w-4 h-4 inline mr-1" />
+                        {groupKey}
+                      </>
+                    ) : stickersViewBy === 'model' ? (
+                      // Format model names to be more user-friendly
+                      (() => {
+                        const parts = groupKey.split('|');
+                        if (parts.length === 4) {
+                          const [itemType, subItemType, name, collection] = parts;
+                          return `${itemType} | ${subItemType} | ${collection} : ${name}`;
+                        }
+                        return groupKey;
+                      })()
+                    ) : (
+                      groupKey
+                    )}
+                  </h4>
+                  <div className="flex items-center gap-3">
+                    {/* Division Total + Low Stock Warning */}
+                    <div className="flex items-center gap-2">
+                      {/* Low stock warning - only in Model view */}
+                      {stickersViewBy === 'model' && (() => {
+                        const warningLevel = getWarningLevel(groupStickers);
+                        if (warningLevel === 'none') return null;
+
+                        const isRed = warningLevel === 'red';
+                        const threshold = isRed ? redThreshold : yellowThreshold;
+                        const color = isRed ? 'text-red-500' : 'text-yellow-500';
+                        const title = isRed
+                          ? `Critical stock: ${calculateDivisionTotal(groupStickers)} < ${redThreshold}`
+                          : `Low stock: ${calculateDivisionTotal(groupStickers)} < ${yellowThreshold}`;
+
+                        return (
+                          <div
+                            className="flex items-center"
+                            title={title}
+                          >
+                            <AlertTriangle className={`w-4 h-4 ${color}`} />
                           </div>
-                        </div>
-                        
-                        {/* Column 3: Station */}
-                        <div className="text-center flex-shrink-0 w-32">
-                          <div className="text-sm font-bold">
-                            {sticker.station}
-                          </div>
-                        </div>
-                        
-                        {/* Column 4: Location - Hidden in Model view */}
-                        <div className="text-sm flex items-center justify-center gap-1 flex-shrink-0 w-32">
-                          <MapPin className="w-4 h-4 flex-shrink-0" />
-                          <div className="flex-1 min-w-0">
-                            {stickersViewBy === 'model' ? (
-                              // In Model view, show read-only summary of locations
-                              <div className="text-xs text-muted-foreground text-center">
-                                {sticker.stock
-                                  .filter(sp => selectedLocationsForModel.has(sp.siteId) && sp.quantity > 0)
-                                  .map(sp => {
-                                    const site = sites.find(s => s.id === sp.siteId);
-                                    return site ? site.name : sp.siteId;
-                                  })
-                                  .join(', ') || 'No stock'}
-                              </div>
-                            ) : (
-                              // In other views, show editable location field
-                                                             renderEditableField(sticker, 'location', 
-                                 sticker.stock.length > 0 ? sticker.stock[0].siteId : 'Home', 
-                                 'select', 
-                                 sites.map(site => ({
-                                   value: site.id,
-                                   label: site.name
-                                 }))
-                               )
-                            )}
-                          </div>
-                        </div>
-                        
-                        {/* Column 5: Quantity */}
-                        <div className="text-center flex-shrink-0 w-20">
-                          <div className="text-sm font-bold">
-                            {renderEditableField(sticker, 'quantity', sticker.stock?.reduce((s, stock) => s + stock.quantity, 0) || 0, 'number', [], '1', '0')}
-                          </div>
-                        </div>
-                        
-                        {/* Column 6: Dimensions */}
-                        <div className="text-center flex-shrink-0 w-24">
-                          <div className="text-sm font-bold">
-                            {sticker.dimensions
-                              ? `${sticker.dimensions.width}×${sticker.dimensions.height} cm`
-                              : 'N/A'}
-                          </div>
-                        </div>
-                        
-                        {/* Column 7: Price */}
-                        <div className="text-center flex-shrink-0 w-24">
-                          <div className="text-sm font-bold">
-                            {renderEditableField(sticker, 'price', sticker.price, 'number')}
-                          </div>
-                        </div>
-                        
-                        {/* Column 8: Status */}
-                        <div className="text-center flex-shrink-0 w-28">
-                          <div className="text-sm font-bold">
-                            {renderEditableField(sticker, 'status', sticker.status, 'select', 
-                              Object.values(ItemStatus).map(status => ({
-                                value: status,
-                                label: status
-                              }))
-                            )}
-                          </div>
-                        </div>
-                        
-                                                 {/* Column 9: Actions */}
-                         <div className="flex justify-center gap-1 flex-shrink-0 w-16">
-                           <Button 
-                             size="sm" 
-                             variant="ghost" 
-                             className="h-6 w-6 p-0"
-                             onClick={() => handleEditItem(sticker)}
-                           >
-                             <Pencil className="w-4 h-4" />
-                           </Button>
-                           <Button 
-                             size="sm" 
-                             variant="ghost" 
-                             className="h-6 w-6 p-0"
-                             onClick={() => handleMoveItem(sticker)}
-                             title="Move Item"
-                           >
-                             <Package className="w-4 h-4" />
-                           </Button>
-                         </div>
-                      </div>
-                      
-                      {/* Row 2: Collection | Subtype | Area | Station | Size | Price | Status | Move - 8 columns */}
-                      <div className="flex items-center gap-4">
-                        {/* Column 1: Collection */}
-                        <div className="text-xs text-muted-foreground truncate flex-1 min-w-0">
-                          {sticker.collection || 'No Collection'}
-                        </div>
-                        
-                        {/* Column 2: Subtype */}
-                        <div className="text-xs text-muted-foreground truncate flex-shrink-0 w-32">
-                          {sticker.subItemType || 'No Subtype'}
-                        </div>
-                        
-                        {/* Column 3: Area Label */}
-                        <div className="text-xs text-muted-foreground text-center flex-shrink-0 w-24">Area</div>
-                        
-                        {/* Column 4: Station Label */}
-                        <div className="text-xs text-muted-foreground text-center flex-shrink-0 w-32">Station</div>
-                        
-                        {/* Column 5: Dimensions Label */}
-                        <div className="text-xs text-muted-foreground text-center flex-shrink-0 w-24">
-                          Dimensions (cm)
-                        </div>
-                        
-                        {/* Column 6: Price Label */}
-                        <div className="text-xs text-muted-foreground text-center flex-shrink-0 w-24">Price ($)</div>
-                        
-                        {/* Column 7: Status Label */}
-                        <div className="text-xs text-muted-foreground text-center flex-shrink-0 w-28">Status</div>
-                        
-                        {/* Column 8: Empty space for alignment */}
-                        <div className="flex justify-center gap-1 flex-shrink-0 w-16">
-                        </div>
+                        );
+                      })()}
+                      <div className="text-sm font-bold text-muted-foreground">
+                        Total: {calculateDivisionTotal(groupStickers)}
                       </div>
                     </div>
-                  ))}
+                    {/* Collapse/Expand Button */}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 w-6 p-0"
+                      onClick={() => toggleDivision(groupKey)}
+                    >
+                      {isDivisionCollapsed(groupKey) ? (
+                        <ChevronRight className="w-4 h-4" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4" />
+                      )}
+                    </Button>
+                  </div>
                 </div>
               </div>
-            )}
-          </div>
+
+              {/* Items in group - only show if not collapsed */}
+              {!isDivisionCollapsed(groupKey) && (
+                <div className="p-4">
+                  {/* Clean 1-column grid layout */}
+                  <div className="grid grid-cols-1 gap-4">
+                    {groupStickers.map(sticker => (
+                      <div key={sticker.id} className="bg-card border rounded-lg p-3 hover:bg-accent/50 transition-colors">
+                        {/* Row 1: Name | Area | Station | Location | Qty | Size | Price | Status | Actions - 8 columns */}
+                        <div className="flex items-center gap-4 mb-2">
+                          {/* Column 1: Name */}
+                          <div className="font-medium text-sm truncate flex-1 min-w-0" title={sticker.name}>
+                            {sticker.name}
+                          </div>
+
+                          {/* Column 2: Area */}
+                          <div className="text-center flex-shrink-0 w-24">
+                            <div className="text-sm font-bold">
+                              {getAreaForStation(sticker.station) || 'N/A'}
+                            </div>
+                          </div>
+
+                          {/* Column 3: Station */}
+                          <div className="text-center flex-shrink-0 w-32">
+                            <div className="text-sm font-bold">
+                              {sticker.station}
+                            </div>
+                          </div>
+
+                          {/* Column 4: Location - Hidden in Model view */}
+                          <div className="text-sm flex items-center justify-center gap-1 flex-shrink-0 w-32">
+                            <MapPin className="w-4 h-4 flex-shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              {stickersViewBy === 'model' ? (
+                                // In Model view, show read-only summary of locations
+                                <div className="text-xs text-muted-foreground text-center">
+                                  {sticker.stock
+                                    .filter(sp => selectedLocationsForModel.has(sp.siteId) && sp.quantity > 0)
+                                    .map(sp => {
+                                      const site = sites.find(s => s.id === sp.siteId);
+                                      return site ? site.name : sp.siteId;
+                                    })
+                                    .join(', ') || 'No stock'}
+                                </div>
+                              ) : (
+                                // In other views, show editable location field
+                                renderEditableField(sticker, 'location',
+                                  sticker.stock.length > 0 ? sticker.stock[0].siteId : 'Home',
+                                  'select',
+                                  sites.map(site => ({
+                                    value: site.id,
+                                    label: site.name
+                                  }))
+                                )
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Column 5: Quantity */}
+                          <div className="text-center flex-shrink-0 w-20">
+                            <div className="text-sm font-bold">
+                              {renderEditableField(sticker, 'quantity', sticker.stock?.reduce((s, stock) => s + stock.quantity, 0) || 0, 'number', [], '1', '0')}
+                            </div>
+                          </div>
+
+                          {/* Column 6: Dimensions */}
+                          <div className="text-center flex-shrink-0 w-24">
+                            <div className="text-sm font-bold">
+                              {sticker.dimensions
+                                ? `${sticker.dimensions.width}×${sticker.dimensions.height} cm`
+                                : 'N/A'}
+                            </div>
+                          </div>
+
+                          {/* Column 7: Price */}
+                          <div className="text-center flex-shrink-0 w-24">
+                            <div className="text-sm font-bold">
+                              {renderEditableField(sticker, 'price', sticker.price, 'number')}
+                            </div>
+                          </div>
+
+                          {/* Column 8: Status */}
+                          <div className="text-center flex-shrink-0 w-28">
+                            <div className="text-sm font-bold">
+                              {renderEditableField(sticker, 'status', sticker.status, 'select',
+                                Object.values(ItemStatus).map(status => ({
+                                  value: status,
+                                  label: status
+                                }))
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Column 9: Actions */}
+                          <div className="flex justify-center gap-1 flex-shrink-0 w-16">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 w-6 p-0"
+                              onClick={() => handleEditItem(sticker)}
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 w-6 p-0"
+                              onClick={() => handleMoveItem(sticker)}
+                              title="Move Item"
+                            >
+                              <Package className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+
+                        {/* Row 2: Collection | Subtype | Area | Station | Size | Price | Status | Move - 8 columns */}
+                        <div className="flex items-center gap-4">
+                          {/* Column 1: Collection */}
+                          <div className="text-xs text-muted-foreground truncate flex-1 min-w-0">
+                            {sticker.collection || 'No Collection'}
+                          </div>
+
+                          {/* Column 2: Subtype */}
+                          <div className="text-xs text-muted-foreground truncate flex-shrink-0 w-32">
+                            {sticker.subItemType || 'No Subtype'}
+                          </div>
+
+                          {/* Column 3: Area Label */}
+                          <div className="text-xs text-muted-foreground text-center flex-shrink-0 w-24">Area</div>
+
+                          {/* Column 4: Station Label */}
+                          <div className="text-xs text-muted-foreground text-center flex-shrink-0 w-32">Station</div>
+
+                          {/* Column 5: Dimensions Label */}
+                          <div className="text-xs text-muted-foreground text-center flex-shrink-0 w-24">
+                            Dimensions (cm)
+                          </div>
+
+                          {/* Column 6: Price Label */}
+                          <div className="text-xs text-muted-foreground text-center flex-shrink-0 w-24">Price ($)</div>
+
+                          {/* Column 7: Status Label */}
+                          <div className="text-xs text-muted-foreground text-center flex-shrink-0 w-28">Status</div>
+
+                          {/* Column 8: Empty space for alignment */}
+                          <div className="flex justify-center gap-1 flex-shrink-0 w-16">
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           );
         })}
       </div>
@@ -1125,12 +1137,12 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
         location = bundle.stock[0].siteId;
       } else {
         // Find the site with the highest quantity
-        const primaryStock = bundle.stock.reduce((max, current) => 
+        const primaryStock = bundle.stock.reduce((max, current) =>
           current.quantity > max.quantity ? current : max
         );
         location = primaryStock.siteId;
       }
-      
+
       if (!acc[location]) acc[location] = [];
       acc[location].push(bundle);
       return acc;
@@ -1151,7 +1163,7 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
             Add Sticker Bundle
           </Button>
         </div>
-        
+
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {Object.entries(groupedBundles).map(([location, bundles]) => (
             <div key={location} className="border rounded-lg">
@@ -1170,7 +1182,7 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
                         <div className="flex-1 min-w-0 space-y-1">
                           <div className="font-medium text-sm">
                             {editingField?.itemId === bundle.id && editingField?.field === 'name' ? (
-                              <Input 
+                              <Input
                                 value={bundle.name}
                                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                                   const updated = { ...bundle, name: e.target.value };
@@ -1180,7 +1192,7 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
                                 className="h-6 px-1 py-0"
                               />
                             ) : (
-                              <div 
+                              <div
                                 className="cursor-pointer hover:bg-blue-50 px-1 py-0.5 rounded transition-colors"
                                 onClick={() => setEditingField({ itemId: bundle.id, field: 'name' })}
                                 title="Click to edit name"
@@ -1189,11 +1201,11 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
                               </div>
                             )}
                           </div>
-                          
+
                           <div className="text-xs text-muted-foreground">
                             {getAreaForStation(bundle.station) || 'N/A'} - {bundle.station}
                           </div>
-                          
+
                           <div className="text-xs text-muted-foreground flex items-center gap-2">
                             <div className="flex items-center gap-1">
                               <span className="text-muted-foreground">Target:</span>
@@ -1205,7 +1217,7 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
                             <div className="flex items-center gap-1">
                               <span className="text-muted-foreground">Quantity:</span>
                               {editingField?.itemId === bundle.id && editingField?.field === 'quantity' ? (
-                                <NumericInput 
+                                <NumericInput
                                   value={bundle.stock?.reduce((s, stock) => s + stock.quantity, 0) || 0}
                                   onChange={async (quantity) => {
                                     const siteId = bundle.stock.length > 0 ? bundle.stock[0].siteId : 'Home';
@@ -1218,7 +1230,7 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
                                   min={0}
                                 />
                               ) : (
-                                <span 
+                                <span
                                   className="cursor-pointer hover:bg-blue-50 px-1 py-0.5 rounded"
                                   onClick={() => setEditingField({ itemId: bundle.id, field: 'quantity' })}
                                   title="Click to edit quantity"
@@ -1250,7 +1262,7 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
                                   </SelectContent>
                                 </Select>
                               ) : (
-                                <span 
+                                <span
                                   className="cursor-pointer hover:bg-blue-50 px-1 py-0.5 rounded"
                                   onClick={() => setEditingField({ itemId: bundle.id, field: 'status' })}
                                   title="Click to edit status"
@@ -1261,22 +1273,22 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
                             </div>
                           </div>
                         </div>
-                        
+
                         {/* Right side - Stock, Price, Actions */}
                         <div className="flex flex-col items-end gap-2 text-right">
                           <div className="text-sm">
                             {editingField?.itemId === bundle.id && editingField?.field === 'price' ? (
-                                                              <NumericInput 
-                                  value={bundle.price || 0}
-                                  onChange={(price) => {
-                                    const updated = { ...bundle, price, value: price * (bundle.stock?.reduce((s, stock) => s + stock.quantity, 0) || 0) };
-                                    handleSaveItem(updated);
-                                  }}
+                              <NumericInput
+                                value={bundle.price || 0}
+                                onChange={(price) => {
+                                  const updated = { ...bundle, price, value: price * (bundle.stock?.reduce((s, stock) => s + stock.quantity, 0) || 0) };
+                                  handleSaveItem(updated);
+                                }}
                                 onBlur={() => setEditingField(null)}
                                 className="h-6 w-24 text-right"
                               />
                             ) : (
-                              <span 
+                              <span
                                 className="cursor-pointer hover:bg-blue-50 px-1 py-0.5 rounded"
                                 onClick={() => setEditingField({ itemId: bundle.id, field: 'price' })}
                                 title="Click to edit price"
@@ -1285,16 +1297,16 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
                               </span>
                             )}
                           </div>
-                          
+
                           <div className="text-sm font-bold">
                             <span className="px-1">{bundle.stock?.reduce((s, stock) => s + stock.quantity, 0) || 0}/{bundle.targetAmount || 0}</span>
                           </div>
-                          
-                                                     <div className="flex gap-1">
-                             <Button size="sm" variant="ghost" className="h-7 text-xs px-2" onClick={(e) => { e.stopPropagation(); handleEditBundle(bundle); }}>
-                               Edit
-                             </Button>
-                           </div>
+
+                          <div className="flex gap-1">
+                            <Button size="sm" variant="ghost" className="h-7 text-xs px-2" onClick={(e) => { e.stopPropagation(); handleEditBundle(bundle); }}>
+                              Edit
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1320,7 +1332,7 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
             Add Print Bundle (Coming Soon)
           </Button>
         </div>
-        
+
         <div className="text-center py-8 text-muted-foreground">
           <Package2 className="w-16 h-16 mx-auto mb-4 opacity-50" />
           <p>Print Bundles will be available soon!</p>
@@ -1344,18 +1356,18 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
   // Compact Equipment View - Grid with essential data
   const renderEquipmentTab = () => {
     const equipmentItems = getFilteredItems(ItemType.EQUIPMENT);
-    
+
     return (
       <div className="space-y-4">
         {renderTabHeader(getTabDisplayName(ItemType.EQUIPMENT), ItemType.EQUIPMENT)}
-        
+
         <div className="grid gap-3 md:grid-cols-4 lg:grid-cols-6">
           {equipmentItems.map(item => (
             <div key={item.id} className="bg-card border rounded p-3 hover:bg-accent/50 cursor-pointer transition-colors" onClick={() => handleEditItem(item)}>
               <div className="text-center space-y-2">
                 <div className="w-12 h-12 mx-auto bg-gradient-to-br from-gray-400 to-gray-600 rounded flex items-center justify-center text-white text-xs">
-                   <Settings className="w-6 h-6" />
-                 </div>
+                  <Settings className="w-6 h-6" />
+                </div>
                 <div className="text-xs font-medium truncate">{item.name}</div>
                 <div className="text-xs text-muted-foreground">{item.year}</div>
                 <div className="text-xs text-muted-foreground">
@@ -1409,12 +1421,12 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
                 {/* Item Image */}
                 <div className="w-16 h-16 mx-auto bg-muted rounded-md flex items-center justify-center">
                   {item.imageUrl ? (
-                    <Image 
-                      src={item.imageUrl} 
-                      alt={item.name} 
-                      width={64} 
-                      height={64} 
-                      className="w-full h-full object-cover rounded-md" 
+                    <Image
+                      src={item.imageUrl}
+                      alt={item.name}
+                      width={64}
+                      height={64}
+                      className="w-full h-full object-cover rounded-md"
                     />
                   ) : (
                     <Package className="w-6 h-6 text-muted-foreground" />
@@ -1473,11 +1485,11 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
             <TabsTrigger value="sticker-bundles">Sticker Bundles</TabsTrigger>
             <TabsTrigger value="print-bundles">Print Bundles</TabsTrigger>
           </TabsList>
-          
+
           <TabsContent value="sticker-bundles" className="mt-4">
             {renderStickerBundlesTab()}
           </TabsContent>
-          
+
           <TabsContent value="print-bundles" className="mt-4">
             {renderPrintBundlesTab()}
           </TabsContent>
@@ -1489,11 +1501,11 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
   // Other tabs with similar compact design
   const renderDigitalArtTab = () => {
     const digitalArtItems = getFilteredItems(ItemType.DIGITAL);
-    
+
     return (
       <div className="space-y-4">
         {renderTabHeader(getTabDisplayName(ItemType.DIGITAL), ItemType.DIGITAL)}
-        
+
         <div className="grid gap-3 md:grid-cols-3 lg:grid-cols-4">
           {digitalArtItems.map(item => (
             <div key={item.id} className="bg-card border rounded p-3 hover:bg-accent/50 cursor-pointer" onClick={() => handleEditItem(item)}>
@@ -1519,7 +1531,7 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
   // Compact Artworks View - Organized by view selector
   const renderArtworksTab = () => {
     const artworkItems = getFilteredItems(ItemType.ARTWORK);
-    
+
     // Group items based on selected view
     const groupedArtworks = artworkItems.reduce((acc, artwork) => {
       let key: string;
@@ -1533,27 +1545,27 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
         default: // collection
           key = artwork.collection || 'Uncategorized';
       }
-      
+
       if (!acc[key]) acc[key] = [];
       acc[key].push(artwork);
       return acc;
     }, {} as Record<string, Item[]>);
-    
+
     // Sort items within each group
     Object.keys(groupedArtworks).forEach(key => {
       groupedArtworks[key] = sortItems(groupedArtworks[key]);
     });
-    
+
     const viewOptions: { value: 'collection' | 'subtype' | 'location'; label: string }[] = [
       { value: 'location', label: 'Location' },
       { value: 'collection', label: 'Collection' },
       { value: 'subtype', label: 'Subtype' }
     ];
-    
+
     return (
       <div className="space-y-4">
         {renderTabHeader(getTabDisplayName(ItemType.ARTWORK), ItemType.ARTWORK, artworksViewBy, (value: 'collection' | 'subtype' | 'location') => setArtworksViewBy(value), viewOptions)}
-        
+
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
           {Object.entries(groupedArtworks).map(([groupKey, groupArtworks]) => (
             <div key={groupKey} className="border rounded-lg">
@@ -1595,7 +1607,7 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
   // Compact Merch View - Organized by view selector
   const renderMerchTab = () => {
     const merchItems = getFilteredItems(ItemType.MERCH);
-    
+
     // Group items based on selected view
     const groupedMerch = merchItems.reduce((acc, item) => {
       let key: string;
@@ -1609,7 +1621,7 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
         default: // collection
           key = item.collection || 'Uncategorized';
       }
-      
+
       if (!acc[key]) acc[key] = [];
       acc[key].push(item);
       return acc;
@@ -1629,7 +1641,7 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
     return (
       <div className="space-y-4">
         {renderTabHeader(getTabDisplayName(ItemType.MERCH), ItemType.MERCH, merchViewBy, (value: 'collection' | 'subtype' | 'location') => setMerchViewBy(value), viewOptions)}
-        
+
         {Object.entries(groupedMerch).map(([groupKey, groupItems]) => (
           <div key={groupKey} className="border rounded-lg">
             <div className="bg-muted/50 px-4 py-2 border-b">
@@ -1668,7 +1680,7 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
   // Compact Craft View - Organized by view selector
   const renderCraftTab = () => {
     const craftItems = getFilteredItems(ItemType.CRAFT);
-    
+
     // Group items based on selected view
     const groupedCraft = craftItems.reduce((acc, item) => {
       let key: string;
@@ -1682,7 +1694,7 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
         default: // collection
           key = item.collection || 'Uncategorized';
       }
-      
+
       if (!acc[key]) acc[key] = [];
       acc[key].push(item);
       return acc;
@@ -1702,7 +1714,7 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
     return (
       <div className="space-y-4">
         {renderTabHeader(getTabDisplayName(ItemType.CRAFT), ItemType.CRAFT, merchViewBy, (value: 'collection' | 'subtype' | 'location') => setMerchViewBy(value), viewOptions)}
-        
+
         {Object.entries(groupedCraft).map(([groupKey, groupItems]) => (
           <div key={groupKey} className="space-y-2">
             <h4 className="text-sm font-medium text-muted-foreground">{groupKey}</h4>
@@ -1731,7 +1743,7 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
   // Compact Prints View - Organized by view selector
   const renderPrintsTab = () => {
     const printItems = getFilteredItems(ItemType.PRINT);
-    
+
     // Group items based on selected view
     const groupedPrints = printItems.reduce((acc, print) => {
       let key: string;
@@ -1745,7 +1757,7 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
         default: // collection
           key = print.collection || 'Uncategorized';
       }
-      
+
       if (!acc[key]) acc[key] = [];
       acc[key].push(print);
       return acc;
@@ -1765,7 +1777,7 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
     return (
       <div className="space-y-4">
         {renderTabHeader(getTabDisplayName(ItemType.PRINT), ItemType.PRINT, printsViewBy, (value: 'collection' | 'subtype' | 'location') => setPrintsViewBy(value), viewOptions)}
-        
+
         {Object.entries(groupedPrints).map(([groupKey, groupPrints]) => (
           <div key={groupKey} className="border rounded-lg">
             <div className="bg-muted/50 px-4 py-2 border-b">
@@ -1807,11 +1819,11 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
 
   const renderMaterialsTab = () => {
     const materialItems = getFilteredItems(ItemType.MATERIAL);
-    
+
     return (
       <div className="space-y-4">
         {renderTabHeader(getTabDisplayName(ItemType.MATERIAL), ItemType.MATERIAL)}
-        
+
         <div className="grid gap-3 md:grid-cols-4 lg:grid-cols-6">
           {materialItems.map(item => (
             <div key={item.id} className="bg-card border rounded p-3 hover:bg-accent/50 cursor-pointer" onClick={() => handleEditItem(item)}>
@@ -1852,9 +1864,9 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
     // Check if this inventory type should show the "Set to Sold" modal
     // Default behavior: show modal for all item types
     const shouldShowModal = true;
-    
+
     if (!shouldShowModal) return;
-    
+
     // Case 1: Moving to a sold item
     if (isMovingToSold) {
       setStatusModalConfig({
@@ -1862,13 +1874,13 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
         message: `"${item.name}" is being moved to a sold item. Update status?`,
         options: [
           {
-                          label: 'Set Status to Sold',
-              action: async () => {
-                const updatedItem = { ...item, status: ItemStatus.SOLD };
-                await ClientAPI.upsertItem(updatedItem);
-                
-                setShowStatusModal(false);
-              },
+            label: 'Set Status to Sold',
+            action: async () => {
+              const updatedItem = { ...item, status: ItemStatus.SOLD };
+              await ClientAPI.upsertItem(updatedItem);
+
+              setShowStatusModal(false);
+            },
             variant: 'default'
           },
           {
@@ -1893,16 +1905,16 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
   const checkQuantityZero = (item: Item, newQuantity: number) => {
     // Don't show status modal during import
     if (isImporting) return;
-    
+
     // DEFENSIVE GUARD: Prevent re-entry if modal is already showing
     if (showStatusModal) return;
-    
+
     // Check if this inventory type should show the "Set to Sold" modal
     // Default behavior: show modal for all item types
     const shouldShowModal = true;
-    
+
     if (!shouldShowModal) return;
-    
+
     if (newQuantity === 0) {
       setStatusModalConfig({
         title: 'Item Quantity is 0',
@@ -2004,15 +2016,15 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
           <TabsTrigger value={InventoryTab.EQUIPMENT}>Equipment</TabsTrigger>
           <TabsTrigger value={InventoryTab.SOLD_ITEMS}>Sold Items</TabsTrigger>
         </TabsList>
-        
+
         <TabsContent value={InventoryTab.DIGITAL} className="mt-4">
           {renderDigitalArtTab()}
         </TabsContent>
-        
+
         <TabsContent value={InventoryTab.ARTWORKS} className="mt-4">
           {renderArtworksTab()}
         </TabsContent>
-        
+
         <TabsContent value={InventoryTab.STICKERS} className="mt-4">
           {renderStickersTab()}
         </TabsContent>
@@ -2020,7 +2032,7 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
         <TabsContent value={InventoryTab.PRINTS} className="mt-4">
           {renderPrintsTab()}
         </TabsContent>
-        
+
         <TabsContent value={InventoryTab.MERCH} className="mt-4">
           {renderMerchTab()}
         </TabsContent>
@@ -2028,15 +2040,15 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
         <TabsContent value={InventoryTab.BUNDLES} className="mt-4">
           {renderBundlesTab()}
         </TabsContent>
-        
+
         <TabsContent value={InventoryTab.CRAFT} className="mt-4">
           {renderCraftTab()}
         </TabsContent>
-        
+
         <TabsContent value={InventoryTab.MATERIALS} className="mt-4">
           {renderMaterialsTab()}
         </TabsContent>
-        
+
         <TabsContent value={InventoryTab.EQUIPMENT} className="mt-4">
           {renderEquipmentTab()}
         </TabsContent>
@@ -2057,191 +2069,191 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
       />
 
 
-             {/* Threshold Modal for Model View */}
-       {showThresholdModal && (
-         <div 
-           className={`fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 ${getZIndexClass('MODALS')}`}
-           onKeyDown={(e) => {
-             if (e.key === 'Escape') {
-               setShowThresholdModal(false);
-             }
-           }}
-           tabIndex={0}
-         >
-           <div className="bg-card border rounded-lg shadow-xl max-w-md w-full p-6">
-             <h3 className="text-lg font-semibold mb-4 text-foreground">Stock Warning Thresholds</h3>
-             <p className="text-sm mb-4 text-muted-foreground">
-               Set thresholds for low stock warnings in the Model view.
-             </p>
-             
-             <div className="space-y-4 mb-6">
-               {/* Yellow Warning Threshold */}
-               <div className="space-y-2">
-                 <label className="text-sm font-medium text-foreground">
-                   Yellow Warning (Low Stock)
-                 </label>
-                 <div className="flex items-center gap-2">
-                   <NumericInput
-                     value={yellowThreshold}
-                     onChange={(value) => setYellowThreshold(value || DEFAULT_YELLOW_THRESHOLD)}
-                     className="w-24"
-                     min={1}
-                     step={1}
-                   />
-                   <span className="text-sm text-muted-foreground">units</span>
-                 </div>
-                 <p className="text-xs text-muted-foreground">
-                   Shows yellow warning when total quantity is below this value
-                 </p>
-               </div>
-               
-               {/* Red Warning Threshold */}
-               <div className="space-y-2">
-                 <label className="text-sm font-medium text-foreground">
-                   Red Warning (Critical Stock)
-                 </label>
-                 <div className="flex items-center gap-2">
-                   <NumericInput
-                     value={redThreshold}
-                     onChange={(value) => setRedThreshold(value || 5)}
-                     className="w-24"
-                     min={1}
-                     step={1}
-                   />
-                   <span className="text-sm text-muted-foreground">units</span>
-                 </div>
-                 <p className="text-xs text-muted-foreground">
-                   Shows red warning when total quantity is below this value
-                 </p>
-               </div>
-             </div>
-             
-             <div className="flex justify-end gap-2">
-               <Button
-                 variant="outline"
-                 onClick={() => setShowThresholdModal(false)}
-               >
-                 Close
-               </Button>
-             </div>
-           </div>
-         </div>
-       )}
+      {/* Threshold Modal for Model View */}
+      {showThresholdModal && (
+        <div
+          className={`fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 ${getZIndexClass('MODALS')}`}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              setShowThresholdModal(false);
+            }
+          }}
+          tabIndex={0}
+        >
+          <div className="bg-card border rounded-lg shadow-xl max-w-md w-full p-6">
+            <h3 className="text-lg font-semibold mb-4 text-foreground">Stock Warning Thresholds</h3>
+            <p className="text-sm mb-4 text-muted-foreground">
+              Set thresholds for low stock warnings in the Model view.
+            </p>
 
-       {/* Location Selection Modal for Model View */}
-       {showLocationSelectionModal && (
-         <div 
-           className={`fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 ${getZIndexClass('MODALS')}`}
-           onKeyDown={(e) => {
-             if (e.key === 'Escape') {
-               setShowLocationSelectionModal(false);
-             }
-           }}
-           tabIndex={0}
-         >
-           <div className="bg-card border rounded-lg shadow-xl max-w-4xl w-full p-6">
-             <h3 className="text-lg font-semibold mb-4 text-foreground">Select Locations for Model View</h3>
-             <p className="text-sm mb-4 text-muted-foreground">
-               Choose which locations to include when calculating totals and showing items in the Model view.
-             </p>
-             
-             {/* Column Selectors */}
-             <div className="flex gap-4 mb-4">
-               <label className="flex items-center gap-2 cursor-pointer">
-                 <input
-                   type="checkbox"
-                   checked={selectedColumns.has('own')}
-                   onChange={(e) => toggleColumn('own', e.target.checked)}
-                   className="w-4 h-4"
-                 />
-                 <span className="text-sm font-medium">Own Locations</span>
-               </label>
-               <label className="flex items-center gap-2 cursor-pointer">
-                 <input
-                   type="checkbox"
-                   checked={selectedColumns.has('consignment')}
-                   onChange={(e) => toggleColumn('consignment', e.target.checked)}
-                   className="w-4 h-4"
-                 />
-                 <span className="text-sm font-medium">Consignment Network</span>
-               </label>
-               <label className="flex items-center gap-2 cursor-pointer">
-                 <input
-                   type="checkbox"
-                   checked={selectedColumns.has('other')}
-                   onChange={(e) => toggleColumn('other', e.target.checked)}
-                   className="w-4 h-4"
-                 />
-                 <span className="text-sm font-medium">Other Locations</span>
-               </label>
-             </div>
-             
-             {/* 3-Column Layout */}
-             <div className="grid grid-cols-3 gap-6 mb-6">
-               {/* Column 1: Own Locations */}
-               <div className="space-y-2">
-                 <h4 className="font-medium text-sm text-muted-foreground mb-3">Own Locations</h4>
-                 {sites.filter(site => ['Akiles', 'Home', 'Feria Box'].includes(site.name)).map(site => (
-                   <label key={site.id} className="flex items-center gap-3 cursor-pointer hover:bg-muted p-2 rounded">
-                     <input
-                       type="checkbox"
-                       checked={selectedLocationsForModel.has(site.id)}
-                       onChange={(e) => toggleLocation(site.id, e.target.checked)}
-                       className="w-4 h-4"
-                     />
-                     <span className="text-sm">{site.name}</span>
-                   </label>
-                 ))}
-               </div>
-               
-               {/* Column 2: Consignment Network */}
-               <div className="space-y-2">
-                 <h4 className="font-medium text-sm text-muted-foreground mb-3">Consignment Network</h4>
-                 {sites.filter(site => ['Smoking Lounge', 'Tagua', 'Cafe Vivo'].includes(site.name)).map(site => (
-                   <label key={site.id} className="flex items-center gap-3 cursor-pointer hover:bg-muted p-2 rounded">
-                     <input
-                       type="checkbox"
-                       checked={selectedLocationsForModel.has(site.id)}
-                       onChange={(e) => toggleLocation(site.id, e.target.checked)}
-                       className="w-4 h-4"
-                     />
-                     <span className="text-sm">{site.name}</span>
-                   </label>
-                 ))}
-               </div>
-               
-               {/* Column 3: Other Locations (Scrollable) */}
-               <div className="space-y-2">
-                 <h4 className="font-medium text-sm text-muted-foreground mb-3">Other Locations</h4>
-                 <div className="max-h-32 overflow-y-auto">
-                   {sites.filter(site => 
-                     !['Akiles', 'Home', 'Feria Box', 'Smoking Lounge', 'Tagua', 'Cafe Vivo'].includes(site.name)
-                   ).map(site => (
-                     <label key={site.id} className="flex items-center gap-3 cursor-pointer hover:bg-muted p-2 rounded">
-                       <input
-                         type="checkbox"
-                         checked={selectedLocationsForModel.has(site.id)}
-                         onChange={(e) => toggleLocation(site.id, e.target.checked)}
-                         className="w-4 h-4"
-                       />
-                       <span className="text-sm">{site.name}</span>
-                     </label>
-                   ))}
-                 </div>
-               </div>
-             </div>
-             
-             <div className="flex justify-end gap-2">
-               <Button
-                 variant="outline"
-                 onClick={() => setShowLocationSelectionModal(false)}
-               >
-                 Close
-               </Button>
-             </div>
-           </div>
-         </div>
-       )}
+            <div className="space-y-4 mb-6">
+              {/* Yellow Warning Threshold */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">
+                  Yellow Warning (Low Stock)
+                </label>
+                <div className="flex items-center gap-2">
+                  <NumericInput
+                    value={yellowThreshold}
+                    onChange={(value) => setYellowThreshold(value || DEFAULT_YELLOW_THRESHOLD)}
+                    className="w-24"
+                    min={1}
+                    step={1}
+                  />
+                  <span className="text-sm text-muted-foreground">units</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Shows yellow warning when total quantity is below this value
+                </p>
+              </div>
+
+              {/* Red Warning Threshold */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">
+                  Red Warning (Critical Stock)
+                </label>
+                <div className="flex items-center gap-2">
+                  <NumericInput
+                    value={redThreshold}
+                    onChange={(value) => setRedThreshold(value || 5)}
+                    className="w-24"
+                    min={1}
+                    step={1}
+                  />
+                  <span className="text-sm text-muted-foreground">units</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Shows red warning when total quantity is below this value
+                </p>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowThresholdModal(false)}
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Location Selection Modal for Model View */}
+      {showLocationSelectionModal && (
+        <div
+          className={`fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 ${getZIndexClass('MODALS')}`}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              setShowLocationSelectionModal(false);
+            }
+          }}
+          tabIndex={0}
+        >
+          <div className="bg-card border rounded-lg shadow-xl max-w-4xl w-full p-6">
+            <h3 className="text-lg font-semibold mb-4 text-foreground">Select Locations for Model View</h3>
+            <p className="text-sm mb-4 text-muted-foreground">
+              Choose which locations to include when calculating totals and showing items in the Model view.
+            </p>
+
+            {/* Column Selectors */}
+            <div className="flex gap-4 mb-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={selectedColumns.has('own')}
+                  onChange={(e) => toggleColumn('own', e.target.checked)}
+                  className="w-4 h-4"
+                />
+                <span className="text-sm font-medium">Own Locations</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={selectedColumns.has('consignment')}
+                  onChange={(e) => toggleColumn('consignment', e.target.checked)}
+                  className="w-4 h-4"
+                />
+                <span className="text-sm font-medium">Consignment Network</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={selectedColumns.has('other')}
+                  onChange={(e) => toggleColumn('other', e.target.checked)}
+                  className="w-4 h-4"
+                />
+                <span className="text-sm font-medium">Other Locations</span>
+              </label>
+            </div>
+
+            {/* 3-Column Layout */}
+            <div className="grid grid-cols-3 gap-6 mb-6">
+              {/* Column 1: Own Locations */}
+              <div className="space-y-2">
+                <h4 className="font-medium text-sm text-muted-foreground mb-3">Own Locations</h4>
+                {sites.filter(site => ['Akiles', 'Home', 'Feria Box'].includes(site.name)).map(site => (
+                  <label key={site.id} className="flex items-center gap-3 cursor-pointer hover:bg-muted p-2 rounded">
+                    <input
+                      type="checkbox"
+                      checked={selectedLocationsForModel.has(site.id)}
+                      onChange={(e) => toggleLocation(site.id, e.target.checked)}
+                      className="w-4 h-4"
+                    />
+                    <span className="text-sm">{site.name}</span>
+                  </label>
+                ))}
+              </div>
+
+              {/* Column 2: Consignment Network */}
+              <div className="space-y-2">
+                <h4 className="font-medium text-sm text-muted-foreground mb-3">Consignment Network</h4>
+                {sites.filter(site => ['Smoking Lounge', 'Tagua', 'Cafe Vivo'].includes(site.name)).map(site => (
+                  <label key={site.id} className="flex items-center gap-3 cursor-pointer hover:bg-muted p-2 rounded">
+                    <input
+                      type="checkbox"
+                      checked={selectedLocationsForModel.has(site.id)}
+                      onChange={(e) => toggleLocation(site.id, e.target.checked)}
+                      className="w-4 h-4"
+                    />
+                    <span className="text-sm">{site.name}</span>
+                  </label>
+                ))}
+              </div>
+
+              {/* Column 3: Other Locations (Scrollable) */}
+              <div className="space-y-2">
+                <h4 className="font-medium text-sm text-muted-foreground mb-3">Other Locations</h4>
+                <div className="max-h-32 overflow-y-auto">
+                  {sites.filter(site =>
+                    !['Akiles', 'Home', 'Feria Box', 'Smoking Lounge', 'Tagua', 'Cafe Vivo'].includes(site.name)
+                  ).map(site => (
+                    <label key={site.id} className="flex items-center gap-3 cursor-pointer hover:bg-muted p-2 rounded">
+                      <input
+                        type="checkbox"
+                        checked={selectedLocationsForModel.has(site.id)}
+                        onChange={(e) => toggleLocation(site.id, e.target.checked)}
+                        className="w-4 h-4"
+                      />
+                      <span className="text-sm">{site.name}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowLocationSelectionModal(false)}
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Bulk Edit Modal */}
       <BulkEditModal
@@ -2266,7 +2278,7 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
 
       {/* Status Modal */}
       {showStatusModal && statusModalConfig && (
-        <div 
+        <div
           className={`fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 ${getZIndexClass('MODALS')}`}
           onKeyDown={(e) => {
             if (e.key === 'Escape') {
