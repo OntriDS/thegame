@@ -171,6 +171,9 @@
   },
   "active": "75f8944c004da465",
   "lastOpenFiles": [
+    "app/api/debug/repair-items/route.ts",
+    "app/api/debug/repair-items",
+    "app/api/debug",
     "components/control-room/task-history-view.tsx"
   ]
 }
