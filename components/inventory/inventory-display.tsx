@@ -131,7 +131,8 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
         // The API now returns ALL items for the month (including sold ones) if I don't pass status.
         // So I can just call getItems('all', month, year) and filter client-side.
         const monthItems = await ClientAPI.getItems('all', month, year);
-        items = monthItems.filter(item => item.status === ItemStatus.SOLD);
+        // Filter case-insensitively to handle 'Sold' (Enum) and 'SOLD' (Legacy/Bug)
+        items = monthItems.filter(item => item.status?.toUpperCase() === 'SOLD');
       } else if (activeTabItemType === 'all') {
         // Load all items
         items = await ClientAPI.getItems();
@@ -275,7 +276,8 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
           const month = filterSoldByMonth ? currentMonth : new Date().getMonth() + 1;
           const year = filterSoldByMonth ? currentYear : new Date().getFullYear();
           const monthItems = await ClientAPI.getItems('all', month, year);
-          items = monthItems.filter(item => item.status === ItemStatus.SOLD);
+          // Filter case-insensitively to handle 'Sold' (Enum) and 'SOLD' (Legacy/Bug)
+          items = monthItems.filter(item => item.status?.toUpperCase() === 'SOLD');
         } else if (activeTabItemType === 'all') {
           // Load all items
           items = await ClientAPI.getItems();

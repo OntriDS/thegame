@@ -2,7 +2,7 @@
 // Sale line processing utilities
 
 import type { Sale, ItemSaleLine, BundleSaleLine, ServiceLine, Task } from '@/types/entities';
-import { LinkType, EntityType, LogEventType } from '@/types/enums';
+import { LinkType, EntityType, LogEventType, ItemStatus } from '@/types/enums';
 import { getItemById, upsertItem, getAllItems, getItemsByType } from '@/data-store/datastore';
 import { upsertTask } from '@/data-store/datastore';
 import { makeLink } from '@/links/links-workflows';
@@ -18,11 +18,11 @@ import { createFinancialRecordFromSale } from './financial-record-utils';
 export async function processSaleLines(sale: Sale): Promise<void> {
   try {
     console.log(`[processSaleLines] Processing ${sale.lines.length} lines for sale: ${sale.counterpartyName}`);
-    
+
     // Process each line based on its kind
     for (const line of sale.lines) {
       console.log(`[processSaleLines] Processing line: ${line.kind}, lineId: ${line.lineId}`);
-      
+
       switch (line.kind) {
         case 'item':
           await processItemSaleLine(line as ItemSaleLine, sale);
@@ -37,14 +37,14 @@ export async function processSaleLines(sale: Sale): Promise<void> {
           console.warn(`[processSaleLines] Unknown line kind: ${(line as any).kind}`);
       }
     }
-    
+
     // Create financial record from sale if it has revenue
     if (sale.totals.totalRevenue > 0) {
       await createFinancialRecordFromSale(sale);
     }
-    
+
     console.log(`[processSaleLines] ✅ Processed all lines for sale: ${sale.counterpartyName}`);
-    
+
   } catch (error) {
     console.error(`[processSaleLines] ❌ Failed to process sale lines for sale ${sale.id}:`, error);
     throw error;
@@ -57,24 +57,24 @@ export async function processSaleLines(sale: Sale): Promise<void> {
 export async function processItemSaleLine(line: ItemSaleLine, sale: Sale): Promise<void> {
   try {
     console.log(`[processItemSaleLine] Processing item sale: ${line.itemId}, quantity: ${line.quantity}`);
-    
+
     // Idempotency check
     const stockDecrementedKey = `sale:${sale.id}:stockDecremented:${line.lineId}`;
     const hasBeenDecremented = await hasEffect(stockDecrementedKey);
-    
+
     if (hasBeenDecremented) {
       console.log(`[processItemSaleLine] Stock already decremented for line ${line.lineId}, skipping`);
       return;
     }
-    
+
     // Get the item
     const item = await getItemById(line.itemId);
-    
+
     if (!item) {
       console.error(`[processItemSaleLine] Item not found: ${line.itemId}`);
       return;
     }
-    
+
     // Check if we have enough stock at the sale site
     // Calculate total available quantity from stock array
     const totalAvailableQuantity = item.stock.reduce((sum, stockPoint) => sum + stockPoint.quantity, 0);
@@ -82,7 +82,7 @@ export async function processItemSaleLine(line: ItemSaleLine, sale: Sale): Promi
       console.error(`[processItemSaleLine] Insufficient stock for item ${item.name}. Available: ${totalAvailableQuantity - item.quantitySold}, Required: ${line.quantity}`);
       return;
     }
-    
+
     // Update item stock
     const updatedItem = {
       ...item,
@@ -92,9 +92,9 @@ export async function processItemSaleLine(line: ItemSaleLine, sale: Sale): Promi
       updatedAt: new Date(),
       stock: item.stock ? item.stock.map(stockPoint => ({ ...stockPoint })) : []
     };
-    
+
     let remainingToDeduct = line.quantity;
-    
+
     const deductFromStockIndex = (index: number) => {
       if (index < 0 || index >= updatedItem.stock.length || remainingToDeduct <= 0) return;
       const stockPoint = updatedItem.stock[index];
@@ -104,38 +104,38 @@ export async function processItemSaleLine(line: ItemSaleLine, sale: Sale): Promi
       updatedItem.stock[index] = { ...stockPoint, quantity: available - deduction };
       remainingToDeduct -= deduction;
     };
-    
+
     // Prefer deducting stock from the sale site, if available
     if (sale.siteId) {
       const saleSiteIndex = updatedItem.stock.findIndex(stockPoint => stockPoint.siteId === sale.siteId);
       deductFromStockIndex(saleSiteIndex);
     }
-    
+
     // Deduct remaining quantities from other stock points
     for (let i = 0; i < updatedItem.stock.length && remainingToDeduct > 0; i++) {
       if (sale.siteId && updatedItem.stock[i].siteId === sale.siteId) continue;
       deductFromStockIndex(i);
     }
-    
+
     if (remainingToDeduct > 0) {
       console.warn(
         `[processItemSaleLine] Remaining quantity could not be deducted for item ${item.id}. Remaining: ${remainingToDeduct}`
       );
     }
-    
+
     // Remove empty stock points
     updatedItem.stock = updatedItem.stock.filter(stockPoint => stockPoint.quantity > 0);
-    
+
     const totalRemainingQuantity = updatedItem.stock.reduce((sum, stockPoint) => sum + stockPoint.quantity, 0);
-    
+
     // Mark item as SOLD if all stock is sold
     if (totalRemainingQuantity <= 0) {
-      updatedItem.status = 'SOLD' as any;
+      updatedItem.status = ItemStatus.SOLD;
     }
-    
+
     // Save the updated item
     await upsertItem(updatedItem);
-    
+
     // Create SALE_ITEM link
     const linkMetadata = {
       quantity: line.quantity,
@@ -144,7 +144,7 @@ export async function processItemSaleLine(line: ItemSaleLine, sale: Sale): Promi
       soldAt: sale.saleDate.toISOString(),
       siteId: sale.siteId
     };
-    
+
     const link = makeLink(
       LinkType.SALE_ITEM,
       { type: EntityType.SALE, id: sale.id },
@@ -152,11 +152,11 @@ export async function processItemSaleLine(line: ItemSaleLine, sale: Sale): Promi
       linkMetadata
     );
     await createLink(link);
-    
+
     // Mark effect as complete
     await markEffect(stockDecrementedKey);
     await markEffect(`sale:${sale.id}:${stockDecrementedKey}`);
-    
+
     // Log the effect
     await appendEntityLog(EntityType.ITEM, line.itemId, LogEventType.SOLD, {
       name: item.name,
@@ -166,9 +166,9 @@ export async function processItemSaleLine(line: ItemSaleLine, sale: Sale): Promi
       saleId: sale.id,
       soldAt: sale.saleDate.toISOString()
     });
-    
+
     console.log(`[processItemSaleLine] ✅ Processed item sale: ${item.name} x${line.quantity}`);
-    
+
   } catch (error) {
     console.error(`[processItemSaleLine] ❌ Failed to process item sale line ${line.lineId}:`, error);
     throw error;
@@ -182,19 +182,19 @@ export async function processItemSaleLine(line: ItemSaleLine, sale: Sale): Promi
 export async function processBundleSaleLine(line: BundleSaleLine, sale: Sale): Promise<void> {
   try {
     console.log(`[processBundleSaleLine] Processing bundle sale: ${line.itemType}, quantity: ${line.quantity} bundles, ${line.itemsPerBundle} items per bundle`);
-    
+
     // Idempotency check
     const bundleProcessedKey = `sale:${sale.id}:bundleProcessed:${line.lineId}`;
     const hasBeenProcessed = await hasEffect(bundleProcessedKey);
-    
+
     if (hasBeenProcessed) {
       console.log(`[processBundleSaleLine] Bundle already processed for line ${line.lineId}, skipping`);
       return;
     }
-    
+
     // Calculate total items needed
     const totalItemsNeeded = line.quantity * line.itemsPerBundle;
-    
+
     // If a specific bundle item is specified, use it
     if (line.itemId) {
       const bundleItem = await getItemById(line.itemId);
@@ -202,7 +202,7 @@ export async function processBundleSaleLine(line: BundleSaleLine, sale: Sale): P
         console.error(`[processBundleSaleLine] Bundle item ${line.itemId} not found`);
         return;
       }
-      
+
       // Reduce bundle stock
       const updatedStock = bundleItem.stock.map(stockPoint => {
         if (stockPoint.siteId === line.siteId) {
@@ -211,16 +211,16 @@ export async function processBundleSaleLine(line: BundleSaleLine, sale: Sale): P
         }
         return stockPoint;
       });
-      
+
       const updatedItem = {
         ...bundleItem,
         stock: updatedStock,
         quantitySold: (bundleItem.quantitySold || 0) + line.quantity,
         updatedAt: new Date()
       };
-      
+
       await upsertItem(updatedItem);
-      
+
       // Create SALE_ITEM link for the bundle
       const bundleLink = makeLink(
         LinkType.SALE_ITEM,
@@ -234,41 +234,41 @@ export async function processBundleSaleLine(line: BundleSaleLine, sale: Sale): P
         }
       );
       await createLink(bundleLink);
-      
+
       console.log(`[processBundleSaleLine] ✅ Processed bundle sale: ${line.quantity} bundles of ${bundleItem.name}`);
     } else {
       // Find individual items of the specified type at the site
       const allItems = await getAllItems();
-      const itemsOfType = allItems.filter(item => 
+      const itemsOfType = allItems.filter(item =>
         item.type === line.itemType &&
         item.stock.some(sp => sp.siteId === line.siteId && sp.quantity > 0)
       );
-      
+
       if (itemsOfType.length === 0) {
         console.error(`[processBundleSaleLine] No items of type ${line.itemType} found at site ${line.siteId}`);
         return;
       }
-      
+
       // Sort by stock quantity (descending) to prioritize items with more stock
       itemsOfType.sort((a, b) => {
         const aStock = a.stock.find(sp => sp.siteId === line.siteId)?.quantity || 0;
         const bStock = b.stock.find(sp => sp.siteId === line.siteId)?.quantity || 0;
         return bStock - aStock;
       });
-      
+
       let remainingToDeduct = totalItemsNeeded;
       const processedItems: Array<{ item: typeof itemsOfType[0]; quantity: number }> = [];
-      
+
       // Deduct stock from items until we have enough
       for (const item of itemsOfType) {
         if (remainingToDeduct <= 0) break;
-        
+
         const stockPoint = item.stock.find(sp => sp.siteId === line.siteId);
         if (!stockPoint || stockPoint.quantity <= 0) continue;
-        
+
         const toDeduct = Math.min(remainingToDeduct, stockPoint.quantity);
         remainingToDeduct -= toDeduct;
-        
+
         // Update item stock
         const updatedStock = item.stock.map(sp => {
           if (sp.siteId === line.siteId) {
@@ -276,17 +276,17 @@ export async function processBundleSaleLine(line: BundleSaleLine, sale: Sale): P
           }
           return sp;
         });
-        
+
         const updatedItem = {
           ...item,
           stock: updatedStock,
           quantitySold: (item.quantitySold || 0) + toDeduct,
           updatedAt: new Date()
         };
-        
+
         await upsertItem(updatedItem);
         processedItems.push({ item, quantity: toDeduct });
-        
+
         // Create SALE_ITEM link for each item consumed
         const itemLink = makeLink(
           LinkType.SALE_ITEM,
@@ -302,16 +302,16 @@ export async function processBundleSaleLine(line: BundleSaleLine, sale: Sale): P
         );
         await createLink(itemLink);
       }
-      
+
       if (remainingToDeduct > 0) {
         console.warn(`[processBundleSaleLine] ⚠️ Insufficient stock: needed ${totalItemsNeeded}, only deducted ${totalItemsNeeded - remainingToDeduct}`);
       }
-      
+
       console.log(`[processBundleSaleLine] ✅ Processed bundle sale: ${line.quantity} bundles consuming ${totalItemsNeeded - remainingToDeduct} items from ${processedItems.length} items`);
     }
-    
+
     await markEffect(bundleProcessedKey);
-    
+
   } catch (error) {
     console.error(`[processBundleSaleLine] ❌ Failed to process bundle sale line ${line.lineId}:`, error);
     throw error;
@@ -324,16 +324,16 @@ export async function processBundleSaleLine(line: BundleSaleLine, sale: Sale): P
 export async function processServiceLine(line: ServiceLine, sale: Sale): Promise<void> {
   try {
     console.log(`[processServiceLine] Processing service sale: ${line.description}`);
-    
+
     // Idempotency check
     const taskCreatedKey = `sale:${sale.id}:taskCreated:${line.lineId}`;
     const hasBeenCreated = await hasEffect(taskCreatedKey);
-    
+
     if (hasBeenCreated || !line.createTask) {
       console.log(`[processServiceLine] Task already created or not requested for line ${line.lineId}, skipping`);
       return;
     }
-    
+
     // Create task from service line
     const serviceTask: Task = {
       id: line.taskId || `task-${sale.id}-${line.lineId}`,
@@ -375,10 +375,10 @@ export async function processServiceLine(line: ServiceLine, sale: Sale): Promise
       isSold: line.isSold || false,
       outputItemStatus: (line.outputItemStatus as any) || (line.isSold ? 'SOLD' as any : 'Created' as any)
     };
-    
+
     // Save the task
     await upsertTask(serviceTask);
-    
+
     // Create SALE_TASK link
     const linkMetadata = {
       serviceDescription: line.description,
@@ -387,7 +387,7 @@ export async function processServiceLine(line: ServiceLine, sale: Sale): Promise
       taskType: line.taskType,
       createdFrom: 'service_sale'
     };
-    
+
     const link = makeLink(
       LinkType.SALE_TASK,
       { type: EntityType.SALE, id: sale.id },
@@ -395,10 +395,10 @@ export async function processServiceLine(line: ServiceLine, sale: Sale): Promise
       linkMetadata
     );
     await createLink(link);
-    
+
     // Mark effect as complete
     await markEffect(`sale:${sale.id}:${taskCreatedKey}`);
-    
+
     // Log the task creation
     await appendEntityLog(EntityType.TASK, serviceTask.id, LogEventType.CREATED, {
       name: serviceTask.name,
@@ -407,9 +407,9 @@ export async function processServiceLine(line: ServiceLine, sale: Sale): Promise
       serviceDescription: line.description,
       station: line.station
     });
-    
+
     console.log(`[processServiceLine] ✅ Created task from service: ${serviceTask.name}`);
-    
+
   } catch (error) {
     console.error(`[processServiceLine] ❌ Failed to process service sale line ${line.lineId}:`, error);
     throw error;
