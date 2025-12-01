@@ -69,7 +69,15 @@ function ArchiveMonthTabsComponent({
                   <dd>{month.summary.playerEvents}</dd>
                 </div>
               </dl>
-              <Button size="sm" variant="outline" className="mt-4 w-full">
+              <Button
+                size="sm"
+                variant="outline"
+                className="mt-4 w-full"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSelectMonth(month.key);
+                }}
+              >
                 Open Box
               </Button>
             </CardContent>
