@@ -73,7 +73,7 @@ import {
   rotateEntityLogsToMonth as workflowRotateEntityLogsToMonth,
   getEntityLogMonths as workflowGetEntityLogMonths
 } from '@/workflows/entities-logging';
-import { getCurrentMonthKey, formatMonthKey } from '@/lib/utils/date-utils';
+import { getCurrentMonthKey, formatMonthKey, reviveDates } from '@/lib/utils/date-utils';
 import { kvMGet, kvSMembers } from './kv';
 import { buildDataKey, buildMonthIndexKey } from './keys';
 import type { PlayerArchiveRow } from '@/types/archive';
@@ -101,7 +101,7 @@ export async function upsertTask(task: Task, options?: { skipWorkflowEffects?: b
 
 export async function getAllTasks(): Promise<Task[]> {
   const tasks = await repoGetAllTasks();
-  return tasks.filter(task => !task.isCollected);
+  return reviveDates(tasks.filter(task => !task.isCollected));
 }
 
 // Phase 1 helpers: month-scoped, filter-after-load
@@ -111,7 +111,7 @@ export async function getTasksForMonth(year: number, month: number): Promise<Tas
   if (ids.length === 0) return [];
   const keys = ids.map(id => buildDataKey(EntityType.TASK, id));
   const tasks = await kvMGet<Task>(keys);
-  return tasks.filter((t): t is Task => t !== null && t !== undefined);
+  return reviveDates(tasks.filter((t): t is Task => t !== null && t !== undefined));
 }
 
 export async function getTaskById(id: string): Promise<Task | null> {
