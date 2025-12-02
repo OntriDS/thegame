@@ -15,6 +15,7 @@ import {
   getItemById,
   upsertItem
 } from '@/data-store/datastore';
+import { upsertTask as repoUpsertTask } from '@/data-store/repositories/task.repo';
 import { archiveTaskSnapshot } from '@/data-store/datastore';
 import { getLinksFor, removeLink } from '@/links/link-registry';
 import { createItemFromTask, removeItemsCreatedByTask } from '../item-creation-utils';
@@ -161,47 +162,41 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
     !!task.isCollected && (!previousTask || !previousTask.isCollected);
 
   if (statusBecameCollected || flagBecameCollected) {
-    const now = new Date();
-    const adjustedNow = new Date(now.getTime() - 6 * 60 * 60 * 1000);
-    const collectedAt = task.collectedAt ?? adjustedNow;
-    const snapshotEffectKey = EffectKeys.sideEffect('task', task.id, `taskSnapshot:${formatMonthKey(collectedAt)}`);
+  const now = new Date();
+  const adjustedNow = new Date(now.getTime() - 6 * 60 * 60 * 1000);
+  const collectedAt = task.collectedAt ?? adjustedNow;
+  const snapshotEffectKey = EffectKeys.sideEffect('task', task.id, `taskSnapshot:${formatMonthKey(collectedAt)}`);
 
-    if (!(await hasEffect(snapshotEffectKey))) {
-      // Ensure task has proper collection fields
-      const normalizedTask: Task = {
-        ...task,
-        isCollected: true,
-        collectedAt
-      };
+  if (!(await hasEffect(snapshotEffectKey))) {
+    const updatedTask: Task = {
+      ...task,
+      isCollected: true,
+      collectedAt
+    };
 
-      // 1. Create TaskSnapshot for Archive Vault statistics
-      await createTaskSnapshot(normalizedTask, collectedAt, task.playerCharacterId || undefined);
+    await repoUpsertTask(updatedTask);
 
-      // 2. Log COLLECTED event
-      await appendEntityLog(EntityType.TASK, task.id, LogEventType.COLLECTED, {
-        name: task.name,
-        taskType: task.type,
-        station: task.station,
-        priority: task.priority,
-        collectedAt
-      });
+    await createTaskSnapshot(updatedTask, collectedAt, updatedTask.playerCharacterId || undefined);
 
-      // 3. Add to month-based collection index for efficient History Tab queries
-      const monthKey = formatMonthKey(collectedAt);
-      const { kvSAdd } = await import('@/data-store/kv');
-      const collectedIndexKey = `index:tasks:collected:${monthKey}`;
-      await kvSAdd(collectedIndexKey, task.id);
+    await appendEntityLog(EntityType.TASK, updatedTask.id, LogEventType.COLLECTED, {
+      name: updatedTask.name,
+      taskType: updatedTask.type,
+      station: updatedTask.station,
+      priority: updatedTask.priority,
+      collectedAt: collectedAt.toISOString()
+    });
 
-      await markEffect(snapshotEffectKey);
-      console.log(`[onTaskUpsert] ✅ Task ${task.name} collected - snapshot created, added to index ${monthKey}`);
+    const monthKey = formatMonthKey(collectedAt);
+    const { kvSAdd } = await import('@/data-store/kv');
+    const collectedIndexKey = `index:tasks:collected:${monthKey}`;
+    await kvSAdd(collectedIndexKey, updatedTask.id);
 
-      // Task stays at data:task:{id} with isCollected=true
-      // Mission Tree filters it out, History Tab queries from index
+    await markEffect(snapshotEffectKey);
+    console.log(`[onTaskUpsert] ✅ Task ${updatedTask.name} collected - snapshot created, added to index ${monthKey}`);
 
-      // COLLECTION CASCADE: Collect all child instances when parent is collected
-      await cascadeCollectionToChildren(task, collectedAt);
-    }
+    await cascadeCollectionToChildren(updatedTask, collectedAt);
   }
+}
 
   // Tasks are not physical entities; skip MOVED logging even if site references change.
 
