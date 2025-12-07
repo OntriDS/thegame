@@ -52,7 +52,8 @@ export async function addEntityToArchive<T extends ArchiveEntity>(
 
 export async function getArchivedEntitiesByMonth<T>(
   entityType: string,
-  mmyy: string
+  mmyy: string,
+  altEntityTypes: string[] = []
 ): Promise<T[]> {
   const indexKey = buildArchiveIndexKey(entityType, mmyy);
   const ids = await kvSMembers(indexKey);
@@ -60,18 +61,22 @@ export async function getArchivedEntitiesByMonth<T>(
 
   // Strategy: Data might be stored in ANY month bucket, not just the requested one.
   // We must scan all candidate months for the data keys corresponding to these IDs.
+  // Also scan alternate entity names (e.g. 'item' vs 'item-snapshots').
   const months = await getAvailableArchiveMonths();
   const candidateMonths = Array.from(new Set([mmyy, ...months]));
+  const targetEntities = [entityType, ...altEntityTypes];
 
   const allKeys: string[] = [];
   const keyToId = new Map<string, string>();
 
-  // Construct search keys for every ID across every candidate month
+  // Construct search keys for every ID across every candidate month AND every candidate entity name
   for (const id of ids) {
-    for (const month of candidateMonths) {
-      const key = buildArchiveDataKey(entityType, month, id);
-      allKeys.push(key);
-      keyToId.set(key, id);
+    for (const ent of targetEntities) {
+      for (const month of candidateMonths) {
+        const key = buildArchiveDataKey(ent, month, id);
+        allKeys.push(key);
+        keyToId.set(key, id);
+      }
     }
   }
 
@@ -101,4 +106,3 @@ export async function getArchivedEntityById<T>(
 ): Promise<T | null> {
   return await kvGet<T>(buildArchiveDataKey(entityType, mmyy, id));
 }
-

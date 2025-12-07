@@ -530,7 +530,7 @@ export async function getArchivedTasksByMonth(mmyy: string): Promise<Task[]> {
 }
 
 export async function getArchivedItemsByMonth(mmyy: string): Promise<Item[]> {
-  const snapshots = await archiveRepo.getArchivedEntitiesByMonth<any>('item-snapshots', mmyy);
+  const snapshots = await archiveRepo.getArchivedEntitiesByMonth<any>('item-snapshots', mmyy, ['item']);
   return snapshots.map(s => {
     const data = s.data || s; // Support legacy raw entities
     return reviveDates(data as Item);
