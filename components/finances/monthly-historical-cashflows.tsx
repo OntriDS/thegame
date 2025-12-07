@@ -10,7 +10,7 @@ import { FinancialStatus } from '@/types/enums';
 import { aggregateRecordsByStation, calculateTotals } from '@/lib/utils/financial-utils';
 import { formatCurrency } from '@/lib/utils/financial-utils';
 import { getCurrentMonth, getMonthName, MONTHS } from '@/lib/constants/date-constants';
-import { TrendingUp, TrendingDown, Calendar } from 'lucide-react';
+import { TrendingUp, TrendingDown, Calendar, Archive, ShoppingCart } from 'lucide-react';
 
 interface MonthlyCashflowData {
   year: number;
@@ -145,6 +145,76 @@ export function MonthlyHistoricalCashflows({ className }: MonthlyHistoricalCashf
             Monthly Historical Cashflows
           </div>
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 gap-2 border-orange-500/50 text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+              onClick={async () => {
+                if (!confirm(`Are you sure you want to collect ALL done financials for ${getMonthName(selectedMonth)} ${selectedYear}? \n\nThis will create archive snapshots and mark them as collected.`)) return;
+
+                setLoading(true);
+                try {
+                  const res = await fetch('/api/financials/collect-all', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ month: selectedMonth, year: selectedYear })
+                  });
+
+                  const data = await res.json();
+
+                  if (res.ok) {
+                    alert(`Successfully collected ${data.collected} financial records!`);
+                    // Reload financials
+                    const financials = await ClientAPI.getFinancialRecords();
+                    setAllFinancials(financials);
+                  } else {
+                    alert(`Error: ${data.error || 'Failed to collect financials'}`);
+                  }
+                } catch (e: any) {
+                  alert('Failed to collect financials: ' + e.message);
+                } finally {
+                  setLoading(false);
+                }
+              }}
+            >
+              <Archive className="w-3.5 h-3.5" />
+              Collect Financials
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 gap-2 border-blue-500/50 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+              onClick={async () => {
+                if (!confirm(`Are you sure you want to collect ALL charged sales for ${getMonthName(selectedMonth)} ${selectedYear}? \n\nThis will create archive snapshots and mark them as collected.`)) return;
+
+                setLoading(true);
+                try {
+                  const res = await fetch('/api/sales/collect-all', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ month: selectedMonth, year: selectedYear })
+                  });
+
+                  const data = await res.json();
+
+                  if (res.ok) {
+                    alert(`Successfully collected ${data.collected} sales records!`);
+                    // Reload financials as sales affect them
+                    const financials = await ClientAPI.getFinancialRecords();
+                    setAllFinancials(financials);
+                  } else {
+                    alert(`Error: ${data.error || 'Failed to collect sales'}`);
+                  }
+                } catch (e: any) {
+                  alert('Failed to collect sales: ' + e.message);
+                } finally {
+                  setLoading(false);
+                }
+              }}
+            >
+              <ShoppingCart className="w-3.5 h-3.5" />
+              Collect Sales
+            </Button>
             <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(parseInt(value))}>
               <SelectTrigger className="w-24 h-8">
                 <SelectValue />

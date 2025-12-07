@@ -162,41 +162,53 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
     !!task.isCollected && (!previousTask || !previousTask.isCollected);
 
   if (statusBecameCollected || flagBecameCollected) {
-  const now = new Date();
-  const adjustedNow = new Date(now.getTime() - 6 * 60 * 60 * 1000);
-  const collectedAt = task.collectedAt ?? adjustedNow;
-  const snapshotEffectKey = EffectKeys.sideEffect('task', task.id, `taskSnapshot:${formatMonthKey(collectedAt)}`);
+    let defaultCollectedAt: Date;
 
-  if (!(await hasEffect(snapshotEffectKey))) {
-    const updatedTask: Task = {
-      ...task,
-      isCollected: true,
-      collectedAt
-    };
+    if (task.doneAt) {
+      // User requirement: If task was done, collect it as of the end of that month
+      const doneDate = new Date(task.doneAt);
+      // Get last day of that month (month index + 1, day 0)
+      defaultCollectedAt = new Date(doneDate.getFullYear(), doneDate.getMonth() + 1, 0);
+      defaultCollectedAt.setHours(12, 0, 0, 0); // Noon to avoid timezone rollover (safe "last day")
+    } else {
+      // Fallback to adjusted current time (Costa Rica offset)
+      const now = new Date();
+      defaultCollectedAt = new Date(now.getTime() - 6 * 60 * 60 * 1000);
+    }
 
-    await repoUpsertTask(updatedTask);
+    const collectedAt = task.collectedAt ?? defaultCollectedAt;
+    const snapshotEffectKey = EffectKeys.sideEffect('task', task.id, `taskSnapshot:${formatMonthKey(collectedAt)}`);
 
-    await createTaskSnapshot(updatedTask, collectedAt, updatedTask.playerCharacterId || undefined);
+    if (!(await hasEffect(snapshotEffectKey))) {
+      const updatedTask: Task = {
+        ...task,
+        isCollected: true,
+        collectedAt
+      };
 
-    await appendEntityLog(EntityType.TASK, updatedTask.id, LogEventType.COLLECTED, {
-      name: updatedTask.name,
-      taskType: updatedTask.type,
-      station: updatedTask.station,
-      priority: updatedTask.priority,
-      collectedAt: collectedAt.toISOString()
-    });
+      await repoUpsertTask(updatedTask);
 
-    const monthKey = formatMonthKey(collectedAt);
-    const { kvSAdd } = await import('@/data-store/kv');
-    const collectedIndexKey = `index:tasks:collected:${monthKey}`;
-    await kvSAdd(collectedIndexKey, updatedTask.id);
+      await createTaskSnapshot(updatedTask, collectedAt, updatedTask.playerCharacterId || undefined);
 
-    await markEffect(snapshotEffectKey);
-    console.log(`[onTaskUpsert] ✅ Task ${updatedTask.name} collected - snapshot created, added to index ${monthKey}`);
+      await appendEntityLog(EntityType.TASK, updatedTask.id, LogEventType.COLLECTED, {
+        name: updatedTask.name,
+        taskType: updatedTask.type,
+        station: updatedTask.station,
+        priority: updatedTask.priority,
+        collectedAt: collectedAt.toISOString()
+      });
 
-    await cascadeCollectionToChildren(updatedTask, collectedAt);
+      const monthKey = formatMonthKey(collectedAt);
+      const { kvSAdd } = await import('@/data-store/kv');
+      const collectedIndexKey = `index:tasks:collected:${monthKey}`;
+      await kvSAdd(collectedIndexKey, updatedTask.id);
+
+      await markEffect(snapshotEffectKey);
+      console.log(`[onTaskUpsert] ✅ Task ${updatedTask.name} collected - snapshot created, added to index ${monthKey}`);
+
+      await cascadeCollectionToChildren(updatedTask, collectedAt);
+    }
   }
-}
 
   // Tasks are not physical entities; skip MOVED logging even if site references change.
 

@@ -188,9 +188,13 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
       collectedAt: new Date().toISOString()
     });
 
-    const now = new Date();
-    const adjustedNow = new Date(now.getTime() - 6 * 60 * 60 * 1000);
-    const collectedAt = financial.collectedAt ?? adjustedNow;
+    // User requirement: collectedAt should be the last day of the record's month
+    // month is 1-based index (1=Jan, 11=Nov). 
+    // new Date(year, month, 0) gives the last day of that month.
+    const endOfMonth = new Date(financial.year, financial.month, 0);
+    endOfMonth.setHours(12, 0, 0, 0); // Noon to avoid timezone rollover (safe "last day")
+
+    const collectedAt = financial.collectedAt ?? endOfMonth;
     const snapshotEffectKey = EffectKeys.sideEffect('financial', financial.id, `financialSnapshot:${formatMonthKey(collectedAt)}`);
 
     if (!(await hasEffect(snapshotEffectKey))) {

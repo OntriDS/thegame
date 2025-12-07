@@ -152,9 +152,12 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
     !!sale.isCollected && (!previousSale || !previousSale.isCollected);
 
   if (statusBecameCollected || flagBecameCollected) {
-    const now = new Date();
-    const adjustedNow = new Date(now.getTime() - 6 * 60 * 60 * 1000);
-    const collectedAt = sale.collectedAt ?? adjustedNow;
+    // User requirement: collectedAt should be the last day of the sale's month
+    const saleDate = sale.saleDate ? new Date(sale.saleDate) : new Date();
+    const endOfMonth = new Date(saleDate.getFullYear(), saleDate.getMonth() + 1, 0);
+    endOfMonth.setHours(12, 0, 0, 0); // Noon
+
+    const collectedAt = sale.collectedAt ?? endOfMonth;
 
     // Normalize both status and flag for consistency
     const normalizedSale = {
@@ -244,7 +247,12 @@ async function maybeCreateSaleSnapshot(sale: Sale, previousSale?: Sale): Promise
     return;
   }
 
-  const collectedAt = sale.collectedAt ?? new Date();
+  // User requirement: collectedAt should be the last day of the sale's month
+  const saleDate = sale.saleDate ? new Date(sale.saleDate) : new Date();
+  const endOfMonth = new Date(saleDate.getFullYear(), saleDate.getMonth() + 1, 0);
+  endOfMonth.setHours(12, 0, 0, 0); // Noon
+
+  const collectedAt = sale.collectedAt ?? endOfMonth;
   const snapshotEffectKey = EffectKeys.sideEffect('sale', sale.id, `saleSnapshot:${formatMonthKey(collectedAt)}`);
 
   if (await hasEffect(snapshotEffectKey)) {
