@@ -139,12 +139,7 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
     // Save updated item (skip workflow to avoid recursion)
     await upsertItem(updatedItem, { skipWorkflowEffects: true });
 
-    // Add to month-based sold index for efficient Sold Items Tab queries
-    const monthKey = formatMonthKey(soldAt);
-    const { kvSAdd } = await import('@/data-store/kv');
-    const soldIndexKey = `index:items:sold:${monthKey}`;
-    await kvSAdd(soldIndexKey, item.id);
-    console.log(`[onItemUpsert] ✅ Added item to sold index ${monthKey}`);
+
 
     // Log SOLD event
     const soldLogDetails: Record<string, any> = {

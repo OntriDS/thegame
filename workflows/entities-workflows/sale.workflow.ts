@@ -296,15 +296,10 @@ async function createItemSnapshotsFromSale(sale: Sale): Promise<void> {
     // Create ItemSnapshot using the Archive-First approach
     await createItemSnapshot(item, line.quantity, sale);
 
-    // Add to month-based sold index
-    const soldAt = sale.saleDate || new Date();
-    const monthKey = formatMonthKey(soldAt);
-    const { kvSAdd } = await import('@/data-store/kv');
-    const soldIndexKey = `index:items:sold:${monthKey}`;
-    await kvSAdd(soldIndexKey, item.id);
+
 
     await markEffect(effectKey);
-    console.log(`[createItemSnapshotsFromSale] ✅ Created snapshot for sold item ${item.name} (${line.quantity} units), added to sold index ${monthKey}`);
+    console.log(`[createItemSnapshotsFromSale] ✅ Created snapshot for sold item ${item.name} (${line.quantity} units)`);
   }
 }
 
