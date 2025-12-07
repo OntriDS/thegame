@@ -59,7 +59,9 @@ export async function getArchivedEntitiesByMonth<T>(
   if (ids.length === 0) return [];
 
   const keys = ids.map(id => buildArchiveDataKey(entityType, mmyy, id));
+  console.log(`[ArchiveRepo] Fetching ${entityType} for ${mmyy}. Keys:`, keys.slice(0, 3));
   const entities = await kvMGet<T>(keys);
+  console.log(`[ArchiveRepo] Found ${entities.filter(e => e !== null).length}/${keys.length} entities`);
 
   return entities.filter((entity): entity is T => entity !== null);
 }
