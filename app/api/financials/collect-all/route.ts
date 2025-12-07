@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdminAuth } from '@/lib/api-auth';
 import { getFinancialsForMonth, upsertFinancial, archiveFinancialRecordSnapshot } from '@/data-store/datastore';
+import { addMonthToArchiveIndex } from '@/data-store/repositories/archive.repo';
 import { formatMonthKey } from '@/lib/utils/date-utils';
-import { FinancialStatus } from '@/types/enums';
+import { FinancialStatus, EntityType, LogEventType } from '@/types/enums';
+import { appendEntityLog } from '@/workflows/entities-logging';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,6 +23,9 @@ export async function POST(request: NextRequest) {
 
         const date = new Date(year, month - 1, 1);
         const monthKey = formatMonthKey(date);
+
+        // Ensure monthly index exists explicitly
+        await addMonthToArchiveIndex(monthKey);
 
         // 1. Get all financials for the month
         const allFinancials = await getFinancialsForMonth(year, month);
@@ -56,6 +61,12 @@ export async function POST(request: NextRequest) {
 
                 // Save updated record
                 await upsertFinancial(updatedRecord, { skipWorkflowEffects: true });
+
+                // Log COLLECTED event (since workflow effects are skipped)
+                await appendEntityLog(EntityType.FINANCIAL, updatedRecord.id, LogEventType.COLLECTED, {
+                    name: updatedRecord.name,
+                    collectedAt: updatedRecord.collectedAt
+                });
 
                 return { id: record.id, success: true };
             } catch (err: any) {

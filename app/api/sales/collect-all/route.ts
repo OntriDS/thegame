@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdminAuth } from '@/lib/api-auth';
 import { getSalesForMonth, upsertSale, archiveSaleSnapshot } from '@/data-store/datastore';
+import { addMonthToArchiveIndex } from '@/data-store/repositories/archive.repo';
 import { formatMonthKey } from '@/lib/utils/date-utils';
-import { SaleStatus } from '@/types/enums';
+import { SaleStatus, EntityType, LogEventType } from '@/types/enums'; // Added enums
+import { appendEntityLog } from '@/workflows/entities-logging'; // Added logging
 
 export const dynamic = 'force-dynamic';
 
@@ -21,6 +23,9 @@ export async function POST(request: NextRequest) {
 
         const date = new Date(year, month - 1, 1);
         const monthKey = formatMonthKey(date);
+
+        // Ensure monthly index exists explicitly to prevent empty vault
+        await addMonthToArchiveIndex(monthKey);
 
         // 1. Get all sales for the month
         const allSales = await getSalesForMonth(year, month);
@@ -66,6 +71,13 @@ export async function POST(request: NextRequest) {
 
                 // Save updated record
                 await upsertSale(updatedSale, { skipWorkflowEffects: true });
+
+                // Log COLLECTED event (since workflow effects are skipped)
+                await appendEntityLog(EntityType.SALE, updatedSale.id, LogEventType.COLLECTED, {
+                    name: updatedSale.counterpartyName || 'Sale',
+                    saleDate: updatedSale.saleDate,
+                    collectedAt: updatedSale.collectedAt
+                });
 
                 return { id: sale.id, success: true };
             } catch (err: any) {

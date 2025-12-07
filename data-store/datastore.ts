@@ -77,6 +77,12 @@ import { getCurrentMonthKey, formatMonthKey, reviveDates } from '@/lib/utils/dat
 import { kvMGet, kvSMembers } from './kv';
 import { buildDataKey, buildMonthIndexKey } from './keys';
 import type { PlayerArchiveRow } from '@/types/archive';
+import {
+  createTaskSnapshot,
+  createItemSnapshot,
+  createSaleSnapshot,
+  createFinancialSnapshot
+} from '@/workflows/snapshot-workflows';
 
 // TASKS
 export async function upsertTask(task: Task, options?: { skipWorkflowEffects?: boolean; skipLinkEffects?: boolean }): Promise<Task> {
@@ -496,42 +502,43 @@ export async function getEntityLogMonths(entityType: EntityType): Promise<string
 // ============================================================================
 
 export async function archiveTaskSnapshot(task: Task, mmyy: string): Promise<void> {
-  await archiveRepo.addEntityToArchive(EntityType.TASK, mmyy, task);
+  await createTaskSnapshot(task, task.collectedAt || new Date(), undefined);
 }
 
 export async function archiveItemSnapshot(item: Item, mmyy: string): Promise<void> {
-  await archiveRepo.addEntityToArchive('item-snapshots', mmyy, item);
+  // Use 1 as default quantity if not specified in context
+  await createItemSnapshot(item, 1, null, undefined);
 }
 
 export async function archiveSaleSnapshot(sale: Sale, mmyy: string): Promise<void> {
-  await archiveRepo.addEntityToArchive('sale-snapshots', mmyy, sale);
+  await createSaleSnapshot(sale, sale.collectedAt || new Date(), sale.playerCharacterId || undefined);
 }
 
 export async function archiveFinancialRecordSnapshot(
   financial: FinancialRecord,
   mmyy: string
 ): Promise<void> {
-  await archiveRepo.addEntityToArchive('financial-snapshots', mmyy, financial);
+  await createFinancialSnapshot(financial, financial.collectedAt || new Date(), undefined);
 }
 
 export async function getArchivedTasksByMonth(mmyy: string): Promise<Task[]> {
   const snapshots = await archiveRepo.getArchivedEntitiesByMonth<TaskSnapshot>('task-snapshots', mmyy);
-  return snapshots.map(s => s.data as unknown as Task);
+  return snapshots.map(s => reviveDates(s.data as unknown as Task));
 }
 
 export async function getArchivedItemsByMonth(mmyy: string): Promise<Item[]> {
   const snapshots = await archiveRepo.getArchivedEntitiesByMonth<ItemSnapshot>('item-snapshots', mmyy);
-  return snapshots.map(s => s.data as unknown as Item);
+  return snapshots.map(s => reviveDates(s.data as unknown as Item));
 }
 
 export async function getArchivedSalesByMonth(mmyy: string): Promise<Sale[]> {
   const snapshots = await archiveRepo.getArchivedEntitiesByMonth<SaleSnapshot>('sale-snapshots', mmyy);
-  return snapshots.map(s => s.data as unknown as Sale);
+  return snapshots.map(s => reviveDates(s.data as unknown as Sale));
 }
 
 export async function getArchivedFinancialRecordsByMonth(mmyy: string): Promise<FinancialRecord[]> {
   const snapshots = await archiveRepo.getArchivedEntitiesByMonth<FinancialSnapshot>('financial-snapshots', mmyy);
-  return snapshots.map(s => s.data as unknown as FinancialRecord);
+  return snapshots.map(s => reviveDates(s.data as unknown as FinancialRecord));
 }
 
 export async function getAvailableArchiveMonths(): Promise<string[]> {
