@@ -64,10 +64,7 @@ function ArchiveMonthTabsComponent({
                   <dt className="font-medium text-foreground mb-1">Items</dt>
                   <dd>{month.summary.items}</dd>
                 </div>
-                <div>
-                  <dt className="font-medium text-foreground mb-1">Player</dt>
-                  <dd>{month.summary.playerEvents}</dd>
-                </div>
+
               </dl>
               <Button
                 size="sm"
