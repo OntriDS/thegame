@@ -10,9 +10,9 @@ import { useEntityUpdates } from "@/lib/hooks/use-entity-updates";
 import { ClientAPI } from "@/lib/client-api";
 import { Sale } from "@/types/entities";
 import { SaleType, SaleStatus } from "@/types/enums";
-import { formatDateDDMMYYYY } from "@/lib/constants/date-constants";
+import { formatDateDDMMYYYY, getMonthName } from "@/lib/constants/date-constants";
 import { getAllSiteNames } from "@/lib/utils/site-options-utils";
-import { Plus, Calendar, DollarSign, Package, TrendingUp } from "lucide-react";
+import { Plus, Calendar, DollarSign, Package, TrendingUp, Archive } from "lucide-react";
 import SalesModal from "@/components/modals/sales-modal";
 import { MonthYearSelector } from "@/components/ui/month-year-selector";
 import { getCurrentMonth } from "@/lib/constants/date-constants";
@@ -133,9 +133,9 @@ export default function SalesPage() {
         if (line.kind === 'item' || line.kind === 'bundle') {
           return lineTotal + line.quantity;
         }
-    return lineTotal;
+        return lineTotal;
+      }, 0);
     }, 0);
-  }, 0);
   };
 
   const handleNewSale = () => {
@@ -151,13 +151,13 @@ export default function SalesPage() {
   const handleSaveSale = async (sale: Sale) => {
     try {
       const finalSale = await ClientAPI.upsertSale(sale);
-      
+
       // Update editingSale with fresh data BEFORE modal closes (fixes stale UI issue)
       setEditingSale(finalSale);
-      
+
       setShowSalesModal(false);
       await loadSales(); // Refresh the list
-      
+
 
     } catch (error) {
       console.error('Failed to save sale:', error);
@@ -204,6 +204,38 @@ export default function SalesPage() {
             />
             <span className="text-sm text-muted-foreground">Show Collected</span>
           </div>
+          <Button
+            variant="outline"
+            className="flex items-center gap-2 border-blue-500/50 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+            onClick={async () => {
+              if (!confirm(`Are you sure you want to collect ALL charged sales for ${getMonthName(currentMonth)} ${currentYear}? \n\nThis will create archive snapshots and mark them as collected.`)) return;
+
+              setIsLoading(true);
+              try {
+                const res = await fetch('/api/sales/collect-all', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ month: currentMonth, year: currentYear })
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                  alert(`Successfully collected ${data.collected} sales records!`);
+                  await loadSales(); // Refresh list
+                } else {
+                  alert(`Error: ${data.error || 'Failed to collect sales'}`);
+                }
+              } catch (e: any) {
+                alert('Failed to collect sales: ' + e.message);
+              } finally {
+                setIsLoading(false);
+              }
+            }}
+          >
+            <Archive className="h-4 w-4" />
+            Collect Month
+          </Button>
           <Button className="flex items-center gap-2" onClick={handleNewSale}>
             <Plus className="h-4 w-4" />
             New Sale
