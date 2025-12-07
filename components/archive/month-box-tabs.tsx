@@ -18,7 +18,7 @@ import { formatDisplayDate } from "@/lib/utils/date-utils";
 import { formatCurrency } from "@/lib/utils/financial-utils";
 import { cn } from "@/lib/utils";
 
-type ArchiveTabKey = "tasks" | "sales" | "financials" | "items" | "player";
+type ArchiveTabKey = "tasks" | "sales" | "financials" | "items";
 
 interface MonthBoxTabsProps {
   month: AvailableArchiveMonth;
@@ -53,7 +53,7 @@ const defaultSorts: Record<ArchiveTabKey, { field: string; direction: "asc" | "d
   sales: { field: "saleDate", direction: "desc" },
   financials: { field: "collectedAt", direction: "desc" },
   items: { field: "saleDate", direction: "desc" },
-  player: { field: "points", direction: "desc" },
+  items: { field: "saleDate", direction: "desc" },
 };
 
 function toNumber(value: unknown): number {
@@ -174,49 +174,7 @@ const ItemColumns: ColumnConfig<Item>[] = [
   },
 ];
 
-const PlayerColumns: ColumnConfig<PlayerArchiveRow>[] = [
-  { key: "source", label: "Source", accessor: (row) => row.sourceType, sortable: true, sortValue: (row) => row.sourceType },
-  { key: "description", label: "Description", accessor: (row) => row.description, sortable: true, sortValue: (row) => row.description },
-  {
-    key: "date",
-    label: "Date",
-    accessor: (row) => formatDisplayDate(row.date),
-    sortable: true,
-    sortValue: (row) => new Date(row.date).getTime(),
-  },
-  {
-    key: "hp",
-    label: "HP",
-    align: "right",
-    accessor: (row) => row.points.hp ?? 0,
-    sortable: true,
-    sortValue: (row) => row.points.hp ?? 0,
-  },
-  {
-    key: "fp",
-    label: "FP",
-    align: "right",
-    accessor: (row) => row.points.fp ?? 0,
-    sortable: true,
-    sortValue: (row) => row.points.fp ?? 0,
-  },
-  {
-    key: "rp",
-    label: "RP",
-    align: "right",
-    accessor: (row) => row.points.rp ?? 0,
-    sortable: true,
-    sortValue: (row) => row.points.rp ?? 0,
-  },
-  {
-    key: "xp",
-    label: "XP",
-    align: "right",
-    accessor: (row) => row.points.xp ?? 0,
-    sortable: true,
-    sortValue: (row) => row.points.xp ?? 0,
-  },
-];
+
 
 function getSearchString(row: unknown): string {
   return JSON.stringify(row).toLowerCase();
@@ -548,18 +506,7 @@ export default function MonthBoxTabs({ month }: MonthBoxTabsProps) {
     lastCopiedId: null,
   });
 
-  const [playerState, setPlayerState] = useState<TabState<PlayerArchiveRow>>({
-    data: [],
-    filtered: [],
-    isLoading: true,
-    error: null,
-    search: "",
-    sortField: defaultSorts.player.field,
-    sortDirection: defaultSorts.player.direction,
-    visibleColumns: new Set(PlayerColumns.map((col) => col.key)),
-    page: 1,
-    lastCopiedId: null,
-  });
+
 
   const handleCopyTaskLink = async (task: Task) => {
     const url = buildActiveEntityLink("task", task.id);
@@ -593,20 +540,7 @@ export default function MonthBoxTabs({ month }: MonthBoxTabsProps) {
     }
   };
 
-  const handleCopyPlayerLink = async (row: PlayerArchiveRow) => {
-    let entity: "task" | "sale" | "financial" | "item" | null = null;
-    if (row.sourceType === "task") entity = "task";
-    if (row.sourceType === "sale") entity = "sale";
-    if (row.sourceType === "financial") entity = "financial";
 
-    if (!entity) return;
-
-    const url = buildActiveEntityLink(entity, row.sourceId);
-    const success = await copyToClipboard(url);
-    if (success) {
-      setPlayerState((prev) => ({ ...prev, lastCopiedId: row.id }));
-    }
-  };
 
   useEffect(() => {
     const loadTasks = async () => {
@@ -712,34 +646,7 @@ export default function MonthBoxTabs({ month }: MonthBoxTabsProps) {
     loadItems();
   }, [month.key]);
 
-  useEffect(() => {
-    const loadPlayer = async () => {
-      setPlayerState((prev) => ({ ...prev, isLoading: true, error: null }));
-      try {
-        const data = await fetchArchiveData<PlayerArchiveRow>("player", month.key);
-        setPlayerState((prev) => {
-          const filtered = applyFiltering(data, prev.search);
-          const sorted = applySorting(filtered, PlayerColumns, prev.sortField, prev.sortDirection);
-          return {
-            ...prev,
-            data,
-            filtered: sorted,
-            isLoading: false,
-            page: 1,
-            lastCopiedId: null,
-          };
-        });
-      } catch (error) {
-        console.error("[MonthBoxTabs] Failed to load player events:", error);
-        setPlayerState((prev) => ({
-          ...prev,
-          isLoading: false,
-          error: "Failed to load player events",
-        }));
-      }
-    };
-    loadPlayer();
-  }, [month.key]);
+
 
   const totals = {
     tasks: useMemo(() => {
@@ -794,261 +701,197 @@ export default function MonthBoxTabs({ month }: MonthBoxTabsProps) {
         { label: "Qty Sold", value: totalQuantity },
       ];
     }, [itemState.filtered]),
-    player: useMemo(() => {
-      const count = playerState.filtered.length;
-      const totals = playerState.filtered.reduce(
-        (acc, row) => ({
-          hp: acc.hp + (row.points.hp ?? 0),
-          fp: acc.fp + (row.points.fp ?? 0),
-          rp: acc.rp + (row.points.rp ?? 0),
-          xp: acc.xp + (row.points.xp ?? 0),
-        }),
-        { hp: 0, fp: 0, rp: 0, xp: 0 }
-      );
-      return [
-        { label: "Events", value: count },
-        { label: "HP", value: totals.hp },
-        { label: "FP", value: totals.fp },
-        { label: "RP", value: totals.rp },
-        { label: "XP", value: totals.xp },
-      ];
-    }, [playerState.filtered]),
+  }, [itemState.filtered]),
+};
   };
 
-  return (
-    <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as ArchiveTabKey)} className="flex flex-col gap-4">
-      <TabsList className="w-full justify-start overflow-x-auto">
-        <TabsTrigger value="tasks">Tasks</TabsTrigger>
-        <TabsTrigger value="sales">Sales</TabsTrigger>
-        <TabsTrigger value="financials">Financials</TabsTrigger>
-        <TabsTrigger value="items">Items</TabsTrigger>
-        <TabsTrigger value="player">Player</TabsTrigger>
-      </TabsList>
+return (
+  <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as ArchiveTabKey)} className="flex flex-col gap-4">
+    <TabsList className="w-full justify-start overflow-x-auto">
+      <TabsTrigger value="tasks">Tasks</TabsTrigger>
+      <TabsTrigger value="sales">Sales</TabsTrigger>
+      <TabsTrigger value="financials">Financials</TabsTrigger>
+      <TabsTrigger value="items">Items</TabsTrigger>
+    </TabsList>
 
-      <TabsContent value="tasks" className="flex-1">
-        {renderTable({
-          tabState: taskState,
-          columns: TaskColumns,
-          onSearch: (value) =>
-            setTaskState((prev) => {
-              const filtered = applyFiltering(prev.data, value);
-              const sorted = applySorting(filtered, TaskColumns, prev.sortField, prev.sortDirection);
-              return { ...prev, search: value, filtered: sorted, page: 1 };
-            }),
-          onSort: (key) =>
-            setTaskState((prev) => {
-              const direction =
-                prev.sortField === key && prev.sortDirection === "asc" ? "desc" : "asc";
-              const sorted = applySorting(prev.filtered, TaskColumns, key, direction);
-              return { ...prev, sortField: key, sortDirection: direction, filtered: sorted };
-            }),
-          onToggleColumn: (key) =>
-            setTaskState((prev) => {
-              const next = new Set(prev.visibleColumns);
-              if (next.has(key) && next.size > 1) {
-                next.delete(key);
-              } else {
-                next.add(key);
-              }
-              return { ...prev, visibleColumns: next };
-            }),
-          onChangePage: (page) => setTaskState((prev) => ({ ...prev, page })),
-          pageSize: PAGE_SIZE,
-          totals: totals.tasks,
-          renderActions: (task) => (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleCopyTaskLink(task)}
-              className="gap-2"
-            >
-              <Clipboard className="h-3.5 w-3.5" />
-              {taskState.lastCopiedId === task.id ? "Copied" : "Copy link"}
-            </Button>
-          ),
-        })}
-      </TabsContent>
+    <TabsContent value="tasks" className="flex-1">
+      {renderTable({
+        tabState: taskState,
+        columns: TaskColumns,
+        onSearch: (value) =>
+          setTaskState((prev) => {
+            const filtered = applyFiltering(prev.data, value);
+            const sorted = applySorting(filtered, TaskColumns, prev.sortField, prev.sortDirection);
+            return { ...prev, search: value, filtered: sorted, page: 1 };
+          }),
+        onSort: (key) =>
+          setTaskState((prev) => {
+            const direction =
+              prev.sortField === key && prev.sortDirection === "asc" ? "desc" : "asc";
+            const sorted = applySorting(prev.filtered, TaskColumns, key, direction);
+            return { ...prev, sortField: key, sortDirection: direction, filtered: sorted };
+          }),
+        onToggleColumn: (key) =>
+          setTaskState((prev) => {
+            const next = new Set(prev.visibleColumns);
+            if (next.has(key) && next.size > 1) {
+              next.delete(key);
+            } else {
+              next.add(key);
+            }
+            return { ...prev, visibleColumns: next };
+          }),
+        onChangePage: (page) => setTaskState((prev) => ({ ...prev, page })),
+        pageSize: PAGE_SIZE,
+        totals: totals.tasks,
+        renderActions: (task) => (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleCopyTaskLink(task)}
+            className="gap-2"
+          >
+            <Clipboard className="h-3.5 w-3.5" />
+            {taskState.lastCopiedId === task.id ? "Copied" : "Copy link"}
+          </Button>
+        ),
+      })}
+    </TabsContent>
 
-      <TabsContent value="sales" className="flex-1">
-        {renderTable({
-          tabState: salesState,
-          columns: SalesColumns,
-          onSearch: (value) =>
-            setSalesState((prev) => {
-              const filtered = applyFiltering(prev.data, value);
-              const sorted = applySorting(filtered, SalesColumns, prev.sortField, prev.sortDirection);
-              return { ...prev, search: value, filtered: sorted, page: 1 };
-            }),
-          onSort: (key) =>
-            setSalesState((prev) => {
-              const direction =
-                prev.sortField === key && prev.sortDirection === "asc" ? "desc" : "asc";
-              const sorted = applySorting(prev.filtered, SalesColumns, key, direction);
-              return { ...prev, sortField: key, sortDirection: direction, filtered: sorted };
-            }),
-          onToggleColumn: (key) =>
-            setSalesState((prev) => {
-              const next = new Set(prev.visibleColumns);
-              if (next.has(key) && next.size > 1) {
-                next.delete(key);
-              } else {
-                next.add(key);
-              }
-              return { ...prev, visibleColumns: next };
-            }),
-          onChangePage: (page) => setSalesState((prev) => ({ ...prev, page })),
-          pageSize: PAGE_SIZE,
-          totals: totals.sales,
-          renderActions: (sale) => (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleCopySaleLink(sale)}
-              className="gap-2"
-            >
-              <Clipboard className="h-3.5 w-3.5" />
-              {salesState.lastCopiedId === sale.id ? "Copied" : "Copy link"}
-            </Button>
-          ),
-        })}
-      </TabsContent>
+    <TabsContent value="sales" className="flex-1">
+      {renderTable({
+        tabState: salesState,
+        columns: SalesColumns,
+        onSearch: (value) =>
+          setSalesState((prev) => {
+            const filtered = applyFiltering(prev.data, value);
+            const sorted = applySorting(filtered, SalesColumns, prev.sortField, prev.sortDirection);
+            return { ...prev, search: value, filtered: sorted, page: 1 };
+          }),
+        onSort: (key) =>
+          setSalesState((prev) => {
+            const direction =
+              prev.sortField === key && prev.sortDirection === "asc" ? "desc" : "asc";
+            const sorted = applySorting(prev.filtered, SalesColumns, key, direction);
+            return { ...prev, sortField: key, sortDirection: direction, filtered: sorted };
+          }),
+        onToggleColumn: (key) =>
+          setSalesState((prev) => {
+            const next = new Set(prev.visibleColumns);
+            if (next.has(key) && next.size > 1) {
+              next.delete(key);
+            } else {
+              next.add(key);
+            }
+            return { ...prev, visibleColumns: next };
+          }),
+        onChangePage: (page) => setSalesState((prev) => ({ ...prev, page })),
+        pageSize: PAGE_SIZE,
+        totals: totals.sales,
+        renderActions: (sale) => (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleCopySaleLink(sale)}
+            className="gap-2"
+          >
+            <Clipboard className="h-3.5 w-3.5" />
+            {salesState.lastCopiedId === sale.id ? "Copied" : "Copy link"}
+          </Button>
+        ),
+      })}
+    </TabsContent>
 
-      <TabsContent value="financials" className="flex-1">
-        {renderTable({
-          tabState: financialState,
-          columns: FinancialColumns,
-          onSearch: (value) =>
-            setFinancialState((prev) => {
-              const filtered = applyFiltering(prev.data, value);
-              const sorted = applySorting(filtered, FinancialColumns, prev.sortField, prev.sortDirection);
-              return { ...prev, search: value, filtered: sorted, page: 1 };
-            }),
-          onSort: (key) =>
-            setFinancialState((prev) => {
-              const direction =
-                prev.sortField === key && prev.sortDirection === "asc" ? "desc" : "asc";
-              const sorted = applySorting(prev.filtered, FinancialColumns, key, direction);
-              return { ...prev, sortField: key, sortDirection: direction, filtered: sorted };
-            }),
-          onToggleColumn: (key) =>
-            setFinancialState((prev) => {
-              const next = new Set(prev.visibleColumns);
-              if (next.has(key) && next.size > 1) {
-                next.delete(key);
-              } else {
-                next.add(key);
-              }
-              return { ...prev, visibleColumns: next };
-            }),
-          onChangePage: (page) => setFinancialState((prev) => ({ ...prev, page })),
-          pageSize: PAGE_SIZE,
-          totals: totals.financials,
-          renderActions: (financial) => (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleCopyFinancialLink(financial)}
-              className="gap-2"
-            >
-              <Clipboard className="h-3.5 w-3.5" />
-              {financialState.lastCopiedId === financial.id ? "Copied" : "Copy link"}
-            </Button>
-          ),
-        })}
-      </TabsContent>
+    <TabsContent value="financials" className="flex-1">
+      {renderTable({
+        tabState: financialState,
+        columns: FinancialColumns,
+        onSearch: (value) =>
+          setFinancialState((prev) => {
+            const filtered = applyFiltering(prev.data, value);
+            const sorted = applySorting(filtered, FinancialColumns, prev.sortField, prev.sortDirection);
+            return { ...prev, search: value, filtered: sorted, page: 1 };
+          }),
+        onSort: (key) =>
+          setFinancialState((prev) => {
+            const direction =
+              prev.sortField === key && prev.sortDirection === "asc" ? "desc" : "asc";
+            const sorted = applySorting(prev.filtered, FinancialColumns, key, direction);
+            return { ...prev, sortField: key, sortDirection: direction, filtered: sorted };
+          }),
+        onToggleColumn: (key) =>
+          setFinancialState((prev) => {
+            const next = new Set(prev.visibleColumns);
+            if (next.has(key) && next.size > 1) {
+              next.delete(key);
+            } else {
+              next.add(key);
+            }
+            return { ...prev, visibleColumns: next };
+          }),
+        onChangePage: (page) => setFinancialState((prev) => ({ ...prev, page })),
+        pageSize: PAGE_SIZE,
+        totals: totals.financials,
+        renderActions: (financial) => (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleCopyFinancialLink(financial)}
+            className="gap-2"
+          >
+            <Clipboard className="h-3.5 w-3.5" />
+            {financialState.lastCopiedId === financial.id ? "Copied" : "Copy link"}
+          </Button>
+        ),
+      })}
+    </TabsContent>
 
-      <TabsContent value="items" className="flex-1">
-        {renderTable({
-          tabState: itemState,
-          columns: ItemColumns,
-          onSearch: (value) =>
-            setItemState((prev) => {
-              const filtered = applyFiltering(prev.data, value);
-              const sorted = applySorting(filtered, ItemColumns, prev.sortField, prev.sortDirection);
-              return { ...prev, search: value, filtered: sorted, page: 1 };
-            }),
-          onSort: (key) =>
-            setItemState((prev) => {
-              const direction =
-                prev.sortField === key && prev.sortDirection === "asc" ? "desc" : "asc";
-              const sorted = applySorting(prev.filtered, ItemColumns, key, direction);
-              return { ...prev, sortField: key, sortDirection: direction, filtered: sorted };
-            }),
-          onToggleColumn: (key) =>
-            setItemState((prev) => {
-              const next = new Set(prev.visibleColumns);
-              if (next.has(key) && next.size > 1) {
-                next.delete(key);
-              } else {
-                next.add(key);
-              }
-              return { ...prev, visibleColumns: next };
-            }),
-          onChangePage: (page) => setItemState((prev) => ({ ...prev, page })),
-          pageSize: PAGE_SIZE,
-          totals: totals.items,
-          renderActions: (item) => (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleCopyItemLink(item)}
-              className="gap-2"
-            >
-              <Clipboard className="h-3.5 w-3.5" />
-              {itemState.lastCopiedId === item.id ? "Copied" : "Copy link"}
-            </Button>
-          ),
-        })}
-      </TabsContent>
+    <TabsContent value="items" className="flex-1">
+      {renderTable({
+        tabState: itemState,
+        columns: ItemColumns,
+        onSearch: (value) =>
+          setItemState((prev) => {
+            const filtered = applyFiltering(prev.data, value);
+            const sorted = applySorting(filtered, ItemColumns, prev.sortField, prev.sortDirection);
+            return { ...prev, search: value, filtered: sorted, page: 1 };
+          }),
+        onSort: (key) =>
+          setItemState((prev) => {
+            const direction =
+              prev.sortField === key && prev.sortDirection === "asc" ? "desc" : "asc";
+            const sorted = applySorting(prev.filtered, ItemColumns, key, direction);
+            return { ...prev, sortField: key, sortDirection: direction, filtered: sorted };
+          }),
+        onToggleColumn: (key) =>
+          setItemState((prev) => {
+            const next = new Set(prev.visibleColumns);
+            if (next.has(key) && next.size > 1) {
+              next.delete(key);
+            } else {
+              next.add(key);
+            }
+            return { ...prev, visibleColumns: next };
+          }),
+        onChangePage: (page) => setItemState((prev) => ({ ...prev, page })),
+        pageSize: PAGE_SIZE,
+        totals: totals.items,
+        renderActions: (item) => (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleCopyItemLink(item)}
+            className="gap-2"
+          >
+            <Clipboard className="h-3.5 w-3.5" />
+            {itemState.lastCopiedId === item.id ? "Copied" : "Copy link"}
+          </Button>
+        ),
+      })}
+    </TabsContent>
 
-      <TabsContent value="player" className="flex-1">
-        {renderTable({
-          tabState: playerState,
-          columns: PlayerColumns,
-          onSearch: (value) =>
-            setPlayerState((prev) => {
-              const filtered = applyFiltering(prev.data, value);
-              const sorted = applySorting(filtered, PlayerColumns, prev.sortField, prev.sortDirection);
-              return { ...prev, search: value, filtered: sorted, page: 1 };
-            }),
-          onSort: (key) =>
-            setPlayerState((prev) => {
-              const direction =
-                prev.sortField === key && prev.sortDirection === "asc" ? "desc" : "asc";
-              const sorted = applySorting(prev.filtered, PlayerColumns, key, direction);
-              return { ...prev, sortField: key, sortDirection: direction, filtered: sorted };
-            }),
-          onToggleColumn: (key) =>
-            setPlayerState((prev) => {
-              const next = new Set(prev.visibleColumns);
-              if (next.has(key) && next.size > 1) {
-                next.delete(key);
-              } else {
-                next.add(key);
-              }
-              return { ...prev, visibleColumns: next };
-            }),
-          onChangePage: (page) => setPlayerState((prev) => ({ ...prev, page })),
-          pageSize: PAGE_SIZE,
-          totals: totals.player,
-          renderActions: (row) => {
-            const disabled = row.sourceType !== "task" && row.sourceType !== "sale" && row.sourceType !== "financial";
-            return (
-              <Button
-                variant="ghost"
-                size="sm"
-                disabled={disabled}
-                onClick={() => handleCopyPlayerLink(row)}
-                className="gap-2"
-              >
-                <Clipboard className="h-3.5 w-3.5" />
-                {playerState.lastCopiedId === row.id ? "Copied" : disabled ? "No link" : "Copy link"}
-              </Button>
-            );
-          },
-        })}
-      </TabsContent>
-    </Tabs>
-  );
+
+  </Tabs>
+);
 }
 
