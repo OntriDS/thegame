@@ -10,7 +10,8 @@ import { FinancialStatus } from '@/types/enums';
 import { aggregateRecordsByStation, calculateTotals } from '@/lib/utils/financial-utils';
 import { formatCurrency } from '@/lib/utils/financial-utils';
 import { getCurrentMonth, getMonthName, MONTHS } from '@/lib/constants/date-constants';
-import { TrendingUp, TrendingDown, Calendar, Archive, ShoppingCart } from 'lucide-react';
+import { TrendingUp, TrendingDown, Calendar, Archive, ShoppingCart, Loader2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface MonthlyCashflowData {
   year: number;
@@ -30,13 +31,23 @@ interface MonthlyCashflowData {
 
 interface MonthlyHistoricalCashflowsProps {
   className?: string;
+  year?: number;
+  month?: number;
 }
 
-export function MonthlyHistoricalCashflows({ className }: MonthlyHistoricalCashflowsProps) {
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth());
+export function MonthlyHistoricalCashflows({ className, year, month }: MonthlyHistoricalCashflowsProps) {
+  const [selectedYear, setSelectedYear] = useState(year || new Date().getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState(month || getCurrentMonth());
   const [allFinancials, setAllFinancials] = useState<FinancialRecord[]>([]);
   const [loading, setLoading] = useState(false);
+  const [showCollectConfirm, setShowCollectConfirm] = useState(false);
+  const [isCollecting, setIsCollecting] = useState(false);
+
+  // Sync state with props when they change
+  useEffect(() => {
+    if (year !== undefined) setSelectedYear(year);
+    if (month !== undefined) setSelectedMonth(month);
+  }, [year, month]);
 
   // Generate year options (current year and 3 years back)
   const currentYear = new Date().getFullYear();
@@ -149,33 +160,7 @@ export function MonthlyHistoricalCashflows({ className }: MonthlyHistoricalCashf
               variant="outline"
               size="sm"
               className="h-8 gap-2 border-orange-500/50 text-orange-600 hover:text-orange-700 hover:bg-orange-50"
-              onClick={async () => {
-                if (!confirm(`Are you sure you want to collect ALL done financials for ${getMonthName(selectedMonth)} ${selectedYear}? \n\nThis will create archive snapshots and mark them as collected.`)) return;
-
-                setLoading(true);
-                try {
-                  const res = await fetch('/api/financials/collect-all', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ month: selectedMonth, year: selectedYear })
-                  });
-
-                  const data = await res.json();
-
-                  if (res.ok) {
-                    alert(`Successfully collected ${data.collected} financial records!`);
-                    // Reload financials
-                    const financials = await ClientAPI.getFinancialRecords();
-                    setAllFinancials(financials);
-                  } else {
-                    alert(`Error: ${data.error || 'Failed to collect financials'}`);
-                  }
-                } catch (e: any) {
-                  alert('Failed to collect financials: ' + e.message);
-                } finally {
-                  setLoading(false);
-                }
-              }}
+              onClick={() => setShowCollectConfirm(true)}
             >
               <Archive className="w-3.5 h-3.5" />
               Collect Financials
@@ -334,6 +319,58 @@ export function MonthlyHistoricalCashflows({ className }: MonthlyHistoricalCashf
           </div>
         )}
       </CardContent>
+
+      <Dialog open={showCollectConfirm} onOpenChange={setShowCollectConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Collect Financials</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to collect ALL done financials for <strong>{getMonthName(selectedMonth)} {selectedYear}</strong>?
+              <br /><br />
+              This will create archive snapshots and mark them as collected.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCollectConfirm(false)} disabled={isCollecting}>
+              Cancel
+            </Button>
+            <Button
+              onClick={async () => {
+                setIsCollecting(true);
+                try {
+                  const res = await fetch('/api/financials/collect-all', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ month: selectedMonth, year: selectedYear })
+                  });
+
+                  const data = await res.json();
+
+                  if (res.ok) {
+                    setShowCollectConfirm(false);
+                    // Use a simple toast or alert - simpler for now as we don't have Toast context handy in this file context check
+                    // But we can fallback to window.alert or just refresh
+                    // alert(`Successfully collected ${data.collected} financial records!`);
+                    // Reload financials
+                    const financials = await ClientAPI.getFinancialRecords();
+                    setAllFinancials(financials);
+                  } else {
+                    alert(`Error: ${data.error || 'Failed to collect financials'}`);
+                  }
+                } catch (e: any) {
+                  alert('Failed to collect financials: ' + e.message);
+                } finally {
+                  setIsCollecting(false);
+                }
+              }}
+              disabled={isCollecting}
+            >
+              {isCollecting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Confirm Collection
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

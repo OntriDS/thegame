@@ -12,7 +12,8 @@ import { Sale } from "@/types/entities";
 import { SaleType, SaleStatus } from "@/types/enums";
 import { formatDateDDMMYYYY, getMonthName } from "@/lib/constants/date-constants";
 import { getAllSiteNames } from "@/lib/utils/site-options-utils";
-import { Plus, Calendar, DollarSign, Package, TrendingUp, Archive } from "lucide-react";
+import { Plus, Calendar, DollarSign, Package, TrendingUp, Archive, Loader2 } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import SalesModal from "@/components/modals/sales-modal";
 import { MonthYearSelector } from "@/components/ui/month-year-selector";
 import { getCurrentMonth } from "@/lib/constants/date-constants";
@@ -33,6 +34,8 @@ export default function SalesPage() {
   const [currentMonth, setCurrentMonth] = useState(getCurrentMonth());
   const [filterByMonth, setFilterByMonth] = useState(true);
   const [showCollected, setShowCollected] = useState(false); // false=Active, true=Collected
+  const [showCollectConfirm, setShowCollectConfirm] = useState(false);
+  const [isCollecting, setIsCollecting] = useState(false);
 
   // Load sales data
   useEffect(() => {
@@ -207,31 +210,7 @@ export default function SalesPage() {
           <Button
             variant="outline"
             className="flex items-center gap-2 border-blue-500/50 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-            onClick={async () => {
-              if (!confirm(`Are you sure you want to collect ALL charged sales for ${getMonthName(currentMonth)} ${currentYear}? \n\nThis will create archive snapshots and mark them as collected.`)) return;
-
-              setIsLoading(true);
-              try {
-                const res = await fetch('/api/sales/collect-all', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ month: currentMonth, year: currentYear })
-                });
-
-                const data = await res.json();
-
-                if (res.ok) {
-                  alert(`Successfully collected ${data.collected} sales records!`);
-                  await loadSales(); // Refresh list
-                } else {
-                  alert(`Error: ${data.error || 'Failed to collect sales'}`);
-                }
-              } catch (e: any) {
-                alert('Failed to collect sales: ' + e.message);
-              } finally {
-                setIsLoading(false);
-              }
-            }}
+            onClick={() => setShowCollectConfirm(true)}
           >
             <Archive className="h-4 w-4" />
             Collect Month
@@ -413,6 +392,54 @@ export default function SalesPage() {
         onSave={handleSaveSale}
         onDelete={handleDeleteSale}
       />
+
+      <Dialog open={showCollectConfirm} onOpenChange={setShowCollectConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Collect Sales</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to collect ALL charged sales for <strong>{getMonthName(currentMonth)} {currentYear}</strong>?
+              <br /><br />
+              This will create archive snapshots and mark them as collected.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCollectConfirm(false)} disabled={isCollecting}>
+              Cancel
+            </Button>
+            <Button
+              onClick={async () => {
+                setIsCollecting(true);
+                try {
+                  const res = await fetch('/api/sales/collect-all', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ month: currentMonth, year: currentYear })
+                  });
+
+                  const data = await res.json();
+
+                  if (res.ok) {
+                    setShowCollectConfirm(false);
+                    // alert(`Successfully collected ${data.collected} sales records!`);
+                    await loadSales(); // Refresh list
+                  } else {
+                    alert(`Error: ${data.error || 'Failed to collect sales'}`);
+                  }
+                } catch (e: any) {
+                  alert('Failed to collect sales: ' + e.message);
+                } finally {
+                  setIsCollecting(false);
+                }
+              }}
+              disabled={isCollecting}
+            >
+              {isCollecting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Confirm Collection
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -13,9 +13,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { ClientAPI } from '@/lib/client-api';
 import { getZIndexClass, getModalZIndex } from '@/lib/utils/z-index-utils';
 import { useEntityUpdates } from '@/lib/hooks/use-entity-updates';
-import { 
-  FinancialRecord, 
-  CompanyFinancialCategory, 
+import {
+  FinancialRecord,
+  CompanyFinancialCategory,
   PersonalFinancialCategory,
   CompanyMonthlySummary,
   PersonalMonthlySummary,
@@ -29,14 +29,14 @@ import { CompanyRecordsList, PersonalRecordsList } from '@/components/finances/f
 import { MonthlyHistoricalCashflows } from '@/components/finances/monthly-historical-cashflows';
 import { Switch } from '@/components/ui/switch';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
-import { 
-  aggregateRecordsByStation, 
+import {
+  aggregateRecordsByStation,
   calculateTotals,
-  formatDecimal, 
-  getCashTotal, 
-  getBankTotal, 
-  getBitcoinTotal, 
-  getToChargeTotal, 
+  formatDecimal,
+  getCashTotal,
+  getBankTotal,
+  getBitcoinTotal,
+  getToChargeTotal,
   getToPayTotal,
   getCoreMonetaryTotal,
   getMonetaryTotal,
@@ -151,7 +151,7 @@ export default function FinancesPage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [showConversionRatesModal, setShowConversionRatesModal] = useState(false);
   const [showFinancialsModal, setShowFinancialsModal] = useState(false);
-  
+
   // Keyboard shortcuts for modal navigation
   useKeyboardShortcuts({
     onOpenFinancialModal: () => setShowFinancialsModal(true),
@@ -159,18 +159,18 @@ export default function FinancesPage() {
   const [activeTab, setActiveTab] = useState('assets');
 
   const [isHydrated, setIsHydrated] = useState(false);
-   
+
   // Asset state management - now using data store
   const [companyAssets, setCompanyAssets] = useState<any>(null);
   const [personalAssets, setPersonalAssets] = useState<any>(null);
   const [jungleCoinsBalance, setJungleCoinsBalance] = useState<number>(0);
   const [treasuryData, setTreasuryData] = useState<any>(null);
-  
+
   // Currency conversion state
   const [exchangeRates, setExchangeRates] = useState<CurrencyExchangeRates>(DEFAULT_CURRENCY_EXCHANGE_RATES);
   const [pointsConversionRates, setPointsConversionRates] = useState<PointsConversionRates>(DEFAULT_POINTS_CONVERSION_RATES);
   const [isFetchingBitcoin, setIsFetchingBitcoin] = useState(false);
-  
+
   const [editingSection, setEditingSection] = useState<{
     type: 'company' | 'personal';
     section: 'monetary' | 'jungleCoins' | 'inventories' | 'otherAssets';
@@ -201,7 +201,7 @@ export default function FinancesPage() {
         console.error('Failed to load conversion rates:', error);
       }
     };
-    
+
     loadConversionRates();
   }, []);
 
@@ -212,17 +212,17 @@ export default function FinancesPage() {
     );
     const companyRecords = records.filter(r => r.type === 'company');
     const personalRecords = records.filter(r => r.type === 'personal');
-    
+
     // Aggregate company records by station using DRY utility
     const companyStations = getCompanyAreas().flatMap(area => BUSINESS_STRUCTURE[area]);
     const companyBreakdown = aggregateRecordsByStation(companyRecords, companyStations);
     const companyTotals = calculateTotals(companyBreakdown);
-    
+
     // Aggregate personal records by station using DRY utility
     const personalStations = BUSINESS_STRUCTURE.PERSONAL;
     const personalBreakdown = aggregateRecordsByStation(personalRecords, personalStations);
     const personalTotals = calculateTotals(personalBreakdown);
-    
+
     // Create summaries with REAL aggregated data
     const company: CompanyMonthlySummary = {
       year: currentYear,
@@ -233,7 +233,7 @@ export default function FinancesPage() {
       totalJungleCoins: companyTotals.totalJungleCoins,
       categoryBreakdown: companyBreakdown
     };
-    
+
     const personal: PersonalMonthlySummary = {
       year: currentYear,
       month: currentMonth,
@@ -243,7 +243,7 @@ export default function FinancesPage() {
       totalJungleCoins: personalTotals.totalJungleCoins,
       categoryBreakdown: personalBreakdown
     };
-    
+
     setCompanySummary(company);
     setPersonalSummary(personal);
     setAggregatedFinancialData(companyTotals);
@@ -279,119 +279,119 @@ export default function FinancesPage() {
     }
   };
 
-    const loadAssets = async () => {
+  const loadAssets = async () => {
+    try {
+      const [companyData, personalData] = await Promise.all([
+        ClientAPI.getCompanyAssets(),
+        ClientAPI.getPersonalAssets(),
+      ]);
+
+      let mergedCompanyData = companyData;
       try {
-        const [companyData, personalData] = await Promise.all([
-          ClientAPI.getCompanyAssets(),
-          ClientAPI.getPersonalAssets(),
-        ]);
+        const items = await ClientAPI.getItems();
+        const inventoryTotals = calculateInventoryTotalsFromItems(items);
+        mergedCompanyData = mergeInventoryTotalsIntoAssets(companyData, inventoryTotals);
+      } catch (inventoryError) {
+        console.warn('Failed to compute inventory totals from items:', inventoryError);
+      }
 
-        let mergedCompanyData = companyData;
-        try {
-          const items = await ClientAPI.getItems();
-          const inventoryTotals = calculateInventoryTotalsFromItems(items);
-          mergedCompanyData = mergeInventoryTotalsIntoAssets(companyData, inventoryTotals);
-        } catch (inventoryError) {
-          console.warn('Failed to compute inventory totals from items:', inventoryError);
-        }
+      setCompanyAssets(mergedCompanyData);
+      setPersonalAssets(personalData);
 
-        setCompanyAssets(mergedCompanyData);
-        setPersonalAssets(personalData);
-        
-        // Get current user's player ID from session (multiplayer-ready)
-        let currentPlayerId: string | null = null;
-        try {
-          const authResponse = await fetch('/api/auth/check');
-          if (authResponse.ok) {
-            const authData = await authResponse.json();
-            if (authData.authenticated && authData.user?.sub) {
-              // Get account from session (sub is account ID)
-              const account = await ClientAPI.getAccount(authData.user.sub);
-              if (account?.playerId) {
-                currentPlayerId = account.playerId;
-              }
+      // Get current user's player ID from session (multiplayer-ready)
+      let currentPlayerId: string | null = null;
+      try {
+        const authResponse = await fetch('/api/auth/check');
+        if (authResponse.ok) {
+          const authData = await authResponse.json();
+          if (authData.authenticated && authData.user?.sub) {
+            // Get account from session (sub is account ID)
+            const account = await ClientAPI.getAccount(authData.user.sub);
+            if (account?.playerId) {
+              currentPlayerId = account.playerId;
             }
           }
+        }
+      } catch (error) {
+        console.error('Failed to get current user from session:', error);
+      }
+
+      // Fallback to PLAYER_ONE_ID if no session player found (for development/single-user)
+      if (!currentPlayerId) {
+        const players = await ClientAPI.getPlayers().catch(() => []);
+        currentPlayerId = players.find((p: any) => p.id === PLAYER_ONE_ID)?.id || players[0]?.id || null;
+      }
+
+      // Fetch J$ balance for current user's player only
+      if (currentPlayerId) {
+        try {
+          const j$BalanceData = await ClientAPI.getPlayerJungleCoinsBalance(currentPlayerId);
+          setJungleCoinsBalance(j$BalanceData?.totalJ$ ?? 0);
         } catch (error) {
-          console.error('Failed to get current user from session:', error);
-        }
-        
-        // Fallback to PLAYER_ONE_ID if no session player found (for development/single-user)
-        if (!currentPlayerId) {
-          const players = await ClientAPI.getPlayers().catch(() => []);
-          currentPlayerId = players.find((p: any) => p.id === PLAYER_ONE_ID)?.id || players[0]?.id || null;
-        }
-        
-        // Fetch J$ balance for current user's player only
-        if (currentPlayerId) {
-          try {
-            const j$BalanceData = await ClientAPI.getPlayerJungleCoinsBalance(currentPlayerId);
-            setJungleCoinsBalance(j$BalanceData?.totalJ$ ?? 0);
-          } catch (error) {
-            console.error('Failed to fetch J$ balance:', error);
-            setJungleCoinsBalance(0);
-          }
-        } else {
+          console.error('Failed to fetch J$ balance:', error);
           setJungleCoinsBalance(0);
         }
-        
-        // Load treasury data
-        try {
-          const treasury = await ClientAPI.getCompanyJ$Treasury();
-          setTreasuryData(treasury);
-        } catch (error) {
-          console.error('Failed to fetch treasury data:', error);
-          setTreasuryData(null);
-        }
-        
-        setIsHydrated(true);
-      } catch (error) {
-        console.error('Failed to load assets:', error);
+      } else {
+        setJungleCoinsBalance(0);
       }
-    };
 
-    const handleAssetsUpdate = async () => {
+      // Load treasury data
       try {
-        const [companyData, personalData] = await Promise.all([
-          ClientAPI.getCompanyAssets(),
-          ClientAPI.getPersonalAssets(),
-        ]);
-
-        let mergedCompanyData = companyData;
-        try {
-          const items = await ClientAPI.getItems();
-          const inventoryTotals = calculateInventoryTotalsFromItems(items);
-          mergedCompanyData = mergeInventoryTotalsIntoAssets(companyData, inventoryTotals);
-        } catch (inventoryError) {
-          console.warn('Failed to recompute inventory totals from items:', inventoryError);
-        }
-
-        setCompanyAssets(mergedCompanyData);
-        setPersonalAssets(personalData);
+        const treasury = await ClientAPI.getCompanyJ$Treasury();
+        setTreasuryData(treasury);
       } catch (error) {
-        console.error('Failed to update assets:', error);
+        console.error('Failed to fetch treasury data:', error);
+        setTreasuryData(null);
       }
-    };
 
-    const handleItemsUpdate = async () => {
+      setIsHydrated(true);
+    } catch (error) {
+      console.error('Failed to load assets:', error);
+    }
+  };
+
+  const handleAssetsUpdate = async () => {
+    try {
+      const [companyData, personalData] = await Promise.all([
+        ClientAPI.getCompanyAssets(),
+        ClientAPI.getPersonalAssets(),
+      ]);
+
+      let mergedCompanyData = companyData;
       try {
-        const [companyData, items] = await Promise.all([
-          ClientAPI.getCompanyAssets(),
-          ClientAPI.getItems(),
-        ]);
+        const items = await ClientAPI.getItems();
         const inventoryTotals = calculateInventoryTotalsFromItems(items);
-        const mergedCompanyData = mergeInventoryTotalsIntoAssets(companyData, inventoryTotals);
-        setCompanyAssets(mergedCompanyData);
-      } catch (error) {
-        console.error('Failed to update company inventory totals:', error);
+        mergedCompanyData = mergeInventoryTotalsIntoAssets(companyData, inventoryTotals);
+      } catch (inventoryError) {
+        console.warn('Failed to recompute inventory totals from items:', inventoryError);
       }
-    };
 
-    // Listen for financials updates to refresh summaries
-    useEntityUpdates('financial', () => setRefreshKey(prev => prev + 1));
-    
-    // Listen for items updates to refresh assets
-    useEntityUpdates('item', handleItemsUpdate);
+      setCompanyAssets(mergedCompanyData);
+      setPersonalAssets(personalData);
+    } catch (error) {
+      console.error('Failed to update assets:', error);
+    }
+  };
+
+  const handleItemsUpdate = async () => {
+    try {
+      const [companyData, items] = await Promise.all([
+        ClientAPI.getCompanyAssets(),
+        ClientAPI.getItems(),
+      ]);
+      const inventoryTotals = calculateInventoryTotalsFromItems(items);
+      const mergedCompanyData = mergeInventoryTotalsIntoAssets(companyData, inventoryTotals);
+      setCompanyAssets(mergedCompanyData);
+    } catch (error) {
+      console.error('Failed to update company inventory totals:', error);
+    }
+  };
+
+  // Listen for financials updates to refresh summaries
+  useEntityUpdates('financial', () => setRefreshKey(prev => prev + 1));
+
+  // Listen for items updates to refresh assets
+  useEntityUpdates('item', handleItemsUpdate);
 
   // Load assets from data store and mark as hydrated
   useEffect(() => {
@@ -399,7 +399,7 @@ export default function FinancesPage() {
     fetchBitcoinPrice();
 
     window.addEventListener('assetsUpdated', handleAssetsUpdate);
-    
+
     return () => {
       window.removeEventListener('assetsUpdated', handleAssetsUpdate);
     };
@@ -459,28 +459,28 @@ export default function FinancesPage() {
     if (!companyAssets) return 0;
     return getToPayTotal(companyAssets.toPay, companyAssets.toPayColones, exchangeRates);
   };
-  
+
   const getCompanyMonetaryTotal = () => {
     if (!companyAssets) return 0;
     return getMonetaryTotal(companyAssets, exchangeRates, false);
   };
-  
+
   const getCompanyJ$Total = () => companyAssets?.companyJ$ || 0;
-  
+
   const getCompanyInventoryTotal = () => {
     if (!companyAssets) return 0;
-    return (companyAssets.materials?.value || 0) + (companyAssets.equipment?.value || 0) + 
-           (companyAssets.artworks?.value || 0) + (companyAssets.prints?.value || 0) + 
-           (companyAssets.stickers?.value || 0) + (companyAssets.merch?.value || 0) + (companyAssets.crafts?.value || 0);
+    return (companyAssets.materials?.value || 0) + (companyAssets.equipment?.value || 0) +
+      (companyAssets.artworks?.value || 0) + (companyAssets.prints?.value || 0) +
+      (companyAssets.stickers?.value || 0) + (companyAssets.merch?.value || 0) + (companyAssets.crafts?.value || 0);
   };
-  
+
   const getCompanyInventoryCost = () => {
     if (!companyAssets) return 0;
-    return (companyAssets.materials?.cost || 0) + (companyAssets.equipment?.cost || 0) + 
-           (companyAssets.artworks?.cost || 0) + (companyAssets.prints?.cost || 0) + 
-           (companyAssets.stickers?.cost || 0) + (companyAssets.merch?.cost || 0) + (companyAssets.crafts?.cost || 0);
+    return (companyAssets.materials?.cost || 0) + (companyAssets.equipment?.cost || 0) +
+      (companyAssets.artworks?.cost || 0) + (companyAssets.prints?.cost || 0) +
+      (companyAssets.stickers?.cost || 0) + (companyAssets.merch?.cost || 0) + (companyAssets.crafts?.cost || 0);
   };
-  
+
   const getCompanyTotal = () => getCompanyMonetaryTotal() + getJungleCoinsTotal(getCompanyJ$Total(), exchangeRates) + getCompanyInventoryTotal();
 
   const getPersonalCoreMonetaryTotal = () => {
@@ -513,19 +513,19 @@ export default function FinancesPage() {
     if (!personalAssets) return 0;
     return getToPayTotal(personalAssets.toPay, personalAssets.toPayColones, exchangeRates);
   };
-  
+
   const getPersonalMonetaryTotal = () => {
     if (!personalAssets) return 0;
     return getMonetaryTotal(personalAssets, exchangeRates, true);
   };
-  
+
   const getPersonalJ$Total = () => jungleCoinsBalance;
-  
+
   const getPersonalOtherTotal = () => {
     if (!personalAssets) return 0;
     return getOtherAssetsTotal(personalAssets);
   };
-  
+
   const getPersonalTotal = () => getPersonalMonetaryTotal() + getJungleCoinsTotal(getPersonalJ$Total(), exchangeRates) + getPersonalOtherTotal();
 
   const getTotalNetWorth = () => getCompanyTotal() + getPersonalTotal();
@@ -537,12 +537,12 @@ export default function FinancesPage() {
 
   const handleSaveSection = (sectionData: any) => {
     if (!editingSection) return;
-    
+
     // Convert ToPay from positive input to negative for storage
     if (sectionData.toPay !== undefined) {
       sectionData.toPay = -Math.abs(sectionData.toPay);
     }
-    
+
     if (editingSection.type === 'company') {
       const updatedAssets = { ...companyAssets, ...sectionData };
       setCompanyAssets(updatedAssets);
@@ -552,7 +552,7 @@ export default function FinancesPage() {
       setPersonalAssets(updatedAssets);
       ClientAPI.savePersonalAssets(updatedAssets);
     }
-    
+
     setEditingSection(null);
   };
 
@@ -560,9 +560,9 @@ export default function FinancesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Finances </h1>   
+          <h1 className="text-3xl font-bold">Finances </h1>
         </div>
-        
+
         <div className="flex items-center gap-4">
           <MonthYearSelector
             currentYear={currentYear}
@@ -577,7 +577,7 @@ export default function FinancesPage() {
             />
             <span className="text-sm text-muted-foreground">Filter by month</span>
           </div>
-          <Button 
+          <Button
             onClick={() => setShowFinancialsModal(true)}
             size="sm"
           >
@@ -617,10 +617,9 @@ export default function FinancesPage() {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>Net</span>
-                  <span className={`font-bold ${
-                    aggregatedFinancialData?.net === 0 ? 'text-muted-foreground' : 
-                    aggregatedFinancialData?.net > 0 ? 'text-foreground' : 'text-muted-foreground'
-                  }`}>
+                  <span className={`font-bold ${aggregatedFinancialData?.net === 0 ? 'text-muted-foreground' :
+                      aggregatedFinancialData?.net > 0 ? 'text-foreground' : 'text-muted-foreground'
+                    }`}>
                     {aggregatedFinancialData?.net ? formatCurrency(aggregatedFinancialData.net) : '$0'}
                   </span>
                 </div>
@@ -650,10 +649,9 @@ export default function FinancesPage() {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>Net</span>
-                  <span className={`font-bold ${
-                    personalSummary?.netCashflow === 0 ? 'text-muted-foreground' : 
-                    (personalSummary?.netCashflow ?? 0) > 0 ? 'text-foreground' : 'text-muted-foreground'
-                  }`}>
+                  <span className={`font-bold ${personalSummary?.netCashflow === 0 ? 'text-muted-foreground' :
+                      (personalSummary?.netCashflow ?? 0) > 0 ? 'text-foreground' : 'text-muted-foreground'
+                    }`}>
                     {personalSummary?.netCashflow ? formatCurrency(personalSummary.netCashflow) : '$0'}
                   </span>
                 </div>
@@ -666,7 +664,7 @@ export default function FinancesPage() {
           </div>
 
           {/* Monthly Historical Cashflows */}
-          <MonthlyHistoricalCashflows />
+          <MonthlyHistoricalCashflows year={currentYear} month={currentMonth} />
 
           {/* Company Assets */}
           <Card>
@@ -687,9 +685,9 @@ export default function FinancesPage() {
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <h4 className="font-medium text-sm">Monetary Assets</h4>
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
+                    <Button
+                      size="sm"
+                      variant="outline"
                       onClick={() => handleEditSection('company', 'monetary')}
                     >
                       Edit
@@ -700,60 +698,60 @@ export default function FinancesPage() {
                     <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm border rounded-lg p-3 bg-muted/30">
                       <div className="font-medium">Core Assets</div>
                       <div className="font-medium text-right">Value</div>
-                      
+
                       <div>Cash</div>
                       <div className="text-right">T${formatDecimal(getCompanyCashT())}</div>
-                      
+
                       <div>Bank</div>
                       <div className="text-right">T${formatDecimal(getCompanyBankT())}</div>
-                      
+
                       <div>Bitcoin</div>
                       <div className="text-right">T${formatDecimal(getCompanyBitcoinT())}</div>
-                      
+
                       <div className="font-semibold border-t pt-1">Total</div>
                       <div className="font-semibold text-right border-t pt-1">T${formatDecimal(getCompanyCoreMonetaryTotal())}</div>
                     </div>
-                    
+
                     {/* Upcoming Section */}
                     <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm border rounded-lg p-3 bg-muted/30">
                       <div className="font-medium">Upcoming</div>
                       <div className="font-medium text-right">Value</div>
-                      
+
                       <div>ToCharge</div>
                       <div className="text-right">T${formatDecimal(getCompanyToChargeT())}</div>
-                      
-                      <div>ToPay</div>  
+
+                      <div>ToPay</div>
                       <div className="text-right">T${formatDecimal(getCompanyToPayT())}</div>
-                      
+
                       <div className="font-semibold border-t pt-1">Total</div>
                       <div className="font-semibold text-right border-t pt-1">T${formatDecimal(getCompanyMonetaryTotal())}</div>
                     </div>
-                    
+
                     {/* Digital Assets Section */}
                     <div className="text-sm border rounded-lg p-3 bg-muted/30">
-                    <div className="grid grid-cols-3 gap-x-3 gap-y-1 text-xs">
+                      <div className="grid grid-cols-3 gap-x-3 gap-y-1 text-xs">
                         <div className="text-sm p-1 text-left">Digital Assets</div>
                         <div className="text-sm p-1 text-right">Amount (Q)</div>
                         <div className="text-sm p-1 text-right">Value ($)</div>
-                        
+
                         <div>In-Game Currency (J$)</div>
                         <div className="text-right">{companyAssets.companyJ$} J$</div>
                         <div className="text-right">${((companyAssets.companyJ$ || 0) * exchangeRates.j$ToUSD).toLocaleString()}</div>
-                        
+
                         <div className="text-muted-foreground opacity-60">Bitcoin Zaps (Z₿)</div>
                         <div className="text-right text-muted-foreground opacity-60">0 sats</div>
                         <div className="text-right text-muted-foreground opacity-60">$0</div>
-                        
+
                         <div className="text-muted-foreground opacity-60">In-Game NFTs</div>
                         <div className="text-right text-muted-foreground opacity-60">0 NFTs</div>
                         <div className="text-right text-muted-foreground opacity-60">$0</div>
-                        
+
                         <div className="font-semibold border-t pt-1">Total</div>
                         <div className="border-t pt-1"></div>
                         <div className="font-semibold text-right border-t pt-1">${((companyAssets.companyJ$ || 0) * exchangeRates.j$ToUSD).toLocaleString()}</div>
                       </div>
                     </div>
-                    
+
                     {/* Company J$ Treasury Section */}
                     {treasuryData && (
                       <Card className="border border-border/50 bg-card/50 backdrop-blur-sm">
@@ -784,7 +782,7 @@ export default function FinancesPage() {
                           <div className="text-xs text-muted-foreground">
                             {treasuryData.buybackCount} buyback transaction{treasuryData.buybackCount !== 1 ? 's' : ''}
                           </div>
-                          
+
                           {/* Buyback History */}
                           {treasuryData.buybacks && treasuryData.buybacks.length > 0 && (
                             <div className="mt-4 pt-4 border-t border-border/50">
@@ -831,61 +829,61 @@ export default function FinancesPage() {
                       <div className="font-medium">Creative Items</div>
                       <div className="font-medium text-right">Value</div>
                       <div className="font-medium text-right">Cost</div>
-                      
+
                       <div>Artworks</div>
                       <div className="text-right">${companyAssets.artworks.value.toLocaleString()}</div>
                       <div className="text-right">${companyAssets.artworks.cost.toLocaleString()}</div>
-                      
+
                       <div>Prints</div>
                       <div className="text-right">${companyAssets.prints.value.toLocaleString()}</div>
                       <div className="text-right">${companyAssets.prints.cost.toLocaleString()}</div>
-                      
+
                       <div>Stickers</div>
                       <div className="text-right">${companyAssets.stickers.value.toLocaleString()}</div>
                       <div className="text-right">${companyAssets.stickers.cost.toLocaleString()}</div>
-                      
+
                       <div>Sticker Bundles</div>
                       <div className="text-right">$0</div>
                       <div className="text-right">$0</div>
-                      
+
                       <div>Merch</div>
                       <div className="text-right">${companyAssets.merch.value.toLocaleString()}</div>
                       <div className="text-right">${companyAssets.merch.cost.toLocaleString()}</div>
-                      
+
                       <div className="font-semibold border-t pt-1">Total</div>
                       <div className="font-semibold text-right border-t pt-1">${(companyAssets.artworks.value + companyAssets.prints.value + companyAssets.stickers.value + companyAssets.merch.value).toLocaleString()}</div>
                       <div className="font-semibold text-right border-t pt-1">${(companyAssets.artworks.cost + companyAssets.prints.cost + companyAssets.stickers.cost + companyAssets.merch.cost).toLocaleString()}</div>
                     </div>
-                    
+
                     {/* Materials & Equipment Section */}
                     <div className="grid grid-cols-3 gap-x-4 gap-y-1 text-sm border rounded-lg p-3 bg-muted/30">
                       <div className="font-medium">Operations Items </div>
                       <div className="font-medium text-right">Value</div>
                       <div className="font-medium text-right">Cost</div>
-                      
+
                       <div>Materials</div>
                       <div className="text-right">${companyAssets.materials.value.toLocaleString()}</div>
                       <div className="text-right">${companyAssets.materials.cost.toLocaleString()}</div>
-                      
+
                       <div>Equipment</div>
                       <div className="text-right">${companyAssets.equipment.value.toLocaleString()}</div>
                       <div className="text-right">${companyAssets.equipment.cost.toLocaleString()}</div>
-                      
+
                       <div>Crafts</div>
                       <div className="text-right">${(companyAssets.crafts?.value || 0).toLocaleString()}</div>
                       <div className="text-right">${(companyAssets.crafts?.cost || 0).toLocaleString()}</div>
-                      
+
                       <div className="font-semibold border-t pt-1">Total</div>
                       <div className="font-semibold text-right border-t pt-1">${((companyAssets.materials.value + companyAssets.equipment.value) + (companyAssets.crafts?.value || 0)).toLocaleString()}</div>
                       <div className="font-semibold text-right border-t pt-1">${((companyAssets.materials.cost + companyAssets.equipment.cost) + (companyAssets.crafts?.cost || 0)).toLocaleString()}</div>
                     </div>
-                    
+
                     {/* Overall Inventory Total */}
                     <div className="grid grid-cols-3 gap-x-4 gap-y-1 text-sm border rounded-lg p-3 bg-muted/30">
                       <div className="font-medium">Inventories Total</div>
                       <div className="font-medium text-right">Value</div>
                       <div className="font-medium text-right">Cost</div>
-                      
+
                       <div className="font-semibold">Total</div>
                       <div className="font-semibold text-right">${getCompanyInventoryTotal().toLocaleString()}</div>
                       <div className="font-semibold text-right">${getCompanyInventoryCost().toLocaleString()}</div>
@@ -915,9 +913,9 @@ export default function FinancesPage() {
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <h4 className="font-medium text-sm">Monetary Assets</h4>
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
+                    <Button
+                      size="sm"
+                      variant="outline"
                       onClick={() => handleEditSection('personal', 'monetary')}
                     >
                       Edit
@@ -928,56 +926,56 @@ export default function FinancesPage() {
                     <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm border rounded-lg p-3 bg-muted/30">
                       <div className="font-medium">Core Assets</div>
                       <div className="font-medium text-right">Value</div>
-                      
+
                       <div>Cash</div>
                       <div className="text-right">T${formatDecimal(getPersonalCashT())}</div>
-                      
+
                       <div>Bank</div>
                       <div className="text-right">T${formatDecimal(getPersonalBankT())}</div>
-                      
+
                       <div>Bitcoin</div>
                       <div className="text-right">T${formatDecimal(getPersonalBitcoinT())}</div>
-                      
+
                       <div>Crypto</div>
                       <div className="text-right">T${formatDecimal(getPersonalCryptoT())}</div>
-                      
+
                       <div className="font-semibold border-t pt-1">Total</div>
                       <div className="font-semibold text-right border-t pt-1">T${formatDecimal(getPersonalCoreMonetaryTotal())}</div>
                     </div>
-                    
+
                     {/* Upcoming Section */}
                     <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm border rounded-lg p-3 bg-muted/30">
                       <div className="font-medium">Upcoming</div>
                       <div className="font-medium text-right">Value</div>
-                      
+
                       <div>ToCharge</div>
                       <div className="text-right">T${formatDecimal(getPersonalToChargeT())}</div>
-                      
+
                       <div>ToPay</div>
                       <div className="text-right">T${formatDecimal(getPersonalToPayT())}</div>
-                      
+
                       <div className="font-semibold border-t pt-1">Total</div>
                       <div className="font-semibold text-right border-t pt-1">T${formatDecimal(getPersonalMonetaryTotal())}</div>
                     </div>
-                    
+
                     {/* Digital Assets Section */}
                     <div className="grid grid-cols-3 gap-x-4 gap-y-1 text-sm border rounded-lg p-3 bg-muted/30">
                       <div className="font-medium">Digital Assets</div>
                       <div className="font-medium text-right">Amount (Q)</div>
                       <div className="font-medium text-right">Value ($)</div>
-                      
+
                       <div>In-Game Currency (J$)</div>
                       <div className="text-right">{jungleCoinsBalance.toFixed(1)} J$</div>
                       <div className="text-right">${((jungleCoinsBalance || VALIDATION_CONSTANTS.DEFAULT_NUMERIC_VALUE) * (exchangeRates.j$ToUSD || VALIDATION_CONSTANTS.DEFAULT_EXCHANGE_RATE)).toLocaleString()}</div>
-                      
+
                       <div className="text-muted-foreground opacity-60">Bitcoin Zaps (Z₿)</div>
                       <div className="text-right text-muted-foreground opacity-60">0 sats</div>
                       <div className="text-right text-muted-foreground opacity-60">$0</div>
-                      
+
                       <div className="text-muted-foreground opacity-60">In-Game NFTs</div>
                       <div className="text-right text-muted-foreground opacity-60">0 NFTs</div>
                       <div className="text-right text-muted-foreground opacity-60">$0</div>
-                      
+
                       <div className="font-semibold border-t pt-1">Total</div>
                       <div className="border-t pt-1"></div>
                       <div className="font-semibold text-right border-t pt-1">${((jungleCoinsBalance || VALIDATION_CONSTANTS.DEFAULT_NUMERIC_VALUE) * (exchangeRates.j$ToUSD || VALIDATION_CONSTANTS.DEFAULT_EXCHANGE_RATE)).toLocaleString()}</div>
@@ -989,9 +987,9 @@ export default function FinancesPage() {
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <h4 className="font-medium text-sm">Other Assets</h4>
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
+                    <Button
+                      size="sm"
+                      variant="outline"
                       onClick={() => handleEditSection('personal', 'otherAssets')}
                     >
                       Edit
@@ -1000,16 +998,16 @@ export default function FinancesPage() {
                   <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm border rounded-lg p-3 bg-muted/30">
                     <div className="font-medium">Asset</div>
                     <div className="font-medium text-right">Value</div>
-                    
+
                     <div>Properties</div>
                     <div className="text-right">${personalAssets?.properties?.toLocaleString() || '0'}</div>
-                    
+
                     <div>NFTs</div>
                     <div className="text-right">${personalAssets?.nfts?.toLocaleString() || '0'}</div>
-                    
+
                     <div>Other</div>
                     <div className="text-right">${personalAssets?.other?.toLocaleString() || '0'}</div>
-                    
+
                     <div className="font-semibold border-t pt-1">Total</div>
                     <div className="font-semibold text-right border-t pt-1">${getPersonalOtherTotal().toLocaleString()}</div>
                   </div>
@@ -1027,7 +1025,7 @@ export default function FinancesPage() {
               <div className="flex items-center gap-6 text-sm">
                 <div className="flex items-center gap-2">
                   <span className="font-medium">Exchange Rates:</span>
-                  
+
                   <div className="flex items-center gap-1">
                     <span>₡</span>
                     <NumericInput
@@ -1039,7 +1037,7 @@ export default function FinancesPage() {
                     <span>= $1</span>
                   </div>
                 </div>
-                
+
                 <div className="flex items-center gap-2">
                   <span>Bitcoin:</span>
                   <div className="flex items-center gap-1">
@@ -1061,7 +1059,7 @@ export default function FinancesPage() {
                     </Button>
                   </div>
                 </div>
-                
+
                 <div className="flex items-center gap-2">
                   <span>J$:</span>
                   <div className="flex items-center gap-1">
@@ -1074,7 +1072,7 @@ export default function FinancesPage() {
                     />
                   </div>
                 </div>
-                
+
                 <Button
                   size="sm"
                   variant="outline"
@@ -1094,10 +1092,10 @@ export default function FinancesPage() {
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold">Company Financial Records</h2>
           </div>
-          <CompanyRecordsList 
+          <CompanyRecordsList
             key={`company-${recordsRefreshKey}`}
-            year={filterByMonth ? currentYear : 0} 
-            month={filterByMonth ? currentMonth : 0} 
+            year={filterByMonth ? currentYear : 0}
+            month={filterByMonth ? currentMonth : 0}
             onRecordUpdated={loadSummaries}
             onRecordEdit={(record) => {
               // This is handled by CompanyRecordsList component
@@ -1105,22 +1103,22 @@ export default function FinancesPage() {
           />
         </TabsContent>
 
-         {/* Personal Tab - Records Only */}
-         <TabsContent value="personal" className="space-y-4">
-           <div className="flex items-center justify-between">
-             <h2 className="text-xl font-semibold">Personal Financial Records</h2>
-           </div>
-           <PersonalRecordsList 
-             key={`personal-${recordsRefreshKey}`}
-             year={filterByMonth ? currentYear : 0} 
-             month={filterByMonth ? currentMonth : 0} 
-             onRecordUpdated={loadSummaries}
-             onRecordEdit={(record) => {
-               // This is handled by PersonalRecordsList component
-             }}
-           />
-          </TabsContent>
-        </Tabs>
+        {/* Personal Tab - Records Only */}
+        <TabsContent value="personal" className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold">Personal Financial Records</h2>
+          </div>
+          <PersonalRecordsList
+            key={`personal-${recordsRefreshKey}`}
+            year={filterByMonth ? currentYear : 0}
+            month={filterByMonth ? currentMonth : 0}
+            onRecordUpdated={loadSummaries}
+            onRecordEdit={(record) => {
+              // This is handled by PersonalRecordsList component
+            }}
+          />
+        </TabsContent>
+      </Tabs>
 
 
       {/* Asset Edit Modal */}
@@ -1134,63 +1132,63 @@ export default function FinancesPage() {
           initialData={(() => {
             if (editingSection.type === 'company') {
               switch (editingSection.section) {
-        case 'monetary':
-          return {
-            cash: companyAssets.cash,
-            bank: companyAssets.bank,
-            bitcoin: companyAssets.bitcoin,
-            toCharge: companyAssets.toCharge,
+                case 'monetary':
+                  return {
+                    cash: companyAssets.cash,
+                    bank: companyAssets.bank,
+                    bitcoin: companyAssets.bitcoin,
+                    toCharge: companyAssets.toCharge,
                     toPay: Math.abs(companyAssets.toPay),
-            cashColones: companyAssets.cashColones || 0,
-            bankColones: companyAssets.bankColones || 0,
-            toChargeColones: companyAssets.toChargeColones || 0,
-            toPayColones: companyAssets.toPayColones || 0,
-            bitcoinSats: companyAssets.bitcoinSats || 0
-          };
-        case 'jungleCoins':
-          return { companyJ$: companyAssets.companyJ$ };
-        case 'inventories':
-          return {
-            materials: { value: companyAssets.materials.value, cost: companyAssets.materials.cost },
-            equipment: { value: companyAssets.equipment.value, cost: companyAssets.equipment.cost },
-            artworks: { value: companyAssets.artworks.value, cost: companyAssets.artworks.cost },
-            prints: { value: companyAssets.prints.value, cost: companyAssets.prints.cost },
-            stickers: { value: companyAssets.stickers.value, cost: companyAssets.stickers.cost },
-            merch: { value: companyAssets.merch.value, cost: companyAssets.merch.cost },
-            crafts: { value: companyAssets.crafts.value, cost: companyAssets.crafts.cost }
-          };
-        default:
-          return {};
-      }
-    } else {
+                    cashColones: companyAssets.cashColones || 0,
+                    bankColones: companyAssets.bankColones || 0,
+                    toChargeColones: companyAssets.toChargeColones || 0,
+                    toPayColones: companyAssets.toPayColones || 0,
+                    bitcoinSats: companyAssets.bitcoinSats || 0
+                  };
+                case 'jungleCoins':
+                  return { companyJ$: companyAssets.companyJ$ };
+                case 'inventories':
+                  return {
+                    materials: { value: companyAssets.materials.value, cost: companyAssets.materials.cost },
+                    equipment: { value: companyAssets.equipment.value, cost: companyAssets.equipment.cost },
+                    artworks: { value: companyAssets.artworks.value, cost: companyAssets.artworks.cost },
+                    prints: { value: companyAssets.prints.value, cost: companyAssets.prints.cost },
+                    stickers: { value: companyAssets.stickers.value, cost: companyAssets.stickers.cost },
+                    merch: { value: companyAssets.merch.value, cost: companyAssets.merch.cost },
+                    crafts: { value: companyAssets.crafts.value, cost: companyAssets.crafts.cost }
+                  };
+                default:
+                  return {};
+              }
+            } else {
               switch (editingSection.section) {
-        case 'monetary':
-          return {
-            cash: personalAssets.cash,
-            bank: personalAssets.bank,
-            bitcoin: personalAssets.bitcoin,
-            crypto: personalAssets.crypto,
-            toCharge: personalAssets.toCharge,
+                case 'monetary':
+                  return {
+                    cash: personalAssets.cash,
+                    bank: personalAssets.bank,
+                    bitcoin: personalAssets.bitcoin,
+                    crypto: personalAssets.crypto,
+                    toCharge: personalAssets.toCharge,
                     toPay: Math.abs(personalAssets.toPay),
-            cashColones: personalAssets.cashColones || 0,
-            bankColones: personalAssets.bankColones || 0,
-            toChargeColones: personalAssets.toChargeColones || 0,
-            toPayColones: personalAssets.toPayColones || 0,
-            bitcoinSats: personalAssets.bitcoinSats || 0
-          };
-        case 'jungleCoins':
-          return { personalJ$: personalAssets.personalJ$ };
-        case 'otherAssets':
-          return {
-            vehicle: personalAssets.vehicle,
-            properties: personalAssets.properties,
-            nfts: personalAssets.nfts,
-            other: personalAssets.other
-          };
-        default:
-          return {};
-      }
-    }
+                    cashColones: personalAssets.cashColones || 0,
+                    bankColones: personalAssets.bankColones || 0,
+                    toChargeColones: personalAssets.toChargeColones || 0,
+                    toPayColones: personalAssets.toPayColones || 0,
+                    bitcoinSats: personalAssets.bitcoinSats || 0
+                  };
+                case 'jungleCoins':
+                  return { personalJ$: personalAssets.personalJ$ };
+                case 'otherAssets':
+                  return {
+                    vehicle: personalAssets.vehicle,
+                    properties: personalAssets.properties,
+                    nfts: personalAssets.nfts,
+                    other: personalAssets.other
+                  };
+                default:
+                  return {};
+              }
+            }
           })()}
         />
       )}
@@ -1228,10 +1226,10 @@ export default function FinancesPage() {
           try {
             // Parent only calls DataStore - Links System handles all relationships automatically
             const finalRecord = await ClientAPI.upsertFinancialRecord(record);
-            
+
             // Refresh summaries
             await loadSummaries();
-            
+
             // Close modal
             setShowFinancialsModal(false);
           } catch (error) {
@@ -1247,7 +1245,7 @@ export default function FinancesPage() {
 // Helper functions for SearchableSelect options
 const getCompanyCategoryOptions = () => {
   const options: Array<{ value: string; label: string; group: string }> = [];
-  
+
   Object.entries(BUSINESS_STRUCTURE).forEach(([station, categories]) => {
     if (station !== 'PERSONAL') {
       categories.forEach((category) => {
@@ -1259,13 +1257,13 @@ const getCompanyCategoryOptions = () => {
       });
     }
   });
-  
+
   return options;
 };
 
 const getPersonalCategoryOptions = () => {
   const options: Array<{ value: string; label: string; group: string }> = [];
-  
+
   BUSINESS_STRUCTURE['PERSONAL'].forEach((category) => {
     options.push({
       value: category,
@@ -1273,6 +1271,6 @@ const getPersonalCategoryOptions = () => {
       group: 'PERSONAL'
     });
   });
-  
+
   return options;
 };
