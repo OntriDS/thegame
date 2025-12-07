@@ -58,12 +58,40 @@ export async function getArchivedEntitiesByMonth<T>(
   const ids = await kvSMembers(indexKey);
   if (ids.length === 0) return [];
 
-  const keys = ids.map(id => buildArchiveDataKey(entityType, mmyy, id));
-  console.log(`[ArchiveRepo] Fetching ${entityType} for ${mmyy}. Keys:`, keys.slice(0, 3));
-  const entities = await kvMGet<T>(keys);
-  console.log(`[ArchiveRepo] Found ${entities.filter(e => e !== null).length}/${keys.length} entities`);
+  // Strategy: Data might be stored in ANY month bucket, not just the requested one.
+  // We must scan all candidate months for the data keys corresponding to these IDs.
+  const months = await getAvailableArchiveMonths();
+  const candidateMonths = Array.from(new Set([mmyy, ...months]));
 
-  return entities.filter((entity): entity is T => entity !== null);
+  const allKeys: string[] = [];
+  const keyToId = new Map<string, string>();
+
+  // Construct search keys for every ID across every candidate month
+  for (const id of ids) {
+    for (const month of candidateMonths) {
+      const key = buildArchiveDataKey(entityType, month, id);
+      allKeys.push(key);
+      keyToId.set(key, id);
+    }
+  }
+
+  // Fetch everything in one go
+  const values = await kvMGet<T>(allKeys);
+
+  // Map found data back to IDs, prioritizing the first found instance
+  const foundEntities = new Map<string, T>();
+
+  values.forEach((val, index) => {
+    if (val) {
+      const key = allKeys[index];
+      const id = keyToId.get(key);
+      if (id && !foundEntities.has(id)) {
+        foundEntities.set(id, val);
+      }
+    }
+  });
+
+  return Array.from(foundEntities.values());
 }
 
 export async function getArchivedEntityById<T>(
