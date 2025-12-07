@@ -53,7 +53,6 @@ const defaultSorts: Record<ArchiveTabKey, { field: string; direction: "asc" | "d
   sales: { field: "saleDate", direction: "desc" },
   financials: { field: "collectedAt", direction: "desc" },
   items: { field: "saleDate", direction: "desc" },
-  items: { field: "saleDate", direction: "desc" },
 };
 
 function toNumber(value: unknown): number {
