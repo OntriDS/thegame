@@ -522,23 +522,35 @@ export async function archiveFinancialRecordSnapshot(
 }
 
 export async function getArchivedTasksByMonth(mmyy: string): Promise<Task[]> {
-  const snapshots = await archiveRepo.getArchivedEntitiesByMonth<TaskSnapshot>('task-snapshots', mmyy);
-  return snapshots.map(s => reviveDates(s.data as unknown as Task));
+  const snapshots = await archiveRepo.getArchivedEntitiesByMonth<any>('task-snapshots', mmyy);
+  return snapshots.map(s => {
+    const data = s.data || s; // Support legacy raw entities
+    return reviveDates(data as Task);
+  });
 }
 
 export async function getArchivedItemsByMonth(mmyy: string): Promise<Item[]> {
-  const snapshots = await archiveRepo.getArchivedEntitiesByMonth<ItemSnapshot>('item-snapshots', mmyy);
-  return snapshots.map(s => reviveDates(s.data as unknown as Item));
+  const snapshots = await archiveRepo.getArchivedEntitiesByMonth<any>('item-snapshots', mmyy);
+  return snapshots.map(s => {
+    const data = s.data || s; // Support legacy raw entities
+    return reviveDates(data as Item);
+  });
 }
 
 export async function getArchivedSalesByMonth(mmyy: string): Promise<Sale[]> {
-  const snapshots = await archiveRepo.getArchivedEntitiesByMonth<SaleSnapshot>('sale-snapshots', mmyy);
-  return snapshots.map(s => reviveDates(s.data as unknown as Sale));
+  const snapshots = await archiveRepo.getArchivedEntitiesByMonth<any>('sale-snapshots', mmyy);
+  return snapshots.map(s => {
+    const data = s.data || s; // Support legacy raw entities
+    return reviveDates(data as Sale);
+  });
 }
 
 export async function getArchivedFinancialRecordsByMonth(mmyy: string): Promise<FinancialRecord[]> {
-  const snapshots = await archiveRepo.getArchivedEntitiesByMonth<FinancialSnapshot>('financial-snapshots', mmyy);
-  return snapshots.map(s => reviveDates(s.data as unknown as FinancialRecord));
+  const snapshots = await archiveRepo.getArchivedEntitiesByMonth<any>('financial-snapshots', mmyy);
+  return snapshots.map(s => {
+    const data = s.data || s; // Support legacy raw entities
+    return reviveDates(data as FinancialRecord);
+  });
 }
 
 export async function getAvailableArchiveMonths(): Promise<string[]> {
