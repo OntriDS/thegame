@@ -36,6 +36,8 @@ import { ItemStatus } from '@/types/enums';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
 import { VALIDATION_CONSTANTS } from '@/lib/constants/financial-constants';
 import ArchiveCollectionConfirmationModal from './submodals/archive-collection-confirmation-submodal';
+import { MonthYearSelector } from '@/components/ui/month-year-selector';
+
 
 // FinancialsModal: UI-only form for financial record data collection and validation
 // Side effects and persistence handled by parent component
@@ -46,7 +48,7 @@ function getDefaultItemStatus(itemType: string, isSold: boolean = false): ItemSt
   if (isSold) {
     return ItemStatus.SOLD;
   }
-  
+
   switch (itemType) {
     case 'Product':
     case 'Merch':
@@ -78,7 +80,7 @@ interface FinancialsModalProps {
 
 export default function FinancialsModal({ record, year, month, open, onOpenChange, onSave, onDelete }: FinancialsModalProps) {
   const { getPreference, setPreference } = useUserPreferences();
-  
+
   // User preference functions - memoized to prevent dependency changes
   const getLastUsedStation = useCallback((): Station => {
     const saved = getPreference('finrec-modal-last-station');
@@ -131,7 +133,9 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
     outputItemPriceString: '0',
     isNewItem: false,
     isSold: false,
-    outputItemId: null as string | null
+    outputItemId: null as string | null,
+    year: year,
+    month: month
   });
 
   const [items, setItems] = useState<Item[]>([]);
@@ -158,7 +162,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
 
   // Guard for one-time initialization of new records
   const didInitRef = useRef(false);
-  
+
   // Emissary column expansion state with persistence
   const [emissaryColumnExpanded, setEmissaryColumnExpanded] = useState(false);
 
@@ -204,7 +208,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
     if (savedEmissary === 'true') {
       setEmissaryColumnExpanded(true);
     }
-    
+
     const savedDescription = getPreference('finrec-modal-description-expanded');
     if (savedDescription === 'true') {
       setDescriptionExpanded(true);
@@ -235,17 +239,17 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
         customerCharacterId: record.customerCharacterId || null,
         isNewCustomer: !record.customerCharacterId, // Toggle based on whether customer exists
         newCustomerName: '',
-        points: { 
-          hp: record.rewards?.points?.hp || 0, 
-          fp: record.rewards?.points?.fp || 0, 
-          rp: record.rewards?.points?.rp || 0, 
-          xp: record.rewards?.points?.xp || 0 
+        points: {
+          hp: record.rewards?.points?.hp || 0,
+          fp: record.rewards?.points?.fp || 0,
+          rp: record.rewards?.points?.rp || 0,
+          xp: record.rewards?.points?.xp || 0
         },
-        pointsStrings: { 
-          hp: (record.rewards?.points?.hp || 0).toString(), 
-          fp: (record.rewards?.points?.fp || 0).toString(), 
-          rp: (record.rewards?.points?.rp || 0).toString(), 
-          xp: (record.rewards?.points?.xp || 0).toString() 
+        pointsStrings: {
+          hp: (record.rewards?.points?.hp || 0).toString(),
+          fp: (record.rewards?.points?.fp || 0).toString(),
+          rp: (record.rewards?.points?.rp || 0).toString(),
+          xp: (record.rewards?.points?.xp || 0).toString()
         },
         outputItemType: (record.outputItemType as ItemType) || '',
         outputQuantity: record.outputQuantity ?? 1,
@@ -259,13 +263,15 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
         outputItemPriceString: (record.outputItemPrice || 0).toString(),
         isNewItem: record.isNewItem || false,
         isSold: record.isSold || false,
-        outputItemId: record.outputItemId || null
+        outputItemId: record.outputItemId || null,
+        year: record.year || year,
+        month: record.month || month
       });
-      
+
       // Initialize player character
       setPlayerCharacterId(record.playerCharacterId || PLAYER_ONE_ID);
       setSelectedItemId(record.outputItemId || '');
-      
+
       // Initialize combined item type/subtype field
       if (record.outputItemType && record.outputItemSubType) {
         setOutputItemTypeSubType(`${record.outputItemType}:${record.outputItemSubType}`);
@@ -274,10 +280,10 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
       } else {
         setOutputItemTypeSubType('none:');
       }
-      
+
       // Initialize item status
       setOutputItemStatus(record.isSold ? ItemStatus.SOLD : ItemStatus.FOR_SALE);
-      
+
       // Reset init guard when editing
       didInitRef.current = false;
     } else if (!didInitRef.current) {
@@ -315,17 +321,30 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
         outputItemPriceString: '0',
         isNewItem: false,
         isSold: false,
-        outputItemId: null
+        outputItemId: null,
+        year: year,
+        month: month
       });
-      
+
       // Initialize player character for new record
       setPlayerCharacterId(PLAYER_ONE_ID);
-      
+
       // Initialize combined item type/subtype field for new record
       setOutputItemTypeSubType('none:');
       setOutputItemStatus(ItemStatus.FOR_SALE);
     }
   }, [record, getLastUsedStation]);
+
+  // Sync year/month for new records when context changes (fixes stale date if filter changes while modal hidden)
+  useEffect(() => {
+    if (!record) {
+      setFormData(prev => ({
+        ...prev,
+        year: year,
+        month: month
+      }));
+    }
+  }, [year, month, record]);
 
   // Auto-logic: Set status to PENDING when isNotPaid or isNotCharged is true
   useEffect(() => {
@@ -344,9 +363,9 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
   }, [formData.isNotPaid, formData.isNotCharged, formData.status]);
 
   const handleStationChange = (newStation: Station) => {
-    
-    setFormData(prev => ({ 
-      ...prev, 
+
+    setFormData(prev => ({
+      ...prev,
       station: newStation,
     }));
   };
@@ -437,14 +456,14 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
   const handleAutoCalculateUnitCost = () => {
     if (formData.outputQuantity > VALIDATION_CONSTANTS.MIN_QUANTITY) {
       let updates: any = {};
-      
+
       // Calculate unit cost if cost is available
       if (formData.cost > VALIDATION_CONSTANTS.MIN_COST && formData.outputQuantity > VALIDATION_CONSTANTS.MIN_QUANTITY) {
         const calculatedUnitCost = formData.cost / formData.outputQuantity;
         updates.outputUnitCost = calculatedUnitCost;
         updates.outputUnitCostString = formatSmartDecimal(calculatedUnitCost);
       }
-      
+
       // Calculate price if revenue is available (check both revenue state and revenueString)
       const currentRevenue = formData.revenue || parseFloat(formData.revenueString) || VALIDATION_CONSTANTS.DEFAULT_NUMERIC_VALUE;
       if (currentRevenue > VALIDATION_CONSTANTS.MIN_REVENUE && formData.outputQuantity > VALIDATION_CONSTANTS.MIN_QUANTITY) {
@@ -452,7 +471,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
         updates.outputItemPrice = calculatedPrice;
         updates.outputItemPriceString = formatSmartDecimal(calculatedPrice);
       }
-      
+
       if (Object.keys(updates).length > 0) {
         setFormData({
           ...formData,
@@ -465,18 +484,18 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
   const handleSave = async () => {
     if (isSaving) return;
     setIsSaving(true);
-    
+
     const recordId = record?.id || uuid();
     const station = formData.station;
-    
+
     const recordData: FinancialRecord = {
       id: recordId,
       name: formData.name || `${formData.station} - ${formatMonthYear(new Date(year, month - 1))}`,
       description: formData.description,
       createdAt: record?.createdAt || new Date(),
       updatedAt: new Date(),
-      year,
-      month,
+      year: formData.year,
+      month: formData.month,
       station: formData.station as Station,
       type: isCompany ? 'company' : 'personal',
       siteId: formData.site || null,
@@ -522,10 +541,10 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
     try {
       // Emit pure record entity - Links System handles all relationships automatically
       await onSave(recordData);
-      
+
       // Dispatch UI update events AFTER successful save
       dispatchEntityUpdated(entityTypeToKind(EntityType.FINANCIAL));
-      
+
       onOpenChange(false);
     } catch (error) {
       console.error('Save failed:', error);
@@ -548,524 +567,534 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
                 <DialogTitle>
                   {record ? 'Edit Financial' : `Create New ${isCompany ? 'Company' : 'Personal'} Financial`}
                 </DialogTitle>
-              <DialogDescription>
-                {record 
-                  ? 'Modify financial details' 
-                  : `Create a new ${isCompany ? 'company' : 'personal'} financial for ${year}-${month.toString().padStart(2, '0')}`
-                }
-              </DialogDescription>
-            </div>
-            <div className="text-sm font-medium text-muted-foreground">
-              Financial Type: <span className="text-foreground">{isCompany ? 'Company' : 'Personal'}</span> | 
-              Station: <span className="text-foreground">{formData.station}</span>
-            </div>
-          </div>
-        </DialogHeader>
-        
-        {/* Content */}
-        <div className="px-6 overflow-y-auto" style={{ maxHeight: 'calc(90vh - 220px)' }}>
-          <div className={`grid gap-4 ${emissaryColumnExpanded ? 'grid-cols-4' : 'grid-cols-3'}`}>
-            {/* Column 1: NATIVE (Basic Info) */}
-            <div className="space-y-3">
-              
-              <div className="space-y-2">
-                <Label htmlFor="name" className="text-xs">Name *</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Financial record name..."
-                  className="h-8 text-sm"
-                  autoFocus
+                <DialogDescription>
+                  {record
+                    ? 'Modify financial details'
+                    : `Create a new ${isCompany ? 'company' : 'personal'} financial for ${year}-${month.toString().padStart(2, '0')}`
+                  }
+                </DialogDescription>
+              </div>
+              <div className="text-sm font-medium text-muted-foreground">
+                Financial Type: <span className="text-foreground">{isCompany ? 'Company' : 'Personal'}</span> |
+                Station: <span className="text-foreground">{formData.station}</span>
+              </div>
+              <div className="mt-2">
+                <div className="text-xs text-muted-foreground mb-1">Record Date</div>
+                <MonthYearSelector
+                  currentYear={formData.year}
+                  currentMonth={formData.month}
+                  onYearChange={(y) => setFormData(prev => ({ ...prev, year: y }))}
+                  onMonthChange={(m) => setFormData(prev => ({ ...prev, month: m }))}
+                  className="h-8"
                 />
               </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="description" className="text-xs">Description</Label>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={toggleDescription}
-                    className="h-6 px-2 text-xs"
-                  >
-                    {descriptionExpanded ? '▼' : '▶'}
-                  </Button>
-                </div>
-                {descriptionExpanded && (
-                  <Textarea
-                    id="description"
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    placeholder="Financial description..."
-                    className="h-16 text-sm resize-none"
-                    rows={3}
-                  />
-                )}
-              </div>
-
-              <div>
-                <Label htmlFor="station" className="text-xs">Station</Label>
-                <SearchableSelect
-                  value={getStationValue(formData.station)}
-                  onValueChange={(value) => {
-                    const station = getStationFromCombined(value);
-                    setFormData({ ...formData, station: station as Station });
-                    // Save last used station to preferences
-                    setPreference('finrec-modal-last-station', station);
-                  }}
-                  placeholder="Select station..."
-                  options={createStationCategoryOptions()}
-                  autoGroupByCategory={true}
-                  getCategoryForValue={(value) => getCategoryFromCombined(value)}
-                  className="h-8 text-sm"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-xs">Financial Type</Label>
-                <div className="text-sm text-muted-foreground">
-                  {isCompany ? 'Company' : 'Personal'}
-                </div>
-              </div>
             </div>
+          </DialogHeader>
 
-            {/* Column 2: NATIVE (Financial Data) */}
-            <div className="space-y-3">
-            {/* <h3 className="text-sm font-semibold text-muted-foreground border-b pb-1">🧬 NATIVE</h3>*/}
-              
-              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-2">
-                  <Label htmlFor="cost" className="text-xs">Cost ($)</Label>
-                  <NumericInput
-                    id="cost"
-                    value={formData.cost}
-                    onChange={(value) => setFormData({ ...formData, cost: value })}
-                    placeholder="0.00"
-                    className="h-8 text-sm"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="revenue" className="text-xs">Revenue ($)</Label>
-                  <NumericInput
-                    id="revenue"
-                    value={formData.revenue}
-                    onChange={(value) => setFormData({ ...formData, revenue: value })}
-                    placeholder="0.00"
-                    className="h-8 text-sm"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  type="button"
-                  variant={formData.isNotPaid ? "outline" : "outline"}
-                  size="sm"
-                  onClick={() => setFormData({ ...formData, isNotPaid: !formData.isNotPaid })}
-                  className={`h-8 text-xs ${formData.isNotPaid ? 'border-orange-500 text-orange-600' : ''}`}
-                >
-                  {formData.isNotPaid ? "⚠ Not Paid" : "✓ Paid"}
-                </Button>
-                <Button
-                  type="button"
-                  variant={formData.isNotCharged ? "outline" : "outline"}
-                  size="sm"
-                  onClick={() => setFormData({ ...formData, isNotCharged: !formData.isNotCharged })}
-                  className={`h-8 text-xs ${formData.isNotCharged ? 'border-orange-500 text-orange-600' : ''}`}
-                >
-                  {formData.isNotCharged ? "⚠ Not Charged" : "✓ Charged"}
-                </Button>
-              </div>
-            </div>
-
-            {/* Column 3: AMBASSADORS */}
-            <div className="space-y-3">
-            {/* <h3 className="text-sm font-semibold text-muted-foreground border-b pb-1">🏛️ AMBASSADORS</h3>*/}
-              
-              <div>
-                <Label htmlFor="site" className="text-xs">Site</Label>
-                <SearchableSelect
-                  value={formData.site}
-                  onValueChange={(v) => setFormData({ ...formData, site: v })}
-                  placeholder="Select site..."
-                  options={createSiteOptionsWithCategories(sites)}
-                  autoGroupByCategory={true}
-                  className="h-8 text-sm"
-                />
-              </div>
-              
-
-            </div>
-
-            {/* Column 4: EMISSARIES (Collapsible) */}
-            {emissaryColumnExpanded && (
+          {/* Content */}
+          <div className="px-6 overflow-y-auto" style={{ maxHeight: 'calc(90vh - 220px)' }}>
+            <div className={`grid gap-4 ${emissaryColumnExpanded ? 'grid-cols-4' : 'grid-cols-3'}`}>
+              {/* Column 1: NATIVE (Basic Info) */}
               <div className="space-y-3">
-            {/* <h3 className="text-sm font-semibold text-muted-foreground border-b pb-1">📡 EMISSARIES</h3>*/}
-                
-                {/* Customer Character - Emissary field for financial records */}
+
+                <div className="space-y-2">
+                  <Label htmlFor="name" className="text-xs">Name *</Label>
+                  <Input
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="Financial record name..."
+                    className="h-8 text-sm"
+                    autoFocus
+                  />
+                </div>
+
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <Label htmlFor="customer-character" className="text-xs">Customer</Label>
+                    <Label htmlFor="description" className="text-xs">Description</Label>
                     <Button
+                      type="button"
+                      variant="ghost"
                       size="sm"
-                      variant="outline"
-                      onClick={() => setFormData({ ...formData, isNewCustomer: !formData.isNewCustomer })}
-                      className="h-6 text-xs px-2"
+                      onClick={toggleDescription}
+                      className="h-6 px-2 text-xs"
                     >
-                      {formData.isNewCustomer ? 'Existing' : 'New'}
+                      {descriptionExpanded ? '▼' : '▶'}
                     </Button>
                   </div>
-                  {formData.isNewCustomer ? (
-                    <Input
-                      id="customer-character"
-                      value={formData.newCustomerName}
-                      onChange={(e) => setFormData({ ...formData, newCustomerName: e.target.value })}
-                      placeholder="New customer name"
-                      className="h-8 text-sm"
-                    />
-                  ) : (
-                    <SearchableSelect
-                      value={formData.customerCharacterId || ''}
-                      onValueChange={(value) => setFormData({ ...formData, customerCharacterId: value })}
-                      options={createCharacterOptions(characters)}
-                      placeholder="Select customer"
-                      autoGroupByCategory={true}
-                      className="h-8 text-sm"
+                  {descriptionExpanded && (
+                    <Textarea
+                      id="description"
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      placeholder="Financial description..."
+                      className="h-16 text-sm resize-none"
+                      rows={3}
                     />
                   )}
                 </div>
-                
-                {/* Points Rewards - Above Item Creation */}
-                <div className="space-y-2">
-                  <Label className="text-xs">Point Rewards</Label>
-                  <div className="grid grid-cols-4 gap-2">
-                    <div>
-                      <Label htmlFor="reward-xp" className="text-xs">XP</Label>
-                      <NumericInput
-                        id="reward-xp"
-                        value={formData.points.xp}
-                        onChange={(value) => setFormData({ ...formData, points: { ...formData.points, xp: value } })}
-                        min={0}
-                        step={1}
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="reward-rp" className="text-xs">RP</Label>
-                      <NumericInput
-                        id="reward-rp"
-                        value={formData.points.rp}
-                        onChange={(value) => setFormData({ ...formData, points: { ...formData.points, rp: value } })}
-                        min={0}
-                        step={1}
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="reward-fp" className="text-xs">FP</Label>
-                      <NumericInput
-                        id="reward-fp"
-                        value={formData.points.fp}
-                        onChange={(value) => setFormData({ ...formData, points: { ...formData.points, fp: value } })}
-                        min={0}
-                        step={1}
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="reward-hp" className="text-xs">HP</Label>
-                      <NumericInput
-                        id="reward-hp"
-                        value={formData.points.hp}
-                        onChange={(value) => setFormData({ ...formData, points: { ...formData.points, hp: value } })}
-                        min={0}
-                        step={1}
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="output-item-type-subtype" className="text-xs">Item Type & SubType</Label>
+
+                <div>
+                  <Label htmlFor="station" className="text-xs">Station</Label>
                   <SearchableSelect
-                    value={outputItemTypeSubType}
-                    onValueChange={handleOutputItemTypeSubTypeChange}
-                    placeholder="No Item Output"
-                    options={[
-                      { value: 'none:', label: 'No Item Output', category: 'None' },
-                      ...createItemTypeSubTypeOptions()
-                    ]}
-                    className="h-8 text-sm"
-                    autoGroupByCategory={true}
-                    getCategoryForValue={(value) => {
-                      if (value === 'none:') return 'None';
-                      return getItemTypeFromCombined(value);
+                    value={getStationValue(formData.station)}
+                    onValueChange={(value) => {
+                      const station = getStationFromCombined(value);
+                      setFormData({ ...formData, station: station as Station });
+                      // Save last used station to preferences
+                      setPreference('finrec-modal-last-station', station);
                     }}
+                    placeholder="Select station..."
+                    options={createStationCategoryOptions()}
+                    autoGroupByCategory={true}
+                    getCategoryForValue={(value) => getCategoryFromCombined(value)}
+                    className="h-8 text-sm"
                   />
                 </div>
 
-                {!!formData.outputItemType && (
-                  <>
+                <div className="space-y-2">
+                  <Label className="text-xs">Financial Type</Label>
+                  <div className="text-sm text-muted-foreground">
+                    {isCompany ? 'Company' : 'Personal'}
+                  </div>
+                </div>
+              </div>
 
-                    {/* Item Division - Row 1: Quantity, Unit Cost, Price, Auto */}
-                    <div className="grid grid-cols-4 gap-2">
-                      <div className="space-y-2">
-                        <Label htmlFor="output-quantity" className="text-xs">Quantity</Label>
-                        <NumericInput
-                          id="output-quantity"
-                          value={formData.outputQuantity}
-                          onChange={(value) => setFormData({ ...formData, outputQuantity: value })}
-                          min={1}
-                          step={QUANTITY_STEP}
-                          className="h-8 text-sm"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="output-unit-cost" className="text-xs">U. Cost $</Label>
-                        <NumericInput
-                          id="output-unit-cost"
-                          value={formData.outputUnitCost}
-                          onChange={(value) => setFormData({ ...formData, outputUnitCost: value })}
-                          min={0}
-                          step={PRICE_STEP}
-                          className="h-8 text-sm"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="output-item-price" className="text-xs">Price $</Label>
-                        <NumericInput
-                          id="output-item-price"
-                          value={formData.outputItemPrice}
-                          onChange={(value) => setFormData({ ...formData, outputItemPrice: value })}
-                          min={0}
-                          step={PRICE_STEP}
-                          className="h-8 text-sm"
-                        />
-                      </div>
-                      <div className="flex items-end">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={handleAutoCalculateUnitCost}
-                          className="h-8 px-4 text-xs w-full"
-                          title="Auto-calculate Unit Cost from Cost/Quantity and Price from Revenue/Quantity"
-                        >
-                          Auto
-                        </Button>
-                      </div>
+              {/* Column 2: NATIVE (Financial Data) */}
+              <div className="space-y-3">
+                {/* <h3 className="text-sm font-semibold text-muted-foreground border-b pb-1">🧬 NATIVE</h3>*/}
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="cost" className="text-xs">Cost ($)</Label>
+                    <NumericInput
+                      id="cost"
+                      value={formData.cost}
+                      onChange={(value) => setFormData({ ...formData, cost: value })}
+                      placeholder="0.00"
+                      className="h-8 text-sm"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="revenue" className="text-xs">Revenue ($)</Label>
+                    <NumericInput
+                      id="revenue"
+                      value={formData.revenue}
+                      onChange={(value) => setFormData({ ...formData, revenue: value })}
+                      placeholder="0.00"
+                      className="h-8 text-sm"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    type="button"
+                    variant={formData.isNotPaid ? "outline" : "outline"}
+                    size="sm"
+                    onClick={() => setFormData({ ...formData, isNotPaid: !formData.isNotPaid })}
+                    className={`h-8 text-xs ${formData.isNotPaid ? 'border-orange-500 text-orange-600' : ''}`}
+                  >
+                    {formData.isNotPaid ? "⚠ Not Paid" : "✓ Paid"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={formData.isNotCharged ? "outline" : "outline"}
+                    size="sm"
+                    onClick={() => setFormData({ ...formData, isNotCharged: !formData.isNotCharged })}
+                    className={`h-8 text-xs ${formData.isNotCharged ? 'border-orange-500 text-orange-600' : ''}`}
+                  >
+                    {formData.isNotCharged ? "⚠ Not Charged" : "✓ Charged"}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Column 3: AMBASSADORS */}
+              <div className="space-y-3">
+                {/* <h3 className="text-sm font-semibold text-muted-foreground border-b pb-1">🏛️ AMBASSADORS</h3>*/}
+
+                <div>
+                  <Label htmlFor="site" className="text-xs">Site</Label>
+                  <SearchableSelect
+                    value={formData.site}
+                    onValueChange={(v) => setFormData({ ...formData, site: v })}
+                    placeholder="Select site..."
+                    options={createSiteOptionsWithCategories(sites)}
+                    autoGroupByCategory={true}
+                    className="h-8 text-sm"
+                  />
+                </div>
+
+
+              </div>
+
+              {/* Column 4: EMISSARIES (Collapsible) */}
+              {emissaryColumnExpanded && (
+                <div className="space-y-3">
+                  {/* <h3 className="text-sm font-semibold text-muted-foreground border-b pb-1">📡 EMISSARIES</h3>*/}
+
+                  {/* Customer Character - Emissary field for financial records */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="customer-character" className="text-xs">Customer</Label>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setFormData({ ...formData, isNewCustomer: !formData.isNewCustomer })}
+                        className="h-6 text-xs px-2"
+                      >
+                        {formData.isNewCustomer ? 'Existing' : 'New'}
+                      </Button>
                     </div>
-
-                    {/* Item Division - Row 2: Target Site, Item Status */}
-                    <div className="grid grid-cols-2 gap-2">
+                    {formData.isNewCustomer ? (
+                      <Input
+                        id="customer-character"
+                        value={formData.newCustomerName}
+                        onChange={(e) => setFormData({ ...formData, newCustomerName: e.target.value })}
+                        placeholder="New customer name"
+                        className="h-8 text-sm"
+                      />
+                    ) : (
                       <SearchableSelect
-                        value={formData.targetSite}
-                        onValueChange={(value) => setFormData({ ...formData, targetSite: value })}
-                        placeholder="Target Site"
-                        options={createSiteOptionsWithCategories(sites)}
+                        value={formData.customerCharacterId || ''}
+                        onValueChange={(value) => setFormData({ ...formData, customerCharacterId: value })}
+                        options={createCharacterOptions(characters)}
+                        placeholder="Select customer"
                         autoGroupByCategory={true}
                         className="h-8 text-sm"
                       />
-                      <Select
-                        value={outputItemStatus}
-                        onValueChange={(value) => setOutputItemStatus(value as ItemStatus)}
-                      >
-                        <SelectTrigger className="h-8 text-sm">
-                          <SelectValue placeholder="Status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {Object.values(ItemStatus).map((status) => (
-                            <SelectItem key={status} value={status}>
-                              {status}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                    )}
+                  </div>
 
-                    <div className="space-y-2">
-                      <ItemNameField
-                        value={formData.outputItemName}
-                        onChange={(value) => setFormData({ ...formData, outputItemName: value })}
-                        placeholder="Item name"
-                        items={existingItems}
-                        selectedItemId={selectedItemId}
-                        onItemSelect={handleItemSelect}
-                        isNewItem={formData.isNewItem}
-                        onNewItemToggle={handleNewItemChange}
-                        label="Item Name"
-                        sites={sites}
-                      />
+                  {/* Points Rewards - Above Item Creation */}
+                  <div className="space-y-2">
+                    <Label className="text-xs">Point Rewards</Label>
+                    <div className="grid grid-cols-4 gap-2">
                       <div>
-                        <Label htmlFor="output-item-collection" className="text-xs">Collection</Label>
-                        <Select 
-                          value={formData.outputItemCollection || 'none'} 
-                          onValueChange={(value) => setFormData({ ...formData, outputItemCollection: value === 'none' ? undefined : value as Collection })}
+                        <Label htmlFor="reward-xp" className="text-xs">XP</Label>
+                        <NumericInput
+                          id="reward-xp"
+                          value={formData.points.xp}
+                          onChange={(value) => setFormData({ ...formData, points: { ...formData.points, xp: value } })}
+                          min={0}
+                          step={1}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="reward-rp" className="text-xs">RP</Label>
+                        <NumericInput
+                          id="reward-rp"
+                          value={formData.points.rp}
+                          onChange={(value) => setFormData({ ...formData, points: { ...formData.points, rp: value } })}
+                          min={0}
+                          step={1}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="reward-fp" className="text-xs">FP</Label>
+                        <NumericInput
+                          id="reward-fp"
+                          value={formData.points.fp}
+                          onChange={(value) => setFormData({ ...formData, points: { ...formData.points, fp: value } })}
+                          min={0}
+                          step={1}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="reward-hp" className="text-xs">HP</Label>
+                        <NumericInput
+                          id="reward-hp"
+                          value={formData.points.hp}
+                          onChange={(value) => setFormData({ ...formData, points: { ...formData.points, hp: value } })}
+                          min={0}
+                          step={1}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="output-item-type-subtype" className="text-xs">Item Type & SubType</Label>
+                    <SearchableSelect
+                      value={outputItemTypeSubType}
+                      onValueChange={handleOutputItemTypeSubTypeChange}
+                      placeholder="No Item Output"
+                      options={[
+                        { value: 'none:', label: 'No Item Output', category: 'None' },
+                        ...createItemTypeSubTypeOptions()
+                      ]}
+                      className="h-8 text-sm"
+                      autoGroupByCategory={true}
+                      getCategoryForValue={(value) => {
+                        if (value === 'none:') return 'None';
+                        return getItemTypeFromCombined(value);
+                      }}
+                    />
+                  </div>
+
+                  {!!formData.outputItemType && (
+                    <>
+
+                      {/* Item Division - Row 1: Quantity, Unit Cost, Price, Auto */}
+                      <div className="grid grid-cols-4 gap-2">
+                        <div className="space-y-2">
+                          <Label htmlFor="output-quantity" className="text-xs">Quantity</Label>
+                          <NumericInput
+                            id="output-quantity"
+                            value={formData.outputQuantity}
+                            onChange={(value) => setFormData({ ...formData, outputQuantity: value })}
+                            min={1}
+                            step={QUANTITY_STEP}
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="output-unit-cost" className="text-xs">U. Cost $</Label>
+                          <NumericInput
+                            id="output-unit-cost"
+                            value={formData.outputUnitCost}
+                            onChange={(value) => setFormData({ ...formData, outputUnitCost: value })}
+                            min={0}
+                            step={PRICE_STEP}
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="output-item-price" className="text-xs">Price $</Label>
+                          <NumericInput
+                            id="output-item-price"
+                            value={formData.outputItemPrice}
+                            onChange={(value) => setFormData({ ...formData, outputItemPrice: value })}
+                            min={0}
+                            step={PRICE_STEP}
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                        <div className="flex items-end">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={handleAutoCalculateUnitCost}
+                            className="h-8 px-4 text-xs w-full"
+                            title="Auto-calculate Unit Cost from Cost/Quantity and Price from Revenue/Quantity"
+                          >
+                            Auto
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Item Division - Row 2: Target Site, Item Status */}
+                      <div className="grid grid-cols-2 gap-2">
+                        <SearchableSelect
+                          value={formData.targetSite}
+                          onValueChange={(value) => setFormData({ ...formData, targetSite: value })}
+                          placeholder="Target Site"
+                          options={createSiteOptionsWithCategories(sites)}
+                          autoGroupByCategory={true}
+                          className="h-8 text-sm"
+                        />
+                        <Select
+                          value={outputItemStatus}
+                          onValueChange={(value) => setOutputItemStatus(value as ItemStatus)}
                         >
                           <SelectTrigger className="h-8 text-sm">
-                            <SelectValue placeholder="Uncategorized" />
+                            <SelectValue placeholder="Status" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="none">Uncategorized</SelectItem>
-                            {Object.values(Collection).map((collection) => (
-                              <SelectItem key={collection} value={collection}>
-                                {collection}
+                            {Object.values(ItemStatus).map((status) => (
+                              <SelectItem key={status} value={status}>
+                                {status}
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                       </div>
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
 
-        <DialogFooter className="flex items-center justify-between py-2 border-t px-6">
-          <div className="flex items-center gap-4">
-            {record && (
-              <>
-                <Button
-                  variant="outline"
-                  onClick={() => setShowDeleteModal(true)}
-                  className="h-8 text-xs text-muted-foreground hover:text-foreground"
-                >
-                  Delete
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setShowRelationshipsModal(true)}
-                  className="h-8 text-xs"
-                >
-                  <Network className="w-3 h-3 mr-1" />
-                  Links
-                </Button>
-              </>
-            )}
-            <Button
-              variant="outline"
-              onClick={() => setShowPlayerCharacterSelector(true)}
-              className="h-8 text-xs"
-            >
-              <User className="w-3 h-3 mr-1" />
-              Player
-            </Button>
-            {/* Status Selector */}
-            <div className="flex items-center gap-2">
-              <Label htmlFor="financial-status" className="text-xs">Status:</Label>
-              <Select
-                value={formData.status}
-                onValueChange={(value) => {
-                  const newStatus = value as FinancialStatus;
-
-                  // Show confirmation for COLLECTED status
-                  if (newStatus === FinancialStatus.COLLECTED && formData.status !== FinancialStatus.COLLECTED) {
-                    setPendingStatusChange({
-                      status: newStatus,
-                      onConfirm: () => {
-                        setFormData(prev => ({ ...prev, status: newStatus }));
-                        setShowArchiveCollectionModal(false);
-                        setPendingStatusChange(null);
-                      },
-                      onCancel: () => {
-                        // Keep original status
-                        setShowArchiveCollectionModal(false);
-                        setPendingStatusChange(null);
-                      }
-                    });
-                    setShowArchiveCollectionModal(true);
-                    return;
-                  }
-
-                  setFormData(prev => ({ ...prev, status: newStatus }));
-                }}
-              >
-                <SelectTrigger className="h-8 w-28 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={FinancialStatus.PENDING}>PENDING</SelectItem>
-                  <SelectItem value={FinancialStatus.DONE}>DONE</SelectItem>
-                  <SelectItem value={FinancialStatus.COLLECTED}>COLLECTED</SelectItem>
-                </SelectContent>
-              </Select>
+                      <div className="space-y-2">
+                        <ItemNameField
+                          value={formData.outputItemName}
+                          onChange={(value) => setFormData({ ...formData, outputItemName: value })}
+                          placeholder="Item name"
+                          items={existingItems}
+                          selectedItemId={selectedItemId}
+                          onItemSelect={handleItemSelect}
+                          isNewItem={formData.isNewItem}
+                          onNewItemToggle={handleNewItemChange}
+                          label="Item Name"
+                          sites={sites}
+                        />
+                        <div>
+                          <Label htmlFor="output-item-collection" className="text-xs">Collection</Label>
+                          <Select
+                            value={formData.outputItemCollection || 'none'}
+                            onValueChange={(value) => setFormData({ ...formData, outputItemCollection: value === 'none' ? undefined : value as Collection })}
+                          >
+                            <SelectTrigger className="h-8 text-sm">
+                              <SelectValue placeholder="Uncategorized" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">Uncategorized</SelectItem>
+                              {Object.values(Collection).map((collection) => (
+                                <SelectItem key={collection} value={collection}>
+                                  {collection}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
-            <Button
-              variant="outline"
-              onClick={toggleEmissaryColumn}
-              className={`h-8 text-xs ${emissaryColumnExpanded ? 'bg-transparent text-white' : 'bg-muted text-muted-foreground'}`}
-            >
-              Emissaries
-            </Button>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)} className="h-8 text-xs" disabled={isSaving}>
-              Cancel
-            </Button>
-            <Button onClick={handleSave} disabled={!formData.name.trim() || isSaving} className="h-8 text-xs">
-              {isSaving ? 'Saving...' : (record ? 'Update' : 'Create')} Financial Record
-            </Button>
-          </div>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          <DialogFooter className="flex items-center justify-between py-2 border-t px-6">
+            <div className="flex items-center gap-4">
+              {record && (
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowDeleteModal(true)}
+                    className="h-8 text-xs text-muted-foreground hover:text-foreground"
+                  >
+                    Delete
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowRelationshipsModal(true)}
+                    className="h-8 text-xs"
+                  >
+                    <Network className="w-3 h-3 mr-1" />
+                    Links
+                  </Button>
+                </>
+              )}
+              <Button
+                variant="outline"
+                onClick={() => setShowPlayerCharacterSelector(true)}
+                className="h-8 text-xs"
+              >
+                <User className="w-3 h-3 mr-1" />
+                Player
+              </Button>
+              {/* Status Selector */}
+              <div className="flex items-center gap-2">
+                <Label htmlFor="financial-status" className="text-xs">Status:</Label>
+                <Select
+                  value={formData.status}
+                  onValueChange={(value) => {
+                    const newStatus = value as FinancialStatus;
 
-    {/* Delete Modal */}
-    {showDeleteModal && (
-      <DeleteModal
-        open={showDeleteModal}
-        onOpenChange={setShowDeleteModal}
-        entityType={EntityType.FINANCIAL}
-        entities={record ? [record] : []}
-        onComplete={() => {
-          setShowDeleteModal(false);
-          onOpenChange(false);
-          onDelete?.();
-        }}
-      />
-    )}
+                    // Show confirmation for COLLECTED status
+                    if (newStatus === FinancialStatus.COLLECTED && formData.status !== FinancialStatus.COLLECTED) {
+                      setPendingStatusChange({
+                        status: newStatus,
+                        onConfirm: () => {
+                          setFormData(prev => ({ ...prev, status: newStatus }));
+                          setShowArchiveCollectionModal(false);
+                          setPendingStatusChange(null);
+                        },
+                        onCancel: () => {
+                          // Keep original status
+                          setShowArchiveCollectionModal(false);
+                          setPendingStatusChange(null);
+                        }
+                      });
+                      setShowArchiveCollectionModal(true);
+                      return;
+                    }
 
-    {/* Links Relationships Modal */}
-    {record && showRelationshipsModal && (
-      <LinksRelationshipsModal
-        entity={{ type: EntityType.FINANCIAL, id: record.id, name: record.name }}
-        open={showRelationshipsModal}
-        onClose={() => setShowRelationshipsModal(false)}
-      />
-    )}
-    
-    {/* Player Character Selector Modal */}
-    <PlayerCharacterSelectorModal
-      open={showPlayerCharacterSelector}
-      onOpenChange={setShowPlayerCharacterSelector}
-      onSelect={setPlayerCharacterId}
-      currentPlayerCharacterId={playerCharacterId}
-    />
+                    setFormData(prev => ({ ...prev, status: newStatus }));
+                  }}
+                >
+                  <SelectTrigger className="h-8 w-28 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={FinancialStatus.PENDING}>PENDING</SelectItem>
+                    <SelectItem value={FinancialStatus.DONE}>DONE</SelectItem>
+                    <SelectItem value={FinancialStatus.COLLECTED}>COLLECTED</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button
+                variant="outline"
+                onClick={toggleEmissaryColumn}
+                className={`h-8 text-xs ${emissaryColumnExpanded ? 'bg-transparent text-white' : 'bg-muted text-muted-foreground'}`}
+              >
+                Emissaries
+              </Button>
+            </div>
 
-    {/* Archive Collection Confirmation Modal */}
-    {pendingStatusChange && (
-      <ArchiveCollectionConfirmationModal
-        open={showArchiveCollectionModal}
-        onOpenChange={setShowArchiveCollectionModal}
-        entityType="financial"
-        entityName={formData.name}
-        pointsValue={{
-          xp: Math.floor((formData.revenue || 0) / 100),
-          rp: Math.floor((formData.revenue || 0) / 200),
-          fp: Math.floor((formData.revenue || 0) / 150),
-          hp: Math.floor((formData.revenue || 0) / 300)
-        }}
-        totalRevenue={formData.revenue || 0}
-        onConfirm={pendingStatusChange.onConfirm}
-        onCancel={pendingStatusChange.onCancel}
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={() => onOpenChange(false)} className="h-8 text-xs" disabled={isSaving}>
+                Cancel
+              </Button>
+              <Button onClick={handleSave} disabled={!formData.name.trim() || isSaving} className="h-8 text-xs">
+                {isSaving ? 'Saving...' : (record ? 'Update' : 'Create')} Financial Record
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Modal */}
+      {showDeleteModal && (
+        <DeleteModal
+          open={showDeleteModal}
+          onOpenChange={setShowDeleteModal}
+          entityType={EntityType.FINANCIAL}
+          entities={record ? [record] : []}
+          onComplete={() => {
+            setShowDeleteModal(false);
+            onOpenChange(false);
+            onDelete?.();
+          }}
+        />
+      )}
+
+      {/* Links Relationships Modal */}
+      {record && showRelationshipsModal && (
+        <LinksRelationshipsModal
+          entity={{ type: EntityType.FINANCIAL, id: record.id, name: record.name }}
+          open={showRelationshipsModal}
+          onClose={() => setShowRelationshipsModal(false)}
+        />
+      )}
+
+      {/* Player Character Selector Modal */}
+      <PlayerCharacterSelectorModal
+        open={showPlayerCharacterSelector}
+        onOpenChange={setShowPlayerCharacterSelector}
+        onSelect={setPlayerCharacterId}
+        currentPlayerCharacterId={playerCharacterId}
       />
-    )}
+
+      {/* Archive Collection Confirmation Modal */}
+      {pendingStatusChange && (
+        <ArchiveCollectionConfirmationModal
+          open={showArchiveCollectionModal}
+          onOpenChange={setShowArchiveCollectionModal}
+          entityType="financial"
+          entityName={formData.name}
+          pointsValue={{
+            xp: Math.floor((formData.revenue || 0) / 100),
+            rp: Math.floor((formData.revenue || 0) / 200),
+            fp: Math.floor((formData.revenue || 0) / 150),
+            hp: Math.floor((formData.revenue || 0) / 300)
+          }}
+          totalRevenue={formData.revenue || 0}
+          onConfirm={pendingStatusChange.onConfirm}
+          onCancel={pendingStatusChange.onCancel}
+        />
+      )}
     </>
   );
 }
