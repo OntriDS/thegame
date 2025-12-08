@@ -220,6 +220,11 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
   const isPersonal = isPersonalStation(formData.station);
 
   useEffect(() => {
+    if (!open) {
+      didInitRef.current = false;
+      return;
+    }
+
     if (record && record.id) {
       setFormData({
         name: record.name,
@@ -333,7 +338,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
       setOutputItemTypeSubType('none:');
       setOutputItemStatus(ItemStatus.FOR_SALE);
     }
-  }, [record, getLastUsedStation]);
+  }, [record, getLastUsedStation, open, year, month]);
 
   // Sync year/month for new records when context changes (fixes stale date if filter changes while modal hidden)
   useEffect(() => {
@@ -490,7 +495,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
 
     const recordData: FinancialRecord = {
       id: recordId,
-      name: formData.name || `${formData.station} - ${formatMonthYear(new Date(year, month - 1))}`,
+      name: formData.name || `${formData.station} - ${formatMonthYear(new Date(formData.year, formData.month - 1))}`,
       description: formData.description,
       createdAt: record?.createdAt || new Date(),
       updatedAt: new Date(),
@@ -570,7 +575,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
                 <DialogDescription>
                   {record
                     ? 'Modify financial details'
-                    : `Create a new ${isCompany ? 'company' : 'personal'} financial for ${year}-${month.toString().padStart(2, '0')}`
+                    : `Create a new ${isCompany ? 'company' : 'personal'} financial for ${formData.year}-${formData.month.toString().padStart(2, '0')}`
                   }
                 </DialogDescription>
               </div>
@@ -585,7 +590,6 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
                   currentMonth={formData.month}
                   onYearChange={(y) => setFormData(prev => ({ ...prev, year: y }))}
                   onMonthChange={(m) => setFormData(prev => ({ ...prev, month: m }))}
-                  className="h-8"
                 />
               </div>
             </div>
