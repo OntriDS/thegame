@@ -38,7 +38,7 @@ import CharacterSelectorSubmodal from './submodals/character-selector-submodal';
 import PlayerCharacterSelectorModal from './submodals/player-character-selector-submodal';
 import { dispatchEntityUpdated, entityTypeToKind } from '@/lib/ui/ui-events';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
-import { format } from 'date-fns';
+import { format, addHours } from 'date-fns';
 
 interface TaskModalProps {
   task?: Task | null;
@@ -835,6 +835,25 @@ export default function TaskModal({
     }
   };
 
+  // Handle opening the scheduler - auto-fill with current date/time if not set
+  const handleOpenScheduler = () => {
+    // Only auto-fill if schedule is not already set
+    if (!scheduledStartDate) {
+      const now = new Date();
+      const defaultDurationHours = 1; // Default to 1 hour duration
+      const start = new Date(now);
+      const end = addHours(start, defaultDurationHours);
+
+      setScheduledStartDate(start);
+      setScheduledStartTime(format(start, 'HH:mm'));
+      setScheduledEndDate(end);
+      setScheduledEndTime(format(end, 'HH:mm'));
+    }
+
+    setShowScheduler(true);
+  };
+
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent zIndexLayer={'MODALS'} className="w-full max-w-7xl max-h-[90vh] overflow-y-auto">
@@ -883,7 +902,7 @@ export default function TaskModal({
                   <Button
                     variant="outline"
                     className={`w-full justify-start text-left font-normal h-auto py-2 px-3 ${!dueDate && !scheduledStartDate ? "text-muted-foreground" : ""}`}
-                    onClick={() => setShowScheduler(true)}
+                    onClick={handleOpenScheduler}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
                     <div className="flex flex-col items-start gap-0.5 overflow-hidden">
