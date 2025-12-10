@@ -72,7 +72,7 @@ export const SITE_STATUS_COLORS = {
 /** Financial Colors - for cost, revenue, profit, margin display */
 export const FINANCIAL_COLORS = {
   negative: 'text-red-600 dark:text-red-400',
-  positive: 'text-green-600 dark:text-green-400', 
+  positive: 'text-green-600 dark:text-green-400',
   neutral: 'text-muted-foreground',
   activeWhite: 'text-white',
   activeBlack: 'text-black',
@@ -137,4 +137,160 @@ export const ROLE_COLORS = {
   STUDENT: REGULAR_ROLE_DEFAULT,
   OTHER: REGULAR_ROLE_DEFAULT,
 } as const;
+
+// ============================================================================
+// BUSINESS COLOR COMMUNICATION SYSTEM (DRY PRINCIPLE)
+// ============================================================================
+// The business model (areas and stations) drives the color system.
+// Other parts of the project (notes, schedule cards, badges) USE these colors.
+
+/**
+ * Area Colors - Maps business areas to their semantic colors
+ * This is the SINGLE SOURCE OF TRUTH for area-based visual communication
+ */
+export const AREA_COLORS = {
+  ADMIN: 'purple',      // Strategy, management, administration
+  RESEARCH: 'cyan',     // Studies, classes
+  DEV: 'indigo',        // Systems Development
+  DESIGN: 'turquoise',  // Creative processes, design work
+  PRODUCTION: 'orange', // Manufacturing, production work
+  SALES: 'yellow',      // Sales, marketing, bookings
+  PERSONAL: 'brown',    // Personal tasks and activities
+} as const;
+
+/**
+ * Station Colors - Maps specific stations to their semantic colors
+ * Inherits from parent area by default, but can have custom colors
+ */
+export const STATION_COLORS = {
+  // Personal stations with custom colors
+  'Family': 'pink',       // Family activities
+  'Health': 'green',      // Health and wellness
+  'Earnings': 'gold',     // Personal earnings
+  'Rewards': 'gold',      // Personal rewards
+
+  // Admin stations with custom colors
+  'Projects': 'royalblue', // Project management
+
+  // All other stations inherit from their parent area
+} as const;
+
+/**
+ * Note-Specific Colors - Colors used ONLY in the notes system
+ * Not tied to business areas/stations
+ */
+export const NOTE_SPECIFIC_COLORS = {
+  IDEAS: 'gray',        // Ideas, creativity, brainstorming
+  URGENT: 'red',        // Challenges, problems, urgent items
+  NEUTRAL: 'white',     // General, neutral, default
+} as const;
+
+/**
+ * Color Classes - Theme-aware Tailwind classes for all colors
+ * Used by notes, schedule cards, badges, and any visual element needing area/station colors
+ */
+export const COLOR_CLASSES = {
+  // Original colors
+  white: 'bg-card border-border hover:bg-muted/50',
+  gray: 'bg-muted/30 border-border hover:bg-muted/50',
+  red: 'bg-red-50/50 border-red-200 hover:bg-red-100/50 dark:bg-red-950/20 dark:border-red-800/50 dark:hover:bg-red-900/30',
+
+  // Area colors
+  purple: 'bg-purple-50/50 border-purple-200 hover:bg-purple-100/50 dark:bg-purple-950/20 dark:border-purple-800/50 dark:hover:bg-purple-900/30',
+  cyan: 'bg-cyan-50/50 border-cyan-200 hover:bg-cyan-100/50 dark:bg-cyan-950/20 dark:border-cyan-800/50 dark:hover:bg-cyan-900/30',
+  indigo: 'bg-indigo-50/50 border-indigo-200 hover:bg-indigo-100/50 dark:bg-indigo-950/20 dark:border-indigo-800/50 dark:hover:bg-indigo-900/30',
+  turquoise: 'bg-teal-50/50 border-teal-200 hover:bg-teal-100/50 dark:bg-teal-950/20 dark:border-teal-800/50 dark:hover:bg-teal-900/30',
+  orange: 'bg-orange-50/50 border-orange-200 hover:bg-orange-100/50 dark:bg-orange-950/20 dark:border-orange-800/50 dark:hover:bg-orange-900/30',
+  yellow: 'bg-yellow-50/50 border-yellow-200 hover:bg-yellow-100/50 dark:bg-yellow-950/20 dark:border-yellow-800/50 dark:hover:bg-yellow-900/30',
+  brown: 'bg-amber-50/50 border-amber-200 hover:bg-amber-100/50 dark:bg-amber-950/20 dark:border-amber-800/50 dark:hover:bg-amber-900/30',
+
+  // Station-specific colors
+  pink: 'bg-pink-50/50 border-pink-200 hover:bg-pink-100/50 dark:bg-pink-950/20 dark:border-pink-800/50 dark:hover:bg-pink-900/30',
+  green: 'bg-green-50/50 border-green-200 hover:bg-green-100/50 dark:bg-green-950/20 dark:border-green-800/50 dark:hover:bg-green-900/30',
+  gold: 'bg-amber-50/50 border-amber-300 hover:bg-amber-100/50 dark:bg-amber-950/20 dark:border-amber-700/50 dark:hover:bg-amber-900/30',
+  royalblue: 'bg-blue-50/50 border-blue-300 hover:bg-blue-100/50 dark:bg-blue-950/20 dark:border-blue-700/50 dark:hover:bg-blue-900/30',
+} as const;
+
+/** 
+ * Legacy export for backward compatibility with notes system 
+ * @deprecated Use COLOR_CLASSES instead
+ */
+export const NOTE_COLOR_CLASSES = COLOR_CLASSES;
+
+/**
+ * Get color for a business area
+ */
+export function getAreaColor(area: keyof typeof AREA_COLORS): string {
+  return AREA_COLORS[area];
+}
+
+/**
+ * Get color for a station (with fallback to parent area)
+ */
+export function getStationColor(station: string, fallbackArea?: keyof typeof AREA_COLORS): string {
+  // Check if station has custom color
+  if (station in STATION_COLORS) {
+    return STATION_COLORS[station as keyof typeof STATION_COLORS];
+  }
+  // Fallback to area color if provided
+  if (fallbackArea) {
+    return AREA_COLORS[fallbackArea];
+  }
+  // Default fallback
+  return 'gray';
+}
+
+/**
+ * Get color classes for any color name
+ */
+export function getColorClasses(color: string): string {
+  return COLOR_CLASSES[color as keyof typeof COLOR_CLASSES] || COLOR_CLASSES.white;
+}
+
+/**
+ * Get color classes for a business area
+ */
+export function getAreaColorClasses(area: keyof typeof AREA_COLORS): string {
+  const color = AREA_COLORS[area];
+  return getColorClasses(color);
+}
+
+/**
+ * Get color classes for a station (with fallback to parent area)
+ */
+export function getStationColorClasses(station: string, fallbackArea?: keyof typeof AREA_COLORS): string {
+  const color = getStationColor(station, fallbackArea);
+  return getColorClasses(color);
+}
+
+/**
+ * Get note color classes (backward compatibility)
+ * @deprecated Use getColorClasses instead
+ */
+export function getNoteColorClasses(color: string): string {
+  return getColorClasses(color);
+}
+
+/**
+ * Get color label for display
+ */
+export function getColorLabel(color: string): string {
+  const colorLabels: Record<string, string> = {
+    white: 'White',
+    gray: 'Gray',
+    red: 'Red',
+    purple: 'Purple',
+    cyan: 'Cyan',
+    indigo: 'Indigo',
+    turquoise: 'Turquoise',
+    orange: 'Orange',
+    yellow: 'Yellow',
+    brown: 'Brown',
+    pink: 'Pink',
+    green: 'Green',
+    gold: 'Gold',
+    royalblue: 'Royal Blue',
+  };
+  return colorLabels[color] || 'White';
+}
 

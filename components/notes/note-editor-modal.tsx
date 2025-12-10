@@ -12,14 +12,14 @@ import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Note, Notebook } from '@/types/entities';
 import { NotebookType, NoteColor, NOTE_TAGS } from '@/types/enums';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
-import { getColorLabel } from '@/lib/utils/note-color-utils';
+import { getColorLabel } from '@/lib/constants/color-constants';
 import { parseRichText } from '@/lib/utils/rich-text-utils';
 import { RichTextEditor } from './rich-text-editor';
-import { 
-  Pin, 
-  Archive, 
-  Tag, 
-  X, 
+import {
+  Pin,
+  Archive,
+  Tag,
+  X,
   BookOpen,
   Eye,
   EyeOff,
@@ -446,9 +446,9 @@ export function NoteEditorModal({
                 onValueChange={(value) => {
                   const selectedNotebook = notebooks.find(nb => nb.id === value);
                   const notebookColor = selectedNotebook?.color || 'text-blue-600';
-                  
-                  setFormData(prev => ({ 
-                    ...prev, 
+
+                  setFormData(prev => ({
+                    ...prev,
                     notebookId: value,
                     color: notebookColor
                   }));
@@ -490,8 +490,8 @@ export function NoteEditorModal({
                     placeholder="Select a Tag"
                     options={[
                       // Business Structure tags
-                      ...NOTE_TAGS.map(tag => ({ 
-                        value: tag, 
+                      ...NOTE_TAGS.map(tag => ({
+                        value: tag,
                         label: tag,
                         group: 'Business Structure'
                       })),
@@ -499,8 +499,8 @@ export function NoteEditorModal({
                       ...Array.from(new Set(
                         notes.flatMap(note => note.tags || [])
                           .filter(tag => !NOTE_TAGS.includes(tag as any))
-                      )).map(tag => ({ 
-                        value: tag, 
+                      )).map(tag => ({
+                        value: tag,
                         label: tag,
                         group: 'Others'
                       }))
@@ -508,7 +508,7 @@ export function NoteEditorModal({
                     className="w-full"
                   />
                 </div>
-                
+
                 {/* Custom Tag Input */}
                 <div>
                   <Label className="text-xs text-muted-foreground mb-1 block">Custom Tag:</Label>
@@ -531,8 +531,8 @@ export function NoteEditorModal({
                   {formData.tags.map((tag, index) => (
                     <Badge key={index} variant="secondary" className="flex items-center gap-1 text-xs">
                       {tag}
-                      <X 
-                        className="h-3 w-3 cursor-pointer" 
+                      <X
+                        className="h-3 w-3 cursor-pointer"
                         onClick={() => handleRemoveTag(tag)}
                       />
                     </Badge>
@@ -597,7 +597,7 @@ export function NoteEditorModal({
                   <Button variant="outline" onClick={onClose} className="flex-1 h-8 text-sm">
                     Cancel
                   </Button>
-                  <Button 
+                  <Button
                     onClick={handleSave}
                     disabled={!formData.title.trim() || !formData.content.trim()}
                     className="flex-1 h-8 text-sm"
@@ -610,36 +610,36 @@ export function NoteEditorModal({
           </div>
         </div>
 
-      {/* Delete Confirmation Modal */}
-      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <DialogContent className={`max-w-md ${getZIndexClass('MODALS')}`}>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Trash2 className="h-5 w-5 text-red-600" />
-              Delete Note
-            </DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
-            <p className="text-sm text-muted-foreground">
-              Are you sure you want to delete this note? There is no going back.
-            </p>
-          </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setShowDeleteConfirm(false)}>
-              Cancel
-            </Button>
-            <Button variant="outline" onClick={() => {
-              onDelete(note!.id);
-              setShowDeleteConfirm(false);
-              onClose();
-            }} className="text-red-600 border-red-600 hover:bg-red-50">
-              <Trash2 className="h-4 w-4 mr-2" />
-              Delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </DialogContent>
-  </Dialog>
+        {/* Delete Confirmation Modal */}
+        <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+          <DialogContent className={`max-w-md ${getZIndexClass('MODALS')}`}>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Trash2 className="h-5 w-5 text-red-600" />
+                Delete Note
+              </DialogTitle>
+            </DialogHeader>
+            <div className="py-4">
+              <p className="text-sm text-muted-foreground">
+                Are you sure you want to delete this note? There is no going back.
+              </p>
+            </div>
+            <DialogFooter>
+              <Button variant="ghost" onClick={() => setShowDeleteConfirm(false)}>
+                Cancel
+              </Button>
+              <Button variant="outline" onClick={() => {
+                onDelete(note!.id);
+                setShowDeleteConfirm(false);
+                onClose();
+              }} className="text-red-600 border-red-600 hover:bg-red-50">
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </DialogContent>
+    </Dialog>
   );
 }

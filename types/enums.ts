@@ -8,7 +8,8 @@
 /** Business Structure - Single source of truth for sections and stations */
 export const BUSINESS_STRUCTURE = {
   ADMIN:      ['Strategy', 'Projects', 'Inventory', 'Transport', 'Team', 'Materials', 'Equipment', 'Rent', 'Founder'],
-  RESEARCH:   ['Classes', 'Studies', 'Development'],
+  RESEARCH:   ['Classes', 'Studies'],
+  DEV:        ['Systems Dev'],
   DESIGN:     ['Digital Art', 'Creative Process', 'Game Design', '3D Modeling', 'Animation'],
   PRODUCTION: ['Buy Orders', 'Paint', 'Craft', 'Dispatch'],
   SALES:      ['Direct Sales', 'Feria Sales', 'Network Sales', 'Online Sales', 'Store Sales', 'Marketing', 'Bookings', 'Other Sales'],
@@ -16,7 +17,7 @@ export const BUSINESS_STRUCTURE = {
 } as const;
 
 // Areas (top-level business areas)
-export const COMPANY_AREAS = ['ADMIN', 'RESEARCH', 'DESIGN', 'PRODUCTION', 'SALES'] as const;
+export const COMPANY_AREAS = ['ADMIN', 'RESEARCH', 'DEV', 'DESIGN', 'PRODUCTION', 'SALES'] as const;
 export const PERSONAL_AREAS = ['PERSONAL'] as const;
 export const ALL_AREAS = [...COMPANY_AREAS, ...PERSONAL_AREAS] as const;
 
@@ -32,6 +33,7 @@ export type Station = typeof BUSINESS_STRUCTURE[Area][number];
 export const STATION_CATEGORIES = {
   ADMIN: BUSINESS_STRUCTURE.ADMIN,
   RESEARCH: BUSINESS_STRUCTURE.RESEARCH,
+  DEV: BUSINESS_STRUCTURE.DEV,
   DESIGN: BUSINESS_STRUCTURE.DESIGN,
   PRODUCTION: BUSINESS_STRUCTURE.PRODUCTION,
   SALES: BUSINESS_STRUCTURE.SALES,
