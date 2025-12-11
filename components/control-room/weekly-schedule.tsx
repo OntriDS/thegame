@@ -9,7 +9,7 @@ import { useThemeColors } from '@/lib/hooks/use-theme-colors';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Plus, Star, Zap, Brain, TrendingUp, Heart, Clock } from 'lucide-react';
 import { BUSINESS_STRUCTURE } from '@/types/enums';
-import { AREA_COLORS, getStationColorClasses } from '@/lib/constants/color-constants';
+import { AREA_COLORS, getStationColorClasses, TASK_STATUS_BADGE_COLORS } from '@/lib/constants/color-constants';
 
 interface WeeklyScheduleProps {
     tasks: Task[];
@@ -65,26 +65,9 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask }: WeeklyS
         return getStationColorClasses(task.station, area);
     };
 
-    // Helper to get status badge color
+    // Helper to get status badge color (using centralized constants)
     const getStatusBadgeColor = (status: TaskStatus) => {
-        switch (status) {
-            case TaskStatus.CREATED:
-                return 'bg-slate-400/80 text-slate-50';
-            case TaskStatus.ON_HOLD:
-                return 'bg-yellow-500/80 text-yellow-50';
-            case TaskStatus.IN_PROGRESS:
-                return 'bg-blue-500/80 text-blue-50';
-            case TaskStatus.FINISHING:
-                return 'bg-cyan-500/80 text-cyan-50';
-            case TaskStatus.DONE:
-                return 'bg-green-500/80 text-green-50';
-            case TaskStatus.FAILED:
-                return 'bg-red-500/80 text-red-50';
-            case TaskStatus.COLLECTED:
-                return 'bg-gray-500/80 text-gray-50';
-            default:
-                return 'bg-muted text-muted-foreground';
-        }
+        return TASK_STATUS_BADGE_COLORS[status] || TASK_STATUS_BADGE_COLORS[TaskStatus.NONE];
     };
 
     // Helper to get parent task name
@@ -284,20 +267,28 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask }: WeeklyS
                                                             style={getTaskStyle(task)}
                                                             onClick={() => onEditTask(task)}
                                                         >
-                                                            {/* Header Row */}
+                                                            {/* Header Row: Station | Time | Points */}
                                                             <div className="flex items-center justify-between mb-1 gap-2">
+                                                                {/* Station Badge */}
                                                                 <span className={cn(
                                                                     "font-bold text-[0.7rem] uppercase tracking-wider truncate px-2 py-0.5 rounded",
                                                                     getStatusBadgeColor(task.status)
                                                                 )}>
                                                                     {task.station}
                                                                 </span>
-                                                                {pointTypes.length > 0 && !isVeryCompact && (
+
+                                                                {/* Time - Always visible in center */}
+                                                                <span className="text-[0.7rem] text-muted-foreground/80 whitespace-nowrap">
+                                                                    {format(new Date(task.scheduledStart!), 'HH:mm')} - {format(new Date(task.scheduledEnd!), 'HH:mm')}
+                                                                </span>
+
+                                                                {/* Points - Always visible */}
+                                                                {pointTypes.length > 0 && (
                                                                     <div className="flex items-center gap-1.5 flex-wrap">
                                                                         {pointTypes.map(pt => {
                                                                             const Icon = pt.icon;
                                                                             return (
-                                                                                <span key={pt.type} className="text-xs flex items-center gap-1 bg-background/40 rounded px-1.5 py-0.5">
+                                                                                <span key={pt.type} className="text-sm flex items-center gap-1 bg-background/40 rounded px-1.5 py-0.5">
                                                                                     <Icon className={cn("w-3 h-3", pt.color)} />
                                                                                     <span className="font-medium">{pt.label}</span>
                                                                                     <span className="font-semibold">{pt.value}</span>
@@ -308,9 +299,9 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask }: WeeklyS
                                                                 )}
                                                             </div>
 
-                                                            {/* Parent Task (if exists and space permits) */}
-                                                            {parentName && !isCompact && (
-                                                                <p className="text-[0.7rem] text-muted-foreground/80 truncate leading-tight mb-1">
+                                                            {/* Parent Task (if exists) */}
+                                                            {parentName && (
+                                                                <p className="text-[0.5rem] text-muted-foreground/80 truncate leading-tight mb-1">
                                                                     ↳ {parentName}
                                                                 </p>
                                                             )}
@@ -318,20 +309,10 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask }: WeeklyS
                                                             {/* Task Name */}
                                                             <p className={cn(
                                                                 "font-semibold truncate transition-colors leading-snug",
-                                                                isVeryCompact ? "line-clamp-1 text-sm" : isCompact ? "line-clamp-1 text-base" : "line-clamp-2 text-base"
+                                                                isVeryCompact ? "line-clamp-1 text-xs" : isCompact ? "line-clamp-1 text-base" : "line-clamp-2 text-base"
                                                             )}>
                                                                 {task.name}
                                                             </p>
-
-                                                            {/* Time Footer (only if height permits) */}
-                                                            {!isCompact && (
-                                                                <div className="flex items-center gap-1 text-[0.7rem] text-muted-foreground/80 mt-1">
-                                                                    <Clock className="w-3 h-3" />
-                                                                    <span>
-                                                                        {format(new Date(task.scheduledStart!), 'HH:mm')} - {format(new Date(task.scheduledEnd!), 'HH:mm')}
-                                                                    </span>
-                                                                </div>
-                                                            )}
                                                         </div>
                                                     );
                                                 })}

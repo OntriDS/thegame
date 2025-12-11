@@ -103,6 +103,18 @@ export const TASK_STATUS_ICON_COLORS = {
   [TaskStatus.DONE]: 'text-green-600 dark:text-green-400',
 } as const;
 
+/** Task Status Badge Colors - For weekly schedule badges (solid backgrounds) */
+export const TASK_STATUS_BADGE_COLORS = {
+  [TaskStatus.CREATED]: 'bg-slate-400/80 text-slate-50',
+  [TaskStatus.ON_HOLD]: 'bg-yellow-500/80 text-yellow-50',
+  [TaskStatus.IN_PROGRESS]: 'bg-blue-500/80 text-blue-50',
+  [TaskStatus.FINISHING]: 'bg-cyan-500/80 text-cyan-50',
+  [TaskStatus.DONE]: 'bg-green-500/80 text-green-50',
+  [TaskStatus.FAILED]: 'bg-red-500/80 text-red-50',
+  [TaskStatus.COLLECTED]: 'bg-gray-500/80 text-gray-50',
+  [TaskStatus.NONE]: 'bg-muted text-muted-foreground',
+} as const;
+
 /** Role Colors - for character role badges */
 // Define colors once
 const SPECIAL_ROLE_FOUNDER = 'border-purple-600 bg-purple-600 text-white hover:bg-purple-700 dark:bg-purple-500 dark:text-white dark:hover:bg-purple-600';
