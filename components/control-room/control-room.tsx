@@ -993,8 +993,11 @@ export default function ControlRoom() {
               // Update taskToEdit with fresh data BEFORE modal closes (fixes stale UI issue)
               setTaskToEdit(finalTask);
 
-              // Reload tasks immediately after save to reflect changes
+              // Reload tasks immediately after save to reflect changes in ALL views
               await loadTasks();
+              // Reload allTasks for Weekly Schedule, Calendar, and Gantt Chart
+              const freshTasks = await loadAllTasks();
+              setAllTasks(freshTasks);
 
               // If editing a selected task, update the selected node
               if (selectedNode && selectedNode.task.id === finalTask.id) {
