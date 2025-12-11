@@ -1004,7 +1004,13 @@ export default function TaskModal({
                     <SelectContent>
                       {Object.values(TaskType)
                         .filter((taskType) => {
-                          if (isRecurrentModal) {
+                          const isRecurrent = (
+                            isRecurrentModal ||
+                            type === TaskType.RECURRENT_GROUP ||
+                            type === TaskType.RECURRENT_TEMPLATE ||
+                            type === TaskType.RECURRENT_INSTANCE
+                          );
+                          if (isRecurrent) {
                             return taskType === TaskType.RECURRENT_GROUP ||
                               taskType === TaskType.RECURRENT_TEMPLATE ||
                               taskType === TaskType.RECURRENT_INSTANCE;
@@ -1031,7 +1037,17 @@ export default function TaskModal({
                       value={parentId || ''}
                       onValueChange={(val) => setParentId(val || null)}
                       placeholder="No Parent"
-                      options={createTaskParentOptions(tasks, task?.id, isRecurrentModal, type)}
+                      options={createTaskParentOptions(
+                        tasks,
+                        task?.id,
+                        (
+                          isRecurrentModal ||
+                          type === TaskType.RECURRENT_GROUP ||
+                          type === TaskType.RECURRENT_TEMPLATE ||
+                          type === TaskType.RECURRENT_INSTANCE
+                        ),
+                        type
+                      )}
                       autoGroupByCategory={true}
                       className="h-8 text-sm"
                       persistentCollapsible={true}

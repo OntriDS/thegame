@@ -991,7 +991,16 @@ export default function ControlRoom() {
           task={taskToEdit.id ? taskToEdit : null}
           open={!!taskToEdit}
           onOpenChange={isOpen => !isOpen && setTaskToEdit(null)}
-          isRecurrentModal={activeSubTab === 'recurrent-tasks'}
+          isRecurrentModal={
+            activeSubTab === 'recurrent-tasks' ||
+            (
+              !!taskToEdit && (
+                taskToEdit.type === TaskType.RECURRENT_GROUP ||
+                taskToEdit.type === TaskType.RECURRENT_TEMPLATE ||
+                taskToEdit.type === TaskType.RECURRENT_INSTANCE
+              )
+            )
+          }
           onSave={async (task) => {
             try {
               // Parent only calls DataStore - Adapter processes through Link Connector automatically
