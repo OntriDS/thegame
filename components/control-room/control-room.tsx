@@ -641,8 +641,15 @@ export default function ControlRoom() {
     setSelectedNode(node);
   };
 
-  const handleEditTask = (task: Task) => {
-    setTaskToEdit(task);
+  const handleEditTask = async (task: Task) => {
+    // Always fetch fresh task data to avoid using filtered/modified task objects
+    try {
+      const freshTask = await ClientAPI.getTaskById(task.id);
+      setTaskToEdit(freshTask || task); // Fallback to provided task if fetch fails
+    } catch (error) {
+      console.error('Failed to fetch fresh task data:', error);
+      setTaskToEdit(task); // Fallback to provided task on error
+    }
   }
 
   // Drag and Drop Handler
