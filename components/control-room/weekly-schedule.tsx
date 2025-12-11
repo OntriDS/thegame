@@ -23,7 +23,7 @@ const HOURS_IN_DAY = 24;
 export default function WeeklySchedule({ tasks, onNewTask, onEditTask }: WeeklyScheduleProps) {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [startHour, setStartHour] = useState(6); // Default start hour: 06:00
-    const [cellHeight, setCellHeight] = useState(80); // Dynamic cell height (40-120px)
+    const [cellHeight, setCellHeight] = useState(50); // Dynamic cell height (20-100px)
 
     // Calculate week days
     const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 }); // Monday start
@@ -48,7 +48,7 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask }: WeeklyS
         });
     }, [tasks, weekDays]);
 
-    // Helper to get task color based on Station -> Area mapping
+    // Helper to get task color based on Station -> Area mapping (for badge only)
     const getTaskColorClass = (task: Task) => {
         // Find the area for this station
         let area: keyof typeof AREA_COLORS | undefined;
@@ -61,8 +61,15 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask }: WeeklyS
             }
         }
 
-        // Get color classes
+        // Get color classes for badge
         return getStationColorClasses(task.station, area);
+    };
+
+    // Helper to get parent task name
+    const getParentTaskName = (task: Task) => {
+        if (!task.parentId) return null;
+        const parent = tasks.find(t => t.id === task.parentId);
+        return parent?.name || null;
     };
 
     const getTaskStyle = (task: Task) => {
@@ -89,8 +96,11 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask }: WeeklyS
         };
     };
 
-    const rotateHours = () => {
-        setStartHour(prev => (prev + 6) % 24);
+    const handleStartHourChange = (value: string) => {
+        const num = parseInt(value);
+        if (!isNaN(num) && num >= 0 && num <= 23) {
+            setStartHour(num);
+        }
     };
 
     // Calculate busy percentage for each day (simple heuristic: hours scheduled / 12 * 100)
@@ -111,11 +121,16 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask }: WeeklyS
         return (xp > 0 || rp > 0 || fp > 0 || hp > 0);
     };
 
-    // Get total points for display
-    const getTotalPoints = (task: Task) => {
-        if (!task.rewards?.points) return 0;
+    // Get individual point types for display
+    const getPointTypes = (task: Task) => {
+        if (!task.rewards?.points) return [];
         const { xp, rp, fp, hp } = task.rewards.points;
-        return (xp || 0) + (rp || 0) + (fp || 0) + (hp || 0);
+        const points = [];
+        if (xp > 0) points.push({ type: 'xp', value: xp, icon: Star, label: 'XP' });
+        if (rp > 0) points.push({ type: 'rp', value: rp, icon: Brain, label: 'RP' });
+        if (fp > 0) points.push({ type: 'fp', value: fp, icon: Heart, label: 'FP' });
+        if (hp > 0) points.push({ type: 'hp', value: hp, icon: Zap, label: 'HP' });
+        return points;
     };
 
     return (
@@ -127,21 +142,32 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask }: WeeklyS
 
                     {/* View Controls */}
                     <div className="flex items-center gap-2 bg-muted/30 p-1 rounded-md border">
-                        <Button variant="ghost" size="sm" onClick={rotateHours} title="Rotate Start Hour">
-                            <Clock className="h-4 w-4 mr-1" />
-                            {startHour}:00
-                        </Button>
+                        <div className="flex items-center gap-2 px-2">
+                            <Clock className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-xs text-muted-foreground whitespace-nowrap">Start:</span>
+                            <input
+                                type="number"
+                                min="0"
+                                max="23"
+                                value={startHour}
+                                onChange={(e) => handleStartHourChange(e.target.value)}
+                                className="w-14 px-2 py-1 text-xs font-medium text-center bg-background border border-border rounded hover:border-primary focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors"
+                            />
+                            <span className="text-xs text-muted-foreground">:00</span>
+                        </div>
                         <div className="h-4 w-px bg-border mx-1" />
                         <div className="flex items-center gap-2 px-2">
-                            <span className="text-xs text-muted-foreground whitespace-nowrap">Zoom:</span>
+                            <span className="text-xs text-muted-foreground whitespace-nowrap">Density:</span>
+                            <span className="text-[0.65rem] text-muted-foreground/70">Compact</span>
                             <input
                                 type="range"
-                                min="40"
-                                max="160"
+                                min="20"
+                                max="100"
                                 value={cellHeight}
                                 onChange={(e) => setCellHeight(parseInt(e.target.value))}
                                 className="w-24 h-1.5 bg-muted-foreground/20 rounded-lg appearance-none cursor-pointer accent-primary"
                             />
+                            <span className="text-[0.65rem] text-muted-foreground/70">Detailed</span>
                         </div>
                     </div>
                 </div>
@@ -166,7 +192,10 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask }: WeeklyS
 
             <div className="flex flex-1 overflow-hidden">
                 {/* Main Grid */}
-                <main className="flex-1 overflow-auto">
+                <main className="flex-1 overflow-auto" style={{
+                    scrollbarWidth: 'thin',
+                    scrollbarColor: 'hsl(var(--muted-foreground) / 0.3) transparent'
+                } as any}>
                     <div className="flex min-h-full min-w-max">
                         {/* Time Column */}
                         <div className="flex flex-col shrink-0 sticky left-0 z-20 bg-background shadow-sm border-r w-16">
@@ -217,41 +246,61 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask }: WeeklyS
                                                 .filter(task => isSameDay(new Date(task.scheduledStart!), day))
                                                 .map(task => {
                                                     const colorClass = getTaskColorClass(task);
-                                                    const isShort = differenceInMinutes(new Date(task.scheduledEnd!), new Date(task.scheduledStart!)) <= 30 && cellHeight < 60;
+                                                    const parentName = getParentTaskName(task);
+                                                    const pointTypes = getPointTypes(task);
+                                                    const isVeryCompact = cellHeight < 35;
+                                                    const isCompact = cellHeight < 55;
+                                                    const isDetailed = cellHeight >= 70;
 
                                                     return (
                                                         <div
                                                             key={task.id}
-                                                            className={cn(
-                                                                "absolute left-1 right-1 rounded-md border p-2 text-xs shadow-sm hover:shadow-md transition-all cursor-pointer overflow-hidden group hover:z-50 hover:scale-[1.02]",
-                                                                colorClass
-                                                            )}
+                                                            className="absolute left-1 right-1 rounded-md border p-2 text-xs shadow-sm hover:shadow-md transition-all cursor-pointer overflow-hidden group hover:z-50 hover:scale-[1.02] bg-card"
                                                             style={getTaskStyle(task)}
                                                             onClick={() => onEditTask(task)}
                                                         >
                                                             {/* Header Row */}
                                                             <div className="flex items-center justify-between mb-0.5 gap-1">
-                                                                <span className="font-bold opacity-70 text-[0.65rem] uppercase tracking-wider truncate">
+                                                                <span className={cn(
+                                                                    "font-bold text-[0.65rem] uppercase tracking-wider truncate px-1.5 py-0.5 rounded",
+                                                                    colorClass
+                                                                )}>
                                                                     {task.station}
                                                                 </span>
-                                                                {hasRewards(task) && !isShort && (
-                                                                    <span className="text-[0.65rem] opacity-80 flex items-center gap-0.5 bg-background/30 rounded px-1 min-w-fit">
-                                                                        <Star className="w-2 h-2 fill-current" /> {getTotalPoints(task)}
-                                                                    </span>
+                                                                {pointTypes.length > 0 && !isVeryCompact && (
+                                                                    <div className="flex items-center gap-1 bg-muted/30 rounded px-1 min-w-fit">
+                                                                        {pointTypes.map(pt => {
+                                                                            const Icon = pt.icon;
+                                                                            return (
+                                                                                <span key={pt.type} className="text-[0.65rem] opacity-80 flex items-center gap-0.5" title={pt.label}>
+                                                                                    <Icon className="w-2.5 h-2.5 fill-current" />
+                                                                                    {pt.value}
+                                                                                </span>
+                                                                            );
+                                                                        })}
+                                                                    </div>
                                                                 )}
                                                             </div>
+
+                                                            {/* Parent Task (if exists and space permits) */}
+                                                            {parentName && !isCompact && (
+                                                                <p className="text-[0.6rem] text-muted-foreground/70 truncate leading-tight mb-0.5">
+                                                                    ↳ {parentName}
+                                                                </p>
+                                                            )}
 
                                                             {/* Task Name */}
                                                             <p className={cn(
                                                                 "font-semibold truncate transition-colors leading-tight",
-                                                                isShort ? "line-clamp-1" : "line-clamp-2"
+                                                                isVeryCompact ? "line-clamp-1 text-[0.7rem]" : isCompact ? "line-clamp-1" : "line-clamp-2"
                                                             )}>
                                                                 {task.name}
                                                             </p>
 
                                                             {/* Time Footer (only if height permits) */}
-                                                            {!isShort && (
-                                                                <div className="flex items-center gap-1 text-[0.6rem] opacity-70 mt-0.5">
+                                                            {!isCompact && (
+                                                                <div className="flex items-center gap-1 text-[0.6rem] text-muted-foreground/70 mt-0.5">
+                                                                    <Clock className="w-2.5 h-2.5" />
                                                                     <span>
                                                                         {format(new Date(task.scheduledStart!), 'HH:mm')} - {format(new Date(task.scheduledEnd!), 'HH:mm')}
                                                                     </span>
