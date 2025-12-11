@@ -7,7 +7,9 @@ import { format, addDays, startOfWeek, getHours, setHours, setMinutes, differenc
 import { cn } from '@/lib/utils';
 import { useThemeColors } from '@/lib/hooks/use-theme-colors';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, Plus, Star, Zap, Brain, TrendingUp, Heart } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Star, Zap, Brain, TrendingUp, Heart, Clock } from 'lucide-react';
+import { BUSINESS_STRUCTURE } from '@/types/enums';
+import { AREA_COLORS, getStationColorClasses } from '@/lib/constants/color-constants';
 
 interface WeeklyScheduleProps {
     tasks: Task[];
@@ -16,11 +18,12 @@ interface WeeklyScheduleProps {
 }
 
 const HOURS_IN_DAY = 24;
-const CELL_HEIGHT = 80; // Increased height for better visibility
+// CELL_HEIGHT removed (now state)
 
 export default function WeeklySchedule({ tasks, onNewTask, onEditTask }: WeeklyScheduleProps) {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [startHour, setStartHour] = useState(6); // Default start hour: 06:00
+    const [cellHeight, setCellHeight] = useState(80); // Dynamic cell height (40-120px)
 
     // Calculate week days
     const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 }); // Monday start
@@ -45,6 +48,23 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask }: WeeklyS
         });
     }, [tasks, weekDays]);
 
+    // Helper to get task color based on Station -> Area mapping
+    const getTaskColorClass = (task: Task) => {
+        // Find the area for this station
+        let area: keyof typeof AREA_COLORS | undefined;
+
+        // Search in BUSINESS_STRUCTURE
+        for (const [key, stations] of Object.entries(BUSINESS_STRUCTURE)) {
+            if ((stations as readonly string[]).includes(task.station)) {
+                area = key as keyof typeof AREA_COLORS;
+                break;
+            }
+        }
+
+        // Get color classes
+        return getStationColorClasses(task.station, area);
+    };
+
     const getTaskStyle = (task: Task) => {
         if (!task.scheduledStart || !task.scheduledEnd) return {};
 
@@ -59,9 +79,9 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask }: WeeklyS
         let adjustedStartHour = startHourVal - startHour;
         if (adjustedStartHour < 0) adjustedStartHour += 24;
 
-        const top = (adjustedStartHour * 60 + startMin) * (CELL_HEIGHT / 60);
+        const top = (adjustedStartHour * 60 + startMin) * (cellHeight / 60);
         const durationMinutes = differenceInMinutes(end, start);
-        const height = durationMinutes * (CELL_HEIGHT / 60);
+        const height = durationMinutes * (cellHeight / 60);
 
         return {
             top: `${top}px`,
@@ -84,22 +104,53 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask }: WeeklyS
         return Math.min((totalMinutes / (12 * 60)) * 100, 100); // Cap at 100% (based on 12h active day)
     };
 
+    // Helper to check if task has any rewards
+    const hasRewards = (task: Task) => {
+        if (!task.rewards?.points) return false;
+        const { xp, rp, fp, hp } = task.rewards.points;
+        return (xp > 0 || rp > 0 || fp > 0 || hp > 0);
+    };
+
+    // Get total points for display
+    const getTotalPoints = (task: Task) => {
+        if (!task.rewards?.points) return 0;
+        const { xp, rp, fp, hp } = task.rewards.points;
+        return (xp || 0) + (rp || 0) + (fp || 0) + (hp || 0);
+    };
+
     return (
         <div className="flex flex-col h-full bg-background">
             {/* Header */}
             <header className="flex shrink-0 items-center justify-between border-b px-4 py-3">
                 <div className="flex items-center gap-4">
                     <h2 className="text-xl font-bold">Weekly Schedule</h2>
-                    <Button variant="outline" size="sm" onClick={rotateHours}>
-                        Rotate Hours (Start: {startHour}:00)
-                    </Button>
+
+                    {/* View Controls */}
+                    <div className="flex items-center gap-2 bg-muted/30 p-1 rounded-md border">
+                        <Button variant="ghost" size="sm" onClick={rotateHours} title="Rotate Start Hour">
+                            <Clock className="h-4 w-4 mr-1" />
+                            {startHour}:00
+                        </Button>
+                        <div className="h-4 w-px bg-border mx-1" />
+                        <div className="flex items-center gap-2 px-2">
+                            <span className="text-xs text-muted-foreground whitespace-nowrap">Zoom:</span>
+                            <input
+                                type="range"
+                                min="40"
+                                max="160"
+                                value={cellHeight}
+                                onChange={(e) => setCellHeight(parseInt(e.target.value))}
+                                className="w-24 h-1.5 bg-muted-foreground/20 rounded-lg appearance-none cursor-pointer accent-primary"
+                            />
+                        </div>
+                    </div>
                 </div>
 
                 <div className="flex items-center gap-3">
                     <Button variant="outline" size="icon" onClick={() => setCurrentDate(addDays(currentDate, -7))}>
                         <ChevronLeft className="h-4 w-4" />
                     </Button>
-                    <span className="text-sm font-medium">
+                    <span className="text-sm font-medium w-32 text-center">
                         {format(weekStart, 'MMM d')} - {format(addDays(weekStart, 6), 'MMM d')}
                     </span>
                     <Button variant="outline" size="icon" onClick={() => setCurrentDate(addDays(currentDate, 7))}>
@@ -122,8 +173,8 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask }: WeeklyS
                             <div className="sticky top-0 z-30 bg-background h-[60px] border-b" /> {/* Header spacer */}
                             <div className="flex-1 relative">
                                 {timeSlots.map(hour => (
-                                    <div key={hour} className="flex items-start justify-end pr-2 border-b border-transparent" style={{ height: `${CELL_HEIGHT}px` }}>
-                                        <span className="text-sm font-medium text-muted-foreground bg-background px-1 pt-4">
+                                    <div key={hour} className="flex items-start justify-end pr-2 border-b border-transparent group" style={{ height: `${cellHeight}px` }}>
+                                        <span className="text-xs font-medium text-muted-foreground bg-background px-1 pt-1 opacity-70 group-hover:opacity-100">
                                             {hour.toString().padStart(2, '0')}:00
                                         </span>
                                     </div>
@@ -136,12 +187,16 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask }: WeeklyS
                             {weekDays.map(day => (
                                 <div key={day.toISOString()} className="flex flex-col border-r min-h-full">
                                     {/* Day Header */}
-                                    <div className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur p-3 text-center h-[60px] flex flex-col justify-center gap-1">
-                                        <p className="font-bold text-sm">{format(day, 'EEE').toUpperCase()}</p>
+                                    <div className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur p-3 text-center h-[60px] flex flex-col justify-center gap-1 group hover:bg-muted/30 transition-colors">
+                                        <p className={`font-bold text-sm ${isSameDay(day, new Date()) ? 'text-primary' : ''}`}>
+                                            {format(day, 'EEE').toUpperCase()}
+                                            {isSameDay(day, new Date()) && <span className="ml-1 text-xs">•</span>}
+                                        </p>
+                                        <div className="text-xs text-muted-foreground">{format(day, 'd')}</div>
                                         {/* Busy Bar */}
-                                        <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                                        <div className="h-1 w-full max-w-[80%] mx-auto bg-muted rounded-full overflow-hidden mt-1">
                                             <div
-                                                className="h-full bg-primary transition-all duration-500"
+                                                className="h-full bg-primary/70 transition-all duration-500"
                                                 style={{ width: `${getDayBusyPercentage(day)}%` }}
                                             />
                                         </div>
@@ -149,40 +204,62 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask }: WeeklyS
 
                                     {/* Day Content */}
                                     <div className="flex-1 relative">
-                                        {/* No Grid Lines - Just a clean background */}
+                                        {/* Hour markers background */}
                                         <div className="absolute inset-0 flex flex-col pointer-events-none">
-                                            {/* Optional: Subtle hour markers if needed, but removing for 'No Grid' request */}
+                                            {timeSlots.map(hour => (
+                                                <div key={hour} className="border-b border-border/10 w-full" style={{ height: `${cellHeight}px` }} />
+                                            ))}
                                         </div>
 
                                         {/* Tasks */}
                                         <div className="relative h-full w-full">
                                             {weeklyTasks
                                                 .filter(task => isSameDay(new Date(task.scheduledStart!), day))
-                                                .map(task => (
-                                                    <div
-                                                        key={task.id}
-                                                        className="absolute left-1 right-1 rounded-lg border border-border/50 bg-card/90 p-2 text-xs shadow-sm hover:shadow-md transition-all cursor-pointer overflow-hidden group hover:z-10 hover:scale-[1.02]"
-                                                        style={getTaskStyle(task)}
-                                                        onClick={() => onEditTask(task)}
-                                                    >
-                                                        <div className="flex items-center justify-between mb-1">
-                                                            <span className="rounded-full bg-primary/20 px-1.5 py-0.5 text-[0.6rem] text-primary font-bold uppercase tracking-wider">
-                                                                {task.station}
-                                                            </span>
-                                                            {task.rewards?.points?.xp ? (
-                                                                <span className="text-[0.6rem] text-muted-foreground flex items-center gap-0.5">
-                                                                    <Star className="w-2 h-2" /> {task.rewards.points.xp} XP
+                                                .map(task => {
+                                                    const colorClass = getTaskColorClass(task);
+                                                    const isShort = differenceInMinutes(new Date(task.scheduledEnd!), new Date(task.scheduledStart!)) <= 30 && cellHeight < 60;
+
+                                                    return (
+                                                        <div
+                                                            key={task.id}
+                                                            className={cn(
+                                                                "absolute left-1 right-1 rounded-md border p-2 text-xs shadow-sm hover:shadow-md transition-all cursor-pointer overflow-hidden group hover:z-50 hover:scale-[1.02]",
+                                                                colorClass
+                                                            )}
+                                                            style={getTaskStyle(task)}
+                                                            onClick={() => onEditTask(task)}
+                                                        >
+                                                            {/* Header Row */}
+                                                            <div className="flex items-center justify-between mb-0.5 gap-1">
+                                                                <span className="font-bold opacity-70 text-[0.65rem] uppercase tracking-wider truncate">
+                                                                    {task.station}
                                                                 </span>
-                                                            ) : null}
+                                                                {hasRewards(task) && !isShort && (
+                                                                    <span className="text-[0.65rem] opacity-80 flex items-center gap-0.5 bg-background/30 rounded px-1 min-w-fit">
+                                                                        <Star className="w-2 h-2 fill-current" /> {getTotalPoints(task)}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+
+                                                            {/* Task Name */}
+                                                            <p className={cn(
+                                                                "font-semibold truncate transition-colors leading-tight",
+                                                                isShort ? "line-clamp-1" : "line-clamp-2"
+                                                            )}>
+                                                                {task.name}
+                                                            </p>
+
+                                                            {/* Time Footer (only if height permits) */}
+                                                            {!isShort && (
+                                                                <div className="flex items-center gap-1 text-[0.6rem] opacity-70 mt-0.5">
+                                                                    <span>
+                                                                        {format(new Date(task.scheduledStart!), 'HH:mm')} - {format(new Date(task.scheduledEnd!), 'HH:mm')}
+                                                                    </span>
+                                                                </div>
+                                                            )}
                                                         </div>
-                                                        <p className="font-semibold truncate text-foreground group-hover:text-primary transition-colors">{task.name}</p>
-                                                        <div className="flex items-center gap-1 text-[0.6rem] text-muted-foreground mt-1">
-                                                            <span>
-                                                                {format(new Date(task.scheduledStart!), 'HH:mm')} - {format(new Date(task.scheduledEnd!), 'HH:mm')}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                ))}
+                                                    );
+                                                })}
                                         </div>
                                     </div>
                                 </div>

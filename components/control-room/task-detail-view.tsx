@@ -34,7 +34,7 @@ const getStatusColor = (status: string, isDarkMode: boolean = false) => {
   if (taskStatus && TASK_STATUS_COLORS[taskStatus]) {
     return isDarkMode ? TASK_STATUS_COLORS[taskStatus].dark : TASK_STATUS_COLORS[taskStatus].light;
   }
-  
+
   // Default fallback
   return isDarkMode ? TASK_STATUS_COLORS[TaskStatus.NONE].dark : TASK_STATUS_COLORS[TaskStatus.NONE].light;
 };
@@ -42,11 +42,11 @@ const getStatusColor = (status: string, isDarkMode: boolean = false) => {
 export default function TaskDetailView({ node, onEditTask, onTaskUpdate }: TaskDetailViewProps) {
   const { isDarkMode } = useThemeColors();
   const Icon = node ? (categoryIcons[node.task.type as keyof typeof categoryIcons] || CheckSquare) : BarChart;
-  
+
   // Inline editing states
   const [editingField, setEditingField] = useState<string | null>(null);
   const [tempValue, setTempValue] = useState<string>('');
-  
+
   const [showDuplicateSuccess, setShowDuplicateSuccess] = useState(false);
   const [currentProgress, setCurrentProgress] = useState<number>(0);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
@@ -87,14 +87,14 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate }: TaskD
 
   const saveEdit = async () => {
     if (!node || !editingField) return;
-    
-    let updatedTask: Task = { 
+
+    let updatedTask: Task = {
       ...node.task,
       // Clear completion timestamps - The Ribosome will set them if task is completing
       doneAt: undefined,
       collectedAt: undefined
     };
-    
+
     switch (editingField) {
       case 'status':
         updatedTask.status = tempValue as TaskStatus;
@@ -110,7 +110,7 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate }: TaskD
         // Station is now the primary field - no category reset needed
         break;
     }
-    
+
     // Save task - The Ribosome (processTaskEffects) will handle:
     // - Completion detection (reads task.status DNA)
     // - Item creation (reads outputItemType DNA)
@@ -118,12 +118,12 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate }: TaskD
     // - Rewards (reads task.rewards DNA)
     // - Links creation (reads all Ambassador fields)
     await ClientAPI.upsertTask(updatedTask);
-    
+
     // Trigger parent update to refresh the selected node
     onTaskUpdate?.();
-    
 
-    
+
+
     setEditingField(null);
     setTempValue('');
   };
@@ -146,21 +146,21 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate }: TaskD
   // Duplicate task handler
   const handleDuplicateTask = async () => {
     if (!node) return;
-    
+
     const duplicatedTask: Task = {
       ...node.task,
       id: crypto.randomUUID(),
-      name: `${node.task.name} (Copy)`,
+      name: node.task.name,
       status: TaskStatus.CREATED,
       progress: 0,
       createdAt: new Date(),
       updatedAt: new Date(),
       parentId: node.task.parentId || null,
     };
-    
+
     // Save the task first - logging is handled server-side automatically
     await ClientAPI.upsertTask(duplicatedTask);
-    
+
     setShowDuplicateSuccess(true);
     setTimeout(() => setShowDuplicateSuccess(false), 2000);
     onTaskUpdate?.();
@@ -210,7 +210,7 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate }: TaskD
     const prefill: Task = {
       id: crypto.randomUUID(),
       name: taskType === TaskType.MILESTONE ? `${parent.name} • Milestone` :
-            taskType === TaskType.GOAL ? `${parent.name} • Goal` : 'New Task',
+        taskType === TaskType.GOAL ? `${parent.name} • Goal` : 'New Task',
       description: '',
       type: taskType,
       status: TaskStatus.CREATED,
@@ -276,13 +276,13 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate }: TaskD
               </Select>
             ) : (
               <div className="flex items-center gap-2">
-                <span 
+                <span
                   className="inline-block px-2 py-1 text-xs font-medium bg-muted text-muted-foreground rounded border cursor-pointer hover:bg-muted/80"
                   onClick={() => startEditing('type', task.type)}
                 >
                   {task.type}
                 </span>
-                
+
                 {/* Financial Status Badges */}
                 {task.isNotPaid && (
                   <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${TASK_STATUS_COLORS[TaskStatus.FAILED][isDarkMode ? 'dark' : 'light']}`}>
@@ -352,7 +352,7 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate }: TaskD
         {/* Description */}
         {task.description && (
           <div className="mb-4">
-            <div 
+            <div
               className="text-muted-foreground max-w-prose text-sm cursor-pointer hover:bg-muted/20 rounded p-2 -m-2 transition-colors"
               onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
             >
@@ -363,10 +363,9 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate }: TaskD
                 <div className="text-xs text-muted-foreground/60">
                   {isDescriptionExpanded ? 'Click to collapse' : 'Click to expand'}
                 </div>
-                <ChevronDown 
-                  className={`h-3 w-3 text-muted-foreground/60 transition-transform duration-200 ${
-                    isDescriptionExpanded ? 'rotate-180' : ''
-                  }`} 
+                <ChevronDown
+                  className={`h-3 w-3 text-muted-foreground/60 transition-transform duration-200 ${isDescriptionExpanded ? 'rotate-180' : ''
+                    }`}
                 />
               </div>
             </div>
@@ -384,8 +383,8 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate }: TaskD
           <div className="relative">
             <div className="w-full bg-muted rounded-full h-2 relative">
               {/* Progress Bar - Read Only */}
-              <div 
-                className="bg-primary h-2 rounded-full transition-all duration-300" 
+              <div
+                className="bg-primary h-2 rounded-full transition-all duration-300"
                 style={{ width: `${currentProgress}%` }}
               />
             </div>
@@ -421,7 +420,7 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate }: TaskD
                 </SelectContent>
               </Select>
             ) : (
-              <span 
+              <span
                 className={`inline-block px-2 py-1 text-xs font-medium rounded cursor-pointer hover:opacity-80 ${getStatusColor(task.status, isDarkMode)}`}
                 onClick={() => startEditing('status', task.status)}
               >
@@ -448,7 +447,7 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate }: TaskD
                 </SelectContent>
               </Select>
             ) : (
-              <div 
+              <div
                 className="text-sm font-bold cursor-pointer hover:bg-muted/50 px-1 rounded"
                 onClick={() => startEditing('priority', task.priority)}
               >
@@ -475,7 +474,7 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate }: TaskD
                 </SelectContent>
               </Select>
             ) : (
-              <div 
+              <div
                 className="text-sm font-bold cursor-pointer hover:bg-muted/50 px-1 rounded"
                 onClick={() => startEditing('station', task.station)}
               >
@@ -504,14 +503,13 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate }: TaskD
               </Card>
               <Card className="p-3">
                 <div className="text-xs font-medium mb-1">Profit</div>
-                <div className={`text-sm font-bold ${
-                  (() => {
+                <div className={`text-sm font-bold ${(() => {
                     const actualCost = task.isNotPaid ? 0 : (task.cost || 0);
                     const actualRevenue = task.isNotCharged ? 0 : (task.revenue || 0);
                     const profit = actualRevenue - actualCost;
                     return profit > 0 ? 'text-green-600' : profit < 0 ? 'text-red-600' : 'text-muted-foreground';
                   })()
-                }`}>
+                  }`}>
                   ${(() => {
                     const actualCost = task.isNotPaid ? 0 : (task.cost || 0);
                     const actualRevenue = task.isNotCharged ? 0 : (task.revenue || 0);
@@ -576,18 +574,18 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate }: TaskD
               Duplicate Task
             </DialogTitle>
           </DialogHeader>
-          
+
           <div className="space-y-4">
             <div className="text-sm text-muted-foreground">
               Are you sure you want to duplicate <strong>&ldquo;{task.name}&rdquo;</strong>?
             </div>
-            
+
             <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
               <div className="text-blue-800 text-sm font-medium">
                 ℹ️ What will happen:
               </div>
               <div className="text-blue-600 text-xs mt-1 space-y-1">
-                <div>• A new task will be created with &ldquo;(Copy)&rdquo; added to the name</div>
+                <div>• A new task will be created with the same name</div>
                 <div>• The duplicate will be reset to &ldquo;Not Started&rdquo; status</div>
                 <div>• Progress will be reset to 0%</div>
                 <div>• Parent relationship will be removed</div>
