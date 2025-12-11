@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { Task } from '@/types/entities';
-import { TaskType } from '@/types/enums';
+import { TaskType, TaskStatus } from '@/types/enums';
 import { format, addDays, startOfWeek, getHours, setHours, setMinutes, differenceInMinutes, isSameDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useThemeColors } from '@/lib/hooks/use-theme-colors';
@@ -48,7 +48,7 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask }: WeeklyS
         });
     }, [tasks, weekDays]);
 
-    // Helper to get task color based on Station -> Area mapping (for badge only)
+    // Helper to get task card color based on Station -> Area mapping
     const getTaskColorClass = (task: Task) => {
         // Find the area for this station
         let area: keyof typeof AREA_COLORS | undefined;
@@ -61,8 +61,30 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask }: WeeklyS
             }
         }
 
-        // Get color classes for badge
+        // Get color classes for card
         return getStationColorClasses(task.station, area);
+    };
+
+    // Helper to get status badge color
+    const getStatusBadgeColor = (status: TaskStatus) => {
+        switch (status) {
+            case TaskStatus.CREATED:
+                return 'bg-slate-400/80 text-slate-50';
+            case TaskStatus.ON_HOLD:
+                return 'bg-yellow-500/80 text-yellow-50';
+            case TaskStatus.IN_PROGRESS:
+                return 'bg-blue-500/80 text-blue-50';
+            case TaskStatus.FINISHING:
+                return 'bg-cyan-500/80 text-cyan-50';
+            case TaskStatus.DONE:
+                return 'bg-green-500/80 text-green-50';
+            case TaskStatus.FAILED:
+                return 'bg-red-500/80 text-red-50';
+            case TaskStatus.COLLECTED:
+                return 'bg-gray-500/80 text-gray-50';
+            default:
+                return 'bg-muted text-muted-foreground';
+        }
     };
 
     // Helper to get parent task name
@@ -121,15 +143,15 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask }: WeeklyS
         return (xp > 0 || rp > 0 || fp > 0 || hp > 0);
     };
 
-    // Get individual point types for display
+    // Get individual point types for display with names
     const getPointTypes = (task: Task) => {
         if (!task.rewards?.points) return [];
         const { xp, rp, fp, hp } = task.rewards.points;
         const points = [];
-        if (xp > 0) points.push({ type: 'xp', value: xp, icon: Star, label: 'XP' });
-        if (rp > 0) points.push({ type: 'rp', value: rp, icon: Brain, label: 'RP' });
-        if (fp > 0) points.push({ type: 'fp', value: fp, icon: Heart, label: 'FP' });
-        if (hp > 0) points.push({ type: 'hp', value: hp, icon: Zap, label: 'HP' });
+        if (xp > 0) points.push({ type: 'xp', value: xp, icon: Star, label: 'XP', color: 'text-yellow-400' });
+        if (rp > 0) points.push({ type: 'rp', value: rp, icon: Brain, label: 'RP', color: 'text-purple-400' });
+        if (fp > 0) points.push({ type: 'fp', value: fp, icon: Heart, label: 'FP', color: 'text-pink-400' });
+        if (hp > 0) points.push({ type: 'hp', value: hp, icon: Zap, label: 'HP', color: 'text-green-400' });
         return points;
     };
 
@@ -223,7 +245,7 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask }: WeeklyS
                                         </p>
                                         <div className="text-xs text-muted-foreground">{format(day, 'd')}</div>
                                         {/* Busy Bar */}
-                                        <div className="h-1 w-full max-w-[80%] mx-auto bg-muted rounded-full overflow-hidden mt-1">
+                                        <div className="h-1.5 w-full max-w-[95%] mx-auto bg-muted rounded-full overflow-hidden mt-1">
                                             <div
                                                 className="h-full bg-primary/70 transition-all duration-500"
                                                 style={{ width: `${getDayBusyPercentage(day)}%` }}
@@ -255,26 +277,30 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask }: WeeklyS
                                                     return (
                                                         <div
                                                             key={task.id}
-                                                            className="absolute left-1 right-1 rounded-md border p-2 text-xs shadow-sm hover:shadow-md transition-all cursor-pointer overflow-hidden group hover:z-50 hover:scale-[1.02] bg-card"
+                                                            className={cn(
+                                                                "absolute left-1 right-1 rounded-md border p-2.5 text-sm shadow-sm hover:shadow-md transition-all cursor-pointer overflow-hidden group hover:z-50 hover:scale-[1.02]",
+                                                                colorClass
+                                                            )}
                                                             style={getTaskStyle(task)}
                                                             onClick={() => onEditTask(task)}
                                                         >
                                                             {/* Header Row */}
-                                                            <div className="flex items-center justify-between mb-0.5 gap-1">
+                                                            <div className="flex items-center justify-between mb-1 gap-2">
                                                                 <span className={cn(
-                                                                    "font-bold text-[0.65rem] uppercase tracking-wider truncate px-1.5 py-0.5 rounded",
-                                                                    colorClass
+                                                                    "font-bold text-[0.7rem] uppercase tracking-wider truncate px-2 py-0.5 rounded",
+                                                                    getStatusBadgeColor(task.status)
                                                                 )}>
                                                                     {task.station}
                                                                 </span>
                                                                 {pointTypes.length > 0 && !isVeryCompact && (
-                                                                    <div className="flex items-center gap-1 bg-muted/30 rounded px-1 min-w-fit">
+                                                                    <div className="flex items-center gap-1.5 flex-wrap">
                                                                         {pointTypes.map(pt => {
                                                                             const Icon = pt.icon;
                                                                             return (
-                                                                                <span key={pt.type} className="text-[0.65rem] opacity-80 flex items-center gap-0.5" title={pt.label}>
-                                                                                    <Icon className="w-2.5 h-2.5 fill-current" />
-                                                                                    {pt.value}
+                                                                                <span key={pt.type} className="text-xs flex items-center gap-1 bg-background/40 rounded px-1.5 py-0.5">
+                                                                                    <Icon className={cn("w-3 h-3", pt.color)} />
+                                                                                    <span className="font-medium">{pt.label}</span>
+                                                                                    <span className="font-semibold">{pt.value}</span>
                                                                                 </span>
                                                                             );
                                                                         })}
@@ -284,23 +310,23 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask }: WeeklyS
 
                                                             {/* Parent Task (if exists and space permits) */}
                                                             {parentName && !isCompact && (
-                                                                <p className="text-[0.6rem] text-muted-foreground/70 truncate leading-tight mb-0.5">
+                                                                <p className="text-[0.7rem] text-muted-foreground/80 truncate leading-tight mb-1">
                                                                     ↳ {parentName}
                                                                 </p>
                                                             )}
 
                                                             {/* Task Name */}
                                                             <p className={cn(
-                                                                "font-semibold truncate transition-colors leading-tight",
-                                                                isVeryCompact ? "line-clamp-1 text-[0.7rem]" : isCompact ? "line-clamp-1" : "line-clamp-2"
+                                                                "font-semibold truncate transition-colors leading-snug",
+                                                                isVeryCompact ? "line-clamp-1 text-sm" : isCompact ? "line-clamp-1 text-base" : "line-clamp-2 text-base"
                                                             )}>
                                                                 {task.name}
                                                             </p>
 
                                                             {/* Time Footer (only if height permits) */}
                                                             {!isCompact && (
-                                                                <div className="flex items-center gap-1 text-[0.6rem] text-muted-foreground/70 mt-0.5">
-                                                                    <Clock className="w-2.5 h-2.5" />
+                                                                <div className="flex items-center gap-1 text-[0.7rem] text-muted-foreground/80 mt-1">
+                                                                    <Clock className="w-3 h-3" />
                                                                     <span>
                                                                         {format(new Date(task.scheduledStart!), 'HH:mm')} - {format(new Date(task.scheduledEnd!), 'HH:mm')}
                                                                     </span>
