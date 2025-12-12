@@ -37,11 +37,11 @@ function Calendar({
           day:
             'h-9 w-9 text-center text-sm p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative',
           day_button: cn(
-            'hover:bg-accent hover:text-accent-foreground w-full h-9 rounded-md font-normal aria-selected:opacity-100 inline-flex items-center justify-center'
+            'hover:bg-accent hover:text-accent-foreground w-full h-9 rounded-md font-normal inline-flex items-center justify-center aria-selected:bg-primary aria-selected:text-primary-foreground aria-selected:font-semibold'
           ),
           day_range_end: 'day-range-end',
           day_selected:
-            'bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground font-semibold',
+            'bg-primary/20 text-primary font-semibold ring-1 ring-primary',
           day_today: 'bg-primary/10 text-primary font-semibold border border-primary/20',
           day_outside:
             'day-outside text-muted-foreground opacity-50 aria-selected:bg-accent/50 aria-selected:text-muted-foreground aria-selected:opacity-30',

@@ -272,11 +272,9 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask, onTaskUpd
     const getDayWorkSegments = (day: Date) => {
         const dayTasks = weeklyTasks.filter(task => isSameDay(new Date(task.scheduledStart!), day));
 
-        // Group minutes and stations by color
         const colorData: Record<string, { minutes: number, stations: Set<string> }> = {};
 
         dayTasks.forEach(task => {
-            // Find area for fallback
             let area: keyof typeof AREA_COLORS | undefined;
             for (const [key, stations] of Object.entries(BUSINESS_STRUCTURE)) {
                 if ((stations as readonly string[]).includes(task.station)) {
@@ -285,30 +283,29 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask, onTaskUpd
                 }
             }
 
-            // Get base color name (e.g., 'purple', 'green')
             const colorName = getStationColor(task.station, area);
-
             const duration = differenceInMinutes(new Date(task.scheduledEnd!), new Date(task.scheduledStart!));
 
             if (!colorData[colorName]) {
                 colorData[colorName] = { minutes: 0, stations: new Set() };
             }
 
-            colorData[colorName].minutes += duration;
+            colorData[colorName].minutes += Math.max(0, duration);
             colorData[colorName].stations.add(task.station);
         });
 
-        // Convert to segments
         const totalMinutes = MAX_WORK_HOURS * 60;
+        const sumMinutes = Object.values(colorData).reduce((acc, d) => acc + d.minutes, 0);
+        const normalizeFactor = sumMinutes > totalMinutes ? (totalMinutes / sumMinutes) : 1;
 
         return Object.entries(colorData).map(([colorName, data]) => {
-            const widthPercentage = (data.minutes / totalMinutes) * 100;
+            const widthPercentage = ((data.minutes / totalMinutes) * 100) * normalizeFactor;
             const stationList = Array.from(data.stations).join(', ');
-            const hours = Math.round(data.minutes / 60 * 10) / 10;
+            const hours = Math.round((data.minutes / 60) * 10) / 10;
 
             return {
-                color: SOLID_COLOR_CLASSES[colorName as keyof typeof SOLID_COLOR_CLASSES] || 'bg-gray-400', // Fallback
-                width: widthPercentage,
+                color: SOLID_COLOR_CLASSES[colorName as keyof typeof SOLID_COLOR_CLASSES] || 'bg-gray-400',
+                width: Math.min(100, Math.max(0, widthPercentage)),
                 minutes: data.minutes,
                 tooltip: `${hours}h • ${stationList}`
             };
@@ -430,7 +427,7 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask, onTaskUpd
                                             </div>
 
                                             {/* Segmented Work Bar */}
-                                            <div className="h-3 w-full bg-muted/50 rounded-sm overflow-hidden mt-1 flex">
+                                            <div className="h-4 sm:h-5 w-full bg-muted/50 rounded-sm overflow-hidden mt-1 flex">
                                                 {segments.map((seg, idx) => (
                                                     <div
                                                         key={idx}
