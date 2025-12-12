@@ -112,8 +112,8 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask }: WeeklyS
     const getDayWorkSegments = (day: Date) => {
         const dayTasks = weeklyTasks.filter(task => isSameDay(new Date(task.scheduledStart!), day));
 
-        // Group minutes by color
-        const colorMinutes: Record<string, number> = {};
+        // Group minutes and stations by color
+        const colorData: Record<string, { minutes: number, stations: Set<string> }> = {};
 
         dayTasks.forEach(task => {
             // Find area for fallback
@@ -129,19 +129,28 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask }: WeeklyS
             const colorName = getStationColor(task.station, area);
 
             const duration = differenceInMinutes(new Date(task.scheduledEnd!), new Date(task.scheduledStart!));
-            colorMinutes[colorName] = (colorMinutes[colorName] || 0) + duration;
+
+            if (!colorData[colorName]) {
+                colorData[colorName] = { minutes: 0, stations: new Set() };
+            }
+
+            colorData[colorName].minutes += duration;
+            colorData[colorName].stations.add(task.station);
         });
 
         // Convert to segments
         const totalMinutes = MAX_WORK_HOURS * 60;
 
-        // Sort keys to have consistent order if needed, or just map
-        return Object.entries(colorMinutes).map(([colorName, minutes]) => {
-            const widthPercentage = (minutes / totalMinutes) * 100;
+        return Object.entries(colorData).map(([colorName, data]) => {
+            const widthPercentage = (data.minutes / totalMinutes) * 100;
+            const stationList = Array.from(data.stations).join(', ');
+            const hours = Math.round(data.minutes / 60 * 10) / 10;
+
             return {
                 color: SOLID_COLOR_CLASSES[colorName as keyof typeof SOLID_COLOR_CLASSES] || 'bg-gray-400', // Fallback
                 width: widthPercentage,
-                minutes
+                minutes: data.minutes,
+                tooltip: `${hours}h • ${stationList}`
             };
         });
     };
@@ -253,10 +262,10 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask }: WeeklyS
                                         {/* Day Header */}
                                         <div className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur p-3 text-center h-[60px] flex flex-col justify-center gap-1 group hover:bg-muted/30 transition-colors">
                                             <div className="flex items-center justify-center gap-1.5 align-baseline">
-                                                <p className={`font-bold text-sm ${isSameDay(day, new Date()) ? 'text-primary' : ''}`}>
+                                                <p className={cn("text-sm font-semibold tracking-tight", isSameDay(day, new Date()) && "text-primary")}>
                                                     {format(day, 'EEE').toUpperCase()}
                                                 </p>
-                                                <span className="text-xs text-muted-foreground">{format(day, 'd')}</span>
+                                                <span className="text-xs text-muted-foreground font-medium">{format(day, 'd')}</span>
                                                 {isSameDay(day, new Date()) && <span className="w-1.5 h-1.5 rounded-full bg-primary" />}
                                             </div>
 
@@ -265,9 +274,9 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask }: WeeklyS
                                                 {segments.map((seg, idx) => (
                                                     <div
                                                         key={idx}
-                                                        className={cn("h-full transition-all duration-300", seg.color)}
+                                                        className={cn("h-full transition-all duration-300 hover:brightness-110", seg.color)}
                                                         style={{ width: `${seg.width}%` }}
-                                                        title={`${Math.round(seg.minutes / 60 * 10) / 10}h`}
+                                                        title={seg.tooltip}
                                                     />
                                                 ))}
                                             </div>
