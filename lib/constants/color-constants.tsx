@@ -223,6 +223,26 @@ export const COLOR_CLASSES = {
   royalblue: 'bg-blue-50/50 border-blue-300 hover:bg-blue-100/50 dark:bg-blue-950/20 dark:border-blue-700/50 dark:hover:bg-blue-900/30',
 } as const;
 
+/**
+ * Solid Color Classes - For elements requiring solid backgrounds (e.g. progress bars, charts)
+ */
+export const SOLID_COLOR_CLASSES = {
+  white: 'bg-slate-200',
+  gray: 'bg-gray-500',
+  red: 'bg-red-500',
+  purple: 'bg-purple-500',
+  cyan: 'bg-cyan-500',
+  indigo: 'bg-indigo-500',
+  turquoise: 'bg-teal-500',
+  orange: 'bg-orange-500',
+  yellow: 'bg-yellow-500',
+  brown: 'bg-amber-600',
+  pink: 'bg-pink-500',
+  green: 'bg-green-500',
+  gold: 'bg-amber-400',
+  royalblue: 'bg-blue-600',
+} as const;
+
 /** 
  * Legacy export for backward compatibility with notes system 
  * @deprecated Use COLOR_CLASSES instead

@@ -9,7 +9,7 @@ import { useThemeColors } from '@/lib/hooks/use-theme-colors';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Plus, Star, Zap, Brain, TrendingUp, Heart, Clock } from 'lucide-react';
 import { BUSINESS_STRUCTURE } from '@/types/enums';
-import { AREA_COLORS, getStationColorClasses, TASK_STATUS_BADGE_COLORS } from '@/lib/constants/color-constants';
+import { AREA_COLORS, getStationColorClasses, TASK_STATUS_BADGE_COLORS, getStationColor, SOLID_COLOR_CLASSES } from '@/lib/constants/color-constants';
 
 interface WeeklyScheduleProps {
     tasks: Task[];
@@ -18,7 +18,7 @@ interface WeeklyScheduleProps {
 }
 
 const HOURS_IN_DAY = 24;
-// CELL_HEIGHT removed (now state)
+const MAX_WORK_HOURS = 12; // Max hours for bar scale
 
 export default function WeeklySchedule({ tasks, onNewTask, onEditTask }: WeeklyScheduleProps) {
     const [currentDate, setCurrentDate] = useState(new Date());
@@ -108,15 +108,42 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask }: WeeklyS
         }
     };
 
-    // Calculate busy percentage for each day (simple heuristic: hours scheduled / 12 * 100)
-    const getDayBusyPercentage = (day: Date) => {
+    // Calculate segments for the work bar
+    const getDayWorkSegments = (day: Date) => {
         const dayTasks = weeklyTasks.filter(task => isSameDay(new Date(task.scheduledStart!), day));
-        const totalMinutes = dayTasks.reduce((acc, task) => {
-            const start = new Date(task.scheduledStart!);
-            const end = new Date(task.scheduledEnd!);
-            return acc + differenceInMinutes(end, start);
-        }, 0);
-        return Math.min((totalMinutes / (12 * 60)) * 100, 100); // Cap at 100% (based on 12h active day)
+
+        // Group minutes by color
+        const colorMinutes: Record<string, number> = {};
+
+        dayTasks.forEach(task => {
+            // Find area for fallback
+            let area: keyof typeof AREA_COLORS | undefined;
+            for (const [key, stations] of Object.entries(BUSINESS_STRUCTURE)) {
+                if ((stations as readonly string[]).includes(task.station)) {
+                    area = key as keyof typeof AREA_COLORS;
+                    break;
+                }
+            }
+
+            // Get base color name (e.g., 'purple', 'green')
+            const colorName = getStationColor(task.station, area);
+
+            const duration = differenceInMinutes(new Date(task.scheduledEnd!), new Date(task.scheduledStart!));
+            colorMinutes[colorName] = (colorMinutes[colorName] || 0) + duration;
+        });
+
+        // Convert to segments
+        const totalMinutes = MAX_WORK_HOURS * 60;
+
+        // Sort keys to have consistent order if needed, or just map
+        return Object.entries(colorMinutes).map(([colorName, minutes]) => {
+            const widthPercentage = (minutes / totalMinutes) * 100;
+            return {
+                color: SOLID_COLOR_CLASSES[colorName as keyof typeof SOLID_COLOR_CLASSES] || 'bg-gray-400', // Fallback
+                width: widthPercentage,
+                minutes
+            };
+        });
     };
 
     // Helper to check if task has any rewards
@@ -218,108 +245,119 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask }: WeeklyS
 
                         {/* Days Columns */}
                         <div className="flex-1 grid grid-cols-7 min-w-0">
-                            {weekDays.map(day => (
-                                <div key={day.toISOString()} className="flex flex-col border-r min-h-full">
-                                    {/* Day Header */}
-                                    <div className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur p-3 text-center h-[60px] flex flex-col justify-center gap-1 group hover:bg-muted/30 transition-colors">
-                                        <p className={`font-bold text-sm ${isSameDay(day, new Date()) ? 'text-primary' : ''}`}>
-                                            {format(day, 'EEE').toUpperCase()}
-                                            {isSameDay(day, new Date()) && <span className="ml-1 text-xs">•</span>}
-                                        </p>
-                                        <div className="text-xs text-muted-foreground">{format(day, 'd')}</div>
-                                        {/* Busy Bar */}
-                                        <div className="h-1.5 w-full max-w-[95%] mx-auto bg-muted rounded-full overflow-hidden mt-1">
-                                            <div
-                                                className="h-full bg-primary/70 transition-all duration-500"
-                                                style={{ width: `${getDayBusyPercentage(day)}%` }}
-                                            />
+                            {weekDays.map(day => {
+                                const segments = getDayWorkSegments(day);
+
+                                return (
+                                    <div key={day.toISOString()} className="flex flex-col border-r min-h-full">
+                                        {/* Day Header */}
+                                        <div className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur p-3 text-center h-[60px] flex flex-col justify-center gap-1 group hover:bg-muted/30 transition-colors">
+                                            <div className="flex items-center justify-center gap-1.5 align-baseline">
+                                                <p className={`font-bold text-sm ${isSameDay(day, new Date()) ? 'text-primary' : ''}`}>
+                                                    {format(day, 'EEE').toUpperCase()}
+                                                </p>
+                                                <span className="text-xs text-muted-foreground">{format(day, 'd')}</span>
+                                                {isSameDay(day, new Date()) && <span className="w-1.5 h-1.5 rounded-full bg-primary" />}
+                                            </div>
+
+                                            {/* Segmented Work Bar */}
+                                            <div className="h-3 w-full bg-muted/50 rounded-sm overflow-hidden mt-1 flex">
+                                                {segments.map((seg, idx) => (
+                                                    <div
+                                                        key={idx}
+                                                        className={cn("h-full transition-all duration-300", seg.color)}
+                                                        style={{ width: `${seg.width}%` }}
+                                                        title={`${Math.round(seg.minutes / 60 * 10) / 10}h`}
+                                                    />
+                                                ))}
+                                            </div>
                                         </div>
-                                    </div>
 
-                                    {/* Day Content */}
-                                    <div className="flex-1 relative">
-                                        {/* Hour markers background */}
-                                        <div className="absolute inset-0 flex flex-col pointer-events-none">
-                                            {timeSlots.map(hour => (
-                                                <div key={hour} className="border-b border-border/10 w-full" style={{ height: `${cellHeight}px` }} />
-                                            ))}
-                                        </div>
+                                        {/* Day Content */}
+                                        <div className="flex-1 relative">
+                                            {/* Hour markers background */}
+                                            <div className="absolute inset-0 flex flex-col pointer-events-none">
+                                                {timeSlots.map(hour => (
+                                                    <div key={hour} className="border-b border-border/10 w-full" style={{ height: `${cellHeight}px` }} />
+                                                ))}
+                                            </div>
 
-                                        {/* Tasks */}
-                                        <div className="relative h-full w-full">
-                                            {weeklyTasks
-                                                .filter(task => isSameDay(new Date(task.scheduledStart!), day))
-                                                .map(task => {
-                                                    const colorClass = getTaskColorClass(task);
-                                                    const parentName = getParentTaskName(task);
-                                                    const pointTypes = getPointTypes(task);
-                                                    const isVeryCompact = cellHeight < 35;
-                                                    const isCompact = cellHeight < 55;
-                                                    const isDetailed = cellHeight >= 70;
+                                            {/* Tasks */}
+                                            <div className="relative h-full w-full">
+                                                {weeklyTasks
+                                                    .filter(task => isSameDay(new Date(task.scheduledStart!), day))
+                                                    .map(task => {
+                                                        const colorClass = getTaskColorClass(task);
+                                                        const parentName = getParentTaskName(task);
+                                                        const pointTypes = getPointTypes(task);
+                                                        const isVeryCompact = cellHeight < 35;
+                                                        const isCompact = cellHeight < 55;
+                                                        const isDetailed = cellHeight >= 70;
 
-                                                    return (
-                                                        <div
-                                                            key={task.id}
-                                                            className={cn(
-                                                                "absolute left-1 right-1 rounded-md border p-2.5 text-sm shadow-sm hover:shadow-md transition-all cursor-pointer overflow-hidden group hover:z-50 hover:scale-[1.02]",
-                                                                colorClass
-                                                            )}
-                                                            style={getTaskStyle(task)}
-                                                            onClick={() => onEditTask(task)}
-                                                        >
-                                                            {/* Header Row: Station | Time | Points */}
-                                                            <div className="flex items-center justify-between mb-1 gap-2">
-                                                                {/* Station Badge */}
-                                                                <span className={cn(
-                                                                    "font-bold text-[0.7rem] uppercase tracking-wider truncate px-2 py-0.5 rounded",
-                                                                    getStatusBadgeColor(task.status)
-                                                                )}>
-                                                                    {task.station}
-                                                                </span>
-
-                                                                {/* Time - Always visible in center */}
-                                                                <span className="text-[0.7rem] text-muted-foreground/80 whitespace-nowrap">
-                                                                    {format(new Date(task.scheduledStart!), 'HH:mm')} - {format(new Date(task.scheduledEnd!), 'HH:mm')}
-                                                                </span>
-
-                                                                {/* Points - Always visible */}
-                                                                {pointTypes.length > 0 && (
-                                                                    <div className="flex items-center gap-1.5 flex-wrap">
-                                                                        {pointTypes.map(pt => {
-                                                                            const Icon = pt.icon;
-                                                                            return (
-                                                                                <span key={pt.type} className="text-sm flex items-center gap-1 bg-background/40 rounded px-1.5 py-0.5">
-                                                                                    <Icon className={cn("w-3 h-3", pt.color)} />
-                                                                                    <span className="font-medium">{pt.label}</span>
-                                                                                    <span className="font-semibold">{pt.value}</span>
-                                                                                </span>
-                                                                            );
-                                                                        })}
-                                                                    </div>
+                                                        return (
+                                                            <div
+                                                                key={task.id}
+                                                                className={cn(
+                                                                    "absolute left-1 right-1 rounded-md border p-2.5 text-sm shadow-sm hover:shadow-md transition-all cursor-pointer overflow-hidden group hover:z-50 hover:scale-[1.02]",
+                                                                    colorClass
                                                                 )}
-                                                            </div>
+                                                                style={getTaskStyle(task)}
+                                                                onClick={() => onEditTask(task)}
+                                                            >
+                                                                {/* Header Row: Station | Time | Points */}
+                                                                <div className="flex items-center justify-between mb-1 gap-2">
+                                                                    {/* Station Badge */}
+                                                                    <span className={cn(
+                                                                        "font-bold text-[0.7rem] uppercase tracking-wider truncate px-2 py-0.5 rounded",
+                                                                        getStatusBadgeColor(task.status)
+                                                                    )}>
+                                                                        {task.station}
+                                                                    </span>
 
-                                                            {/* Parent Task (if exists) */}
-                                                            {parentName && (
-                                                                <p className="text-[0.5rem] text-muted-foreground/80 truncate leading-tight mb-1">
-                                                                    ↳ {parentName}
+                                                                    {/* Time - Always visible in center */}
+                                                                    <span className="text-[0.7rem] text-muted-foreground/80 whitespace-nowrap">
+                                                                        {format(new Date(task.scheduledStart!), 'HH:mm')} - {format(new Date(task.scheduledEnd!), 'HH:mm')}
+                                                                    </span>
+
+                                                                    {/* Points - Always visible */}
+                                                                    {pointTypes.length > 0 && (
+                                                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                                                            {pointTypes.map(pt => {
+                                                                                const Icon = pt.icon;
+                                                                                return (
+                                                                                    <span key={pt.type} className="text-sm flex items-center gap-1 bg-background/40 rounded px-1.5 py-0.5">
+                                                                                        <Icon className={cn("w-3 h-3", pt.color)} />
+                                                                                        <span className="font-medium">{pt.label}</span>
+                                                                                        <span className="font-semibold">{pt.value}</span>
+                                                                                    </span>
+                                                                                );
+                                                                            })}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+
+                                                                {/* Parent Task (if exists) */}
+                                                                {parentName && (
+                                                                    <p className="text-[0.5rem] text-muted-foreground/80 truncate leading-tight mb-1">
+                                                                        ↳ {parentName}
+                                                                    </p>
+                                                                )}
+
+                                                                {/* Task Name */}
+                                                                <p className={cn(
+                                                                    "font-semibold truncate transition-colors leading-snug",
+                                                                    isVeryCompact ? "line-clamp-1 text-xs" : isCompact ? "line-clamp-1 text-base" : "line-clamp-2 text-base"
+                                                                )}>
+                                                                    {task.name}
                                                                 </p>
-                                                            )}
-
-                                                            {/* Task Name */}
-                                                            <p className={cn(
-                                                                "font-semibold truncate transition-colors leading-snug",
-                                                                isVeryCompact ? "line-clamp-1 text-xs" : isCompact ? "line-clamp-1 text-base" : "line-clamp-2 text-base"
-                                                            )}>
-                                                                {task.name}
-                                                            </p>
-                                                        </div>
-                                                    );
-                                                })}
+                                                            </div>
+                                                        );
+                                                    })}
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </div>
                 </main>
@@ -327,3 +365,4 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask }: WeeklyS
         </div>
     );
 }
+
