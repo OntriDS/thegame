@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Task } from '@/types/entities';
 import { TaskType, TaskStatus } from '@/types/enums';
-import { format, addDays, startOfWeek, getHours, setHours, setMinutes, differenceInMinutes, isSameDay } from 'date-fns';
+import { format, addDays, startOfWeek, getHours, setHours, setMinutes, differenceInMinutes, isSameDay, differenceInDays } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useThemeColors } from '@/lib/hooks/use-theme-colors';
 import { Button } from '@/components/ui/button';
@@ -15,15 +15,29 @@ interface WeeklyScheduleProps {
     tasks: Task[];
     onNewTask: () => void;
     onEditTask: (task: Task) => void;
+    onTaskUpdate?: (task: Task) => void;
 }
 
 const HOURS_IN_DAY = 24;
 const MAX_WORK_HOURS = 12; // Max hours for bar scale
 
-export default function WeeklySchedule({ tasks, onNewTask, onEditTask }: WeeklyScheduleProps) {
+export default function WeeklySchedule({ tasks, onNewTask, onEditTask, onTaskUpdate }: WeeklyScheduleProps) {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [startHour, setStartHour] = useState(6); // Default start hour: 06:00
     const [cellHeight, setCellHeight] = useState(50); // Dynamic cell height (20-100px)
+
+    // DND State
+    const [draggingId, setDraggingId] = useState<string | null>(null);
+    const [dragState, setDragState] = useState<{
+        type: 'move' | 'resize-top' | 'resize-bottom';
+        task: Task;
+        originalStart: Date;
+        originalEnd: Date;
+        startY: number;
+        startX: number;
+        currentY: number;
+        currentX: number;
+    } | null>(null);
 
     // Calculate week days
     const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 }); // Monday start
@@ -77,11 +91,151 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask }: WeeklyS
         return parent?.name || null;
     };
 
-    const getTaskStyle = (task: Task) => {
-        if (!task.scheduledStart || !task.scheduledEnd) return {};
+    // Helper: Round date to nearest 15 minutes
+    const snapToGrid = (date: Date) => {
+        const minutes = date.getMinutes();
+        const rounded = Math.round(minutes / 15) * 15;
+        return setMinutes(date, rounded);
+    };
 
-        const start = new Date(task.scheduledStart);
-        const end = new Date(task.scheduledEnd);
+    // Global pointer up listener to end drag
+    useEffect(() => {
+        const handlePointerUp = () => {
+            if (dragState && onTaskUpdate) {
+                // Determine Day Change
+                // Calculate column index based on X position relative to grid
+                // (This is simplified; for robust day changing we need refs to day columns)
+                // For now, implementing Time Only changes for simplicity in this step, 
+                // but the state is ready for Day changes if we add refs.
+
+                // For MVP: Commit the time changes calculated during drag
+                if (draggingId) {
+                    onTaskUpdate(dragState.task);
+                }
+            }
+            setDraggingId(null);
+            setDragState(null);
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+        };
+
+        const handlePointerMove = (e: PointerEvent) => {
+            if (!dragState) return;
+
+            setDragState(prev => {
+                if (!prev) return null;
+
+                // Calculate time delta logic
+                // Pixels moved
+                const deltaY = e.clientY - prev.startY;
+                // Minutes moved = (deltaY / cellHeight) * 60
+                const minutesMoved = Math.round((deltaY / cellHeight) * 60);
+
+                let newStart = new Date(prev.originalStart);
+                let newEnd = new Date(prev.originalEnd);
+
+                if (prev.type === 'move') {
+                    // Calculate Date/Day Change
+                    // Find the day element under the cursor
+                    const elements = document.elementsFromPoint(e.clientX, e.clientY);
+                    const dayElement = elements.find(el => el.hasAttribute('data-date'));
+
+                    if (dayElement) {
+                        const dateStr = dayElement.getAttribute('data-date');
+                        if (dateStr) {
+                            const targetDate = new Date(dateStr);
+
+                            // Set the new date parts (Year, Month, Day) from target, keep Time from original + delta
+                            // Actually easier: just take targetDate and set hours/mins
+                            newStart = new Date(targetDate);
+                            newEnd = new Date(targetDate);
+                        }
+                    }
+
+                    newStart.setHours(prev.originalStart.getHours());
+                    newStart.setMinutes(prev.originalStart.getMinutes() + minutesMoved);
+
+                    // Recalculate end based on original duration
+                    const duration = differenceInMinutes(prev.originalEnd, prev.originalStart);
+                    newEnd = new Date(newStart);
+                    newEnd.setMinutes(newStart.getMinutes() + duration);
+
+                } else if (prev.type === 'resize-top') {
+                    newStart.setMinutes(prev.originalStart.getMinutes() + minutesMoved);
+                    // Prevent end < start
+                    if (differenceInMinutes(newEnd, newStart) < 15) {
+                        newStart = setMinutes(newEnd, newEnd.getMinutes() - 15);
+                    }
+                } else if (prev.type === 'resize-bottom') {
+                    newEnd.setMinutes(prev.originalEnd.getMinutes() + minutesMoved);
+                    // Prevent end < start
+                    if (differenceInMinutes(newEnd, newStart) < 15) {
+                        newEnd = setMinutes(newStart, newStart.getMinutes() + 15);
+                    }
+                }
+
+                // Snap to 15 mins
+                newStart = snapToGrid(newStart);
+                newEnd = snapToGrid(newEnd);
+
+                return {
+                    ...prev,
+                    currentY: e.clientY,
+                    currentX: e.clientX,
+                    task: {
+                        ...prev.task,
+                        scheduledStart: newStart,
+                        scheduledEnd: newEnd
+                    }
+                };
+            });
+        };
+
+        if (draggingId) {
+            window.addEventListener('pointerup', handlePointerUp);
+            window.addEventListener('pointermove', handlePointerMove);
+        }
+
+        return () => {
+            window.removeEventListener('pointerup', handlePointerUp);
+            window.removeEventListener('pointermove', handlePointerMove);
+        };
+    }, [draggingId, cellHeight, onTaskUpdate, dragState]); // Added dragState to dep array to satisfy linter, though refs are better for perf.
+
+    const handleDragStart = (e: React.PointerEvent, task: Task, type: 'move' | 'resize-top' | 'resize-bottom') => {
+        if (!onTaskUpdate) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        // Capture initial state
+        setDraggingId(task.id);
+        setDragState({
+            type,
+            task: { ...task },
+            originalStart: new Date(task.scheduledStart!),
+            originalEnd: new Date(task.scheduledEnd!),
+            startY: e.clientY,
+            startX: e.clientX,
+            currentY: e.clientY,
+            currentX: e.clientX
+        });
+
+        document.body.style.cursor = type === 'move' ? 'grabbing' : 'ns-resize';
+        document.body.style.userSelect = 'none';
+
+        // If it's a move, we might need a reference to the container to calculate day changes
+    };
+
+    const getTaskStyle = (task: Task) => {
+        // Use dragged state if this is the dragged task
+        const isDragging = draggingId === task.id;
+        const currentTask = (isDragging && dragState) ? dragState.task : task;
+
+        if (!currentTask.scheduledStart || !currentTask.scheduledEnd) return {};
+
+        const start = new Date(currentTask.scheduledStart);
+        const end = new Date(currentTask.scheduledEnd);
 
         // Calculate position relative to startHour
         let startHourVal = getHours(start);
@@ -91,6 +245,8 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask }: WeeklyS
         let adjustedStartHour = startHourVal - startHour;
         if (adjustedStartHour < 0) adjustedStartHour += 24;
 
+        // Handle overflow to next day (simplified visual) - if adjusted hour is massive
+
         const top = (adjustedStartHour * 60 + startMin) * (cellHeight / 60);
         const durationMinutes = differenceInMinutes(end, start);
         const height = durationMinutes * (cellHeight / 60);
@@ -98,6 +254,10 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask }: WeeklyS
         return {
             top: `${top}px`,
             height: `${height}px`,
+            zIndex: isDragging ? 50 : 10,
+            opacity: isDragging ? 0.9 : 1,
+            boxShadow: isDragging ? '0 10px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.2)' : undefined,
+            cursor: 'grab' // Default cursor for the task body
         };
     };
 
@@ -307,58 +467,80 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask }: WeeklyS
                                                             <div
                                                                 key={task.id}
                                                                 className={cn(
-                                                                    "absolute left-1 right-1 rounded-md border p-2.5 text-sm shadow-sm hover:shadow-md transition-all cursor-pointer overflow-hidden group hover:z-50 hover:scale-[1.02]",
+                                                                    "absolute left-1 right-1 rounded-md border text-sm shadow-sm hover:shadow-md transition-shadow overflow-visible group hover:z-50",
                                                                     colorClass
                                                                 )}
                                                                 style={getTaskStyle(task)}
-                                                                onClick={() => onEditTask(task)}
+                                                                onPointerDown={(e) => handleDragStart(e, task, 'move')}
                                                             >
-                                                                {/* Header Row: Station | Time | Points */}
-                                                                <div className="flex items-center justify-between mb-1 gap-2">
-                                                                    {/* Station Badge */}
-                                                                    <span className={cn(
-                                                                        "font-bold text-[0.7rem] uppercase tracking-wider truncate px-2 py-0.5 rounded",
-                                                                        getStatusBadgeColor(task.status)
-                                                                    )}>
-                                                                        {task.station}
-                                                                    </span>
+                                                                {/* Resize Handle Top */}
+                                                                <div
+                                                                    className="absolute top-0 left-0 right-0 h-2 cursor-ns-resize z-20 hover:bg-white/30"
+                                                                    onPointerDown={(e) => handleDragStart(e, task, 'resize-top')}
+                                                                />
 
-                                                                    {/* Time - Always visible in center */}
-                                                                    <span className="text-[0.7rem] text-muted-foreground/80 whitespace-nowrap">
-                                                                        {format(new Date(task.scheduledStart!), 'HH:mm')} - {format(new Date(task.scheduledEnd!), 'HH:mm')}
-                                                                    </span>
+                                                                {/* Task Content */}
+                                                                <div
+                                                                    className="p-2.5 h-full overflow-hidden"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation(); // Prevent drag start from clicking
+                                                                        onEditTask(task);
+                                                                    }}
+                                                                >
+                                                                    {/* Header Row: Station | Time | Points */}
+                                                                    <div className="flex items-center justify-between mb-1 gap-2 pointer-events-none">
+                                                                        {/* Station Badge */}
+                                                                        <span className={cn(
+                                                                            "font-bold text-[0.7rem] uppercase tracking-wider truncate px-2 py-0.5 rounded",
+                                                                            getStatusBadgeColor(task.status)
+                                                                        )}>
+                                                                            {task.station}
+                                                                        </span>
 
-                                                                    {/* Points - Always visible */}
-                                                                    {pointTypes.length > 0 && (
-                                                                        <div className="flex items-center gap-1.5 flex-wrap">
-                                                                            {pointTypes.map(pt => {
-                                                                                const Icon = pt.icon;
-                                                                                return (
-                                                                                    <span key={pt.type} className="text-sm flex items-center gap-1 bg-background/40 rounded px-1.5 py-0.5">
-                                                                                        <Icon className={cn("w-3 h-3", pt.color)} />
-                                                                                        <span className="font-medium">{pt.label}</span>
-                                                                                        <span className="font-semibold">{pt.value}</span>
-                                                                                    </span>
-                                                                                );
-                                                                            })}
-                                                                        </div>
+                                                                        {/* Time - Always visible in center */}
+                                                                        <span className="text-[0.7rem] text-muted-foreground/80 whitespace-nowrap">
+                                                                            {format(new Date(draggingId === task.id && dragState ? dragState.task.scheduledStart! : task.scheduledStart!), 'HH:mm')} -
+                                                                            {format(new Date(draggingId === task.id && dragState ? dragState.task.scheduledEnd! : task.scheduledEnd!), 'HH:mm')}
+                                                                        </span>
+
+                                                                        {/* Points - Always visible */}
+                                                                        {pointTypes.length > 0 && (
+                                                                            <div className="flex items-center gap-1.5 flex-wrap">
+                                                                                {pointTypes.map(pt => {
+                                                                                    const Icon = pt.icon;
+                                                                                    return (
+                                                                                        <span key={pt.type} className="text-sm flex items-center gap-1 bg-background/40 rounded px-1.5 py-0.5">
+                                                                                            <Icon className={cn("w-3 h-3", pt.color)} />
+                                                                                            <span className="font-medium">{pt.label}</span>
+                                                                                            <span className="font-semibold">{pt.value}</span>
+                                                                                        </span>
+                                                                                    );
+                                                                                })}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+
+                                                                    {/* Parent Task (if exists) */}
+                                                                    {parentName && (
+                                                                        <p className="text-[0.5rem] text-muted-foreground/80 truncate leading-tight mb-1 pointer-events-none">
+                                                                            ↳ {parentName}
+                                                                        </p>
                                                                     )}
+
+                                                                    {/* Task Name */}
+                                                                    <p className={cn(
+                                                                        "font-semibold truncate transition-colors leading-snug pointer-events-none",
+                                                                        isVeryCompact ? "line-clamp-1 text-xs" : isCompact ? "line-clamp-1 text-base" : "line-clamp-2 text-base"
+                                                                    )}>
+                                                                        {task.name}
+                                                                    </p>
                                                                 </div>
 
-                                                                {/* Parent Task (if exists) */}
-                                                                {parentName && (
-                                                                    <p className="text-[0.5rem] text-muted-foreground/80 truncate leading-tight mb-1">
-                                                                        ↳ {parentName}
-                                                                    </p>
-                                                                )}
-
-                                                                {/* Task Name */}
-                                                                <p className={cn(
-                                                                    "font-semibold truncate transition-colors leading-snug",
-                                                                    isVeryCompact ? "line-clamp-1 text-xs" : isCompact ? "line-clamp-1 text-base" : "line-clamp-2 text-base"
-                                                                )}>
-                                                                    {task.name}
-                                                                </p>
+                                                                {/* Resize Handle Bottom */}
+                                                                <div
+                                                                    className="absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize z-20 hover:bg-white/30"
+                                                                    onPointerDown={(e) => handleDragStart(e, task, 'resize-bottom')}
+                                                                />
                                                             </div>
                                                         );
                                                     })}

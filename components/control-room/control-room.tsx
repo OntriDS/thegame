@@ -652,6 +652,23 @@ export default function ControlRoom() {
     }
   }
 
+  const handleTaskUpdate = async (updatedTask: Task) => {
+    try {
+      // Optimistic update locally
+      setAllTasks(prev => prev.map(t => t.id === updatedTask.id ? updatedTask : t));
+
+      // Save to server
+      await ClientAPI.upsertTask(updatedTask);
+
+      // Refresh tree if needed (debounced or relies on useEntityUpdates)
+      setRefreshKey(prev => prev + 1);
+    } catch (error) {
+      console.error('Failed to update task:', error);
+      // Revert on failure (reload all)
+      loadAllTasks().then(setAllTasks);
+    }
+  };
+
   // Drag and Drop Handler
   const handleDragOver = useCallback((event: DragOverEvent) => {
     const { over, active } = event;
@@ -947,11 +964,12 @@ export default function ControlRoom() {
             </TabsContent>
 
             {/* Weekly Schedule Tab Content */}
-            <TabsContent value="weekly-schedule" className="mt-0 p-0 data-[state=active]:flex flex-col flex-1 min-h-0">
+            <TabsContent value="weekly-schedule" className="h-full m-0 p-0 border-none data-[state=inactive]:hidden">
               <WeeklySchedule
                 tasks={allTasks}
                 onNewTask={handleNewTask}
                 onEditTask={handleEditTask}
+                onTaskUpdate={handleTaskUpdate}
               />
             </TabsContent>
 
