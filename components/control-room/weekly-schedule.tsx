@@ -400,7 +400,7 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask, onTaskUpd
                     <div className="flex min-h-full min-w-max">
                         {/* Time Column */}
                         <div className="flex flex-col shrink-0 sticky left-0 z-20 bg-background shadow-sm border-r w-16">
-                            <div className="sticky top-0 z-30 bg-background h-[60px] border-b" /> {/* Header spacer */}
+                            <div className="sticky top-0 z-30 bg-background/60 backdrop-blur-md h-[60px] border-b shadow-sm" /> {/* Header spacer */}
                             <div className="flex-1 relative">
                                 {timeSlots.map(hour => (
                                     <div key={hour} className="flex items-start justify-end pr-2 border-b border-transparent group" style={{ height: `${cellHeight}px` }}>
@@ -420,7 +420,7 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask, onTaskUpd
                                 return (
                                     <div key={day.toISOString()} className="flex flex-col border-r min-h-full">
                                         {/* Day Header */}
-                                        <div className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur p-3 text-center h-[60px] flex flex-col justify-center gap-1 group hover:bg-muted/30 transition-colors">
+                                        <div className="sticky top-0 z-10 border-b bg-background/60 backdrop-blur-md p-3 text-center h-[60px] flex flex-col justify-center gap-1 group hover:bg-background/70 transition-colors shadow-sm">
                                             <div className="flex items-center justify-center gap-1.5 align-baseline">
                                                 <p className={cn("text-sm font-semibold tracking-tight", isSameDay(day, new Date()) && "text-primary")}>
                                                     {format(day, 'EEE').toUpperCase()}
