@@ -25,6 +25,7 @@ import { SaleLine, Item, Site, Character, ServiceLine, ItemSaleLine, BundleSaleL
 import { v4 as uuid } from 'uuid';
 import { createSiteOptionsWithCategories } from '@/lib/utils/site-options-utils';
 import SaleItemsSubModal from './sale-items-submodal';
+import { DEFAULT_CURRENCY_EXCHANGE_RATES } from '@/lib/constants/financial-constants';
 
 // ============================================================================
 // Types
@@ -91,8 +92,8 @@ export default function FeriaSalesDashboard({
 
     // 1. Setup State
     // ============================================================================
-    const [boothCost, setBoothCost] = useState<number>(-20000); // Default to typical cost
-    const [exchangeRate, setExchangeRate] = useState<number>(500); // Approx CRC/USD
+    const [boothCost, setBoothCost] = useState<number>(0); // Default to 0
+    const exchangeRate = DEFAULT_CURRENCY_EXCHANGE_RATES.colonesToUsd; // Read-only from system
     const [showItemSelector, setShowItemSelector] = useState(false);
 
     // Partner Quick Entry State
@@ -283,7 +284,7 @@ export default function FeriaSalesDashboard({
                             <Store className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
                         </div>
                         <div>
-                            <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">Feria Settlement</h2>
+                            <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">Booth Sales</h2>
                             <div className="flex items-center gap-2 text-xs text-muted-foreground">
                                 <Building2 className="h-3 w-3" />
                                 <span>Shared Booth Management</span>
@@ -294,44 +295,37 @@ export default function FeriaSalesDashboard({
                     <div className="w-px h-10 bg-slate-200 dark:bg-slate-700" />
 
                     <div className="grid grid-cols-4 gap-4">
-                        <div className="space-y-1">
-                            <Label className="text-xs text-muted-foreground">Date</Label>
+                        <div className="space-y-1.5">
+                            <Label className="text-xs font-medium text-muted-foreground">Date</Label>
                             <DatePicker value={saleDate} onChange={(d) => setSaleDate(d || new Date())} />
                         </div>
-                        <div className="space-y-1">
-                            <Label className="text-xs text-muted-foreground">Booth Cost (Total)</Label>
+                        <div className="space-y-1.5">
+                            <Label className="text-xs font-medium text-muted-foreground">Booth Cost</Label>
                             <NumericInput
                                 value={boothCost}
                                 onChange={setBoothCost}
                                 className="h-9 w-32 border-red-200 text-red-600 font-medium"
+                                placeholder="0"
                             />
                         </div>
-                        <div className="space-y-1">
-                            <Label className="text-xs text-muted-foreground">Exchange Rate</Label>
-                            <NumericInput
-                                value={exchangeRate}
-                                onChange={setExchangeRate}
-                                className="h-9 w-24"
-                            />
+                        <div className="space-y-1.5">
+                            <Label className="text-xs font-medium text-muted-foreground">$/₡</Label>
+                            <div className="h-9 w-24 px-3 py-2 rounded-md border bg-muted/50 flex items-center justify-center text-sm font-medium text-muted-foreground">
+                                {exchangeRate}
+                            </div>
                         </div>
-                        <div className="space-y-1">
-                            <Label className="text-xs text-muted-foreground">Site</Label>
+                        <div className="space-y-1.5">
+                            <Label className="text-xs font-medium text-muted-foreground">Site</Label>
                             <SearchableSelect
                                 value={siteId}
                                 onValueChange={setSiteId}
                                 options={createSiteOptionsWithCategories(sites)}
                                 autoGroupByCategory
                                 placeholder="Select site..."
-                                className="h-9 w-40"
+                                className="h-9 w-48"
                             />
                         </div>
                     </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="px-3 py-1 bg-green-50 text-green-700 border-green-200">
-                        75% / 25% Active
-                    </Badge>
                 </div>
             </div>
 
