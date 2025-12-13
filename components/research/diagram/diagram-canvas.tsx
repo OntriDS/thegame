@@ -132,7 +132,7 @@ const DiagramCanvasContent = () => {
                     style={{ opacity: 0.03 }}
                 />
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,#050505_100%)] pointer-events-none" />
-                <Controls className="bg-black/50 border border-white/10 text-white fill-white" />
+                <Controls className="bg-black/50 border border-white/10 text-black fill-black [&>button]:!border-white/10 [&>button:hover]:!bg-white/10" />
             </ReactFlow>
 
             {/* FLOATING HUD INFO - Ported from Stitch */}

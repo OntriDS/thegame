@@ -66,12 +66,6 @@ export const CustomNode = memo(({ data, selected }: NodeProps) => {
                         <h3 className={`font-mono font-bold tracking-[0.2em] text-sm ${style.text} uppercase`}>
                             {data.label}
                         </h3>
-
-                        <div className="w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
-                        <div className="flex justify-between w-full text-[10px] font-mono text-slate-400">
-                            <span>OP: 100%</span>
-                            <span>Lvl. 4</span>
-                        </div>
                     </div>
 
                     {/* Decorative Corner Accents */}
