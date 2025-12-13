@@ -87,6 +87,4 @@ Represents the formal agreement between two `LegalEntities`.
 2.  **Logic Swap**: Replace `settlementMatrix` with `SalesDistributionMatrix`.
 3.  **Integration**: precise "Associate Selector" that only shows Characters with active Contracts.
 
-### Phase C: Polish
-1.  **Card UI**: Update the "Quick Entry" card to be cleaner (remove "Description" focus, make it fast).
-2.  **Visuals**: Remove unrealistic "My Share/Your Share" headers if they don't match the selected Contract mode.
+

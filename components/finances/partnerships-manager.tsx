@@ -16,9 +16,9 @@ interface PartnershipsManagerProps {
     contracts: Contract[];
     characters: Character[];
     sites: Site[];
-    onCreateLegalEntity: (entity: Partial<LegalEntity>) => void;
+    onCreateLegalEntity: (entity: LegalEntity) => void;
     onUpdateLegalEntity: (entity: LegalEntity) => void;
-    onCreateContract: (contract: Partial<Contract>) => void;
+    onCreateContract: (contract: Contract) => void;
     onUpdateContract: (contract: Contract) => void;
 }
 

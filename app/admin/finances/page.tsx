@@ -44,7 +44,6 @@ import {
   getInventoryTotal,
   getInventoryCost,
   getOtherAssetsTotal,
-  getTotalNetWorth,
   type ExchangeRates,
   type MonetaryAssets,
   type InventoryAssets,
@@ -57,7 +56,10 @@ import { MonthYearSelector } from '@/components/ui/month-year-selector'
 import AssetsEditModal from '@/components/modals/submodals/assets-edit-submodal'
 import ConversionRatesModal from '@/components/modals/submodals/conversion-rates-submodal'
 import FinancialsModal from '@/components/modals/financials-modal'
+
+import { PartnershipsManager } from '@/components/finances/partnerships-manager';
 import { useKeyboardShortcuts } from '@/lib/hooks/use-keyboard-shortcuts';
+import { Contract, LegalEntity, Character, Site } from '@/types/entities';
 import {
   DEFAULT_CURRENCY_EXCHANGE_RATES,
   DEFAULT_POINTS_CONVERSION_RATES,
@@ -175,6 +177,12 @@ export default function FinancesPage() {
     type: 'company' | 'personal';
     section: 'monetary' | 'jungleCoins' | 'inventories' | 'otherAssets';
   } | null>(null);
+
+  // Partnership State
+  const [contracts, setContracts] = useState<Contract[]>([]);
+  const [legalEntities, setLegalEntities] = useState<LegalEntity[]>([]);
+  const [characters, setCharacters] = useState<Character[]>([]);
+  const [sites, setSites] = useState<Site[]>([]);
 
   // Load saved filter preference once preferences are loaded
   useEffect(() => {
@@ -348,6 +356,60 @@ export default function FinancesPage() {
     } catch (error) {
       console.error('Failed to load assets:', error);
     }
+
+  };
+
+  const loadPartnershipData = async () => {
+    try {
+      const [loadedContracts, loadedEntities, loadedCharacters, loadedSites] = await Promise.all([
+        ClientAPI.getContracts(),
+        ClientAPI.getLegalEntities(),
+        ClientAPI.getCharacters(),
+        ClientAPI.getSites()
+      ]);
+      setContracts(loadedContracts);
+      setLegalEntities(loadedEntities);
+      setCharacters(loadedCharacters);
+      setSites(loadedSites);
+    } catch (error) {
+      console.error('Failed to load partnership data:', error);
+    }
+  };
+
+  const handleCreateLegalEntity = async (entity: LegalEntity) => {
+    try {
+      await ClientAPI.upsertLegalEntity(entity);
+      loadPartnershipData();
+    } catch (error) {
+      console.error('Failed to create legal entity', error);
+    }
+  };
+
+  const handleUpdateLegalEntity = async (entity: LegalEntity) => {
+    try {
+      await ClientAPI.upsertLegalEntity(entity);
+      loadPartnershipData();
+    } catch (error) {
+      console.error('Failed to update legal entity', error);
+    }
+  };
+
+  const handleCreateContract = async (contract: Contract) => {
+    try {
+      await ClientAPI.upsertContract(contract);
+      loadPartnershipData();
+    } catch (error) {
+      console.error('Failed to create contract', error);
+    }
+  };
+
+  const handleUpdateContract = async (contract: Contract) => {
+    try {
+      await ClientAPI.upsertContract(contract);
+      loadPartnershipData();
+    } catch (error) {
+      console.error('Failed to update contract', error);
+    }
   };
 
   const handleAssetsUpdate = async () => {
@@ -394,8 +456,10 @@ export default function FinancesPage() {
   useEntityUpdates('item', handleItemsUpdate);
 
   // Load assets from data store and mark as hydrated
+  // Load assets from data store and mark as hydrated
   useEffect(() => {
     loadAssets();
+    loadPartnershipData();
     fetchBitcoinPrice();
 
     window.addEventListener('assetsUpdated', handleAssetsUpdate);
@@ -592,9 +656,31 @@ export default function FinancesPage() {
           <TabsTrigger value="assets">Assets</TabsTrigger>
           <TabsTrigger value="company">Company</TabsTrigger>
           <TabsTrigger value="personal">Personal</TabsTrigger>
+          <TabsTrigger value="partnerships">Partnerships</TabsTrigger>
         </TabsList>
 
         {/* Assets Tab - Now First and Main */}
+        <TabsContent value="partnerships" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Partnership Management</CardTitle>
+              <CardDescription>Manage your Legal Entities and Contracts with Associates.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <PartnershipsManager
+                legalEntities={legalEntities}
+                contracts={contracts}
+                characters={characters}
+                sites={sites}
+                onCreateLegalEntity={handleCreateLegalEntity}
+                onUpdateLegalEntity={handleUpdateLegalEntity}
+                onCreateContract={handleCreateContract}
+                onUpdateContract={handleUpdateContract}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="assets" className="space-y-4">
           {/* Concise Cashflow Summary at Top */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -618,7 +704,7 @@ export default function FinancesPage() {
                 <div className="flex justify-between text-sm">
                   <span>Net</span>
                   <span className={`font-bold ${aggregatedFinancialData?.net === 0 ? 'text-muted-foreground' :
-                      aggregatedFinancialData?.net > 0 ? 'text-foreground' : 'text-muted-foreground'
+                    aggregatedFinancialData?.net > 0 ? 'text-foreground' : 'text-muted-foreground'
                     }`}>
                     {aggregatedFinancialData?.net ? formatCurrency(aggregatedFinancialData.net) : '$0'}
                   </span>
@@ -650,7 +736,7 @@ export default function FinancesPage() {
                 <div className="flex justify-between text-sm">
                   <span>Net</span>
                   <span className={`font-bold ${personalSummary?.netCashflow === 0 ? 'text-muted-foreground' :
-                      (personalSummary?.netCashflow ?? 0) > 0 ? 'text-foreground' : 'text-muted-foreground'
+                    (personalSummary?.netCashflow ?? 0) > 0 ? 'text-foreground' : 'text-muted-foreground'
                     }`}>
                     {personalSummary?.netCashflow ? formatCurrency(personalSummary.netCashflow) : '$0'}
                   </span>
