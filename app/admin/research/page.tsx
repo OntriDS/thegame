@@ -1,7 +1,6 @@
 'use client';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { BookOpen, Map, FileText, Compass, Zap, CheckCircle, AlertTriangle, X, Bot } from 'lucide-react';
 import { useState, useEffect, Suspense } from 'react';
@@ -9,8 +8,7 @@ import { NotebookType } from '@/types/enums';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
 import { formatDateDDMMYYYY } from '@/lib/constants/date-constants';
 import { NotesTab } from '@/components/research/notes-tab';
-import { RoadmapsTab } from '@/components/research/roadmaps-tab';
-import { DiagramsTab } from '@/components/research/diagrams-tab';
+import { DiagramBuilderTab } from '@/components/research/diagram-builder-tab';
 import { SystemDevelopmentTab } from '@/components/research/system-development-tab';
 import { DevSprintsTab } from '@/components/research/dev-sprints-tab';
 import { AIAssistantTab } from '@/components/research/ai-assistant-tab';
@@ -35,13 +33,13 @@ function ResearchPageContent() {
   // Load preferences and URL tab on mount (client-side only)
   useEffect(() => {
     if (!isClient) return;
-    
+
     const savedTab = getPreference('research-active-tab', 'system-development');
-    
+
     // Get URL tab from window.location.search
     const params = new URLSearchParams(window.location.search);
     const urlTab = params.get('tab');
-    
+
     // URL tab takes precedence over saved preference
     setActiveTab(urlTab || savedTab);
   }, [getPreference, isClient]);
@@ -49,10 +47,10 @@ function ResearchPageContent() {
   // Update URL and preferences when tab changes (client-side only)
   const handleTabChange = (value: string) => {
     if (!isClient) return;
-    
+
     setActiveTab(value);
     setPreference('research-active-tab', value);
-    
+
     // SSR Guard for window object
     if (typeof window !== 'undefined') {
       const url = new URL(window.location.href);
@@ -64,11 +62,11 @@ function ResearchPageContent() {
   // Load project status from API (client-side only)
   useEffect(() => {
     if (!isClient) return;
-    
+
     const loadProjectStatus = async () => {
       try {
         const response = await fetch('/api/project-status');
-        
+
         if (response.ok) {
           const data = await response.json();
           setProjectStatus(data);
@@ -86,11 +84,11 @@ function ResearchPageContent() {
   // Load dev log from API (client-side only)
   useEffect(() => {
     if (!isClient) return;
-    
+
     const loadDevLog = async () => {
       try {
         const response = await fetch('/api/dev-log');
-        
+
         if (response.ok) {
           const data = await response.json();
           setDevLog(data);
@@ -108,7 +106,7 @@ function ResearchPageContent() {
   // Initialize notebooks with persistence (client-side only)
   useEffect(() => {
     if (!isClient) return;
-    
+
     const loadNotebooks = () => {
       try {
         const savedNotebooks = getPreference('research-notebooks');
@@ -117,45 +115,45 @@ function ResearchPageContent() {
         } else {
           // Only initialize with defaults if no saved notebooks exist
           const initialNotebooks = [
-            { 
-              id: NotebookType.ALL_NOTES, 
-              label: 'All Notes', 
+            {
+              id: NotebookType.ALL_NOTES,
+              label: 'All Notes',
               icon: 'BookOpen',
               color: 'text-black-600'
             },
-            { 
-              id: NotebookType.CURRENT_SPRINT, 
-              label: 'Current Sprint', 
+            {
+              id: NotebookType.CURRENT_SPRINT,
+              label: 'Current Sprint',
               icon: 'Target',
               color: 'text-green-600'
             },
-            { 
-              id: NotebookType.CHALLENGES, 
-              label: 'Challenges', 
+            {
+              id: NotebookType.CHALLENGES,
+              label: 'Challenges',
               icon: 'Wrench',
               color: 'text-red-600'
             },
-            { 
-              id: NotebookType.ROAD_AHEAD, 
-              label: 'Road Ahead', 
+            {
+              id: NotebookType.ROAD_AHEAD,
+              label: 'Road Ahead',
               icon: 'CalendarDays',
               color: 'text-purple-600'
             },
-            { 
-              id: NotebookType.STRATEGY, 
-              label: 'Strategy', 
+            {
+              id: NotebookType.STRATEGY,
+              label: 'Strategy',
               icon: 'Zap',
               color: 'text-orange-600'
             },
-            { 
-              id: NotebookType.IDEAS, 
-              label: 'Ideas', 
+            {
+              id: NotebookType.IDEAS,
+              label: 'Ideas',
               icon: 'Lightbulb',
               color: 'text-yellow-600'
             },
-            { 
-              id: NotebookType.GENERAL, 
-              label: 'General', 
+            {
+              id: NotebookType.GENERAL,
+              label: 'General',
               icon: 'FileText',
               color: 'text-gray-600'
             }
@@ -167,45 +165,45 @@ function ResearchPageContent() {
         console.error('Error loading notebooks:', error);
         // Fallback to defaults
         const initialNotebooks = [
-          { 
-            id: NotebookType.ALL_NOTES, 
-            label: 'All Notes', 
+          {
+            id: NotebookType.ALL_NOTES,
+            label: 'All Notes',
             icon: 'BookOpen',
             color: 'text-black-600'
           },
-          { 
-            id: NotebookType.CURRENT_SPRINT, 
-            label: 'Current Sprint', 
+          {
+            id: NotebookType.CURRENT_SPRINT,
+            label: 'Current Sprint',
             icon: 'Target',
             color: 'text-green-600'
           },
-          { 
-            id: NotebookType.CHALLENGES, 
-            label: 'Challenges', 
+          {
+            id: NotebookType.CHALLENGES,
+            label: 'Challenges',
             icon: 'Wrench',
             color: 'text-red-600'
           },
-          { 
-            id: NotebookType.ROAD_AHEAD, 
-            label: 'Road Ahead', 
+          {
+            id: NotebookType.ROAD_AHEAD,
+            label: 'Road Ahead',
             icon: 'CalendarDays',
             color: 'text-purple-600'
           },
-          { 
-            id: NotebookType.STRATEGY, 
-            label: 'Strategy', 
+          {
+            id: NotebookType.STRATEGY,
+            label: 'Strategy',
             icon: 'Zap',
             color: 'text-orange-600'
           },
-          { 
-            id: NotebookType.IDEAS, 
-            label: 'Ideas', 
+          {
+            id: NotebookType.IDEAS,
+            label: 'Ideas',
             icon: 'Lightbulb',
             color: 'text-yellow-600'
           },
-          { 
-            id: NotebookType.GENERAL, 
-            label: 'General', 
+          {
+            id: NotebookType.GENERAL,
+            label: 'General',
             icon: 'FileText',
             color: 'text-gray-600'
           }
@@ -220,11 +218,11 @@ function ResearchPageContent() {
   // Load notes from API (client-side only)
   useEffect(() => {
     if (!isClient) return;
-    
+
     const loadNotes = async () => {
       try {
         const response = await fetch('/api/notes-log');
-        
+
         if (response.ok) {
           const data = await response.json();
           setNotes(data.entries || []);
@@ -315,8 +313,8 @@ function ResearchPageContent() {
     }
 
     // Check if nextSprintPlan exists and has phases
-    if (!projectStatus.nextSprintPlan || 
-        Object.keys(projectStatus.nextSprintPlan).length === 0) {
+    if (!projectStatus.nextSprintPlan ||
+      Object.keys(projectStatus.nextSprintPlan).length === 0) {
       alert('Next sprint plan is not ready. Please ensure it has at least one phase.');
       return;
     }
@@ -330,7 +328,7 @@ function ResearchPageContent() {
         alert(`Sprint ${projectStatus.currentSprintNumber} already exists in dev log. Please check the data.`);
         return;
       }
-      
+
       // 1. Create sprint completion entry for dev log
       const completedSprint = {
         id: sprintId,
@@ -379,7 +377,7 @@ function ResearchPageContent() {
 
       // 4. Update project status: move nextSprintPlan to phasePlan, increment sprint number
       const nextSprintNumber = (projectStatus.currentSprintNumber || 10) + 1;
-      
+
       // Helper function to update phase keys from phaseX.N to phase{sprintNumber}.N
       const updatePhaseKeys = (phases: any, sprintNumber: number) => {
         const updatedPhases: any = {};
@@ -390,7 +388,7 @@ function ResearchPageContent() {
         });
         return updatedPhases;
       };
-      
+
       const updatedProjectStatus = {
         ...projectStatus,
         lastUpdated: new Date().toISOString(),
@@ -406,7 +404,7 @@ function ResearchPageContent() {
           },
           [`phaseX.2`]: {
             "phaseName": "",
-            "status": "Not Started", 
+            "status": "Not Started",
             "description": "",
             "deliverables": []
           },
@@ -437,10 +435,10 @@ function ResearchPageContent() {
 
       // 5. Reload data to reflect changes
       await handleReloadLogs();
-      
+
       setSuccessMessage(`Sprint ${projectStatus.currentSprintNumber} completed successfully! Moved to Sprint ${nextSprintNumber}.`);
       setShowSuccessModal(true);
-      
+
     } catch (error) {
       console.error('Error completing sprint:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
@@ -466,7 +464,7 @@ function ResearchPageContent() {
   return (
     <div className="container mx-auto px-4 space-y-6">
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="ai-assistant" className="flex items-center gap-2">
             <Bot className="h-4 w-4" />
             AI Assistant
@@ -481,11 +479,7 @@ function ResearchPageContent() {
           </TabsTrigger>
           <TabsTrigger value="diagrams" className="flex items-center gap-2">
             <Map className="h-4 w-4" />
-            Diagrams
-          </TabsTrigger>
-          <TabsTrigger value="roadmaps" className="flex items-center gap-2">    
-            <Compass className="h-4 w-4" />
-            Roadmaps
+            Diagram Builder
           </TabsTrigger>
           <TabsTrigger value="notes" className="flex items-center gap-2">
             <FileText className="h-4 w-4" />
@@ -503,7 +497,7 @@ function ResearchPageContent() {
 
         {/* Dev Log Tab */}
         <TabsContent value="dev-log" className="space-y-6">
-          <DevSprintsTab 
+          <DevSprintsTab
             projectStatus={projectStatus}
             devLog={devLog}
             onReload={handleReloadLogs}
@@ -513,15 +507,12 @@ function ResearchPageContent() {
           />
         </TabsContent>
 
-        {/* Diagrams Tab */}
-        <DiagramsTab />
+        {/* Diagrams Tab (Merged) */}
+        <DiagramBuilderTab />
 
-
-        {/* Roadmaps Tab */}
-        <RoadmapsTab projectStatus={projectStatus} />
 
         {/* Notes Tab */}
-        <NotesTab 
+        <NotesTab
           notes={notes}
           notebooks={notebooks}
           onUpdateNotes={setNotes}
@@ -552,7 +543,7 @@ function ResearchPageContent() {
               </button>
             </div>
             <p className="text-gray-700 mb-4">{successMessage}</p>
-            <Button 
+            <Button
               onClick={() => setShowSuccessModal(false)}
               className="w-full"
             >
@@ -562,7 +553,7 @@ function ResearchPageContent() {
         </div>
       )}
     </div>
-  );  
+  );
 }
 
 export default function ResearchPage() {

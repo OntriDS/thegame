@@ -1,0 +1,220 @@
+"use client";
+
+import React, { useState } from 'react';
+import { motion } from 'framer-motion';
+import { 
+  Cpu, 
+  Settings, 
+  Globe, 
+  ShoppingCart, 
+  Database, 
+  Zap, 
+  Layout, 
+  Plus, 
+  Search,
+  Box,
+  Share2,
+  MousePointer2
+} from 'lucide-react';
+
+// --- 1. CONFIGURATION & TYPES ---
+const NODE_TYPES = {
+  ADMIN: { color: 'border-cyan-500', glow: 'shadow-[0_0_30px_rgba(6,182,212,0.4)]', text: 'text-cyan-400', bg: 'bg-cyan-950/30' },
+  PRODUCTION: { color: 'border-green-500', glow: 'shadow-[0_0_30px_rgba(34,197,94,0.4)]', text: 'text-green-400', bg: 'bg-green-950/30' },
+  SALES: { color: 'border-orange-500', glow: 'shadow-[0_0_30px_rgba(249,115,22,0.4)]', text: 'text-orange-400', bg: 'bg-orange-950/30' },
+  CREATIVE: { color: 'border-purple-500', glow: 'shadow-[0_0_30px_rgba(168,85,247,0.4)]', text: 'text-purple-400', bg: 'bg-purple-950/30' },
+};
+
+// --- 2. THE CUSTOM "POP-OUT" NODE COMPONENT ---
+// This is the specific visual fix you needed.
+const GameNode = ({ type, title, icon: Icon, isSelected, onClick, x, y }) => {
+  const style = NODE_TYPES[type] || NODE_TYPES.ADMIN;
+  
+  return (
+    <motion.div
+      drag
+      dragMomentum={false}
+      initial={{ opacity: 0, scale: 0.8 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="absolute cursor-grab active:cursor-grabbing group z-10"
+      style={{ left: x, top: y }}
+      onClick={(e) => { e.stopPropagation(); onClick(); }}
+    >
+      <div className={`relative min-w-[200px] flex flex-col items-center`}>
+        
+        {/* THE POP-OUT ICON (The "Isometric" Effect) */}
+        {/* We position this absolutely to sit ON TOP of the border */}
+        <div className={`absolute -top-8 z-20 transition-transform duration-300 group-hover:scale-110 ${isSelected ? 'scale-110' : ''}`}>
+           {/* The Diamond Shape Wrapper */}
+           <div className={`w-16 h-16 ${style.bg} backdrop-blur-md border-2 ${style.color} rounded-xl rotate-45 flex items-center justify-center ${style.glow} shadow-lg`}>
+              {/* The Icon (Counter-rotated to stay upright) */}
+              <div className="-rotate-45">
+                 <Icon className={`w-8 h-8 ${style.text}`} />
+              </div>
+           </div>
+        </div>
+
+        {/* THE CARD BODY */}
+        <div className={`mt-0 pt-10 pb-4 px-6 w-full ${style.bg} backdrop-blur-xl border ${style.color} rounded-lg border-opacity-60 hover:border-opacity-100 transition-all ${isSelected ? 'ring-2 ring-white/20' : ''}`}>
+          
+          {/* Content */}
+          <div className="flex flex-col items-center text-center space-y-2">
+            <h3 className={`font-mono font-bold tracking-[0.2em] text-sm ${style.text} uppercase`}>
+              {title}
+            </h3>
+            
+            {/* Fake "Stats" to make it look technical */}
+            <div className="w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+            <div className="flex justify-between w-full text-[10px] font-mono text-slate-400">
+              <span>OP: 100%</span>
+              <span>Lvl. 4</span>
+            </div>
+          </div>
+
+          {/* Decorative Corner Accents */}
+          <div className={`absolute -bottom-1 -left-1 w-2 h-2 border-l-2 border-b-2 ${style.color}`} />
+          <div className={`absolute -bottom-1 -right-1 w-2 h-2 border-r-2 border-b-2 ${style.color}`} />
+        </div>
+
+        {/* CONNECTION LINE STUB (Visual Only) */}
+        <div className={`absolute -bottom-4 w-0.5 h-4 ${style.bg} ${style.color} border-l`} />
+      </div>
+    </motion.div>
+  );
+};
+
+
+// --- 3. MAIN CANVAS COMPONENT ---
+export default function SciFiDiagramBuilder() {
+  const [selectedNode, setSelectedNode] = useState(null);
+  
+  // Sample Data State
+  const [nodes, setNodes] = useState([
+    { id: 1, title: "Control Tower", type: "ADMIN", icon: Cpu, x: 400, y: 300 },
+    { id: 2, title: "Art Studio", type: "CREATIVE", icon: Layout, x: 150, y: 150 },
+    { id: 3, title: "Exchange Hub", type: "SALES", icon: ShoppingCart, x: 700, y: 400 },
+    { id: 4, title: "Bot Foundry", type: "PRODUCTION", icon: Zap, x: 150, y: 500 },
+  ]);
+
+  return (
+    <div className="flex h-screen w-screen bg-[#050505] text-slate-200 font-sans overflow-hidden selection:bg-cyan-500/30">
+      
+      {/* BACKGROUND EFFECTS */}
+      <div className="absolute inset-0 z-0 pointer-events-none">
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:40px_40px]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,#050505_100%)]" />
+      </div>
+
+      {/* --- SIDEBAR (TOOLS) --- */}
+      <aside className="w-16 border-r border-white/10 bg-[#0a0a0a]/80 backdrop-blur-md z-50 flex flex-col items-center py-6 gap-6">
+        <div className="w-10 h-10 bg-cyan-500/20 text-cyan-400 rounded-lg flex items-center justify-center border border-cyan-500/50 shadow-[0_0_15px_rgba(6,182,212,0.3)]">
+          <Box size={24} />
+        </div>
+        <div className="flex flex-col gap-4 mt-8">
+            {/* Tool Icons */}
+            {[MousePointer2, Plus, Share2, Search].map((Icon, i) => (
+                <button key={i} className="p-3 text-slate-500 hover:text-cyan-400 hover:bg-white/5 rounded-lg transition-colors">
+                    <Icon size={20} />
+                </button>
+            ))}
+        </div>
+      </aside>
+
+      {/* --- MAIN CANVAS AREA --- */}
+      <main className="flex-1 relative overflow-hidden" onClick={() => setSelectedNode(null)}>
+        
+        {/* SVG LAYER FOR CONNECTIONS (Static example for now) */}
+        <svg className="absolute inset-0 w-full h-full pointer-events-none z-0 opacity-40">
+           {/* Simple straight lines simulating connections */}
+           <path d="M 500 350 L 250 200" stroke="#06b6d4" strokeWidth="2" fill="none" className="drop-shadow-[0_0_5px_cyan]" />
+           <path d="M 500 350 L 800 450" stroke="#f97316" strokeWidth="2" fill="none" className="drop-shadow-[0_0_5px_orange]" />
+           <path d="M 500 350 L 250 550" stroke="#22c55e" strokeWidth="2" fill="none" className="drop-shadow-[0_0_5px_green]" />
+        </svg>
+
+        {/* RENDER NODES */}
+        {nodes.map((node) => (
+          <GameNode 
+            key={node.id}
+            {...node}
+            isSelected={selectedNode?.id === node.id}
+            onClick={() => setSelectedNode(node)}
+          />
+        ))}
+
+        {/* FLOATING HUD INFO */}
+        <div className="absolute bottom-6 left-6 font-mono text-xs text-slate-500 pointer-events-none">
+            <p>SYSTEM: ONLINE</p>
+            <p>COORDS: 482.22, 112.01</p>
+        </div>
+      </main>
+
+      {/* --- PROPERTIES PANEL (RIGHT) --- */}
+      <aside className={`w-80 border-l border-white/10 bg-[#0a0a0a]/90 backdrop-blur-xl z-50 transition-all duration-300 transform ${selectedNode ? 'translate-x-0' : 'translate-x-full'}`}>
+        <div className="p-6 h-full flex flex-col">
+            <div className="flex items-center gap-2 mb-8 text-cyan-400">
+                <Settings size={18} />
+                <h2 className="font-mono font-bold tracking-widest uppercase text-sm">Node Properties</h2>
+            </div>
+
+            {selectedNode ? (
+                <div className="space-y-6">
+                    <div>
+                        <label className="text-xs uppercase font-bold text-slate-500 mb-2 block font-mono">Label</label>
+                        <input 
+                            type="text" 
+                            value={selectedNode.title} 
+                            onChange={(e) => {
+                                const newNodes = nodes.map(n => n.id === selectedNode.id ? {...n, title: e.target.value} : n);
+                                setNodes(newNodes);
+                                setSelectedNode({...selectedNode, title: e.target.value});
+                            }}
+                            className="w-full bg-black/40 border border-white/20 rounded p-2 text-sm text-white focus:border-cyan-500 focus:outline-none font-mono"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="text-xs uppercase font-bold text-slate-500 mb-2 block font-mono">Category Type</label>
+                        <div className="grid grid-cols-2 gap-2">
+                             {['ADMIN', 'PRODUCTION', 'SALES', 'CREATIVE'].map(type => (
+                                 <button 
+                                    key={type}
+                                    onClick={() => {
+                                        const newNodes = nodes.map(n => n.id === selectedNode.id ? {...n, type: type} : n);
+                                        setNodes(newNodes);
+                                        setSelectedNode({...selectedNode, type: type});
+                                    }}
+                                    className={`text-[10px] py-2 border rounded hover:bg-white/5 transition-colors font-mono ${selectedNode.type === type ? 'border-cyan-500 text-cyan-400 bg-cyan-950/20' : 'border-white/10 text-slate-400'}`}
+                                 >
+                                    {type}
+                                 </button>
+                             ))}
+                        </div>
+                    </div>
+
+                    <div className="p-4 bg-white/5 rounded border border-white/10 mt-4">
+                        <div className="flex justify-between text-xs mb-2">
+                            <span className="text-slate-400">Efficiency</span>
+                            <span className="text-green-400">94%</span>
+                        </div>
+                        <div className="h-1 bg-white/10 rounded-full overflow-hidden">
+                            <div className="h-full w-[94%] bg-green-500 shadow-[0_0_10px_green]" />
+                        </div>
+                    </div>
+                </div>
+            ) : (
+                <div className="flex flex-col items-center justify-center h-64 text-slate-600">
+                    <MousePointer2 size={48} className="mb-4 opacity-20" />
+                    <p className="text-sm font-mono">Select a node to edit</p>
+                </div>
+            )}
+            
+            <div className="mt-auto pt-6 border-t border-white/10">
+                <button className="w-full py-3 bg-cyan-600 hover:bg-cyan-500 text-black font-bold font-mono text-sm uppercase rounded transition-all shadow-[0_0_20px_rgba(6,182,212,0.4)]">
+                    Save Configuration
+                </button>
+            </div>
+        </div>
+      </aside>
+    </div>
+  );
+}

@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Gamified Ecosystem Diagram Builder</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet"/>
+<style>@keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 10px currentColor; opacity: 0.9; }
+            50% { box-shadow: 0 0 20px currentColor; opacity: 1; }
+        }
+        @keyframes flow-line {
+            0% { stroke-dashoffset: 1000; }
+            100% { stroke-dashoffset: 0; }
+        }
+        .animate-flow {
+            stroke-dasharray: 20 10;
+            animation: flow-line 30s linear infinite;
+        }.star-bg {
+            background-color: #02040a;
+            background-image: 
+                radial-gradient(white, rgba(255,255,255,.15) 1px, transparent 1px),
+                radial-gradient(white, rgba(255,255,255,.1) 1px, transparent 1px),
+                radial-gradient(white, rgba(255,255,255,.05) 2px, transparent 2px);
+            background-size: 550px 550px, 350px 350px, 250px 250px;
+            background-position: 0 0, 40px 60px, 130px 270px;
+        }.node-glow-blue {
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.4), inset 0 0 10px rgba(6, 182, 212, 0.2);
+        }
+        .node-glow-green {
+            box-shadow: 0 0 15px rgba(34, 197, 94, 0.4), inset 0 0 10px rgba(34, 197, 94, 0.2);
+        }
+        .node-glow-orange {
+            box-shadow: 0 0 15px rgba(249, 115, 22, 0.4), inset 0 0 10px rgba(249, 115, 22, 0.2);
+        }
+        .node-glow-yellow {
+            box-shadow: 0 0 20px rgba(234, 179, 8, 0.5), inset 0 0 15px rgba(234, 179, 8, 0.2);
+        }.rhombus {
+            clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+        }.glass-panel {
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    </style>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#00f0ff", // Cyan/Neon Blue
+                        "background-dark": "#02040a", // Deep void black
+                        "neon-green": "#00ff88",
+                        "neon-orange": "#ffaa00",
+                        "neon-purple": "#bd00ff",
+                        "neon-yellow": "#ffd700",
+                    },
+                    fontFamily: {
+                        display: ["Rajdhani", "sans-serif"],
+                    },
+                    borderRadius: {
+                        DEFAULT: "0.5rem",
+                        'xl': '1rem',
+                    },
+                },
+            },
+        };
+    </script>
+</head>
+<body class="bg-background-dark text-slate-100 font-display h-screen w-screen overflow-hidden selection:bg-primary selection:text-black">
+<div class="relative w-full h-full flex flex-col">
+<header class="h-16 border-b border-slate-800 glass-panel flex items-center justify-between px-6 z-50">
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2 text-primary drop-shadow-[0_0_5px_rgba(0,240,255,0.5)]">
+<span class="material-icons-outlined text-3xl">hub</span>
+<h1 class="text-xl font-bold tracking-widest uppercase">EcoMap Builder</h1>
+</div>
+<div class="h-6 w-px bg-slate-700 mx-2"></div>
+<nav class="flex gap-1">
+<button class="p-2 hover:bg-slate-800 rounded text-slate-400 hover:text-primary transition-colors">
+<span class="material-icons-outlined text-sm">save</span>
+</button>
+<button class="p-2 hover:bg-slate-800 rounded text-slate-400 hover:text-primary transition-colors">
+<span class="material-icons-outlined text-sm">undo</span>
+</button>
+<button class="p-2 hover:bg-slate-800 rounded text-slate-400 hover:text-primary transition-colors">
+<span class="material-icons-outlined text-sm">redo</span>
+</button>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2 bg-slate-800/50 border border-slate-700 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wider text-slate-400">
+<span class="w-2 h-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_#22c55e]"></span>
+                    Live Sync
+                </div>
+<button class="bg-primary hover:bg-cyan-300 text-black px-6 py-2 rounded font-bold text-sm uppercase tracking-wide transition-all shadow-[0_0_15px_rgba(0,240,255,0.4)] hover:shadow-[0_0_25px_rgba(0,240,255,0.6)]">
+                    Export Map
+                </button>
+</div>
+</header>
+<main class="flex-1 relative overflow-hidden bg-background-dark star-bg cursor-grab active:cursor-grabbing">
+<div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[1800px] h-[1000px] scale-[0.9] origin-center">
+<svg class="absolute inset-0 w-full h-full pointer-events-none z-0" xmlns="http://www.w3.org/2000/svg">
+<defs>
+<filter height="200%" id="glow-blue-line" width="200%" x="-50%" y="-50%">
+<feGaussianBlur result="blur" stdDeviation="4"></feGaussianBlur>
+<feComposite in="SourceGraphic" in2="blur" operator="over"></feComposite>
+</filter>
+<filter height="200%" id="glow-green-line" width="200%" x="-50%" y="-50%">
+<feGaussianBlur result="blur" stdDeviation="4"></feGaussianBlur>
+<feComposite in="SourceGraphic" in2="blur" operator="over"></feComposite>
+</filter>
+<filter height="200%" id="glow-orange-line" width="200%" x="-50%" y="-50%">
+<feGaussianBlur result="blur" stdDeviation="4"></feGaussianBlur>
+<feComposite in="SourceGraphic" in2="blur" operator="over"></feComposite>
+</filter>
+<linearGradient id="grad-blue-green" x1="0%" x2="100%" y1="0%" y2="0%">
+<stop offset="0%" style="stop-color:#00f0ff;stop-opacity:1"></stop>
+<stop offset="100%" style="stop-color:#00ff88;stop-opacity:1"></stop>
+</linearGradient>
+</defs>
+<path d="M 180 150 L 180 850" fill="none" filter="url(#glow-green-line)" stroke="#00ff88" stroke-linecap="round" stroke-width="6"></path>
+<path class="animate-flow" d="M 180 150 L 180 850" fill="none" opacity="0.8" stroke="#ffffff" stroke-dasharray="10, 20" stroke-width="2"></path>
+<path d="M 180 150 L 320 150" fill="none" filter="url(#glow-green-line)" stroke="#00ff88" stroke-width="2"></path>
+<path d="M 180 270 L 320 270" fill="none" filter="url(#glow-green-line)" stroke="#00ff88" stroke-width="2"></path>
+<path d="M 180 390 L 320 390" fill="none" filter="url(#glow-green-line)" stroke="#00ff88" stroke-width="2"></path>
+<path d="M 180 510 L 320 510" fill="none" filter="url(#glow-green-line)" stroke="#00ff88" stroke-width="2"></path>
+<path d="M 180 630 L 320 630" fill="none" filter="url(#glow-green-line)" stroke="#00ff88" stroke-width="2"></path>
+<path d="M 680 500 L 450 150" fill="none" filter="url(#glow-blue-line)" stroke="#00f0ff" stroke-width="3"></path>
+<path d="M 680 500 L 480 320" fill="none" filter="url(#glow-blue-line)" stroke="#00f0ff" stroke-width="3"></path>
+<path d="M 680 500 L 500 650" fill="none" filter="url(#glow-blue-line)" stroke="#00f0ff" stroke-width="3"></path>
+<path d="M 680 500 L 400 480" fill="none" filter="url(#glow-blue-line)" stroke="#00f0ff" stroke-width="3"></path>
+<path d="M 850 500 L 1250 500" fill="none" filter="url(#glow-orange-line)" stroke="url(#grad-blue-green)" stroke-width="4"></path>
+<path class="animate-flow" d="M 850 500 L 1250 500" fill="none" opacity="0.6" stroke="#ffffff" stroke-dasharray="5,10" stroke-width="2"></path>
+<path d="M 1350 500 L 1150 300" fill="none" filter="url(#glow-orange-line)" stroke="#ffaa00" stroke-width="3"></path>
+<path d="M 1350 500 L 1550 320" fill="none" filter="url(#glow-orange-line)" stroke="#ffaa00" stroke-width="3"></path>
+<path d="M 1350 500 L 1600 500" fill="none" filter="url(#glow-orange-line)" stroke="#ffaa00" stroke-width="3"></path>
+<path d="M 1350 500 L 1550 680" fill="none" filter="url(#glow-orange-line)" stroke="#ffaa00" stroke-width="3"></path>
+<path d="M 1350 500 L 1150 700" fill="none" filter="url(#glow-orange-line)" stroke="#ffaa00" stroke-width="3"></path>
+<path d="M 850 500 L 1350 500" fill="none" opacity="0.3" stroke="#ffffff" stroke-dasharray="4,8" stroke-width="1"></path>
+</svg>
+<div class="absolute left-[40px] top-[100px] flex flex-col gap-10 z-10">
+<div class="absolute -top-10 left-10 w-36 group cursor-pointer">
+<div class="p-2 bg-slate-900/90 border-2 border-cyan-400 node-glow-blue rounded-lg text-center transform group-hover:scale-105 transition-transform duration-300">
+<span class="material-icons-outlined text-cyan-300 text-4xl drop-shadow-[0_0_5px_rgba(34,211,238,0.8)]">folder_special</span>
+<div class="h-px w-full bg-cyan-900/50 my-1"></div>
+<div class="text-cyan-100 text-sm font-bold tracking-widest uppercase">PROJECTS</div>
+</div>
+</div>
+<div class="absolute left-[122px] top-[50px] h-[700px] flex flex-col justify-between items-center pointer-events-none z-20">
+<div class="relative">
+<span class="material-icons-outlined text-green-400 text-5xl drop-shadow-[0_0_10px_#4ade80]" style="transform: scaleY(1.2);">electric_meter</span>
+</div>
+<div class="relative top-4">
+<span class="material-icons-outlined text-green-400 text-5xl drop-shadow-[0_0_10px_#4ade80]" style="transform: scaleY(1.2);">electric_meter</span>
+</div>
+<div class="relative top-8">
+<span class="material-icons-outlined text-green-400 text-5xl drop-shadow-[0_0_10px_#4ade80]" style="transform: scaleY(1.2);">electric_meter</span>
+</div>
+<div class="relative top-12">
+<span class="material-icons-outlined text-green-400 text-5xl drop-shadow-[0_0_10px_#4ade80]" style="transform: scaleY(1.2);">electric_meter</span>
+</div>
+<div class="relative top-16">
+<span class="material-icons-outlined text-green-400 text-5xl drop-shadow-[0_0_10px_#4ade80]" style="transform: scaleY(1.2);">electric_meter</span>
+</div>
+</div>
+<div class="relative left-[280px] space-y-12 mt-4">
+<div class="w-48 bg-slate-900/90 border border-green-500/50 node-glow-green rounded-lg flex flex-col overflow-hidden group hover:scale-105 transition-transform cursor-pointer">
+<div class="h-24 bg-gradient-to-b from-green-900/40 to-transparent flex items-center justify-center relative">
+<img alt="Game controller illustration" class="w-16 h-16 object-contain opacity-90 drop-shadow-[0_0_5px_rgba(74,222,128,0.5)]" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDkC46x2lc93rA-bN_yDKAt40w5qtdPUN9qo6fBbMEeSLNo6PrrAm-VUEfz_MR-YlRScCxkBZVA886ZSPwsZYFHIl_UlJbWWJX8qxpCTrfqoGsyqVzxJoGkFMjaQzjx8su292hdg2trnKNqFCgMR9htqSFJ_JUDvXNMpMWjLWFitS6YdENjfo6KjLuMryxaHEzeqdUaRfxWvPZXi2tdy2ZT9GBwwbMllSOJTFtAGFfcNMQATNZcv6TtBC8jLfXdkg733uWro881N1c"/>
+</div>
+<div class="p-2 border-t border-green-500/30 bg-slate-900/95 text-center">
+<div class="text-green-100 font-bold text-sm tracking-wide uppercase">GAME DESIGN</div>
+</div>
+</div>
+<div class="w-48 bg-slate-900/90 border border-green-500/50 node-glow-green rounded-lg flex flex-col overflow-hidden group hover:scale-105 transition-transform cursor-pointer">
+<div class="h-24 bg-gradient-to-b from-green-900/40 to-transparent flex items-center justify-center relative">
+<img alt="Robot arm illustration" class="w-16 h-16 object-contain opacity-90 drop-shadow-[0_0_5px_rgba(74,222,128,0.5)]" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCfkyupONqbXlDJvq4Bx5fll798_TY4iC2OpF2n5rCPdYEPKBs9hcY8pbQPIeln13WtuzqAdkTreNmMito_PllBgDxH6SxUHq9_8Uie0tpfFgF5SvjoPnKSEHl9579fOqx4Q3WsyIs6gqJUBdgUU01Ew5T3Q6VXOl5VNgrlcKX5QCfhuKyb9FVaRLiK_OTUR53FKbr93JLZU_-yceMidxXpAYD0-ItswUgXzLbIPp1HmAQ-oLe7pTtYOiXIhdWn1GOcBdtgMlOwBbk"/>
+</div>
+<div class="p-2 border-t border-green-500/30 bg-slate-900/95 text-center">
+<div class="text-green-100 font-bold text-sm tracking-wide uppercase">MAKER BOTS</div>
+</div>
+</div>
+<div class="w-48 bg-slate-900/90 border border-green-500/50 node-glow-green rounded-lg flex flex-col overflow-hidden group hover:scale-105 transition-transform cursor-pointer">
+<div class="h-24 bg-gradient-to-b from-green-900/40 to-transparent flex items-center justify-center relative">
+<img alt="Plant illustration" class="w-16 h-16 object-contain opacity-90 drop-shadow-[0_0_5px_rgba(74,222,128,0.5)]" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCGxBDOEItTlCKGE12JwbgM-4_RHKO6Kh6A2mAQ5DiOr_G85ZhNsKc0iqm3HGEqHmqmcvkY4kn3Nm2GrWO2DEGop90RCdszHQW47B7GpJVr0rbENNpI_BN_3zX4Z8XGi9B2OvUjizarEqWfZT9QhB3xaIsda_Fnp2bg-N7qBId8GF_DWb3yV7ZRxqQxbO6UhlEy3JjMa3fJfEjAPJIckYq9OND6ozftCIfbX3aiZdDbEH-2YV7hRgLP-cqnFjy0li5-8duRK8BJqNQ"/>
+</div>
+<div class="p-2 border-t border-green-500/30 bg-slate-900/95 text-center">
+<div class="text-green-100 font-bold text-sm tracking-wide uppercase">GROW SHOP</div>
+</div>
+</div>
+<div class="w-48 bg-slate-900/90 border border-green-500/50 node-glow-green rounded-lg flex flex-col overflow-hidden group hover:scale-105 transition-transform cursor-pointer">
+<div class="h-24 bg-gradient-to-b from-green-900/40 to-transparent flex items-center justify-center relative">
+<img alt="Recycle illustration" class="w-16 h-16 object-contain opacity-90 drop-shadow-[0_0_5px_rgba(74,222,128,0.5)]" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDCYTJVI7ng6tSJWIrlFd5g35ljg0XXcoMPNkbJvAvz6dpcrlZGY6vl8JCuKueOwfF31qtQlA_QOq5qYt4rmWbZsW2ZAFjYVhYpG95nGPLBUqHKxEPKFVW1SUmip3kApuoj31AFN745DhI7dE5J6RmaHIu5an4jFQ8CFkvwurEs4jhukLq9AeGRvTjLCFL5LOLd-UOfXrHj36EZ_jybnFhXJ4xC_nEswkPAfAOLdBUM-6XsXlWKPJ0_dqtVYg-31XvT0z3zwD5QwJc"/>
+</div>
+<div class="p-2 border-t border-green-500/30 bg-slate-900/95 text-center">
+<div class="text-green-100 font-bold text-sm tracking-wide uppercase">RECYCLE PLASTICS</div>
+</div>
+</div>
+<div class="w-48 bg-slate-900/90 border border-green-500/50 node-glow-green rounded-lg flex flex-col overflow-hidden group hover:scale-105 transition-transform cursor-pointer">
+<div class="h-24 bg-gradient-to-b from-green-900/40 to-transparent flex items-center justify-center relative">
+<img alt="Skateboard illustration" class="w-16 h-16 object-contain opacity-90 drop-shadow-[0_0_5px_rgba(74,222,128,0.5)]" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA1VpEgF7qUuXqgKdG9KWvo3voFbtvtR-jmsiPyKSjgFQyup3zkiXBSwpArNJCbg7DbX2afb1_3vQWwrJ9VxUR8nd2xzoEup9uVA6akhVYiOGeYlAKMm21lMgfTaK7D1eRpLsJCSYfFkpQDXUU-CKrZfeqRY_7xIizzoqfKt5hkZvXg43tFy9xVtUQHUrH-rFVRSCso01d4TJjmy8ir-4etZbKUMDdXI3QPYMYC7JPFFvC6asVapqG2wzwvK8boj6kwhi1QKbuqIDw"/>
+</div>
+<div class="p-2 border-t border-green-500/30 bg-slate-900/95 text-center">
+<div class="text-green-100 font-bold text-sm tracking-wide uppercase">PORTAL SKATEPARK</div>
+</div>
+</div>
+</div>
+</div>
+<div class="absolute left-[400px] top-[50px] flex gap-12 z-10">
+<div class="flex flex-col items-center group">
+<div class="w-40 h-12 border-2 border-cyan-400 bg-slate-900/90 rounded-full flex items-center justify-center shadow-[0_0_15px_rgba(6,182,212,0.6)] group-hover:shadow-[0_0_25px_cyan] transition-all cursor-pointer z-10">
+<span class="text-cyan-300 font-bold tracking-[0.2em] text-sm group-hover:text-white transition-colors">PLANNING</span>
+</div>
+<div class="h-8 w-0.5 bg-cyan-500/50"></div>
+<div class="w-32 py-1.5 px-3 bg-slate-800/80 border border-slate-600 rounded text-center backdrop-blur-sm">
+<span class="text-slate-300 text-xs font-semibold uppercase tracking-wider">Strategy</span>
+</div>
+</div>
+<div class="flex flex-col items-center mt-12 group">
+<div class="w-40 h-12 border-2 border-cyan-400 bg-slate-900/90 rounded-full flex items-center justify-center shadow-[0_0_15px_rgba(6,182,212,0.6)] group-hover:shadow-[0_0_25px_cyan] transition-all cursor-pointer z-10">
+<span class="text-cyan-300 font-bold tracking-[0.2em] text-sm group-hover:text-white transition-colors">RESEARCH</span>
+</div>
+<div class="h-8 w-0.5 bg-cyan-500/50"></div>
+<div class="w-32 py-1.5 px-3 bg-slate-800/80 border border-slate-600 rounded text-center backdrop-blur-sm">
+<span class="text-slate-300 text-xs font-semibold uppercase tracking-wider">Analysis</span>
+</div>
+</div>
+</div>
+<div class="absolute left-[680px] top-[400px] w-[300px] h-[300px] z-20 flex items-center justify-center -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+<div class="relative w-56 h-56 bg-slate-900/95 border-2 border-cyan-400 rotate-45 flex items-center justify-center shadow-[0_0_40px_rgba(6,182,212,0.5),inset_0_0_20px_rgba(6,182,212,0.2)] z-20 pointer-events-auto cursor-pointer hover:shadow-[0_0_60px_rgba(6,182,212,0.8)] transition-all duration-500">
+<div class="absolute inset-2 border border-cyan-500/30"></div>
+<div class="-rotate-45 flex flex-col items-center justify-center w-full h-full text-center p-4">
+<div class="mb-2 p-3 rounded-full bg-cyan-900/30 border border-cyan-500/50 shadow-[0_0_15px_rgba(6,182,212,0.4)]">
+<span class="material-icons-outlined text-4xl text-cyan-200 drop-shadow-[0_0_5px_cyan]">memory</span>
+</div>
+<h2 class="text-cyan-100 font-bold text-xl tracking-widest drop-shadow-[0_0_5px_rgba(0,0,0,0.8)]">ADMIN</h2>
+<div class="w-16 h-px bg-cyan-500/50 my-1"></div>
+<span class="text-cyan-400 text-[10px] font-bold uppercase tracking-wider">Control Tower &amp;<br/>Innovation Hub</span>
+</div>
+</div>
+<div class="absolute -top-16 -left-20 pointer-events-auto">
+<div class="w-32 p-2 bg-slate-900/90 border border-blue-500/60 node-glow-blue rounded-lg text-center flex flex-col items-center gap-1">
+<span class="material-icons-outlined text-blue-400 text-2xl">inventory_2</span>
+<div class="text-blue-100 text-[10px] font-bold uppercase tracking-wider">INVENTORIES</div>
+</div>
+</div>
+<div class="absolute top-16 -left-40 pointer-events-auto">
+<div class="w-32 p-2 bg-slate-900/90 border border-blue-500/60 node-glow-blue rounded-lg text-center flex flex-col items-center gap-1">
+<span class="material-icons-outlined text-blue-400 text-2xl">handshake</span>
+<div class="text-blue-100 text-[10px] font-bold uppercase tracking-wider">ALLIANCES &amp;<br/>COLLABS</div>
+</div>
+</div>
+</div>
+<div class="absolute left-[680px] top-[700px] -translate-x-1/2 flex justify-center gap-8 z-10 pointer-events-none">
+<div class="flex flex-col items-center pointer-events-auto group">
+<div class="w-24 h-24 rounded-full border-2 border-blue-500 bg-slate-900/95 flex flex-col items-center justify-center shadow-[0_0_20px_rgba(59,130,246,0.5)] group-hover:shadow-[0_0_30px_#3b82f6] transition-all cursor-pointer relative overflow-hidden">
+<div class="absolute inset-0 bg-gradient-to-b from-blue-900/20 to-transparent"></div>
+<span class="material-icons-outlined text-blue-300 text-3xl mb-1 drop-shadow-md">person</span>
+<span class="text-[9px] text-blue-100 font-bold text-center leading-tight tracking-wider uppercase">LEAD<br/>PRODUCER</span>
+</div>
+</div>
+<div class="flex flex-col items-center mt-12 pointer-events-auto group">
+<div class="w-24 h-24 rounded-full border-2 border-blue-500 bg-slate-900/95 flex flex-col items-center justify-center shadow-[0_0_20px_rgba(59,130,246,0.5)] group-hover:shadow-[0_0_30px_#3b82f6] transition-all cursor-pointer relative overflow-hidden">
+<div class="absolute inset-0 bg-gradient-to-b from-blue-900/20 to-transparent"></div>
+<span class="material-icons-outlined text-blue-300 text-3xl mb-1 drop-shadow-md">groups</span>
+<span class="text-[9px] text-blue-100 font-bold text-center leading-tight tracking-wider uppercase">TEAM<br/>MGMT</span>
+</div>
+</div>
+<div class="flex flex-col items-center pointer-events-auto group">
+<div class="w-24 h-24 rounded-full border-2 border-blue-500 bg-slate-900/95 flex flex-col items-center justify-center shadow-[0_0_20px_rgba(59,130,246,0.5)] group-hover:shadow-[0_0_30px_#3b82f6] transition-all cursor-pointer relative overflow-hidden">
+<div class="absolute inset-0 bg-gradient-to-b from-blue-900/20 to-transparent"></div>
+<span class="material-icons-outlined text-blue-300 text-3xl mb-1 drop-shadow-md">brush</span>
+<span class="text-[9px] text-blue-100 font-bold text-center leading-tight tracking-wider uppercase">LEAD<br/>DESIGNER</span>
+</div>
+</div>
+</div>
+<div class="absolute left-[1050px] top-[150px] z-10">
+<div class="grid grid-cols-2 gap-16">
+<div class="flex flex-col items-center">
+<div class="w-40 bg-slate-900/90 border border-green-400 node-glow-green rounded-lg overflow-hidden text-center group cursor-pointer hover:scale-105 transition-transform">
+<div class="h-20 bg-gradient-to-b from-green-900/40 to-transparent flex items-center justify-center">
+<span class="material-icons-outlined text-green-400 text-4xl drop-shadow-[0_0_5px_#4ade80]">draw</span>
+</div>
+<div class="p-2 border-t border-green-500/30">
+<div class="text-green-100 text-xs font-bold tracking-wider uppercase">ART &amp; DESIGN<br/>WORKSHOPS</div>
+</div>
+</div>
+<div class="h-12 w-px bg-green-500/50"></div>
+<div class="w-10 h-10 rounded-full bg-slate-900 border border-green-400 flex items-center justify-center shadow-[0_0_10px_green]">
+<span class="material-icons-outlined text-green-300 text-sm">add</span>
+</div>
+</div>
+<div class="flex flex-col items-center pt-16">
+<div class="w-40 bg-slate-900/90 border border-green-400 node-glow-green rounded-lg overflow-hidden text-center group cursor-pointer hover:scale-105 transition-transform">
+<div class="h-20 bg-gradient-to-b from-green-900/40 to-transparent flex items-center justify-center">
+<span class="material-icons-outlined text-green-400 text-4xl drop-shadow-[0_0_5px_#4ade80]">school</span>
+</div>
+<div class="p-2 border-t border-green-500/30">
+<div class="text-green-100 text-xs font-bold tracking-wider uppercase">TEACHING AT<br/>SCHOOLS</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="absolute left-[1350px] top-[500px] z-20 -translate-x-1/2 -translate-y-1/2">
+<div class="relative w-40 h-40 rounded-full border-4 border-yellow-500 bg-gradient-to-br from-yellow-900 via-orange-900 to-slate-900 flex items-center justify-center shadow-[0_0_60px_rgba(234,179,8,0.6)] z-20 group cursor-pointer">
+<div class="absolute inset-0 rounded-full border border-yellow-300/30 animate-pulse"></div>
+<span class="material-icons-outlined text-7xl text-yellow-400 drop-shadow-[0_0_10px_rgba(250,204,21,0.8)]">$</span>
+</div>
+<div class="absolute top-[170px] left-1/2 -translate-x-1/2 w-48 text-center">
+<span class="text-yellow-500 font-bold uppercase tracking-[0.2em] text-lg drop-shadow-lg shadow-black">Exchange Hub</span>
+</div>
+<div class="absolute -top-[160px] left-[100px]">
+<div class="w-32 p-2 bg-orange-950/80 border border-orange-500 node-glow-orange rounded-lg text-center transform rotate-12 hover:rotate-0 transition-transform cursor-pointer">
+<span class="material-icons-outlined text-orange-400 text-2xl mb-1">confirmation_number</span>
+<div class="text-orange-100 text-[10px] font-bold uppercase tracking-wider">STICKER<br/>NETWORK</div>
+</div>
+</div>
+<div class="absolute top-[0px] left-[200px]">
+<div class="w-32 p-2 bg-orange-950/80 border border-orange-500 node-glow-orange rounded-lg text-center hover:scale-110 transition-transform cursor-pointer">
+<span class="material-icons-outlined text-orange-400 text-2xl mb-1">storefront</span>
+<div class="text-orange-100 text-[10px] font-bold uppercase tracking-wider">STORE</div>
+</div>
+</div>
+<div class="absolute top-[160px] left-[160px]">
+<div class="w-32 p-2 bg-orange-950/80 border border-orange-500 node-glow-orange rounded-lg text-center transform -rotate-6 hover:rotate-0 transition-transform cursor-pointer">
+<span class="material-icons-outlined text-orange-400 text-2xl mb-1">museum</span>
+<div class="text-orange-100 text-[10px] font-bold uppercase tracking-wider">ART GALLERY</div>
+</div>
+</div>
+<div class="absolute top-[200px] -left-[50px]">
+<div class="flex flex-col items-center gap-2">
+<div class="w-20 h-20 rounded-full border-2 border-yellow-500 bg-slate-900 flex flex-col items-center justify-center shadow-[0_0_20px_rgba(234,179,8,0.5)] cursor-pointer hover:shadow-[0_0_30px_#eab308] transition-shadow">
+<span class="material-icons-outlined text-yellow-400 text-3xl">token</span>
+</div>
+<div class="text-center text-yellow-500 text-xs font-bold tracking-wider">NFTs</div>
+</div>
+</div>
+</div>
+<div class="absolute top-[350px] left-[900px] text-teal-500/60 text-[10px] font-mono tracking-widest pointer-events-none select-none">
+                    // ECOSYSTEM_v4.2<br/>
+                    // CONNECTION_STABLE<br/>
+                    // SYNC_RATE: 99.9%
+                </div>
+</div>
+</main>
+<div class="absolute bottom-8 right-8 flex flex-col gap-2 z-50">
+<button class="w-12 h-12 bg-slate-800 border border-slate-600 rounded-lg flex items-center justify-center text-white hover:bg-primary hover:text-black hover:border-primary transition-all shadow-lg hover:shadow-[0_0_15px_cyan]">
+<span class="material-icons-outlined">add</span>
+</button>
+<div class="w-12 h-12 bg-slate-900/90 backdrop-blur border border-slate-600 rounded-lg flex items-center justify-center text-xs text-slate-300 font-mono font-bold shadow-lg">
+                85%
+            </div>
+<button class="w-12 h-12 bg-slate-800 border border-slate-600 rounded-lg flex items-center justify-center text-white hover:bg-primary hover:text-black hover:border-primary transition-all shadow-lg hover:shadow-[0_0_15px_cyan]">
+<span class="material-icons-outlined">remove</span>
+</button>
+</div>
+<div class="absolute top-24 left-6 w-16 flex flex-col gap-3 z-50">
+<div class="p-2 bg-slate-900/80 backdrop-blur-md border border-slate-700/50 rounded-xl shadow-2xl flex flex-col gap-3 items-center">
+<button class="w-10 h-10 rounded-lg bg-primary/10 text-primary border border-primary/50 hover:bg-primary hover:text-black transition-all flex items-center justify-center shadow-[0_0_10px_rgba(0,240,255,0.2)]" title="Select Tool">
+<span class="material-icons-outlined">near_me</span>
+</button>
+<button class="w-10 h-10 rounded-lg hover:bg-slate-700 text-slate-400 transition-colors flex items-center justify-center" title="Add Node">
+<span class="material-icons-outlined">add_box</span>
+</button>
+<button class="w-10 h-10 rounded-lg hover:bg-slate-700 text-slate-400 transition-colors flex items-center justify-center" title="Connect">
+<span class="material-icons-outlined">timeline</span>
+</button>
+<button class="w-10 h-10 rounded-lg hover:bg-slate-700 text-slate-400 transition-colors flex items-center justify-center" title="Group">
+<span class="material-icons-outlined">category</span>
+</button>
+<div class="h-px w-8 bg-slate-700"></div>
+<button class="w-10 h-10 rounded-lg hover:bg-slate-700 text-slate-400 transition-colors flex items-center justify-center" title="Settings">
+<span class="material-icons-outlined">settings</span>
+</button>
+</div>
+</div>
+<div class="absolute top-24 right-6 w-72 bg-slate-900/90 backdrop-blur-md border border-slate-700/50 rounded-xl shadow-2xl p-5 hidden lg:block z-50">
+<h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Node Properties</h3>
+<div class="space-y-5">
+<div>
+<label class="text-[10px] text-slate-500 uppercase tracking-wider block mb-1.5">Node Type</label>
+<div class="relative">
+<select class="w-full bg-slate-800 border border-slate-600 text-slate-200 text-sm rounded-lg px-3 py-2 focus:ring-primary focus:border-primary appearance-none">
+<option>Process Hub</option>
+<option>Standard Node</option>
+<option>Resource Input</option>
+</select>
+<span class="material-icons-outlined absolute right-2 top-2 text-slate-500 pointer-events-none text-lg">expand_more</span>
+</div>
+</div>
+<div>
+<label class="text-[10px] text-slate-500 uppercase tracking-wider block mb-1.5">Label</label>
+<input class="w-full bg-slate-800 border border-slate-600 text-slate-200 text-sm rounded-lg px-3 py-2 focus:ring-primary focus:border-primary placeholder-slate-600" type="text" value="ADMIN HUB"/>
+</div>
+<div>
+<label class="text-[10px] text-slate-500 uppercase tracking-wider block mb-2">Glow Color</label>
+<div class="flex gap-3">
+<div class="w-8 h-8 rounded-full bg-cyan-500 shadow-[0_0_10px_cyan] border-2 border-white cursor-pointer ring-2 ring-cyan-500/30 transition-transform hover:scale-110"></div>
+<div class="w-8 h-8 rounded-full bg-green-500 shadow-[0_0_5px_green] border border-slate-600 cursor-pointer opacity-50 hover:opacity-100 hover:shadow-[0_0_10px_green] transition-all"></div>
+<div class="w-8 h-8 rounded-full bg-orange-500 shadow-[0_0_5px_orange] border border-slate-600 cursor-pointer opacity-50 hover:opacity-100 hover:shadow-[0_0_10px_orange] transition-all"></div>
+<div class="w-8 h-8 rounded-full bg-purple-500 shadow-[0_0_5px_purple] border border-slate-600 cursor-pointer opacity-50 hover:opacity-100 hover:shadow-[0_0_10px_purple] transition-all"></div>
+</div>
+</div>
+<div class="pt-4 border-t border-slate-800">
+<div class="flex items-center justify-between text-xs text-slate-400">
+<span>Connections</span>
+<span class="bg-slate-800 px-2 py-0.5 rounded text-white font-mono">4</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</body></html>
