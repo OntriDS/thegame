@@ -8,7 +8,7 @@ export const Sidebar = () => {
 
     return (
         <aside className="w-16 border-r border-white/10 bg-[#0a0a0a]/80 backdrop-blur-md z-50 flex flex-col items-center py-6 gap-6 h-full">
-            <div className="w-10 h-10 bg-cyan-500/20 text-cyan-400 rounded-lg flex items-center justify-center border border-cyan-500/50 shadow-[0_0_15px_rgba(6,182,212,0.3)]">
+            <div className="w-10 h-10 bg-cyan-500/20 text-cyan-400 rounded-lg flex items-center justify-center border border-cyan-500/50 shadow-[0_0_15px_rgba(6,182,212,0.3)] cursor-default" title="Diagram Builder">
                 <Box size={24} />
             </div>
 

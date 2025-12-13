@@ -64,7 +64,7 @@ const getEdgeStyle = (color: string) => ({
 let id = 0;
 const getId = () => `dndnode_${id++}`;
 
-const DiagramCanvasContent = () => {
+const DiagramCanvasContent = ({ onNodeSelect }: { onNodeSelect?: (node: Node | null) => void }) => {
     const reactFlowWrapper = useRef<HTMLDivElement>(null);
     const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
     const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
@@ -79,6 +79,13 @@ const DiagramCanvasContent = () => {
         event.preventDefault();
         event.dataTransfer.dropEffect = 'move';
     }, []);
+
+    // Handle selection changes
+    const onSelectionChange = useCallback(({ nodes }: { nodes: Node[] }) => {
+        if (onNodeSelect) {
+            onNodeSelect(nodes.length > 0 ? nodes[0] : null);
+        }
+    }, [onNodeSelect]);
 
     const onDrop = useCallback(
         (event: React.DragEvent) => {
@@ -100,7 +107,7 @@ const DiagramCanvasContent = () => {
                 id: getId(),
                 type: 'custom',
                 position,
-                data: { label: `${type} Node`, type: type },
+                data: { label: `New ${type} Node`, type: type },
             };
 
             setNodes((nds) => nds.concat(newNode));
@@ -119,6 +126,7 @@ const DiagramCanvasContent = () => {
                 onInit={setReactFlowInstance}
                 onDrop={onDrop}
                 onDragOver={onDragOver}
+                onSelectionChange={onSelectionChange}
                 nodeTypes={nodeTypes}
                 defaultEdgeOptions={defaultEdgeOptions}
                 connectionMode={ConnectionMode.Loose}
@@ -144,8 +152,8 @@ const DiagramCanvasContent = () => {
     );
 };
 
-export const DiagramCanvas = () => (
+export const DiagramCanvas = ({ onNodeSelect }: { onNodeSelect?: (node: Node | null) => void }) => (
     <ReactFlowProvider>
-        <DiagramCanvasContent />
+        <DiagramCanvasContent onNodeSelect={onNodeSelect} />
     </ReactFlowProvider>
 );
