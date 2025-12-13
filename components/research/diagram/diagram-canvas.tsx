@@ -1,4 +1,6 @@
-import { useCallback, useRef, useState } from 'react';
+'use client';
+
+import { useCallback, useRef, useState, DragEvent } from 'react';
 import ReactFlow, {
     Background,
     Controls,
@@ -75,7 +77,8 @@ const DiagramCanvasContent = ({ onNodeSelect }: { onNodeSelect?: (node: Node | n
         [],
     );
 
-    const onDragOver = useCallback((event: React.DragEvent) => {
+
+    const onDragOver = useCallback((event: DragEvent) => {
         event.preventDefault();
         event.dataTransfer.dropEffect = 'move';
     }, []);
@@ -88,8 +91,10 @@ const DiagramCanvasContent = ({ onNodeSelect }: { onNodeSelect?: (node: Node | n
     }, [onNodeSelect]);
 
     const onDrop = useCallback(
-        (event: React.DragEvent) => {
+        (event: DragEvent) => {
             event.preventDefault();
+
+            if (!reactFlowInstance) return;
 
             const type = event.dataTransfer.getData('application/reactflow');
 
@@ -140,7 +145,7 @@ const DiagramCanvasContent = ({ onNodeSelect }: { onNodeSelect?: (node: Node | n
                     style={{ opacity: 0.03 }}
                 />
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,#050505_100%)] pointer-events-none" />
-                <Controls className="bg-black/50 border border-white/10 text-black fill-black [&>button]:!border-white/10 [&>button:hover]:!bg-white/10" />
+                <Controls className="bg-black/50 border border-white/10 !fill-white [&>button]:!bg-black/80 [&>button]:!border-white/20 [&>button:hover]:!bg-white/20 [&>button]:!fill-white [&>button_path]:!fill-white" />
             </ReactFlow>
 
             {/* FLOATING HUD INFO - Ported from Stitch */}
@@ -152,8 +157,6 @@ const DiagramCanvasContent = ({ onNodeSelect }: { onNodeSelect?: (node: Node | n
     );
 };
 
-export const DiagramCanvas = ({ onNodeSelect }: { onNodeSelect?: (node: Node | null) => void }) => (
-    <ReactFlowProvider>
-        <DiagramCanvasContent onNodeSelect={onNodeSelect} />
-    </ReactFlowProvider>
-);
+export const DiagramCanvas = ({ onNodeSelect }: { onNodeSelect?: (node: Node | null) => void }) => {
+    return <DiagramCanvasContent onNodeSelect={onNodeSelect} />;
+};

@@ -1,3 +1,6 @@
+'use client';
+
+import React from 'react';
 import { Box, MousePointer2, Plus, Share2, Search, Cpu, Layout, ShoppingCart, Zap } from 'lucide-react';
 
 export const Sidebar = () => {

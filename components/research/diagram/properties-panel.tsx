@@ -1,3 +1,5 @@
+'use client';
+
 import { useState, useEffect } from 'react';
 import { useReactFlow, Node } from 'reactflow';
 import { Settings, MousePointer2 } from 'lucide-react';
