@@ -261,12 +261,13 @@ export default function SalesModal({
 
       // Reset init guard when editing
       didInitRef.current = false;
-    } else if (!didInitRef.current) {
-      // New sale - initialize once only (don't reset again while user edits)
-      didInitRef.current = true;
+    } else {
+      // New sale - always reset form when sale is null/undefined
       resetForm();
       // Initialize player character for new sale
       setPlayerCharacterId(PLAYER_ONE_ID);
+      // Mark as initialized
+      didInitRef.current = true;
     }
   }, [sale]);
 
