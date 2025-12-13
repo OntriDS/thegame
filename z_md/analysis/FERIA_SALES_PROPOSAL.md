@@ -1,82 +1,92 @@
-# Feria Sales System Proposal
+# Booth Sales & Partnerships: Architecture Plan V2
 
-## 1. Objective
-Digitize the current Excel-based "Feria" sales management system into the `SalesModal` while maintaining the flexibility of the current workflow and adding the benefits of integrated inventory tracking.
+## 1. Core Terminology Updates
 
-## 2. Core Concepts
-The Feria Sale is unique because it involves:
-1.  **Shared Booth**: Two sellers (Akiles & Partner/O2) sharing one space.
-2.  **Cross-Commission**: 
-    - Akiles earns 75% on his items (Partner keeps 25%).
-    - Partner earns 75% on her items (Akiles keeps 25%).
-3.  **Complex Settlement**: Needs to calculate payouts in multiple currencies (Colones, USD, BTC) and account for shared expenses (Booth Cost) and delayed payments (Card Sales).
-4.  **Inventory Impact**: Needs to deduct sold items from Akiles' inventory (and optionally track Partner's sales).
+We are shifting terminology to be precise and avoid collision with existing entities.
 
-## 3. UI Proposal
-When `SaleType.FERIA` is selected in the `SalesModal`, the UI will transform into a specialized **Feria Dashboard** with three main sections:
+| Old Term | **New Term** | Reason |
+| :--- | :--- | :--- |
+| Feria Sales | **Booth Sales** | Cleaner, more professional naming. |
+| Settlement (in this context) | **Sales Distribution** | "Settlement" is already a distinct Financial Entity. This is just a calculation of splits. |
+| Partner | **Associate** | More formal role definition. |
+| Dashboard | **Sales View** | It's not a dashboard, it's a specific Sales Interface. |
 
-### Section A: Setup (Top Bar)
-- **Booth Cost (Puesto)**: Input field (e.g., -20,000 colones).
-- **Exchange Rate**: Auto-filled or manual override (e.g., 500).
-- **Date**: Standard date picker.
-- **Site**: Auto-selected to "Feria Sales" (or specific Feria location).
+---
 
-### Section B: The "Cart" (Inventory Input)
-Instead of just entering totals, we will use an **Item-Based Input** to ensure inventory accuracy.
-- **Mode 1: Detailed Item Entry** (For Akiles' stock)
-    - "Add Item" button -> Search & Select specific products (Stickers, Prints, etc.).
-    - System automatically categorizes them into rows based on `ItemType`.
-- **Mode 2: Quick/Partner Entry** (For O2/Partner stock)
-    - "Add Partner Sale" button.
-    - Fields: `Amount`, `Currency`, `Category` (e.g., "O2 Jewelry"), `Description`.
-    - This allows recording Maria's sales without needing to upload her entire inventory database first.
+## 2. The New Architecture: Finance Infra-Entities
 
-### Section C: Settlement Matrix (The "Excel" View)
-A dynamic table that updates in real-time as items are added.
-- **Rows**:
-    - *Auto-generated from Cart items*: Artwork/Prints, Stickers, Merch.
-    - *Partner Rows*: O2 (aggregated from Quick Entry).
-- **Columns**:
-    - **Total C** (Colones Cash)
-    - **Total $** (USD Cash)
-    - **Total Bit** (BTC)
-    - **Card (Tarjeta)** (Tracked separately as it's not cash-in-hand yet).
-    - **Splits**: Columns showing the calculated 75% / 25% distribution.
-- **Summary Footer**:
-    - **Maria's Total Payout**: (Her 75% + Her 25% commission) - (Share of Expenses?).
-    - **Akiles' Net Income**: (His 75% + His 25% commission) - (Share of Expenses?).
-    - **Cash Reconciliation**: "Expected Cash in Box" vs "Actual Cash" (optional inputs).
+We are avoiding the "Links System" for this core logic to keep it robust and explicit. We will introduce **Infra-Entities** under the **Finances** domain.
 
-## 4. Logic & Calculations
-The system will run a `FeriaSettlementEngine` on every render:
+### 🏛 New Entity: `LegalEntity` (Finance Infra)
+Represents the "Business Identity" of a person or organizations.
+*   **Purpose**: To separate the *Persona* (Character) from the *Business* (Tax/Legal).
+*   **Connections**:
+    *   Linked to a **Site** (e.g., "Ecosystem").
+    *   Linked to a **Character** (e.g., Akiles/Founder).
+*   **Example 1**: `Ecosystem` (Legal Entity) ↔ `HQ` (Site) ↔ `Akiles` (Character).
+*   **Example 2**: `O2 Jewelry` (Legal Entity) ↔ `Maria` (Character).
 
-1.  **Group Items**:
-    - Iterate through all selected `SaleLine`s.
-    - Group by `Owner` (Akiles vs Partner). *Note: We need a way to flag "Partner Items".*
-    - Sub-group by `Category` (Stickers, Prints, etc.).
+### 📜 New Entity: `LegalEntity` (Character Infra)
+Represents the tax/legal identity of a connect (Company, Individual, DAO).
+*   **Type**: Character Infra-Entity.
+*   **Links**: Linked to a `Character` (the persona) and/or `Site` (the HQ).
 
-2.  **Calculate Wrappers**:
-    - `Gross Sales` per currency.
-    - `Commission` = Gross * 0.25.
-    - `Owner Share` = Gross * 0.75.
+### 📜 New Entity: `Contract` (Finance Infra)
+Represents the formal agreement between two `LegalEntities`.
+*   **Type**: Finance Infra-Entity.
+*   **Parties**:
+    *   **Principal**: The Company (me).
+    *   **Counterparty**: The Associate (her).
+*   **Terms (Clauses & Sliding Bars)**:
+    *   Defines specific rules for different categories (e.g., "Jewelry", "Stickers", "Booth Fee").
+    *   Each clause has a "Sliding Bar" split (Company vs Associate).
+    *   **Example 1**: "Commission" -> 75% Us / 25% Them. // They Sell our Products
+    *   **Example 2**: "Commission" -> 25% Us / 75% Them. // We Sell their Products
+    *   **Example 3**: "Booth Expenses" -> 50% Us / 50% Them.
 
-3.  **Expense Logic (Open Question)**:
-    - How is the "Booth Cost" (-20,000) treated?
-    - *Option A*: Split 50/50?
-    - *Option B*: Proportional to sales?
-    - *Option C*: Paid by one person, and the other reimburses half?
-    - **Current Assumption**: It's deducted from the "Cash Box" total before the split, or deducted from the Payouts. (Need User Clarification).
+---
 
-## 5. Implementation Steps
-1.  **Partner Identity**: Add a simple toggle or "Owner" field to `SaleLine` (or assume specific Categories = Partner). *Proposal: Add "Is Partner Item?" toggle in the Item Submodal for Feria sales.*
-2.  **UI Construction**: Build the Grid Layout in `sales-modal.tsx`.
-3.  **State Management**: Create a `feriaState` object to hold the matrix values.
-4.  **Backend Adaptation**:
-    - Ensure `Sale` entity saves the *Aggregate* results (for Financial Records).
-    - But keeps `SaleLines` intact (for Inventory tracking).
-    - Logic to create the "Commission" financial records automatically upon save.
+## 3. The Workflow: "Booth Sales"
 
-## 6. Questions for User
-1.  **O2 Items**: Do you want to track individual Jewelry pieces (Inventory) or just enter "Sold 50,000 in Jewelry" (Value)?
-2.  **Booth Expense**: How exactly do you split the booth cost? (50/50, or does one person pay it all?)
-3.  **Card Sales**: When a customer pays by Card, does the money go to *your* bank account or *hers*? (This affects who owes whom). 
+### Step 1: Configuration (The Setup)
+*   User goes to `Finances > Partnerships` (New Tab).
+*   Creates **Legal Entities** if they don't exist.
+*   Creates a **Contract** linking *My Entity* and *Associate's Entity*.
+*   Defines the **Split Rules** in the Contract.
+
+### Step 2: operational Flow (The Sale)
+1.  **Open Booth Sales**: The user opens the specialized Sales View.
+2.  **Select Associate**: User selects "Maria" (filtered by Associate Badge).
+3.  **System Action**:
+    *   Finds the active `Contract` between Me and Maria.
+    *   Loads the Terms (75/25 & 25/75).
+4.  **Entry & Calculation**:
+    *   User enters "Associate Item" (e.g., Jewelry).
+    *   System applies **Associate Product Rule**: 75% to Maria, 25% to Me.
+    *   User enters "My Item" (sold by her).
+    *   System applies **Principal Product Rule**: 75% to Me, 25% to Maria.
+5.  **Finalize**:
+    *   The "Distribution" is shown (not "Settlement").
+    *   User confirms.
+    *   System generates:
+        *   `Sale` entity (for the transaction).
+        *   `FinancialRecords` (if immediate payment).
+        *   Updates Inventory.
+
+---
+
+## 4. Implementation Stages
+
+### Phase A: Architecture & Data Modeling (The Foundation)
+1.  **Legal Entity**: Define the model and "Manage Legal Entities" UI.
+2.  **Contract**: Define the `Contract` model and "Partnerships" UI.
+3.  **Migration**: Ensure existing Characters (Akiles, Maria) are linked to these new structures.
+
+### Phase B: Booth Sales UI Refactor
+1.  **Rename**: `FeriaSalesDashboard` -> `BoothSalesView`.
+2.  **Logic Swap**: Replace `settlementMatrix` with `SalesDistributionMatrix`.
+3.  **Integration**: precise "Associate Selector" that only shows Characters with active Contracts.
+
+### Phase C: Polish
+1.  **Card UI**: Update the "Quick Entry" card to be cleaner (remove "Description" focus, make it fast).
+2.  **Visuals**: Remove unrealistic "My Share/Your Share" headers if they don't match the selected Contract mode.

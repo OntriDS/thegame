@@ -25,6 +25,9 @@ import {
   FinancialStatus,
   LinkType,
   EntityType,
+  LegalEntityType,
+  ContractStatus,
+  ContractClauseType,
 } from './enums';
 import { getCompanyAreas, getPersonalAreas } from '@/lib/utils/business-structure-utils';
 import type { Area, Station, SubItemType } from './type-aliases';
@@ -117,9 +120,9 @@ export interface SystemSiteMetadata extends BaseSiteMetadata {
   systemType: SystemSiteType;
 }
 
-export type SiteMetadata = 
-  | PhysicalSiteMetadata 
-  | DigitalSiteMetadata 
+export type SiteMetadata =
+  | PhysicalSiteMetadata
+  | DigitalSiteMetadata
   | SystemSiteMetadata;
 
 /** Site Entity - Core entity for all locations */
@@ -165,43 +168,43 @@ export interface Item extends BaseEntity {
   status: ItemStatus;
   station: Station;           // Primary work station (e.g., 'Strategy', 'Digital Art', 'Prints')
   stock: StockPoint[];          // multiple sites - SINGLE SOURCE OF TRUTH
-  
+
   // Physical dimensions (for physical items)
   dimensions?: {
     width: number;              // width in cm
     height: number;             // height in cm
     area: number;               // mt2 calculation
   };
-  
+
   // Size field (for items like shoes, t-shirts, etc.)
   size?: string;                // e.g., "7.5", "M", "XL", "38.5"
-  
+
   // Financial fields
   unitCost: number;             // purchase cost per unit (calculated from task)
   additionalCost: number;       // additional selling costs (commission, booth rental, etc.)
   price: number;                // target selling price
   value: number;                // actual sale price (0 if not sold)
   restockable?: boolean;        // whether item should be reordered when depleted (defaults by ItemType)
-  
+
   // Inventory tracking - UNIFIED STOCK SYSTEM
   // totalQuantity = sum of all stock.quantity (computed property)
   quantitySold: number;         // quantity sold so far
   targetAmount?: number;        // target stock level (for stickers, materials, etc.)
-  
+
   // Bundle-specific fields (only used when category === BUNDLE_ITEM)
   itemsPerBundle?: number;           // how many individual items per bundle (e.g., 100 stickers per bundle)
   soldThisMonth?: number;            // monthly sales tracking for bundles
   lastRestockDate?: Date;            // last restock date for bundles
-  
+
   // Metadata
   year?: number;                // year of creation/purchase
   subItemType?: SubItemType;    // for merch: T-Shirt, Bag, Shoes, Rashguard, Sports Bra, T-Shirt AllOver
   imageUrl?: string;            // URL to item image/photo
-  
+
   // File attachments
   originalFiles?: FileReference[];
   accessoryFiles?: FileReference[];
-  
+
   // Ambassador Fields (Links System - references to other entities)
   sourceTaskId?: string | null;    // e.g. related to "Order Stickers"
   sourceRecordId?: string | null;  // e.g. related to "Buy Fan" record
@@ -266,12 +269,12 @@ export interface Task extends BaseEntity {
   siteId?: string | null;           // Site where work is done (optional)
   targetSiteId?: string | null;     // Target site/client (optional)
   sourceSaleId?: string | null;     // Sale that generated this task (for service sales)
-  
+
   // Emissary Fields (Conditional entity creation - pass to created entities)
   customerCharacterId?: string | null;  // Customer for service tasks - passed to created items
   playerCharacterId?: string | null;    // AMBASSADOR: Player character who owns this task
   newCustomerName?: string;             // EMISSARY: Name for new customer character creation
-  
+
   // Item output (DNA for RNA - creates TASK_ITEM links)
   outputItemType?: string;          // Type of item this task creates
   outputItemSubType?: SubItemType;  // SubType of item this task creates
@@ -296,7 +299,7 @@ export interface Task extends BaseEntity {
   isNotPaid?: boolean;              // Cost not paid yet (copied to FINREC via RNA)
   isNotCharged?: boolean;           // Revenue not received yet (copied to FINREC via RNA)
   rewards: Rewards;                 // Rewards DNA (copied to FINREC and distributed to Character/Player)
-  
+
   // Archive field
   isCollected: boolean;             // Task collected (monthly close)
 }
@@ -317,7 +320,7 @@ export interface FinancialRecord extends BaseEntity {
   station: Station;                 // Main area: ADMIN, DESIGN, PRODUCTION, SALES, PERSONAL
   type: 'company' | 'personal';
   outputItemId?: string | null;     // Reuse existing inventory item when present
-  
+
   // Ambassador Fields (Links System)
   siteId?: string | null;           // Site where financial activity occurred (optional)
   targetSiteId?: string | null;     // Target site/client (optional)
@@ -326,22 +329,22 @@ export interface FinancialRecord extends BaseEntity {
   sourceTaskId?: string | null;     // Task that generated this financial record (optional)
   sourceSaleId?: string | null;     // Sale that generated this financial record (optional)
   salesChannel?: Station | null;    // Sales channel station (for sales-derived records: 'Direct Sales', 'Network Sales', etc.)
-  
+
   // Emissary Fields
   newCustomerName?: string;         // EMISSARY: Name for new customer character creation
-  
+
   // Financial data - SOURCE OF TRUTH for accounting
   // These are the REAL values, copied from Task/Sale DNA via RNA
   cost: number;                     // negative cash impact (REAL accounting value)
   revenue: number;                  // positive cash impact (REAL accounting value)
   jungleCoins: number;              // Jungle Coins earned/spent (1 J$ = $10)
   notes?: string;                   // optional notes for the month
-  
+
   // Payment status - SOURCE OF TRUTH for payment tracking
   // Copied from Task/Sale via RNA, then managed here as the accounting reality
   isNotPaid?: boolean;              // Cost not paid yet - EXCLUDES from totals until paid
   isNotCharged?: boolean;           // Revenue not received yet - EXCLUDES from totals until received
-  
+
   // Character/Player rewards
   rewards?: {
     points?: {
@@ -351,7 +354,7 @@ export interface FinancialRecord extends BaseEntity {
       xp?: number;          // Experience Points
     };
   };
-  
+
   // Item output data (DNA for RNA - similar to Task)
   outputItemType?: string;
   outputItemSubType?: SubItemType;  // SubType of item this record creates
@@ -363,7 +366,7 @@ export interface FinancialRecord extends BaseEntity {
   isNewItem?: boolean;
   isSold?: boolean;                 // Whether the item is already sold
   outputItemStatus?: ItemStatus;    // Status of the item created
-  
+
   // Calculated fields
   netCashflow: number;              // revenue - cost
   jungleCoinsValue: number;         // jungleCoins * 10 (for display)
@@ -409,6 +412,58 @@ export interface FinancialDashboard {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// SECTION 5.1: FINANCE INFRA-ENTITIES (Contracts)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * A specific clause or rule within a contract (The "Sliding Bar").
+ * Defines a specific split for a category of items, services, or expenses.
+ */
+
+export interface ContractClause {
+  id: string;
+  type: ContractClauseType;
+
+  // Specificity (Optional)
+  itemCategory?: string;     // e.g. "Jewelry", "Stickers" (If null, applies to all in type)
+  description?: string;      // User defined label
+
+  // The Split (0.0 - 1.0)
+  companyShare: number;      // "Us" (Principal)
+  associateShare: number;    // "Them" (Associate)
+}
+
+/** 
+ * CONTRACT - The Agreement (Financial Instrument)
+ * Defines the business relationship via a list of Clauses.
+ */
+export interface Contract extends BaseEntity {
+  // Parties
+  principalLegalEntityId: string;    // Me / The Company
+  counterpartyLegalEntityId: string; // The Associate / Partner
+
+  // Status & Lifecycle
+  status: ContractStatus;
+  validFrom: Date;
+  validTo?: Date;
+
+  // The "Real World" Terms: A list of specific agreements
+  clauses: ContractClause[];
+
+  // Metadata
+  isExclusive?: boolean;
+  notes?: string;
+}
+
+
+
+
+
+
+
+
+
+// ═══════════════════════════════════════════════════════════════════════════
 // SECTION 6: SALES ENTITIES
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -425,7 +480,7 @@ export interface Payment {
   currency: Currency;
   receivedAt?: Date;       // when payment was actually received
   notes?: string;          // payment notes
-  
+
   // Exchange payment specific fields (when method = EXCHANGE)
   exchangeDescription?: string;  // What was exchanged for (e.g., "Rent for 3 months")
   exchangeCategory?: string;     // Financial category for the cost record (e.g., "Rent", "Materials")
@@ -466,7 +521,7 @@ export interface ServiceLine extends SaleLineBase {
   station: Station;        // Design/Production/etc.
   revenue: number;
   createTask?: boolean;    // creates a basic Task if true
-  
+
   // Task creation fields (from mini-submodals)
   taskId?: string;         // existing task to link to
   taskType?: TaskType;     // task type
@@ -480,7 +535,7 @@ export interface ServiceLine extends SaleLineBase {
     xp: number;
   };
   taskCost?: number;       // task cost
-  
+
   // Item creation fields (for task output)
   outputItemType?: ItemType;
   outputItemSubType?: SubItemType;
@@ -503,14 +558,14 @@ export interface Sale extends BaseEntity {
   saleDate: Date;                // business date of the sale (immutable once set)
   type: SaleType;
   status: SaleStatus;
-  
+
   // Ambassador Fields (Links System)
   siteId: string;                   // Site where sale occurred
   counterpartyName?: string;        // client/store/partner name
   customerId?: string | null;       // Character who is the customer (for tracking purchases)
   playerCharacterId?: string | null; // Player character who owns this sale
   salesChannel?: Station | null;    // Sales channel station (e.g., 'Direct Sales', 'Network Sales', 'Feria Sales')
-  
+
   // Emissary Fields
   newCustomerName?: string;         // EMISSARY: Name for new customer character creation
 
@@ -547,11 +602,14 @@ export interface Sale extends BaseEntity {
   restockTaskId?: string;
   createdTaskId?: string;        // when sale spawns a Task (e.g., mural)
   sourceTaskId?: string | null;  // AMBASSADOR: Task that created/spawned this sale
-  
+
   // Archive field
   isCollected: boolean;          // Sale collected (monthly close)
   collectedAt?: Date;            // When sale was collected/archive-ready
 }
+
+
+
 
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -603,12 +661,12 @@ export interface Relationship {
 export interface Player extends BaseEntity {
   // 1. IDENTITY & AUTHENTICATION (Ambassador Field)
   accountId?: string | null;     // 🏛️ AMBASSADOR FIELD (links to Account entity) - V0.1: optional, Future: required
-  
+
   // NOTE: V0.1 TEMPORARY - Current auth system (not connected to Account entity yet)
   email: string;                 // Temporary placeholder (will be removed when Account storage implemented)
   passwordHash: string;          // Temporary placeholder (will be removed when Account storage implemented)
   sessionToken?: string;         // Temporary placeholder (will be removed when Account storage implemented)
-  
+
   // 2. PROGRESSION & REWARDS - Earned from business activities
   level: number;                 // Player level (starts at 0)
   totalPoints: {                 // Aggregate of all earned points (tracks overall progress)
@@ -624,25 +682,25 @@ export interface Player extends BaseEntity {
     xp: number;
   };
   // J$ is stored in FinancialRecord ledger via PLAYER_FINREC links, not on Player entity
-  
+
   // 3. RPG STATS - NOT YET IMPLEMENTED (V0.1 placeholders)
   skills?: PlayerSkillsMap;              // { DESIGN_THINKING: 9, PROGRAMMING: 4, ... } - V0.2
   intellectualFunctions?: PlayerIntellectualMap;  // { CREATIVITY: 8, PLANNING: 9, ... } - V0.2
   attributes?: PlayerAttributesMap;      // { CHARISMA: 5, LOGIC: 9, ... } - V0.2
-  
+
   // 4. CHARACTER MANAGEMENT - One-to-many relationship (Ambassador Fields)
   characterIds: string[];        // 🏛️ Characters linked to this player
-  
+
   // 5. ACHIEVEMENTS - Player-specific accomplishments (real-life milestones)
   achievementsPlayer: string[];   // Player progression badges and rewards/achievements tree
-  
+
   // 6. LIFECYCLE & METRICS
   lastActiveAt: Date;
   totalTasksCompleted: number;
   totalSalesCompleted: number;
   totalItemsSold: number;        // Total items sold (business metric)
   metrics?: PlayerMetrics;       // optional performance metrics
-  
+
   // Archive field
   isActive: boolean;             // Player is active in the system
 }
@@ -676,44 +734,65 @@ export interface Player extends BaseEntity {
  */
 export interface Character extends BaseEntity {
   // 1. Character: name (nickname/display name) + id inherited from BaseEntity
-  
+
   // 2. IDENTITY & AUTHENTICATION
   accountId?: string | null;     // 🏛️ AMBASSADOR FIELD (links to Account entity) - V0.1: optional, Future: preferred
-  
+
   // 3. ROLES - Core: defines WHO they are to the system AND Player
   roles: CharacterRole[];    // [PLAYER, FOUNDER, CUSTOMER, FAMILY, TEAM, etc.]
-  
+
   // 4. CONTACT INFORMATION (MIGRATION NOTE: Moving to Account entity)
   description?: string;          // short description/notes (already in BaseEntity, kept for clarity)
   contactPhone?: string;         // phone number - V0.1: Still here, Future: Remove (use Account.phone)
   contactEmail?: string;         // email address - V0.1: Still here, Future: Remove (use Account.email)
-  
+
   // 5. COMM COLOR - Communication style (KEY!)
   commColor?: CommColor;         // How to communicate with this person - ESSENTIAL for interaction!
-  
+
   // 6. CHARACTER PROGRESSION - Character-specific metrics (NOT Player points)
   CP?: number;                            // Character Points - character-specific points
   achievementsCharacter: string[];        // Character-specific achievements tree (different from Player achievements)
-  
+
   // 7. BUSINESS METRICS
   // J$ is stored in FinancialRecord ledger via CHARACTER_FINREC links, not on Character entity
   purchasedAmount: number;       // What they've bought from the business (CUSTOMER role)
   inventory: string[];           // Item IDs they own/possess
-  
+
   // 8. RELATIONSHIPS (Ambassador Fields - Links System)
   playerId: string;              // 🏛️ Links to Player who manages this character - REQUIRED
   siteId?: string | null;        // AMBASSADOR: Character's home site or primary work location
-  
+
   // 9. SOCIAL GRAPH - V0.2
   relationships?: Relationship[];  // connections to other Characters
-  
+
   // 10. LIFECYCLE & METRICS
   lastActiveAt: Date;
-  
+
   // Archive field
   isActive: boolean;             // Character is active in the system
-  
+
   // Links System inherited from BaseEntity
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SECTION 7.1: CHARACTER INFRA-ENTITIES (Legal Entities)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * LEGAL ENTITY - The "Business Identity" (Persona Layer)
+ * 
+ * Separates the Persona (Character) from the Business (Tax/Legal).
+ * Can be linked to a Site (HQ) and a Character (Representative).
+ */
+export interface LegalEntity extends BaseEntity {
+  type: LegalEntityType;
+  taxId?: string;               // Optional Tax ID / SSN / Cedula
+
+  // Connections
+  linkedCharacterId?: string | null;  // The person behind this entity (e.g. Akiles)
+  linkedSiteId?: string | null;       // The HQ or main contract site (e.g. Ecosystem)
+
+  isActive: boolean;
 }
 
 // Note: Player and Character are SEPARATE but CONNECTED entities
@@ -730,6 +809,8 @@ export interface Character extends BaseEntity {
 // ═══════════════════════════════════════════════════════════════════════════
 // SECTION 7B: ACCOUNT ENTITY (Authentication & Identity Layer)
 // ═══════════════════════════════════════════════════════════════════════════
+
+
 
 /**
  * ACCOUNT ENTITY - Authentication & Personal Identity Layer
@@ -752,34 +833,34 @@ export interface Account extends BaseEntity {
   // name inherited from BaseEntity → Real person's name
   email: string;              // Real person's email (unique, required)
   phone?: string;             // Real person's phone (optional)
-  
+
   // AUTHENTICATION (Security Layer)
   passwordHash: string;       // Hashed password (bcrypt/argon2)
   sessionToken?: string;      // Current active session JWT
   lastLoginAt?: Date;         // Last successful login timestamp
   loginAttempts: number;      // Failed login counter (security/brute force protection)
-  
+
   // ACCESS CONTROL
   isActive: boolean;          // Account enabled/disabled (admin can disable)
   isVerified: boolean;        // Email verified (via verification link)
   verificationToken?: string; // Email verification token
   resetToken?: string;        // Password reset token
   resetTokenExpiry?: Date;    // Reset token expiration timestamp
-  
+
   // PRIVACY SETTINGS
   privacySettings: {
     showEmail: boolean;       // Allow others to see email (default: false)
     showPhone: boolean;       // Allow others to see phone (default: false)
     showRealName: boolean;    // Use real name or nickname (default: true)
   };
-  
+
   // RELATIONSHIPS (Ambassador Fields)
   playerId?: string | null;   // 🏛️ Links to Player entity (optional - only if playing the game)
   characterId: string;        // 🏛️ Links to Character entity (required - everyone has a character)
-  
+
   // LIFECYCLE
   lastActiveAt: Date;         // Last activity timestamp (any action in system)
-  
+
   // Links System inherited from BaseEntity
   // links: Link[] → ACCOUNT_PLAYER, ACCOUNT_CHARACTER, PLAYER_ACCOUNT, CHARACTER_ACCOUNT
 }

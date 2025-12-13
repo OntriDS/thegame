@@ -33,23 +33,23 @@ export default function CharacterInventorySubmodal({
   const loadInventory = useCallback(async () => {
     try {
       setLoading(true);
-      
+
       // Get all links for this character
       const links = await ClientAPI.getLinksFor({ type: EntityType.CHARACTER, id: characterId });
-      
+
       // Filter for ownership links (both canonical and reverse)
-      const itemLinks = links.filter((l: Link) => 
+      const itemLinks = links.filter((l: Link) =>
         (l.linkType === LinkType.ITEM_CHARACTER || l.linkType === LinkType.CHARACTER_ITEM) &&
         (l.source.type === EntityType.CHARACTER && l.source.id === characterId ||
-         l.target.type === EntityType.CHARACTER && l.target.id === characterId)
+          l.target.type === EntityType.CHARACTER && l.target.id === characterId)
       );
-      
+
       const siteLinks = links.filter((l: Link) =>
         (l.linkType === LinkType.SITE_CHARACTER || l.linkType === LinkType.CHARACTER_SITE) &&
         (l.source.type === EntityType.CHARACTER && l.source.id === characterId ||
-         l.target.type === EntityType.CHARACTER && l.target.id === characterId)
+          l.target.type === EntityType.CHARACTER && l.target.id === characterId)
       );
-      
+
       // Get item IDs from links
       const itemIds = new Set<string>();
       itemLinks.forEach((link: Link) => {
@@ -59,7 +59,7 @@ export default function CharacterInventorySubmodal({
           itemIds.add(link.target.id);
         }
       });
-      
+
       // Get site IDs from links
       const siteIds = new Set<string>();
       siteLinks.forEach((link: Link) => {
@@ -69,14 +69,14 @@ export default function CharacterInventorySubmodal({
           siteIds.add(link.target.id);
         }
       });
-      
+
       // Fetch items and sites
       const allItems = await ClientAPI.getItems();
       const allSites = await ClientAPI.getSites();
-      
+
       const items = allItems.filter((item: Item) => itemIds.has(item.id));
       const sites = allSites.filter((site: Site) => siteIds.has(site.id));
-      
+
       setOwnedItems(items);
       setOwnedSites(sites);
     } catch (error) {
@@ -94,7 +94,7 @@ export default function CharacterInventorySubmodal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent 
+      <DialogContent
         className="max-w-4xl max-h-[80vh]"
         style={{ zIndex: getInteractiveSubModalZIndex() }}
       >
@@ -165,50 +165,6 @@ export default function CharacterInventorySubmodal({
             </ScrollArea>
           </TabsContent>
 
-          <TabsContent value="sites" className="mt-4">
-            <ScrollArea className="h-[500px]">
-              {loading ? (
-                <div className="flex items-center justify-center h-32">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </div>
-              ) : ownedSites.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-32 text-muted-foreground">
-                  <MapPin className="h-12 w-12 mb-4 opacity-20" />
-                  <p>No owned sites</p>
-                  <p className="text-sm">Sites owned by this character will appear here</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {ownedSites.map((site) => (
-                    <Card key={site.id} className="hover:bg-accent/50 transition-colors">
-                      <CardContent className="p-4">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-2">
-                              <h4 className="font-semibold truncate">{site.name}</h4>
-                              <Badge variant="secondary" className="text-xs">
-                                {site.metadata?.type || 'Unknown'}
-                              </Badge>
-                            </div>
-                            {site.description && (
-                              <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
-                                {site.description}
-                              </p>
-                            )}
-                            <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                              {site.status && (
-                                <span>Status: {site.status}</span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </ScrollArea>
-          </TabsContent>
         </Tabs>
 
         <div className="flex justify-end gap-2 mt-4">

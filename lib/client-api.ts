@@ -12,7 +12,7 @@
  * from @/data-store/datastore, which is server-side only.
  */
 
-import type { Task, Item, Sale, FinancialRecord, Character, Player, Site, Account, Settlement, AISession } from '@/types/entities';
+import type { Task, Item, Sale, FinancialRecord, Character, Player, Site, Account, Settlement, AISession, LegalEntity, Contract } from '@/types/entities';
 
 export const ClientAPI = {
   // ============================================================================
@@ -91,7 +91,7 @@ export const ClientAPI = {
     if (typeof month === 'number') params.append('month', String(month));
     if (typeof year === 'number') params.append('year', String(year));
     if (status) params.append('status', status);
-    
+
     const url = params.toString() ? `${base}?${params.toString()}` : base;
     const res = await fetch(url);
     if (!res.ok) throw new Error('Failed to fetch items');
@@ -433,6 +433,66 @@ export const ClientAPI = {
   deleteSettlement: async (id: string): Promise<void> => {
     const res = await fetch(`/api/settlements/${id}`, { method: 'DELETE' });
     if (!res.ok) throw new Error('Failed to delete settlement');
+  },
+
+  // ============================================================================
+  // LEGAL ENTITIES - Character Infra
+  // ============================================================================
+  getLegalEntities: async (): Promise<LegalEntity[]> => {
+    const res = await fetch('/api/legal-entities');
+    if (!res.ok) throw new Error('Failed to fetch legal entities');
+    return await res.json();
+  },
+
+  getLegalEntityById: async (id: string): Promise<LegalEntity | null> => {
+    const res = await fetch(`/api/legal-entities/${id}`);
+    if (!res.ok) return null;
+    return await res.json();
+  },
+
+  upsertLegalEntity: async (entity: LegalEntity): Promise<LegalEntity> => {
+    const res = await fetch('/api/legal-entities', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(entity)
+    });
+    if (!res.ok) throw new Error('Failed to save legal entity');
+    return await res.json();
+  },
+
+  deleteLegalEntity: async (id: string): Promise<void> => {
+    const res = await fetch(`/api/legal-entities/${id}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Failed to delete legal entity');
+  },
+
+  // ============================================================================
+  // CONTRACTS - Finance Infra
+  // ============================================================================
+  getContracts: async (): Promise<Contract[]> => {
+    const res = await fetch('/api/contracts');
+    if (!res.ok) throw new Error('Failed to fetch contracts');
+    return await res.json();
+  },
+
+  getContractById: async (id: string): Promise<Contract | null> => {
+    const res = await fetch(`/api/contracts/${id}`);
+    if (!res.ok) return null;
+    return await res.json();
+  },
+
+  upsertContract: async (contract: Contract): Promise<Contract> => {
+    const res = await fetch('/api/contracts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(contract)
+    });
+    if (!res.ok) throw new Error('Failed to save contract');
+    return await res.json();
+  },
+
+  deleteContract: async (id: string): Promise<void> => {
+    const res = await fetch(`/api/contracts/${id}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Failed to delete contract');
   },
 
   // Compatibility aliases

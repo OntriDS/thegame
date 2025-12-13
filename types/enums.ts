@@ -7,13 +7,13 @@
 
 /** Business Structure - Single source of truth for sections and stations */
 export const BUSINESS_STRUCTURE = {
-  ADMIN:      ['Strategy', 'Projects', 'Inventory', 'Transport', 'Team', 'Materials', 'Equipment', 'Rent', 'Founder'],
-  RESEARCH:   ['Classes', 'Studies'],
-  DEV:        ['Systems Dev'],
-  DESIGN:     ['Digital Art', 'Creative Process', 'Game Design', '3D Modeling', 'Animation'],
+  ADMIN: ['Strategy', 'Projects', 'Inventory', 'Transport', 'Team', 'Materials', 'Equipment', 'Rent', 'Founder'],
+  RESEARCH: ['Classes', 'Studies'],
+  DEV: ['Systems Dev'],
+  DESIGN: ['Digital Art', 'Creative Process', 'Game Design', '3D Modeling', 'Animation'],
   PRODUCTION: ['Buy Orders', 'Paint', 'Craft', 'Dispatch'],
-  SALES:      ['Direct Sales', 'Feria Sales', 'Partner Sales', 'Network Sales', 'Online Sales', 'Store Sales', 'Marketing', 'Bookings', 'Other Sales'],
-  PERSONAL:   ['Health', 'Family', 'Food', 'Rewards', 'Earnings', 'Home', 'Transport P', 'Rent P', 'Other P']
+  SALES: ['Direct Sales', 'Feria Sales', 'Associate Sales', 'Network Sales', 'Online Sales', 'Store Sales', 'Marketing', 'Bookings', 'Other Sales'],
+  PERSONAL: ['Health', 'Family', 'Food', 'Rewards', 'Earnings', 'Home', 'Transport P', 'Rent P', 'Other P']
 } as const;
 
 // Areas (top-level business areas)
@@ -636,8 +636,42 @@ export enum EntityType {
   PLAYER = 'player',        // Players are real people with authentication and progression
 
   // INFRA ENTITIES - Supporting Data
-  SESSION = 'session',        // AI assistant conversation sessions
+  SESSION = 'session',          // AI assistant conversation sessions
   SETTLEMENT = 'settlement',     // Settlement reference data for Sites
+  LEGAL_ENTITY = 'legal_entity', // Legal Entities that represent Personas usually for contracts
+  CONTRACT = 'contract',        // Financial Contracts between Legal Entities
+}
+
+// ============================================================================
+// CHARACTER INFRA ENUMS
+// ============================================================================
+
+/** Types of Legal Entities */
+export enum LegalEntityType {
+  COMPANY = 'Company',        // A registered business entity
+  INDIVIDUAL = 'Individual',  // A person acting as a business entity
+  DAO = 'DAO',                // Decentralized Autonomous Organization
+  NON_PROFIT = 'Non-Profit'   // Non-profit organization
+}
+
+// ============================================================================
+// FINANCE INFRA ENUMS
+// ============================================================================
+
+/** Status of Contracts */
+export enum ContractStatus {
+  DRAFT = 'Draft',            // Being created/negotiated
+  ACTIVE = 'Active',          // Currently in effect
+  PAUSED = 'Paused',           // Temporarily paused
+  TERMINATED = 'Terminated'  // Ended before expiration
+}
+
+/** Types of Contract Clauses */
+export enum ContractClauseType {
+  SALES_COMMISSION = 'Commission',      // Principal Products sold by Associate (Company pays commission)
+  SALES_SERVICE = 'Sales Service',       // Associate Products sold by Principal (Company provides service)
+  EXPENSE_SHARING = 'Expense Sharing',   // Shared costs (e.g. Booth Fee)
+  OTHER = 'Other'
 }
 
 // ============================================================================

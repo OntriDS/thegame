@@ -15,12 +15,15 @@ import { CharacterRole, CHARACTER_ROLE_TYPES, EntityType, PLAYER_ONE_ID } from '
 import { ROLE_COLORS } from '@/lib/constants/color-constants';
 import { useTheme } from '@/lib/hooks/use-theme';
 import { ROLE_BEHAVIORS, canViewAccountInfo } from '@/lib/game-mechanics/roles-rules';
-import { Network, Info, Trash2, Package } from 'lucide-react';
+import { Network, Info, Trash2, Package, MapPin, Building2 } from 'lucide-react';
 import { ClientAPI } from '@/lib/client-api';
 import { dispatchEntityUpdated, entityTypeToKind } from '@/lib/ui/ui-events';
 import DeleteModal from './submodals/delete-submodal';
 import LinksRelationshipsModal from './submodals/links-relationships-submodal';
 import CharacterInventorySubmodal from './submodals/character-inventory-submodal';
+import CharacterSitesSubmodal from './submodals/character-sites-submodal';
+import { LegalEntitySubmodal } from './submodals/legal-entity-submodal';
+import { LegalEntity } from '@/types/entities'; // Ensure LegalEntity is imported
 // Side effects handled by parent component via API calls
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
 
@@ -45,13 +48,13 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
   // Roles
   const [roles, setRoles] = useState<CharacterRole[]>([]);
   const [specialRoles, setSpecialRoles] = useState<CharacterRole[]>([]);
-  
+
   // Account Info Modal
   const [showAccountInfo, setShowAccountInfo] = useState(false);
 
   // Loading state
   const [isSaving, setIsSaving] = useState(false);
-  
+
   // Delete modal
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
@@ -63,7 +66,10 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
   const [CP, setCP] = useState<number | undefined>(undefined);
   const [achievementsCharacter, setAchievementsCharacter] = useState<string[]>([]);
   const [showRelationshipsModal, setShowRelationshipsModal] = useState(false);
+
   const [showInventoryModal, setShowInventoryModal] = useState(false);
+  const [showOwnedSitesModal, setShowOwnedSitesModal] = useState(false);
+  const [showLegalEntityModal, setShowLegalEntityModal] = useState(false);
 
   // Initialize when opening
   useEffect(() => {
@@ -92,13 +98,13 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
             setContactPhone(character?.contactPhone || '');
             setContactEmail(character?.contactEmail || '');
           }
-          
+
           setDescription(character?.description || '');
           setRoles(character?.roles || []);
           setPurchasedAmount(character?.purchasedAmount ?? 0);
           setCP(character?.CP);
           setAchievementsCharacter(character?.achievementsCharacter || []);
-          
+
           // Reset init guard when editing
           didInitRef.current = false;
         } else if (!didInitRef.current) {
@@ -114,13 +120,13 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
           setAchievementsCharacter([]);
         }
       }
-      
+
       // Reset init guard when modal closes (allows fresh init on next open)
       if (!open) {
         didInitRef.current = false;
       }
     };
-    
+
     loadData();
   }, [open, character]); // open needed for async loading, character for data changes
 
@@ -138,16 +144,16 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
 
   // Regular roles (user-toggleable) from CHARACTER_ROLE_TYPES
   const regularRoles = CHARACTER_ROLE_TYPES.REGULAR.map(r => r as CharacterRole);
-  
+
   // Special roles (badges, system-controlled)
   const specialRolesList = CHARACTER_ROLE_TYPES.SPECIAL.map(r => r as CharacterRole);
-  
+
   // Check if editing Player One (Founder)
   const isPlayerOne = character?.id === PLAYER_ONE_ID || character?.playerId === PLAYER_ONE_ID;
-  
+
   // For new characters, also show SpecialFields (they should be able to assign special roles)
   const shouldShowSpecialFields = isPlayerOne || !character;
-  
+
   // Check if character has PLAYER role (personal data should be read-only from Account)
   const hasPlayerRole = character?.roles?.includes(CharacterRole.PLAYER) || false;
 
@@ -157,11 +163,11 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
   // Get role color based on role type and dark mode
   const getRoleColor = (role: CharacterRole, isActive: boolean): string => {
     if (!isActive) return ''; // No special styling for inactive roles
-    
+
     // Convert role to uppercase to match ROLE_COLORS keys
     const roleKey = role.toUpperCase() as keyof typeof ROLE_COLORS;
     const colorClass = ROLE_COLORS[roleKey] || ROLE_COLORS.CUSTOMER;
-    
+
     // Return appropriate color based on dark mode
     return colorClass;
   };
@@ -169,18 +175,18 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
   const handleSave = async () => {
     if (isSaving) return;
     setIsSaving(true);
-    
+
     // Validation: Characters must have at least one role
     if (roles.length === 0) {
       alert('Please select at least one role for the character.');
       setIsSaving(false);
       return;
     }
-    
+
     try {
       // If character has PLAYER role, don't save name/email/phone (they're from Account)
       const shouldPreserveContactInfo = hasPlayerRole;
-      
+
       const newCharacter: Character = {
         id: character?.id || uuid(),
         name: name?.trim() || 'Unnamed Character',
@@ -221,10 +227,10 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
       };
 
       await onSave(newCharacter);
-      
+
       // Dispatch events AFTER successful save
       dispatchEntityUpdated(entityTypeToKind(EntityType.CHARACTER));
-      
+
       onOpenChange(false);
     } catch (error) {
       console.error('Save failed:', error);
@@ -233,17 +239,28 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
       setIsSaving(false);
     }
   };
-  
+
   const handleDelete = () => {
     if (!character) return;
     setShowDeleteModal(true);
   };
-  
+
   const handleDeleteComplete = () => {
     setShowDeleteModal(false);
     // Dispatch UI update event after successful deletion
     dispatchEntityUpdated(entityTypeToKind(EntityType.CHARACTER));
     onOpenChange(false);
+  };
+
+
+
+  const handleSaveLegalEntity = async (entity: LegalEntity) => {
+    try {
+      await ClientAPI.upsertLegalEntity(entity);
+      // Maybe show toast? 
+    } catch (e) {
+      console.error("Failed to save legal entity", e);
+    }
   };
 
   return (
@@ -257,138 +274,101 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
             </DialogDescription>
           </DialogHeader>
 
-        {/* Content - 2 Column Layout */}
-        <div className="px-6 space-y-4">
-          {/* Column Headers */}
-          <div className="grid grid-cols-2 gap-4 mb-2">
-            {/* <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">🧬 Native</div>*/}
-            {/* <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">🧬 Native</div>*/}
-          </div>
-
-          {/* Main 2-Column Grid */}
-          <div className="grid grid-cols-2 gap-6">
-            {/* Column 1: NATIVE (Contact Info) */}
-            <div className="space-y-3">
-              {/* Personal Data - Read-only for PLAYER role */}
-              {hasPlayerRole && (
-                <div className="text-xs p-2 border rounded bg-blue-50 dark:bg-blue-950/30 text-blue-800 dark:text-blue-200">
-                  Personal data managed by Account. Edit from <strong>Player Modal → Edit Account</strong>.
-                </div>
-              )}
-              
-              <div className="space-y-2">
-                <Label htmlFor="char-name" className="text-xs">
-                  Name * {hasPlayerRole && <span className="text-muted-foreground">(from Account)</span>}
-                </Label>
-                <Input
-                  id="char-name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Character name"
-                  className="h-8 text-sm"
-                  readOnly={hasPlayerRole}
-                  disabled={hasPlayerRole}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="char-phone" className="text-xs">
-                  Phone {hasPlayerRole && <span className="text-muted-foreground">(from Account)</span>}
-                </Label>
-                <Input
-                  id="char-phone"
-                  value={contactPhone}
-                  onChange={(e) => setContactPhone(e.target.value)}
-                  placeholder="+1 555 123 4567"
-                  className="h-8 text-sm"
-                  readOnly={hasPlayerRole}
-                  disabled={hasPlayerRole}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="char-email" className="text-xs">
-                  Email {hasPlayerRole && <span className="text-muted-foreground">(from Account)</span>}
-                </Label>
-                <Input
-                  id="char-email"
-                  value={contactEmail}
-                  onChange={(e) => setContactEmail(e.target.value)}
-                  placeholder="name@email.com"
-                  className="h-8 text-sm"
-                  readOnly={hasPlayerRole}
-                  disabled={hasPlayerRole}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowAdvanced(!showAdvanced)}
-                  className="h-8 text-xs w-full"
-                >
-                  Advanced
-                </Button>
-              </div>
+          {/* Content - 2 Column Layout */}
+          <div className="px-6 space-y-4">
+            {/* Column Headers */}
+            <div className="grid grid-cols-2 gap-4 mb-2">
+              {/* <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">🧬 Native</div>*/}
+              {/* <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">🧬 Native</div>*/}
             </div>
 
-            {/* Column 2: NATIVE (Roles as Buttons) */}
-            <div className="space-y-3">
-              <Label className="text-xs">Roles *</Label>
-              
-              {/* Regular Roles - User can toggle freely */}
-              <div className="space-y-1">
-                <div className="grid grid-cols-5 gap-1">
-                  {regularRoles.map(role => {
-                    const isActive = roles.includes(role);
-                    return (
-                      <button
-                        key={role}
-                        type="button"
-                        onClick={() => toggleRole(role, !isActive)}
-                        className={`h-7 text-xs px-2 rounded-md border transition-colors ${
-                          isActive 
-                            ? getRoleColor(role, true)
-                            : 'border-input bg-background hover:bg-muted hover:text-accent-foreground'
-                        }`}
-                      >
-                        {role}
-                      </button>
-                    );
-                  })}
+            {/* Main 2-Column Grid */}
+            <div className="grid grid-cols-2 gap-6">
+              {/* Column 1: NATIVE (Contact Info) */}
+              <div className="space-y-3">
+                {/* Personal Data - Read-only for PLAYER role */}
+                {hasPlayerRole && (
+                  <div className="text-xs p-2 border rounded bg-blue-50 dark:bg-blue-950/30 text-blue-800 dark:text-blue-200">
+                    Personal data managed by Account. Edit from <strong>Player Modal → Edit Account</strong>.
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <Label htmlFor="char-name" className="text-xs">
+                    Name * {hasPlayerRole && <span className="text-muted-foreground">(from Account)</span>}
+                  </Label>
+                  <Input
+                    id="char-name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Character name"
+                    className="h-8 text-sm"
+                    readOnly={hasPlayerRole}
+                    disabled={hasPlayerRole}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="char-phone" className="text-xs">
+                    Phone {hasPlayerRole && <span className="text-muted-foreground">(from Account)</span>}
+                  </Label>
+                  <Input
+                    id="char-phone"
+                    value={contactPhone}
+                    onChange={(e) => setContactPhone(e.target.value)}
+                    placeholder="+1 555 123 4567"
+                    className="h-8 text-sm"
+                    readOnly={hasPlayerRole}
+                    disabled={hasPlayerRole}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="char-email" className="text-xs">
+                    Email {hasPlayerRole && <span className="text-muted-foreground">(from Account)</span>}
+                  </Label>
+                  <Input
+                    id="char-email"
+                    value={contactEmail}
+                    onChange={(e) => setContactEmail(e.target.value)}
+                    placeholder="name@email.com"
+                    className="h-8 text-sm"
+                    readOnly={hasPlayerRole}
+                    disabled={hasPlayerRole}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowAdvanced(!showAdvanced)}
+                    className="h-8 text-xs w-full"
+                  >
+                    Advanced
+                  </Button>
                 </div>
               </div>
 
-              {/* Special Roles - System-controlled */}
-              {shouldShowSpecialFields && (
-                <div className="space-y-1 border-t pt-2 mt-2">
-                  <Label className="text-xs">Special Roles</Label>
-                  <div className="grid grid-cols-4 gap-1">
-                    {specialRolesList.map(role => {
-                      const hasRole = roles.includes(role);
-                      const behavior = ROLE_BEHAVIORS[role as keyof typeof ROLE_BEHAVIORS];
-                      
-                      // Skip if no behavior defined (shouldn't happen with proper enums)
-                      if (!behavior) return null;
-                      
-                      // Hide if not assigned and role config says to hide
-                      if (behavior.hideIfNotAssigned && !hasRole) return null;
-                      
-                      // Determine if role is display-only (not toggleable)
-                      const isDisplayOnly = behavior.isDisplayOnly;
-                      
+              {/* Column 2: NATIVE (Roles as Buttons) */}
+              <div className="space-y-3">
+                <Label className="text-xs">Roles *</Label>
+
+                {/* Regular Roles - User can toggle freely */}
+                <div className="space-y-1">
+                  <div className="grid grid-cols-5 gap-1">
+                    {regularRoles.map(role => {
+                      const isActive = roles.includes(role);
                       return (
                         <button
                           key={role}
                           type="button"
-                          onClick={() => !isDisplayOnly && toggleRole(role, !hasRole)}
-                          className={`h-7 text-xs px-2 rounded-md border transition-colors ${
-                            hasRole 
-                              ? getRoleColor(role, true) + (isDisplayOnly ? ' cursor-not-allowed' : '')
-                              : 'border-input bg-background hover:bg-muted hover:text-accent-foreground'
-                          }`}
+                          onClick={() => toggleRole(role, !isActive)}
+                          className={`h-7 text-xs px-2 rounded-md border transition-colors ${isActive
+                            ? getRoleColor(role, true)
+                            : 'border-input bg-background hover:bg-muted hover:text-accent-foreground'
+                            }`}
                         >
                           {role}
                         </button>
@@ -396,161 +376,240 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
                     })}
                   </div>
                 </div>
-              )}
+
+                {/* Special Roles - System-controlled */}
+                {shouldShowSpecialFields && (
+                  <div className="space-y-1 border-t pt-2 mt-2">
+                    <Label className="text-xs">Special Roles</Label>
+                    <div className="grid grid-cols-4 gap-1">
+                      {specialRolesList.map(role => {
+                        const hasRole = roles.includes(role);
+                        const behavior = ROLE_BEHAVIORS[role as keyof typeof ROLE_BEHAVIORS];
+
+                        // Skip if no behavior defined (shouldn't happen with proper enums)
+                        if (!behavior) return null;
+
+                        // Hide if not assigned and role config says to hide
+                        if (behavior.hideIfNotAssigned && !hasRole) return null;
+
+                        // Determine if role is display-only (not toggleable)
+                        const isDisplayOnly = behavior.isDisplayOnly;
+
+                        return (
+                          <button
+                            key={role}
+                            type="button"
+                            onClick={() => !isDisplayOnly && toggleRole(role, !hasRole)}
+                            className={`h-7 text-xs px-2 rounded-md border transition-colors ${hasRole
+                              ? getRoleColor(role, true) + (isDisplayOnly ? ' cursor-not-allowed' : '')
+                              : 'border-input bg-background hover:bg-muted hover:text-accent-foreground'
+                              }`}
+                          >
+                            {role}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
+
+            {/* Customer Purchase Section (Conditional) */}
+            {isCustomer && (
+              <div className="border-t pt-4 mt-4">
+                <div className="flex items-center justify-between mb-2">
+                  <Label className="text-sm font-semibold">Customer Purchase Data</Label>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setShowCustomerPurchase(!showCustomerPurchase)}
+                    className="h-7 text-xs"
+                  >
+                    {showCustomerPurchase ? 'Hide' : 'Show'} Purchase Data
+                  </Button>
+                </div>
+
+                {showCustomerPurchase && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="purchased-amount" className="text-xs">Purchased Amount ($)</Label>
+                      <NumericInput
+                        id="purchased-amount"
+                        value={purchasedAmount}
+                        onChange={setPurchasedAmount}
+                        placeholder="0.00"
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
-          {/* Customer Purchase Section (Conditional) */}
-          {isCustomer && (
-            <div className="border-t pt-4 mt-4">
-              <div className="flex items-center justify-between mb-2">
-                <Label className="text-sm font-semibold">Customer Purchase Data</Label>
+          <DialogFooter className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              {/* Account Info Button - Only for FOUNDER/ADMIN roles */}
+              {character && canViewAccountInfo(roles) && (
                 <Button
-                  type="button"
+                  variant="ghost"
                   size="sm"
-                  variant="outline"
-                  onClick={() => setShowCustomerPurchase(!showCustomerPurchase)}
-                  className="h-7 text-xs"
+                  onClick={() => setShowAccountInfo(true)}
+                  className="h-8 text-xs"
+                  title="View Account Information"
                 >
-                  {showCustomerPurchase ? 'Hide' : 'Show'} Purchase Data
+                  <Info className="h-4 w-4" />
                 </Button>
-              </div>
-              
-              {showCustomerPurchase && (
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="purchased-amount" className="text-xs">Purchased Amount ($)</Label>
-                    <NumericInput
-                      id="purchased-amount"
-                      value={purchasedAmount}
-                      onChange={setPurchasedAmount}
-                      placeholder="0.00"
-                      className="h-8 text-sm"
-                    />
-                  </div>
-                </div>
               )}
+
+              {/* Links Button - Only when editing existing character */}
+              {character && (
+                <Button
+                  variant="outline"
+                  onClick={() => setShowRelationshipsModal(true)}
+                  className="h-8 text-xs"
+                >
+                  <Network className="w-3 h-3 mr-1" />
+                  Links
+                </Button>
+              )}
+
+              {/* Inventory Button - Only when editing existing character */}
+              {character && (
+                <Button
+                  variant="outline"
+                  onClick={() => setShowInventoryModal(true)}
+                  className="h-8 text-xs"
+                >
+                  <Package className="w-3 h-3 mr-1" />
+                  Inventory
+                </Button>
+              )}
+
+              {/* Owned Sites Button - Only when editing */}
+              {character && (
+                <Button
+                  variant="outline"
+                  onClick={() => setShowOwnedSitesModal(true)}
+                  className="h-8 text-xs"
+                >
+                  <MapPin className="w-3 h-3 mr-1" />
+                  Owned Sites
+                </Button>
+              )}
+
+              {/* Legal Entity Button - Only when editing */}
+              {character && (
+                <Button
+                  variant="outline"
+                  onClick={() => setShowLegalEntityModal(true)}
+                  className="h-8 text-xs"
+                >
+                  <Building2 className="w-3 h-3 mr-1" />
+                  Legal Entity
+                </Button>
+              )}
+
+              {/* Delete Button - Only when editing existing character */}
+              {character && (
+                <Button
+                  variant="outline"
+                  onClick={handleDelete}
+                  className="h-8 text-xs text-muted-foreground hover:text-foreground"
+                >
+                  Delete
+                </Button>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 ml-auto">
+              <Button variant="outline" onClick={() => onOpenChange(false)} className="h-8 text-xs" disabled={isSaving}>Cancel</Button>
+              <Button onClick={handleSave} className="h-8 text-xs" disabled={!name.trim() || isSaving}>
+                {isSaving ? 'Saving...' : (character ? 'Update' : 'Create')} Character
+              </Button>
+            </div>
+          </DialogFooter>
+
+          {/* Advanced Section (Description) */}
+          {showAdvanced && (
+            <div className="px-6 pb-4">
+              <div className="space-y-2 border-t pt-4">
+                <Label htmlFor="char-description" className="text-xs">Description</Label>
+                <Textarea
+                  id="char-description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Character description..."
+                  rows={3}
+                  className="text-sm"
+                />
+              </div>
             </div>
           )}
-        </div>
 
-        <DialogFooter className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            {/* Account Info Button - Only for FOUNDER/ADMIN roles */}
-            {character && canViewAccountInfo(roles) && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowAccountInfo(true)}
-                className="h-8 text-xs"
-                title="View Account Information"
-              >
-                <Info className="h-4 w-4" />
-              </Button>
-            )}
+        </DialogContent>
+      </Dialog>
 
-            {/* Links Button - Only when editing existing character */}
-            {character && (
-              <Button
-                variant="outline"
-                onClick={() => setShowRelationshipsModal(true)}
-                className="h-8 text-xs"
-              >
-                <Network className="w-3 h-3 mr-1" />
-                Links
-              </Button>
-            )}
+      {/* Account Info Submodal */}
+      {character && (
+        <AccountInfoModal
+          character={character}
+          open={showAccountInfo}
+          onOpenChange={setShowAccountInfo}
+        />
+      )}
 
-            {/* Inventory Button - Only when editing existing character */}
-            {character && (
-              <Button
-                variant="outline"
-                onClick={() => setShowInventoryModal(true)}
-                className="h-8 text-xs"
-              >
-                <Package className="w-3 h-3 mr-1" />
-                Inventory
-              </Button>
-            )}
+      {/* Delete Confirmation Modal */}
+      {character && (
+        <DeleteModal
+          open={showDeleteModal}
+          onOpenChange={setShowDeleteModal}
+          entityType={EntityType.CHARACTER}
+          entities={[character]}
+          onComplete={handleDeleteComplete}
+        />
+      )}
 
-            {/* Delete Button - Only when editing existing character */}
-            {character && (
-              <Button
-                variant="outline"
-                onClick={handleDelete}
-                className="h-8 text-xs text-muted-foreground hover:text-foreground"
-              >
-                Delete
-              </Button>
-            )}
-          </div>
-          
-          <div className="flex items-center gap-2 ml-auto">
-            <Button variant="outline" onClick={() => onOpenChange(false)} className="h-8 text-xs" disabled={isSaving}>Cancel</Button>
-            <Button onClick={handleSave} className="h-8 text-xs" disabled={!name.trim() || isSaving}>
-              {isSaving ? 'Saving...' : (character ? 'Update' : 'Create')} Character
-            </Button>
-          </div>
-        </DialogFooter>
+      {/* Links Relationships Modal */}
+      {character && (
+        <LinksRelationshipsModal
+          entity={{ type: EntityType.CHARACTER, id: character.id, name: character.name }}
+          open={showRelationshipsModal}
+          onClose={() => setShowRelationshipsModal(false)}
+        />
+      )}
 
-        {/* Advanced Section (Description) */}
-        {showAdvanced && (
-          <div className="px-6 pb-4">
-            <div className="space-y-2 border-t pt-4">
-              <Label htmlFor="char-description" className="text-xs">Description</Label>
-              <Textarea
-                id="char-description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Character description..."
-                rows={3}
-                className="text-sm"
-              />
-            </div>
-          </div>
-        )}
+      {/* Character Inventory Submodal */}
+      {character && (
+        <CharacterInventorySubmodal
+          open={showInventoryModal}
+          onOpenChange={setShowInventoryModal}
+          characterId={character.id}
+          characterName={character.name}
+        />
+      )}
 
-      </DialogContent>
-    </Dialog>
+      {/* Character Owned Sites Submodal */}
+      {character && (
+        <CharacterSitesSubmodal
+          open={showOwnedSitesModal}
+          onOpenChange={setShowOwnedSitesModal}
+          characterId={character.id}
+          characterName={character.name}
+        />
+      )}
 
-    {/* Account Info Submodal */}
-    {character && (
-      <AccountInfoModal
-        character={character}
-        open={showAccountInfo}
-        onOpenChange={setShowAccountInfo}
-      />
-    )}
-    
-    {/* Delete Confirmation Modal */}
-    {character && (
-      <DeleteModal
-        open={showDeleteModal}
-        onOpenChange={setShowDeleteModal}
-        entityType={EntityType.CHARACTER}
-        entities={[character]}
-        onComplete={handleDeleteComplete}
-      />
-    )}
-
-    {/* Links Relationships Modal */}
-    {character && (
-      <LinksRelationshipsModal
-        entity={{ type: EntityType.CHARACTER, id: character.id, name: character.name }}
-        open={showRelationshipsModal}
-        onClose={() => setShowRelationshipsModal(false)}
-      />
-    )}
-
-    {/* Character Inventory Submodal */}
-    {character && (
-      <CharacterInventorySubmodal
-        open={showInventoryModal}
-        onOpenChange={setShowInventoryModal}
-        characterId={character.id}
-        characterName={character.name}
-      />
-    )}
+      {/* Legal Entity Submodal */}
+      {character && (
+        <LegalEntitySubmodal
+          open={showLegalEntityModal}
+          onClose={() => setShowLegalEntityModal(false)}
+          onSave={handleSaveLegalEntity}
+          defaultLinkedCharacterId={character.id}
+        />
+      )}
     </>
   );
 }
@@ -565,7 +624,7 @@ interface AccountInfoModalProps {
 function AccountInfoModal({ character, open, onOpenChange }: AccountInfoModalProps) {
   const [account, setAccount] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  
+
   useEffect(() => {
     const loadAccount = async () => {
       if (open && character.accountId) {
@@ -581,10 +640,10 @@ function AccountInfoModal({ character, open, onOpenChange }: AccountInfoModalPro
         }
       }
     };
-    
+
     loadAccount();
   }, [character, open]);
-  
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent zIndexLayer={'SUB_MODALS'} className="max-w-md">
@@ -594,7 +653,7 @@ function AccountInfoModal({ character, open, onOpenChange }: AccountInfoModalPro
             Account Information • {character.name}
           </DialogTitle>
         </DialogHeader>
-        
+
         <div className="space-y-4 py-4">
           {isLoading ? (
             <div className="text-center py-4 text-muted-foreground">Loading account data...</div>
@@ -614,7 +673,7 @@ function AccountInfoModal({ character, open, onOpenChange }: AccountInfoModalPro
                 <p className="font-semibold">Account Entity (Read-Only)</p>
                 <p className="text-muted-foreground mt-1">ID: {account.id}</p>
               </div>
-              
+
               <div className="space-y-2">
                 <Label>Name</Label>
                 <Input
@@ -624,7 +683,7 @@ function AccountInfoModal({ character, open, onOpenChange }: AccountInfoModalPro
                   className="bg-muted/50"
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label>Email</Label>
                 <Input
@@ -634,7 +693,7 @@ function AccountInfoModal({ character, open, onOpenChange }: AccountInfoModalPro
                   className="bg-muted/50"
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label>Phone</Label>
                 <Input
@@ -645,7 +704,7 @@ function AccountInfoModal({ character, open, onOpenChange }: AccountInfoModalPro
                   placeholder="No phone"
                 />
               </div>
-              
+
               <div className="border-t pt-3 space-y-2">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Account Status:</span>
@@ -653,7 +712,7 @@ function AccountInfoModal({ character, open, onOpenChange }: AccountInfoModalPro
                     {account.isActive ? 'Active' : 'Inactive'}
                   </span>
                 </div>
-                
+
                 {account.lastActiveAt && (
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Last Active:</span>
@@ -664,7 +723,7 @@ function AccountInfoModal({ character, open, onOpenChange }: AccountInfoModalPro
             </>
           )}
         </div>
-        
+
         <DialogFooter>
           <Button onClick={() => onOpenChange(false)}>Close</Button>
         </DialogFooter>

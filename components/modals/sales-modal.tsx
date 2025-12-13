@@ -36,7 +36,7 @@ import ItemEmissarySubModal, { ItemCreationData } from './submodals/item-emissar
 import PointsEmissarySubModal, { PointsData } from './submodals/points-emissary-submodal';
 import ConfirmationModal from './submodals/confirmation-submodal';
 import ArchiveCollectionConfirmationModal from './submodals/archive-collection-confirmation-submodal';
-import FeriaSalesDashboard from './submodals/feria-sales-dashboard';
+import BoothSalesView from './submodals/booth-sales-view';
 
 interface SalesModalProps {
   sale?: Sale | null;
@@ -1079,10 +1079,12 @@ export default function SalesModal({
 
         {/* Content Area - Fixed Height with Internal Scroll */}
         {type === SaleType.FERIA ? (
-          <FeriaSalesDashboard
+          <BoothSalesView
             sites={sites}
             characters={characters}
             items={items}
+            legalEntities={[]} // TODO: Fetch from ClientAPI
+            contracts={[]} // TODO: Fetch from ClientAPI
             saleDate={saleDate}
             setSaleDate={setSaleDate}
             lines={lines}
