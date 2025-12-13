@@ -1,13 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useReactFlow, Node } from 'reactflow';
+import { useState, useEffect, Dispatch, SetStateAction } from 'react';
+import { Node } from 'reactflow';
 import { Settings, MousePointer2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 
-export const PropertiesPanel = ({ selectedNode }: { selectedNode: Node | null }) => {
-    const { setNodes } = useReactFlow();
+interface PropertiesPanelProps {
+    selectedNode: Node | null;
+    setNodes: Dispatch<SetStateAction<Node[]>>;
+}
+
+export const PropertiesPanel = ({ selectedNode, setNodes }: PropertiesPanelProps) => {
     const [label, setLabel] = useState('');
     const [type, setType] = useState('');
 
@@ -22,33 +25,37 @@ export const PropertiesPanel = ({ selectedNode }: { selectedNode: Node | null })
     // Handle label change
     const handleLabelChange = (newLabel: string) => {
         setLabel(newLabel);
-        setNodes((nodes) =>
-            nodes.map((node) => {
-                if (node.id === selectedNode?.id) {
-                    return {
-                        ...node,
-                        data: { ...node.data, label: newLabel },
-                    };
-                }
-                return node;
-            })
-        );
+        if (setNodes && selectedNode) {
+            setNodes((nodes: Node[]) =>
+                nodes.map((node) => {
+                    if (node.id === selectedNode.id) {
+                        return {
+                            ...node,
+                            data: { ...node.data, label: newLabel },
+                        };
+                    }
+                    return node;
+                })
+            );
+        }
     };
 
     // Handle type change
     const handleTypeChange = (newType: string) => {
         setType(newType);
-        setNodes((nodes) =>
-            nodes.map((node) => {
-                if (node.id === selectedNode?.id) {
-                    return {
-                        ...node,
-                        data: { ...node.data, type: newType },
-                    };
-                }
-                return node;
-            })
-        );
+        if (setNodes && selectedNode) {
+            setNodes((nodes: Node[]) =>
+                nodes.map((node) => {
+                    if (node.id === selectedNode.id) {
+                        return {
+                            ...node,
+                            data: { ...node.data, type: newType },
+                        };
+                    }
+                    return node;
+                })
+            );
+        }
     };
 
     return (

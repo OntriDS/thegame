@@ -1,19 +1,19 @@
 'use client';
 
-import { useCallback, useRef, useState, DragEvent } from 'react';
+import React, { useCallback } from 'react';
 import ReactFlow, {
     Background,
     Controls,
-    Edge,
     Node,
     NodeTypes,
     ReactFlowProvider,
-    addEdge,
-    useNodesState,
-    useEdgesState,
-    Connection,
     ConnectionMode,
     MarkerType,
+    Edge,
+    OnNodesChange,
+    OnEdgesChange,
+    OnConnect,
+    OnInit,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { CustomNode } from './custom-node';
@@ -21,29 +21,6 @@ import { CustomNode } from './custom-node';
 const nodeTypes: NodeTypes = {
     custom: CustomNode,
 };
-
-const initialNodes: Node[] = [
-    {
-        id: '1',
-        type: 'custom',
-        position: { x: 400, y: 300 },
-        data: { label: 'Control Tower', type: 'ADMIN' }
-    },
-    {
-        id: '2',
-        type: 'custom',
-        position: { x: 150, y: 150 },
-        data: { label: 'Art Studio', type: 'CREATIVE' }
-    },
-    {
-        id: '3',
-        type: 'custom',
-        position: { x: 700, y: 400 },
-        data: { label: 'Exchange Hub', type: 'SALES' }
-    },
-];
-
-const initialEdges: Edge[] = [];
 
 // Custom edge styles to match neon aesthetic
 const defaultEdgeOptions = {
@@ -56,79 +33,45 @@ const defaultEdgeOptions = {
     animated: true,
 };
 
-// Generates correct color based on connection source (could be enhanced later)
-const getEdgeStyle = (color: string) => ({
-    stroke: color,
-    strokeWidth: 2,
-    filter: `drop-shadow(0 0 3px ${color})`,
-});
+interface DiagramCanvasProps {
+    nodes: Node[];
+    edges: Edge[];
+    onNodesChange: OnNodesChange;
+    onEdgesChange: OnEdgesChange;
+    onConnect: OnConnect;
+    onInit: OnInit;
+    onDrop: (event: React.DragEvent) => void;
+    onDragOver: (event: React.DragEvent) => void;
+    onNodeSelect: (node: Node | null) => void;
+}
 
-let id = 0;
-const getId = () => `dndnode_${id++}`;
+export const DiagramCanvas = ({
+    nodes,
+    edges,
+    onNodesChange,
+    onEdgesChange,
+    onConnect,
+    onInit,
+    onDrop,
+    onDragOver,
+    onNodeSelect
+}: DiagramCanvasProps) => {
 
-const DiagramCanvasContent = ({ onNodeSelect }: { onNodeSelect?: (node: Node | null) => void }) => {
-    const reactFlowWrapper = useRef<HTMLDivElement>(null);
-    const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-    const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
-    const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
-
-    const onConnect = useCallback(
-        (params: Connection) => setEdges((eds) => addEdge({ ...params, type: 'smoothstep', animated: true, style: { stroke: '#06b6d4', strokeWidth: 2, filter: 'drop-shadow(0 0 3px #06b6d4)' } }, eds)),
-        [],
-    );
-
-
-    const onDragOver = useCallback((event: DragEvent) => {
-        event.preventDefault();
-        event.dataTransfer.dropEffect = 'move';
-    }, []);
-
-    // Handle selection changes
     const onSelectionChange = useCallback(({ nodes }: { nodes: Node[] }) => {
         if (onNodeSelect) {
             onNodeSelect(nodes.length > 0 ? nodes[0] : null);
         }
     }, [onNodeSelect]);
 
-    const onDrop = useCallback(
-        (event: DragEvent) => {
-            event.preventDefault();
-
-            if (!reactFlowInstance) return;
-
-            const type = event.dataTransfer.getData('application/reactflow');
-
-            // check if the dropped element is valid
-            if (typeof type === 'undefined' || !type) {
-                return;
-            }
-
-            const position = reactFlowInstance.screenToFlowPosition({
-                x: event.clientX,
-                y: event.clientY,
-            });
-
-            const newNode: Node = {
-                id: getId(),
-                type: 'custom',
-                position,
-                data: { label: `New ${type} Node`, type: type },
-            };
-
-            setNodes((nds) => nds.concat(newNode));
-        },
-        [reactFlowInstance],
-    );
-
     return (
-        <div className="flex-grow h-full w-full bg-[#050505]" ref={reactFlowWrapper}>
+        <div className="flex-grow h-full w-full bg-[#050505]">
             <ReactFlow
                 nodes={nodes}
                 edges={edges}
                 onNodesChange={onNodesChange}
                 onEdgesChange={onEdgesChange}
                 onConnect={onConnect}
-                onInit={setReactFlowInstance}
+                onInit={onInit}
                 onDrop={onDrop}
                 onDragOver={onDragOver}
                 onSelectionChange={onSelectionChange}
@@ -148,15 +91,11 @@ const DiagramCanvasContent = ({ onNodeSelect }: { onNodeSelect?: (node: Node | n
                 <Controls className="bg-black/50 border border-white/10 !fill-white [&>button]:!bg-black/80 [&>button]:!border-white/20 [&>button:hover]:!bg-white/20 [&>button]:!fill-white [&>button_path]:!fill-white" />
             </ReactFlow>
 
-            {/* FLOATING HUD INFO - Ported from Stitch */}
+            {/* FLOATING HUD INFO */}
             <div className="absolute bottom-6 left-6 font-mono text-xs text-slate-500 pointer-events-none z-50">
                 <p>SYSTEM: ONLINE</p>
                 <p>MODE: EDIT</p>
             </div>
         </div>
     );
-};
-
-export const DiagramCanvas = ({ onNodeSelect }: { onNodeSelect?: (node: Node | null) => void }) => {
-    return <DiagramCanvasContent onNodeSelect={onNodeSelect} />;
 };

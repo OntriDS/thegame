@@ -2,7 +2,6 @@
 
 import { memo } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
-import { motion } from 'framer-motion';
 import { Cpu, Layout, ShoppingCart, Zap } from 'lucide-react';
 
 const NODE_TYPES = {
