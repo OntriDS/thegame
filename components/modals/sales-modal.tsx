@@ -36,6 +36,7 @@ import ItemEmissarySubModal, { ItemCreationData } from './submodals/item-emissar
 import PointsEmissarySubModal, { PointsData } from './submodals/points-emissary-submodal';
 import ConfirmationModal from './submodals/confirmation-submodal';
 import ArchiveCollectionConfirmationModal from './submodals/archive-collection-confirmation-submodal';
+import FeriaSalesDashboard from './submodals/feria-sales-dashboard';
 
 interface SalesModalProps {
   sale?: Sale | null;
@@ -53,7 +54,7 @@ export default function SalesModal({
   onDelete,
 }: SalesModalProps) {
   const { getPreference, setPreference } = useUserPreferences();
-  
+
   // Helper function to get the correct value format for SearchableSelect
   const getStationValue = (station: Station): string => {
     const area = getAreaForStation(station);
@@ -90,7 +91,7 @@ export default function SalesModal({
   const [taskName, setTaskName] = useState<string>('');
   const [taskType, setTaskType] = useState<TaskType>(TaskType.ASSIGNMENT);
   const [taskParentId, setTaskParentId] = useState<string>('');
-  
+
   // Note: Sales don't create items directly - they pass data to Tasks via mini-submodals
   const [emissaryColumnExpanded, setEmissaryColumnExpanded] = useState(false);
 
@@ -216,15 +217,15 @@ export default function SalesModal({
       setCustomerId(sale.customerId || '');
       setIsNewCustomer(!sale.customerId); // Toggle to "Existing" if customer exists
       setNewCustomerName(''); // Clear new customer name
-    setIsNotPaid(sale.isNotPaid || false);
-    setIsNotCharged(sale.isNotCharged || false);
-    setIsCollected(sale.isCollected || false);
+      setIsNotPaid(sale.isNotPaid || false);
+      setIsNotCharged(sale.isNotCharged || false);
+      setIsCollected(sale.isCollected || false);
       setOverallDiscount(sale.overallDiscount || {});
       setLines(sale.lines || []);
       setPayments(sale.payments || []);
       setSalesChannel(sale.salesChannel || getSalesChannelFromSaleType(sale.type) || null);
       setQuickRows([]);
-      
+
       // Determine if sale is product or service based on lines
       const hasServiceLines = sale.lines?.some(line => line.kind === 'service');
       setWhatKind(hasServiceLines ? 'service' : 'product');
@@ -254,10 +255,10 @@ export default function SalesModal({
           });
         }
       }
-      
+
       // Initialize player character
       setPlayerCharacterId(sale.playerCharacterId || PLAYER_ONE_ID);
-      
+
       // Reset init guard when editing
       didInitRef.current = false;
     } else if (!didInitRef.current) {
@@ -342,7 +343,7 @@ export default function SalesModal({
     if (savedEmissary === 'true') {
       setEmissaryColumnExpanded(true);
     }
-    
+
     const savedAdvanced = getPreference('sales-modal-advanced-expanded');
     if (savedAdvanced === 'true') {
       setShowAdvanced(true);
@@ -400,7 +401,7 @@ export default function SalesModal({
     setLines([]);
     setPayments([]);
     setWhatKind('product');
-    
+
     // Reset mini-submodal data
     setTaskItemData({
       outputItemType: '',
@@ -454,7 +455,7 @@ export default function SalesModal({
     const hasProductFields = Boolean(selectedItemId) || quickRows.some(r => r.quantity > 0);
     const hasSelectedItems = selectedItems.length > 0;
     const hasAnyProductSelection = hasProductLines || hasProductFields || hasSelectedItems;
-    
+
     if (!hasAnyProductSelection && !hasServiceSelection) {
       showValidationError('Please add at least one product (item) or service (task) to the sale.', true);
       return;
@@ -462,12 +463,12 @@ export default function SalesModal({
 
 
     // Validate: Check for conflicting data (product fields filled while service lines exist, or vice versa)
-    
+
     if (hasServiceSelection && (hasProductFields || hasSelectedItems)) {
       showValidationError('Conflicting data detected! You have service lines but also product fields filled. Please clear one before saving.', true);
       return;
     }
-    
+
     if (hasAnyProductSelection && whatKind === 'service' && !hasServiceSelection) {
       showValidationError('Conflicting data detected! You have product lines but are in Service mode. Please clear the product lines or switch to Product mode.', true);
       return;
@@ -530,7 +531,7 @@ export default function SalesModal({
         isNewOutputItem: taskItemData.isNewItem,
         isSold: taskItemData.outputItemStatus === ItemStatus.SOLD,
       } as any];
-      
+
     } else if (!manualLines && quickRows.length > 0) {
       // If user is using Quick Count (manualLines=false), materialize lines from quickRows
       effectiveLines = quickRows
@@ -589,21 +590,21 @@ export default function SalesModal({
     const totalRevenue = subtotal - totalDiscount + taxTotal;
 
     // Convert recordedPayments (SalePaymentLine[]) to Payment[] format
-    const effectivePayments = recordedPayments.length > 0 
+    const effectivePayments = recordedPayments.length > 0
       ? recordedPayments.map(p => ({
-          method: p.method,
-          amount: p.amount,
-          currency: p.currency,
-          receivedAt: p.date,
-          notes: p.notes,
-          exchangeDescription: p.exchangeDescription,
-          exchangeCategory: p.exchangeCategory
-        }))
+        method: p.method,
+        amount: p.amount,
+        currency: p.currency,
+        receivedAt: p.date,
+        notes: p.notes,
+        exchangeDescription: p.exchangeDescription,
+        exchangeCategory: p.exchangeCategory
+      }))
       : payments.length > 0 ? payments : undefined;
 
     const saleData: Sale = {
       id: sale?.id || uuid(),
-      name: (name?.trim() || `${type} @ ${siteId} ${saleDate.toISOString().slice(0,10)}`),
+      name: (name?.trim() || `${type} @ ${siteId} ${saleDate.toISOString().slice(0, 10)}`),
       description: description.trim() || undefined,
       saleDate,
       type,
@@ -642,10 +643,10 @@ export default function SalesModal({
     try {
       // Emit pure sale entity - Links System handles all relationships automatically
       await onSave(saleData);
-      
+
       // Dispatch events AFTER successful save
       dispatchEntityUpdated(entityTypeToKind(EntityType.SALE));
-      
+
       onOpenChange(false);
     } catch (error) {
       console.error('Save failed:', error);
@@ -658,19 +659,19 @@ export default function SalesModal({
   // Validation: Check if sale can have the specified line type
   const canAddLineType = (lineKind: 'item' | 'bundle' | 'service') => {
     if (lines.length === 0) return true; // First line can be anything
-    
+
     const existingKinds = new Set(lines.map(line => line.kind));
-    
+
     // If it's a product line (item/bundle), check if there are no service lines
     if (lineKind === 'item' || lineKind === 'bundle') {
       return !existingKinds.has('service');
     }
-    
+
     // If it's a service line, check if there are no product lines
     if (lineKind === 'service') {
       return !existingKinds.has('item') && !existingKinds.has('bundle');
     }
-    
+
     return true;
   };
 
@@ -679,7 +680,7 @@ export default function SalesModal({
       showValidationError('Cannot mix product and service lines in the same sale. Please clear existing lines first.');
       return;
     }
-    
+
     const newLine: SaleLine = {
       lineId: uuid(),
       kind: 'item',
@@ -752,7 +753,7 @@ export default function SalesModal({
       showValidationError('Cannot mix product and service lines in the same sale. Please clear existing lines first.');
       return;
     }
-    
+
     const newLine: SaleLine = {
       lineId: uuid(),
       kind: 'bundle',
@@ -772,7 +773,7 @@ export default function SalesModal({
       showValidationError('Cannot mix product and service lines in the same sale. Please clear existing lines first.');
       return;
     }
-    
+
     const newLine: SaleLine = {
       lineId: uuid(),
       kind: 'service',
@@ -896,10 +897,10 @@ export default function SalesModal({
       date: new Date(),
       notes: 'Gift payment'
     };
-    
+
     // Add to recorded payments
     setRecordedPayments([...recordedPayments, giftPayment]);
-    
+
     // Reduce revenue by gift amount
     if (whatKind === 'product') {
       if (oneItemMultiple === 'one') {
@@ -914,7 +915,7 @@ export default function SalesModal({
       // Service: reduce revenue
       setRevenue(Math.max(0, revenue - amount));
     }
-    
+
     // Set category to Other Sales
     setTaskStation(STATION_CATEGORIES.SALES[7] as Station); // 'Other Sales'
   };
@@ -932,10 +933,10 @@ export default function SalesModal({
       exchangeDescription: description,
       exchangeCategory: category
     };
-    
+
     // Add to recorded payments
     setRecordedPayments([...recordedPayments, exchangePayment]);
-    
+
     // Set category based on exchange category if provided, otherwise default to "Other Sales"
     if (category) {
       setTaskStation(category as Station);
@@ -954,7 +955,7 @@ export default function SalesModal({
       date: new Date(),
       notes: `Custom method: ${methodName}`
     };
-    
+
     // Add to recorded payments
     setRecordedPayments([...recordedPayments, otherPayment]);
   };
@@ -989,7 +990,7 @@ export default function SalesModal({
                   />
                 </div>
               </div>
-              
+
             </div>
 
           </div>
@@ -1003,24 +1004,24 @@ export default function SalesModal({
               variant="outline"
               onClick={() => {
                 if (sale?.id) return; // Don't allow changes for existing sales
-                
+
                 const newKind = whatKind === 'product' ? 'service' : 'product';
-                
+
                 // Check if we can switch to the new kind
                 if (lines.length > 0) {
                   const existingKinds = new Set(lines.map(line => line.kind));
-                  
+
                   if (newKind === 'product' && existingKinds.has('service')) {
                     showValidationError('Cannot switch to Product mode. This sale already has service lines. Please clear all lines first.');
                     return;
                   }
-                  
+
                   if (newKind === 'service' && (existingKinds.has('item') || existingKinds.has('bundle'))) {
                     showValidationError('Cannot switch to Service mode. This sale already has product lines. Please clear all lines first.');
                     return;
                   }
                 }
-                
+
                 setWhatKind(newKind);
               }}
               className={`min-w-[110px] ${sale?.id ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -1041,19 +1042,19 @@ export default function SalesModal({
               </Button>
             )}
 
-              {/* Sale Type Selectors - ONE ROW */}
-              <div className="ml-auto flex items-center gap-2">
+            {/* Sale Type Selectors - ONE ROW */}
+            <div className="ml-auto flex items-center gap-2">
               {Object.values(SaleType).map(t => {
                 // Disable type changes for existing sales (except product->multiple)
                 const isExistingSale = sale?.id;
                 const isProductToMultiple = type === SaleType.DIRECT && t === SaleType.BUNDLE_SALE;
                 const isDisabled = isExistingSale && !isProductToMultiple;
-                
+
                 return (
-                  <Button 
-                    key={t} 
-                    variant={t === type ? 'default' : 'outline'} 
-                    size="sm" 
+                  <Button
+                    key={t}
+                    variant={t === type ? 'default' : 'outline'}
+                    size="sm"
                     disabled={!!isDisabled}
                     onClick={() => {
                       if (isDisabled) return;
@@ -1076,7 +1077,23 @@ export default function SalesModal({
         </div>
 
         {/* Content Area - Fixed Height with Internal Scroll */}
-        <div className="px-6 overflow-y-auto space-y-4" style={{ maxHeight: 'calc(90vh - 280px)' }}>
+        {type === SaleType.FERIA ? (
+          <FeriaSalesDashboard
+            sites={sites}
+            characters={characters}
+            items={items}
+            saleDate={saleDate}
+            setSaleDate={setSaleDate}
+            lines={lines}
+            setLines={setLines}
+            siteId={siteId}
+            setSiteId={setSiteId}
+            onSave={handleSave}
+            onCancel={() => onOpenChange(false)}
+            isSaving={isSaving}
+          />
+        ) : (
+          <div className="px-6 overflow-y-auto space-y-4" style={{ maxHeight: 'calc(90vh - 280px)' }}>
             {/* Row 1: Date and Total Amount */}
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-2">
@@ -1091,7 +1108,7 @@ export default function SalesModal({
               <div className="flex items-center gap-2">
                 <span className="text-sm text-muted-foreground">Total Amount:</span>
                 <div className="min-w-[120px] text-lg font-bold text-foreground">
-                  ${whatKind === 'product' 
+                  ${whatKind === 'product'
                     ? (oneItemMultiple === 'one'
                       ? ((selectedItemQuantity * selectedItemPrice) - cost - (overallDiscount.amount || 0)).toFixed(2)
                       : (selectedItems.reduce((sum, item) => sum + item.total, 0) - cost - (overallDiscount.amount || 0)).toFixed(2)
@@ -1107,174 +1124,174 @@ export default function SalesModal({
               <>
                 {/* Column Headers */}
 
-                
+
                 <div className={`grid gap-4 ${emissaryColumnExpanded ? 'grid-cols-4' : 'grid-cols-3'}`}>
-                {/* Column 1: Ambassadors - Site & Customer */}
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="site" className="text-xs">Site</Label>
-                    <SearchableSelect
-                      value={siteId}
-                      onValueChange={setSiteId}
-                      options={createSiteOptionsWithCategories(sites)}
-                      autoGroupByCategory={true}
-                      placeholder="Select site..."
-                      className="h-8 text-sm"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="customer" className="text-xs">Customer</Label>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setIsNewCustomer(!isNewCustomer)}
-                        className="h-6 text-xs px-2"
-                      >
-                        {isNewCustomer ? 'Existing' : 'New'}
-                      </Button>
-                    </div>
-                    {isNewCustomer ? (
-                      <Input
-                        id="customer"
-                        value={newCustomerName}
-                        onChange={(e) => setNewCustomerName(e.target.value)}
-                        placeholder="New customer name"
-                        className="h-8 text-sm"
-                      />
-                    ) : (
+                  {/* Column 1: Ambassadors - Site & Customer */}
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="site" className="text-xs">Site</Label>
                       <SearchableSelect
-                        value={customerId || ''}
-                        onValueChange={setCustomerId}
-                        options={createCharacterOptions(characters)}
+                        value={siteId}
+                        onValueChange={setSiteId}
+                        options={createSiteOptionsWithCategories(sites)}
                         autoGroupByCategory={true}
-                        placeholder="Select customer"
+                        placeholder="Select site..."
                         className="h-8 text-sm"
                       />
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="customer" className="text-xs">Customer</Label>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setIsNewCustomer(!isNewCustomer)}
+                          className="h-6 text-xs px-2"
+                        >
+                          {isNewCustomer ? 'Existing' : 'New'}
+                        </Button>
+                      </div>
+                      {isNewCustomer ? (
+                        <Input
+                          id="customer"
+                          value={newCustomerName}
+                          onChange={(e) => setNewCustomerName(e.target.value)}
+                          placeholder="New customer name"
+                          className="h-8 text-sm"
+                        />
+                      ) : (
+                        <SearchableSelect
+                          value={customerId || ''}
+                          onValueChange={setCustomerId}
+                          options={createCharacterOptions(characters)}
+                          autoGroupByCategory={true}
+                          placeholder="Select customer"
+                          className="h-8 text-sm"
+                        />
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Column 2: Ambassadors - Item */}
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="item" className="text-xs">Item</Label>
+                      <SearchableSelect
+                        value={selectedItemId}
+                        onValueChange={handleItemSelection}
+                        options={getItemOptions()}
+                        autoGroupByCategory={true}
+                        placeholder="Select item..."
+                        className="h-8 text-sm"
+                      />
+                    </div>
+
+                    {/* Show item fields when item is selected */}
+                    {selectedItemId && (
+                      <>
+                        <div className="space-y-2">
+                          <Label htmlFor="itemQuantity" className="text-xs">Quantity</Label>
+                          <NumericInput
+                            id="itemQuantity"
+                            value={selectedItemQuantity}
+                            onChange={(value) => setSelectedItemQuantity(value)}
+                            min={1}
+                            step={1}
+                            className="h-8 text-sm"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="itemPrice" className="text-xs">Price</Label>
+                          <NumericInput
+                            id="itemPrice"
+                            value={selectedItemPrice}
+                            onChange={(value) => {
+                              setSelectedItemPrice(value);
+                              setRevenue(value);
+                            }}
+                            min={0}
+                            step={1}
+                            placeholder="0.00"
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                      </>
                     )}
                   </div>
-                </div>
 
-                {/* Column 2: Ambassadors - Item */}
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="item" className="text-xs">Item</Label>
-                    <SearchableSelect
-                      value={selectedItemId}
-                      onValueChange={handleItemSelection}
-                      options={getItemOptions()}
-                      autoGroupByCategory={true}
-                      placeholder="Select item..."
-                      className="h-8 text-sm"
-                    />
-                  </div>
-                  
-                  {/* Show item fields when item is selected */}
-                  {selectedItemId && (
-                    <>
-                      <div className="space-y-2">
-                        <Label htmlFor="itemQuantity" className="text-xs">Quantity</Label>
-                        <NumericInput
-                          id="itemQuantity"
-                          value={selectedItemQuantity}
-                          onChange={(value) => setSelectedItemQuantity(value)}
-                          min={1}
-                          step={1}
-                          className="h-8 text-sm"
-                        />
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="itemPrice" className="text-xs">Price</Label>
-                        <NumericInput
-                          id="itemPrice"
-                          value={selectedItemPrice}
-                          onChange={(value) => {
-                            setSelectedItemPrice(value);
-                            setRevenue(value);
-                          }}
-                          min={0}
-                          step={1}
-                          placeholder="0.00"
-                          className="h-8 text-sm"
-                        />
-                      </div>
-                    </>
-                  )}
-                </div>
-
-                {/* Column 3: Financial Ambassador Fields (like TaskModal) */}
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label className="text-xs">Cost & Revenue</Label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="space-y-2">
-                        <Label htmlFor="cost" className="text-xs">Cost</Label>
-                        <NumericInput
-                          id="cost"
-                          value={cost}
-                          onChange={setCost}
-                          min={0}
-                          step={1}
-                          placeholder="0.00"
-                          className="h-8 text-sm"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="revenue" className="text-xs">Revenue</Label>
-                        <div className="h-8 text-sm bg-muted px-3 py-2 rounded-md border flex items-center">
-                          {(selectedItemQuantity * selectedItemPrice) % 1 === 0 
-                            ? (selectedItemQuantity * selectedItemPrice).toString()
-                            : (selectedItemQuantity * selectedItemPrice).toFixed(1)
-                          }
+                  {/* Column 3: Financial Ambassador Fields (like TaskModal) */}
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label className="text-xs">Cost & Revenue</Label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-2">
+                          <Label htmlFor="cost" className="text-xs">Cost</Label>
+                          <NumericInput
+                            id="cost"
+                            value={cost}
+                            onChange={setCost}
+                            min={0}
+                            step={1}
+                            placeholder="0.00"
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="revenue" className="text-xs">Revenue</Label>
+                          <div className="h-8 text-sm bg-muted px-3 py-2 rounded-md border flex items-center">
+                            {(selectedItemQuantity * selectedItemPrice) % 1 === 0
+                              ? (selectedItemQuantity * selectedItemPrice).toString()
+                              : (selectedItemQuantity * selectedItemPrice).toFixed(1)
+                            }
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label className="text-xs">Payment Status</Label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setIsNotPaid(!isNotPaid)}
-                        className={`h-8 text-xs ${isNotPaid ? 'border-orange-500 text-orange-600' : ''}`}
-                      >
-                        {isNotPaid ? "⚠ Not Paid" : "✓ Paid"}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          const newIsNotCharged = !isNotCharged;
-                          setIsNotCharged(newIsNotCharged);
-                          updateSaleStatus(newIsNotCharged);
-                        }}
-                        className={`h-8 text-xs ${isNotCharged ? 'border-orange-500 text-orange-600' : ''}`}
-                      >
-                        {isNotCharged ? "⚠ Not Charged" : "✓ Charged"}
-                      </Button>
-                    </div>
-                  </div>
-                </div>
 
-                {/* Column 4: Emissaries - Player Points (only when expanded) */}
-                {emissaryColumnExpanded && (
-                  <div className="space-y-4">
                     <div className="space-y-2">
-                      <Label className="text-xs">Point Rewards</Label>
-                      <div className="grid grid-cols-4 gap-2">
-                        <div><Label htmlFor="reward-xp" className="text-xs">XP</Label><NumericInput id="reward-xp" value={playerPoints.xp} onChange={(value) => setPlayerPoints({ ...playerPoints, xp: value })} min={0} step={1} className="h-8 text-sm" /></div>
-                        <div><Label htmlFor="reward-rp" className="text-xs">RP</Label><NumericInput id="reward-rp" value={playerPoints.rp} onChange={(value) => setPlayerPoints({ ...playerPoints, rp: value })} min={0} step={1} className="h-8 text-sm" /></div>
-                        <div><Label htmlFor="reward-fp" className="text-xs">FP</Label><NumericInput id="reward-fp" value={playerPoints.fp} onChange={(value) => setPlayerPoints({ ...playerPoints, fp: value })} min={0} step={1} className="h-8 text-sm" /></div>
-                        <div><Label htmlFor="reward-hp" className="text-xs">HP</Label><NumericInput id="reward-hp" value={playerPoints.hp} onChange={(value) => setPlayerPoints({ ...playerPoints, hp: value })} min={0} step={1} className="h-8 text-sm" /></div>
+                      <Label className="text-xs">Payment Status</Label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setIsNotPaid(!isNotPaid)}
+                          className={`h-8 text-xs ${isNotPaid ? 'border-orange-500 text-orange-600' : ''}`}
+                        >
+                          {isNotPaid ? "⚠ Not Paid" : "✓ Paid"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            const newIsNotCharged = !isNotCharged;
+                            setIsNotCharged(newIsNotCharged);
+                            updateSaleStatus(newIsNotCharged);
+                          }}
+                          className={`h-8 text-xs ${isNotCharged ? 'border-orange-500 text-orange-600' : ''}`}
+                        >
+                          {isNotCharged ? "⚠ Not Charged" : "✓ Charged"}
+                        </Button>
                       </div>
                     </div>
                   </div>
-                )}
-              </div>
+
+                  {/* Column 4: Emissaries - Player Points (only when expanded) */}
+                  {emissaryColumnExpanded && (
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label className="text-xs">Point Rewards</Label>
+                        <div className="grid grid-cols-4 gap-2">
+                          <div><Label htmlFor="reward-xp" className="text-xs">XP</Label><NumericInput id="reward-xp" value={playerPoints.xp} onChange={(value) => setPlayerPoints({ ...playerPoints, xp: value })} min={0} step={1} className="h-8 text-sm" /></div>
+                          <div><Label htmlFor="reward-rp" className="text-xs">RP</Label><NumericInput id="reward-rp" value={playerPoints.rp} onChange={(value) => setPlayerPoints({ ...playerPoints, rp: value })} min={0} step={1} className="h-8 text-sm" /></div>
+                          <div><Label htmlFor="reward-fp" className="text-xs">FP</Label><NumericInput id="reward-fp" value={playerPoints.fp} onChange={(value) => setPlayerPoints({ ...playerPoints, fp: value })} min={0} step={1} className="h-8 text-sm" /></div>
+                          <div><Label htmlFor="reward-hp" className="text-xs">HP</Label><NumericInput id="reward-hp" value={playerPoints.hp} onChange={(value) => setPlayerPoints({ ...playerPoints, hp: value })} min={0} step={1} className="h-8 text-sm" /></div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </>
             )}
 
@@ -1290,176 +1307,176 @@ export default function SalesModal({
                     <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Emissaries</div>
                   )}
                 </div>
-                
+
                 <div className={`grid gap-4 ${emissaryColumnExpanded ? 'grid-cols-4' : 'grid-cols-3'}`}>
-                {/* Column 1: Ambassadors - Site & Customer */}
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="site" className="text-xs">Site</Label>
-                    <SearchableSelect
-                      value={siteId}
-                      onValueChange={setSiteId}
-                      options={createSiteOptionsWithCategories(sites)}
-                      autoGroupByCategory={true}
-                      placeholder="Select site"
-                      className="h-8 text-sm"
-                    />
+                  {/* Column 1: Ambassadors - Site & Customer */}
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="site" className="text-xs">Site</Label>
+                      <SearchableSelect
+                        value={siteId}
+                        onValueChange={setSiteId}
+                        options={createSiteOptionsWithCategories(sites)}
+                        autoGroupByCategory={true}
+                        placeholder="Select site"
+                        className="h-8 text-sm"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="customer" className="text-xs">Customer</Label>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setIsNewCustomer(!isNewCustomer)}
+                          className="h-6 text-xs px-2"
+                        >
+                          {isNewCustomer ? 'Existing' : 'New'}
+                        </Button>
+                      </div>
+                      {isNewCustomer ? (
+                        <Input
+                          id="customer"
+                          value={newCustomerName}
+                          onChange={(e) => setNewCustomerName(e.target.value)}
+                          placeholder="New customer name"
+                          className="h-8 text-sm"
+                        />
+                      ) : (
+                        <SearchableSelect
+                          value={customerId || ''}
+                          onValueChange={setCustomerId}
+                          options={createCharacterOptions(characters)}
+                          autoGroupByCategory={true}
+                          placeholder="Select customer"
+                          className="h-8 text-sm"
+                        />
+                      )}
+                    </div>
                   </div>
-                  
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="customer" className="text-xs">Customer</Label>
+
+                  {/* Column 2: Items Array */}
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label className="text-xs">Selected Items</Label>
                       <Button
-                        size="sm"
                         variant="outline"
-                        onClick={() => setIsNewCustomer(!isNewCustomer)}
-                        className="h-6 text-xs px-2"
+                        size="sm"
+                        onClick={() => setShowItemsSubModal(true)}
+                        className="w-full h-10 text-xs"
                       >
-                        {isNewCustomer ? 'Existing' : 'New'}
+                        <ListPlus className="w-4 h-4 mr-2" />
+                        {selectedItems.length > 0 ? `Edit Items (${selectedItems.length})` : 'Add Items'}
                       </Button>
                     </div>
-                    {isNewCustomer ? (
-                      <Input
-                        id="customer"
-                        value={newCustomerName}
-                        onChange={(e) => setNewCustomerName(e.target.value)}
-                        placeholder="New customer name"
-                        className="h-8 text-sm"
-                      />
-                    ) : (
-                      <SearchableSelect
-                        value={customerId || ''}
-                        onValueChange={setCustomerId}
-                        options={createCharacterOptions(characters)}
-                        autoGroupByCategory={true}
-                        placeholder="Select customer"
-                        className="h-8 text-sm"
-                      />
-                    )}
-                  </div>
-                </div>
 
-                {/* Column 2: Items Array */}
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label className="text-xs">Selected Items</Label>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowItemsSubModal(true)}
-                      className="w-full h-10 text-xs"
-                    >
-                      <ListPlus className="w-4 h-4 mr-2" />
-                      {selectedItems.length > 0 ? `Edit Items (${selectedItems.length})` : 'Add Items'}
-                    </Button>
-                  </div>
+                    {/* Display selected items summary */}
+                    {selectedItems.length > 0 && (
+                      <div className="space-y-2">
+                        <div className="max-h-32 overflow-y-auto space-y-1 p-2 bg-muted/30 rounded-md border">
+                          {selectedItems.map((item) => (
+                            <div key={item.id} className="text-xs flex justify-between items-center">
+                              <span className="truncate flex-1">{item.itemName}</span>
+                              <span className="text-muted-foreground ml-2">Ã—{item.quantity}</span>
+                              <span className="font-medium ml-2">${item.total.toFixed(2)}</span>
+                            </div>
+                          ))}
+                        </div>
 
-                  {/* Display selected items summary */}
-                  {selectedItems.length > 0 && (
-                    <div className="space-y-2">
-                      <div className="max-h-32 overflow-y-auto space-y-1 p-2 bg-muted/30 rounded-md border">
-                        {selectedItems.map((item) => (
-                          <div key={item.id} className="text-xs flex justify-between items-center">
-                            <span className="truncate flex-1">{item.itemName}</span>
-                            <span className="text-muted-foreground ml-2">Ã—{item.quantity}</span>
-                            <span className="font-medium ml-2">${item.total.toFixed(2)}</span>
+                        {/* Calculation Fields */}
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="space-y-2">
+                            <Label className="text-xs">Total Qty</Label>
+                            <div className="h-8 text-sm bg-muted px-3 py-2 rounded-md border flex items-center font-medium">
+                              {selectedItems.reduce((sum, item) => sum + item.quantity, 0)}
+                            </div>
                           </div>
-                        ))}
-                      </div>
-
-                      {/* Calculation Fields */}
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="space-y-2">
-                          <Label className="text-xs">Total Qty</Label>
-                          <div className="h-8 text-sm bg-muted px-3 py-2 rounded-md border flex items-center font-medium">
-                            {selectedItems.reduce((sum, item) => sum + item.quantity, 0)}
+                          <div className="space-y-2">
+                            <Label className="text-xs">Total Price</Label>
+                            <div className="h-8 text-sm bg-muted px-3 py-2 rounded-md border flex items-center font-medium">
+                              ${selectedItems.reduce((sum, item) => sum + item.total, 0).toFixed(2)}
+                            </div>
                           </div>
                         </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Column 3: Financial Ambassador Fields */}
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label className="text-xs">Cost & Revenue</Label>
+                      <div className="grid grid-cols-2 gap-2">
                         <div className="space-y-2">
-                          <Label className="text-xs">Total Price</Label>
-                          <div className="h-8 text-sm bg-muted px-3 py-2 rounded-md border flex items-center font-medium">
-                            ${selectedItems.reduce((sum, item) => sum + item.total, 0).toFixed(2)}
-                          </div>
+                          <Label htmlFor="cost" className="text-xs">Cost</Label>
+                          <NumericInput
+                            id="cost"
+                            value={cost}
+                            onChange={setCost}
+                            min={0}
+                            step={1}
+                            placeholder="0.00"
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="revenue" className="text-xs">Revenue</Label>
+                          <NumericInput
+                            id="revenue"
+                            value={revenue}
+                            onChange={setRevenue}
+                            min={0}
+                            step={1}
+                            placeholder="0.00"
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-xs">Payment Status</Label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setIsNotPaid(!isNotPaid)}
+                          className={`h-8 text-xs ${isNotPaid ? 'border-orange-500 text-orange-600' : ''}`}
+                        >
+                          {isNotPaid ? "⚠ Not Paid" : "✓ Paid"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            const newIsNotCharged = !isNotCharged;
+                            setIsNotCharged(newIsNotCharged);
+                            updateSaleStatus(newIsNotCharged);
+                          }}
+                          className={`h-8 text-xs ${isNotCharged ? 'border-orange-500 text-orange-600' : ''}`}
+                        >
+                          {isNotCharged ? "⚠ Not Charged" : "✓ Charged"}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Column 4: Emissaries - Player Points (only when expanded) */}
+                  {emissaryColumnExpanded && (
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label className="text-xs">Point Rewards</Label>
+                        <div className="grid grid-cols-4 gap-2">
+                          <div><Label htmlFor="multiple-reward-xp" className="text-xs">XP</Label><NumericInput id="multiple-reward-xp" value={playerPoints.xp} onChange={(value) => setPlayerPoints({ ...playerPoints, xp: value })} min={0} step={1} className="h-8 text-sm" /></div>
+                          <div><Label htmlFor="multiple-reward-rp" className="text-xs">RP</Label><NumericInput id="multiple-reward-rp" value={playerPoints.rp} onChange={(value) => setPlayerPoints({ ...playerPoints, rp: value })} min={0} step={1} className="h-8 text-sm" /></div>
+                          <div><Label htmlFor="multiple-reward-fp" className="text-xs">FP</Label><NumericInput id="multiple-reward-fp" value={playerPoints.fp} onChange={(value) => setPlayerPoints({ ...playerPoints, fp: value })} min={0} step={1} className="h-8 text-sm" /></div>
+                          <div><Label htmlFor="multiple-reward-hp" className="text-xs">HP</Label><NumericInput id="multiple-reward-hp" value={playerPoints.hp} onChange={(value) => setPlayerPoints({ ...playerPoints, hp: value })} min={0} step={1} className="h-8 text-sm" /></div>
                         </div>
                       </div>
                     </div>
                   )}
                 </div>
-
-                {/* Column 3: Financial Ambassador Fields */}
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label className="text-xs">Cost & Revenue</Label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="space-y-2">
-                        <Label htmlFor="cost" className="text-xs">Cost</Label>
-                        <NumericInput
-                          id="cost"
-                          value={cost}
-                          onChange={setCost}
-                          min={0}
-                          step={1}
-                          placeholder="0.00"
-                          className="h-8 text-sm"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="revenue" className="text-xs">Revenue</Label>
-                        <NumericInput
-                          id="revenue"
-                          value={revenue}
-                          onChange={setRevenue}
-                          min={0}
-                          step={1}
-                          placeholder="0.00"
-                          className="h-8 text-sm"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label className="text-xs">Payment Status</Label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setIsNotPaid(!isNotPaid)}
-                        className={`h-8 text-xs ${isNotPaid ? 'border-orange-500 text-orange-600' : ''}`}
-                      >
-                        {isNotPaid ? "⚠ Not Paid" : "✓ Paid"}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          const newIsNotCharged = !isNotCharged;
-                          setIsNotCharged(newIsNotCharged);
-                          updateSaleStatus(newIsNotCharged);
-                        }}
-                        className={`h-8 text-xs ${isNotCharged ? 'border-orange-500 text-orange-600' : ''}`}
-                      >
-                        {isNotCharged ? "⚠ Not Charged" : "✓ Charged"}
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Column 4: Emissaries - Player Points (only when expanded) */}
-                {emissaryColumnExpanded && (
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label className="text-xs">Point Rewards</Label>
-                      <div className="grid grid-cols-4 gap-2">
-                        <div><Label htmlFor="multiple-reward-xp" className="text-xs">XP</Label><NumericInput id="multiple-reward-xp" value={playerPoints.xp} onChange={(value) => setPlayerPoints({ ...playerPoints, xp: value })} min={0} step={1} className="h-8 text-sm" /></div>
-                        <div><Label htmlFor="multiple-reward-rp" className="text-xs">RP</Label><NumericInput id="multiple-reward-rp" value={playerPoints.rp} onChange={(value) => setPlayerPoints({ ...playerPoints, rp: value })} min={0} step={1} className="h-8 text-sm" /></div>
-                        <div><Label htmlFor="multiple-reward-fp" className="text-xs">FP</Label><NumericInput id="multiple-reward-fp" value={playerPoints.fp} onChange={(value) => setPlayerPoints({ ...playerPoints, fp: value })} min={0} step={1} className="h-8 text-sm" /></div>
-                        <div><Label htmlFor="multiple-reward-hp" className="text-xs">HP</Label><NumericInput id="multiple-reward-hp" value={playerPoints.hp} onChange={(value) => setPlayerPoints({ ...playerPoints, hp: value })} min={0} step={1} className="h-8 text-sm" /></div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
               </>
             )}
 
@@ -1475,215 +1492,215 @@ export default function SalesModal({
                     <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Emissaries</div>
                   )}
                 </div>
-                
+
                 <div className={`grid gap-4 ${emissaryColumnExpanded ? 'grid-cols-4' : 'grid-cols-3'}`}>
-                {/* Column 1: Ambassadors - Site & Customer */}
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="site" className="text-xs">Site</Label>
-                    <SearchableSelect
-                      value={siteId}
-                      onValueChange={setSiteId}
-                      options={createSiteOptionsWithCategories(sites)}
-                      autoGroupByCategory={true}
-                      placeholder="Select site"
-                      className="h-8 text-sm"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="customer" className="text-xs">Customer</Label>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setIsNewCustomer(!isNewCustomer)}
-                        className="h-6 text-xs px-2"
-                      >
-                        {isNewCustomer ? 'Existing' : 'New'}
-                      </Button>
-                    </div>
-                    {isNewCustomer ? (
-                      <Input
-                        id="customer"
-                        value={newCustomerName}
-                        onChange={(e) => setNewCustomerName(e.target.value)}
-                        placeholder="New customer name"
-                        className="h-8 text-sm"
-                      />
-                    ) : (
-                      <SearchableSelect
-                        value={customerId || ''}
-                        onValueChange={setCustomerId}
-                        options={createCharacterOptions(characters)}
-                        autoGroupByCategory={true}
-                        placeholder="Select customer"
-                        className="h-8 text-sm"
-                      />
-                    )}
-                  </div>
-                </div>
-
-                {/* Column 2: Ambassadors - Task */}
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="taskName" className="text-xs">Task Name</Label>
-                    <Input
-                      id="taskName"
-                      value={taskName}
-                      onChange={(e) => setTaskName(e.target.value)}
-                      placeholder="Task name"
-                      className="h-8 text-sm"
-                    />
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="taskStation" className="text-xs">Station</Label>
-                    <SearchableSelect
-                      value={getStationValue(taskStation)}
-                      onValueChange={(value) => {
-                        const station = getStationFromCombined(value);
-                        setTaskStation(station as Station);
-                      }}
-                      placeholder="Select station..."
-                      options={createStationCategoryOptions()}
-                      autoGroupByCategory={true}
-                      getCategoryForValue={(value) => getCategoryFromCombined(value)}
-                      className="h-8 text-sm"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="space-y-2">
-                      <Label htmlFor="taskType" className="text-xs">Type</Label>
-                      <Select value={taskType} onValueChange={(value) => setTaskType(value as TaskType)}>
-                        <SelectTrigger className="h-8 text-sm">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {Object.values(TaskType).map(type => (
-                            <SelectItem key={type} value={type}>
-                              {type}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="taskParent" className="text-xs">Parent</Label>
-                      <SearchableSelect
-                        value={taskParentId}
-                        onValueChange={setTaskParentId}
-                        placeholder="No Parent"
-                        options={createTaskParentOptions(tasks, taskParentId)}
-                        autoGroupByCategory={true}
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Mini-submodal buttons for Task data */}
-                  <div className="flex justify-center gap-4 mt-4">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowTaskItemSubModal(true)}
-                      className="flex items-center gap-2"
-                    >
-                      <Package className="h-4 w-4" />
-                      Task Item
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowTaskPointsSubModal(true)}
-                      className="flex items-center gap-2"
-                    >
-                      <Gift className="h-4 w-4" />
-                      Task Rewards
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Column 3: Financial Ambassador Fields (like TaskModal) */}
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label className="text-xs">Cost & Revenue</Label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="space-y-2">
-                        <Label htmlFor="cost" className="text-xs">Cost</Label>
-                        <NumericInput
-                          id="cost"
-                          value={cost}
-                          onChange={setCost}
-                          min={0}
-                          step={1}
-                          placeholder="0.00"
-                          className="h-8 text-sm"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="revenue" className="text-xs">Revenue</Label>
-                        <NumericInput
-                          id="revenue"
-                          value={revenue}
-                          onChange={setRevenue}
-                          min={0}
-                          step={1}
-                          placeholder="0.00"
-                          className="h-8 text-sm"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label className="text-xs">Payment Status</Label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setIsNotPaid(!isNotPaid)}
-                        className={`h-8 text-xs ${isNotPaid ? 'border-orange-500 text-orange-600' : ''}`}
-                      >
-                        {isNotPaid ? "⚠ Not Paid" : "✓ Paid"}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          const newIsNotCharged = !isNotCharged;
-                          setIsNotCharged(newIsNotCharged);
-                          updateSaleStatus(newIsNotCharged);
-                        }}
-                        className={`h-8 text-xs ${isNotCharged ? 'border-orange-500 text-orange-600' : ''}`}
-                      >
-                        {isNotCharged ? "⚠ Not Charged" : "✓ Charged"}
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Column 4: Emissaries - Player Points (SALE_PLAYER links) */}
-                {emissaryColumnExpanded && (
+                  {/* Column 1: Ambassadors - Site & Customer */}
                   <div className="space-y-4">
-                    {/* Sale Player Points - for SALE_PLAYER links */}
                     <div className="space-y-2">
-                      <Label className="text-xs">Sale Player Points (SALE_PLAYER)</Label>
-                      <div className="grid grid-cols-4 gap-2">
-                        <div><Label htmlFor="service-reward-xp" className="text-xs">XP</Label><NumericInput id="service-reward-xp" value={playerPoints.xp} onChange={(value) => setPlayerPoints({ ...playerPoints, xp: value })} min={0} step={1} className="h-8 text-sm" /></div>
-                        <div><Label htmlFor="service-reward-rp" className="text-xs">RP</Label><NumericInput id="service-reward-rp" value={playerPoints.rp} onChange={(value) => setPlayerPoints({ ...playerPoints, rp: value })} min={0} step={1} className="h-8 text-sm" /></div>
-                        <div><Label htmlFor="service-reward-fp" className="text-xs">FP</Label><NumericInput id="service-reward-fp" value={playerPoints.fp} onChange={(value) => setPlayerPoints({ ...playerPoints, fp: value })} min={0} step={1} className="h-8 text-sm" /></div>
-                        <div><Label htmlFor="service-reward-hp" className="text-xs">HP</Label><NumericInput id="service-reward-hp" value={playerPoints.hp} onChange={(value) => setPlayerPoints({ ...playerPoints, hp: value })} min={0} step={1} className="h-8 text-sm" /></div>
+                      <Label htmlFor="site" className="text-xs">Site</Label>
+                      <SearchableSelect
+                        value={siteId}
+                        onValueChange={setSiteId}
+                        options={createSiteOptionsWithCategories(sites)}
+                        autoGroupByCategory={true}
+                        placeholder="Select site"
+                        className="h-8 text-sm"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="customer" className="text-xs">Customer</Label>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setIsNewCustomer(!isNewCustomer)}
+                          className="h-6 text-xs px-2"
+                        >
+                          {isNewCustomer ? 'Existing' : 'New'}
+                        </Button>
+                      </div>
+                      {isNewCustomer ? (
+                        <Input
+                          id="customer"
+                          value={newCustomerName}
+                          onChange={(e) => setNewCustomerName(e.target.value)}
+                          placeholder="New customer name"
+                          className="h-8 text-sm"
+                        />
+                      ) : (
+                        <SearchableSelect
+                          value={customerId || ''}
+                          onValueChange={setCustomerId}
+                          options={createCharacterOptions(characters)}
+                          autoGroupByCategory={true}
+                          placeholder="Select customer"
+                          className="h-8 text-sm"
+                        />
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Column 2: Ambassadors - Task */}
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="taskName" className="text-xs">Task Name</Label>
+                      <Input
+                        id="taskName"
+                        value={taskName}
+                        onChange={(e) => setTaskName(e.target.value)}
+                        placeholder="Task name"
+                        className="h-8 text-sm"
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="taskStation" className="text-xs">Station</Label>
+                      <SearchableSelect
+                        value={getStationValue(taskStation)}
+                        onValueChange={(value) => {
+                          const station = getStationFromCombined(value);
+                          setTaskStation(station as Station);
+                        }}
+                        placeholder="Select station..."
+                        options={createStationCategoryOptions()}
+                        autoGroupByCategory={true}
+                        getCategoryForValue={(value) => getCategoryFromCombined(value)}
+                        className="h-8 text-sm"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="taskType" className="text-xs">Type</Label>
+                        <Select value={taskType} onValueChange={(value) => setTaskType(value as TaskType)}>
+                          <SelectTrigger className="h-8 text-sm">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Object.values(TaskType).map(type => (
+                              <SelectItem key={type} value={type}>
+                                {type}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="taskParent" className="text-xs">Parent</Label>
+                        <SearchableSelect
+                          value={taskParentId}
+                          onValueChange={setTaskParentId}
+                          placeholder="No Parent"
+                          options={createTaskParentOptions(tasks, taskParentId)}
+                          autoGroupByCategory={true}
+                          className="h-8 text-sm"
+                        />
                       </div>
                     </div>
 
-                    {/* Note: Item creation is now handled via "Configure Task Item" button below */}
+                    {/* Mini-submodal buttons for Task data */}
+                    <div className="flex justify-center gap-4 mt-4">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowTaskItemSubModal(true)}
+                        className="flex items-center gap-2"
+                      >
+                        <Package className="h-4 w-4" />
+                        Task Item
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowTaskPointsSubModal(true)}
+                        className="flex items-center gap-2"
+                      >
+                        <Gift className="h-4 w-4" />
+                        Task Rewards
+                      </Button>
+                    </div>
                   </div>
-                )}
-              </div>
+
+                  {/* Column 3: Financial Ambassador Fields (like TaskModal) */}
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label className="text-xs">Cost & Revenue</Label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-2">
+                          <Label htmlFor="cost" className="text-xs">Cost</Label>
+                          <NumericInput
+                            id="cost"
+                            value={cost}
+                            onChange={setCost}
+                            min={0}
+                            step={1}
+                            placeholder="0.00"
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="revenue" className="text-xs">Revenue</Label>
+                          <NumericInput
+                            id="revenue"
+                            value={revenue}
+                            onChange={setRevenue}
+                            min={0}
+                            step={1}
+                            placeholder="0.00"
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-xs">Payment Status</Label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setIsNotPaid(!isNotPaid)}
+                          className={`h-8 text-xs ${isNotPaid ? 'border-orange-500 text-orange-600' : ''}`}
+                        >
+                          {isNotPaid ? "⚠ Not Paid" : "✓ Paid"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            const newIsNotCharged = !isNotCharged;
+                            setIsNotCharged(newIsNotCharged);
+                            updateSaleStatus(newIsNotCharged);
+                          }}
+                          className={`h-8 text-xs ${isNotCharged ? 'border-orange-500 text-orange-600' : ''}`}
+                        >
+                          {isNotCharged ? "⚠ Not Charged" : "✓ Charged"}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Column 4: Emissaries - Player Points (SALE_PLAYER links) */}
+                  {emissaryColumnExpanded && (
+                    <div className="space-y-4">
+                      {/* Sale Player Points - for SALE_PLAYER links */}
+                      <div className="space-y-2">
+                        <Label className="text-xs">Sale Player Points (SALE_PLAYER)</Label>
+                        <div className="grid grid-cols-4 gap-2">
+                          <div><Label htmlFor="service-reward-xp" className="text-xs">XP</Label><NumericInput id="service-reward-xp" value={playerPoints.xp} onChange={(value) => setPlayerPoints({ ...playerPoints, xp: value })} min={0} step={1} className="h-8 text-sm" /></div>
+                          <div><Label htmlFor="service-reward-rp" className="text-xs">RP</Label><NumericInput id="service-reward-rp" value={playerPoints.rp} onChange={(value) => setPlayerPoints({ ...playerPoints, rp: value })} min={0} step={1} className="h-8 text-sm" /></div>
+                          <div><Label htmlFor="service-reward-fp" className="text-xs">FP</Label><NumericInput id="service-reward-fp" value={playerPoints.fp} onChange={(value) => setPlayerPoints({ ...playerPoints, fp: value })} min={0} step={1} className="h-8 text-sm" /></div>
+                          <div><Label htmlFor="service-reward-hp" className="text-xs">HP</Label><NumericInput id="service-reward-hp" value={playerPoints.hp} onChange={(value) => setPlayerPoints({ ...playerPoints, hp: value })} min={0} step={1} className="h-8 text-sm" /></div>
+                        </div>
+                      </div>
+
+                      {/* Note: Item creation is now handled via "Configure Task Item" button below */}
+                    </div>
+                  )}
+                </div>
               </>
             )}
 
@@ -1744,20 +1761,20 @@ export default function SalesModal({
 
             {/* Advanced Section - Always visible after diplomatic fields */}
             <div className="mt-4">
-              <Button 
-                size="sm" 
-                variant="outline" 
+              <Button
+                size="sm"
+                variant="outline"
                 onClick={toggleAdvanced}
                 className={`h-8 text-xs ${showAdvanced ? 'bg-transparent text-white' : 'bg-muted text-muted-foreground'}`}
               >
                 Advanced
               </Button>
-              
+
               {showAdvanced && (
                 <div className="mt-3 space-y-4">
                   {/* Native Section Header */}
                   <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Native</div>
-                  
+
                   <div className="grid grid-cols-3 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="description" className="text-xs">Description</Label>
@@ -1808,118 +1825,121 @@ export default function SalesModal({
                 </div>
               )}
             </div>
-        </div>
-
-        <DialogFooter className="flex items-center justify-between py-2 border-t px-6">
-          <div className="flex items-center gap-4">
-            {sale && (
-              <>
-                <Button
-                  variant="outline"
-                  onClick={() => setShowDeleteModal(true)}
-                  className="h-8 text-xs text-muted-foreground hover:text-foreground"
-                >
-                  Delete
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setShowRelationshipsModal(true)}
-                  className="h-8 text-xs"
-                >
-                  <Network className="w-3 h-3 mr-1" />
-                  Links
-                </Button>
-              </>
-            )}
-            <Button
-              variant="outline"
-              onClick={() => setShowPlayerCharacterSelector(true)}
-              className="h-8 text-xs"
-            >
-              <User className="w-3 h-3 mr-1" />
-              Player
-            </Button>
-            {/* Emissaries toggle - show for all modes */}
-            <Button
-              variant="outline"
-              onClick={toggleEmissary}
-              className={`h-8 text-xs ${emissaryColumnExpanded ? 'bg-transparent text-white' : 'bg-muted text-muted-foreground'}`}
-            >
-              Emissaries
-            </Button>
-            
-            {/* Payments button */}
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowPaymentsSubModal(true);
-                setPaymentsModalMode('payments');
-              }}
-              className="h-8 text-xs"
-            >
-              <Wallet className="w-3 h-3 mr-1" />
-              Payments {recordedPayments.length > 0 && `(${recordedPayments.length})`}
-            </Button>
-            
-            {/* Other Methods button */}
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowPaymentsSubModal(true);
-                setPaymentsModalMode('other-methods');
-              }}
-              className="h-8 text-xs"
-            >
-              <Gift className="w-3 h-3 mr-1" />
-              Other Methods
-            </Button>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <div className="hidden sm:block">
-                <Label className="text-xs">Status</Label>
-              </div>
-              <Select value={status} onValueChange={(value) => {
-                const newStatus = value as SaleStatus;
-                
-                // Show confirmation for COLLECTED status
-                if (newStatus === SaleStatus.COLLECTED && status !== SaleStatus.COLLECTED) {
-                  setPendingStatusChange({
-                    status: newStatus,
-                    onConfirm: () => {
-                      setStatus(newStatus);
-                      setShowArchiveCollectionModal(false);
-                      setPendingStatusChange(null);
-                    },
-                    onCancel: () => {
-                      setShowArchiveCollectionModal(false);
-                      setPendingStatusChange(null);
-                    }
-                  });
-                  setShowArchiveCollectionModal(true);
-                  return;
-                }
-                
-                setStatus(newStatus);
-              }}>
-                <SelectTrigger className="h-8 text-sm w-[160px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.values(SaleStatus).map(s => (
-                    <SelectItem key={s} value={s}>{s}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button variant="outline" onClick={() => onOpenChange(false)} className="h-8 text-xs" disabled={isSaving}>
-                Cancel
+        )}
+
+        {type !== SaleType.FERIA && (
+          <DialogFooter className="flex items-center justify-between py-2 border-t px-6">
+            <div className="flex items-center gap-4">
+              {sale && (
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowDeleteModal(true)}
+                    className="h-8 text-xs text-muted-foreground hover:text-foreground"
+                  >
+                    Delete
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowRelationshipsModal(true)}
+                    className="h-8 text-xs"
+                  >
+                    <Network className="w-3 h-3 mr-1" />
+                    Links
+                  </Button>
+                </>
+              )}
+              <Button
+                variant="outline"
+                onClick={() => setShowPlayerCharacterSelector(true)}
+                className="h-8 text-xs"
+              >
+                <User className="w-3 h-3 mr-1" />
+                Player
               </Button>
-              <Button onClick={handleSave} className="h-8 text-xs" disabled={isSaving}>
-                {isSaving ? 'Saving...' : (sale ? 'Update' : 'Create')} Sale
+              {/* Emissaries toggle - show for all modes */}
+              <Button
+                variant="outline"
+                onClick={toggleEmissary}
+                className={`h-8 text-xs ${emissaryColumnExpanded ? 'bg-transparent text-white' : 'bg-muted text-muted-foreground'}`}
+              >
+                Emissaries
+              </Button>
+
+              {/* Payments button */}
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowPaymentsSubModal(true);
+                  setPaymentsModalMode('payments');
+                }}
+                className="h-8 text-xs"
+              >
+                <Wallet className="w-3 h-3 mr-1" />
+                Payments {recordedPayments.length > 0 && `(${recordedPayments.length})`}
+              </Button>
+
+              {/* Other Methods button */}
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowPaymentsSubModal(true);
+                  setPaymentsModalMode('other-methods');
+                }}
+                className="h-8 text-xs"
+              >
+                <Gift className="w-3 h-3 mr-1" />
+                Other Methods
               </Button>
             </div>
-          </div>
-        </DialogFooter>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <div className="hidden sm:block">
+                  <Label className="text-xs">Status</Label>
+                </div>
+                <Select value={status} onValueChange={(value) => {
+                  const newStatus = value as SaleStatus;
+
+                  // Show confirmation for COLLECTED status
+                  if (newStatus === SaleStatus.COLLECTED && status !== SaleStatus.COLLECTED) {
+                    setPendingStatusChange({
+                      status: newStatus,
+                      onConfirm: () => {
+                        setStatus(newStatus);
+                        setShowArchiveCollectionModal(false);
+                        setPendingStatusChange(null);
+                      },
+                      onCancel: () => {
+                        setShowArchiveCollectionModal(false);
+                        setPendingStatusChange(null);
+                      }
+                    });
+                    setShowArchiveCollectionModal(true);
+                    return;
+                  }
+
+                  setStatus(newStatus);
+                }}>
+                  <SelectTrigger className="h-8 text-sm w-[160px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.values(SaleStatus).map(s => (
+                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button variant="outline" onClick={() => onOpenChange(false)} className="h-8 text-xs" disabled={isSaving}>
+                  Cancel
+                </Button>
+                <Button onClick={handleSave} className="h-8 text-xs" disabled={isSaving}>
+                  {isSaving ? 'Saving...' : (sale ? 'Update' : 'Create')} Sale
+                </Button>
+              </div>
+            </div>
+          </DialogFooter>
+        )}
 
         {/* Delete Modal */}
         {showDeleteModal && (
@@ -1975,7 +1995,7 @@ export default function SalesModal({
           onGiftApplied={handleGiftApplied}
           onExchangeApplied={handleExchangeApplied}
           onOtherMethodApplied={handleOtherMethodApplied}
-          totalDue={whatKind === 'product' 
+          totalDue={whatKind === 'product'
             ? (oneItemMultiple === 'one'
               ? (selectedItemQuantity * selectedItemPrice)
               : selectedItems.reduce((sum, item) => sum + item.total, 0)
