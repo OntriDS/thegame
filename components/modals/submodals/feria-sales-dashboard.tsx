@@ -72,7 +72,8 @@ type SettlementRow = {
 }
 
 // ============================================================================
-// Component
+// Component Booth Sales
+
 // ============================================================================
 
 export default function FeriaSalesDashboard({
@@ -277,55 +278,53 @@ export default function FeriaSalesDashboard({
         <div className="flex flex-col h-full bg-slate-50/50 dark:bg-slate-900/50 -mx-6 -my-4 p-6">
 
             {/* SECTION A: HEADER / SETUP */}
-            <div className="flex items-center justify-between mb-6 bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border">
-                <div className="flex items-center gap-6">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 bg-indigo-100 dark:bg-indigo-900 rounded-lg">
-                            <Store className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
-                        </div>
-                        <div>
-                            <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">Booth Sales</h2>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                <Building2 className="h-3 w-3" />
-                                <span>Shared Booth Management</span>
-                            </div>
-                        </div>
+            <div className="flex items-center gap-6 mb-6 bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border">
+                {/* Icon + Title */}
+                <div className="flex items-center gap-3">
+                    <div className="p-2 bg-indigo-100 dark:bg-indigo-900 rounded-lg">
+                        <Store className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
                     </div>
+                    <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 whitespace-nowrap">Booth Sales</h2>
+                </div>
 
-                    <div className="w-px h-10 bg-slate-200 dark:bg-slate-700" />
+                <div className="w-px h-8 bg-slate-200 dark:bg-slate-700" />
 
-                    <div className="grid grid-cols-4 gap-4">
-                        <div className="space-y-1.5">
-                            <Label className="text-xs font-medium text-muted-foreground">Date</Label>
-                            <DatePicker value={saleDate} onChange={(d) => setSaleDate(d || new Date())} />
-                        </div>
-                        <div className="space-y-1.5">
-                            <Label className="text-xs font-medium text-muted-foreground">Booth Cost</Label>
-                            <NumericInput
-                                value={boothCost}
-                                onChange={setBoothCost}
-                                className="h-9 w-32 border-red-200 text-red-600 font-medium"
-                                placeholder="0"
-                            />
-                        </div>
-                        <div className="space-y-1.5">
-                            <Label className="text-xs font-medium text-muted-foreground">$/₡</Label>
-                            <div className="h-9 w-24 px-3 py-2 rounded-md border bg-muted/50 flex items-center justify-center text-sm font-medium text-muted-foreground">
-                                {exchangeRate}
-                            </div>
-                        </div>
-                        <div className="space-y-1.5">
-                            <Label className="text-xs font-medium text-muted-foreground">Site</Label>
-                            <SearchableSelect
-                                value={siteId}
-                                onValueChange={setSiteId}
-                                options={createSiteOptionsWithCategories(sites)}
-                                autoGroupByCategory
-                                placeholder="Select site..."
-                                className="h-9 w-48"
-                            />
-                        </div>
+                {/* Date Field */}
+                <div className="flex items-center gap-2">
+                    <Label className="text-sm font-medium text-muted-foreground whitespace-nowrap">Date:</Label>
+                    <DatePicker value={saleDate} onChange={(d) => setSaleDate(d || new Date())} />
+                </div>
+
+                {/* Booth Cost Field */}
+                <div className="flex items-center gap-2">
+                    <Label className="text-sm font-medium text-muted-foreground whitespace-nowrap">Booth Cost:</Label>
+                    <NumericInput
+                        value={boothCost}
+                        onChange={setBoothCost}
+                        className="h-9 w-32 border-red-200 text-red-600 font-medium"
+                        placeholder="0"
+                    />
+                </div>
+
+                {/* Exchange Rate Field */}
+                <div className="flex items-center gap-2">
+                    <Label className="text-sm font-medium text-muted-foreground whitespace-nowrap">$/₡:</Label>
+                    <div className="h-9 w-20 px-3 py-2 rounded-md border bg-muted/50 flex items-center justify-center text-sm font-medium text-muted-foreground">
+                        {exchangeRate}
                     </div>
+                </div>
+
+                {/* Site Field */}
+                <div className="flex items-center gap-2">
+                    <Label className="text-sm font-medium text-muted-foreground whitespace-nowrap">Site:</Label>
+                    <SearchableSelect
+                        value={siteId}
+                        onValueChange={setSiteId}
+                        options={createSiteOptionsWithCategories(sites)}
+                        autoGroupByCategory
+                        placeholder="Select site..."
+                        className="h-9 w-48"
+                    />
                 </div>
             </div>
 
@@ -362,7 +361,8 @@ export default function FeriaSalesDashboard({
 
                                     if (line.kind === 'item') {
                                         const l = line as ItemSaleLine;
-                                        displayText = l.itemId || 'Unknown Item';
+                                        const item = items.find(i => i.id === l.itemId);
+                                        displayText = item?.name || l.description || 'Unknown Item';
                                         qty = l.quantity;
                                         price = l.unitPrice;
                                     } else if (line.kind === 'bundle') {
@@ -572,10 +572,27 @@ export default function FeriaSalesDashboard({
                         description: item.itemName
                     } as ItemSaleLine));
 
-                    setLines([...lines, ...convertedLines]);
+                    setLines(convertedLines); // Replace all lines with the new selection
                     setShowItemSelector(false);
                 }}
-                initialItems={[]} // Always start fresh here
+                initialItems={
+                    // Convert existing lines back to SaleItemLine format for editing
+                    lines
+                        .filter(line => line.kind === 'item')
+                        .map(line => {
+                            const itemLine = line as ItemSaleLine;
+                            const item = items.find(i => i.id === itemLine.itemId);
+                            return {
+                                id: itemLine.lineId,
+                                itemId: itemLine.itemId,
+                                itemName: item?.name || itemLine.description || itemLine.itemId,
+                                siteId: siteId,
+                                quantity: itemLine.quantity,
+                                unitPrice: itemLine.unitPrice,
+                                total: itemLine.quantity * itemLine.unitPrice
+                            };
+                        })
+                }
                 defaultSiteId={siteId}
             />
 
