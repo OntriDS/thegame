@@ -313,10 +313,14 @@ export default function FinancesPage() {
         if (authResponse.ok) {
           const authData = await authResponse.json();
           if (authData.authenticated && authData.user?.sub) {
-            // Get account from session (sub is account ID)
-            const account = await ClientAPI.getAccount(authData.user.sub);
-            if (account?.playerId) {
-              currentPlayerId = account.playerId;
+            // Check if sub is a valid UUID (account ID) before calling getAccount
+            const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(authData.user.sub);
+            if (isUUID) {
+              // Get account from session (sub is account ID)
+              const account = await ClientAPI.getAccount(authData.user.sub);
+              if (account?.playerId) {
+                currentPlayerId = account.playerId;
+              }
             }
           }
         }

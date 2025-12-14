@@ -456,6 +456,13 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
                 <>
                   <Button
                     variant="outline"
+                    onClick={handleDelete}
+                    className="h-8 text-xs text-muted-foreground hover:text-foreground"
+                  >
+                    Delete
+                  </Button>
+                  <Button
+                    variant="outline"
                     size="sm"
                     onClick={() => setShowOwnersModal(true)}
                     className="flex items-center gap-2 h-8 text-xs"
@@ -470,13 +477,6 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
                   >
                     <Network className="w-3 h-3 mr-1" />
                     Links
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={handleDelete}
-                    className="h-8 text-xs text-muted-foreground hover:text-foreground"
-                  >
-                    Delete
                   </Button>
                 </>
               )}

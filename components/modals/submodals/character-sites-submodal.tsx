@@ -37,11 +37,8 @@ export default function CharacterSitesSubmodal({
         try {
             setLoading(true);
 
-            console.log('[OwnedSites] Loading sites for character:', characterId);
-
             // Get all links for this character
             const links = await ClientAPI.getLinksFor({ type: EntityType.CHARACTER, id: characterId });
-            console.log('[OwnedSites] All links:', links.length);
 
             // Filter for ownership links (canonical: SITE_CHARACTER)
             // Site -> Character ownership
@@ -49,7 +46,6 @@ export default function CharacterSitesSubmodal({
                 (l.linkType === LinkType.SITE_CHARACTER) &&
                 (l.target.type === EntityType.CHARACTER && l.target.id === characterId)
             );
-            console.log('[OwnedSites] SITE_CHARACTER links:', siteLinks.length, siteLinks);
 
             // Get site IDs from link SOURCE (site is the source)
             const siteIds = new Set<string>();
@@ -58,20 +54,17 @@ export default function CharacterSitesSubmodal({
                     siteIds.add(link.source.id);
                 }
             });
-            console.log('[OwnedSites] Site IDs from links:', Array.from(siteIds));
 
             // Fetch all sites for options and filtering
             const allSites = await ClientAPI.getSites();
             setAllSiteOptions(allSites);
-            console.log('[OwnedSites] All sites:', allSites.length);
 
             // Filter by link IDs only (Links System is source of truth)
             const mySites = allSites.filter((site: Site) => siteIds.has(site.id));
-            console.log('[OwnedSites] My sites:', mySites.length, mySites.map(s => ({ id: s.id, name: s.name, ownerId: s.ownerId })));
             setOwnedSites(mySites);
 
         } catch (error) {
-            console.error('[OwnedSites] Failed to load sites:', error);
+            console.error('Failed to load sites:', error);
         } finally {
             setLoading(false);
         }
@@ -86,13 +79,7 @@ export default function CharacterSitesSubmodal({
     const handleAddSite = async () => {
         if (!selectedSiteId) return;
         try {
-            setLoading(true); // Show loading during link creation
-
-            console.log('[OwnedSites] Creating link:', {
-                site: selectedSiteId,
-                character: characterId,
-                linkType: LinkType.SITE_CHARACTER
-            });
+            setLoading(true);
 
             // Create CANONICAL link: Site -> Character
             await ClientAPI.createLink({
@@ -103,17 +90,14 @@ export default function CharacterSitesSubmodal({
                 createdAt: new Date().toISOString()
             });
 
-            console.log('[OwnedSites] Link created successfully');
-
             // Reset state
             setIsAdding(false);
             setSelectedSiteId('');
 
-            console.log('[OwnedSites] Reloading sites...');
             // Reload sites to show the newly linked site
             await loadSites();
         } catch (err) {
-            console.error("[OwnedSites] Failed to add site:", err);
+            console.error('Failed to add site:', err);
             alert(`Failed to link site: ${err instanceof Error ? err.message : 'Unknown error'}`);
         } finally {
             setLoading(false);
@@ -134,13 +118,12 @@ export default function CharacterSitesSubmodal({
 
             if (linkToDelete) {
                 await ClientAPI.removeLink(linkToDelete.id);
-                console.log('[OwnedSites] Link removed successfully');
             }
 
             // Reload sites
             await loadSites();
         } catch (err) {
-            console.error("[OwnedSites] Failed to remove site:", err);
+            console.error('Failed to remove site:', err);
         } finally {
             setLoading(false);
         }
