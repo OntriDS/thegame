@@ -64,6 +64,12 @@ export const ROLE_BEHAVIORS = {
     isDisplayOnly: false,     // Can be freely toggled
     requiresJungleCoins: false,
   },
+  [CharacterRole.PARTNER]: {
+    isImmutable: false,
+    hideIfNotAssigned: false,
+    isDisplayOnly: false,     // Can be freely toggled
+    requiresJungleCoins: false,
+  }
 } as const;
 
 /**
@@ -71,6 +77,15 @@ export const ROLE_BEHAVIORS = {
  * Defines what each role enables in the system
  */
 export const ROLE_BENEFITS = {
+  [CharacterRole.PARTNER]: {
+    description: "Strategic partner with business shares",
+    benefits: [
+      "Can hold shares in a specific Business",
+      "Can have multiple Contracts assigned",
+      "Shareholder analytics",
+    ],
+    requirements: ["Must have valid Business link"]
+  },
   [CharacterRole.PLAYER]: {
     description: "Connects the character to a Player entity with points progression",
     benefits: [

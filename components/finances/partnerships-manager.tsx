@@ -135,6 +135,8 @@ export function PartnershipsManager({
                     console.log("Partnership saved", data);
                     setIsPartnershipModalOpen(false);
                 }}
+                businesses={businesses}
+                characters={characters}
             />
         </div>
     );
