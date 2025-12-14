@@ -705,6 +705,7 @@ export enum LogEventType {
   REQUESTED_TASK = 'REQUESTED_TASK', // Character requested a task
   PURCHASED = 'PURCHASED',            // Character made a purchase
   TRANSACTED = 'TRANSACTED',          // Character in financial transaction
+  BUSINESS_LINKED = 'BUSINESS_LINKED', // Business entity linked to character
 
   // Account-specific events
   EMAIL_VERIFIED = 'EMAIL_VERIFIED',

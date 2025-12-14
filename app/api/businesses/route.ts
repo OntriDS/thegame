@@ -4,6 +4,7 @@ import { v4 as uuid } from 'uuid';
 import type { Business } from '@/types/entities';
 import { requireAdminAuth } from '@/lib/api-auth';
 import { getAllBusinesses, upsertBusiness } from '@/data-store/datastore';
+import { onBusinessUpsert } from '@/workflows/entities-workflows/business.workflow';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,6 +35,10 @@ export async function POST(req: NextRequest) {
       links: body.links || []
     };
     const saved = await upsertBusiness(entity);
+
+    // Trigger workflow for logging
+    await onBusinessUpsert(saved);
+
     return NextResponse.json(saved);
   } catch (error) {
     console.error('[Businesses API] Failed to save:', error);
