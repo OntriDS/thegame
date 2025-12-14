@@ -660,7 +660,7 @@ export default function FinancesPage() {
           <TabsTrigger value="assets">Assets</TabsTrigger>
           <TabsTrigger value="company">Company</TabsTrigger>
           <TabsTrigger value="personal">Personal</TabsTrigger>
-          <TabsTrigger value="partnerships">Partnerships</TabsTrigger>
+          <TabsTrigger value="partnerships">Partnerships & Contracts</TabsTrigger>
         </TabsList>
 
         {/* Assets Tab - Now First and Main */}
