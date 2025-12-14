@@ -9,12 +9,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Site, PhysicalSiteMetadata, DigitalSiteMetadata, SystemSiteMetadata, Settlement } from '@/types/entities';
-import { 
-  SiteType, 
-  SiteStatus, 
-  PhysicalBusinessType, 
-  DigitalSiteType, 
-  SystemSiteType, 
+import {
+  SiteType,
+  SiteStatus,
+  PhysicalBusinessType,
+  DigitalSiteType,
+  SystemSiteType,
   LOCATION_HIERARCHY,
   EntityType
 } from '@/types/enums';
@@ -48,32 +48,32 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState<SiteStatus>(SiteStatus.ACTIVE);
   const [siteType, setSiteType] = useState<SiteType>(SiteType.PHYSICAL);
-  
+
   // Physical site fields
   const [settlementId, setSettlementId] = useState<string>('');
   const [settlements, setSettlements] = useState<Settlement[]>([]);
   const [businessType, setBusinessType] = useState<PhysicalBusinessType>(PhysicalBusinessType.STORAGE);
   const [googleMapsAddress, setGoogleMapsAddress] = useState('');
-  
+
   // Digital site fields
   const [digitalUrl, setDigitalUrl] = useState('');
   const [digitalType, setDigitalType] = useState<DigitalSiteType>(DigitalSiteType.DIGITAL_STORAGE);
-  
+
   // Special site fields
   const [systemPurpose, setSystemPurpose] = useState<SystemSiteType>(SystemSiteType.UNIVERSAL_TRACKING);
   const [showRelationshipsModal, setShowRelationshipsModal] = useState(false);
   const [showOwnersModal, setShowOwnersModal] = useState(false);
-  
+
   // Delete modal
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  
+
   // Settlement submodal
   const [showSettlementModal, setShowSettlementModal] = useState(false);
-  
+
   // Guard for one-time initialization of new sites
   const didInitRef = useRef(false);
-  
+
   // UI state
   const [showDescription, setShowDescription] = useState(false);
 
@@ -100,7 +100,7 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
       setDescription(site.description || '');
       setStatus((site.status as SiteStatus) || SiteStatus.ACTIVE);
       setSiteType(site.metadata.type);
-      
+
       // Load type-specific fields
       if (site.metadata.type === SiteType.PHYSICAL) {
         const physicalMeta = site.metadata as PhysicalSiteMetadata;
@@ -115,7 +115,7 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
         const systemMeta = site.metadata as SystemSiteMetadata;
         setSystemPurpose(systemMeta.systemType || SystemSiteType.UNIVERSAL_TRACKING);
       }
-      
+
       // Reset init guard when editing
       didInitRef.current = false;
     } else if (!didInitRef.current) {
@@ -132,7 +132,7 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
       setDigitalType(DigitalSiteType.DIGITAL_STORAGE);
       setSystemPurpose(SystemSiteType.UNIVERSAL_TRACKING);
     }
-    
+
     // Reset init guard when modal closes (allows fresh init on next open)
     if (!open) {
       didInitRef.current = false;
@@ -141,20 +141,20 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
 
   const handleSave = async () => {
     if (isSaving) return;
-    
+
     // Block saving changes to "None" site - it's a protected system site
     if (isNoneSite(site)) {
       console.warn('Cannot save changes to "None" site - it is a protected system site');
       alert('Cannot save changes to "None" site. It is a protected system site.');
       return;
     }
-    
+
     setIsSaving(true);
-    
+
     try {
       // Build metadata based on site type
       let metadata;
-      
+
       if (siteType === SiteType.PHYSICAL) {
         metadata = {
           type: SiteType.PHYSICAL,
@@ -187,10 +187,10 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
       };
 
       await onSave(siteData);
-      
+
       // Dispatch UI update events AFTER successful save
       dispatchEntityUpdated(entityTypeToKind(EntityType.SITE));
-      
+
       onOpenChange(false);
     } catch (error) {
       console.error('Save failed:', error);
@@ -199,7 +199,7 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
       setIsSaving(false);
     }
   };
-  
+
   const handleDelete = () => {
     if (!site) return;
     setShowDeleteModal(true);
@@ -209,10 +209,10 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
     try {
       const { ClientAPI } = await import('@/lib/client-api');
       await ClientAPI.upsertSettlement(settlement);
-      
+
       // Refresh settlements list
       await loadSettlements();
-      
+
       // Select the newly created settlement
       setSettlementId(settlement.id);
     } catch (error) {
@@ -221,7 +221,7 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
     }
   };
 
-  const [settlementOptions, setSettlementOptions] = useState<Array<{value: string, label: string, category: string}>>([]);
+  const [settlementOptions, setSettlementOptions] = useState<Array<{ value: string, label: string, category: string }>>([]);
 
   // Load settlement options when settlements change
   useEffect(() => {
@@ -232,14 +232,14 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
     }));
     setSettlementOptions(options);
   }, [settlements]);
-  
+
   const handleDeleteComplete = () => {
     setShowDeleteModal(false);
     // Dispatch UI update event after successful deletion
     dispatchEntityUpdated(entityTypeToKind(EntityType.SITE));
     onOpenChange(false);
   };
-  
+
   // Simple settlement options - no categorization needed
   const getSettlementOptions = () => {
     return settlements.map(settlement => ({
@@ -283,11 +283,11 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
                   disabled={isNoneSite(site)}
                 />
               </div>
-              
+
               <div className="col-span-2 space-y-2">
                 <Label htmlFor="siteType" className="text-xs">Type *</Label>
-                <Select 
-                  value={siteType} 
+                <Select
+                  value={siteType}
                   onValueChange={(v) => setSiteType(v as SiteType)}
                   disabled={isNoneSite(site)}
                 >
@@ -328,7 +328,7 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
                     </Button>
                   </div>
                 </div>
-                
+
                 <div className="col-span-2 space-y-2">
                   <Label htmlFor="businessType" className="text-xs">Business Type *</Label>
                   <Select
@@ -370,7 +370,7 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 <div className="col-span-2 space-y-2">
                   <Label htmlFor="digitalUrl" className="text-xs">URL</Label>
                   <Input
@@ -424,15 +424,15 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
 
             {/* Description - Collapsible */}
             <div className="mt-4">
-              <Button 
-                size="sm" 
-                variant="outline" 
+              <Button
+                size="sm"
+                variant="outline"
                 onClick={() => setShowDescription(!showDescription)}
                 className={`h-8 text-xs ${showDescription ? 'bg-transparent text-white' : 'bg-muted text-muted-foreground'}`}
               >
                 Description
               </Button>
-              
+
               {showDescription && (
                 <div className="mt-3 space-y-2">
                   <Textarea
@@ -511,9 +511,9 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
               <Button variant="outline" onClick={() => onOpenChange(false)} className="h-8 text-xs" disabled={isSaving}>
                 Cancel
               </Button>
-              <Button 
-                onClick={handleSave} 
-                className="h-8 text-xs" 
+              <Button
+                onClick={handleSave}
+                className="h-8 text-xs"
                 disabled={!name.trim() || isSaving || isNoneSite(site)}
               >
                 {isSaving ? 'Saving...' : (site ? 'Update' : 'Create')} Site
@@ -522,7 +522,7 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      
+
       {/* Delete Confirmation Modal */}
       {site && (
         <DeleteModal
@@ -559,12 +559,7 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
           entityId={site.id}
           entityName={site.name}
           linkType={LinkType.SITE_CHARACTER}
-          onPrimaryOwnerChanged={() => {
-            // Refresh UI if needed
-            dispatchEntityUpdated(entityTypeToKind(EntityType.SITE));
-          }}
-          onAdditionalOwnersChanged={() => {
-            // Refresh UI if needed
+          onOwnersChanged={() => {
             dispatchEntityUpdated(entityTypeToKind(EntityType.SITE));
           }}
         />

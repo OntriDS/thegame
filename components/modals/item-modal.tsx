@@ -53,7 +53,7 @@ const getDefaultRestockableForType = (itemType: ItemType): boolean => {
 
 export default function ItemModal({ item, defaultItemType, open, onOpenChange, onSave }: ItemModalProps) {
   const { getPreference, setPreference } = useUserPreferences();
-  
+
   // Memoized to prevent dependency changes on every render
   const getLastUsedStation = useCallback((): Station => {
     const saved = getPreference('item-modal-last-station');
@@ -99,7 +99,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
   const [quickSellLoading, setQuickSellLoading] = useState(false);
   const [showSoldConfirmation, setShowSoldConfirmation] = useState(false);
   const [pendingSoldStatus, setPendingSoldStatus] = useState(false);
-  
+
   // Item selection states for compound field
   const [isNewItem, setIsNewItem] = useState(true);
   const [selectedItemId, setSelectedItemId] = useState('');
@@ -531,7 +531,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
 
   const handleStationCategoryChange = (newStationCategory: string) => {
     const newStation = getStationFromCombined(newStationCategory) as Station;
-    
+
     setStationCategory(newStationCategory);
     setStation(newStation);
     setPreference('item-modal-last-station', newStation);
@@ -540,15 +540,15 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
   const handleItemTypeSubTypeChange = (newItemTypeSubType: string) => {
     const newItemType = getItemTypeFromCombined(newItemTypeSubType) as ItemType;
     const newSubType = getSubTypeFromCombined(newItemTypeSubType) as SubItemType;
-    
+
     setItemTypeSubType(newItemTypeSubType);
     setType(newItemType);
     setSubItemType(newSubType || '');
-    
+
     if (!item && !selectedItemId) {
       setRestockable(getDefaultRestockableForType(newItemType));
     }
-    
+
     // Save to user preferences
     const prefKey = `item-modal-last-subtype-${newItemType}`;
     setPreference(prefKey, newItemTypeSubType);
@@ -585,7 +585,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
       setType(itemType);
       setSubItemType(itemSubType);
       setItemTypeSubType(`${itemType}:${itemSubType}`);
-      
+
       const itemStation = item.station || 'Strategy';
       setStation(itemStation);
       const area = getAreaForStation(itemStation);
@@ -608,17 +608,17 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
       setTargetAmount(item.targetAmount?.toString() || '');
       const itemSiteId = item.stock?.[0]?.siteId || 'Home';
       setSite(itemSiteId);
-      
+
       // Parse file attachments for display
       const formatFileReferences = (files?: FileReference[]): string => {
         if (!files || files.length === 0) return '';
         return files.map(f => `${f.url || 'symbolic'}:${f.type}`).join(';');
       };
-      
+
       setOriginalFiles(formatFileReferences(item.originalFiles));
       setAccessoryFiles(formatFileReferences(item.accessoryFiles));
       setOwnerCharacterId(item.ownerCharacterId || null);
-      
+
       // Reset init guard when editing
       didInitRef.current = false;
     } else if (!didInitRef.current) {
@@ -638,7 +638,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
       // Load last used subtype for this ItemType
       const prefKey = `item-modal-last-subtype-${defaultItemType}`;
       const lastUsedSubtype = getPreference(prefKey);
-      
+
       if (lastUsedSubtype) {
         // Use the last selected subtype
         setItemTypeSubType(lastUsedSubtype);
@@ -729,7 +729,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
   const handleSave = async () => {
     if (isSaving) return;
     setIsSaving(true);
-    
+
     try {
       const dimensions = width && height ? {
         width: parseFloat(width),
@@ -742,19 +742,19 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
 
       // Handle stock quantity - add to existing if item already exists at this site
       let updatedStock: StockPoint[] = [];
-      
+
       // Determine if we're editing an existing item (either via prop or selectedItemId)
       const isEditingExistingItem = item || selectedItemId;
-      
+
       if (isEditingExistingItem) {
         // Editing existing item - get the item data
         const existingItem = item || existingItems.find(i => i.id === selectedItemId);
-        
+
         if (existingItem) {
           // Merge with existing stock
           updatedStock = [...(existingItem.stock || [])];
           const existingStockIndex = updatedStock.findIndex(stock => stock.siteId === site);
-          
+
           if (existingStockIndex >= 0) {
             // Update existing quantity at this site (replace, don't add)
             updatedStock[existingStockIndex] = {
@@ -782,7 +782,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
       // Parse file attachments
       const parseFileReferences = (field: string): FileReference[] => {
         if (!field || field.trim() === '') return [];
-        
+
         return field.split(';').map(fileRef => {
           const parts = fileRef.split(':');
           if (parts.length >= 2) {
@@ -837,10 +837,10 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
 
       // Emit pure item entity - Links System handles all relationships automatically
       await onSave(newItem);
-      
+
       // Dispatch UI update events AFTER successful save
       dispatchEntityUpdated(entityTypeToKind(EntityType.ITEM));
-      
+
       // Links are loaded on-demand when user clicks "View Links" button
       const remainingAfterSave = newItem.stock?.reduce((sum, stockPoint) => sum + stockPoint.quantity, 0) || 0;
       if (remainingAfterSave === 0) {
@@ -873,562 +873,569 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
           <DialogHeader className="pb-4">
             <DialogTitle className="text-lg">{(item || selectedItemId) ? 'Edit Item' : 'Add New Item'}</DialogTitle>
           </DialogHeader>
-        
+
           {/* Main Fields - 3 Columns */}
           <div className="grid grid-cols-3 gap-6">
             {/* Column 1 - NATIVE (Item Basics) */}
             <div className="space-y-3">
-            {/* <h3 className="text-sm font-semibold text-muted-foreground border-b pb-1">🧬 NATIVE</h3>*/}
-            <div>
-              <ItemNameField
-                value={name}
-                onChange={setName}
-                placeholder="Item name"
-                items={existingItems}
-                selectedItemId={selectedItemId}
-                onItemSelect={handleItemSelect}
-                isNewItem={isNewItem}
-                onNewItemToggle={setIsNewItem}
-                label="Item Name"
-                sites={sites}
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="station-category" className="text-xs">Station & Category</Label>
-              <SearchableSelect
-                value={stationCategory}
-                onValueChange={handleStationCategoryChange}
-                options={createStationCategoryOptions()}
-                autoGroupByCategory={true}
-                getCategoryForValue={(value) => getCategoryFromCombined(value)}
-                placeholder="Select station..."
-                className="h-8 text-sm mt-1"
-                persistentCollapsible={true}
-                instanceId="item-modal-station-category"
-              />
-            </div>
+              {/* <h3 className="text-sm font-semibold text-muted-foreground border-b pb-1">🧬 NATIVE</h3>*/}
+              <div>
+                <ItemNameField
+                  value={name}
+                  onChange={setName}
+                  placeholder="Item name"
+                  items={existingItems}
+                  selectedItemId={selectedItemId}
+                  onItemSelect={handleItemSelect}
+                  isNewItem={isNewItem}
+                  onNewItemToggle={setIsNewItem}
+                  label="Item Name"
+                  sites={sites}
+                />
+              </div>
 
-            <div>
-              <Label htmlFor="item-type-subtype" className="text-xs">Type & Subtype *</Label>
-              <SearchableSelect
-                value={itemTypeSubType}
-                onValueChange={handleItemTypeSubTypeChange}
-                options={createItemTypeSubTypeOptions()}
-                autoGroupByCategory={true}
-                placeholder="Select item type and subtype..."
-                className="h-8 text-sm mt-1"
-                persistentCollapsible={true}
-                instanceId="item-modal-item-type"
-              />
+              <div>
+                <Label htmlFor="station-category" className="text-xs">Station & Category</Label>
+                <SearchableSelect
+                  value={stationCategory}
+                  onValueChange={handleStationCategoryChange}
+                  options={createStationCategoryOptions()}
+                  autoGroupByCategory={true}
+                  getCategoryForValue={(value) => getCategoryFromCombined(value)}
+                  placeholder="Select station..."
+                  className="h-8 text-sm mt-1"
+                  persistentCollapsible={true}
+                  instanceId="item-modal-station-category"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="item-type-subtype" className="text-xs">Type & Subtype *</Label>
+                <SearchableSelect
+                  value={itemTypeSubType}
+                  onValueChange={handleItemTypeSubTypeChange}
+                  options={createItemTypeSubTypeOptions()}
+                  autoGroupByCategory={true}
+                  placeholder="Select item type and subtype..."
+                  className="h-8 text-sm mt-1"
+                  persistentCollapsible={true}
+                  instanceId="item-modal-item-type"
+                />
+              </div>
             </div>
-          </div>
 
             {/* Column 2 - NATIVE (Item Data) */}
             <div className="space-y-3">
-            {/* <h3 className="text-sm font-semibold text-muted-foreground border-b pb-1">🧬 NATIVE</h3>*/}
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <Label htmlFor="quantity" className="text-xs">Quantity *</Label>
-                <NumericInput
-                  id="quantity"
-                  value={quantity}
-                  onChange={(value) => setQuantity(value)}
-                  min={0}
-                  className="h-8 text-sm mt-1"
+              {/* <h3 className="text-sm font-semibold text-muted-foreground border-b pb-1">🧬 NATIVE</h3>*/}
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label htmlFor="quantity" className="text-xs">Quantity *</Label>
+                  <NumericInput
+                    id="quantity"
+                    value={quantity}
+                    onChange={(value) => setQuantity(value)}
+                    min={0}
+                    className="h-8 text-sm mt-1"
+                  />
+                  {item && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Current stock at {site}: {item.stock?.find(stock => stock.siteId === site)?.quantity || 0} units
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <Label htmlFor="targetAmount" className="text-xs">Target Q</Label>
+                  <NumericInput
+                    id="targetAmount"
+                    value={targetAmount ? parseFloat(targetAmount) : 0}
+                    onChange={(value) => setTargetAmount(value.toString())}
+                    min={0}
+                    placeholder="Target"
+                    className="h-8 text-sm mt-1"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label htmlFor="unitCost" className="text-xs">Unit Cost</Label>
+                  <NumericInput
+                    id="unitCost"
+                    value={unitCost}
+                    onChange={setUnitCost}
+                    className="h-8 text-sm mt-1"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="price" className="text-xs">Price</Label>
+                  <NumericInput
+                    id="price"
+                    value={price}
+                    onChange={setPrice}
+                    className="h-8 text-sm mt-1"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label htmlFor="collection" className="text-xs">Collection</Label>
+                  <Select value={collection} onValueChange={(value) => setCollection(value as Collection | 'none')}>
+                    <SelectTrigger className="h-8 text-sm mt-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={Collection.NO_COLLECTION}>None</SelectItem>
+                      {Object.values(Collection).filter(c => c !== Collection.NO_COLLECTION).map(collection => (
+                        <SelectItem key={collection} value={collection}>{collection}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="year" className="text-xs">Year</Label>
+                  <NumericInput
+                    id="year"
+                    value={year}
+                    onChange={(value) => setYear(Math.max(YEAR_MIN, Math.min(YEAR_MAX, Math.floor(value))))}
+                    min={YEAR_MIN}
+                    className="h-8 text-sm mt-1"
+                    placeholder={new Date().getFullYear().toString()}
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 pt-1">
+                <Switch
+                  id="restockable"
+                  checked={restockable}
+                  onCheckedChange={(checked) => setRestockable(checked)}
                 />
-                {item && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Current stock at {site}: {item.stock?.find(stock => stock.siteId === site)?.quantity || 0} units
-                  </p>
+                <Label htmlFor="restockable" className="text-xs">
+                  Restock automatically when sold (set to To Order at zero stock)
+                </Label>
+              </div>
+            </div>
+
+            {/* Column 3 - AMBASSADOR (Site References) */}
+            <div className="space-y-3">
+              {/* <h3 className="text-sm font-semibold text-muted-foreground border-b pb-1">🏛️ AMBASSADOR</h3>*/}
+
+              <div>
+                <Label htmlFor="site" className="text-xs">Site</Label>
+                <SearchableSelect
+                  value={site}
+                  onValueChange={(value) => setSite(value)}
+                  placeholder="Select site"
+                  options={createSiteOptionsWithCategories(sites)}
+                  autoGroupByCategory={true}
+                  className="h-8 text-sm"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* More Fields (Collapsible) */}
+          <div className="border-t pt-3 mt-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowMoreFields(!showMoreFields)}
+              className="h-7 text-xs"
+            >
+              {showMoreFields ? 'Hide' : 'Show'} Extra Fields
+            </Button>
+
+            {showMoreFields && (
+              <div className="grid grid-cols-4 gap-4 mt-4">
+                <div>
+                  <Label htmlFor="description" className="text-xs">Description</Label>
+                  <Input
+                    id="description"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Item description"
+                    className="h-8 text-sm mt-1"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="imageUrl" className="text-xs">Image URL</Label>
+                  <Input
+                    id="imageUrl"
+                    value={imageUrl}
+                    onChange={(e) => setImageUrl(e.target.value)}
+                    placeholder="URL to item image"
+                    className="h-8 text-sm mt-1"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="originalFiles" className="text-xs">Original Files</Label>
+                  <Input
+                    id="originalFiles"
+                    value={originalFiles}
+                    onChange={(e) => setOriginalFiles(e.target.value)}
+                    placeholder="url:type;url:type"
+                    className="h-8 text-sm mt-1"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="accessoryFiles" className="text-xs">Accessory Files</Label>
+                  <Input
+                    id="accessoryFiles"
+                    value={accessoryFiles}
+                    onChange={(e) => setAccessoryFiles(e.target.value)}
+                    placeholder="url:type;url:type"
+                    className="h-8 text-sm mt-1"
+                  />
+                </div>
+
+                {showDimensions && (
+                  <>
+                    <div>
+                      <Label htmlFor="width" className="text-xs">Width (cm)</Label>
+                      <NumericInput
+                        id="width"
+                        value={width ? parseFloat(width) : 0}
+                        onChange={(value) => setWidth(value.toString())}
+                        min={0}
+                        step={0.1}
+                        className="h-8 text-sm mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="height" className="text-xs">Height (cm)</Label>
+                      <NumericInput
+                        id="height"
+                        value={height ? parseFloat(height) : 0}
+                        onChange={(value) => setHeight(value.toString())}
+                        min={0}
+                        step={0.1}
+                        className="h-8 text-sm mt-1"
+                      />
+                    </div>
+                  </>
+                )}
+
+                {showModelSize && (
+                  <div>
+                    <Label htmlFor="size" className="text-xs">Model Size</Label>
+                    <Input
+                      id="size"
+                      value={size}
+                      onChange={(e) => setSize(e.target.value)}
+                      placeholder="M, L, XL, 7.5"
+                      className="h-8 text-sm mt-1"
+                    />
+                  </div>
                 )}
               </div>
+            )}
+          </div>
 
-              <div>
-                <Label htmlFor="targetAmount" className="text-xs">Target Q</Label>
-                <NumericInput
-                  id="targetAmount"
-                  value={targetAmount ? parseFloat(targetAmount) : 0}
-                  onChange={(value) => setTargetAmount(value.toString())}
-                  min={0}
-                  placeholder="Target"
-                  className="h-8 text-sm mt-1"
-                />
-              </div>
+          <DialogFooter className="flex justify-between items-center pt-4 border-t">
+            <div className="flex gap-2">
+              {item && ( // Show DELETE/VIEW LINKS/MOVE for existing items
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowDeleteModal(true)}
+                    className="flex items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 h-8 text-xs"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                    Delete
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowLinksModal(true)}
+                    className="h-8 text-xs"
+                  >
+                    <Network className="w-3 h-3 mr-1" />
+                    Links
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowMoveModal(true)}
+                    className="flex items-center gap-2 h-8 text-xs"
+                  >
+                    <Package className="h-3 w-3" />
+                    Move
+                  </Button>
+                </>
+              )}
+
+              {/* Owner button - available for both creating and editing */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowOwnerModal(true)}
+                className="flex items-center gap-2 h-8 text-xs"
+              >
+                <User className="h-3 w-3" />
+                {ownerCharacterId ? `Owner: ${ownerCharacterName}` : 'Set Owner'}
+              </Button>
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <Label htmlFor="unitCost" className="text-xs">Unit Cost</Label>
-                <NumericInput
-                  id="unitCost"
-                  value={unitCost}
-                  onChange={setUnitCost}
-                  className="h-8 text-sm mt-1"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="price" className="text-xs">Price</Label>
-                <NumericInput
-                  id="price"
-                  value={price}
-                  onChange={setPrice}
-                  className="h-8 text-sm mt-1"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <Label htmlFor="collection" className="text-xs">Collection</Label>
-                <Select value={collection} onValueChange={(value) => setCollection(value as Collection | 'none')}>
-                  <SelectTrigger className="h-8 text-sm mt-1">
+            <div className="flex gap-2 items-center">
+              {/* Status in footer */}
+              <div className="flex items-center gap-2">
+                <Label htmlFor="status-footer" className="text-xs whitespace-nowrap">Status:</Label>
+                <Select value={status} onValueChange={(value) => handleStatusChange(value as ItemStatus)}>
+                  <SelectTrigger className="h-8 text-sm w-32">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={Collection.NO_COLLECTION}>None</SelectItem>
-                    {Object.values(Collection).filter(c => c !== Collection.NO_COLLECTION).map(collection => (
-                      <SelectItem key={collection} value={collection}>{collection}</SelectItem>
+                    {Object.values(ItemStatus).map(status => (
+                      <SelectItem key={status} value={status}>{status}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
 
-              <div>
-                <Label htmlFor="year" className="text-xs">Year</Label>
-                <NumericInput
-                  id="year"
-                  value={year}
-                  onChange={(value) => setYear(Math.max(YEAR_MIN, Math.min(YEAR_MAX, Math.floor(value))))}
-                  min={YEAR_MIN}
-                  className="h-8 text-sm mt-1"
-                  placeholder={new Date().getFullYear().toString()}
-                />
-              </div>
+              <div className="h-6 w-px bg-border mx-2"></div>
+
+              <Button variant="outline" onClick={() => onOpenChange(false)} className="h-8 text-xs" disabled={isSaving}>
+                Cancel
+              </Button>
+              <Button onClick={handleSave} disabled={!name.trim() || isSaving} className="h-8 text-xs">
+                {isSaving ? 'Saving...' : ((item || selectedItemId) ? 'Update' : 'Create')} Item
+              </Button>
             </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-            <div className="flex items-center gap-3 pt-1">
-              <Switch
-                id="restockable"
-                checked={restockable}
-                onCheckedChange={(checked) => setRestockable(checked)}
-              />
-              <Label htmlFor="restockable" className="text-xs">
-                Restock automatically when sold (set to To Order at zero stock)
-              </Label>
-            </div>
-          </div>
+      {/* MOVE Modal */}
+      <MoveItemsModal
+        open={showMoveModal}
+        onOpenChange={setShowMoveModal}
+        items={(item || (selectedItemId && existingItems.find(i => i.id === selectedItemId))) ? [item || existingItems.find(i => i.id === selectedItemId)!] : []}
+        sites={sites}
+        onComplete={() => {
+          setShowMoveModal(false);
+          onOpenChange(false); // Close the modal after moving
+        }}
+        onStatusCheck={(item, isMovingToSold) => {
+          // Handle status check from move operation
+          if (isMovingToSold) {
+            // Item is being moved to a sold item - emit to parent for handling
+            const updatedItem = { ...item, status: ItemStatus.SOLD };
+            onSave(updatedItem);
+          }
+          // Close the move modal after status check
+          setShowMoveModal(false);
+          onOpenChange(false);
+        }}
+      />
 
-            {/* Column 3 - AMBASSADOR (Site References) */}
-            <div className="space-y-3">
-            {/* <h3 className="text-sm font-semibold text-muted-foreground border-b pb-1">🏛️ AMBASSADOR</h3>*/}
-            
-            <div>
-              <Label htmlFor="site" className="text-xs">Site</Label>
-              <SearchableSelect
-                value={site}
-                onValueChange={(value) => setSite(value)}
-                placeholder="Select site"
-                options={createSiteOptionsWithCategories(sites)}
-                autoGroupByCategory={true}
-                className="h-8 text-sm"
-              />
-            </div>
-          </div>
-        </div>
+      {/* DELETE Modal */}
+      <DeleteModal
+        open={showDeleteModal}
+        onOpenChange={setShowDeleteModal}
+        entityType={EntityType.ITEM}
+        entities={(item || (selectedItemId && existingItems.find(i => i.id === selectedItemId))) ? [item || existingItems.find(i => i.id === selectedItemId)!] : []}
+        onComplete={async () => {
+          setShowDeleteModal(false);
+          // Reload existing items to update SearchableSelect
+          try {
+            const updatedItems = await ClientAPI.getItems();
+            setExistingItems(updatedItems);
 
-        {/* More Fields (Collapsible) */}
-        <div className="border-t pt-3 mt-4">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowMoreFields(!showMoreFields)}
-            className="h-7 text-xs"
-          >
-            {showMoreFields ? 'Hide' : 'Show'} Extra Fields
-          </Button>
-          
-          {showMoreFields && (
-            <div className="grid grid-cols-4 gap-4 mt-4">
-              <div>
-                <Label htmlFor="description" className="text-xs">Description</Label>
-                <Input
-                  id="description"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Item description"
-                  className="h-8 text-sm mt-1"
-                />
-              </div>
+            // Clear selectedItemId if the deleted item was selected
+            const deletedItem = item || (selectedItemId && existingItems.find(i => i.id === selectedItemId));
+            if (deletedItem && selectedItemId === deletedItem.id) {
+              setSelectedItemId('');
+              setName('');
+              // Reset form to create mode
+              setIsNewItem(true);
+            }
+          } catch (error) {
+            console.error('Failed to reload items after deletion:', error);
+          }
+          onOpenChange(false); // Close the modal after deleting
+        }}
+      />
 
-              <div>
-                <Label htmlFor="imageUrl" className="text-xs">Image URL</Label>
-                <Input
-                  id="imageUrl"
-                  value={imageUrl}
-                  onChange={(e) => setImageUrl(e.target.value)}
-                  placeholder="URL to item image"
-                  className="h-8 text-sm mt-1"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="originalFiles" className="text-xs">Original Files</Label>
-                <Input
-                  id="originalFiles"
-                  value={originalFiles}
-                  onChange={(e) => setOriginalFiles(e.target.value)}
-                  placeholder="url:type;url:type"
-                  className="h-8 text-sm mt-1"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="accessoryFiles" className="text-xs">Accessory Files</Label>
-                <Input
-                  id="accessoryFiles"
-                  value={accessoryFiles}
-                  onChange={(e) => setAccessoryFiles(e.target.value)}
-                  placeholder="url:type;url:type"
-                  className="h-8 text-sm mt-1"
-                />
-              </div>
-
-              {showDimensions && (
-                <>
-                  <div>
-                    <Label htmlFor="width" className="text-xs">Width (cm)</Label>
-                    <NumericInput
-                      id="width"
-                      value={width ? parseFloat(width) : 0}
-                      onChange={(value) => setWidth(value.toString())}
-                      min={0}
-                      step={0.1}
-                      className="h-8 text-sm mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="height" className="text-xs">Height (cm)</Label>
-                    <NumericInput
-                      id="height"
-                      value={height ? parseFloat(height) : 0}
-                      onChange={(value) => setHeight(value.toString())}
-                      min={0}
-                      step={0.1}
-                      className="h-8 text-sm mt-1"
-                    />
-                  </div>
-                </>
-              )}
-
-              {showModelSize && (
-                <div>
-                  <Label htmlFor="size" className="text-xs">Model Size</Label>
-                  <Input
-                    id="size"
-                    value={size}
-                    onChange={(e) => setSize(e.target.value)}
-                    placeholder="M, L, XL, 7.5"
-                    className="h-8 text-sm mt-1"
-                  />
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        <DialogFooter className="flex justify-between items-center pt-4 border-t">
-          <div className="flex gap-2">
-            {item && ( // Show DELETE/VIEW LINKS/MOVE for existing items
-              <>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => setShowDeleteModal(true)}
-                  className="flex items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 h-8 text-xs"
-                >
-                  <Trash2 className="h-3 w-3" />
-                  Delete
-                </Button>
-                
+      {/* Status Modal */}
+      {showStatusModal && statusModalConfig && (
+        <div className={`fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 ${getZIndexClass('MODALS')}`}>
+          <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
+            <h3 className="text-lg font-semibold mb-2">{statusModalConfig.title}</h3>
+            <p className="text-sm mb-4">{statusModalConfig.message}</p>
+            <div className="flex justify-end gap-2">
+              {statusModalConfig.options.map((option, index) => (
                 <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowLinksModal(true)}
-                  className="h-8 text-xs"
+                  key={index}
+                  variant={option.variant}
+                  onClick={option.action}
                 >
-                  <Network className="w-3 h-3 mr-1" />
-                  Links
+                  {option.label}
                 </Button>
-                
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => setShowMoveModal(true)}
-                  className="flex items-center gap-2 h-8 text-xs"
-                >
-                  <Package className="h-3 w-3" />
-                  Move
-                </Button>
-              </>
-            )}
-            
-            {/* Owner button - available for both creating and editing */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowOwnerModal(true)}
-              className="flex items-center gap-2 h-8 text-xs"
-            >
-              <User className="h-3 w-3" />
-              {ownerCharacterId ? `Owner: ${ownerCharacterName}` : 'Set Owner'}
-            </Button>
+              ))}
+            </div>
           </div>
+        </div>
+      )}
 
-          <div className="flex gap-2 items-center">
-            {/* Status in footer */}
-            <div className="flex items-center gap-2">
-              <Label htmlFor="status-footer" className="text-xs whitespace-nowrap">Status:</Label>
-              <Select value={status} onValueChange={(value) => handleStatusChange(value as ItemStatus)}>
-                <SelectTrigger className="h-8 text-sm w-32">
+
+
+      {/* Quick Sell Modal */}
+      <Dialog open={showQuickSellModal} onOpenChange={(open) => {
+        setShowQuickSellModal(open);
+        if (!open) {
+          setQuickSellError('');
+          setQuickSellItem(null);
+        }
+      }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Quick Sell {quickSellItem?.name || ''}</DialogTitle>
+            <DialogDescription>
+              Choose how many units to sell and whether to generate a Sale record or archive only.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label className="text-xs">Available Stock</Label>
+              <p className="text-xs text-muted-foreground mt-1">
+                {(quickSellItem?.stock || [])
+                  .filter(point => point.quantity > 0)
+                  .map(point => `${point.siteId || '—'}: ${point.quantity}`)
+                  .join(' • ') || 'No stock available'}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs">Site</Label>
+                <Select value={quickSellSiteId} onValueChange={(value) => setQuickSellSiteId(value)}>
+                  <SelectTrigger className="h-8 text-sm mt-1">
+                    <SelectValue placeholder="Select site" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(quickSellItem?.stock || [])
+                      .filter(point => point.quantity > 0)
+                      .map(point => (
+                        <SelectItem key={point.siteId || 'unknown'} value={point.siteId || ''}>
+                          {(point.siteId || 'Unknown')} ({point.quantity})
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label className="text-xs">Quantity</Label>
+                <NumericInput
+                  value={quickSellQuantity}
+                  onChange={(value) => setQuickSellQuantity(value ?? 0)}
+                  min={1}
+                  className="h-8 text-sm mt-1"
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label className="text-xs">Flow</Label>
+              <Select value={quickSellMode} onValueChange={(value) => setQuickSellMode(value as 'create-sale' | 'archive-only')}>
+                <SelectTrigger className="h-8 text-sm mt-1">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.values(ItemStatus).map(status => (
-                    <SelectItem key={status} value={status}>{status}</SelectItem>
-                  ))}
+                  <SelectItem value="create-sale">Create Sale (recommended)</SelectItem>
+                  <SelectItem value="archive-only">Archive Only (no sale)</SelectItem>
                 </SelectContent>
               </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                {quickSellMode === 'create-sale'
+                  ? 'Generates a Sale record, adjusts inventory, and archives the sold snapshot automatically.'
+                  : 'Reduces stock and logs the sale without creating a Sale record.'}
+              </p>
             </div>
 
-            <div className="h-6 w-px bg-border mx-2"></div>
-
-            <Button variant="outline" onClick={() => onOpenChange(false)} className="h-8 text-xs" disabled={isSaving}>
+            {quickSellError && (
+              <p className="text-xs text-destructive">{quickSellError}</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowQuickSellModal(false)} disabled={quickSellLoading}>
               Cancel
             </Button>
-            <Button onClick={handleSave} disabled={!name.trim() || isSaving} className="h-8 text-xs">
-              {isSaving ? 'Saving...' : ((item || selectedItemId) ? 'Update' : 'Create')} Item
+            <Button onClick={handleQuickSellConfirm} disabled={quickSellLoading}>
+              {quickSellLoading ? 'Processing...' : quickSellMode === 'create-sale' ? 'Create Sale' : 'Archive'}
             </Button>
-          </div>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-
-    {/* MOVE Modal */}
-    <MoveItemsModal
-      open={showMoveModal}
-      onOpenChange={setShowMoveModal}
-      items={(item || (selectedItemId && existingItems.find(i => i.id === selectedItemId))) ? [item || existingItems.find(i => i.id === selectedItemId)!] : []}
-      sites={sites}
-      onComplete={() => {
-        setShowMoveModal(false);
-        onOpenChange(false); // Close the modal after moving
-      }}
-      onStatusCheck={(item, isMovingToSold) => {
-        // Handle status check from move operation
-        if (isMovingToSold) {
-          // Item is being moved to a sold item - emit to parent for handling
-          const updatedItem = { ...item, status: ItemStatus.SOLD };
-          onSave(updatedItem);
-        }
-        // Close the move modal after status check
-        setShowMoveModal(false);
-        onOpenChange(false);
-      }}
-    />
-    
-    {/* DELETE Modal */}
-    <DeleteModal
-      open={showDeleteModal}
-      onOpenChange={setShowDeleteModal}
-      entityType={EntityType.ITEM}
-      entities={(item || (selectedItemId && existingItems.find(i => i.id === selectedItemId))) ? [item || existingItems.find(i => i.id === selectedItemId)!] : []}
-      onComplete={async () => {
-        setShowDeleteModal(false);
-        // Reload existing items to update SearchableSelect
-        try {
-          const updatedItems = await ClientAPI.getItems();
-          setExistingItems(updatedItems);
-          
-          // Clear selectedItemId if the deleted item was selected
-          const deletedItem = item || (selectedItemId && existingItems.find(i => i.id === selectedItemId));
-          if (deletedItem && selectedItemId === deletedItem.id) {
-            setSelectedItemId('');
-            setName('');
-            // Reset form to create mode
-            setIsNewItem(true);
-          }
-        } catch (error) {
-          console.error('Failed to reload items after deletion:', error);
-        }
-        onOpenChange(false); // Close the modal after deleting
-      }}
-    />
-
-    {/* Status Modal */}
-    {showStatusModal && statusModalConfig && (
-      <div className={`fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 ${getZIndexClass('MODALS')}`}>
-        <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
-          <h3 className="text-lg font-semibold mb-2">{statusModalConfig.title}</h3>
-          <p className="text-sm mb-4">{statusModalConfig.message}</p>
-          <div className="flex justify-end gap-2">
-            {statusModalConfig.options.map((option, index) => (
-              <Button
-                key={index}
-                variant={option.variant}
-                onClick={option.action}
-              >
-                {option.label}
-              </Button>
-            ))}
-          </div>
-        </div>
-      </div>
-    )}
-
-    
-
-    {/* Quick Sell Modal */}
-    <Dialog open={showQuickSellModal} onOpenChange={(open) => {
-      setShowQuickSellModal(open);
-      if (!open) {
-        setQuickSellError('');
-        setQuickSellItem(null);
-      }
-    }}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Quick Sell {quickSellItem?.name || ''}</DialogTitle>
-          <DialogDescription>
-            Choose how many units to sell and whether to generate a Sale record or archive only.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4">
-          <div>
-            <Label className="text-xs">Available Stock</Label>
-            <p className="text-xs text-muted-foreground mt-1">
-              {(quickSellItem?.stock || [])
-                .filter(point => point.quantity > 0)
-                .map(point => `${point.siteId || '—'}: ${point.quantity}`)
-                .join(' • ') || 'No stock available'}
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label className="text-xs">Site</Label>
-              <Select value={quickSellSiteId} onValueChange={(value) => setQuickSellSiteId(value)}>
-                <SelectTrigger className="h-8 text-sm mt-1">
-                  <SelectValue placeholder="Select site" />
-                </SelectTrigger>
-                <SelectContent>
-                  {(quickSellItem?.stock || [])
-                    .filter(point => point.quantity > 0)
-                    .map(point => (
-                      <SelectItem key={point.siteId || 'unknown'} value={point.siteId || ''}>
-                        {(point.siteId || 'Unknown')} ({point.quantity})
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label className="text-xs">Quantity</Label>
-              <NumericInput
-                value={quickSellQuantity}
-                onChange={(value) => setQuickSellQuantity(value ?? 0)}
-                min={1}
-                className="h-8 text-sm mt-1"
-              />
-            </div>
-          </div>
-
-          <div>
-            <Label className="text-xs">Flow</Label>
-            <Select value={quickSellMode} onValueChange={(value) => setQuickSellMode(value as 'create-sale' | 'archive-only')}>
-              <SelectTrigger className="h-8 text-sm mt-1">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="create-sale">Create Sale (recommended)</SelectItem>
-                <SelectItem value="archive-only">Archive Only (no sale)</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground mt-1">
-              {quickSellMode === 'create-sale'
-                ? 'Generates a Sale record, adjusts inventory, and archives the sold snapshot automatically.'
-                : 'Reduces stock and logs the sale without creating a Sale record.'}
-            </p>
-          </div>
-
-          {quickSellError && (
-            <p className="text-xs text-destructive">{quickSellError}</p>
-          )}
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setShowQuickSellModal(false)} disabled={quickSellLoading}>
-            Cancel
-          </Button>
-          <Button onClick={handleQuickSellConfirm} disabled={quickSellLoading}>
-            {quickSellLoading ? 'Processing...' : quickSellMode === 'create-sale' ? 'Create Sale' : 'Archive'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
 
-    {/* Links Relationships Modal */}
-    {item && (
-      <LinksRelationshipsModal
-        entity={{ type: EntityType.ITEM, id: item.id, name: item.name }}
-        open={showLinksModal}
-        onClose={() => setShowLinksModal(false)}
-      />
-    )}
+      {/* Links Relationships Modal */}
+      {item && (
+        <LinksRelationshipsModal
+          entity={{ type: EntityType.ITEM, id: item.id, name: item.name }}
+          open={showLinksModal}
+          onClose={() => setShowLinksModal(false)}
+        />
+      )}
 
-    {/* Owner Submodal */}
-    {item && (
-      <OwnerSubmodal
-        open={showOwnerModal}
-        onOpenChange={setShowOwnerModal}
-        entityType={EntityType.ITEM}
-        entityId={item.id}
-        entityName={item.name}
-        linkType={LinkType.ITEM_CHARACTER}
-        currentPrimaryOwnerId={ownerCharacterId}
-        onPrimaryOwnerChanged={(characterId, characterName) => {
-          setOwnerCharacterId(characterId);
-          setOwnerCharacterName(characterName || '');
-          // Refresh UI
-          dispatchEntityUpdated(entityTypeToKind(EntityType.ITEM));
-        }}
-        onAdditionalOwnersChanged={() => {
-          // Refresh UI if needed
-          dispatchEntityUpdated(entityTypeToKind(EntityType.ITEM));
-        }}
-      />
-    )}
+      {/* Owner Submodal */}
+      {item && (
+        <OwnerSubmodal
+          open={showOwnerModal}
+          onOpenChange={setShowOwnerModal}
+          entityType={EntityType.ITEM}
+          entityId={item.id}
+          entityName={item.name}
+          linkType={LinkType.ITEM_CHARACTER}
+          onOwnersChanged={() => {
+            // Refresh owner display
+            const loadOwner = async () => {
+              const links = await ClientAPI.getLinksFor({ type: EntityType.ITEM, id: item.id });
+              const ownerLink = links.find(l => l.linkType === LinkType.ITEM_CHARACTER);
+              if (ownerLink && ownerLink.target.type === EntityType.CHARACTER) {
+                setOwnerCharacterId(ownerLink.target.id);
+                const characters = await ClientAPI.getCharacters();
+                const owner = characters.find(c => c.id === ownerLink.target.id);
+                setOwnerCharacterName(owner?.name || 'Unknown');
+              } else {
+                setOwnerCharacterId(null);
+                setOwnerCharacterName('');
+              }
+            };
+            loadOwner();
+            dispatchEntityUpdated(entityTypeToKind(EntityType.ITEM));
+          }}
+        />
+      )}
 
-    {/* Archive Collection Confirmation Modal for manual SOLD status */}
-    {pendingSoldStatus && currentEditingItem && (
-      <ArchiveCollectionConfirmationModal
-        open={showSoldConfirmation}
-        onOpenChange={setShowSoldConfirmation}
-        entityType="item"
-        entityName={currentEditingItem.name || 'Untitled Item'}
-        onConfirm={() => {
-          setStatus(ItemStatus.SOLD);
-          setShowSoldConfirmation(false);
-          setPendingSoldStatus(false);
-        }}
-        onCancel={() => {
-          setPendingSoldStatus(false);
-          setShowSoldConfirmation(false);
-        }}
-      />
-    )}
+      {/* Archive Collection Confirmation Modal for manual SOLD status */}
+      {pendingSoldStatus && currentEditingItem && (
+        <ArchiveCollectionConfirmationModal
+          open={showSoldConfirmation}
+          onOpenChange={setShowSoldConfirmation}
+          entityType="item"
+          entityName={currentEditingItem.name || 'Untitled Item'}
+          onConfirm={() => {
+            setStatus(ItemStatus.SOLD);
+            setShowSoldConfirmation(false);
+            setPendingSoldStatus(false);
+          }}
+          onCancel={() => {
+            setPendingSoldStatus(false);
+            setShowSoldConfirmation(false);
+          }}
+        />
+      )}
     </>
   );
 }
