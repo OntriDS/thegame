@@ -200,10 +200,12 @@ export default function CharacterLegalEntitiesSubmodal({
                         ) : (
                             <div className="flex items-center gap-2 p-2 border rounded-lg bg-muted/20 w-full animate-in fade-in slide-in-from-top-1">
                                 <SearchableSelect
+                                    key={`business-select-${allEntityOptions.length}`}
                                     options={getAvailableOptions()}
                                     value={selectedEntityId}
                                     onValueChange={setSelectedEntityId}
                                     placeholder="Select entity to link..."
+                                    autoGroupByCategory={true}
                                     className="w-[300px]"
                                 />
                                 <Button size="sm" onClick={handleLinkEntity} disabled={!selectedEntityId}>Link</Button>
