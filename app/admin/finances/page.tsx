@@ -59,7 +59,7 @@ import FinancialsModal from '@/components/modals/financials-modal'
 
 import { PartnershipsManager } from '@/components/finances/partnerships-manager';
 import { useKeyboardShortcuts } from '@/lib/hooks/use-keyboard-shortcuts';
-import { Contract, LegalEntity, Character, Site } from '@/types/entities';
+import { Contract, Business, Character, Site } from '@/types/entities';
 import {
   DEFAULT_CURRENCY_EXCHANGE_RATES,
   DEFAULT_POINTS_CONVERSION_RATES,
@@ -180,7 +180,7 @@ export default function FinancesPage() {
 
   // Partnership State
   const [contracts, setContracts] = useState<Contract[]>([]);
-  const [legalEntities, setLegalEntities] = useState<LegalEntity[]>([]);
+  const [businesses, setBusinesses] = useState<Business[]>([]);
   const [characters, setCharacters] = useState<Character[]>([]);
   const [sites, setSites] = useState<Site[]>([]);
 
@@ -363,12 +363,12 @@ export default function FinancesPage() {
     try {
       const [loadedContracts, loadedEntities, loadedCharacters, loadedSites] = await Promise.all([
         ClientAPI.getContracts(),
-        ClientAPI.getLegalEntities(),
+        ClientAPI.getBusinesses(),
         ClientAPI.getCharacters(),
         ClientAPI.getSites()
       ]);
       setContracts(loadedContracts);
-      setLegalEntities(loadedEntities);
+      setBusinesses(loadedEntities);
       setCharacters(loadedCharacters);
       setSites(loadedSites);
     } catch (error) {
@@ -376,18 +376,18 @@ export default function FinancesPage() {
     }
   };
 
-  const handleCreateLegalEntity = async (entity: LegalEntity) => {
+  const handleCreateBusiness = async (entity: Business) => {
     try {
-      await ClientAPI.upsertLegalEntity(entity);
+      await ClientAPI.upsertBusiness(entity);
       loadPartnershipData();
     } catch (error) {
-      console.error('Failed to create legal entity', error);
+      console.error('Failed to create business', error);
     }
   };
 
-  const handleUpdateLegalEntity = async (entity: LegalEntity) => {
+  const handleUpdateBusiness = async (entity: Business) => {
     try {
-      await ClientAPI.upsertLegalEntity(entity);
+      await ClientAPI.upsertBusiness(entity);
       loadPartnershipData();
     } catch (error) {
       console.error('Failed to update legal entity', error);
@@ -662,7 +662,7 @@ export default function FinancesPage() {
         {/* Assets Tab - Now First and Main */}
         <TabsContent value="partnerships" className="space-y-4">
           <PartnershipsManager
-            legalEntities={legalEntities}
+            businesses={businesses}
             contracts={contracts}
             characters={characters}
             sites={sites}

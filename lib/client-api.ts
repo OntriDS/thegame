@@ -12,7 +12,7 @@
  * from @/data-store/datastore, which is server-side only.
  */
 
-import type { Task, Item, Sale, FinancialRecord, Character, Player, Site, Account, Settlement, AISession, LegalEntity, Contract } from '@/types/entities';
+import type { Task, Item, Sale, FinancialRecord, Character, Player, Site, Account, Settlement, AISession, Business, Contract } from '@/types/entities';
 
 export const ClientAPI = {
   // ============================================================================
@@ -436,33 +436,33 @@ export const ClientAPI = {
   },
 
   // ============================================================================
-  // LEGAL ENTITIES - Character Infra
+  // BUSINESSES - Character Infra
   // ============================================================================
-  getLegalEntities: async (): Promise<LegalEntity[]> => {
-    const res = await fetch('/api/legal-entities');
-    if (!res.ok) throw new Error('Failed to fetch legal entities');
+  getBusinesses: async (): Promise<Business[]> => {
+    const res = await fetch('/api/businesses');
+    if (!res.ok) throw new Error('Failed to fetch businesses');
     return await res.json();
   },
 
-  getLegalEntityById: async (id: string): Promise<LegalEntity | null> => {
-    const res = await fetch(`/api/legal-entities/${id}`);
+  getBusinessById: async (id: string): Promise<Business | null> => {
+    const res = await fetch(`/api/businesses/${id}`);
     if (!res.ok) return null;
     return await res.json();
   },
 
-  upsertLegalEntity: async (entity: LegalEntity): Promise<LegalEntity> => {
-    const res = await fetch('/api/legal-entities', {
+  upsertBusiness: async (entity: Business): Promise<Business> => {
+    const res = await fetch('/api/businesses', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(entity)
     });
-    if (!res.ok) throw new Error('Failed to save legal entity');
+    if (!res.ok) throw new Error('Failed to save business');
     return await res.json();
   },
 
-  deleteLegalEntity: async (id: string): Promise<void> => {
-    const res = await fetch(`/api/legal-entities/${id}`, { method: 'DELETE' });
-    if (!res.ok) throw new Error('Failed to delete legal entity');
+  deleteBusiness: async (id: string): Promise<void> => {
+    const res = await fetch(`/api/businesses/${id}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Failed to delete business');
   },
 
   // ============================================================================

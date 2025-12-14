@@ -1,7 +1,7 @@
 // data-store/datastore.ts
 // Orchestration layer: repositories → workflows → links → logging
 
-import type { Task, Item, FinancialRecord, Sale, Character, Player, Site, Settlement, Account, LegalEntity, Contract } from '@/types/entities';
+import type { Task, Item, FinancialRecord, Sale, Character, Player, Site, Settlement, Account, Business, Contract } from '@/types/entities';
 import type { TaskSnapshot, ItemSnapshot, SaleSnapshot, FinancialSnapshot } from '@/types/archive';
 import { EntityType, ItemType, TaskPriority, TaskStatus, FinancialStatus } from '@/types/enums';
 import {
@@ -42,10 +42,10 @@ import {
   getAllCharacters as repoGetAllCharacters,
   getCharacterById as repoGetCharacterById,
   deleteCharacter as repoDeleteCharacter,
-  upsertLegalEntity as repoUpsertLegalEntity,
-  getAllLegalEntities as repoGetAllLegalEntities,
-  getLegalEntityById as repoGetLegalEntityById,
-  deleteLegalEntity as repoDeleteLegalEntity
+  upsertBusiness as repoUpsertBusiness,
+  getAllBusinesses as repoGetAllBusinesses,
+  getBusinessById as repoGetBusinessById,
+  deleteBusiness as repoDeleteBusiness
 } from './repositories/character.repo';
 import {
   upsertPlayer as repoUpsertPlayer,
@@ -416,22 +416,23 @@ export async function removeAccount(id: string): Promise<void> {
 
 // removed any-typed duplicates for legal entities and contracts
 
-// LEGAL ENTITIES
-export async function upsertLegalEntity(entity: LegalEntity): Promise<LegalEntity> {
-  const saved = await repoUpsertLegalEntity(entity);
+
+// BUSINESSES
+export async function upsertBusiness(entity: Business): Promise<Business> {
+  const saved = await repoUpsertBusiness(entity);
   return saved;
 }
 
-export async function getAllLegalEntities(): Promise<LegalEntity[]> {
-  return await repoGetAllLegalEntities();
+export async function getAllBusinesses(): Promise<Business[]> {
+  return await repoGetAllBusinesses();
 }
 
-export async function getLegalEntityById(id: string): Promise<LegalEntity | null> {
-  return await repoGetLegalEntityById(id);
+export async function getBusinessById(id: string): Promise<Business | null> {
+  return await repoGetBusinessById(id);
 }
 
-export async function removeLegalEntity(id: string): Promise<void> {
-  await repoDeleteLegalEntity(id);
+export async function removeBusiness(id: string): Promise<void> {
+  await repoDeleteBusiness(id);
 }
 
 // CONTRACTS

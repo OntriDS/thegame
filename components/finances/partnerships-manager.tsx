@@ -5,12 +5,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { FileText, ShieldCheck } from 'lucide-react';
-import { LegalEntity, Contract, Character, Site } from '@/types/entities';
+import { Business, Contract, Character, Site } from '@/types/entities';
 import { ContractStatus } from '@/types/enums';
 import { ContractSubmodal } from '@/components/modals/submodals/contract-submodal';
 
 interface PartnershipsManagerProps {
-    legalEntities: LegalEntity[];
+    businesses: Business[];
     contracts: Contract[];
     characters: Character[];
     sites: Site[]; // Kept for consistency if needed, though unused maybe?
@@ -19,7 +19,7 @@ interface PartnershipsManagerProps {
 }
 
 export function PartnershipsManager({
-    legalEntities = [],
+    businesses = [],
     contracts = [],
     characters = [],
     sites = [],
@@ -31,7 +31,7 @@ export function PartnershipsManager({
 
     // Helpers to resolve names
     const getEntityName = (id: string) => {
-        const ent = legalEntities.find(e => e.id === id);
+        const ent = businesses.find((e: Business) => e.id === id);
         return ent ? ent.name : 'Unknown Entity';
     };
 
@@ -68,11 +68,11 @@ export function PartnershipsManager({
                                         <ShieldCheck className="h-4 w-4 text-emerald-500" />
                                     </div>
                                     <CardTitle className="text-lg flex items-center gap-2 mt-2 group-hover:text-primary transition-colors">
-                                        {getEntityName(contract.counterpartyLegalEntityId)}
+                                        {getEntityName(contract.counterpartyBusinessId)}
                                     </CardTitle>
-                                    <CardDescription className="flex items-center gap-2 text-xs">
-                                        With: {getEntityName(contract.principalLegalEntityId)}
-                                    </CardDescription>
+                                    <div className="text-xs text-muted-foreground">
+                                        With: {getEntityName(contract.principalBusinessId)}
+                                    </div>
                                 </CardHeader>
                                 <CardContent>
                                     <div className="space-y-2 text-sm">
@@ -99,7 +99,7 @@ export function PartnershipsManager({
                         setIsContractModalOpen(false);
                     }}
                     initialData={selectedContract}
-                    legalEntities={legalEntities}
+                    businesses={businesses}
                 />
             </CardContent>
         </Card>

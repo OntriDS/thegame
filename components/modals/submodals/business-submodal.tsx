@@ -7,8 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { LegalEntity, Character, Site } from '@/types/entities';
-import { LegalEntityType } from '@/types/enums';
+import { Business, Character, Site } from '@/types/entities';
+import { BusinessType } from '@/types/enums';
 import { v4 as uuid } from 'uuid';
 import { createCharacterOptions, createSiteOptionsWithCategories } from '@/lib/utils';
 
@@ -16,23 +16,23 @@ import { getInteractiveSubModalZIndex } from '@/lib/utils/z-index-utils';
 
 import { ClientAPI } from '@/lib/client-api';
 
-interface LegalEntitySubmodalProps {
+interface BusinessSubmodalProps {
     open: boolean;
     onClose: () => void;
-    onSave: (entity: LegalEntity) => void;
-    initialData?: LegalEntity;
+    onSave: (entity: Business) => void;
+    initialData?: Business;
     defaultLinkedCharacterId?: string;
 }
 
-export function LegalEntitySubmodal({
+export function BusinessSubmodal({
     open,
     onClose,
     onSave,
     initialData,
     defaultLinkedCharacterId
-}: LegalEntitySubmodalProps) {
+}: BusinessSubmodalProps) {
     const [name, setName] = useState('');
-    const [type, setType] = useState<LegalEntityType>(LegalEntityType.COMPANY);
+    const [type, setType] = useState<BusinessType>(BusinessType.COMPANY);
     const [taxId, setTaxId] = useState('');
     const [linkedCharacterId, setLinkedCharacterId] = useState<string>('');
     const [linkedSiteId, setLinkedSiteId] = useState<string>('');
@@ -63,7 +63,7 @@ export function LegalEntitySubmodal({
             } else {
                 // Reset for new
                 setName('');
-                setType(LegalEntityType.COMPANY);
+                setType(BusinessType.COMPANY);
                 setTaxId('');
                 setLinkedCharacterId(defaultLinkedCharacterId || '');
                 setLinkedSiteId('');
@@ -74,10 +74,10 @@ export function LegalEntitySubmodal({
     const handleSave = () => {
         if (!name) return; // Validation
 
-        const entity: LegalEntity = {
+        const entity: Business = {
             id: initialData?.id || uuid(),
             name,
-            description: `Legal Entity for ${name}`,
+            description: `Business for ${name}`,
             type,
             taxId,
             linkedCharacterId: linkedCharacterId || null,
@@ -99,7 +99,7 @@ export function LegalEntitySubmodal({
                 style={{ zIndex: getInteractiveSubModalZIndex() }}
             >
                 <DialogHeader>
-                    <DialogTitle>{initialData ? 'Edit Legal Entity' : 'New Legal Entity'}</DialogTitle>
+                    <DialogTitle>{initialData ? 'Edit Business' : 'New Business'}</DialogTitle>
                     <DialogDescription>
                         Define a business identity for Contracts and Finance.
                     </DialogDescription>
@@ -119,12 +119,12 @@ export function LegalEntitySubmodal({
 
                     <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="type" className="text-right">Type</Label>
-                        <Select value={type} onValueChange={(val) => setType(val as LegalEntityType)}>
+                        <Select value={type} onValueChange={(val) => setType(val as BusinessType)}>
                             <SelectTrigger className="col-span-3">
                                 <SelectValue placeholder="Select type" />
                             </SelectTrigger>
                             <SelectContent>
-                                {Object.values(LegalEntityType).map((t) => (
+                                {Object.values(BusinessType).map((t) => (
                                     <SelectItem key={t} value={t}>{t}</SelectItem>
                                 ))}
                             </SelectContent>
@@ -175,7 +175,7 @@ export function LegalEntitySubmodal({
 
                 <DialogFooter>
                     <Button variant="outline" onClick={onClose}>Cancel</Button>
-                    <Button onClick={handleSave}>Save Entity</Button>
+                    <Button onClick={handleSave}>Save Business</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>

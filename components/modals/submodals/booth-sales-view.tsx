@@ -23,7 +23,7 @@ import {
     ContractStatus,
     ContractClauseType
 } from '@/types/enums';
-import { SaleLine, Item, Site, Character, ServiceLine, ItemSaleLine, BundleSaleLine, LegalEntity, Contract } from '@/types/entities';
+import { SaleLine, Item, Site, Character, ServiceLine, ItemSaleLine, BundleSaleLine, Business, Contract } from '@/types/entities';
 import { v4 as uuid } from 'uuid';
 import { createSiteOptionsWithCategories } from '@/lib/utils/site-options-utils';
 import SaleItemsSubModal from './sale-items-submodal';
@@ -38,7 +38,7 @@ export interface BoothSalesViewProps {
     sites: Site[];
     characters: Character[];
     items: Item[];
-    legalEntities: LegalEntity[]; // New: For resolving contracts
+    businesses: Business[]; // New: For resolving contracts
     contracts: Contract[]; // New: For dynamic distribution logic
 
     // State from Parent (SalesModal)
@@ -84,7 +84,7 @@ export default function BoothSalesView({
     sites,
     characters,
     items,
-    legalEntities,
+    businesses,
     contracts,
     saleDate,
     setSaleDate,

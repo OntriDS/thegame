@@ -597,7 +597,7 @@ export enum LinkType {
   CHARACTER_FINREC = 'CHARACTER_FINREC',   // Character is assigned to this Financial Record (customer, team member, etc.)
   CHARACTER_SITE = 'CHARACTER_SITE',     // Character is related to a Site (owner, lives at, works at, customer of, etc.)
   CHARACTER_PLAYER = 'CHARACTER_PLAYER',   // When a Character belongs to a Player
-  CHARACTER_LEGAL_ENTITY = 'CHARACTER_LEGAL_ENTITY', // Character is related to a Legal Entity (owner, rep, etc.)
+  CHARACTER_BUSINESS = 'CHARACTER_BUSINESS', // Character is related to a Business (owner, rep, etc.)
 
   // SITE relationships (locations and places)
   SITE_TASK = 'SITE_TASK', // Site has Tasks performed there (reverse)
@@ -639,16 +639,16 @@ export enum EntityType {
   // INFRA ENTITIES - Supporting Data
   SESSION = 'session',          // AI assistant conversation sessions
   SETTLEMENT = 'settlement',     // Settlement reference data for Sites
-  LEGAL_ENTITY = 'legal_entity', // Legal Entities that represent Personas usually for contracts
-  CONTRACT = 'contract',        // Financial Contracts between Legal Entities
+  BUSINESS = 'business',         // Business Entities for contracts and finance
+  CONTRACT = 'contract',        // Financial Contracts between Business Entities
 }
 
 // ============================================================================
 // CHARACTER INFRA ENUMS
 // ============================================================================
 
-/** Types of Legal Entities */
-export enum LegalEntityType {
+/** Types of Business Entities */
+export enum BusinessType {
   COMPANY = 'Company',        // A registered business entity
   INDIVIDUAL = 'Individual',  // A person acting as a business entity
   DAO = 'DAO',                // Decentralized Autonomous Organization

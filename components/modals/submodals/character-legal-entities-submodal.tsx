@@ -5,15 +5,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent } from '@/components/ui/card';
-import { LegalEntity, Link } from '@/types/entities';
+import { Business, Link } from '@/types/entities';
 import { Building2, Loader2, Plus, Trash2, Link as LinkIcon } from 'lucide-react';
 import { getInteractiveSubModalZIndex } from '@/lib/utils/z-index-utils';
 import { ClientAPI } from '@/lib/client-api';
 import { EntityType, LinkType } from '@/types/enums';
 import { Badge } from '@/components/ui/badge';
 import { SearchableSelect } from '@/components/ui/searchable-select';
-import { LegalEntitySubmodal } from './legal-entity-submodal';
-import { createLegalEntityOptionsWithCategories } from '@/lib/utils';
+import { BusinessSubmodal } from './business-submodal';
+import { createBusinessOptionsWithCategories } from '@/lib/utils';
 
 interface CharacterLegalEntitiesSubmodalProps {
     open: boolean;
@@ -28,13 +28,13 @@ export default function CharacterLegalEntitiesSubmodal({
     characterId,
     characterName
 }: CharacterLegalEntitiesSubmodalProps) {
-    const [linkedEntities, setLinkedEntities] = useState<LegalEntity[]>([]);
+    const [linkedEntities, setLinkedEntities] = useState<Business[]>([]);
     const [loading, setLoading] = useState(true);
     const [isLinking, setIsLinking] = useState(false); // Mode to link existing
-    const [editingEntity, setEditingEntity] = useState<LegalEntity | undefined>(undefined);
+    const [editingEntity, setEditingEntity] = useState<Business | undefined>(undefined);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
-    const [allEntityOptions, setAllEntityOptions] = useState<LegalEntity[]>([]);
+    const [allEntityOptions, setAllEntityOptions] = useState<Business[]>([]);
     const [selectedEntityId, setSelectedEntityId] = useState('');
 
     const loadEntities = useCallback(async () => {
@@ -46,24 +46,24 @@ export default function CharacterLegalEntitiesSubmodal({
 
             // Filter for legal entity links
             const entityLinks = links.filter((l: Link) =>
-                (l.linkType === LinkType.CHARACTER_LEGAL_ENTITY) &&
+                (l.linkType === LinkType.CHARACTER_BUSINESS) &&
                 (l.source.type === EntityType.CHARACTER && l.source.id === characterId)
             );
 
             // Get entity IDs from Links
             const entityIds = new Set<string>();
             entityLinks.forEach((link: Link) => {
-                if (link.target.type === EntityType.LEGAL_ENTITY) {
+                if (link.target.type === EntityType.BUSINESS) {
                     entityIds.add(link.target.id);
                 }
             });
 
             // Fetch all entities for options and filtering
-            const allEntities = await ClientAPI.getLegalEntities();
+            const allEntities = await ClientAPI.getBusinesses();
             setAllEntityOptions(allEntities);
 
             // Union of Linked Entities AND Entities where linkedCharacterId matches
-            const myEntities = allEntities.filter((ent: LegalEntity) =>
+            const myEntities = allEntities.filter((ent: Business) =>
                 entityIds.has(ent.id) || ent.linkedCharacterId === characterId
             );
             setLinkedEntities(myEntities);
@@ -90,8 +90,8 @@ export default function CharacterLegalEntitiesSubmodal({
             // 1. Create Link: Character -> Legal Entity
             await ClientAPI.createLink({
                 source: { type: EntityType.CHARACTER, id: characterId },
-                target: { type: EntityType.LEGAL_ENTITY, id: selectedEntityId },
-                linkType: LinkType.CHARACTER_LEGAL_ENTITY,
+                target: { type: EntityType.BUSINESS, id: selectedEntityId },
+                linkType: LinkType.CHARACTER_BUSINESS,
             });
 
             // 2. Sync linkedCharacterId (Primary Rep) in Entity
@@ -100,7 +100,7 @@ export default function CharacterLegalEntitiesSubmodal({
                 // Only overwrite if it doesn't have a rep? Or overwrite always?
                 // User said "A person could own multiple...".
                 // I'll overwrite, assuming "I am taking ownership/representation".
-                await ClientAPI.upsertLegalEntity({
+                await ClientAPI.upsertBusiness({
                     ...entityToUpdate,
                     linkedCharacterId: characterId
                 });
@@ -119,7 +119,7 @@ export default function CharacterLegalEntitiesSubmodal({
             // 1. Remove Link(s)
             const links = await ClientAPI.getLinksFor({ type: EntityType.CHARACTER, id: characterId });
             const linksToDelete = links.filter(l =>
-                l.linkType === LinkType.CHARACTER_LEGAL_ENTITY &&
+                l.linkType === LinkType.CHARACTER_BUSINESS &&
                 l.source.id === characterId &&
                 l.target.id === entityId
             );
@@ -131,7 +131,7 @@ export default function CharacterLegalEntitiesSubmodal({
             // 2. Clear linkedCharacterId if it matches current character
             const entity = linkedEntities.find(e => e.id === entityId);
             if (entity && entity.linkedCharacterId === characterId) {
-                await ClientAPI.upsertLegalEntity({
+                await ClientAPI.upsertBusiness({
                     ...entity,
                     linkedCharacterId: null // or undefined, check type
                 });
@@ -143,9 +143,9 @@ export default function CharacterLegalEntitiesSubmodal({
         }
     };
 
-    const handleSaveSuccess = async (entity: LegalEntity) => {
+    const handleSaveSuccess = async (entity: Business) => {
         try {
-            await ClientAPI.upsertLegalEntity(entity);
+            await ClientAPI.upsertBusiness(entity);
             setIsEditModalOpen(false);
             setEditingEntity(undefined);
             loadEntities();
@@ -154,7 +154,7 @@ export default function CharacterLegalEntitiesSubmodal({
         }
     };
 
-    const handleEditClick = (entity: LegalEntity) => {
+    const handleEditClick = (entity: Business) => {
         setEditingEntity(entity);
         setIsEditModalOpen(true);
     };
@@ -169,7 +169,7 @@ export default function CharacterLegalEntitiesSubmodal({
         // Exclude already linked
         const linkedIds = new Set(linkedEntities.map(e => e.id));
         const available = allEntityOptions.filter(e => !linkedIds.has(e.id));
-        return createLegalEntityOptionsWithCategories(available);
+        return createBusinessOptionsWithCategories(available);
     };
 
     return (
@@ -181,7 +181,7 @@ export default function CharacterLegalEntitiesSubmodal({
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         <Building2 className="h-5 w-5" />
-                        Legal Entities: {characterName}
+                        Businesses: {characterName}
                     </DialogTitle>
                 </DialogHeader>
 
@@ -220,7 +220,7 @@ export default function CharacterLegalEntitiesSubmodal({
                         ) : linkedEntities.length === 0 ? (
                             <div className="flex flex-col items-center justify-center h-48 text-muted-foreground border-2 border-dashed border-muted rounded-lg bg-slate-50 dark:bg-slate-900/20">
                                 <Building2 className="h-12 w-12 mb-4 opacity-20" />
-                                <p>No Legal Entities linked</p>
+                                <p>No Businesses linked</p>
                                 <p className="text-sm mt-1">Link an existing entity or create a new one.</p>
                             </div>
                         ) : (
@@ -282,7 +282,7 @@ export default function CharacterLegalEntitiesSubmodal({
             </DialogContent>
 
             {/* Create/Edit Entity Submodal */}
-            <LegalEntitySubmodal
+            <BusinessSubmodal
                 open={isEditModalOpen}
                 onClose={() => setIsEditModalOpen(false)}
                 onSave={handleSaveSuccess}

@@ -2,10 +2,10 @@
 import { kvGet, kvMGet, kvSet, kvDel, kvSAdd, kvSRem, kvSMembers } from '../kv';
 import { buildDataKey, buildIndexKey } from '../keys';
 import { EntityType } from '@/types/enums';
-import type { Character, LegalEntity } from '@/types/entities';
+import type { Character, Business } from '@/types/entities';
 
 const ENTITY = EntityType.CHARACTER;
-const LEGAL_ENTITY = EntityType.LEGAL_ENTITY;
+const LEGAL_ENTITY = EntityType.BUSINESS; // Business Entity constant
 
 // ============================================================================
 // CHARACTER OPERATIONS
@@ -45,24 +45,24 @@ export async function deleteCharacter(id: string): Promise<void> {
 }
 
 // ============================================================================
-// LEGAL ENTITY OPERATIONS (Business Persona Layer for Characters)
+// BUSINESS OPERATIONS (Business Persona Layer for Characters)
 // ============================================================================
 
-export async function getAllLegalEntities(): Promise<LegalEntity[]> {
+export async function getAllBusinesses(): Promise<Business[]> {
   const indexKey = buildIndexKey(LEGAL_ENTITY);
   const ids = await kvSMembers(indexKey);
   if (ids.length === 0) return [];
   const keys = ids.map(id => buildDataKey(LEGAL_ENTITY, id));
-  const entities = await kvMGet<LegalEntity>(keys);
-  return entities.filter((e): e is LegalEntity => e !== null && e !== undefined);
+  const entities = await kvMGet<Business>(keys);
+  return entities.filter((e): e is Business => e !== null && e !== undefined);
 }
 
-export async function getLegalEntityById(id: string): Promise<LegalEntity | null> {
+export async function getBusinessById(id: string): Promise<Business | null> {
   const key = buildDataKey(LEGAL_ENTITY, id);
-  return await kvGet<LegalEntity>(key);
+  return await kvGet<Business>(key);
 }
 
-export async function upsertLegalEntity(entity: LegalEntity): Promise<LegalEntity> {
+export async function upsertBusiness(entity: Business): Promise<Business> {
   const key = buildDataKey(LEGAL_ENTITY, entity.id);
   const indexKey = buildIndexKey(LEGAL_ENTITY);
   await kvSet(key, entity);
@@ -70,7 +70,7 @@ export async function upsertLegalEntity(entity: LegalEntity): Promise<LegalEntit
   return entity;
 }
 
-export async function deleteLegalEntity(id: string): Promise<void> {
+export async function deleteBusiness(id: string): Promise<void> {
   const key = buildDataKey(LEGAL_ENTITY, id);
   const indexKey = buildIndexKey(LEGAL_ENTITY);
   await kvDel(key);

@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 // separator removed
 import { Trash2, Plus } from 'lucide-react';
 import { getInteractiveSubModalZIndex } from '@/lib/utils/z-index-utils';
-import { Contract, LegalEntity, ContractClause } from '@/types/entities';
+import { Contract, Business, ContractClause } from '@/types/entities';
 import { ContractStatus, ContractClauseType } from '@/types/enums';
 import { v4 as uuid } from 'uuid';
 
@@ -19,7 +19,7 @@ interface ContractSubmodalProps {
     onClose: () => void;
     onSave: (contract: Contract) => void;
     initialData?: Contract;
-    legalEntities: LegalEntity[];
+    businesses: Business[];
 }
 
 export function ContractSubmodal({
@@ -27,7 +27,7 @@ export function ContractSubmodal({
     onClose,
     onSave,
     initialData,
-    legalEntities
+    businesses
 }: ContractSubmodalProps) {
     const [principalId, setPrincipalId] = useState('');
     const [counterpartyId, setCounterpartyId] = useState('');
@@ -40,8 +40,8 @@ export function ContractSubmodal({
     useEffect(() => {
         if (open) {
             if (initialData) {
-                setPrincipalId(initialData.principalLegalEntityId);
-                setCounterpartyId(initialData.counterpartyLegalEntityId);
+                setPrincipalId(initialData.principalBusinessId);
+                setCounterpartyId(initialData.counterpartyBusinessId);
                 setStatus(initialData.status);
                 setNotes(initialData.notes || '');
                 setClauses(initialData.clauses || []);
@@ -113,8 +113,8 @@ export function ContractSubmodal({
             id: initialData?.id || uuid(),
             name: `${principalId}-${counterpartyId} Contract`,
             description: 'Partnership Contract',
-            principalLegalEntityId: principalId,
-            counterpartyLegalEntityId: counterpartyId,
+            principalBusinessId: principalId,
+            counterpartyBusinessId: counterpartyId,
             status,
             validFrom: initialData?.validFrom || new Date(),
             clauses: clauses,
@@ -129,7 +129,7 @@ export function ContractSubmodal({
     };
 
     // Filter available entities (basic logic)
-    const availableEntities = legalEntities;
+    const availableEntities = businesses;
 
     return (
         <Dialog open={open} onOpenChange={(val) => !val && onClose()}>

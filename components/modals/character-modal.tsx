@@ -23,7 +23,7 @@ import LinksRelationshipsModal from './submodals/links-relationships-submodal';
 import CharacterInventorySubmodal from './submodals/character-inventory-submodal';
 import CharacterSitesSubmodal from './submodals/character-sites-submodal';
 import CharacterLegalEntitiesSubmodal from './submodals/character-legal-entities-submodal';
-import { LegalEntity } from '@/types/entities'; // Ensure LegalEntity is imported
+import { Business } from '@/types/entities'; // Ensure Business is imported
 // Side effects handled by parent component via API calls
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
 
@@ -501,7 +501,7 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
                   className="h-8 text-xs"
                 >
                   <Building2 className="w-3 h-3 mr-1" />
-                  Legal Entity
+                  Business
                 </Button>
               )}
 

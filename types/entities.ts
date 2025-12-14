@@ -25,7 +25,7 @@ import {
   FinancialStatus,
   LinkType,
   EntityType,
-  LegalEntityType,
+  BusinessType,
   ContractStatus,
   ContractClauseType,
 } from './enums';
@@ -440,8 +440,8 @@ export interface ContractClause {
  */
 export interface Contract extends BaseEntity {
   // Parties
-  principalLegalEntityId: string;    // Me / The Company
-  counterpartyLegalEntityId: string; // The Associate / Partner
+  principalBusinessId: string;    // Me / The Company
+  counterpartyBusinessId: string; // The Associate / Partner
 
   // Status & Lifecycle
   status: ContractStatus;
@@ -780,13 +780,13 @@ export interface Character extends BaseEntity {
 // ═══════════════════════════════════════════════════════════════════════════
 
 /**
- * LEGAL ENTITY - The "Business Identity" (Persona Layer)
+ * BUSINESS - The "Business Identity" (Business Persona Layer)
  * 
  * Separates the Persona (Character) from the Business (Tax/Legal).
  * Can be linked to a Site (HQ) and a Character (Representative).
  */
-export interface LegalEntity extends BaseEntity {
-  type: LegalEntityType;
+export interface Business extends BaseEntity {
+  type: BusinessType;
   taxId?: string;               // Optional Tax ID / SSN / Cedula
 
   // Connections
