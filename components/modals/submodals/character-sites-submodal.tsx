@@ -96,9 +96,11 @@ export default function CharacterSitesSubmodal({
 
             // Create CANONICAL link: Site -> Character
             await ClientAPI.createLink({
+                id: crypto.randomUUID(),
                 source: { type: EntityType.SITE, id: selectedSiteId },
                 target: { type: EntityType.CHARACTER, id: characterId },
                 linkType: LinkType.SITE_CHARACTER,
+                createdAt: new Date().toISOString()
             });
 
             console.log('[OwnedSites] Link created successfully');
