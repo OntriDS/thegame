@@ -37,8 +37,11 @@ export default function CharacterSitesSubmodal({
         try {
             setLoading(true);
 
+            console.log('[OwnedSites] Loading sites for character:', characterId);
+
             // Get all links for this character
             const links = await ClientAPI.getLinksFor({ type: EntityType.CHARACTER, id: characterId });
+            console.log('[OwnedSites] All links:', links.length);
 
             // Filter for ownership links (canonical: CHARACTER_SITE)
             // Usually Character OWNS Site
@@ -46,6 +49,7 @@ export default function CharacterSitesSubmodal({
                 (l.linkType === LinkType.CHARACTER_SITE) &&
                 (l.source.type === EntityType.CHARACTER && l.source.id === characterId)
             );
+            console.log('[OwnedSites] CHARACTER_SITE links:', siteLinks.length, siteLinks);
 
             // Get site IDs
             const siteIds = new Set<string>();
@@ -54,17 +58,20 @@ export default function CharacterSitesSubmodal({
                     siteIds.add(link.target.id);
                 }
             });
+            console.log('[OwnedSites] Site IDs from links:', Array.from(siteIds));
 
             // Fetch all sites for options and filtering
             const allSites = await ClientAPI.getSites();
             setAllSiteOptions(allSites);
+            console.log('[OwnedSites] All sites:', allSites.length);
 
             // Union of Linked Sites AND Sites where ownerId matches
             const mySites = allSites.filter((site: Site) => siteIds.has(site.id) || site.ownerId === characterId);
+            console.log('[OwnedSites] My sites:', mySites.length, mySites.map(s => ({ id: s.id, name: s.name, ownerId: s.ownerId })));
             setOwnedSites(mySites);
 
         } catch (error) {
-            console.error('Failed to load sites:', error);
+            console.error('[OwnedSites] Failed to load sites:', error);
         } finally {
             setLoading(false);
         }
@@ -81,30 +88,47 @@ export default function CharacterSitesSubmodal({
         try {
             setLoading(true); // Show loading during link creation
 
+            console.log('[OwnedSites] Creating link:', {
+                character: characterId,
+                site: selectedSiteId,
+                linkType: LinkType.CHARACTER_SITE
+            });
+
             // 1. Create Link: Character -> Site
-            await ClientAPI.createLink({
+            const linkResult = await ClientAPI.createLink({
                 source: { type: EntityType.CHARACTER, id: characterId },
                 target: { type: EntityType.SITE, id: selectedSiteId },
                 linkType: LinkType.CHARACTER_SITE,
             });
 
+            console.log('[OwnedSites] Link created:', linkResult);
+
             // 2. Sync ownerId in Site Entity (for legacy compatibility)
             const siteToUpdate = allSiteOptions.find(s => s.id === selectedSiteId);
             if (siteToUpdate) {
+                console.log('[OwnedSites] Updating site ownerId:', { siteId: selectedSiteId, ownerId: characterId });
                 await ClientAPI.upsertSite({
                     ...siteToUpdate,
                     ownerId: characterId
                 });
+                console.log('[OwnedSites] Site updated');
+            } else {
+                console.error('[OwnedSites] Site not found in allSiteOptions:', selectedSiteId);
             }
 
             // Reset state
             setIsAdding(false);
             setSelectedSiteId('');
 
+            // Small delay to ensure DB commits
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            console.log('[OwnedSites] Reloading sites...');
             // Reload sites to show the newly linked site
             await loadSites();
         } catch (err) {
-            console.error("Failed to add site", err);
+            console.error("[OwnedSites] Failed to add site:", err);
+            alert(`Failed to link site: ${err instanceof Error ? err.message : 'Unknown error'}`);
         } finally {
             setLoading(false);
         }
