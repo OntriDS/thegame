@@ -113,7 +113,7 @@ export function BusinessSubmodal({
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             className="col-span-3"
-                            placeholder="e.g. O2 Jewelry"
+                            placeholder="Business name"
                         />
                     </div>
 
@@ -151,9 +151,7 @@ export function BusinessSubmodal({
                                 options={createCharacterOptions(characters)}
                                 placeholder="Link to Character..."
                             />
-                            <p className="text-[10px] text-muted-foreground mt-1">
-                                The human representative (e.g. Maria).
-                            </p>
+
                         </div>
                     </div>
 
@@ -166,9 +164,7 @@ export function BusinessSubmodal({
                                 options={createSiteOptionsWithCategories(sites)}
                                 placeholder="Link to Site..."
                             />
-                            <p className="text-[10px] text-muted-foreground mt-1">
-                                The HQ or primary location.
-                            </p>
+
                         </div>
                     </div>
                 </div>
