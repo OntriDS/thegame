@@ -652,7 +652,7 @@ export default function FinancesPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="assets">Assets</TabsTrigger>
           <TabsTrigger value="company">Company</TabsTrigger>
           <TabsTrigger value="personal">Personal</TabsTrigger>
@@ -661,24 +661,14 @@ export default function FinancesPage() {
 
         {/* Assets Tab - Now First and Main */}
         <TabsContent value="partnerships" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Partnership Management</CardTitle>
-              <CardDescription>Manage your Legal Entities and Contracts with Associates.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <PartnershipsManager
-                legalEntities={legalEntities}
-                contracts={contracts}
-                characters={characters}
-                sites={sites}
-                onCreateLegalEntity={handleCreateLegalEntity}
-                onUpdateLegalEntity={handleUpdateLegalEntity}
-                onCreateContract={handleCreateContract}
-                onUpdateContract={handleUpdateContract}
-              />
-            </CardContent>
-          </Card>
+          <PartnershipsManager
+            legalEntities={legalEntities}
+            contracts={contracts}
+            characters={characters}
+            sites={sites}
+            onCreateContract={handleCreateContract}
+            onUpdateContract={handleUpdateContract}
+          />
         </TabsContent>
 
         <TabsContent value="assets" className="space-y-4">
