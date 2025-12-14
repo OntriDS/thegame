@@ -105,67 +105,58 @@ export default function CharacterInventorySubmodal({
           </DialogTitle>
         </DialogHeader>
 
-        <Tabs defaultValue="items" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="items">
-              <Package className="h-4 w-4 mr-2" />
-              Owned Items ({ownedItems.length})
-            </TabsTrigger>
-            <TabsTrigger value="sites">
-              <MapPin className="h-4 w-4 mr-2" />
-              Owned Sites ({ownedSites.length})
-            </TabsTrigger>
-          </TabsList>
+        <div className="w-full mt-4">
+          <div className="flex items-center gap-2 mb-4">
+            <Package className="h-4 w-4" />
+            <span className="font-semibold">Owned Items ({ownedItems.length})</span>
+          </div>
 
-          <TabsContent value="items" className="mt-4">
-            <ScrollArea className="h-[500px]">
-              {loading ? (
-                <div className="flex items-center justify-center h-32">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </div>
-              ) : ownedItems.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-32 text-muted-foreground">
-                  <Package className="h-12 w-12 mb-4 opacity-20" />
-                  <p>No owned items</p>
-                  <p className="text-sm">Items owned by this character will appear here</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {ownedItems.map((item) => (
-                    <Card key={item.id} className="hover:bg-accent/50 transition-colors">
-                      <CardContent className="p-4">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-2">
-                              <h4 className="font-semibold truncate">{item.name}</h4>
-                              <Badge variant="secondary" className="text-xs">
-                                {item.type}
-                              </Badge>
-                            </div>
-                            {item.description && (
-                              <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
-                                {item.description}
-                              </p>
+          <ScrollArea className="h-[500px]">
+            {loading ? (
+              <div className="flex items-center justify-center h-32">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : ownedItems.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-32 text-muted-foreground">
+                <Package className="h-12 w-12 mb-4 opacity-20" />
+                <p>No owned items</p>
+                <p className="text-sm">Items owned by this character will appear here</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {ownedItems.map((item) => (
+                  <Card key={item.id} className="hover:bg-accent/50 transition-colors">
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-2">
+                            <h4 className="font-semibold truncate">{item.name}</h4>
+                            <Badge variant="secondary" className="text-xs">
+                              {item.type}
+                            </Badge>
+                          </div>
+                          {item.description && (
+                            <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
+                              {item.description}
+                            </p>
+                          )}
+                          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                            {item.status && (
+                              <span>Status: {item.status}</span>
                             )}
-                            <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                              {item.status && (
-                                <span>Status: {item.status}</span>
-                              )}
-                              {item.price > 0 && (
-                                <span>Price: ${item.price.toLocaleString()}</span>
-                              )}
-                            </div>
+                            {item.price > 0 && (
+                              <span>Price: ${item.price.toLocaleString()}</span>
+                            )}
                           </div>
                         </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </ScrollArea>
-          </TabsContent>
-
-        </Tabs>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </ScrollArea>
+        </div>
 
         <div className="flex justify-end gap-2 mt-4">
           <Button variant="outline" onClick={() => onOpenChange(false)}>

@@ -597,6 +597,7 @@ export enum LinkType {
   CHARACTER_FINREC = 'CHARACTER_FINREC',   // Character is assigned to this Financial Record (customer, team member, etc.)
   CHARACTER_SITE = 'CHARACTER_SITE',     // Character is related to a Site (owner, lives at, works at, customer of, etc.)
   CHARACTER_PLAYER = 'CHARACTER_PLAYER',   // When a Character belongs to a Player
+  CHARACTER_LEGAL_ENTITY = 'CHARACTER_LEGAL_ENTITY', // Character is related to a Legal Entity (owner, rep, etc.)
 
   // SITE relationships (locations and places)
   SITE_TASK = 'SITE_TASK', // Site has Tasks performed there (reverse)

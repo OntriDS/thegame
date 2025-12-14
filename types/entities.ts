@@ -131,6 +131,7 @@ export interface Site extends BaseEntity {
   description?: string;
   metadata: SiteMetadata;
   status: SiteStatus; // SiteStatus enum - Active or Inactive
+  ownerId?: string | null; // ID of the Character who owns this site
   // links inherited from BaseEntity as Link[]
 }
 

@@ -59,7 +59,8 @@ export default function CharacterSitesSubmodal({
             const allSites = await ClientAPI.getSites();
             setAllSiteOptions(allSites);
 
-            const mySites = allSites.filter((site: Site) => siteIds.has(site.id));
+            // Union of Linked Sites AND Sites where ownerId matches
+            const mySites = allSites.filter((site: Site) => siteIds.has(site.id) || site.ownerId === characterId);
             setOwnedSites(mySites);
 
         } catch (error) {
@@ -78,12 +79,22 @@ export default function CharacterSitesSubmodal({
     const handleAddSite = async () => {
         if (!selectedSiteId) return;
         try {
-            // Create Link: Character -> Site
+            // 1. Create Link: Character -> Site
             await ClientAPI.createLink({
                 source: { type: EntityType.CHARACTER, id: characterId },
                 target: { type: EntityType.SITE, id: selectedSiteId },
                 linkType: LinkType.CHARACTER_SITE,
             });
+
+            // 2. Sync ownerId in Site Entity (for legacy compatibility)
+            const siteToUpdate = allSiteOptions.find(s => s.id === selectedSiteId);
+            if (siteToUpdate) {
+                await ClientAPI.upsertSite({
+                    ...siteToUpdate,
+                    ownerId: characterId
+                });
+            }
+
             setIsAdding(false);
             setSelectedSiteId('');
             loadSites();
@@ -93,12 +104,8 @@ export default function CharacterSitesSubmodal({
     };
 
     const handleRemoveSite = async (siteId: string) => {
-        // Logic to remove link would be here, but clientAPI might not expose 'deleteLinkByTargets' easily without link ID.
-        // For now, assuming readonly or basic list.
-        // If we need to remove, we first need to find the link ID.
-        // Implementation pending user request for "Manage", for now "Selector" requested.
-        // But I will add the logic to find and delete.
         try {
+            // 1. Remove Link
             const links = await ClientAPI.getLinksFor({ type: EntityType.CHARACTER, id: characterId });
             const linkToDelete = links.find(l =>
                 l.linkType === LinkType.CHARACTER_SITE &&
@@ -107,8 +114,18 @@ export default function CharacterSitesSubmodal({
             );
             if (linkToDelete) {
                 await ClientAPI.removeLink(linkToDelete.id);
-                loadSites();
             }
+
+            // 2. Clear ownerId if it matches current character
+            const site = ownedSites.find(s => s.id === siteId);
+            if (site && site.ownerId === characterId) {
+                await ClientAPI.upsertSite({
+                    ...site,
+                    ownerId: undefined // Unset owner
+                });
+            }
+
+            loadSites();
         } catch (err) {
             console.error("Failed to remove site", err);
         }

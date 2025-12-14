@@ -22,7 +22,7 @@ import DeleteModal from './submodals/delete-submodal';
 import LinksRelationshipsModal from './submodals/links-relationships-submodal';
 import CharacterInventorySubmodal from './submodals/character-inventory-submodal';
 import CharacterSitesSubmodal from './submodals/character-sites-submodal';
-import { LegalEntitySubmodal } from './submodals/legal-entity-submodal';
+import CharacterLegalEntitiesSubmodal from './submodals/character-legal-entities-submodal';
 import { LegalEntity } from '@/types/entities'; // Ensure LegalEntity is imported
 // Side effects handled by parent component via API calls
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
@@ -254,14 +254,7 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
 
 
 
-  const handleSaveLegalEntity = async (entity: LegalEntity) => {
-    try {
-      await ClientAPI.upsertLegalEntity(entity);
-      // Maybe show toast? 
-    } catch (e) {
-      console.error("Failed to save legal entity", e);
-    }
-  };
+
 
   return (
     <>
@@ -601,13 +594,13 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
         />
       )}
 
-      {/* Legal Entity Submodal */}
+      {/* Character Legal Entities Submodal */}
       {character && (
-        <LegalEntitySubmodal
+        <CharacterLegalEntitiesSubmodal
           open={showLegalEntityModal}
-          onClose={() => setShowLegalEntityModal(false)}
-          onSave={handleSaveLegalEntity}
-          defaultLinkedCharacterId={character.id}
+          onOpenChange={setShowLegalEntityModal}
+          characterId={character.id}
+          characterName={character.name}
         />
       )}
     </>
