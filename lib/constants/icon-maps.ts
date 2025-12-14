@@ -37,7 +37,7 @@ export const FINANCIAL_ENTRY_ICONS: Record<EntityType, React.ElementType> = {
   link: LinkIcon,
   session: MessageSquare,
   settlement: Building2,
-  legal_entity: Briefcase,
+  business: Briefcase,
   contract: FileCheck,
 };
 
