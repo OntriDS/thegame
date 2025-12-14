@@ -13,6 +13,7 @@ import { EntityType, LinkType } from '@/types/enums';
 import { Badge } from '@/components/ui/badge';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { LegalEntitySubmodal } from './legal-entity-submodal';
+import { createLegalEntityOptionsWithCategories } from '@/lib/utils';
 
 interface CharacterLegalEntitiesSubmodalProps {
     open: boolean;
@@ -167,9 +168,8 @@ export default function CharacterLegalEntitiesSubmodal({
     const getAvailableOptions = () => {
         // Exclude already linked
         const linkedIds = new Set(linkedEntities.map(e => e.id));
-        return allEntityOptions
-            .filter(e => !linkedIds.has(e.id))
-            .map(e => ({ label: e.name, value: e.id, category: e.type }));
+        const available = allEntityOptions.filter(e => !linkedIds.has(e.id));
+        return createLegalEntityOptionsWithCategories(available);
     };
 
     return (
