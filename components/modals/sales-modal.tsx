@@ -12,7 +12,7 @@ import NumericInput from '@/components/ui/numeric-input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Sale, SaleLine, Item, Discount, Site, Character, Task, ItemSaleLine, BundleSaleLine } from '@/types/entities';
+import { Sale, SaleLine, Item, Discount, Site, Character, Task, ItemSaleLine, BundleSaleLine, Business, Contract } from '@/types/entities';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
 import { SaleType, SaleStatus, PaymentMethod, Currency, ItemType, ItemStatus, TaskType, TaskPriority, Collection, STATION_CATEGORIES, CharacterRole, EntityType, PLAYER_ONE_ID } from '@/types/enums';
 import { getSubTypesForItemType } from '@/lib/utils/item-utils';
@@ -183,6 +183,8 @@ export default function SalesModal({
   const [sites, setSites] = useState<Site[]>([]);
   const [characters, setCharacters] = useState<Character[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [businesses, setBusinesses] = useState<Business[]>([]);
+  const [contracts, setContracts] = useState<Contract[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
   // Load data on mount
@@ -192,6 +194,8 @@ export default function SalesModal({
       loadSites();
       loadCharacters();
       loadTasks();
+      loadBusinesses();
+      loadContracts();
     }
   }, [open]);
 
@@ -375,6 +379,24 @@ export default function SalesModal({
       setCharacters(charactersData);
     } catch (error) {
       console.error('Failed to load characters:', error);
+    }
+  };
+
+  const loadBusinesses = async () => {
+    try {
+      const businessesData = await ClientAPI.getBusinesses();
+      setBusinesses(businessesData);
+    } catch (error) {
+      console.error('Failed to load businesses:', error);
+    }
+  };
+
+  const loadContracts = async () => {
+    try {
+      const contractsData = await ClientAPI.getContracts();
+      setContracts(contractsData);
+    } catch (error) {
+      console.error('Failed to load contracts:', error);
     }
   };
 
@@ -1083,8 +1105,8 @@ export default function SalesModal({
             sites={sites}
             characters={characters}
             items={items}
-            legalEntities={[]} // TODO: Fetch from ClientAPI
-            contracts={[]} // TODO: Fetch from ClientAPI
+            businesses={businesses}
+            contracts={contracts}
             saleDate={saleDate}
             setSaleDate={setSaleDate}
             lines={lines}
