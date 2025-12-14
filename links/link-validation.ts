@@ -33,7 +33,7 @@ export async function validateLink(
   metadata?: Record<string, any>
 ): Promise<LinkValidationResult> {
   const warnings: string[] = [];
-  
+
   try {
     // 1. Basic validation
     if (!linkType || !source?.type || !source?.id || !target?.type || !target?.id) {
@@ -122,7 +122,7 @@ export function validateLinkTypeCompatibility(
     'TASK_PLAYER': { source: [EntityType.TASK], target: [EntityType.PLAYER] },
     'TASK_CHARACTER': { source: [EntityType.TASK], target: [EntityType.CHARACTER] },
     'TASK_SITE': { source: [EntityType.TASK], target: [EntityType.SITE] },
-    
+
     // ITEM relationships (6)
     'ITEM_TASK': { source: [EntityType.ITEM], target: [EntityType.TASK] },
     'ITEM_SALE': { source: [EntityType.ITEM], target: [EntityType.SALE] },
@@ -154,6 +154,7 @@ export function validateLinkTypeCompatibility(
     'CHARACTER_FINREC': { source: [EntityType.CHARACTER], target: [EntityType.FINANCIAL] },
     'CHARACTER_SITE': { source: [EntityType.CHARACTER], target: [EntityType.SITE] },
     'CHARACTER_PLAYER': { source: [EntityType.CHARACTER], target: [EntityType.PLAYER] },
+    'CHARACTER_LEGAL_ENTITY': { source: [EntityType.CHARACTER], target: [EntityType.LEGAL_ENTITY] },
 
     // SITE relationships (6)
     'SITE_TASK': { source: [EntityType.SITE], target: [EntityType.TASK] },
@@ -205,10 +206,10 @@ export function validateLinkTypeCompatibility(
 /**
  * Validate entity exists with retry for KV eventual consistency
  */
-async function validateEntityExistsWithRetry(t: EntityType, id: string, retries=5, delayMs=120): Promise<boolean> {
-  for (let i=0;i<=retries;i++) {
+async function validateEntityExistsWithRetry(t: EntityType, id: string, retries = 5, delayMs = 120): Promise<boolean> {
+  for (let i = 0; i <= retries; i++) {
     if (await validateEntityExists(t, id)) return true;
-    if (i<retries) await new Promise(r=>setTimeout(r, delayMs));
+    if (i < retries) await new Promise(r => setTimeout(r, delayMs));
   }
   return false;
 }
@@ -242,11 +243,11 @@ async function checkReverseDuplicate(
     // Ownership: canonical is ITEM_CHARACTER, reverse is CHARACTER_ITEM
     [LinkType.ITEM_CHARACTER]: null, // Canonical - no reverse check needed
     [LinkType.CHARACTER_ITEM]: LinkType.ITEM_CHARACTER, // Reverse - check if canonical exists
-    
+
     // Ownership: canonical is SITE_CHARACTER, reverse is CHARACTER_SITE
     [LinkType.SITE_CHARACTER]: null, // Canonical - no reverse check needed
     [LinkType.CHARACTER_SITE]: LinkType.SITE_CHARACTER, // Reverse - check if canonical exists
-    
+
     // Add other reverse pairs as needed
     [LinkType.TASK_ITEM]: null,
     [LinkType.ITEM_TASK]: null,
@@ -288,39 +289,40 @@ async function checkReverseDuplicate(
     [LinkType.ACCOUNT_PLAYER]: null,
     [LinkType.PLAYER_ACCOUNT]: null,
     [LinkType.ACCOUNT_CHARACTER]: null,
-    [LinkType.CHARACTER_ACCOUNT]: null
+    [LinkType.CHARACTER_ACCOUNT]: null,
+    [LinkType.CHARACTER_LEGAL_ENTITY]: null
   };
 
   const canonicalType = canonicalPairs[linkType];
-  
+
   // If this is a reverse link type, check if canonical already exists
   if (canonicalType) {
     // For reverse links, we need to check if canonical exists
     // Example: CHARACTER_ITEM (reverse) -> check if ITEM_CHARACTER (canonical) exists
     // The canonical link would have ITEM as source and CHARACTER as target
     // So we check links for both entities to find the canonical link
-    
+
     // Get links for both entities to find canonical link
     const sourceLinks = await getLinksFor(source);
     const targetLinks = await getLinksFor(target);
     const allRelevantLinks = [...sourceLinks, ...targetLinks];
-    
+
     // Check if canonical link exists connecting the same entities
     const canonicalExists = allRelevantLinks.some((link: any) => {
       if (link.linkType !== canonicalType) return false;
-      
+
       // Check if canonical link connects the same two entities (in either direction)
       // For ITEM_CHARACTER canonical: source=ITEM, target=CHARACTER
       // For CHARACTER_ITEM reverse: source=CHARACTER, target=ITEM
       // We need to match the entity pair regardless of direction
       const linkConnectsSource = (link.source.type === source.type && link.source.id === source.id) ||
-                                 (link.target.type === source.type && link.target.id === source.id);
+        (link.target.type === source.type && link.target.id === source.id);
       const linkConnectsTarget = (link.source.type === target.type && link.source.id === target.id) ||
-                                 (link.target.type === target.type && link.target.id === target.id);
-      
+        (link.target.type === target.type && link.target.id === target.id);
+
       return linkConnectsSource && linkConnectsTarget;
     });
-    
+
     if (canonicalExists) {
       return {
         isValid: false,

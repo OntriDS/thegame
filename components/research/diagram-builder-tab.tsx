@@ -62,7 +62,7 @@ export function DiagramBuilderTab() {
             animated: true,
             style: { stroke: '#06b6d4', strokeWidth: 2, filter: 'drop-shadow(0 0 3px #06b6d4)' }
         }, eds)),
-        []
+        [setEdges]
     );
 
     const onDragOver = useCallback((event: React.DragEvent) => {
