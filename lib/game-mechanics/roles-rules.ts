@@ -58,7 +58,7 @@ export const ROLE_BEHAVIORS = {
     isDisplayOnly: false,     // Can be freely toggled
     requiresJungleCoins: false,
   },
-  [CharacterRole.FRIEND]: {
+  [CharacterRole.BOSS]: {
     isImmutable: false,
     hideIfNotAssigned: false,
     isDisplayOnly: false,     // Can be freely toggled
@@ -132,15 +132,13 @@ export const ROLE_BENEFITS = {
     ],
     requirements: ["Only Founder can grant this role"]
   },
-  [CharacterRole.FRIEND]: {
-    description: "Friend can have characters to track for mutal benefit",
+  [CharacterRole.BOSS]: {
+    description: "Boss role for business ownership and leadership",
     benefits: [
-      "Have contact data",
-      "Get Special Discount and rewards",
-      "Return calculations and analytics",
-      "Unlocks the Unique Friend achievement (once get, achievement cant be removed)",
-      "Requirement for non team roles to have player beta access"
-      // "Can login to the portal.space and interact with character", // In Ideation
+      "Can own and manage businesses",
+      "Leadership tracking and analytics",
+      "Can grant special permissions to team members",
+      "Access to business management features"
     ],
     requirements: ["Only Founder can grant this role"]
   },
@@ -193,7 +191,7 @@ export const BUSINESS_ROLES = [
 export function canCompleteStationTasks(characterRoles: CharacterRole[]): boolean {
   const hasPlayerRole = characterRoles.includes(CharacterRole.PLAYER);
   const hasBusinessRole = characterRoles.some(role => BUSINESS_ROLES.includes(role as any));
-  
+
   return hasPlayerRole && hasBusinessRole;
 }
 
@@ -204,7 +202,7 @@ export function canCompleteStationTasks(characterRoles: CharacterRole[]): boolea
 export function isExternalContractor(characterRoles: CharacterRole[]): boolean {
   const hasPlayerRole = characterRoles.includes(CharacterRole.PLAYER);
   const hasBusinessRole = characterRoles.some(role => BUSINESS_ROLES.includes(role as any));
-  
+
   return hasBusinessRole && !hasPlayerRole;
 }
 
@@ -213,23 +211,23 @@ export function isExternalContractor(characterRoles: CharacterRole[]): boolean {
  */
 export function getRoleBenefits(characterRoles: CharacterRole[]): string[] {
   const benefits: string[] = [];
-  
+
   characterRoles.forEach(role => {
     const roleBenefit = ROLE_BENEFITS[role as keyof typeof ROLE_BENEFITS];
     if (roleBenefit) {
       benefits.push(...roleBenefit.benefits);
     }
   });
-  
+
   // Add conditional benefits
   if (canCompleteStationTasks(characterRoles)) {
     benefits.push("Can complete station tasks (Business Role + PLAYER)");
   }
-  
+
   if (isExternalContractor(characterRoles)) {
     benefits.push("External contractor (no TheCompany benefits)");
   }
-  
+
   return [...new Set(benefits)]; // Remove duplicates
 }
 
@@ -238,7 +236,7 @@ export function getRoleBenefits(characterRoles: CharacterRole[]): string[] {
  * Only FOUNDER and ADMIN roles can view Account entity details
  */
 export function canViewAccountInfo(characterRoles: CharacterRole[]): boolean {
-  return characterRoles.includes(CharacterRole.FOUNDER) || 
-         characterRoles.includes(CharacterRole.ADMIN);
+  return characterRoles.includes(CharacterRole.FOUNDER) ||
+    characterRoles.includes(CharacterRole.ADMIN);
 }
 
