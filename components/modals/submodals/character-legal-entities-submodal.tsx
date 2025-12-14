@@ -30,7 +30,8 @@ export default function CharacterLegalEntitiesSubmodal({
     const [linkedEntities, setLinkedEntities] = useState<LegalEntity[]>([]);
     const [loading, setLoading] = useState(true);
     const [isLinking, setIsLinking] = useState(false); // Mode to link existing
-    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false); // Mode to create new
+    const [editingEntity, setEditingEntity] = useState<LegalEntity | undefined>(undefined);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
     const [allEntityOptions, setAllEntityOptions] = useState<LegalEntity[]>([]);
     const [selectedEntityId, setSelectedEntityId] = useState('');
@@ -78,6 +79,7 @@ export default function CharacterLegalEntitiesSubmodal({
             loadEntities();
             setIsLinking(false);
             setSelectedEntityId('');
+            setEditingEntity(undefined);
         }
     }, [open, loadEntities]);
 
@@ -140,12 +142,25 @@ export default function CharacterLegalEntitiesSubmodal({
         }
     };
 
-    const handleCreateSuccess = (entity: LegalEntity) => {
-        // Entity created by submodal, now just refresh list
-        // Note: LegalEntitySubmodal logic needs to ensure it's linked if we passed defaultLinkedCharacterId
-        // The modal below passes it, so it should be fine.
-        setIsCreateModalOpen(false);
-        loadEntities();
+    const handleSaveSuccess = async (entity: LegalEntity) => {
+        try {
+            await ClientAPI.upsertLegalEntity(entity);
+            setIsEditModalOpen(false);
+            setEditingEntity(undefined);
+            loadEntities();
+        } catch (error) {
+            console.error("Failed to save entity", error);
+        }
+    };
+
+    const handleEditClick = (entity: LegalEntity) => {
+        setEditingEntity(entity);
+        setIsEditModalOpen(true);
+    };
+
+    const handleCreateClick = () => {
+        setEditingEntity(undefined);
+        setIsEditModalOpen(true);
     };
 
     // Helper for Select options
@@ -154,7 +169,7 @@ export default function CharacterLegalEntitiesSubmodal({
         const linkedIds = new Set(linkedEntities.map(e => e.id));
         return allEntityOptions
             .filter(e => !linkedIds.has(e.id))
-            .map(e => ({ label: e.name, value: e.id, description: e.type }));
+            .map(e => ({ label: e.name, value: e.id, category: e.type }));
     };
 
     return (
@@ -178,7 +193,7 @@ export default function CharacterLegalEntitiesSubmodal({
                                 <Button variant="outline" size="sm" onClick={() => setIsLinking(true)}>
                                     <LinkIcon className="h-4 w-4 mr-2" /> Link Existing
                                 </Button>
-                                <Button variant="default" size="sm" onClick={() => setIsCreateModalOpen(true)}>
+                                <Button variant="default" size="sm" onClick={handleCreateClick}>
                                     <Plus className="h-4 w-4 mr-2" /> Create New Entity
                                 </Button>
                             </>
@@ -203,7 +218,7 @@ export default function CharacterLegalEntitiesSubmodal({
                                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                             </div>
                         ) : linkedEntities.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center h-48 text-muted-foreground border-2 border-dashed rounded-lg bg-slate-50">
+                            <div className="flex flex-col items-center justify-center h-48 text-muted-foreground border-2 border-dashed border-muted rounded-lg bg-slate-50 dark:bg-slate-900/20">
                                 <Building2 className="h-12 w-12 mb-4 opacity-20" />
                                 <p>No Legal Entities linked</p>
                                 <p className="text-sm mt-1">Link an existing entity or create a new one.</p>
@@ -211,13 +226,13 @@ export default function CharacterLegalEntitiesSubmodal({
                         ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pb-2">
                                 {linkedEntities.map((entity) => (
-                                    <Card key={entity.id} className="hover:bg-accent/50 transition-colors">
+                                    <Card key={entity.id} className="hover:bg-accent/50 transition-colors group">
                                         <CardContent className="p-4">
                                             <div className="flex items-start justify-between">
                                                 <div className="flex-1 min-w-0">
                                                     <div className="flex items-center gap-2 mb-2">
-                                                        <div className="p-2 bg-indigo-100 rounded-md">
-                                                            <Building2 className="h-4 w-4 text-indigo-700" />
+                                                        <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-md">
+                                                            <Building2 className="h-4 w-4 text-indigo-700 dark:text-indigo-400" />
                                                         </div>
                                                         <div className="min-w-0">
                                                             <h4 className="font-semibold truncate">{entity.name}</h4>
@@ -231,11 +246,19 @@ export default function CharacterLegalEntitiesSubmodal({
                                                             Tax ID: {entity.taxId}
                                                         </p>
                                                     )}
-                                                    <div className="flex items-center gap-2 mt-2">
+                                                    <div className="flex items-center gap-2 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="h-7 text-xs"
+                                                            onClick={() => handleEditClick(entity)}
+                                                        >
+                                                            Edit
+                                                        </Button>
                                                         <Button
                                                             variant="ghost"
                                                             size="sm"
-                                                            className="h-6 text-red-500 hover:text-red-700 hover:bg-red-50 px-2"
+                                                            className="h-7 text-xs text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
                                                             onClick={() => handleUnlinkEntity(entity.id)}
                                                         >
                                                             <Trash2 className="h-3 w-3 mr-1" /> Unlink
@@ -260,11 +283,13 @@ export default function CharacterLegalEntitiesSubmodal({
 
             {/* Create/Edit Entity Submodal */}
             <LegalEntitySubmodal
-                open={isCreateModalOpen}
-                onClose={() => setIsCreateModalOpen(false)}
-                onSave={handleCreateSuccess}
+                open={isEditModalOpen}
+                onClose={() => setIsEditModalOpen(false)}
+                onSave={handleSaveSuccess}
+                initialData={editingEntity}
                 defaultLinkedCharacterId={characterId}
             />
         </Dialog>
     );
 }
+
