@@ -40,7 +40,7 @@ export function CharacterLogTab({ characterLog, onReload, isReloading }: Charact
   const { filter, setFilter, getVisibleEntries } = useLogViewFilter({ entityType: EntityType.CHARACTER });
 
   const processedCharacterLog = processLogData(characterLog, logOrder);
-  
+
   // Apply view filter to entries
   const visibleEntries = getVisibleEntries(processedCharacterLog.entries || []);
 
@@ -86,14 +86,14 @@ export function CharacterLogTab({ characterLog, onReload, isReloading }: Charact
               // Handle BULK_IMPORT and BULK_EXPORT entries
               const eventRaw = entry.event || entry.status || '';
               const statusRaw = String(eventRaw).toUpperCase();
-              
+
               if (statusRaw === 'BULK_IMPORT' || statusRaw === 'BULK_EXPORT') {
                 const operation = statusRaw === 'BULK_IMPORT' ? 'Bulk Import' : 'Bulk Export';
                 const count = entry.count || 0;
                 const source = entry.source || 'unknown';
                 const mode = entry.importMode || entry.exportFormat || '';
                 const date = entry.displayDate || entry.timestamp || '';
-                
+
                 return (
                   <div key={index} className="flex items-center gap-3 p-3 border rounded-lg bg-muted/30">
                     <div className="flex-shrink-0">
@@ -118,31 +118,31 @@ export function CharacterLogTab({ characterLog, onReload, isReloading }: Charact
                   </div>
                 );
               }
-              
+
               const statusRawNorm: string = entry.event || 'unknown';
               const status = statusRawNorm.charAt(0).toUpperCase() + statusRawNorm.slice(1);
-              
+
               // Use displayName from normalization, fallback to entry data (standardized with other log tabs)
               const name: string = entry.displayName || entry.name || entry.title || 'Character Activity';
               const date: string = entry.displayDate || entry.timestamp || '';
-              
+
               // Character native fields
               const isFounder = entry.roles && Array.isArray(entry.roles) && entry.roles.includes(CharacterRole.FOUNDER);
               const characterInfo = [];
-              
+
               // ALWAYS show roles - they're the primary character identifier
               const roles = entry.roles;
               if (roles && Array.isArray(roles) && roles.length > 0) {
                 characterInfo.push(`Roles: ${roles.join(', ')}`);
               }
-              
+
               // Show native fields only when present
               if (entry.commColor) characterInfo.push(`CommColor: ${entry.commColor}`);
               if (entry.description) characterInfo.push(`Description: ${entry.description}`);
               if (entry.contactEmail) characterInfo.push(`Email: ${entry.contactEmail}`);
               if (entry.contactPhone) characterInfo.push(`Phone: ${entry.contactPhone}`);
               if (entry.isActive !== undefined) characterInfo.push(`Active: ${entry.isActive ? 'Yes' : 'No'}`);
-              
+
               // Event-specific details (show when present)
               if (statusRaw === 'REQUESTED_TASK') {
                 if (entry.taskName) characterInfo.push(`Task: ${entry.taskName}`);
@@ -156,8 +156,11 @@ export function CharacterLogTab({ characterLog, onReload, isReloading }: Charact
                 if (entry.saleName) characterInfo.push(`Sale: ${entry.saleName}`);
                 if (entry.saleType) characterInfo.push(`Type: ${entry.saleType}`);
                 if (entry.totalRevenue) characterInfo.push(`Revenue: $${entry.totalRevenue.toFixed(2)}`);
+              } else if (statusRaw === 'BUSINESS_LINKED') {
+                if (entry.businessName) characterInfo.push(`Business: ${entry.businessName}`);
+                if (entry.businessType) characterInfo.push(`Type: ${entry.businessType}`);
               }
-              
+
               const characterInfoText = characterInfo.join(' • ');
 
               return (
@@ -166,7 +169,7 @@ export function CharacterLogTab({ characterLog, onReload, isReloading }: Charact
                   <div className="flex-shrink-0">
                     <User className="h-4 w-4 text-muted-foreground" />
                   </div>
-                  
+
                   {/* Main Info Row */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3 text-sm">
@@ -174,12 +177,12 @@ export function CharacterLogTab({ characterLog, onReload, isReloading }: Charact
                       <div className="inline-flex items-center rounded-full border px-2 py-1 text-xs font-semibold transition-colors bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
                         {status}
                       </div>
-                      
+
                       {/* Name */}
                       <span className="font-medium text-foreground min-w-0 flex-shrink-0">
                         {name}
                       </span>
-                      
+
                       {/* Character Info - only for non-Founder characters */}
                       {characterInfoText && (
                         <span className="text-muted-foreground min-w-0 flex-shrink-0 text-xs">
@@ -188,7 +191,7 @@ export function CharacterLogTab({ characterLog, onReload, isReloading }: Charact
                       )}
                     </div>
                   </div>
-                  
+
                   {/* Right Side: Links Icon + Date */}
                   <div className="flex items-center gap-2 flex-shrink-0">
                     {/* Links Icon */}
@@ -196,21 +199,21 @@ export function CharacterLogTab({ characterLog, onReload, isReloading }: Charact
                       variant="ghost"
                       size="sm"
                       className="h-6 w-6 p-0"
-                        onClick={async () => {
-                          try {
-                            const { ClientAPI } = await import('@/lib/client-api');
-                            
-                            // Always fetch links for the character entity
-                            const links = await ClientAPI.getLinksFor({ type: EntityType.CHARACTER, id: entry.entityId });
-                            
-                            setCharacterLinks(links);
-                            setSelectedCharacterId(entry.entityId);
-                            setSelectedLogEntry(entry);
-                            setShowLinksModal(true);
-                          } catch (error) {
-                            console.error('Failed to fetch character links:', error);
-                          }
-                        }}
+                      onClick={async () => {
+                        try {
+                          const { ClientAPI } = await import('@/lib/client-api');
+
+                          // Always fetch links for the character entity
+                          const links = await ClientAPI.getLinksFor({ type: EntityType.CHARACTER, id: entry.entityId });
+
+                          setCharacterLinks(links);
+                          setSelectedCharacterId(entry.entityId);
+                          setSelectedLogEntry(entry);
+                          setShowLinksModal(true);
+                        } catch (error) {
+                          console.error('Failed to fetch character links:', error);
+                        }
+                      }}
                     >
                       <LinkIcon className="h-4 w-4 text-muted-foreground hover:text-foreground" />
                     </Button>
@@ -222,7 +225,7 @@ export function CharacterLogTab({ characterLog, onReload, isReloading }: Charact
                       onReload={onReload}
                       logManagementEnabled={logManagementEnabled}
                     />
-                    
+
                     {/* Date */}
                     <span className="text-xs text-muted-foreground whitespace-nowrap">
                       {date}
@@ -233,7 +236,7 @@ export function CharacterLogTab({ characterLog, onReload, isReloading }: Charact
             })
           )}
         </div>
-        
+
         {/* Links SubModal */}
         <LinksSubModal
           open={showLinksModal}

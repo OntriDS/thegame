@@ -79,6 +79,8 @@ export default function CharacterSitesSubmodal({
     const handleAddSite = async () => {
         if (!selectedSiteId) return;
         try {
+            setLoading(true); // Show loading during link creation
+
             // 1. Create Link: Character -> Site
             await ClientAPI.createLink({
                 source: { type: EntityType.CHARACTER, id: characterId },
@@ -95,11 +97,16 @@ export default function CharacterSitesSubmodal({
                 });
             }
 
+            // Reset state
             setIsAdding(false);
             setSelectedSiteId('');
-            loadSites();
+
+            // Reload sites to show the newly linked site
+            await loadSites();
         } catch (err) {
             console.error("Failed to add site", err);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -134,7 +141,7 @@ export default function CharacterSitesSubmodal({
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent
-                className="max-w-3xl max-h-[80vh]"
+                className="max-w-3xl max-h-[80vh] min-h-[500px] flex flex-col"
                 style={{ zIndex: getInteractiveSubModalZIndex() }}
             >
                 <DialogHeader>
@@ -144,7 +151,7 @@ export default function CharacterSitesSubmodal({
                     </DialogTitle>
                 </DialogHeader>
 
-                <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-4 flex-1 min-h-0">
                     {/* Add New Site Section */}
                     {!isAdding ? (
                         <Button variant="outline" size="sm" className="self-start" onClick={() => setIsAdding(true)}>
@@ -159,8 +166,10 @@ export default function CharacterSitesSubmodal({
                                 placeholder="Select a site to own..."
                                 className="w-[300px]"
                             />
-                            <Button size="sm" onClick={handleAddSite} disabled={!selectedSiteId}>Link</Button>
-                            <Button size="sm" variant="ghost" onClick={() => setIsAdding(false)}>Cancel</Button>
+                            <Button size="sm" onClick={handleAddSite} disabled={!selectedSiteId || loading}>
+                                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Link'}
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={() => { setIsAdding(false); setSelectedSiteId(''); }} disabled={loading}>Cancel</Button>
                         </div>
                     )}
 
