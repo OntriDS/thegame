@@ -138,7 +138,7 @@ export function ContractSubmodal({
                 style={{ zIndex: getInteractiveSubModalZIndex() }}
             >
                 <DialogHeader>
-                    <DialogTitle>{initialData ? 'Edit Contract' : 'New Partnership Contract'}</DialogTitle>
+                    <DialogTitle>{initialData ? 'Edit Contract' : 'New Contract'}</DialogTitle>
                     <DialogDescription>
                         Define clauses for commissions and expense sharing.
                     </DialogDescription>
@@ -188,7 +188,7 @@ export function ContractSubmodal({
 
                         <div className="max-h-[300px] overflow-y-auto space-y-3 pr-2">
                             {clauses.map((clause, index) => (
-                                <div key={clause.id} className="p-3 border rounded-lg bg-slate-50 relative group">
+                                <div key={clause.id} className="p-3 border rounded-lg bg-card relative group">
                                     <div className="grid grid-cols-12 gap-3 items-end">
                                         <div className="col-span-3 space-y-1">
                                             <Label className="text-xs">Type</Label>
