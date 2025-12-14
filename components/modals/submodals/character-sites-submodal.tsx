@@ -43,19 +43,19 @@ export default function CharacterSitesSubmodal({
             const links = await ClientAPI.getLinksFor({ type: EntityType.CHARACTER, id: characterId });
             console.log('[OwnedSites] All links:', links.length);
 
-            // Filter for ownership links (canonical: CHARACTER_SITE)
-            // Usually Character OWNS Site
+            // Filter for ownership links (canonical: SITE_CHARACTER)
+            // Site -> Character ownership
             const siteLinks = links.filter((l: Link) =>
-                (l.linkType === LinkType.CHARACTER_SITE) &&
-                (l.source.type === EntityType.CHARACTER && l.source.id === characterId)
+                (l.linkType === LinkType.SITE_CHARACTER) &&
+                (l.target.type === EntityType.CHARACTER && l.target.id === characterId)
             );
-            console.log('[OwnedSites] CHARACTER_SITE links:', siteLinks.length, siteLinks);
+            console.log('[OwnedSites] SITE_CHARACTER links:', siteLinks.length, siteLinks);
 
-            // Get site IDs
+            // Get site IDs from link SOURCE (site is the source)
             const siteIds = new Set<string>();
             siteLinks.forEach((link: Link) => {
-                if (link.target.type === EntityType.SITE) {
-                    siteIds.add(link.target.id);
+                if (link.source.type === EntityType.SITE) {
+                    siteIds.add(link.source.id);
                 }
             });
             console.log('[OwnedSites] Site IDs from links:', Array.from(siteIds));
@@ -65,8 +65,8 @@ export default function CharacterSitesSubmodal({
             setAllSiteOptions(allSites);
             console.log('[OwnedSites] All sites:', allSites.length);
 
-            // Union of Linked Sites AND Sites where ownerId matches
-            const mySites = allSites.filter((site: Site) => siteIds.has(site.id) || site.ownerId === characterId);
+            // Filter by link IDs only (Links System is source of truth)
+            const mySites = allSites.filter((site: Site) => siteIds.has(site.id));
             console.log('[OwnedSites] My sites:', mySites.length, mySites.map(s => ({ id: s.id, name: s.name, ownerId: s.ownerId })));
             setOwnedSites(mySites);
 
@@ -89,39 +89,23 @@ export default function CharacterSitesSubmodal({
             setLoading(true); // Show loading during link creation
 
             console.log('[OwnedSites] Creating link:', {
-                character: characterId,
                 site: selectedSiteId,
-                linkType: LinkType.CHARACTER_SITE
+                character: characterId,
+                linkType: LinkType.SITE_CHARACTER
             });
 
-            // 1. Create Link: Character -> Site
-            const linkResult = await ClientAPI.createLink({
-                source: { type: EntityType.CHARACTER, id: characterId },
-                target: { type: EntityType.SITE, id: selectedSiteId },
-                linkType: LinkType.CHARACTER_SITE,
+            // Create CANONICAL link: Site -> Character
+            await ClientAPI.createLink({
+                source: { type: EntityType.SITE, id: selectedSiteId },
+                target: { type: EntityType.CHARACTER, id: characterId },
+                linkType: LinkType.SITE_CHARACTER,
             });
 
-            console.log('[OwnedSites] Link created:', linkResult);
-
-            // 2. Sync ownerId in Site Entity (for legacy compatibility)
-            const siteToUpdate = allSiteOptions.find(s => s.id === selectedSiteId);
-            if (siteToUpdate) {
-                console.log('[OwnedSites] Updating site ownerId:', { siteId: selectedSiteId, ownerId: characterId });
-                await ClientAPI.upsertSite({
-                    ...siteToUpdate,
-                    ownerId: characterId
-                });
-                console.log('[OwnedSites] Site updated');
-            } else {
-                console.error('[OwnedSites] Site not found in allSiteOptions:', selectedSiteId);
-            }
+            console.log('[OwnedSites] Link created successfully');
 
             // Reset state
             setIsAdding(false);
             setSelectedSiteId('');
-
-            // Small delay to ensure DB commits
-            await new Promise(resolve => setTimeout(resolve, 500));
 
             console.log('[OwnedSites] Reloading sites...');
             // Reload sites to show the newly linked site
@@ -136,29 +120,27 @@ export default function CharacterSitesSubmodal({
 
     const handleRemoveSite = async (siteId: string) => {
         try {
-            // 1. Remove Link
+            setLoading(true);
+
+            // Find SITE_CHARACTER link where site is SOURCE
             const links = await ClientAPI.getLinksFor({ type: EntityType.CHARACTER, id: characterId });
             const linkToDelete = links.find(l =>
-                l.linkType === LinkType.CHARACTER_SITE &&
-                l.source.id === characterId &&
-                l.target.id === siteId
+                l.linkType === LinkType.SITE_CHARACTER &&
+                l.source.id === siteId &&
+                l.target.id === characterId
             );
+
             if (linkToDelete) {
                 await ClientAPI.removeLink(linkToDelete.id);
+                console.log('[OwnedSites] Link removed successfully');
             }
 
-            // 2. Clear ownerId if it matches current character
-            const site = ownedSites.find(s => s.id === siteId);
-            if (site && site.ownerId === characterId) {
-                await ClientAPI.upsertSite({
-                    ...site,
-                    ownerId: undefined // Unset owner
-                });
-            }
-
-            loadSites();
+            // Reload sites
+            await loadSites();
         } catch (err) {
-            console.error("Failed to remove site", err);
+            console.error("[OwnedSites] Failed to remove site:", err);
+        } finally {
+            setLoading(false);
         }
     };
 
