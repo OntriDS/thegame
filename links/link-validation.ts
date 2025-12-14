@@ -154,7 +154,7 @@ export function validateLinkTypeCompatibility(
     'CHARACTER_FINREC': { source: [EntityType.CHARACTER], target: [EntityType.FINANCIAL] },
     'CHARACTER_SITE': { source: [EntityType.CHARACTER], target: [EntityType.SITE] },
     'CHARACTER_PLAYER': { source: [EntityType.CHARACTER], target: [EntityType.PLAYER] },
-    'CHARACTER_LEGAL_ENTITY': { source: [EntityType.CHARACTER], target: [EntityType.LEGAL_ENTITY] },
+    'CHARACTER_BUSINESS': { source: [EntityType.CHARACTER], target: [EntityType.BUSINESS] },
 
     // SITE relationships (6)
     'SITE_TASK': { source: [EntityType.SITE], target: [EntityType.TASK] },
@@ -290,7 +290,7 @@ async function checkReverseDuplicate(
     [LinkType.PLAYER_ACCOUNT]: null,
     [LinkType.ACCOUNT_CHARACTER]: null,
     [LinkType.CHARACTER_ACCOUNT]: null,
-    [LinkType.CHARACTER_LEGAL_ENTITY]: null
+    [LinkType.CHARACTER_BUSINESS]: null
   };
 
   const canonicalType = canonicalPairs[linkType];
