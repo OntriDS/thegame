@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { FileText, ShieldCheck } from 'lucide-react';
 import { Business, Contract, Character, Site } from '@/types/entities';
 import { ContractStatus } from '@/types/enums';
+import { PartnershipSubmodal } from '@/components/modals/submodals/partnership-submodal';
 import { ContractSubmodal } from '@/components/modals/submodals/contract-submodal';
 
 interface PartnershipsManagerProps {
@@ -27,6 +28,7 @@ export function PartnershipsManager({
     onUpdateContract
 }: PartnershipsManagerProps) {
     const [isContractModalOpen, setIsContractModalOpen] = useState(false);
+    const [isPartnershipModalOpen, setIsPartnershipModalOpen] = useState(false);
     const [selectedContract, setSelectedContract] = useState<Contract | undefined>(undefined);
 
     // Helpers to resolve names
@@ -35,7 +37,6 @@ export function PartnershipsManager({
         return ent ? ent.name : 'Unknown Entity';
     };
 
-    return (
     return (
         <div className="space-y-6">
             {/* CONTRACTS SECTION */}
@@ -100,7 +101,7 @@ export function PartnershipsManager({
                             <CardTitle>Partners and Investors</CardTitle>
                             <CardDescription>Manage strategic relationships and investors.</CardDescription>
                         </div>
-                        <Button variant="secondary">
+                        <Button variant="outline" onClick={() => setIsPartnershipModalOpen(true)}>
                             New Partnership
                         </Button>
                     </div>
