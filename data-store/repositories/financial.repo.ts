@@ -2,7 +2,7 @@
 import { kvGet, kvMGet, kvSet, kvDel, kvSAdd, kvSRem, kvSMembers } from '../kv';
 import { buildDataKey, buildIndexKey, buildMonthIndexKey } from '../keys';
 import { EntityType } from '@/types/enums';
-import type { FinancialRecord } from '@/types/entities';
+import type { FinancialRecord, Contract } from '@/types/entities';
 import { formatMonthKey } from '@/lib/utils/date-utils';
 
 const ENTITY = EntityType.FINANCIAL;
@@ -36,7 +36,7 @@ export async function getFinancialsBySourceTaskId(sourceTaskId: string): Promise
   const indexKey = `index:${ENTITY}:sourceTaskId:${sourceTaskId}`;
   const ids = await kvSMembers(indexKey);
   if (ids.length === 0) return [];
-  
+
   const keys = ids.map(id => buildDataKey(ENTITY, id));
   const financials = await kvMGet<FinancialRecord>(keys);
   return financials.filter((financial): financial is FinancialRecord => financial !== null && financial !== undefined);
@@ -50,7 +50,7 @@ export async function getFinancialsBySourceSaleId(sourceSaleId: string): Promise
   const indexKey = `index:${ENTITY}:sourceSaleId:${sourceSaleId}`;
   const ids = await kvSMembers(indexKey);
   if (ids.length === 0) return [];
-  
+
   const keys = ids.map(id => buildDataKey(ENTITY, id));
   const financials = await kvMGet<FinancialRecord>(keys);
   return financials.filter((financial): financial is FinancialRecord => financial !== null && financial !== undefined);
@@ -59,10 +59,10 @@ export async function getFinancialsBySourceSaleId(sourceSaleId: string): Promise
 export async function upsertFinancial(financial: FinancialRecord): Promise<FinancialRecord> {
   const key = buildDataKey(ENTITY, financial.id);
   const indexKey = buildIndexKey(ENTITY);
-  
+
   // Get previous financial to clean up old indexes if they changed
   const previousFinancial = await kvGet<FinancialRecord>(key);
-  
+
   await kvSet(key, financial);
   await kvSAdd(indexKey, financial.id);
 
@@ -72,25 +72,25 @@ export async function upsertFinancial(financial: FinancialRecord): Promise<Finan
     const currentMonthKey = formatMonthKey(monthDate);
     await kvSAdd(buildMonthIndexKey(ENTITY, currentMonthKey), financial.id);
   }
-  
+
   // Maintain sourceTaskId index
   if (financial.sourceTaskId) {
     const sourceTaskIndexKey = `index:${ENTITY}:sourceTaskId:${financial.sourceTaskId}`;
     await kvSAdd(sourceTaskIndexKey, financial.id);
   }
-  
+
   // Clean up old sourceTaskId index if it changed or was removed
   if (previousFinancial?.sourceTaskId && previousFinancial.sourceTaskId !== financial.sourceTaskId) {
     const oldSourceTaskIndexKey = `index:${ENTITY}:sourceTaskId:${previousFinancial.sourceTaskId}`;
     await kvSRem(oldSourceTaskIndexKey, financial.id);
   }
-  
+
   // Maintain sourceSaleId index
   if (financial.sourceSaleId) {
     const sourceSaleIndexKey = `index:${ENTITY}:sourceSaleId:${financial.sourceSaleId}`;
     await kvSAdd(sourceSaleIndexKey, financial.id);
   }
-  
+
   // Clean up old sourceSaleId index if it changed or was removed
   if (previousFinancial?.sourceSaleId && previousFinancial.sourceSaleId !== financial.sourceSaleId) {
     const oldSourceSaleIndexKey = `index:${ENTITY}:sourceSaleId:${previousFinancial.sourceSaleId}`;
@@ -105,14 +105,14 @@ export async function upsertFinancial(financial: FinancialRecord): Promise<Finan
       await kvSRem(buildMonthIndexKey(ENTITY, prevMonthKey), financial.id);
     }
   }
-  
+
   return financial;
 }
 
 export async function deleteFinancial(id: string): Promise<void> {
   const key = buildDataKey(ENTITY, id);
   const indexKey = buildIndexKey(ENTITY);
-  
+
   // Get financial to clean up indexes
   const financial = await kvGet<FinancialRecord>(key);
   if (financial?.sourceTaskId) {
@@ -127,7 +127,40 @@ export async function deleteFinancial(id: string): Promise<void> {
     const prevMonthKey = formatMonthKey(new Date(financial.year, financial.month - 1, 1));
     await kvSRem(buildMonthIndexKey(ENTITY, prevMonthKey), id);
   }
-  
+
+  await kvDel(key);
+  await kvSRem(indexKey, id);
+}
+
+// ============================================================================
+// CONTRACT OPERATIONS (Financial Instruments - Revenue/Payment Splits)
+// ============================================================================
+
+export async function getAllContracts(): Promise<Contract[]> {
+  const indexKey = buildIndexKey(EntityType.CONTRACT);
+  const ids = await kvSMembers(indexKey);
+  if (ids.length === 0) return [];
+  const keys = ids.map(id => buildDataKey(EntityType.CONTRACT, id));
+  const contracts = await kvMGet<Contract>(keys);
+  return contracts.filter((c): c is Contract => c !== null && c !== undefined);
+}
+
+export async function getContractById(id: string): Promise<Contract | null> {
+  const key = buildDataKey(EntityType.CONTRACT, id);
+  return await kvGet<Contract>(key);
+}
+
+export async function upsertContract(contract: Contract): Promise<Contract> {
+  const key = buildDataKey(EntityType.CONTRACT, contract.id);
+  const indexKey = buildIndexKey(EntityType.CONTRACT);
+  await kvSet(key, contract);
+  await kvSAdd(indexKey, contract.id);
+  return contract;
+}
+
+export async function deleteContract(id: string): Promise<void> {
+  const key = buildDataKey(EntityType.CONTRACT, id);
+  const indexKey = buildIndexKey(EntityType.CONTRACT);
   await kvDel(key);
   await kvSRem(indexKey, id);
 }

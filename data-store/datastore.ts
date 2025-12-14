@@ -1,7 +1,7 @@
 // data-store/datastore.ts
 // Orchestration layer: repositories → workflows → links → logging
 
-import type { Task, Item, FinancialRecord, Sale, Character, Player, Site, Settlement, Account } from '@/types/entities';
+import type { Task, Item, FinancialRecord, Sale, Character, Player, Site, Settlement, Account, LegalEntity, Contract } from '@/types/entities';
 import type { TaskSnapshot, ItemSnapshot, SaleSnapshot, FinancialSnapshot } from '@/types/archive';
 import { EntityType, ItemType, TaskPriority, TaskStatus, FinancialStatus } from '@/types/enums';
 import {
@@ -25,7 +25,11 @@ import {
   getFinancialById as repoGetFinancialById,
   deleteFinancial as repoDeleteFinancial,
   getFinancialsBySourceTaskId as repoGetFinancialsBySourceTaskId,
-  getFinancialsBySourceSaleId as repoGetFinancialsBySourceSaleId
+  getFinancialsBySourceSaleId as repoGetFinancialsBySourceSaleId,
+  upsertContract as repoUpsertContract,
+  getAllContracts as repoGetAllContracts,
+  getContractById as repoGetContractById,
+  deleteContract as repoDeleteContract
 } from './repositories/financial.repo';
 import {
   upsertSale as repoUpsertSale,
@@ -37,7 +41,11 @@ import {
   upsertCharacter as repoUpsertCharacter,
   getAllCharacters as repoGetAllCharacters,
   getCharacterById as repoGetCharacterById,
-  deleteCharacter as repoDeleteCharacter
+  deleteCharacter as repoDeleteCharacter,
+  upsertLegalEntity as repoUpsertLegalEntity,
+  getAllLegalEntities as repoGetAllLegalEntities,
+  getLegalEntityById as repoGetLegalEntityById,
+  deleteLegalEntity as repoDeleteLegalEntity
 } from './repositories/character.repo';
 import {
   upsertPlayer as repoUpsertPlayer,
@@ -51,6 +59,7 @@ import {
   getAccountById as repoGetAccountById,
   deleteAccount as repoDeleteAccount
 } from './repositories/account.repo';
+// duplicate imports removed
 import {
   upsertSite as repoUpsertSite,
   getAllSites as repoGetAllSites,
@@ -400,10 +409,47 @@ export async function removeAccount(id: string): Promise<void> {
   const existing = await repoGetAccountById(id);
   await repoDeleteAccount(id);
   if (existing) {
-    // Call account deletion workflow for cleanup
     const { removeAccountEffectsOnDelete } = await import('@/workflows/entities-workflows/account.workflow');
     await removeAccountEffectsOnDelete(id);
   }
+}
+
+// removed any-typed duplicates for legal entities and contracts
+
+// LEGAL ENTITIES
+export async function upsertLegalEntity(entity: LegalEntity): Promise<LegalEntity> {
+  const saved = await repoUpsertLegalEntity(entity);
+  return saved;
+}
+
+export async function getAllLegalEntities(): Promise<LegalEntity[]> {
+  return await repoGetAllLegalEntities();
+}
+
+export async function getLegalEntityById(id: string): Promise<LegalEntity | null> {
+  return await repoGetLegalEntityById(id);
+}
+
+export async function removeLegalEntity(id: string): Promise<void> {
+  await repoDeleteLegalEntity(id);
+}
+
+// CONTRACTS
+export async function upsertContract(contract: Contract): Promise<Contract> {
+  const saved = await repoUpsertContract(contract);
+  return saved;
+}
+
+export async function getAllContracts(): Promise<Contract[]> {
+  return await repoGetAllContracts();
+}
+
+export async function getContractById(id: string): Promise<Contract | null> {
+  return await repoGetContractById(id);
+}
+
+export async function removeContract(id: string): Promise<void> {
+  await repoDeleteContract(id);
 }
 
 // SITES

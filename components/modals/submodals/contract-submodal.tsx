@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { NumericInput } from '@/components/ui/numeric-input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 // separator removed
@@ -220,11 +221,11 @@ export function ContractSubmodal({
                                                 <div>
                                                     <Label className="text-[10px] text-muted-foreground block text-center">Us</Label>
                                                     <div className="relative">
-                                                        <Input
-                                                            type="number"
+                                                        <NumericInput
                                                             className="h-8 w-16 text-xs pr-4 focus-visible:ring-1"
-                                                            value={(clause.companyShare * 100).toFixed(0)}
-                                                            onChange={(e) => updateClause(clause.id, 'companyShare', parseFloat(e.target.value) / 100)}
+                                                            value={clause.companyShare * 100}
+                                                            onChange={(val) => updateClause(clause.id, 'companyShare', Number(val) / 100)}
+                                                            placeholder="50"
                                                         />
                                                         <span className="absolute right-1 top-2 text-[10px] text-muted-foreground">%</span>
                                                     </div>
@@ -233,11 +234,12 @@ export function ContractSubmodal({
                                                 <div>
                                                     <Label className="text-[10px] text-muted-foreground block text-center">Them</Label>
                                                     <div className="relative">
-                                                        <Input
-                                                            type="number"
+                                                        <NumericInput
                                                             className="h-8 w-16 text-xs pr-4 focus-visible:ring-1 bg-muted"
-                                                            value={(clause.associateShare * 100).toFixed(0)}
-                                                            readOnly
+                                                            value={clause.associateShare * 100}
+                                                            onChange={(val) => { }}
+                                                            placeholder="50"
+                                                            disabled
                                                         />
                                                         <span className="absolute right-1 top-2 text-[10px] text-muted-foreground">%</span>
                                                     </div>
