@@ -46,7 +46,7 @@ export function SmartSchedulerSubmodal({
         if (value.frequencyConfig && !showFrequency) {
             setShowFrequency(true);
         }
-    }, [value.frequencyConfig]);
+    }, [value.frequencyConfig, showFrequency]);
 
     const handleScheduleDateSelect = (date: Date | undefined) => {
         if (!date) return;

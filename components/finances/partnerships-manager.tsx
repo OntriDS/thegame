@@ -125,7 +125,6 @@ export function PartnershipsManager({
                     setIsContractModalOpen(false);
                 }}
                 initialData={selectedContract}
-                businesses={businesses}
             />
 
             <PartnershipSubmodal
