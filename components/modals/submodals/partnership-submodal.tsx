@@ -231,7 +231,12 @@ export function PartnershipSubmodal({
                                         <span className="text-[10px] italic">No active contracts assigned.</span>
                                     </div>
                                 ) : (
-                                    <div className="text-xs">Contract list would go here</div>
+                                    <div className="max-h-[120px] overflow-y-auto pr-1 space-y-1 scrollbar-thin scrollbar-thumb-muted-foreground/20">
+                                        {/* Mock List for visualization if contractIds were populated */}
+                                        {contractIds.map(id => (
+                                            <div key={id} className="text-xs p-1 border rounded bg-background">Contract {id}</div>
+                                        ))}
+                                    </div>
                                 )}
                             </div>
                         )}
