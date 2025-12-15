@@ -152,7 +152,7 @@ export function PartnershipSubmodal({ // Keeping filename export for compatibili
                                         <div className="flex flex-col items-center justify-center h-48 text-muted-foreground border-2 border-dashed rounded-lg bg-muted/10 mx-auto max-w-sm mt-8">
                                             <Handshake className="h-10 w-10 mb-3 opacity-20" />
                                             <p className="font-medium text-sm">No active relationships</p>
-                                            <p className="text-xs">Click "New Relationship" to start.</p>
+                                            <p className="text-xs">Click &quot;New Relationship&quot; to start.</p>
                                         </div>
                                     ) : (
                                         <div className="space-y-3">
