@@ -8,7 +8,7 @@ alwaysApply: true
 ## WORKFLOW RULES
 
 - **Foundational/Structural Changes**: Ask and plan together (enums, entities, architecture, data structures, complex components)
-- **Basic/Feature Changes**: Try your approach, user tests, refine together (pages, simple components, UI improvements)
+- **Basic/Feature Changes**: Try your approach, user tests, refine together (give pages, simple components, UI improvements)
 - **CRITICAL: NEVER DELETE FILES.** Do not delete any file without asking for and receiving explicit permission first.
 - **Dont update PROJECT-STATUS.json** unless the user explicitly asks for it
 - This is the user's project with established patterns - not a generic coding exercise
