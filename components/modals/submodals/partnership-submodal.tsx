@@ -7,7 +7,7 @@ import { getInteractiveSubModalZIndex } from '@/lib/utils/z-index-utils';
 import { Business, Character } from '@/types/entities';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Label } from '@/components/ui/label';
-import { Check, FileText } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { NumericInput } from '@/components/ui/numeric-input';
 
 interface PartnershipSubmodalProps {
@@ -89,103 +89,102 @@ export function PartnershipSubmodal({
                 className="sm:max-w-[600px] min-h-[500px] flex flex-col"
                 style={{ zIndex: getInteractiveSubModalZIndex() }}
             >
-                <DialogHeader>
+                <DialogHeader className="pb-2 text-center">
                     <DialogTitle>Management Configurator</DialogTitle>
                     <DialogDescription>
-                        Configure roles, partnerships, and investor status for a character.
+                        Configure roles, partnerships, and investor status.
                     </DialogDescription>
                 </DialogHeader>
 
-                <div className="flex-1 overflow-y-auto py-4 space-y-6 px-1">
+                <div className="flex-1 overflow-y-auto py-2 space-y-4 px-1">
 
-                    {/* 1. CHARACTER SELECTION */}
-                    <div className="space-y-3">
-                        <Label>Select Character</Label>
-                        <SearchableSelect
-                            value={characterId}
-                            onValueChange={setCharacterId}
-                            placeholder="Select a character..."
-                            options={characterOptions}
-                            autoGroupByCategory={true}
-                        />
-                    </div>
+                    {/* 1. CHARACTER SELECTION & ROLE TOGGLES - Side by Side on larger screens? No, keep stacked but tight */}
+                    <div className="grid gap-4">
+                        <div className="space-y-2">
+                            <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Character Assignment</Label>
+                            <SearchableSelect
+                                value={characterId}
+                                onValueChange={setCharacterId}
+                                placeholder="Select a character..."
+                                options={characterOptions}
+                                autoGroupByCategory={true}
+                                className="h-9 text-sm"
+                            />
+                        </div>
 
-                    {/* 2. ROLE TOGGLES */}
-                    <div className="space-y-3">
-                        <Label>Roles & Relationships</Label>
-                        <div className="grid grid-cols-3 gap-3">
-                            {['Associate', 'Partner', 'Investor'].map((label) => {
-                                const value = label.toLowerCase();
-                                const isSelected = roles.includes(value);
-                                return (
-                                    <div
-                                        key={value}
-                                        onClick={() => toggleRole(value)}
-                                        className={`
-                                            cursor-pointer flex flex-col items-center justify-center p-3 rounded-lg border transition-all select-none
-                                            ${isSelected
-                                                ? 'border-primary bg-primary/5 ring-1 ring-primary'
-                                                : 'border-muted hover:bg-muted/50 opacity-70 hover:opacity-100'
-                                            }
-                                        `}
-                                    >
-                                        <div className={`h-4 w-4 rounded border flex items-center justify-center mb-2 ${isSelected ? 'bg-primary border-primary text-primary-foreground' : 'border-muted-foreground'}`}>
-                                            {isSelected && <Check className="h-3 w-3" />}
+                        <div className="space-y-2">
+                            <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Relationship Type</Label>
+                            <div className="flex gap-2">
+                                {['Associate', 'Partner', 'Investor'].map((label) => {
+                                    const value = label.toLowerCase();
+                                    const isSelected = roles.includes(value);
+                                    return (
+                                        <div
+                                            key={value}
+                                            onClick={() => toggleRole(value)}
+                                            className={`
+                                                flex-1 cursor-pointer flex items-center justify-center p-2 rounded-md border transition-all select-none
+                                                ${isSelected
+                                                    ? 'border-primary bg-primary/10 text-primary font-medium'
+                                                    : 'border-muted hover:bg-muted/50 text-muted-foreground'
+                                                }
+                                            `}
+                                        >
+                                            <div className={`mr-2 h-3 w-3 rounded-full border flex items-center justify-center ${isSelected ? 'border-primary bg-primary' : 'border-muted-foreground'}`}>
+                                                {isSelected && <Check className="h-2 w-2 text-primary-foreground" />}
+                                            </div>
+                                            <span className="text-xs">{label}</span>
                                         </div>
-                                        <span className="text-sm font-semibold">{label}</span>
-                                    </div>
-                                );
-                            })}
+                                    );
+                                })}
+                            </div>
                         </div>
                     </div>
 
-                    {/* 3. CONDITIONAL CONFIGURATION SECTIONS */}
-                    <div className="space-y-4">
+                    <div className="h-px bg-border my-2" />
+
+                    {/* 3. CONDITIONAL CONFIGURATION SECTIONS - Compacted */}
+                    <div className="space-y-3">
 
                         {/* PARTNER CONFIG */}
                         {roles.includes('partner') && (
-                            <div className="p-4 border rounded-lg bg-card animate-in fade-in slide-in-from-top-2 duration-200">
-                                <div className="flex items-center gap-2 mb-4">
-                                    <h4 className="font-semibold text-sm">Partner Configuration</h4>
-                                    <div className="h-px flex-1 bg-border" />
+                            <div className="p-3 border rounded-md bg-card animate-in fade-in slide-in-from-top-2 duration-200">
+                                <div className="flex items-center justify-between mb-3">
+                                    <h4 className="font-semibold text-xs flex items-center gap-2">
+                                        <span className="h-2 w-2 rounded-full bg-blue-500" /> Partner Shares
+                                    </h4>
+                                    <div className="text-xs text-muted-foreground">
+                                        Owned: <span className="font-bold text-foreground">{totalShares > 0 ? ((shares / totalShares) * 100).toFixed(1) : 0}%</span>
+                                    </div>
                                 </div>
-                                <div className="space-y-4">
-                                    <div className="space-y-2">
-                                        <Label className="text-xs">Business Entity</Label>
-                                        <SearchableSelect
-                                            value={businessId}
-                                            onValueChange={setBusinessId}
-                                            placeholder="Select Business..."
-                                            options={businessOptions}
-                                            autoGroupByCategory={true}
-                                        />
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-2">
-                                            <Label className="text-xs">Shares Held</Label>
-                                            <div className="relative">
-                                                <NumericInput
-                                                    className="h-9 w-full rounded-md border text-sm"
-                                                    value={shares}
-                                                    onChange={setShares}
-                                                    placeholder="0"
-                                                />
-                                            </div>
+                                <div className="space-y-3">
+                                    <SearchableSelect
+                                        value={businessId}
+                                        onValueChange={setBusinessId}
+                                        placeholder="Select Business Entity..."
+                                        options={businessOptions}
+                                        autoGroupByCategory={true}
+                                        className="h-8 text-xs"
+                                    />
+                                    <div className="grid grid-cols-2 gap-3 items-center">
+                                        <div className="space-y-1">
+                                            <Label className="text-[10px] text-muted-foreground uppercase">Shares</Label>
+                                            <NumericInput
+                                                className="h-8 text-xs"
+                                                value={shares}
+                                                onChange={setShares}
+                                                placeholder="0"
+                                            />
                                         </div>
-                                        <div className="space-y-2">
-                                            <Label className="text-xs">Total Outstanding</Label>
-                                            <div className="relative">
-                                                <NumericInput
-                                                    className="h-9 w-full rounded-md border text-sm"
-                                                    value={totalShares}
-                                                    onChange={setTotalShares}
-                                                    placeholder="100"
-                                                />
-                                            </div>
+                                        <div className="space-y-1">
+                                            <Label className="text-[10px] text-muted-foreground uppercase">Total</Label>
+                                            <NumericInput
+                                                className="h-8 text-xs"
+                                                value={totalShares}
+                                                onChange={setTotalShares}
+                                                placeholder="100"
+                                            />
                                         </div>
-                                    </div>
-                                    <div className="text-xs text-right text-muted-foreground">
-                                        Ownership: <span className="font-bold text-foreground">{totalShares > 0 ? ((shares / totalShares) * 100).toFixed(1) : 0}%</span>
                                     </div>
                                 </div>
                             </div>
@@ -193,24 +192,23 @@ export function PartnershipSubmodal({
 
                         {/* INVESTOR CONFIG */}
                         {roles.includes('investor') && (
-                            <div className="p-4 border rounded-lg bg-card animate-in fade-in slide-in-from-top-2 duration-200">
-                                <div className="flex items-center gap-2 mb-4">
-                                    <h4 className="font-semibold text-sm">Investor Configuration</h4>
-                                    <div className="h-px flex-1 bg-border" />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label className="text-xs">Initial Investment (J$)</Label>
-                                    <div className="relative">
-                                        <span className="absolute left-3 top-2.5 text-xs font-bold text-emerald-500">J$</span>
+                            <div className="p-3 border rounded-md bg-card animate-in fade-in slide-in-from-top-2 duration-200">
+                                <h4 className="font-semibold text-xs flex items-center gap-2 mb-3">
+                                    <span className="h-2 w-2 rounded-full bg-amber-500" /> Investor Holdings
+                                </h4>
+                                <div className="flex items-center gap-3">
+                                    <div className="relative flex-1">
+                                        <span className="absolute left-2.5 top-2 text-xs font-bold text-amber-500">J$</span>
                                         <input
                                             type="number"
-                                            className="flex h-9 w-full rounded-md border border-input bg-transparent pl-8 pr-3 py-1 text-sm shadow-sm transition-colors"
+                                            className="flex h-8 w-full rounded-md border border-input bg-transparent pl-7 pr-3 py-1 text-xs shadow-sm transition-colors"
                                             value={jungleCoins}
                                             onChange={(e) => setJungleCoins(Number(e.target.value))}
+                                            placeholder="Initial Investment"
                                         />
                                     </div>
-                                    <p className="text-[10px] text-muted-foreground mt-1">
-                                        Represents equity holdings in TheGame ecosystem.
+                                    <p className="text-[10px] text-muted-foreground flex-1 leading-tight">
+                                        Equity via Jungle Coins (J$).
                                     </p>
                                 </div>
                             </div>
@@ -218,20 +216,23 @@ export function PartnershipSubmodal({
 
                         {/* ASSOCIATE CONFIG (Contracts) */}
                         {(roles.includes('associate') || roles.includes('partner')) && (
-                            <div className="p-4 border rounded-lg bg-card animate-in fade-in slide-in-from-top-2 duration-200">
-                                <div className="flex items-center gap-2 mb-4">
-                                    <h4 className="font-semibold text-sm">Active Contracts</h4>
-                                    <div className="h-px flex-1 bg-border" />
+                            <div className="p-3 border rounded-md bg-card animate-in fade-in slide-in-from-top-2 duration-200">
+                                <div className="flex items-center justify-between mb-2">
+                                    <h4 className="font-semibold text-xs flex items-center gap-2">
+                                        <span className="h-2 w-2 rounded-full bg-slate-500" /> Contracts
+                                    </h4>
+                                    <Button variant="ghost" size="sm" className="h-6 px-2 text-[10px] hover:bg-accent -mr-1">
+                                        + Assign
+                                    </Button>
                                 </div>
 
-                                <div className="p-8 border border-dashed rounded flex flex-col items-center justify-center text-muted-foreground bg-muted/20">
-                                    <FileText className="h-8 w-8 mb-2 opacity-20" />
-                                    <span className="text-xs">No active contracts assigned.</span>
-                                    <Button variant="ghost" size="sm" className="h-auto p-0 mt-1 text-xs hover:bg-transparent underline">
-                                        + Assign Contract
-                                    </Button>
-                                    {/* Placeholder for future Multi-Select Contracts */}
-                                </div>
+                                {contractIds.length === 0 ? (
+                                    <div className="py-2 border-2 border-dashed rounded flex flex-col items-center justify-center text-muted-foreground bg-muted/20">
+                                        <span className="text-[10px] italic">No active contracts assigned.</span>
+                                    </div>
+                                ) : (
+                                    <div className="text-xs">Contract list would go here</div>
+                                )}
                             </div>
                         )}
 
