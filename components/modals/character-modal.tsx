@@ -708,7 +708,7 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
           <DialogHeader>
             <DialogTitle>Exchange J$ to USD</DialogTitle>
             <DialogDescription>
-              Cash out J$ from {character?.name}'s wallet.
+              Cash out J$ from {character?.name}&apos;s wallet.
             </DialogDescription>
           </DialogHeader>
 
