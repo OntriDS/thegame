@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { getInteractiveSubModalZIndex } from '@/lib/utils/z-index-utils';
@@ -58,8 +58,53 @@ export function PartnershipSubmodal({ // Keeping filename export for compatibili
     const [jAmount, setJAmount] = useState<number>(0);
     const [isCreating, setIsCreating] = useState(false);
 
-    // --- MOCK DATA FOR LIST ---
+    // --- RELATIONSHIPS STATE ---
     const [relationships, setRelationships] = useState<ActiveRelationship[]>([]);
+
+    // Load existing relationships from characters
+    useEffect(() => {
+        const businessRoles = ['investor', 'partner', 'sponsor', 'associate'];
+
+        const activeRelationships: ActiveRelationship[] = characters
+            .filter(char => char.roles && char.roles.some(role => businessRoles.includes(role)))
+            .map(char => ({
+                id: char.id,
+                entityId: char.id,
+                entityType: 'character' as const,
+                name: char.name,
+                roles: char.roles?.filter(role => businessRoles.includes(role)) || [],
+                status: 'Active' as const
+            }));
+
+        setRelationships(activeRelationships);
+    }, [characters, open]);
+
+    // Listen for updates to refresh the list
+    useEffect(() => {
+        const handleUpdate = () => {
+            // Re-run the filter logic when data changes
+            const businessRoles = ['investor', 'partner', 'sponsor', 'associate'];
+            const activeRelationships: ActiveRelationship[] = characters
+                .filter(char => char.roles && char.roles.some(role => businessRoles.includes(role)))
+                .map(char => ({
+                    id: char.id,
+                    entityId: char.id,
+                    entityType: 'character' as const,
+                    name: char.name,
+                    roles: char.roles?.filter(role => businessRoles.includes(role)) || [],
+                    status: 'Active' as const
+                }));
+            setRelationships(activeRelationships);
+        };
+
+        window.addEventListener('linksUpdated', handleUpdate);
+        window.addEventListener('charactersUpdated', handleUpdate);
+
+        return () => {
+            window.removeEventListener('linksUpdated', handleUpdate);
+            window.removeEventListener('charactersUpdated', handleUpdate);
+        };
+    }, [characters]);
 
 
     const handleCreateStart = () => {
@@ -145,22 +190,11 @@ export function PartnershipSubmodal({ // Keeping filename export for compatibili
                 });
             }
 
-            // Update local state for UI (Mock for now until refresh)
-            // Note: targetName is available here because it's defined in the try block scope (or should be if block wasn't closed)
-            // Wait, we need to ensure targetName is accessible. It is const inside try.
-
-            const newRel: ActiveRelationship = {
-                id: Math.random().toString(),
-                entityId: targetEntityId,
-                entityType: selectedEntityType,
-                name: targetName,
-                roles: [selectedRole],
-                status: 'Active'
-            };
-            setRelationships([...relationships, newRel]);
-
-            // Trigger refresh events
-            if (window) window.dispatchEvent(new Event('linksUpdated'));
+            // Trigger refresh events to update the UI
+            if (window) {
+                window.dispatchEvent(new Event('linksUpdated'));
+                window.dispatchEvent(new Event('charactersUpdated'));
+            }
 
             setViewMode('list');
 
@@ -237,44 +271,206 @@ export function PartnershipSubmodal({ // Keeping filename export for compatibili
                                     </TabsList>
                                 </div>
 
-                                <ScrollArea className="flex-1 p-6">
-                                    {relationships.length === 0 ? (
-                                        <div className="flex flex-col items-center justify-center h-48 text-muted-foreground border-2 border-dashed rounded-lg bg-muted/10 mx-auto max-w-sm mt-8">
-                                            <Handshake className="h-10 w-10 mb-3 opacity-20" />
-                                            <p className="font-medium text-sm">No active relationships</p>
-                                            <p className="text-xs">Click &quot;New Relationship&quot; to start.</p>
-                                        </div>
-                                    ) : (
-                                        <div className="space-y-3">
-                                            {relationships.map(rel => (
-                                                <Card key={rel.id} className="group hover:border-indigo-200 transition-colors">
-                                                    <CardContent className="p-4 flex items-center justify-between">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className={`h-10 w-10 rounded-full flex items-center justify-center ${rel.entityType === 'business' ? 'bg-indigo-100 text-indigo-600' : 'bg-green-100 text-green-600'}`}>
-                                                                {rel.entityType === 'business' ? <Building2 className="h-5 w-5" /> : <Users className="h-5 w-5" />}
-                                                            </div>
-                                                            <div>
-                                                                <h4 className="font-medium text-sm">{rel.name}</h4>
-                                                                <div className="flex gap-2 items-center mt-1">
-                                                                    {rel.roles.map(r => <span key={r}>{getRoleBadge(r)}</span>)}
-                                                                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider pl-1">{rel.entityType}</span>
+                                <TabsContent value="all" className="flex-1 m-0 p-0">
+                                    <ScrollArea className="flex-1 p-6 h-[350px]">
+                                        {relationships.length === 0 ? (
+                                            <div className="flex flex-col items-center justify-center h-48 text-muted-foreground border-2 border-dashed rounded-lg bg-muted/10 mx-auto max-w-sm mt-8">
+                                                <Handshake className="h-10 w-10 mb-3 opacity-20" />
+                                                <p className="font-medium text-sm">No active relationships</p>
+                                                <p className="text-xs">Click &quot;New Relationship&quot; to start.</p>
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-3">
+                                                {relationships.map(rel => (
+                                                    <Card key={rel.id} className="group hover:border-indigo-200 transition-colors">
+                                                        <CardContent className="p-4 flex items-center justify-between">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className={`h-10 w-10 rounded-full flex items-center justify-center ${rel.entityType === 'business' ? 'bg-indigo-100 text-indigo-600' : 'bg-green-100 text-green-600'}`}>
+                                                                    {rel.entityType === 'business' ? <Building2 className="h-5 w-5" /> : <Users className="h-5 w-5" />}
+                                                                </div>
+                                                                <div>
+                                                                    <h4 className="font-medium text-sm">{rel.name}</h4>
+                                                                    <div className="flex gap-2 items-center mt-1">
+                                                                        {rel.roles.map(r => <span key={r}>{getRoleBadge(r)}</span>)}
+                                                                        <span className="text-[10px] text-muted-foreground uppercase tracking-wider pl-1">{rel.entityType}</span>
+                                                                    </div>
                                                                 </div>
                                                             </div>
-                                                        </div>
-                                                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0" title="Edit Contract">
-                                                                <Edit className="h-4 w-4 text-muted-foreground" />
-                                                            </Button>
-                                                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:text-red-600" title="End Relationship">
-                                                                <Trash2 className="h-4 w-4" />
-                                                            </Button>
-                                                        </div>
-                                                    </CardContent>
-                                                </Card>
-                                            ))}
-                                        </div>
-                                    )}
-                                </ScrollArea>
+                                                            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0" title="Edit Contract">
+                                                                    <Edit className="h-4 w-4 text-muted-foreground" />
+                                                                </Button>
+                                                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:text-red-600" title="End Relationship">
+                                                                    <Trash2 className="h-4 w-4" />
+                                                                </Button>
+                                                            </div>
+                                                        </CardContent>
+                                                    </Card>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </ScrollArea>
+                                </TabsContent>
+
+                                <TabsContent value="associate" className="flex-1 m-0 p-0">
+                                    <ScrollArea className="flex-1 p-6 h-[350px]">
+                                        {relationships.filter(r => r.roles.includes('associate')).length === 0 ? (
+                                            <div className="flex flex-col items-center justify-center h-48 text-muted-foreground border-2 border-dashed rounded-lg bg-muted/10 mx-auto max-w-sm mt-8">
+                                                <Handshake className="h-10 w-10 mb-3 opacity-20" />
+                                                <p className="font-medium text-sm">No associate relationships</p>
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-3">
+                                                {relationships.filter(r => r.roles.includes('associate')).map(rel => (
+                                                    <Card key={rel.id} className="group hover:border-indigo-200 transition-colors">
+                                                        <CardContent className="p-4 flex items-center justify-between">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className={`h-10 w-10 rounded-full flex items-center justify-center ${rel.entityType === 'business' ? 'bg-indigo-100 text-indigo-600' : 'bg-green-100 text-green-600'}`}>
+                                                                    {rel.entityType === 'business' ? <Building2 className="h-5 w-5" /> : <Users className="h-5 w-5" />}
+                                                                </div>
+                                                                <div>
+                                                                    <h4 className="font-medium text-sm">{rel.name}</h4>
+                                                                    <div className="flex gap-2 items-center mt-1">
+                                                                        {rel.roles.map(r => <span key={r}>{getRoleBadge(r)}</span>)}
+                                                                        <span className="text-[10px] text-muted-foreground uppercase tracking-wider pl-1">{rel.entityType}</span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0" title="Edit Contract">
+                                                                    <Edit className="h-4 w-4 text-muted-foreground" />
+                                                                </Button>
+                                                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:text-red-600" title="End Relationship">
+                                                                    <Trash2 className="h-4 w-4" />
+                                                                </Button>
+                                                            </div>
+                                                        </CardContent>
+                                                    </Card>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </ScrollArea>
+                                </TabsContent>
+
+                                <TabsContent value="partner" className="flex-1 m-0 p-0">
+                                    <ScrollArea className="flex-1 p-6 h-[350px]">
+                                        {relationships.filter(r => r.roles.includes('partner')).length === 0 ? (
+                                            <div className="flex flex-col items-center justify-center h-48 text-muted-foreground border-2 border-dashed rounded-lg bg-muted/10 mx-auto max-w-sm mt-8">
+                                                <Handshake className="h-10 w-10 mb-3 opacity-20" />
+                                                <p className="font-medium text-sm">No partner relationships</p>
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-3">
+                                                {relationships.filter(r => r.roles.includes('partner')).map(rel => (
+                                                    <Card key={rel.id} className="group hover:border-indigo-200 transition-colors">
+                                                        <CardContent className="p-4 flex items-center justify-between">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className={`h-10 w-10 rounded-full flex items-center justify-center ${rel.entityType === 'business' ? 'bg-indigo-100 text-indigo-600' : 'bg-green-100 text-green-600'}`}>
+                                                                    {rel.entityType === 'business' ? <Building2 className="h-5 w-5" /> : <Users className="h-5 w-5" />}
+                                                                </div>
+                                                                <div>
+                                                                    <h4 className="font-medium text-sm">{rel.name}</h4>
+                                                                    <div className="flex gap-2 items-center mt-1">
+                                                                        {rel.roles.map(r => <span key={r}>{getRoleBadge(r)}</span>)}
+                                                                        <span className="text-[10px] text-muted-foreground uppercase tracking-wider pl-1">{rel.entityType}</span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0" title="Edit Contract">
+                                                                    <Edit className="h-4 w-4 text-muted-foreground" />
+                                                                </Button>
+                                                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:text-red-600" title="End Relationship">
+                                                                    <Trash2 className="h-4 w-4" />
+                                                                </Button>
+                                                            </div>
+                                                        </CardContent>
+                                                    </Card>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </ScrollArea>
+                                </TabsContent>
+
+                                <TabsContent value="investor" className="flex-1 m-0 p-0">
+                                    <ScrollArea className="flex-1 p-6 h-[350px]">
+                                        {relationships.filter(r => r.roles.includes('investor')).length === 0 ? (
+                                            <div className="flex flex-col items-center justify-center h-48 text-muted-foreground border-2 border-dashed rounded-lg bg-muted/10 mx-auto max-w-sm mt-8">
+                                                <Handshake className="h-10 w-10 mb-3 opacity-20" />
+                                                <p className="font-medium text-sm">No investor relationships</p>
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-3">
+                                                {relationships.filter(r => r.roles.includes('investor')).map(rel => (
+                                                    <Card key={rel.id} className="group hover:border-indigo-200 transition-colors">
+                                                        <CardContent className="p-4 flex items-center justify-between">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className={`h-10 w-10 rounded-full flex items-center justify-center ${rel.entityType === 'business' ? 'bg-indigo-100 text-indigo-600' : 'bg-green-100 text-green-600'}`}>
+                                                                    {rel.entityType === 'business' ? <Building2 className="h-5 w-5" /> : <Users className="h-5 w-5" />}
+                                                                </div>
+                                                                <div>
+                                                                    <h4 className="font-medium text-sm">{rel.name}</h4>
+                                                                    <div className="flex gap-2 items-center mt-1">
+                                                                        {rel.roles.map(r => <span key={r}>{getRoleBadge(r)}</span>)}
+                                                                        <span className="text-[10px] text-muted-foreground uppercase tracking-wider pl-1">{rel.entityType}</span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0" title="Edit Contract">
+                                                                    <Edit className="h-4 w-4 text-muted-foreground" />
+                                                                </Button>
+                                                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:text-red-600" title="End Relationship">
+                                                                    <Trash2 className="h-4 w-4" />
+                                                                </Button>
+                                                            </div>
+                                                        </CardContent>
+                                                    </Card>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </ScrollArea>
+                                </TabsContent>
+
+                                <TabsContent value="sponsor" className="flex-1 m-0 p-0">
+                                    <ScrollArea className="flex-1 p-6 h-[350px]">
+                                        {relationships.filter(r => r.roles.includes('sponsor')).length === 0 ? (
+                                            <div className="flex flex-col items-center justify-center h-48 text-muted-foreground border-2 border-dashed rounded-lg bg-muted/10 mx-auto max-w-sm mt-8">
+                                                <Handshake className="h-10 w-10 mb-3 opacity-20" />
+                                                <p className="font-medium text-sm">No sponsor relationships</p>
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-3">
+                                                {relationships.filter(r => r.roles.includes('sponsor')).map(rel => (
+                                                    <Card key={rel.id} className="group hover:border-indigo-200 transition-colors">
+                                                        <CardContent className="p-4 flex items-center justify-between">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className={`h-10 w-10 rounded-full flex items-center justify-center ${rel.entityType === 'business' ? 'bg-indigo-100 text-indigo-600' : 'bg-green-100 text-green-600'}`}>
+                                                                    {rel.entityType === 'business' ? <Building2 className="h-5 w-5" /> : <Users className="h-5 w-5" />}
+                                                                </div>
+                                                                <div>
+                                                                    <h4 className="font-medium text-sm">{rel.name}</h4>
+                                                                    <div className="flex gap-2 items-center mt-1">
+                                                                        {rel.roles.map(r => <span key={r}>{getRoleBadge(r)}</span>)}
+                                                                        <span className="text-[10px] text-muted-foreground uppercase tracking-wider pl-1">{rel.entityType}</span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0" title="Edit Contract">
+                                                                    <Edit className="h-4 w-4 text-muted-foreground" />
+                                                                </Button>
+                                                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:text-red-600" title="End Relationship">
+                                                                    <Trash2 className="h-4 w-4" />
+                                                                </Button>
+                                                            </div>
+                                                        </CardContent>
+                                                    </Card>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </ScrollArea>
+                                </TabsContent>
                             </Tabs>
                         </div>
                     ) : (
