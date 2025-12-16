@@ -286,7 +286,12 @@ export function ContractSubmodal({
                                         value={selectedCounterpartyId}
                                         onValueChange={setSelectedCounterpartyId}
                                         placeholder={`Search ${selectedEntityType}s...`}
-                                        options={availableCharacters.map(c => ({ value: c.id, label: c.name }))}
+                                        options={availableCharacters.map(c => ({
+                                            value: c.id,
+                                            label: c.name,
+                                            category: c.roles?.[0] || 'Other'
+                                        }))}
+                                        autoGroupByCategory={true}
                                         className="w-full"
                                     />
                                 </div>
