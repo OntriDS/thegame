@@ -110,7 +110,7 @@ export function PartnershipSubmodal({ // Keeping filename export for compatibili
     return (
         <Dialog open={open} onOpenChange={(val) => !val && onClose()}>
             <DialogContent
-                className="sm:max-w-[700px] h-[500px] flex flex-col p-0 gap-0 overflow-hidden"
+                className="sm:max-w-[700px] h-[500px] flex flex-col p-0 gap-0 overflow-hidden [&>button]:hidden"
                 style={{ zIndex: getInteractiveSubModalZIndex() }}
             >
                 {/* HEADER */}
@@ -118,15 +118,12 @@ export function PartnershipSubmodal({ // Keeping filename export for compatibili
                     <div>
                         <DialogTitle className="text-lg flex items-center gap-2">
                             <Handshake className="h-5 w-5 text-indigo-500" />
-                            Partnerships & Contracts
+                            Business Relationships Manager
                         </DialogTitle>
-                        <DialogDescription className="text-xs mt-1">
-                            Manage relationships, agreements, and sponsorships.
-                        </DialogDescription>
                     </div>
                     {viewMode === 'list' && (
                         <Button size="sm" onClick={handleCreateStart} className="ml-auto bg-indigo-600 hover:bg-indigo-700 text-white">
-                            <Plus className="h-4 w-4 mr-1" /> New Relationship
+                            <Plus className="h-4 w-4 mr-1" /> New Business Relationship
                         </Button>
                     )}
                 </div>
@@ -190,55 +187,31 @@ export function PartnershipSubmodal({ // Keeping filename export for compatibili
                     ) : (
                         // CREATE VIEW
                         <div className="p-6 h-full flex flex-col">
-                            <div className="mb-6">
-                                <h3 className="text-sm font-semibold mb-1">New Relationship</h3>
-                                <p className="text-xs text-muted-foreground">Define who you are working with.</p>
+                            <div className="mb-6 flex items-center justify-between">
+                                <h3 className="text-sm font-semibold">New Business Relationship</h3>
                             </div>
 
                             <div className="space-y-6 flex-1">
-                                {/* 1. Entity Type Toggle */}
+                                {/* 1. Entity Type Toggle & Selector */}
                                 <div className="space-y-3">
-                                    <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Counterparty Type</Label>
-                                    <div className="flex gap-3">
-                                        <div
-                                            onClick={() => { setSelectedEntityType('character'); setTargetEntityId(''); }}
-                                            className={`
-                                                flex-1 cursor-pointer p-3 rounded-lg border-2 transition-all flex items-center gap-3
-                                                ${selectedEntityType === 'character' ? 'border-indigo-500 bg-indigo-50/50' : 'border-muted hover:border-indigo-200'}
-                                            `}
-                                        >
-                                            <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center text-green-700">
-                                                <Users className="h-4 w-4" />
-                                            </div>
-                                            <div>
-                                                <div className="font-medium text-sm">Character</div>
-                                                <div className="text-[10px] text-muted-foreground">A Person or NPC</div>
-                                            </div>
-                                            {selectedEntityType === 'character' && <Check className="ml-auto h-4 w-4 text-indigo-600" />}
-                                        </div>
-
-                                        <div
-                                            onClick={() => { setSelectedEntityType('business'); setTargetEntityId(''); }}
-                                            className={`
-                                                flex-1 cursor-pointer p-3 rounded-lg border-2 transition-all flex items-center gap-3
-                                                ${selectedEntityType === 'business' ? 'border-indigo-500 bg-indigo-50/50' : 'border-muted hover:border-indigo-200'}
-                                            `}
-                                        >
-                                            <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700">
-                                                <Building2 className="h-4 w-4" />
-                                            </div>
-                                            <div>
-                                                <div className="font-medium text-sm">Business</div>
-                                                <div className="text-[10px] text-muted-foreground">Company or Org</div>
-                                            </div>
-                                            {selectedEntityType === 'business' && <Check className="ml-auto h-4 w-4 text-indigo-600" />}
+                                    <div className="flex items-center justify-between">
+                                        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Counterparty</Label>
+                                        <div className="flex bg-muted p-1 rounded-md">
+                                            <button
+                                                onClick={() => { setSelectedEntityType('character'); setTargetEntityId(''); }}
+                                                className={`px-3 py-1 text-xs font-medium rounded-sm transition-all ${selectedEntityType === 'character' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                                            >
+                                                Character
+                                            </button>
+                                            <button
+                                                onClick={() => { setSelectedEntityType('business'); setTargetEntityId(''); }}
+                                                className={`px-3 py-1 text-xs font-medium rounded-sm transition-all ${selectedEntityType === 'business' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                                            >
+                                                Business
+                                            </button>
                                         </div>
                                     </div>
-                                </div>
 
-                                {/* 2. Entity Selector */}
-                                <div className="space-y-2">
-                                    <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Select {selectedEntityType}</Label>
                                     <SearchableSelect
                                         value={targetEntityId}
                                         onValueChange={setTargetEntityId}
@@ -249,7 +222,7 @@ export function PartnershipSubmodal({ // Keeping filename export for compatibili
                                     />
                                 </div>
 
-                                {/* 3. Role Selector */}
+                                {/* 2. Role Selector */}
                                 <div className="space-y-2">
                                     <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Primary Role</Label>
                                     <div className="grid grid-cols-2 gap-2">
@@ -275,6 +248,24 @@ export function PartnershipSubmodal({ // Keeping filename export for compatibili
                                         ))}
                                     </div>
                                 </div>
+
+                                {/* 3. Investor Specifics (Conditional) */}
+                                {selectedRole === 'investor' && (
+                                    <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
+                                        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Investment Amount</Label>
+                                        <div className="relative">
+                                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                <span className="text-muted-foreground text-sm">J$</span>
+                                            </div>
+                                            <input
+                                                type="number"
+                                                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 pl-8"
+                                                placeholder="0.00"
+                                            />
+                                        </div>
+                                        <p className="text-[10px] text-muted-foreground">Initial capital injection.</p>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}
@@ -288,7 +279,7 @@ export function PartnershipSubmodal({ // Keeping filename export for compatibili
                         <div className="flex w-full justify-between gap-2">
                             <Button variant="ghost" onClick={handleCreateCancel}>Cancel</Button>
                             <Button onClick={handleCreateNext} disabled={!targetEntityId} className="bg-indigo-600 hover:bg-indigo-700">
-                                Create Contract
+                                Create Relationship
                             </Button>
                         </div>
                     )}
