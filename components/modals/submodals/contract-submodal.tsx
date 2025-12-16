@@ -6,13 +6,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { NumericInput } from '@/components/ui/numeric-input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Trash2, Plus, FileText, DollarSign, PenTool } from 'lucide-react';
+import { SearchableSelect } from '@/components/ui/searchable-select';
+import { Trash2, Plus, FileText, DollarSign, PenTool, Link as LinkIcon, AlertTriangle } from 'lucide-react';
 import { getInteractiveSubModalZIndex } from '@/lib/utils/z-index-utils';
-import { Contract, Business, ContractClause } from '@/types/entities';
-import { ContractStatus, ContractClauseType } from '@/types/enums';
+import { Contract, Business, ContractClause, Character, Link } from '@/types/entities';
+import { ContractStatus, ContractClauseType, LinkType, EntityType } from '@/types/enums';
 import { v4 as uuid } from 'uuid';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { ClientAPI } from '@/lib/client-api';
 
 interface ContractSubmodalProps {
     open: boolean;
@@ -24,6 +25,9 @@ interface ContractSubmodalProps {
     principalEntity?: { id: string, name: string, type: 'character' | 'business' };
     // Target: Who is the contract with?
     counterpartyEntity?: { id: string, name: string, type: 'character' | 'business' };
+
+    // For selection if counterparty is not provided
+    availableCharacters?: Character[];
 }
 
 export function ContractSubmodal({
@@ -32,13 +36,19 @@ export function ContractSubmodal({
     onSave,
     initialData,
     principalEntity,
-    counterpartyEntity
+    counterpartyEntity,
+    availableCharacters = []
 }: ContractSubmodalProps) {
     const [name, setName] = useState('');
     const [status, setStatus] = useState<ContractStatus>(ContractStatus.DRAFT);
     const [notes, setNotes] = useState('');
     const [clauses, setClauses] = useState<ContractClause[]>([]);
 
+    // Counterparty State (if selecting manually)
+    const [selectedCounterpartyId, setSelectedCounterpartyId] = useState<string>('');
+    const [isSaving, setIsSaving] = useState(false);
+
+    // Initial Load Effect
     useEffect(() => {
         if (open) {
             if (initialData) {
@@ -46,17 +56,43 @@ export function ContractSubmodal({
                 setStatus(initialData.status);
                 setNotes(initialData.notes || '');
                 setClauses(initialData.clauses || []);
+                // If editing, counterparty is fixed in the data
             } else {
-                // Default Name
-                const pName = principalEntity?.name || 'Me';
-                const cName = counterpartyEntity?.name || 'Partner';
-                setName(`${pName} ↔ ${cName} Agreement`);
+                // New Contract
                 setStatus(ContractStatus.DRAFT);
                 setNotes('');
                 setClauses([]);
+
+                // Set default counterparty if props provided
+                if (counterpartyEntity) {
+                    setSelectedCounterpartyId(counterpartyEntity.id);
+                } else {
+                    setSelectedCounterpartyId('');
+                }
             }
         }
-    }, [open, initialData, principalEntity, counterpartyEntity]);
+    }, [open, initialData, counterpartyEntity]);
+
+    // Name Auto-Generator
+    useEffect(() => {
+        if (!initialData && open) {
+            const pName = principalEntity?.name || 'Me';
+            // Determine Counterparty Name
+            let cName = 'Partner';
+            if (counterpartyEntity) {
+                cName = counterpartyEntity.name;
+            } else if (selectedCounterpartyId && availableCharacters.length > 0) {
+                const char = availableCharacters.find(c => c.id === selectedCounterpartyId);
+                if (char) cName = char.name;
+            }
+
+            // Only update if user hasn't typed a custom name (simple heuristic: starts with 'Me ↔')
+            if (!name || name.startsWith('Me ↔')) {
+                setName(`${pName} ↔ ${cName} Agreement`);
+            }
+        }
+    }, [open, initialData, principalEntity, counterpartyEntity, selectedCounterpartyId, availableCharacters]);
+
 
     const addClause = (type: ContractClauseType) => {
         let newClause: ContractClause = {
@@ -67,22 +103,27 @@ export function ContractSubmodal({
             associateShare: 0
         };
 
-        // Preset Defaults based on Type
+        // Preset Intelligent Defaults (The "Templates")
         switch (type) {
             case ContractClauseType.SALES_COMMISSION:
-                newClause.description = 'Standard Sales Commission';
-                newClause.companyShare = 0.70; // Owner
-                newClause.associateShare = 0.30; // Seller
+                newClause.description = 'My Items sold by Associate';
+                newClause.companyShare = 0.75; // I keep stock, I keep 75%
+                newClause.associateShare = 0.25; // They get 25% commission
+                break;
+            case ContractClauseType.SALES_SERVICE:
+                newClause.description = 'Associate Items sold by Me';
+                newClause.companyShare = 0.25; // I take 25% Service Fee
+                newClause.associateShare = 0.75; // They keep 75%
                 break;
             case ContractClauseType.EXPENSE_SHARING:
-                newClause.description = 'Shared Booth Cost';
+                newClause.description = 'Shared Booth/Event Costs';
                 newClause.companyShare = 0.50;
                 newClause.associateShare = 0.50;
                 break;
-            // We can treat SPONSORSHIP as a special case of FIXED_FEE or similar if we strictly follow enums,
-            // but for now let's map it to a generic type or re-use existing logic with nice descriptions.
-            // Assuming we might add a generic 'FEE' type later. For now, we reuse existing fields creatively or add a type.
-            // Let's assume user wants to add "Sponsorship" as a concept.
+            default:
+                newClause.description = 'Custom Term';
+                newClause.companyShare = 0.50;
+                newClause.associateShare = 0.50;
         }
 
         setClauses([...clauses, newClause]);
@@ -110,46 +151,93 @@ export function ContractSubmodal({
         }));
     };
 
-    const handleSave = () => {
-        // Validation?
-        const contract: Contract = {
-            id: initialData?.id || uuid(),
-            name,
-            description: 'Generated Contract', // Could be input
-            // We are using polymorphic approach or mapping to Business IDs. 
-            // For V0.1 we might need to strictly map to Business ID if schema requires it, 
-            // OR we update schema. Assuming pure JSON flexibility for now.
-            principalBusinessId: principalEntity?.id || 'SELF',
-            counterpartyBusinessId: counterpartyEntity?.id || 'OTHER',
-            status,
-            validFrom: initialData?.validFrom || new Date(),
-            clauses: clauses,
-            notes: notes || undefined,
-            createdAt: initialData?.createdAt || new Date(),
-            updatedAt: new Date(),
-            links: initialData?.links || [],
-        };
+    const handleSave = async () => {
+        if (!name) {
+            console.error("Contract name is required");
+            return;
+        }
 
-        onSave(contract);
-        onClose();
+        // Determine Counterparty ID
+        const finalCounterpartyId = counterpartyEntity?.id || selectedCounterpartyId;
+
+        if (!finalCounterpartyId && !initialData) {
+            console.error("A Counterparty (Associate) is required");
+            return;
+        }
+
+        setIsSaving(true);
+
+        try {
+            const contract: Contract = {
+                id: initialData?.id || uuid(),
+                name,
+                description: notes,
+                principalBusinessId: principalEntity?.id || 'SELF',
+                counterpartyBusinessId: finalCounterpartyId, // Linking to Character ID for now as "Business" representative
+                status,
+                validFrom: initialData?.validFrom || new Date(),
+                clauses: clauses,
+                notes: notes || undefined,
+                createdAt: initialData?.createdAt || new Date(),
+                updatedAt: new Date(),
+                links: initialData?.links || [],
+            };
+
+            // 1. Save The Contract Entity
+            // Assuming ClientAPI has a generic upsert or we use a specialized one. 
+            // Since Contract is a BaseEntity, we might need a specific endpoint.
+            // For now, I will assume the Parent handles the actual Entity Persistence via onSave,
+            // BUT I will handle the Link Creation here as requested.
+
+            // NOTE: If ClientAPI doesn't have upsertContract, we rely on parent. 
+            // However, to create a link to it, it ideally should exist.
+            // Let's assume onSave does the heavy lifting of saving the contract to DB.
+            onSave(contract);
+
+            // 2. Create the Link (The "Bridge")
+            // specific requirement: "Execute ClientAPI.createLink to bind Contract <-> Character"
+            // We do this ONLY if it's a new contract or link doesn't exist.
+
+            // We need to wait for the contract to be "real" in some systems, but here we generate ID client-side.
+            const link: Link = {
+                id: uuid(),
+                linkType: LinkType.CONTRACT_CHARACTER,
+                source: { type: EntityType.CONTRACT, id: contract.id },
+                target: { type: EntityType.CHARACTER, id: finalCounterpartyId },
+                createdAt: new Date(),
+                metadata: { role: 'associate' } // Helpful metadata
+            };
+
+            await ClientAPI.createLink(link);
+            console.log("Contract saved and linked to Associate");
+            onClose();
+
+        } catch (error) {
+            console.error("Failed to save contract", error);
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     return (
-        <Dialog open={open} onOpenChange={(val) => !val && onClose()}>
+        <Dialog open={open} onOpenChange={(val) => !val && !isSaving && onClose()}>
             <DialogContent
-                className="sm:max-w-[800px] h-[600px] flex flex-col p-0 gap-0 overflow-hidden"
+                className="sm:max-w-[800px] h-[700px] flex flex-col p-0 gap-0 overflow-hidden bg-slate-50 dark:bg-slate-950"
                 style={{ zIndex: getInteractiveSubModalZIndex() }}
             >
                 {/* HEADER */}
-                <div className="px-6 py-4 border-b flex justify-between items-center bg-muted/10">
+                <div className="px-6 py-4 border-b flex justify-between items-center bg-white dark:bg-slate-900 shadow-sm">
                     <div className="flex items-center gap-3">
-                        <div className="bg-indigo-100 p-2 rounded-lg">
-                            <PenTool className="h-5 w-5 text-indigo-600" />
+                        <div className="bg-indigo-100 dark:bg-indigo-900/30 p-2 rounded-lg">
+                            <PenTool className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
                         </div>
                         <div>
                             <DialogTitle className="text-lg">Contract Definition</DialogTitle>
                             <DialogDescription className="text-xs mt-1">
-                                Define terms between <strong>{principalEntity?.name}</strong> and <strong>{counterpartyEntity?.name}</strong>.
+                                {counterpartyEntity
+                                    ? <span>Define terms for <strong>{counterpartyEntity.name}</strong></span>
+                                    : <span>Create a new business agreement</span>
+                                }
                             </DialogDescription>
                         </div>
                     </div>
@@ -157,95 +245,144 @@ export function ContractSubmodal({
 
                 <div className="flex-1 overflow-hidden flex flex-col">
                     <ScrollArea className="flex-1 p-6">
-                        <div className="space-y-6 max-w-2xl mx-auto">
+                        <div className="space-y-8 max-w-3xl mx-auto">
 
-                            {/* 1. KEY DETAILS */}
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2 col-span-2">
+                            {/* 1. CONTRACT HEADER */}
+                            <div className="grid grid-cols-12 gap-6">
+                                <div className="col-span-8 space-y-2">
                                     <Label className="text-xs font-semibold uppercase text-muted-foreground">Contract Title</Label>
                                     <Input
                                         value={name}
                                         onChange={(e) => setName(e.target.value)}
-                                        className="font-medium text-lg h-10"
-                                        placeholder="e.g. Standard Consignment Agreement"
+                                        className="font-medium text-lg h-11 shadow-sm bg-white dark:bg-slate-900"
+                                        placeholder="e.g. Associate Agreement 2024"
                                     />
+                                </div>
+                                <div className="col-span-4 space-y-2">
+                                    <Label className="text-xs font-semibold uppercase text-muted-foreground">Reference Number</Label>
+                                    <div className="h-11 px-3 flex items-center bg-muted/20 rounded-md border text-xs font-mono text-muted-foreground">
+                                        {initialData?.id.substring(0, 8) || 'AUTO-GENERATED'}
+                                    </div>
                                 </div>
                             </div>
 
-                            <div className="h-px bg-border my-4" />
+                            {/* 2. PARTIES & SELECTOR */}
+                            {!counterpartyEntity && !initialData && (
+                                <div className="p-4 bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/50 rounded-lg space-y-3">
+                                    <div className="flex items-center gap-2 text-indigo-700 dark:text-indigo-300">
+                                        <AlertTriangle className="h-4 w-4" />
+                                        <h3 className="text-sm font-semibold">Select Counterparty</h3>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground">Who is this contract with? (Associate, Partner, or Business)</p>
+                                    <div className="max-w-md">
+                                        <SearchableSelect
+                                            options={availableCharacters.map(c => ({ value: c.id, label: c.name }))}
+                                            value={selectedCounterpartyId}
+                                            onValueChange={(val) => setSelectedCounterpartyId(val)}
+                                            placeholder="Search Associate..."
+                                            className="bg-white dark:bg-slate-900"
+                                        />
+                                    </div>
+                                </div>
+                            )}
 
-                            {/* 2. CLAUSES */}
+                            <div className="h-px bg-border my-2" />
+
+                            {/* 3. CLAUSES DEFINITION */}
                             <div className="space-y-4">
                                 <div className="flex items-center justify-between">
                                     <h3 className="text-sm font-semibold flex items-center gap-2">
-                                        <FileText className="h-4 w-4 text-indigo-500" /> Stub Clauses
+                                        <FileText className="h-4 w-4 text-indigo-500" />
+                                        Financial Clauses
                                     </h3>
+                                    {/* Action Buttons - Distinct Types */}
                                     <div className="flex gap-2">
-                                        <Button size="sm" variant="outline" onClick={() => addClause(ContractClauseType.SALES_COMMISSION)} className="h-7 text-xs">
-                                            + Commission
+                                        <Button size="sm" variant="outline" onClick={() => addClause(ContractClauseType.SALES_COMMISSION)} className="h-8 text-xs bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950 dark:hover:bg-indigo-900 border-indigo-200">
+                                            <Plus className="h-3 w-3 mr-1" /> Principal Sales (75/25)
                                         </Button>
-                                        <Button size="sm" variant="outline" onClick={() => addClause(ContractClauseType.EXPENSE_SHARING)} className="h-7 text-xs">
-                                            + Expense Share
+                                        <Button size="sm" variant="outline" onClick={() => addClause(ContractClauseType.SALES_SERVICE)} className="h-8 text-xs bg-pink-50 hover:bg-pink-100 dark:bg-pink-950 dark:hover:bg-pink-900 border-pink-200">
+                                            <Plus className="h-3 w-3 mr-1" /> Associate Sales (25/75)
+                                        </Button>
+                                        <Button size="sm" variant="outline" onClick={() => addClause(ContractClauseType.EXPENSE_SHARING)} className="h-8 text-xs bg-slate-50 hover:bg-slate-100 border-slate-200">
+                                            <Plus className="h-3 w-3 mr-1" /> Exp. Share (50/50)
                                         </Button>
                                     </div>
                                 </div>
 
                                 {clauses.length === 0 ? (
-                                    <div className="p-8 border-2 border-dashed rounded-lg flex flex-col items-center justify-center text-muted-foreground bg-muted/5">
-                                        <FileText className="h-8 w-8 mb-2 opacity-20" />
-                                        <p className="text-sm">No clauses defined.</p>
-                                        <p className="text-xs">Add a clause to define how money is split.</p>
+                                    <div className="py-12 border-2 border-dashed rounded-xl flex flex-col items-center justify-center text-muted-foreground bg-slate-50/50 dark:bg-slate-900/20">
+                                        <div className="h-12 w-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-3">
+                                            <FileText className="h-6 w-6 opacity-40" />
+                                        </div>
+                                        <p className="text-sm font-medium">No clauses defined</p>
+                                        <p className="text-xs text-muted-foreground max-w-xs text-center mt-1">
+                                            Add clauses above to define how revenue and expenses are split between the parties.
+                                        </p>
                                     </div>
                                 ) : (
-                                    <div className="space-y-3">
+                                    <div className="grid gap-4">
                                         {clauses.map((clause, index) => (
-                                            <div key={clause.id} className="p-4 border rounded-lg bg-card shadow-sm group hover:border-indigo-300 transition-colors">
-                                                <div className="flex justify-between items-start mb-3">
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="h-6 w-6 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-500">
+                                            <div key={clause.id} className="p-4 border rounded-xl bg-white dark:bg-slate-900 shadow-sm hover:border-indigo-300 transition-all group">
+
+                                                {/* Clause Header */}
+                                                <div className="flex justify-between items-start mb-4">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="h-6 w-6 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-xs font-bold text-slate-500">
                                                             {index + 1}
                                                         </div>
-                                                        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{clause.type}</span>
+                                                        <div>
+                                                            <div className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+                                                                {clause.type === ContractClauseType.SALES_COMMISSION && "Principal Commission"}
+                                                                {clause.type === ContractClauseType.SALES_SERVICE && "Associate Sales Service"}
+                                                                {clause.type === ContractClauseType.EXPENSE_SHARING && "Expense Sharing"}
+                                                                {clause.type === ContractClauseType.OTHER && "Other Term"}
+                                                            </div>
+                                                            <div className="text-[10px] text-muted-foreground">
+                                                                {clause.type === ContractClauseType.SALES_COMMISSION && "Revenue from MY Items"}
+                                                                {clause.type === ContractClauseType.SALES_SERVICE && "Revenue from THEIR Items"}
+                                                                {clause.type === ContractClauseType.EXPENSE_SHARING && "Shared Costs (Rent, etc)"}
+                                                            </div>
+                                                        </div>
                                                     </div>
-                                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-red-500" onClick={() => removeClause(clause.id)}>
-                                                        <Trash2 className="h-3 w-3" />
+                                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30" onClick={() => removeClause(clause.id)}>
+                                                        <Trash2 className="h-4 w-4" />
                                                     </Button>
                                                 </div>
 
-                                                <div className="grid grid-cols-12 gap-4 items-center">
-                                                    <div className="col-span-6 space-y-1">
-                                                        <Label className="text-[10px]">Description</Label>
+                                                {/* Clause Body */}
+                                                <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+                                                    <div className="md:col-span-6 space-y-1.5">
+                                                        <Label className="text-[10px] font-semibold text-muted-foreground uppercase">Description / Category</Label>
                                                         <Input
                                                             value={clause.description}
                                                             onChange={(e) => updateClause(clause.id, 'description', e.target.value)}
-                                                            className="h-8 text-xs"
-                                                            placeholder="Clause description..."
+                                                            className="h-9 text-xs"
+                                                            placeholder="e.g. Jewelry Category, or Booth Fee"
                                                         />
                                                     </div>
 
                                                     {/* Shares Visualization */}
-                                                    <div className="col-span-6 space-y-1">
-                                                        <Label className="text-[10px] text-center block">Revenue Split</Label>
-                                                        <div className="flex items-center gap-2">
+                                                    <div className="md:col-span-6 space-y-1.5">
+                                                        <Label className="text-[10px] font-semibold text-muted-foreground uppercase text-center w-full block">Split Breakdown</Label>
+                                                        <div className="flex items-center gap-3 p-1 rounded-lg bg-slate-50 dark:bg-slate-950/50 border border-slate-100 dark:border-slate-800">
                                                             <div className="flex-1 relative">
                                                                 <NumericInput
                                                                     value={clause.companyShare * 100}
                                                                     onChange={(v) => updateClause(clause.id, 'companyShare', v / 100)}
-                                                                    className="h-8 text-xs pr-6"
+                                                                    className="h-8 text-xs pr-6 text-right border-transparent bg-transparent focus:bg-white dark:focus:bg-slate-900 transition-colors"
                                                                 />
-                                                                <span className="absolute right-2 top-2 text-[10px] text-muted-foreground">%</span>
-                                                                <span className="text-[9px] text-muted-foreground absolute -bottom-4 left-0">Principal</span>
+                                                                <span className="absolute right-2 top-2 text-[10px] text-muted-foreground font-bold">%</span>
+                                                                <span className="text-[9px] font-bold text-indigo-600 absolute -bottom-5 left-1">ME</span>
                                                             </div>
-                                                            <div className="text-muted-foreground text-xs">:</div>
+                                                            <div className="text-slate-300">/</div>
                                                             <div className="flex-1 relative">
                                                                 <NumericInput
                                                                     value={clause.associateShare * 100}
                                                                     onChange={(v) => updateClause(clause.id, 'associateShare', v / 100)}
-                                                                    className="h-8 text-xs pr-6 bg-slate-50"
-                                                                    disabled // Auto-calculated for now
+                                                                    className="h-8 text-xs pr-6 text-right border-transparent bg-transparent focus:bg-white dark:focus:bg-slate-900 transition-colors"
                                                                 />
-                                                                <span className="absolute right-2 top-2 text-[10px] text-muted-foreground">%</span>
-                                                                <span className="text-[9px] text-muted-foreground absolute -bottom-4 right-0">Counterparty</span>
+                                                                <span className="absolute right-2 top-2 text-[10px] text-muted-foreground font-bold">%</span>
+                                                                <span className="text-[9px] font-bold text-pink-600 absolute -bottom-5 right-1">THEM</span>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -260,11 +397,17 @@ export function ContractSubmodal({
                     </ScrollArea>
                 </div>
 
-                <DialogFooter className="px-6 py-4 border-t bg-muted/10">
-                    <Button variant="outline" onClick={onClose}>Cancel</Button>
-                    <Button onClick={handleSave} className="bg-indigo-600 hover:bg-indigo-700 min-w-[120px]">
-                        Save Contract
-                    </Button>
+                <DialogFooter className="px-6 py-4 border-t bg-white dark:bg-slate-900 shadow-sm flex justify-between items-center z-10">
+                    <div className="text-xs text-muted-foreground flex items-center gap-2">
+                        <LinkIcon className="h-3 w-3" />
+                        {counterpartyEntity || selectedCounterpartyId ? 'Link will be created automatically' : 'Select a counterparty to link'}
+                    </div>
+                    <div className="flex gap-2">
+                        <Button variant="outline" onClick={onClose}>Cancel</Button>
+                        <Button onClick={handleSave} disabled={isSaving} className="bg-indigo-600 hover:bg-indigo-700 min-w-[140px] shadow-sm">
+                            {isSaving ? 'Linking...' : 'Save Contract'}
+                        </Button>
+                    </div>
                 </DialogFooter>
             </DialogContent>
         </Dialog>

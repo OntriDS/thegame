@@ -620,6 +620,9 @@ export enum LinkType {
   ACCOUNT_CHARACTER = 'ACCOUNT_CHARACTER', // Account owns Character (required)
   PLAYER_ACCOUNT = 'PLAYER_ACCOUNT',    // Player belongs to Account (reverse)
   CHARACTER_ACCOUNT = 'CHARACTER_ACCOUNT', // Character belongs to Account (reverse)
+
+  // CONTRACT relationships
+  CONTRACT_CHARACTER = 'CONTRACT_CHARACTER', // Contract applies to Character (Associate)
 }
 
 /** Entity Types for Link System */
