@@ -175,7 +175,10 @@ export function validateLinkTypeCompatibility(
     'ACCOUNT_PLAYER': { source: [EntityType.ACCOUNT], target: [EntityType.PLAYER] },
     'ACCOUNT_CHARACTER': { source: [EntityType.ACCOUNT], target: [EntityType.CHARACTER] },
     'PLAYER_ACCOUNT': { source: [EntityType.PLAYER], target: [EntityType.ACCOUNT] },
-    'CHARACTER_ACCOUNT': { source: [EntityType.CHARACTER], target: [EntityType.ACCOUNT] }
+    'CHARACTER_ACCOUNT': { source: [EntityType.CHARACTER], target: [EntityType.ACCOUNT] },
+
+    // CONTRACT relationships (1)
+    'CONTRACT_CHARACTER': { source: [EntityType.CONTRACT], target: [EntityType.CHARACTER] }
   };
 
   const combination = validCombinations[linkType];
@@ -290,7 +293,8 @@ async function checkReverseDuplicate(
     [LinkType.PLAYER_ACCOUNT]: null,
     [LinkType.ACCOUNT_CHARACTER]: null,
     [LinkType.CHARACTER_ACCOUNT]: null,
-    [LinkType.CHARACTER_BUSINESS]: null
+    [LinkType.CHARACTER_BUSINESS]: null,
+    [LinkType.CONTRACT_CHARACTER]: null
   };
 
   const canonicalType = canonicalPairs[linkType];

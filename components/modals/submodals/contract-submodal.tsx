@@ -91,6 +91,7 @@ export function ContractSubmodal({
                 setName(`${pName} ↔ ${cName} Agreement`);
             }
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, initialData, principalEntity, counterpartyEntity, selectedCounterpartyId, availableCharacters]);
 
 
