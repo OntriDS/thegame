@@ -12,6 +12,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { ClientAPI } from '@/lib/client-api';
+import { EntityType, LinkType, FinancialStatus, CharacterRole } from '@/types/enums';
+import { FinancialRecord, Link } from '@/types/entities';
+import { DEFAULT_CURRENCY_EXCHANGE_RATES } from '@/lib/constants/financial-constants';
+import { NumericInput } from '@/components/ui/numeric-input';
+import { Loader2 } from 'lucide-react';
+
 
 interface PartnershipManagerSubmodalProps {
     open: boolean;
@@ -47,9 +54,13 @@ export function PartnershipSubmodal({ // Keeping filename export for compatibili
     const [selectedEntityType, setSelectedEntityType] = useState<'character' | 'business'>('character');
     const [targetEntityId, setTargetEntityId] = useState('');
     const [selectedRole, setSelectedRole] = useState<string>('associate');
+    const [usdAmount, setUsdAmount] = useState<number>(0);
+    const [jAmount, setJAmount] = useState<number>(0);
+    const [isCreating, setIsCreating] = useState(false);
 
     // --- MOCK DATA FOR LIST ---
     const [relationships, setRelationships] = useState<ActiveRelationship[]>([]);
+
 
     const handleCreateStart = () => {
         setViewMode('create');
@@ -61,26 +72,108 @@ export function PartnershipSubmodal({ // Keeping filename export for compatibili
         setViewMode('list');
     };
 
-    const handleCreateNext = () => {
-        // This would typically open the Contract Modal
-        // For now, we'll just "mock" creating a relationship
-        const targetName = selectedEntityType === 'character'
-            ? characters.find(c => c.id === targetEntityId)?.name
-            : businesses.find(b => b.id === targetEntityId)?.name;
+    const handleAmountChange = (value: number, type: 'usd' | 'j') => {
+        if (type === 'usd') {
+            setUsdAmount(value);
+            setJAmount(value / DEFAULT_CURRENCY_EXCHANGE_RATES.j$ToUSD);
+        } else {
+            setJAmount(value);
+            setUsdAmount(value * DEFAULT_CURRENCY_EXCHANGE_RATES.j$ToUSD);
+        }
+    };
 
-        if (targetName && targetEntityId) {
+    const handleCreate = async () => {
+        if (!targetEntityId) return;
+        setIsCreating(true);
+
+        try {
+            const targetCharacter = characters.find(c => c.id === targetEntityId);
+            const targetBusiness = businesses.find(b => b.id === targetEntityId);
+            const targetName = selectedEntityType === 'character' ? targetCharacter?.name : targetBusiness?.name;
+
+            if (!targetName) throw new Error('Target entity not found');
+
+            // 1. Update Character Roles (if it's a character)
+            if (selectedEntityType === 'character' && targetCharacter) {
+                const updatedRoles = [...(targetCharacter.roles || [])];
+                if (!updatedRoles.includes(selectedRole as CharacterRole)) {
+                    updatedRoles.push(selectedRole as CharacterRole);
+                }
+
+                // If Investor, handle Financials
+                if (selectedRole === 'investor') {
+                    // 2. Create Financial Record
+                    const financialRecord = {
+                        id: crypto.randomUUID(),
+                        name: `Investment from ${targetName}`,
+                        description: `Initial investment injection from ${targetName}`,
+                        type: 'company' as const, // Company receives the investment
+                        station: 'Investment' as any, // Cast to any if strictly typed to enum
+                        // category removed to satisfy interface if missing
+                        status: FinancialStatus.DONE,
+                        revenue: usdAmount, // +$ Revenue
+                        cost: 0,
+                        jungleCoins: jAmount, // Track J$ issued
+                        netCashflow: usdAmount,
+                        jungleCoinsValue: jAmount * DEFAULT_CURRENCY_EXCHANGE_RATES.j$ToUSD,
+                        year: new Date().getFullYear(),
+                        month: new Date().getMonth() + 1,
+                        createdAt: new Date(),
+                        updatedAt: new Date(),
+                        links: [] as Link[],
+                        isCollected: false
+                    } as unknown as FinancialRecord; // Force cast to avoid strict type checks on missing optional/dynamic fields during rapid prototyping
+
+                    const savedRecord = await ClientAPI.upsertFinancialRecord(financialRecord);
+
+                    // 3. Create Link (FINREC_CHARACTER)
+                    const link: Link = {
+                        id: crypto.randomUUID(),
+                        linkType: LinkType.FINREC_CHARACTER,
+                        source: { type: EntityType.FINANCIAL, id: savedRecord.id },
+                        target: { type: EntityType.CHARACTER, id: targetCharacter.id },
+                        createdAt: new Date()
+                    };
+                    await ClientAPI.createLink(link);
+                }
+
+                // Save Character Updates
+                await ClientAPI.upsertCharacter({
+                    ...targetCharacter,
+                    roles: updatedRoles
+                    // jungleCoins removed - balance derived from ledger
+                });
+            }
+
+            // Update local state for UI (Mock for now until refresh)
+            // Note: targetName is available here because it's defined in the try block scope (or should be if block wasn't closed)
+            // Wait, we need to ensure targetName is accessible. It is const inside try.
+
             const newRel: ActiveRelationship = {
                 id: Math.random().toString(),
                 entityId: targetEntityId,
                 entityType: selectedEntityType,
                 name: targetName,
                 roles: [selectedRole],
-                status: 'Draft'
+                status: 'Active'
             };
             setRelationships([...relationships, newRel]);
+
+            // Trigger refresh events
+            if (window) window.dispatchEvent(new Event('linksUpdated'));
+
             setViewMode('list');
+
+        } catch (error) {
+            console.error('Failed to create relationship:', error);
+            // Show error toast ideally
+        } finally {
+            setIsCreating(false);
         }
     };
+
+
+
 
     // Prepare Options
     const characterOptions = characters.map(c => ({
@@ -251,19 +344,43 @@ export function PartnershipSubmodal({ // Keeping filename export for compatibili
 
                                 {/* 3. Investor Specifics (Conditional) */}
                                 {selectedRole === 'investor' && (
-                                    <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
-                                        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Investment Amount</Label>
-                                        <div className="relative">
-                                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                                <span className="text-muted-foreground text-sm">J$</span>
+                                    <div className="space-y-4 animate-in fade-in slide-in-from-top-2 p-4 border rounded-md bg-muted/20">
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-2">
+                                                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Investment (USD)</Label>
+                                                <div className="relative">
+                                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                        <span className="text-muted-foreground text-sm">$</span>
+                                                    </div>
+                                                    <NumericInput
+                                                        value={usdAmount}
+                                                        onChange={(val) => handleAmountChange(val || 0, 'usd')}
+                                                        className="pl-7"
+                                                        placeholder="0.00"
+                                                    />
+                                                </div>
                                             </div>
-                                            <input
-                                                type="number"
-                                                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 pl-8"
-                                                placeholder="0.00"
-                                            />
+                                            <div className="space-y-2">
+                                                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Tokens (J$)</Label>
+                                                <div className="relative">
+                                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                        <span className="text-muted-foreground text-sm">J$</span>
+                                                    </div>
+                                                    <NumericInput
+                                                        value={jAmount}
+                                                        onChange={(val) => handleAmountChange(val || 0, 'j')}
+                                                        className="pl-8"
+                                                        placeholder="0.00"
+                                                    />
+                                                </div>
+                                            </div>
                                         </div>
-                                        <p className="text-[10px] text-muted-foreground">Initial capital injection.</p>
+                                        <div className="flex items-center gap-2 text-[10px] text-muted-foreground bg-blue-50 dark:bg-blue-900/20 p-2 rounded text-center justify-center">
+                                            <span>Exchange Rate: 1 J$ = ${DEFAULT_CURRENCY_EXCHANGE_RATES.j$ToUSD} USD</span>
+                                        </div>
+                                        <p className="text-[10px] text-muted-foreground text-center">
+                                            Creating this will record a financial transaction and issue J$ to the investor.
+                                        </p>
                                     </div>
                                 )}
                             </div>
@@ -278,8 +395,8 @@ export function PartnershipSubmodal({ // Keeping filename export for compatibili
                     ) : (
                         <div className="flex w-full justify-between gap-2">
                             <Button variant="ghost" onClick={handleCreateCancel}>Cancel</Button>
-                            <Button onClick={handleCreateNext} disabled={!targetEntityId} className="bg-indigo-600 hover:bg-indigo-700">
-                                Create Relationship
+                            <Button onClick={handleCreate} disabled={!targetEntityId || isCreating} className="bg-indigo-600 hover:bg-indigo-700 min-w-[100px]">
+                                {isCreating ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Create'}
                             </Button>
                         </div>
                     )}

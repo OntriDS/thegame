@@ -7,7 +7,7 @@
 
 /** Business Structure - Single source of truth for sections and stations */
 export const BUSINESS_STRUCTURE = {
-  ADMIN: ['Strategy', 'Projects', 'Inventory', 'Transport', 'Team', 'Materials', 'Equipment', 'Rent', 'Founder'],
+  ADMIN: ['Strategy', 'Projects', 'Inventory', 'Transport', 'Team', 'Materials', 'Equipment', 'Rent', 'Founder', 'Investment'],
   RESEARCH: ['Classes', 'Studies'],
   DEV: ['Systems Dev'],
   DESIGN: ['Digital Art', 'Creative Process', 'Game Design', '3D Modeling', 'Animation'],
