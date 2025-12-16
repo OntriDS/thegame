@@ -27,6 +27,11 @@ import { Business } from '@/types/entities'; // Ensure Business is imported
 // Side effects handled by parent component via API calls
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
 
+import { DEFAULT_CURRENCY_EXCHANGE_RATES } from '@/lib/constants/financial-constants';
+import { FinancialRecord, Link } from '@/types/entities';
+import { FinancialStatus } from '@/types/enums';
+import { Loader2 } from 'lucide-react';
+
 interface CharacterModalProps {
   character?: Character | null;
   open: boolean;
@@ -73,6 +78,11 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
 
   const [jungleCoinsBalance, setJungleCoinsBalance] = useState<number>(0);
 
+  // Cash Out State
+  const [showCashOutModal, setShowCashOutModal] = useState(false);
+  const [cashOutJAmount, setCashOutJAmount] = useState(0);
+  const [isProcessingCashOut, setIsProcessingCashOut] = useState(false);
+
   // Initialize when opening
   useEffect(() => {
     const loadData = async () => {
@@ -110,24 +120,7 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
           // Reset init guard when editing
           didInitRef.current = false;
 
-          // Load J$ Balance from Financial Records
-          try {
-            const links = await ClientAPI.getLinksFor({ type: EntityType.CHARACTER, id: character.id });
-            // Filter for FINREC_CHARACTER links where this character is the target
-            const finRecLinks = links.filter((l: any) => l.type === LinkType.FINREC_CHARACTER && l.targetId === character.id);
-
-            if (finRecLinks.length > 0) {
-              const records = await Promise.all(finRecLinks.map((l: any) => ClientAPI.getFinancialRecordById(l.sourceId)));
-              // Ensure we treat jungleCoins as a number
-              const totalJ = records.reduce((sum, r) => sum + Number(r?.jungleCoins || 0), 0);
-              setJungleCoinsBalance(totalJ);
-            } else {
-              setJungleCoinsBalance(0);
-            }
-          } catch (error) {
-            console.error('Failed to load J$ balance:', error);
-            setJungleCoinsBalance(0);
-          }
+          setJungleCoinsBalance(character?.jungleCoins || 0);
 
         } else if (!didInitRef.current) {
           // Creating new character - initialize once only (don't reset again while user edits)
@@ -147,6 +140,8 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
       // Reset init guard when modal closes (allows fresh init on next open)
       if (!open) {
         didInitRef.current = false;
+        setShowCashOutModal(false);
+        setCashOutJAmount(0);
       }
     };
 
@@ -193,6 +188,68 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
 
     // Return appropriate color based on dark mode
     return colorClass;
+  };
+
+  const handleCashOut = async () => {
+    if (!character || cashOutJAmount <= 0) return;
+    setIsProcessingCashOut(true);
+
+    try {
+      const usdValue = cashOutJAmount * DEFAULT_CURRENCY_EXCHANGE_RATES.j$ToUSD;
+
+      // 1. Create Financial Record (Expense/Burn)
+      // This is the opposite of an investment: Money OUT (Cost), J$ IN/BURNED (Negative J$)
+      const financialRecord = {
+        id: crypto.randomUUID(),
+        name: `Cash Out: ${character.name}`,
+        description: `J$ Cash out by ${character.name}`,
+        type: 'company' as const,
+        station: 'Investment' as any,
+        status: FinancialStatus.DONE,
+        revenue: 0,
+        cost: usdValue, // Expense for the company
+        jungleCoins: -cashOutJAmount, // Negative to represent return/removal from circulation
+        netCashflow: -usdValue, // Negative cashflow
+        jungleCoinsValue: -usdValue, // Value in USD (negative financial impact)
+        year: new Date().getFullYear(),
+        month: new Date().getMonth() + 1,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        links: [] as Link[],
+        isCollected: false
+      } as unknown as FinancialRecord;
+
+      const savedRecord = await ClientAPI.upsertFinancialRecord(financialRecord);
+
+      // 2. Create Link (FINREC_CHARACTER)
+      const link: Link = {
+        id: crypto.randomUUID(),
+        linkType: LinkType.FINREC_CHARACTER,
+        source: { type: EntityType.FINANCIAL, id: savedRecord.id },
+        target: { type: EntityType.CHARACTER, id: character.id },
+        createdAt: new Date()
+      };
+      await ClientAPI.createLink(link);
+
+      // 3. Update Character Wallet (Source of Truth)
+      const newBalance = (character.jungleCoins || 0) - cashOutJAmount;
+      const updatedChar = {
+        ...character,
+        jungleCoins: Math.max(0, newBalance)
+      };
+      await ClientAPI.upsertCharacter(updatedChar);
+
+      // 4. Update UI & Notify
+      setJungleCoinsBalance(updatedChar.jungleCoins || 0);
+      dispatchEntityUpdated(entityTypeToKind(EntityType.CHARACTER));
+      setShowCashOutModal(false);
+      setCashOutJAmount(0);
+
+    } catch (error) {
+      console.error('Cash out failed:', error);
+    } finally {
+      setIsProcessingCashOut(false);
+    }
   };
 
   const handleSave = async () => {
@@ -427,10 +484,22 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
                 {/* INVESTOR/PARTNER: J$ Balance Display */}
                 {(roles.includes(CharacterRole.INVESTOR) || roles.includes(CharacterRole.PARTNER) || roles.includes(CharacterRole.ASSOCIATE)) && (
                   <div className="mt-4 pt-2 border-t flex justify-between items-center bg-muted/20 p-2 rounded-md">
-                    <Label className="text-xs text-muted-foreground font-medium">J$ Balance</Label>
-                    <span className="text-sm font-bold font-mono">
-                      {jungleCoinsBalance.toLocaleString()} J$
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <Label className="text-xs text-muted-foreground font-medium">J$ Balance</Label>
+                      <span className="text-sm font-bold font-mono">
+                        {jungleCoinsBalance.toLocaleString()} J$
+                      </span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowCashOutModal(true)}
+                      className="h-6 text-[10px] px-2 text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20"
+                      title="Cash out J$ to USD"
+                      disabled={jungleCoinsBalance <= 0}
+                    >
+                      Exchange
+                    </Button>
                   </div>
                 )}
               </div>

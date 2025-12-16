@@ -140,8 +140,8 @@ export function PartnershipSubmodal({ // Keeping filename export for compatibili
                 // Save Character Updates
                 await ClientAPI.upsertCharacter({
                     ...targetCharacter,
-                    roles: updatedRoles
-                    // jungleCoins removed - balance derived from ledger
+                    roles: updatedRoles,
+                    jungleCoins: (targetCharacter.jungleCoins || 0) + jAmount
                 });
             }
 

@@ -755,7 +755,7 @@ export interface Character extends BaseEntity {
   achievementsCharacter: string[];        // Character-specific achievements tree (different from Player achievements)
 
   // 7. BUSINESS METRICS
-  // J$ is stored in FinancialRecord ledger via CHARACTER_FINREC links, not on Character entity
+  jungleCoins?: number;          // Current J$ Wallet Balance
   purchasedAmount: number;       // What they've bought from the business (CUSTOMER role)
   inventory: string[];           // Item IDs they own/possess
 
