@@ -28,6 +28,7 @@ interface ContractSubmodalProps {
 
     // For selection if counterparty is not provided
     availableCharacters?: Character[];
+    availableBusinesses?: Business[];
 }
 
 export function ContractSubmodal({
@@ -37,7 +38,8 @@ export function ContractSubmodal({
     initialData,
     principalEntity,
     counterpartyEntity,
-    availableCharacters = []
+    availableCharacters = [],
+    availableBusinesses = []
 }: ContractSubmodalProps) {
     const [name, setName] = useState('');
     const [status, setStatus] = useState<ContractStatus>(ContractStatus.DRAFT);
@@ -286,11 +288,18 @@ export function ContractSubmodal({
                                         value={selectedCounterpartyId}
                                         onValueChange={setSelectedCounterpartyId}
                                         placeholder={`Search ${selectedEntityType}s...`}
-                                        options={availableCharacters.map(c => ({
-                                            value: c.id,
-                                            label: c.name,
-                                            category: c.roles?.[0] || 'Other'
-                                        }))}
+                                        options={selectedEntityType === 'character'
+                                            ? availableCharacters.map(c => ({
+                                                value: c.id,
+                                                label: c.name,
+                                                category: c.roles?.[0] || 'Other'
+                                            }))
+                                            : availableBusinesses.map(b => ({
+                                                value: b.id,
+                                                label: b.name,
+                                                category: b.type || 'Business'
+                                            }))
+                                        }
                                         autoGroupByCategory={true}
                                         className="w-full"
                                     />

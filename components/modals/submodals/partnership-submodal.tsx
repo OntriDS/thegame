@@ -521,6 +521,7 @@ export function PartnershipSubmodal({ // Keeping filename export for compatibili
                 initialData={contractInitialData}
                 counterpartyEntity={contractCounterparty}
                 availableCharacters={characters}
+                availableBusinesses={businesses}
                 principalEntity={rootEntity} // Or 'Me'
             />
         </>
