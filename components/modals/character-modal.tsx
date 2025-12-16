@@ -339,7 +339,7 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="w-full max-w-5xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-full max-w-5xl max-h-[90vh] overflow-y-auto" zIndexLayer="MODALS">
           <DialogHeader>
             <DialogTitle>{character ? 'Edit Character' : 'Create Character'}</DialogTitle>
             <DialogDescription>
@@ -701,6 +701,53 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
           />
         )
       }
+
+      {/* Cash Out Confirmation Modal */}
+      <Dialog open={showCashOutModal} onOpenChange={setShowCashOutModal}>
+        <DialogContent className="max-w-sm" zIndexLayer="SUB_MODALS">
+          <DialogHeader>
+            <DialogTitle>Exchange J$ to USD</DialogTitle>
+            <DialogDescription>
+              Cash out J$ from {character?.name}'s wallet.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="flex items-center justify-between bg-muted/30 p-3 rounded-md">
+              <span className="text-sm text-muted-foreground">Available Balance</span>
+              <span className="text-sm font-bold font-mono">{jungleCoinsBalance} J$</span>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs">Amount to Cash Out (J$)</Label>
+              <NumericInput
+                value={cashOutJAmount}
+                onChange={(val) => setCashOutJAmount(Math.min(val, jungleCoinsBalance))} // Cap at max balance
+                placeholder="0"
+                className="text-center font-mono text-lg"
+              />
+            </div>
+
+            <div className="text-center text-sm text-muted-foreground">
+              You will receive <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                ${(cashOutJAmount * DEFAULT_CURRENCY_EXCHANGE_RATES.j$ToUSD).toLocaleString()} USD
+              </span>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setShowCashOutModal(false)}>Cancel</Button>
+            <Button
+              size="sm"
+              onClick={handleCashOut}
+              disabled={cashOutJAmount <= 0 || isProcessingCashOut}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+            >
+              {isProcessingCashOut ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Confirm Exchange'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Character Legal Entities Submodal */}
       {
