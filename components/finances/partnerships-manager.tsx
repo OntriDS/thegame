@@ -47,10 +47,15 @@ export function PartnershipsManager({
                             <CardTitle>Contracts</CardTitle>
                             <CardDescription>Manage active contracts and agreements.</CardDescription>
                         </div>
-                        <Button onClick={() => { setSelectedContract(undefined); setIsContractModalOpen(true); }}>
-                            <FileText className="mr-2 h-4 w-4" />
-                            New Contract
-                        </Button>
+                        <div className="flex gap-2">
+                            <Button variant="outline" onClick={() => setIsPartnershipModalOpen(true)}>
+                                Business Relationships Manager
+                            </Button>
+                            <Button onClick={() => { setSelectedContract(undefined); setIsContractModalOpen(true); }}>
+                                <FileText className="mr-2 h-4 w-4" />
+                                New Contract
+                            </Button>
+                        </div>
                     </div>
                 </CardHeader>
                 <CardContent>
@@ -90,26 +95,6 @@ export function PartnershipsManager({
                             ))}
                         </div>
                     )}
-                </CardContent>
-            </Card>
-
-            {/* PARTNERS & INVESTORS SECTION */}
-            <Card>
-                <CardHeader>
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <CardTitle>Partners and Investors</CardTitle>
-                            <CardDescription>Manage strategic relationships and investors.</CardDescription>
-                        </div>
-                        <Button variant="outline" onClick={() => setIsPartnershipModalOpen(true)}>
-                            New Partnership
-                        </Button>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    <div className="text-center py-8 text-muted-foreground text-sm">
-                        No partners or investors configured yet.
-                    </div>
                 </CardContent>
             </Card>
 

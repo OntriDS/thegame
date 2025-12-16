@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import NumericInput from '@/components/ui/numeric-input';
 
 import type { Character } from '@/types/entities';
-import { CharacterRole, CHARACTER_ROLE_TYPES, EntityType, PLAYER_ONE_ID } from '@/types/enums';
+import { CharacterRole, CHARACTER_ROLE_TYPES, EntityType, PLAYER_ONE_ID, LinkType } from '@/types/enums';
 import { ROLE_COLORS } from '@/lib/constants/color-constants';
 import { useTheme } from '@/lib/hooks/use-theme';
 import { ROLE_BEHAVIORS, canViewAccountInfo } from '@/lib/game-mechanics/roles-rules';
@@ -71,6 +71,8 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
   const [showOwnedSitesModal, setShowOwnedSitesModal] = useState(false);
   const [showLegalEntityModal, setShowLegalEntityModal] = useState(false);
 
+  const [jungleCoinsBalance, setJungleCoinsBalance] = useState<number>(0);
+
   // Initialize when opening
   useEffect(() => {
     const loadData = async () => {
@@ -107,6 +109,25 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
 
           // Reset init guard when editing
           didInitRef.current = false;
+
+          // Load J$ Balance from Financial Records
+          try {
+            const links = await ClientAPI.getLinksFor({ type: EntityType.CHARACTER, id: character.id });
+            // Filter for FINREC_CHARACTER links where this character is the target
+            const finRecLinks = links.filter((l: any) => l.type === LinkType.FINREC_CHARACTER && l.targetId === character.id);
+
+            if (finRecLinks.length > 0) {
+              const records = await Promise.all(finRecLinks.map((l: any) => ClientAPI.getFinancialRecordById(l.sourceId)));
+              const totalJ = records.reduce((sum, r) => sum + (r?.jungleCoins || 0), 0);
+              setJungleCoinsBalance(totalJ);
+            } else {
+              setJungleCoinsBalance(0);
+            }
+          } catch (error) {
+            console.error('Failed to load J$ balance:', error);
+            setJungleCoinsBalance(0);
+          }
+
         } else if (!didInitRef.current) {
           // Creating new character - initialize once only (don't reset again while user edits)
           didInitRef.current = true;
@@ -118,6 +139,7 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
           setPurchasedAmount(0);
           setCP(undefined);
           setAchievementsCharacter([]);
+          setJungleCoinsBalance(0);
         }
       }
 
@@ -342,6 +364,16 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
                     Advanced
                   </Button>
                 </div>
+
+                {/* INVESTOR/PARTNER: J$ Balance Display */}
+                {(roles.includes(CharacterRole.INVESTOR) || roles.includes(CharacterRole.PARTNER) || roles.includes(CharacterRole.ASSOCIATE)) && (
+                  <div className="mt-3 p-2 bg-emerald-50 dark:bg-emerald-950/20 rounded-md border border-emerald-100 dark:border-emerald-900/50 flex items-center justify-between">
+                    <Label className="text-xs font-semibold text-emerald-800 dark:text-emerald-400">J$ Balance</Label>
+                    <div className="text-base font-bold text-emerald-700 dark:text-emerald-300">
+                      {jungleCoinsBalance.toLocaleString()} J$
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Column 2: NATIVE (Roles as Buttons) */}
