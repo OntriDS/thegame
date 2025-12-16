@@ -1086,6 +1086,12 @@ export const ClientAPI = {
     const res = await fetch('/admin/logout', { method: 'POST' });
     if (!res.ok) throw new Error('Failed to logout');
   },
+
+  getInventorySummary: async (): Promise<any> => {
+    const res = await fetch('/api/finances/inventory-summary');
+    if (!res.ok) throw new Error('Failed to fetch inventory summary');
+    return await res.json();
+  },
 };
 
 // Historical placement: keep alias methods at the end to avoid duplicate keys

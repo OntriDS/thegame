@@ -94,37 +94,9 @@ const EMPTY_INVENTORY_TOTALS: InventoryBucketTotals = {
   crafts: { value: 0, cost: 0 },
 };
 
-const ITEM_TYPE_TO_BUCKET: Partial<Record<ItemType, keyof InventoryBucketTotals>> = {
-  [ItemType.MATERIAL]: 'materials',
-  [ItemType.EQUIPMENT]: 'equipment',
-  [ItemType.ARTWORK]: 'artworks',
-  [ItemType.PRINT]: 'prints',
-  [ItemType.STICKER]: 'stickers',
-  [ItemType.MERCH]: 'merch',
-  [ItemType.CRAFT]: 'crafts',
-  [ItemType.DIGITAL]: 'artworks',
-  [ItemType.BUNDLE]: 'stickers',
-};
 
-function calculateInventoryTotalsFromItems(items: Item[]): InventoryBucketTotals {
-  const totals: InventoryBucketTotals = JSON.parse(JSON.stringify(EMPTY_INVENTORY_TOTALS));
 
-  items.forEach((item) => {
-    const bucketKey = ITEM_TYPE_TO_BUCKET[item.type as ItemType];
-    if (!bucketKey) return;
 
-    const quantity = (item.stock || []).reduce((sum, stockPoint) => sum + (Number(stockPoint.quantity) || 0), 0);
-    if (quantity <= 0) return;
-
-    const pricePerUnit = Number(item.price ?? item.value ?? 0);
-    const costPerUnit = Number(item.unitCost ?? 0) + Number(item.additionalCost ?? 0);
-
-    totals[bucketKey].value += pricePerUnit * quantity;
-    totals[bucketKey].cost += costPerUnit * quantity;
-  });
-
-  return totals;
-}
 
 function mergeInventoryTotalsIntoAssets(assets: any, inventoryTotals: InventoryBucketTotals) {
   if (!assets) return assets;
@@ -296,11 +268,10 @@ export default function FinancesPage() {
 
       let mergedCompanyData = companyData;
       try {
-        const items = await ClientAPI.getItems();
-        const inventoryTotals = calculateInventoryTotalsFromItems(items);
+        const inventoryTotals = await ClientAPI.getInventorySummary();
         mergedCompanyData = mergeInventoryTotalsIntoAssets(companyData, inventoryTotals);
       } catch (inventoryError) {
-        console.warn('Failed to compute inventory totals from items:', inventoryError);
+        console.warn('Failed to compute inventory totals:', inventoryError);
       }
 
       setCompanyAssets(mergedCompanyData);
@@ -425,11 +396,10 @@ export default function FinancesPage() {
 
       let mergedCompanyData = companyData;
       try {
-        const items = await ClientAPI.getItems();
-        const inventoryTotals = calculateInventoryTotalsFromItems(items);
+        const inventoryTotals = await ClientAPI.getInventorySummary();
         mergedCompanyData = mergeInventoryTotalsIntoAssets(companyData, inventoryTotals);
       } catch (inventoryError) {
-        console.warn('Failed to recompute inventory totals from items:', inventoryError);
+        console.warn('Failed to recompute inventory totals:', inventoryError);
       }
 
       setCompanyAssets(mergedCompanyData);
@@ -441,11 +411,10 @@ export default function FinancesPage() {
 
   const handleItemsUpdate = async () => {
     try {
-      const [companyData, items] = await Promise.all([
+      const [companyData, inventoryTotals] = await Promise.all([
         ClientAPI.getCompanyAssets(),
-        ClientAPI.getItems(),
+        ClientAPI.getInventorySummary(),
       ]);
-      const inventoryTotals = calculateInventoryTotalsFromItems(items);
       const mergedCompanyData = mergeInventoryTotalsIntoAssets(companyData, inventoryTotals);
       setCompanyAssets(mergedCompanyData);
     } catch (error) {
