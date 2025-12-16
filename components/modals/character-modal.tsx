@@ -118,7 +118,8 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
 
             if (finRecLinks.length > 0) {
               const records = await Promise.all(finRecLinks.map((l: any) => ClientAPI.getFinancialRecordById(l.sourceId)));
-              const totalJ = records.reduce((sum, r) => sum + (r?.jungleCoins || 0), 0);
+              // Ensure we treat jungleCoins as a number
+              const totalJ = records.reduce((sum, r) => sum + Number(r?.jungleCoins || 0), 0);
               setJungleCoinsBalance(totalJ);
             } else {
               setJungleCoinsBalance(0);
@@ -364,16 +365,6 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
                     Advanced
                   </Button>
                 </div>
-
-                {/* INVESTOR/PARTNER: J$ Balance Display */}
-                {(roles.includes(CharacterRole.INVESTOR) || roles.includes(CharacterRole.PARTNER) || roles.includes(CharacterRole.ASSOCIATE)) && (
-                  <div className="mt-3 p-2 bg-emerald-50 dark:bg-emerald-950/20 rounded-md border border-emerald-100 dark:border-emerald-900/50 flex items-center justify-between">
-                    <Label className="text-xs font-semibold text-emerald-800 dark:text-emerald-400">J$ Balance</Label>
-                    <div className="text-base font-bold text-emerald-700 dark:text-emerald-300">
-                      {jungleCoinsBalance.toLocaleString()} J$
-                    </div>
-                  </div>
-                )}
               </div>
 
               {/* Column 2: NATIVE (Roles as Buttons) */}
@@ -411,13 +402,8 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
                         const hasRole = roles.includes(role);
                         const behavior = ROLE_BEHAVIORS[role as keyof typeof ROLE_BEHAVIORS];
 
-                        // Skip if no behavior defined (shouldn't happen with proper enums)
                         if (!behavior) return null;
-
-                        // Hide if not assigned and role config says to hide
                         if (behavior.hideIfNotAssigned && !hasRole) return null;
-
-                        // Determine if role is display-only (not toggleable)
                         const isDisplayOnly = behavior.isDisplayOnly;
 
                         return (
@@ -437,42 +423,53 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
                     </div>
                   </div>
                 )}
-              </div>
-            </div>
 
-            {/* Customer Purchase Section (Conditional) */}
-            {isCustomer && (
-              <div className="border-t pt-4 mt-4">
-                <div className="flex items-center justify-between mb-2">
-                  <Label className="text-sm font-semibold">Customer Purchase Data</Label>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setShowCustomerPurchase(!showCustomerPurchase)}
-                    className="h-7 text-xs"
-                  >
-                    {showCustomerPurchase ? 'Hide' : 'Show'} Purchase Data
-                  </Button>
-                </div>
-
-                {showCustomerPurchase && (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="purchased-amount" className="text-xs">Purchased Amount ($)</Label>
-                      <NumericInput
-                        id="purchased-amount"
-                        value={purchasedAmount}
-                        onChange={setPurchasedAmount}
-                        placeholder="0.00"
-                        className="h-8 text-sm"
-                      />
-                    </div>
+                {/* INVESTOR/PARTNER: J$ Balance Display */}
+                {(roles.includes(CharacterRole.INVESTOR) || roles.includes(CharacterRole.PARTNER) || roles.includes(CharacterRole.ASSOCIATE)) && (
+                  <div className="mt-4 pt-2 border-t flex justify-between items-center bg-muted/20 p-2 rounded-md">
+                    <Label className="text-xs text-muted-foreground font-medium">J$ Balance</Label>
+                    <span className="text-sm font-bold font-mono">
+                      {jungleCoinsBalance.toLocaleString()} J$
+                    </span>
                   </div>
                 )}
               </div>
-            )}
+            </div>
           </div>
+
+          {/* Customer Purchase Section (Conditional) */}
+          {isCustomer && (
+            <div className="border-t pt-4 mt-4">
+              <div className="flex items-center justify-between mb-2">
+                <Label className="text-sm font-semibold">Customer Purchase Data</Label>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setShowCustomerPurchase(!showCustomerPurchase)}
+                  className="h-7 text-xs"
+                >
+                  {showCustomerPurchase ? 'Hide' : 'Show'} Purchase Data
+                </Button>
+              </div>
+
+              {showCustomerPurchase && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="purchased-amount" className="text-xs">Purchased Amount ($)</Label>
+                    <NumericInput
+                      id="purchased-amount"
+                      value={purchasedAmount}
+                      onChange={setPurchasedAmount}
+                      placeholder="0.00"
+                      className="h-8 text-sm"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
 
           <DialogFooter className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -578,63 +575,75 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
       </Dialog>
 
       {/* Account Info Submodal */}
-      {character && (
-        <AccountInfoModal
-          character={character}
-          open={showAccountInfo}
-          onOpenChange={setShowAccountInfo}
-        />
-      )}
+      {
+        character && (
+          <AccountInfoModal
+            character={character}
+            open={showAccountInfo}
+            onOpenChange={setShowAccountInfo}
+          />
+        )
+      }
 
       {/* Delete Confirmation Modal */}
-      {character && (
-        <DeleteModal
-          open={showDeleteModal}
-          onOpenChange={setShowDeleteModal}
-          entityType={EntityType.CHARACTER}
-          entities={[character]}
-          onComplete={handleDeleteComplete}
-        />
-      )}
+      {
+        character && (
+          <DeleteModal
+            open={showDeleteModal}
+            onOpenChange={setShowDeleteModal}
+            entityType={EntityType.CHARACTER}
+            entities={[character]}
+            onComplete={handleDeleteComplete}
+          />
+        )
+      }
 
       {/* Links Relationships Modal */}
-      {character && (
-        <LinksRelationshipsModal
-          entity={{ type: EntityType.CHARACTER, id: character.id, name: character.name }}
-          open={showRelationshipsModal}
-          onClose={() => setShowRelationshipsModal(false)}
-        />
-      )}
+      {
+        character && (
+          <LinksRelationshipsModal
+            entity={{ type: EntityType.CHARACTER, id: character.id, name: character.name }}
+            open={showRelationshipsModal}
+            onClose={() => setShowRelationshipsModal(false)}
+          />
+        )
+      }
 
       {/* Character Inventory Submodal */}
-      {character && (
-        <CharacterInventorySubmodal
-          open={showInventoryModal}
-          onOpenChange={setShowInventoryModal}
-          characterId={character.id}
-          characterName={character.name}
-        />
-      )}
+      {
+        character && (
+          <CharacterInventorySubmodal
+            open={showInventoryModal}
+            onOpenChange={setShowInventoryModal}
+            characterId={character.id}
+            characterName={character.name}
+          />
+        )
+      }
 
       {/* Character Owned Sites Submodal */}
-      {character && (
-        <CharacterSitesSubmodal
-          open={showOwnedSitesModal}
-          onOpenChange={setShowOwnedSitesModal}
-          characterId={character.id}
-          characterName={character.name}
-        />
-      )}
+      {
+        character && (
+          <CharacterSitesSubmodal
+            open={showOwnedSitesModal}
+            onOpenChange={setShowOwnedSitesModal}
+            characterId={character.id}
+            characterName={character.name}
+          />
+        )
+      }
 
       {/* Character Legal Entities Submodal */}
-      {character && (
-        <CharacterLegalEntitiesSubmodal
-          open={showLegalEntityModal}
-          onOpenChange={setShowLegalEntityModal}
-          characterId={character.id}
-          characterName={character.name}
-        />
-      )}
+      {
+        character && (
+          <CharacterLegalEntitiesSubmodal
+            open={showLegalEntityModal}
+            onOpenChange={setShowLegalEntityModal}
+            characterId={character.id}
+            characterName={character.name}
+          />
+        )
+      }
     </>
   );
 }
