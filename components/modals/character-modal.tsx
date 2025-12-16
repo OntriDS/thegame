@@ -31,6 +31,7 @@ import { DEFAULT_CURRENCY_EXCHANGE_RATES } from '@/lib/constants/financial-const
 import { FinancialRecord, Link } from '@/types/entities';
 import { FinancialStatus } from '@/types/enums';
 import { Loader2 } from 'lucide-react';
+import CashOutConfirmationSubmodal from './submodals/cash-out-confirmation-submodal';
 
 interface CharacterModalProps {
   character?: Character | null;
@@ -233,14 +234,25 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
 
       // 3. Update Character Wallet (Source of Truth)
       const newBalance = (character.jungleCoins || 0) - cashOutJAmount;
+      const finalBalance = Math.max(0, newBalance);
+
+      // Logic: If balance hits 0, remove INVESTOR role
+      let updatedRoles = [...character.roles];
+      if (finalBalance === 0 && updatedRoles.includes(CharacterRole.INVESTOR)) {
+        updatedRoles = updatedRoles.filter(r => r !== CharacterRole.INVESTOR);
+        // Also update local state to reflect role removal immediately
+        setRoles(prev => prev.filter(r => r !== CharacterRole.INVESTOR));
+      }
+
       const updatedChar = {
         ...character,
-        jungleCoins: Math.max(0, newBalance)
+        roles: updatedRoles,
+        jungleCoins: finalBalance
       };
       await ClientAPI.upsertCharacter(updatedChar);
 
       // 4. Update UI & Notify
-      setJungleCoinsBalance(updatedChar.jungleCoins || 0);
+      setJungleCoinsBalance(finalBalance);
       dispatchEntityUpdated(entityTypeToKind(EntityType.CHARACTER));
       setShowCashOutModal(false);
       setCashOutJAmount(0);
@@ -703,51 +715,18 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
       }
 
       {/* Cash Out Confirmation Modal */}
-      <Dialog open={showCashOutModal} onOpenChange={setShowCashOutModal}>
-        <DialogContent className="max-w-sm" zIndexLayer="SUB_MODALS">
-          <DialogHeader>
-            <DialogTitle>Exchange J$ to USD</DialogTitle>
-            <DialogDescription>
-              Cash out J$ from {character?.name}&apos;s wallet.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-4">
-            <div className="flex items-center justify-between bg-muted/30 p-3 rounded-md">
-              <span className="text-sm text-muted-foreground">Available Balance</span>
-              <span className="text-sm font-bold font-mono">{jungleCoinsBalance} J$</span>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-xs">Amount to Cash Out (J$)</Label>
-              <NumericInput
-                value={cashOutJAmount}
-                onChange={(val) => setCashOutJAmount(Math.min(val, jungleCoinsBalance))} // Cap at max balance
-                placeholder="0"
-                className="text-center font-mono text-lg"
-              />
-            </div>
-
-            <div className="text-center text-sm text-muted-foreground">
-              You will receive <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                ${(cashOutJAmount * DEFAULT_CURRENCY_EXCHANGE_RATES.j$ToUSD).toLocaleString()} USD
-              </span>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" size="sm" onClick={() => setShowCashOutModal(false)}>Cancel</Button>
-            <Button
-              size="sm"
-              onClick={handleCashOut}
-              disabled={cashOutJAmount <= 0 || isProcessingCashOut}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white"
-            >
-              {isProcessingCashOut ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Confirm Exchange'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {character && (
+        <CashOutConfirmationSubmodal
+          open={showCashOutModal}
+          onOpenChange={setShowCashOutModal}
+          character={character}
+          balance={jungleCoinsBalance}
+          amount={cashOutJAmount}
+          onAmountChange={setCashOutJAmount}
+          onConfirm={handleCashOut}
+          isProcessing={isProcessingCashOut}
+        />
+      )}
 
       {/* Character Legal Entities Submodal */}
       {
