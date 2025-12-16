@@ -45,7 +45,9 @@ export function ContractSubmodal({
     const [clauses, setClauses] = useState<ContractClause[]>([]);
 
     // Counterparty State (if selecting manually)
+    const [selectedEntityType, setSelectedEntityType] = useState<'character' | 'business'>('character');
     const [selectedCounterpartyId, setSelectedCounterpartyId] = useState<string>('');
+    const [selectedRole, setSelectedRole] = useState<string>('associate');
     const [isSaving, setIsSaving] = useState(false);
 
     // Initial Load Effect
@@ -223,11 +225,11 @@ export function ContractSubmodal({
     return (
         <Dialog open={open} onOpenChange={(val) => !val && !isSaving && onClose()}>
             <DialogContent
-                className="sm:max-w-[800px] h-[700px] flex flex-col p-0 gap-0 overflow-hidden bg-slate-50 dark:bg-slate-950"
+                className="sm:max-w-[700px] h-[600px] flex flex-col p-0 gap-0 overflow-hidden"
                 style={{ zIndex: getInteractiveSubModalZIndex() }}
             >
                 {/* HEADER */}
-                <div className="px-6 py-4 border-b flex justify-between items-center bg-white dark:bg-slate-900 shadow-sm">
+                <div className="px-6 py-4 border-b flex justify-between items-center bg-background">
                     <div className="flex items-center gap-3">
                         <div className="bg-indigo-100 dark:bg-indigo-900/30 p-2 rounded-lg">
                             <PenTool className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
@@ -246,93 +248,116 @@ export function ContractSubmodal({
 
                 <div className="flex-1 overflow-hidden flex flex-col">
                     <ScrollArea className="flex-1 p-6">
-                        <div className="space-y-8 max-w-3xl mx-auto">
+                        <div className="space-y-6 max-w-3xl mx-auto">
 
-                            {/* 1. CONTRACT HEADER */}
-                            <div className="grid grid-cols-12 gap-6">
-                                <div className="col-span-8 space-y-2">
-                                    <Label className="text-xs font-semibold uppercase text-muted-foreground">Contract Title</Label>
-                                    <Input
-                                        value={name}
-                                        onChange={(e) => setName(e.target.value)}
-                                        className="font-medium text-lg h-11 shadow-sm bg-white dark:bg-slate-900"
-                                        placeholder="e.g. Associate Agreement 2024"
-                                    />
-                                </div>
-                                <div className="col-span-4 space-y-2">
-                                    <Label className="text-xs font-semibold uppercase text-muted-foreground">Reference Number</Label>
-                                    <div className="h-11 px-3 flex items-center bg-muted/20 rounded-md border text-xs font-mono text-muted-foreground">
-                                        {initialData?.id.substring(0, 8) || 'AUTO-GENERATED'}
-                                    </div>
-                                </div>
+                            {/* 1. CONTRACT TITLE */}
+                            <div className="space-y-2">
+                                <Label className="text-xs font-semibold uppercase text-muted-foreground">Contract Title</Label>
+                                <Input
+                                    value={name}
+                                    onChange={(e) => setName(e.target.value)}
+                                    className="font-medium text-base h-10"
+                                    placeholder="e.g. Me ↔ Partner Agreement"
+                                />
                             </div>
 
-                            {/* 2. PARTIES & SELECTOR */}
+                            {/* 2. COUNTERPARTY SELECTOR (if not pre-filled) */}
                             {!counterpartyEntity && !initialData && (
-                                <div className="p-4 bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/50 rounded-lg space-y-3">
-                                    <div className="flex items-center gap-2 text-indigo-700 dark:text-indigo-300">
-                                        <AlertTriangle className="h-4 w-4" />
-                                        <h3 className="text-sm font-semibold">Select Counterparty</h3>
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Counterparty</Label>
+                                        <div className="flex bg-muted p-1 rounded-md">
+                                            <button
+                                                onClick={() => { setSelectedEntityType('character'); setSelectedCounterpartyId(''); }}
+                                                className={`px-3 py-1 text-xs font-medium rounded-sm transition-all ${selectedEntityType === 'character' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                                            >
+                                                Character
+                                            </button>
+                                            <button
+                                                onClick={() => { setSelectedEntityType('business'); setSelectedCounterpartyId(''); }}
+                                                className={`px-3 py-1 text-xs font-medium rounded-sm transition-all ${selectedEntityType === 'business' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                                            >
+                                                Business
+                                            </button>
+                                        </div>
                                     </div>
-                                    <p className="text-xs text-muted-foreground">Who is this contract with? (Associate, Partner, or Business)</p>
-                                    <div className="max-w-md">
-                                        <SearchableSelect
-                                            options={availableCharacters.map(c => ({ value: c.id, label: c.name }))}
-                                            value={selectedCounterpartyId}
-                                            onValueChange={(val) => setSelectedCounterpartyId(val)}
-                                            placeholder="Search Associate..."
-                                            className="bg-white dark:bg-slate-900"
-                                        />
+
+                                    <SearchableSelect
+                                        value={selectedCounterpartyId}
+                                        onValueChange={setSelectedCounterpartyId}
+                                        placeholder={`Search ${selectedEntityType}s...`}
+                                        options={availableCharacters.map(c => ({ value: c.id, label: c.name }))}
+                                        className="w-full"
+                                    />
+                                </div>
+                            )}
+
+                            {/* 3. ROLE SELECTOR (if creating new) */}
+                            {!initialData && (
+                                <div className="space-y-2">
+                                    <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Contract Type</Label>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {[
+                                            { id: 'associate', label: 'Associate' },
+                                            { id: 'partner', label: 'Partner' },
+                                            { id: 'sponsor', label: 'Sponsor' },
+                                        ].map(role => (
+                                            <div
+                                                key={role.id}
+                                                onClick={() => setSelectedRole(role.id)}
+                                                className={`
+                                                cursor-pointer p-2 rounded border text-center transition-all text-sm font-medium
+                                                ${selectedRole === role.id
+                                                        ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-900 dark:text-indigo-100 ring-1 ring-indigo-500'
+                                                        : 'border-muted hover:bg-muted/50'}
+                                            `}
+                                            >
+                                                {role.label}
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
                             )}
 
-                            <div className="h-px bg-border my-2" />
-
-                            {/* 3. CLAUSES DEFINITION */}
-                            <div className="space-y-4">
+                            {/* 4. CLAUSES DEFINITION */}
+                            <div className="space-y-3">
                                 <div className="flex items-center justify-between">
-                                    <h3 className="text-sm font-semibold flex items-center gap-2">
-                                        <FileText className="h-4 w-4 text-indigo-500" />
-                                        Financial Clauses
-                                    </h3>
-                                    {/* Action Buttons - Distinct Types */}
+                                    <Label className="text-xs font-semibold uppercase text-muted-foreground">Financial Clauses</Label>
+                                    {/* Action Buttons */}
                                     <div className="flex gap-2">
-                                        <Button size="sm" variant="outline" onClick={() => addClause(ContractClauseType.SALES_COMMISSION)} className="h-8 text-xs bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950 dark:hover:bg-indigo-900 border-indigo-200">
+                                        <Button size="sm" variant="outline" onClick={() => addClause(ContractClauseType.SALES_COMMISSION)} className="h-7 text-xs">
                                             <Plus className="h-3 w-3 mr-1" /> Principal Sales (75/25)
                                         </Button>
-                                        <Button size="sm" variant="outline" onClick={() => addClause(ContractClauseType.SALES_SERVICE)} className="h-8 text-xs bg-pink-50 hover:bg-pink-100 dark:bg-pink-950 dark:hover:bg-pink-900 border-pink-200">
+                                        <Button size="sm" variant="outline" onClick={() => addClause(ContractClauseType.SALES_SERVICE)} className="h-7 text-xs">
                                             <Plus className="h-3 w-3 mr-1" /> Associate Sales (25/75)
                                         </Button>
-                                        <Button size="sm" variant="outline" onClick={() => addClause(ContractClauseType.EXPENSE_SHARING)} className="h-8 text-xs bg-slate-50 hover:bg-slate-100 border-slate-200">
+                                        <Button size="sm" variant="outline" onClick={() => addClause(ContractClauseType.EXPENSE_SHARING)} className="h-7 text-xs">
                                             <Plus className="h-3 w-3 mr-1" /> Exp. Share (50/50)
                                         </Button>
                                     </div>
                                 </div>
 
                                 {clauses.length === 0 ? (
-                                    <div className="py-12 border-2 border-dashed rounded-xl flex flex-col items-center justify-center text-muted-foreground bg-slate-50/50 dark:bg-slate-900/20">
-                                        <div className="h-12 w-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-3">
-                                            <FileText className="h-6 w-6 opacity-40" />
-                                        </div>
+                                    <div className="py-8 border-2 border-dashed rounded-lg flex flex-col items-center justify-center text-muted-foreground">
+                                        <FileText className="h-8 w-8 opacity-20 mb-2" />
                                         <p className="text-sm font-medium">No clauses defined</p>
                                         <p className="text-xs text-muted-foreground max-w-xs text-center mt-1">
                                             Add clauses above to define how revenue and expenses are split between the parties.
                                         </p>
                                     </div>
                                 ) : (
-                                    <div className="grid gap-4">
+                                    <div className="grid gap-3">
                                         {clauses.map((clause, index) => (
-                                            <div key={clause.id} className="p-4 border rounded-xl bg-white dark:bg-slate-900 shadow-sm hover:border-indigo-300 transition-all group">
+                                            <div key={clause.id} className="p-3 border rounded-lg bg-card hover:border-indigo-300 transition-all group">
 
                                                 {/* Clause Header */}
-                                                <div className="flex justify-between items-start mb-4">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="h-6 w-6 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-xs font-bold text-slate-500">
+                                                <div className="flex justify-between items-start mb-3">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="h-5 w-5 rounded-full bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground">
                                                             {index + 1}
                                                         </div>
                                                         <div>
-                                                            <div className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+                                                            <div className="text-xs font-bold uppercase tracking-wider text-foreground">
                                                                 {clause.type === ContractClauseType.SALES_COMMISSION && "Principal Commission"}
                                                                 {clause.type === ContractClauseType.SALES_SERVICE && "Associate Sales Service"}
                                                                 {clause.type === ContractClauseType.EXPENSE_SHARING && "Expense Sharing"}
@@ -341,49 +366,47 @@ export function ContractSubmodal({
                                                             <div className="text-[10px] text-muted-foreground">
                                                                 {clause.type === ContractClauseType.SALES_COMMISSION && "Revenue from MY Items"}
                                                                 {clause.type === ContractClauseType.SALES_SERVICE && "Revenue from THEIR Items"}
-                                                                {clause.type === ContractClauseType.EXPENSE_SHARING && "Shared Costs (Rent, etc)"}
+                                                                {clause.type === ContractClauseType.EXPENSE_SHARING && "Shared Costs"}
                                                             </div>
                                                         </div>
                                                     </div>
-                                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30" onClick={() => removeClause(clause.id)}>
-                                                        <Trash2 className="h-4 w-4" />
+                                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-red-500" onClick={() => removeClause(clause.id)}>
+                                                        <Trash2 className="h-3.5 w-3.5" />
                                                     </Button>
                                                 </div>
 
                                                 {/* Clause Body */}
-                                                <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
-                                                    <div className="md:col-span-6 space-y-1.5">
-                                                        <Label className="text-[10px] font-semibold text-muted-foreground uppercase">Description / Category</Label>
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    <div className="space-y-1">
+                                                        <Label className="text-[10px] font-semibold text-muted-foreground uppercase">Description</Label>
                                                         <Input
                                                             value={clause.description}
                                                             onChange={(e) => updateClause(clause.id, 'description', e.target.value)}
-                                                            className="h-9 text-xs"
-                                                            placeholder="e.g. Jewelry Category, or Booth Fee"
+                                                            className="h-8 text-xs"
+                                                            placeholder="e.g. Jewelry Category"
                                                         />
                                                     </div>
 
-                                                    {/* Shares Visualization */}
-                                                    <div className="md:col-span-6 space-y-1.5">
-                                                        <Label className="text-[10px] font-semibold text-muted-foreground uppercase text-center w-full block">Split Breakdown</Label>
-                                                        <div className="flex items-center gap-3 p-1 rounded-lg bg-slate-50 dark:bg-slate-950/50 border border-slate-100 dark:border-slate-800">
+                                                    {/* Shares */}
+                                                    <div className="space-y-1">
+                                                        <Label className="text-[10px] font-semibold text-muted-foreground uppercase text-center w-full block">Split</Label>
+                                                        <div className="flex items-center gap-2">
                                                             <div className="flex-1 relative">
                                                                 <NumericInput
                                                                     value={clause.companyShare * 100}
                                                                     onChange={(v) => updateClause(clause.id, 'companyShare', v / 100)}
-                                                                    className="h-8 text-xs pr-6 text-right border-transparent bg-transparent focus:bg-white dark:focus:bg-slate-900 transition-colors"
+                                                                    className="h-8 text-xs pr-6 text-right"
                                                                 />
                                                                 <span className="absolute right-2 top-2 text-[10px] text-muted-foreground font-bold">%</span>
-                                                                <span className="text-[9px] font-bold text-indigo-600 absolute -bottom-5 left-1">ME</span>
                                                             </div>
-                                                            <div className="text-slate-300">/</div>
+                                                            <span className="text-muted-foreground">/</span>
                                                             <div className="flex-1 relative">
                                                                 <NumericInput
                                                                     value={clause.associateShare * 100}
                                                                     onChange={(v) => updateClause(clause.id, 'associateShare', v / 100)}
-                                                                    className="h-8 text-xs pr-6 text-right border-transparent bg-transparent focus:bg-white dark:focus:bg-slate-900 transition-colors"
+                                                                    className="h-8 text-xs pr-6 text-right"
                                                                 />
                                                                 <span className="absolute right-2 top-2 text-[10px] text-muted-foreground font-bold">%</span>
-                                                                <span className="text-[9px] font-bold text-pink-600 absolute -bottom-5 right-1">THEM</span>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -398,15 +421,15 @@ export function ContractSubmodal({
                     </ScrollArea>
                 </div>
 
-                <DialogFooter className="px-6 py-4 border-t bg-white dark:bg-slate-900 shadow-sm flex justify-between items-center z-10">
+                <DialogFooter className="px-6 py-3 border-t flex justify-between items-center">
                     <div className="text-xs text-muted-foreground flex items-center gap-2">
                         <LinkIcon className="h-3 w-3" />
                         {counterpartyEntity || selectedCounterpartyId ? 'Link will be created automatically' : 'Select a counterparty to link'}
                     </div>
                     <div className="flex gap-2">
                         <Button variant="outline" onClick={onClose}>Cancel</Button>
-                        <Button onClick={handleSave} disabled={isSaving} className="bg-indigo-600 hover:bg-indigo-700 min-w-[140px] shadow-sm">
-                            {isSaving ? 'Linking...' : 'Save Contract'}
+                        <Button onClick={handleSave} disabled={isSaving} className="min-w-[120px]">
+                            {isSaving ? 'Saving...' : 'Save Contract'}
                         </Button>
                     </div>
                 </DialogFooter>
