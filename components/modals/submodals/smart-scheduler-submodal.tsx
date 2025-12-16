@@ -1,18 +1,19 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import * as React from 'react';
+import { Calendar as CalendarIcon, Clock, Repeat, ChevronDown, X } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { DatePicker } from '@/components/ui/date-picker';
-import SimpleTimePicker from '@/components/ui/simple-time-picker';
+import { Calendar } from '@/components/ui/calendar';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { format, addHours, isSameDay, addDays, nextSaturday, nextMonday, startOfToday } from 'date-fns';
 import { FrequencyCalendar, FrequencyConfig } from '@/components/ui/frequency-calendar';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar, Clock, Repeat, ArrowRight } from 'lucide-react';
-import { format, addHours, isBefore, startOfDay } from 'date-fns';
-import { getInteractiveSubModalZIndex } from '@/lib/utils/z-index-utils';
+import SimpleTimePicker from '@/components/ui/simple-time-picker';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { getZIndexClass } from '@/lib/utils/z-index-utils';
 
-interface SchedulerValue {
+export interface ScheduleValue {
     dueDate?: Date;
     scheduledStart?: Date;
     scheduledEnd?: Date;
@@ -22,9 +23,9 @@ interface SchedulerValue {
 interface SmartSchedulerSubmodalProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    value: SchedulerValue;
-    onChange: (value: SchedulerValue) => void;
-    isRecurrent: boolean;
+    value: ScheduleValue;
+    onChange: (value: ScheduleValue) => void;
+    isRecurrent?: boolean;
 }
 
 export function SmartSchedulerSubmodal({
@@ -32,196 +33,229 @@ export function SmartSchedulerSubmodal({
     onOpenChange,
     value,
     onChange,
-    isRecurrent
+    isRecurrent = false,
 }: SmartSchedulerSubmodalProps) {
-    // Local state for editing
-    const [activeTab, setActiveTab] = useState<'schedule' | 'recurrence'>('schedule');
-    const [dueDate, setDueDate] = useState<Date | undefined>(value.dueDate);
-    const [startDate, setStartDate] = useState<Date | undefined>(value.scheduledStart);
-    const [startTime, setStartTime] = useState<string>(value.scheduledStart ? format(value.scheduledStart, 'HH:mm') : '');
-    const [endDate, setEndDate] = useState<Date | undefined>(value.scheduledEnd);
-    const [endTime, setEndTime] = useState<string>(value.scheduledEnd ? format(value.scheduledEnd, 'HH:mm') : '');
-    const [frequencyConfig, setFrequencyConfig] = useState<FrequencyConfig | undefined>(value.frequencyConfig);
+    const [showFrequency, setShowFrequency] = React.useState(!!value.frequencyConfig);
 
-    // Sync with props when opening
-    useEffect(() => {
-        if (open) {
-            setDueDate(value.dueDate);
-            setStartDate(value.scheduledStart);
-            setStartTime(value.scheduledStart ? format(value.scheduledStart, 'HH:mm') : '');
-            setEndDate(value.scheduledEnd);
-            setEndTime(value.scheduledEnd ? format(value.scheduledEnd, 'HH:mm') : '');
-            setFrequencyConfig(value.frequencyConfig);
-
-            // Select appropriate tab
-            if (isRecurrent && !value.scheduledStart) {
-                setActiveTab('recurrence');
-            } else {
-                setActiveTab('schedule');
-            }
+    // Initialize showFrequency based on incoming value
+    React.useEffect(() => {
+        if (value.frequencyConfig && !showFrequency) {
+            setShowFrequency(true);
         }
-    }, [open, value, isRecurrent]);
+    }, [value.frequencyConfig]);
 
-    // Handler helpers
-    const handleStartTimeChange = (time: string) => {
-        setStartTime(time);
-        // Auto-adjust end time if needed (default 1 hour duration)
-        if (time && !endTime) {
-            const [h, m] = time.split(':').map(Number);
-            const start = new Date();
-            start.setHours(h, m);
-            const end = addHours(start, 1);
-            setEndTime(format(end, 'HH:mm'));
-        }
-    };
+    const handleDateSelect = (date: Date | undefined) => {
+        if (!date) return;
 
-    const handleApply = () => {
-        // Construct final dates
-        let finalStart: Date | undefined = undefined;
-        if (startDate && startTime) {
-            const [h, m] = startTime.split(':').map(Number);
-            finalStart = new Date(startDate);
-            finalStart.setHours(h, m);
+        // If we have a start time, preserve it
+        let newStart = date;
+        if (value.scheduledStart) {
+            newStart = new Date(date);
+            newStart.setHours(value.scheduledStart.getHours(), value.scheduledStart.getMinutes());
         }
 
-        let finalEnd: Date | undefined = undefined;
-        if (endDate && endTime) {
-            const [h, m] = endTime.split(':').map(Number);
-            finalEnd = new Date(endDate);
-            finalEnd.setHours(h, m);
-        } else if (finalStart && endTime) {
-            // If end date is missing but time is present, assume same day
-            const [h, m] = endTime.split(':').map(Number);
-            finalEnd = new Date(finalStart); // same day as start
-            finalEnd.setHours(h, m);
+        // If we have an end time, preserve its duration relative to start, or keep same time on new day
+        let newEnd = value.scheduledEnd;
+        if (value.scheduledEnd && value.scheduledStart) {
+            const duration = value.scheduledEnd.getTime() - value.scheduledStart.getTime();
+            newEnd = new Date(newStart.getTime() + duration);
+        } else if (value.scheduledEnd) {
+            // Just move end to new date if no start exists (unlikely but possible)
+            newEnd = new Date(date);
+            newEnd.setHours(value.scheduledEnd.getHours(), value.scheduledEnd.getMinutes());
         }
 
         onChange({
-            dueDate,
-            scheduledStart: finalStart,
-            scheduledEnd: finalEnd,
-            frequencyConfig
+            ...value,
+            dueDate: date, // Default due date to selected date
+            scheduledStart: newStart,
+            scheduledEnd: newEnd,
         });
-        onOpenChange(false);
     };
 
-    // Quick preset handlers
-    const setToday = () => {
-        const now = new Date();
-        setDueDate(now);
-        setStartDate(now);
+    const handleStartTimeChange = (timeStr: string) => {
+        if (!timeStr) return;
+
+        const [hours, minutes] = timeStr.split(':').map(Number);
+        const baseDate = value.scheduledStart || value.dueDate || new Date();
+
+        const newStart = new Date(baseDate);
+        newStart.setHours(hours, minutes);
+
+        // Smart End Time: Default to +1 hour if not set or if end is before new start
+        let newEnd = value.scheduledEnd;
+        if (!newEnd || newEnd <= newStart) {
+            newEnd = addHours(newStart, 1);
+        } else {
+            // If end exists and is valid, keep the date synced if we changed the start date implicitly (not happening here, but good practice)
+            const endBase = new Date(newStart);
+            endBase.setHours(newEnd.getHours(), newEnd.getMinutes());
+            newEnd = endBase;
+        }
+
+        onChange({
+            ...value,
+            dueDate: value.dueDate || baseDate, // Ensure due date is set if it wasn't
+            scheduledStart: newStart,
+            scheduledEnd: newEnd,
+        });
     };
 
-    const setTomorrow = () => {
-        const tmrw = new Date();
-        tmrw.setDate(tmrw.getDate() + 1);
-        setDueDate(tmrw);
-        setStartDate(tmrw);
+    const handleEndTimeChange = (timeStr: string) => {
+        if (!timeStr) return;
+
+        const [hours, minutes] = timeStr.split(':').map(Number);
+        // Default to start date, or due date, or today
+        const baseDate = value.scheduledEnd || value.scheduledStart || value.dueDate || new Date();
+
+        const newEnd = new Date(baseDate);
+        newEnd.setHours(hours, minutes);
+
+        onChange({
+            ...value,
+            scheduledEnd: newEnd,
+        });
+    };
+
+    const applyPreset = (preset: 'today' | 'tomorrow' | 'weekend' | 'next-week') => {
+        let date = startOfToday();
+
+        switch (preset) {
+            case 'today':
+                date = startOfToday();
+                break;
+            case 'tomorrow':
+                date = addDays(startOfToday(), 1);
+                break;
+            case 'weekend':
+                date = nextSaturday(startOfToday());
+                break;
+            case 'next-week':
+                date = nextMonday(startOfToday());
+                break;
+        }
+
+        // Default times for presets (e.g. 9am - 10am)
+        const start = new Date(date);
+        start.setHours(9, 0, 0, 0);
+        const end = addHours(start, 1);
+
+        onChange({
+            ...value,
+            dueDate: date,
+            scheduledStart: start,
+            scheduledEnd: end,
+        });
+    };
+
+    const toggleFrequency = (checked: boolean) => {
+        setShowFrequency(checked);
+        if (!checked) {
+            onChange({ ...value, frequencyConfig: undefined });
+        } else {
+            // Default frequency if none exists
+            if (!value.frequencyConfig) {
+                onChange({
+                    ...value,
+                    frequencyConfig: {
+                        type: 1, // DAILY
+                        interval: 1,
+                        repeatMode: 'periodically'
+                    } as any
+                });
+            }
+        }
     };
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent
-                className="sm:max-w-[600px] flex flex-col gap-0 p-0 overflow-hidden"
-                style={{ zIndex: getInteractiveSubModalZIndex() }}
-            >
-                <DialogHeader className="px-6 py-4 border-b bg-muted/10">
-                    <DialogTitle className="flex items-center gap-2">
-                        <Clock className="w-5 h-5 text-indigo-500" />
-                        Smart Scheduler
-                    </DialogTitle>
+            <DialogContent zIndexLayer="SUB_MODALS" className="w-[400px] max-w-[90vw]">
+                <DialogHeader>
+                    <DialogTitle>Set Schedule</DialogTitle>
                     <DialogDescription>
-                        Configure time, duration and recurrence for this task.
+                        Configure date, time, and recurrence.
                     </DialogDescription>
                 </DialogHeader>
 
-                <div className="p-6">
-                    <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
-                        <TabsList className="grid w-full grid-cols-2 mb-6">
-                            <TabsTrigger value="schedule" className="flex items-center gap-2">
-                                <Calendar className="w-4 h-4" />
-                                Date & Time
-                            </TabsTrigger>
-                            <TabsTrigger value="recurrence" disabled={!isRecurrent} className="flex items-center gap-2">
-                                <Repeat className="w-4 h-4" />
-                                Recurrence
-                            </TabsTrigger>
-                        </TabsList>
+                <div className="space-y-4 py-2">
+                    {/* 1. Quick Presets */}
+                    <div className="grid grid-cols-4 gap-2">
+                        <Button variant="outline" size="sm" className="text-xs h-8" onClick={() => applyPreset('today')}>Today</Button>
+                        <Button variant="outline" size="sm" className="text-xs h-8" onClick={() => applyPreset('tomorrow')}>Tomorrow</Button>
+                        <Button variant="outline" size="sm" className="text-xs h-8" onClick={() => applyPreset('weekend')}>Weekend</Button>
+                        <Button variant="outline" size="sm" className="text-xs h-8" onClick={() => applyPreset('next-week')}>Next Week</Button>
+                    </div>
 
-                        <TabsContent value="schedule" className="space-y-6 mt-0">
+                    {/* 2. Time Selection */}
+                    <div className="flex items-center gap-3">
+                        <div className="flex-1 space-y-1.5">
+                            <Label className="text-xs text-muted-foreground">Start Time</Label>
+                            <SimpleTimePicker
+                                value={value.scheduledStart ? format(value.scheduledStart, 'HH:mm') : ''}
+                                onChange={handleStartTimeChange}
+                                placeholder="Start"
+                                className="w-full"
+                            />
+                        </div>
+                        <div className="flex items-center pt-6 text-muted-foreground">-</div>
+                        <div className="flex-1 space-y-1.5">
+                            <Label className="text-xs text-muted-foreground">End Time</Label>
+                            <SimpleTimePicker
+                                value={value.scheduledEnd ? format(value.scheduledEnd, 'HH:mm') : ''}
+                                onChange={handleEndTimeChange}
+                                placeholder="End"
+                                className="w-full"
+                            />
+                        </div>
+                    </div>
 
-                            {/* Quick Presets */}
-                            <div className="flex gap-2 mb-2">
-                                <Button variant="outline" size="sm" onClick={setToday} className="text-xs">Today</Button>
-                                <Button variant="outline" size="sm" onClick={setTomorrow} className="text-xs">Tomorrow</Button>
+                    {/* 3. Calendar */}
+                    <div className="border rounded-md p-2 flex justify-center">
+                        <Calendar
+                            mode="single"
+                            selected={value.scheduledStart || value.dueDate}
+                            onSelect={handleDateSelect}
+                            initialFocus
+                        />
+                    </div>
+
+                    {/* 4. Recurrence Toggle */}
+                    <div className="space-y-3 pt-2 border-t">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-2">
+                                <Repeat className="w-4 h-4 text-muted-foreground" />
+                                <Label htmlFor="recurrence-mode" className="text-sm font-medium">Repeat Task</Label>
                             </div>
+                            <Switch
+                                id="recurrence-mode"
+                                checked={showFrequency}
+                                onCheckedChange={toggleFrequency}
+                            />
+                        </div>
 
-                            {/* Due Date Section */}
-                            <div className="grid grid-cols-4 items-center gap-4">
-                                <Label className="text-right text-xs uppercase tracking-wider text-muted-foreground w-full">Due Date</Label>
-                                <div className="col-span-3">
-                                    <DatePicker
-                                        date={dueDate}
-                                        setDate={setDueDate}
-                                        className="w-full"
-                                        placeholder="Select due date (deadline)"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="border-t border-border/50 my-2"></div>
-
-                            {/* Scheduled Start */}
-                            <div className="grid grid-cols-4 items-start gap-4">
-                                <Label className="text-right text-xs uppercase tracking-wider text-muted-foreground w-full pt-2">Start</Label>
-                                <div className="col-span-3 grid grid-cols-2 gap-2">
-                                    <DatePicker
-                                        date={startDate}
-                                        setDate={setStartDate}
-                                        placeholder="Start Date"
-                                    />
-                                    <SimpleTimePicker
-                                        value={startTime}
-                                        onChange={handleStartTimeChange}
-                                        placeholder="Start Time"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Scheduled End */}
-                            <div className="grid grid-cols-4 items-start gap-4">
-                                <Label className="text-right text-xs uppercase tracking-wider text-muted-foreground w-full pt-2">End</Label>
-                                <div className="col-span-3 grid grid-cols-2 gap-2">
-                                    <DatePicker
-                                        date={endDate || startDate} // Default to start date if not set
-                                        setDate={setEndDate}
-                                        placeholder="End Date"
-                                    />
-                                    <SimpleTimePicker
-                                        value={endTime}
-                                        onChange={setEndTime}
-                                        placeholder="End Time"
-                                    />
-                                </div>
-                            </div>
-
-                        </TabsContent>
-
-                        <TabsContent value="recurrence" className="mt-0">
-                            <div className="border rounded-md p-4 bg-muted/20">
+                        {showFrequency && (
+                            <div className="pl-6 border-l-2 ml-2">
                                 <FrequencyCalendar
-                                    config={frequencyConfig}
-                                    onChange={setFrequencyConfig}
+                                    value={value.frequencyConfig}
+                                    onChange={(cfg) => onChange({ ...value, frequencyConfig: cfg })}
+                                    allowAlways={isRecurrent}
                                 />
                             </div>
-                        </TabsContent>
-                    </Tabs>
+                        )}
+                    </div>
                 </div>
 
-                <DialogFooter className="px-6 py-4 border-t bg-muted/10">
-                    <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-                    <Button onClick={handleApply} className="bg-indigo-600 hover:bg-indigo-700 min-w-[100px]">
-                        Apply Schedule
+                <DialogFooter className="flex justify-between sm:justify-between items-center w-full">
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 text-xs text-muted-foreground hover:text-destructive"
+                        onClick={() => onChange({ dueDate: undefined, scheduledStart: undefined, scheduledEnd: undefined, frequencyConfig: undefined })}
+                    >
+                        Clear Schedule
+                    </Button>
+                    <Button size="sm" className="h-8 text-xs" onClick={() => onOpenChange(false)}>
+                        Done
                     </Button>
                 </DialogFooter>
             </DialogContent>
