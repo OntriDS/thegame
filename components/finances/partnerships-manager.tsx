@@ -33,8 +33,13 @@ export function PartnershipsManager({
 
     // Helpers to resolve names
     const getEntityName = (id: string) => {
-        const ent = businesses.find((e: Business) => e.id === id);
-        return ent ? ent.name : 'Unknown Entity';
+        const bus = businesses.find((e: Business) => e.id === id);
+        if (bus) return bus.name;
+
+        const char = characters.find((c: Character) => c.id === id);
+        if (char) return char.name;
+
+        return 'Unknown Entity';
     };
 
     return (
