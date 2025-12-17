@@ -111,10 +111,9 @@ export default function SalesPage() {
 
   const getTypeBadge = (type: SaleType) => {
     const typeColors = {
-      [SaleType.FERIA]: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
       [SaleType.DIRECT]: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
-      [SaleType.CONSIGNMENT]: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200',
-      [SaleType.BUNDLE_SALE]: 'bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200',
+      [SaleType.BOOTH]: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
+      [SaleType.NETWORK]: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200',
       [SaleType.ONLINE]: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200',
       [SaleType.NFT]: 'bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200',
     };
