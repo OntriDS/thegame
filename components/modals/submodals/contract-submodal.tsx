@@ -106,7 +106,7 @@ export function ContractSubmodal({
                 }
             }
         }
-    }, [open, initialData, counterpartyEntity, initialRole]); // Minimal deps to avoid loops
+    }, [open, initialData, counterpartyEntity, initialRole, availableBusinesses, principalCharacters]); // Minimal deps to avoid loops
 
     // Name Auto-Generator
     useEffect(() => {

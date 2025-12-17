@@ -387,6 +387,15 @@ export default function FinancesPage() {
     }
   };
 
+  const handleDeleteContract = async (contractIds: string[]) => {
+    try {
+      await Promise.all(contractIds.map(id => ClientAPI.deleteContract(id)));
+      loadPartnershipData();
+    } catch (error) {
+      console.error('Failed to delete contracts', error);
+    }
+  };
+
   const handleAssetsUpdate = async () => {
     try {
       const [companyData, personalData] = await Promise.all([
@@ -641,6 +650,7 @@ export default function FinancesPage() {
             sites={sites}
             onCreateContract={handleCreateContract}
             onUpdateContract={handleUpdateContract}
+            onDeleteContract={handleDeleteContract}
           />
         </TabsContent>
 
