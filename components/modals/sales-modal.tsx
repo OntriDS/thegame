@@ -756,7 +756,7 @@ export default function SalesModal({
     switch (t) {
       case SaleType.ONLINE: return PaymentMethod.PAYPAL;
       case SaleType.NFT: return PaymentMethod.BTC;
-      case SaleType.CONSIGNMENT: return PaymentMethod.SINPE;
+      case SaleType.NETWORK: return PaymentMethod.SINPE;
       case SaleType.DIRECT: return PaymentMethod.FIAT_USD;
       default: return PaymentMethod.FIAT_USD;
     }
@@ -994,14 +994,14 @@ export default function SalesModal({
               {/* Metadata below title */}
               <div className="flex items-center gap-4 text-xs text-muted-foreground pt-1">
                 <span>Type: <span className="font-medium text-foreground">{String(type)}</span></span>
-                <span>Station: <span className="font-medium text-foreground">SALES</span></span>
+                <span>Area: <span className="font-medium text-foreground">SALES</span></span>
                 <div className="flex items-center gap-1">
                   <span>Station:</span>
                   <SearchableSelect
-                    value={getStationValue(taskStation)}
+                    value={salesChannel ? getStationValue(salesChannel) : ''}
                     onValueChange={(value) => {
                       const station = getStationFromCombined(value);
-                      setTaskStation(station as Station);
+                      setSalesChannel(station as Station);
                     }}
                     placeholder="Station"
                     options={createStationCategoryOptions()}
@@ -1017,90 +1017,89 @@ export default function SalesModal({
             </div>
 
           </div>
-        </DialogHeader>
-
-        {/* Sale SubType Selector - Always Visible */}
-        <div className="px-1 border-b pb-1">
-          <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                if (sale?.id) return; // Don't allow changes for existing sales
-
-                const newKind = whatKind === 'product' ? 'service' : 'product';
-
-                // Check if we can switch to the new kind
-                if (lines.length > 0) {
-                  const existingKinds = new Set(lines.map(line => line.kind));
-
-                  if (newKind === 'product' && existingKinds.has('service')) {
-                    showValidationError('Cannot switch to Product mode. This sale already has service lines. Please clear all lines first.');
-                    return;
-                  }
-
-                  if (newKind === 'service' && (existingKinds.has('item') || existingKinds.has('bundle'))) {
-                    showValidationError('Cannot switch to Service mode. This sale already has product lines. Please clear all lines first.');
-                    return;
-                  }
-                }
-
-                setWhatKind(newKind);
-              }}
-              className={`min-w-[110px] ${sale?.id ? 'opacity-50 cursor-not-allowed' : ''}`}
-              disabled={!!sale?.id}
-              title={sale?.id ? 'Product/Service type cannot be changed after creation' : 'Toggle between Product and Service'}
-            >
-              {whatKind === 'product' ? 'Product' : 'Service'}
-            </Button>
-            {whatKind === 'product' && (
+          {/* Sale SubType Selector - Always Visible */}
+          <div className="px-1 border-b pb-1 mt-4">
+            <div className="flex items-center gap-2">
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => setOneItemMultiple(prev => prev === 'one' ? 'multiple' : 'one')}
-                className="min-w-[120px]"
-                title="Toggle between one item or multiple items"
+                onClick={() => {
+                  if (sale?.id) return; // Don't allow changes for existing sales
+
+                  const newKind = whatKind === 'product' ? 'service' : 'product';
+
+                  // Check if we can switch to the new kind
+                  if (lines.length > 0) {
+                    const existingKinds = new Set(lines.map(line => line.kind));
+
+                    if (newKind === 'product' && existingKinds.has('service')) {
+                      showValidationError('Cannot switch to Product mode. This sale already has service lines. Please clear all lines first.');
+                      return;
+                    }
+
+                    if (newKind === 'service' && (existingKinds.has('item') || existingKinds.has('bundle'))) {
+                      showValidationError('Cannot switch to Service mode. This sale already has product lines. Please clear all lines first.');
+                      return;
+                    }
+                  }
+
+                  setWhatKind(newKind);
+                }}
+                className={`min-w-[110px] ${sale?.id ? 'opacity-50 cursor-not-allowed' : ''}`}
+                disabled={!!sale?.id}
+                title={sale?.id ? 'Product/Service type cannot be changed after creation' : 'Toggle between Product and Service'}
               >
-                {oneItemMultiple === 'one' ? 'One' : 'Multiple'}
+                {whatKind === 'product' ? 'Product' : 'Service'}
               </Button>
-            )}
+              {whatKind === 'product' && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setOneItemMultiple(prev => prev === 'one' ? 'multiple' : 'one')}
+                  className="min-w-[120px]"
+                  title="Toggle between one item or multiple items"
+                >
+                  {oneItemMultiple === 'one' ? 'One' : 'Multiple'}
+                </Button>
+              )}
 
-            {/* Sale Type Selectors - ONE ROW */}
-            <div className="ml-auto flex items-center gap-2">
-              {Object.values(SaleType).map(t => {
-                // Disable type changes for existing sales (except product->multiple)
-                const isExistingSale = sale?.id;
-                const isProductToMultiple = type === SaleType.DIRECT && t === SaleType.BUNDLE_SALE;
-                const isDisabled = isExistingSale && !isProductToMultiple;
+              {/* Sale Type Selectors - ONE ROW */}
+              <div className="ml-auto flex items-center gap-2">
+                {Object.values(SaleType).map(t => {
+                  // Disable type changes for existing sales (except product->multiple)
+                  const isExistingSale = sale?.id;
+                  const isProductToMultiple = type === SaleType.DIRECT && t === SaleType.NETWORK;
+                  const isDisabled = isExistingSale && !isProductToMultiple;
 
-                return (
-                  <Button
-                    key={t}
-                    variant={t === type ? 'default' : 'outline'}
-                    size="sm"
-                    disabled={!!isDisabled}
-                    onClick={() => {
-                      if (isDisabled) return;
-                      setType(t as SaleType);
-                      // Auto-set salesChannel based on Sale Type
-                      const channel = getSalesChannelFromSaleType(t);
-                      if (channel) {
-                        setSalesChannel(channel);
-                      }
-                    }}
-                    className={`h-8 text-xs px-2 ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    title={isDisabled ? 'Sale type cannot be changed after creation' : ''}
-                  >
-                    {t}
-                  </Button>
-                );
-              })}
+                  return (
+                    <Button
+                      key={t}
+                      variant={t === type ? 'default' : 'outline'}
+                      size="sm"
+                      disabled={!!isDisabled}
+                      onClick={() => {
+                        if (isDisabled) return;
+                        setType(t as SaleType);
+                        // Auto-set salesChannel based on Sale Type
+                        const channel = getSalesChannelFromSaleType(t);
+                        if (channel) {
+                          setSalesChannel(channel);
+                        }
+                      }}
+                      className={`h-8 text-xs px-2 ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      title={isDisabled ? 'Sale type cannot be changed after creation' : ''}
+                    >
+                      {t === SaleType.BOOTH ? 'BOOTH' : t}
+                    </Button>
+                  );
+                })}
+              </div>
             </div>
           </div>
-        </div>
+        </DialogHeader>
 
         {/* Content Area - Fixed Height with Internal Scroll */}
-        {type === SaleType.FERIA ? (
+        {type === SaleType.BOOTH ? (
           <BoothSalesView
             sites={sites}
             characters={characters}
@@ -1853,7 +1852,7 @@ export default function SalesModal({
           </div>
         )}
 
-        {type !== SaleType.FERIA && (
+        {type !== SaleType.BOOTH && (
           <DialogFooter className="flex items-center justify-between py-2 border-t px-6">
             <div className="flex items-center gap-4">
               {sale && (

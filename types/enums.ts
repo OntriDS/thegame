@@ -12,7 +12,7 @@ export const BUSINESS_STRUCTURE = {
   DEV: ['Systems Dev'],
   DESIGN: ['Digital Art', 'Creative Process', 'Game Design', '3D Modeling', 'Animation'],
   PRODUCTION: ['Buy Orders', 'Paint', 'Craft', 'Dispatch'],
-  SALES: ['Direct Sales', 'Feria Sales', 'Associate Sales', 'Network Sales', 'Online Sales', 'Store Sales', 'Marketing', 'Bookings', 'Other Sales'],
+  SALES: ['Direct Sales', 'Booth Sales', 'Associate Sales', 'Network Sales', 'Online Sales', 'Store Sales', 'Marketing', 'Bookings', 'Other Sales'],
   PERSONAL: ['Health', 'Family', 'Food', 'Rewards', 'Earnings', 'Home', 'Transport P', 'Rent P', 'Other P']
 } as const;
 
@@ -81,8 +81,7 @@ export const LOCATION_HIERARCHY = LOCATION_STRUCTURE;
 export enum PhysicalBusinessType {
   STORAGE = 'storage',                // Warehouse sites (Home, Feria Box...)
   CONSIGNMENT = 'consignment',            // Items left to sell (Smoking Lounge, Tagua...)
-  SELLING_POINT = 'selling point',          // Stores that buy at discount (El Hornito, Perezoso Feliz...)
-  FERIA = 'feria',                  // Feria sites (Eco Feria...)
+  SELLING_POINT = 'selling point',          // Stores, Ferias, Festivals that buy at discount (El Hornito, Eco Feria, Envision...)
   TEACHING_SPACE = 'teaching space',         // Teaching sites (Jungle Academy...)
   HQ = 'HQ',                     // HQ sites (Home, Feria Box...)
   ART_GALLERY = 'art gallery',            // Gallery sites (Gallery 1084...)
@@ -123,7 +122,6 @@ export const SITE_CATEGORIES = {
     PhysicalBusinessType.STORAGE,
     PhysicalBusinessType.CONSIGNMENT,
     PhysicalBusinessType.SELLING_POINT,
-    PhysicalBusinessType.FERIA,
     PhysicalBusinessType.TEACHING_SPACE,
     PhysicalBusinessType.HQ,
     PhysicalBusinessType.ART_GALLERY,
@@ -406,9 +404,8 @@ export enum EquipmentSubType {
 /** Sales transaction types */
 export enum SaleType {
   DIRECT = 'DIRECT',
-  FERIA = 'FERIA',
-  BUNDLE_SALE = 'BUNDLE',
-  CONSIGNMENT = 'CONSIGNMENT',
+  BOOTH = 'BOOTH',
+  NETWORK = 'NETWORK',
   ONLINE = 'ONLINE',
   NFT = 'NFT',
 }
