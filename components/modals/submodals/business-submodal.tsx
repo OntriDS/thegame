@@ -96,7 +96,7 @@ export function BusinessSubmodal({
         <Dialog open={open} onOpenChange={(val) => !val && onClose()}>
             <DialogContent
                 className="sm:max-w-[500px]"
-                style={{ zIndex: getInteractiveSubModalZIndex() }}
+                zIndexLayer="SUB_MODALS"
             >
                 <DialogHeader>
                     <DialogTitle>{initialData ? 'Edit Business' : 'New Business'}</DialogTitle>

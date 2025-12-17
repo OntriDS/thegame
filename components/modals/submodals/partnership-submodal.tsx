@@ -349,7 +349,7 @@ export function PartnershipSubmodal({ // Keeping filename export for compatibili
             <Dialog open={open} onOpenChange={(val) => !val && onClose()}>
                 <DialogContent
                     className="sm:max-w-[700px] h-[500px] flex flex-col p-0 gap-0 overflow-hidden [&>button]:hidden"
-                    style={{ zIndex: getInteractiveSubModalZIndex() }}
+                    zIndexLayer="SUB_MODALS"
                 >
                     {/* HEADER */}
                     <div className="px-6 py-4 border-b flex justify-between items-center bg-muted/10">

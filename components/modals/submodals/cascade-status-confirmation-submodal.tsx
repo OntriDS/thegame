@@ -75,9 +75,9 @@ export default function CascadeStatusConfirmationModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent 
+      <DialogContent
         className="sm:max-w-md"
-        style={{ zIndex: getInteractiveSubModalZIndex() }}
+        zIndexLayer="SUB_MODALS"
       >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -128,7 +128,7 @@ export default function CascadeStatusConfirmationModal({
               <span className="text-sm font-medium">Template:</span>
               <span className="text-sm">{templateName}</span>
             </div>
-            
+
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium">Status Change:</span>
               <div className="flex items-center gap-2">
@@ -157,7 +157,7 @@ export default function CascadeStatusConfirmationModal({
                 <div className="text-sm text-amber-800">
                   <p className="font-medium">Warning: Status Reversal</p>
                   <p className="mt-1">
-                    This will revert the status of {affectedInstancesCount} instance{affectedInstancesCount !== 1 ? 's' : ''} 
+                    This will revert the status of {affectedInstancesCount} instance{affectedInstancesCount !== 1 ? 's' : ''}
                     back to <span className="font-medium">{newStatus}</span>.
                   </p>
                 </div>

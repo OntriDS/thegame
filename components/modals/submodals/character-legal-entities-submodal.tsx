@@ -176,7 +176,7 @@ export default function CharacterLegalEntitiesSubmodal({
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent
                 className="max-w-3xl max-h-[80vh] flex flex-col"
-                style={{ zIndex: getInteractiveSubModalZIndex() }}
+                zIndexLayer="SUB_MODALS"
             >
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">

@@ -18,12 +18,13 @@ const DialogClose = DialogPrimitive.Close
 
 const DialogOverlay = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Overlay>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Overlay>
->(({ className, ...props }, ref) => (
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Overlay> & { zIndexLayer?: keyof typeof Z_INDEX_LAYERS }
+>(({ className, zIndexLayer, ...props }, ref) => (
   <DialogPrimitive.Overlay
     ref={ref}
     className={cn(
       "fixed inset-0 bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:pointer-events-none",
+      zIndexLayer ? getZIndexClass(zIndexLayer) : undefined, // Apply z-index to overlay
       className
     )}
     {...props}
@@ -40,7 +41,7 @@ const DialogContent = React.forwardRef<
   DialogContentProps
 >(({ className, children, zIndexLayer, ...props }, ref) => (
   <DialogPortal>
-    <DialogOverlay />
+    <DialogOverlay zIndexLayer={zIndexLayer} />
     <DialogPrimitive.Content
       ref={ref}
       className={cn(

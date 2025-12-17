@@ -34,13 +34,13 @@ export default function LinksRelationshipsModal({
       setLoading(true);
       const entityLinks = await ClientAPI.getLinksFor({ type: entity.type, id: entity.id });
       setLinks(entityLinks);
-      
+
       // Fetch entity names for all linked entities
       const names: Record<string, string> = {};
       for (const link of entityLinks) {
         const sourceKey = `${link.source.type}:${link.source.id}`;
         const targetKey = `${link.target.type}:${link.target.id}`;
-        
+
         if (!names[sourceKey]) {
           names[sourceKey] = await getEntityDisplayName(link.source.type, link.source.id);
         }
@@ -102,7 +102,7 @@ export default function LinksRelationshipsModal({
     try {
       // Try to fetch actual entity name from DataStore
       let entity: any = null;
-      
+
       switch (entityType) {
         case 'task':
           entity = await ClientAPI.getTaskById(entityId);
@@ -126,14 +126,14 @@ export default function LinksRelationshipsModal({
           entity = await ClientAPI.getSiteById(entityId);
           break;
       }
-      
+
       if (entity && entity.name) {
         return entity.name;
       }
     } catch (error) {
       console.warn(`Failed to fetch ${entityType} name for ${entityId}:`, error);
     }
-    
+
     // Fallback to formatted ID
     const shortId = entityId.slice(0, 8);
     return `${entityType.charAt(0).toUpperCase() + entityType.slice(1)} ${shortId}`;
@@ -144,7 +144,7 @@ export default function LinksRelationshipsModal({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent zIndexLayer={'SUB_MODALS'} className="max-w-4xl max-h-[80vh]">
+      <DialogContent zIndexLayer="SUB_MODALS" className="max-w-4xl max-h-[80vh]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Network className="w-5 h-5" />
@@ -178,9 +178,9 @@ export default function LinksRelationshipsModal({
             <ScrollArea className="h-[400px] mt-4">
               <TabsContent value="all" className="space-y-2">
                 {links.map(link => (
-                  <LinkCard 
-                    key={link.id} 
-                    link={link} 
+                  <LinkCard
+                    key={link.id}
+                    link={link}
                     currentEntity={entity}
                     entityNames={entityNames}
                     onDelete={handleDeleteLink}
@@ -196,9 +196,9 @@ export default function LinksRelationshipsModal({
                     </div>
                   ) : (
                     typeLinks.map(link => (
-                      <LinkCard 
-                        key={link.id} 
-                        link={link} 
+                      <LinkCard
+                        key={link.id}
+                        link={link}
                         currentEntity={entity}
                         entityNames={entityNames}
                         onDelete={handleDeleteLink}
@@ -219,13 +219,13 @@ export default function LinksRelationshipsModal({
   );
 }
 
-function LinkCard({ 
-  link, 
+function LinkCard({
+  link,
   currentEntity,
   entityNames,
-  onDelete 
-}: { 
-  link: Link; 
+  onDelete
+}: {
+  link: Link;
   currentEntity: { type: EntityType; id: string };
   entityNames: Record<string, string>;
   onDelete: (linkId: string) => void;
@@ -274,9 +274,9 @@ function LinkCard({
               {getEntityDisplayName(currentEntity.type, currentEntity.id)}
             </div>
           </div>
-          
+
           <ArrowRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-          
+
           <div className="flex-1">
             <div className="text-sm font-medium">
               {otherEntity.type.toUpperCase()}

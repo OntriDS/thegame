@@ -65,7 +65,7 @@ export function ContractSubmodal({
     // Filtered Options
     // Filtered Options
     const principalCharacters = React.useMemo(() =>
-        availableCharacters.filter(c => c.roles.includes(CharacterRole.FOUNDER) || c.roles.includes(CharacterRole.PLAYER) || c.roles.includes(CharacterRole.ADMIN)),
+        availableCharacters.filter(c => c.roles.includes(CharacterRole.PLAYER)),
         [availableCharacters]);
 
     const principalBusinesses = React.useMemo(() =>
@@ -303,7 +303,7 @@ export function ContractSubmodal({
         <Dialog open={open} onOpenChange={(val) => !val && !isSaving && onClose()}>
             <DialogContent
                 className="sm:max-w-[700px] h-[700px] flex flex-col p-0 gap-0 overflow-hidden"
-                style={{ zIndex: getInteractiveSubModalZIndex() }}
+                zIndexLayer="SUB_MODALS"
             >
                 {/* HEADER */}
                 <div className="px-6 py-4 border-b flex justify-between items-center bg-background">

@@ -102,7 +102,7 @@ export default function ArchiveCollectionConfirmationModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className="sm:max-w-lg"
-        style={{ zIndex: Z_INDEX_LAYERS.CRITICAL }}
+        zIndexLayer="CRITICAL"
       >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
