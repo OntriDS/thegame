@@ -17,6 +17,7 @@ interface PartnershipsManagerProps {
     sites: Site[]; // Kept for consistency if needed, though unused maybe?
     onCreateContract: (contract: Contract) => void;
     onUpdateContract: (contract: Contract) => void;
+    onDeleteContract: (contractIds: string[]) => void;
 }
 
 export function PartnershipsManager({
@@ -25,7 +26,8 @@ export function PartnershipsManager({
     characters = [],
     sites = [],
     onCreateContract,
-    onUpdateContract
+    onUpdateContract,
+    onDeleteContract
 }: PartnershipsManagerProps) {
     const [isContractModalOpen, setIsContractModalOpen] = useState(false);
     const [isPartnershipModalOpen, setIsPartnershipModalOpen] = useState(false);
@@ -113,6 +115,12 @@ export function PartnershipsManager({
                         onCreateContract(contract);
                     }
                     setIsContractModalOpen(false);
+                }}
+                onDelete={(id) => {
+                    if (id) {
+                        onDeleteContract([id]);
+                        setIsContractModalOpen(false);
+                    }
                 }}
                 initialData={selectedContract}
                 availableCharacters={characters}
