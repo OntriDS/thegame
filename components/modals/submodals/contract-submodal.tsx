@@ -214,11 +214,29 @@ export function ContractSubmodal({
             // If editing, usually link exists.
 
             if (!initialData) { // New Contract Flow
+                // Determine the target Character ID for the Link and Role
+                let targetCharacterId = finalCounterpartyId;
+
+                // If we selected a Business, we need to find the human behind it
+                if (selectedEntityType === 'business' || counterpartyEntity?.type === 'business') {
+                    const selectedBus = availableBusinesses.find(b => b.id === finalCounterpartyId);
+                    if (selectedBus && selectedBus.linkedCharacterId) {
+                        targetCharacterId = selectedBus.linkedCharacterId;
+                    } else {
+                        // Fallback or warning?
+                        // User said "if its just a legal entity... thats different subject", 
+                        // so we assume for now if no link, we might not be able to link validation-wise 
+                        // or we link to the business ID if the validation allowed CONTRACT_BUSINESS (which we just disabled/commented out)
+                        // But for now, we follow the instruction: "business is linked only to a character"
+                        console.warn("Selected Business has no linked Character. Link might be invalid or role assignment skipped.");
+                    }
+                }
+
                 const link: Link = {
                     id: uuid(),
                     linkType: LinkType.CONTRACT_CHARACTER,
                     source: { type: EntityType.CONTRACT, id: contract.id },
-                    target: { type: EntityType.CHARACTER, id: finalCounterpartyId },
+                    target: { type: EntityType.CHARACTER, id: targetCharacterId },
                     createdAt: new Date(),
                     metadata: { role: selectedRole } // Helpful metadata
                 };
@@ -226,11 +244,11 @@ export function ContractSubmodal({
                 await ClientAPI.createLink(link);
 
                 // 3. Assign Role to Character (The "Badge")
-                // Only if target is a character
+                // Only if target is a character (which it should be now)
                 // We need to fetch the character first to append role safely
-                if (selectedEntityType === 'character' || counterpartyEntity?.type === 'character') {
+                if (targetCharacterId) {
                     try {
-                        const character = await ClientAPI.getCharacterById(finalCounterpartyId);
+                        const character = await ClientAPI.getCharacterById(targetCharacterId);
                         if (character) {
                             const currentRoles = character.roles || [];
                             // Add role if missing

@@ -294,7 +294,7 @@ async function checkReverseDuplicate(
     [LinkType.ACCOUNT_CHARACTER]: null,
     [LinkType.CHARACTER_ACCOUNT]: null,
     [LinkType.CHARACTER_BUSINESS]: null,
-    [LinkType.CONTRACT_CHARACTER]: null
+    [LinkType.CONTRACT_CHARACTER]: null,
   };
 
   const canonicalType = canonicalPairs[linkType];
