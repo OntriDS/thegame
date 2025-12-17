@@ -136,81 +136,97 @@ export function PartnershipSubmodal({ // Keeping filename export for compatibili
 
     const handleCreate = async () => {
         if (!targetEntityId) return;
-        setIsCreating(true);
 
-        try {
-            const targetCharacter = characters.find(c => c.id === targetEntityId);
-            const targetBusiness = businesses.find(b => b.id === targetEntityId);
-            const targetName = selectedEntityType === 'character' ? targetCharacter?.name : targetBusiness?.name;
+        // --- 1. INVESTOR Workflow (Immediate) ---
+        if (selectedRole === 'investor') {
+            setIsCreating(true);
+            try {
+                const targetCharacter = characters.find(c => c.id === targetEntityId);
+                const targetBusiness = businesses.find(b => b.id === targetEntityId);
+                const targetName = selectedEntityType === 'character' ? targetCharacter?.name : targetBusiness?.name;
 
-            if (!targetName) throw new Error('Target entity not found');
+                if (!targetCharacter) return; // Investors must be characters for now? Or businesses too? Assuming Char based on original code.
 
-            // 1. Update Character Roles (if it's a character)
-            if (selectedEntityType === 'character' && targetCharacter) {
+                // A. Create Financial Record
+                const financialRecord = {
+                    id: crypto.randomUUID(),
+                    name: `Investment from ${targetName}`,
+                    description: `Initial investment injection from ${targetName}`,
+                    type: 'company' as const,
+                    station: 'Investment' as any,
+                    status: FinancialStatus.DONE,
+                    revenue: usdAmount,
+                    cost: 0,
+                    jungleCoins: jAmount,
+                    netCashflow: usdAmount,
+                    jungleCoinsValue: jAmount * DEFAULT_CURRENCY_EXCHANGE_RATES.j$ToUSD,
+                    year: new Date().getFullYear(),
+                    month: new Date().getMonth() + 1,
+                    createdAt: new Date(),
+                    updatedAt: new Date(),
+                    links: [] as Link[],
+                    isCollected: false
+                } as unknown as FinancialRecord;
+
+                const savedRecord = await ClientAPI.upsertFinancialRecord(financialRecord);
+
+                // B. Create Link (FINREC_CHARACTER)
+                const link: Link = {
+                    id: crypto.randomUUID(),
+                    linkType: LinkType.FINREC_CHARACTER,
+                    source: { type: EntityType.FINANCIAL, id: savedRecord.id },
+                    target: { type: EntityType.CHARACTER, id: targetCharacter.id },
+                    createdAt: new Date()
+                };
+                await ClientAPI.createLink(link);
+
+                // C. Assign 'INVESTOR' Role immediately
                 const updatedRoles = [...(targetCharacter.roles || [])];
-                if (!updatedRoles.includes(selectedRole as CharacterRole)) {
-                    updatedRoles.push(selectedRole as CharacterRole);
+                if (!updatedRoles.includes(CharacterRole.INVESTOR)) {
+                    updatedRoles.push(CharacterRole.INVESTOR);
                 }
 
-                // If Investor, handle Financials
-                if (selectedRole === 'investor') {
-                    // 2. Create Financial Record
-                    const financialRecord = {
-                        id: crypto.randomUUID(),
-                        name: `Investment from ${targetName}`,
-                        description: `Initial investment injection from ${targetName}`,
-                        type: 'company' as const, // Company receives the investment
-                        station: 'Investment' as any, // Cast to any if strictly typed to enum
-                        // category removed to satisfy interface if missing
-                        status: FinancialStatus.DONE,
-                        revenue: usdAmount, // +$ Revenue
-                        cost: 0,
-                        jungleCoins: jAmount, // Track J$ issued
-                        netCashflow: usdAmount,
-                        jungleCoinsValue: jAmount * DEFAULT_CURRENCY_EXCHANGE_RATES.j$ToUSD,
-                        year: new Date().getFullYear(),
-                        month: new Date().getMonth() + 1,
-                        createdAt: new Date(),
-                        updatedAt: new Date(),
-                        links: [] as Link[],
-                        isCollected: false
-                    } as unknown as FinancialRecord; // Force cast to avoid strict type checks on missing optional/dynamic fields during rapid prototyping
-
-                    const savedRecord = await ClientAPI.upsertFinancialRecord(financialRecord);
-
-                    // 3. Create Link (FINREC_CHARACTER)
-                    const link: Link = {
-                        id: crypto.randomUUID(),
-                        linkType: LinkType.FINREC_CHARACTER,
-                        source: { type: EntityType.FINANCIAL, id: savedRecord.id },
-                        target: { type: EntityType.CHARACTER, id: targetCharacter.id },
-                        createdAt: new Date()
-                    };
-                    await ClientAPI.createLink(link);
-                }
-
-                // Save Character Updates
                 await ClientAPI.upsertCharacter({
                     ...targetCharacter,
                     roles: updatedRoles,
                     jungleCoins: (targetCharacter.jungleCoins || 0) + jAmount
                 });
+
+                // Refresh
+                if (window) {
+                    window.dispatchEvent(new Event('linksUpdated'));
+                    window.dispatchEvent(new Event('charactersUpdated'));
+                }
+                setViewMode('list');
+
+            } catch (error) {
+                console.error('Failed to create investor:', error);
+            } finally {
+                setIsCreating(false);
             }
-
-            // Trigger refresh events to update the UI
-            if (window) {
-                window.dispatchEvent(new Event('linksUpdated'));
-                window.dispatchEvent(new Event('charactersUpdated'));
-            }
-
-            setViewMode('list');
-
-        } catch (error) {
-            console.error('Failed to create relationship:', error);
-            // Show error toast ideally
-        } finally {
-            setIsCreating(false);
+            return;
         }
+
+        // --- 2. CONTRACT Workflow (Partner, Associate, Sponsor) ---
+        // Redirect to Contract Modal. Do NOT create anything yet.
+        const targetCharacter = characters.find(c => c.id === targetEntityId);
+        const targetBusiness = businesses.find(b => b.id === targetEntityId);
+
+        if (!targetCharacter && !targetBusiness) return;
+
+        setContractCounterparty({
+            id: targetEntityId,
+            name: (selectedEntityType === 'character' ? targetCharacter?.name : targetBusiness?.name) || 'Unknown',
+            type: selectedEntityType
+        });
+
+        // Reset contract data for new contract
+        setContractInitialData(undefined);
+
+        // Open the modal
+        setIsContractOpen(true);
+        // We stay in 'create' mode in this modal, but the contract modal is now overlaying.
+        // Once contract saves, it will close, and we can perhaps reset ViewMode to list.
     };
 
     // --- CONTRACT EDIT LOGIC ---
@@ -248,6 +264,57 @@ export function PartnershipSubmodal({ // Keeping filename export for compatibili
             console.error("Failed to load contract:", error);
         } finally {
             setIsLoadingContract(false);
+        }
+    };
+
+    // --- END RELATIONSHIP LOGIC ---
+    const handleEndRelationship = async (relationship: ActiveRelationship) => {
+        if (!confirm(`Are you sure you want to end the relationship with ${relationship.name}? This will remove related roles and links.`)) {
+            return;
+        }
+
+        try {
+            // 1. Find related Links
+            const links = await ClientAPI.getLinksFor({ type: relationship.entityType, id: relationship.entityId });
+
+            // 2. Identify Links to Delete
+            // We want to delete CONTRACT links and FINREC links (if Investor?)
+            // For now, focus on CONTRACT_CHARACTER links which define active business roles
+            const linksToDelete = links.filter(l =>
+                l.linkType === LinkType.CONTRACT_CHARACTER &&
+                l.target.id === relationship.entityId
+            );
+
+            // 3. Delete Links
+            for (const link of linksToDelete) {
+                await ClientAPI.removeLink(link.id);
+            }
+
+            // 4. Update Character Roles
+            // Remove business roles
+            const businessRoles = ['investor', 'partner', 'sponsor', 'associate'];
+
+            if (relationship.entityType === 'character') {
+                const character = await ClientAPI.getCharacterById(relationship.entityId);
+                if (character) {
+                    const currentRoles = character.roles || [];
+                    const updatedRoles = currentRoles.filter(r => !businessRoles.includes(r.toLowerCase()));
+
+                    if (updatedRoles.length !== currentRoles.length) {
+                        await ClientAPI.upsertCharacter({
+                            ...character,
+                            roles: updatedRoles
+                        });
+                    }
+                }
+            }
+
+            // Refresh
+            window.dispatchEvent(new Event('linksUpdated'));
+            window.dispatchEvent(new Event('charactersUpdated'));
+
+        } catch (error) {
+            console.error("Failed to end relationship:", error);
         }
     };
 
@@ -366,7 +433,13 @@ export function PartnershipSubmodal({ // Keeping filename export for compatibili
                                                                             >
                                                                                 <Edit className="h-4 w-4 text-muted-foreground hover:text-indigo-600" />
                                                                             </Button>
-                                                                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:text-red-600" title="End Relationship">
+                                                                            <Button
+                                                                                variant="ghost"
+                                                                                size="sm"
+                                                                                className="h-8 w-8 p-0 hover:text-red-600"
+                                                                                title="End Relationship"
+                                                                                onClick={() => handleEndRelationship(rel)}
+                                                                            >
                                                                                 <Trash2 className="h-4 w-4" />
                                                                             </Button>
                                                                         </div>
@@ -512,17 +585,22 @@ export function PartnershipSubmodal({ // Keeping filename export for compatibili
             <ContractSubmodal
                 open={isContractOpen}
                 onClose={() => setIsContractOpen(false)}
-                onSave={async (contract) => {
-                    // Refresh data if needed or handle internal updates
-                    await ClientAPI.upsertContract(contract);
-                    // Force refresh of lines?
-                    window.dispatchEvent(new Event('linksUpdated'));
-                }}
+
                 initialData={contractInitialData}
                 counterpartyEntity={contractCounterparty}
                 availableCharacters={characters}
                 availableBusinesses={businesses}
-                principalEntity={rootEntity} // Or 'Me'
+                principalEntity={rootEntity}
+                initialRole={selectedRole} // Pass the role we want to create
+                onSave={async (contract) => {
+                    await ClientAPI.upsertContract(contract);
+                    window.dispatchEvent(new Event('linksUpdated'));
+                    window.dispatchEvent(new Event('charactersUpdated'));
+
+                    if (viewMode === 'create') {
+                        setViewMode('list');
+                    }
+                }}
             />
         </>
     );

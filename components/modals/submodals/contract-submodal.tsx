@@ -29,6 +29,9 @@ interface ContractSubmodalProps {
     // For selection if counterparty is not provided
     availableCharacters?: Character[];
     availableBusinesses?: Business[];
+
+    // Workflow: Enforce a specific role?
+    initialRole?: string;
 }
 
 export function ContractSubmodal({
@@ -39,7 +42,8 @@ export function ContractSubmodal({
     principalEntity,
     counterpartyEntity,
     availableCharacters = [],
-    availableBusinesses = []
+    availableBusinesses = [],
+    initialRole
 }: ContractSubmodalProps) {
     const [name, setName] = useState('');
     const [status, setStatus] = useState<ContractStatus>(ContractStatus.DRAFT);
@@ -67,15 +71,21 @@ export function ContractSubmodal({
                 setNotes('');
                 setClauses([]);
 
+                if (initialRole) {
+                    setSelectedRole(initialRole);
+                }
+
                 // Set default counterparty if props provided
                 if (counterpartyEntity) {
                     setSelectedCounterpartyId(counterpartyEntity.id);
+                    // Also maintain entity type based on prop if provided, or derive it?
+                    setSelectedEntityType(counterpartyEntity.type);
                 } else {
                     setSelectedCounterpartyId('');
                 }
             }
         }
-    }, [open, initialData, counterpartyEntity]);
+    }, [open, initialData, counterpartyEntity, initialRole]);
 
     // Name Auto-Generator
     useEffect(() => {
@@ -170,6 +180,12 @@ export function ContractSubmodal({
             return;
         }
 
+        // Validation: Need a role if creating new (and not editing existing data that might already imply one)
+        if (!initialData && !selectedRole) {
+            console.error("Role is required");
+            return;
+        }
+
         setIsSaving(true);
 
         try {
@@ -188,33 +204,56 @@ export function ContractSubmodal({
                 links: initialData?.links || [],
             };
 
-            // 1. Save The Contract Entity
-            // Assuming ClientAPI has a generic upsert or we use a specialized one. 
-            // Since Contract is a BaseEntity, we might need a specific endpoint.
-            // For now, I will assume the Parent handles the actual Entity Persistence via onSave,
-            // BUT I will handle the Link Creation here as requested.
-
-            // NOTE: If ClientAPI doesn't have upsertContract, we rely on parent. 
-            // However, to create a link to it, it ideally should exist.
-            // Let's assume onSave does the heavy lifting of saving the contract to DB.
             onSave(contract);
 
             // 2. Create the Link (The "Bridge")
             // specific requirement: "Execute ClientAPI.createLink to bind Contract <-> Character"
             // We do this ONLY if it's a new contract or link doesn't exist.
 
-            // We need to wait for the contract to be "real" in some systems, but here we generate ID client-side.
-            const link: Link = {
-                id: uuid(),
-                linkType: LinkType.CONTRACT_CHARACTER,
-                source: { type: EntityType.CONTRACT, id: contract.id },
-                target: { type: EntityType.CHARACTER, id: finalCounterpartyId },
-                createdAt: new Date(),
-                metadata: { role: 'associate' } // Helpful metadata
-            };
+            // Check if link exists? For now, we assume simple creation if it's new.
+            // If editing, usually link exists.
 
-            await ClientAPI.createLink(link);
-            console.log("Contract saved and linked to Associate");
+            if (!initialData) { // New Contract Flow
+                const link: Link = {
+                    id: uuid(),
+                    linkType: LinkType.CONTRACT_CHARACTER,
+                    source: { type: EntityType.CONTRACT, id: contract.id },
+                    target: { type: EntityType.CHARACTER, id: finalCounterpartyId },
+                    createdAt: new Date(),
+                    metadata: { role: selectedRole } // Helpful metadata
+                };
+
+                await ClientAPI.createLink(link);
+
+                // 3. Assign Role to Character (The "Badge")
+                // Only if target is a character
+                // We need to fetch the character first to append role safely
+                if (selectedEntityType === 'character' || counterpartyEntity?.type === 'character') {
+                    try {
+                        const character = await ClientAPI.getCharacterById(finalCounterpartyId);
+                        if (character) {
+                            const currentRoles = character.roles || [];
+                            // Add role if missing
+                            // Use selectedRole which is state (e.g. 'associate', 'partner')
+                            // Cast to known role type?
+                            const newRole = selectedRole as any;
+
+                            if (!currentRoles.includes(newRole)) {
+                                const updatedRoles = [...currentRoles, newRole];
+                                await ClientAPI.upsertCharacter({
+                                    ...character,
+                                    roles: updatedRoles
+                                });
+                                console.log(`Assigned role ${newRole} to ${character.name}`);
+                            }
+                        }
+                    } catch (err) {
+                        console.error("Failed to update character role", err);
+                    }
+                }
+            }
+
+            console.log("Contract saved and linked");
             onClose();
 
         } catch (error) {
