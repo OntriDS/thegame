@@ -63,8 +63,14 @@ export function ContractSubmodal({
     const [isSaving, setIsSaving] = useState(false);
 
     // Filtered Options
-    const principalCharacters = availableCharacters.filter(c => c.roles.includes(CharacterRole.FOUNDER) || c.roles.includes(CharacterRole.PLAYER) || c.roles.includes(CharacterRole.ADMIN));
-    const principalBusinesses = availableBusinesses.filter(b => b.linkedCharacterId === principalCharacterId);
+    // Filtered Options
+    const principalCharacters = React.useMemo(() =>
+        availableCharacters.filter(c => c.roles.includes(CharacterRole.FOUNDER) || c.roles.includes(CharacterRole.PLAYER) || c.roles.includes(CharacterRole.ADMIN)),
+        [availableCharacters]);
+
+    const principalBusinesses = React.useMemo(() =>
+        availableBusinesses.filter(b => b.linkedCharacterId === principalCharacterId),
+        [availableBusinesses, principalCharacterId]);
 
     // Initial Load Effect
     useEffect(() => {
