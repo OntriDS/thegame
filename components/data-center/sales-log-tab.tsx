@@ -58,9 +58,8 @@ export function SalesLogTab({ salesLog, onReload, isReloading }: SalesLogTabProp
     // Use different icons for different sale types
     switch (normalized) {
       case SaleType.DIRECT: return <DollarSign className="h-4 w-4 text-muted-foreground" />;
-      case SaleType.FERIA: return <Calendar className="h-4 w-4 text-muted-foreground" />;
-      case SaleType.BUNDLE_SALE: return <ShoppingCart className="h-4 w-4 text-muted-foreground" />;
-      case SaleType.CONSIGNMENT: return <Package className="h-4 w-4 text-muted-foreground" />;
+      case SaleType.BOOTH: return <Calendar className="h-4 w-4 text-muted-foreground" />;
+      case SaleType.NETWORK: return <ShoppingCart className="h-4 w-4 text-muted-foreground" />;
       case SaleType.ONLINE: return <DollarSign className="h-4 w-4 text-muted-foreground" />;
       case SaleType.NFT: return <DollarSign className="h-4 w-4 text-muted-foreground" />;
       default: return <ShoppingCart className="h-4 w-4 text-muted-foreground" />;
