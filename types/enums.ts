@@ -88,6 +88,7 @@ export enum PhysicalBusinessType {
   WORKSHOP = 'Workshop',                // Production sites for creating items
   STORAGE = 'Storage',                // Warehouse sites (Home, Feria Box...)
   PROVIDER = 'Provider',                // Provider sites (Colono, Iguana Verde, Art Depot...)
+  LIVING_SPACE = 'Living space',        // Living sites (Rents for Living Space...)
 }
 
 /** Cloud Digital Types */
@@ -129,6 +130,7 @@ export const SITE_CATEGORIES = {
     PhysicalBusinessType.WORKSHOP,
     PhysicalBusinessType.STORAGE,
     PhysicalBusinessType.PROVIDER,
+    PhysicalBusinessType.LIVING_SPACE,
   ],
   DIGITAL: [
     DigitalSiteType.REPOSITORY,
