@@ -79,14 +79,15 @@ export const LOCATION_HIERARCHY = LOCATION_STRUCTURE;
 
 /** Physical Site Business Types */
 export enum PhysicalBusinessType {
-  STORAGE = 'storage',                // Warehouse sites (Home, Feria Box...)
-  CONSIGNMENT = 'consignment',            // Items left to sell (Smoking Lounge, Tagua...)
-  SELLING_POINT = 'selling point',          // Stores, Ferias, Festivals that buy at discount (El Hornito, Eco Feria, Envision...)
-  TEACHING_SPACE = 'teaching space',         // Teaching sites (Jungle Academy...)
+  STORE = 'Store',            // Items left to sell (Smoking Lounge, Tagua...)
+  SELLING_POINT = 'Selling point',          // Stores, Ferias, Festivals that buy at discount (El Hornito, Eco Feria, Envision...)
+  TEACHING_SPACE = 'Teaching space',         // Teaching sites (Jungle Academy...)
   HQ = 'HQ',                     // HQ sites (Home, Feria Box...)
-  ART_GALLERY = 'art gallery',            // Gallery sites (Gallery 1084...)
-  DESIGN_SPACE = 'design space',           // Design hub sites (Design Hub...)
-  WORKSHOP = 'workshop'                // Production sites for creating items
+  ART_GALLERY = 'Art gallery',            // Gallery sites (Gallery 1084...)
+  DESIGN_SPACE = 'Design space',           // Design hub sites (Design Hub...)
+  WORKSHOP = 'Workshop',                // Production sites for creating items
+  STORAGE = 'Storage',                // Warehouse sites (Home, Feria Box...)
+  PROVIDER = 'Provider',                // Provider sites (Colono, Iguana Verde, Art Depot...)
 }
 
 /** Cloud Digital Types */
@@ -119,14 +120,15 @@ export enum SiteStatus {
 /** Site categories for UI organization and SearchableSelect grouping */
 export const SITE_CATEGORIES = {
   PHYSICAL: [
-    PhysicalBusinessType.STORAGE,
-    PhysicalBusinessType.CONSIGNMENT,
+    PhysicalBusinessType.STORE,
     PhysicalBusinessType.SELLING_POINT,
     PhysicalBusinessType.TEACHING_SPACE,
     PhysicalBusinessType.HQ,
     PhysicalBusinessType.ART_GALLERY,
     PhysicalBusinessType.DESIGN_SPACE,
-    PhysicalBusinessType.WORKSHOP
+    PhysicalBusinessType.WORKSHOP,
+    PhysicalBusinessType.STORAGE,
+    PhysicalBusinessType.PROVIDER,
   ],
   DIGITAL: [
     DigitalSiteType.REPOSITORY,
