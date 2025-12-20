@@ -104,7 +104,7 @@ export default function BoothSalesView({
     const [showItemPicker, setShowItemPicker] = useState(false);
 
     // Financials
-    const [boothCost, setBoothCost] = useState(30000); // Default assumption
+    const [boothCost, setBoothCost] = useState(0); // Default to 0 as requested
     const exchangeRate = DEFAULT_CURRENCY_EXCHANGE_RATES.colonesToUsd; // 500
 
     // State for Principal (Me)
@@ -116,10 +116,11 @@ export default function BoothSalesView({
 
     // Associate Quick Entry State (formerly Partner)
     const [associateEntries, setAssociateEntries] = useState<AssociateQuickEntry[]>([]);
+    const [viewMode, setViewMode] = useState<'Associate' | 'Partner'>('Associate');
 
     // Quick Entry Form State
     const [quickAmount, setQuickAmount] = useState<string>('');
-    const [quickDesc, setQuickDesc] = useState<string>('');
+    // const [quickDesc, setQuickDesc] = useState<string>(''); // Removed as requested
     const [quickCat, setQuickCat] = useState<string>('');
 
     // Load Defaults (One-time) - Mocking "My Defaults"
@@ -333,7 +334,7 @@ export default function BoothSalesView({
 
         const newEntry: AssociateQuickEntry = {
             id: uuid(),
-            description: quickDesc,
+            description: '', // Description removed from UI
             amount: amount,
             category: quickCat,
             associateId: selectedAssociateId
@@ -341,7 +342,7 @@ export default function BoothSalesView({
 
         setAssociateEntries([...associateEntries, newEntry]);
         setQuickAmount('');
-        setQuickDesc('');
+        // setQuickDesc('');
         setQuickCat('');
     };
 
@@ -397,9 +398,6 @@ export default function BoothSalesView({
                     </div>
                     <div>
                         <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 whitespace-nowrap">Booth Sales</h2>
-                        <div className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold flex items-center gap-1">
-                            <Network className="h-3 w-3" /> Associate System V1.0
-                        </div>
                     </div>
                 </div>
 
@@ -468,7 +466,7 @@ export default function BoothSalesView({
                                         value={selectedContractId_Principal}
                                         onValueChange={setSelectedContractId_Principal}
                                         placeholder="Select Contract (Optional)"
-                                        className="h-8 text-xs bg-slate-800 border-indigo-500/30"
+                                        className="h-8 text-xs bg-slate-800 border-indigo-500/30 max-w-[200px] truncate"
                                     />
                                 </div>
 
@@ -505,44 +503,66 @@ export default function BoothSalesView({
                             <CardContent className="p-4 space-y-4">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
-                                        <h3 className="text-lg font-semibold flex items-center text-pink-300">
-                                            <User className="h-5 w-5 mr-2" />
-                                            Partner
-                                        </h3>
-                                        {/* Partner Selector */}
+                                        <div className="flex bg-slate-900 rounded-md p-0.5 border border-slate-700">
+                                            <button
+                                                onClick={() => setViewMode('Associate')}
+                                                className={`text-[10px] px-2 py-1 rounded-sm transition-colors ${viewMode === 'Associate' ? 'bg-pink-600 text-white font-medium' : 'text-slate-400 hover:text-slate-300'}`}
+                                            >
+                                                Associate
+                                            </button>
+                                            <button
+                                                onClick={() => setViewMode('Partner')}
+                                                className={`text-[10px] px-2 py-1 rounded-sm transition-colors ${viewMode === 'Partner' ? 'bg-pink-600 text-white font-medium' : 'text-slate-400 hover:text-slate-300'}`}
+                                            >
+                                                Partner
+                                            </button>
+                                        </div>
+
+                                        {/* Simplified Partner/Associate Selector */}
                                         <div className="w-[180px]">
-                                            <SearchableSelect
-                                                options={characters.map(c => ({ value: c.id, label: c.name }))}
+                                            <select
                                                 value={selectedAssociateId}
-                                                onValueChange={setSelectedAssociateId}
-                                                placeholder="Select Partner..."
-                                                className="h-8 text-xs"
-                                            />
+                                                onChange={(e) => setSelectedAssociateId(e.target.value)}
+                                                className="h-8 w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-1 text-xs shadow-sm focus:outline-none focus:ring-1 focus:ring-pink-500 text-slate-200"
+                                            >
+                                                <option value="" disabled>Select {viewMode}...</option>
+                                                {characters
+                                                    .filter(c => {
+                                                        // Filter logic: Show all for now, but ideally filter by role
+                                                        // For simplicity and robustness, showing basic list sorted by name
+                                                        return true;
+                                                    })
+                                                    .map(c => (
+                                                        <option key={c.id} value={c.id}>
+                                                            {c.name}
+                                                        </option>
+                                                    ))}
+                                            </select>
                                         </div>
                                     </div>
                                     <Badge variant="secondary" className="bg-pink-500/20 text-pink-300 hover:bg-pink-500/30">{associateEntries.length} Entries</Badge>
                                 </div>
 
-                                {/* Contract Selector for Partner */}
+                                {/* Contract Selector for Partner - With overflow fix */}
                                 <div className="flex items-center gap-2 max-w-sm">
                                     <Label className="text-xs text-muted-foreground whitespace-nowrap">Applicable Contract:</Label>
                                     <SearchableSelect
                                         options={contracts.map(c => ({ value: c.id, label: c.name }))}
                                         value={selectedContractId_Associate}
                                         onValueChange={setSelectedContractId_Associate}
-                                        placeholder="Select Partner Contract..."
-                                        className="h-8 text-xs bg-slate-800 border-pink-500/30"
+                                        placeholder={`Select ${viewMode} Contract...`}
+                                        className="h-8 text-xs bg-slate-800 border-pink-500/30 max-w-[200px] truncate"
                                     />
                                 </div>
 
-                                {/* Quick Entry Form */}
+                                {/* Quick Entry Form - Simplified */}
                                 <div className={`bg-slate-900/50 p-4 rounded-lg border border-slate-800 space-y-3 ${!selectedAssociateId ? 'opacity-50 pointer-events-none' : ''}`}>
                                     <div className="flex gap-2">
                                         <NumericInput
                                             value={parseFloat(quickAmount) || 0}
                                             onChange={(val) => setQuickAmount(val.toString())}
                                             placeholder="Amount (₡)"
-                                            className="flex-1 bg-slate-950 border-slate-700"
+                                            className="w-32 bg-slate-950 border-slate-700"
                                         />
                                         <Input
                                             value={quickCat}
@@ -550,17 +570,9 @@ export default function BoothSalesView({
                                             placeholder="Category (e.g. Jewelry)"
                                             className="flex-1 bg-slate-950 border-slate-700"
                                         />
-                                    </div>
-                                    <div className="flex gap-2">
-                                        <Input
-                                            value={quickDesc}
-                                            onChange={(e) => setQuickDesc(e.target.value)}
-                                            placeholder="Description..."
-                                            className="flex-1 bg-slate-950 border-slate-700"
-                                        />
                                         <Button
                                             onClick={handleAddAssociateEntry}
-                                            className="bg-pink-600 hover:bg-pink-700 text-white"
+                                            className="bg-pink-600 hover:bg-pink-700 text-white shrink-0"
                                             disabled={!selectedAssociateId || !quickAmount}
                                         >
                                             Add
@@ -574,7 +586,6 @@ export default function BoothSalesView({
                                         <div key={entry.id} className="flex justify-between items-center text-sm p-2 bg-slate-800 rounded border border-slate-700/50">
                                             <div className="flex flex-col">
                                                 <span className="font-medium text-pink-200">{entry.category}</span>
-                                                <span className="text-xs text-muted-foreground">{entry.description}</span>
                                             </div>
                                             <div className="flex items-center gap-4">
                                                 <span className="font-mono text-pink-300">₡{entry.amount.toLocaleString()}</span>
@@ -722,6 +733,6 @@ export default function BoothSalesView({
                 }}
                 defaultSiteId={siteId}
             />
-        </div>
+        </div >
     );
 }
