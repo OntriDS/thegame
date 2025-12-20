@@ -1,8 +1,8 @@
 // lib/utils/searchable-select-utils.ts
 // Universal utilities for SearchableSelect category grouping
 
-import { 
-  SITE_CATEGORIES, 
+import {
+  SITE_CATEGORIES,
   STATION_CATEGORIES,
   TASK_CATEGORIES,
   SKILLS_CATEGORIES,
@@ -30,7 +30,7 @@ function getItemTypeSortIndex(type: string): number {
  * @returns The category name or 'Other' if not found
  */
 export function getCategoryForValue(
-  value: string, 
+  value: string,
   categories: Record<string, readonly string[]>
 ): string {
   for (const [category, types] of Object.entries(categories)) {
@@ -100,10 +100,10 @@ export function createOptionsWithCategories<T extends string>(
   label: string;
   category: string;
 }> {
-  const values = Array.isArray(enumValues) 
-    ? enumValues 
+  const values = Array.isArray(enumValues)
+    ? enumValues
     : Object.values(enumValues);
-    
+
   return values.map(value => ({
     value: value as string,
     label: getLabelFunction ? getLabelFunction(value) : (value as string),
@@ -153,10 +153,10 @@ export function createTaskTypeOptionsWithCategories() {
 export function createSkillsOptionsWithCategories() {
   const allSkills = [
     ...Object.values(IntelectualFunction),
-    ...Object.values(Attribute), 
+    ...Object.values(Attribute),
     ...Object.values(Skill)
   ] as string[];
-  
+
   return createOptionsWithCategories(
     allSkills,
     getCategoryForSkill
@@ -232,13 +232,13 @@ export function createTaskParentOptions(tasks: any[], currentTaskId?: string, is
     label: string;
     category: string;
   }> = [];
-  
+
   // Handle case where tasks array is not provided or empty
   if (!tasks || tasks.length === 0) {
     // Return empty array - SearchableSelect will auto-add "None" option
     return [];
   }
-  
+
   // Filter out current task and add remaining tasks with their proper category
   let availableTasks = tasks.filter(task => task && task.id && task.id !== currentTaskId);
 
@@ -297,7 +297,7 @@ export function createTaskParentOptions(tasks: any[], currentTaskId?: string, is
       return canBeParent(task.type, currentTaskType);
     });
   }
-  
+
   // Group tasks by their specific type (not broader categories)
   const groupedTasks: Record<string, any[]> = {};
 
@@ -308,7 +308,7 @@ export function createTaskParentOptions(tasks: any[], currentTaskId?: string, is
     }
     groupedTasks[taskType].push(task);
   }
-  
+
   // Add tasks in specific order: Mission types first, then Recurrent types
   const taskTypeOrder = ['Mission', 'Milestone', 'Goal', 'Assignment', 'Recurrent Group', 'Recurrent Template', 'Recurrent Instance'];
   const addedTaskIds = new Set<string>(); // Track added tasks to prevent duplicates
@@ -333,7 +333,7 @@ export function createTaskParentOptions(tasks: any[], currentTaskId?: string, is
       });
     }
   }
-  
+
   // SearchableSelect will automatically add "None" option at the bottom
   return options;
 }
@@ -349,7 +349,7 @@ export function createCharacterOptions(characters: any[]) {
     label: string;
     category: string;
   }> = [];
-  
+
   for (const character of characters) {
     const primaryRole = character.roles?.[0] || 'OTHER';
     options.push({
@@ -358,7 +358,7 @@ export function createCharacterOptions(characters: any[]) {
       category: primaryRole.toUpperCase()
     });
   }
-  
+
   return options;
 }
 
@@ -369,12 +369,12 @@ export function createCharacterOptions(characters: any[]) {
  */
 export function getCategoryForCharacterRole(roleValue: string): string {
   const role = roleValue.toLowerCase();
-  
+
   // Check if it's a special role
   if (['founder', 'player', 'padawan', 'team', 'family', 'friend', 'investor'].includes(role)) {
     return 'SPECIAL';
   }
-  
+
   // Default to regular role
   return 'REGULAR';
 }
@@ -391,11 +391,11 @@ export function createItemTypeSubTypeOptions() {
     label: string;
     category: string;
   }> = [];
-  
-  
+
+
   for (const itemType of Object.values(ItemType) as string[]) {
     const subtypes = getSubTypesForItemType(itemType as ItemType);
-    
+
     if (subtypes.length > 0) {
       // Add each subtype as an option with ItemType as category
       for (const subtype of subtypes) {
@@ -414,7 +414,7 @@ export function createItemTypeSubTypeOptions() {
       });
     }
   }
-  
+
   return options;
 }
 
@@ -456,8 +456,8 @@ export function createSiteTypeOptionsWithCategories() {
  * @returns Array of item options with ItemType grouping
  */
 export function createItemOptions(
-  items: Item[], 
-  showPrice: boolean = true, 
+  items: Item[],
+  showPrice: boolean = true,
   showQuantity: boolean = true,
   sites: Site[] = []
 ) {
@@ -467,20 +467,20 @@ export function createItemOptions(
     category: string;
   }> = [];
   const siteNameMap = new Map(sites.map(site => [site.id, site.name]));
-  
+
   const trimWithEllipsis = (value: string, maxLength: number) => {
     if (!value) return value;
     return value.length > maxLength ? `${value.slice(0, maxLength - 2)}.. ` : value;
   };
 
   for (const item of items) {
-    const trimmedName = trimWithEllipsis(item.name, 15);
-    let label = trimmedName;
-    
+    // Used to trim, now full name:
+    let label = item.name;
+
     if (showPrice && item.price !== undefined) {
       label += `• $${item.price} • `;
     }
-    
+
     if (showQuantity) {
       const ClientAPI = require('@/lib/client-api').ClientAPI;
       const qty = ClientAPI.getItemTotalQuantity(item.id, items);
@@ -500,7 +500,7 @@ export function createItemOptions(
         label += ` ${stockSummary}`;
       }
     }
-    
+
     options.push({
       value: item.id,
       label: label,
@@ -513,7 +513,7 @@ export function createItemOptions(
     if (typeComparison !== 0) return typeComparison;
     return a.label.localeCompare(b.label);
   });
-  
+
   return options;
 }
 
@@ -525,7 +525,7 @@ export function createItemOptions(
  * @returns Array of item options with site-specific quantities grouped by ItemType
  */
 export function createItemOptionsForSite(
-  items: Item[], 
+  items: Item[],
   siteId: string,
   showPrice: boolean = true,
   sites: Site[] = []
@@ -535,20 +535,20 @@ export function createItemOptionsForSite(
     label: string;
     category: string;
   }> = [];
-  
+
   const ClientAPI = require('@/lib/client-api').ClientAPI;
   const siteNameMap = new Map(sites.map(site => [site.id, site.name]));
   const trimWithEllipsis = (value: string, maxLength: number) => {
     if (!value) return value;
     return value.length > maxLength ? `${value.slice(0, maxLength - 2)}..` : value;
   };
-  
+
   for (const item of items) {
     const qtyAtSite = siteId ? ClientAPI.getQuantityAtSite(item, siteId) : 0;
-    
-    const trimmedName = trimWithEllipsis(item.name, 15);
-    let label = trimmedName;
-    
+
+    // Used to trim, now full name:
+    let label = item.name;
+
     if (showPrice && item.price !== undefined) {
       label += ` $${item.price}`;
     }
@@ -570,7 +570,7 @@ export function createItemOptionsForSite(
         label += ` ${otherSummary}`;
       }
     }
-    
+
     options.push({
       value: item.id,
       label: label,
@@ -583,7 +583,7 @@ export function createItemOptionsForSite(
     if (typeComparison !== 0) return typeComparison;
     return a.label.localeCompare(b.label);
   });
-  
+
   return options;
 }
 

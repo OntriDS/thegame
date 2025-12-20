@@ -23,7 +23,8 @@ import {
     ContractStatus,
     ContractClauseType,
     SaleType,
-    SaleStatus
+    SaleStatus,
+    CharacterRole
 } from '@/types/enums';
 import { Sale, SaleLine, Item, Site, Character, ServiceLine, ItemSaleLine, BundleSaleLine, Business, Contract } from '@/types/entities';
 import { v4 as uuid } from 'uuid';
@@ -594,8 +595,9 @@ export default function BoothSalesView({
                                                 <option value="" disabled>Select {viewMode}...</option>
                                                 {characters
                                                     .filter(c => {
-                                                        // Filter logic could go here
-                                                        return true;
+                                                        if (viewMode === 'Associate') return c.roles.includes(CharacterRole.ASSOCIATE);
+                                                        if (viewMode === 'Partner') return c.roles.includes(CharacterRole.PARTNER);
+                                                        return false;
                                                     })
                                                     .map(c => (
                                                         <option key={c.id} value={c.id}>
@@ -820,6 +822,7 @@ export default function BoothSalesView({
                     setShowItemPicker(false);
                 }}
                 defaultSiteId={siteId}
+                exchangeRate={exchangeRate}
             />
         </div >
     );

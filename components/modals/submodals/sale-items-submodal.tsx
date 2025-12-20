@@ -20,6 +20,8 @@ export interface SaleItemLine {
   quantity: number;
   unitPrice: number;
   total: number;
+  usdExpression?: string; // New: Raw expression for USD input
+  crcExpression?: string; // New: Raw expression for CRC input
 }
 
 interface SaleItemsSubModalProps {
@@ -28,6 +30,7 @@ interface SaleItemsSubModalProps {
   onSave: (items: SaleItemLine[]) => void;
   initialItems?: SaleItemLine[];
   defaultSiteId?: string;
+  exchangeRate?: number; // New: CRC to USD rate
 }
 
 export default function SaleItemsSubModal({
@@ -35,7 +38,8 @@ export default function SaleItemsSubModal({
   onOpenChange,
   onSave,
   initialItems = [],
-  defaultSiteId = ''
+  defaultSiteId = '',
+  exchangeRate = 500 // Default fallback
 }: SaleItemsSubModalProps) {
   const [items, setItems] = useState<Item[]>([]);
   const [lines, setLines] = useState<SaleItemLine[]>([]);
@@ -43,6 +47,30 @@ export default function SaleItemsSubModal({
   const [selectedSiteId, setSelectedSiteId] = useState<string>(defaultSiteId);
   const [isSaving, setIsSaving] = useState(false);
   const hasInitializedRef = useRef(false);
+
+  // Helper: Safe Math Evaluation
+  const evaluateMathExpression = (expression: string): number => {
+    if (!expression) return 0;
+    try {
+      // 1. Sanitize: Allow digits, operators (+ - * / .), parentheses, and k/K
+      const sanitized = expression.replace(/[^0-9+\-*/.()kK]/g, '');
+
+      // 2. Handle 'k' or 'K' -> '*1000'
+      // We replace k/K with *1000, but we need to be careful about context.
+      // E.g. "1k" -> "1*1000". "1.5K" -> "1.5*1000".
+      // Regex looks for a number followed immediately by K.
+      const withMultipliers = sanitized.replace(/(\d*\.?\d+)[kK]/g, '$1*1000');
+
+      // 3. Evaluate safely
+      // using Function constructor is closer to eval but we sanitized characters.
+      // We only allow math chars.
+      // Returns 0 if calculation fails or result is NaN
+      const result = new Function('return ' + withMultipliers)();
+      return isNaN(result) ? 0 : result;
+    } catch (e) {
+      return 0;
+    }
+  };
 
   const loadData = async () => {
     try {
@@ -64,7 +92,9 @@ export default function SaleItemsSubModal({
     siteId: selectedSiteId,
     quantity: 1,
     unitPrice: 0,
-    total: 0
+    total: 0,
+    usdExpression: '',
+    crcExpression: ''
   }), [selectedSiteId]);
 
   useEffect(() => {
@@ -78,7 +108,6 @@ export default function SaleItemsSubModal({
     if (!open || hasInitializedRef.current) {
       return;
     }
-
     const siteId = defaultSiteId || '';
     const initialLines =
       initialItems.length > 0 ? initialItems : [createEmptyLine()];
@@ -87,24 +116,20 @@ export default function SaleItemsSubModal({
       initialLines.map((line) => ({
         ...line,
         siteId: siteId || line.siteId || '',
+        usdExpression: '', // Initialize new fields if missing
+        crcExpression: ''
       }))
     );
-
     hasInitializedRef.current = true;
   }, [open, initialItems, defaultSiteId, createEmptyLine]);
 
   useEffect(() => {
-    if (!open) {
-      return;
-    }
+    if (!open) return;
     setSelectedSiteId(defaultSiteId || '');
   }, [defaultSiteId, open]);
 
   useEffect(() => {
-    if (!open) {
-      return;
-    }
-
+    if (!open) return;
     setLines((prev) =>
       prev.map((line) => ({
         ...line,
@@ -115,9 +140,9 @@ export default function SaleItemsSubModal({
 
   const getItemOptions = (lineId: string) => {
     if (selectedSiteId) {
-      return createItemOptionsForSite(items, selectedSiteId, true, sites);
+      return createItemOptionsForSite(items, selectedSiteId, false, sites);
     } else {
-      return createItemOptions(items, true, false, sites);
+      return createItemOptions(items, false, false, sites);
     }
   };
 
@@ -127,16 +152,17 @@ export default function SaleItemsSubModal({
 
     setLines(prev => prev.map(line => {
       if (line.id === lineId) {
-        const newLine = {
+        return {
           ...line,
           itemId: item.id,
           itemName: item.name,
           siteId: selectedSiteId,
           unitPrice: item.price || 0,
-          quantity: 1
+          quantity: 1, // Reset quantity on item change unless we keep it? User might want to keep inputs. Let's reset for safety.
+          total: (item.price || 0) * 1,
+          usdExpression: '',
+          crcExpression: ''
         };
-        newLine.total = newLine.quantity * newLine.unitPrice;
-        return newLine;
       }
       return line;
     }));
@@ -145,6 +171,9 @@ export default function SaleItemsSubModal({
   const handleQuantityChange = (lineId: string, quantity: number) => {
     setLines(prev => prev.map(line => {
       if (line.id === lineId) {
+        // If user manually changes quantity, we might want to clear expressions or keep them?
+        // User said "quantity autocalculates". If they override, it's fine.
+        // We won't clear expressions, just update total.
         const newLine = { ...line, quantity };
         newLine.total = newLine.quantity * newLine.unitPrice;
         return newLine;
@@ -153,16 +182,56 @@ export default function SaleItemsSubModal({
     }));
   };
 
+  // Re-calculate quantity based on current expressions and (potentially new) price
+  const recalculateQuantity = (currentLine: SaleItemLine, newPrice: number): number => {
+    if (newPrice === 0) return currentLine.quantity;
+    const usdVal = evaluateMathExpression(currentLine.usdExpression || '');
+    const crcVal = evaluateMathExpression(currentLine.crcExpression || '');
+
+    // Total Value in USD = USD + (CRC / ExchangeRate)
+    const totalValueUsd = usdVal + (crcVal / exchangeRate);
+
+    if (totalValueUsd === 0) return currentLine.quantity; // No expression input? Keep existing.
+
+    // Quantity = Total Value / Unit Price
+    // Rounding to nearest integer ?? Or 1 decimal? items usually integers.
+    // User example: "26 / 2 = 13". 
+    // Let's assume integer items for now but Math.round is safer than floor/ceil.
+    return Math.round(totalValueUsd / newPrice);
+  };
+
   const handlePriceChange = (lineId: string, unitPrice: number) => {
     setLines(prev => prev.map(line => {
       if (line.id === lineId) {
-        const newLine = { ...line, unitPrice };
-        newLine.total = newLine.quantity * newLine.unitPrice;
+        // If we have expressions, update quantity based on new price
+        let newQuantity = line.quantity;
+        if (line.usdExpression || line.crcExpression) {
+          newQuantity = recalculateQuantity(line, unitPrice);
+        }
+
+        const newLine = { ...line, unitPrice, quantity: newQuantity };
+        newLine.total = newQuantity * unitPrice;
         return newLine;
       }
       return line;
     }));
   };
+
+  // New Handler for Expressions
+  const handleExpressionChange = (lineId: string, field: 'usdExpression' | 'crcExpression', value: string) => {
+    setLines(prev => prev.map(line => {
+      if (line.id === lineId) {
+        const updatedLine = { ...line, [field]: value };
+        // Auto-calculate quantity
+        const newQuantity = recalculateQuantity(updatedLine, updatedLine.unitPrice);
+        updatedLine.quantity = newQuantity;
+        updatedLine.total = newQuantity * updatedLine.unitPrice;
+        return updatedLine;
+      }
+      return line;
+    }));
+  };
+
 
   const handleAddLine = () => {
     setLines(prev => [...prev, createEmptyLine()]);
@@ -172,25 +241,20 @@ export default function SaleItemsSubModal({
     setLines(prev => prev.filter(line => line.id !== lineId));
   };
 
-  const handleSave = async () => {
+  const handleSaveInternal = async () => {
     if (isSaving) return;
     setIsSaving(true);
-
     try {
-      // Filter out empty lines
       const validLines = lines.filter(line => line.itemId && line.quantity > 0);
-
       if (validLines.length === 0) {
         onSave(validLines);
         onOpenChange(false);
         return;
       }
-
       onSave(validLines);
       onOpenChange(false);
     } catch (error) {
       console.error('Failed to save sale item changes:', error);
-      alert('Failed to save items. Please try again.');
     } finally {
       setIsSaving(false);
     }
@@ -201,7 +265,7 @@ export default function SaleItemsSubModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent zIndexLayer={'SUB_MODALS'} className="w-full max-w-4xl max-h-[80vh]">
+      <DialogContent zIndexLayer={'SUB_MODALS'} className="w-full max-w-5xl max-h-[85vh]">
         <DialogHeader>
           <DialogTitle>Select Sale Items</DialogTitle>
         </DialogHeader>
@@ -210,26 +274,31 @@ export default function SaleItemsSubModal({
           {/* Items Table */}
           <div className="space-y-2">
             <div className="grid grid-cols-12 gap-2 text-xs font-semibold text-muted-foreground px-2">
-              <div className="col-span-5">Item</div>
-              <div className="col-span-2">Price</div>
-              <div className="col-span-2">Qty</div>
-              <div className="col-span-2">Total</div>
+              <div className="col-span-3">Item</div>
+              <div className="col-span-1">Price ($)</div>
+              <div className="col-span-2">Calc ($)</div>
+              <div className="col-span-2">Calc (₡)</div>
+              <div className="col-span-1">Qty</div>
+              <div className="col-span-2">Total ($)</div>
               <div className="col-span-1"></div>
             </div>
 
             {lines.map((line, index) => (
               <div key={line.id} className="grid grid-cols-12 gap-2 items-end">
-                <div className="col-span-5">
+                {/* Item Selector */}
+                <div className="col-span-3">
                   <SearchableSelect
                     value={line.itemId}
                     onValueChange={(value) => handleItemSelect(line.id, value)}
                     options={getItemOptions(line.id)}
                     autoGroupByCategory={true}
-                    placeholder="Select item..."
+                    placeholder="Item..."
                     className="h-8 text-sm"
                   />
                 </div>
-                <div className="col-span-2">
+
+                {/* Unit Price */}
+                <div className="col-span-1">
                   <NumericInput
                     value={line.unitPrice}
                     onChange={(value) => handlePriceChange(line.id, value)}
@@ -239,27 +308,56 @@ export default function SaleItemsSubModal({
                     className="h-8 text-sm"
                   />
                 </div>
+
+                {/* USD Calculator Input */}
                 <div className="col-span-2">
+                  <input
+                    type="text"
+                    value={line.usdExpression || ''}
+                    onChange={(e) => handleExpressionChange(line.id, 'usdExpression', e.target.value)}
+                    placeholder="2+5.."
+                    className="flex h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                  />
+                </div>
+
+                {/* CRC Calculator Input */}
+                <div className="col-span-2">
+                  <input
+                    type="text"
+                    value={line.crcExpression || ''}
+                    onChange={(e) => handleExpressionChange(line.id, 'crcExpression', e.target.value)}
+                    placeholder="1k+500.."
+                    className="flex h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 border-pink-500/20"
+                  />
+                  <div className="text-[9px] text-muted-foreground text-right pr-1">Rate: {exchangeRate}</div>
+                </div>
+
+                {/* Quantity (Auto-calc but editable) */}
+                <div className="col-span-1">
                   <NumericInput
                     value={line.quantity}
                     onChange={(value) => handleQuantityChange(line.id, value)}
                     min={1}
                     step={1}
                     placeholder="1"
-                    className="h-8 text-sm"
+                    className="h-8 text-sm font-bold bg-slate-50 dark:bg-slate-900"
                   />
                 </div>
+
+                {/* Total Line Price */}
                 <div className="col-span-2">
-                  <div className="h-8 text-sm bg-muted px-3 py-2 rounded-md border flex items-center">
-                    {line.total.toFixed(2)}
+                  <div className="h-8 text-sm bg-muted px-3 py-2 rounded-md border flex items-center font-mono">
+                    ${line.total.toFixed(2)}
                   </div>
                 </div>
+
+                {/* Actions */}
                 <div className="col-span-1">
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => handleRemoveLine(line.id)}
-                    className="h-8 w-8 p-0"
+                    className="h-8 w-8 p-0 text-red-400 hover:text-red-500 hover:bg-red-50"
                     disabled={lines.length === 1}
                   >
                     <Trash2 className="w-4 h-4" />
@@ -272,22 +370,22 @@ export default function SaleItemsSubModal({
               variant="outline"
               size="sm"
               onClick={handleAddLine}
-              className="w-full h-8 text-xs"
+              className="w-full h-8 text-xs dash-border"
             >
               <Plus className="w-4 h-4 mr-1" />
-              Add Item
+              Add Item Row
             </Button>
           </div>
 
-          {/* Totals */}
+          {/* Totals Summary */}
           <div className="flex items-center justify-end gap-6 pt-4 border-t">
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">Total Quantity:</span>
               <span className="text-lg font-bold">{totalQuantity}</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Total Price:</span>
-              <span className="text-lg font-bold">${totalPrice.toFixed(2)}</span>
+              <span className="text-sm text-muted-foreground">Grand Total:</span>
+              <span className="text-lg font-bold text-green-600">${totalPrice.toFixed(2)}</span>
             </div>
           </div>
         </div>
@@ -300,7 +398,7 @@ export default function SaleItemsSubModal({
             <Button variant="outline" onClick={() => onOpenChange(false)} className="h-8 text-xs">
               Cancel
             </Button>
-            <Button onClick={handleSave} className="h-8 text-xs" disabled={isSaving}>
+            <Button onClick={handleSaveInternal} className="h-8 text-xs" disabled={isSaving}>
               {isSaving ? 'Saving...' : 'Save Items'}
             </Button>
           </div>
