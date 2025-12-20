@@ -494,6 +494,7 @@ export interface SaleLineBase {
   description?: string;
   taxAmount?: number;
   discount?: Discount;     // line-level discount
+  metadata?: Record<string, any>; // component-specific details like math expressions
 }
 
 /** Precise item sale: reference exact inventory item */

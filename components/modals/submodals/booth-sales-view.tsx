@@ -144,6 +144,24 @@ export default function BoothSalesView({
         }
     }, [characters, selectedAssociateId]);
 
+    // Auto-select contract when Associate changes
+    useEffect(() => {
+        if (!selectedAssociateId) {
+            return;
+        }
+
+        const relevantContracts = contracts.filter(c =>
+            c.status === ContractStatus.ACTIVE &&
+            c.counterpartyBusinessId === selectedAssociateId
+        );
+
+        if (relevantContracts.length > 0) {
+            setSelectedContractId(relevantContracts[0].id);
+        } else {
+            setSelectedContractId('');
+        }
+    }, [selectedAssociateId, contracts]);
+
 
     // 2. Logic & Calculations (The Sales Distribution Engine)
     // ============================================================================
@@ -302,15 +320,19 @@ export default function BoothSalesView({
                     id: category,
                     label: category,
                     isAssociate: false,
-                    totalColones: total, // Assumption: Feria sales usually in Colones
-                    totalDollars: 0,
+                    totalColones: line.kind === 'bundle' ? total : 0, // Bundles in Colones (Assumption)
+                    totalDollars: line.kind === 'item' ? total : 0,   // Items in Dollars
                     totalBitcoin: 0,
                     totalCard: 0,
                     commissionAmount: 0,
                     ownerAmount: 0
                 };
             } else {
-                akilesRows[category].totalColones += total;
+                if (line.kind === 'item') {
+                    akilesRows[category].totalDollars += total;
+                } else {
+                    akilesRows[category].totalColones += total;
+                }
             }
         });
 
@@ -533,13 +555,12 @@ export default function BoothSalesView({
                                         <User className="h-5 w-5 mr-2" />
                                         My Inventory (Akiles)
                                     </h3>
-                                    <Badge variant="secondary" className="bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30">{myItems.length} Items</Badge>
-                                </div>
-
-                                {/* Add Items Button / Area */}
-                                <div className="p-4 border-2 border-dashed border-indigo-500/30 rounded-lg flex flex-col items-center justify-center text-muted-foreground hover:bg-slate-800/50 transition-colors cursor-pointer" onClick={() => setShowItemPicker(true)}>
-                                    <Plus className="h-6 w-6 mb-2" />
-                                    <span className="text-sm">Add Items from Inventory...</span>
+                                    <div className="flex items-center gap-2">
+                                        <Button size="sm" variant="outline" className="h-7 text-xs border-indigo-500/30 text-indigo-300 hover:bg-indigo-500/20" onClick={() => setShowItemPicker(true)}>
+                                            <Plus className="h-3 w-3 mr-1" /> Add
+                                        </Button>
+                                        <Badge variant="secondary" className="bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30">{myItems.length}</Badge>
+                                    </div>
                                 </div>
 
                                 {/* List of Added Items */}
@@ -548,12 +569,12 @@ export default function BoothSalesView({
                                         // Simple rendering for now
                                         const item = line.kind === 'item' ? items.find(i => i.id === (line as ItemSaleLine).itemId) : null;
                                         return (
-                                            <div key={line.lineId} className="flex justify-between items-center text-sm p-2 bg-slate-800 rounded border border-slate-700">
+                                            <div key={line.lineId} className="flex justify-between items-center text-sm p-2 bg-slate-800 rounded border border-slate-700 cursor-pointer hover:bg-slate-700 transition-colors group" onClick={() => setShowItemPicker(true)}>
                                                 <span className="truncate max-w-[150px]">{item ? item.name : 'Bundle'}</span>
                                                 <div className="flex items-center gap-4">
                                                     <span>{line.quantity}x</span>
-                                                    <span>₡{((line.unitPrice || 0) * (line.quantity || 0)).toLocaleString()}</span>
-                                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-red-400" onClick={() => handleRemoveLine(line.lineId)}>
+                                                    <span>${((line.unitPrice || 0) * (line.quantity || 0)).toLocaleString()}</span>
+                                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-red-400 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => { e.stopPropagation(); handleRemoveLine(line.lineId); }}>
                                                         <Trash2 className="h-3 w-3" />
                                                     </Button>
                                                 </div>
@@ -624,11 +645,7 @@ export default function BoothSalesView({
                                                     {contracts
                                                         .filter(c =>
                                                             c.status === ContractStatus.ACTIVE &&
-                                                            (c.counterpartyBusinessId === selectedAssociateId ||
-                                                                // Allow looser matching if exact ID match fails (e.g. if associating Character ID but contract uses Business ID)
-                                                                // For MVP, we assume User picks the Entity that matches the ID in the contract.
-                                                                // If not, they can always add logic to find the Business for the Character.
-                                                                c.counterpartyBusinessId === selectedAssociateId)
+                                                            c.counterpartyBusinessId === selectedAssociateId
                                                         )
                                                         .map(c => (
                                                             <option key={c.id} value={c.id}>
@@ -810,17 +827,44 @@ export default function BoothSalesView({
                 onSave={(selectedItems) => {
                     // Convert SaleItemLine from submodal to ItemSaleLine for our lines
                     const newLines: SaleLine[] = selectedItems.map(saleItem => ({
-                        lineId: uuid(),
+                        lineId: uuid(), // Generate new ID or keep existing? Submodal generates new IDs, we accept them.
+                        // Actually, submodal returns SaleItemLine with an ID, but we usually regen on save or we can reuse.
+                        // Let's create new ItemSaleLines.
                         kind: 'item',
                         itemId: saleItem.itemId,
                         unitPrice: saleItem.unitPrice,
                         quantity: saleItem.quantity,
-                        description: saleItem.itemName
+                        description: saleItem.itemName,
+                        metadata: {
+                            usdExpression: saleItem.usdExpression,
+                            crcExpression: saleItem.crcExpression
+                        }
                     } as ItemSaleLine));
 
-                    setLines([...lines, ...newLines]);
+                    // Replace ALL item lines with the new selection (since modal manages the full list)
+                    // Keep non-item lines (like bundles if any, though we filtered them before? No, bundles are separate)
+                    // The logic here replaces the previous "add to list" logic.
+                    // User Edit Flow: "Open modal -> See current items -> Edit/Add/Remove -> Save -> Replace list".
+
+                    const nonItemLines = lines.filter(l => l.kind !== 'item');
+                    setLines([...nonItemLines, ...newLines]);
                     setShowItemPicker(false);
                 }}
+                initialItems={lines.filter(l => l.kind === 'item').map(l => {
+                    const il = l as ItemSaleLine;
+                    const item = items.find(i => i.id === il.itemId);
+                    return {
+                        id: il.lineId,
+                        itemId: il.itemId,
+                        itemName: item ? item.name : 'Unknown Item',
+                        quantity: il.quantity,
+                        unitPrice: il.unitPrice || 0,
+                        total: (il.quantity || 0) * (il.unitPrice || 0),
+                        siteId: siteId,
+                        usdExpression: l.metadata?.usdExpression,
+                        crcExpression: l.metadata?.crcExpression
+                    };
+                })}
                 defaultSiteId={siteId}
                 exchangeRate={exchangeRate}
             />

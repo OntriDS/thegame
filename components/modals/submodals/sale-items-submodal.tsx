@@ -277,7 +277,10 @@ export default function SaleItemsSubModal({
               <div className="col-span-3">Item</div>
               <div className="col-span-1">Price ($)</div>
               <div className="col-span-2">Calc ($)</div>
-              <div className="col-span-2">Calc (₡)</div>
+              <div className="col-span-2 flex flex-col justify-center">
+                <span>Calc (₡)</span>
+                <span className="text-[9px] text-muted-foreground font-normal">Rate: {exchangeRate}</span>
+              </div>
               <div className="col-span-1">Qty</div>
               <div className="col-span-2">Total ($)</div>
               <div className="col-span-1"></div>
@@ -329,7 +332,6 @@ export default function SaleItemsSubModal({
                     placeholder="1k+500.."
                     className="flex h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 border-pink-500/20"
                   />
-                  <div className="text-[9px] text-muted-foreground text-right pr-1">Rate: {exchangeRate}</div>
                 </div>
 
                 {/* Quantity (Auto-calc but editable) */}
