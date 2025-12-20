@@ -798,6 +798,7 @@ export default function BoothSalesView({
                     </div>
 
                     {/* Summary Footer */}
+                    {/* Summary Footer */}
                     <div className="p-4 bg-slate-950 border-t border-slate-800 space-y-4">
                         <div className="text-xs font-bold text-slate-400 uppercase flex items-center gap-2">
                             <DollarSign className="h-3 w-3" /> Sales Distribution
@@ -814,45 +815,61 @@ export default function BoothSalesView({
                                     </div>
                                 </div>
                                 <div className="space-y-1 text-xs bg-indigo-950/10 p-2 rounded border border-indigo-500/10">
-                                    <div className="flex justify-between text-muted-foreground"><span>Sales:</span> <span>₡{salesDistributionMatrix.akiles.reduce((s, r) => s + r.ownerAmount, 0).toLocaleString()}</span></div>
-                                    <div className="flex justify-between text-muted-foreground"><span>Comm:</span> <span>+₡{totals.myCommissions.toLocaleString()}</span></div>
-                                    <div className="flex justify-between text-red-400"><span>Booth:</span> <span>-₡{(Math.abs(boothCost) / 2).toLocaleString()}</span></div>
-                                    <div className="border-t pt-1 mt-1 flex justify-between font-bold text-sm text-indigo-600">
-                                        <span>Total:</span> <span>₡{totals.myNet.toLocaleString()}</span>
+                                    <div className="flex justify-between text-slate-400"><span>Sales:</span> <span>₡{salesDistributionMatrix.akiles.reduce((s, r) => s + r.ownerAmount, 0).toLocaleString()}</span></div>
+                                    <div className="flex justify-between text-slate-400"><span>Comm:</span> <span>+₡{totals.myCommissions.toLocaleString()}</span></div>
+                                    <div className="flex justify-between text-red-400/70"><span>Booth:</span> <span>-₡{(Math.abs(boothCost) / 2).toLocaleString()}</span></div>
+
+                                    <div className="border-t border-indigo-500/20 pt-2 mt-2 space-y-1">
+                                        <div className="flex justify-between font-bold text-sm text-indigo-400">
+                                            <span>Total ($):</span>
+                                            <span>${(totals.myNet / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                        </div>
+                                        <div className="flex justify-between text-xs text-indigo-400/50">
+                                            <span>Total (₡):</span>
+                                            <span>₡{totals.myNet.toLocaleString()}</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
 
                             {/* Associate Payout */}
-                            <div className="p-3 bg-white dark:bg-slate-800 rounded-lg border border-pink-100 shadow-sm">
+                            <div className="p-3 bg-slate-900 rounded-lg border border-pink-500/20 shadow-sm">
                                 <div className="flex items-center gap-2 mb-2">
-                                    <div className="h-6 w-6 rounded-full bg-pink-100 flex items-center justify-center text-pink-700 font-bold text-[10px]">
-                                        {selectedAssociateId ? characters.find(c => c.id === selectedAssociateId)?.name.substring(0, 1).toUpperCase() : 'A'}
+                                    <div className="h-6 w-6 rounded-full bg-pink-500/20 flex items-center justify-center text-pink-400 font-bold text-[10px]">
+                                        {selectedAssociateId ? getAssociateName(selectedAssociateId).substring(0, 1).toUpperCase() : 'A'}
                                     </div>
                                     <div>
-                                        <div className="text-xs font-bold">
-                                            {selectedAssociateId ? `${characters.find(c => c.id === selectedAssociateId)?.name} Net` : 'Associate Net'}
+                                        <div className="text-xs font-bold text-pink-100">
+                                            {selectedAssociateId ? `${getAssociateName(selectedAssociateId)} Net` : 'Associate Net'}
                                         </div>
-                                        <div className="text-[10px] text-muted-foreground">Payout to Associate</div>
+                                        <div className="text-[10px] text-slate-500">Payout to Associate</div>
                                     </div>
                                 </div>
-                                <div className="space-y-1 text-xs bg-slate-50 p-2 rounded">
-                                    <div className="flex justify-between text-muted-foreground"><span>Sales:</span> <span>₡{salesDistributionMatrix.associate.reduce((s, r) => s + r.commissionAmount, 0).toLocaleString()}</span></div>
-                                    <div className="flex justify-between text-muted-foreground"><span>Comm:</span> <span>+₡{totals.associateCommissions.toLocaleString()}</span></div>
-                                    <div className="flex justify-between text-red-400"><span>Booth:</span> <span>-₡{(Math.abs(boothCost) / 2).toLocaleString()}</span></div>
-                                    <div className="border-t pt-1 mt-1 flex justify-between font-bold text-sm text-pink-600">
-                                        <span>Total:</span> <span>₡{totals.associateNet.toLocaleString()}</span>
+                                <div className="space-y-1 text-xs bg-pink-950/10 p-2 rounded border border-pink-500/10">
+                                    <div className="flex justify-between text-slate-400"><span>Sales:</span> <span>₡{salesDistributionMatrix.associate.reduce((s, r) => s + r.commissionAmount, 0).toLocaleString()}</span></div>
+                                    <div className="flex justify-between text-slate-400"><span>Comm:</span> <span>+₡{totals.associateCommissions.toLocaleString()}</span></div>
+                                    <div className="flex justify-between text-red-400/70"><span>Booth:</span> <span>-₡{(Math.abs(boothCost) / 2).toLocaleString()}</span></div>
+
+                                    <div className="border-t border-pink-500/20 pt-2 mt-2 space-y-1">
+                                        <div className="flex justify-between font-bold text-sm text-pink-400">
+                                            <span>Total ($):</span>
+                                            <span>${(totals.associateNet / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                        </div>
+                                        <div className="flex justify-between text-xs text-pink-400/50">
+                                            <span>Total (₡):</span>
+                                            <span>₡{totals.associateNet.toLocaleString()}</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </div >
-                </div >
-            </div >
+                    </div>
+                </div>
+            </div>
 
             <div className="p-4 border-t bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 flex justify-end gap-2">
                 <Button variant="ghost" onClick={onCancel} disabled={isSaving}>Cancel</Button>
-                <Button onClick={handleSave} disabled={isSaving || isSaving} className="bg-indigo-600 hover:bg-indigo-700">
+                <Button onClick={handleSave} disabled={isSaving} className="bg-indigo-600 hover:bg-indigo-700">
                     {isSaving ? 'Processing...' : 'Confirm Booth Sales'}
                 </Button>
             </div>
