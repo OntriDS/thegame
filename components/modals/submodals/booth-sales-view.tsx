@@ -515,17 +515,8 @@ export default function BoothSalesView({
                     />
                 </div>
 
-                {/* Centralized Contract Selector */}
-                <div className="flex items-center gap-2 ml-auto">
-                    <Label className="text-sm font-medium text-muted-foreground whitespace-nowrap shrink-0">Contract:</Label>
-                    <SearchableSelect
-                        options={contracts.map(c => ({ value: c.id, label: c.name }))}
-                        value={selectedContractId}
-                        onValueChange={setSelectedContractId}
-                        placeholder="Select Booth Agreement..."
-                        className="h-9 w-48 text-sm bg-slate-800 border-indigo-500/30 truncate"
-                    />
-                </div>
+                {/* Header Spacer or additional info */}
+                <div className="flex-1" />
             </div>
 
             <div className="grid grid-cols-12 gap-6 flex-1 min-h-0">
@@ -614,6 +605,38 @@ export default function BoothSalesView({
                                             </select>
                                         </div>
                                     </div>
+
+                                    {/* Contract Selector (Specific to Associate) */}
+                                    {selectedAssociateId && (
+                                        <div className="flex items-center gap-2 w-full animate-in fade-in slide-in-from-top-1 duration-200">
+                                            <div className="w-[68px] text-[10px] text-pink-300 font-medium text-right shrink-0">
+                                                Agreement:
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <select
+                                                    value={selectedContractId}
+                                                    onChange={(e) => setSelectedContractId(e.target.value)}
+                                                    className="h-7 w-full rounded-md border border-pink-500/30 bg-pink-950/30 px-2 text-[10px] shadow-sm focus:outline-none focus:ring-1 focus:ring-pink-500 text-pink-100 truncate"
+                                                >
+                                                    <option value="" disabled>Select Active Contract...</option>
+                                                    {contracts
+                                                        .filter(c =>
+                                                            c.status === ContractStatus.ACTIVE &&
+                                                            (c.counterpartyBusinessId === selectedAssociateId ||
+                                                                // Allow looser matching if exact ID match fails (e.g. if associating Character ID but contract uses Business ID)
+                                                                // For MVP, we assume User picks the Entity that matches the ID in the contract.
+                                                                // If not, they can always add logic to find the Business for the Character.
+                                                                c.counterpartyBusinessId === selectedAssociateId)
+                                                        )
+                                                        .map(c => (
+                                                            <option key={c.id} value={c.id}>
+                                                                {c.name}
+                                                            </option>
+                                                        ))}
+                                                </select>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Quick Entry Form - Simplified */}
