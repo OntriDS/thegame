@@ -146,21 +146,34 @@ export default function BoothSalesView({
 
     // Auto-select contract when Associate changes
     useEffect(() => {
-        if (!selectedAssociateId) {
-            return;
-        }
+        if (!selectedAssociateId) return;
 
-        const relevantContracts = contracts.filter(c =>
-            c.status === ContractStatus.ACTIVE &&
+        // 1. Try Strict Match (ID)
+        let match = contracts.find(c =>
+            ['Active', 'ACTIVE', 'active'].includes(c.status) &&
             c.counterpartyBusinessId === selectedAssociateId
         );
 
-        if (relevantContracts.length > 0) {
-            setSelectedContractId(relevantContracts[0].id);
+        // 2. Try Fuzzy Name Match (Fallback)
+        if (!match) {
+            const associate = characters.find(char => char.id === selectedAssociateId);
+            if (associate) {
+                // Simple fuzzy: check if Contract Name contains the Associate's first name
+                // e.g. "Maria Agreement" matches "Maria Cecilia"
+                const firstName = associate.name.split(' ')[0].toLowerCase();
+                match = contracts.find(c =>
+                    ['Active', 'ACTIVE', 'active'].includes(c.status) &&
+                    c.name.toLowerCase().includes(firstName)
+                );
+            }
+        }
+
+        if (match) {
+            setSelectedContractId(match.id);
         } else {
             setSelectedContractId('');
         }
-    }, [selectedAssociateId, contracts]);
+    }, [selectedAssociateId, contracts, characters]);
 
 
     // 2. Logic & Calculations (The Sales Distribution Engine)
@@ -553,7 +566,7 @@ export default function BoothSalesView({
                                 <div className="flex items-center justify-between">
                                     <h3 className="text-lg font-semibold flex items-center text-indigo-300">
                                         <User className="h-5 w-5 mr-2" />
-                                        My Inventory (Akiles)
+                                        Products
                                     </h3>
                                     <div className="flex items-center gap-2">
                                         <Button size="sm" variant="outline" className="h-7 text-xs border-indigo-500/30 text-indigo-300 hover:bg-indigo-500/20" onClick={() => setShowItemPicker(true)}>
@@ -614,17 +627,28 @@ export default function BoothSalesView({
                                                 className="h-8 w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-1 text-xs shadow-sm focus:outline-none focus:ring-1 focus:ring-pink-500 text-slate-200 truncate"
                                             >
                                                 <option value="" disabled>Select {viewMode}...</option>
-                                                {characters
-                                                    .filter(c => {
-                                                        if (viewMode === 'Associate') return c.roles.includes(CharacterRole.ASSOCIATE);
-                                                        if (viewMode === 'Partner') return c.roles.includes(CharacterRole.PARTNER);
-                                                        return false;
-                                                    })
-                                                    .map(c => (
-                                                        <option key={c.id} value={c.id}>
-                                                            {c.name}
+
+                                                <optgroup label="People">
+                                                    {characters
+                                                        .filter(c => {
+                                                            if (viewMode === 'Associate') return c.roles.includes(CharacterRole.ASSOCIATE);
+                                                            if (viewMode === 'Partner') return c.roles.includes(CharacterRole.PARTNER);
+                                                            return false;
+                                                        })
+                                                        .map(c => (
+                                                            <option key={c.id} value={c.id}>
+                                                                {c.name}
+                                                            </option>
+                                                        ))}
+                                                </optgroup>
+
+                                                <optgroup label="Businesses">
+                                                    {businesses.map(b => (
+                                                        <option key={b.id} value={b.id}>
+                                                            {b.name}
                                                         </option>
                                                     ))}
+                                                </optgroup>
                                             </select>
                                         </div>
                                     </div>
@@ -643,10 +667,7 @@ export default function BoothSalesView({
                                                 >
                                                     <option value="" disabled>Select Active Contract...</option>
                                                     {contracts
-                                                        .filter(c =>
-                                                            c.status === ContractStatus.ACTIVE &&
-                                                            c.counterpartyBusinessId === selectedAssociateId
-                                                        )
+                                                        .filter(c => ['Active', 'ACTIVE', 'active'].includes(c.status))
                                                         .map(c => (
                                                             <option key={c.id} value={c.id}>
                                                                 {c.name}
