@@ -301,6 +301,14 @@ export default function BoothSalesView({
 
     }, [myItems, associateEntries, boothCost, activeContract]);
 
+    const getAssociateName = (id: string) => {
+        const char = characters.find(c => c.id === id);
+        if (char) return char.name;
+        const bus = businesses.find(b => b.id === id);
+        if (bus) return bus.name;
+        return 'Unknown';
+    };
+
     const salesDistributionMatrix = useMemo(() => {
         // 1. Group Akiles Items (from lines)
         const akilesRows: Record<string, SettlementRow> = {};
@@ -317,16 +325,15 @@ export default function BoothSalesView({
                 total = (itemLine.quantity || 0) * (itemLine.unitPrice || 0);
                 const item = items.find(i => i.id === itemLine.itemId);
                 // Safely determine category
-                category = item ? item.type : 'Other';
-                if (item?.type === ItemType.STICKER) category = 'Stickers';
-                if (item?.type === ItemType.PRINT) category = 'Prints';
-                if (item?.type === ItemType.ARTWORK) category = 'Artworks';
-                if (item?.type === ItemType.MERCH) category = 'Merch';
+                if (item) {
+                    category = item.subItemType ? `${item.type}: ${item.subItemType}` : item.type;
+                }
             } else if (line.kind === 'bundle') {
                 const bundleLine = line as BundleSaleLine;
                 total = (bundleLine.quantity || 0) * (bundleLine.unitPrice || 0);
-                category = 'Bundles';
+                category = bundleLine.subItemType ? `Bundle: ${bundleLine.subItemType}` : 'Bundle';
             }
+
 
             if (!akilesRows[category]) {
                 akilesRows[category] = {
@@ -421,13 +428,19 @@ export default function BoothSalesView({
 
     // Handler to merge everything and Save
     const handleSave = () => {
+        if (!siteId) {
+            alert("Please select a Site.");
+            return;
+        }
+
         // 1. Convert Associate Entries to Service Lines
         const associateServiceLines: ServiceLine[] = associateEntries.map(entry => ({
             lineId: uuid(),
             kind: 'service',
             station: 'Associate Sales' as Station,
             revenue: entry.amount,
-            description: `[Associate: ${characters.find(c => c.id === entry.associateId)?.name || entry.associateId}] ${entry.category}`,
+            // Helper to get name
+            description: `[Associate: ${getAssociateName(entry.associateId)}] ${entry.category}`,
             taxAmount: 0,
             createTask: false,
             customerCharacterId: entry.associateId,
@@ -733,26 +746,28 @@ export default function BoothSalesView({
                 < div className="col-span-12 lg:col-span-5 flex flex-col min-h-0 bg-white dark:bg-slate-800 rounded-xl border shadow-sm overflow-hidden" >
 
                     {/* Matrix Header */}
-                    < div className="grid grid-cols-12 gap-2 p-3 bg-slate-100 dark:bg-slate-900 border-b text-xs font-semibold text-muted-foreground uppercase tracking-wider text-center" >
+                    <div className="grid grid-cols-12 gap-2 p-3 bg-slate-900 border-b border-slate-700 text-[10px] font-semibold text-slate-400 uppercase tracking-wider text-center">
                         <div className="col-span-3 text-left pl-2">Category</div>
-                        <div className="col-span-3 text-right">Total</div>
-                        <div className="col-span-3 text-right text-indigo-600">My Share</div>
-                        <div className="col-span-3 text-right text-pink-600">Assoc. Share</div>
-                    </div >
+                        <div className="col-span-2 text-right">Total ($)</div>
+                        <div className="col-span-2 text-right">Total (₡)</div>
+                        <div className="col-span-2 text-right text-indigo-400">My Share ($)</div>
+                        <div className="col-span-3 text-right text-pink-400">Assoc. Share ($)</div>
+                    </div>
 
                     {/* Matrix Body (Scrollable) */}
-                    < div className="flex-1 overflow-y-auto" >
+                    <div className="flex-1 overflow-y-auto bg-slate-900/30">
                         {/* Akiles Section */}
                         {
                             salesDistributionMatrix.akiles.length > 0 && (
-                                <div className="p-2 bg-indigo-50/30">
-                                    <div className="text-xs font-bold text-indigo-700 mb-2 px-2">AKILES PRODUCTS</div>
+                                <div className="p-2 bg-indigo-950/20 border-b border-indigo-500/10">
+                                    <div className="text-[10px] font-bold text-indigo-400 mb-2 px-2 uppercase tracking-wide">AKILES PRODUCTS</div>
                                     {salesDistributionMatrix.akiles.map(row => (
-                                        <div key={row.id} className="grid grid-cols-12 gap-2 p-2 text-sm border-b border-indigo-100 last:border-0 hover:bg-white/50 transition-colors">
-                                            <div className="col-span-3 font-medium text-slate-700 dark:text-slate-200">{row.label}</div>
-                                            <div className="col-span-3 text-right font-bold">₡{row.totalColones.toLocaleString()}</div>
-                                            <div className="col-span-3 text-right text-indigo-600">₡{row.ownerAmount.toLocaleString()}</div>
-                                            <div className="col-span-3 text-right text-pink-400">₡{row.commissionAmount.toLocaleString()}</div>
+                                        <div key={row.id} className="grid grid-cols-12 gap-2 p-2 text-xs border-b border-indigo-500/10 last:border-0 hover:bg-white/5 transition-colors items-center">
+                                            <div className="col-span-3 font-medium text-indigo-100 truncate" title={row.label}>{row.label}</div>
+                                            <div className="col-span-2 text-right font-mono text-slate-300">${row.totalDollars.toLocaleString()}</div>
+                                            <div className="col-span-2 text-right font-mono text-slate-400">₡{row.totalColones.toLocaleString()}</div>
+                                            <div className="col-span-2 text-right text-indigo-300 font-bold">${(row.ownerAmount / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                                            <div className="col-span-3 text-right text-pink-300/70">${(row.commissionAmount / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                                         </div>
                                     ))}
                                 </div>
@@ -762,42 +777,43 @@ export default function BoothSalesView({
                         {/* Associate Section */}
                         {
                             salesDistributionMatrix.associate.length > 0 && (
-                                <div className="p-2 bg-pink-50/30">
-                                    <div className="text-xs font-bold text-pink-700 mb-2 px-2 mt-2">
+                                <div className="p-2 bg-pink-950/20">
+                                    <div className="text-[10px] font-bold text-pink-400 mb-2 px-2 mt-2 uppercase tracking-wide">
                                         {selectedAssociateId
-                                            ? `ASSOCIATE (${characters.find(c => c.id === selectedAssociateId)?.name?.toUpperCase()})`
+                                            ? `ASSOCIATE (${getAssociateName(selectedAssociateId).toUpperCase()})`
                                             : 'ASSOCIATE SALES'}
                                     </div>
                                     {salesDistributionMatrix.associate.map(row => (
-                                        <div key={row.id} className="grid grid-cols-12 gap-2 p-2 text-sm border-b border-pink-100 last:border-0 hover:bg-white/50 transition-colors">
-                                            <div className="col-span-3 font-medium text-slate-700 dark:text-slate-200">{row.label}</div>
-                                            <div className="col-span-3 text-right font-bold">₡{row.totalColones.toLocaleString()}</div>
-                                            <div className="col-span-3 text-right text-indigo-400">₡{row.ownerAmount.toLocaleString()} (Comm)</div>
-                                            <div className="col-span-3 text-right text-pink-600">₡{row.commissionAmount.toLocaleString()}</div>
+                                        <div key={row.id} className="grid grid-cols-12 gap-2 p-2 text-xs border-b border-pink-500/10 last:border-0 hover:bg-white/5 transition-colors items-center">
+                                            <div className="col-span-3 font-medium text-pink-100 truncate" title={row.label}>{row.label}</div>
+                                            <div className="col-span-2 text-right font-mono text-slate-300">${row.totalDollars.toLocaleString()}</div>
+                                            <div className="col-span-2 text-right font-mono text-slate-400">₡{row.totalColones.toLocaleString()}</div>
+                                            <div className="col-span-2 text-right text-indigo-300/70">${(row.ownerAmount / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                                            <div className="col-span-3 text-right text-pink-300 font-bold">${(row.commissionAmount / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                                         </div>
                                     ))}
                                 </div>
                             )
                         }
-                    </div >
+                    </div>
 
                     {/* Summary Footer */}
-                    < div className="p-4 bg-slate-50 dark:bg-slate-900 border-t space-y-4" >
-                        <div className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-2">
+                    <div className="p-4 bg-slate-950 border-t border-slate-800 space-y-4">
+                        <div className="text-xs font-bold text-slate-400 uppercase flex items-center gap-2">
                             <DollarSign className="h-3 w-3" /> Sales Distribution
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
                             {/* My Payout */}
-                            <div className="p-3 bg-white dark:bg-slate-800 rounded-lg border border-indigo-100 shadow-sm">
+                            <div className="p-3 bg-slate-900 rounded-lg border border-indigo-500/20 shadow-sm">
                                 <div className="flex items-center gap-2 mb-2">
-                                    <div className="h-6 w-6 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-[10px]">A</div>
+                                    <div className="h-6 w-6 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold text-[10px]">A</div>
                                     <div>
-                                        <div className="text-xs font-bold">Akiles Net</div>
-                                        <div className="text-[10px] text-muted-foreground">Payout to Me</div>
+                                        <div className="text-xs font-bold text-indigo-100">Akiles Net</div>
+                                        <div className="text-[10px] text-slate-500">Payout to Me</div>
                                     </div>
                                 </div>
-                                <div className="space-y-1 text-xs bg-slate-50 p-2 rounded">
+                                <div className="space-y-1 text-xs bg-indigo-950/10 p-2 rounded border border-indigo-500/10">
                                     <div className="flex justify-between text-muted-foreground"><span>Sales:</span> <span>₡{salesDistributionMatrix.akiles.reduce((s, r) => s + r.ownerAmount, 0).toLocaleString()}</span></div>
                                     <div className="flex justify-between text-muted-foreground"><span>Comm:</span> <span>+₡{totals.myCommissions.toLocaleString()}</span></div>
                                     <div className="flex justify-between text-red-400"><span>Booth:</span> <span>-₡{(Math.abs(boothCost) / 2).toLocaleString()}</span></div>
