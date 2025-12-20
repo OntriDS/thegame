@@ -21,9 +21,11 @@ import {
     ItemType,
     Station,
     ContractStatus,
-    ContractClauseType
+    ContractClauseType,
+    SaleType,
+    SaleStatus
 } from '@/types/enums';
-import { SaleLine, Item, Site, Character, ServiceLine, ItemSaleLine, BundleSaleLine, Business, Contract } from '@/types/entities';
+import { Sale, SaleLine, Item, Site, Character, ServiceLine, ItemSaleLine, BundleSaleLine, Business, Contract } from '@/types/entities';
 import { v4 as uuid } from 'uuid';
 import { createSiteOptionsWithCategories } from '@/lib/utils/site-options-utils';
 import SaleItemsSubModal from './sale-items-submodal';
@@ -50,7 +52,7 @@ export interface BoothSalesViewProps {
     setSiteId: (id: string) => void;
 
     // Actions
-    onSave: () => void;
+    onSave: (sale?: Sale) => void;
     onCancel: () => void;
     isSaving: boolean;
 }
@@ -104,15 +106,14 @@ export default function BoothSalesView({
     const [showItemPicker, setShowItemPicker] = useState(false);
 
     // Financials
-    const [boothCost, setBoothCost] = useState(0); // Default to 0 as requested
-    const exchangeRate = DEFAULT_CURRENCY_EXCHANGE_RATES.colonesToUsd; // 500
+    const [boothCost, setBoothCost] = useState(0);
+    const exchangeRate = DEFAULT_CURRENCY_EXCHANGE_RATES.colonesToUsd;
 
-    // State for Principal (Me)
-    const [selectedContractId_Principal, setSelectedContractId_Principal] = useState<string>('');
+    // State for Single Contract (Global for this sale)
+    const [selectedContractId, setSelectedContractId] = useState<string>('');
 
     // State for Associate (Them)
     const [selectedAssociateId, setSelectedAssociateId] = useState<string>(''); // Character ID
-    const [selectedContractId_Associate, setSelectedContractId_Associate] = useState<string>('');
 
     // Associate Quick Entry State (formerly Partner)
     const [associateEntries, setAssociateEntries] = useState<AssociateQuickEntry[]>([]);
@@ -127,11 +128,11 @@ export default function BoothSalesView({
     useEffect(() => {
         // Find a default contract for Principal if one exists (just taking the first valid one for now)
         // In real app, this would come from user settings or local storage
-        const defaultPrincipalContract = contracts.find(c => c.status === ContractStatus.ACTIVE); // Simplified
-        if (defaultPrincipalContract && !selectedContractId_Principal) {
-            setSelectedContractId_Principal(defaultPrincipalContract.id);
+        const defaultContract = contracts.find(c => c.status === ContractStatus.ACTIVE); // Simplified
+        if (defaultContract && !selectedContractId) {
+            setSelectedContractId(defaultContract.id);
         }
-    }, [contracts, selectedContractId_Principal]);
+    }, [contracts, selectedContractId]);
 
     // Load Default Associate (One time)
     useEffect(() => {
@@ -145,6 +146,128 @@ export default function BoothSalesView({
 
     // 2. Logic & Calculations (The Sales Distribution Engine)
     // ============================================================================
+
+    // 2. Logic & Calculations (The Sales Distribution Engine)
+    // ============================================================================
+
+    const myItems = useMemo(() =>
+        lines.filter(l => (l.kind === 'item' || l.kind === 'bundle')) as (ItemSaleLine | BundleSaleLine)[],
+        [lines]);
+
+    // Unified logic to find the single active contract
+    const activeContract = useMemo(() => {
+        if (!selectedContractId) return null;
+        return contracts.find(c => c.id === selectedContractId);
+    }, [contracts, selectedContractId]);
+
+    // Calculate Totals & Distribution
+    const totals = useMemo(() => {
+        let grossSales = 0;
+        let akilesNet = 0;
+        let associateNet = 0;
+
+        // --- 1. Principal Items (My Stuff) ---
+        const myItemsTotal = myItems.reduce((sum, item) => sum + ((item.unitPrice || 0) * (item.quantity || 0)), 0);
+
+        // Find Contract for ME
+        const myContract = activeContract;
+
+        // Calculate Splits for MY items
+        // Default: 100% to me, 0% to associate if no contract
+        let principalSharePct_Me = 100;
+        let principalSharePct_Associate = 0;
+
+        if (myContract) {
+            // "Principal Commission": My Items sold by Associate
+            // Usually [Me, Associate] e.g. 75/25
+            const clause = myContract.clauses?.find(c => c.type === ContractClauseType.SALES_COMMISSION && c.description?.toLowerCase().includes('principal'));
+            if (!clause) {
+                // Try generic Sales Commission if specific one not found
+                const genericClause = myContract.clauses?.find(c => c.type === ContractClauseType.SALES_COMMISSION);
+                if (genericClause) {
+                    principalSharePct_Me = (genericClause.companyShare || 0) * 100;
+                    principalSharePct_Associate = (genericClause.associateShare || 0) * 100;
+                }
+            } else {
+                principalSharePct_Me = (clause.companyShare || 0) * 100;
+                principalSharePct_Associate = (clause.associateShare || 0) * 100;
+            }
+        }
+
+        const myRevenue_FromMyItems = myItemsTotal * (principalSharePct_Me / 100);
+        const assocRevenue_FromMyItems = myItemsTotal * (principalSharePct_Associate / 100);
+
+        // --- 2. Associate Items (Their Stuff) ---
+        const assocItemsTotal = associateEntries.reduce((sum, e) => sum + e.amount, 0);
+
+        // Calculate Splits for THEIR items
+        // "Associate Sales Service": Associate Items sold by Me
+        // Usually [Me, Associate] e.g. 25/75 (I take 25% commission)
+        let associateSharePct_Me = 0; // Default: I get nothing
+        let associateSharePct_Associate = 100; // They get 100%
+
+        if (myContract) {
+            // Prefer SALES_SERVICE for this (I'm providing a service selling their stuff)
+            // Fallback to SALES_COMMISSION with 'associate' in description for legacy/safety
+            let clause = myContract.clauses?.find(c => c.type === ContractClauseType.SALES_SERVICE);
+
+            if (!clause) {
+                clause = myContract.clauses?.find(c => c.type === ContractClauseType.SALES_COMMISSION && c.description?.toLowerCase().includes('associate'));
+            }
+
+            if (clause) {
+                associateSharePct_Me = (clause.companyShare || 0) * 100;
+                associateSharePct_Associate = (clause.associateShare || 0) * 100;
+            }
+        }
+
+        const myRevenue_FromAssocItems = assocItemsTotal * (associateSharePct_Me / 100);
+        const assocRevenue_FromAssocItems = assocItemsTotal * (associateSharePct_Associate / 100);
+
+
+        // --- 3. Booth Cost ---
+        // "Expense Sharing"
+        let costSharePct_Me = 50;
+
+        if (myContract) {
+            const expClause = myContract.clauses?.find(c => c.type === ContractClauseType.EXPENSE_SHARING);
+            if (expClause) {
+                costSharePct_Me = (expClause.companyShare || 0) * 100;
+            }
+        }
+
+        const cost_Me = boothCost * (costSharePct_Me / 100);
+        const cost_Assoc = boothCost - cost_Me;
+
+
+        // --- Final Tally ---
+        grossSales = myItemsTotal + assocItemsTotal;
+        akilesNet = myRevenue_FromMyItems + myRevenue_FromAssocItems - cost_Me;
+        associateNet = assocRevenue_FromMyItems + assocRevenue_FromAssocItems - cost_Assoc;
+
+        return {
+            grossSales, // Total money collected
+            myNet: akilesNet, // What ends up in my pocket (Sales + Comm - Cost) (Renaming to avoid confusion)
+            associateNet, // What I owe/pay them
+            myCommissions: myRevenue_FromAssocItems,
+            associateCommissions: assocRevenue_FromMyItems,
+            breakdown: {
+                principalSharePct_Me,
+                principalSharePct_Associate,
+                associateSharePct_Me,
+                associateSharePct_Associate,
+                mySales: myItemsTotal,
+                assocSales: assocItemsTotal,
+                myRevenueFromMySales: myRevenue_FromMyItems,
+                myRevenueFromAssocSales: myRevenue_FromAssocItems,
+                assocRevenueFromMySales: assocRevenue_FromMyItems,
+                assocRevenueFromAssocSales: assocRevenue_FromAssocItems,
+                costMe: cost_Me,
+                costAssoc: cost_Assoc
+            }
+        };
+
+    }, [myItems, associateEntries, boothCost, activeContract]);
 
     const salesDistributionMatrix = useMemo(() => {
         // 1. Group Akiles Items (from lines)
@@ -211,118 +334,24 @@ export default function BoothSalesView({
             }
         });
 
-        // Calculate Splits using Contract Logic or Defaults
-        // Akiles Rows (Principal Products)
+        // Apply calculated splits from the 'totals' memo to the rows for display
         Object.values(akilesRows).forEach(row => {
             const totalValue = row.totalColones + (row.totalDollars * exchangeRate);
-
-            // Default: 100% Owner (Me), 0% Associate
-            let pShare = 1.0;
-            let aShare = 0.0;
-
-            const contract = contracts.find(c => c.id === selectedContractId_Principal);
-
-            if (contract) {
-                // TRY NEW SYSTEM (Clauses)
-                if (contract.clauses && Array.isArray(contract.clauses)) {
-                    const clause = contract.clauses.find(c =>
-                        c.type === ContractClauseType.SALES_COMMISSION && c.itemCategory === row.label
-                    ) || contract.clauses.find(c =>
-                        c.type === ContractClauseType.SALES_COMMISSION && !c.itemCategory
-                    );
-
-                    if (clause) {
-                        pShare = clause.companyShare;
-                        aShare = clause.associateShare;
-                    }
-                }
-                // FALLBACK TO LEGACY SYSTEM (Terms)
-                else if ((contract as any).terms?.principalProducts) {
-                    const terms = (contract as any).terms.principalProducts;
-                    pShare = terms.principalShare;
-                    aShare = terms.associateShare;
-                }
-            }
-
-            row.ownerAmount = totalValue * pShare;
-            row.commissionAmount = totalValue * aShare;
+            row.ownerAmount = totalValue * (totals.breakdown.principalSharePct_Me / 100);
+            row.commissionAmount = totalValue * (totals.breakdown.principalSharePct_Associate / 100);
         });
 
-        // Associate Rows (Associate Products)
         Object.values(associateRows).forEach(row => {
             const totalValue = row.totalColones + (row.totalDollars * exchangeRate);
-
-            // Default: 25% Owner (Me/Service Fee), 75% Associate (Them)
-            let pShare = 0.25;
-            let aShare = 0.75;
-
-            const contract = contracts.find(c => c.id === selectedContractId_Associate);
-
-            if (contract) {
-                // TRY NEW SYSTEM (Clauses)
-                if (contract.clauses && Array.isArray(contract.clauses)) {
-                    const clause = contract.clauses.find(c =>
-                        c.type === ContractClauseType.SALES_COMMISSION && c.itemCategory === row.label
-                    ) || contract.clauses.find(c =>
-                        c.type === ContractClauseType.SALES_COMMISSION && !c.itemCategory
-                    );
-
-                    if (clause) {
-                        pShare = clause.companyShare;   // Our Service Fee
-                        aShare = clause.associateShare; // Their Take
-                    }
-                }
-                // FALLBACK TO LEGACY SYSTEM (Terms)
-                else if ((contract as any).terms?.associateProducts) {
-                    const terms = (contract as any).terms.associateProducts;
-                    pShare = terms.principalShare;
-                    aShare = terms.associateShare;
-                }
-            }
-
-            row.ownerAmount = totalValue * pShare;
-            row.commissionAmount = totalValue * aShare;
+            row.ownerAmount = totalValue * (totals.breakdown.associateSharePct_Me / 100);
+            row.commissionAmount = totalValue * (totals.breakdown.associateSharePct_Associate / 100);
         });
 
         return {
             akiles: Object.values(akilesRows),
             associate: Object.values(associateRows)
         };
-    }, [lines, associateEntries, items, exchangeRate, selectedContractId_Principal, selectedContractId_Associate, contracts]);
-
-    // Totals
-    const totals = useMemo(() => {
-        const totalSales =
-            salesDistributionMatrix.akiles.reduce((s, r) => s + r.totalColones + (r.totalDollars * exchangeRate), 0) +
-            salesDistributionMatrix.associate.reduce((s, r) => s + r.totalColones + (r.totalDollars * exchangeRate), 0);
-
-        // Akiles (Me)
-        // My Sales Share + My Commission from Associate Sales
-        const myNet = salesDistributionMatrix.akiles.reduce((sum, r) => sum + r.ownerAmount, 0) +
-            salesDistributionMatrix.associate.reduce((sum, r) => sum + r.ownerAmount, 0);
-
-        const myShareOfBooth = boothCost / 2; // TODO: Contract-based expense sharing
-        const finalMyNet = myNet - myShareOfBooth;
-
-        // Associate (Selected)
-        // Associate Commission from My Sales + Associate Share from Their Sales
-        const associateNet = salesDistributionMatrix.akiles.reduce((sum, r) => sum + r.commissionAmount, 0) +
-            salesDistributionMatrix.associate.reduce((sum, r) => sum + r.commissionAmount, 0);
-
-        const myCommissions = salesDistributionMatrix.associate.reduce((sum, r) => sum + r.ownerAmount, 0);
-        const associateCommissions = salesDistributionMatrix.akiles.reduce((sum, r) => sum + r.commissionAmount, 0);
-
-        const associateShareOfBooth = boothCost / 2;
-        const finalAssociateNet = associateNet - associateShareOfBooth;
-
-        return {
-            totalSales,
-            myNet: finalMyNet,
-            associateNet: finalAssociateNet,
-            myCommissions: myCommissions,
-            associateCommissions: associateCommissions
-        };
-    }, [salesDistributionMatrix, boothCost, exchangeRate]);
+    }, [myItems, associateEntries, items, exchangeRate, totals]);
 
 
     // 3. Handlers
@@ -356,31 +385,76 @@ export default function BoothSalesView({
 
     // Handler to merge everything and Save
     const handleSave = () => {
-        // 1. Convert Associate Entries to Service Lines (if not already done)
+        // 1. Convert Associate Entries to Service Lines
         const associateServiceLines: ServiceLine[] = associateEntries.map(entry => ({
             lineId: uuid(),
             kind: 'service',
             station: 'Associate Sales' as Station,
             revenue: entry.amount,
-            description: `[Associate: ${entry.associateId}] ${entry.category} - ${entry.description}`,
+            description: `[Associate: ${characters.find(c => c.id === entry.associateId)?.name || entry.associateId}] ${entry.category}`,
             taxAmount: 0,
             createTask: false,
-            // Tag with associate ID for future reference
-            customerCharacterId: entry.associateId
+            customerCharacterId: entry.associateId,
+            // Add metadata for tracking splits if needed
+            metadata: {
+                category: entry.category,
+                associateShare: totals.breakdown.associateSharePct_Associate,
+                myCommission: totals.breakdown.associateSharePct_Me
+            }
         }));
 
-        // Strategy: 
-        // - Save Akiles Items as regular Item Lines.
-        // - Save Partner Sales as Service Lines (Revenue).
-
-        // For now, let's update the lines locally then call save.
+        // 2. Combine all lines
         const allLines = [...lines.filter(l => l.kind !== 'service'), ...associateServiceLines];
-        setLines(allLines);
 
-        // Wait for state update? React batching might handle it, but it's risky.
-        setTimeout(() => {
-            onSave(); // Trigger parent save
-        }, 100);
+        // 3. Construct Metadata Context
+        const boothMetadata = {
+            boothSaleContext: {
+                contractId: selectedContractId,
+                boothCost: boothCost,
+                calculatedTotals: totals
+            }
+        };
+
+        // 4. Construct FULL Valid Sale Object
+        // Using CHARGED as the standard 'Completed' status for sales
+        const saleId = uuid();
+        const saleName = `Booth Sale ${saleDate.toLocaleDateString()}`;
+
+        const fullSale: Sale = {
+            id: saleId,
+            name: saleName,
+            description: 'Feria / Booth Sale',
+            saleDate: saleDate, // Using date object directly
+            type: SaleType.BOOTH,
+            status: SaleStatus.CHARGED,
+            siteId: siteId,
+            salesChannel: 'Booth Sales' as Station,
+
+            // Financials
+            lines: allLines,
+            totals: {
+                subtotal: totals.grossSales,
+                discountTotal: 0,
+                taxTotal: 0,
+                totalRevenue: totals.grossSales
+            },
+
+            // Metadata & Links
+            archiveMetadata: boothMetadata,
+            links: [], // Rosetta Stone initialization
+
+            // Lifecycle defaults
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            isCollected: false,
+
+            // Optional fields defaults
+            isNotPaid: false,
+            isNotCharged: false,
+        };
+
+        // 5. Pass to Parent
+        onSave(fullSale);
     };
 
 
@@ -440,11 +514,23 @@ export default function BoothSalesView({
                         className="h-9 w-48"
                     />
                 </div>
+
+                {/* Centralized Contract Selector */}
+                <div className="flex items-center gap-2 ml-auto">
+                    <Label className="text-sm font-medium text-muted-foreground whitespace-nowrap shrink-0">Contract:</Label>
+                    <SearchableSelect
+                        options={contracts.map(c => ({ value: c.id, label: c.name }))}
+                        value={selectedContractId}
+                        onValueChange={setSelectedContractId}
+                        placeholder="Select Booth Agreement..."
+                        className="h-9 w-48 text-sm bg-slate-800 border-indigo-500/30 truncate"
+                    />
+                </div>
             </div>
 
             <div className="grid grid-cols-12 gap-6 flex-1 min-h-0">
 
-                {/* SECTION B: INPUTS (The Cart) - Left Column */}
+                {/* SECTION B: SPLIT VIEW (My Inventory vs. Partner Sales) */}
                 <div className="col-span-12 lg:col-span-7 flex flex-col gap-4 min-h-0 overflow-y-auto pr-2">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {/* Card 1: My Inventory (Akiles) */}
@@ -455,19 +541,7 @@ export default function BoothSalesView({
                                         <User className="h-5 w-5 mr-2" />
                                         My Inventory (Akiles)
                                     </h3>
-                                    <Badge variant="secondary">{lines.filter(l => l.kind === 'item' || l.kind === 'bundle').length} Items</Badge>
-                                </div>
-
-                                {/* Contract Selector for My Inventory */}
-                                <div className="flex items-center gap-2 max-w-sm">
-                                    <Label className="text-xs text-muted-foreground whitespace-nowrap">Applicable Contract:</Label>
-                                    <SearchableSelect
-                                        options={contracts.map(c => ({ value: c.id, label: c.name }))}
-                                        value={selectedContractId_Principal}
-                                        onValueChange={setSelectedContractId_Principal}
-                                        placeholder="Select Contract (Optional)"
-                                        className="h-8 text-xs bg-slate-800 border-indigo-500/30 max-w-[200px] truncate"
-                                    />
+                                    <Badge variant="secondary" className="bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30">{myItems.length} Items</Badge>
                                 </div>
 
                                 {/* Add Items Button / Area */}
@@ -478,7 +552,7 @@ export default function BoothSalesView({
 
                                 {/* List of Added Items */}
                                 <div className="space-y-2 max-h-[200px] overflow-y-auto">
-                                    {lines.filter(l => l.kind === 'item' || l.kind === 'bundle').map(line => {
+                                    {myItems.map(line => {
                                         // Simple rendering for now
                                         const item = line.kind === 'item' ? items.find(i => i.id === (line as ItemSaleLine).itemId) : null;
                                         return (
@@ -501,9 +575,10 @@ export default function BoothSalesView({
                         {/* Card 2: Partner / Associate (Sales of their stuff) */}
                         <Card className="border-pink-500/20 bg-pink-950/20">
                             <CardContent className="p-4 space-y-4">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                        <div className="flex bg-slate-900 rounded-md p-0.5 border border-slate-700">
+                                <div className="flex flex-col gap-3">
+                                    {/* Header Row: Toggle & Selector */}
+                                    <div className="flex items-center gap-2 w-full">
+                                        <div className="flex bg-slate-900 rounded-md p-0.5 border border-slate-700 shrink-0">
                                             <button
                                                 onClick={() => setViewMode('Associate')}
                                                 className={`text-[10px] px-2 py-1 rounded-sm transition-colors ${viewMode === 'Associate' ? 'bg-pink-600 text-white font-medium' : 'text-slate-400 hover:text-slate-300'}`}
@@ -519,17 +594,16 @@ export default function BoothSalesView({
                                         </div>
 
                                         {/* Simplified Partner/Associate Selector */}
-                                        <div className="w-[180px]">
+                                        <div className="flex-1 min-w-0">
                                             <select
                                                 value={selectedAssociateId}
                                                 onChange={(e) => setSelectedAssociateId(e.target.value)}
-                                                className="h-8 w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-1 text-xs shadow-sm focus:outline-none focus:ring-1 focus:ring-pink-500 text-slate-200"
+                                                className="h-8 w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-1 text-xs shadow-sm focus:outline-none focus:ring-1 focus:ring-pink-500 text-slate-200 truncate"
                                             >
                                                 <option value="" disabled>Select {viewMode}...</option>
                                                 {characters
                                                     .filter(c => {
-                                                        // Filter logic: Show all for now, but ideally filter by role
-                                                        // For simplicity and robustness, showing basic list sorted by name
+                                                        // Filter logic could go here
                                                         return true;
                                                     })
                                                     .map(c => (
@@ -540,19 +614,6 @@ export default function BoothSalesView({
                                             </select>
                                         </div>
                                     </div>
-                                    <Badge variant="secondary" className="bg-pink-500/20 text-pink-300 hover:bg-pink-500/30">{associateEntries.length} Entries</Badge>
-                                </div>
-
-                                {/* Contract Selector for Partner - With overflow fix */}
-                                <div className="flex items-center gap-2 max-w-sm">
-                                    <Label className="text-xs text-muted-foreground whitespace-nowrap">Applicable Contract:</Label>
-                                    <SearchableSelect
-                                        options={contracts.map(c => ({ value: c.id, label: c.name }))}
-                                        value={selectedContractId_Associate}
-                                        onValueChange={setSelectedContractId_Associate}
-                                        placeholder={`Select ${viewMode} Contract...`}
-                                        className="h-8 text-xs bg-slate-800 border-pink-500/30 max-w-[200px] truncate"
-                                    />
                                 </div>
 
                                 {/* Quick Entry Form - Simplified */}
@@ -603,58 +664,62 @@ export default function BoothSalesView({
                             </CardContent>
                         </Card>
                     </div>
-                </div>
+                </div >
 
                 {/* SECTION C: SETTLEMENT MATRIX (The Excel View) - Right Column */}
-                <div className="col-span-12 lg:col-span-5 flex flex-col min-h-0 bg-white dark:bg-slate-800 rounded-xl border shadow-sm overflow-hidden">
+                < div className="col-span-12 lg:col-span-5 flex flex-col min-h-0 bg-white dark:bg-slate-800 rounded-xl border shadow-sm overflow-hidden" >
 
                     {/* Matrix Header */}
-                    <div className="grid grid-cols-12 gap-2 p-3 bg-slate-100 dark:bg-slate-900 border-b text-xs font-semibold text-muted-foreground uppercase tracking-wider text-center">
+                    < div className="grid grid-cols-12 gap-2 p-3 bg-slate-100 dark:bg-slate-900 border-b text-xs font-semibold text-muted-foreground uppercase tracking-wider text-center" >
                         <div className="col-span-3 text-left pl-2">Category</div>
                         <div className="col-span-3 text-right">Total</div>
                         <div className="col-span-3 text-right text-indigo-600">My Share</div>
                         <div className="col-span-3 text-right text-pink-600">Assoc. Share</div>
-                    </div>
+                    </div >
 
                     {/* Matrix Body (Scrollable) */}
-                    <div className="flex-1 overflow-y-auto">
+                    < div className="flex-1 overflow-y-auto" >
                         {/* Akiles Section */}
-                        {salesDistributionMatrix.akiles.length > 0 && (
-                            <div className="p-2 bg-indigo-50/30">
-                                <div className="text-xs font-bold text-indigo-700 mb-2 px-2">AKILES PRODUCTS</div>
-                                {salesDistributionMatrix.akiles.map(row => (
-                                    <div key={row.id} className="grid grid-cols-12 gap-2 p-2 text-sm border-b border-indigo-100 last:border-0 hover:bg-white/50 transition-colors">
-                                        <div className="col-span-3 font-medium text-slate-700 dark:text-slate-200">{row.label}</div>
-                                        <div className="col-span-3 text-right font-bold">₡{row.totalColones.toLocaleString()}</div>
-                                        <div className="col-span-3 text-right text-indigo-600">₡{row.ownerAmount.toLocaleString()}</div>
-                                        <div className="col-span-3 text-right text-pink-400">₡{row.commissionAmount.toLocaleString()}</div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
+                        {
+                            salesDistributionMatrix.akiles.length > 0 && (
+                                <div className="p-2 bg-indigo-50/30">
+                                    <div className="text-xs font-bold text-indigo-700 mb-2 px-2">AKILES PRODUCTS</div>
+                                    {salesDistributionMatrix.akiles.map(row => (
+                                        <div key={row.id} className="grid grid-cols-12 gap-2 p-2 text-sm border-b border-indigo-100 last:border-0 hover:bg-white/50 transition-colors">
+                                            <div className="col-span-3 font-medium text-slate-700 dark:text-slate-200">{row.label}</div>
+                                            <div className="col-span-3 text-right font-bold">₡{row.totalColones.toLocaleString()}</div>
+                                            <div className="col-span-3 text-right text-indigo-600">₡{row.ownerAmount.toLocaleString()}</div>
+                                            <div className="col-span-3 text-right text-pink-400">₡{row.commissionAmount.toLocaleString()}</div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )
+                        }
 
                         {/* Associate Section */}
-                        {salesDistributionMatrix.associate.length > 0 && (
-                            <div className="p-2 bg-pink-50/30">
-                                <div className="text-xs font-bold text-pink-700 mb-2 px-2 mt-2">
-                                    {selectedAssociateId
-                                        ? `ASSOCIATE (${characters.find(c => c.id === selectedAssociateId)?.name?.toUpperCase()})`
-                                        : 'ASSOCIATE SALES'}
-                                </div>
-                                {salesDistributionMatrix.associate.map(row => (
-                                    <div key={row.id} className="grid grid-cols-12 gap-2 p-2 text-sm border-b border-pink-100 last:border-0 hover:bg-white/50 transition-colors">
-                                        <div className="col-span-3 font-medium text-slate-700 dark:text-slate-200">{row.label}</div>
-                                        <div className="col-span-3 text-right font-bold">₡{row.totalColones.toLocaleString()}</div>
-                                        <div className="col-span-3 text-right text-indigo-400">₡{row.ownerAmount.toLocaleString()} (Comm)</div>
-                                        <div className="col-span-3 text-right text-pink-600">₡{row.commissionAmount.toLocaleString()}</div>
+                        {
+                            salesDistributionMatrix.associate.length > 0 && (
+                                <div className="p-2 bg-pink-50/30">
+                                    <div className="text-xs font-bold text-pink-700 mb-2 px-2 mt-2">
+                                        {selectedAssociateId
+                                            ? `ASSOCIATE (${characters.find(c => c.id === selectedAssociateId)?.name?.toUpperCase()})`
+                                            : 'ASSOCIATE SALES'}
                                     </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
+                                    {salesDistributionMatrix.associate.map(row => (
+                                        <div key={row.id} className="grid grid-cols-12 gap-2 p-2 text-sm border-b border-pink-100 last:border-0 hover:bg-white/50 transition-colors">
+                                            <div className="col-span-3 font-medium text-slate-700 dark:text-slate-200">{row.label}</div>
+                                            <div className="col-span-3 text-right font-bold">₡{row.totalColones.toLocaleString()}</div>
+                                            <div className="col-span-3 text-right text-indigo-400">₡{row.ownerAmount.toLocaleString()} (Comm)</div>
+                                            <div className="col-span-3 text-right text-pink-600">₡{row.commissionAmount.toLocaleString()}</div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )
+                        }
+                    </div >
 
                     {/* Summary Footer */}
-                    <div className="p-4 bg-slate-50 dark:bg-slate-900 border-t space-y-4">
+                    < div className="p-4 bg-slate-50 dark:bg-slate-900 border-t space-y-4" >
                         <div className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-2">
                             <DollarSign className="h-3 w-3" /> Sales Distribution
                         </div>
@@ -702,9 +767,9 @@ export default function BoothSalesView({
                                 </div>
                             </div>
                         </div>
-                    </div>
-                </div>
-            </div>
+                    </div >
+                </div >
+            </div >
 
             <div className="p-4 border-t bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 flex justify-end gap-2">
                 <Button variant="ghost" onClick={onCancel} disabled={isSaving}>Cancel</Button>

@@ -444,8 +444,24 @@ export default function SalesModal({
     });
   };
 
-  const handleSave = async () => {
+  const handleSave = async (overrideSale?: Sale) => {
     if (isSaving) return;
+
+    // Handle Override (e.g. from BoothSalesView)
+    if (overrideSale) {
+      setIsSaving(true);
+      try {
+        await onSave(overrideSale);
+        // Dispatch events AFTER successful save
+        dispatchEntityUpdated(entityTypeToKind(EntityType.SALE));
+        onOpenChange(false);
+      } catch (error) {
+        console.error('Save failed:', error);
+      } finally {
+        setIsSaving(false);
+      }
+      return;
+    }
 
     // Check if status is being changed to COLLECTED - show confirmation modal
     const isBecomingCollected = status === SaleStatus.COLLECTED && sale?.status !== SaleStatus.COLLECTED;
@@ -1957,7 +1973,7 @@ export default function SalesModal({
                 <Button variant="outline" onClick={() => onOpenChange(false)} className="h-8 text-xs" disabled={isSaving}>
                   Cancel
                 </Button>
-                <Button onClick={handleSave} className="h-8 text-xs" disabled={isSaving}>
+                <Button onClick={() => handleSave()} className="h-8 text-xs" disabled={isSaving}>
                   {isSaving ? 'Saving...' : (sale ? 'Update' : 'Create')} Sale
                 </Button>
               </div>
