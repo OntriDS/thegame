@@ -148,25 +148,28 @@ export default function BoothSalesView({
         }
     }, [characters, selectedAssociateId]);
 
-    // Auto-select contract when Associate changes
+    // Auto-select active contract when Associate changes
     useEffect(() => {
-        if (!selectedAssociateId) return;
+        if (!selectedAssociateId) {
+            setSelectedContractId('');
+            return;
+        }
 
-        // 1. Try Strict Match (ID)
+        // 1. Try Strict Match (ID matches Principal or Counterparty)
+        // We look for any ACTIVE contract involving this entity
         let match = contracts.find(c =>
-            ['Active', 'ACTIVE', 'active'].includes(c.status) &&
-            c.counterpartyBusinessId === selectedAssociateId
+            c.status === ContractStatus.ACTIVE &&
+            (c.counterpartyBusinessId === selectedAssociateId || c.principalBusinessId === selectedAssociateId)
         );
 
-        // 2. Try Fuzzy Name Match (Fallback)
+        // 2. Try Fuzzy Name Match (Fallback if strict ID fails)
         if (!match) {
             const associate = characters.find(char => char.id === selectedAssociateId);
             if (associate) {
                 // Simple fuzzy: check if Contract Name contains the Associate's first name
-                // e.g. "Maria Agreement" matches "Maria Cecilia"
                 const firstName = associate.name.split(' ')[0].toLowerCase();
                 match = contracts.find(c =>
-                    ['Active', 'ACTIVE', 'active'].includes(c.status) &&
+                    c.status === ContractStatus.ACTIVE &&
                     c.name.toLowerCase().includes(firstName)
                 );
             }
@@ -175,15 +178,10 @@ export default function BoothSalesView({
         if (match) {
             setSelectedContractId(match.id);
         } else {
+            // No contract found for this associate -> Clear selection (Default/No Contract)
             setSelectedContractId('');
         }
     }, [selectedAssociateId, contracts, characters]);
-
-
-    // 2. Logic & Calculations (The Sales Distribution Engine)
-    // ============================================================================
-
-    // 2. Logic & Calculations (The Sales Distribution Engine)
     // ============================================================================
 
     const myItems = useMemo(() =>
@@ -201,52 +199,53 @@ export default function BoothSalesView({
         let akilesNet = 0;
         let associateNet = 0;
 
-        // 1. Calculate Baselines
-        const myItemsTotal = myItems.reduce((sum, item) => sum + ((item.unitPrice || 0) * (item.quantity || 0)), 0);
-        const assocItemsTotal = associateEntries.reduce((sum, e) => sum + e.amount, 0);
+        // 1. Calculate Baselines (Respecting Currency)
+        // Assumption: All Inventory Items (Products & Bundles) are priced in USD for Booth Sales.
+        const myItemsTotalUSD = myItems.reduce((s, i) => s + ((i.unitPrice || 0) * (i.quantity || 0)), 0);
 
-        // 2. Default Shares (No Contract Defaults)
-        // I keep 100% of my items.
-        // I take 0% commission on their items (they keep 100%).
-        // I pay 100% of the booth.
+        // Normalize my sales to Colones for calculation (Standardizing on CRC for Booth Sales Ledger)
+        const myItemsTotalValue_CRC = myItemsTotalUSD * exchangeRate;
+
+        // Associate Entries are entered in Colones (Quick Entry)
+        const assocItemsTotal_CRC = associateEntries.reduce((sum, e) => sum + e.amount, 0);
+
+        // 2. Default Shares (No Contract Defaults = 100% Me, 0% Assoc, Me pays Costs)
         let shareOfMyItems_Me = 1.0;
         let shareOfAssocItems_Me = 0.0;
         let shareOfExpenses_Me = 1.0;
 
         // 3. Apply Contract Clauses
         if (activeContract) {
-            // A. Sales Commission (Applied to Associate's Items typically)
-            // Does this contract have a commission clause?
+            // A. Sales Commission
             const commClause = activeContract.clauses.find(c => c.type === ContractClauseType.SALES_COMMISSION);
             if (commClause) {
-                // companyShare = My Commission %
                 shareOfAssocItems_Me = commClause.companyShare;
             }
 
-            // B. Expense Sharing (Booth Cost)
+            // B. Expense Sharing
             const expenseClause = activeContract.clauses.find(c => c.type === ContractClauseType.EXPENSE_SHARING);
             if (expenseClause) {
                 shareOfExpenses_Me = expenseClause.companyShare;
             }
         }
 
-        // 4. Calculate Values
-        const revenueMyItems_Me = myItemsTotal * shareOfMyItems_Me;
-        const revenueMyItems_Assoc = myItemsTotal * (1 - shareOfMyItems_Me);
+        // 4. Calculate Values (In CRC)
+        const revenueMyItems_Me = myItemsTotalValue_CRC * shareOfMyItems_Me;
+        const revenueMyItems_Assoc = myItemsTotalValue_CRC * (1 - shareOfMyItems_Me);
 
-        const revenueAssocItems_Me = assocItemsTotal * shareOfAssocItems_Me; // My Commission
-        const revenueAssocItems_Assoc = assocItemsTotal * (1 - shareOfAssocItems_Me);
+        const revenueAssocItems_Me = assocItemsTotal_CRC * shareOfAssocItems_Me; // My Commission
+        const revenueAssocItems_Assoc = assocItemsTotal_CRC * (1 - shareOfAssocItems_Me);
 
         const cost_Me = boothCost * shareOfExpenses_Me;
         const cost_Assoc = boothCost - cost_Me;
 
         // 5. Final Calculations
-        grossSales = myItemsTotal + assocItemsTotal;
+        grossSales = myItemsTotalValue_CRC + assocItemsTotal_CRC;
 
-        // Akiles Net = (My Sales Keep) + (Commission from Them) - (My Cost)
+        // Akiles Net (CRC)
         akilesNet = revenueMyItems_Me + revenueAssocItems_Me - cost_Me;
 
-        // Associate Net = (Their Sales Keep) + (Share of My Sales?) - (Their Cost)
+        // Associate Net (CRC)
         associateNet = revenueAssocItems_Assoc + revenueMyItems_Assoc - cost_Assoc;
 
         return {
@@ -260,14 +259,14 @@ export default function BoothSalesView({
                 principalSharePct_Associate: (1 - shareOfMyItems_Me) * 100,
                 associateSharePct_Me: shareOfAssocItems_Me * 100,
                 associateSharePct_Associate: (1 - shareOfAssocItems_Me) * 100,
-                mySales: myItemsTotal,
-                assocSales: assocItemsTotal,
+                mySales: myItemsTotalValue_CRC,
+                assocSales: assocItemsTotal_CRC,
                 costMe: cost_Me,
                 costAssoc: cost_Assoc
             }
         };
 
-    }, [myItems, associateEntries, boothCost, activeContract]);
+    }, [myItems, associateEntries, boothCost, activeContract, exchangeRate]);
 
     const getAssociateName = (id: string) => {
         const char = characters.find(c => c.id === id);
@@ -292,7 +291,6 @@ export default function BoothSalesView({
                 const itemLine = line as ItemSaleLine;
                 total = (itemLine.quantity || 0) * (itemLine.unitPrice || 0);
                 const item = items.find(i => i.id === itemLine.itemId);
-                // Safely determine category
                 if (item) {
                     category = item.subItemType ? `${item.type}: ${item.subItemType}` : item.type;
                 }
@@ -302,25 +300,20 @@ export default function BoothSalesView({
                 category = bundleLine.subItemType ? `Bundle: ${bundleLine.subItemType}` : 'Bundle';
             }
 
-
             if (!akilesRows[category]) {
                 akilesRows[category] = {
                     id: category,
                     label: category,
                     isAssociate: false,
-                    totalColones: line.kind === 'bundle' ? total : 0, // Bundles in Colones (Assumption)
-                    totalDollars: line.kind === 'item' ? total : 0,   // Items in Dollars
+                    totalColones: 0,
+                    totalDollars: total, // All Inventory treated as USD
                     totalBitcoin: 0,
                     totalCard: 0,
                     commissionAmount: 0,
                     ownerAmount: 0
                 };
             } else {
-                if (line.kind === 'item') {
-                    akilesRows[category].totalDollars += total;
-                } else {
-                    akilesRows[category].totalColones += total;
-                }
+                akilesRows[category].totalDollars += total;
             }
         });
 
