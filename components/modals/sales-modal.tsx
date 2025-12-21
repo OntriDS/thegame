@@ -1036,47 +1036,51 @@ export default function SalesModal({
           {/* Sale SubType Selector - Always Visible */}
           <div className="px-1 border-b pb-1 mt-4">
             <div className="flex items-center gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  if (sale?.id) return; // Don't allow changes for existing sales
+              {type !== SaleType.BOOTH && (
+                <>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      if (sale?.id) return; // Don't allow changes for existing sales
 
-                  const newKind = whatKind === 'product' ? 'service' : 'product';
+                      const newKind = whatKind === 'product' ? 'service' : 'product';
 
-                  // Check if we can switch to the new kind
-                  if (lines.length > 0) {
-                    const existingKinds = new Set(lines.map(line => line.kind));
+                      // Check if we can switch to the new kind
+                      if (lines.length > 0) {
+                        const existingKinds = new Set(lines.map(line => line.kind));
 
-                    if (newKind === 'product' && existingKinds.has('service')) {
-                      showValidationError('Cannot switch to Product mode. This sale already has service lines. Please clear all lines first.');
-                      return;
-                    }
+                        if (newKind === 'product' && existingKinds.has('service')) {
+                          showValidationError('Cannot switch to Product mode. This sale already has service lines. Please clear all lines first.');
+                          return;
+                        }
 
-                    if (newKind === 'service' && (existingKinds.has('item') || existingKinds.has('bundle'))) {
-                      showValidationError('Cannot switch to Service mode. This sale already has product lines. Please clear all lines first.');
-                      return;
-                    }
-                  }
+                        if (newKind === 'service' && (existingKinds.has('item') || existingKinds.has('bundle'))) {
+                          showValidationError('Cannot switch to Service mode. This sale already has product lines. Please clear all lines first.');
+                          return;
+                        }
+                      }
 
-                  setWhatKind(newKind);
-                }}
-                className={`min-w-[110px] ${sale?.id ? 'opacity-50 cursor-not-allowed' : ''}`}
-                disabled={!!sale?.id}
-                title={sale?.id ? 'Product/Service type cannot be changed after creation' : 'Toggle between Product and Service'}
-              >
-                {whatKind === 'product' ? 'Product' : 'Service'}
-              </Button>
-              {whatKind === 'product' && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setOneItemMultiple(prev => prev === 'one' ? 'multiple' : 'one')}
-                  className="min-w-[120px]"
-                  title="Toggle between one item or multiple items"
-                >
-                  {oneItemMultiple === 'one' ? 'One' : 'Multiple'}
-                </Button>
+                      setWhatKind(newKind);
+                    }}
+                    className={`min-w-[110px] ${sale?.id ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    disabled={!!sale?.id}
+                    title={sale?.id ? 'Product/Service type cannot be changed after creation' : 'Toggle between Product and Service'}
+                  >
+                    {whatKind === 'product' ? 'Product' : 'Service'}
+                  </Button>
+                  {whatKind === 'product' && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setOneItemMultiple(prev => prev === 'one' ? 'multiple' : 'one')}
+                      className="min-w-[120px]"
+                      title="Toggle between one item or multiple items"
+                    >
+                      {oneItemMultiple === 'one' ? 'One' : 'Multiple'}
+                    </Button>
+                  )}
+                </>
               )}
 
               {/* Sale Type Selectors - ONE ROW */}

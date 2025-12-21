@@ -595,7 +595,7 @@ export default function BoothSalesView({
 
                 {/* SECTION B: SPLIT VIEW (My Inventory vs. Partner Sales) */}
                 <div className="col-span-12 lg:col-span-7 flex flex-col gap-4 min-h-0 overflow-y-auto pr-2">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="flex flex-col gap-4">
                         {/* Card 1: My Inventory (Akiles) */}
                         <Card className="border-indigo-500/20 bg-indigo-950/20">
                             <CardContent className="p-4 space-y-4">
@@ -780,16 +780,11 @@ export default function BoothSalesView({
 
                     {/* Summary Footer */}
                     <div className="p-4 bg-slate-950 border-t border-slate-800 space-y-4">
-                        <div className="flex items-center justify-between">
-                            {/* Left: Title Lozenge (Moved Here) */}
+                        <div className="flex items-center justify-end">
+                            {/* Title Lozenge (Right Aligned) */}
                             <div className="flex items-center gap-2 px-3 py-1.5 bg-indigo-500/10 rounded-md border border-indigo-500/20">
                                 <Store className="h-4 w-4 text-indigo-500" />
                                 <span className="text-sm font-bold text-indigo-500 whitespace-nowrap">Booth Sales</span>
-                            </div>
-
-                            {/* Right: Section Title */}
-                            <div className="text-xs font-bold text-slate-400 uppercase flex items-center gap-2">
-                                <DollarSign className="h-3 w-3" /> Sales Distribution
                             </div>
                         </div>
 
