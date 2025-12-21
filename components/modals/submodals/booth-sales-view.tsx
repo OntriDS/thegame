@@ -1,10 +1,13 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { DatePicker } from '@/components/ui/date-picker';
 import NumericInput from '@/components/ui/numeric-input';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Card, CardContent } from '@/components/ui/card';
@@ -15,7 +18,8 @@ import {
     User,
     Store,
     DollarSign,
-    Network
+    Network,
+    CalendarIcon
 } from 'lucide-react';
 import {
     ItemType,
@@ -192,108 +196,72 @@ export default function BoothSalesView({
         return contracts.find(c => c.id === selectedContractId);
     }, [contracts, selectedContractId]);
 
-    // Calculate Totals & Distribution
     const totals = useMemo(() => {
         let grossSales = 0;
         let akilesNet = 0;
         let associateNet = 0;
 
-        // --- 1. Principal Items (My Stuff) ---
+        // 1. Calculate Baselines
         const myItemsTotal = myItems.reduce((sum, item) => sum + ((item.unitPrice || 0) * (item.quantity || 0)), 0);
-
-        // Find Contract for ME
-        const myContract = activeContract;
-
-        // Calculate Splits for MY items
-        // Default: 100% to me, 0% to associate if no contract
-        let principalSharePct_Me = 100;
-        let principalSharePct_Associate = 0;
-
-        if (myContract) {
-            // "Principal Commission": My Items sold by Associate
-            // Usually [Me, Associate] e.g. 75/25
-            const clause = myContract.clauses?.find(c => c.type === ContractClauseType.SALES_COMMISSION && c.description?.toLowerCase().includes('principal'));
-            if (!clause) {
-                // Try generic Sales Commission if specific one not found
-                const genericClause = myContract.clauses?.find(c => c.type === ContractClauseType.SALES_COMMISSION);
-                if (genericClause) {
-                    principalSharePct_Me = (genericClause.companyShare || 0) * 100;
-                    principalSharePct_Associate = (genericClause.associateShare || 0) * 100;
-                }
-            } else {
-                principalSharePct_Me = (clause.companyShare || 0) * 100;
-                principalSharePct_Associate = (clause.associateShare || 0) * 100;
-            }
-        }
-
-        const myRevenue_FromMyItems = myItemsTotal * (principalSharePct_Me / 100);
-        const assocRevenue_FromMyItems = myItemsTotal * (principalSharePct_Associate / 100);
-
-        // --- 2. Associate Items (Their Stuff) ---
         const assocItemsTotal = associateEntries.reduce((sum, e) => sum + e.amount, 0);
 
-        // Calculate Splits for THEIR items
-        // "Associate Sales Service": Associate Items sold by Me
-        // Usually [Me, Associate] e.g. 25/75 (I take 25% commission)
-        let associateSharePct_Me = 0; // Default: I get nothing
-        let associateSharePct_Associate = 100; // They get 100%
+        // 2. Default Shares (No Contract Defaults)
+        // I keep 100% of my items.
+        // I take 0% commission on their items (they keep 100%).
+        // I pay 100% of the booth.
+        let shareOfMyItems_Me = 1.0;
+        let shareOfAssocItems_Me = 0.0;
+        let shareOfExpenses_Me = 1.0;
 
-        if (myContract) {
-            // Prefer SALES_SERVICE for this (I'm providing a service selling their stuff)
-            // Fallback to SALES_COMMISSION with 'associate' in description for legacy/safety
-            let clause = myContract.clauses?.find(c => c.type === ContractClauseType.SALES_SERVICE);
-
-            if (!clause) {
-                clause = myContract.clauses?.find(c => c.type === ContractClauseType.SALES_COMMISSION && c.description?.toLowerCase().includes('associate'));
+        // 3. Apply Contract Clauses
+        if (activeContract) {
+            // A. Sales Commission (Applied to Associate's Items typically)
+            // Does this contract have a commission clause?
+            const commClause = activeContract.clauses.find(c => c.type === ContractClauseType.SALES_COMMISSION);
+            if (commClause) {
+                // companyShare = My Commission %
+                shareOfAssocItems_Me = commClause.companyShare;
             }
 
-            if (clause) {
-                associateSharePct_Me = (clause.companyShare || 0) * 100;
-                associateSharePct_Associate = (clause.associateShare || 0) * 100;
-            }
-        }
-
-        const myRevenue_FromAssocItems = assocItemsTotal * (associateSharePct_Me / 100);
-        const assocRevenue_FromAssocItems = assocItemsTotal * (associateSharePct_Associate / 100);
-
-
-        // --- 3. Booth Cost ---
-        // "Expense Sharing"
-        let costSharePct_Me = 50;
-
-        if (myContract) {
-            const expClause = myContract.clauses?.find(c => c.type === ContractClauseType.EXPENSE_SHARING);
-            if (expClause) {
-                costSharePct_Me = (expClause.companyShare || 0) * 100;
+            // B. Expense Sharing (Booth Cost)
+            const expenseClause = activeContract.clauses.find(c => c.type === ContractClauseType.EXPENSE_SHARING);
+            if (expenseClause) {
+                shareOfExpenses_Me = expenseClause.companyShare;
             }
         }
 
-        const cost_Me = boothCost * (costSharePct_Me / 100);
+        // 4. Calculate Values
+        const revenueMyItems_Me = myItemsTotal * shareOfMyItems_Me;
+        const revenueMyItems_Assoc = myItemsTotal * (1 - shareOfMyItems_Me);
+
+        const revenueAssocItems_Me = assocItemsTotal * shareOfAssocItems_Me; // My Commission
+        const revenueAssocItems_Assoc = assocItemsTotal * (1 - shareOfAssocItems_Me);
+
+        const cost_Me = boothCost * shareOfExpenses_Me;
         const cost_Assoc = boothCost - cost_Me;
 
-
-        // --- Final Tally ---
+        // 5. Final Calculations
         grossSales = myItemsTotal + assocItemsTotal;
-        akilesNet = myRevenue_FromMyItems + myRevenue_FromAssocItems - cost_Me;
-        associateNet = assocRevenue_FromMyItems + assocRevenue_FromAssocItems - cost_Assoc;
+
+        // Akiles Net = (My Sales Keep) + (Commission from Them) - (My Cost)
+        akilesNet = revenueMyItems_Me + revenueAssocItems_Me - cost_Me;
+
+        // Associate Net = (Their Sales Keep) + (Share of My Sales?) - (Their Cost)
+        associateNet = revenueAssocItems_Assoc + revenueMyItems_Assoc - cost_Assoc;
 
         return {
-            grossSales, // Total money collected
-            myNet: akilesNet, // What ends up in my pocket (Sales + Comm - Cost) (Renaming to avoid confusion)
-            associateNet, // What I owe/pay them
-            myCommissions: myRevenue_FromAssocItems,
-            associateCommissions: assocRevenue_FromMyItems,
+            grossSales,
+            myNet: akilesNet,
+            associateNet,
+            myCommissions: revenueAssocItems_Me,
+            associateCommissions: revenueAssocItems_Assoc,
             breakdown: {
-                principalSharePct_Me,
-                principalSharePct_Associate,
-                associateSharePct_Me,
-                associateSharePct_Associate,
+                principalSharePct_Me: shareOfMyItems_Me * 100,
+                principalSharePct_Associate: (1 - shareOfMyItems_Me) * 100,
+                associateSharePct_Me: shareOfAssocItems_Me * 100,
+                associateSharePct_Associate: (1 - shareOfAssocItems_Me) * 100,
                 mySales: myItemsTotal,
                 assocSales: assocItemsTotal,
-                myRevenueFromMySales: myRevenue_FromMyItems,
-                myRevenueFromAssocSales: myRevenue_FromAssocItems,
-                assocRevenueFromMySales: assocRevenue_FromMyItems,
-                assocRevenueFromAssocSales: assocRevenue_FromAssocItems,
                 costMe: cost_Me,
                 costAssoc: cost_Assoc
             }
@@ -497,7 +465,7 @@ export default function BoothSalesView({
             updatedAt: new Date(),
             isCollected: false,
 
-            // Optional fields defaults
+            // Optional fields defaultsthe input
             isNotPaid: false,
             isNotCharged: false,
         };
@@ -512,60 +480,62 @@ export default function BoothSalesView({
     return (
         <div className="flex flex-col h-full bg-slate-50/50 dark:bg-slate-900/50 -mx-6 -my-4 p-6">
 
-            {/* SECTION A: HEADER / SETUP */}
-            <div className="flex items-center gap-6 mb-6 bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border">
-                {/* Icon + Title */}
-                <div className="flex items-center gap-3">
-                    <div className="p-2 bg-indigo-100 dark:bg-indigo-900 rounded-lg">
-                        <Store className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-                    </div>
-                    <div>
-                        <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 whitespace-nowrap">Booth Sales</h2>
-                    </div>
+            {/* Header / Setup Toolbar */}
+            <div className="flex items-center gap-4 bg-white dark:bg-slate-800 p-2 rounded-lg shadow-sm border mb-4">
+
+                {/* Title Lozenge */}
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-indigo-500/10 rounded-md border border-indigo-500/20">
+                    <Store className="h-4 w-4 text-indigo-500" />
+                    <span className="text-sm font-bold text-indigo-500 whitespace-nowrap">Booth Sales</span>
                 </div>
 
-                <div className="w-px h-8 bg-slate-200 dark:bg-slate-700" />
+                <div className="w-px h-6 bg-slate-200 dark:bg-slate-700 mx-2" />
 
-                {/* Date Field */}
+                {/* Date */}
                 <div className="flex items-center gap-2">
-                    <Label className="text-sm font-medium text-muted-foreground whitespace-nowrap">Date:</Label>
-                    <DatePicker value={saleDate} onChange={(d) => setSaleDate(d || new Date())} />
+                    <span className="text-xs font-medium text-muted-foreground">Date:</span>
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button variant="outline" size="sm" className="h-8 justify-start text-left font-normal w-32">
+                                <CalendarIcon className="mr-2 h-3 w-3" />
+                                {saleDate ? format(saleDate, "dd-MM-yyyy") : <span>Pick a date</span>}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar mode="single" selected={saleDate} onSelect={(d) => d && setSaleDate(d)} initialFocus />
+                        </PopoverContent>
+                    </Popover>
                 </div>
 
-                {/* Booth Cost Field */}
+                {/* Booth Cost */}
                 <div className="flex items-center gap-2">
-                    <Label className="text-sm font-medium text-muted-foreground whitespace-nowrap">Booth Cost:</Label>
+                    <span className="text-xs font-medium text-muted-foreground">Booth Cost:</span>
                     <NumericInput
                         value={boothCost}
                         onChange={setBoothCost}
-                        className="h-9 w-32 border-red-200 text-red-600 font-medium"
+                        className="h-8 w-24 border-red-500/30 text-red-500 font-medium text-xs bg-slate-900/50"
                         placeholder="0"
                     />
                 </div>
 
-                {/* Exchange Rate Field */}
-                <div className="flex items-center gap-2">
-                    <Label className="text-sm font-medium text-muted-foreground whitespace-nowrap">$/₡:</Label>
-                    <div className="h-9 w-20 px-3 py-2 rounded-md border bg-muted/50 flex items-center justify-center text-sm font-medium text-muted-foreground">
-                        {exchangeRate}
-                    </div>
+                {/* Rate */}
+                <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-900 px-3 py-1.5 rounded-md border border-slate-700/50">
+                    <span className="text-xs font-bold text-slate-500">$/₡:</span>
+                    <span className="text-xs font-medium text-slate-400">{exchangeRate}</span>
                 </div>
 
-                {/* Site Field */}
-                <div className="flex items-center gap-2">
-                    <Label className="text-sm font-medium text-muted-foreground whitespace-nowrap">Site:</Label>
+                {/* Site */}
+                <div className="flex items-center gap-2 ml-auto">
+                    <span className="text-xs font-medium text-muted-foreground">Site:</span>
                     <SearchableSelect
                         value={siteId}
                         onValueChange={setSiteId}
                         options={createSiteOptionsWithCategories(sites)}
                         autoGroupByCategory
                         placeholder="Select site..."
-                        className="h-9 w-48"
+                        className="h-8 w-48"
                     />
                 </div>
-
-                {/* Header Spacer or additional info */}
-                <div className="flex-1" />
             </div>
 
             <div className="grid grid-cols-12 gap-6 flex-1 min-h-0">
@@ -817,7 +787,7 @@ export default function BoothSalesView({
                                 <div className="space-y-1 text-xs bg-indigo-950/10 p-2 rounded border border-indigo-500/10">
                                     <div className="flex justify-between text-slate-400"><span>Sales:</span> <span>₡{salesDistributionMatrix.akiles.reduce((s, r) => s + r.ownerAmount, 0).toLocaleString()}</span></div>
                                     <div className="flex justify-between text-slate-400"><span>Comm:</span> <span>+₡{totals.myCommissions.toLocaleString()}</span></div>
-                                    <div className="flex justify-between text-red-400/70"><span>Booth:</span> <span>-₡{(Math.abs(boothCost) / 2).toLocaleString()}</span></div>
+                                    <div className="flex justify-between text-red-400/70"><span>Booth:</span> <span>-₡{totals.breakdown.costMe.toLocaleString()}</span></div>
 
                                     <div className="border-t border-indigo-500/20 pt-2 mt-2 space-y-1">
                                         <div className="flex justify-between font-bold text-sm text-indigo-400">
@@ -848,7 +818,7 @@ export default function BoothSalesView({
                                 <div className="space-y-1 text-xs bg-pink-950/10 p-2 rounded border border-pink-500/10">
                                     <div className="flex justify-between text-slate-400"><span>Sales:</span> <span>₡{salesDistributionMatrix.associate.reduce((s, r) => s + r.commissionAmount, 0).toLocaleString()}</span></div>
                                     <div className="flex justify-between text-slate-400"><span>Comm:</span> <span>+₡{totals.associateCommissions.toLocaleString()}</span></div>
-                                    <div className="flex justify-between text-red-400/70"><span>Booth:</span> <span>-₡{(Math.abs(boothCost) / 2).toLocaleString()}</span></div>
+                                    <div className="flex justify-between text-red-400/70"><span>Booth:</span> <span>-₡{totals.breakdown.costAssoc.toLocaleString()}</span></div>
 
                                     <div className="border-t border-pink-500/20 pt-2 mt-2 space-y-1">
                                         <div className="flex justify-between font-bold text-sm text-pink-400">
