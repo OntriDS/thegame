@@ -374,6 +374,7 @@ export enum MerchSubType {
 export enum CraftSubType {
   FRAME = "Frame",
   FURNITURE = "Furniture",
+  STANDS = "Stands",
 }
 
 /** Bundle Item SubTypes */
@@ -394,8 +395,9 @@ export enum EquipmentSubType {
   ART_EQUIPMENT = "Art Equipment",
   DESIGN_EQUIPMENT = "Design Equipment",
   WORKSHOP_EQUIPMENT = "Workshop Equipment",
-  STORE_EQUIPMENT = "Store Equipment",
-  VEHICLE = "Vehicle"
+  SALES_EQUIPMENT = "Store Equipment",
+  PERSONAL_EQUIPMENT = "Personal Equipment",
+  VEHICLE = "Vehicle",
 }
 
 

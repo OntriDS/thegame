@@ -476,14 +476,6 @@ export default function BoothSalesView({
             {/* Header / Setup Toolbar */}
             <div className="flex items-center gap-4 bg-white dark:bg-slate-800 p-2 rounded-lg shadow-sm border mb-4">
 
-                {/* Title Lozenge */}
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-indigo-500/10 rounded-md border border-indigo-500/20">
-                    <Store className="h-4 w-4 text-indigo-500" />
-                    <span className="text-sm font-bold text-indigo-500 whitespace-nowrap">Booth Sales</span>
-                </div>
-
-                <div className="w-px h-6 bg-slate-200 dark:bg-slate-700 mx-2" />
-
                 {/* Date */}
                 <div className="flex items-center gap-2">
                     <span className="text-xs font-medium text-muted-foreground">Date:</span>
@@ -500,6 +492,12 @@ export default function BoothSalesView({
                     </Popover>
                 </div>
 
+                {/* Rate */}
+                <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-900 px-3 py-1.5 rounded-md border border-slate-700/50">
+                    <span className="text-xs font-bold text-slate-500">$/₡:</span>
+                    <span className="text-xs font-medium text-slate-400">{exchangeRate}</span>
+                </div>
+
                 {/* Booth Cost */}
                 <div className="flex items-center gap-2">
                     <span className="text-xs font-medium text-muted-foreground">Booth Cost:</span>
@@ -511,14 +509,8 @@ export default function BoothSalesView({
                     />
                 </div>
 
-                {/* Rate */}
-                <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-900 px-3 py-1.5 rounded-md border border-slate-700/50">
-                    <span className="text-xs font-bold text-slate-500">$/₡:</span>
-                    <span className="text-xs font-medium text-slate-400">{exchangeRate}</span>
-                </div>
-
                 {/* Site */}
-                <div className="flex items-center gap-2 ml-auto">
+                <div className="flex items-center gap-2">
                     <span className="text-xs font-medium text-muted-foreground">Site:</span>
                     <SearchableSelect
                         value={siteId}
@@ -526,9 +518,77 @@ export default function BoothSalesView({
                         options={createSiteOptionsWithCategories(sites)}
                         autoGroupByCategory
                         placeholder="Select site..."
-                        className="h-8 w-48"
+                        className="h-8 w-40"
                     />
                 </div>
+
+                <div className="w-px h-6 bg-slate-200 dark:bg-slate-700 mx-2 ml-auto" />
+
+                {/* Associate / Partner Toggle & Selector (Moved to Header) */}
+                <div className="flex items-center gap-2">
+                    {/* Role Toggle */}
+                    <div className="flex bg-slate-900 rounded-md p-0.5 border border-slate-700 shrink-0">
+                        <button
+                            onClick={() => setViewMode('Associate')}
+                            className={`text-[10px] px-2 py-1 rounded-sm transition-colors ${viewMode === 'Associate' ? 'bg-pink-600 text-white font-medium' : 'text-slate-400 hover:text-slate-300'}`}
+                        >
+                            Associate
+                        </button>
+                        <button
+                            onClick={() => setViewMode('Partner')}
+                            className={`text-[10px] px-2 py-1 rounded-sm transition-colors ${viewMode === 'Partner' ? 'bg-pink-600 text-white font-medium' : 'text-slate-400 hover:text-slate-300'}`}
+                        >
+                            Partner
+                        </button>
+                    </div>
+
+                    {/* Entity Selector */}
+                    <div className="w-48">
+                        <div className="relative">
+                            <select
+                                value={selectedAssociateId}
+                                onChange={(e) => setSelectedAssociateId(e.target.value)}
+                                className={cn(
+                                    "h-8 w-full rounded-md border bg-slate-900 px-3 py-1 text-xs shadow-sm focus:outline-none focus:ring-1 focus:ring-pink-500 truncate pr-8 appearance-none",
+                                    selectedAssociateId ? "border-pink-500/50 text-pink-200" : "border-slate-700 text-slate-400"
+                                )}
+                            >
+                                <option value="">Select {viewMode}...</option>
+                                <optgroup label="People">
+                                    {characters
+                                        .filter(c => {
+                                            if (viewMode === 'Associate') return c.roles.includes(CharacterRole.ASSOCIATE);
+                                            if (viewMode === 'Partner') return c.roles.includes(CharacterRole.PARTNER);
+                                            return false;
+                                        })
+                                        .map(c => (
+                                            <option key={c.id} value={c.id}>
+                                                {c.name}
+                                            </option>
+                                        ))}
+                                </optgroup>
+                                <optgroup label="Businesses">
+                                    {businesses.map(b => (
+                                        <option key={b.id} value={b.id}>
+                                            {b.name}
+                                        </option>
+                                    ))}
+                                </optgroup>
+                            </select>
+
+                            {/* Clear Button (Only if selected) */}
+                            {selectedAssociateId && (
+                                <button
+                                    onClick={() => setSelectedAssociateId('')}
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 hover:text-red-400"
+                                >
+                                    <Trash2 className="h-3 w-3" />
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
             </div>
 
             <div className="grid grid-cols-12 gap-6 flex-1 min-h-0">
@@ -574,72 +634,29 @@ export default function BoothSalesView({
                             </CardContent>
                         </Card>
 
-                        {/* Card 2: Partner / Associate (Sales of their stuff) */}
-                        <Card className="border-pink-500/20 bg-pink-950/20">
-                            <CardContent className="p-4 space-y-4">
-                                <div className="flex flex-col gap-3">
-                                    {/* Header Row: Toggle & Selector */}
-                                    <div className="flex items-center gap-2 w-full">
-                                        <div className="flex bg-slate-900 rounded-md p-0.5 border border-slate-700 shrink-0">
-                                            <button
-                                                onClick={() => setViewMode('Associate')}
-                                                className={`text-[10px] px-2 py-1 rounded-sm transition-colors ${viewMode === 'Associate' ? 'bg-pink-600 text-white font-medium' : 'text-slate-400 hover:text-slate-300'}`}
-                                            >
-                                                Associate
-                                            </button>
-                                            <button
-                                                onClick={() => setViewMode('Partner')}
-                                                className={`text-[10px] px-2 py-1 rounded-sm transition-colors ${viewMode === 'Partner' ? 'bg-pink-600 text-white font-medium' : 'text-slate-400 hover:text-slate-300'}`}
-                                            >
-                                                Partner
-                                            </button>
+                        {/* Card 2: Partner / Associate (Only if selected) */}
+                        {selectedAssociateId && (
+                            <Card className="border-pink-500/20 bg-pink-950/20">
+                                <CardContent className="p-4 space-y-3">
+                                    <div className="flex flex-col gap-2">
+                                        <div className="flex justify-between items-center">
+                                            <div className="text-sm font-bold text-pink-400 flex items-center gap-2">
+                                                <User className="h-4 w-4" />
+                                                {getAssociateName(selectedAssociateId)}
+                                                <span className="text-[10px] font-normal text-pink-500/70">({viewMode})</span>
+                                            </div>
                                         </div>
 
-                                        {/* Simplified Partner/Associate Selector */}
-                                        <div className="flex-1 min-w-0">
-                                            <select
-                                                value={selectedAssociateId}
-                                                onChange={(e) => setSelectedAssociateId(e.target.value)}
-                                                className="h-8 w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-1 text-xs shadow-sm focus:outline-none focus:ring-1 focus:ring-pink-500 text-slate-200 truncate"
-                                            >
-                                                <option value="" disabled>Select {viewMode}...</option>
-
-                                                <optgroup label="People">
-                                                    {characters
-                                                        .filter(c => {
-                                                            if (viewMode === 'Associate') return c.roles.includes(CharacterRole.ASSOCIATE);
-                                                            if (viewMode === 'Partner') return c.roles.includes(CharacterRole.PARTNER);
-                                                            return false;
-                                                        })
-                                                        .map(c => (
-                                                            <option key={c.id} value={c.id}>
-                                                                {c.name}
-                                                            </option>
-                                                        ))}
-                                                </optgroup>
-
-                                                <optgroup label="Businesses">
-                                                    {businesses.map(b => (
-                                                        <option key={b.id} value={b.id}>
-                                                            {b.name}
-                                                        </option>
-                                                    ))}
-                                                </optgroup>
-                                            </select>
-                                        </div>
-                                    </div>
-
-                                    {/* Contract Selector (Specific to Associate) */}
-                                    {selectedAssociateId && (
-                                        <div className="flex items-center gap-2 w-full animate-in fade-in slide-in-from-top-1 duration-200">
-                                            <div className="w-[68px] text-[10px] text-pink-300 font-medium text-right shrink-0">
+                                        {/* Contract Selector */}
+                                        <div className="flex items-center gap-2 w-full">
+                                            <div className="w-auto text-[10px] text-pink-300 font-medium shrink-0">
                                                 Agreement:
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <select
                                                     value={selectedContractId}
                                                     onChange={(e) => setSelectedContractId(e.target.value)}
-                                                    className="h-7 w-full rounded-md border border-pink-500/30 bg-pink-950/30 px-2 text-[10px] shadow-sm focus:outline-none focus:ring-1 focus:ring-pink-500 text-pink-100 truncate"
+                                                    className="h-6 w-full rounded border border-pink-500/30 bg-pink-950/30 px-2 text-[10px] shadow-sm focus:outline-none focus:ring-1 focus:ring-pink-500 text-pink-100 truncate"
                                                 >
                                                     <option value="" disabled>Select Active Contract...</option>
                                                     {contracts
@@ -652,69 +669,68 @@ export default function BoothSalesView({
                                                 </select>
                                             </div>
                                         </div>
-                                    )}
-                                </div>
-
-                                {/* Quick Entry Form - Simplified */}
-                                <div className={`bg-slate-900/50 p-4 rounded-lg border border-slate-800 space-y-3 ${!selectedAssociateId ? 'opacity-50 pointer-events-none' : ''}`}>
-                                    <div className="flex gap-2">
-                                        <NumericInput
-                                            value={parseFloat(quickAmount) || 0}
-                                            onChange={(val) => setQuickAmount(val.toString())}
-                                            placeholder="Amount (₡)"
-                                            className="w-32 bg-slate-950 border-slate-700"
-                                        />
-                                        <Input
-                                            value={quickCat}
-                                            onChange={(e) => setQuickCat(e.target.value)}
-                                            placeholder="Category (e.g. Jewelry)"
-                                            className="flex-1 bg-slate-950 border-slate-700"
-                                        />
-                                        <Button
-                                            onClick={handleAddAssociateEntry}
-                                            className="bg-pink-600 hover:bg-pink-700 text-white shrink-0"
-                                            disabled={!selectedAssociateId || !quickAmount}
-                                        >
-                                            Add
-                                        </Button>
                                     </div>
-                                </div>
 
-                                {/* List of Associate Entries */}
-                                <div className="space-y-2 max-h-[150px] overflow-y-auto">
-                                    {associateEntries.map(entry => (
-                                        <div key={entry.id} className="flex justify-between items-center text-sm p-2 bg-slate-800 rounded border border-slate-700/50">
-                                            <div className="flex flex-col">
-                                                <span className="font-medium text-pink-200">{entry.category}</span>
-                                            </div>
-                                            <div className="flex items-center gap-4">
-                                                <span className="font-mono text-pink-300">₡{entry.amount.toLocaleString()}</span>
-                                                <Button variant="ghost" size="icon" className="h-6 w-6 text-red-400" onClick={() => handleRemoveAssociateEntry(entry.id)}>
-                                                    <Trash2 className="h-3 w-3" />
-                                                </Button>
-                                            </div>
+                                    {/* Quick Entry Form */}
+                                    <div className="bg-slate-900/50 p-3 rounded-lg border border-slate-800 space-y-2">
+                                        <div className="flex gap-2">
+                                            <NumericInput
+                                                value={parseFloat(quickAmount) || 0}
+                                                onChange={(val) => setQuickAmount(val.toString())}
+                                                placeholder="0 ₡"
+                                                className="w-24 bg-slate-950 border-slate-700 h-8 text-xs"
+                                            />
+                                            <Input
+                                                value={quickCat}
+                                                onChange={(e) => setQuickCat(e.target.value)}
+                                                placeholder="Products"
+                                                className="flex-1 bg-slate-950 border-slate-700 h-8 text-xs"
+                                            />
+                                            <Button
+                                                onClick={handleAddAssociateEntry}
+                                                className="bg-pink-600 hover:bg-pink-700 text-white shrink-0 h-8 text-xs"
+                                                disabled={!quickAmount}
+                                                size="sm"
+                                            >
+                                                Add
+                                            </Button>
                                         </div>
-                                    ))}
-                                    {associateEntries.length === 0 && selectedAssociateId && (
-                                        <div className="text-center text-xs text-muted-foreground py-4 italic">No entries yet.</div>
-                                    )}
-                                </div>
+                                    </div>
 
-                            </CardContent>
-                        </Card>
+                                    {/* List */}
+                                    <div className="space-y-1 max-h-[150px] overflow-y-auto">
+                                        {associateEntries.map(entry => (
+                                            <div key={entry.id} className="flex justify-between items-center text-xs p-2 bg-slate-800 rounded border border-slate-700/50">
+                                                <span className="font-medium text-pink-200">{entry.category}</span>
+                                                <div className="flex items-center gap-3">
+                                                    <span className="font-mono text-pink-300">₡{entry.amount.toLocaleString()}</span>
+                                                    <Button variant="ghost" size="icon" className="h-5 w-5 text-red-400 hover:bg-slate-700" onClick={() => handleRemoveAssociateEntry(entry.id)}>
+                                                        <Trash2 className="h-3 w-3" />
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        )}
                     </div>
                 </div >
 
                 {/* SECTION C: SETTLEMENT MATRIX (The Excel View) - Right Column */}
-                < div className="col-span-12 lg:col-span-5 flex flex-col min-h-0 bg-white dark:bg-slate-800 rounded-xl border shadow-sm overflow-hidden" >
+                <div className="col-span-12 lg:col-span-5 flex flex-col min-h-0 bg-white dark:bg-slate-800 rounded-xl border shadow-sm overflow-hidden">
 
                     {/* Matrix Header */}
                     <div className="grid grid-cols-12 gap-2 p-3 bg-slate-900 border-b border-slate-700 text-[10px] font-semibold text-slate-400 uppercase tracking-wider text-center">
-                        <div className="col-span-3 text-left pl-2">Category</div>
-                        <div className="col-span-2 text-right">Total ($)</div>
-                        <div className="col-span-2 text-right">Total (₡)</div>
-                        <div className="col-span-2 text-right text-indigo-400">My Share ($)</div>
-                        <div className="col-span-3 text-right text-pink-400">Assoc. Share ($)</div>
+                        <div className={`text-left pl-2 ${selectedAssociateId ? 'col-span-3' : 'col-span-6'}`}>Category</div>
+                        <div className={`text-right ${selectedAssociateId ? 'col-span-2' : 'col-span-3'}`}>Total ($)</div>
+                        <div className={`text-right ${selectedAssociateId ? 'col-span-2' : 'col-span-3'}`}>Total (₡)</div>
+                        {selectedAssociateId && (
+                            <>
+                                <div className="col-span-2 text-right text-indigo-400">My Share ($)</div>
+                                <div className="col-span-3 text-right text-pink-400">Assoc. Share ($)</div>
+                            </>
+                        )}
                     </div>
 
                     {/* Matrix Body (Scrollable) */}
@@ -726,25 +742,27 @@ export default function BoothSalesView({
                                     <div className="text-[10px] font-bold text-indigo-400 mb-2 px-2 uppercase tracking-wide">AKILES PRODUCTS</div>
                                     {salesDistributionMatrix.akiles.map(row => (
                                         <div key={row.id} className="grid grid-cols-12 gap-2 p-2 text-xs border-b border-indigo-500/10 last:border-0 hover:bg-white/5 transition-colors items-center">
-                                            <div className="col-span-3 font-medium text-indigo-100 truncate" title={row.label}>{row.label}</div>
-                                            <div className="col-span-2 text-right font-mono text-slate-300">${row.totalDollars.toLocaleString()}</div>
-                                            <div className="col-span-2 text-right font-mono text-slate-400">₡{row.totalColones.toLocaleString()}</div>
-                                            <div className="col-span-2 text-right text-indigo-300 font-bold">${(row.ownerAmount / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                                            <div className="col-span-3 text-right text-pink-300/70">${(row.commissionAmount / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                                            <div className={`font-medium text-indigo-100 truncate ${selectedAssociateId ? 'col-span-3' : 'col-span-6'}`} title={row.label}>{row.label}</div>
+                                            <div className={`text-right font-mono text-slate-300 ${selectedAssociateId ? 'col-span-2' : 'col-span-3'}`}>${row.totalDollars.toLocaleString()}</div>
+                                            <div className={`text-right font-mono text-slate-400 ${selectedAssociateId ? 'col-span-2' : 'col-span-3'}`}>₡{row.totalColones.toLocaleString()}</div>
+                                            {selectedAssociateId && (
+                                                <>
+                                                    <div className="col-span-2 text-right text-indigo-300 font-bold">${(row.ownerAmount / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                                                    <div className="col-span-3 text-right text-pink-300/70">${(row.commissionAmount / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                                                </>
+                                            )}
                                         </div>
                                     ))}
                                 </div>
                             )
                         }
 
-                        {/* Associate Section */}
+                        {/* Associate Section (Only if selected) */}
                         {
-                            salesDistributionMatrix.associate.length > 0 && (
+                            selectedAssociateId && salesDistributionMatrix.associate.length > 0 && (
                                 <div className="p-2 bg-pink-950/20">
                                     <div className="text-[10px] font-bold text-pink-400 mb-2 px-2 mt-2 uppercase tracking-wide">
-                                        {selectedAssociateId
-                                            ? `ASSOCIATE (${getAssociateName(selectedAssociateId).toUpperCase()})`
-                                            : 'ASSOCIATE SALES'}
+                                        {`ASSOCIATE (${getAssociateName(selectedAssociateId).toUpperCase()})`}
                                     </div>
                                     {salesDistributionMatrix.associate.map(row => (
                                         <div key={row.id} className="grid grid-cols-12 gap-2 p-2 text-xs border-b border-pink-500/10 last:border-0 hover:bg-white/5 transition-colors items-center">
@@ -761,13 +779,21 @@ export default function BoothSalesView({
                     </div>
 
                     {/* Summary Footer */}
-                    {/* Summary Footer */}
                     <div className="p-4 bg-slate-950 border-t border-slate-800 space-y-4">
-                        <div className="text-xs font-bold text-slate-400 uppercase flex items-center gap-2">
-                            <DollarSign className="h-3 w-3" /> Sales Distribution
+                        <div className="flex items-center justify-between">
+                            {/* Left: Title Lozenge (Moved Here) */}
+                            <div className="flex items-center gap-2 px-3 py-1.5 bg-indigo-500/10 rounded-md border border-indigo-500/20">
+                                <Store className="h-4 w-4 text-indigo-500" />
+                                <span className="text-sm font-bold text-indigo-500 whitespace-nowrap">Booth Sales</span>
+                            </div>
+
+                            {/* Right: Section Title */}
+                            <div className="text-xs font-bold text-slate-400 uppercase flex items-center gap-2">
+                                <DollarSign className="h-3 w-3" /> Sales Distribution
+                            </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className={`grid gap-4 ${selectedAssociateId ? 'grid-cols-2' : 'grid-cols-1'}`}>
                             {/* My Payout */}
                             <div className="p-3 bg-slate-900 rounded-lg border border-indigo-500/20 shadow-sm">
                                 <div className="flex items-center gap-2 mb-2">
@@ -779,7 +805,9 @@ export default function BoothSalesView({
                                 </div>
                                 <div className="space-y-1 text-xs bg-indigo-950/10 p-2 rounded border border-indigo-500/10">
                                     <div className="flex justify-between text-slate-400"><span>Sales:</span> <span>₡{salesDistributionMatrix.akiles.reduce((s, r) => s + r.ownerAmount, 0).toLocaleString()}</span></div>
-                                    <div className="flex justify-between text-slate-400"><span>Comm:</span> <span>+₡{totals.myCommissions.toLocaleString()}</span></div>
+                                    {selectedAssociateId && (
+                                        <div className="flex justify-between text-slate-400"><span>Comm:</span> <span>+₡{totals.myCommissions.toLocaleString()}</span></div>
+                                    )}
                                     <div className="flex justify-between text-red-400/70"><span>Booth:</span> <span>-₡{totals.breakdown.costMe.toLocaleString()}</span></div>
 
                                     <div className="border-t border-indigo-500/20 pt-2 mt-2 space-y-1">
@@ -795,39 +823,42 @@ export default function BoothSalesView({
                                 </div>
                             </div>
 
-                            {/* Associate Payout */}
-                            <div className="p-3 bg-slate-900 rounded-lg border border-pink-500/20 shadow-sm">
-                                <div className="flex items-center gap-2 mb-2">
-                                    <div className="h-6 w-6 rounded-full bg-pink-500/20 flex items-center justify-center text-pink-400 font-bold text-[10px]">
-                                        {selectedAssociateId ? getAssociateName(selectedAssociateId).substring(0, 1).toUpperCase() : 'A'}
-                                    </div>
-                                    <div>
-                                        <div className="text-xs font-bold text-pink-100">
-                                            {selectedAssociateId ? `${getAssociateName(selectedAssociateId)} Net` : 'Associate Net'}
+                            {/* Associate Payout (Conditional) */}
+                            {selectedAssociateId && (
+                                <div className="p-3 bg-slate-900 rounded-lg border border-pink-500/20 shadow-sm">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <div className="h-6 w-6 rounded-full bg-pink-500/20 flex items-center justify-center text-pink-400 font-bold text-[10px]">
+                                            {selectedAssociateId ? getAssociateName(selectedAssociateId).substring(0, 1).toUpperCase() : 'A'}
                                         </div>
-                                        <div className="text-[10px] text-slate-500">Payout to Associate</div>
+                                        <div>
+                                            <div className="text-xs font-bold text-pink-100">
+                                                {selectedAssociateId ? `${getAssociateName(selectedAssociateId)} Net` : 'Associate Net'}
+                                            </div>
+                                            <div className="text-[10px] text-slate-500">Payout to Associate</div>
+                                        </div>
                                     </div>
-                                </div>
-                                <div className="space-y-1 text-xs bg-pink-950/10 p-2 rounded border border-pink-500/10">
-                                    <div className="flex justify-between text-slate-400"><span>Sales:</span> <span>₡{salesDistributionMatrix.associate.reduce((s, r) => s + r.commissionAmount, 0).toLocaleString()}</span></div>
-                                    <div className="flex justify-between text-slate-400"><span>Comm:</span> <span>+₡{totals.associateCommissions.toLocaleString()}</span></div>
-                                    <div className="flex justify-between text-red-400/70"><span>Booth:</span> <span>-₡{totals.breakdown.costAssoc.toLocaleString()}</span></div>
+                                    <div className="space-y-1 text-xs bg-pink-950/10 p-2 rounded border border-pink-500/10">
+                                        <div className="flex justify-between text-slate-400"><span>Sales:</span> <span>₡{salesDistributionMatrix.associate.reduce((s, r) => s + r.ownerAmount, 0).toLocaleString()}</span></div>
+                                        <div className="flex justify-between text-slate-400"><span>Comm:</span> <span>+₡{totals.associateCommissions.toLocaleString()}</span></div>
+                                        <div className="flex justify-between text-red-400/70"><span>Booth:</span> <span>-₡{totals.breakdown.costAssoc.toLocaleString()}</span></div>
 
-                                    <div className="border-t border-pink-500/20 pt-2 mt-2 space-y-1">
-                                        <div className="flex justify-between font-bold text-sm text-pink-400">
-                                            <span>Total ($):</span>
-                                            <span>${(totals.associateNet / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                                        </div>
-                                        <div className="flex justify-between text-xs text-pink-400/50">
-                                            <span>Total (₡):</span>
-                                            <span>₡{totals.associateNet.toLocaleString()}</span>
+                                        <div className="border-t border-pink-500/20 pt-2 mt-2 space-y-1">
+                                            <div className="flex justify-between font-bold text-sm text-pink-400">
+                                                <span>Total ($):</span>
+                                                <span>${(totals.associateNet / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                            </div>
+                                            <div className="flex justify-between text-xs text-pink-400/50">
+                                                <span>Total (₡):</span>
+                                                <span>₡{totals.associateNet.toLocaleString()}</span>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
+                            )}
                         </div>
                     </div>
                 </div>
+
             </div>
 
             <div className="p-4 border-t bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 flex justify-end gap-2">
