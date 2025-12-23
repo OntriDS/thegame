@@ -397,7 +397,7 @@ export default function BoothSalesView({
             akiles: Object.values(akilesRows),
             associate: Object.values(associateRows)
         };
-    }, [myItems, associateEntries, items, exchangeRate, totals]);
+    }, [myItems, associateEntries, items, exchangeRate, totals, lines]);
 
 
     // 3. Handlers
@@ -692,7 +692,7 @@ export default function BoothSalesView({
                                             {myItems.length === 0 && (
                                                 <tr>
                                                     <td colSpan={7} className="p-4 text-center text-muted-foreground italic">
-                                                        No items selected. Click "Add" to select inventory.
+                                                        No items selected. Click &quot;Add&quot; to select inventory.
                                                     </td>
                                                 </tr>
                                             )}
