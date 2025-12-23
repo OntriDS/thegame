@@ -975,7 +975,7 @@ export default function BoothSalesView({
                                         <div key={row.id} className="grid grid-cols-12 gap-2 p-2 text-xs border-b border-indigo-500/10 last:border-0 hover:bg-white/5 transition-colors items-center">
                                             <div className={`font-medium text-indigo-100 truncate ${selectedAssociateId ? 'col-span-3' : 'col-span-6'}`} title={row.label}>{row.label}</div>
                                             <div className={`text-right font-mono text-slate-400 ${selectedAssociateId ? 'col-span-2' : 'col-span-3'}`}>₡{row.totalColones.toLocaleString()}</div>
-                                            <div className={`text-right font-mono text-slate-300 ${selectedAssociateId ? 'col-span-2' : 'col-span-3'}`}>${row.totalDollars.toLocaleString()}</div>
+                                            <div className={`text-right font-mono text-slate-300 ${selectedAssociateId ? 'col-span-2' : 'col-span-3'}`}>${row.totalDollars.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</div>
                                             {selectedAssociateId && (
                                                 <>
                                                     <div className="col-span-2 text-right text-indigo-300 font-bold">${(row.ownerAmount / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
@@ -999,7 +999,7 @@ export default function BoothSalesView({
                                         <div key={row.id} className="grid grid-cols-12 gap-2 p-2 text-xs border-b border-pink-500/10 last:border-0 hover:bg-white/5 transition-colors items-center">
                                             <div className="col-span-3 font-medium text-pink-100 truncate" title={row.label}>{row.label}</div>
                                             <div className="col-span-2 text-right font-mono text-slate-400">₡{row.totalColones.toLocaleString()}</div>
-                                            <div className="col-span-2 text-right font-mono text-slate-300">${row.totalDollars.toLocaleString()}</div>
+                                            <div className="col-span-2 text-right font-mono text-slate-300">${row.totalDollars.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</div>
                                             <div className="col-span-2 text-right text-indigo-300/70">${(row.ownerAmount / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                                             <div className="col-span-3 text-right text-pink-300 font-bold">${(row.commissionAmount / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                                         </div>
@@ -1034,25 +1034,18 @@ export default function BoothSalesView({
                                         <div className="grid grid-cols-3 gap-2 text-xs text-indigo-100">
                                             <span>Sales:</span>
                                             <div className="text-right font-mono">₡{salesDistributionMatrix.akiles.reduce((s, r) => s + r.totalColones, 0).toLocaleString()}</div>
-                                            <div className="text-right font-mono">${salesDistributionMatrix.akiles.reduce((s, r) => s + r.totalDollars, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                                            <div className="text-right font-mono">${salesDistributionMatrix.akiles.reduce((s, r) => s + r.totalDollars, 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</div>
                                         </div>
                                         <div className="grid grid-cols-3 gap-2 text-xs text-red-400">
                                             <span>Booth:</span>
                                             <div className="text-right font-mono text-red-400">-₡{(totals.breakdown.costMe * exchangeRate).toLocaleString()}</div>
                                             <div className="text-right font-mono text-red-400">-${totals.breakdown.costMe.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
                                         </div>
-                                        <div className="grid grid-cols-3 gap-2 text-sm font-bold border-t border-indigo-500/20 pt-1 mt-1">
-                                            <span>Total:</span>
-                                            <div className="text-right text-indigo-300">₡{totals.breakdown.mySales.toLocaleString()}</div>
-                                            <div className="text-right text-indigo-300">${(totals.myNet / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
-                                            {/* Note: The 'Total' row in user screenshot showed mixed values.
-                                                If they want specific T$ and T₡ rows:
-                                             */}
                                         </div>
                                         {/* Explicit T$ and T₡ rows as requested */}
                                         <div className="grid grid-cols-3 gap-2 text-sm font-bold border-t border-indigo-500/20 pt-1 mt-1 text-indigo-400">
                                             <span className="col-span-1">T$:</span>
-                                            <span className="col-span-2 text-right">${(totals.myNet / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                            <span className="col-span-2 text-right">${(totals.myNet / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</span>
                                         </div>
                                         <div className="grid grid-cols-3 gap-2 text-xs font-medium text-indigo-400/50">
                                             <span className="col-span-1">T₡:</span>
@@ -1087,7 +1080,7 @@ export default function BoothSalesView({
                                             <div className="grid grid-cols-3 gap-2 text-xs text-pink-100">
                                                 <span>Sales:</span>
                                                 <div className="text-right font-mono">₡{salesDistributionMatrix.associate.reduce((s, r) => s + r.totalColones, 0).toLocaleString()}</div>
-                                                <div className="text-right font-mono">${salesDistributionMatrix.associate.reduce((s, r) => s + r.totalDollars, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                                                <div className="text-right font-mono">${salesDistributionMatrix.associate.reduce((s, r) => s + r.totalDollars, 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</div>
                                             </div>
                                             <div className="grid grid-cols-3 gap-2 text-xs text-red-400">
                                                 <span>Booth:</span>
@@ -1096,7 +1089,7 @@ export default function BoothSalesView({
                                             </div>
                                             <div className="grid grid-cols-3 gap-2 text-sm font-bold border-t border-pink-500/20 pt-1 mt-1 text-pink-400">
                                                 <span className="col-span-1">T$:</span>
-                                                <span className="col-span-2 text-right">${(totals.associateNet / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                <span className="col-span-2 text-right">${(totals.associateNet / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</span>
                                             </div>
                                             <div className="grid grid-cols-3 gap-2 text-xs font-medium text-pink-400/50">
                                                 <span className="col-span-1">T₡:</span>
@@ -1232,74 +1225,74 @@ export default function BoothSalesView({
                 </div>
             </div >
 
-            {/* Item Selector Sub-Modal */}
-            <SaleItemsSubModal
-                open={showItemPicker}
-                onOpenChange={setShowItemPicker}
-                onSave={(selectedItems) => {
-                    // Convert SaleItemLine from submodal to ItemSaleLine for our lines
-                    const newLines: SaleLine[] = selectedItems.map(saleItem => ({
-                        lineId: uuid(), // Generate new ID or keep existing? Submodal generates new IDs, we accept them.
-                        // Actually, submodal returns SaleItemLine with an ID, but we usually regen on save or we can reuse.
-                        // Let's create new ItemSaleLines.
-                        kind: 'item',
-                        itemId: saleItem.itemId,
-                        unitPrice: saleItem.unitPrice,
-                        quantity: saleItem.quantity,
-                        description: saleItem.itemName,
-                        metadata: {
-                            usdExpression: saleItem.usdExpression,
-                            crcExpression: saleItem.crcExpression,
-                            totalUSD: saleItem.totalUSD,
-                            totalCRC: saleItem.totalCRC
-                        }
-                    } as ItemSaleLine));
-
-                    // Replace ALL item lines with the new selection (since modal manages the full list)
-                    // Keep non-item lines (like bundles if any, though we filtered them before? No, bundles are separate)
-                    // The logic here replaces the previous "add to list" logic.
-                    // User Edit Flow: "Open modal -> See current items -> Edit/Add/Remove -> Save -> Replace list".
-
-                    const nonItemLines = lines.filter(l => l.kind !== 'item');
-                    setLines([...nonItemLines, ...newLines]);
-                    setShowItemPicker(false);
-                }}
-                initialItems={
-                    lines.filter(l => l.kind === 'item').map(l => {
-                        const il = l as ItemSaleLine;
-                        const item = items.find(i => i.id === il.itemId);
-                        return {
-                            id: il.lineId,
-                            itemId: il.itemId,
-                            itemName: item ? item.name : 'Unknown Item',
-                            quantity: il.quantity,
-                            unitPrice: il.unitPrice || 0,
-                            total: (il.quantity || 0) * (il.unitPrice || 0),
-                            siteId: siteId,
-                            usdExpression: l.metadata?.usdExpression,
-                            crcExpression: l.metadata?.crcExpression
-                        };
-                    })
+            {/* Item Selector Sub-Modal */ }
+    <SaleItemsSubModal
+        open={showItemPicker}
+        onOpenChange={setShowItemPicker}
+        onSave={(selectedItems) => {
+            // Convert SaleItemLine from submodal to ItemSaleLine for our lines
+            const newLines: SaleLine[] = selectedItems.map(saleItem => ({
+                lineId: uuid(), // Generate new ID or keep existing? Submodal generates new IDs, we accept them.
+                // Actually, submodal returns SaleItemLine with an ID, but we usually regen on save or we can reuse.
+                // Let's create new ItemSaleLines.
+                kind: 'item',
+                itemId: saleItem.itemId,
+                unitPrice: saleItem.unitPrice,
+                quantity: saleItem.quantity,
+                description: saleItem.itemName,
+                metadata: {
+                    usdExpression: saleItem.usdExpression,
+                    crcExpression: saleItem.crcExpression,
+                    totalUSD: saleItem.totalUSD,
+                    totalCRC: saleItem.totalCRC
                 }
-                defaultSiteId={siteId}
-                exchangeRate={exchangeRate}
-            />
+            } as ItemSaleLine));
 
-            {/* Delete Confirmation Modal */}
-            <ConfirmationModal
-                open={showDeleteConfirm}
-                onOpenChange={setShowDeleteConfirm}
-                title="Delete Sale"
-                description="Are you sure you want to delete this sale? This action cannot be undone."
-                confirmText="Delete"
-                cancelText="Cancel"
-                variant="destructive"
-                onConfirm={() => {
-                    setShowDeleteConfirm(false);
-                    if (onDelete) onDelete();
-                }}
-                onCancel={() => setShowDeleteConfirm(false)}
-            />
+            // Replace ALL item lines with the new selection (since modal manages the full list)
+            // Keep non-item lines (like bundles if any, though we filtered them before? No, bundles are separate)
+            // The logic here replaces the previous "add to list" logic.
+            // User Edit Flow: "Open modal -> See current items -> Edit/Add/Remove -> Save -> Replace list".
+
+            const nonItemLines = lines.filter(l => l.kind !== 'item');
+            setLines([...nonItemLines, ...newLines]);
+            setShowItemPicker(false);
+        }}
+        initialItems={
+            lines.filter(l => l.kind === 'item').map(l => {
+                const il = l as ItemSaleLine;
+                const item = items.find(i => i.id === il.itemId);
+                return {
+                    id: il.lineId,
+                    itemId: il.itemId,
+                    itemName: item ? item.name : 'Unknown Item',
+                    quantity: il.quantity,
+                    unitPrice: il.unitPrice || 0,
+                    total: (il.quantity || 0) * (il.unitPrice || 0),
+                    siteId: siteId,
+                    usdExpression: l.metadata?.usdExpression,
+                    crcExpression: l.metadata?.crcExpression
+                };
+            })
+        }
+        defaultSiteId={siteId}
+        exchangeRate={exchangeRate}
+    />
+
+    {/* Delete Confirmation Modal */ }
+    <ConfirmationModal
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        title="Delete Sale"
+        description="Are you sure you want to delete this sale? This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="destructive"
+        onConfirm={() => {
+            setShowDeleteConfirm(false);
+            if (onDelete) onDelete();
+        }}
+        onCancel={() => setShowDeleteConfirm(false)}
+    />
         </div >
     );
 }
