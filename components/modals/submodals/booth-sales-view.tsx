@@ -141,6 +141,11 @@ export default function BoothSalesView({
     // Associate Quick Entry State (formerly Partner)
     const [associateEntries, setAssociateEntries] = useState<AssociateQuickEntry[]>([]);
 
+    // Payments Logic: Auto-calculate remaining need
+    // "reduce from colones then convert to dollars"
+
+
+
     // View Mode: 'Associate' | 'Partner' | 'Off' (Nullable logic handled by string literal)
     const [viewMode, setViewMode] = useState<'Associate' | 'Partner' | 'Off'>('Off');
 
@@ -343,31 +348,63 @@ export default function BoothSalesView({
 
             if (line.kind === 'item') {
                 const itemLine = line as ItemSaleLine;
-                total = (itemLine.quantity || 0) * (itemLine.unitPrice || 0);
+
+                // Use metadata partial totals if available, otherwise fallback to total (USD)
+                const metaUSD = itemLine.metadata?.totalUSD ?? 0;
+                const metaCRC = itemLine.metadata?.totalCRC ?? 0;
+
+                // If we have specific metadata (new system), use it.
+                // Otherwise fallback to legacy behavior (quantity * unitPrice = USD).
+                if (metaUSD > 0 || metaCRC > 0) {
+                    // Check if this line is purely derived from expressions
+                    total = (itemLine.quantity || 0) * (itemLine.unitPrice || 0);
+                    // But for the matrix, we want the split.
+                } else {
+                    total = (itemLine.quantity || 0) * (itemLine.unitPrice || 0);
+                }
+
                 const item = items.find(i => i.id === itemLine.itemId);
                 if (item) {
                     category = item.subItemType ? `${item.type}: ${item.subItemType}` : item.type;
+                }
+
+                if (!akilesRows[category]) {
+                    akilesRows[category] = {
+                        id: category,
+                        label: category,
+                        isAssociate: false,
+                        totalColones: metaCRC,
+                        totalDollars: (metaUSD > 0 || metaCRC > 0) ? metaUSD : total,
+                        totalBitcoin: 0,
+                        totalCard: 0,
+                        commissionAmount: 0,
+                        ownerAmount: 0
+                    };
+                } else {
+                    akilesRows[category].totalDollars += ((metaUSD > 0 || metaCRC > 0) ? metaUSD : total);
+                    akilesRows[category].totalColones += metaCRC;
                 }
             } else if (line.kind === 'bundle') {
                 const bundleLine = line as BundleSaleLine;
                 total = (bundleLine.quantity || 0) * (bundleLine.unitPrice || 0);
                 category = bundleLine.subItemType ? `Bundle: ${bundleLine.subItemType}` : 'Bundle';
-            }
 
-            if (!akilesRows[category]) {
-                akilesRows[category] = {
-                    id: category,
-                    label: category,
-                    isAssociate: false,
-                    totalColones: 0,
-                    totalDollars: total, // All Inventory treated as USD
-                    totalBitcoin: 0,
-                    totalCard: 0,
-                    commissionAmount: 0,
-                    ownerAmount: 0
-                };
-            } else {
-                akilesRows[category].totalDollars += total;
+                // Bundle logic remains simple (USD) for now unless extended
+                if (!akilesRows[category]) {
+                    akilesRows[category] = {
+                        id: category,
+                        label: category,
+                        isAssociate: false,
+                        totalColones: 0,
+                        totalDollars: total,
+                        totalBitcoin: 0,
+                        totalCard: 0,
+                        commissionAmount: 0,
+                        ownerAmount: 0
+                    };
+                } else {
+                    akilesRows[category].totalDollars += total;
+                }
             }
         });
 
@@ -412,6 +449,40 @@ export default function BoothSalesView({
         };
     }, [myItems, associateEntries, items, exchangeRate, totals, lines]);
 
+
+    // Payments Logic: Auto-calculate remaining need
+    // Moved here to be after salesDistributionMatrix is defined
+    useEffect(() => {
+        // 1. Calculate Total Incomes (Separated by Currency)
+        const totalCRC = salesDistributionMatrix.akiles.reduce((acc, r) => acc + r.totalColones, 0) +
+            salesDistributionMatrix.associate.reduce((acc, r) => acc + r.totalColones, 0);
+
+        const totalDollars = salesDistributionMatrix.akiles.reduce((acc, r) => acc + r.totalDollars, 0) +
+            salesDistributionMatrix.associate.reduce((acc, r) => acc + r.totalDollars, 0);
+
+        // 2. Calculate Non-USD Payments (Card, BTC, CashCRC)
+        const paymentCardVal = Number(paymentCard) || 0;
+        const paymentBtcVal = Number(paymentBitcoin) || 0;
+        const paymentCashCRCVal = Number(paymentCashCRC) || 0;
+
+        // 3. Logic:
+        // Cash USD = (Total Sales USD) + Remaining Colones Value Converted to USD
+        // Remaining Colones = Total Sales CRC - Card - BTC - CashCRC
+        const remainingCRC = totalCRC - paymentCardVal - paymentBtcVal - paymentCashCRCVal;
+
+        // Convert remainder to USD
+        const remainingCRCInUSD = remainingCRC / exchangeRate;
+
+        // Final Expected Cash USD
+        const expectedCashUSD = totalDollars + remainingCRCInUSD;
+
+        // 4. Update State
+        // Ensure accurate rounding to 2 decimal places to match currency conventions
+        const groundedUSD = Math.round(expectedCashUSD * 100) / 100;
+
+        setPaymentCashUSD(groundedUSD);
+
+    }, [salesDistributionMatrix, paymentCard, paymentBitcoin, paymentCashCRC, exchangeRate]);
 
     // 3. Handlers
     // ============================================================================
@@ -957,14 +1028,39 @@ export default function BoothSalesView({
                                     )}
                                     <div className="flex justify-between text-red-400/70"><span>Booth:</span> <span>-₡{totals.breakdown.costMe.toLocaleString()}</span></div>
 
-                                    <div className="border-t border-indigo-500/20 pt-2 mt-2 space-y-1">
-                                        <div className="flex justify-between font-bold text-sm text-indigo-400">
-                                            <span>T$:</span>
-                                            <span>${(totals.myNet / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                    {/* Footer: 2-Column Summary */}
+                                    <div className="border-t border-indigo-500/20 pt-2 mt-2">
+                                        <div className="grid grid-cols-3 gap-2 text-xs font-medium text-indigo-100/70 mb-1 border-b border-indigo-500/10 pb-1">
+                                            <span></span>
+                                            <span className="text-right">₡</span>
+                                            <span className="text-right">$</span>
                                         </div>
-                                        <div className="flex justify-between text-xs text-indigo-400/50">
-                                            <span>T₡:</span>
-                                            <span>₡{totals.myNet.toLocaleString()}</span>
+                                        <div className="grid grid-cols-3 gap-2 text-xs text-indigo-100">
+                                            <span>Sales:</span>
+                                            <div className="text-right font-mono">₡{salesDistributionMatrix.akiles.reduce((s, r) => s + r.totalColones, 0).toLocaleString()}</div>
+                                            <div className="text-right font-mono">${salesDistributionMatrix.akiles.reduce((s, r) => s + r.totalDollars, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-2 text-xs text-red-400">
+                                            <span>Booth:</span>
+                                            <div className="text-right font-mono text-red-400">-₡{(totals.breakdown.costMe * exchangeRate).toLocaleString()}</div>
+                                            <div className="text-right font-mono text-red-400">-${totals.breakdown.costMe.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-2 text-sm font-bold border-t border-indigo-500/20 pt-1 mt-1">
+                                            <span>Total:</span>
+                                            <div className="text-right text-indigo-300">₡{totals.breakdown.mySales.toLocaleString()}</div>
+                                            <div className="text-right text-indigo-300">${(totals.myNet / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                                            {/* Note: The 'Total' row in user screenshot showed mixed values.
+                                                If they want specific T$ and T₡ rows:
+                                             */}
+                                        </div>
+                                        {/* Explicit T$ and T₡ rows as requested */}
+                                        <div className="grid grid-cols-3 gap-2 text-sm font-bold border-t border-indigo-500/20 pt-1 mt-1 text-indigo-400">
+                                            <span className="col-span-1">T$:</span>
+                                            <span className="col-span-2 text-right">${(totals.myNet / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-2 text-xs font-medium text-indigo-400/50">
+                                            <span className="col-span-1">T₡:</span>
+                                            <span className="col-span-2 text-right">₡{totals.myNet.toLocaleString()}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -989,14 +1085,29 @@ export default function BoothSalesView({
                                         <div className="flex justify-between text-slate-400"><span>Comm:</span> <span>+₡{totals.associateCommissions.toLocaleString()}</span></div>
                                         <div className="flex justify-between text-red-400/70"><span>Booth:</span> <span>-₡{totals.breakdown.costAssoc.toLocaleString()}</span></div>
 
-                                        <div className="border-t border-pink-500/20 pt-2 mt-2 space-y-1">
-                                            <div className="flex justify-between font-bold text-sm text-pink-400">
-                                                <span>T$:</span>
-                                                <span>${(totals.associateNet / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                        <div className="border-t border-pink-500/20 pt-2 mt-2">
+                                            <div className="grid grid-cols-3 gap-2 text-xs font-medium text-pink-100/70 mb-1 border-b border-pink-500/10 pb-1">
+                                                <span></span>
+                                                <span className="text-right">₡</span>
+                                                <span className="text-right">$</span>
                                             </div>
-                                            <div className="flex justify-between text-xs text-pink-400/50">
-                                                <span>T₡:</span>
-                                                <span>₡{totals.associateNet.toLocaleString()}</span>
+                                            <div className="grid grid-cols-3 gap-2 text-xs text-pink-100">
+                                                <span>Sales:</span>
+                                                <div className="text-right font-mono">₡{salesDistributionMatrix.associate.reduce((s, r) => s + r.totalColones, 0).toLocaleString()}</div>
+                                                <div className="text-right font-mono">${salesDistributionMatrix.associate.reduce((s, r) => s + r.totalDollars, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                                            </div>
+                                            <div className="grid grid-cols-3 gap-2 text-xs text-red-400">
+                                                <span>Booth:</span>
+                                                <div className="text-right font-mono">-₡{(totals.breakdown.costAssoc * exchangeRate).toLocaleString()}</div>
+                                                <div className="text-right font-mono">-${totals.breakdown.costAssoc.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                                            </div>
+                                            <div className="grid grid-cols-3 gap-2 text-sm font-bold border-t border-pink-500/20 pt-1 mt-1 text-pink-400">
+                                                <span className="col-span-1">T$:</span>
+                                                <span className="col-span-2 text-right">${(totals.associateNet / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                            </div>
+                                            <div className="grid grid-cols-3 gap-2 text-xs font-medium text-pink-400/50">
+                                                <span className="col-span-1">T₡:</span>
+                                                <span className="col-span-2 text-right">₡{totals.associateNet.toLocaleString()}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -1141,7 +1252,9 @@ export default function BoothSalesView({
                         description: saleItem.itemName,
                         metadata: {
                             usdExpression: saleItem.usdExpression,
-                            crcExpression: saleItem.crcExpression
+                            crcExpression: saleItem.crcExpression,
+                            totalUSD: saleItem.totalUSD,
+                            totalCRC: saleItem.totalCRC
                         }
                     } as ItemSaleLine));
 

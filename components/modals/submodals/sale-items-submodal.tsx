@@ -22,6 +22,8 @@ export interface SaleItemLine {
   total: number;
   usdExpression?: string; // New: Raw expression for USD input
   crcExpression?: string; // New: Raw expression for CRC input
+  totalCRC?: number; // New: Calculated CRC total
+  totalUSD?: number; // New: Calculated USD total
 }
 
 interface SaleItemsSubModalProps {
@@ -161,7 +163,9 @@ export default function SaleItemsSubModal({
           quantity: 1, // Reset quantity on item change unless we keep it? User might want to keep inputs. Let's reset for safety.
           total: (item.price || 0) * 1,
           usdExpression: '',
-          crcExpression: ''
+          crcExpression: '',
+          totalUSD: 0,
+          totalCRC: 0
         };
       }
       return line;
@@ -195,9 +199,16 @@ export default function SaleItemsSubModal({
 
     // Quantity = Total Value / Unit Price
     // Rounding to nearest integer ?? Or 1 decimal? items usually integers.
+    // Let's assume integer items for now but Math.round is safer than floor/ceil.
     // User example: "26 / 2 = 13". 
     // Let's assume integer items for now but Math.round is safer than floor/ceil.
-    return Math.round(totalValueUsd / newPrice);
+    const qty = Math.round(totalValueUsd / newPrice);
+
+    // Store calculated values (mutating line object passed in? No, we return quantity).
+    // Actually, we need to update the line state with these values too.
+    // We should return an object or handle it in the caller.
+    // Refactoring this to return just quantity, caller updates state.
+    return qty;
   };
 
   const handlePriceChange = (lineId: string, unitPrice: number) => {
@@ -222,10 +233,27 @@ export default function SaleItemsSubModal({
     setLines(prev => prev.map(line => {
       if (line.id === lineId) {
         const updatedLine = { ...line, [field]: value };
+
+        // Evaluate expressions
+        const usdVal = evaluateMathExpression(updatedLine.usdExpression || '');
+        const crcVal = evaluateMathExpression(updatedLine.crcExpression || '');
+
         // Auto-calculate quantity
-        const newQuantity = recalculateQuantity(updatedLine, updatedLine.unitPrice);
-        updatedLine.quantity = newQuantity;
-        updatedLine.total = newQuantity * updatedLine.unitPrice;
+        // Total Value in USD = USD + (CRC / ExchangeRate)
+        const totalValueUsd = usdVal + (crcVal / exchangeRate);
+
+        // If Price is 0, we can't calc quantity from price.
+        // If Price > 0
+        if (updatedLine.unitPrice > 0) {
+          updatedLine.quantity = Math.round(totalValueUsd / updatedLine.unitPrice);
+        }
+
+        updatedLine.total = updatedLine.quantity * updatedLine.unitPrice;
+
+        // Store the breakdown
+        updatedLine.totalUSD = usdVal;
+        updatedLine.totalCRC = crcVal;
+
         return updatedLine;
       }
       return line;

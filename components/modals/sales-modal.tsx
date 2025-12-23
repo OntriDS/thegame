@@ -1144,6 +1144,7 @@ export default function SalesModal({
               setIsNotCharged(val);
               updateSaleStatus(val);
             }}
+            onDelete={sale?.id ? (() => setShowDeleteModal(true)) : undefined}
           />
         ) : (
           <div className="px-6 overflow-y-auto space-y-4" style={{ maxHeight: 'calc(90vh - 280px)' }}>
