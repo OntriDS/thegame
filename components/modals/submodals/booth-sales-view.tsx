@@ -537,7 +537,7 @@ export default function BoothSalesView({
     // 4. Render
     // ============================================================================
     return (
-        <div className="flex flex-col h-full bg-slate-50/50 dark:bg-slate-900/50 -mx-6 -my-4 p-4 pt-2">
+        <div className="flex flex-col h-full bg-slate-50/50 dark:bg-slate-900/50 -mx-6 -mt-6 -mb-4 p-4 pt-4">
 
             {/* Header / Setup Toolbar */}
             <div className="flex items-center gap-4 bg-white dark:bg-slate-800 p-2 rounded-lg shadow-sm border mb-4">
@@ -764,28 +764,27 @@ export default function BoothSalesView({
                                                 {getAssociateName(selectedAssociateId)}
                                                 <span className="text-[10px] font-normal text-pink-500/70">({viewMode})</span>
                                             </div>
-                                        </div>
-
-                                        {/* Contract Selector */}
-                                        <div className="flex items-center gap-2 w-full">
-                                            <div className="w-auto text-[10px] text-pink-300 font-medium shrink-0">
-                                                Agreement:
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <select
-                                                    value={selectedContractId}
-                                                    onChange={(e) => setSelectedContractId(e.target.value)}
-                                                    className="h-6 w-full rounded border border-pink-500/30 bg-pink-950/30 px-2 text-[10px] shadow-sm focus:outline-none focus:ring-1 focus:ring-pink-500 text-pink-100 truncate"
-                                                >
-                                                    <option value="" disabled>Select Active Contract...</option>
-                                                    {contracts
-                                                        .filter(c => ['Active', 'ACTIVE', 'active'].includes(c.status))
-                                                        .map(c => (
-                                                            <option key={c.id} value={c.id}>
-                                                                {c.name}
-                                                            </option>
-                                                        ))}
-                                                </select>
+                                            {/* Contract Selector - Moved to Header */}
+                                            <div className="flex items-center gap-2 w-auto">
+                                                <div className="w-auto text-[10px] text-pink-300 font-medium shrink-0">
+                                                    Agreement:
+                                                </div>
+                                                <div className="w-48">
+                                                    <select
+                                                        value={selectedContractId}
+                                                        onChange={(e) => setSelectedContractId(e.target.value)}
+                                                        className="h-6 w-full rounded border border-pink-500/30 bg-pink-950/30 px-2 text-[10px] shadow-sm focus:outline-none focus:ring-1 focus:ring-pink-500 text-pink-100 truncate"
+                                                    >
+                                                        <option value="" disabled>Select Active Contract...</option>
+                                                        {contracts
+                                                            .filter(c => ['Active', 'ACTIVE', 'active'].includes(c.status))
+                                                            .map(c => (
+                                                                <option key={c.id} value={c.id}>
+                                                                    {c.name}
+                                                                </option>
+                                                            ))}
+                                                    </select>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -878,12 +877,12 @@ export default function BoothSalesView({
                     {/* Matrix Header */}
                     <div className="grid grid-cols-12 gap-2 p-3 bg-slate-900 border-b border-slate-700 text-[10px] font-semibold text-slate-400 uppercase tracking-wider text-center">
                         <div className={`text-left pl-2 ${selectedAssociateId ? 'col-span-3' : 'col-span-6'}`}>Category</div>
-                        <div className={`text-right ${selectedAssociateId ? 'col-span-2' : 'col-span-3'}`}>Total ($)</div>
-                        <div className={`text-right ${selectedAssociateId ? 'col-span-2' : 'col-span-3'}`}>Total (₡)</div>
+                        <div className={`text-right ${selectedAssociateId ? 'col-span-2' : 'col-span-3'}`}>T₡</div>
+                        <div className={`text-right ${selectedAssociateId ? 'col-span-2' : 'col-span-3'}`}>T$</div>
                         {selectedAssociateId && (
                             <>
-                                <div className="col-span-2 text-right text-indigo-400">My Share ($)</div>
-                                <div className="col-span-3 text-right text-pink-400">Assoc. Share ($)</div>
+                                <div className="col-span-2 text-right text-indigo-400">Our Share $</div>
+                                <div className="col-span-3 text-right text-pink-400">Their Share $</div>
                             </>
                         )}
                     </div>
@@ -898,8 +897,8 @@ export default function BoothSalesView({
                                     {salesDistributionMatrix.akiles.map(row => (
                                         <div key={row.id} className="grid grid-cols-12 gap-2 p-2 text-xs border-b border-indigo-500/10 last:border-0 hover:bg-white/5 transition-colors items-center">
                                             <div className={`font-medium text-indigo-100 truncate ${selectedAssociateId ? 'col-span-3' : 'col-span-6'}`} title={row.label}>{row.label}</div>
-                                            <div className={`text-right font-mono text-slate-300 ${selectedAssociateId ? 'col-span-2' : 'col-span-3'}`}>${row.totalDollars.toLocaleString()}</div>
                                             <div className={`text-right font-mono text-slate-400 ${selectedAssociateId ? 'col-span-2' : 'col-span-3'}`}>₡{row.totalColones.toLocaleString()}</div>
+                                            <div className={`text-right font-mono text-slate-300 ${selectedAssociateId ? 'col-span-2' : 'col-span-3'}`}>${row.totalDollars.toLocaleString()}</div>
                                             {selectedAssociateId && (
                                                 <>
                                                     <div className="col-span-2 text-right text-indigo-300 font-bold">${(row.ownerAmount / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
@@ -922,8 +921,8 @@ export default function BoothSalesView({
                                     {salesDistributionMatrix.associate.map(row => (
                                         <div key={row.id} className="grid grid-cols-12 gap-2 p-2 text-xs border-b border-pink-500/10 last:border-0 hover:bg-white/5 transition-colors items-center">
                                             <div className="col-span-3 font-medium text-pink-100 truncate" title={row.label}>{row.label}</div>
-                                            <div className="col-span-2 text-right font-mono text-slate-300">${row.totalDollars.toLocaleString()}</div>
                                             <div className="col-span-2 text-right font-mono text-slate-400">₡{row.totalColones.toLocaleString()}</div>
+                                            <div className="col-span-2 text-right font-mono text-slate-300">${row.totalDollars.toLocaleString()}</div>
                                             <div className="col-span-2 text-right text-indigo-300/70">${(row.ownerAmount / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                                             <div className="col-span-3 text-right text-pink-300 font-bold">${(row.commissionAmount / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                                         </div>
@@ -958,11 +957,11 @@ export default function BoothSalesView({
 
                                     <div className="border-t border-indigo-500/20 pt-2 mt-2 space-y-1">
                                         <div className="flex justify-between font-bold text-sm text-indigo-400">
-                                            <span>Total ($):</span>
+                                            <span>T$:</span>
                                             <span>${(totals.myNet / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                         </div>
                                         <div className="flex justify-between text-xs text-indigo-400/50">
-                                            <span>Total (₡):</span>
+                                            <span>T₡:</span>
                                             <span>₡{totals.myNet.toLocaleString()}</span>
                                         </div>
                                     </div>
@@ -990,11 +989,11 @@ export default function BoothSalesView({
 
                                         <div className="border-t border-pink-500/20 pt-2 mt-2 space-y-1">
                                             <div className="flex justify-between font-bold text-sm text-pink-400">
-                                                <span>Total ($):</span>
+                                                <span>T$:</span>
                                                 <span>${(totals.associateNet / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                             </div>
                                             <div className="flex justify-between text-xs text-pink-400/50">
-                                                <span>Total (₡):</span>
+                                                <span>T₡:</span>
                                                 <span>₡{totals.associateNet.toLocaleString()}</span>
                                             </div>
                                         </div>
