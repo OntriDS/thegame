@@ -450,12 +450,13 @@ export default function BoothSalesView({
             return;
         }
 
-        // 1. Convert Associate Entries to Service Lines
+        // 1. Convert Associate Entries to Service Lines (Revenue in USD)
         const associateServiceLines: ServiceLine[] = associateEntries.map(entry => ({
             lineId: uuid(),
             kind: 'service',
             station: 'Associate Sales' as Station,
-            revenue: (entry.amountCRC || 0) + ((entry.amountUSD || 0) * exchangeRate),
+            // Convert everything to USD for the official record
+            revenue: ((entry.amountCRC || 0) / exchangeRate) + (entry.amountUSD || 0),
             // Helper to get name
             description: `[Associate: ${getAssociateName(entry.associateId)}] ${entry.category}`,
             taxAmount: 0,
@@ -507,13 +508,13 @@ export default function BoothSalesView({
             salesChannel: 'Booth Sales' as Station,
             customerId: (viewMode !== 'Off' && selectedAssociateId) ? selectedAssociateId : null,
 
-            // Financials
+            // Financials (Converted to USD)
             lines: allLines,
             totals: {
-                subtotal: totals.grossSales,
+                subtotal: totals.grossSales / exchangeRate,
                 discountTotal: 0,
                 taxTotal: 0,
-                totalRevenue: totals.grossSales
+                totalRevenue: totals.grossSales / exchangeRate
             },
 
             // Metadata & Links
@@ -525,8 +526,7 @@ export default function BoothSalesView({
             updatedAt: new Date(),
             isCollected: false,
 
-            // Optional fields defaultsthe input
-
+            // Optional fields defaults
         };
 
         // 5. Pass to Parent
