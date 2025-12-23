@@ -2,7 +2,7 @@
 // Financial record creation and management utilities
 
 import type { Task, FinancialRecord, Sale, ItemSaleLine, Character } from '@/types/entities';
-import { LinkType, EntityType, LogEventType, BUSINESS_STRUCTURE, CharacterRole } from '@/types/enums';
+import { LinkType, EntityType, LogEventType, BUSINESS_STRUCTURE, CharacterRole, SaleType, SaleStatus } from '@/types/enums';
 import { upsertFinancial, getAllFinancials, getFinancialsBySourceTaskId, removeFinancial, getItemById, getCharacterById, getFinancialConversionRates } from '@/data-store/datastore';
 import { makeLink } from '@/links/links-workflows';
 import { createLink } from '@/links/link-registry';
@@ -18,17 +18,17 @@ import { BITCOIN_SATOSHIS_PER_BTC } from '@/lib/constants/financial-constants';
 export async function createFinancialRecordFromTask(task: Task): Promise<FinancialRecord | null> {
   try {
     console.log(`[createFinancialRecordFromTask] Starting financial record creation for task: ${task.name} (${task.id})`);
-    
+
     // Check if task has cost or revenue
     if (!task.cost && !task.revenue) {
       console.log(`[createFinancialRecordFromTask] Task ${task.name} has no cost or revenue, skipping financial record creation`);
       return null;
     }
-    
+
     // OPTIMIZED: No need to check for existing records - Effects Registry already did!
     // The workflow only calls this when hasEffect('task:{id}:financialCreated') === false
     console.log(`[createFinancialRecordFromTask] Creating new financial record (Effect Registry confirmed no existing record)`);
-    
+
     const currentDate = new Date();
     const newFinrec: FinancialRecord = {
       id: `finrec-${task.id}-${Date.now()}`,
@@ -56,11 +56,11 @@ export async function createFinancialRecordFromTask(task: Task): Promise<Financi
       updatedAt: new Date(),
       links: []
     };
-    
+
     // Store the financial record
     console.log(`[createFinancialRecordFromTask] Creating new financial record:`, newFinrec);
     const createdFinrec = await upsertFinancial(newFinrec);
-    
+
     // Create TASK_FINREC link with metadata
     const linkMetadata = {
       cost: task.cost || 0,
@@ -71,20 +71,20 @@ export async function createFinancialRecordFromTask(task: Task): Promise<Financi
       netCashflow: newFinrec.netCashflow,
       createdFrom: 'task'
     };
-    
+
     const link = makeLink(
       LinkType.TASK_FINREC,
       { type: EntityType.TASK, id: task.id },
       { type: EntityType.FINANCIAL, id: createdFinrec.id },
       linkMetadata
     );
-    
+
     await createLink(link);
-    
+
     console.log(`[createFinancialRecordFromTask] ✅ Financial record created and TASK_FINREC link established: ${createdFinrec.name}`);
-    
+
     return createdFinrec;
-    
+
   } catch (error) {
     console.error(`[createFinancialRecordFromTask] ❌ Failed to create financial record from task ${task.id}:`, error);
     throw error;
@@ -98,35 +98,35 @@ export async function createFinancialRecordFromTask(task: Task): Promise<Financi
 export async function updateFinancialRecordFromTask(task: Task, previousTask: Task): Promise<void> {
   try {
     console.log(`[updateFinancialRecordFromTask] Updating financial record for task: ${task.name} (${task.id})`);
-    
+
     // Find the existing financial record created by this task
     const taskFinancials = await getFinancialsBySourceTaskId(task.id);
     const existingFinrec = taskFinancials.length > 0 ? taskFinancials[0] : null;
-    
+
     if (!existingFinrec) {
       console.log(`[updateFinancialRecordFromTask] No financial record found for task ${task.id}, creating new one`);
       await createFinancialRecordFromTask(task);
       return;
     }
-    
+
     // Check if any financial properties changed
-    const financialPropsChanged = 
+    const financialPropsChanged =
       previousTask.cost !== task.cost ||
       previousTask.revenue !== task.revenue ||
       previousTask.isNotPaid !== task.isNotPaid ||
       previousTask.isNotCharged !== task.isNotCharged ||
-    previousTask.outputItemId !== task.outputItemId ||
-    previousTask.isNewItem !== task.isNewItem ||
+      previousTask.outputItemId !== task.outputItemId ||
+      previousTask.isNewItem !== task.isNewItem ||
       previousTask.name !== task.name ||
       previousTask.station !== task.station ||
       previousTask.siteId !== task.siteId ||
       previousTask.targetSiteId !== task.targetSiteId;
-    
+
     if (!financialPropsChanged) {
       console.log(`[updateFinancialRecordFromTask] No financial properties changed for task ${task.id}, skipping update`);
       return;
     }
-    
+
     // Update the financial record with new task data
     const updatedFinrec = {
       ...existingFinrec,
@@ -145,11 +145,11 @@ export async function updateFinancialRecordFromTask(task: Task, previousTask: Ta
       netCashflow: (task.revenue || 0) - (task.cost || 0),
       updatedAt: new Date()
     };
-    
+
     // Store the updated financial record
     console.log(`[updateFinancialRecordFromTask] Updating financial record:`, updatedFinrec);
     await upsertFinancial(updatedFinrec);
-    
+
     // Log the update
     await appendEntityLog(EntityType.FINANCIAL, existingFinrec.id, LogEventType.UPDATED, {
       name: task.name,
@@ -162,9 +162,9 @@ export async function updateFinancialRecordFromTask(task: Task, previousTask: Ta
       },
       updatedAt: new Date().toISOString()
     });
-    
+
     console.log(`[updateFinancialRecordFromTask] ✅ Financial record updated successfully for task: ${task.name}`);
-    
+
   } catch (error) {
     console.error(`[updateFinancialRecordFromTask] ❌ Failed to update financial record for task ${task.id}:`, error);
     throw error;
@@ -179,17 +179,17 @@ export async function updateFinancialRecordFromTask(task: Task, previousTask: Ta
 export async function removeFinancialRecordsCreatedByTask(taskId: string): Promise<void> {
   try {
     console.log(`[removeFinancialRecordsCreatedByTask] Removing financial records created by task: ${taskId}`);
-    
+
     // OPTIMIZED: Only load financials created by this task, not all financials
     const taskFinancials = await getFinancialsBySourceTaskId(taskId);
-    
+
     if (taskFinancials.length === 0) {
       console.log(`[removeFinancialRecordsCreatedByTask] No financial records found for task ${taskId}`);
       return;
     }
-    
+
     console.log(`[removeFinancialRecordsCreatedByTask] Found ${taskFinancials.length} financial record(s) to remove`);
-    
+
     // Remove each financial record
     for (const financial of taskFinancials) {
       try {
@@ -199,9 +199,9 @@ export async function removeFinancialRecordsCreatedByTask(taskId: string): Promi
         console.error(`[removeFinancialRecordsCreatedByTask] ❌ Failed to remove financial record ${financial.id}:`, error);
       }
     }
-    
+
     console.log(`[removeFinancialRecordsCreatedByTask] ✅ Removed ${taskFinancials.length} financial record(s) for task ${taskId}`);
-    
+
   } catch (error) {
     console.error(`[removeFinancialRecordsCreatedByTask] ❌ Failed to remove financial records for task ${taskId}:`, error);
     throw error;
@@ -216,23 +216,23 @@ export async function removeFinancialRecordsCreatedByTask(taskId: string): Promi
 export async function createFinancialRecordFromSale(sale: Sale): Promise<FinancialRecord | null> {
   try {
     console.log(`[createFinancialRecordFromSale] Creating financial record from sale: ${sale.counterpartyName}`);
-    
+
     // Check if sale has revenue
     if (sale.totals.totalRevenue <= 0) {
       console.log(`[createFinancialRecordFromSale] Sale ${sale.id} has no revenue, skipping financial record creation`);
       return null;
     }
-    
+
     // OPTIMIZED: No need to check for existing records - Effects Registry already did!
     // The workflow only calls this when hasEffect('sale:{id}:financialCreated') === false
     console.log(`[createFinancialRecordFromSale] Creating new financial record (Effect Registry confirmed no existing record)`);
-    
+
     const currentDate = new Date();
     // Determine sales channel from Sale entity or derive from SaleType
     const salesChannel = sale.salesChannel || getSalesChannelFromSaleType(sale.type) || ('Direct Sales' as Station);
     // Use salesChannel as station for sales-derived financial records
     const station = salesChannel;
-    
+
     const newFinrec: FinancialRecord = {
       id: `finrec-${sale.id}-${Date.now()}`,
       name: `Sale: ${sale.counterpartyName}`,
@@ -258,11 +258,11 @@ export async function createFinancialRecordFromSale(sale: Sale): Promise<Financi
       updatedAt: new Date(),
       links: []
     };
-    
+
     // Store the financial record
     console.log(`[createFinancialRecordFromSale] Creating financial record:`, newFinrec);
     const createdFinrec = await upsertFinancial(newFinrec);
-    
+
     // Create SALE_FINREC link
     const linkMetadata = {
       revenue: sale.totals.totalRevenue,
@@ -271,23 +271,23 @@ export async function createFinancialRecordFromSale(sale: Sale): Promise<Financi
       netCashflow: newFinrec.netCashflow,
       createdFrom: 'sale'
     };
-    
+
     const link = makeLink(
       LinkType.SALE_FINREC,
       { type: EntityType.SALE, id: sale.id },
       { type: EntityType.FINANCIAL, id: createdFinrec.id },
       linkMetadata
     );
-    
+
     await createLink(link);
-    
+
     // Create FINREC_ITEM links for each sold item
     if (sale.lines && sale.lines.length > 0) {
       for (const line of sale.lines) {
         if (line.kind === 'item' && 'itemId' in line && line.itemId) {
           const itemLine = line as ItemSaleLine;
           const item = await getItemById(itemLine.itemId);
-          
+
           if (item) {
             const itemLink = makeLink(
               LinkType.FINREC_ITEM,
@@ -307,13 +307,113 @@ export async function createFinancialRecordFromSale(sale: Sale): Promise<Financi
         }
       }
     }
-    
+
     console.log(`[createFinancialRecordFromSale] ✅ Financial record created and SALE_FINREC link established: ${createdFinrec.name}`);
-    
+
     return createdFinrec;
-    
+
   } catch (error) {
     console.error(`[createFinancialRecordFromSale] ❌ Failed to create financial record from sale ${sale.id}:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Create split financial records for Booth Sales
+ * - Record 1: Gross Income (Total Sales)
+ * - Record 2: Associate Payout (Expense)
+ */
+export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<void> {
+  try {
+    console.log(`[createFinancialRecordFromBoothSale] Creating split financial records for Booth Sale: ${sale.counterpartyName}`);
+
+    // Validate Booth Metadata
+    const boothMetadata = sale.archiveMetadata?.boothSaleContext;
+    if (!boothMetadata || !boothMetadata.calculatedTotals) {
+      console.warn(`[createFinancialRecordFromBoothSale] Missing booth metadata, reverting to standard creation.`);
+      await createFinancialRecordFromSale(sale);
+      return;
+    }
+
+    const { associateNet } = boothMetadata.calculatedTotals;
+    const grossRevenue = sale.totals.totalRevenue;
+
+    // 1. Create Gross Income Record (Standard)
+    console.log(`[createFinancialRecordFromBoothSale] Creating Gross Income Record: ${grossRevenue}`);
+    const incomeRecord = await createFinancialRecordFromSale(sale);
+
+    if (!incomeRecord) {
+      console.error(`[createFinancialRecordFromBoothSale] Failed to create income record.`);
+      return;
+    }
+
+    // 2. Create Payout Expense Record (If Associate owed money)
+    if (associateNet > 0) {
+      console.log(`[createFinancialRecordFromBoothSale] Creating Associate Payout Record: ${associateNet}`);
+
+      const currentDate = new Date();
+      // Payout Status Logic: Matches Sale Status
+      // If Sale is CHARGED -> Payout is PENDING (Liability created) or CHARGED (Immediate Payout)?
+      // User Req: "if the status is pending then yes ... but if is Charged is charged."
+      // So if sale.status === CHARGED, then payout is charged (paid immediately).
+      const isPayoutPaid = sale.status === SaleStatus.CHARGED;
+
+      const payoutFinrec: FinancialRecord = {
+        id: `finrec-payout-${sale.id}-${Date.now()}`,
+        name: `Payout: ${sale.counterpartyName || 'Associate'}`,
+        description: `Associate split payout for ${sale.counterpartyName}`,
+        year: currentDate.getFullYear(),
+        month: currentDate.getMonth() + 1,
+        station: 'Booth Sales' as Station, // Or 'Associate Sales'
+        type: 'company', // Expense for company
+        siteId: sale.siteId,
+        sourceSaleId: sale.id,
+        salesChannel: 'Booth Sales' as Station,
+
+        cost: associateNet, // The Payout Amount
+        revenue: 0,
+        jungleCoins: 0,
+
+        // Status Logic
+        isNotPaid: !isPayoutPaid, // If sale charged, this is paid. If sale pending, this is not paid.
+        isNotCharged: false,      // Not applicable for expense
+
+        rewards: undefined,
+        netCashflow: -associateNet, // Negative cashflow
+        jungleCoinsValue: 0,
+        isCollected: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        links: []
+      };
+
+      const createdPayout = await upsertFinancial(payoutFinrec);
+
+      // Link Payout to Sale
+      const link = makeLink(
+        LinkType.SALE_FINREC,
+        { type: EntityType.SALE, id: sale.id },
+        { type: EntityType.FINANCIAL, id: createdPayout.id },
+        { type: 'payout', netCashflow: -associateNet }
+      );
+      await createLink(link);
+
+      // Link Payout to Associate (Character) if customerId present (customerId in Booth Sale = The Associate)
+      if (sale.customerId) {
+        const charLink = makeLink(
+          LinkType.FINREC_CHARACTER,
+          { type: EntityType.FINANCIAL, id: createdPayout.id },
+          { type: EntityType.CHARACTER, id: sale.customerId },
+          { role: CharacterRole.ASSOCIATE }
+        );
+        await createLink(charLink);
+      }
+
+      console.log(`[createFinancialRecordFromBoothSale] ✅ Created Payout Record: ${createdPayout.name}`);
+    }
+
+  } catch (error) {
+    console.error(`[createFinancialRecordFromBoothSale] ❌ Failed to create booth records:`, error);
     throw error;
   }
 }
@@ -323,7 +423,7 @@ export async function createFinancialRecordFromSale(sale: Sale): Promise<Financi
  */
 export async function processFinancialRecordCreationWithLinks(record: FinancialRecord): Promise<FinancialRecord> {
   console.log(`[processFinancialRecordCreationWithLinks] Processing financial record creation: ${record.name} (${record.id})`);
-  
+
   return record;
 }
 
@@ -340,13 +440,13 @@ export async function createFinancialRecordFromPointsExchange(
 ): Promise<FinancialRecord> {
   try {
     console.log(`[createFinancialRecordFromPointsExchange] Creating financial record for points exchange: ${j$Received} J$`);
-    
+
     const currentDate = new Date();
     // Use 'Rewards' station from BUSINESS_STRUCTURE.PERSONAL (single source of truth)
     const rewardsStation = BUSINESS_STRUCTURE.PERSONAL.find(s => s === 'Rewards');
     if (!rewardsStation) throw new Error('Rewards station not found in BUSINESS_STRUCTURE');
     const station = rewardsStation as Station;
-    
+
     const newFinrec: FinancialRecord = {
       id: `finrec-exchange-${playerId}-${Date.now()}`,
       name: `Points Exchange: ${pointsExchanged.xp + pointsExchanged.rp + pointsExchanged.fp + pointsExchanged.hp} points`,
@@ -361,13 +461,13 @@ export async function createFinancialRecordFromPointsExchange(
       jungleCoins: j$Received, // J$ received from exchange
       isNotPaid: false,
       isNotCharged: false,
-      rewards: { 
-        points: { 
+      rewards: {
+        points: {
           xp: -pointsExchanged.xp, // Negative points (spent)
           rp: -pointsExchanged.rp,
           fp: -pointsExchanged.fp,
           hp: -pointsExchanged.hp
-        } 
+        }
       },
       netCashflow: 0, // No cashflow, just currency exchange
       jungleCoinsValue: j$Received * 10, // J$ value in USD (1 J$ = $10)
@@ -376,11 +476,11 @@ export async function createFinancialRecordFromPointsExchange(
       updatedAt: new Date(),
       links: []
     };
-    
+
     // Store the financial record
     console.log(`[createFinancialRecordFromPointsExchange] Creating financial record:`, newFinrec);
     const createdFinrec = await upsertFinancial(newFinrec);
-    
+
     // Create PLAYER_FINREC link (always create link to player)
     const linkMetadata = {
       pointsExchanged: pointsExchanged,
@@ -389,21 +489,21 @@ export async function createFinancialRecordFromPointsExchange(
       playerCharacterId: playerCharacterId || null,
       createdAt: new Date().toISOString()
     };
-    
+
     const link = makeLink(
       LinkType.PLAYER_FINREC,
       { type: EntityType.PLAYER, id: playerId },
       { type: EntityType.FINANCIAL, id: createdFinrec.id },
       linkMetadata
     );
-    
+
     await createLink(link);
     console.log(`[createFinancialRecordFromPointsExchange] ✅ Created PLAYER_FINREC link for player ${playerId}`);
-    
+
     console.log(`[createFinancialRecordFromPointsExchange] ✅ Financial record created for points exchange: ${createdFinrec.name}`);
-    
+
     return createdFinrec;
-    
+
   } catch (error) {
     console.error(`[createFinancialRecordFromPointsExchange] ❌ Failed to create financial record for points exchange:`, error);
     throw error;
@@ -424,7 +524,7 @@ export async function createFinancialRecordFromJ$CashOut(
 ): Promise<{ personalRecord: FinancialRecord; companyRecord: FinancialRecord }> {
   try {
     console.log(`[createFinancialRecordFromJ$CashOut] Creating financial records for cash-out: ${j$Sold} J$ for ${cashOutType}`);
-    
+
     // Determine company station based on character role
     let companyStation: Station;
     if (playerCharacterId) {
@@ -449,12 +549,12 @@ export async function createFinancialRecordFromJ$CashOut(
       if (!founderStation) throw new Error('Founder station not found in BUSINESS_STRUCTURE');
       companyStation = founderStation as Station;
     }
-    
+
     // Calculate payment amount based on cash-out type
     let amountPaid: number;
     let amountLabel: string;
     let calculatedZapsRate: number | undefined;
-    
+
     if (cashOutType === 'USD') {
       amountPaid = j$Sold * j$Rate; // USD amount
       amountLabel = `${amountPaid} USD`;
@@ -465,14 +565,14 @@ export async function createFinancialRecordFromJ$CashOut(
         // Formula: (J$ value in USD) / (Bitcoin price in USD) * (sats per BTC) = sats per J$
         const rates = await getFinancialConversionRates();
         const bitcoinPrice = rates?.bitcoinToUsd;
-        
+
         // REQUIRED: Real Bitcoin price must be available - no fallback
         if (!bitcoinPrice || bitcoinPrice <= 0) {
           throw new Error('Bitcoin price not available. Please fetch Bitcoin price before cashing out to Zaps.');
         }
-        
+
         const j$ValueInUSD = j$Rate; // Default: 10 USD per J$
-        
+
         // Calculate sats per J$: (j$ValueInUSD / bitcoinPrice) * satsPerBTC
         calculatedZapsRate = (j$ValueInUSD / bitcoinPrice) * BITCOIN_SATOSHIS_PER_BTC;
         console.log(`[createFinancialRecordFromJ$CashOut] Calculated Zaps rate: ${calculatedZapsRate.toFixed(0)} sats per J$ (Bitcoin price: $${bitcoinPrice})`);
@@ -482,15 +582,15 @@ export async function createFinancialRecordFromJ$CashOut(
       amountPaid = j$Sold * calculatedZapsRate; // Zaps amount (sats)
       amountLabel = `${amountPaid.toFixed(0)} sats`;
     }
-    
+
     const currentDate = new Date();
     const exchangeType = cashOutType === 'USD' ? 'J$_TO_USD' : 'J$_TO_ZAPS';
-    
+
     // Get Earnings station from BUSINESS_STRUCTURE.PERSONAL
     const earningsStation = BUSINESS_STRUCTURE.PERSONAL.find(s => s === 'Earnings');
     if (!earningsStation) throw new Error('Earnings station not found in BUSINESS_STRUCTURE');
     const personalStation = earningsStation as Station;
-    
+
     // Create personal FinancialRecord (J$ deduction)
     const personalFinrec: FinancialRecord = {
       id: `finrec-cashout-personal-${playerId}-${Date.now()}`,
@@ -513,7 +613,7 @@ export async function createFinancialRecordFromJ$CashOut(
       updatedAt: new Date(),
       links: []
     };
-    
+
     // Create company FinancialRecord (J$ buyback with cost)
     const companyFinrec: FinancialRecord = {
       id: `finrec-cashout-company-${playerId}-${Date.now()}`,
@@ -536,11 +636,11 @@ export async function createFinancialRecordFromJ$CashOut(
       updatedAt: new Date(),
       links: []
     };
-    
+
     // Store both financial records
     const createdPersonalFinrec = await upsertFinancial(personalFinrec);
     const createdCompanyFinrec = await upsertFinancial(companyFinrec);
-    
+
     // Create PLAYER_FINREC links for both records
     const personalLinkMetadata = {
       j$Sold: j$Sold,
@@ -552,14 +652,14 @@ export async function createFinancialRecordFromJ$CashOut(
       playerCharacterId: playerCharacterId || null,
       createdAt: new Date().toISOString()
     };
-    
+
     const personalLink = makeLink(
       LinkType.PLAYER_FINREC,
       { type: EntityType.PLAYER, id: playerId },
       { type: EntityType.FINANCIAL, id: createdPersonalFinrec.id },
       personalLinkMetadata
     );
-    
+
     const companyLinkMetadata = {
       j$Sold: j$Sold,
       amountPaid: amountPaid,
@@ -571,26 +671,26 @@ export async function createFinancialRecordFromJ$CashOut(
       companyStation: companyStation,
       createdAt: new Date().toISOString()
     };
-    
+
     const companyLink = makeLink(
       LinkType.PLAYER_FINREC,
       { type: EntityType.PLAYER, id: playerId },
       { type: EntityType.FINANCIAL, id: createdCompanyFinrec.id },
       companyLinkMetadata
     );
-    
+
     await createLink(personalLink);
     await createLink(companyLink);
-    
+
     console.log(`[createFinancialRecordFromJ$CashOut] ✅ Created PLAYER_FINREC links for both records`);
     console.log(`[createFinancialRecordFromJ$CashOut] ✅ Personal record: ${createdPersonalFinrec.name}`);
     console.log(`[createFinancialRecordFromJ$CashOut] ✅ Company record: ${createdCompanyFinrec.name}`);
-    
+
     return {
       personalRecord: createdPersonalFinrec,
       companyRecord: createdCompanyFinrec
     };
-    
+
   } catch (error) {
     console.error(`[createFinancialRecordFromJ$CashOut] ❌ Failed to create financial records for cash-out:`, error);
     throw error;

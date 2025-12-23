@@ -1981,6 +1981,14 @@ export default function SalesModal({
                   {isSaving ? 'Saving...' : (sale ? 'Update' : 'Create')} Sale
                 </Button>
               </div>
+
+              {/* Booth Sales Lozenge - Footer Placement */}
+              {type === SaleType.BOOTH && (
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-indigo-500/10 rounded-md border border-indigo-500/20 ml-2">
+                  <Store className="h-4 w-4 text-indigo-500" />
+                  <span className="text-sm font-bold text-indigo-500 whitespace-nowrap">Booth Sales</span>
+                </div>
+              )}
             </div>
           </DialogFooter>
         )}

@@ -122,7 +122,9 @@ export default function BoothSalesView({
 
     // Associate Quick Entry State (formerly Partner)
     const [associateEntries, setAssociateEntries] = useState<AssociateQuickEntry[]>([]);
-    const [viewMode, setViewMode] = useState<'Associate' | 'Partner'>('Associate');
+    
+    // View Mode: 'Associate' | 'Partner' | 'Off' (Nullable logic handled by string literal)
+    const [viewMode, setViewMode] = useState<'Associate' | 'Partner' | 'Off'>('Off'); 
 
     // Quick Entry Form State
     const [quickAmount, setQuickAmount] = useState<string>('');
@@ -141,12 +143,17 @@ export default function BoothSalesView({
 
     // Load Default Associate (One time)
     useEffect(() => {
-        // Mocking "Maria" as default if she exists
-        if (!selectedAssociateId && characters.length > 0) {
+        // Mocking "Maria" as default if she exists IF viewMode is NOT Off
+        if (viewMode !== 'Off' && !selectedAssociateId && characters.length > 0) {
             const maria = characters.find(c => c.name.toLowerCase().includes('maria') || c.name.includes('O2'));
             if (maria) setSelectedAssociateId(maria.id);
         }
-    }, [characters, selectedAssociateId]);
+        
+        // Clear selection if Off
+        if (viewMode === 'Off') {
+            setSelectedAssociateId('');
+        }
+    }, [characters, selectedAssociateId, viewMode]);
 
     // Auto-select active contract when Associate changes
     useEffect(() => {
@@ -214,15 +221,23 @@ export default function BoothSalesView({
         let shareOfAssocItems_Me = 0.0;
         let shareOfExpenses_Me = 1.0;
 
-        // 3. Apply Contract Clauses
+        // 3. Apply Contract Clauses (Corrected Logic)
         if (activeContract) {
-            // A. Sales Commission
+            // A. Principal Items (My Items) -> Apply SALES_COMMISSION Clause (If I pay comm)
+            // Logic: I keep 'companyShare' of My Items.
             const commClause = activeContract.clauses.find(c => c.type === ContractClauseType.SALES_COMMISSION);
             if (commClause) {
-                shareOfAssocItems_Me = commClause.companyShare;
+                shareOfMyItems_Me = commClause.companyShare;
             }
 
-            // B. Expense Sharing
+            // B. Associate Items (Their Items) -> Apply SALES_SERVICE Clause (If I provide service)
+            // Logic: I keep 'companyShare' of Their Items (My Commission).
+            const serviceClause = activeContract.clauses.find(c => c.type === ContractClauseType.SALES_SERVICE);
+            if (serviceClause) {
+                shareOfAssocItems_Me = serviceClause.companyShare;
+            }
+
+            // C. Expense Sharing
             const expenseClause = activeContract.clauses.find(c => c.type === ContractClauseType.EXPENSE_SHARING);
             if (expenseClause) {
                 shareOfExpenses_Me = expenseClause.companyShare;
@@ -526,8 +541,14 @@ export default function BoothSalesView({
 
                 {/* Associate / Partner Toggle & Selector (Moved to Header) */}
                 <div className="flex items-center gap-2">
-                    {/* Role Toggle */}
+                    {/* Role Toggle 3-Way */}
                     <div className="flex bg-slate-900 rounded-md p-0.5 border border-slate-700 shrink-0">
+                         <button
+                            onClick={() => setViewMode('Off')}
+                            className={`text-[10px] px-2 py-1 rounded-sm transition-colors ${viewMode === 'Off' ? 'bg-slate-700 text-white font-medium' : 'text-slate-400 hover:text-slate-300'}`}
+                        >
+                            Off
+                        </button>
                         <button
                             onClick={() => setViewMode('Associate')}
                             className={`text-[10px] px-2 py-1 rounded-sm transition-colors ${viewMode === 'Associate' ? 'bg-pink-600 text-white font-medium' : 'text-slate-400 hover:text-slate-300'}`}
@@ -547,13 +568,15 @@ export default function BoothSalesView({
                         <div className="relative">
                             <select
                                 value={selectedAssociateId}
+                                disabled={viewMode === 'Off'}
                                 onChange={(e) => setSelectedAssociateId(e.target.value)}
                                 className={cn(
                                     "h-8 w-full rounded-md border bg-slate-900 px-3 py-1 text-xs shadow-sm focus:outline-none focus:ring-1 focus:ring-pink-500 truncate pr-8 appearance-none",
-                                    selectedAssociateId ? "border-pink-500/50 text-pink-200" : "border-slate-700 text-slate-400"
+                                    selectedAssociateId ? "border-pink-500/50 text-pink-200" : "border-slate-700 text-slate-400",
+                                    viewMode === 'Off' && "opacity-50 cursor-not-allowed border-slate-800 text-slate-600"
                                 )}
                             >
-                                <option value="">Select {viewMode}...</option>
+                                <option value="">{viewMode === 'Off' ? 'Disabled' : `Select ${viewMode}...`}</option>
                                 <optgroup label="People">
                                     {characters
                                         .filter(c => {
@@ -576,8 +599,8 @@ export default function BoothSalesView({
                                 </optgroup>
                             </select>
 
-                            {/* Clear Button (Only if selected) */}
-                            {selectedAssociateId && (
+                            {/* Clear Button (Only if selected and Enabled) */}
+                            {selectedAssociateId && viewMode !== 'Off' && (
                                 <button
                                     onClick={() => setSelectedAssociateId('')}
                                     className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 hover:text-red-400"
@@ -781,21 +804,17 @@ export default function BoothSalesView({
                     {/* Summary Footer */}
                     <div className="p-4 bg-slate-950 border-t border-slate-800 space-y-4">
                         <div className="flex items-center justify-end">
-                            {/* Title Lozenge (Right Aligned) */}
-                            <div className="flex items-center gap-2 px-3 py-1.5 bg-indigo-500/10 rounded-md border border-indigo-500/20">
-                                <Store className="h-4 w-4 text-indigo-500" />
-                                <span className="text-sm font-bold text-indigo-500 whitespace-nowrap">Booth Sales</span>
-                            </div>
+                            {/* Title Lozenge Removed - Moved to Footer in SalesModal */}
                         </div>
 
                         <div className={`grid gap-4 ${selectedAssociateId ? 'grid-cols-2' : 'grid-cols-1'}`}>
                             {/* My Payout */}
                             <div className="p-3 bg-slate-900 rounded-lg border border-indigo-500/20 shadow-sm">
                                 <div className="flex items-center gap-2 mb-2">
-                                    <div className="h-6 w-6 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold text-[10px]">A</div>
+                                    <div className="h-6 w-6 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold text-[10px]">C</div>
                                     <div>
-                                        <div className="text-xs font-bold text-indigo-100">Akiles Net</div>
-                                        <div className="text-[10px] text-slate-500">Payout to Me</div>
+                                        <div className="text-xs font-bold text-indigo-100">TheCompany Net</div>
+                                        <div className="text-[10px] text-slate-500">Net Profit</div>
                                     </div>
                                 </div>
                                 <div className="space-y-1 text-xs bg-indigo-950/10 p-2 rounded border border-indigo-500/10">
