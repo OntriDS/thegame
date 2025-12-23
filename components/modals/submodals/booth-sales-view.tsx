@@ -1011,9 +1011,6 @@ export default function BoothSalesView({
 
                     {/* Summary Footer */}
                     <div className="p-4 bg-slate-950 border-t border-slate-800 space-y-4">
-                        <div className="flex items-center justify-end">
-                            {/* Title Lozenge Removed - Moved to Footer in SalesModal */}
-                        </div>
 
                         <div className={`grid gap-4 ${selectedAssociateId ? 'grid-cols-2' : 'grid-cols-1'}`}>
                             {/* My Payout */}
