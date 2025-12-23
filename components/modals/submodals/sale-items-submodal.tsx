@@ -116,8 +116,8 @@ export default function SaleItemsSubModal({
       initialLines.map((line) => ({
         ...line,
         siteId: siteId || line.siteId || '',
-        usdExpression: '', // Initialize new fields if missing
-        crcExpression: ''
+        usdExpression: line.usdExpression || '',
+        crcExpression: line.crcExpression || ''
       }))
     );
     hasInitializedRef.current = true;

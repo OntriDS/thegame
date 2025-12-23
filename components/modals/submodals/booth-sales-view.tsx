@@ -74,7 +74,8 @@ export interface BoothSalesViewProps {
 interface AssociateQuickEntry {
     id: string;
     description: string;
-    amount: number;
+    amountCRC: number;
+    amountUSD: number;
     category: string; // e.g., 'O2 Jewelry'
     associateId: string; // Linking to specific associate
 }
@@ -142,7 +143,8 @@ export default function BoothSalesView({
     const [viewMode, setViewMode] = useState<'Associate' | 'Partner' | 'Off'>('Off');
 
     // Quick Entry Form State
-    const [quickAmount, setQuickAmount] = useState<string>('');
+    const [quickAmountCRC, setQuickAmountCRC] = useState<string>('');
+    const [quickAmountUSD, setQuickAmountUSD] = useState<string>('');
     // const [quickDesc, setQuickDesc] = useState<string>(''); // Removed as requested
     const [quickCat, setQuickCat] = useState<string>('');
 
@@ -233,8 +235,12 @@ export default function BoothSalesView({
         // Normalize my sales to Colones for calculation (Standardizing on CRC for Booth Sales Ledger)
         const myItemsTotalValue_CRC = myItemsTotalUSD * exchangeRate;
 
-        // Associate Entries are entered in Colones (Quick Entry)
-        const assocItemsTotal_CRC = associateEntries.reduce((sum, e) => sum + e.amount, 0);
+        // Associate Entries are entered in Colones (and USD now)
+        const assocItemsTotal_CRC = associateEntries.reduce((sum, e) => {
+            const crcVal = e.amountCRC || 0;
+            const usdValAsCRC = (e.amountUSD || 0) * exchangeRate;
+            return sum + crcVal + usdValAsCRC;
+        }, 0);
 
         // 2. Default Shares (No Contract Defaults = 100% Me, 0% Assoc, Me pays Costs)
         let shareOfMyItems_Me = 1.0;
@@ -361,15 +367,16 @@ export default function BoothSalesView({
                     id: catLabel,
                     label: catLabel,
                     isAssociate: true,
-                    totalColones: entry.amount, // Assumption: Entered in Colones
-                    totalDollars: 0,
+                    totalColones: entry.amountCRC || 0,
+                    totalDollars: entry.amountUSD || 0,
                     totalBitcoin: 0,
                     totalCard: 0,
                     commissionAmount: 0,
                     ownerAmount: 0
                 };
             } else {
-                associateRows[catLabel].totalColones += entry.amount;
+                associateRows[catLabel].totalColones += (entry.amountCRC || 0);
+                associateRows[catLabel].totalDollars += (entry.amountUSD || 0);
             }
         });
 
@@ -397,20 +404,23 @@ export default function BoothSalesView({
     // ============================================================================
 
     const handleAddAssociateEntry = () => {
-        const amount = parseFloat(quickAmount);
-        if (amount <= 0 || !selectedAssociateId || !quickCat) return;
+        const amountCRC = parseFloat(quickAmountCRC) || 0;
+        const amountUSD = parseFloat(quickAmountUSD) || 0;
+
+        if ((amountCRC <= 0 && amountUSD <= 0) || !selectedAssociateId || !quickCat) return;
 
         const newEntry: AssociateQuickEntry = {
             id: uuid(),
             description: '', // Description removed from UI
-            amount: amount,
+            amountCRC: amountCRC,
+            amountUSD: amountUSD,
             category: quickCat,
             associateId: selectedAssociateId
         };
 
         setAssociateEntries([...associateEntries, newEntry]);
-        setQuickAmount('');
-        // setQuickDesc('');
+        setQuickAmountCRC('');
+        setQuickAmountUSD('');
         setQuickCat('');
     };
 
@@ -434,7 +444,7 @@ export default function BoothSalesView({
             lineId: uuid(),
             kind: 'service',
             station: 'Associate Sales' as Station,
-            revenue: entry.amount,
+            revenue: (entry.amountCRC || 0) + ((entry.amountUSD || 0) * exchangeRate),
             // Helper to get name
             description: `[Associate: ${getAssociateName(entry.associateId)}] ${entry.category}`,
             taxAmount: 0,
@@ -442,6 +452,8 @@ export default function BoothSalesView({
             customerCharacterId: entry.associateId,
             // Add metadata for tracking splits if needed
             metadata: {
+                originalAmountCRC: entry.amountCRC,
+                originalAmountUSD: entry.amountUSD,
                 category: entry.category,
                 associateShare: totals.breakdown.associateSharePct_Associate,
                 myCommission: totals.breakdown.associateSharePct_Me
@@ -662,24 +674,61 @@ export default function BoothSalesView({
                                     </div>
                                 </div>
 
-                                {/* List of Added Items */}
-                                <div className="space-y-2 max-h-[200px] overflow-y-auto">
-                                    {myItems.map(line => {
-                                        // Simple rendering for now
-                                        const item = line.kind === 'item' ? items.find(i => i.id === (line as ItemSaleLine).itemId) : null;
-                                        return (
-                                            <div key={line.lineId} className="flex justify-between items-center text-sm p-2 bg-slate-800 rounded border border-slate-700 cursor-pointer hover:bg-slate-700 transition-colors group" onClick={() => setShowItemPicker(true)}>
-                                                <span className="truncate max-w-[150px]">{item ? item.name : 'Bundle'}</span>
-                                                <div className="flex items-center gap-4">
-                                                    <span>{line.quantity}x</span>
-                                                    <span>${((line.unitPrice || 0) * (line.quantity || 0)).toLocaleString()}</span>
-                                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-red-400 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => { e.stopPropagation(); handleRemoveLine(line.lineId); }}>
-                                                        <Trash2 className="h-3 w-3" />
-                                                    </Button>
-                                                </div>
-                                            </div>
-                                        )
-                                    })}
+                                {/* List of Added Items - Table View */}
+                                <div className="max-h-[300px] overflow-y-auto rounded-md border border-indigo-500/20">
+                                    <table className="w-full text-xs text-left">
+                                        <thead className="bg-indigo-900/30 text-indigo-200 sticky top-0 font-semibold">
+                                            <tr>
+                                                <th className="p-2 w-[40%]">Item</th>
+                                                <th className="p-2 w-[15%]">Price ($)</th>
+                                                <th className="p-2 w-[15%]">Calc ($)</th>
+                                                <th className="p-2 w-[15%]">Calc (₡)</th>
+                                                <th className="p-2 w-[5%] text-center">Qty</th>
+                                                <th className="p-2 w-[10%] text-right">Total ($)</th>
+                                                <th className="p-2 w-[5%]"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-indigo-500/10">
+                                            {myItems.length === 0 && (
+                                                <tr>
+                                                    <td colSpan={7} className="p-4 text-center text-muted-foreground italic">
+                                                        No items selected. Click "Add" to select inventory.
+                                                    </td>
+                                                </tr>
+                                            )}
+                                            {myItems.map(line => {
+                                                const item = items.find(i => i.id === (line as ItemSaleLine).itemId);
+                                                const meta = line.metadata || {};
+                                                return (
+                                                    <tr key={line.lineId} className="bg-slate-900/40 hover:bg-indigo-500/10 transition-colors group cursor-pointer" onClick={() => setShowItemPicker(true)}>
+                                                        <td className="p-2 font-medium text-slate-200">
+                                                            {item ? item.name : 'Unknown Item'}
+                                                        </td>
+                                                        <td className="p-2 text-slate-400">
+                                                            ${(line.unitPrice || 0).toFixed(2)}
+                                                        </td>
+                                                        <td className="p-2 text-slate-400 font-mono text-[10px]">
+                                                            {meta.usdExpression || '-'}
+                                                        </td>
+                                                        <td className="p-2 text-slate-400 font-mono text-[10px]">
+                                                            {meta.crcExpression || '-'}
+                                                        </td>
+                                                        <td className="p-2 text-center font-bold text-white bg-indigo-500/10 rounded">
+                                                            {line.quantity}
+                                                        </td>
+                                                        <td className="p-2 text-right font-bold text-green-400">
+                                                            ${((line.unitPrice || 0) * (line.quantity || 0)).toFixed(2)}
+                                                        </td>
+                                                        <td className="p-2 text-right">
+                                                            <Button variant="ghost" size="icon" className="h-6 w-6 text-red-400 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => { e.stopPropagation(); handleRemoveLine(line.lineId); }}>
+                                                                <Trash2 className="h-3 w-3" />
+                                                            </Button>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
                                 </div>
                             </CardContent>
                         </Card>
@@ -724,22 +773,34 @@ export default function BoothSalesView({
                                     {/* Quick Entry Form */}
                                     <div className="bg-slate-900/50 p-3 rounded-lg border border-slate-800 space-y-2">
                                         <div className="flex gap-2">
-                                            <NumericInput
-                                                value={parseFloat(quickAmount) || 0}
-                                                onChange={(val) => setQuickAmount(val.toString())}
-                                                placeholder="0 ₡"
-                                                className="w-24 bg-slate-950 border-slate-700 h-8 text-xs"
-                                            />
+                                            <div className="relative">
+                                                <span className="absolute left-2 top-1.5 text-[10px] text-pink-500 font-bold">₡</span>
+                                                <NumericInput
+                                                    value={parseFloat(quickAmountCRC) || 0}
+                                                    onChange={(val) => setQuickAmountCRC(val.toString())}
+                                                    placeholder="0"
+                                                    className="w-24 bg-slate-950 border-slate-700 h-8 text-xs pl-5"
+                                                />
+                                            </div>
+                                            <div className="relative">
+                                                <span className="absolute left-2 top-1.5 text-[10px] text-green-500 font-bold">$</span>
+                                                <NumericInput
+                                                    value={parseFloat(quickAmountUSD) || 0}
+                                                    onChange={(val) => setQuickAmountUSD(val.toString())}
+                                                    placeholder="0.00"
+                                                    className="w-24 bg-slate-950 border-slate-700 h-8 text-xs pl-5"
+                                                />
+                                            </div>
                                             <Input
                                                 value={quickCat}
                                                 onChange={(e) => setQuickCat(e.target.value)}
-                                                placeholder="Products"
+                                                placeholder="Description / Category"
                                                 className="flex-1 bg-slate-950 border-slate-700 h-8 text-xs"
                                             />
                                             <Button
                                                 onClick={handleAddAssociateEntry}
                                                 className="bg-pink-600 hover:bg-pink-700 text-white shrink-0 h-8 text-xs"
-                                                disabled={!quickAmount}
+                                                disabled={!quickAmountCRC && !quickAmountUSD}
                                                 size="sm"
                                             >
                                                 Add
@@ -747,19 +808,43 @@ export default function BoothSalesView({
                                         </div>
                                     </div>
 
-                                    {/* List */}
-                                    <div className="space-y-1 max-h-[150px] overflow-y-auto">
-                                        {associateEntries.map(entry => (
-                                            <div key={entry.id} className="flex justify-between items-center text-xs p-2 bg-slate-800 rounded border border-slate-700/50">
-                                                <span className="font-medium text-pink-200">{entry.category}</span>
-                                                <div className="flex items-center gap-3">
-                                                    <span className="font-mono text-pink-300">₡{entry.amount.toLocaleString()}</span>
-                                                    <Button variant="ghost" size="icon" className="h-5 w-5 text-red-400 hover:bg-slate-700" onClick={() => handleRemoveAssociateEntry(entry.id)}>
-                                                        <Trash2 className="h-3 w-3" />
-                                                    </Button>
-                                                </div>
-                                            </div>
-                                        ))}
+                                    {/* List - Table View */}
+                                    <div className="max-h-[200px] overflow-y-auto rounded-md border border-pink-500/20">
+                                        <table className="w-full text-xs text-left">
+                                            <thead className="bg-pink-900/30 text-pink-200 sticky top-0 font-semibold">
+                                                <tr>
+                                                    <th className="p-2 w-[40%]">Description</th>
+                                                    <th className="p-2 w-[25%] text-right">Amount ($)</th>
+                                                    <th className="p-2 w-[25%] text-right">Amount (₡)</th>
+                                                    <th className="p-2 w-[10%]"></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-pink-500/10">
+                                                {associateEntries.length === 0 && (
+                                                    <tr>
+                                                        <td colSpan={4} className="p-4 text-center text-muted-foreground italic">
+                                                            No entries yet.
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                                {associateEntries.map(entry => (
+                                                    <tr key={entry.id} className="bg-slate-900/40 hover:bg-pink-500/10 transition-colors group">
+                                                        <td className="p-2 text-slate-300 font-medium">{entry.category || entry.description}</td>
+                                                        <td className="p-2 text-slate-400 text-right font-mono">
+                                                            {entry.amountUSD ? `$${entry.amountUSD.toFixed(2)}` : '-'}
+                                                        </td>
+                                                        <td className="p-2 text-slate-400 text-right font-mono">
+                                                            {entry.amountCRC ? `₡${entry.amountCRC.toLocaleString()}` : '-'}
+                                                        </td>
+                                                        <td className="p-2 text-right">
+                                                            <Button variant="ghost" size="icon" className="h-6 w-6 text-red-400 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleRemoveAssociateEntry(entry.id)}>
+                                                                <Trash2 className="h-3 w-3" />
+                                                            </Button>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
                                     </div>
                                 </CardContent>
                             </Card>
