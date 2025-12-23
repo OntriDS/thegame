@@ -115,12 +115,28 @@ export default function SaleItemsSubModal({
       initialItems.length > 0 ? initialItems : [createEmptyLine()];
 
     setLines(
-      initialLines.map((line) => ({
-        ...line,
-        siteId: siteId || line.siteId || '',
-        usdExpression: line.usdExpression || '',
-        crcExpression: line.crcExpression || ''
-      }))
+      initialLines.map((line) => {
+        // Ensure totals are calculated if missing (for existing lines)
+        const usdVal = evaluateMathExpression(line.usdExpression || '');
+        const crcVal = evaluateMathExpression(line.crcExpression || '');
+        // If totals are missing but expressions exist, backfill them
+        let tUSD = line.totalUSD ?? 0;
+        let tCRC = line.totalCRC ?? 0;
+
+        if (tUSD === 0 && tCRC === 0 && (usdVal > 0 || crcVal > 0)) {
+          tUSD = usdVal;
+          tCRC = crcVal;
+        }
+
+        return {
+          ...line,
+          siteId: siteId || line.siteId || '',
+          usdExpression: line.usdExpression || '',
+          crcExpression: line.crcExpression || '',
+          totalUSD: tUSD,
+          totalCRC: tCRC
+        };
+      })
     );
     hasInitializedRef.current = true;
   }, [open, initialItems, defaultSiteId, createEmptyLine]);

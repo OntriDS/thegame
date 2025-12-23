@@ -35,6 +35,7 @@ import { Sale, SaleLine, Item, Site, Character, ServiceLine, ItemSaleLine, Bundl
 import { v4 as uuid } from 'uuid';
 import { createSiteOptionsWithCategories } from '@/lib/utils/site-options-utils';
 import SaleItemsSubModal from './sale-items-submodal';
+import ConfirmationModal from './confirmation-submodal';
 import { DEFAULT_CURRENCY_EXCHANGE_RATES } from '@/lib/constants/financial-constants';
 
 // ============================================================================
@@ -140,6 +141,9 @@ export default function BoothSalesView({
 
     // Associate Quick Entry State (formerly Partner)
     const [associateEntries, setAssociateEntries] = useState<AssociateQuickEntry[]>([]);
+
+    // Delete Confirmation State
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
     // Payments Logic: Auto-calculate remaining need
     // "reduce from colones then convert to dollars"
@@ -1022,14 +1026,9 @@ export default function BoothSalesView({
                                     </div>
                                 </div>
                                 <div className="space-y-1 text-xs bg-indigo-950/10 p-2 rounded border border-indigo-500/10">
-                                    <div className="flex justify-between text-slate-400"><span>Sales:</span> <span>₡{salesDistributionMatrix.akiles.reduce((s, r) => s + r.ownerAmount, 0).toLocaleString()}</span></div>
-                                    {selectedAssociateId && (
-                                        <div className="flex justify-between text-slate-400"><span>Comm:</span> <span>+₡{totals.myCommissions.toLocaleString()}</span></div>
-                                    )}
-                                    <div className="flex justify-between text-red-400/70"><span>Booth:</span> <span>-₡{totals.breakdown.costMe.toLocaleString()}</span></div>
 
                                     {/* Footer: 2-Column Summary */}
-                                    <div className="border-t border-indigo-500/20 pt-2 mt-2">
+                                    <div className="border-t border-indigo-500/20 pt-2 mt-0">
                                         <div className="grid grid-cols-3 gap-2 text-xs font-medium text-indigo-100/70 mb-1 border-b border-indigo-500/10 pb-1">
                                             <span></span>
                                             <span className="text-right">₡</span>
@@ -1081,11 +1080,8 @@ export default function BoothSalesView({
                                         </div>
                                     </div>
                                     <div className="space-y-1 text-xs bg-pink-950/10 p-2 rounded border border-pink-500/10">
-                                        <div className="flex justify-between text-slate-400"><span>Sales:</span> <span>₡{salesDistributionMatrix.associate.reduce((s, r) => s + r.ownerAmount, 0).toLocaleString()}</span></div>
-                                        <div className="flex justify-between text-slate-400"><span>Comm:</span> <span>+₡{totals.associateCommissions.toLocaleString()}</span></div>
-                                        <div className="flex justify-between text-red-400/70"><span>Booth:</span> <span>-₡{totals.breakdown.costAssoc.toLocaleString()}</span></div>
 
-                                        <div className="border-t border-pink-500/20 pt-2 mt-2">
+                                        <div className="border-t border-pink-500/20 pt-2 mt-0">
                                             <div className="grid grid-cols-3 gap-2 text-xs font-medium text-pink-100/70 mb-1 border-b border-pink-500/10 pb-1">
                                                 <span></span>
                                                 <span className="text-right">₡</span>
@@ -1224,7 +1220,11 @@ export default function BoothSalesView({
                 {/* Right Side: Action Buttons */}
                 <div className="flex gap-2">
                     {onDelete && (
-                        <Button onClick={onDelete} disabled={isSaving} className="mr-auto bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/20">
+                        <Button
+                            onClick={() => setShowDeleteConfirm(true)}
+                            disabled={isSaving}
+                            className="mr-auto bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/20 h-9"
+                        >
                             Delete
                         </Button>
                     )}
@@ -1286,6 +1286,22 @@ export default function BoothSalesView({
                 }
                 defaultSiteId={siteId}
                 exchangeRate={exchangeRate}
+            />
+
+            {/* Delete Confirmation Modal */}
+            <ConfirmationModal
+                open={showDeleteConfirm}
+                onOpenChange={setShowDeleteConfirm}
+                title="Delete Sale"
+                description="Are you sure you want to delete this sale? This action cannot be undone."
+                confirmText="Delete"
+                cancelText="Cancel"
+                variant="destructive"
+                onConfirm={() => {
+                    setShowDeleteConfirm(false);
+                    if (onDelete) onDelete();
+                }}
+                onCancel={() => setShowDeleteConfirm(false)}
             />
         </div >
     );
