@@ -151,7 +151,18 @@ export default function BoothSalesView({
     // Payment Distribution State
     const [paymentBitcoin, setPaymentBitcoin] = useState<number>(0); // Value in CRC
     const [paymentCard, setPaymentCard] = useState<number>(0);       // Value in CRC
-    // Cash is calculated: Total - Bitcoin - Card
+
+    // Manual Payment Entry for Cash (Split)
+    const [paymentCashCRC, setPaymentCashCRC] = useState<number>(0);
+    const [paymentCashUSD, setPaymentCashUSD] = useState<number>(0);
+
+    // Effect to auto-calculate Cash remainder initially (OPTIONAL)
+    // For now, minimizing magic. If user wants to type, let them type. 
+    // But helpful to pre-fill? Maybe not, complicates "editable".
+    // Let's leave them 0 for now or user can fill.
+    // Actually, "auto-calculated Cash remainder display" was the OLD feature. 
+    // New feature is "Split... into two editable fields". 
+    // Users might prefer auto-calc. Let's start with 0.
 
     // Load Defaults (One-time) - Mocking "My Defaults"
     useEffect(() => {
@@ -472,7 +483,8 @@ export default function BoothSalesView({
                 paymentDistribution: {
                     bitcoin: paymentBitcoin,
                     card: paymentCard,
-                    cash: totals.grossSales - paymentBitcoin - paymentCard
+                    cashCRC: paymentCashCRC,
+                    cashUSD: paymentCashUSD
                 }
             }
         };
@@ -525,7 +537,7 @@ export default function BoothSalesView({
     // 4. Render
     // ============================================================================
     return (
-        <div className="flex flex-col h-full bg-slate-50/50 dark:bg-slate-900/50 -mx-6 -my-4 p-6">
+        <div className="flex flex-col h-full bg-slate-50/50 dark:bg-slate-900/50 -mx-6 -my-4 p-4 pt-2">
 
             {/* Header / Setup Toolbar */}
             <div className="flex items-center gap-4 bg-white dark:bg-slate-800 p-2 rounded-lg shadow-sm border mb-4">
@@ -574,6 +586,14 @@ export default function BoothSalesView({
                         placeholder="Select site..."
                         className="h-8 w-40"
                     />
+                </div>
+
+
+
+                {/* Booth Sales Lozenge (Relocated) */}
+                <div className="flex items-center gap-1.5 px-2 py-0.5 bg-indigo-500/10 rounded-md border border-indigo-500/20 ml-2">
+                    <Store className="h-3 w-3 text-indigo-500" />
+                    <span className="text-[10px] font-bold text-indigo-500 whitespace-nowrap uppercase tracking-wider">Booth Sales</span>
                 </div>
 
                 <div className="w-px h-6 bg-slate-200 dark:bg-slate-700 mx-2 ml-auto" />
@@ -1035,46 +1055,56 @@ export default function BoothSalesView({
                         </Button>
                     </div>
 
-                    {/* Booth Sales Lozenge */}
-                    <div className="flex items-center gap-2 px-3 py-1.5 bg-indigo-500/10 rounded-md border border-indigo-500/20 ml-4">
-                        <Store className="h-4 w-4 text-indigo-500" />
-                        <span className="text-sm font-bold text-indigo-500 whitespace-nowrap">Booth Sales</span>
-                    </div>
                 </div>
+
 
                 {/* Center: Payment Distribution Inputs */}
                 <div className="flex items-center gap-2 mx-4">
                     <div className="flex items-center gap-2">
-                        <Label className="text-[10px] text-muted-foreground uppercase tracking-wide">Payments (₡)</Label>
+                        <Label className="text-[9px] text-muted-foreground uppercase tracking-wide">Payments</Label>
 
                         {/* Bitcoin Input */}
-                        <div className="flex items-center relative">
-                            <span className="absolute left-2 text-[10px] text-orange-500 font-bold">₿</span>
+                        <div className="flex items-center relative" title="Bitcoin Payment (CRC)">
+                            <span className="absolute left-2 text-[10px] text-orange-500 font-bold z-10">₿</span>
                             <NumericInput
                                 value={paymentBitcoin}
                                 onChange={setPaymentBitcoin}
-                                className="h-8 w-24 pl-5 text-xs bg-slate-100 dark:bg-slate-950 border-orange-500/20 text-orange-600 dark:text-orange-400 focus:border-orange-500/50"
+                                className="h-8 w-20 pl-8 text-xs bg-slate-100 dark:bg-slate-950 border-orange-500/20 text-orange-600 dark:text-orange-400 focus:border-orange-500/50"
                                 placeholder="BTC"
                             />
                         </div>
 
                         {/* Card Input */}
-                        <div className="flex items-center relative">
-                            <span className="absolute left-2 text-[10px] text-indigo-500 font-bold">💳</span>
+                        <div className="flex items-center relative" title="Card Payment (CRC)">
+                            <span className="absolute left-2 text-[10px] text-indigo-500 font-bold z-10">💳</span>
                             <NumericInput
                                 value={paymentCard}
                                 onChange={setPaymentCard}
-                                className="h-8 w-24 pl-5 text-xs bg-slate-100 dark:bg-slate-950 border-indigo-500/20 text-indigo-600 dark:text-indigo-400 focus:border-indigo-500/50"
+                                className="h-8 w-20 pl-8 text-xs bg-slate-100 dark:bg-slate-950 border-indigo-500/20 text-indigo-600 dark:text-indigo-400 focus:border-indigo-500/50"
                                 placeholder="Card"
                             />
                         </div>
 
-                        {/* Cash Remainder Display */}
-                        <div className="flex items-center gap-1 bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20 h-8" title="Cash Remainder">
-                            <span className="text-[10px] text-emerald-500 font-bold">💵</span>
-                            <span className="text-xs font-mono font-medium text-emerald-600 dark:text-emerald-400">
-                                ₡{(totals.grossSales - paymentBitcoin - paymentCard).toLocaleString()}
-                            </span>
+                        {/* Cash CRC Input */}
+                        <div className="flex items-center relative" title="Cash Payment (CRC)">
+                            <span className="absolute left-2 text-[10px] text-emerald-500 font-bold z-10">₡</span>
+                            <NumericInput
+                                value={paymentCashCRC}
+                                onChange={setPaymentCashCRC}
+                                className="h-8 w-20 pl-8 text-xs bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400 focus:border-emerald-500/50"
+                                placeholder="CRC"
+                            />
+                        </div>
+
+                        {/* Cash USD Input */}
+                        <div className="flex items-center relative" title="Cash Payment (USD)">
+                            <span className="absolute left-2 text-[10px] text-emerald-500 font-bold z-10">$</span>
+                            <NumericInput
+                                value={paymentCashUSD}
+                                onChange={setPaymentCashUSD}
+                                className="h-8 w-20 pl-8 text-xs bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400 focus:border-emerald-500/50"
+                                placeholder="USD"
+                            />
                         </div>
                     </div>
                 </div>
@@ -1083,10 +1113,10 @@ export default function BoothSalesView({
                 <div className="flex gap-2">
                     <Button variant="ghost" onClick={onCancel} disabled={isSaving}>Cancel</Button>
                     <Button onClick={handleSave} disabled={isSaving} className="bg-indigo-600 hover:bg-indigo-700">
-                        {isSaving ? 'Processing...' : 'Confirm Booth Sales'}
+                        {isSaving ? 'Processing...' : 'Confirm'}
                     </Button>
                 </div>
-            </div>
+            </div >
 
             {/* Item Selector Sub-Modal */}
             <SaleItemsSubModal
@@ -1118,21 +1148,23 @@ export default function BoothSalesView({
                     setLines([...nonItemLines, ...newLines]);
                     setShowItemPicker(false);
                 }}
-                initialItems={lines.filter(l => l.kind === 'item').map(l => {
-                    const il = l as ItemSaleLine;
-                    const item = items.find(i => i.id === il.itemId);
-                    return {
-                        id: il.lineId,
-                        itemId: il.itemId,
-                        itemName: item ? item.name : 'Unknown Item',
-                        quantity: il.quantity,
-                        unitPrice: il.unitPrice || 0,
-                        total: (il.quantity || 0) * (il.unitPrice || 0),
-                        siteId: siteId,
-                        usdExpression: l.metadata?.usdExpression,
-                        crcExpression: l.metadata?.crcExpression
-                    };
-                })}
+                initialItems={
+                    lines.filter(l => l.kind === 'item').map(l => {
+                        const il = l as ItemSaleLine;
+                        const item = items.find(i => i.id === il.itemId);
+                        return {
+                            id: il.lineId,
+                            itemId: il.itemId,
+                            itemName: item ? item.name : 'Unknown Item',
+                            quantity: il.quantity,
+                            unitPrice: il.unitPrice || 0,
+                            total: (il.quantity || 0) * (il.unitPrice || 0),
+                            siteId: siteId,
+                            usdExpression: l.metadata?.usdExpression,
+                            crcExpression: l.metadata?.crcExpression
+                        };
+                    })
+                }
                 defaultSiteId={siteId}
                 exchangeRate={exchangeRate}
             />
