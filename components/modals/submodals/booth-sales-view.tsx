@@ -60,6 +60,7 @@ export interface BoothSalesViewProps {
     // Actions
     onSave: (sale?: Sale) => void;
     onCancel: () => void;
+    onDelete?: () => void;
     isSaving: boolean;
 
     // Status State
@@ -117,7 +118,8 @@ export default function BoothSalesView({
     isNotPaid,
     setIsNotPaid,
     isNotCharged,
-    setIsNotCharged
+    setIsNotCharged,
+    onDelete
 }: BoothSalesViewProps) {
 
     // 1. Local State
@@ -1110,6 +1112,11 @@ export default function BoothSalesView({
 
                 {/* Right Side: Action Buttons */}
                 <div className="flex gap-2">
+                    {onDelete && (
+                        <Button onClick={onDelete} disabled={isSaving} className="mr-auto bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/20">
+                            Delete
+                        </Button>
+                    )}
                     <Button variant="ghost" onClick={onCancel} disabled={isSaving}>Cancel</Button>
                     <Button onClick={handleSave} disabled={isSaving} className="bg-indigo-600 hover:bg-indigo-700">
                         {isSaving ? 'Processing...' : 'Confirm'}
