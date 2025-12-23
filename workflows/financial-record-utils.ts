@@ -329,6 +329,22 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
 
     // Validate Booth Metadata
     const boothMetadata = sale.archiveMetadata?.boothSaleContext;
+    const paymentDist = boothMetadata?.paymentDistribution;
+
+    // Log the detailed transaction
+    const logDetails = {
+      gross: sale.totals.totalRevenue,
+      netCompany: boothMetadata?.calculatedTotals?.myNet || 0,
+      netAssociate: boothMetadata?.calculatedTotals?.associateNet || 0,
+      payments: paymentDist ? `Cash: ${paymentDist.cash}, BTC: ${paymentDist.bitcoin}, Card: ${paymentDist.card}` : 'Standard',
+      associateId: sale.customerId
+    };
+
+    await appendEntityLog(EntityType.SALE, sale.id, LogEventType.TRANSACTED, {
+      message: `Booth Sale Finalized. Gross: ${sale.totals.totalRevenue}. Payments: ${JSON.stringify(paymentDist || {})}`,
+      ...logDetails
+    });
+
     if (!boothMetadata || !boothMetadata.calculatedTotals) {
       console.warn(`[createFinancialRecordFromBoothSale] Missing booth metadata, reverting to standard creation.`);
       await createFinancialRecordFromSale(sale);
@@ -341,6 +357,20 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
     // 1. Create Gross Income Record (Standard)
     console.log(`[createFinancialRecordFromBoothSale] Creating Gross Income Record: ${grossRevenue}`);
     const incomeRecord = await createFinancialRecordFromSale(sale);
+
+    // [NEW] Link Sale to Associate (Character) if present
+    if (sale.customerId) {
+      // Determine role based on context (defaulting to ASSOCIATE for Booth Sales)
+      // In future, could check Character roles, but for this specific link, ASSOCIATE is the relationship type in this context.
+      const charLink = makeLink(
+        LinkType.SALE_CHARACTER,
+        { type: EntityType.SALE, id: sale.id },
+        { type: EntityType.CHARACTER, id: sale.customerId },
+        { role: CharacterRole.ASSOCIATE, context: 'Booth Associate' }
+      );
+      await createLink(charLink);
+      console.log(`[createFinancialRecordFromBoothSale] ✅ Linked Sale ${sale.id} to Associate ${sale.customerId}`);
+    }
 
     if (!incomeRecord) {
       console.error(`[createFinancialRecordFromBoothSale] Failed to create income record.`);

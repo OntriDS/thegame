@@ -26,7 +26,7 @@ import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
 import PlayerCharacterSelectorModal from './submodals/player-character-selector-submodal';
 // Side effects handled by parent component via API calls
 import { v4 as uuid } from 'uuid';
-import { Plus, Trash2, Package, DollarSign, Network, ListPlus, Wallet, Gift, User } from 'lucide-react';
+import { Plus, Trash2, Package, DollarSign, Network, ListPlus, Wallet, Gift, User, Store } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import DeleteModal from './submodals/delete-submodal';
 import LinksRelationshipsModal from './submodals/links-relationships-submodal';
@@ -1135,6 +1135,15 @@ export default function SalesModal({
             onSave={handleSave}
             onCancel={() => onOpenChange(false)}
             isSaving={isSaving}
+            status={status}
+            setStatus={setStatus}
+            isNotPaid={isNotPaid}
+            setIsNotPaid={setIsNotPaid}
+            isNotCharged={isNotCharged}
+            setIsNotCharged={(val) => {
+              setIsNotCharged(val);
+              updateSaleStatus(val);
+            }}
           />
         ) : (
           <div className="px-6 overflow-y-auto space-y-4" style={{ maxHeight: 'calc(90vh - 280px)' }}>
@@ -1983,12 +1992,6 @@ export default function SalesModal({
               </div>
 
               {/* Booth Sales Lozenge - Footer Placement */}
-              {type === SaleType.BOOTH && (
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-indigo-500/10 rounded-md border border-indigo-500/20 ml-2">
-                  <Store className="h-4 w-4 text-indigo-500" />
-                  <span className="text-sm font-bold text-indigo-500 whitespace-nowrap">Booth Sales</span>
-                </div>
-              )}
             </div>
           </DialogFooter>
         )}

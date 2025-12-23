@@ -12,6 +12,7 @@ import NumericInput from '@/components/ui/numeric-input';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
     Plus,
     Trash2,
@@ -60,6 +61,14 @@ export interface BoothSalesViewProps {
     onSave: (sale?: Sale) => void;
     onCancel: () => void;
     isSaving: boolean;
+
+    // Status State
+    status: SaleStatus;
+    setStatus: (status: SaleStatus) => void;
+    isNotPaid: boolean;
+    setIsNotPaid: (val: boolean) => void;
+    isNotCharged: boolean;
+    setIsNotCharged: (val: boolean) => void;
 }
 
 interface AssociateQuickEntry {
@@ -101,7 +110,13 @@ export default function BoothSalesView({
     setSiteId,
     onSave,
     onCancel,
-    isSaving
+    isSaving,
+    status,
+    setStatus,
+    isNotPaid,
+    setIsNotPaid,
+    isNotCharged,
+    setIsNotCharged
 }: BoothSalesViewProps) {
 
     // 1. Local State
@@ -122,14 +137,19 @@ export default function BoothSalesView({
 
     // Associate Quick Entry State (formerly Partner)
     const [associateEntries, setAssociateEntries] = useState<AssociateQuickEntry[]>([]);
-    
+
     // View Mode: 'Associate' | 'Partner' | 'Off' (Nullable logic handled by string literal)
-    const [viewMode, setViewMode] = useState<'Associate' | 'Partner' | 'Off'>('Off'); 
+    const [viewMode, setViewMode] = useState<'Associate' | 'Partner' | 'Off'>('Off');
 
     // Quick Entry Form State
     const [quickAmount, setQuickAmount] = useState<string>('');
     // const [quickDesc, setQuickDesc] = useState<string>(''); // Removed as requested
     const [quickCat, setQuickCat] = useState<string>('');
+
+    // Payment Distribution State
+    const [paymentBitcoin, setPaymentBitcoin] = useState<number>(0); // Value in CRC
+    const [paymentCard, setPaymentCard] = useState<number>(0);       // Value in CRC
+    // Cash is calculated: Total - Bitcoin - Card
 
     // Load Defaults (One-time) - Mocking "My Defaults"
     useEffect(() => {
@@ -148,7 +168,7 @@ export default function BoothSalesView({
             const maria = characters.find(c => c.name.toLowerCase().includes('maria') || c.name.includes('O2'));
             if (maria) setSelectedAssociateId(maria.id);
         }
-        
+
         // Clear selection if Off
         if (viewMode === 'Off') {
             setSelectedAssociateId('');
@@ -436,7 +456,12 @@ export default function BoothSalesView({
             boothSaleContext: {
                 contractId: selectedContractId,
                 boothCost: boothCost,
-                calculatedTotals: totals
+                calculatedTotals: totals,
+                paymentDistribution: {
+                    bitcoin: paymentBitcoin,
+                    card: paymentCard,
+                    cash: totals.grossSales - paymentBitcoin - paymentCard
+                }
             }
         };
 
@@ -451,9 +476,12 @@ export default function BoothSalesView({
             description: 'Feria / Booth Sale',
             saleDate: saleDate, // Using date object directly
             type: SaleType.BOOTH,
-            status: SaleStatus.CHARGED,
+            status: status, // Use selected status
+            isNotPaid: isNotPaid,
+            isNotCharged: isNotCharged,
             siteId: siteId,
             salesChannel: 'Booth Sales' as Station,
+            customerId: (viewMode !== 'Off' && selectedAssociateId) ? selectedAssociateId : null,
 
             // Financials
             lines: allLines,
@@ -474,8 +502,7 @@ export default function BoothSalesView({
             isCollected: false,
 
             // Optional fields defaultsthe input
-            isNotPaid: false,
-            isNotCharged: false,
+
         };
 
         // 5. Pass to Parent
@@ -543,7 +570,7 @@ export default function BoothSalesView({
                 <div className="flex items-center gap-2">
                     {/* Role Toggle 3-Way */}
                     <div className="flex bg-slate-900 rounded-md p-0.5 border border-slate-700 shrink-0">
-                         <button
+                        <button
                             onClick={() => setViewMode('Off')}
                             className={`text-[10px] px-2 py-1 rounded-sm transition-colors ${viewMode === 'Off' ? 'bg-slate-700 text-white font-medium' : 'text-slate-400 hover:text-slate-300'}`}
                         >
@@ -875,11 +902,105 @@ export default function BoothSalesView({
 
             </div>
 
-            <div className="p-4 border-t bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 flex justify-end gap-2">
-                <Button variant="ghost" onClick={onCancel} disabled={isSaving}>Cancel</Button>
-                <Button onClick={handleSave} disabled={isSaving} className="bg-indigo-600 hover:bg-indigo-700">
-                    {isSaving ? 'Processing...' : 'Confirm Booth Sales'}
-                </Button>
+            <div className="p-4 border-t bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 flex justify-between items-center">
+
+                {/* Left Side: Status Controls (Moved to Footer) */}
+                <div className="flex items-center gap-2">
+                    {/* Status Selector */}
+                    <div className="flex items-center gap-2">
+                        <Label className="text-xs text-muted-foreground mr-1">Status:</Label>
+                        <Select value={status} onValueChange={(val) => setStatus(val as SaleStatus)}>
+                            <SelectTrigger className="h-8 w-[130px] text-xs bg-white dark:bg-slate-950 border-slate-300 dark:border-slate-700">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {Object.values(SaleStatus).map(s => (
+                                    <SelectItem key={s} value={s}>{s}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <div className="w-px h-6 bg-slate-300 dark:bg-slate-700 mx-2"></div>
+
+                    {/* Payment Status Toggles */}
+                    <div className="flex items-center gap-2">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setIsNotPaid(!isNotPaid)}
+                            className={`h-8 text-xs px-3 font-medium transition-colors ${isNotPaid
+                                ? 'border-orange-500/50 text-orange-600 dark:text-orange-400 bg-orange-500/10 hover:bg-orange-500/20'
+                                : 'border-emerald-500/50 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20'
+                                }`}
+                        >
+                            {isNotPaid ? "⚠ Not Paid" : "✓ Paid"}
+                        </Button>
+
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setIsNotCharged(!isNotCharged)}
+                            className={`h-8 text-xs px-3 font-medium transition-colors ${isNotCharged
+                                ? 'border-orange-500/50 text-orange-600 dark:text-orange-400 bg-orange-500/10 hover:bg-orange-500/20'
+                                : 'border-emerald-500/50 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20'
+                                }`}
+                        >
+                            {isNotCharged ? "⚠ Not Charged" : "✓ Charged"}
+                        </Button>
+                    </div>
+
+                    {/* Booth Sales Lozenge */}
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-indigo-500/10 rounded-md border border-indigo-500/20 ml-4">
+                        <Store className="h-4 w-4 text-indigo-500" />
+                        <span className="text-sm font-bold text-indigo-500 whitespace-nowrap">Booth Sales</span>
+                    </div>
+                </div>
+
+                {/* Center: Payment Distribution Inputs */}
+                <div className="flex items-center gap-2 mx-4">
+                    <div className="flex items-center gap-2">
+                        <Label className="text-[10px] text-muted-foreground uppercase tracking-wide">Payments (₡)</Label>
+
+                        {/* Bitcoin Input */}
+                        <div className="flex items-center relative">
+                            <span className="absolute left-2 text-[10px] text-orange-500 font-bold">₿</span>
+                            <NumericInput
+                                value={paymentBitcoin}
+                                onChange={setPaymentBitcoin}
+                                className="h-8 w-24 pl-5 text-xs bg-slate-100 dark:bg-slate-950 border-orange-500/20 text-orange-600 dark:text-orange-400 focus:border-orange-500/50"
+                                placeholder="BTC"
+                            />
+                        </div>
+
+                        {/* Card Input */}
+                        <div className="flex items-center relative">
+                            <span className="absolute left-2 text-[10px] text-indigo-500 font-bold">💳</span>
+                            <NumericInput
+                                value={paymentCard}
+                                onChange={setPaymentCard}
+                                className="h-8 w-24 pl-5 text-xs bg-slate-100 dark:bg-slate-950 border-indigo-500/20 text-indigo-600 dark:text-indigo-400 focus:border-indigo-500/50"
+                                placeholder="Card"
+                            />
+                        </div>
+
+                        {/* Cash Remainder Display */}
+                        <div className="flex items-center gap-1 bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20 h-8" title="Cash Remainder">
+                            <span className="text-[10px] text-emerald-500 font-bold">💵</span>
+                            <span className="text-xs font-mono font-medium text-emerald-600 dark:text-emerald-400">
+                                ₡{(totals.grossSales - paymentBitcoin - paymentCard).toLocaleString()}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Right Side: Action Buttons */}
+                <div className="flex gap-2">
+                    <Button variant="ghost" onClick={onCancel} disabled={isSaving}>Cancel</Button>
+                    <Button onClick={handleSave} disabled={isSaving} className="bg-indigo-600 hover:bg-indigo-700">
+                        {isSaving ? 'Processing...' : 'Confirm Booth Sales'}
+                    </Button>
+                </div>
             </div>
 
             {/* Item Selector Sub-Modal */}
