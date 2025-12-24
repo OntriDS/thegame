@@ -951,26 +951,27 @@ export default function BoothSalesView({
                 {/* SECTION C: SETTLEMENT MATRIX (The Excel View) - Right Column */}
                 <div className="col-span-12 lg:col-span-5 flex flex-col min-h-0 bg-white dark:bg-slate-800 rounded-xl border shadow-sm overflow-hidden">
 
-                    {/* Matrix Header */}
-                    <div className="grid grid-cols-12 gap-2 p-3 bg-slate-900 border-b border-slate-700 text-[10px] font-semibold text-slate-400 uppercase tracking-wider text-center">
-                        <div className={`text-left pl-2 ${selectedAssociateId ? 'col-span-3' : 'col-span-6'}`}>Category</div>
-                        <div className={`text-right ${selectedAssociateId ? 'col-span-2' : 'col-span-3'}`}>T₡</div>
-                        <div className={`text-right ${selectedAssociateId ? 'col-span-2' : 'col-span-3'}`}>T$</div>
-                        {selectedAssociateId && (
-                            <>
-                                <div className="col-span-2 text-right text-indigo-400">Our Share $</div>
-                                <div className="col-span-3 text-right text-pink-400">Their Share $</div>
-                            </>
-                        )}
-                    </div>
-
                     {/* Matrix Body (Scrollable) */}
                     <div className="flex-1 overflow-y-auto bg-slate-900/30">
                         {/* Akiles Section */}
                         {
                             salesDistributionMatrix.akiles.length > 0 && (
                                 <div className="p-2 bg-indigo-950/20 border-b border-indigo-500/10">
-                                    <div className="text-[10px] font-bold text-indigo-400 mb-2 px-2 uppercase tracking-wide">AKILES PRODUCTS</div>
+                                    {/* Embedded Header for Akiles Section */}
+                                    <div className="grid grid-cols-12 gap-2 px-2 mb-2 items-end">
+                                        <div className={`text-[10px] font-bold text-indigo-400 uppercase tracking-wide ${selectedAssociateId ? 'col-span-3' : 'col-span-6'}`}>
+                                            AKILES PRODUCTS
+                                        </div>
+                                        <div className={`text-right text-[10px] font-semibold text-slate-500 ${selectedAssociateId ? 'col-span-2' : 'col-span-3'}`}>T₡</div>
+                                        <div className={`text-right text-[10px] font-semibold text-slate-500 ${selectedAssociateId ? 'col-span-2' : 'col-span-3'}`}>T$</div>
+                                        {selectedAssociateId && (
+                                            <>
+                                                <div className="col-span-2 text-right text-[9px] font-bold text-indigo-400 leading-none whitespace-nowrap">OUR SHARE $</div>
+                                                <div className="col-span-3 text-right text-[9px] font-bold text-pink-400 leading-none whitespace-nowrap">THEIR SHARE $</div>
+                                            </>
+                                        )}
+                                    </div>
+
                                     {salesDistributionMatrix.akiles.map(row => (
                                         <div key={row.id} className="grid grid-cols-12 gap-2 p-2 text-xs border-b border-indigo-500/10 last:border-0 hover:bg-white/5 transition-colors items-center">
                                             <div className={`font-medium text-indigo-100 truncate ${selectedAssociateId ? 'col-span-3' : 'col-span-6'}`} title={row.label}>{row.label}</div>
@@ -992,9 +993,17 @@ export default function BoothSalesView({
                         {
                             selectedAssociateId && salesDistributionMatrix.associate.length > 0 && (
                                 <div className="p-2 bg-pink-950/20">
-                                    <div className="text-[10px] font-bold text-pink-400 mb-2 px-2 mt-2 uppercase tracking-wide">
-                                        {`ASSOCIATE (${getAssociateName(selectedAssociateId).toUpperCase()})`}
+                                    {/* Embedded Header for Associate Section */}
+                                    <div className="grid grid-cols-12 gap-2 px-2 mt-4 mb-2 items-end">
+                                        <div className="col-span-3 text-[10px] font-bold text-pink-400 uppercase tracking-wide truncate">
+                                            {`ASSOC (${getAssociateName(selectedAssociateId).toUpperCase().split(' ')[0]})`}
+                                        </div>
+                                        <div className="col-span-2 text-right text-[10px] font-semibold text-slate-500">T₡</div>
+                                        <div className="col-span-2 text-right text-[10px] font-semibold text-slate-500">T$</div>
+                                        <div className="col-span-2 text-right text-[9px] font-bold text-indigo-400 leading-none whitespace-nowrap">OUR SHARE $</div>
+                                        <div className="col-span-3 text-right text-[9px] font-bold text-pink-400 leading-none whitespace-nowrap">THEIR SHARE $</div>
                                     </div>
+
                                     {salesDistributionMatrix.associate.map(row => (
                                         <div key={row.id} className="grid grid-cols-12 gap-2 p-2 text-xs border-b border-pink-500/10 last:border-0 hover:bg-white/5 transition-colors items-center">
                                             <div className="col-span-3 font-medium text-pink-100 truncate" title={row.label}>{row.label}</div>
@@ -1018,8 +1027,7 @@ export default function BoothSalesView({
                                 <div className="flex items-center gap-2 mb-2">
                                     <div className="h-6 w-6 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold text-[10px]">C</div>
                                     <div>
-                                        <div className="text-xs font-bold text-indigo-100">TheCompany Net</div>
-                                        <div className="text-[10px] text-slate-500">Net Profit</div>
+                                        <div className="text-xs font-bold text-indigo-100">TheCompany</div>
                                     </div>
                                 </div>
                                 <div className="space-y-1 text-xs bg-indigo-950/10 p-2 rounded border border-indigo-500/10">
@@ -1053,52 +1061,51 @@ export default function BoothSalesView({
                                     </div>
                                 </div>
                             </div>
+
+                            {/* Associate Payout (Conditional) */}
+                            {selectedAssociateId && (
+                                <div className="p-3 bg-slate-900 rounded-lg border border-pink-500/20 shadow-sm">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <div className="h-6 w-6 rounded-full bg-pink-500/20 flex items-center justify-center text-pink-400 font-bold text-[10px]">
+                                            {selectedAssociateId ? getAssociateName(selectedAssociateId).substring(0, 1).toUpperCase() : 'A'}
+                                        </div>
+                                        <div>
+                                            <div className="text-xs font-bold text-pink-100">
+                                                {selectedAssociateId ? getAssociateName(selectedAssociateId) : 'Associate'}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-1 text-xs bg-pink-950/10 p-2 rounded border border-pink-500/10">
+
+                                        <div className="border-t border-pink-500/20 pt-2 mt-0">
+                                            <div className="grid grid-cols-3 gap-2 text-xs font-medium text-pink-100/70 mb-1 border-b border-pink-500/10 pb-1">
+                                                <span></span>
+                                                <span className="text-right">₡</span>
+                                                <span className="text-right">$</span>
+                                            </div>
+                                            <div className="grid grid-cols-3 gap-2 text-xs text-pink-100">
+                                                <span>Sales:</span>
+                                                <div className="text-right font-mono">₡{salesDistributionMatrix.associate.reduce((s, r) => s + r.totalColones, 0).toLocaleString()}</div>
+                                                <div className="text-right font-mono">${salesDistributionMatrix.associate.reduce((s, r) => s + r.totalDollars, 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</div>
+                                            </div>
+                                            <div className="grid grid-cols-3 gap-2 text-xs text-red-400">
+                                                <span>Booth:</span>
+                                                <div className="text-right font-mono">-₡{(totals.breakdown.costAssoc * exchangeRate).toLocaleString()}</div>
+                                                <div className="text-right font-mono">-${totals.breakdown.costAssoc.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                                            </div>
+                                            <div className="grid grid-cols-3 gap-2 text-sm font-bold border-t border-pink-500/20 pt-1 mt-1 text-pink-400">
+                                                <span className="col-span-1">T$:</span>
+                                                <span className="col-span-2 text-right">${(totals.associateNet / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</span>
+                                            </div>
+                                            <div className="grid grid-cols-3 gap-2 text-xs font-medium text-pink-400/50">
+                                                <span className="col-span-1">T₡:</span>
+                                                <span className="col-span-2 text-right">₡{totals.associateNet.toLocaleString()}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
-
-                        {/* Associate Payout (Conditional) */}
-                        {selectedAssociateId && (
-                            <div className="p-3 bg-slate-900 rounded-lg border border-pink-500/20 shadow-sm">
-                                <div className="flex items-center gap-2 mb-2">
-                                    <div className="h-6 w-6 rounded-full bg-pink-500/20 flex items-center justify-center text-pink-400 font-bold text-[10px]">
-                                        {selectedAssociateId ? getAssociateName(selectedAssociateId).substring(0, 1).toUpperCase() : 'A'}
-                                    </div>
-                                    <div>
-                                        <div className="text-xs font-bold text-pink-100">
-                                            {selectedAssociateId ? `${getAssociateName(selectedAssociateId)} Net` : 'Associate Net'}
-                                        </div>
-                                        <div className="text-[10px] text-slate-500">Payout to Associate</div>
-                                    </div>
-                                </div>
-                                <div className="space-y-1 text-xs bg-pink-950/10 p-2 rounded border border-pink-500/10">
-
-                                    <div className="border-t border-pink-500/20 pt-2 mt-0">
-                                        <div className="grid grid-cols-3 gap-2 text-xs font-medium text-pink-100/70 mb-1 border-b border-pink-500/10 pb-1">
-                                            <span></span>
-                                            <span className="text-right">₡</span>
-                                            <span className="text-right">$</span>
-                                        </div>
-                                        <div className="grid grid-cols-3 gap-2 text-xs text-pink-100">
-                                            <span>Sales:</span>
-                                            <div className="text-right font-mono">₡{salesDistributionMatrix.associate.reduce((s, r) => s + r.totalColones, 0).toLocaleString()}</div>
-                                            <div className="text-right font-mono">${salesDistributionMatrix.associate.reduce((s, r) => s + r.totalDollars, 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</div>
-                                        </div>
-                                        <div className="grid grid-cols-3 gap-2 text-xs text-red-400">
-                                            <span>Booth:</span>
-                                            <div className="text-right font-mono">-₡{(totals.breakdown.costAssoc * exchangeRate).toLocaleString()}</div>
-                                            <div className="text-right font-mono">-${totals.breakdown.costAssoc.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
-                                        </div>
-                                        <div className="grid grid-cols-3 gap-2 text-sm font-bold border-t border-pink-500/20 pt-1 mt-1 text-pink-400">
-                                            <span className="col-span-1">T$:</span>
-                                            <span className="col-span-2 text-right">${(totals.associateNet / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</span>
-                                        </div>
-                                        <div className="grid grid-cols-3 gap-2 text-xs font-medium text-pink-400/50">
-                                            <span className="col-span-1">T₡:</span>
-                                            <span className="col-span-2 text-right">₡{totals.associateNet.toLocaleString()}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
                     </div>
                 </div>
             </div>
