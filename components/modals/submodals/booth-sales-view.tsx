@@ -958,10 +958,8 @@ export default function BoothSalesView({
                             salesDistributionMatrix.akiles.length > 0 && (
                                 <div className="p-2 bg-indigo-950/20 border-b border-indigo-500/10">
                                     {/* Embedded Header for Akiles Section */}
-                                    <div className="grid grid-cols-12 gap-2 px-2 mb-2 items-end">
-                                        <div className={`text-[10px] font-bold text-indigo-400 uppercase tracking-wide ${selectedAssociateId ? 'col-span-3' : 'col-span-6'}`}>
-                                            AKILES PRODUCTS
-                                        </div>
+                                    {/* <div className="grid grid-cols-12 gap-2 px-2 mb-2 items-end">
+
                                         <div className={`text-right text-[10px] font-semibold text-slate-500 ${selectedAssociateId ? 'col-span-2' : 'col-span-3'}`}>T₡</div>
                                         <div className={`text-right text-[10px] font-semibold text-slate-500 ${selectedAssociateId ? 'col-span-2' : 'col-span-3'}`}>T$</div>
                                         {selectedAssociateId && (
@@ -970,7 +968,7 @@ export default function BoothSalesView({
                                                 <div className="col-span-3 text-right text-[9px] font-bold text-pink-400 leading-none whitespace-nowrap">THEIR SHARE $</div>
                                             </>
                                         )}
-                                    </div>
+                                    </div> */}
 
                                     {salesDistributionMatrix.akiles.map(row => (
                                         <div key={row.id} className="grid grid-cols-12 gap-2 p-2 text-xs border-b border-indigo-500/10 last:border-0 hover:bg-white/5 transition-colors items-center">
@@ -994,7 +992,7 @@ export default function BoothSalesView({
                             selectedAssociateId && salesDistributionMatrix.associate.length > 0 && (
                                 <div className="p-2 bg-pink-950/20">
                                     {/* Embedded Header for Associate Section */}
-                                    <div className="grid grid-cols-12 gap-2 px-2 mt-4 mb-2 items-end">
+                                    {/* <div className="grid grid-cols-12 gap-2 px-2 mt-4 mb-2 items-end">
                                         <div className="col-span-3 text-[10px] font-bold text-pink-400 uppercase tracking-wide truncate">
                                             {`ASSOC (${getAssociateName(selectedAssociateId).toUpperCase().split(' ')[0]})`}
                                         </div>
@@ -1002,7 +1000,7 @@ export default function BoothSalesView({
                                         <div className="col-span-2 text-right text-[10px] font-semibold text-slate-500">T$</div>
                                         <div className="col-span-2 text-right text-[9px] font-bold text-indigo-400 leading-none whitespace-nowrap">OUR SHARE $</div>
                                         <div className="col-span-3 text-right text-[9px] font-bold text-pink-400 leading-none whitespace-nowrap">THEIR SHARE $</div>
-                                    </div>
+                                    </div> */}
 
                                     {salesDistributionMatrix.associate.map(row => (
                                         <div key={row.id} className="grid grid-cols-12 gap-2 p-2 text-xs border-b border-pink-500/10 last:border-0 hover:bg-white/5 transition-colors items-center">
@@ -1032,32 +1030,44 @@ export default function BoothSalesView({
                                 </div>
                                 <div className="space-y-1 text-xs bg-indigo-950/10 p-2 rounded border border-indigo-500/10">
 
-                                    {/* Footer: 2-Column Summary */}
+                                    {/* Footer: 3-Row Logic */}
                                     <div className="border-t border-indigo-500/20 pt-2 mt-0">
                                         <div className="grid grid-cols-3 gap-2 text-xs font-medium text-indigo-100/70 mb-1 border-b border-indigo-500/10 pb-1">
                                             <span></span>
                                             <span className="text-right">₡</span>
                                             <span className="text-right">$</span>
                                         </div>
+
+                                        {/* Row 1: Sales */}
                                         <div className="grid grid-cols-3 gap-2 text-xs text-indigo-100">
                                             <span>Sales:</span>
                                             <div className="text-right font-mono">₡{salesDistributionMatrix.akiles.reduce((s, r) => s + r.totalColones, 0).toLocaleString()}</div>
                                             <div className="text-right font-mono">${salesDistributionMatrix.akiles.reduce((s, r) => s + r.totalDollars, 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</div>
                                         </div>
+
+                                        {/* Row 2: Costs (Only in CRC) */}
                                         <div className="grid grid-cols-3 gap-2 text-xs text-red-400">
-                                            <span>Booth:</span>
+                                            <span>Costs:</span>
                                             <div className="text-right font-mono text-red-400">-₡{totals.breakdown.costMe.toLocaleString()}</div>
-                                            <div className="text-right font-mono text-red-400">-${(totals.breakdown.costMe / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                                            <div className="text-right font-mono text-slate-600/50">-</div>
+                                        </div>
+
+                                        {/* Row 3: Net Cash (Calculated) */}
+                                        <div className="grid grid-cols-3 gap-2 text-xs text-indigo-200 font-semibold border-t border-indigo-500/10 mt-1 pt-1">
+                                            <span>Net:</span>
+                                            <div className="text-right font-mono">
+                                                ₡{(salesDistributionMatrix.akiles.reduce((s, r) => s + r.totalColones, 0) - totals.breakdown.costMe).toLocaleString()}
+                                            </div>
+                                            <div className="text-right font-mono">
+                                                ${salesDistributionMatrix.akiles.reduce((s, r) => s + r.totalDollars, 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                                            </div>
                                         </div>
                                     </div>
-                                    {/* Explicit T$ and T₡ rows as requested */}
-                                    <div className="grid grid-cols-3 gap-2 text-sm font-bold border-t border-indigo-500/20 pt-1 mt-1 text-indigo-400">
-                                        <span className="col-span-1">T$:</span>
-                                        <span className="col-span-2 text-right">${(totals.myNet / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</span>
-                                    </div>
-                                    <div className="grid grid-cols-3 gap-2 text-xs font-medium text-indigo-400/50">
-                                        <span className="col-span-1">T₡:</span>
-                                        <span className="col-span-2 text-right">₡{totals.myNet.toLocaleString()}</span>
+
+                                    {/* Final Total Row */}
+                                    <div className="grid grid-cols-3 gap-2 text-sm font-bold border-t border-indigo-500/20 pt-2 mt-2 text-indigo-400 items-end">
+                                        <span className="col-span-2 text-[10px] text-indigo-400/70 text-right uppercase tracking-wider pb-0.5">Total Eq ($):</span>
+                                        <span className="col-span-1 text-right text-base">${(totals.myNet / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</span>
                                     </div>
                                 </div>
                             </div>
@@ -1089,18 +1099,27 @@ export default function BoothSalesView({
                                                 <div className="text-right font-mono">${salesDistributionMatrix.associate.reduce((s, r) => s + r.totalDollars, 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</div>
                                             </div>
                                             <div className="grid grid-cols-3 gap-2 text-xs text-red-400">
-                                                <span>Booth:</span>
+                                                <span>Costs:</span>
                                                 <div className="text-right font-mono text-red-400">-₡{totals.breakdown.costAssoc.toLocaleString()}</div>
-                                                <div className="text-right font-mono">-${(totals.breakdown.costAssoc / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                                                <div className="text-right font-mono text-slate-600/50">-</div>
                                             </div>
-                                            <div className="grid grid-cols-3 gap-2 text-sm font-bold border-t border-pink-500/20 pt-1 mt-1 text-pink-400">
-                                                <span className="col-span-1">T$:</span>
-                                                <span className="col-span-2 text-right">${(totals.associateNet / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</span>
+
+                                            {/* Net Row */}
+                                            <div className="grid grid-cols-3 gap-2 text-xs text-pink-200 font-semibold border-t border-pink-500/10 mt-1 pt-1">
+                                                <span>Net:</span>
+                                                <div className="text-right font-mono">
+                                                    ₡{(salesDistributionMatrix.associate.reduce((s, r) => s + r.totalColones, 0) - totals.breakdown.costAssoc).toLocaleString()}
+                                                </div>
+                                                <div className="text-right font-mono">
+                                                    ${salesDistributionMatrix.associate.reduce((s, r) => s + r.totalDollars, 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                                                </div>
                                             </div>
-                                            <div className="grid grid-cols-3 gap-2 text-xs font-medium text-pink-400/50">
-                                                <span className="col-span-1">T₡:</span>
-                                                <span className="col-span-2 text-right">₡{totals.associateNet.toLocaleString()}</span>
-                                            </div>
+                                        </div>
+
+                                        {/* Final Total Row */}
+                                        <div className="grid grid-cols-3 gap-2 text-sm font-bold border-t border-pink-500/20 pt-2 mt-2 text-pink-400 items-end">
+                                            <span className="col-span-2 text-[10px] text-pink-400/70 text-right uppercase tracking-wider pb-0.5">Total Eq ($):</span>
+                                            <span className="col-span-1 text-right text-base">${(totals.associateNet / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</span>
                                         </div>
                                     </div>
                                 </div>
