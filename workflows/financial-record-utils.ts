@@ -7,6 +7,7 @@ import { upsertFinancial, getAllFinancials, getFinancialsBySourceTaskId, removeF
 import { makeLink } from '@/links/links-workflows';
 import { createLink } from '@/links/link-registry';
 import { appendEntityLog } from './entities-logging';
+import { appendLinkLog } from '@/links/links-logging';
 import { getFinancialTypeForStation, getSalesChannelFromSaleType } from '@/lib/utils/business-structure-utils';
 import type { Station } from '@/types/type-aliases';
 import { BITCOIN_SATOSHIS_PER_BTC } from '@/lib/constants/financial-constants';
@@ -80,6 +81,7 @@ export async function createFinancialRecordFromTask(task: Task): Promise<Financi
     );
 
     await createLink(link);
+    await appendLinkLog(link, 'created');
 
     console.log(`[createFinancialRecordFromTask] ✅ Financial record created and TASK_FINREC link established: ${createdFinrec.name}`);
 
@@ -233,10 +235,14 @@ export async function createFinancialRecordFromSale(sale: Sale): Promise<Financi
     // Use salesChannel as station for sales-derived financial records
     const station = salesChannel;
 
+    // Naming Logic: Use counterparty name or descriptive fallback based on type
+    const fallbackName = sale.type === SaleType.BOOTH ? `Booth Sale` : 'Walk-in Customer';
+    const displayName = sale.counterpartyName || fallbackName;
+
     const newFinrec: FinancialRecord = {
       id: `finrec-${sale.id}-${Date.now()}`,
-      name: `Sale: ${sale.counterpartyName || 'Walk-in Customer'}`,
-      description: `Financial record from sale: ${sale.counterpartyName || 'Walk-in Customer'}`,
+      name: `Sale: ${displayName}`,
+      description: `Financial record from sale: ${displayName}`,
       year: currentDate.getFullYear(),
       month: currentDate.getMonth() + 1,
       station: station,
@@ -280,6 +286,7 @@ export async function createFinancialRecordFromSale(sale: Sale): Promise<Financi
     );
 
     await createLink(link);
+    await appendLinkLog(link, 'created');
 
     // Create FINREC_ITEM links for each sold item
     if (sale.lines && sale.lines.length > 0) {
@@ -302,6 +309,7 @@ export async function createFinancialRecordFromSale(sale: Sale): Promise<Financi
               }
             );
             await createLink(itemLink);
+            await appendLinkLog(itemLink, 'created');
             console.log(`[createFinancialRecordFromSale] ✅ Created FINREC_ITEM link for item ${item.name} (${itemLine.quantity} @ ${itemLine.unitPrice})`);
           }
         }
@@ -369,6 +377,7 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
         { role: CharacterRole.ASSOCIATE, context: 'Booth Associate' }
       );
       await createLink(charLink);
+      await appendLinkLog(charLink, 'created');
       console.log(`[createFinancialRecordFromBoothSale] ✅ Linked Sale ${sale.id} to Associate ${sale.customerId}`);
     }
 
@@ -427,6 +436,7 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
         { type: 'payout', netCashflow: -associateNet }
       );
       await createLink(link);
+      await appendLinkLog(link, 'created');
 
       // Link Payout to Associate (Character) if customerId present (customerId in Booth Sale = The Associate)
       if (sale.customerId) {
@@ -437,6 +447,7 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
           { role: CharacterRole.ASSOCIATE }
         );
         await createLink(charLink);
+        await appendLinkLog(charLink, 'created');
       }
 
       console.log(`[createFinancialRecordFromBoothSale] ✅ Created Payout Record: ${createdPayout.name}`);
@@ -528,6 +539,7 @@ export async function createFinancialRecordFromPointsExchange(
     );
 
     await createLink(link);
+    await appendLinkLog(link, 'created');
     console.log(`[createFinancialRecordFromPointsExchange] ✅ Created PLAYER_FINREC link for player ${playerId}`);
 
     console.log(`[createFinancialRecordFromPointsExchange] ✅ Financial record created for points exchange: ${createdFinrec.name}`);
@@ -710,7 +722,9 @@ export async function createFinancialRecordFromJ$CashOut(
     );
 
     await createLink(personalLink);
+    await appendLinkLog(personalLink, 'created');
     await createLink(companyLink);
+    await appendLinkLog(companyLink, 'created');
 
     console.log(`[createFinancialRecordFromJ$CashOut] ✅ Created PLAYER_FINREC links for both records`);
     console.log(`[createFinancialRecordFromJ$CashOut] ✅ Personal record: ${createdPersonalFinrec.name}`);

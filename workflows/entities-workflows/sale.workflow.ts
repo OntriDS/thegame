@@ -63,6 +63,14 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
       }
     }
 
+    // Wait for all side effects to complete
+    // await Promise.all(sideEffects); // If we had parallel side effects
+
+    // NEW FINANCIAL RECORD CREATION
+    // This looks for missing financial records (standard or booth) and creates them
+    // Logic is now centralized in updateFinancialRecordsFromSale (handling new sales when previousSale is undefined)
+    await updateFinancialRecordsFromSale(sale, undefined);
+
     const isCharged =
       sale.status === 'CHARGED' && !sale.isNotPaid && !sale.isNotCharged;
     if (isCharged) {

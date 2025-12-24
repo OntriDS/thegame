@@ -377,14 +377,30 @@ export async function updateItemsCreatedByRecord(
 
 export async function updateFinancialRecordsFromSale(
   sale: Sale,
-  previousSale: Sale
+  previousSale?: Sale
 ): Promise<void> {
   try {
     console.log(`[updateFinancialRecordsFromSale] Updating financial records for sale: ${sale.name}`);
 
+    const { createFinancialRecordFromBoothSale, createFinancialRecordFromSale } = await import('./financial-record-utils');
+
+    // NEW SALE HANDLING: If no previous sale, strictly create records
+    if (!previousSale) {
+      if (sale.type === 'BOOTH') {
+        await createFinancialRecordFromBoothSale(sale);
+      } else if (sale.totals.totalRevenue > 0) {
+        const effectKey = `sale:${sale.id}:financialCreated`;
+        if (!(await hasEffect(effectKey))) {
+          await createFinancialRecordFromSale(sale);
+          await markEffect(effectKey);
+        }
+      }
+      return;
+    }
+
+    // UPDATE EXISTING SALE HANDLING
     // SPECIAL HANDLING for Booth Sales (Split Records)
     if (sale.type === 'BOOTH') { // Use string literal matching enum
-      const { createFinancialRecordFromBoothSale } = await import('./financial-record-utils');
       // Booth sales manage their own complex record creation/updates (Split Income/Expense)
       // TO-DO: Implement UPDATE logic for Booth Sales if needed (currently optimized for creation)
       // For now, if revenue changed significantly, we might need to re-evaluate the split
@@ -425,7 +441,6 @@ export async function updateFinancialRecordsFromSale(
 
     // If no records found, maybe we need to create one (Emissary Pattern)
     if (relatedRecords.length === 0 && sale.totals.totalRevenue > 0) {
-      const { createFinancialRecordFromSale } = await import('./financial-record-utils');
       // Check effect key to be safe
       const effectKey = `sale:${sale.id}:financialCreated`;
       if (!(await hasEffect(effectKey))) {
