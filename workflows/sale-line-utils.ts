@@ -40,7 +40,13 @@ export async function processSaleLines(sale: Sale): Promise<void> {
 
     // Create financial record from sale if it has revenue
     if (sale.totals.totalRevenue > 0) {
-      await createFinancialRecordFromSale(sale);
+      if (sale.type === 'BOOTH') {
+        // Dynamic import to avoid circular dependency
+        const { createFinancialRecordFromBoothSale } = await import('./financial-record-utils');
+        await createFinancialRecordFromBoothSale(sale);
+      } else {
+        await createFinancialRecordFromSale(sale);
+      }
     }
 
     console.log(`[processSaleLines] ✅ Processed all lines for sale: ${sale.counterpartyName}`);
