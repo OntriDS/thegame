@@ -1046,8 +1046,8 @@ export default function BoothSalesView({
                                         </div>
                                         <div className="grid grid-cols-3 gap-2 text-xs text-red-400">
                                             <span>Booth:</span>
-                                            <div className="text-right font-mono text-red-400">-₡{(totals.breakdown.costMe * exchangeRate).toLocaleString()}</div>
-                                            <div className="text-right font-mono text-red-400">-${totals.breakdown.costMe.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                                            <div className="text-right font-mono text-red-400">-₡{totals.breakdown.costMe.toLocaleString()}</div>
+                                            <div className="text-right font-mono text-red-400">-${(totals.breakdown.costMe / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                                         </div>
                                     </div>
                                     {/* Explicit T$ and T₡ rows as requested */}
@@ -1090,8 +1090,8 @@ export default function BoothSalesView({
                                             </div>
                                             <div className="grid grid-cols-3 gap-2 text-xs text-red-400">
                                                 <span>Booth:</span>
-                                                <div className="text-right font-mono">-₡{(totals.breakdown.costAssoc * exchangeRate).toLocaleString()}</div>
-                                                <div className="text-right font-mono">-${totals.breakdown.costAssoc.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                                                <div className="text-right font-mono text-red-400">-₡{totals.breakdown.costAssoc.toLocaleString()}</div>
+                                                <div className="text-right font-mono">-${(totals.breakdown.costAssoc / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                                             </div>
                                             <div className="grid grid-cols-3 gap-2 text-sm font-bold border-t border-pink-500/20 pt-1 mt-1 text-pink-400">
                                                 <span className="col-span-1">T$:</span>
