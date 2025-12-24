@@ -1188,44 +1188,44 @@ export default function BoothSalesView({
 
                         {/* Bitcoin Input */}
                         <div className="flex items-center relative" title="Bitcoin Payment (CRC)">
-                            <span className="absolute left-3 text-lg text-orange-500 font-bold z-10 top-1/2 -translate-y-1/2">₿</span>
+                            <span className="absolute left-3 text-base text-orange-500 font-bold z-10 top-1/2 -translate-y-1/2">₿</span>
                             <NumericInput
                                 value={paymentBitcoin}
                                 onChange={setPaymentBitcoin}
-                                className="h-12 w-32 pl-10 text-lg font-bold bg-slate-100 dark:bg-slate-950 border-orange-500/20 text-orange-600 dark:text-orange-400 focus:border-orange-500/50 rounded-lg shadow-sm"
+                                className="h-12 w-32 pl-10 text-sm font-bold bg-slate-100 dark:bg-slate-950 border-orange-500/20 text-orange-600 dark:text-orange-400 focus:border-orange-500/50 rounded-lg shadow-sm"
                                 placeholder="BTC"
                             />
                         </div>
 
                         {/* Card Input */}
                         <div className="flex items-center relative" title="Card Payment (CRC)">
-                            <span className="absolute left-3 text-lg text-indigo-500 font-bold z-10 top-1/2 -translate-y-1/2">💳</span>
+                            <span className="absolute left-3 text-base text-indigo-500 font-bold z-10 top-1/2 -translate-y-1/2">💳</span>
                             <NumericInput
                                 value={paymentCard}
                                 onChange={setPaymentCard}
-                                className="h-12 w-32 pl-10 text-lg font-bold bg-slate-100 dark:bg-slate-950 border-indigo-500/20 text-indigo-600 dark:text-indigo-400 focus:border-indigo-500/50 rounded-lg shadow-sm"
+                                className="h-12 w-32 pl-10 text-sm font-bold bg-slate-100 dark:bg-slate-950 border-indigo-500/20 text-indigo-600 dark:text-indigo-400 focus:border-indigo-500/50 rounded-lg shadow-sm"
                                 placeholder="Card"
                             />
                         </div>
 
                         {/* Cash CRC Input */}
                         <div className="flex items-center relative" title="Cash Payment (CRC)">
-                            <span className="absolute left-3 text-lg text-emerald-500 font-bold z-10 top-1/2 -translate-y-1/2">₡</span>
+                            <span className="absolute left-3 text-base text-emerald-500 font-bold z-10 top-1/2 -translate-y-1/2">₡</span>
                             <NumericInput
                                 value={paymentCashCRC}
                                 onChange={setPaymentCashCRC}
-                                className="h-12 w-32 pl-10 text-lg font-bold bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400 focus:border-emerald-500/50 rounded-lg shadow-sm"
+                                className="h-12 w-32 pl-10 text-sm font-bold bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400 focus:border-emerald-500/50 rounded-lg shadow-sm"
                                 placeholder="CRC"
                             />
                         </div>
 
                         {/* Cash USD Input */}
                         <div className="flex items-center relative" title="Cash Payment (USD)">
-                            <span className="absolute left-3 text-lg text-emerald-500 font-bold z-10 top-1/2 -translate-y-1/2">$</span>
+                            <span className="absolute left-3 text-base text-emerald-500 font-bold z-10 top-1/2 -translate-y-1/2">$</span>
                             <NumericInput
                                 value={paymentCashUSD}
                                 onChange={setPaymentCashUSD}
-                                className="h-12 w-32 pl-10 text-lg font-bold bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400 focus:border-emerald-500/50 rounded-lg shadow-sm"
+                                className="h-12 w-32 pl-10 text-sm font-bold bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400 focus:border-emerald-500/50 rounded-lg shadow-sm"
                                 placeholder="USD"
                             />
                         </div>
