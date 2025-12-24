@@ -8,7 +8,7 @@ import { hasEffect, markEffect, clearEffectsByPrefix } from '@/data-store/effect
 import { EffectKeys, buildLogKey } from '@/data-store/keys';
 import { kvGet, kvSet } from '@/data-store/kv';
 import { getLinksFor, removeLink } from '@/links/link-registry';
-import { getPlayerById, getSaleById, getItemById } from '@/data-store/datastore';
+import { getPlayerById, getSaleById, getItemById, getFinancialsBySourceSaleId, removeFinancial } from '@/data-store/datastore';
 import { awardPointsToPlayer, removePointsFromPlayer, calculatePointsFromRevenue } from '../points-rewards-utils';
 import { processSaleLines } from '../sale-line-utils';
 import {
@@ -35,7 +35,7 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
     await appendEntityLog(EntityType.SALE, sale.id, LogEventType.CREATED, {
       type: sale.type,
       status: sale.status,
-      counterpartyName: sale.counterpartyName,
+      counterpartyName: sale.counterpartyName || 'Walk-in Customer',
       totals: {
         subtotal: sale.totals.subtotal,
         discountTotal: sale.totals.discountTotal,
@@ -82,7 +82,7 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
       await appendEntityLog(EntityType.SALE, sale.id, LogEventType.CANCELLED, {
         type: sale.type,
         status: sale.status,
-        counterpartyName: sale.counterpartyName,
+        counterpartyName: sale.counterpartyName || 'Walk-in Customer',
         totals: {
           subtotal: sale.totals.subtotal,
           discountTotal: sale.totals.discountTotal,
@@ -96,7 +96,7 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
       await appendEntityLog(EntityType.SALE, sale.id, LogEventType.DONE, {
         type: sale.type,
         status: sale.status,
-        counterpartyName: sale.counterpartyName,
+        counterpartyName: sale.counterpartyName || 'Walk-in Customer',
         totals: {
           subtotal: sale.totals.subtotal,
           discountTotal: sale.totals.discountTotal,
@@ -129,7 +129,7 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
       await appendEntityLog(EntityType.SALE, sale.id, LogEventType.PENDING, {
         type: sale.type,
         status: sale.status,
-        counterpartyName: sale.counterpartyName,
+        counterpartyName: sale.counterpartyName || 'Walk-in Customer',
         totals: {
           subtotal: sale.totals.subtotal,
           discountTotal: sale.totals.discountTotal,
@@ -324,6 +324,19 @@ export async function removeSaleEffectsOnDelete(saleId: string): Promise<void> {
         console.log(`[removeSaleEffectsOnDelete] ✅ Removed link: ${link.linkType}`);
       } catch (error) {
         console.error(`[removeSaleEffectsOnDelete] ❌ Failed to remove link ${link.id}:`, error);
+      }
+    }
+
+    // 2.5 Remove associated Financial Records
+    const financialRecords = await getFinancialsBySourceSaleId(saleId);
+    console.log(`[removeSaleEffectsOnDelete] Found ${financialRecords.length} financial records to remove`);
+
+    for (const record of financialRecords) {
+      try {
+        await removeFinancial(record.id);
+        console.log(`[removeSaleEffectsOnDelete] ✅ Removed financial record: ${record.name}`);
+      } catch (error) {
+        console.error(`[removeSaleEffectsOnDelete] ❌ Failed to remove financial record ${record.id}:`, error);
       }
     }
 

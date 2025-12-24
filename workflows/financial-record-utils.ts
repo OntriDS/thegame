@@ -235,8 +235,8 @@ export async function createFinancialRecordFromSale(sale: Sale): Promise<Financi
 
     const newFinrec: FinancialRecord = {
       id: `finrec-${sale.id}-${Date.now()}`,
-      name: `Sale: ${sale.counterpartyName}`,
-      description: `Financial record from sale: ${sale.counterpartyName}`,
+      name: `Sale: ${sale.counterpartyName || 'Walk-in Customer'}`,
+      description: `Financial record from sale: ${sale.counterpartyName || 'Walk-in Customer'}`,
       year: currentDate.getFullYear(),
       month: currentDate.getMonth() + 1,
       station: station,
@@ -391,7 +391,7 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
       const payoutFinrec: FinancialRecord = {
         id: `finrec-payout-${sale.id}-${Date.now()}`,
         name: `Payout: ${sale.counterpartyName || 'Associate'}`,
-        description: `Associate split payout for ${sale.counterpartyName}`,
+        description: `Associate split payout for ${sale.counterpartyName || 'Associate'}`,
         year: currentDate.getFullYear(),
         month: currentDate.getMonth() + 1,
         station: 'Booth Sales' as Station, // Or 'Associate Sales'
