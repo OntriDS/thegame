@@ -565,11 +565,13 @@ export interface Sale extends BaseEntity {
   siteId: string;                   // Site where sale occurred
   counterpartyName?: string;        // client/store/partner name
   customerId?: string | null;       // Character who is the customer (for tracking purchases)
+  associateId?: string | null;      // Character acting as Associate (Booth Sales)
+  partnerId?: string | null;        // Character acting as Partner (Booth Sales)
   playerCharacterId?: string | null; // Player character who owns this sale
   salesChannel?: Station | null;    // Sales channel station (e.g., 'Direct Sales', 'Network Sales', 'Feria Sales')
 
   // Emissary Fields
-  newCustomerName?: string;         // EMISSARY: Name for new customer character creation
+  newCustomerName?: string;         // Name for new customer character creation
 
   // Financial DNA (Permanent Ambassadors / Temporary Snapshots)
   // These fields are "instructions" that get copied via RNA to create FinancialRecord entity

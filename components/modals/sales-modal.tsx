@@ -1121,6 +1121,7 @@ export default function SalesModal({
         {/* Content Area - Fixed Height with Internal Scroll */}
         {type === SaleType.BOOTH ? (
           <BoothSalesView
+            sale={sale || undefined}
             sites={sites}
             characters={characters}
             items={items}

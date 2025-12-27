@@ -90,10 +90,10 @@
 ### Current State:
 - **Primary Surface**: The Gamified Admin App we are building
 - **Game Views**: Control Room (v0.1), Finances (v0.1), Inventory (v0.1), others are placeholders
-- **Core Mechanic**: Turn-based pacing by timeframe (e.g., "each day = a turn")
+- **Core Mechanic**: Real Time Strategy games (complete timed tasks) inside a Turn Based Strategy ("each day = a turn")
 
 ### Control Room Architecture (v0.1)
-- **Control Room**: Main container with custom resizable sidebar and DndContext provider
+- **Control Room**: Main container with custom resizable sidebar and Dnd Context provider
 - **Task Tree**: Hierarchical navigation with expand/collapse and drag-and-drop
 - **Task Detail View**: Comprehensive task information display
 - **Task Modal**: Create/edit interface with validation

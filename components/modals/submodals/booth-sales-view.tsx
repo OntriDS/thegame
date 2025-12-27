@@ -50,6 +50,7 @@ export interface BoothSalesViewProps {
     businesses: Business[]; // New: For resolving contracts
     contracts: Contract[]; // New: For dynamic distribution logic
 
+    sale?: Sale;
     // State from Parent (SalesModal)
     saleDate: Date;
     setSaleDate: (date: Date) => void;
@@ -105,6 +106,7 @@ export default function BoothSalesView({
     items,
     businesses,
     contracts,
+    sale,
     saleDate,
     setSaleDate,
     lines,
@@ -137,7 +139,12 @@ export default function BoothSalesView({
     const [selectedContractId, setSelectedContractId] = useState<string>('');
 
     // State for Associate (Them)
-    const [selectedAssociateId, setSelectedAssociateId] = useState<string>(''); // Character ID
+    // State for Associate (Them)
+    const [selectedAssociateId, setSelectedAssociateId] = useState<string>(() => {
+        if (sale?.associateId) return sale.associateId;
+        if (sale?.partnerId) return sale.partnerId;
+        return '';
+    }); // Character ID
 
     // Associate Quick Entry State (formerly Partner)
     const [associateEntries, setAssociateEntries] = useState<AssociateQuickEntry[]>([]);
@@ -150,8 +157,12 @@ export default function BoothSalesView({
 
 
 
-    // View Mode: 'Associate' | 'Partner' | 'Off' (Nullable logic handled by string literal)
-    const [viewMode, setViewMode] = useState<'Associate' | 'Partner' | 'Off'>('Off');
+    // View Mode: 'Associate' | 'Partner' | 'Off'
+    const [viewMode, setViewMode] = useState<'Associate' | 'Partner' | 'Off'>(() => {
+        if (sale?.associateId) return 'Associate';
+        if (sale?.partnerId) return 'Partner';
+        return 'Off';
+    });
 
     // Quick Entry Form State
     const [quickAmountCRC, setQuickAmountCRC] = useState<string>('');
@@ -187,8 +198,8 @@ export default function BoothSalesView({
 
     // Load Default Associate (One time)
     useEffect(() => {
-        // Mocking "Maria" as default if she exists IF viewMode is NOT Off
-        if (viewMode !== 'Off' && !selectedAssociateId && characters.length > 0) {
+        // Mocking "Maria" as default if she exists IF viewMode is NOT Off AND NOT EDITING
+        if (!sale && viewMode !== 'Off' && !selectedAssociateId && characters.length > 0) {
             const maria = characters.find(c => c.name.toLowerCase().includes('maria') || c.name.includes('O2'));
             if (maria) setSelectedAssociateId(maria.id);
         }
@@ -197,7 +208,7 @@ export default function BoothSalesView({
         if (viewMode === 'Off') {
             setSelectedAssociateId('');
         }
-    }, [characters, selectedAssociateId, viewMode]);
+    }, [characters, selectedAssociateId, viewMode, sale]);
 
     // Auto-select active contract when Associate changes
     useEffect(() => {
@@ -583,7 +594,9 @@ export default function BoothSalesView({
             isNotCharged: isNotCharged,
             siteId: siteId,
             salesChannel: 'Booth Sales' as Station,
-            customerId: (viewMode !== 'Off' && selectedAssociateId) ? selectedAssociateId : null,
+            customerId: null, // Associate/Partner are NOT customers!
+            associateId: (viewMode === 'Associate' && selectedAssociateId) ? selectedAssociateId : null,
+            partnerId: (viewMode === 'Partner' && selectedAssociateId) ? selectedAssociateId : null,
 
             // Financials (Converted to USD)
             lines: allLines,

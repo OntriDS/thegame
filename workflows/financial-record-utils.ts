@@ -10,6 +10,7 @@ import { appendEntityLog } from './entities-logging';
 import { appendLinkLog } from '@/links/links-logging';
 import { getFinancialTypeForStation, getSalesChannelFromSaleType } from '@/lib/utils/business-structure-utils';
 import type { Station } from '@/types/type-aliases';
+
 import { BITCOIN_SATOSHIS_PER_BTC } from '@/lib/constants/financial-constants';
 
 /**
@@ -344,7 +345,7 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
       gross: sale.totals.totalRevenue,
       netCompany: boothMetadata?.calculatedTotals?.myNet || 0,
       netAssociate: boothMetadata?.calculatedTotals?.associateNet || 0,
-      payments: paymentDist ? `Cash: ${paymentDist.cash}, BTC: ${paymentDist.bitcoin}, Card: ${paymentDist.card}` : 'Standard',
+      payments: paymentDist ? `Cash: ${paymentDist.cashCRC}/${paymentDist.cashUSD}, BTC: ${paymentDist.bitcoin}, Card: ${paymentDist.card}` : 'Standard',
       associateId: sale.customerId
     };
 
