@@ -147,7 +147,36 @@ export default function BoothSalesView({
     }); // Character ID
 
     // Associate Quick Entry State (formerly Partner)
-    const [associateEntries, setAssociateEntries] = useState<AssociateQuickEntry[]>([]);
+    // Initialize from existing service lines to prevent data loss on edit
+    const [associateEntries, setAssociateEntries] = useState<AssociateQuickEntry[]>(() => {
+        if (!sale || !lines) return [];
+        const serviceLines = lines.filter(l => l.kind === 'service') as ServiceLine[];
+        return serviceLines.map(sl => ({
+            id: sl.lineId,
+            description: sl.description || '',
+            amountCRC: sl.metadata?.originalAmountCRC ?? 0,
+            amountUSD: sl.metadata?.originalAmountUSD ?? 0,
+            category: sl.metadata?.category || (sl.description?.includes('] ') ? sl.description.split('] ')[1] : sl.description) || 'Other',
+            associateId: sl.metadata?.associateId || sl.metadata?.customerCharacterId || sale.associateId || ''
+        }));
+    });
+
+    // Re-hydrate when sale ID changes (switching sales without unmounting)
+    useEffect(() => {
+        if (sale) {
+            const serviceLines = (sale.lines || []).filter(l => l.kind === 'service') as ServiceLine[];
+            setAssociateEntries(serviceLines.map(sl => ({
+                id: sl.lineId,
+                description: sl.description || '',
+                amountCRC: sl.metadata?.originalAmountCRC ?? 0,
+                amountUSD: sl.metadata?.originalAmountUSD ?? 0,
+                category: sl.metadata?.category || (sl.description?.includes('] ') ? sl.description.split('] ')[1] : sl.description) || 'Other',
+                associateId: sl.metadata?.associateId || sl.metadata?.customerCharacterId || sale.associateId || ''
+            })));
+        } else {
+            setAssociateEntries([]);
+        }
+    }, [sale?.id]); // Only if sale ID changes (not on every line update)
 
     // Delete Confirmation State
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -508,23 +537,43 @@ export default function BoothSalesView({
 
         if ((amountCRC <= 0 && amountUSD <= 0) || !selectedAssociateId || !quickCat) return;
 
-        const newEntry: AssociateQuickEntry = {
-            id: uuid(),
-            description: '', // Description removed from UI
-            amountCRC: amountCRC,
-            amountUSD: amountUSD,
-            category: quickCat,
-            associateId: selectedAssociateId
+        // Create the ServiceLine directly
+        const newLineId = uuid();
+        const safeExchangeRate = exchangeRate || 500;
+
+        const newServiceLine: ServiceLine = {
+            lineId: newLineId,
+            kind: 'service',
+            station: 'Associate Sales' as Station,
+            // Revenue in USD (Source of Truth for Financials)
+            revenue: ((amountCRC / safeExchangeRate) + amountUSD),
+            // Descriptive label
+            description: `[Associate: ${getAssociateName(selectedAssociateId)}] ${quickCat}`,
+            taxAmount: 0,
+            createTask: false,
+            // Metadata stores the raw inputs and relationship info
+            metadata: {
+                originalAmountCRC: amountCRC,
+                originalAmountUSD: amountUSD,
+                category: quickCat,
+                associateId: selectedAssociateId,
+                // Shares will be recalculated on Save, but good to have baseline
+                associateShare: 0,
+                myCommission: 0
+            }
         };
 
-        setAssociateEntries([...associateEntries, newEntry]);
+        // Add directly to lines (Single Source of Truth)
+        setLines([...lines, newServiceLine]);
+
         setQuickAmountCRC('');
         setQuickAmountUSD('');
         setQuickCat('');
     };
 
     const handleRemoveAssociateEntry = (id: string) => {
-        setAssociateEntries(prev => prev.filter(e => e.id !== id));
+        // Remove directly from lines
+        setLines(lines.filter(l => l.lineId !== id));
     };
 
     const handleRemoveLine = (lineId: string) => {
@@ -538,37 +587,45 @@ export default function BoothSalesView({
             return;
         }
 
-        // 1. Convert Associate Entries to Service Lines (Revenue in USD)
-        const associateServiceLines: ServiceLine[] = associateEntries.map(entry => ({
-            lineId: uuid(),
-            kind: 'service',
-            station: 'Associate Sales' as Station,
-            // Convert everything to USD for the official record
-            revenue: ((entry.amountCRC || 0) / exchangeRate) + (entry.amountUSD || 0),
-            // Helper to get name
-            description: `[Associate: ${getAssociateName(entry.associateId)}] ${entry.category}`,
-            taxAmount: 0,
-            createTask: false,
-            customerCharacterId: entry.associateId,
-            // Add metadata for tracking splits if needed
-            metadata: {
-                originalAmountCRC: entry.amountCRC,
-                originalAmountUSD: entry.amountUSD,
-                category: entry.category,
-                associateShare: totals.breakdown.associateSharePct_Associate,
-                myCommission: totals.breakdown.associateSharePct_Me
-            }
-        }));
+        // Safeguard against division by zero
+        const safeExchangeRate = exchangeRate || 500;
 
-        // 2. Combine all lines
-        const allLines = [...lines.filter(l => l.kind !== 'service'), ...associateServiceLines];
+        // 1. Re-process lines to ensure shares are up to date (Calculated Totals might have changed)
+        // We iterate over the existing lines. If it's an Associate Service line, we update its metadata.
+        const updatedLines = lines.map(line => {
+            if (line.kind === 'service' && line.station === 'Associate Sales') {
+                return {
+                    ...line,
+                    metadata: {
+                        ...line.metadata,
+                        associateShare: !Number.isNaN(totals.breakdown.associateSharePct_Associate) ? totals.breakdown.associateSharePct_Associate : 0,
+                        myCommission: !Number.isNaN(totals.breakdown.associateSharePct_Me) ? totals.breakdown.associateSharePct_Me : 0
+                    }
+                };
+            }
+            return line;
+        });
+
+        // 2. (Skipped) Combine Step is gone. updatedLines IS allLines.
 
         // 3. Construct Metadata Context
         const boothMetadata = {
             boothSaleContext: {
                 contractId: selectedContractId,
                 boothCost: boothCost,
-                calculatedTotals: totals,
+                calculatedTotals: {
+                    ...totals,
+                    breakdown: {
+                        principalSharePct_Me: totals.breakdown.principalSharePct_Me || 0,
+                        principalSharePct_Associate: totals.breakdown.principalSharePct_Associate || 0,
+                        associateSharePct_Me: totals.breakdown.associateSharePct_Me || 0,
+                        associateSharePct_Associate: totals.breakdown.associateSharePct_Associate || 0,
+                        mySales: totals.breakdown.mySales || 0,
+                        assocSales: totals.breakdown.assocSales || 0,
+                        costMe: totals.breakdown.costMe || 0,
+                        costAssoc: totals.breakdown.costAssoc || 0
+                    }
+                },
                 paymentDistribution: {
                     bitcoin: paymentBitcoin,
                     card: paymentCard,
@@ -580,7 +637,7 @@ export default function BoothSalesView({
 
         // 4. Construct FULL Valid Sale Object
         // Using CHARGED as the standard 'Completed' status for sales
-        const saleId = uuid();
+        const saleId = sale?.id || uuid(); // Preserve ID if exists
         const saleName = `Booth Sale ${saleDate.toLocaleDateString()}`;
 
         const fullSale: Sale = {
@@ -599,22 +656,22 @@ export default function BoothSalesView({
             partnerId: (viewMode === 'Partner' && selectedAssociateId) ? selectedAssociateId : null,
 
             // Financials (Converted to USD)
-            lines: allLines,
+            lines: updatedLines,
             totals: {
-                subtotal: totals.grossSales / exchangeRate,
+                subtotal: totals.grossSales / safeExchangeRate,
                 discountTotal: 0,
                 taxTotal: 0,
-                totalRevenue: totals.grossSales / exchangeRate
+                totalRevenue: totals.grossSales / safeExchangeRate
             },
 
             // Metadata & Links
-            archiveMetadata: boothMetadata,
-            links: [], // Rosetta Stone initialization
+            archiveMetadata: { ...(sale?.archiveMetadata || {}), ...boothMetadata }, // Merge with existing
+            links: sale?.links || [],
 
             // Lifecycle defaults
-            createdAt: new Date(),
+            createdAt: sale?.createdAt || new Date(),
             updatedAt: new Date(),
-            isCollected: false,
+            isCollected: sale?.isCollected || false,
 
             // Optional fields defaults
         };
@@ -1249,7 +1306,11 @@ export default function BoothSalesView({
                 <div className="flex gap-2">
                     {onDelete && (
                         <Button
-                            onClick={() => setShowDeleteConfirm(true)}
+                            onClick={() => {
+                                // Direct call to parent's onDelete (which handles confirmation)
+                                // to avoid double confirmation prompts.
+                                onDelete();
+                            }}
                             disabled={isSaving}
                             className="mr-auto bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/20 h-9"
                         >
@@ -1257,7 +1318,7 @@ export default function BoothSalesView({
                         </Button>
                     )}
                     <Button variant="ghost" onClick={onCancel} disabled={isSaving}>Cancel</Button>
-                    <Button onClick={handleSave} disabled={isSaving} className="bg-indigo-600 hover:bg-indigo-700">
+                    <Button onClick={() => handleSave()} disabled={isSaving} className="bg-indigo-600 hover:bg-indigo-700">
                         {isSaving ? 'Processing...' : 'Confirm'}
                     </Button>
                 </div>
@@ -1316,21 +1377,7 @@ export default function BoothSalesView({
                 exchangeRate={exchangeRate}
             />
 
-            {/* Delete Confirmation Modal */}
-            <ConfirmationModal
-                open={showDeleteConfirm}
-                onOpenChange={setShowDeleteConfirm}
-                title="Delete Sale"
-                description="Are you sure you want to delete this sale? This action cannot be undone."
-                confirmText="Delete"
-                cancelText="Cancel"
-                variant="destructive"
-                onConfirm={() => {
-                    setShowDeleteConfirm(false);
-                    if (onDelete) onDelete();
-                }}
-                onCancel={() => setShowDeleteConfirm(false)}
-            />
+            {/* Delete Confirmation Modal REMOVED - using Parent's Modal */}
         </div >
     );
 }
