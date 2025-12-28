@@ -146,37 +146,25 @@ export default function BoothSalesView({
         return '';
     }); // Character ID
 
-    // Associate Quick Entry State (formerly Partner)
-    // Initialize from existing service lines to prevent data loss on edit
-    const [associateEntries, setAssociateEntries] = useState<AssociateQuickEntry[]>(() => {
-        if (!sale || !lines) return [];
-        const serviceLines = lines.filter(l => l.kind === 'service') as ServiceLine[];
+    // View Mode: 'Associate' | 'Partner' | 'Off'
+    const [viewMode, setViewMode] = useState<'Associate' | 'Partner' | 'Off'>(() => {
+        if (sale?.associateId) return 'Associate';
+        if (sale?.partnerId) return 'Partner';
+        return 'Off';
+    });
+
+    // Derived State: Associate Entries (Single Source of Truth: lines)
+    const associateEntries = useMemo(() => {
+        const serviceLines = lines.filter(l => l.kind === 'service' && l.station === 'Associate Sales') as ServiceLine[];
         return serviceLines.map(sl => ({
             id: sl.lineId,
             description: sl.description || '',
             amountCRC: sl.metadata?.originalAmountCRC ?? 0,
             amountUSD: sl.metadata?.originalAmountUSD ?? 0,
             category: sl.metadata?.category || (sl.description?.includes('] ') ? sl.description.split('] ')[1] : sl.description) || 'Other',
-            associateId: sl.metadata?.associateId || sl.metadata?.customerCharacterId || sale.associateId || ''
+            associateId: sl.metadata?.associateId || sl.metadata?.customerCharacterId || sale?.associateId || ''
         }));
-    });
-
-    // Re-hydrate when sale ID changes (switching sales without unmounting)
-    useEffect(() => {
-        if (sale) {
-            const serviceLines = (sale.lines || []).filter(l => l.kind === 'service') as ServiceLine[];
-            setAssociateEntries(serviceLines.map(sl => ({
-                id: sl.lineId,
-                description: sl.description || '',
-                amountCRC: sl.metadata?.originalAmountCRC ?? 0,
-                amountUSD: sl.metadata?.originalAmountUSD ?? 0,
-                category: sl.metadata?.category || (sl.description?.includes('] ') ? sl.description.split('] ')[1] : sl.description) || 'Other',
-                associateId: sl.metadata?.associateId || sl.metadata?.customerCharacterId || sale.associateId || ''
-            })));
-        } else {
-            setAssociateEntries([]);
-        }
-    }, [sale?.id]); // Only if sale ID changes (not on every line update)
+    }, [lines, sale?.associateId]);
 
     // Delete Confirmation State
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -186,12 +174,7 @@ export default function BoothSalesView({
 
 
 
-    // View Mode: 'Associate' | 'Partner' | 'Off'
-    const [viewMode, setViewMode] = useState<'Associate' | 'Partner' | 'Off'>(() => {
-        if (sale?.associateId) return 'Associate';
-        if (sale?.partnerId) return 'Partner';
-        return 'Off';
-    });
+
 
     // Quick Entry Form State
     const [quickAmountCRC, setQuickAmountCRC] = useState<string>('');
@@ -797,11 +780,41 @@ export default function BoothSalesView({
                                         ))}
                                 </optgroup>
                                 <optgroup label="Businesses">
-                                    {businesses.map(b => (
-                                        <option key={b.id} value={b.id}>
-                                            {b.name}
-                                        </option>
-                                    ))}
+                                    {businesses
+                                        .filter(b => {
+                                            // Filter Businesses:
+                                            // 1. Must be Active
+                                            if (!b.isActive) return false;
+
+                                            // 2. If 'Associate' mode, check if linked char is Associate OR has active Associate contract
+                                            if (viewMode === 'Associate') {
+                                                const linkedChar = characters.find(c => c.id === b.linkedCharacterId);
+                                                if (linkedChar && linkedChar.roles.includes(CharacterRole.ASSOCIATE)) return true;
+                                                // Check contracts
+                                                return contracts.some(c =>
+                                                    c.status === ContractStatus.ACTIVE &&
+                                                    (c.principalBusinessId === b.id || c.counterpartyBusinessId === b.id)
+                                                    // AND ideally check if contract implies 'Associate' relationship, but for now existence is enough approx?
+                                                    // Actually, if they have a contract, they are a partner/associate.
+                                                );
+                                            }
+
+                                            // 3. If 'Partner' mode
+                                            if (viewMode === 'Partner') {
+                                                const linkedChar = characters.find(c => c.id === b.linkedCharacterId);
+                                                if (linkedChar && linkedChar.roles.includes(CharacterRole.PARTNER)) return true;
+                                                return contracts.some(c =>
+                                                    c.status === ContractStatus.ACTIVE &&
+                                                    (c.principalBusinessId === b.id || c.counterpartyBusinessId === b.id)
+                                                );
+                                            }
+                                            return false;
+                                        })
+                                        .map(b => (
+                                            <option key={b.id} value={b.id}>
+                                                {b.name}
+                                            </option>
+                                        ))}
                                 </optgroup>
                             </select>
 
@@ -914,7 +927,7 @@ export default function BoothSalesView({
                                             {/* Contract Selector - Moved to Header */}
                                             <div className="flex items-center gap-2 w-auto">
                                                 <div className="w-auto text-[10px] text-pink-300 font-medium shrink-0">
-                                                    Agreement:
+                                                    Contract:
                                                 </div>
                                                 <div className="w-48">
                                                     <select
@@ -924,7 +937,13 @@ export default function BoothSalesView({
                                                     >
                                                         <option value="" disabled>Select Active Contract...</option>
                                                         {contracts
-                                                            .filter(c => ['Active', 'ACTIVE', 'active'].includes(c.status))
+                                                            .filter(c => {
+                                                                // 1. Must be Active
+                                                                if (!['Active', 'ACTIVE', 'active'].includes(c.status)) return false;
+
+                                                                // 2. Must belong to the selected entity (Principal OR Counterparty)
+                                                                return c.principalBusinessId === selectedAssociateId || c.counterpartyBusinessId === selectedAssociateId;
+                                                            })
                                                             .map(c => (
                                                                 <option key={c.id} value={c.id}>
                                                                     {c.name}
