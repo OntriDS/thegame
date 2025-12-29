@@ -582,6 +582,15 @@ export interface Sale extends BaseEntity {
   // Discounts
   overallDiscount?: Discount;    // applies to subtotal before tax
 
+  // Booth Sales Context (First-Class Fields)
+  boothFee?: number;           // Cost of participation
+  paymentBreakdown?: {         // Specific payment method breakdown
+    cashUSD: number;
+    cashCRC: number;
+    card: number;
+    bitcoin: number;
+  };
+
   // Lines & payments
   lines: SaleLine[];
   payments?: Payment[];

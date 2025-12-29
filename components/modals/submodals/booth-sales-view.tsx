@@ -132,7 +132,7 @@ export default function BoothSalesView({
     const [showItemPicker, setShowItemPicker] = useState(false);
 
     // Financials
-    const [boothCost, setBoothCost] = useState(0);
+    // const [boothCost, setBoothCost] = useState(0); // Removed duplicate
     const exchangeRate = DEFAULT_CURRENCY_EXCHANGE_RATES.colonesToUsd;
 
     // State for Single Contract (Global for this sale)
@@ -183,12 +183,12 @@ export default function BoothSalesView({
     const [quickCat, setQuickCat] = useState<string>('');
 
     // Payment Distribution State
-    const [paymentBitcoin, setPaymentBitcoin] = useState<number>(0); // Value in CRC
-    const [paymentCard, setPaymentCard] = useState<number>(0);       // Value in CRC
-
-    // Manual Payment Entry for Cash (Split)
-    const [paymentCashCRC, setPaymentCashCRC] = useState<number>(0);
-    const [paymentCashUSD, setPaymentCashUSD] = useState<number>(0);
+    // Modifiable Financials State (First-Class Fields)
+    const [boothCost, setBoothCost] = useState<number>(sale?.boothFee || 0);
+    const [paymentBitcoin, setPaymentBitcoin] = useState<number>(sale?.paymentBreakdown?.bitcoin || 0);
+    const [paymentCard, setPaymentCard] = useState<number>(sale?.paymentBreakdown?.card || 0);
+    const [paymentCashCRC, setPaymentCashCRC] = useState<number>(sale?.paymentBreakdown?.cashCRC || 0);
+    const [paymentCashUSD, setPaymentCashUSD] = useState<number>(sale?.paymentBreakdown?.cashUSD || 0);
 
     // Effect to auto-calculate Cash remainder initially (OPTIONAL)
     // For now, minimizing magic. If user wants to type, let them type. 
@@ -198,15 +198,14 @@ export default function BoothSalesView({
     // New feature is "Split... into two editable fields". 
     // Users might prefer auto-calc. Let's start with 0.
 
-    // Load Defaults (One-time) - Mocking "My Defaults"
+    // Load Defaults (One-time on Mount)
     useEffect(() => {
-        // Find a default contract for Principal if one exists (just taking the first valid one for now)
-        // In real app, this would come from user settings or local storage
-        const defaultContract = contracts.find(c => c.status === ContractStatus.ACTIVE); // Simplified
-        if (defaultContract && !selectedContractId) {
+        // 1. Load Default Contract (if needed)
+        const defaultContract = contracts.find(c => c.status === ContractStatus.ACTIVE);
+        if (defaultContract && !selectedContractId && !sale) {
             setSelectedContractId(defaultContract.id);
         }
-    }, [contracts, selectedContractId]);
+    }, [sale?.id, contracts, selectedContractId]);
 
     // Load Default Associate (One time)
     useEffect(() => {
@@ -647,16 +646,30 @@ export default function BoothSalesView({
                 totalRevenue: totals.grossSales / safeExchangeRate
             },
 
-            // Metadata & Links
-            archiveMetadata: { ...(sale?.archiveMetadata || {}), ...boothMetadata }, // Merge with existing
+            // First-Class Fields
+            boothFee: boothCost,
+            paymentBreakdown: {
+                bitcoin: paymentBitcoin,
+                card: paymentCard,
+                cashCRC: paymentCashCRC,
+                cashUSD: paymentCashUSD
+            },
+
+            // Metadata & Links (Legacy Context kept for backward compatibility if needed, but primary truth is above)
+            archiveMetadata: {
+                ...(sale?.archiveMetadata || {}),
+                boothSaleContext: {
+                    ...boothMetadata.boothSaleContext,
+                    contractId: selectedContractId // Still store contract ID in metadata for now until we add contractId to Sale entity properly?
+                    // Actually, let's keep it in metadata as well to be safe during migration
+                }
+            },
             links: sale?.links || [],
 
             // Lifecycle defaults
             createdAt: sale?.createdAt || new Date(),
             updatedAt: new Date(),
             isCollected: sale?.isCollected || false,
-
-            // Optional fields defaults
         };
 
         // 5. Pass to Parent

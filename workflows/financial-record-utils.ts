@@ -1,9 +1,9 @@
 // workflows/financial-record-utils.ts
 // Financial record creation and management utilities
 
-import type { Task, FinancialRecord, Sale, ItemSaleLine, Character } from '@/types/entities';
-import { LinkType, EntityType, LogEventType, BUSINESS_STRUCTURE, CharacterRole, SaleType, SaleStatus } from '@/types/enums';
-import { upsertFinancial, getAllFinancials, getFinancialsBySourceTaskId, removeFinancial, getItemById, getCharacterById, getFinancialConversionRates } from '@/data-store/datastore';
+import type { Task, FinancialRecord, Sale, ItemSaleLine, Character, Contract, ServiceLine, BundleSaleLine } from '@/types/entities';
+import { LinkType, EntityType, LogEventType, BUSINESS_STRUCTURE, CharacterRole, SaleType, SaleStatus, ContractClauseType, ContractStatus } from '@/types/enums';
+import { upsertFinancial, getAllFinancials, getFinancialsBySourceTaskId, removeFinancial, getItemById, getCharacterById, getFinancialConversionRates, getContractById } from '@/data-store/datastore';
 import { makeLink } from '@/links/links-workflows';
 import { createLink } from '@/links/link-registry';
 import { appendEntityLog } from './entities-logging';
@@ -336,55 +336,110 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
   try {
     console.log(`[createFinancialRecordFromBoothSale] Creating split financial records for Booth Sale: ${sale.counterpartyName}`);
 
-    // Validate Booth Metadata
-    const boothMetadata = sale.archiveMetadata?.boothSaleContext;
-    const paymentDist = boothMetadata?.paymentDistribution;
+    // [UPDATED] Robust Logic using First-Class Fields
+    // If we have boothFee, we assume this is a Booth Sale with Split Logic
+    // If not, we check metadata for legacy support.
+    const boothFee = sale.boothFee ?? sale.archiveMetadata?.boothSaleContext?.boothCost ?? 0;
+    const paymentBreakdown = sale.paymentBreakdown ?? sale.archiveMetadata?.boothSaleContext?.paymentDistribution;
+    const boothMetadata = sale.archiveMetadata?.boothSaleContext; // Keep relative reference for fallback
 
     // Log the detailed transaction
     const logDetails = {
       gross: sale.totals.totalRevenue,
-      netCompany: boothMetadata?.calculatedTotals?.myNet || 0,
-      netAssociate: boothMetadata?.calculatedTotals?.associateNet || 0,
-      payments: paymentDist ? `Cash: ${paymentDist.cashCRC}/${paymentDist.cashUSD}, BTC: ${paymentDist.bitcoin}, Card: ${paymentDist.card}` : 'Standard',
-      associateId: sale.customerId
+      boothFee,
+      netCompany: boothMetadata?.calculatedTotals?.myNet || 0, // Legacy fallback
+      netAssociate: boothMetadata?.calculatedTotals?.associateNet || 0, // Legacy fallback
+      payments: paymentBreakdown ? `Cash: ${paymentBreakdown.cashCRC}/${paymentBreakdown.cashUSD}, BTC: ${paymentBreakdown.bitcoin}, Card: ${paymentBreakdown.card}` : 'Standard',
+      associateId: sale.associateId || sale.partnerId || sale.customerId
     };
 
     await appendEntityLog(EntityType.SALE, sale.id, LogEventType.TRANSACTED, {
-      message: `Booth Sale Finalized. Gross: ${sale.totals.totalRevenue}. Payments: ${JSON.stringify(paymentDist || {})}`,
+      message: `Booth Sale Finalized. Gross: ${sale.totals.totalRevenue}. Payments: ${JSON.stringify(paymentBreakdown || {})}`,
       ...logDetails
     });
 
-    if (!boothMetadata || !boothMetadata.calculatedTotals) {
-      console.warn(`[createFinancialRecordFromBoothSale] Missing booth metadata, reverting to standard creation.`);
-      await createFinancialRecordFromSale(sale);
-      return;
-    }
-
-    const { associateNet } = boothMetadata.calculatedTotals;
-    const grossRevenue = sale.totals.totalRevenue;
-
     // 1. Create Gross Income Record (Standard)
+    const grossRevenue = sale.totals.totalRevenue;
     console.log(`[createFinancialRecordFromBoothSale] Creating Gross Income Record: ${grossRevenue}`);
     const incomeRecord = await createFinancialRecordFromSale(sale);
 
+    if (!incomeRecord) {
+      console.error(`[createFinancialRecordFromBoothSale] Failed to create income record.`);
+      return; // Stop if primary record fails
+    }
+
     // [NEW] Link Sale to Associate (Character) if present
-    if (sale.customerId) {
-      // Determine role based on context (defaulting to ASSOCIATE for Booth Sales)
-      // In future, could check Character roles, but for this specific link, ASSOCIATE is the relationship type in this context.
+    const targetEntityId = sale.associateId || sale.partnerId || sale.customerId;
+    let associateNet = 0; // Calculated Payout Amount
+
+    if (targetEntityId) {
+      // Determine role based on context
+      const linkRole = sale.partnerId ? CharacterRole.PARTNER : CharacterRole.ASSOCIATE;
+
       const charLink = makeLink(
         LinkType.SALE_CHARACTER,
         { type: EntityType.SALE, id: sale.id },
-        { type: EntityType.CHARACTER, id: sale.customerId },
-        { role: CharacterRole.ASSOCIATE, context: 'Booth Associate' }
+        { type: EntityType.CHARACTER, id: targetEntityId },
+        { role: linkRole, context: `Booth ${sale.partnerId ? 'Partner' : 'Associate'}` }
       );
       await createLink(charLink);
       await appendLinkLog(charLink, 'created');
-      console.log(`[createFinancialRecordFromBoothSale] ✅ Linked Sale ${sale.id} to Associate ${sale.customerId}`);
-    }
 
-    if (!incomeRecord) {
-      console.error(`[createFinancialRecordFromBoothSale] Failed to create income record.`);
-      return;
+      // CALCULATION LOGIC (SERVER SIDE)
+      // Categorize Lines
+      let myItemsTotal = 0;
+      let assocItemsTotal = 0;
+
+      // Load Contract splits
+      let shareOfMyItems_Me = 1.0;
+      let shareOfAssocItems_Me = 0.0; // My commission on their items
+      let shareOfExpenses_Me = 1.0; // I pay 100% of booth fee by default
+
+      // Determine Contract ID
+      const contractId = sale.archiveMetadata?.boothSaleContext?.contractId;
+      let contract: Contract | null = null;
+      if (contractId) {
+        contract = await getContractById(contractId);
+      }
+
+      if (contract && contract.status === ContractStatus.ACTIVE) {
+        // Apply Clauses
+        const commClause = contract.clauses.find(c => c.type === ContractClauseType.SALES_COMMISSION);
+        if (commClause) shareOfMyItems_Me = commClause.companyShare;
+
+        const serviceClause = contract.clauses.find(c => c.type === ContractClauseType.SALES_SERVICE);
+        if (serviceClause) shareOfAssocItems_Me = serviceClause.companyShare;
+
+        const expenseClause = contract.clauses.find(c => c.type === ContractClauseType.EXPENSE_SHARING);
+        if (expenseClause) shareOfExpenses_Me = expenseClause.companyShare;
+      }
+
+      // Sum Items (USD)
+      sale.lines.forEach(line => {
+        // Is it an Associate Item? (Ref BoothSalesView logic)
+        const isAssociateItem = line.kind === 'service' && (line as ServiceLine).station === 'Associate Sales';
+
+        let lineTotal = 0;
+        if (line.kind === 'item') lineTotal = ((line as ItemSaleLine).unitPrice || 0) * ((line as ItemSaleLine).quantity || 0);
+        else if (line.kind === 'bundle') lineTotal = ((line as BundleSaleLine).unitPrice || 0) * ((line as BundleSaleLine).quantity || 0);
+        else if (line.kind === 'service') lineTotal = (line as ServiceLine).revenue || 0;
+
+        if (isAssociateItem) assocItemsTotal += lineTotal;
+        else myItemsTotal += lineTotal;
+      });
+
+      // Calculate Associate Share (USD)
+      const rates = await getFinancialConversionRates();
+      const rate = rates.colonesToUsd || 500;
+      const boothFeeUSD = boothFee / rate;
+
+      const revenueMyItems_Assoc = myItemsTotal * (1 - shareOfMyItems_Me);
+      const revenueAssocItems_Assoc = assocItemsTotal * (1 - shareOfAssocItems_Me);
+      const cost_Assoc = boothFeeUSD * (1 - shareOfExpenses_Me);
+
+      associateNet = revenueMyItems_Assoc + revenueAssocItems_Assoc - cost_Assoc;
+
+      console.log(`[createFinancialRecordFromBoothSale] Calculated Split (USD): MyItems=${myItemsTotal} AssocItems=${assocItemsTotal} => AssociateNet=${associateNet}`);
     }
 
     // 2. Create Payout Expense Record (If Associate owed money)
@@ -393,33 +448,28 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
 
       const currentDate = new Date();
       // Payout Status Logic: Matches Sale Status
-      // If Sale is CHARGED -> Payout is PENDING (Liability created) or CHARGED (Immediate Payout)?
-      // User Req: "if the status is pending then yes ... but if is Charged is charged."
-      // So if sale.status === CHARGED, then payout is charged (paid immediately).
       const isPayoutPaid = sale.status === SaleStatus.CHARGED;
 
       const payoutFinrec: FinancialRecord = {
         id: `finrec-payout-${sale.id}-${Date.now()}`,
         name: `Payout: ${sale.counterpartyName || 'Associate'}`,
-        description: `Associate split payout for ${sale.counterpartyName || 'Associate'}`,
+        description: `Associate payout for ${sale.counterpartyName || 'Associate'} (Split Share)`,
         year: currentDate.getFullYear(),
         month: currentDate.getMonth() + 1,
-        station: 'Booth Sales' as Station, // Or 'Associate Sales'
-        type: 'company', // Expense for company
+        station: 'Booth Sales' as Station,
+        type: 'company', // Expense
         siteId: sale.siteId,
         sourceSaleId: sale.id,
         salesChannel: 'Booth Sales' as Station,
 
-        cost: associateNet, // The Payout Amount
+        cost: associateNet,
         revenue: 0,
         jungleCoins: 0,
 
-        // Status Logic
-        isNotPaid: !isPayoutPaid, // If sale charged, this is paid. If sale pending, this is not paid.
-        isNotCharged: false,      // Not applicable for expense
+        isNotPaid: !isPayoutPaid,
+        isNotCharged: false,
 
-        rewards: undefined,
-        netCashflow: -associateNet, // Negative cashflow
+        netCashflow: -associateNet, // Expense
         jungleCoinsValue: 0,
         isCollected: false,
         createdAt: new Date(),
@@ -439,13 +489,14 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
       await createLink(link);
       await appendLinkLog(link, 'created');
 
-      // Link Payout to Associate (Character) if customerId present (customerId in Booth Sale = The Associate)
-      if (sale.customerId) {
+      // Link Payout to Associate (Character) if present
+      if (targetEntityId) {
+        const linkRole = sale.partnerId ? CharacterRole.PARTNER : CharacterRole.ASSOCIATE;
         const charLink = makeLink(
           LinkType.FINREC_CHARACTER,
           { type: EntityType.FINANCIAL, id: createdPayout.id },
-          { type: EntityType.CHARACTER, id: sale.customerId },
-          { role: CharacterRole.ASSOCIATE }
+          { type: EntityType.CHARACTER, id: targetEntityId },
+          { role: linkRole }
         );
         await createLink(charLink);
         await appendLinkLog(charLink, 'created');
