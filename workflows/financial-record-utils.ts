@@ -402,7 +402,7 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
         contract = await getContractById(contractId);
       }
 
-      if (contract && contract.status === ContractStatus.ACTIVE) {
+      if (contract && contract.status === ContractStatus.ACTIVE && Array.isArray(contract.clauses)) {
         // Apply Clauses
         const commClause = contract.clauses.find(c => c.type === ContractClauseType.SALES_COMMISSION);
         if (commClause) shareOfMyItems_Me = commClause.companyShare;
@@ -412,6 +412,8 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
 
         const expenseClause = contract.clauses.find(c => c.type === ContractClauseType.EXPENSE_SHARING);
         if (expenseClause) shareOfExpenses_Me = expenseClause.companyShare;
+      } else if (contract && !Array.isArray(contract.clauses)) {
+        console.warn(`[createFinancialRecordFromBoothSale] Contract ${contract.id} has invalid clauses structure. Using defaults.`);
       }
 
       // Sum Items (USD)
