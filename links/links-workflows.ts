@@ -6,7 +6,7 @@ import type { Task, Item, Sale, FinancialRecord, Character, Player, Site, Link }
 import { createLink, removeLink, getLinksFor } from './link-registry';
 import { appendLinkLog } from './links-logging';
 import { getItemsBySourceTaskId, getItemsBySourceRecordId, getItemById } from '@/data-store/repositories/item.repo';
-import { getCharacterById } from '@/data-store/repositories/character.repo';
+import { getCharacterById, getBusinessById } from '@/data-store/repositories/character.repo';
 import { getTaskById } from '@/data-store/repositories/task.repo';
 import { v4 as uuid } from 'uuid';
 import { appendEntityLog } from '@/workflows/entities-logging';
@@ -239,11 +239,11 @@ export async function processSaleEffects(sale: Sale): Promise<void> {
     }
   }
 
-  // SALE_CHARACTER link (Associate)
+  // SALE_CHARACTER/BUSINESS link (Associate)
   if (sale.associateId) {
     // 1. Cleanup existing Associate links to prevent duplicates (Idempotency)
     const oldAssociateLinks = existingLinks.filter(l =>
-      l.linkType === LinkType.SALE_CHARACTER &&
+      (l.linkType === LinkType.SALE_CHARACTER || l.linkType === LinkType.SALE_BUSINESS) &&
       l.metadata?.role === 'associate'
     );
 
@@ -258,30 +258,60 @@ export async function processSaleEffects(sale: Sale): Promise<void> {
     // 2. Create new link if it doesn't exist
     const alreadyExists = oldAssociateLinks.some(l => l.target.id === sale.associateId);
     if (!alreadyExists) {
-      const l = makeLink(
-        LinkType.SALE_CHARACTER,
-        { type: EntityType.SALE, id: sale.id },
-        { type: EntityType.CHARACTER, id: sale.associateId },
-        { role: 'associate' }
-      );
-      const wasCreated = await createLink(l);
+      // Determine target type (Character or Business)
+      let targetType = EntityType.CHARACTER;
+      let linkType = LinkType.SALE_CHARACTER;
+      let targetName = 'Unknown';
+      let roles: string[] = [];
 
-      if (wasCreated) {
-        await appendLinkLog(l, 'created');
-        const character = await getCharacterById(sale.associateId);
-        await appendEntityLog(EntityType.CHARACTER, sale.associateId, LogEventType.TRANSACTED, {
-          name: character?.name || 'Unknown',
-          roles: character?.roles || [],
-          saleId: sale.id,
-          type: 'Associate Sale',
-          role: 'associate'
-        });
+      const character = await getCharacterById(sale.associateId);
+      if (character) {
+        targetType = EntityType.CHARACTER;
+        linkType = LinkType.SALE_CHARACTER;
+        targetName = character.name;
+        roles = character.roles || [];
+      } else {
+        const business = await getBusinessById(sale.associateId);
+        if (business) {
+          targetType = EntityType.BUSINESS;
+          linkType = LinkType.SALE_BUSINESS;
+          targetName = business.name;
+          roles = ['Business'];
+        } else {
+          console.warn(`[processSaleEffects] Associate ID ${sale.associateId} not found as Character or Business. Skipping link creation.`);
+        }
+      }
+
+      // Only create link if entity exists (prevent validation error)
+      if (character || (await getBusinessById(sale.associateId))) {
+        const l = makeLink(
+          linkType,
+          { type: EntityType.SALE, id: sale.id },
+          { type: targetType, id: sale.associateId },
+          { role: 'associate' }
+        );
+        const wasCreated = await createLink(l);
+
+        if (wasCreated) {
+          await appendLinkLog(l, 'created');
+
+          // Log reference if it's a character (Business logs not yet implemented?)
+          if (targetType === EntityType.CHARACTER) {
+            await appendEntityLog(EntityType.CHARACTER, sale.associateId, LogEventType.TRANSACTED, {
+              name: targetName,
+              roles: roles,
+              saleId: sale.id,
+              type: 'Associate Sale',
+              role: 'associate'
+            });
+          }
+        }
       }
     }
   } else {
     // If field was cleared, remove the link
     const oldAssociateLinks = existingLinks.filter(l =>
-      l.linkType === LinkType.SALE_CHARACTER &&
+      (l.linkType === LinkType.SALE_CHARACTER || l.linkType === LinkType.SALE_BUSINESS) &&
       l.metadata?.role === 'associate'
     );
     for (const oldLink of oldAssociateLinks) {
@@ -290,11 +320,11 @@ export async function processSaleEffects(sale: Sale): Promise<void> {
     }
   }
 
-  // SALE_CHARACTER link (Partner)
+  // SALE_CHARACTER/BUSINESS link (Partner)
   if (sale.partnerId) {
     // 1. Cleanup existing Partner links
     const oldPartnerLinks = existingLinks.filter(l =>
-      l.linkType === LinkType.SALE_CHARACTER &&
+      (l.linkType === LinkType.SALE_CHARACTER || l.linkType === LinkType.SALE_BUSINESS) &&
       l.metadata?.role === 'partner'
     );
 
@@ -307,30 +337,57 @@ export async function processSaleEffects(sale: Sale): Promise<void> {
 
     const alreadyExists = oldPartnerLinks.some(l => l.target.id === sale.partnerId);
     if (!alreadyExists) {
-      const l = makeLink(
-        LinkType.SALE_CHARACTER,
-        { type: EntityType.SALE, id: sale.id },
-        { type: EntityType.CHARACTER, id: sale.partnerId },
-        { role: 'partner' }
-      );
-      const wasCreated = await createLink(l);
+      // Determine target type (Character or Business)
+      let targetType = EntityType.CHARACTER;
+      let linkType = LinkType.SALE_CHARACTER;
+      let targetName = 'Unknown';
+      let roles: string[] = [];
 
-      if (wasCreated) {
-        await appendLinkLog(l, 'created');
-        const character = await getCharacterById(sale.partnerId);
-        await appendEntityLog(EntityType.CHARACTER, sale.partnerId, LogEventType.TRANSACTED, {
-          name: character?.name || 'Unknown',
-          roles: character?.roles || [],
-          saleId: sale.id,
-          type: 'Partner Sale',
-          role: 'partner'
-        });
+      const character = await getCharacterById(sale.partnerId);
+      if (character) {
+        targetType = EntityType.CHARACTER;
+        linkType = LinkType.SALE_CHARACTER;
+        targetName = character.name;
+        roles = character.roles || [];
+      } else {
+        const business = await getBusinessById(sale.partnerId);
+        if (business) {
+          targetType = EntityType.BUSINESS;
+          linkType = LinkType.SALE_BUSINESS;
+          targetName = business.name;
+          roles = ['Business'];
+        } else {
+          console.warn(`[processSaleEffects] Partner ID ${sale.partnerId} not found as Character or Business. Skipping link creation.`);
+        }
+      }
+
+      if (character || (await getBusinessById(sale.partnerId))) {
+        const l = makeLink(
+          linkType,
+          { type: EntityType.SALE, id: sale.id },
+          { type: targetType, id: sale.partnerId },
+          { role: 'partner' }
+        );
+        const wasCreated = await createLink(l);
+
+        if (wasCreated) {
+          await appendLinkLog(l, 'created');
+          if (targetType === EntityType.CHARACTER) {
+            await appendEntityLog(EntityType.CHARACTER, sale.partnerId, LogEventType.TRANSACTED, {
+              name: targetName,
+              roles: roles,
+              saleId: sale.id,
+              type: 'Partner Sale',
+              role: 'partner'
+            });
+          }
+        }
       }
     }
   } else {
     // If field was cleared, remove the link
     const oldPartnerLinks = existingLinks.filter(l =>
-      l.linkType === LinkType.SALE_CHARACTER &&
+      (l.linkType === LinkType.SALE_CHARACTER || l.linkType === LinkType.SALE_BUSINESS) &&
       l.metadata?.role === 'partner'
     );
     for (const oldLink of oldPartnerLinks) {
