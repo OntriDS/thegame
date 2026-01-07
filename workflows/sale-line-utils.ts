@@ -160,8 +160,8 @@ export async function processItemSaleLine(line: ItemSaleLine, sale: Sale): Promi
       updatedItem.status = ItemStatus.SOLD;
     }
 
-    // Save the updated item
-    await upsertItem(updatedItem);
+    // Save the updated item (Skip generic workflow to avoid duplicate logs)
+    await upsertItem(updatedItem, { skipWorkflowEffects: true });
 
     // Create SALE_ITEM link
     const linkMetadata = {
@@ -246,7 +246,19 @@ export async function processBundleSaleLine(line: BundleSaleLine, sale: Sale): P
         updatedAt: new Date()
       };
 
-      await upsertItem(updatedItem);
+      await upsertItem(updatedItem, { skipWorkflowEffects: true });
+
+      // Log detailed sale event (Fixes missing data for bundles)
+      await appendEntityLog(EntityType.ITEM, bundleItem.id, LogEventType.SOLD, {
+        name: bundleItem.name,
+        quantity: line.quantity,
+        isBundle: true,
+        unitPrice: line.unitPrice,
+        total: line.quantity * line.unitPrice,
+        saleId: sale.id,
+        soldAt: sale.saleDate.toISOString(),
+        description: `Bundle Sold: ${line.quantity} units (Single Item Bundle)`
+      });
 
       // Create SALE_ITEM link for the bundle
       const bundleLink = makeLink(
@@ -311,7 +323,18 @@ export async function processBundleSaleLine(line: BundleSaleLine, sale: Sale): P
           updatedAt: new Date()
         };
 
-        await upsertItem(updatedItem);
+        await upsertItem(updatedItem, { skipWorkflowEffects: true });
+
+        // Log detailed usage event for item consumed in bundle
+        await appendEntityLog(EntityType.ITEM, item.id, LogEventType.SOLD, {
+          name: item.name,
+          quantity: toDeduct,
+          isBundleComponent: true,
+          bundleType: line.itemType,
+          saleId: sale.id,
+          soldAt: sale.saleDate.toISOString(),
+          description: `Used in Bundle: ${toDeduct} units for ${line.itemType}`
+        });
         processedItems.push({ item, quantity: toDeduct });
 
         // Create SALE_ITEM link for each item consumed

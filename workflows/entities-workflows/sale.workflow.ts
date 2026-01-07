@@ -394,6 +394,19 @@ export async function removeSaleEffectsOnDelete(saleId: string): Promise<void> {
       console.log(`[removeSaleEffectsOnDelete] ✅ Removed ${characterLog.length - filteredCharacterLog.length} entries from character log`);
     }
 
+    // [New] Remove from ITEM Logs (Lifecycle events)
+    // Items log keys are typically generic 'item' log or specific to item. 
+    // Assuming 'item' log key:
+    const itemLogKey = buildLogKey(EntityType.ITEM);
+    const itemLog = (await kvGet<any[]>(itemLogKey)) || [];
+    // Filter out entries where sourceSaleId matches
+    const filteredItemLog = itemLog.filter(entry => entry.sourceSaleId !== saleId && entry.saleId !== saleId);
+
+    if (filteredItemLog.length !== itemLog.length) {
+      await kvSet(itemLogKey, filteredItemLog);
+      console.log(`[removeSaleEffectsOnDelete] ✅ Removed ${itemLog.length - filteredItemLog.length} entries from item log`);
+    }
+
     console.log(`[removeSaleEffectsOnDelete] ✅ Cleared effects, removed links, and removed log entries for sale ${saleId}`);
   } catch (error) {
     console.error('Error removing sale effects:', error);
