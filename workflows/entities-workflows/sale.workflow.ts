@@ -8,7 +8,7 @@ import { hasEffect, markEffect, clearEffectsByPrefix } from '@/data-store/effect
 import { EffectKeys, buildLogKey } from '@/data-store/keys';
 import { kvGet, kvSet } from '@/data-store/kv';
 import { getLinksFor, removeLink } from '@/links/link-registry';
-import { getPlayerById, getSaleById, getItemById, getFinancialsBySourceSaleId, removeFinancial } from '@/data-store/datastore';
+import { getPlayerById, getSaleById, getItemById, getFinancialsBySourceSaleId, removeFinancial, upsertItem } from '@/data-store/datastore';
 import { awardPointsToPlayer, removePointsFromPlayer, calculatePointsFromRevenue } from '../points-rewards-utils';
 import { processSaleLines } from '../sale-line-utils';
 import {
@@ -319,6 +319,9 @@ export async function removeSaleEffectsOnDelete(saleId: string): Promise<void> {
   try {
     console.log(`[removeSaleEffectsOnDelete] Starting cleanup for sale: ${saleId}`);
 
+    // 0. Revert Inventory (Restore Stock)
+    await revertSaleInventory(saleId);
+
     // 1. Remove player points that were awarded by this sale (if points were badly given)
     await removePlayerPointsFromSale(saleId);
 
@@ -440,5 +443,75 @@ async function removePlayerPointsFromSale(saleId: string): Promise<void> {
 
   } catch (error) {
     console.error(`[removePlayerPointsFromSale] ❌ Failed to remove player points for sale ${saleId}:`, error);
+  }
+}
+
+/**
+ * Revert inventory changes from a sale
+ * - Restores stock to the original item
+ * - Resets soldAt if no stock remains sold
+ */
+async function revertSaleInventory(saleId: string): Promise<void> {
+  try {
+    console.log(`[revertSaleInventory] Reverting inventory for sale: ${saleId}`);
+    const sale = await getSaleById(saleId);
+    if (!sale || !sale.lines) return;
+
+    for (const line of sale.lines) {
+      if (line.kind !== 'item' && line.kind !== 'bundle') continue;
+
+      const itemId = (line as any).itemId;
+      const quantityToRestore = (line as any).quantity || 0;
+
+      if (!itemId || quantityToRestore <= 0) continue;
+
+      const item = await getItemById(itemId);
+      if (!item) {
+        console.warn(`[revertSaleInventory] Item ${itemId} not found, cannot restore stock.`);
+        continue;
+      }
+
+      console.log(`[revertSaleInventory] Restoring ${quantityToRestore} units to item ${item.name}`);
+
+      // 1. Restore Stock Point
+      // We look for a stock point matching the sale's site, or default to the first one available
+      const targetSiteId = sale.siteId || item.stock?.[0]?.siteId || 'default';
+
+      let updatedStock = item.stock ? [...item.stock] : [];
+      const stockPointIndex = updatedStock.findIndex(sp => sp.siteId === targetSiteId);
+
+      if (stockPointIndex >= 0) {
+        updatedStock[stockPointIndex] = {
+          ...updatedStock[stockPointIndex],
+          quantity: updatedStock[stockPointIndex].quantity + quantityToRestore
+        };
+      } else {
+        // Create new stock point if it doesn't exist (e.g. if it was fully consumed and removed, though usually we keep at 0)
+        updatedStock.push({
+          siteId: targetSiteId,
+          quantity: quantityToRestore
+        });
+      }
+
+      // 2. Update Quantity Sold
+      const newQuantitySold = Math.max(0, (item.quantitySold || 0) - quantityToRestore);
+
+      // 3. Reset Lifecycle fields if "unsold"
+      const updatedItem = {
+        ...item,
+        stock: updatedStock,
+        quantitySold: newQuantitySold,
+        // If it was marked sold but now isn't, maybe clear soldAt?
+        // But soldAt tracks "first sale". We might want to keep it or clear it.
+        // Safer to clear if quantitySold goes back to 0.
+        soldAt: newQuantitySold === 0 ? undefined : item.soldAt,
+        updatedAt: new Date()
+      };
+
+      await upsertItem(updatedItem);
+      console.log(`[revertSaleInventory] ✅ Restored stock for item ${item.id}. New Qty in ${targetSiteId}: ${updatedStock.find(s => s.siteId === targetSiteId)?.quantity}`);
+    }
+  } catch (error) {
+    console.error(`[revertSaleInventory] ❌ Failed to revert inventory for sale ${saleId}:`, error);
   }
 }
