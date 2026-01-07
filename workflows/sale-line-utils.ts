@@ -102,8 +102,7 @@ export async function processItemSaleLine(line: ItemSaleLine, sale: Sale): Promi
         // Create new stock point if needed
         item.stock.push({
           siteId: targetSiteId,
-          quantity: shortage,
-          location: 'Sales Adjustment'
+          quantity: shortage
         });
       }
 

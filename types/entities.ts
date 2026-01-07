@@ -92,7 +92,6 @@ export interface FileReference {
 export interface StockPoint {
   siteId: string;
   quantity: number;
-  location?: string; // Specific location within the site (e.g., "Shelf A", "Sales Adjustment")
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
