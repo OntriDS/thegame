@@ -184,6 +184,12 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
       await processChargedSaleLines(sale);
     }
 
+    // Ensure item snapshots are created when sale becomes collected
+    // (If they weren't created during CHARGED phase because it wasn't collected then)
+    if (hasItems) {
+      await createItemSnapshotsFromSale(sale);
+    }
+
     await appendEntityLog(EntityType.SALE, sale.id, LogEventType.COLLECTED, {
       type: sale.type,
       counterpartyName: sale.counterpartyName,
@@ -239,7 +245,10 @@ async function processChargedSaleLines(sale: Sale): Promise<void> {
   console.log(`[onSaleUpsert] ✅ Sale lines processed and effect marked: ${sale.counterpartyName}`);
 
   // Create ItemSnapshots for sold items (Archive-First approach)
-  await createItemSnapshotsFromSale(sale);
+  // ONLY if the sale is also collected. If not, snapshots will be created when sale becomes collected.
+  if (sale.isCollected || sale.status === 'COLLECTED') {
+    await createItemSnapshotsFromSale(sale);
+  }
 }
 
 async function maybeCreateSaleSnapshot(sale: Sale, previousSale?: Sale): Promise<void> {

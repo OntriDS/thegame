@@ -122,9 +122,12 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
     }
 
     // Create snapshot BEFORE updating item (capture current state)
-    const soldAt = item.soldAt || new Date();
-    await createItemSnapshot(item, quantityToSell, null, soldAt);
-    console.log(`[onItemUpsert] ✅ Created ItemSnapshot for manually sold item ${item.name} (${quantityToSell} units)`);
+    // DISABLED: User requirement "ONLY COLLECTED SENDS THINGS TO ARCHIVE"
+    // Manual "Sold" status change does not imply "Collected" (money received).
+    // Therefore, we do NOT archive here.
+    // const soldAt = item.soldAt || new Date();
+    // await createItemSnapshot(item, quantityToSell, null, soldAt);
+    console.log(`[onItemUpsert] Manual SOLD status change processed for ${item.name} (${quantityToSell} units) - Archive skipped (Not Collected)`);
 
     // Update item: deduct all remaining stock, update quantitySold, set soldAt
     const updatedItem: Item = {
