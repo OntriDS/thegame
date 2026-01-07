@@ -761,7 +761,8 @@ export default function MonthBoxTabs({ month }: MonthBoxTabsProps) {
                   e.stopPropagation();
                   if (confirm('Are you sure you want to delete this archive task? This cannot be undone.')) {
                     try {
-                      await ClientAPI.deleteArchivedTask(task.id, month.key);
+                      const deleteId = (task as any)._archiveId || task.id;
+                      await ClientAPI.deleteArchivedTask(deleteId, month.key);
                       setTaskState((prev) => ({
                         ...prev,
                         data: prev.data.filter((t) => t.id !== task.id),
@@ -918,7 +919,8 @@ export default function MonthBoxTabs({ month }: MonthBoxTabsProps) {
                   e.stopPropagation();
                   if (confirm('Are you sure you want to delete this archive item? This cannot be undone.')) {
                     try {
-                      await ClientAPI.deleteArchivedItem(item.id, month.key);
+                      const deleteId = (item as any)._archiveId || item.id;
+                      await ClientAPI.deleteArchivedItem(deleteId, month.key);
                       setItemState((prev) => ({
                         ...prev,
                         data: prev.data.filter((i) => i.id !== item.id),

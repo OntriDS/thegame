@@ -572,7 +572,8 @@ export async function getArchivedTasksByMonth(mmyy: string): Promise<Task[]> {
   const snapshots = await archiveRepo.getArchivedEntitiesByMonth<any>('task-snapshots', mmyy);
   return snapshots.map(s => {
     const data = s.data || s; // Support legacy raw entities
-    return reviveDates(data as Task);
+    const task = reviveDates(data as Task);
+    return { ...task, _archiveId: s.id };
   });
 }
 
@@ -580,7 +581,9 @@ export async function getArchivedItemsByMonth(mmyy: string): Promise<Item[]> {
   const snapshots = await archiveRepo.getArchivedEntitiesByMonth<any>('item-snapshots', mmyy, ['item']);
   return snapshots.map(s => {
     const data = s.data || s; // Support legacy raw entities
-    return reviveDates(data as Item);
+    const item = reviveDates(data as Item);
+    // Inject snapshot ID for deletion (using a temporary property that won't break types at runtime)
+    return { ...item, _archiveId: s.id };
   });
 }
 
