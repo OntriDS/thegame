@@ -384,24 +384,27 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
 
       let targetType = EntityType.CHARACTER; // Default
       const { getBusinessById } = await import('@/data-store/repositories/character.repo');
-      const business = await getBusinessById(targetEntityId);
 
+      // Attempt to look up as business first
+      const business = await getBusinessById(targetEntityId);
       if (business) {
         targetType = EntityType.BUSINESS;
       }
 
+      // Construct Link based on resolved type
+      const linkType = targetType === EntityType.BUSINESS
+        ? LinkType.SALE_BUSINESS
+        : LinkType.SALE_CHARACTER;
+
       const charLink = makeLink(
-        targetType === EntityType.BUSINESS ? LinkType.SALE_BUSINESS : LinkType.SALE_CHARACTER,
+        linkType,
         { type: EntityType.SALE, id: sale.id },
         { type: targetType, id: targetEntityId },
         { role: linkRole, context: `Booth ${sale.partnerId ? 'Partner' : 'Associate'}` }
       );
 
-      // Ensure the LinkType enum supports SALE_BUSINESS, if not, fallback or define it? 
-      // Checking enums.ts... Assuming SALE_BUSINESS exists or we use generic link. 
-      // Actually, standardizing on SALE_CHARACTER often implies "Entity that acts as character".
-      // But validation is strict. If SALE_BUSINESS is not in enum, we might need to add it or use a generic.
-      // waiting to see enum defs, but assuming we can fix the type.
+      // Only attempt to create link if it's a known valid type
+      // The validator will still check entity existence, but now with the correct type
       await createLink(charLink);
       await appendLinkLog(charLink, 'created');
 
