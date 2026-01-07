@@ -83,10 +83,32 @@ export async function processItemSaleLine(line: ItemSaleLine, sale: Sale): Promi
 
     // Check if we have enough stock at the sale site
     // Calculate total available quantity from stock array
-    const totalAvailableQuantity = item.stock.reduce((sum, stockPoint) => sum + stockPoint.quantity, 0);
-    if (item.quantitySold + line.quantity > totalAvailableQuantity) {
-      console.error(`[processItemSaleLine] Insufficient stock for item ${item.name}. Available: ${totalAvailableQuantity - item.quantitySold}, Required: ${line.quantity}`);
-      return;
+    const currentStock = item.stock.reduce((sum, stockPoint) => sum + stockPoint.quantity, 0);
+    const requiredTotal = line.quantity;
+
+    // [AUTO-ADJUST] If insufficient stock, we "find" the items to allow the sale
+    if (requiredTotal > currentStock) {
+      const shortage = requiredTotal - currentStock;
+      console.warn(`[processItemSaleLine] ⚠️ Auto-adjusting stock for ${item.name}. Required: ${requiredTotal}, Available: ${currentStock}, Adding: ${shortage}`);
+
+      // Add shortage to the sale site (or first available site)
+      const targetSiteId = sale.siteId || (item.stock[0]?.siteId) || 'default';
+
+      let siteStockPoint = item.stock.find(sp => sp.siteId === targetSiteId);
+
+      if (siteStockPoint) {
+        siteStockPoint.quantity += shortage;
+      } else {
+        // Create new stock point if needed
+        item.stock.push({
+          siteId: targetSiteId,
+          quantity: shortage,
+          location: 'Sales Adjustment'
+        });
+      }
+
+      // We don't save yet, we let the logic below deduct correctly and then save the final state.
+      // This ensures we end up with 0 (or valid) stock after deduction.
     }
 
     // Update item stock

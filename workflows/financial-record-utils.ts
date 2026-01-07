@@ -373,15 +373,35 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
     let associateNet = 0; // Calculated Payout Amount
 
     if (targetEntityId) {
-      // Determine role based on context
+      // Determine role determines role, but we also need to determine TYPE (Character vs Business)
       const linkRole = sale.partnerId ? CharacterRole.PARTNER : CharacterRole.ASSOCIATE;
 
+      // [FIX] Dynamically check if the ID belongs to a Business or Character
+      // Since we don't have the type stored in the Sale, we can try to look it up or rely on ID format/metadata
+      // But for robust linking, we should check.
+      // OPTIMIZATION: If we moved `associateId` / `partnerId` to specific fields or stored type, this would be easier.
+      // For now, let's try to fetch as Business first (as O2 is likely a business), then Character.
+
+      let targetType = EntityType.CHARACTER; // Default
+      const { getBusinessById } = await import('@/data-store/repositories/character.repo');
+      const business = await getBusinessById(targetEntityId);
+
+      if (business) {
+        targetType = EntityType.BUSINESS;
+      }
+
       const charLink = makeLink(
-        LinkType.SALE_CHARACTER,
+        targetType === EntityType.BUSINESS ? LinkType.SALE_BUSINESS : LinkType.SALE_CHARACTER,
         { type: EntityType.SALE, id: sale.id },
-        { type: EntityType.CHARACTER, id: targetEntityId },
+        { type: targetType, id: targetEntityId },
         { role: linkRole, context: `Booth ${sale.partnerId ? 'Partner' : 'Associate'}` }
       );
+
+      // Ensure the LinkType enum supports SALE_BUSINESS, if not, fallback or define it? 
+      // Checking enums.ts... Assuming SALE_BUSINESS exists or we use generic link. 
+      // Actually, standardizing on SALE_CHARACTER often implies "Entity that acts as character".
+      // But validation is strict. If SALE_BUSINESS is not in enum, we might need to add it or use a generic.
+      // waiting to see enum defs, but assuming we can fix the type.
       await createLink(charLink);
       await appendLinkLog(charLink, 'created');
 
@@ -491,20 +511,36 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
       await createLink(link);
       await appendLinkLog(link, 'created');
 
-      // Link Payout to Associate (Character) if present
+      // Link Payout to Associate (Character or Business) if present
       if (targetEntityId) {
+        // [FIX] Dynamically check if the ID belongs to a Business or Character
+        let targetType = EntityType.CHARACTER; // Default
+
+        try {
+          const { getBusinessById } = await import('@/data-store/repositories/character.repo');
+
+          // Safety check: targetEntityId might be undefined if logic drifted, though if check above handles it.
+          // But typescript complained about string | null.
+          if (targetEntityId) {
+            const business = await getBusinessById(targetEntityId);
+            if (business) {
+              targetType = EntityType.BUSINESS;
+            }
+          }
+        } catch (err) {
+          console.warn(`[createFinancialRecordFromBoothSale] Error checking business existence:`, err);
+        }
+
         const linkRole = sale.partnerId ? CharacterRole.PARTNER : CharacterRole.ASSOCIATE;
         const charLink = makeLink(
-          LinkType.FINREC_CHARACTER,
+          targetType === EntityType.BUSINESS ? LinkType.FINREC_BUSINESS : LinkType.FINREC_CHARACTER,
           { type: EntityType.FINANCIAL, id: createdPayout.id },
-          { type: EntityType.CHARACTER, id: targetEntityId },
+          { type: targetType, id: targetEntityId },
           { role: linkRole }
         );
         await createLink(charLink);
         await appendLinkLog(charLink, 'created');
       }
-
-      console.log(`[createFinancialRecordFromBoothSale] ✅ Created Payout Record: ${createdPayout.name}`);
     }
 
   } catch (error) {

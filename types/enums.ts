@@ -584,6 +584,7 @@ export enum LinkType {
   SALE_FINREC = 'SALE_FINREC',    // Sale linked to Financial Record
   SALE_PLAYER = 'SALE_PLAYER',    // Sale earned Player points (only for PLAYERS)
   SALE_CHARACTER = 'SALE_CHARACTER', // Sale customer is Character (customer, team member, etc.)
+  SALE_BUSINESS = 'SALE_BUSINESS',   // Sale customer/associate is a Business
   SALE_SITE = 'SALE_SITE',      // Sale is performed at a Site
 
   // FINANCIAL RECORD relationships
@@ -592,6 +593,7 @@ export enum LinkType {
   FINREC_SALE = 'FINREC_SALE',    // Financial Record linked to Sale
   FINREC_PLAYER = 'FINREC_PLAYER',  // Financial Record earned Player points (only for PLAYERS)
   FINREC_CHARACTER = 'FINREC_CHARACTER', // Financial Record assigned to Character (customer, team member, etc.)
+  FINREC_BUSINESS = 'FINREC_BUSINESS', // Financial Record assigned to Business
   FINREC_SITE = 'FINREC_SITE',      // Financial Record is related to a Site
 
   // CHARACTER relationships
