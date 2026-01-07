@@ -116,27 +116,19 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
 
       if (activeTab === InventoryTab.SOLD_ITEMS) {
         // Use status filter for sold items
-        const month = filterSoldByMonth ? currentMonth : undefined;
-        const year = filterSoldByMonth ? currentYear : undefined;
-        // We pass 'all' as type to search across all item types
-        // But we rely on the API to filter by status='Sold' if we could pass it.
-        // ClientAPI.getItems doesn't support status param yet in its signature, but we can append it manually or update ClientAPI.
-        // Let's update ClientAPI signature first or cast it.
-        // Actually, let's just update ClientAPI.getItems to accept an options object or just pass it in the query.
-        // For now, I'll assume I update ClientAPI.getItems to accept status.
-        // Wait, I can't update ClientAPI signature easily without breaking other calls.
-        // I'll use the existing getItems signature but I need to pass status.
-        // I will update ClientAPI.getItems to accept an options object in the next step.
-        // For now, I will revert to fetching by month and filtering on client, which is what the user expects for "Sold Items tab".
-        // The API now returns ALL items for the month (including sold ones) if I don't pass status.
-        // So I can just call getItems('all', month, year) and filter client-side.
-        // UPDATE: Passing status='Sold' explicitly to bypass potential month-index issues
-        const monthItems = await ClientAPI.getItems('all', month, year, 'Sold');
+        const month = filterSoldByMonth ? currentMonth : new Date().getMonth() + 1;
+        const year = filterSoldByMonth ? currentYear : new Date().getFullYear();
 
-        // Filter case-insensitively to handle 'Sold' (Enum) and 'SOLD' (Legacy/Bug) and "ItemStatus.SOLD" (User manual entry)
+        // Fetch ALL items (including "Sold Entity" ghosts) and filter
+        // Note: We use 'all' type and client-side filtering because getItems status param might not be fully supported by all backends yet,
+        // and we want to ensure we catch 'ItemStatus.SOLD' correctly.
+
+        const monthItems = await ClientAPI.getItems('all', month, year);
+
+        // Filter for items that are explicitly SOLD
         items = monthItems.filter(item => {
-          const s = item.status as string;
-          return s?.toUpperCase() === 'SOLD' || s === 'ItemStatus.SOLD';
+          const s = (item.status as string || '').toUpperCase();
+          return s === 'SOLD' || s === 'ITEMSTATUS.SOLD';
         });
       } else if (activeTabItemType === 'all') {
         // Load all items

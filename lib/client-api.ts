@@ -1099,6 +1099,13 @@ export const ClientAPI = {
     if (!res.ok) throw new Error('Failed to delete archived item');
   },
 
+  getArchivedItems: async (month: number, year: number): Promise<Item[]> => {
+    const formattedMonth = `${String(month).padStart(2, '0')}-${String(year).slice(-2)}`;
+    const res = await fetch(`/api/archive/items?month=${formattedMonth}`);
+    if (!res.ok) throw new Error('Failed to fetch archived items');
+    return await res.json();
+  },
+
   deleteArchivedTask: async (id: string, month: string): Promise<void> => {
     const res = await fetch(`/api/archive/tasks/${id}?month=${encodeURIComponent(month)}`, {
       method: 'DELETE'

@@ -528,15 +528,31 @@ export async function updateItemsFromSale(
           soldAt: item.soldAt || (sale.doneAt || sale.saleDate || new Date()), // Set soldAt on first sale
           value: line.unitPrice * line.quantity, // Update actual sale value
           price: line.unitPrice, // Update unit price
-          isSold: true, // Mark as sold
-          status: ItemStatus.SOLD, // Set item status to SOLD
           updatedAt: new Date()
         };
 
         await upsertItem(updatedItem);
-        await markEffect(updateKey);
-
         console.log(`[updateItemsFromSale] ✅ Updated item: ${line.itemId}`);
+
+        const soldItemEntity: Item = {
+          ...item,
+          id: `${item.id}-sold-${sale.id.slice(-6)}`, // Unique ID for this sale instance
+          name: `${item.name}`, // Keep same name
+          status: ItemStatus.SOLD,
+          isCollected: sale.isCollected || false,
+          stock: [], // No active stock
+          quantitySold: line.quantity || 0, // Represents quantity in this specific sale
+          soldAt: sale.saleDate || new Date(),
+          sourceRecordId: sale.id, // Link back to sale
+          updatedAt: new Date(),
+          description: `Sold in sale ${sale.counterpartyName} (${new Date(sale.saleDate || new Date()).toLocaleDateString()})`
+        };
+
+        // Save this "Ghost" entity to the main items store so "Sold Items Tab" finds it.
+        await upsertItem(soldItemEntity, { skipWorkflowEffects: true });
+        console.log(`[updateItemsFromSale] ✅ Created Sold Item Entity: ${soldItemEntity.id}`);
+
+        await markEffect(updateKey);
       }
     }
   } catch (error) {
