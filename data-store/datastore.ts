@@ -584,6 +584,14 @@ export async function getArchivedItemsByMonth(mmyy: string): Promise<Item[]> {
   });
 }
 
+export async function deleteArchivedItem(id: string, mmyy: string): Promise<void> {
+  await archiveRepo.deleteEntityFromArchive('item-snapshots', mmyy, id);
+}
+
+export async function deleteArchivedTask(id: string, mmyy: string): Promise<void> {
+  await archiveRepo.deleteEntityFromArchive('task-snapshots', mmyy, id);
+}
+
 export async function getArchivedSalesByMonth(mmyy: string): Promise<Sale[]> {
   const snapshots = await archiveRepo.getArchivedEntitiesByMonth<any>('sale-snapshots', mmyy);
   return snapshots.map(s => {

@@ -1092,6 +1092,19 @@ export const ClientAPI = {
     if (!res.ok) throw new Error('Failed to fetch inventory summary');
     return await res.json();
   },
+  deleteArchivedItem: async (id: string, month: string): Promise<void> => {
+    const res = await fetch(`/api/archive/items/${id}?month=${encodeURIComponent(month)}`, {
+      method: 'DELETE'
+    });
+    if (!res.ok) throw new Error('Failed to delete archived item');
+  },
+
+  deleteArchivedTask: async (id: string, month: string): Promise<void> => {
+    const res = await fetch(`/api/archive/tasks/${id}?month=${encodeURIComponent(month)}`, {
+      method: 'DELETE'
+    });
+    if (!res.ok) throw new Error('Failed to delete archived task');
+  },
 };
 
 // Historical placement: keep alias methods at the end to avoid duplicate keys

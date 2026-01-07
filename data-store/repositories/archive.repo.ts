@@ -1,7 +1,7 @@
 // data-store/repositories/archive.repo.ts
 // Generic helpers for storing and retrieving archived entities in monthly buckets
 
-import { kvGet, kvMGet, kvSAdd, kvSMembers, kvSet } from '@/data-store/kv';
+import { kvGet, kvMGet, kvSAdd, kvSMembers, kvSet, kvSRem, kvDel } from '@/data-store/kv';
 import {
   buildArchiveDataKey,
   buildArchiveIndexKey,
@@ -105,4 +105,15 @@ export async function getArchivedEntityById<T>(
   id: string
 ): Promise<T | null> {
   return await kvGet<T>(buildArchiveDataKey(entityType, mmyy, id));
+}
+export async function deleteEntityFromArchive(
+  entityType: string,
+  mmyy: string,
+  id: string
+): Promise<void> {
+  const indexKey = buildArchiveIndexKey(entityType, mmyy);
+  const dataKey = buildArchiveDataKey(entityType, mmyy, id);
+
+  await kvSRem(indexKey, id);
+  await kvDel(dataKey);
 }
