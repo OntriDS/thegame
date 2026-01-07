@@ -11,11 +11,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ChevronDown, Clipboard, Loader2 } from "lucide-react";
+import { ChevronDown, Clipboard, Loader2, Trash2 } from "lucide-react";
 import type { AvailableArchiveMonth, PlayerArchiveRow } from "@/types/archive";
 import type { Task, Sale, FinancialRecord, Item } from "@/types/entities";
 import { formatDisplayDate } from "@/lib/utils/date-utils";
 import { formatCurrency } from "@/lib/utils/financial-utils";
+import { ClientAPI } from "@/lib/client-api";
 import { cn } from "@/lib/utils";
 
 type ArchiveTabKey = "tasks" | "sales" | "financials" | "items";
@@ -742,15 +743,40 @@ export default function MonthBoxTabs({ month }: MonthBoxTabsProps) {
           pageSize: PAGE_SIZE,
           totals: totals.tasks,
           renderActions: (task) => (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleCopyTaskLink(task)}
-              className="gap-2"
-            >
-              <Clipboard className="h-3.5 w-3.5" />
-              {taskState.lastCopiedId === task.id ? "Copied" : "Copy link"}
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleCopyTaskLink(task)}
+                className="gap-2"
+              >
+                <Clipboard className="h-3.5 w-3.5" />
+                {taskState.lastCopiedId === task.id ? "Copied" : "Copy link"}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  if (confirm('Are you sure you want to delete this archive task? This cannot be undone.')) {
+                    try {
+                      await ClientAPI.deleteTask(task.id);
+                      setTaskState((prev) => ({
+                        ...prev,
+                        data: prev.data.filter((t) => t.id !== task.id),
+                        filtered: prev.filtered.filter((t) => t.id !== task.id),
+                      }));
+                    } catch (err) {
+                      console.error('Failed to delete task:', err);
+                      // Handle potentially "safe to ignore" errors if task is already deleted
+                    }
+                  }
+                }}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
           ),
         })}
       </TabsContent>
@@ -874,15 +900,41 @@ export default function MonthBoxTabs({ month }: MonthBoxTabsProps) {
           pageSize: PAGE_SIZE,
           totals: totals.items,
           renderActions: (item) => (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleCopyItemLink(item)}
-              className="gap-2"
-            >
-              <Clipboard className="h-3.5 w-3.5" />
-              {itemState.lastCopiedId === item.id ? "Copied" : "Copy link"}
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleCopyItemLink(item)}
+                className="gap-2"
+              >
+                <Clipboard className="h-3.5 w-3.5" />
+                {itemState.lastCopiedId === item.id ? "Copied" : "Copy link"}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  if (confirm('Are you sure you want to delete this archive item? This cannot be undone.')) {
+                    try {
+                      await ClientAPI.deleteItem(item.id);
+                      setItemState((prev) => ({
+                        ...prev,
+                        data: prev.data.filter((i) => i.id !== item.id),
+                        filtered: prev.filtered.filter((i) => i.id !== item.id),
+                      }));
+                    } catch (err) {
+                      console.error('Failed to delete item:', err);
+                      const msg = err instanceof Error ? err.message : 'Unknown error';
+                      alert(`Failed to delete item: ${msg}`);
+                    }
+                  }
+                }}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
           ),
         })}
       </TabsContent>

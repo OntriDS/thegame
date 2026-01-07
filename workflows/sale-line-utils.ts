@@ -156,9 +156,13 @@ export async function processItemSaleLine(line: ItemSaleLine, sale: Sale): Promi
     const totalRemainingQuantity = updatedItem.stock.reduce((sum, stockPoint) => sum + stockPoint.quantity, 0);
 
     // Mark item as SOLD if all stock is sold
+    // [CHANGE] User requested items NOT be marked SOLD/Deleted even if stock is 0.
+    // They should remain visible (likely ACTIVE) to be restocked.
+    /*
     if (totalRemainingQuantity <= 0) {
       updatedItem.status = ItemStatus.SOLD;
     }
+    */
 
     // Save the updated item (Skip generic workflow to avoid duplicate logs)
     await upsertItem(updatedItem, { skipWorkflowEffects: true });
