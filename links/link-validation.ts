@@ -137,6 +137,7 @@ export function validateLinkTypeCompatibility(
     'SALE_FINREC': { source: [EntityType.SALE], target: [EntityType.FINANCIAL] },
     'SALE_PLAYER': { source: [EntityType.SALE], target: [EntityType.PLAYER] },
     'SALE_CHARACTER': { source: [EntityType.SALE], target: [EntityType.CHARACTER] },
+    'SALE_BUSINESS': { source: [EntityType.SALE], target: [EntityType.BUSINESS] },
     'SALE_SITE': { source: [EntityType.SALE], target: [EntityType.SITE] },
 
     // FINANCIAL RECORD relationships (6)
@@ -145,6 +146,7 @@ export function validateLinkTypeCompatibility(
     'FINREC_SALE': { source: [EntityType.FINANCIAL], target: [EntityType.SALE] },
     'FINREC_PLAYER': { source: [EntityType.FINANCIAL], target: [EntityType.PLAYER] },
     'FINREC_CHARACTER': { source: [EntityType.FINANCIAL], target: [EntityType.CHARACTER] },
+    'FINREC_BUSINESS': { source: [EntityType.FINANCIAL], target: [EntityType.BUSINESS] },
     'FINREC_SITE': { source: [EntityType.FINANCIAL], target: [EntityType.SITE] },
 
     // CHARACTER relationships (6)
@@ -295,6 +297,8 @@ async function checkReverseDuplicate(
     [LinkType.CHARACTER_ACCOUNT]: null,
     [LinkType.CHARACTER_BUSINESS]: null,
     [LinkType.CONTRACT_CHARACTER]: null,
+    [LinkType.SALE_BUSINESS]: null,
+    [LinkType.FINREC_BUSINESS]: null,
   };
 
   const canonicalType = canonicalPairs[linkType];
