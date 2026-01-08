@@ -753,22 +753,37 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         if (existingItem) {
           // Merge with existing stock
           updatedStock = [...(existingItem.stock || [])];
-          const existingStockIndex = updatedStock.findIndex(stock => stock.siteId === site);
 
-          if (existingStockIndex >= 0) {
-            // Update existing quantity at this site (replace, don't add)
-            updatedStock[existingStockIndex] = {
+          // SMART UPDATE LOGIC:
+          // If the item only has stock at ONE location (classic single-site item),
+          // and the user changes the Site dropdown, they intend to MOVE the item to the new site.
+          // We should update that single entry's siteId instead of creating a new one.
+          if (updatedStock.length === 1) {
+            updatedStock[0] = {
               siteId: site,
               quantity: quantity || 0
             };
-            console.log(`📦 Updated stock at ${site}: ${quantity || 0} units`);
           } else {
-            // Add new stock point at this site
-            updatedStock.push({
-              siteId: site,
-              quantity: quantity || 0
-            });
-            console.log(`📦 Added new stock at ${site}: ${quantity || 0} units`);
+            // Multi-site item: Treat as "Edit Stock at [Site]"
+            // If user selects a new site, they are adding/editing stock at THAT site.
+            // We do NOT remove stock from other sites (safety first).
+            const existingStockIndex = updatedStock.findIndex(stock => stock.siteId === site);
+
+            if (existingStockIndex >= 0) {
+              // Update existing quantity at this site
+              updatedStock[existingStockIndex] = {
+                siteId: site,
+                quantity: quantity || 0
+              };
+              console.log(`📦 Updated stock at ${site}: ${quantity || 0} units`);
+            } else {
+              // Add new stock point at this site
+              updatedStock.push({
+                siteId: site,
+                quantity: quantity || 0
+              });
+              console.log(`📦 Added new stock at ${site}: ${quantity || 0} units`);
+            }
           }
         }
       } else {
