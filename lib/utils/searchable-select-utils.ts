@@ -474,38 +474,49 @@ export function createItemOptions(
   };
 
   for (const item of items) {
-    // Used to trim, now full name:
-    let label = item.name;
+    // Handle items with no stock records (show them as 0 Qty)
+    if (!item.stock || item.stock.length === 0) {
+      let label = item.name;
+      if (showPrice && item.price !== undefined) label += ` • $${item.price}`;
+      if (showQuantity) label += ` (Qty: 0)`;
 
-    if (showPrice && item.price !== undefined) {
-      label += `• $${item.price} • `;
+      options.push({
+        value: item.id,
+        label: label,
+        category: item.type
+      });
+      continue;
     }
 
-    if (showQuantity) {
-      const ClientAPI = require('@/lib/client-api').ClientAPI;
-      const qty = ClientAPI.getItemTotalQuantity(item.id, items);
-      label += ` (Qty: ${qty})`;
-    }
+    // SPLIT LOGIC: Create one option per stock point
+    for (const stockPoint of item.stock) {
+      let label = item.name;
 
-    const stockPoints = (item.stock ?? []).filter(stockPoint => stockPoint.quantity > 0);
-    if (stockPoints.length > 0) {
-      const stockSummary = stockPoints
-        .map(stockPoint => {
-          const siteName = siteNameMap.get(stockPoint.siteId) ?? stockPoint.siteId;
-          const trimmedSite = trimWithEllipsis(siteName, 10);
-          return `${trimmedSite}: ${stockPoint.quantity}`;
-        })
-        .join(', ');
-      if (stockSummary) {
-        label += ` ${stockSummary}`;
+      // Add Price
+      if (showPrice && item.price !== undefined) {
+        label += ` • $${item.price}`;
       }
-    }
 
-    options.push({
-      value: item.id,
-      label: label,
-      category: item.type
-    });
+      // Add Site Name
+      const siteName = siteNameMap.get(stockPoint.siteId) ?? stockPoint.siteId;
+      // const trimmedSite = trimWithEllipsis(siteName, 15);
+      label += ` • ${siteName}`;
+
+      // Add Quantity (Always show, even if 0, per user request)
+      if (showQuantity) {
+        label += ` (Qty: ${stockPoint.quantity})`;
+      }
+
+      // Use composite ID to ensure uniqueness and allow site selection
+      // Format: itemId:siteId
+      // The consumer (SaleItemsSubModal) MUST handle this composite ID.
+      // We hope the user accepts we might need to tweak the consumer next.
+      options.push({
+        value: `${item.id}:${stockPoint.siteId}`,
+        label: label,
+        category: item.type
+      });
+    }
   }
 
   options.sort((a, b) => {
