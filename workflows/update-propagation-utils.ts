@@ -493,6 +493,8 @@ export async function updateItemsFromSale(
 ): Promise<void> {
   try {
     console.log(`[updateItemsFromSale] Updating items for sale: ${sale.name}`);
+    const { appendEntityLog } = await import('./entities-logging');
+    const { LogEventType } = await import('@/types/enums');
 
     // Check if sale lines changed
     const linesChanged =
@@ -531,8 +533,25 @@ export async function updateItemsFromSale(
           updatedAt: new Date()
         };
 
-        await upsertItem(updatedItem);
+        // Save updated item with skipWorkflowEffects: true to prevent generic "Sold" log
+        await upsertItem(updatedItem, { skipWorkflowEffects: true });
         console.log(`[updateItemsFromSale] ✅ Updated item: ${line.itemId}`);
+
+        // Explicitly Log Detailed Sale Info to Item Log
+        const soldLogDetails = {
+          message: `Sold ${line.quantity}x in ${sale.counterpartyName || 'Booth Sale'} for $${line.unitPrice}`,
+          saleId: sale.id,
+          saleName: sale.name,
+          counterparty: sale.counterpartyName || 'Walk-in / Booth',
+          quantitySold: updatedItem.quantitySold,
+          quantityInOneSale: line.quantity,
+          unitPrice: line.unitPrice,
+          totalPrice: line.unitPrice * line.quantity,
+          soldAt: sale.saleDate || new Date(),
+          context: sale.type
+        };
+
+        await appendEntityLog(EntityType.ITEM, item.id, LogEventType.SOLD, soldLogDetails);
 
         const soldItemEntity: Item = {
           ...item,

@@ -1647,7 +1647,7 @@ export default function SalesModal({
                           value={taskParentId}
                           onValueChange={setTaskParentId}
                           placeholder="No Parent"
-                          options={createTaskParentOptions(tasks, taskParentId)}
+                          options={createTaskParentOptions(tasks, undefined)}
                           autoGroupByCategory={true}
                           className="h-8 text-sm"
                         />

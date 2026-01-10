@@ -3,7 +3,7 @@
 
 import type { Task, FinancialRecord, Sale, ItemSaleLine, Character, Contract, ServiceLine, BundleSaleLine } from '@/types/entities';
 import { LinkType, EntityType, LogEventType, BUSINESS_STRUCTURE, CharacterRole, SaleType, SaleStatus, ContractClauseType, ContractStatus } from '@/types/enums';
-import { upsertFinancial, getAllFinancials, getFinancialsBySourceTaskId, removeFinancial, getItemById, getCharacterById, getFinancialConversionRates, getContractById } from '@/data-store/datastore';
+import { upsertFinancial, getAllFinancials, getFinancialsBySourceTaskId, removeFinancial, getItemById, getCharacterById, getFinancialConversionRates, getContractById, getFinancialsBySourceSaleId } from '@/data-store/datastore';
 import { makeLink } from '@/links/links-workflows';
 import { createLink } from '@/links/link-registry';
 import { appendEntityLog } from './entities-logging';
@@ -237,8 +237,27 @@ export async function createFinancialRecordFromSale(sale: Sale): Promise<Financi
     const station = salesChannel;
 
     // Naming Logic: Use counterparty name or descriptive fallback based on type
-    const fallbackName = sale.type === SaleType.BOOTH ? `Booth Sale` : 'Walk-in Customer';
-    const displayName = sale.counterpartyName || fallbackName;
+    let displayName = sale.counterpartyName;
+
+    if (!displayName) {
+      if (sale.type === SaleType.BOOTH) {
+        if (sale.siteId) {
+          try {
+            // Try to fetch site name for Booth Sales without a specific counterparty (Event Name)
+            const { getSiteById } = await import('@/data-store/datastore');
+            const site = await getSiteById(sale.siteId);
+            displayName = site?.name || 'Booth Sale';
+          } catch (e) {
+            console.warn('Failed to fetch site for naming', e);
+            displayName = 'Booth Sale';
+          }
+        } else {
+          displayName = 'Booth Sale';
+        }
+      } else {
+        displayName = 'Walk-in Customer';
+      }
+    }
 
     const newFinrec: FinancialRecord = {
       id: `finrec-${sale.id}-${Date.now()}`,
@@ -331,10 +350,14 @@ export async function createFinancialRecordFromSale(sale: Sale): Promise<Financi
  * Create split financial records for Booth Sales
  * - Record 1: Gross Income (Total Sales)
  * - Record 2: Associate Payout (Expense)
+ * IDEMPOTENT: Updates existing records if they exist.
  */
 export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<void> {
   try {
-    console.log(`[createFinancialRecordFromBoothSale] Creating split financial records for Booth Sale: ${sale.counterpartyName}`);
+    console.log(`[createFinancialRecordFromBoothSale] Processing financial records for Booth Sale: ${sale.counterpartyName}`);
+
+    // [IDEMPOTENCY CHECK] Check for existing records first
+    const existingRecords = await getFinancialsBySourceSaleId(sale.id);
 
     // [UPDATED] Robust Logic using First-Class Fields
     // If we have boothFee, we assume this is a Booth Sale with Split Logic
@@ -353,67 +376,30 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
       associateId: sale.associateId || sale.partnerId || sale.customerId
     };
 
-    await appendEntityLog(EntityType.SALE, sale.id, LogEventType.TRANSACTED, {
-      message: `Booth Sale Finalized. Gross: ${sale.totals.totalRevenue}. Payments: ${JSON.stringify(paymentBreakdown || {})}`,
-      ...logDetails
-    });
-
-    // 1. Create Gross Income Record (Standard)
-    const grossRevenue = sale.totals.totalRevenue;
-    console.log(`[createFinancialRecordFromBoothSale] Creating Gross Income Record: ${grossRevenue}`);
-    const incomeRecord = await createFinancialRecordFromSale(sale);
-
-    if (!incomeRecord) {
-      console.error(`[createFinancialRecordFromBoothSale] Failed to create income record.`);
-      return; // Stop if primary record fails
-    }
-
-    // [NEW] Link Sale to Associate (Character) if present
+    // Calculate Associate Share (USD) - Logic needed for both Create and Update
+    let associateNet = 0;
+    let targetEntityName = 'Associate';
     const targetEntityId = sale.associateId || sale.partnerId || sale.customerId;
-    let associateNet = 0; // Calculated Payout Amount
 
+    // We need to resolve the target type for both create and update scenarios to ensure names/links are correct
+    let targetType = EntityType.CHARACTER; // Default
     if (targetEntityId) {
-      // Determine role determines role, but we also need to determine TYPE (Character vs Business)
-      const linkRole = sale.partnerId ? CharacterRole.PARTNER : CharacterRole.ASSOCIATE;
-
-      // [FIX] Dynamically check if the ID belongs to a Business or Character
-      // Since we don't have the type stored in the Sale, we can try to look it up or rely on ID format/metadata
-      // But for robust linking, we should check.
-      // OPTIMIZATION: If we moved `associateId` / `partnerId` to specific fields or stored type, this would be easier.
-      // For now, let's try to fetch as Business first (as O2 is likely a business), then Character.
-
-      let targetType = EntityType.CHARACTER; // Default
       const { getBusinessById } = await import('@/data-store/repositories/character.repo');
-
-      // Attempt to look up as business first
       const business = await getBusinessById(targetEntityId);
       if (business) {
         targetType = EntityType.BUSINESS;
+        targetEntityName = business.name;
+      } else {
+        const character = await getCharacterById(targetEntityId);
+        if (character) {
+          targetEntityName = character.name;
+        }
       }
 
-      // Construct Link based on resolved type
-      const linkType = targetType === EntityType.BUSINESS
-        ? LinkType.SALE_BUSINESS
-        : LinkType.SALE_CHARACTER;
-
-      const charLink = makeLink(
-        linkType,
-        { type: EntityType.SALE, id: sale.id },
-        { type: targetType, id: targetEntityId },
-        { role: linkRole, context: `Booth ${sale.partnerId ? 'Partner' : 'Associate'}` }
-      );
-
-      // Only attempt to create link if it's a known valid type
-      // The validator will still check entity existence, but now with the correct type
-      await createLink(charLink);
-      await appendLinkLog(charLink, 'created');
-
       // CALCULATION LOGIC (SERVER SIDE)
-      // Categorize Lines
+      // Categorize Lines to calculate split
       let myItemsTotal = 0;
       let assocItemsTotal = 0;
-
-      // Load Contract splits
       let shareOfMyItems_Me = 1.0;
       let shareOfAssocItems_Me = 0.0; // My commission on their items
       let shareOfExpenses_Me = 1.0; // I pay 100% of booth fee by default
@@ -435,8 +421,6 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
 
         const expenseClause = contract.clauses.find(c => c.type === ContractClauseType.EXPENSE_SHARING);
         if (expenseClause) shareOfExpenses_Me = expenseClause.companyShare;
-      } else if (contract && !Array.isArray(contract.clauses)) {
-        console.warn(`[createFinancialRecordFromBoothSale] Contract ${contract.id} has invalid clauses structure. Using defaults.`);
       }
 
       // Sum Items (USD)
@@ -463,92 +447,142 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
       const cost_Assoc = boothFeeUSD * (1 - shareOfExpenses_Me);
 
       associateNet = revenueMyItems_Assoc + revenueAssocItems_Assoc - cost_Assoc;
-
       console.log(`[createFinancialRecordFromBoothSale] Calculated Split (USD): MyItems=${myItemsTotal} AssocItems=${assocItemsTotal} => AssociateNet=${associateNet}`);
     }
 
+    if (existingRecords.length > 0) {
+      // === UPDATE PATH ===
+      console.log(`[createFinancialRecordFromBoothSale] Updating ${existingRecords.length} existing records for Booth Sale ${sale.id}`);
+
+      // 1. Update Gross Income Record
+      const incomeRecord = existingRecords.find(r => r.revenue > 0 && r.cost === 0);
+      if (incomeRecord) {
+        const updatedIncome = {
+          ...incomeRecord,
+          revenue: sale.totals.totalRevenue,
+          netCashflow: sale.totals.totalRevenue,
+          isNotPaid: sale.isNotPaid || false,
+          isNotCharged: sale.status !== 'CHARGED',
+          updatedAt: new Date()
+        };
+        await upsertFinancial(updatedIncome);
+        console.log(`[createFinancialRecordFromBoothSale] ✅ Updated Gross Income Record: ${incomeRecord.id}`);
+      }
+
+      // 2. Update/Manage Payout Record
+      const payoutRecord = existingRecords.find(r => r.type === 'company' && r.revenue === 0 && r.cost > 0);
+
+      if (associateNet > 0) {
+        if (payoutRecord) {
+          // Update existing payout
+          const updatedPayout = {
+            ...payoutRecord,
+            cost: associateNet,
+            netCashflow: -associateNet,
+            name: `Payout: ${targetEntityName}`,
+            isNotPaid: sale.status !== SaleStatus.CHARGED,
+            updatedAt: new Date()
+          };
+          await upsertFinancial(updatedPayout);
+          console.log(`[createFinancialRecordFromBoothSale] ✅ Updated Payout Record: ${payoutRecord.id}`);
+        } else {
+          // Create new payout logic if it was missing but now needed
+          await createBoothPayoutRecord(sale, associateNet, targetEntityName, targetEntityId, targetType);
+        }
+      } else if (payoutRecord) {
+        // If payout is no longer needed (associateNet <= 0), zero it out
+        const updatedPayout = {
+          ...payoutRecord,
+          cost: 0,
+          netCashflow: 0,
+          description: `Payout adjustment: Associate share is 0`,
+          updatedAt: new Date()
+        };
+        await upsertFinancial(updatedPayout);
+        console.log(`[createFinancialRecordFromBoothSale] ✅ Zeroed Payout Record as Associate Share is 0`);
+      }
+
+      return; // EXIT UPDATE PATH
+    }
+
+    // === CREATE PATH ===
+    console.log(`[createFinancialRecordFromBoothSale] Creating FRESH split financial records for Booth Sale`);
+
+
+
+    // 1. Create Gross Income Record (Standard)
+    const incomeRecord = await createFinancialRecordFromSale(sale);
+    if (!incomeRecord) return;
+
     // 2. Create Payout Expense Record (If Associate owed money)
     if (associateNet > 0) {
-      console.log(`[createFinancialRecordFromBoothSale] Creating Associate Payout Record: ${associateNet}`);
-
-      const currentDate = new Date();
-      // Payout Status Logic: Matches Sale Status
-      const isPayoutPaid = sale.status === SaleStatus.CHARGED;
-
-      const payoutFinrec: FinancialRecord = {
-        id: `finrec-payout-${sale.id}-${Date.now()}`,
-        name: `Payout: ${sale.counterpartyName || 'Associate'}`,
-        description: `Associate payout for ${sale.counterpartyName || 'Associate'} (Split Share)`,
-        year: currentDate.getFullYear(),
-        month: currentDate.getMonth() + 1,
-        station: 'Booth Sales' as Station,
-        type: 'company', // Expense
-        siteId: sale.siteId,
-        sourceSaleId: sale.id,
-        salesChannel: 'Booth Sales' as Station,
-
-        cost: associateNet,
-        revenue: 0,
-        jungleCoins: 0,
-
-        isNotPaid: !isPayoutPaid,
-        isNotCharged: false,
-
-        netCashflow: -associateNet, // Expense
-        jungleCoinsValue: 0,
-        isCollected: false,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        links: []
-      };
-
-      const createdPayout = await upsertFinancial(payoutFinrec);
-
-      // Link Payout to Sale
-      const link = makeLink(
-        LinkType.SALE_FINREC,
-        { type: EntityType.SALE, id: sale.id },
-        { type: EntityType.FINANCIAL, id: createdPayout.id },
-        { type: 'payout', netCashflow: -associateNet }
-      );
-      await createLink(link);
-      await appendLinkLog(link, 'created');
-
-      // Link Payout to Associate (Character or Business) if present
-      if (targetEntityId) {
-        // [FIX] Dynamically check if the ID belongs to a Business or Character
-        let targetType = EntityType.CHARACTER; // Default
-
-        try {
-          const { getBusinessById } = await import('@/data-store/repositories/character.repo');
-
-          // Safety check: targetEntityId might be undefined if logic drifted, though if check above handles it.
-          // But typescript complained about string | null.
-          if (targetEntityId) {
-            const business = await getBusinessById(targetEntityId);
-            if (business) {
-              targetType = EntityType.BUSINESS;
-            }
-          }
-        } catch (err) {
-          console.warn(`[createFinancialRecordFromBoothSale] Error checking business existence:`, err);
-        }
-
-        const linkRole = sale.partnerId ? CharacterRole.PARTNER : CharacterRole.ASSOCIATE;
-        const charLink = makeLink(
-          targetType === EntityType.BUSINESS ? LinkType.FINREC_BUSINESS : LinkType.FINREC_CHARACTER,
-          { type: EntityType.FINANCIAL, id: createdPayout.id },
-          { type: targetType, id: targetEntityId },
-          { role: linkRole }
-        );
-        await createLink(charLink);
-        await appendLinkLog(charLink, 'created');
-      }
+      await createBoothPayoutRecord(sale, associateNet, targetEntityName, targetEntityId, targetType);
     }
 
   } catch (error) {
     console.error(`[createFinancialRecordFromBoothSale] ❌ Failed to create booth records:`, error);
     throw error;
+  }
+}
+
+// Helper to create the payout record to avoid code duplication
+async function createBoothPayoutRecord(sale: Sale, associateNet: number, targetEntityName: string, targetEntityId: string | null | undefined, targetType: EntityType) {
+  console.log(`[createBoothPayoutRecord] Creating Associate Payout Record: ${associateNet}`);
+  const currentDate = new Date();
+  // Payout Status Logic: Matches Sale Status
+  const isPayoutPaid = sale.status === SaleStatus.CHARGED;
+
+  const payoutFinrec: FinancialRecord = {
+    id: `finrec-payout-${sale.id}-${Date.now()}`,
+    name: `Payout: ${targetEntityName}`,
+    description: `Associate payout for ${targetEntityName} (Split Share)`,
+    year: currentDate.getFullYear(),
+    month: currentDate.getMonth() + 1,
+    station: 'Booth Sales' as Station,
+    type: 'company', // Expense
+    siteId: sale.siteId,
+    sourceSaleId: sale.id,
+    salesChannel: 'Booth Sales' as Station,
+
+    cost: associateNet,
+    revenue: 0,
+    jungleCoins: 0,
+
+    isNotPaid: !isPayoutPaid,
+    isNotCharged: false, // Default
+
+    netCashflow: -associateNet, // Expense
+    jungleCoinsValue: 0,
+    isCollected: false,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    links: []
+  };
+
+  const createdPayout = await upsertFinancial(payoutFinrec);
+
+  // Link Payout to Sale
+  const link = makeLink(
+    LinkType.SALE_FINREC,
+    { type: EntityType.SALE, id: sale.id },
+    { type: EntityType.FINANCIAL, id: createdPayout.id },
+    { type: 'payout', netCashflow: -associateNet }
+  );
+  await createLink(link);
+  await appendLinkLog(link, 'created');
+
+  // Link Payout to Associate (Character or Business) if present
+  if (targetEntityId) {
+    // [FIX] Dynamically check if the ID belongs to a Business or Character (already resolved by caller usually, but validation here)
+    const linkRole = sale.partnerId ? CharacterRole.PARTNER : CharacterRole.ASSOCIATE;
+    const charLink = makeLink(
+      targetType === EntityType.BUSINESS ? LinkType.FINREC_BUSINESS : LinkType.FINREC_CHARACTER,
+      { type: EntityType.FINANCIAL, id: createdPayout.id },
+      { type: targetType, id: targetEntityId },
+      { role: linkRole }
+    );
+    await createLink(charLink);
+    await appendLinkLog(charLink, 'created');
   }
 }
 

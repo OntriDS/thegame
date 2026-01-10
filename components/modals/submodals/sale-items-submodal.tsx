@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
+
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import NumericInput from '@/components/ui/numeric-input';
 import { Item, Site } from '@/types/entities';
@@ -156,13 +156,14 @@ export default function SaleItemsSubModal({
     );
   }, [selectedSiteId, open]);
 
-  const getItemOptions = (lineId: string) => {
+  // Optimize: Calculate options once, as they are the same for all rows based on selectedSiteId
+  const rowOptions = React.useMemo(() => {
     if (selectedSiteId) {
       return createItemOptionsForSite(items, selectedSiteId, false, sites);
     } else {
       return createItemOptions(items, false, false, sites);
     }
-  };
+  }, [items, selectedSiteId, sites]);
 
   const handleItemSelect = (lineId: string, rawValue: string) => {
     const [itemId, specificSiteId] = rawValue.split(':');
@@ -192,9 +193,6 @@ export default function SaleItemsSubModal({
   const handleQuantityChange = (lineId: string, quantity: number) => {
     setLines(prev => prev.map(line => {
       if (line.id === lineId) {
-        // If user manually changes quantity, we might want to clear expressions or keep them?
-        // User said "quantity autocalculates". If they override, it's fine.
-        // We won't clear expressions, just update total.
         const newLine = { ...line, quantity };
         newLine.total = newLine.quantity * newLine.unitPrice;
         return newLine;
@@ -212,26 +210,15 @@ export default function SaleItemsSubModal({
     // Total Value in USD = USD + (CRC / ExchangeRate)
     const totalValueUsd = usdVal + (crcVal / exchangeRate);
 
-    if (totalValueUsd === 0) return currentLine.quantity; // No expression input? Keep existing.
+    if (totalValueUsd === 0) return currentLine.quantity;
 
-    // Quantity = Total Value / Unit Price
-    // Rounding to nearest integer ?? Or 1 decimal? items usually integers.
-    // Let's assume integer items for now but Math.round is safer than floor/ceil.
-    // User example: "26 / 2 = 13". 
-    // Let's assume integer items for now but Math.round is safer than floor/ceil.
     const qty = Math.round(totalValueUsd / newPrice);
-
-    // Store calculated values (mutating line object passed in? No, we return quantity).
-    // Actually, we need to update the line state with these values too.
-    // We should return an object or handle it in the caller.
-    // Refactoring this to return just quantity, caller updates state.
     return qty;
   };
 
   const handlePriceChange = (lineId: string, unitPrice: number) => {
     setLines(prev => prev.map(line => {
       if (line.id === lineId) {
-        // If we have expressions, update quantity based on new price
         let newQuantity = line.quantity;
         if (line.usdExpression || line.crcExpression) {
           newQuantity = recalculateQuantity(line, unitPrice);
@@ -245,29 +232,21 @@ export default function SaleItemsSubModal({
     }));
   };
 
-  // New Handler for Expressions
   const handleExpressionChange = (lineId: string, field: 'usdExpression' | 'crcExpression', value: string) => {
     setLines(prev => prev.map(line => {
       if (line.id === lineId) {
         const updatedLine = { ...line, [field]: value };
 
-        // Evaluate expressions
         const usdVal = evaluateMathExpression(updatedLine.usdExpression || '');
         const crcVal = evaluateMathExpression(updatedLine.crcExpression || '');
 
-        // Auto-calculate quantity
-        // Total Value in USD = USD + (CRC / ExchangeRate)
         const totalValueUsd = usdVal + (crcVal / exchangeRate);
 
-        // If Price is 0, we can't calc quantity from price.
-        // If Price > 0
         if (updatedLine.unitPrice > 0) {
           updatedLine.quantity = Math.round(totalValueUsd / updatedLine.unitPrice);
         }
 
         updatedLine.total = updatedLine.quantity * updatedLine.unitPrice;
-
-        // Store the breakdown
         updatedLine.totalUSD = usdVal;
         updatedLine.totalCRC = crcVal;
 
@@ -276,7 +255,6 @@ export default function SaleItemsSubModal({
       return line;
     }));
   };
-
 
   const handleAddLine = () => {
     setLines(prev => [...prev, createEmptyLine()]);
@@ -331,87 +309,107 @@ export default function SaleItemsSubModal({
               <div className="col-span-1"></div>
             </div>
 
-            {lines.map((line, index) => (
-              <div key={line.id} className="grid grid-cols-12 gap-2 items-end">
-                {/* Item Selector */}
-                <div className="col-span-3">
-                  <SearchableSelect
-                    value={line.itemId}
-                    onValueChange={(value) => handleItemSelect(line.id, value)}
-                    options={getItemOptions(line.id)}
-                    autoGroupByCategory={true}
-                    placeholder="Item..."
-                    className="h-8 text-sm"
-                  />
-                </div>
+            {lines.map((line, index) => {
+              // Robust matching logic for composite values (ItemId:SiteId)
+              const primaryComposite = `${line.itemId}:${line.siteId || 'none'}`;
 
-                {/* Unit Price */}
-                <div className="col-span-1">
-                  <NumericInput
-                    value={line.unitPrice}
-                    onChange={(value) => handlePriceChange(line.id, value)}
-                    min={0}
-                    step={1}
-                    placeholder="0"
-                    className="h-8 text-sm"
-                  />
-                </div>
+              // 1. Try exact match with current siteId (or 'none' if empty)
+              let matchedOption = rowOptions.find(o => o.value === primaryComposite);
 
-                {/* USD Calculator Input */}
-                <div className="col-span-2">
-                  <input
-                    type="text"
-                    value={line.usdExpression || ''}
-                    onChange={(e) => handleExpressionChange(line.id, 'usdExpression', e.target.value)}
-                    placeholder="2+5.."
-                    className="flex h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                  />
-                </div>
+              if (!matchedOption && line.siteId !== (line.siteId || 'none')) {
+                // 2. Try exact match with raw siteId (if it was different from 'none')
+                matchedOption = rowOptions.find(o => o.value === `${line.itemId}:${line.siteId}`);
+              }
 
-                {/* CRC Calculator Input */}
-                <div className="col-span-2">
-                  <input
-                    type="text"
-                    value={line.crcExpression || ''}
-                    onChange={(e) => handleExpressionChange(line.id, 'crcExpression', e.target.value)}
-                    placeholder="1k+500.."
-                    className="flex h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 border-pink-500/20"
-                  />
-                </div>
+              if (!matchedOption) {
+                // 3. Fallback: Find ANY option for this item (e.g. if site moved or first load)
+                matchedOption = rowOptions.find(o => o.value.startsWith(`${line.itemId}:`));
+              }
 
-                {/* Quantity (Auto-calc but editable) */}
-                <div className="col-span-1">
-                  <NumericInput
-                    value={line.quantity}
-                    onChange={(value) => handleQuantityChange(line.id, value)}
-                    min={1}
-                    step={1}
-                    placeholder="1"
-                    className="h-8 text-sm font-bold bg-slate-50 dark:bg-slate-900"
-                  />
-                </div>
+              const matchedValue = matchedOption ? matchedOption.value : line.itemId;
 
-                {/* Total Line Price */}
-                <div className="col-span-2">
-                  <div className="h-8 text-sm bg-muted px-3 py-2 rounded-md border flex items-center font-mono">
-                    ${line.total.toFixed(2)}
+              return (
+                <div key={line.id} className="grid grid-cols-12 gap-2 items-end">
+                  {/* Item Selector */}
+                  <div className="col-span-3">
+                    <SearchableSelect
+                      value={matchedValue}
+                      onValueChange={(value) => handleItemSelect(line.id, value)}
+                      options={rowOptions}
+                      autoGroupByCategory={true}
+                      placeholder="Item..."
+                      className="h-8 text-sm"
+                    />
+                  </div>
+
+                  {/* Unit Price */}
+                  <div className="col-span-1">
+                    <NumericInput
+                      value={line.unitPrice}
+                      onChange={(value) => handlePriceChange(line.id, value)}
+                      min={0}
+                      step={1}
+                      placeholder="0"
+                      className="h-8 text-sm"
+                    />
+                  </div>
+
+                  {/* USD Calculator Input */}
+                  <div className="col-span-2">
+                    <input
+                      type="text"
+                      value={line.usdExpression || ''}
+                      onChange={(e) => handleExpressionChange(line.id, 'usdExpression', e.target.value)}
+                      placeholder="2+5.."
+                      className="flex h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                    />
+                  </div>
+
+                  {/* CRC Calculator Input */}
+                  <div className="col-span-2">
+                    <input
+                      type="text"
+                      value={line.crcExpression || ''}
+                      onChange={(e) => handleExpressionChange(line.id, 'crcExpression', e.target.value)}
+                      placeholder="1k+500.."
+                      className="flex h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 border-pink-500/20"
+                    />
+                  </div>
+
+                  {/* Quantity (Auto-calc but editable) */}
+                  <div className="col-span-1">
+                    <NumericInput
+                      value={line.quantity}
+                      onChange={(value) => handleQuantityChange(line.id, value)}
+                      min={1}
+                      step={1}
+                      placeholder="1"
+                      className="h-8 text-sm font-bold bg-slate-50 dark:bg-slate-900"
+                    />
+                  </div>
+
+                  {/* Total Line Price */}
+                  <div className="col-span-2">
+                    <div className="h-8 text-sm bg-muted px-3 py-2 rounded-md border flex items-center font-mono">
+                      ${line.total.toFixed(2)}
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="col-span-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRemoveLine(line.id)}
+                      className="h-8 w-8 p-0 text-red-400 hover:text-red-500 hover:bg-red-50"
+                      disabled={lines.length === 1}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
                   </div>
                 </div>
-
-                {/* Actions */}
-                <div className="col-span-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleRemoveLine(line.id)}
-                    className="h-8 w-8 p-0 text-red-400 hover:text-red-500 hover:bg-red-50"
-                    disabled={lines.length === 1}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
 
             <Button
               variant="outline"

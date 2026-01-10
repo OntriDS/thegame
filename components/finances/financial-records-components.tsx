@@ -10,14 +10,14 @@ import { formatMonthYear, reviveDates } from '@/lib/utils/date-utils';
 import FinancialsModal from '@/components/modals/financials-modal';
 
 // Company Records List Component
-export function CompanyRecordsList({ 
-  year, 
-  month, 
+export function CompanyRecordsList({
+  year,
+  month,
   onRecordUpdated,
   onRecordEdit
-}: { 
-  year: number; 
-  month: number; 
+}: {
+  year: number;
+  month: number;
   onRecordUpdated: () => void;
   onRecordEdit: (record: FinancialRecord) => void;
 }) {
@@ -33,6 +33,8 @@ export function CompanyRecordsList({
       } else {
         companyRecords = await ClientAPI.getFinancialRecordsByMonth(year, month, 'company');
       }
+      // Sort by creation date descending (newest first)
+      companyRecords.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       setRecords(companyRecords);
     };
     loadRecords();
@@ -48,6 +50,7 @@ export function CompanyRecordsList({
       } else {
         companyRecords = await ClientAPI.getFinancialRecordsByMonth(year, month, 'company');
       }
+      companyRecords.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       setRecords(companyRecords);
     };
     loadRecords();
@@ -63,8 +66,8 @@ export function CompanyRecordsList({
         <Card>
           <CardContent className="text-center py-8">
             <p className="text-muted-foreground">
-              {year === 0 || month === 0 
-                ? 'No company records' 
+              {year === 0 || month === 0
+                ? 'No company records'
                 : `No company records for ${formatMonthYear(new Date(year, month - 1))}`}
             </p>
           </CardContent>
@@ -75,7 +78,7 @@ export function CompanyRecordsList({
             // Payment status indicators
             const isWaiting = record.isNotPaid || record.isNotCharged;
             const waitingText = record.isNotPaid ? '⏳ Not Paid' : record.isNotCharged ? '⏳ Not Charged' : '';
-            
+
             return (
               <Card key={record.id} className={isWaiting ? "border-orange-500/50 bg-orange-500/5" : ""}>
                 <CardContent className="p-3">
@@ -126,7 +129,7 @@ export function CompanyRecordsList({
                         </>
                       )}
                     </div>
-                    
+
                     {/* Edit button */}
                     <Button size="sm" variant="outline" onClick={() => handleEdit(record)}>
                       Edit
@@ -148,13 +151,13 @@ export function CompanyRecordsList({
                 try {
                   // Parent only calls DataStore - Links System handles all relationships automatically
                   const finalRecord = await ClientAPI.upsertFinancialRecord(record);
-                  
+
                   const companyRecords = await ClientAPI.getFinancialRecordsByMonth(year, month, 'company');
                   setRecords(companyRecords);
                   onRecordUpdated();
                   // Update recordToEdit with fresh data BEFORE modal closes (fixes stale UI issue)
                   setRecordToEdit(finalRecord);
-                  
+
 
                 } catch (error) {
                   console.error('Failed to save financial record:', error);
@@ -175,14 +178,14 @@ export function CompanyRecordsList({
 }
 
 // Personal Records List Component  
-export function PersonalRecordsList({ 
-  year, 
-  month, 
+export function PersonalRecordsList({
+  year,
+  month,
   onRecordUpdated,
   onRecordEdit
-}: { 
-  year: number; 
-  month: number; 
+}: {
+  year: number;
+  month: number;
   onRecordUpdated: () => void;
   onRecordEdit: (record: FinancialRecord) => void;
 }) {
@@ -234,19 +237,19 @@ ${record.name}
 ${record.station} • ${record.description}
 
 This action cannot be undone.`);
-    
+
     if (confirmed) {
       try {
         // Delete from DataStore (log cleanup handled by removeRecordEffectsOnDelete workflow)
         await ClientAPI.deleteFinancialRecord(record.id);
-        
+
         // Update local state immediately
         const updatedRecords = records.filter(r => r.id !== record.id);
         setRecords(updatedRecords);
-        
+
         // Trigger parent refresh
         onRecordUpdated();
-        
+
       } catch (error) {
         console.error('Error deleting record:', error);
         alert('Error deleting record. Please try again.');
@@ -260,8 +263,8 @@ This action cannot be undone.`);
         <Card>
           <CardContent className="text-center py-8">
             <p className="text-muted-foreground">
-              {year === 0 || month === 0 
-                ? 'No personal records' 
+              {year === 0 || month === 0
+                ? 'No personal records'
                 : `No personal records for ${formatMonthYear(new Date(year, month - 1))}`}
             </p>
           </CardContent>
@@ -272,7 +275,7 @@ This action cannot be undone.`);
             // Payment status indicators
             const isWaiting = record.isNotPaid || record.isNotCharged;
             const waitingText = record.isNotPaid ? '⏳ Not Paid' : record.isNotCharged ? '⏳ Not Charged' : '';
-            
+
             return (
               <Card key={record.id} className={isWaiting ? "border-orange-500/50 bg-orange-500/5" : ""}>
                 <CardContent className="p-3">
@@ -323,7 +326,7 @@ This action cannot be undone.`);
                         </>
                       )}
                     </div>
-                    
+
                     {/* Edit button */}
                     <Button size="sm" variant="outline" onClick={() => handleEdit(record)}>
                       Edit
@@ -345,13 +348,13 @@ This action cannot be undone.`);
                 try {
                   // Parent only calls DataStore - Links System handles all relationships automatically
                   const finalRecord = await ClientAPI.upsertFinancialRecord(record);
-                  
+
                   const personalRecords = await ClientAPI.getFinancialRecordsByMonth(year, month, 'personal');
                   setRecords(personalRecords);
                   onRecordUpdated();
                   // Update recordToEdit with fresh data BEFORE modal closes (fixes stale UI issue)
                   setRecordToEdit(finalRecord);
-                  
+
 
                 } catch (error) {
                   console.error('Failed to save financial record:', error);
