@@ -164,7 +164,8 @@ export default function SaleItemsSubModal({
     }
   };
 
-  const handleItemSelect = (lineId: string, itemId: string) => {
+  const handleItemSelect = (lineId: string, rawValue: string) => {
+    const [itemId, specificSiteId] = rawValue.split(':');
     const item = items.find(i => i.id === itemId);
     if (!item) return;
 
@@ -174,9 +175,9 @@ export default function SaleItemsSubModal({
           ...line,
           itemId: item.id,
           itemName: item.name,
-          siteId: selectedSiteId,
+          siteId: specificSiteId || selectedSiteId, // Use specific site from selection if available
           unitPrice: item.price || 0,
-          quantity: 1, // Reset quantity on item change unless we keep it? User might want to keep inputs. Let's reset for safety.
+          quantity: 1,
           total: (item.price || 0) * 1,
           usdExpression: '',
           crcExpression: '',

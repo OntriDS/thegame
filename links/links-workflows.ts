@@ -259,8 +259,8 @@ export async function processSaleEffects(sale: Sale): Promise<void> {
     const alreadyExists = oldAssociateLinks.some(l => l.target.id === sale.associateId);
     if (!alreadyExists) {
       // Determine target type (Character or Business)
-      let targetType = EntityType.CHARACTER;
-      let linkType = LinkType.SALE_CHARACTER;
+      let targetType: EntityType | null = null;
+      let linkType: LinkType | null = null;
       let targetName = 'Unknown';
       let roles: string[] = [];
 
@@ -277,17 +277,14 @@ export async function processSaleEffects(sale: Sale): Promise<void> {
           linkType = LinkType.SALE_BUSINESS;
           targetName = business.name;
           roles = ['Business'];
-        } else {
-          console.warn(`[processSaleEffects] Associate ID ${sale.associateId} not found as Character or Business. Skipping link creation.`);
         }
       }
 
-      // Only create link if entity exists (prevent validation error)
-      if (character || (await getBusinessById(sale.associateId))) {
+      if (targetType && linkType) {
         const l = makeLink(
           linkType,
           { type: EntityType.SALE, id: sale.id },
-          { type: targetType, id: sale.associateId },
+          { type: (targetType as any), id: sale.associateId },
           { role: 'associate' }
         );
         const wasCreated = await createLink(l);
@@ -295,17 +292,26 @@ export async function processSaleEffects(sale: Sale): Promise<void> {
         if (wasCreated) {
           await appendLinkLog(l, 'created');
 
-          // Log reference if it's a character (Business logs not yet implemented?)
-          if (targetType === EntityType.CHARACTER) {
-            await appendEntityLog(EntityType.CHARACTER, sale.associateId, LogEventType.TRANSACTED, {
-              name: targetName,
-              roles: roles,
-              saleId: sale.id,
-              type: 'Associate Sale',
-              role: 'associate'
-            });
+          // Log transaction
+          // using CHARACTER log for both (since Business doesn't have a log yet)
+          if (targetType === EntityType.CHARACTER || targetType === EntityType.BUSINESS) {
+            // NOTE: Logging to CHARACTER log even for BUSINESS for visibility in this version
+            await appendEntityLog(
+              targetType === EntityType.CHARACTER ? EntityType.CHARACTER : EntityType.BUSINESS,
+              sale.associateId,
+              LogEventType.TRANSACTED,
+              {
+                name: targetName,
+                roles: roles,
+                saleId: sale.id,
+                type: 'Associate Sale',
+                role: 'associate'
+              }
+            ).catch(err => console.warn('Logging failed/skipped for business entity', err));
           }
         }
+      } else {
+        console.warn(`[processSaleEffects] Associate ID ${sale.associateId} not found as Character or Business. Skipping link creation.`);
       }
     }
   } else {
@@ -338,8 +344,8 @@ export async function processSaleEffects(sale: Sale): Promise<void> {
     const alreadyExists = oldPartnerLinks.some(l => l.target.id === sale.partnerId);
     if (!alreadyExists) {
       // Determine target type (Character or Business)
-      let targetType = EntityType.CHARACTER;
-      let linkType = LinkType.SALE_CHARACTER;
+      let targetType: EntityType | null = null;
+      let linkType: LinkType | null = null;
       let targetName = 'Unknown';
       let roles: string[] = [];
 
@@ -356,32 +362,36 @@ export async function processSaleEffects(sale: Sale): Promise<void> {
           linkType = LinkType.SALE_BUSINESS;
           targetName = business.name;
           roles = ['Business'];
-        } else {
-          console.warn(`[processSaleEffects] Partner ID ${sale.partnerId} not found as Character or Business. Skipping link creation.`);
         }
       }
 
-      if (character || (await getBusinessById(sale.partnerId))) {
+      if (targetType && linkType) {
         const l = makeLink(
           linkType,
           { type: EntityType.SALE, id: sale.id },
-          { type: targetType, id: sale.partnerId },
+          { type: (targetType as any), id: sale.partnerId },
           { role: 'partner' }
         );
         const wasCreated = await createLink(l);
 
         if (wasCreated) {
           await appendLinkLog(l, 'created');
-          if (targetType === EntityType.CHARACTER) {
-            await appendEntityLog(EntityType.CHARACTER, sale.partnerId, LogEventType.TRANSACTED, {
+
+          await appendEntityLog(
+            targetType === EntityType.CHARACTER ? EntityType.CHARACTER : EntityType.BUSINESS,
+            sale.partnerId,
+            LogEventType.TRANSACTED,
+            {
               name: targetName,
               roles: roles,
               saleId: sale.id,
               type: 'Partner Sale',
               role: 'partner'
-            });
-          }
+            }
+          ).catch(err => console.warn('Logging failed/skipped for business entity', err));
         }
+      } else {
+        console.warn(`[processSaleEffects] Partner ID ${sale.partnerId} not found as Character or Business. Skipping link creation.`);
       }
     }
   } else {

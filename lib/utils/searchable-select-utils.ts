@@ -555,38 +555,42 @@ export function createItemOptionsForSite(
   };
 
   for (const item of items) {
-    const qtyAtSite = siteId ? ClientAPI.getQuantityAtSite(item, siteId) : 0;
+    // 1. Handle Empty Stock (Single Option)
+    if (!item.stock || item.stock.length === 0) {
+      let label = item.name;
+      if (showPrice && item.price !== undefined) label += ` $${item.price}`;
+      label += ` (Qty: 0)`;
 
-    // Used to trim, now full name:
-    let label = item.name;
-
-    if (showPrice && item.price !== undefined) {
-      label += ` $${item.price}`;
+      options.push({
+        value: item.id,
+        label: label,
+        category: item.type
+      });
+      continue;
     }
-    const primarySiteName = siteNameMap.get(siteId) ?? siteId;
-    const trimmedPrimary = trimWithEllipsis(primarySiteName, 10);
-    label += ` ${trimmedPrimary}: ${qtyAtSite}`;
 
-    const stockPoints = (item.stock ?? []).filter(stockPoint => stockPoint.quantity > 0);
-    const otherStock = stockPoints.filter(stockPoint => stockPoint.siteId !== siteId);
-    if (otherStock.length > 0) {
-      const otherSummary = otherStock
-        .map(stockPoint => {
-          const siteName = siteNameMap.get(stockPoint.siteId) ?? stockPoint.siteId;
-          const trimmedSite = trimWithEllipsis(siteName, 10);
-          return `${trimmedSite}: ${stockPoint.quantity}`;
-        })
-        .join(', ');
-      if (otherSummary) {
-        label += ` ${otherSummary}`;
+    // 2. Handle Stock Points (Split into separate options per Site)
+    // This respects the rule: One Option = One Site.
+    for (const stockPoint of item.stock) {
+      // Filter out zero quantity if desired, but user seems to want to see stock even if 0 if record exists?
+      // Usually stock records implies existence.
+      // User request format: "Stickers Cafe Vivo (the name) - Cafe Vivo (the Site) : 80 (the quantity)"
+
+      let label = item.name;
+      if (showPrice && item.price !== undefined) {
+        label += ` $${item.price}`;
       }
-    }
 
-    options.push({
-      value: item.id,
-      label: label,
-      category: item.type
-    });
+      const siteName = siteNameMap.get(stockPoint.siteId) ?? stockPoint.siteId;
+      label += ` - ${siteName}: ${stockPoint.quantity}`;
+
+      options.push({
+        // Use composite value so the consumer knows which site was selected
+        value: `${item.id}:${stockPoint.siteId}`,
+        label: label,
+        category: item.type
+      });
+    }
   }
 
   options.sort((a, b) => {
