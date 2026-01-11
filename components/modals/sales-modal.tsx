@@ -58,7 +58,7 @@ export default function SalesModal({
   // Helper function to get the correct value format for SearchableSelect
   const getStationValue = (station: Station): string => {
     const area = getAreaForStation(station);
-    return `${station}:${area}`;
+    return `${area}:${station}`;
   };
 
   // Form state

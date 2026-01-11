@@ -322,7 +322,12 @@ export default function SaleItemsSubModal({
               }
 
               if (!matchedOption) {
-                // 3. Fallback: Find ANY option for this item (e.g. if site moved or first load)
+                // 3. Try exact match with simple Item ID (for when not using site-split, e.g. createItemOptions)
+                matchedOption = rowOptions.find(o => o.value === line.itemId);
+              }
+
+              if (!matchedOption) {
+                // 4. Fallback: Find ANY option for this item (e.g. if site moved or first load)
                 matchedOption = rowOptions.find(o => o.value.startsWith(`${line.itemId}:`));
               }
 

@@ -98,7 +98,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
   // Helper function to get the correct value format for SearchableSelect
   const getStationValue = (station: Station): string => {
     const area = getAreaForStation(station);
-    return `${station}:${area}`;
+    return `${area}:${station}`;
   };
 
   const [formData, setFormData] = useState({
