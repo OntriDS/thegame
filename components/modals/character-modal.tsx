@@ -27,11 +27,7 @@ import { Business } from '@/types/entities'; // Ensure Business is imported
 // Side effects handled by parent component via API calls
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
 
-import { DEFAULT_CURRENCY_EXCHANGE_RATES } from '@/lib/constants/financial-constants';
-import { FinancialRecord, Link } from '@/types/entities';
-import { FinancialStatus } from '@/types/enums';
-import { Loader2 } from 'lucide-react';
-import CashOutConfirmationSubmodal from './submodals/cash-out-confirmation-submodal';
+import { JungleCoinWallet } from '@/components/wallet/jungle-coin-wallet';
 
 interface CharacterModalProps {
   character?: Character | null;
@@ -79,10 +75,7 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
 
   const [jungleCoinsBalance, setJungleCoinsBalance] = useState<number>(0);
 
-  // Cash Out State
-  const [showCashOutModal, setShowCashOutModal] = useState(false);
-  const [cashOutJAmount, setCashOutJAmount] = useState(0);
-  const [isProcessingCashOut, setIsProcessingCashOut] = useState(false);
+
 
   // Initialize when opening
   useEffect(() => {
@@ -138,11 +131,8 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
         }
       }
 
-      // Reset init guard when modal closes (allows fresh init on next open)
       if (!open) {
         didInitRef.current = false;
-        setShowCashOutModal(false);
-        setCashOutJAmount(0);
       }
     };
 
@@ -191,78 +181,7 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
     return colorClass;
   };
 
-  const handleCashOut = async () => {
-    if (!character || cashOutJAmount <= 0) return;
-    setIsProcessingCashOut(true);
 
-    try {
-      const usdValue = cashOutJAmount * DEFAULT_CURRENCY_EXCHANGE_RATES.j$ToUSD;
-
-      // 1. Create Financial Record (Expense/Burn)
-      // This is the opposite of an investment: Money OUT (Cost), J$ IN/BURNED (Negative J$)
-      const financialRecord = {
-        id: crypto.randomUUID(),
-        name: `Cash Out: ${character.name}`,
-        description: `J$ Cash out by ${character.name}`,
-        type: 'company' as const,
-        station: 'Investment' as any,
-        status: FinancialStatus.DONE,
-        revenue: 0,
-        cost: usdValue, // Expense for the company
-        jungleCoins: -cashOutJAmount, // Negative to represent return/removal from circulation
-        netCashflow: -usdValue, // Negative cashflow
-        jungleCoinsValue: -usdValue, // Value in USD (negative financial impact)
-        year: new Date().getFullYear(),
-        month: new Date().getMonth() + 1,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        links: [] as Link[],
-        isCollected: false
-      } as unknown as FinancialRecord;
-
-      const savedRecord = await ClientAPI.upsertFinancialRecord(financialRecord);
-
-      // 2. Create Link (FINREC_CHARACTER)
-      const link: Link = {
-        id: crypto.randomUUID(),
-        linkType: LinkType.FINREC_CHARACTER,
-        source: { type: EntityType.FINANCIAL, id: savedRecord.id },
-        target: { type: EntityType.CHARACTER, id: character.id },
-        createdAt: new Date()
-      };
-      await ClientAPI.createLink(link);
-
-      // 3. Update Character Wallet (Source of Truth)
-      const newBalance = (character.jungleCoins || 0) - cashOutJAmount;
-      const finalBalance = Math.max(0, newBalance);
-
-      // Logic: If balance hits 0, remove INVESTOR role
-      let updatedRoles = [...character.roles];
-      if (finalBalance === 0 && updatedRoles.includes(CharacterRole.INVESTOR)) {
-        updatedRoles = updatedRoles.filter(r => r !== CharacterRole.INVESTOR);
-        // Also update local state to reflect role removal immediately
-        setRoles(prev => prev.filter(r => r !== CharacterRole.INVESTOR));
-      }
-
-      const updatedChar = {
-        ...character,
-        roles: updatedRoles,
-        jungleCoins: finalBalance
-      };
-      await ClientAPI.upsertCharacter(updatedChar);
-
-      // 4. Update UI & Notify
-      setJungleCoinsBalance(finalBalance);
-      dispatchEntityUpdated(entityTypeToKind(EntityType.CHARACTER));
-      setShowCashOutModal(false);
-      setCashOutJAmount(0);
-
-    } catch (error) {
-      console.error('Cash out failed:', error);
-    } finally {
-      setIsProcessingCashOut(false);
-    }
-  };
 
   const handleSave = async () => {
     if (isSaving) return;
@@ -493,25 +412,10 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
                   </div>
                 )}
 
-                {/* INVESTOR/PARTNER: J$ Balance Display */}
-                {(roles.includes(CharacterRole.INVESTOR) || roles.includes(CharacterRole.PARTNER) || roles.includes(CharacterRole.ASSOCIATE)) && (
-                  <div className="mt-4 pt-2 border-t flex justify-between items-center bg-muted/20 p-2 rounded-md">
-                    <div className="flex items-center gap-2">
-                      <Label className="text-xs text-muted-foreground font-medium">J$ Balance</Label>
-                      <span className="text-sm font-bold font-mono">
-                        {jungleCoinsBalance.toLocaleString()} J$
-                      </span>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowCashOutModal(true)}
-                      className="h-6 text-[10px] px-2 text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20"
-                      title="Cash out J$ to USD"
-                      disabled={jungleCoinsBalance <= 0}
-                    >
-                      Exchange
-                    </Button>
+                {/* Wallet Integration */}
+                {(roles.includes(CharacterRole.INVESTOR) || roles.includes(CharacterRole.PARTNER) || roles.includes(CharacterRole.ASSOCIATE) || roles.includes(CharacterRole.CUSTOMER)) && character?.id && (
+                  <div className="mt-4 pt-2 border-t">
+                    <JungleCoinWallet characterId={character.id} className="w-full border-0 shadow-none p-0" />
                   </div>
                 )}
               </div>
@@ -714,19 +618,7 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
         )
       }
 
-      {/* Cash Out Confirmation Modal */}
-      {character && (
-        <CashOutConfirmationSubmodal
-          open={showCashOutModal}
-          onOpenChange={setShowCashOutModal}
-          character={character}
-          balance={jungleCoinsBalance}
-          amount={cashOutJAmount}
-          onAmountChange={setCashOutJAmount}
-          onConfirm={handleCashOut}
-          isProcessing={isProcessingCashOut}
-        />
-      )}
+
 
       {/* Character Legal Entities Submodal */}
       {

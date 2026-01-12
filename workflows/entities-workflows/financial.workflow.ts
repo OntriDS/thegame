@@ -23,6 +23,7 @@ import { createCharacterFromFinancial } from '../character-creation-utils';
 import { archiveFinancialRecordSnapshot, upsertFinancial } from '@/data-store/datastore';
 import { formatMonthKey } from '@/lib/utils/date-utils';
 import { createFinancialSnapshot } from '../snapshot-workflows';
+import { recalculateCharacterWallet } from '../financial-record-utils';
 
 const STATE_FIELDS = ['isNotPaid', 'isNotCharged', 'isCollected'];
 const DESCRIPTIVE_FIELDS = ['name', 'description', 'cost', 'revenue', 'jungleCoins', 'notes'];
@@ -103,6 +104,26 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
               console.log(`[onFinancialUpsert] ✅ Points awarded to player ${playerId} for record: ${financial.name}`);
             }
           }
+        })()
+      );
+    }
+
+    // J$ Wallet Cache Update - on record creation
+    if (financial.jungleCoins !== 0) {
+      sideEffects.push(
+        (async () => {
+          // Identify target character(s)
+          // 1. Explicit Customer
+          if (financial.customerCharacterId) {
+            await recalculateCharacterWallet(financial.customerCharacterId);
+          }
+          // 2. Explicit Player
+          if (financial.playerCharacterId) {
+            await recalculateCharacterWallet(financial.playerCharacterId);
+          }
+          // 3. Check for Links? (Async, might be overkill for creation if we trust fields)
+          // If fields are missing but links exist, we might miss it here.
+          // But usually creator ensures fields for ID.
         })()
       );
     }
@@ -243,6 +264,22 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
       await updatePlayerPointsFromSource(EntityType.FINANCIAL, financial, previousFinancial);
     }
 
+
+    // Propagate J$ changes to Character Wallet Cache
+    if (financial.jungleCoins !== previousFinancial.jungleCoins) {
+      console.log(`[onFinancialUpsert] Propagating J$ changes to wallet cache: ${financial.name}`);
+      if (financial.customerCharacterId) await recalculateCharacterWallet(financial.customerCharacterId);
+      if (financial.playerCharacterId) await recalculateCharacterWallet(financial.playerCharacterId);
+
+      // Also check previous record's owner if it changed!
+      if (previousFinancial.customerCharacterId && previousFinancial.customerCharacterId !== financial.customerCharacterId) {
+        await recalculateCharacterWallet(previousFinancial.customerCharacterId);
+      }
+      if (previousFinancial.playerCharacterId && previousFinancial.playerCharacterId !== financial.playerCharacterId) {
+        await recalculateCharacterWallet(previousFinancial.playerCharacterId);
+      }
+    }
+
   }
 
   // Descriptive changes - update in-place
@@ -266,10 +303,16 @@ export async function removeRecordEffectsOnDelete(recordId: string): Promise<voi
 
     // 2. Remove player points that were awarded by this record (if points were badly given)
     await removePlayerPointsFromRecord(recordId);
-
     // 3. Remove all Links related to this record
     const recordLinks = await getLinksFor({ type: EntityType.FINANCIAL, id: recordId });
     console.log(`[removeRecordEffectsOnDelete] Found ${recordLinks.length} links to remove`);
+
+    // Extract character IDs from links before deleting them
+    const affectedCharacterIds = new Set<string>();
+    for (const link of recordLinks) {
+      if (link.source.type === EntityType.CHARACTER) affectedCharacterIds.add(link.source.id);
+      if (link.target.type === EntityType.CHARACTER) affectedCharacterIds.add(link.target.id);
+    }
 
     for (const link of recordLinks) {
       try {
@@ -278,6 +321,12 @@ export async function removeRecordEffectsOnDelete(recordId: string): Promise<voi
       } catch (error) {
         console.error(`[removeRecordEffectsOnDelete] ❌ Failed to remove link ${link.id}:`, error);
       }
+    }
+
+    // Recalculate for all affected characters found via links
+    for (const charId of affectedCharacterIds) {
+      await recalculateCharacterWallet(charId);
+      console.log(`[removeRecordEffectsOnDelete] ✅ Recalculated wallet for character: ${charId}`);
     }
 
     // 4. Clear effects registry

@@ -3,15 +3,117 @@
 
 import type { Task, FinancialRecord, Sale, ItemSaleLine, Character, Contract, ServiceLine, BundleSaleLine } from '@/types/entities';
 import { LinkType, EntityType, LogEventType, BUSINESS_STRUCTURE, CharacterRole, SaleType, SaleStatus, ContractClauseType, ContractStatus } from '@/types/enums';
-import { upsertFinancial, getAllFinancials, getFinancialsBySourceTaskId, removeFinancial, getItemById, getCharacterById, getFinancialConversionRates, getContractById, getFinancialsBySourceSaleId } from '@/data-store/datastore';
+import { upsertFinancial, getAllFinancials, getFinancialsBySourceTaskId, removeFinancial, getItemById, getCharacterById, getFinancialConversionRates, getContractById, getFinancialsBySourceSaleId, upsertCharacter } from '@/data-store/datastore';
 import { makeLink } from '@/links/links-workflows';
-import { createLink } from '@/links/link-registry';
+import { createLink, getLinksFor } from '@/links/link-registry';
 import { appendEntityLog } from './entities-logging';
 import { appendLinkLog } from '@/links/links-logging';
 import { getFinancialTypeForStation, getSalesChannelFromSaleType } from '@/lib/utils/business-structure-utils';
 import type { Station } from '@/types/type-aliases';
 
 import { BITCOIN_SATOSHIS_PER_BTC } from '@/lib/constants/financial-constants';
+
+/**
+ * Get the current J$ Balance for an entity (Character or Player)
+ * Source of Truth: Sum of 'jungleCoins' field in all linked Financial Records
+ */
+export async function getJungleCoinBalance(entityId: string): Promise<number> {
+  try {
+    console.log(`[getJungleCoinBalance] Calculating J$ balance for entity: ${entityId}`);
+
+    // 1. Get all financial records linked to this entity via FINREC_CHARACTER or FINREC_PLAYER or PLAYER_FINREC
+    // We check multiple link types to be robust, though strictly it should be FINREC_CHARACTER for characters
+    const links = await getLinksFor({ type: EntityType.CHARACTER, id: entityId }); // Try character first
+
+    // Determine if it's a character or player based on ID (or just query both link types if unsure)
+    // For now, we fetch links for the ID assuming it's a Character. 
+    // If it's a Player, we might need to query explicitly if using different ID.
+    // However, the caller usually knows the ID.
+
+    const relevantLinkTypes = [
+      LinkType.FINREC_CHARACTER, // Standard for Characters
+      LinkType.PLAYER_FINREC,    // Standard for Player (Reverse link direction in some legacy logic, check both)
+      LinkType.FINREC_PLAYER     // Potential consistency fix
+    ];
+
+    const financialLinks = links.filter(l => relevantLinkTypes.includes(l.linkType));
+
+    if (financialLinks.length === 0) {
+      // Logic for Player: Player ID might be different or links might be on the other side?
+      // For Player, we often check 'PLAYER_FINREC' where Source=Player, Target=FinRec
+      // The getLinksFor({id: entityId}) handles bidirectional, so if Source=Player, it returns it.
+      console.log(`[getJungleCoinBalance] No linked financial records found for ${entityId}`);
+      return 0;
+    }
+
+    // 2. Map to Financial Record IDs
+    // Be careful with direction:
+    // FINREC_CHARACTER: Source=FinRec, Target=Character. We want Source.
+    // PLAYER_FINREC: Source=Player, Target=FinRec. We want Target.
+    const finRecIds = financialLinks.map(l => {
+      if (l.target.type === EntityType.FINANCIAL) return l.target.id;
+      if (l.source.type === EntityType.FINANCIAL) return l.source.id;
+      return null;
+    }).filter(id => id !== null) as string[];
+
+    const uniqueFinRecIds = Array.from(new Set(finRecIds));
+
+    if (uniqueFinRecIds.length === 0) return 0;
+
+    // 3. Fetch Records and Sum JungleCoins
+    // We can use Promise.all or an optimized batch fetch if available.
+    // For now, using getFinancialById in parallel.
+    let totalBalance = 0;
+
+    const records = await Promise.all(uniqueFinRecIds.map(id => import('@/data-store/datastore').then(ds => ds.getFinancialById(id))));
+
+    for (const record of records) {
+      if (record && record.jungleCoins) {
+        // Only count if it's the correct record type? 
+        // Actually, any J$ attached to a record linked to me is mine.
+        // Except maybe if I'm just an "Associate" on a large sale?
+        // Rule: If I am linked to the FinancialRecord, does it mean I own the J$?
+        // In "Bonus", yes. In "Exchange", yes.
+        // In "Sale Payout", the record has cost/revenue, does it have J$? 
+        // Usually J$ is 0 on Sales.
+
+        // IMPORTANT: We trust the 'jungleCoins' field on the record.
+        totalBalance += record.jungleCoins || 0;
+      }
+    }
+
+    console.log(`[getJungleCoinBalance] Calculated Balance for ${entityId}: ${totalBalance} J$ (${uniqueFinRecIds.length} records)`);
+    return totalBalance;
+
+  } catch (error) {
+    console.error(`[getJungleCoinBalance] ❌ Error calculating balance:`, error);
+    return 0; // Fail safe
+  }
+}
+
+/**
+ * Recalculate and update the cached J$ balance on the Character entity
+ * This ensures the UI is always instant, while the source of truth remains the ledger
+ */
+export async function recalculateCharacterWallet(characterId: string): Promise<void> {
+  try {
+    const balance = await getJungleCoinBalance(characterId);
+    const character = await getCharacterById(characterId);
+
+    if (character) {
+      // Only update if changed to avoid write loops
+      if (character.jungleCoins !== balance) {
+        console.log(`[recalculateCharacterWallet] Updating wallet cache for ${character.name}: ${character.jungleCoins} -> ${balance}`);
+        // skipWorkflowEffects to avoid recursion, though Character workflow usually doesn't trigger financial things
+        await upsertCharacter({ ...character, jungleCoins: balance }, { skipWorkflowEffects: true });
+      } else {
+        console.log(`[recalculateCharacterWallet] Wallet cache already in sync for ${character.name}: ${balance}`);
+      }
+    }
+  } catch (error) {
+    console.error(`[recalculateCharacterWallet] ❌ Failed to update wallet cache for ${characterId}:`, error);
+  }
+}
 
 /**
  * Create a financial record from a task (when task has cost or revenue)
@@ -798,69 +900,69 @@ export async function createFinancialRecordFromJ$CashOut(
       jungleCoins: j$Sold, // Positive: J$ returns to company treasury
       isNotPaid: false,
       isNotCharged: false,
-      netCashflow: cashOutType === 'USD' ? -amountPaid : 0, // Negative cashflow for USD, 0 for Zaps
-      jungleCoinsValue: j$Sold * 10, // J$ value in USD
+      netCashflow: cashOutType === 'USD' ? -amountPaid : 0,
+      jungleCoinsValue: j$Sold * 10,
       isCollected: false,
       createdAt: new Date(),
       updatedAt: new Date(),
       links: []
     };
 
-    // Store both financial records
-    const createdPersonalFinrec = await upsertFinancial(personalFinrec);
-    const createdCompanyFinrec = await upsertFinancial(companyFinrec);
+    // Store records
+    await upsertFinancial(personalFinrec);
+    await upsertFinancial(companyFinrec);
 
-    // Create PLAYER_FINREC links for both records
-    const personalLinkMetadata = {
+    console.log(`[createFinancialRecordFromJ$CashOut] ✅ Financial records created: Personal=${personalFinrec.id}, Company=${companyFinrec.id}`);
+
+    // Create links
+    const pLinkMetadata = {
       j$Sold: j$Sold,
       amountPaid: amountPaid,
-      j$Rate: cashOutType === 'USD' ? j$Rate : undefined,
-      zapsRate: cashOutType === 'ZAPS' ? (calculatedZapsRate || zapsRate) : undefined,
-      cashOutType: cashOutType,
+      currency: cashOutType,
       exchangeType: exchangeType,
       playerCharacterId: playerCharacterId || null,
       createdAt: new Date().toISOString()
     };
 
-    const personalLink = makeLink(
+    const pLink = makeLink(
       LinkType.PLAYER_FINREC,
       { type: EntityType.PLAYER, id: playerId },
-      { type: EntityType.FINANCIAL, id: createdPersonalFinrec.id },
-      personalLinkMetadata
+      { type: EntityType.FINANCIAL, id: personalFinrec.id },
+      pLinkMetadata
     );
+    await createLink(pLink);
+    await appendLinkLog(pLink, 'created');
 
-    const companyLinkMetadata = {
-      j$Sold: j$Sold,
+    const cLinkMetadata = {
+      j$Bought: j$Sold,
       amountPaid: amountPaid,
-      j$Rate: cashOutType === 'USD' ? j$Rate : undefined,
-      zapsRate: cashOutType === 'ZAPS' ? (calculatedZapsRate || zapsRate) : undefined,
-      cashOutType: cashOutType,
+      currency: cashOutType,
       exchangeType: exchangeType,
       playerCharacterId: playerCharacterId || null,
-      companyStation: companyStation,
       createdAt: new Date().toISOString()
     };
 
-    const companyLink = makeLink(
+    const cLink = makeLink(
       LinkType.PLAYER_FINREC,
       { type: EntityType.PLAYER, id: playerId },
-      { type: EntityType.FINANCIAL, id: createdCompanyFinrec.id },
-      companyLinkMetadata
+      { type: EntityType.FINANCIAL, id: companyFinrec.id },
+      cLinkMetadata
     );
+    await createLink(cLink);
+    await appendLinkLog(cLink, 'created');
 
-    await createLink(personalLink);
-    await appendLinkLog(personalLink, 'created');
-    await createLink(companyLink);
-    await appendLinkLog(companyLink, 'created');
+    // Also link company record to Character if ID present (as FINREC_CHARACTER to show history on profile)
+    if (playerCharacterId) {
+      const charLink = makeLink(
+        LinkType.FINREC_CHARACTER,
+        { type: EntityType.FINANCIAL, id: companyFinrec.id },
+        { type: EntityType.CHARACTER, id: playerCharacterId },
+        { role: CharacterRole.PLAYER }
+      );
+      await createLink(charLink);
+    }
 
-    console.log(`[createFinancialRecordFromJ$CashOut] ✅ Created PLAYER_FINREC links for both records`);
-    console.log(`[createFinancialRecordFromJ$CashOut] ✅ Personal record: ${createdPersonalFinrec.name}`);
-    console.log(`[createFinancialRecordFromJ$CashOut] ✅ Company record: ${createdCompanyFinrec.name}`);
-
-    return {
-      personalRecord: createdPersonalFinrec,
-      companyRecord: createdCompanyFinrec
-    };
+    return { personalRecord: personalFinrec, companyRecord: companyFinrec };
 
   } catch (error) {
     console.error(`[createFinancialRecordFromJ$CashOut] ❌ Failed to create financial records for cash-out:`, error);
