@@ -205,7 +205,7 @@ export default function BoothSalesView({
         if (defaultContract && !selectedContractId && !sale) {
             setSelectedContractId(defaultContract.id);
         }
-    }, [sale?.id, contracts, selectedContractId]);
+    }, [sale, sale?.id, contracts, selectedContractId]);
 
     // Load Default Associate (One time)
     useEffect(() => {
@@ -473,7 +473,7 @@ export default function BoothSalesView({
             akiles: Object.values(akilesRows),
             associate: Object.values(associateRows)
         };
-    }, [myItems, associateEntries, items, exchangeRate, totals, lines]);
+    }, [associateEntries, items, exchangeRate, totals, lines]);
 
 
     // Payments Logic: Auto-calculate remaining need

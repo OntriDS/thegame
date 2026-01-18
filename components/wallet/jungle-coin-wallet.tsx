@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -29,11 +29,7 @@ export function JungleCoinWallet({ characterId, className, onBalanceChange }: Ju
     const [showTransferModal, setShowTransferModal] = useState(false);
     const [showExchangeModal, setShowExchangeModal] = useState(false);
 
-    useEffect(() => {
-        fetchWalletData();
-    }, [characterId]);
-
-    const fetchWalletData = async () => {
+    const fetchWalletData = useCallback(async () => {
         try {
             setLoading(true);
             const res = await fetch(`/api/character/${characterId}/wallet`);
@@ -46,7 +42,11 @@ export function JungleCoinWallet({ characterId, className, onBalanceChange }: Ju
         } finally {
             setLoading(false);
         }
-    };
+    }, [characterId]);
+
+    useEffect(() => {
+        fetchWalletData();
+    }, [fetchWalletData]);
 
     if (loading) {
         return (

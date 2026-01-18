@@ -239,7 +239,7 @@ export function SearchableSelect({
                       className="cursor-pointer bg-accent/20 text-accent-foreground font-medium italic"
                     >
                       <Plus className="mr-2 h-4 w-4" />
-                      Create "{searchQuery}"
+                      Create &quot;{searchQuery}&quot;
                     </CommandItem>
                   ) : (
                     <div className="px-3 py-2 text-sm text-muted-foreground">
