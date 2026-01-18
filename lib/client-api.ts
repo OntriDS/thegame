@@ -191,6 +191,23 @@ export const ClientAPI = {
   // ============================================================================
   // FINANCIALS - Financial records management operations
   // ============================================================================
+  getFinancialSummary: async (month?: number, year?: number): Promise<{
+    companySummary: any;
+    personalSummary: any;
+    aggregatedFinancialData: any;
+    aggregatedCategoryData: any;
+  }> => {
+    let url = '/api/financials/summary';
+    const params = new URLSearchParams();
+    if (typeof month === 'number') params.append('month', String(month));
+    if (typeof year === 'number') params.append('year', String(year));
+    if (params.toString()) url += `?${params.toString()}`;
+
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('Failed to fetch financial summary');
+    return await res.json();
+  },
+
   getFinancialRecords: async (month?: number, year?: number): Promise<FinancialRecord[]> => {
     let url = '/api/financials';
     const params = new URLSearchParams();
@@ -739,49 +756,24 @@ export const ClientAPI = {
     return item.stock.find(sp => sp.siteId === siteId)?.quantity || 0;
   },
 
+  moveInventoryItem: async (itemId: string, toSiteId: string, quantity: number, fromSiteId?: string): Promise<Item> => {
+    const res = await fetch('/api/inventory/move', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ itemId, toSiteId, quantity, fromSiteId })
+    });
+
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.error || 'Failed to move inventory');
+    }
+
+    return await res.json();
+  },
+
+  // Legacy compatibility wrapper - calls the new API
   moveItemsBetweenSites: async (item: Item, fromSiteId: string, toSiteId: string, quantity: number): Promise<Item> => {
-    const updatedItem = { ...item };
-
-    // Find source stock
-    const sourceStockIndex = updatedItem.stock.findIndex(sp => sp.siteId === fromSiteId);
-    if (sourceStockIndex === -1) {
-      throw new Error(`Item not found at source site: ${fromSiteId}`);
-    }
-
-    const sourceStock = updatedItem.stock[sourceStockIndex];
-    if (sourceStock.quantity < quantity) {
-      throw new Error(`Insufficient quantity at source. Available: ${sourceStock.quantity}, Requested: ${quantity}`);
-    }
-
-    // Reduce source quantity
-    if (sourceStock.quantity === quantity) {
-      // Remove stock point if moving all items
-      updatedItem.stock = updatedItem.stock.filter((_, i) => i !== sourceStockIndex);
-    } else {
-      // Reduce quantity
-      updatedItem.stock[sourceStockIndex] = {
-        ...sourceStock,
-        quantity: sourceStock.quantity - quantity
-      };
-    }
-
-    // Add to destination (or increase existing stock)
-    const destStockIndex = updatedItem.stock.findIndex(sp => sp.siteId === toSiteId);
-    if (destStockIndex >= 0) {
-      // Increase existing stock
-      updatedItem.stock[destStockIndex] = {
-        ...updatedItem.stock[destStockIndex],
-        quantity: updatedItem.stock[destStockIndex].quantity + quantity
-      };
-    } else {
-      // Add new stock point
-      updatedItem.stock.push({
-        siteId: toSiteId,
-        quantity: quantity
-      });
-    }
-
-    return updatedItem;
+    return ClientAPI.moveInventoryItem(item.id, toSiteId, quantity, fromSiteId);
   },
 
   bulkImportItems: async (items: Item[]): Promise<boolean> => {

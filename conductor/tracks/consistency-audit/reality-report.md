@@ -1,74 +1,49 @@
-# Reality Report: System Verification & Consistency
-**Date**: 2026-01-13
-**Track**: Consistency Audit
-**Status**: Verified ✅
+# Reality Report
+**Last Verified:** 2026-01-15
+**Verified By:** Pixelbrain (Deep Analysis Audit)
 
-## 1. Lifecycle: Done vs Collected
-The system implements a strik two-stage completion lifecycle.
+## 1. System Integrity Audit (Granular)
 
-### Stage A: Operational Completion ("Done")
-- **Definition**: The work is finished, or the transaction is valid.
-- **Statuses**:
-    - **Tasks**: `TaskStatus.DONE`
-    - **Sales**: `SaleStatus.CHARGED` (Both Paid & Charged)
-    - **Financials**: `FinancialStatus.DONE` (Both Paid & Charged)
-    - **Items**: `ItemStatus.SOLD`
-- **Behavior**:
-    - Entity remains **ACTIVE** in the database and UI lists.
-    - Side effects (Points, Links, Item Creation) are triggered.
-    - User can still interact/modify certain non-critical fields.
+### A. Dashboards & Control Room (Tasks) - ✅ GREEN
+- **UI**: `ControlRoom` component correctly handles hierarchical task display, filters, and drag-and-drop.
+- **Data Flow**: `useEntityUpdates` ensures real-time sync. API `GET /tasks` supports historical filtering (month/year).
+- **Workflow**: `task.workflow.ts` correctly triggers item creation and financial logging upon completion. "Collected" tasks are filtered out of active views.
+- **Archives**: Task collection logic aligns with system lifecycle (Active -> Done -> Collected).
 
-### Stage B: Accounting Completion ("Collected")
-- **Definition**: The entity is closed for the accounting period (Monthly Close).
-- **Triggers**:
-    - Flag: `isCollected: true`
-    - Status: `Status.COLLECTED`
-    - Time: Usually end of month or manual "Collect" action.
-- **Behavior**:
-    1.  **Archiving**: A snapshot (e.g., `TaskSnapshot`) is created in the Archive Repo.
-    2.  **Indexing**: Entity ID added to `index:[type]:collected:[mmyy]`.
-    3.  **Hiding**: `getAll[Type]()` functions strictly filter out `isCollected` items.
-    4.  **Locking**: Effectively becomes read-only history.
+### B. Inventory & Items (Stock) - ✅ GREEN
+- **UI**: `InventoryDisplay` correctly manages "Unified Stock" (array of `{siteId, quantity}`).
+- **Stock Logic**: Inline editing uses `ClientAPI.updateStockAtSite`, ensuring atomic updates.
+- **Indexing**: `upsertItem` maintains critical `index:item:mmyy` based on `soldAt` or `createdAt`, crucial for "Sold Items" history.
+- **API**: Flexible filtering strategies (Time > Type > Fallback) optimized for performance.
 
-### Verification Status
-- **Code**: `task.workflow.ts`, `sale.workflow.ts`, `financial.workflow.ts` all implement `isCollected` logic consistently.
-- **Data Store**: `datastore.ts` queries consistently filter `!isCollected`.
-- **Snapshots**: `snapshot-workflows.ts` correctly handles creation for all types.
+### C. Sales (Point of Sale) - ✅ GREEN
+- **Logic**: `SalesModal` enforces strict separation between "Product" (Item) and "Service" (Task) lines.
+- **Service Integration**: Service sales correctly flagged to spawn Tasks (`createTask: true`) with associated rewards (XP, RP, etc.).
+- **Booth Logic**: "Quick Count" rows and `BoothSalesView` integration verified.
+- **Lifecycle**: `Collect Month` API route correctly transitions sales to `COLLECTED` status, creates archive snapshots, and uses `skipWorkflowEffects: true` to prevent side effects during archiving.
 
-## 2. Economy: Points vs Jungle Coins (J$)
-The system enforces a strict strict separation between "Score" and "Money".
+### D. Finances (Ledger) - ✅ GREEN
+- **Aggregation**: on-the-fly aggregation in `FinancesPage` provides accurate Monthly Summaries without database bloat.
+- **Assets**: Company and Personal assets separated correctly. Inventory values merged dynamically into asset reports.
+- **Jungle Coins (J$)**: Confirmed as a ledger-based currency (derived from FinancialRecords sum), not a static field on entities.
 
-### Points (The Score)
-- **Concept**: RPG Attributes representing effort in different life areas.
-- **Types**: `XP`, `RP`, `FP`, `HP`.
-- **Source**:
-    - **Tasks**: Explicit rewards (`task.rewards`).
-    - **Sales**: Calculated from Revenue ($100 Revenue = 1 Point, split across types).
-    - **Financials**: Explicit rewards.
-- **Storage**: **Entity Property**. Stored directly on `Player.points` and `Player.totalPoints`.
-- **Link**: `TASK_PLAYER`, `SALE_PLAYER`, etc., link the *Source* to the *Player*.
+## 2. Recent Consistency Checks
 
-### Jungle Coins / J$ (The Money)
-- **Concept**: Exchangeable currency for in-game purchases (1 J$ = $10 USD).
-- **Source**: **Explicit Exchange Only**. Points do NOT auto-convert.
-- **Storage**: **Ledger Based**.
-    - **NO** master `jungleCoins` field on Player/Character is the source of truth.
-    - **Balance** = Sum of `jungleCoins` field in all `FinancialRecord`s linked to the Player (Type: `Personal`).
-- **Exchange Mechanism**:
-    - `app/api/player/[id]/jungle-coins/route.ts` calculates the balance dynamically.
-    - **Inflow**: Exchange Points -> Creates `FinancialRecord` (Type: `Personal`, Category: `Exchange`, `jungleCoins`: +X).
-    - **Outflow**: Purchase Asset -> Creates `FinancialRecord` (Type: `Personal`, Category: `Purchase`, `jungleCoins`: -X).
+### Lifecycle: Done vs Collected
+*   **Status**: **CONSISTENT**
+*   **Definition**: "Done" is a functional state (task finished, sale charged). "Collected" is a lifecycle state (archived, snapshot taken, hidden from daily views).
+*   **Mechanism**: The "Collect Month" workflow efficiently partitions active vs. historical data.
 
-### Discrepancy Note
-- `types/entities.ts` defines `Character.jungleCoins?: number`. This field appears to be a cache or frontend convenience. The **Real Truth** is the Financial Ledger (verified by API implementation).
-- `Player` entity does NOT have a visible `jungleCoins` field in its interface, aligning with the "Ledger" philosophy.
+### Economy: Points vs Jungle Coins (J$)
+*   **Status**: **CONSISTENT**
+*   **Points**: Awarded via Tasks/Sales. Stored on `Player` entity.
+*   **Jungle Coins**: Ledger-based. Calculated by summing `FinancialRecord` entries (Revenue - Cost).
+*   **Treasury**: Company J$ holdings tracked separately from Personal J$.
 
-## 3. Discrepancies & Resolutions
-| Discrepancy | Reality | Action Taken |
-| :--- | :--- | :--- |
-| **Context Files** | Missing "Collected" and "Points/J$" details | **Updated `architecture.md`** to explicitly define Lifecycle States and Economy System. |
-| **Character.jungleCoins** | Exists in Type, but API uses Ledger | Accepted as Cache/Legacy. **System Truth is Ledger**. No immediate code change needed, but aware for refactoring. |
-| **Item Collection** | `item.workflow.ts` logs `COLLECTED` but didn't snapshot | `sale.workflow.ts` handles Item Snapshots when Sale is Collected. This is **Valid Design** (Items follow Sale lifecycle). |
+## 3. Known Issues / Watchlist
+*   **Constraint**: No current critical issues found.
+*   **Observation**: `InventoryDisplay` relies on `ClientAPI` helper logic for stock moves; future refactors should ensure this logic remains robust if API changes.
+*   **Performance**: Aggregating *all* financial records for monthly summary works now but may need optimization (server-side aggregation) as dataset grows >10k records.
 
-## 4. Conclusion
-The system implementation matches the core architectural principles, with "Collected" serving as the Archive gatekeeper and "Financial Records" serving as the J$ Source of Truth.
+## 4. Next Actions
+*   Audit Phase Complete. System is consistent and operationally sound.

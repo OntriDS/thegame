@@ -30,8 +30,6 @@ import { MonthlyHistoricalCashflows } from '@/components/finances/monthly-histor
 import { Switch } from '@/components/ui/switch';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
 import {
-  aggregateRecordsByStation,
-  calculateTotals,
   formatDecimal,
   getCashTotal,
   getBankTotal,
@@ -186,48 +184,15 @@ export default function FinancesPage() {
   }, []);
 
   const loadSummaries = useCallback(async () => {
-    const records = await ClientAPI.getFinancialRecords(
+    const data = await ClientAPI.getFinancialSummary(
       filterByMonth ? currentMonth : undefined,
       filterByMonth ? currentYear : undefined
     );
-    const companyRecords = records.filter(r => r.type === 'company');
-    const personalRecords = records.filter(r => r.type === 'personal');
 
-    // Aggregate company records by station using DRY utility
-    const companyStations = getCompanyAreas().flatMap(area => BUSINESS_STRUCTURE[area]);
-    const companyBreakdown = aggregateRecordsByStation(companyRecords, companyStations);
-    const companyTotals = calculateTotals(companyBreakdown);
-
-    // Aggregate personal records by station using DRY utility
-    const personalStations = BUSINESS_STRUCTURE.PERSONAL;
-    const personalBreakdown = aggregateRecordsByStation(personalRecords, personalStations);
-    const personalTotals = calculateTotals(personalBreakdown);
-
-    // Create summaries with REAL aggregated data
-    const company: CompanyMonthlySummary = {
-      year: currentYear,
-      month: currentMonth,
-      totalRevenue: companyTotals.totalRevenue,
-      totalCost: companyTotals.totalCost,
-      netCashflow: companyTotals.net,
-      totalJungleCoins: companyTotals.totalJungleCoins,
-      categoryBreakdown: companyBreakdown
-    };
-
-    const personal: PersonalMonthlySummary = {
-      year: currentYear,
-      month: currentMonth,
-      totalRevenue: personalTotals.totalRevenue,
-      totalCost: personalTotals.totalCost,
-      netCashflow: personalTotals.net,
-      totalJungleCoins: personalTotals.totalJungleCoins,
-      categoryBreakdown: personalBreakdown
-    };
-
-    setCompanySummary(company);
-    setPersonalSummary(personal);
-    setAggregatedFinancialData(companyTotals);
-    setAggregatedCategoryData({ categoryBreakdown: companyBreakdown });
+    setCompanySummary(data.companySummary);
+    setPersonalSummary(data.personalSummary);
+    setAggregatedFinancialData(data.aggregatedFinancialData);
+    setAggregatedCategoryData(data.aggregatedCategoryData);
     setRecordsRefreshKey(prev => prev + 1);
   }, [currentYear, currentMonth, filterByMonth]);
 

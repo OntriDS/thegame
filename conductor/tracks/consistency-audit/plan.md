@@ -1,28 +1,28 @@
-# Plan: Deep Analysis & Reality Check
+# Plan: System-Wide Deep Audit
 
-## Phase 1: The Foundation Scan (Types & Enums)
-- [ ] **Analyze Types**: Read `types/*.ts` to understand the *actual* shape of entities.
-  - *Verify*: Do we have `Collected` in `TaskStatus`? `FinancialStatus`? `ItemStatus`?
-  - *Verify*: What are the exact fields for `Diplomatic` logic?
-- [ ] **Analyze Constants**: Read `lib/constants.ts` (if exists) or wherever enums are used.
+**Objective**: Comprehensive verification of system functionality and workflow adherence across all modules (Dashboards, Tasks, Inventory, Sales, Finances).
 
-## Phase 2: The Execution Path Trace (API -> Adapter -> Workflow)
-- [ ] **Trace Task Save**: Follow the code from `app/api/tasks/route.ts` -> `lib/data-store.ts` -> `lib/adapters/*.ts`.
-  - *Goal*: Confirm if `sideEffects` flags represent reality or legacy code.
-- [ ] **Trace Workflow Entry**: Verify how `processLinkEntity` is *actually* called in the codebase.
-- [ ] **Trace Link Creation**: Read `workflows/entities-workflows/*.ts`.
-  - *Goal*: Document exactly what happens for each entity type (don't assume it matches the wiki).
+## Phase 1: Control Room (Tasks & Dashboards) - ✅ COMPLETE
+- [x] Inspect `app/admin/page.tsx` (Root redirect).
+- [x] Inspect `app/admin/control-room/page.tsx` & `components/control-room`.
+- [x] Verify `task.workflow.ts` triggers.
+- [x] confirm "Collected" filter logic in `getTasks`.
 
-## Phase 3: The Logic Deep Dive ("Done" vs "Collected")
-- [ ] **Find "Collected" Logic**: grep for `COLLECTED` or related status strings.
-  - *Question*: Is there *any* code currently handling this? Or is it just a UI state?
-- [ ] **Find Points/J$ Logic**: Find where `jungleCoins` or `points` are calculated.
-  - *Question*: Is it in the workflow? In the component? In a utility function?
+## Phase 2: Inventory (Items) - ✅ COMPLETE
+- [x] Inspect `app/admin/inventories/page.tsx` & `components/inventory`.
+- [x] Verify "Unified Stock" logic (array of sites).
+- [x] Check `item.workflow.ts` for "Sold" logic.
 
-## Phase 4: Verification & Reporting
-- [ ] **Update Context**: Rewrite `conductor/context/product.md` and `architecture.md` with the *verified reality*.
-- [ ] **Create Reality Report**: Write `conductor/tracks/consistency-audit/reality-report.md`.
-  - Document the *actual* flow vs the *expected* flow.
-  - Document the *actual* state of "Done vs Collected".
-  - Identify discrepancies.
-- [ ] **Wait**: Present findings to Akiles before proposing ANY changes.
+## Phase 3: Sales (Point of Sale) - ✅ COMPLETE
+- [x] Inspect `app/admin/sales/page.tsx`.
+- [x] Check `SalesModal` logic for "Service" vs "Product".
+- [x] **CRITICAL**: Verify `app/api/sales/collect-all/route.ts` implementation details (Snapshot + Archive).
+
+## Phase 4: Finances (Ledger & J$) - ✅ COMPLETE
+- [x] Inspect `app/admin/finances/page.tsx`.
+- [x] Verify J$ calculation logic (Ledger vs Entity Field).
+- [x] Check `FinancialsModal` consistency.
+
+## Phase 5: Verification & Reporting - ✅ COMPLETE
+- [x] Synthesize findings.
+- [x] Update `reality-report.md`.

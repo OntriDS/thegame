@@ -12,9 +12,9 @@ import { ItemStatus, SiteType, EntityType, LinkType } from '@/types/enums';
 import { ClientAPI } from '@/lib/client-api';
 import { Item } from '@/types/entities';
 import { Package, MapPin, Cloud, Globe } from 'lucide-react';
-import { 
-  getSitesByType, 
-  getSiteByName 
+import {
+  getSitesByType,
+  getSiteByName
 } from '@/lib/utils/site-options-utils';
 
 interface MoveItemsModalProps {
@@ -40,14 +40,14 @@ export default function MoveItemsModal({ open, onOpenChange, items, sites, onCom
   const getPhysicalSitesGroupedByBusinessType = () => {
     const physicalSites = getPhysicalSites();
     const grouped: Record<string, string[]> = {};
-    
+
     physicalSites.forEach(site => {
       // For now, group by site name since business type metadata doesn't exist
       const group = 'Physical';
       if (!grouped[group]) grouped[group] = [];
       grouped[group].push(site.name); // Extract string name
     });
-    
+
     return grouped;
   };
 
@@ -55,46 +55,41 @@ export default function MoveItemsModal({ open, onOpenChange, items, sites, onCom
   const isValidDestination = (item: Item, destinationSite: string): boolean => {
     const siteInfo = getSiteByName(sites, destinationSite);
     if (!siteInfo) return false;
-    
+
     // Digital items can ONLY go to digital sites
     if (item.type === 'Digital') {
       return siteInfo.metadata?.type === 'DIGITAL';
     }
-    
+
     // Physical items can go to physical and system sites (NOT digital)
     return ['PHYSICAL', 'SYSTEM'].includes(siteInfo.metadata?.type || '');
   };
 
   const handleMove = async () => {
     if (items.length === 0 || parseInt(quantity) < 1) return;
-    
+
     setIsProcessing(true);
-    
+
     try {
       for (const item of items) {
         const quantityToMove = parseInt(quantity) || 0;
-        
+
         // Check if we have enough quantity to move
         const items = await ClientAPI.getItems();
         const currentQuantity = ClientAPI.getItemTotalQuantity(item.id, items);
         if (currentQuantity < quantityToMove) {
           throw new Error(`Insufficient quantity. Available: ${currentQuantity}, Requested: ${quantityToMove}`);
         }
-        
+
         // Use the new unified stock management system
+        // API handles persistence and workflow logging
         const updatedSourceItem = await ClientAPI.moveItemsBetweenSites(
-          item, 
-          item.stock[0]?.siteId || 'Home', 
-          destination, 
+          item,
+          item.stock[0]?.siteId || 'Home',
+          destination,
           quantityToMove
         );
-        
-        // Add temporary flag to signal this is a move operation (workflow will log MOVED)
-        (updatedSourceItem as any)._movedViaSubmodal = true;
-        
-        // Save the updated item
-        await ClientAPI.upsertItem(updatedSourceItem);
-        
+
         // Create SITE_SITE link via API (avoid importing server-only modules in client)
         const link = {
           id: crypto.randomUUID(),
@@ -111,7 +106,7 @@ export default function MoveItemsModal({ open, onOpenChange, items, sites, onCom
         } as any;
         await ClientAPI.createLink(link);
       }
-      
+
       onComplete();
       onOpenChange(false);
     } catch (error) {
@@ -135,7 +130,7 @@ export default function MoveItemsModal({ open, onOpenChange, items, sites, onCom
             Select the destination site for the selected items.
           </DialogDescription>
         </DialogHeader>
-        
+
         <div className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="destination">Destination Site</Label>
@@ -152,8 +147,8 @@ export default function MoveItemsModal({ open, onOpenChange, items, sites, onCom
                       {businessType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
                     </div>
                     {sites.map(siteName => (
-                      <SelectItem 
-                        key={siteName} 
+                      <SelectItem
+                        key={siteName}
                         value={siteName}
                         disabled={!items.every(item => isValidDestination(item, siteName))}
                         className="ml-4"
@@ -163,7 +158,7 @@ export default function MoveItemsModal({ open, onOpenChange, items, sites, onCom
                     ))}
                   </div>
                 ))}
-                
+
                 {/* Special Sites */}
                 {getSystemSites().length > 0 && (
                   <div>
@@ -172,8 +167,8 @@ export default function MoveItemsModal({ open, onOpenChange, items, sites, onCom
                       Special Sites
                     </div>
                     {getSystemSites().map((site: any) => (
-                      <SelectItem 
-                        key={site.name} 
+                      <SelectItem
+                        key={site.name}
                         value={site.name}
                         disabled={!items.every(item => isValidDestination(item, site.name))}
                         className="ml-4"
@@ -183,7 +178,7 @@ export default function MoveItemsModal({ open, onOpenChange, items, sites, onCom
                     ))}
                   </div>
                 )}
-                
+
                 {/* Cloud Sites - Only for Digital Items */}
                 {getDigitalSites().length > 0 && items.every(item => item.type === 'Digital') && (
                   <div>
@@ -192,8 +187,8 @@ export default function MoveItemsModal({ open, onOpenChange, items, sites, onCom
                       Cloud Sites
                     </div>
                     {getDigitalSites().map((site: any) => (
-                      <SelectItem 
-                        key={site.name} 
+                      <SelectItem
+                        key={site.name}
                         value={site.name}
                         className="ml-4"
                       >
@@ -204,18 +199,18 @@ export default function MoveItemsModal({ open, onOpenChange, items, sites, onCom
                 )}
               </SelectContent>
             </Select>
-            
+
             {/* Show validation message */}
             {destination && items.length > 0 && (
               <div className="text-xs text-muted-foreground">
-                {items.every(item => isValidDestination(item, destination)) 
-                  ? '✅ Valid destination for all items' 
+                {items.every(item => isValidDestination(item, destination))
+                  ? '✅ Valid destination for all items'
                   : '❌ Some items cannot be moved to this destination'
                 }
               </div>
             )}
           </div>
-          
+
           <div className="space-y-2">
             <Label htmlFor="quantity">Quantity to Move</Label>
             <NumericInput
@@ -226,7 +221,7 @@ export default function MoveItemsModal({ open, onOpenChange, items, sites, onCom
               min={1}
             />
           </div>
-          
+
           <div className="text-sm text-muted-foreground">
             This will create new items at the destination and reduce quantities at the source.
           </div>
@@ -236,12 +231,12 @@ export default function MoveItemsModal({ open, onOpenChange, items, sites, onCom
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button 
-            onClick={handleMove} 
+          <Button
+            onClick={handleMove}
             disabled={
-              items.length === 0 || 
-              parseInt(quantity) < 1 || 
-              isProcessing || 
+              items.length === 0 ||
+              parseInt(quantity) < 1 ||
+              isProcessing ||
               !items.every(item => isValidDestination(item, destination))
             }
           >

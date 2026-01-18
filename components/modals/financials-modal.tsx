@@ -766,6 +766,12 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
                         placeholder="Select customer"
                         autoGroupByCategory={true}
                         className="h-8 text-sm"
+                        onCreate={(query) => setFormData({
+                          ...formData,
+                          isNewCustomer: true,
+                          newCustomerName: query,
+                          customerCharacterId: null
+                        })}
                       />
                     )}
                   </div>

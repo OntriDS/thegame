@@ -11,6 +11,22 @@ import { createItemOptions, createItemOptionsForSite } from '@/lib/utils/searcha
 import { ClientAPI } from '@/lib/client-api';
 import { Trash2, Plus } from 'lucide-react';
 import { v4 as uuid } from 'uuid';
+import { ItemType, ItemStatus, Collection } from '@/types/enums';
+
+// Default values for quick-created items
+const ITEM_DEFAULTS = {
+  type: ItemType.ARTWORK, // Defaulting to Artwork for creative context
+  status: ItemStatus.FOR_SALE,
+  station: 'Strategy' as const, // Default station
+  stock: [],
+  unitCost: 0,
+  additionalCost: 0,
+  price: 0,
+  value: 0,
+  quantitySold: 0,
+  isCollected: false
+};
+
 
 export interface SaleItemLine {
   id: string;
@@ -264,6 +280,35 @@ export default function SaleItemsSubModal({
     setLines(prev => prev.filter(line => line.id !== lineId));
   };
 
+  const handleCreateItem = async (lineId: string, name: string) => {
+    try {
+      // 1. Create minimal valid item
+      const newItem: Item = {
+        ...ITEM_DEFAULTS,
+        id: uuid(),
+        name: name,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        links: []
+      };
+
+      // 2. Persist immediately (fire and forget pattern for UI responsiveness, but logic needs it)
+      // We await to ensure we can select it validly
+      await ClientAPI.upsertItem(newItem);
+
+      // 3. Update local state
+      setItems(prev => [...prev, newItem]);
+
+      // 4. Select it for the line
+      handleItemSelect(lineId, newItem.id);
+
+    } catch (error) {
+      console.error('Failed to create new item:', error);
+    }
+  };
+
+
+
   const handleSaveInternal = async () => {
     if (isSaving) return;
     setIsSaving(true);
@@ -343,7 +388,9 @@ export default function SaleItemsSubModal({
                       options={rowOptions}
                       autoGroupByCategory={true}
                       placeholder="Item..."
+                      initialLabel={line.itemName}
                       className="h-8 text-sm"
+                      onCreate={(query) => handleCreateItem(line.id, query)}
                     />
                   </div>
 
