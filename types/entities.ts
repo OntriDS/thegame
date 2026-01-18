@@ -601,6 +601,7 @@ export interface Sale extends BaseEntity {
     discountTotal: number;       // overall + per-line discounts
     taxTotal: number;            // aggregated tax
     totalRevenue: number;        // subtotal - discounts + tax
+    totalCost?: number;          // [NEW] aggregated cost (e.g. booth fees + payouts)
   };
 
   // Lifecycle timestamps (never overwritten once set)

@@ -454,6 +454,74 @@ export async function createFinancialRecordFromSale(sale: Sale): Promise<Financi
  * - Record 2: Associate Payout (Expense)
  * IDEMPOTENT: Updates existing records if they exist.
  */
+/**
+ * Calculate the associate's share of a sale
+ */
+export async function calculateAssociatePayout(sale: Sale): Promise<number> {
+  const boothFee = sale.boothFee ?? sale.archiveMetadata?.boothSaleContext?.boothCost ?? 0;
+
+  // Determine Target Entity ID
+  const targetEntityId = sale.associateId || sale.partnerId || sale.customerId;
+  if (!targetEntityId) return 0;
+
+  // CALCULATION LOGIC (SERVER SIDE)
+  // Categorize Lines to calculate split
+  let myItemsTotal = 0;
+  let assocItemsTotal = 0;
+  let shareOfMyItems_Me = 1.0;
+  let shareOfAssocItems_Me = 0.0; // My commission on their items
+  let shareOfExpenses_Me = 1.0; // I pay 100% of booth fee by default
+
+  // Determine Contract ID
+  const contractId = sale.archiveMetadata?.boothSaleContext?.contractId;
+  let contract: Contract | null = null;
+  if (contractId) {
+    contract = await getContractById(contractId);
+  }
+
+  if (contract && contract.status === ContractStatus.ACTIVE && Array.isArray(contract.clauses)) {
+    // Apply Clauses
+    const commClause = contract.clauses.find(c => c.type === ContractClauseType.SALES_COMMISSION);
+    if (commClause) shareOfMyItems_Me = commClause.companyShare;
+
+    const serviceClause = contract.clauses.find(c => c.type === ContractClauseType.SALES_SERVICE);
+    if (serviceClause) shareOfAssocItems_Me = serviceClause.companyShare;
+
+    const expenseClause = contract.clauses.find(c => c.type === ContractClauseType.EXPENSE_SHARING);
+    if (expenseClause) shareOfExpenses_Me = expenseClause.companyShare;
+  }
+
+  // Sum Items (USD)
+  if (sale.lines) {
+    sale.lines.forEach(line => {
+      // Is it an Associate Item? (Ref BoothSalesView logic)
+      const isAssociateItem = line.kind === 'service' && (line as ServiceLine).station === 'Associate Sales';
+
+      let lineTotal = 0;
+      if (line.kind === 'item') lineTotal = ((line as ItemSaleLine).unitPrice || 0) * ((line as ItemSaleLine).quantity || 0);
+      else if (line.kind === 'bundle') lineTotal = ((line as BundleSaleLine).unitPrice || 0) * ((line as BundleSaleLine).quantity || 0);
+      else if (line.kind === 'service') lineTotal = (line as ServiceLine).revenue || 0;
+
+      if (isAssociateItem) assocItemsTotal += lineTotal;
+      else myItemsTotal += lineTotal;
+    });
+  }
+
+  // Calculate Associate Share (USD)
+  const rates = await getFinancialConversionRates();
+  const rate = rates.colonesToUsd || 500;
+  const boothFeeUSD = boothFee / rate;
+
+  const revenueMyItems_Assoc = myItemsTotal * (1 - shareOfMyItems_Me);
+  const revenueAssocItems_Assoc = assocItemsTotal * (1 - shareOfAssocItems_Me);
+  const cost_Assoc = boothFeeUSD * (1 - shareOfExpenses_Me);
+
+  const associateNet = revenueMyItems_Assoc + revenueAssocItems_Assoc - cost_Assoc;
+  console.log(`[calculateAssociatePayout] Calculated Split (USD): MyItems=${myItemsTotal} AssocItems=${assocItemsTotal} => AssociateNet=${associateNet}`);
+
+  return associateNet;
+}
+
 export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<void> {
   try {
     console.log(`[createFinancialRecordFromBoothSale] Processing financial records for Booth Sale: ${sale.counterpartyName}`);
@@ -461,30 +529,13 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
     // [IDEMPOTENCY CHECK] Check for existing records first
     const existingRecords = await getFinancialsBySourceSaleId(sale.id);
 
-    // [UPDATED] Robust Logic using First-Class Fields
-    // If we have boothFee, we assume this is a Booth Sale with Split Logic
-    // If not, we check metadata for legacy support.
-    const boothFee = sale.boothFee ?? sale.archiveMetadata?.boothSaleContext?.boothCost ?? 0;
-    const paymentBreakdown = sale.paymentBreakdown ?? sale.archiveMetadata?.boothSaleContext?.paymentDistribution;
-    const boothMetadata = sale.archiveMetadata?.boothSaleContext; // Keep relative reference for fallback
+    // Calculate associate net using shared helper
+    const associateNet = await calculateAssociatePayout(sale);
 
-    // Log the detailed transaction
-    const logDetails = {
-      gross: sale.totals.totalRevenue,
-      boothFee,
-      netCompany: boothMetadata?.calculatedTotals?.myNet || 0, // Legacy fallback
-      netAssociate: boothMetadata?.calculatedTotals?.associateNet || 0, // Legacy fallback
-      payments: paymentBreakdown ? `Cash: ${paymentBreakdown.cashCRC}/${paymentBreakdown.cashUSD}, BTC: ${paymentBreakdown.bitcoin}, Card: ${paymentBreakdown.card}` : 'Standard',
-      associateId: sale.associateId || sale.partnerId || sale.customerId
-    };
-
-    // Calculate Associate Share (USD) - Logic needed for both Create and Update
-    let associateNet = 0;
-    let targetEntityName = 'Associate';
     const targetEntityId = sale.associateId || sale.partnerId || sale.customerId;
+    let targetEntityName = 'Associate';
+    let targetType = EntityType.CHARACTER;
 
-    // We need to resolve the target type for both create and update scenarios to ensure names/links are correct
-    let targetType = EntityType.CHARACTER; // Default
     if (targetEntityId) {
       const { getBusinessById } = await import('@/data-store/repositories/character.repo');
       const business = await getBusinessById(targetEntityId);
@@ -497,59 +548,6 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
           targetEntityName = character.name;
         }
       }
-
-      // CALCULATION LOGIC (SERVER SIDE)
-      // Categorize Lines to calculate split
-      let myItemsTotal = 0;
-      let assocItemsTotal = 0;
-      let shareOfMyItems_Me = 1.0;
-      let shareOfAssocItems_Me = 0.0; // My commission on their items
-      let shareOfExpenses_Me = 1.0; // I pay 100% of booth fee by default
-
-      // Determine Contract ID
-      const contractId = sale.archiveMetadata?.boothSaleContext?.contractId;
-      let contract: Contract | null = null;
-      if (contractId) {
-        contract = await getContractById(contractId);
-      }
-
-      if (contract && contract.status === ContractStatus.ACTIVE && Array.isArray(contract.clauses)) {
-        // Apply Clauses
-        const commClause = contract.clauses.find(c => c.type === ContractClauseType.SALES_COMMISSION);
-        if (commClause) shareOfMyItems_Me = commClause.companyShare;
-
-        const serviceClause = contract.clauses.find(c => c.type === ContractClauseType.SALES_SERVICE);
-        if (serviceClause) shareOfAssocItems_Me = serviceClause.companyShare;
-
-        const expenseClause = contract.clauses.find(c => c.type === ContractClauseType.EXPENSE_SHARING);
-        if (expenseClause) shareOfExpenses_Me = expenseClause.companyShare;
-      }
-
-      // Sum Items (USD)
-      sale.lines.forEach(line => {
-        // Is it an Associate Item? (Ref BoothSalesView logic)
-        const isAssociateItem = line.kind === 'service' && (line as ServiceLine).station === 'Associate Sales';
-
-        let lineTotal = 0;
-        if (line.kind === 'item') lineTotal = ((line as ItemSaleLine).unitPrice || 0) * ((line as ItemSaleLine).quantity || 0);
-        else if (line.kind === 'bundle') lineTotal = ((line as BundleSaleLine).unitPrice || 0) * ((line as BundleSaleLine).quantity || 0);
-        else if (line.kind === 'service') lineTotal = (line as ServiceLine).revenue || 0;
-
-        if (isAssociateItem) assocItemsTotal += lineTotal;
-        else myItemsTotal += lineTotal;
-      });
-
-      // Calculate Associate Share (USD)
-      const rates = await getFinancialConversionRates();
-      const rate = rates.colonesToUsd || 500;
-      const boothFeeUSD = boothFee / rate;
-
-      const revenueMyItems_Assoc = myItemsTotal * (1 - shareOfMyItems_Me);
-      const revenueAssocItems_Assoc = assocItemsTotal * (1 - shareOfAssocItems_Me);
-      const cost_Assoc = boothFeeUSD * (1 - shareOfExpenses_Me);
-
-      associateNet = revenueMyItems_Assoc + revenueAssocItems_Assoc - cost_Assoc;
-      console.log(`[createFinancialRecordFromBoothSale] Calculated Split (USD): MyItems=${myItemsTotal} AssocItems=${assocItemsTotal} => AssociateNet=${associateNet}`);
     }
 
     if (existingRecords.length > 0) {
@@ -609,8 +607,6 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
 
     // === CREATE PATH ===
     console.log(`[createFinancialRecordFromBoothSale] Creating FRESH split financial records for Booth Sale`);
-
-
 
     // 1. Create Gross Income Record (Standard)
     const incomeRecord = await createFinancialRecordFromSale(sale);

@@ -1,7 +1,7 @@
 // workflows/entities-workflows/sale.workflow.ts
 // Sale-specific workflow with CHARGED, CANCELLED, COLLECTED events
 
-import { EntityType, LogEventType, PLAYER_ONE_ID, SaleStatus } from '@/types/enums';
+import { EntityType, LogEventType, PLAYER_ONE_ID, SaleStatus, SaleType } from '@/types/enums';
 import type { Item, Sale } from '@/types/entities';
 import { appendEntityLog, updateEntityLogField } from '../entities-logging';
 import { hasEffect, markEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
@@ -200,10 +200,39 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
 
   // COMPREHENSIVE UPDATE PROPAGATION - when sale properties change
   if (previousSale) {
+    // Check if relevant financial drivers changed (Revenue, Fee, Associate, etc)
+    const hasFinancialDriversChanged =
+      hasRevenueChanged(sale, previousSale) ||
+      sale.boothFee !== previousSale.boothFee ||
+      sale.associateId !== previousSale.associateId ||
+      sale.partnerId !== previousSale.partnerId ||
+      sale.customerId !== previousSale.customerId;
+
     // Propagate to Financial Records
-    if (hasRevenueChanged(sale, previousSale)) {
-      console.log(`[onSaleUpsert] Propagating revenue changes to financial records: ${sale.counterpartyName}`);
+    if (hasFinancialDriversChanged) {
+      console.log(`[onSaleUpsert] Propagating financial changes to records: ${sale.counterpartyName}`);
       await updateFinancialRecordsFromSale(sale, previousSale);
+
+      // [FIX] Update Sale Cost with Payout Amount (for Booth Sales)
+      // This ensures "Sale Log" shows correct Profit (Revenue - Cost)
+      if (sale.type === SaleType.BOOTH) {
+        const { calculateAssociatePayout } = await import('@/workflows/financial-record-utils');
+        const payout = await calculateAssociatePayout(sale);
+
+        // If calculated payout differs from current cost, update it
+        if (payout >= 0 && Math.abs((sale.totals.totalCost || 0) - payout) > 0.01) {
+          console.log(`[onSaleUpsert] Updating sale cost with associate payout: $${payout}`);
+          const updatedSaleWithCost = {
+            ...sale,
+            totals: {
+              ...sale.totals,
+              totalCost: payout
+            }
+          };
+          // Skip workflow interactions to prevent infinite loops, but allow simple persistence
+          await upsertSale(updatedSaleWithCost, { skipWorkflowEffects: true, skipLinkEffects: true });
+        }
+      }
     }
 
     // Propagate to Items (stock updates)
@@ -213,7 +242,7 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
     }
 
     // Propagate to Player (points delta from revenue)
-    if (hasRevenueChanged(sale, previousSale)) {
+    if (hasRevenueChanged(sale, previousSale)) { // Player points ONLY care about Revenue
       console.log(`[onSaleUpsert] Propagating revenue changes to player points: ${sale.counterpartyName}`);
       await updatePlayerPointsFromSource(EntityType.SALE, sale, previousSale);
     }

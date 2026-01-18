@@ -402,34 +402,16 @@ export async function updateFinancialRecordsFromSale(
     // SPECIAL HANDLING for Booth Sales (Split Records)
     if (sale.type === 'BOOTH') { // Use string literal matching enum
       // Booth sales manage their own complex record creation/updates (Split Income/Expense)
-      // TO-DO: Implement UPDATE logic for Booth Sales if needed (currently optimized for creation)
-      // For now, if revenue changed significantly, we might need to re-evaluate the split
-      if (hasRevenueChanged(sale, previousSale)) {
-        // If records don't exist, create them. If they do, update them (Complex logic needed for full update support)
-        // For MVP: We assume Booth Sales are final or we rely on the create logic to be idempotent-ish or handle basic updates
-        const relatedRecords = await getFinancialsBySourceSaleId(sale.id);
-        if (relatedRecords.length === 0) {
-          await createFinancialRecordFromBoothSale(sale);
-        } else {
-          // Basic update for existing records (Revenue Only)
-          // This doesn't fully re-calculate the split yet - Future Task
-          for (const record of relatedRecords) {
-            // If Income Record (Positive revenue)
-            if (record.cost === 0 && record.revenue > 0) {
-              const updatedRecord = {
-                ...record,
-                revenue: sale.totals?.totalRevenue || 0,
-                isNotPaid: sale.isNotPaid,
-                isNotCharged: sale.status !== 'CHARGED',
-                updatedAt: new Date()
-              };
-              await upsertFinancial(updatedRecord);
-            }
-          }
-        }
+      // If we are here, something relevant changed (Revenue, Fee, Associate, etc - driven by caller)
+
+      // If records don't exist, create them. If they do, update them.
+      const relatedRecords = await getFinancialsBySourceSaleId(sale.id);
+
+      if (relatedRecords.length === 0) {
+        await createFinancialRecordFromBoothSale(sale);
       } else {
-        // Use the create logic to ensure records exist if they were missing (e.g. imported sale)
-        // The create function checks effects registry so it is safe to call
+        // We defer to the smart utility to handle the complex update logic (idempotent Upsert)
+        // because createFinancialRecordFromBoothSale now has "Update Path" logic inside it
         await createFinancialRecordFromBoothSale(sale);
       }
       return;

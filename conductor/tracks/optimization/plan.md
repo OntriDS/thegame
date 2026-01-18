@@ -64,11 +64,22 @@ Currently, `FinancesPage` downloads *all* raw records for a month to calculate t
 #### [MODIFY] `app/admin/finances/page.tsx`
 - Switch from `ClientAPI.getFinancialRecords()` + local math to `ClientAPI.getFinancialSummary()`.
 
+## Proposed Changes
+
+### Workflows & Utilities
+
+#### [MODIFY] [financial-record-utils.ts](file:///c:/Users/Usuario/AKILES/DEV/thegame/workflows/financial-record-utils.ts)
+- Export the associate payout calculation logic as a reusable helper: `calculateAssociatePayout`.
+- Use this helper in `createFinancialRecordFromBoothSale`.
+
+#### [MODIFY] [sale.workflow.ts](file:///c:/Users/Usuario/AKILES/DEV/thegame/workflows/entities-workflows/sale.workflow.ts)
+- In `onSaleUpsert`, call `calculateAssociatePayout` (if dealing with a Booth Sale).
+- If an associate payout exists, update the `sale.totals.totalCost` field with this amount.
+- Ensure this update doesn't trigger an infinite workflow loop (use `skipWorkflowEffects: true` properly).
+
 ## Verification Plan
 
-### Automated Tests
-- None planned (standard manual verification).
-
 ### Manual Verification
-1. **Inventory**: Move an item between sites using the UI. Verify network tab calls `/api/inventory/move`. check persistence.
-2. **Finances**: Load the Finances dashboard. Verify network tab calls `/api/financials/summary`. Compare numbers against "All Records" view to ensure accuracy.
+1.  **Edit Sale**: Edit an existing Booth Sale (or create new).
+2.  **Check Logs**: Verify "Sale Log" (SalesLogTab) shows accurate "Profit" based on the stored cost.
+3.  **Check Financials**: Verify "Financial Log" (FinancialsTab) also respects this cost (my previous fix might be redundant or complementary - I will keep it for safety but the Source of Truth fix is primary).
