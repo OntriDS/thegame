@@ -22,13 +22,13 @@ interface DevSprintsTabProps {
   onCheckSprintCompletion: () => void;
 }
 
-export function DevSprintsTab({ 
-  projectStatus, 
-  devLog, 
-  onReload, 
-  isReloading, 
+export function DevSprintsTab({
+  projectStatus,
+  devLog,
+  onReload,
+  isReloading,
   onCyclePhaseStatus,
-  onCheckSprintCompletion 
+  onCheckSprintCompletion
 }: DevSprintsTabProps) {
   const { isDarkMode } = useThemeColors();
   const [activeSubTab, setActiveSubTab] = useState<string>('sprints');
@@ -39,20 +39,20 @@ export function DevSprintsTab({
     if (!dateStr || dateStr === 'Current Sprint') {
       return new Date();
     }
-    
+
     // Our standard format is DD-MM-YYYY (from date-constants.ts)
     const parts = dateStr.split('-');
-    
+
     if (parts.length === 3) {
       const [day, month, year] = parts;
-      
+
       // Validate DD-MM-YYYY format
       if (day.length === 2 && month.length === 2 && year.length === 4) {
         // Convert DD-MM-YYYY to YYYY-MM-DD for Date constructor
         return new Date(`${year}-${month}-${day}`);
       }
     }
-    
+
     // Fallback for any other format
     return new Date(dateStr);
   };
@@ -60,7 +60,7 @@ export function DevSprintsTab({
   // Generate chronological log entries from sprints and phases data (like the old working version)
   const generateLogEntries = () => {
     const entries: any[] = [];
-    
+
     // Add current sprint phase completions first
     if (projectStatus && projectStatus.phasePlan) {
       Object.entries(projectStatus.phasePlan)
@@ -81,7 +81,7 @@ export function DevSprintsTab({
               }
             }
           }
-          
+
           // If no completion date found, use a default date (today minus 2 days for phase 8.1, today for others)
           if (completionDate === 'Current Sprint') {
             const today = new Date();
@@ -95,7 +95,7 @@ export function DevSprintsTab({
               completionDate = formatDateDDMMYYYY(today);
             }
           }
-          
+
           entries.push({
             type: 'phase',
             id: phaseKey,
@@ -106,7 +106,7 @@ export function DevSprintsTab({
           });
         });
     }
-    
+
     // Add historical entries in the correct order
     if (devLog && devLog.sprints) {
       // Sort sprints by completion date (newest first for logOrder === 'newest')
@@ -115,7 +115,7 @@ export function DevSprintsTab({
         const dateB = parseDate(b.completedAt);
         return logOrder === 'newest' ? dateB.getTime() - dateA.getTime() : dateA.getTime() - dateB.getTime();
       });
-      
+
       // For each sprint, add its phases first, then the sprint
       sortedSprints.forEach((sprint: any) => {
         if (sprint.phases && sprint.phases.length > 0) {
@@ -125,7 +125,7 @@ export function DevSprintsTab({
             const dateB = parseDate(b.completedAt);
             return logOrder === 'newest' ? dateB.getTime() - dateA.getTime() : dateA.getTime() - dateB.getTime();
           });
-          
+
           // Add phases first
           sortedPhases.forEach((phase: any) => {
             entries.push({
@@ -138,7 +138,7 @@ export function DevSprintsTab({
             });
           });
         }
-        
+
         // Then add the sprint completion AFTER all its phases
         entries.push({
           type: 'sprint',
@@ -150,7 +150,7 @@ export function DevSprintsTab({
         });
       });
     }
-    
+
     // Now sort all entries by completion date to ensure proper chronological order
     // This handles cases where phases and sprints might have the same date
     entries.sort((a, b) => {
@@ -158,7 +158,7 @@ export function DevSprintsTab({
       // Use flexible date parsing to handle both DD-MM-YYYY and YYYY-MM-DD formats
       const dateA = parseDate(a.completedAt);
       const dateB = parseDate(b.completedAt);
-     
+
       // If dates are the same, use numeric ID as tie-breaker
       if (dateA.getTime() === dateB.getTime()) {
         // Extract numeric parts for proper numeric sorting (supports decimals like 1.1, 1.2, etc.)
@@ -166,19 +166,19 @@ export function DevSprintsTab({
           // Keep digits and dots for decimal numbers like "1.1", "11.2", etc.
           const numericPart = id.replace(/[^0-9.]/g, '');
           if (!numericPart) return 0;
-          
+
           // Handle decimal numbers (e.g., "11.1" = 11.1, "1.2" = 1.2)
           if (numericPart.includes('.')) {
             return parseFloat(numericPart);
           }
-          
+
           // Handle whole numbers
           return parseInt(numericPart, 10);
         };
-        
+
         const numA = extractNumericId(a.id);
         const numB = extractNumericId(b.id);
-        
+
         // Numeric comparison: for 'oldest' order, lower numbers first; for 'newest', higher first
         if (logOrder === 'oldest') {
           return numA - numB;
@@ -186,7 +186,7 @@ export function DevSprintsTab({
           return numB - numA;
         }
       }
-     
+
       // Different dates - sort by chronological order
       if (logOrder === 'newest') {
         return dateB.getTime() - dateA.getTime();
@@ -194,7 +194,7 @@ export function DevSprintsTab({
         return dateA.getTime() - dateB.getTime();
       }
     });
-    
+
     return entries;
   };
 
@@ -205,8 +205,8 @@ export function DevSprintsTab({
     const getIconColor = (status: string) => {
       const statusColors = DEV_SPRINT_STATUS_COLORS[status as DevSprintStatus];
       if (statusColors) {
-        return isDarkMode ? statusColors.dark.replace('bg-', 'text-').replace('-800', '-200').replace('-900', '-200') : 
-                           statusColors.light.replace('bg-', 'text-').replace('-100', '-600');
+        return isDarkMode ? statusColors.dark.replace('bg-', 'text-').replace('-800', '-200').replace('-900', '-200') :
+          statusColors.light.replace('bg-', 'text-').replace('-100', '-600');
       }
       return isDarkMode ? "text-gray-200" : "text-gray-400";
     };
@@ -236,7 +236,7 @@ export function DevSprintsTab({
                   <CardTitle className="text-lg mb-2 text-amber-500">
                     Current Sprint & Phases
                   </CardTitle>
-                  
+
                   {/* Sprint Info Header */}
                   <div className="text-xs text-muted-foreground mb-2 space-y-1">
                     <div className="flex items-center gap-2">
@@ -255,6 +255,28 @@ export function DevSprintsTab({
                     onClick={onCheckSprintCompletion}
                   >
                     Sprint Complete
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={async () => {
+                      if (!confirm('This will overwrite the database (KV) with the contents of PROJECT-STATUS.json. Are you sure?')) return;
+                      try {
+                        const res = await fetch('/api/project-status/sync', { method: 'POST' });
+                        if (res.ok) {
+                          onReload();
+                          alert('Project Status Synced Successfully!');
+                        } else {
+                          alert('Failed to sync.');
+                        }
+                      } catch (e) {
+                        alert('Error syncing.');
+                      }
+                    }}
+                    title="Force Sync from PROJECT-STATUS.json"
+                  >
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Sync File
                   </Button>
                   <Button
                     variant="outline"
@@ -348,8 +370,8 @@ export function DevSprintsTab({
               {logEntries.length > 0 ? (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   {logEntries.map((entry: any, index: number) => (
-                    <div 
-                      key={`${entry.id}-${index}`} 
+                    <div
+                      key={`${entry.id}-${index}`}
                       className="border-l-4 border-gray-300 pl-4 py-2"
                     >
                       {entry.type === 'sprint' ? (
