@@ -73,13 +73,42 @@ export function DiagramsViewerTab() {
     const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
 
     const containerRef = useRef<HTMLDivElement>(null);
+    const imgRef = useRef<HTMLImageElement>(null);
 
     const selectedDiagram = diagrams.find(d => d.id === selectedDiagramId) || diagrams[0];
 
-    // Reset zoom/pan when diagram changes
-    useEffect(() => {
-        setZoom(1);
+    const handleFitToScreen = () => {
+        if (!containerRef.current || !imgRef.current) return;
+
+        const container = containerRef.current.getBoundingClientRect();
+        const img = imgRef.current.getBoundingClientRect();
+
+        // Calculate scale based on natural dimensions to handle initial load correctly
+        const naturalWidth = imgRef.current.naturalWidth;
+        const naturalHeight = imgRef.current.naturalHeight;
+
+        if (!naturalWidth || !naturalHeight) return;
+
+        // Add some padding (e.g., 40px)
+        const padding = 40;
+        const availableWidth = container.width - padding;
+        const availableHeight = container.height - padding;
+
+        const scaleX = availableWidth / naturalWidth;
+        const scaleY = availableHeight / naturalHeight;
+
+        // Use the smaller scale to fit entirely
+        const newZoom = Math.min(scaleX, scaleY, 1); // Cap at 1 to not upscale small images
+
+        setZoom(newZoom);
         setPosition({ x: 0, y: 0 });
+    };
+
+    // Reset and fit when diagram changes
+    useEffect(() => {
+        setPosition({ x: 0, y: 0 });
+        // We don't reset zoom here immediately, we let the onLoad of the new image trigger handleFitToScreen
+        // preventing a flash of big image then small image
     }, [selectedDiagramId]);
 
     const handleZoomIn = () => setZoom(prev => Math.min(prev + 0.5, 5));
@@ -172,10 +201,12 @@ export function DiagramsViewerTab() {
                             {/* Using standard img tag for drag/drop flexibility and preventing Next.js Image strict sizing issues in this interactive context, 
                   but can switch to Next/Image if needed with layout='fill' and object-contain in a wrapper */}
                             <img
+                                ref={imgRef}
                                 src={selectedDiagram.imagePath}
                                 alt={selectedDiagram.name}
                                 draggable={false}
-                                className="max-w-none shadow-2xl"
+                                onLoad={handleFitToScreen}
+                                className="max-w-none shadow-2xl transition-opacity duration-300"
                                 style={{
                                     // Prevent image selection during drag
                                     userSelect: 'none',
@@ -230,7 +261,8 @@ export function DiagramsViewerTab() {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 text-slate-300 hover:text-white hover:bg-white/10"
-                        title="Fit to Screen (Placeholder)"
+                        onClick={handleFitToScreen}
+                        title="Fit to Screen"
                     >
                         <Maximize className="h-4 w-4" />
                     </Button>
