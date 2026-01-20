@@ -8,7 +8,7 @@ import { NotebookType } from '@/types/enums';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
 import { formatDateDDMMYYYY } from '@/lib/constants/date-constants';
 import { NotesTab } from '@/components/research/notes-tab';
-import { DiagramBuilderTab } from '@/components/research/diagram-builder-tab';
+import { DiagramsViewerTab } from '@/components/research/diagrams-viewer-tab';
 import { SystemDevelopmentTab } from '@/components/research/system-development-tab';
 import { DevSprintsTab } from '@/components/research/dev-sprints-tab';
 import { AIAssistantTab } from '@/components/research/ai-assistant-tab';
@@ -479,7 +479,7 @@ function ResearchPageContent() {
           </TabsTrigger>
           <TabsTrigger value="diagrams" className="flex items-center gap-2">
             <Map className="h-4 w-4" />
-            Diagram Builder
+            Diagrams
           </TabsTrigger>
           <TabsTrigger value="notes" className="flex items-center gap-2">
             <FileText className="h-4 w-4" />
@@ -508,7 +508,7 @@ function ResearchPageContent() {
         </TabsContent>
 
         {/* Diagrams Tab (Merged) */}
-        <DiagramBuilderTab />
+        <DiagramsViewerTab />
 
 
         {/* Notes Tab */}
