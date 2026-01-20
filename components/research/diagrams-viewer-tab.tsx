@@ -111,8 +111,8 @@ export function DiagramsViewerTab() {
         // preventing a flash of big image then small image
     }, [selectedDiagramId]);
 
-    const handleZoomIn = () => setZoom(prev => Math.min(prev + 0.5, 5));
-    const handleZoomOut = () => setZoom(prev => Math.max(prev - 0.5, 0.5));
+    const handleZoomIn = () => setZoom(prev => Math.min(prev + 0.1, 3));
+    const handleZoomOut = () => setZoom(prev => Math.max(prev - 0.1, 0.1));
     const handleReset = () => {
         setZoom(1);
         setPosition({ x: 0, y: 0 });
