@@ -640,7 +640,7 @@ export default function TaskModal({
   // Helper function to get the correct value format for SearchableSelect
   const getStationValue = (station: Station): string => {
     const area = getAreaForStation(station);
-    return `${station}:${area}`;
+    return `${area}:${station}`;
   };
 
   const handleStationCategoryChange = (newStationCategory: string) => {

@@ -60,12 +60,18 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
     return (saved as Station) || ('Strategy' as Station);
   }, [getPreference]);
 
+  // Helper function to get the correct value format for SearchableSelect
+  const getStationValue = (station: Station): string => {
+    const area = getAreaForStation(station);
+    return `${area}:${station}`;
+  };
+
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [type, setType] = useState<ItemType>(defaultItemType || ItemType.STICKER);
   const [station, setStation] = useState<Station>(getLastUsedStation());
 
-  const [stationCategory, setStationCategory] = useState<string>('ADMIN:Strategy');
+  // stationCategory state removed - derived from station via getStationValue
   const [subItemType, setSubItemType] = useState<SubItemType | ''>('');
   const [itemTypeSubType, setItemTypeSubType] = useState<string>(`${defaultItemType || ItemType.STICKER}:`);
   const [collection, setCollection] = useState<Collection | 'none'>(Collection.NO_COLLECTION);
@@ -134,7 +140,6 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         description,
         type,
         station,
-        stationCategory,
         subItemType,
         collection,
         status,
@@ -154,7 +159,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
       };
       setPreference('item-modal-form-data', JSON.stringify(formData));
     }
-  }, [item, name, description, type, station, stationCategory, subItemType, collection, status, quantity, unitCost, price, restockable, year, imageUrl, width, height, size, targetAmount, site, originalFiles, accessoryFiles, setPreference]);
+  }, [item, name, description, type, station, subItemType, collection, status, quantity, unitCost, price, restockable, year, imageUrl, width, height, size, targetAmount, site, originalFiles, accessoryFiles, setPreference]);
 
   // Load form data from preferences when modal opens
   const loadFormDataFromStorage = useCallback(() => {
@@ -532,7 +537,6 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
   const handleStationCategoryChange = (newStationCategory: string) => {
     const newStation = getStationFromCombined(newStationCategory) as Station;
 
-    setStationCategory(newStationCategory);
     setStation(newStation);
     setPreference('item-modal-last-station', newStation);
   };
@@ -588,8 +592,6 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
 
       const itemStation = item.station || 'Strategy';
       setStation(itemStation);
-      const area = getAreaForStation(itemStation);
-      setStationCategory(`${area || 'ADMIN'}:${itemStation}`);
       setCollection(item.collection || Collection.NO_COLLECTION);
       setStatus(item.status || ItemStatus.FOR_SALE);
       setQuantity(item.stock?.reduce((s, stock) => s + stock.quantity, 0) || 0);
@@ -626,8 +628,6 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
       didInitRef.current = true;
       const lastStation = getLastUsedStation();
       setStation(lastStation);
-      const area = getAreaForStation(lastStation);
-      setStationCategory(`${area || 'ADMIN'}:${lastStation}`);
       // Other fields remain as-is or are loaded from persisted draft via loadFormDataFromStorage
     }
   }, [item, defaultItemType, getLastUsedStation]);
@@ -910,9 +910,9 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
               </div>
 
               <div>
-                <Label htmlFor="station-category" className="text-xs">Station & Category</Label>
+                <label htmlFor="station-category" className="text-xs">Station & Category</label>
                 <SearchableSelect
-                  value={stationCategory}
+                  value={getStationValue(station)}
                   onValueChange={handleStationCategoryChange}
                   options={createStationCategoryOptions()}
                   autoGroupByCategory={true}
