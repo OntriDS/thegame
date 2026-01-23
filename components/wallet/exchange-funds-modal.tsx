@@ -49,7 +49,7 @@ export function ExchangeFundsModal({ isOpen, onClose, characterId, currentBalanc
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className="sm:max-w-[425px]" zIndexLayer="SUB_MODALS">
                 <DialogHeader>
                     <DialogTitle>Exchange J$ (Reduce Balance)</DialogTitle>
                 </DialogHeader>

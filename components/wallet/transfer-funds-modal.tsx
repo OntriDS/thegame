@@ -47,7 +47,7 @@ export function TransferFundsModal({ isOpen, onClose, characterId, onSuccess }: 
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className="sm:max-w-[425px]" zIndexLayer="SUB_MODALS">
                 <DialogHeader>
                     <DialogTitle>Transfer J$ Funds</DialogTitle>
                 </DialogHeader>

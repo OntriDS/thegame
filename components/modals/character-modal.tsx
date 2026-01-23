@@ -413,7 +413,7 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
                 )}
 
                 {/* Wallet Integration */}
-                {(roles.includes(CharacterRole.INVESTOR) || roles.includes(CharacterRole.PARTNER) || roles.includes(CharacterRole.ASSOCIATE) || roles.includes(CharacterRole.CUSTOMER)) && character?.id && (
+                {(roles.includes(CharacterRole.FOUNDER) || roles.includes(CharacterRole.PLAYER) || roles.includes(CharacterRole.TEAM) || roles.includes(CharacterRole.PARTNER) || roles.includes(CharacterRole.ASSOCIATE) || roles.includes(CharacterRole.CUSTOMER) || roles.includes(CharacterRole.FAMILY)) && character?.id && (
                   <div className="mt-4 pt-2 border-t">
                     <JungleCoinWallet characterId={character.id} className="w-full border-0 shadow-none p-0" />
                   </div>
