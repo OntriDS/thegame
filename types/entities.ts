@@ -94,6 +94,16 @@ export interface StockPoint {
   quantity: number;
 }
 
+/** 
+ * THE VAULT (Wallet)
+ * Holds specific assets belonging to a Character.
+ */
+export interface Wallet {
+  jungleCoins: number;        // The J$ Coin Balance
+  // Future: zaps?: number;
+  // Future: nfts?: string[];
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // SECTION 2: SITE ENTITY & METADATA
 // ═══════════════════════════════════════════════════════════════════════════
@@ -768,7 +778,7 @@ export interface Character extends BaseEntity {
   achievementsCharacter: string[];        // Character-specific achievements tree (different from Player achievements)
 
   // 7. BUSINESS METRICS
-  jungleCoins?: number;          // Current J$ Wallet Balance
+  wallet?: Wallet;               // THE VAULT: Holds J$ and other assets. Updated transactionally.
   purchasedAmount: number;       // What they've bought from the business (CUSTOMER role)
   inventory: string[];           // Item IDs they own/possess
 

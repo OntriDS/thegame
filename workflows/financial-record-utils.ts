@@ -101,11 +101,16 @@ export async function recalculateCharacterWallet(characterId: string): Promise<v
     const character = await getCharacterById(characterId);
 
     if (character) {
+      const currentWallet = character.wallet || { jungleCoins: -1 }; // Force update if missing
+
       // Only update if changed to avoid write loops
-      if (character.jungleCoins !== balance) {
-        console.log(`[recalculateCharacterWallet] Updating wallet cache for ${character.name}: ${character.jungleCoins} -> ${balance}`);
-        // skipWorkflowEffects to avoid recursion, though Character workflow usually doesn't trigger financial things
-        await upsertCharacter({ ...character, jungleCoins: balance }, { skipWorkflowEffects: true });
+      if (currentWallet.jungleCoins !== balance) {
+        console.log(`[recalculateCharacterWallet] Updating wallet cache for ${character.name}: ${currentWallet.jungleCoins} -> ${balance}`);
+
+        await upsertCharacter({
+          ...character,
+          wallet: { ...currentWallet, jungleCoins: balance }
+        }, { skipWorkflowEffects: true });
       } else {
         console.log(`[recalculateCharacterWallet] Wallet cache already in sync for ${character.name}: ${balance}`);
       }

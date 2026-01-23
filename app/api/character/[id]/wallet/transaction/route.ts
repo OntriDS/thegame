@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCharacterById } from '@/data-store/datastore';
-import { upsertFinancial } from '@/data-store/datastore';
+import { upsertFinancial, upsertCharacter } from '@/data-store/datastore';
 import { makeLink } from '@/links/links-workflows';
 import { createLink } from '@/links/link-registry';
 import { appendLinkLog } from '@/links/links-logging';
@@ -82,6 +82,28 @@ export async function POST(
 
         // Upsert Record
         const savedRecord = await upsertFinancial(finRecord);
+
+        // UPDATE WALLET (The "Write-Through" Logic)
+        // 1. Initialize Wallet if missing (The Vault)
+        const currentWallet = character.wallet || { jungleCoins: 0 };
+
+        // 2. Calculate new balance
+        const currentBalance = currentWallet.jungleCoins;
+        const newBalance = type === 'transfer'
+            ? currentBalance + amount
+            : currentBalance - amount;
+
+        // 3. Update Character
+        const updatedCharacter = {
+            ...character,
+            wallet: {
+                ...currentWallet,
+                jungleCoins: newBalance
+            },
+            updatedAt: new Date()
+        };
+
+        await upsertCharacter(updatedCharacter);
 
         // Create Link
         const link = makeLink(

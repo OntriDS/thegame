@@ -189,7 +189,10 @@ export function PartnershipSubmodal({ // Keeping filename export for compatibili
                 await ClientAPI.upsertCharacter({
                     ...targetCharacter,
                     roles: updatedRoles,
-                    jungleCoins: (targetCharacter.jungleCoins || 0) + jAmount
+                    wallet: {
+                        ...(targetCharacter.wallet || { jungleCoins: 0 }),
+                        jungleCoins: (targetCharacter.wallet?.jungleCoins || 0) + jAmount
+                    }
                 });
 
                 // Refresh

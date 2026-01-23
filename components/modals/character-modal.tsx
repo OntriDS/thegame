@@ -114,7 +114,7 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
           // Reset init guard when editing
           didInitRef.current = false;
 
-          setJungleCoinsBalance(character?.jungleCoins || 0);
+          setJungleCoinsBalance(character?.wallet?.jungleCoins || 0);
 
         } else if (!didInitRef.current) {
           // Creating new character - initialize once only (don't reset again while user edits)

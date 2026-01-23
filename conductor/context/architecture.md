@@ -93,8 +93,10 @@ Explicit separation between "Gamification Rewards" and "Financial Assets".
 - **Nature**: Financial Asset (Money).
 - **Ratio**: 1 J$ = $10 USD.
 - **Source**: Created **ONLY** via manual **Exchange** of Points.
-- **Storage**: **Financial Ledger**. NOT stored on Player/Character entity.
-    - Calculated by summing `jungleCoins` field of all `FinancialRecord`s linked to Player.
+- **Storage**:
+    - **The Wallet**: `Character.jungleCoins` (Current Balance). The "Vault" that holds value.
+    - **The Ledger**: `FinancialRecord` entries (History). The "Files" that track movement.
+    - **Synchronization**: Transactions MUST update both atomically.
 - **Flow**:
     1.  User accumulates Points.
     2.  User manually "Exchanges" Points.

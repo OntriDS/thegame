@@ -8,24 +8,21 @@ export async function GET(
     { params }: { params: { id: string } }
 ) {
     try {
-        // 1. Auth Check (Admin only for now, or owner)
-        // Assuming cookie based auth is handled by middleware.
-
         const characterId = params.id;
         if (!characterId) {
             return NextResponse.json({ error: 'Character ID required' }, { status: 400 });
         }
 
-        // 2. Get Character (for name/validation)
+        // 1. Get Character with Wallet Balance
         const character = await getCharacterById(characterId);
         if (!character) {
             return NextResponse.json({ error: 'Character not found' }, { status: 404 });
         }
 
-        // 3. Get Linked Financial Records
+        // 2. Get Transaction History (Coins Ledger)
+        // We still fetch this for the history view, but NOT to calculate the balance on the fly anymore.
         const links = await getLinksFor({ type: EntityType.CHARACTER, id: characterId });
 
-        // Filter for J$ relevant links
         const relevantLinkTypes = [
             LinkType.FINREC_CHARACTER,
             LinkType.PLAYER_FINREC,
@@ -34,39 +31,35 @@ export async function GET(
 
         const financialLinks = links.filter(l => relevantLinkTypes.includes(l.linkType));
 
-        // Map to Financial Record IDs
         const finRecIds = financialLinks.map(l => {
             if (l.target.type === EntityType.FINANCIAL) return l.target.id;
             if (l.source.type === EntityType.FINANCIAL) return l.source.id;
             return null;
         }).filter(id => id !== null) as string[];
 
-        const uniqueFinRecIds = Array.from(new Set(finRecIds)); // Dedupe
+        const uniqueFinRecIds = Array.from(new Set(finRecIds));
 
-        // Fetch Records
         const records = await Promise.all(
             uniqueFinRecIds.map(id => getFinancialById(id))
         );
 
-        // Filter valid records and those with J$ impact
         const validRecords = records.filter(r => r !== null && r.jungleCoins !== 0);
 
-        // Sort by Date (Desc)
         validRecords.sort((a, b) => {
             const dateA = a!.collectedAt ? new Date(a!.collectedAt).getTime() : new Date(a!.createdAt).getTime();
             const dateB = b!.collectedAt ? new Date(b!.collectedAt).getTime() : new Date(b!.createdAt).getTime();
             return dateB - dateA;
         });
 
-        // Calculate Real-Time Balance (Audit)
-        const calculatedBalance = validRecords.reduce((sum, r) => sum + (r!.jungleCoins || 0), 0);
+        // Audit (Optional: Check if Ledger matches Wallet)
+        // const ledgerBalance = validRecords.reduce((sum, r) => sum + (r!.jungleCoins || 0), 0);
+        // if (ledgerBalance !== (character.jungleCoins || 0)) { console.warn('Wallet Desync Detected', { wallet: character.jungleCoins, ledger: ledgerBalance }); }
 
         return NextResponse.json({
             characterId: character.id,
             characterName: character.name,
-            cachedBalance: character.jungleCoins || 0,
-            auditBalance: calculatedBalance,
-            transactions: validRecords
+            cachedBalance: character.wallet?.jungleCoins || 0, // THE WALLET (Source of Truth)
+            transactions: validRecords // THE LEDGER (History)
         });
 
     } catch (error) {
