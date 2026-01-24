@@ -8,44 +8,28 @@ import path from 'path';
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
-  console.log('🔥 [Project Status API] GET request received');
-  
   if (!(await requireAdminAuth(req))) {
-    console.log('🔥 [Project Status API] ❌ Auth failed');
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
     // In production with KV, read from KV
     if (process.env.UPSTASH_REDIS_REST_URL) {
-      console.log('🔥 [Project Status API] Using KV (production)');
       const { kvGet } = await import('@/data-store/kv');
       const projectStatus = await kvGet('data:project-status');
-      console.log('🔥 [Project Status API] KV data:', projectStatus ? 'FOUND' : 'NOT FOUND');
 
       if (projectStatus) {
-        console.log('🔥 [Project Status API] ✅ Returning project status from KV');
-        const projectStatusData = projectStatus as any;
-        console.log('🔥 [Project Status API] Data structure:', {
-          hasPhasePlan: !!projectStatusData.phasePlan,
-          hasCurrentSprint: !!projectStatusData.currentSprint,
-          keys: Object.keys(projectStatusData)
-        });
         return NextResponse.json(projectStatus);
       } else {
-        console.log('🔥 [Project Status API] ⚠️ No project status in KV, returning empty object');
         return NextResponse.json({});
       }
     } else {
-      console.log('🔥 [Project Status API] Using filesystem (development)');
       // In development, read from filesystem
       const filePath = path.join(process.cwd(), 'PROJECT-STATUS.json');
-      console.log('🔥 [Project Status API] Reading from:', filePath);
 
       try {
         const fileContent = fs.readFileSync(filePath, 'utf8');
         const projectStatus = JSON.parse(fileContent);
-        console.log('🔥 [Project Status API] ✅ File read successfully');
         return NextResponse.json(projectStatus);
       } catch (fileError) {
         console.error('🔥 [Project Status API] ❌ Error reading PROJECT-STATUS.json:', fileError);
@@ -92,8 +76,8 @@ export async function PUT(req: NextRequest) {
     const { phaseKey, newStatus } = await req.json();
 
     if (!phaseKey || !newStatus) {
-      return NextResponse.json({ 
-        error: 'Missing required fields: phaseKey and newStatus' 
+      return NextResponse.json({
+        error: 'Missing required fields: phaseKey and newStatus'
       }, { status: 400 });
     }
 
@@ -102,7 +86,7 @@ export async function PUT(req: NextRequest) {
     if (process.env.UPSTASH_REDIS_REST_URL) {
       const { kvGet, kvSet } = await import('@/data-store/kv');
       projectStatus = await kvGet('data:project-status');
-      
+
       if (projectStatus && projectStatus.phasePlan && projectStatus.phasePlan[phaseKey]) {
         projectStatus.phasePlan[phaseKey].status = newStatus;
         projectStatus.lastUpdated = new Date().toISOString();
@@ -114,7 +98,7 @@ export async function PUT(req: NextRequest) {
       // In development, read from filesystem
       const filePath = path.join(process.cwd(), 'PROJECT-STATUS.json');
       projectStatus = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-      
+
       if (projectStatus.phasePlan && projectStatus.phasePlan[phaseKey]) {
         projectStatus.phasePlan[phaseKey].status = newStatus;
         projectStatus.lastUpdated = new Date().toISOString();
@@ -124,8 +108,8 @@ export async function PUT(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       message: `Phase ${phaseKey} status updated to ${newStatus}`,
       data: projectStatus
     });

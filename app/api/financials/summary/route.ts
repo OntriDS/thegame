@@ -20,10 +20,8 @@ export async function GET(request: Request) {
             month = parseInt(monthParam);
             records = await getFinancialsForMonth(year, month);
         } else {
-            // Default to current? Or return empty? Existing client logic fetched with params or fetched all if filterByMonth was false.
-            // But if filterByMonth is false, it gets ALL aggregation across ALL time?
-            // "records = await ClientAPI.getFinancialRecords(...)". If no params, it gets all.
-            // Fetching all records for summary might be heavy if dataset grows, but fine for now.
+            // Fallback: If no date params provided, fetch all records.
+            // This matches the behavior required for complete historical aggregation.
             records = await getAllFinancials();
             const now = new Date();
             year = now.getFullYear();

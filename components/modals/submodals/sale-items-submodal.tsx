@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 
 import { SearchableSelect } from '@/components/ui/searchable-select';
@@ -336,6 +336,9 @@ export default function SaleItemsSubModal({
       <DialogContent zIndexLayer={'SUB_MODALS'} className="w-full max-w-5xl max-h-[85vh]">
         <DialogHeader>
           <DialogTitle>Select Sale Items</DialogTitle>
+          <DialogDescription>
+            Search and select items to add to the sale.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 overflow-y-auto max-h-[60vh] px-1">

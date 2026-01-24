@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/numeric-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea"; // Assuming generic textarea exists or use Input for now
 import { Loader2 } from "lucide-react";
@@ -56,12 +57,12 @@ export function TransferFundsModal({ isOpen, onClose, characterId, onSuccess }: 
                         <Label htmlFor="amount" className="text-right">
                             Amount (J$)
                         </Label>
-                        <Input
+                        <NumericInput
                             id="amount"
-                            type="number"
                             value={amount}
-                            onChange={(e) => setAmount(Number(e.target.value))}
+                            onChange={(val) => setAmount(val)}
                             className="col-span-3"
+                            min={0}
                         />
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">

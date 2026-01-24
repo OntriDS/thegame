@@ -89,13 +89,9 @@ export default function AssetsEditModal({ isOpen, onClose, onSave, section, init
         </div>
         <div>
           <Label htmlFor="cash-total" className="flex justify-center pb-1">T$</Label>
-          <Input
-            id="cash-total"
-            type="number"
-            value={formatDecimal((formData.cash || 0) + (formData.cashColones || 0) / exchangeRates.colonesToUsd)}
-            readOnly
-            className="bg-muted px-3 py-2"
-          />
+          <div className="flex h-10 w-full rounded-md border border-input bg-muted px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+            {formatDecimal((formData.cash || 0) + (formData.cashColones || 0) / exchangeRates.colonesToUsd)}
+          </div>
         </div>
       </div>
 
@@ -133,13 +129,9 @@ export default function AssetsEditModal({ isOpen, onClose, onSave, section, init
         </div>
         <div>
           <Label htmlFor="bank-total" className="flex justify-center pb-1">T$</Label>
-          <Input
-            id="bank-total"
-            type="number"
-            value={formatDecimal((formData.bank || 0) + (formData.bankColones || 0) / exchangeRates.colonesToUsd)}
-            readOnly
-            className="bg-muted px-3 py-2"
-          />
+          <div className="flex h-10 w-full rounded-md border border-input bg-muted px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+            {formatDecimal((formData.bank || 0) + (formData.bankColones || 0) / exchangeRates.colonesToUsd)}
+          </div>
         </div>
       </div>
 
@@ -177,13 +169,9 @@ export default function AssetsEditModal({ isOpen, onClose, onSave, section, init
         </div>
         <div>
           <Label htmlFor="bitcoin-total" className="flex justify-center pb-1">T$</Label>
-          <Input
-            id="bitcoin-total"
-            type="number"
-            value={formatDecimal((formData.bitcoin || 0) + ((formData.bitcoinSats || 0) / BITCOIN_SATOSHIS_PER_BTC) * exchangeRates.bitcoinToUsd)}
-            readOnly
-            className="bg-muted px-3 py-2"
-          />
+          <div className="flex h-10 w-full rounded-md border border-input bg-muted px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+            {formatDecimal((formData.bitcoin || 0) + ((formData.bitcoinSats || 0) / BITCOIN_SATOSHIS_PER_BTC) * exchangeRates.bitcoinToUsd)}
+          </div>
         </div>
       </div>
 
@@ -209,24 +197,15 @@ export default function AssetsEditModal({ isOpen, onClose, onSave, section, init
           </div>
           <div>
             <Label htmlFor="crypto-empty" className="flex justify-center pb-1">-</Label>
-            <Input
-              id="crypto-empty"
-              type="text"
-              value=""
-              readOnly
-              className="bg-muted px-3 py-2"
-              placeholder="-"
-            />
+            <div className="flex h-10 w-full rounded-md border border-input bg-muted px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+              -
+            </div>
           </div>
           <div>
             <Label htmlFor="crypto-total" className="flex justify-center pb-1">T$</Label>
-            <Input
-              id="crypto-total"
-              type="number"
-              value={formatDecimal(formData.crypto || 0)}
-              readOnly
-              className="bg-muted"
-            />
+            <div className="flex h-10 w-full rounded-md border border-input bg-muted px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+              {formatDecimal(formData.crypto || 0)}
+            </div>
           </div>
         </div>
       )}
@@ -265,13 +244,9 @@ export default function AssetsEditModal({ isOpen, onClose, onSave, section, init
         </div>
         <div>
           <Label htmlFor="toCharge-total" className="flex justify-center pb-1">T$</Label>
-          <Input
-            id="toCharge-total"
-            type="number"
-            value={formatDecimal((formData.toCharge || 0) + (formData.toChargeColones || 0) / exchangeRates.colonesToUsd)}
-            readOnly
-            className="bg-muted px-3 py-2"
-          />
+          <div className="flex h-10 w-full rounded-md border border-input bg-muted px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+            {formatDecimal((formData.toCharge || 0) + (formData.toChargeColones || 0) / exchangeRates.colonesToUsd)}
+          </div>
         </div>
       </div>
 
@@ -309,13 +284,9 @@ export default function AssetsEditModal({ isOpen, onClose, onSave, section, init
         </div>
         <div>
           <Label htmlFor="toPay-total" className="flex justify-center pb-1">T$</Label>
-          <Input
-            id="toPay-total"
-            type="number"
-            value={formatDecimal((formData.toPay || 0) + (formData.toPayColones || 0) / exchangeRates.colonesToUsd)}
-            readOnly
-            className="bg-muted px-3 py-2"
-          />
+          <div className="flex h-10 w-full rounded-md border border-input bg-muted px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+            {formatDecimal((formData.toPay || 0) + (formData.toPayColones || 0) / exchangeRates.colonesToUsd)}
+          </div>
         </div>
       </div>
     </div>

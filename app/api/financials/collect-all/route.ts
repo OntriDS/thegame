@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
             !record.isCollected
         );
 
-        console.log(`[COLLECT-FINANCIALS] Found ${recordsToCollect.length} records to collect for ${monthKey}`);
+
 
         let collectedCount = 0;
         const errors: string[] = [];

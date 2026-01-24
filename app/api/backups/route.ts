@@ -30,15 +30,15 @@ export async function POST(req: NextRequest) {
     const { entityType, data } = await req.json();
 
     if (!entityType || !data) {
-      return NextResponse.json({ 
-        error: 'Missing required fields: entityType and data' 
+      return NextResponse.json({
+        error: 'Missing required fields: entityType and data'
       }, { status: 400 });
     }
 
     // Validate entity type
     if (!BACKUPABLE_ENTITY_TYPES.includes(entityType as EntityType)) {
-      return NextResponse.json({ 
-        error: `Invalid entity type. Must be one of: ${BACKUPABLE_ENTITY_TYPES.join(', ')}` 
+      return NextResponse.json({
+        error: `Invalid entity type. Must be one of: ${BACKUPABLE_ENTITY_TYPES.join(', ')}`
       }, { status: 400 });
     }
 
@@ -55,8 +55,6 @@ export async function POST(req: NextRequest) {
     };
 
     await kv.set(backupKey, JSON.stringify(backupData));
-
-    console.log(`[Backup API] ✅ Saved backup for ${entityType} (${backupData.metadata.count} items)`);
 
     return NextResponse.json({
       success: true,
@@ -92,8 +90,8 @@ export async function GET(req: NextRequest) {
       const backupData = await kv.get(backupKey);
 
       if (!backupData) {
-        return NextResponse.json({ 
-          error: `No backup found for entity type: ${entityType}` 
+        return NextResponse.json({
+          error: `No backup found for entity type: ${entityType}`
         }, { status: 404 });
       }
 
@@ -135,8 +133,6 @@ export async function GET(req: NextRequest) {
       const batchResults = await Promise.all(batchPromises);
       backups.push(...batchResults.filter(result => result !== null));
     }
-
-    console.log(`[Backup API] ✅ Found ${backups.length} available backups`);
 
     return NextResponse.json({
       success: true,

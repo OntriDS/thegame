@@ -281,7 +281,7 @@ export function SearchableSelect({
                           <CommandGroup>
                             {groupOptions.map((option, index) => (
                               <CommandItem
-                                key={`${groupName}-${option.value}-${index}`}
+                                key={`${groupName}-${option.value}`}
                                 value={option.label}
                                 onSelect={() => {
                                   onValueChange(option.value === value ? '' : option.value);

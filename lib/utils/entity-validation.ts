@@ -12,7 +12,7 @@ export interface ValidationResult {
   valid: boolean;
   errors: string[];
   warnings: string[];
-  fixed?: any; // Optional: fixed/normalized record
+  fixed?: unknown; // Optional: fixed/normalized record
 }
 
 /**
@@ -47,7 +47,7 @@ export function validateSite(site: any, index: number): ValidationResult {
   }
 
   // Validate type-specific metadata
-  
+
   if (type === SiteType.PHYSICAL) {
     if (!site.metadata.businessType) {
       errors.push(`Physical sites require 'metadata.businessType' field`);
@@ -79,7 +79,7 @@ export function validateSite(site: any, index: number): ValidationResult {
   if ('isArchived' in fixed) {
     delete fixed.isArchived;
   }
-  
+
   // Remove isActive from metadata if present
   if (fixed.metadata && 'isActive' in fixed.metadata) {
     const { isActive, ...metadataWithoutActive } = fixed.metadata;
@@ -97,11 +97,11 @@ export function validateSite(site: any, index: number): ValidationResult {
 /**
  * Validate a record based on entity type
  */
-export function validateEntity(entityType: EntityType, record: any, index: number): ValidationResult {
+export function validateEntity(entityType: EntityType, record: Partial<Site | Item | Task | Sale | FinancialRecord | Character | Player>, index: number): ValidationResult {
   switch (entityType) {
     case EntityType.SITE:
-      return validateSite(record, index);
-    
+      return validateSite(record as Partial<Site>, index);
+
     case EntityType.ITEM:
     case EntityType.TASK:
     case EntityType.SALE:
@@ -116,7 +116,7 @@ export function validateEntity(entityType: EntityType, record: any, index: numbe
         warnings: [],
         fixed: record
       };
-    
+
     default:
       return {
         valid: true,
@@ -132,15 +132,15 @@ export function validateEntity(entityType: EntityType, record: any, index: numbe
  */
 export function validateEntities(
   entityType: EntityType,
-  records: any[]
+  records: Array<Partial<Site | Item | Task | Sale | FinancialRecord | Character | Player>>
 ): {
-  valid: any[];
-  invalid: Array<{ index: number; record: any; errors: string[]; warnings: string[] }>;
-  fixed: any[];
+  valid: Array<Partial<Site | Item | Task | Sale | FinancialRecord | Character | Player>>;
+  invalid: Array<{ index: number; record: Partial<Site | Item | Task | Sale | FinancialRecord | Character | Player> | null; errors: string[]; warnings: string[] }>;
+  fixed: Array<Partial<Site | Item | Task | Sale | FinancialRecord | Character | Player>>;
 } {
-  const valid: any[] = [];
-  const invalid: Array<{ index: number; record: any; errors: string[]; warnings: string[] }> = [];
-  const fixed: any[] = [];
+  const valid: Array<Partial<Site | Item | Task | Sale | FinancialRecord | Character | Player>> = [];
+  const invalid: Array<{ index: number; record: Partial<Site | Item | Task | Sale | FinancialRecord | Character | Player> | null; errors: string[]; warnings: string[] }> = [];
+  const fixed: Array<Partial<Site | Item | Task | Sale | FinancialRecord | Character | Player>> = [];
 
   records.forEach((record, index) => {
     if (!record) {
@@ -154,7 +154,7 @@ export function validateEntities(
     }
 
     const validation = validateEntity(entityType, record, index);
-    
+
     if (validation.valid) {
       if (validation.fixed && validation.fixed !== record) {
         // Record was normalized/fixed

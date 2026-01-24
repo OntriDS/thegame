@@ -8,46 +8,28 @@ import path from 'path';
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
-  console.log('🔥 [Dev Log API] GET request received');
-  
   if (!(await requireAdminAuth(req))) {
-    console.log('🔥 [Dev Log API] ❌ Auth failed');
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
     // In production with KV, read from KV
     if (process.env.UPSTASH_REDIS_REST_URL) {
-      console.log('🔥 [Dev Log API] Using KV (production)');
       const { kvGet } = await import('@/data-store/kv');
       const devLog = await kvGet('data:dev-log');
-      console.log('🔥 [Dev Log API] KV data:', devLog ? 'FOUND' : 'NOT FOUND');
 
       if (devLog) {
-        console.log('🔥 [Dev Log API] ✅ Returning dev log from KV');
-        const devLogData = devLog as any;
-        console.log('🔥 [Dev Log API] Data structure:', {
-          hasSprints: !!devLogData.sprints,
-          hasPhases: !!devLogData.phases,
-          sprintsLength: devLogData.sprints?.length || 0,
-          phasesLength: devLogData.phases?.length || 0,
-          keys: Object.keys(devLogData)
-        });
         return NextResponse.json(devLog);
       } else {
-        console.log('🔥 [Dev Log API] ⚠️ No dev log in KV, returning empty structure');
         return NextResponse.json({ sprints: [], phases: [] });
       }
     } else {
-      console.log('🔥 [Dev Log API] Using filesystem (development)');
       // In development, read from filesystem
       const filePath = path.join(process.cwd(), 'logs-research', 'dev-log.json');
-      console.log('🔥 [Dev Log API] Reading from:', filePath);
 
       try {
         const fileContent = fs.readFileSync(filePath, 'utf8');
         const devLog = JSON.parse(fileContent);
-        console.log('🔥 [Dev Log API] ✅ File read successfully');
         return NextResponse.json(devLog);
       } catch (fileError) {
         console.error('🔥 [Dev Log API] ❌ Error reading dev-log.json:', fileError);

@@ -7,7 +7,6 @@ import path from 'path';
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
-    console.log('🔥 [Project Status Sync API] Request received');
 
     if (!(await requireAdminAuth(req))) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -16,7 +15,6 @@ export async function POST(req: NextRequest) {
     try {
         // 1. Read from the filesystem (The Source of Truth for this action)
         const filePath = path.join(process.cwd(), 'PROJECT-STATUS.json');
-        console.log('🔥 [Project Status Sync API] Reading from:', filePath);
 
         let fileStatusData;
         try {
@@ -29,14 +27,12 @@ export async function POST(req: NextRequest) {
 
         // 2. Write to the KV Store (if configured)
         if (process.env.UPSTASH_REDIS_REST_URL) {
-            console.log('🔥 [Project Status Sync API] Syncing to KV (production/preview)');
             const { kvSet } = await import('@/data-store/kv');
 
             // Update the timestamp to now
             fileStatusData.lastUpdated = new Date().toISOString();
 
             await kvSet('data:project-status', fileStatusData);
-            console.log('🔥 [Project Status Sync API] ✅ KV Synced');
 
             return NextResponse.json({
                 success: true,
@@ -44,7 +40,6 @@ export async function POST(req: NextRequest) {
                 data: fileStatusData
             });
         } else {
-            console.log('🔥 [Project Status Sync API] No KV configured. Reading/Writing to file is the same.');
             return NextResponse.json({
                 success: true,
                 message: 'No external database configured. File is already the source of truth.',

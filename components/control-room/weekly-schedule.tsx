@@ -7,6 +7,7 @@ import { format, addDays, startOfWeek, getHours, setHours, setMinutes, differenc
 import { cn } from '@/lib/utils';
 import { useThemeColors } from '@/lib/hooks/use-theme-colors';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { ChevronLeft, ChevronRight, Plus, Star, Zap, Brain, TrendingUp, Heart, Clock } from 'lucide-react';
 import { BUSINESS_STRUCTURE } from '@/types/enums';
 import { AREA_COLORS, getStationColorClasses, TASK_STATUS_BADGE_COLORS, getStationColor, SOLID_COLOR_CLASSES } from '@/lib/constants/color-constants';
@@ -343,13 +344,12 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask, onTaskUpd
                         <div className="flex items-center gap-2 px-2">
                             <Clock className="h-4 w-4 text-muted-foreground" />
                             <span className="text-xs text-muted-foreground whitespace-nowrap">Start:</span>
-                            <input
-                                type="number"
-                                min="0"
-                                max="23"
+                            <Input
+                                type="text"
+                                inputMode="numeric"
                                 value={startHour}
                                 onChange={(e) => handleStartHourChange(e.target.value)}
-                                className="w-14 px-2 py-1 text-xs font-medium text-center bg-background border border-border rounded hover:border-primary focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors"
+                                className="w-14 px-2 py-1 text-xs font-medium text-center bg-background border border-border rounded hover:border-primary focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors h-auto"
                             />
                             <span className="text-xs text-muted-foreground">:00</span>
                         </div>

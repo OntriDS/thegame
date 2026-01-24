@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
             !sale.isCollected
         );
 
-        console.log(`[COLLECT-SALES] Found ${recordsToCollect.length} records to collect for ${monthKey}`);
+
 
         let collectedCount = 0;
         const errors: string[] = [];

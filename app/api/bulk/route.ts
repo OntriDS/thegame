@@ -154,9 +154,8 @@ async function handleBulkOperation<T>(
     }
 
     // Validate all records before processing
-    console.log(`[Bulk API] Validating ${records.length} records for ${entityType}...`);
     const validation = validateEntities(entityType, records);
-    
+
     // Report validation results
     if (validation.invalid.length > 0) {
       console.warn(`[Bulk API] ⚠️ ${validation.invalid.length} invalid records detected, will be skipped`);
@@ -164,14 +163,13 @@ async function handleBulkOperation<T>(
         console.warn(`[Bulk API] Row ${inv.index}: ${inv.errors.join('; ')}`);
       });
     }
-    
+
     if (validation.fixed.length > 0) {
-      console.log(`[Bulk API] ✅ ${validation.fixed.length} records normalized/fixed`);
     }
-    
+
     // Use validated and fixed records for processing
-    const recordsToProcess = validation.valid;
-    
+    const recordsToProcess: any[] = validation.valid;
+
     // Add validation errors to error list
     validation.invalid.forEach(inv => {
       const errorMsg = `Row ${inv.index}: ${inv.errors.join('; ')}${inv.warnings.length > 0 ? ` (Warnings: ${inv.warnings.join(', ')})` : ''}`;
@@ -195,10 +193,10 @@ async function handleBulkOperation<T>(
 
     // Process records in batches
     const seenThisBatch = new Set<string>();
-    
+
     for (let batchStart = 0; batchStart < recordsToProcess.length; batchStart += BATCH_SIZE) {
       const batch = recordsToProcess.slice(batchStart, batchStart + BATCH_SIZE);
-      
+
       for (let i = 0; i < batch.length; i++) {
         const record = batch[i];
         const recordIndex = batchStart + i;
@@ -325,7 +323,6 @@ async function handleBulkOperation<T>(
             errors: errors.length > 0 ? errors.slice(0, 10) : undefined
           }
         });
-        console.log(`[Bulk API] ✅ Logged bulk operation: ${totalProcessed} ${entityType} processed`);
       }
     } catch (logError) {
       console.error(`[Bulk API] Failed to log bulk operation:`, logError);
@@ -347,7 +344,7 @@ async function handleBulkOperation<T>(
     console.error(`[Bulk API] Fatal error in handleBulkOperation for ${entityType}:`, error);
     const errorMsg = error instanceof Error ? error.message : 'Fatal error during bulk operation';
     errors.push(`Fatal error: ${errorMsg}`);
-    
+
     // Log bulk operation even on fatal error (with partial progress)
     try {
       const totalProcessed = counts.added + counts.updated + counts.skipped + counts.failed;
@@ -366,14 +363,13 @@ async function handleBulkOperation<T>(
             fatalError: errorMsg
           }
         });
-        console.log(`[Bulk API] ✅ Logged bulk operation (with error): ${totalProcessed} ${entityType} processed`);
       }
     } catch (logError) {
       console.error(`[Bulk API] Failed to log bulk operation on error:`, logError);
     }
-    
+
     return NextResponse.json(
-      { 
+      {
         success: false,
         error: errorMsg,
         mode,
