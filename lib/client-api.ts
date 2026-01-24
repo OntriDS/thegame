@@ -231,7 +231,10 @@ export const ClientAPI = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(record)
     });
-    if (!res.ok) throw new Error('Failed to save financial');
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(errorData.error || 'Failed to save financial');
+    }
     return await res.json();
   },
 
