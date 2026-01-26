@@ -150,21 +150,15 @@ export default function SalesPage() {
     setShowSalesModal(true);
   };
 
-  const handleSaveSale = async (sale: Sale) => {
-    try {
-      const finalSale = await ClientAPI.upsertSale(sale);
+  const handleSaveSale = async (sale: Sale, force?: boolean) => {
+    // We bubble the error up to SalesModal so it can handle duplicate logic/UI
+    const finalSale = await ClientAPI.upsertSale(sale, { force });
 
-      // Update editingSale with fresh data BEFORE modal closes (fixes stale UI issue)
-      setEditingSale(finalSale);
+    // Update editingSale with fresh data BEFORE modal closes (fixes stale UI issue)
+    setEditingSale(finalSale);
 
-      setShowSalesModal(false);
-      await loadSales(); // Refresh the list
-
-
-    } catch (error) {
-      console.error('Failed to save sale:', error);
-      alert('Failed to save sale. Please try again.');
-    }
+    setShowSalesModal(false);
+    await loadSales(); // Refresh the list
   };
 
   const handleDeleteSale = async () => {

@@ -63,6 +63,9 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
   // Guard for one-time initialization of new characters
   const didInitRef = useRef(false);
 
+  // Identity Vault: Persist ID across renders
+  const draftId = useRef(character?.id || uuid());
+
   // V0.1 Core - Game Mechanics (Character-specific only!)
   const [purchasedAmount, setPurchasedAmount] = useState<number>(0);
   const [CP, setCP] = useState<number | undefined>(undefined);
@@ -119,6 +122,8 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
         } else if (!didInitRef.current) {
           // Creating new character - initialize once only (don't reset again while user edits)
           didInitRef.current = true;
+          // Generate new ID for new session
+          draftId.current = uuid();
           setName('');
           setDescription('');
           setContactPhone('');
@@ -199,7 +204,7 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
       const shouldPreserveContactInfo = hasPlayerRole;
 
       const newCharacter: Character = {
-        id: character?.id || uuid(),
+        id: character?.id || draftId.current,
         name: name?.trim() || 'Unnamed Character',
         description: description?.trim() || undefined,
         createdAt: character?.createdAt || new Date(),

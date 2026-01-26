@@ -3,7 +3,7 @@
 
 import type { Task, Item, FinancialRecord, Sale, Character, Player, Site, Settlement, Account, Business, Contract } from '@/types/entities';
 import type { TaskSnapshot, ItemSnapshot, SaleSnapshot, FinancialSnapshot } from '@/types/archive';
-import { EntityType, ItemType, TaskPriority, TaskStatus, FinancialStatus } from '@/types/enums';
+import { EntityType, ItemType, TaskPriority, TaskStatus, FinancialStatus, TaskType } from '@/types/enums';
 import {
   upsertTask as repoUpsertTask,
   getAllTasks as repoGetAllTasks,
@@ -102,6 +102,59 @@ export async function upsertTask(task: Task, options?: { skipWorkflowEffects?: b
       : task;
   const saved = await repoUpsertTask(normalizedTask);
 
+  // Identity Shield: Time-Window Deduplication (2 minutes)
+  // Only apply to NEW tasks (no previous record found) to allow updates
+  if (!previous) {
+    const DUPLICATION_WINDOW_MS = 2 * 60 * 1000; // 2 minutes
+    const now = new Date();
+
+    // Fetch recent tasks (could be optimized with a time-based index, but filtering getAllTasks is acceptable for now given volume)
+    // NOTE: In high-volume prod, query by approximate time range is better.
+    const recentTasks = (await repoGetAllTasks()).filter(t =>
+      t.id !== saved.id && // exclude self
+      t.createdAt &&
+      (now.getTime() - new Date(t.createdAt).getTime() < DUPLICATION_WINDOW_MS)
+    );
+
+    const isDuplicate = recentTasks.some(existing => {
+      // 1. Basic Identity Match
+      const basicMatch =
+        existing.name === saved.name &&
+        existing.type === saved.type &&
+        existing.station === saved.station &&
+        existing.priority === saved.priority;
+
+      if (!basicMatch) return false;
+
+      // 2. Recurrence Exception
+      // If both are instances of the same parent (Recurrent Instances), they are NOT duplicates 
+      // IF their scheduledStart is different.
+      if (
+        saved.type === TaskType.RECURRENT_INSTANCE &&
+        existing.type === TaskType.RECURRENT_INSTANCE &&
+        saved.parentId === existing.parentId
+      ) {
+        // If scheduledStart differs, they are distinct instances (e.g. Daily Task for Monday vs Tuesday)
+        const savedStart = saved.scheduledStart ? new Date(saved.scheduledStart).getTime() : 0;
+        const existingStart = existing.scheduledStart ? new Date(existing.scheduledStart).getTime() : 0;
+
+        if (savedStart !== existingStart) return false;
+      }
+
+      // If we got here, it's a duplicate
+      return true;
+    });
+
+    if (isDuplicate) {
+      console.warn(`[upsertTask] Prevented duplicate task creation: ${saved.name} (${saved.id})`);
+      // We essentially "undo" the save by throwing (or we could physically delete, but throwing allows API to handle it)
+      // Since we already saved it (to get the ID for comparison? No, we shouldn't have saved it yet ideally)
+      // The current architecture saves first. We must delete it.
+      await repoDeleteTask(saved.id);
+      throw new Error(`DUPLICATE_TASK_DETECTED: A similar task was created less than 2 minutes ago.`);
+    }
+  }
+
   if (!options?.skipWorkflowEffects) {
     const { onTaskUpsert } = await import('@/workflows/entities-workflows/task.workflow');
     await onTaskUpsert(saved, previous || undefined);
@@ -150,6 +203,48 @@ export async function removeTask(id: string): Promise<void> {
 // - API routes MUST have try/catch to handle workflow failures gracefully
 export async function upsertItem(item: Item, options?: { skipWorkflowEffects?: boolean; skipLinkEffects?: boolean }): Promise<Item> {
   const previous = await repoGetItemById(item.id);
+
+  // Identity Shield: Time-Window Deduplication (2 minutes)
+  // Only apply to NEW items (no previous record found) to allow legitimate updates
+  if (!previous) {
+    const DUPLICATION_WINDOW_MS = 2 * 60 * 1000; // 2 minutes
+    const now = new Date();
+
+    // Fetch recent items
+    // NOTE: This could be optimized with a query by createdAt if available in repo, 
+    // but filtering getAllItems is acceptable for current scale.
+    const recentItems = (await repoGetAllItems()).filter(i =>
+      i.id !== item.id && // exclude self
+      i.createdAt &&
+      (now.getTime() - new Date(i.createdAt).getTime() < DUPLICATION_WINDOW_MS)
+    );
+
+    const isDuplicate = recentItems.some(existing => {
+      // 1. Basic Identity Match
+      return (
+        existing.name === item.name &&
+        existing.type === item.type &&
+        existing.station === item.station &&
+        existing.subItemType === item.subItemType &&
+        // Check stock length as a proxy for "same content"
+        (existing.stock?.length || 0) === (item.stock?.length || 0)
+      );
+    });
+
+    if (isDuplicate) {
+      console.warn(`[upsertItem] Prevented duplicate item creation: ${item.name}`);
+      // We technically haven't saved it yet in this flow (repoUpsertItem is called AFTER this check in my proposed change, 
+      // but wait... the original code calls repoUpsertItem at line 206. I need to intercept BEFORE line 206).
+
+      // Wait, the original code is:
+      // const saved = await repoUpsertItem(item);
+
+      // I need to change that order OR delete it if dup detected. 
+      // Changing order is safer.
+      throw new Error(`DUPLICATE_ITEM_DETECTED: A similar item was created less than 2 minutes ago.`);
+    }
+  }
+
   const saved = await repoUpsertItem(item);  // ✅ Item persisted here
 
   if (!options?.skipWorkflowEffects) {
@@ -208,8 +303,49 @@ export async function removeItem(id: string): Promise<void> {
 }
 
 // FINANCIALS
-export async function upsertFinancial(financial: FinancialRecord, options?: { skipWorkflowEffects?: boolean; skipLinkEffects?: boolean }): Promise<FinancialRecord> {
+export async function upsertFinancial(financial: FinancialRecord, options?: { skipWorkflowEffects?: boolean; skipLinkEffects?: boolean; forceSave?: boolean }): Promise<FinancialRecord> {
   const previous = await repoGetFinancialById(financial.id);
+
+  // FUZZY DEDUPLICATION SHIELD
+  // If this is a NEW record (no previous ID) and forceSave is not enabled
+  if (!previous && !options?.forceSave) {
+    // 1. Fetch records for the same month context
+    const monthRecords = await getFinancialsForMonth(financial.year, financial.month);
+
+    // 2. Scan for "Business Duplicates"
+    const duplicate = monthRecords.find(existing => {
+      if (existing.id === financial.id) return false;
+
+      // A. Strict Type & Station Match
+      if (existing.type !== financial.type) return false;
+      if (existing.station !== financial.station) return false;
+
+      // B. Fuzzy Name Match (Case insensitive, trimmed)
+      if (existing.name.trim().toLowerCase() !== financial.name.trim().toLowerCase()) return false;
+
+      // C. Value Match (Cost OR Revenue)
+      const existingCost = existing.cost || 0;
+      const newCost = financial.cost || 0;
+      if (Math.abs(existingCost - newCost) > 0.01) return false;
+
+      const existingRevenue = existing.revenue || 0;
+      const newRevenue = financial.revenue || 0;
+      if (Math.abs(existingRevenue - newRevenue) > 0.01) return false;
+
+      // D. Time Match (within 2 minutes) - Important for preventing double-clicks
+      const existingTime = new Date(existing.createdAt).getTime();
+      const newTime = new Date(financial.createdAt).getTime();
+      if (Math.abs(existingTime - newTime) > 2 * 60 * 1000) return false;
+
+      return true;
+    });
+
+    if (duplicate) {
+      console.warn(`[DuplicateShield] Blocked duplicate financial creation. New: ${financial.id}, Existing: ${duplicate.id}`);
+      throw new Error(`DUPLICATE_FINANCIAL_DETECTED: Potential duplicate of record ${duplicate.id}`);
+    }
+  }
+
   const saved = await repoUpsertFinancial(financial);
 
   if (!options?.skipWorkflowEffects) {
@@ -266,8 +402,48 @@ export async function removeFinancial(id: string): Promise<void> {
 }
 
 // SALES
-export async function upsertSale(sale: Sale, options?: { skipWorkflowEffects?: boolean; skipLinkEffects?: boolean }): Promise<Sale> {
+export async function upsertSale(sale: Sale, options?: { skipWorkflowEffects?: boolean; skipLinkEffects?: boolean; forceSave?: boolean }): Promise<Sale> {
   const previous = await repoGetSaleById(sale.id);
+
+  // FUZZY DEDUPLICATION SHIELD
+  // If this is a NEW sale (no previous ID) and forceSave is not enabled
+  if (!previous && !options?.forceSave) {
+    // 1. Fetch sales for the same month context
+    const saleDate = new Date(sale.saleDate);
+    const monthSales = await getSalesForMonth(saleDate.getFullYear(), saleDate.getMonth() + 1);
+
+    // 2. Scan for "Business Duplicates" (same core data, different ID)
+    const duplicate = monthSales.find(existing => {
+      // Must be different ID (obvious since we checked previous, but safety first)
+      if (existing.id === sale.id) return false;
+
+      // A. Strict Site & Type Match
+      if (existing.siteId !== sale.siteId) return false;
+      if (existing.type !== sale.type) return false;
+
+      // B. Fuzzy Time Match (within 2 minutes) - accounts for slight client clock drift or manual re-entry speed
+      const timeDiff = Math.abs(new Date(existing.saleDate).getTime() - saleDate.getTime());
+      if (timeDiff > 2 * 60 * 1000) return false;
+
+      // C. Identity Match (Customer/Counterparty)
+      if (existing.customerId !== sale.customerId) return false;
+      if (!existing.customerId && existing.counterpartyName !== sale.counterpartyName) return false;
+
+      // D. Value Match (Total Revenue)
+      // Use totals if available, otherwise fallback to simple line check (length)
+      const existingTotal = existing.totals?.totalRevenue ?? 0;
+      const newTotal = sale.totals?.totalRevenue ?? 0;
+      if (Math.abs(existingTotal - newTotal) > 0.01) return false;
+
+      return true;
+    });
+
+    if (duplicate) {
+      console.warn(`[DuplicateShield] Blocked duplicate sale creation. New: ${sale.id}, Existing: ${duplicate.id}`);
+      throw new Error(`DUPLICATE_SALE_DETECTED: Potential duplicate of sale ${duplicate.id}`);
+    }
+  }
+
   const saved = await repoUpsertSale(sale);
 
   if (!options?.skipWorkflowEffects) {
@@ -313,6 +489,29 @@ export async function removeSale(id: string): Promise<void> {
 // CHARACTERS
 export async function upsertCharacter(character: Character, options?: { skipWorkflowEffects?: boolean; skipLinkEffects?: boolean }): Promise<Character> {
   const previous = await repoGetCharacterById(character.id);
+
+  // Identity Shield: Time-Window Deduplication (2 minutes)
+  if (!previous) {
+    const DUPLICATION_WINDOW_MS = 2 * 60 * 1000;
+    const now = new Date();
+    const recent = (await repoGetAllCharacters()).filter(c =>
+      c.id !== character.id &&
+      c.createdAt &&
+      (now.getTime() - new Date(c.createdAt).getTime() < DUPLICATION_WINDOW_MS)
+    );
+
+    const isDuplicate = recent.some(existing =>
+      existing.name === character.name &&
+      // Check if roles match exactly (simple equality check for arrays)
+      JSON.stringify(existing.roles.sort()) === JSON.stringify(character.roles.sort())
+    );
+
+    if (isDuplicate) {
+      console.warn(`[upsertCharacter] Prevented duplicate character creation: ${character.name}`);
+      throw new Error(`DUPLICATE_CHARACTER_DETECTED: A similar character was created less than 2 minutes ago.`);
+    }
+  }
+
   const saved = await repoUpsertCharacter(character);
 
   if (!options?.skipWorkflowEffects) {
@@ -419,6 +618,29 @@ export async function removeAccount(id: string): Promise<void> {
 
 // BUSINESSES
 export async function upsertBusiness(entity: Business): Promise<Business> {
+  const previous = await repoGetBusinessById(entity.id);
+
+  // Identity Shield: Time-Window Deduplication (2 minutes)
+  if (!previous) {
+    const DUPLICATION_WINDOW_MS = 2 * 60 * 1000;
+    const now = new Date();
+    const recent = (await repoGetAllBusinesses()).filter(b =>
+      b.id !== entity.id &&
+      b.createdAt &&
+      (now.getTime() - new Date(b.createdAt).getTime() < DUPLICATION_WINDOW_MS)
+    );
+
+    const isDuplicate = recent.some(existing =>
+      existing.name === entity.name &&
+      existing.type === entity.type
+    );
+
+    if (isDuplicate) {
+      console.warn(`[upsertBusiness] Prevented duplicate business creation: ${entity.name}`);
+      throw new Error(`DUPLICATE_BUSINESS_DETECTED: A similar business was created less than 2 minutes ago.`);
+    }
+  }
+
   const saved = await repoUpsertBusiness(entity);
   return saved;
 }

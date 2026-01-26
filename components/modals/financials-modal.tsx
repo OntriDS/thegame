@@ -36,6 +36,7 @@ import { ItemStatus } from '@/types/enums';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
 import { VALIDATION_CONSTANTS } from '@/lib/constants/financial-constants';
 import ArchiveCollectionConfirmationModal from './submodals/archive-collection-confirmation-submodal';
+import ConfirmationModal from './submodals/confirmation-submodal';
 import { MonthYearSelector } from '@/components/ui/month-year-selector';
 
 
@@ -72,7 +73,7 @@ interface FinancialsModalProps {
   month: number;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (record: FinancialRecord) => Promise<void>;
+  onSave: (record: FinancialRecord, force?: boolean) => Promise<void>;
   onDelete?: () => void;
 }
 
@@ -162,6 +163,13 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
 
   // Guard for one-time initialization of new records
   const didInitRef = useRef(false);
+  // Identity Vault: Persist ID across renders
+  const draftId = useRef(record?.id || uuid());
+
+  // Duplicate Shield State
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+  const [duplicateErrorMessage, setDuplicateErrorMessage] = useState('');
+  const [pendingDuplicateRecord, setPendingDuplicateRecord] = useState<FinancialRecord | null>(null);
 
   // Emissary column expansion state with persistence
   const [emissaryColumnExpanded, setEmissaryColumnExpanded] = useState(false);
@@ -291,9 +299,13 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
 
       // Reset init guard when editing
       didInitRef.current = false;
+      // Sync Vault with existing record ID
+      draftId.current = record.id;
     } else if (!didInitRef.current) {
       // New record - initialize once only (don't reset again while user edits)
       didInitRef.current = true;
+      // Generate new ID for new record session
+      draftId.current = uuid();
       setFormData({
         name: '',
         description: '',
@@ -490,7 +502,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
     if (isSaving) return;
     setIsSaving(true);
 
-    const recordId = record?.id || uuid();
+    const recordId = draftId.current;
     const station = formData.station;
 
     const recordData: FinancialRecord = {
@@ -553,7 +565,14 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
       onOpenChange(false);
     } catch (error) {
       console.error('Save failed:', error);
-      // Keep modal open on error
+      if (error instanceof Error && error.message.includes('DUPLICATE_FINANCIAL_DETECTED')) {
+        setPendingDuplicateRecord(recordData);
+        setDuplicateErrorMessage(error.message.replace('DUPLICATE_FINANCIAL_DETECTED: ', ''));
+        setShowDuplicateModal(true);
+      } else {
+        // Keep modal open on other errors (could add alert here)
+        alert(error instanceof Error ? error.message : 'Failed to save record');
+      }
     } finally {
       setIsSaving(false);
     }
@@ -1105,6 +1124,30 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
           onCancel={pendingStatusChange.onCancel}
         />
       )}
+      <ConfirmationModal
+        open={showDuplicateModal}
+        onOpenChange={setShowDuplicateModal}
+        title="Duplicate Financial Record Detected"
+        description={`A similar record already exists (${duplicateErrorMessage}). Is this intentional?`}
+        confirmText="Force Save"
+        cancelText="Cancel"
+        variant="destructive"
+        onConfirm={async () => {
+          if (pendingDuplicateRecord) {
+            try {
+              // Force Save
+              await onSave(pendingDuplicateRecord, true);
+              dispatchEntityUpdated(entityTypeToKind(EntityType.FINANCIAL));
+              setShowDuplicateModal(false);
+              onOpenChange(false);
+            } catch (error) {
+              console.error('Force save failed:', error);
+              // alert(error instanceof Error ? error.message : 'Force save failed');
+            }
+          }
+        }}
+        onCancel={() => setShowDuplicateModal(false)}
+      />
     </>
   );
 }

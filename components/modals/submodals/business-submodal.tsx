@@ -41,6 +41,9 @@ export function BusinessSubmodal({
     const [characters, setCharacters] = useState<Character[]>([]);
     const [sites, setSites] = useState<Site[]>([]);
 
+    // Identity Vault: Persist ID across renders
+    const draftId = React.useRef(initialData?.id || uuid());
+
     useEffect(() => {
         if (open) {
             // Load Options
@@ -60,8 +63,11 @@ export function BusinessSubmodal({
                 setTaxId(initialData.taxId || '');
                 setLinkedCharacterId(initialData.linkedCharacterId || '');
                 setLinkedSiteId(initialData.linkedSiteId || '');
+                // Reset draftId to current editing item
+                draftId.current = initialData.id;
             } else {
                 // Reset for new
+                draftId.current = uuid();
                 setName('');
                 setType(BusinessType.COMPANY);
                 setTaxId('');
@@ -75,7 +81,7 @@ export function BusinessSubmodal({
         if (!name) return; // Validation
 
         const entity: Business = {
-            id: initialData?.id || uuid(),
+            id: initialData?.id || draftId.current,
             name,
             description: `Business for ${name}`,
             type,

@@ -42,7 +42,7 @@ interface SalesModalProps {
   sale?: Sale | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (sale: Sale) => Promise<void>;
+  onSave: (sale: Sale, force?: boolean) => Promise<void>;
   onDelete?: () => void; // Optional callback for when sale is deleted
 }
 
@@ -150,6 +150,13 @@ export default function SalesModal({
 
   // Guard for one-time initialization of new sales
   const didInitRef = useRef(false);
+
+  // Duplicate Prevention
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+  const [pendingDuplicateSale, setPendingDuplicateSale] = useState<Sale | null>(null);
+  const [duplicateErrorMessage, setDuplicateErrorMessage] = useState('');
+  // Identity Vault: Persist ID across renders to prevent duplicate creation on multiple saves
+  const draftId = useRef(sale?.id || uuid());
 
   const toggleAdvanced = () => {
     const newValue = !showAdvanced;
@@ -265,6 +272,8 @@ export default function SalesModal({
 
       // Reset init guard when editing
       didInitRef.current = false;
+      // Sync Vault with existing sale ID
+      draftId.current = sale.id;
     } else {
       // New sale - always reset form when sale is null/undefined
       resetForm();
@@ -272,6 +281,8 @@ export default function SalesModal({
       setPlayerCharacterId(PLAYER_ONE_ID);
       // Mark as initialized
       didInitRef.current = true;
+      // Generate new ID for new sale session
+      draftId.current = uuid();
     }
   }, [sale]);
 
@@ -642,7 +653,7 @@ export default function SalesModal({
       : payments.length > 0 ? payments : undefined;
 
     const saleData: Sale = {
-      id: sale?.id || uuid(),
+      id: draftId.current,
       name: (name?.trim() || `${type} @ ${siteId} ${saleDate.toISOString().slice(0, 10)}`),
       description: description.trim() || undefined,
       saleDate,
@@ -689,7 +700,14 @@ export default function SalesModal({
       onOpenChange(false);
     } catch (error) {
       console.error('Save failed:', error);
-      // Keep modal open on error
+      if (error instanceof Error && error.message.includes('DUPLICATE_SALE_DETECTED')) {
+        setPendingDuplicateSale(saleData);
+        setDuplicateErrorMessage(error.message.replace('DUPLICATE_SALE_DETECTED: ', ''));
+        setShowDuplicateModal(true);
+      } else {
+        // Fallback for other errors (validation, network, etc)
+        showValidationError(error instanceof Error ? error.message : 'Failed to save sale', true);
+      }
     } finally {
       setIsSaving(false);
     }
@@ -2113,6 +2131,32 @@ export default function SalesModal({
         variant="destructive"
         onConfirm={handleConfirmClearLines}
         onCancel={() => setShowClearLinesModal(false)}
+      />
+
+      {/* Duplicate Shield Confirmation */}
+      <ConfirmationModal
+        open={showDuplicateModal}
+        onOpenChange={setShowDuplicateModal}
+        title="Duplicate Sale Detected"
+        description={`A very similar sale already exists (${duplicateErrorMessage}). Is this intentional?`}
+        confirmText="Force Save"
+        cancelText="Cancel"
+        variant="destructive" // Orange in spirit, red in UI
+        onConfirm={async () => {
+          if (pendingDuplicateSale) {
+            try {
+              // Force Save
+              await onSave(pendingDuplicateSale, true);
+              dispatchEntityUpdated(entityTypeToKind(EntityType.SALE));
+              setShowDuplicateModal(false);
+              onOpenChange(false);
+            } catch (error) {
+              console.error('Force save failed:', error);
+              showValidationError(error instanceof Error ? error.message : 'Force save failed');
+            }
+          }
+        }}
+        onCancel={() => setShowDuplicateModal(false)}
       />
 
       {/* Archive Collection Confirmation Modal for status selector */}

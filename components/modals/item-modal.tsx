@@ -132,6 +132,9 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
   // Guard for one-time initialization of new items
   const didInitRef = useRef(false);
 
+  // Identity Vault: Persist ID across renders to prevent duplicate creation on multiple saves
+  const draftId = useRef(item?.id || uuid());
+
   // Save form data to preferences when modal closes
   const saveFormDataToStorage = useCallback(() => {
     if (!item) { // Only save for new items, not when editing existing items
@@ -626,6 +629,8 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
     } else if (!didInitRef.current) {
       // New item - initialize once only (don't reset again while user edits)
       didInitRef.current = true;
+      // Generate new ID for new item session
+      draftId.current = uuid();
       const lastStation = getLastUsedStation();
       setStation(lastStation);
       // Other fields remain as-is or are loaded from persisted draft via loadFormDataFromStorage
@@ -813,32 +818,40 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
       const parsedOriginalFiles = parseFileReferences(originalFiles);
       const parsedAccessoryFiles = parseFileReferences(accessoryFiles);
 
+      let finalId = item?.id;
+      if (!finalId) {
+        if (selectedItemId) {
+          finalId = selectedItemId; // We are updating an existing item selected from dropdown
+        } else {
+          finalId = draftId.current; // Identity Vault: Use persistent ID
+        }
+      }
+
       const newItem: Item = {
-        id: item?.id || selectedItemId || uuid(),
+        id: finalId,
         name,
         description,
         type,
+        station,
         subItemType: subItemType || undefined,
         collection: collection === Collection.NO_COLLECTION ? undefined : collection as Collection,
         status,
-        station,
-        unitCost: unitCost || 0,
-        additionalCost: 0, // Default value
-        price: price || 0,
-        value: 0, // Default value
+        unitCost,
+        additionalCost: 0,
+        price,
+        value: 0,
         restockable,
-        quantitySold: 0, // Default value
-        targetAmount: targetAmount ? parseInt(targetAmount) : undefined,
+        quantitySold: 0,
+        year,
+        imageUrl,
         stock: updatedStock,
+        originalFiles: parseFileReferences(originalFiles),
+        accessoryFiles: parseFileReferences(accessoryFiles),
         dimensions,
         size: parsedSize,
-        year: year || undefined,
-        imageUrl: imageUrl || undefined,
-        originalFiles: parsedOriginalFiles.length > 0 ? parsedOriginalFiles : undefined,
-        accessoryFiles: parsedAccessoryFiles.length > 0 ? parsedAccessoryFiles : undefined,
-        sourceTaskId: (item || existingItems.find(i => i.id === selectedItemId))?.sourceTaskId || null,      // Preserve source task if exists
-        sourceRecordId: (item || existingItems.find(i => i.id === selectedItemId))?.sourceRecordId || null,  // Preserve source record if exists
-        ownerCharacterId: ownerCharacterId,            // Ambassador: Character who owns this item
+        targetAmount: targetAmount && !isNaN(parseFloat(targetAmount)) ? parseFloat(targetAmount) : undefined,
+        ownerCharacterId: ownerCharacterId || null,
+        // Preserve creation date if editing, otherwise new date
         createdAt: (item || existingItems.find(i => i.id === selectedItemId))?.createdAt || new Date(),
         updatedAt: new Date(),
         isCollected: (item || existingItems.find(i => i.id === selectedItemId))?.isCollected || false,        // Preserve collection status

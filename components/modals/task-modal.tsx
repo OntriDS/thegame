@@ -201,6 +201,9 @@ export default function TaskModal({
   const hasInitializedRef = useRef(false);
   const initializedTaskIdRef = useRef<string | null>(null);
 
+  // Identity Vault: Persist ID across renders
+  const draftId = useRef(task?.id || uuid());
+
   // Load UI data for form dropdowns
   useEffect(() => {
     const loadUIData = async () => {
@@ -244,6 +247,8 @@ export default function TaskModal({
   }, []);
 
   const initializeFromTask = useCallback((existingTask: Task) => {
+    // Sync Vault with existing record ID
+    draftId.current = existingTask.id;
     setName(existingTask.name);
     setDescription(existingTask.description || '');
     setStatus(existingTask.status);
@@ -327,6 +332,8 @@ export default function TaskModal({
   }, [computeStationCategoryValue]);
 
   const initializeForNewTask = useCallback(() => {
+    // Generate new ID for new task session
+    draftId.current = uuid();
     setName('');
     setDescription('');
     setStatus(TaskStatus.CREATED);
@@ -450,7 +457,7 @@ export default function TaskModal({
     }
 
     return {
-      id: task?.id || uuid(),
+      id: draftId.current,
       name,
       description,
       status: finalStatus,

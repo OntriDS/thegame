@@ -62,10 +62,19 @@ export async function POST(req: NextRequest) {
       doneAt: body.doneAt ? new Date(body.doneAt) : undefined,
       cancelledAt: body.cancelledAt ? new Date(body.cancelledAt) : undefined
     };
-    const saved = await upsertSale(sale);
+    const forceSave = req.nextUrl.searchParams.get('force') === 'true';
+    const saved = await upsertSale(sale, { forceSave });
     return NextResponse.json(saved);
   } catch (error) {
     console.error('[API] Error saving sale:', error);
+
+    if (error instanceof Error && error.message.includes('DUPLICATE_SALE_DETECTED')) {
+      return NextResponse.json(
+        { error: error.message, isDuplicate: true },
+        { status: 409 }
+      );
+    }
+
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to save sale' },
       { status: 500 }

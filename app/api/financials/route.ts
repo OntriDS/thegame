@@ -58,10 +58,19 @@ export async function POST(req: NextRequest) {
       createdAt: body.createdAt ? new Date(body.createdAt) : new Date(),
       updatedAt: new Date()
     };
-    const saved = await upsertFinancial(financial);
+    const forceSave = req.nextUrl.searchParams.get('force') === 'true';
+    const saved = await upsertFinancial(financial, { forceSave });
     return NextResponse.json(saved);
   } catch (error) {
     console.error('[API] Error saving financial record:', error);
+
+    if (error instanceof Error && error.message.includes('DUPLICATE_FINANCIAL_DETECTED')) {
+      return NextResponse.json(
+        { error: error.message, isDuplicate: true },
+        { status: 409 }
+      );
+    }
+
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to save financial record' },
       { status: 500 }

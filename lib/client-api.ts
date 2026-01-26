@@ -162,13 +162,25 @@ export const ClientAPI = {
     return await res.json();
   },
 
-  upsertSale: async (sale: Sale): Promise<Sale> => {
-    const res = await fetch('/api/sales', {
+  upsertSale: async (sale: Sale, options?: { force?: boolean }): Promise<Sale> => {
+    let url = '/api/sales';
+    if (options?.force) {
+      url += '?force=true';
+    }
+
+    const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(sale)
     });
-    if (!res.ok) throw new Error('Failed to save sale');
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      if (res.status === 409) {
+        throw new Error(`DUPLICATE_SALE_DETECTED: ${errorData.error}`);
+      }
+      throw new Error(errorData.error || 'Failed to save sale');
+    }
     return await res.json();
   },
 
@@ -225,14 +237,22 @@ export const ClientAPI = {
     return await res.json();
   },
 
-  upsertFinancialRecord: async (record: FinancialRecord): Promise<FinancialRecord> => {
-    const res = await fetch('/api/financials', {
+  upsertFinancialRecord: async (record: FinancialRecord, options?: { force?: boolean }): Promise<FinancialRecord> => {
+    let url = '/api/financials';
+    if (options?.force) {
+      url += '?force=true';
+    }
+
+    const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(record)
     });
     if (!res.ok) {
       const errorData = await res.json().catch(() => ({}));
+      if (res.status === 409) {
+        throw new Error(`DUPLICATE_FINANCIAL_DETECTED: ${errorData.error}`);
+      }
       throw new Error(errorData.error || 'Failed to save financial');
     }
     return await res.json();

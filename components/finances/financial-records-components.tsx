@@ -147,21 +147,14 @@ export function CompanyRecordsList({
               month={month}
               open={!!recordToEdit}
               onOpenChange={(open: boolean) => !open && setRecordToEdit(null)}
-              onSave={async (record: FinancialRecord) => {
-                try {
-                  // Parent only calls DataStore - Links System handles all relationships automatically
-                  const finalRecord = await ClientAPI.upsertFinancialRecord(record);
+              onSave={async (record: FinancialRecord, force?: boolean) => {
+                // Allow error to bubble up
+                const finalRecord = await ClientAPI.upsertFinancialRecord(record, { force });
 
-                  const companyRecords = await ClientAPI.getFinancialRecordsByMonth(year, month, 'company');
-                  setRecords(companyRecords);
-                  onRecordUpdated();
-                  // Update recordToEdit with fresh data BEFORE modal closes (fixes stale UI issue)
-                  setRecordToEdit(finalRecord);
-
-
-                } catch (error) {
-                  console.error('Failed to save financial record:', error);
-                }
+                const companyRecords = await ClientAPI.getFinancialRecordsByMonth(year, month, 'company');
+                setRecords(companyRecords);
+                onRecordUpdated();
+                setRecordToEdit(finalRecord);
               }}
               onDelete={async () => {
                 const companyRecords = await ClientAPI.getFinancialRecordsByMonth(year, month, 'company');
@@ -344,21 +337,14 @@ This action cannot be undone.`);
               month={month}
               open={!!recordToEdit}
               onOpenChange={(open: boolean) => !open && setRecordToEdit(null)}
-              onSave={async (record: FinancialRecord) => {
-                try {
-                  // Parent only calls DataStore - Links System handles all relationships automatically
-                  const finalRecord = await ClientAPI.upsertFinancialRecord(record);
+              onSave={async (record: FinancialRecord, force?: boolean) => {
+                // Allow error to bubble up
+                const finalRecord = await ClientAPI.upsertFinancialRecord(record, { force });
 
-                  const personalRecords = await ClientAPI.getFinancialRecordsByMonth(year, month, 'personal');
-                  setRecords(personalRecords);
-                  onRecordUpdated();
-                  // Update recordToEdit with fresh data BEFORE modal closes (fixes stale UI issue)
-                  setRecordToEdit(finalRecord);
-
-
-                } catch (error) {
-                  console.error('Failed to save financial record:', error);
-                }
+                const personalRecords = await ClientAPI.getFinancialRecordsByMonth(year, month, 'personal');
+                setRecords(personalRecords);
+                onRecordUpdated();
+                setRecordToEdit(finalRecord);
               }}
               onDelete={async () => {
                 const personalRecords = await ClientAPI.getFinancialRecordsByMonth(year, month, 'personal');
