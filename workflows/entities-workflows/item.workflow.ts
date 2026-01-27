@@ -74,7 +74,11 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
       await appendEntityLog(EntityType.ITEM, item.id, LogEventType.MOVED, {
         name: item.name,
         itemType: item.type,
+        station: item.station,
+        subItemType: item.subItemType,
         collection: item.collection,
+        price: item.price,
+        unitCost: item.unitCost,
         oldStock: previousItem.stock,
         newStock: item.stock
       });

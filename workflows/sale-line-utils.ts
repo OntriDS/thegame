@@ -191,6 +191,10 @@ export async function processItemSaleLine(line: ItemSaleLine, sale: Sale): Promi
     // Log the effect
     await appendEntityLog(EntityType.ITEM, line.itemId, LogEventType.SOLD, {
       name: item.name,
+      itemType: item.type,
+      station: item.station,
+      subItemType: item.subItemType,
+      collection: item.collection,
       quantity: line.quantity,
       unitPrice: line.unitPrice,
       total: line.quantity * line.unitPrice,

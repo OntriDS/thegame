@@ -39,7 +39,7 @@ export function ItemsLifecycleTab({ itemsLog, onReload, isReloading }: ItemsLife
 
   // Process items log data
   const processedItemsLog = processLogData(itemsLog, logOrder);
-  
+
   // Apply view filter to entries
   const visibleEntries = getVisibleEntries(processedItemsLog.entries || []);
 
@@ -48,7 +48,7 @@ export function ItemsLifecycleTab({ itemsLog, onReload, isReloading }: ItemsLife
     const fetchSourceNames = async () => {
       const entries = processedItemsLog.entries || [];
       const sourceIds = new Set<string>();
-      
+
       // Collect all sourceIds that need lookup
       entries.forEach((entry: any) => {
         const sourceId = entry.sourceId;
@@ -57,18 +57,18 @@ export function ItemsLifecycleTab({ itemsLog, onReload, isReloading }: ItemsLife
           sourceIds.add(sourceId);
         }
       });
-      
+
       if (sourceIds.size === 0) return;
-      
+
       try {
         const { ClientAPI } = await import('@/lib/client-api');
         const newCache: Record<string, string> = { ...sourceNameCache };
-        
+
         const entriesWithTaskSources = entries.filter((entry: any) => {
           const sourceType = entry?.data?.sourceType || entry?.sourceType;
           return sourceType === 'task';
         });
-        
+
         if (entriesWithTaskSources.length > 0) {
           const tasks = await ClientAPI.getTasks();
           entriesWithTaskSources.forEach((entry: any) => {
@@ -76,20 +76,20 @@ export function ItemsLifecycleTab({ itemsLog, onReload, isReloading }: ItemsLife
             if (sourceId) {
               const task = tasks.find((t: any) => t.id === sourceId);
               if (task) {
-                const truncatedName = task.name.length > 30 
-                  ? task.name.substring(0, 27) + '...' 
+                const truncatedName = task.name.length > 30
+                  ? task.name.substring(0, 27) + '...'
                   : task.name;
                 newCache[sourceId] = truncatedName;
               }
             }
           });
         }
-        
+
         const entriesWithRecordSources = entries.filter((entry: any) => {
           const sourceType = entry?.data?.sourceType || entry?.sourceType;
           return sourceType === 'record';
         });
-        
+
         if (entriesWithRecordSources.length > 0) {
           const records = await ClientAPI.getFinancialRecords();
           entriesWithRecordSources.forEach((entry: any) => {
@@ -97,21 +97,21 @@ export function ItemsLifecycleTab({ itemsLog, onReload, isReloading }: ItemsLife
             if (sourceId) {
               const record = records.find((r: any) => r.id === sourceId);
               if (record) {
-                const truncatedName = record.name.length > 30 
-                  ? record.name.substring(0, 27) + '...' 
+                const truncatedName = record.name.length > 30
+                  ? record.name.substring(0, 27) + '...'
                   : record.name;
                 newCache[sourceId] = truncatedName;
               }
             }
           });
         }
-        
+
         setSourceNameCache(newCache);
       } catch (error) {
         console.error('Failed to fetch source names:', error);
       }
     };
-    
+
     fetchSourceNames();
   }, [processedItemsLog.entries, sourceNameCache]);
 
@@ -121,7 +121,7 @@ export function ItemsLifecycleTab({ itemsLog, onReload, isReloading }: ItemsLife
       const colorClasses = isDarkMode ? ITEM_STATUS_COLORS[itemStatus].dark : ITEM_STATUS_COLORS[itemStatus].light;
       return colorClasses;
     }
-    
+
     const normalizedStatus = status.toLowerCase();
     const statusMap: Record<string, ItemStatus> = {
       'created': ItemStatus.CREATED,
@@ -137,13 +137,13 @@ export function ItemsLifecycleTab({ itemsLog, onReload, isReloading }: ItemsLife
       'collected': ItemStatus.COLLECTED,
       'consignment': ItemStatus.CONSIGNMENT,
     };
-    
+
     const mappedStatus = statusMap[normalizedStatus];
     if (mappedStatus && ITEM_STATUS_COLORS[mappedStatus]) {
       const colorClasses = isDarkMode ? ITEM_STATUS_COLORS[mappedStatus].dark : ITEM_STATUS_COLORS[mappedStatus].light;
       return colorClasses;
     }
-    
+
     const fallbackClasses = isDarkMode ? ITEM_STATUS_COLORS[ItemStatus.IDLE].dark : ITEM_STATUS_COLORS[ItemStatus.IDLE].light;
     return fallbackClasses;
   };
@@ -200,7 +200,7 @@ export function ItemsLifecycleTab({ itemsLog, onReload, isReloading }: ItemsLife
                 <p className="text-muted-foreground text-center py-4">No item lifecycle events found</p>
               ) : (
                 visibleEntries.map((entry: any, index: number) => {
-                  
+
                   // Extract status with proper normalization
                   const eventKindRaw: string = entry.event || entry.action || entry.type || entry.status || 'unknown';
                   const eventKind = eventKindRaw.toLowerCase();
@@ -255,10 +255,10 @@ export function ItemsLifecycleTab({ itemsLog, onReload, isReloading }: ItemsLife
                   const sourceType = entry.sourceType;
                   const sourceId = entry.sourceId;
                   const date = entry.displayDate || entry.timestamp || '';
-                  
+
                   // Get source name from cache
                   const truncatedSourceName = sourceId ? sourceNameCache[sourceId] || '' : '';
-                  
+
                   // Handle bulk operations
                   if (
                     eventKind === LogEventType.BULK_IMPORT.toLowerCase() ||
@@ -268,7 +268,7 @@ export function ItemsLifecycleTab({ itemsLog, onReload, isReloading }: ItemsLife
                     const source = entry.source || 'backup folder';
                     const importMode = entry.importMode;
                     const bulkLabel = eventKind === LogEventType.BULK_IMPORT.toLowerCase() ? 'Bulk Import' : 'Bulk Export';
-                    
+
                     return (
                       <div key={index} className="flex items-center gap-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors">
                         <div className="flex-shrink-0">
@@ -280,7 +280,7 @@ export function ItemsLifecycleTab({ itemsLog, onReload, isReloading }: ItemsLife
                               {bulkLabel}
                             </div>
                             <span className="font-medium text-foreground">
-                              {eventKind === LogEventType.BULK_IMPORT.toLowerCase() 
+                              {eventKind === LogEventType.BULK_IMPORT.toLowerCase()
                                 ? `${count} items imported from ${source} (${importMode || 'merge'} mode)`
                                 : `${count} items exported to backup folder`}
                             </span>
@@ -292,7 +292,7 @@ export function ItemsLifecycleTab({ itemsLog, onReload, isReloading }: ItemsLife
                       </div>
                     );
                   }
-                  
+
                   // Regular item entry - match tasks log structure
                   return (
                     <div key={index} className="flex items-center gap-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors">
@@ -300,7 +300,7 @@ export function ItemsLifecycleTab({ itemsLog, onReload, isReloading }: ItemsLife
                       <div className="flex-shrink-0">
                         {getItemTypeIcon(itemType)}
                       </div>
-                      
+
                       {/* Main Info Row */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-3 text-sm">
@@ -308,55 +308,55 @@ export function ItemsLifecycleTab({ itemsLog, onReload, isReloading }: ItemsLife
                           <div className={`inline-flex items-center rounded-full border px-2 py-1 text-xs font-semibold transition-colors ${badgeClasses}`}>
                             {statusDisplayName}
                           </div>
-                          
+
                           {/* Name */}
                           <span className="font-medium text-foreground min-w-0 flex-shrink-0">
                             {name}
                           </span>
-                          
+
                           {/* Station */}
                           {station !== '—' && (
                             <span className="text-muted-foreground min-w-0 flex-shrink-0">
                               {station}
                             </span>
                           )}
-                          
+
                           {/* Type */}
                           {itemType !== '—' && (
                             <span className="text-muted-foreground min-w-0 flex-shrink-0">
                               {itemType}
                             </span>
                           )}
-                          
+
                           {/* SubItemType */}
                           {subItemType !== '—' && (
                             <span className="text-muted-foreground min-w-0 flex-shrink-0">
                               {subItemType}
                             </span>
                           )}
-                          
+
                           {/* Collection */}
                           {collection !== '—' && (
                             <span className="text-muted-foreground min-w-0 flex-shrink-0">
                               {collection}
                             </span>
                           )}
-                          
+
                           {/* Quantity */}
-                          {/* Event-specific details */}
-                          {eventKind === LogEventType.CREATED.toLowerCase() && quantity !== undefined && quantity > 0 && (
+                          {/* Quantity - Show for Created AND Updated events */}
+                          {(eventKind === LogEventType.CREATED.toLowerCase() || eventKind === LogEventType.UPDATED.toLowerCase()) && quantity !== undefined && quantity > 0 && (
                             <span className="text-muted-foreground min-w-0 flex-shrink-0">
                               Q: {quantity}
                             </span>
                           )}
-                          
-                          {eventKind === LogEventType.CREATED.toLowerCase() && unitCost !== undefined && (
+
+                          {(eventKind === LogEventType.CREATED.toLowerCase() || eventKind === LogEventType.UPDATED.toLowerCase()) && unitCost !== undefined && (
                             <span className="text-muted-foreground min-w-0 flex-shrink-0">
                               Cost: ${unitCost}
                             </span>
                           )}
 
-                          {eventKind === LogEventType.CREATED.toLowerCase() && price !== undefined && (
+                          {(eventKind === LogEventType.CREATED.toLowerCase() || eventKind === LogEventType.UPDATED.toLowerCase()) && price !== undefined && (
                             <span className="text-muted-foreground min-w-0 flex-shrink-0">
                               ${price}
                             </span>
@@ -409,7 +409,7 @@ export function ItemsLifecycleTab({ itemsLog, onReload, isReloading }: ItemsLife
                               collected at: {new Date(entry.collectedAt).toLocaleDateString()}
                             </span>
                           )}
-                          
+
                           {/* Source */}
                           {truncatedSourceName && (
                             <span className="text-xs text-muted-foreground min-w-0 flex-shrink-0">
@@ -418,7 +418,7 @@ export function ItemsLifecycleTab({ itemsLog, onReload, isReloading }: ItemsLife
                           )}
                         </div>
                       </div>
-                      
+
                       {/* Right Side: Links Icon + Date */}
                       <div className="flex items-center gap-2 flex-shrink-0">
                         {/* Links Icon */}
@@ -449,7 +449,7 @@ export function ItemsLifecycleTab({ itemsLog, onReload, isReloading }: ItemsLife
                           onReload={onReload}
                           logManagementEnabled={logManagementEnabled}
                         />
-                        
+
                         {/* Date */}
                         <span className="text-xs text-muted-foreground whitespace-nowrap">
                           {date}

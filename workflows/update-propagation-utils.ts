@@ -203,7 +203,26 @@ export async function updateItemsCreatedByTask(
             }
           }
 
-          await upsertItem(updatedItem);
+          await upsertItem(updatedItem, { skipWorkflowEffects: true });
+
+          // Log detailed update event
+          const { appendEntityLog } = await import('./entities-logging');
+          const { LogEventType } = await import('@/types/enums');
+
+          await appendEntityLog(EntityType.ITEM, item.id, LogEventType.UPDATED, {
+            name: updatedItem.name,
+            itemType: updatedItem.type,
+            station: updatedItem.station,
+            subItemType: updatedItem.subItemType,
+            collection: updatedItem.collection,
+            quantity: updatedItem.stock?.reduce((sum, s) => sum + s.quantity, 0) || 0,
+            unitCost: updatedItem.unitCost,
+            price: updatedItem.price,
+            sourceType: 'task',
+            sourceId: task.id,
+            description: `Updated from Task: ${task.name}`
+          });
+
           await markEffect(updateKey);
 
           console.log(`[updateItemsCreatedByTask] ✅ Updated item: ${item.id}`);
@@ -360,7 +379,26 @@ export async function updateItemsCreatedByRecord(
           }
         }
 
-        await upsertItem(updatedItem);
+        await upsertItem(updatedItem, { skipWorkflowEffects: true });
+
+        // Log detailed update event
+        const { appendEntityLog } = await import('./entities-logging');
+        const { LogEventType } = await import('@/types/enums');
+
+        await appendEntityLog(EntityType.ITEM, item.id, LogEventType.UPDATED, {
+          name: updatedItem.name,
+          itemType: updatedItem.type,
+          station: updatedItem.station,
+          subItemType: updatedItem.subItemType,
+          collection: updatedItem.collection,
+          quantity: updatedItem.stock?.reduce((sum, s) => sum + s.quantity, 0) || 0,
+          unitCost: updatedItem.unitCost,
+          price: updatedItem.price,
+          sourceType: 'record',
+          sourceId: record.id,
+          description: `Updated from Record: ${record.name}`
+        });
+
         await markEffect(updateKey);
 
         console.log(`[updateItemsCreatedByRecord] ✅ Updated item: ${item.id}`);
@@ -521,6 +559,11 @@ export async function updateItemsFromSale(
 
         // Explicitly Log Detailed Sale Info to Item Log
         const soldLogDetails = {
+          name: item.name, // Explicitly set Item Name to override potential fallbacks
+          itemType: item.type,
+          station: item.station,
+          subItemType: item.subItemType,
+          collection: item.collection,
           message: `Sold ${line.quantity}x in ${sale.counterpartyName || 'Booth Sale'} for $${line.unitPrice}`,
           saleId: sale.id,
           saleName: sale.name,
