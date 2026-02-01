@@ -706,6 +706,12 @@ export interface Player extends BaseEntity {
     rp: number;
     xp: number;
   };
+  pendingPoints?: {              // [NEW] Earned but not vested (awaiting Collection)
+    hp: number;
+    fp: number;
+    rp: number;
+    xp: number;
+  };
   // J$ is stored in FinancialRecord ledger via PLAYER_FINREC links, not on Player entity
 
   // 3. RPG STATS - NOT YET IMPLEMENTED (V0.1 placeholders)

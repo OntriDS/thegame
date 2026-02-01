@@ -119,7 +119,18 @@ export default function PlayerPage() {
   });
 
   const computeAndSetUnexchanged = useCallback(
-    (entries: any[]) => {
+    (entries: any[], player: Player | null) => {
+      // Use pendingPoints directly if available (Source of Truth for Earned Points)
+      if (player?.pendingPoints) {
+        setUnexchangedPoints({
+          xp: player.pendingPoints.xp || 0,
+          rp: player.pendingPoints.rp || 0,
+          fp: player.pendingPoints.fp || 0,
+          hp: player.pendingPoints.hp || 0
+        });
+        return;
+      }
+      // Fallback to legacy calculation if pendingPoints key is missing (should generally use the above)
       const unexchanged = calculateUnexchangedPoints(entries, monthStart);
       setUnexchangedPoints(unexchanged);
     },
@@ -155,12 +166,12 @@ export default function PlayerPage() {
       }));
       setPlayers(playersData ?? []);
       setPersonalAssets(personalAssetsData ?? null);
-      
+
       // Fetch J$ balance for the main player (multiplayer-ready)
-      const mainPlayerId = playersData?.find((p) => p.id === PLAYER_ONE_ID)?.id || playersData?.[0]?.id;
-      if (mainPlayerId) {
+      const mainPlayer = playersData?.find((p) => p.id === PLAYER_ONE_ID) || playersData?.[0] || null;
+      if (mainPlayer) {
         try {
-          const j$BalanceData = await ClientAPI.getPlayerJungleCoinsBalance(mainPlayerId);
+          const j$BalanceData = await ClientAPI.getPlayerJungleCoinsBalance(mainPlayer.id);
           setJungleCoinsBalance(j$BalanceData?.totalJ$ ?? 0);
         } catch (error) {
           console.error('Failed to fetch J$ balance:', error);
@@ -169,7 +180,7 @@ export default function PlayerPage() {
       } else {
         setJungleCoinsBalance(0);
       }
-      computeAndSetUnexchanged(entries);
+      computeAndSetUnexchanged(entries, mainPlayer);
       setIsHydrated(true);
     } catch (error) {
       console.error('[Player Page] Failed to load data:', error);
@@ -252,7 +263,7 @@ export default function PlayerPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-xl">
             <TrendingUp className="h-5 w-5 text-primary" />
-            Current Month Holdings
+            Current Month Holdings (Earned & Collected)
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -291,7 +302,7 @@ export default function PlayerPage() {
           <div className="border-t pt-4">
             <div className="flex items-center gap-2 mb-3">
               <Coins className="h-4 w-4 text-primary" />
-              <span className="font-semibold text-sm">Exchange Preview — Current Month Points</span>
+              <span className="font-semibold text-sm">Exchange Preview — Earned Points (Pending Collection)</span>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 text-sm">
               {[

@@ -7,10 +7,10 @@ import { appendEntityLog, updateEntityLogField } from '../entities-logging';
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
 import { EffectKeys, buildLogKey } from '@/data-store/keys';
 import { kvGet, kvSet } from '@/data-store/kv';
-import { getLinksFor, removeLink } from '@/links/link-registry';
+import { createLink, getLinksFor, removeLink } from '@/links/link-registry';
 import { getPlayerById, getFinancialById } from '@/data-store/datastore';
 import { createItemFromRecord, removeItemsCreatedByRecord } from '../item-creation-utils';
-import { awardPointsToPlayer, removePointsFromPlayer } from '../points-rewards-utils';
+import { awardPointsToPlayer, removePointsFromPlayer, resolveToPlayerIdMaybeCharacter, stagePointsForPlayer, vestPointsForPlayer } from '../points-rewards-utils';
 import {
   updateTasksFromFinancialRecord,
   updateItemsCreatedByRecord,
@@ -88,22 +88,24 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
     if (financial.rewards?.points) {
       sideEffects.push(
         (async () => {
-          const pointsEffectKey = EffectKeys.sideEffect('financial', financial.id, 'pointsAwarded');
-          if (!(await hasEffect(pointsEffectKey))) {
-            console.log(`[onFinancialUpsert] Awarding points from financial record: ${financial.name}`);
-            const playerId = financial.playerCharacterId || PLAYER_ONE_ID;
-            const points = financial.rewards?.points;
-            if (points) {
-              await awardPointsToPlayer(playerId, {
-                xp: points.xp || 0,
-                rp: points.rp || 0,
-                fp: points.fp || 0,
-                hp: points.hp || 0
-              }, financial.id, EntityType.FINANCIAL);
-              await markEffect(pointsEffectKey);
-              console.log(`[onFinancialUpsert] ✅ Points awarded to player ${playerId} for record: ${financial.name}`);
+          (async () => {
+            const stagingKey = EffectKeys.sideEffect('financial', financial.id, 'pointsStaged');
+            const legacyKey = EffectKeys.sideEffect('financial', financial.id, 'pointsAwarded');
+
+            if (!(await hasEffect(stagingKey)) && !(await hasEffect(legacyKey))) {
+              const playerId = financial.playerCharacterId || PLAYER_ONE_ID;
+              const points = financial.rewards?.points;
+              if (points) {
+                await stagePointsForPlayer(playerId, {
+                  xp: points.xp || 0,
+                  rp: points.rp || 0,
+                  fp: points.fp || 0,
+                  hp: points.hp || 0
+                }, financial.id, EntityType.FINANCIAL);
+                await markEffect(stagingKey);
+              }
             }
-          }
+          })()
         })()
       );
     }
@@ -155,6 +157,20 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
         const { kvSAdd } = await import('@/data-store/kv');
         const collectedIndexKey = `index:financials:collected:${monthKey}`;
         await kvSAdd(collectedIndexKey, financial.id);
+
+        // Vest points if rewards exist AND they were staged
+        const stagingEffectKey = EffectKeys.sideEffect('financial', financial.id, 'pointsStaged');
+
+        if (financial.rewards?.points && await hasEffect(stagingEffectKey)) {
+          const playerId = financial.playerCharacterId || PLAYER_ONE_ID;
+          await vestPointsForPlayer(playerId, {
+            xp: financial.rewards.points.xp || 0,
+            rp: financial.rewards.points.rp || 0,
+            fp: financial.rewards.points.fp || 0,
+            hp: financial.rewards.points.hp || 0
+          }, financial.id, EntityType.FINANCIAL);
+          console.log(`[onFinancialUpsert] 💰 Vested points for collected record: ${financial.name}`);
+        }
 
         await markEffect(snapshotEffectKey);
         console.log(`[onFinancialUpsert] ✅ Created snapshot for collected financial ${financial.name}, added to index ${monthKey}`);
@@ -238,6 +254,20 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
       const { kvSAdd } = await import('@/data-store/kv');
       const collectedIndexKey = `index:financials:collected:${monthKey}`;
       await kvSAdd(collectedIndexKey, financial.id);
+
+      // Vest points if rewards exist AND they were staged
+      const stagingEffectKey = EffectKeys.sideEffect('financial', normalizedFinancial.id, 'pointsStaged');
+
+      if (normalizedFinancial.rewards?.points && await hasEffect(stagingEffectKey)) {
+        const playerId = normalizedFinancial.playerCharacterId || PLAYER_ONE_ID;
+        await vestPointsForPlayer(playerId, {
+          xp: normalizedFinancial.rewards.points.xp || 0,
+          rp: normalizedFinancial.rewards.points.rp || 0,
+          fp: normalizedFinancial.rewards.points.fp || 0,
+          hp: normalizedFinancial.rewards.points.hp || 0
+        }, normalizedFinancial.id, EntityType.FINANCIAL);
+        console.log(`[onFinancialUpsert] 💰 Vested points for collected record: ${normalizedFinancial.name}`);
+      }
 
       await markEffect(snapshotEffectKey);
       console.log(`[onFinancialUpsert] ✅ Created snapshot for collected financial ${financial.name}, added to index ${monthKey}`);

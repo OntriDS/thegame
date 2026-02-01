@@ -19,7 +19,7 @@ import { upsertTask as repoUpsertTask } from '@/data-store/repositories/task.rep
 import { archiveTaskSnapshot } from '@/data-store/datastore';
 import { getLinksFor, removeLink } from '@/links/link-registry';
 import { createItemFromTask, removeItemsCreatedByTask } from '../item-creation-utils';
-import { awardPointsToPlayer, removePointsFromPlayer } from '../points-rewards-utils';
+import { awardPointsToPlayer, removePointsFromPlayer, stagePointsForPlayer, vestPointsForPlayer } from '../points-rewards-utils';
 import { createFinancialRecordFromTask, updateFinancialRecordFromTask, removeFinancialRecordsCreatedByTask } from '../financial-record-utils';
 import { createCharacterFromTask } from '../character-creation-utils';
 import { DEFAULT_POINTS_CONVERSION_RATES } from '@/lib/constants/financial-constants';
@@ -204,6 +204,16 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
       const collectedIndexKey = `index:tasks:collected:${monthKey}`;
       await kvSAdd(collectedIndexKey, updatedTask.id);
 
+      // Vest points if rewards exist AND they were staged (prevents double-counting legacy tasks)
+      // We check for the 'pointsStaged' effect which only exists for tasks processed under the new system
+      const stagingEffectKey = EffectKeys.sideEffect('task', updatedTask.id, 'pointsStaged');
+
+      if (updatedTask.rewards?.points && await hasEffect(stagingEffectKey)) {
+        const playerId = updatedTask.playerCharacterId || PLAYER_ONE_ID;
+        await vestPointsForPlayer(playerId, updatedTask.rewards.points, updatedTask.id, EntityType.TASK);
+        console.log(`[onTaskUpsert] 💰 Vested points for collected task: ${updatedTask.name}`);
+      }
+
       await markEffect(snapshotEffectKey);
       console.log(`[onTaskUpsert] ✅ Task ${updatedTask.name} collected - snapshot created, added to index ${monthKey}`);
 
@@ -256,14 +266,17 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
     if (task.rewards?.points) {
       sideEffects.push(
         (async () => {
-          const effectKey = EffectKeys.sideEffect('task', task.id, 'pointsAwarded');
-          if (!(await hasEffect(effectKey))) {
-            console.log(`[onTaskUpsert] Awarding points from task completion: ${task.name}`);
-            const playerId = task.playerCharacterId || PLAYER_ONE_ID;
-            await awardPointsToPlayer(playerId, task.rewards.points, task.id, EntityType.TASK);
-            await markEffect(effectKey);
-            console.log(`[onTaskUpsert] ✅ Points awarded to player ${playerId} for task: ${task.name}`);
-          }
+          (async () => {
+            // Use 'pointsStaged' key to distinguish from legacy 'pointsAwarded'
+            const stagingKey = EffectKeys.sideEffect('task', task.id, 'pointsStaged');
+            const legacyKey = EffectKeys.sideEffect('task', task.id, 'pointsAwarded');
+
+            if (!(await hasEffect(stagingKey)) && !(await hasEffect(legacyKey))) {
+              const playerId = task.playerCharacterId || PLAYER_ONE_ID;
+              await stagePointsForPlayer(playerId, task.rewards.points, task.id, EntityType.TASK);
+              await markEffect(stagingKey);
+            }
+          })()
         })()
       );
     }

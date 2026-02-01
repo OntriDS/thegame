@@ -688,22 +688,44 @@ export async function updatePlayerPointsFromSource(
     }
 
     // Update player points and totalPoints
-    const updatedPlayer = {
-      ...player,
-      points: {
-        xp: (player.points?.xp || 0) + pointsDelta.xp,
-        rp: (player.points?.rp || 0) + pointsDelta.rp,
-        fp: (player.points?.fp || 0) + pointsDelta.fp,
-        hp: (player.points?.hp || 0) + pointsDelta.hp
-      },
-      totalPoints: {
-        xp: (player.totalPoints?.xp || 0) + pointsDelta.xp,
-        rp: (player.totalPoints?.rp || 0) + pointsDelta.rp,
-        fp: (player.totalPoints?.fp || 0) + pointsDelta.fp,
-        hp: (player.totalPoints?.hp || 0) + pointsDelta.hp
-      },
-      updatedAt: new Date()
-    };
+    // Determine if we should update Vested (Available) or Pending points
+    const isCollected = newSource.isCollected === true;
+
+    let updatedPlayer: any;
+
+    if (isCollected) {
+      // If collected, update Vested Points and Lifetime Points
+      console.log(`[updatePlayerPointsFromSource] Updating VESTED points (Source Collected)`);
+      updatedPlayer = {
+        ...player,
+        points: {
+          xp: (player.points?.xp || 0) + pointsDelta.xp,
+          rp: (player.points?.rp || 0) + pointsDelta.rp,
+          fp: (player.points?.fp || 0) + pointsDelta.fp,
+          hp: (player.points?.hp || 0) + pointsDelta.hp
+        },
+        totalPoints: {
+          xp: (player.totalPoints?.xp || 0) + pointsDelta.xp,
+          rp: (player.totalPoints?.rp || 0) + pointsDelta.rp,
+          fp: (player.totalPoints?.fp || 0) + pointsDelta.fp,
+          hp: (player.totalPoints?.hp || 0) + pointsDelta.hp
+        },
+        updatedAt: new Date()
+      };
+    } else {
+      // If NOT collected, update Pending Points only
+      console.log(`[updatePlayerPointsFromSource] Updating PENDING points (Source Not Collected)`);
+      updatedPlayer = {
+        ...player,
+        pendingPoints: {
+          xp: (player.pendingPoints?.xp || 0) + pointsDelta.xp,
+          rp: (player.pendingPoints?.rp || 0) + pointsDelta.rp,
+          fp: (player.pendingPoints?.fp || 0) + pointsDelta.fp,
+          hp: (player.pendingPoints?.hp || 0) + pointsDelta.hp
+        },
+        updatedAt: new Date()
+      };
+    }
 
     await upsertPlayer(updatedPlayer);
     await markEffect(updateKey);

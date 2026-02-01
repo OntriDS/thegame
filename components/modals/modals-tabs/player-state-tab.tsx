@@ -25,18 +25,18 @@ export function PlayerStateContent({
   };
 }) {
   // Calculate J$ value from available points using shared utility
-  const preview = conversionRates 
+  const preview = conversionRates
     ? calculatePointsToJ$(
-        {
-          xp: playerData?.points?.xp || 0,
-          rp: playerData?.points?.rp || 0,
-          fp: playerData?.points?.fp || 0,
-          hp: playerData?.points?.hp || 0,
-        },
-        conversionRates
-      )
+      {
+        xp: playerData?.points?.xp || 0,
+        rp: playerData?.points?.rp || 0,
+        fp: playerData?.points?.fp || 0,
+        hp: playerData?.points?.hp || 0,
+      },
+      conversionRates
+    )
     : { totalPreview: 0 };
-  
+
   const j$Value = preview.totalPreview;
   const usdValue = conversionRates?.j$ToUSD ? j$Value * conversionRates.j$ToUSD : 0;
 
@@ -51,7 +51,7 @@ export function PlayerStateContent({
         </CardHeader>
         <CardContent>
           <div className="text-center mb-6">
-            <div className="text-sm text-muted-foreground mb-2">Available Points</div>
+            <div className="text-sm text-muted-foreground mb-2">Exchangeable Points</div>
             <div className="flex items-center justify-center gap-4">
               <div className="text-4xl font-extrabold tracking-tight">
                 {((playerData?.points?.xp || 0) + (playerData?.points?.rp || 0) + (playerData?.points?.fp || 0) + (playerData?.points?.hp || 0))}
@@ -81,6 +81,36 @@ export function PlayerStateContent({
               </div>
             ))}
           </div>
+
+          {/* Pending Points Section */}
+          {(playerData?.pendingPoints?.xp || 0) + (playerData?.pendingPoints?.rp || 0) +
+            (playerData?.pendingPoints?.fp || 0) + (playerData?.pendingPoints?.hp || 0) > 0 && (
+              <div className="mt-6 pt-4 border-t">
+                <div className="text-center mb-4">
+                  <div className="text-sm font-medium text-amber-600 flex items-center justify-center gap-2">
+                    <span>Earned Points</span>
+                    <span className="text-xs font-normal text-muted-foreground">(Pending Collection)</span>
+                  </div>
+                  <div className="text-2xl font-bold text-muted-foreground/80 mt-1">
+                    {((playerData?.pendingPoints?.xp || 0) + (playerData?.pendingPoints?.rp || 0) +
+                      (playerData?.pendingPoints?.fp || 0) + (playerData?.pendingPoints?.hp || 0))}
+                  </div>
+                </div>
+                <div className="grid grid-cols-4 gap-4 opacity-75">
+                  {[
+                    { key: 'xp', label: 'XP', value: playerData?.pendingPoints?.xp || 0 },
+                    { key: 'rp', label: 'RP', value: playerData?.pendingPoints?.rp || 0 },
+                    { key: 'fp', label: 'FP', value: playerData?.pendingPoints?.fp || 0 },
+                    { key: 'hp', label: 'HP', value: playerData?.pendingPoints?.hp || 0 }
+                  ].map((point) => (
+                    <div key={`pending-${point.key}`} className="p-3 rounded-lg border border-dashed bg-muted/10">
+                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">{point.label}</div>
+                      <div className="text-lg font-semibold text-muted-foreground">{point.value}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
         </CardContent>
       </Card>
     </div>
@@ -95,12 +125,12 @@ interface PlayerStateTabProps {
   personalAssets: any;
 }
 
-export default function PlayerStateTab({ 
-  open, 
-  onOpenChange, 
-  playerData, 
-  currentMonthMetrics, 
-  personalAssets 
+export default function PlayerStateTab({
+  open,
+  onOpenChange,
+  playerData,
+  currentMonthMetrics,
+  personalAssets
 }: PlayerStateTabProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -122,7 +152,7 @@ export default function PlayerStateTab({
             </CardHeader>
             <CardContent>
               <div className="text-center mb-6">
-                <div className="text-sm text-muted-foreground">Available Points</div>
+                <div className="text-sm text-muted-foreground">Exchangeable Points</div>
                 <div className="text-4xl font-extrabold tracking-tight">
                   {((playerData?.points?.xp || 0) + (playerData?.points?.rp || 0) + (playerData?.points?.fp || 0) + (playerData?.points?.hp || 0))}
                 </div>
