@@ -20,7 +20,7 @@ import {
 } from '../update-propagation-utils';
 import { createCharacterFromSale } from '../character-creation-utils';
 import { archiveSaleSnapshot, upsertSale } from '@/data-store/datastore';
-import { formatMonthKey } from '@/lib/utils/date-utils';
+import { formatMonthKey, calculateClosingDate } from '@/lib/utils/date-utils';
 import { createItemSnapshot, createSaleSnapshot } from '../snapshot-workflows';
 
 const STATE_FIELDS = ['status', 'isNotPaid', 'isNotCharged', 'isCollected', 'postedAt', 'doneAt', 'cancelledAt'];
@@ -161,11 +161,9 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
 
   if (statusBecameCollected || flagBecameCollected) {
     // User requirement: collectedAt should be the last day of the sale's month
+    // Snap-to-Month Logic
     const saleDate = sale.saleDate ? new Date(sale.saleDate) : new Date();
-    const endOfMonth = new Date(saleDate.getFullYear(), saleDate.getMonth() + 1, 0);
-    endOfMonth.setHours(12, 0, 0, 0); // Noon
-
-    const collectedAt = sale.collectedAt ?? endOfMonth;
+    const collectedAt = sale.collectedAt ?? calculateClosingDate(saleDate);
 
     // Normalize both status and flag for consistency
     const normalizedSale = {
@@ -289,11 +287,9 @@ async function maybeCreateSaleSnapshot(sale: Sale, previousSale?: Sale): Promise
   }
 
   // User requirement: collectedAt should be the last day of the sale's month
+  // Snap-to-Month Logic
   const saleDate = sale.saleDate ? new Date(sale.saleDate) : new Date();
-  const endOfMonth = new Date(saleDate.getFullYear(), saleDate.getMonth() + 1, 0);
-  endOfMonth.setHours(12, 0, 0, 0); // Noon
-
-  const collectedAt = sale.collectedAt ?? endOfMonth;
+  const collectedAt = sale.collectedAt ?? calculateClosingDate(saleDate);
   const snapshotEffectKey = EffectKeys.sideEffect('sale', sale.id, `saleSnapshot:${formatMonthKey(collectedAt)}`);
 
   if (await hasEffect(snapshotEffectKey)) {

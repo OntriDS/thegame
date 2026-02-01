@@ -13,7 +13,7 @@ import { getCategoryForItemType } from '@/lib/utils/searchable-select-utils';
 import { createCharacterFromItem } from '../character-creation-utils';
 import { upsertItem } from '@/data-store/datastore';
 import { createItemSnapshot } from '../snapshot-workflows';
-import { formatMonthKey } from '@/lib/utils/date-utils';
+import { formatMonthKey, calculateClosingDate } from '@/lib/utils/date-utils';
 
 const STATE_FIELDS = ['status', 'stock', 'quantitySold', 'isCollected'];
 const DESCRIPTIVE_FIELDS = ['name', 'description', 'price', 'unitCost', 'additionalCost', 'value'];
@@ -207,13 +207,45 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
   }
 
   // Collection status - COLLECTED event
-  if (item.isCollected && !previousItem.isCollected) {
+  // Dual detection: status OR flag change to COLLECTED
+  const statusBecameCollected =
+    item.status === ItemStatus.COLLECTED &&
+    (!previousItem || previousItem.status !== ItemStatus.COLLECTED);
+
+  const flagBecameCollected =
+    !!item.isCollected && (!previousItem || !previousItem.isCollected);
+
+  if (statusBecameCollected || flagBecameCollected) {
+    // Snap-to-Month Logic
+    // For items without a sale, we use the soldAt date (if set) or current date as reference
+    const referenceDate = item.soldAt ? new Date(item.soldAt) : new Date();
+    const collectedAt = item.collectedAt ?? calculateClosingDate(referenceDate);
+
     await appendEntityLog(EntityType.ITEM, item.id, LogEventType.COLLECTED, {
       name: item.name,
       itemType: item.type,
       collection: item.collection,
-      collectedAt: new Date().toISOString()
+      collectedAt: collectedAt.toISOString()
     });
+
+    // Create Item Snapshot for Archive (Fixing the Gap)
+    // Only if not already snapshotted (e.g. via Sale workflow)
+    const snapshotEffectKey = EffectKeys.sideEffect('item', item.id, `itemSnapshot:${formatMonthKey(collectedAt)}`);
+
+    if (!(await hasEffect(snapshotEffectKey))) {
+      // Create ItemSnapshot using the new Archive-First approach
+      // We pass 'undefined' for saleId as this is a manual collection (no parent sale)
+      await createItemSnapshot(item, item.quantitySold || 1, undefined);
+
+      // Add to month-based collection index for efficient History Tab queries
+      const monthKey = formatMonthKey(collectedAt);
+      const { kvSAdd } = await import('@/data-store/kv');
+      const collectedIndexKey = `index:items:collected:${monthKey}`;
+      await kvSAdd(collectedIndexKey, item.id);
+
+      await markEffect(snapshotEffectKey);
+      console.log(`[onItemUpsert] ✅ Created snapshot for manually collected item ${item.name}, added to index ${monthKey}`);
+    }
   }
 
   // Descriptive changes - update in-place

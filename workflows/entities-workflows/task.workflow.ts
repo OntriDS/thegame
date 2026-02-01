@@ -27,7 +27,7 @@ import type { PointsConversionRates } from '@/lib/constants/financial-constants'
 import { getCategoryForTaskType } from '@/lib/utils/searchable-select-utils';
 import { kvGet, kvSet } from '@/data-store/kv';
 import { buildLogKey } from '@/data-store/keys';
-import { formatMonthKey } from '@/lib/utils/date-utils';
+import { formatMonthKey, calculateClosingDate } from '@/lib/utils/date-utils';
 import {
   updateFinancialRecordsFromTask,
   updateItemsCreatedByTask,
@@ -165,15 +165,16 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
     let defaultCollectedAt: Date;
 
     if (task.doneAt) {
-      // User requirement: If task was done, collect it as of the end of that month
-      const doneDate = new Date(task.doneAt);
-      // Get last day of that month (month index + 1, day 0)
-      defaultCollectedAt = new Date(doneDate.getFullYear(), doneDate.getMonth() + 1, 0);
-      defaultCollectedAt.setHours(12, 0, 0, 0); // Noon to avoid timezone rollover (safe "last day")
+      // User requirement: Snap to the end of the month the task was DONE
+      // Time Travel Safe: If done in Jan but collected in Feb, it goes to Jan Archive
+      defaultCollectedAt = calculateClosingDate(task.doneAt);
     } else {
-      // Fallback to adjusted current time (Costa Rica offset)
+      // Fallback to adjusted current time (Costa Rica offset) if not done (rare for collected)
+      // Or if task is collected without being done (e.g. manual override)
       const now = new Date();
-      defaultCollectedAt = new Date(now.getTime() - 6 * 60 * 60 * 1000);
+      // Adjust to CR time (UTC-6) roughly for "Today" fallback
+      const adjustedNow = new Date(now.getTime() - 6 * 60 * 60 * 1000);
+      defaultCollectedAt = calculateClosingDate(adjustedNow);
     }
 
     const collectedAt = task.collectedAt ?? defaultCollectedAt;

@@ -21,7 +21,7 @@ import {
 } from '../update-propagation-utils';
 import { createCharacterFromFinancial } from '../character-creation-utils';
 import { archiveFinancialRecordSnapshot, upsertFinancial } from '@/data-store/datastore';
-import { formatMonthKey } from '@/lib/utils/date-utils';
+import { formatMonthKey, calculateClosingDate } from '@/lib/utils/date-utils';
 import { createFinancialSnapshot } from '../snapshot-workflows';
 import { recalculateCharacterWallet } from '../financial-record-utils';
 
@@ -210,12 +210,12 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
     });
 
     // User requirement: collectedAt should be the last day of the record's month
+    // Snap-to-Month Logic
     // month is 1-based index (1=Jan, 11=Nov). 
-    // new Date(year, month, 0) gives the last day of that month.
-    const endOfMonth = new Date(financial.year, financial.month, 0);
-    endOfMonth.setHours(12, 0, 0, 0); // Noon to avoid timezone rollover (safe "last day")
+    // Construct a reference date for the helper (using the 1st of the month is fine, helper finds the end)
+    const referenceDate = new Date(financial.year, financial.month - 1, 1);
+    const collectedAt = financial.collectedAt ?? calculateClosingDate(referenceDate);
 
-    const collectedAt = financial.collectedAt ?? endOfMonth;
     const snapshotEffectKey = EffectKeys.sideEffect('financial', financial.id, `financialSnapshot:${formatMonthKey(collectedAt)}`);
 
     if (!(await hasEffect(snapshotEffectKey))) {

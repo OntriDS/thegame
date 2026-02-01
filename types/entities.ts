@@ -230,6 +230,7 @@ export interface Item extends BaseEntity {
 
   // Archive field
   isCollected: boolean;            // Item collected (monthly close)
+  collectedAt?: Date;              // When item was collected (monthly close)
 }
 
 

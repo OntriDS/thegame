@@ -2,11 +2,11 @@
 // Centralized date formatting utilities using app constants
 import { format, parseISO, isValid } from 'date-fns';
 import type { Task, Sale, FinancialRecord, Item } from '@/types/entities';
-import { 
-  DATE_FORMAT_DISPLAY, 
-  DATE_FORMAT_INPUT, 
-  DATE_FORMAT_LONG, 
-  DATE_FORMAT_SHORT, 
+import {
+  DATE_FORMAT_DISPLAY,
+  DATE_FORMAT_INPUT,
+  DATE_FORMAT_LONG,
+  DATE_FORMAT_SHORT,
   DATE_FORMAT_MONTH_YEAR,
   DATE_FORMAT_MONTH_KEY
 } from '@/lib/constants/app-constants';
@@ -18,11 +18,11 @@ import {
  */
 export function formatDisplayDate(date: Date | string | null | undefined): string {
   if (!date) return '';
-  
+
   try {
     const dateObj = typeof date === 'string' ? parseISO(date) : date;
     if (!isValid(dateObj)) return '';
-    
+
     return format(dateObj, DATE_FORMAT_DISPLAY);
   } catch {
     return '';
@@ -36,11 +36,11 @@ export function formatDisplayDate(date: Date | string | null | undefined): strin
  */
 export function formatInputDate(date: Date | string | null | undefined): string {
   if (!date) return '';
-  
+
   try {
     const dateObj = typeof date === 'string' ? parseISO(date) : date;
     if (!isValid(dateObj)) return '';
-    
+
     return format(dateObj, DATE_FORMAT_INPUT);
   } catch {
     return '';
@@ -54,11 +54,11 @@ export function formatInputDate(date: Date | string | null | undefined): string 
  */
 export function formatLongDate(date: Date | string | null | undefined): string {
   if (!date) return '';
-  
+
   try {
     const dateObj = typeof date === 'string' ? parseISO(date) : date;
     if (!isValid(dateObj)) return '';
-    
+
     return format(dateObj, DATE_FORMAT_LONG);
   } catch {
     return '';
@@ -72,11 +72,11 @@ export function formatLongDate(date: Date | string | null | undefined): string {
  */
 export function formatShortDate(date: Date | string | null | undefined): string {
   if (!date) return '';
-  
+
   try {
     const dateObj = typeof date === 'string' ? parseISO(date) : date;
     if (!isValid(dateObj)) return '';
-    
+
     return format(dateObj, DATE_FORMAT_SHORT);
   } catch {
     return '';
@@ -90,11 +90,11 @@ export function formatShortDate(date: Date | string | null | undefined): string 
  */
 export function formatMonthYear(date: Date | string | null | undefined): string {
   if (!date) return '';
-  
+
   try {
     const dateObj = typeof date === 'string' ? parseISO(date) : date;
     if (!isValid(dateObj)) return '';
-    
+
     return format(dateObj, DATE_FORMAT_MONTH_YEAR);
   } catch {
     return '';
@@ -136,7 +136,7 @@ export function getCurrentMonthKey(): string {
  */
 export function parseInputDate(dateString: string): Date | null {
   if (!dateString) return null;
-  
+
   try {
     const date = parseISO(dateString);
     return isValid(date) ? date : null;
@@ -159,6 +159,30 @@ export function getCurrentDisplayDate(): string {
  */
 export function getCurrentInputDate(): string {
   return formatInputDate(new Date());
+}
+
+/**
+ * Calculate the closing date for an entity based on its reference date.
+ * Returns the LAST DAY of the reference date's month at 12:00 PM (Noon)
+ * to avoid timezone rollover issues.
+ *
+ * Usage: "Snap-to-Month" logic for Monthly Close.
+ *
+ * @param referenceDate - The date the event occurred (doneAt, saleDate, etc.)
+ * @returns Date object set to the end of that month
+ */
+export function calculateClosingDate(referenceDate: Date | string): Date {
+  const dateObj = typeof referenceDate === 'string' ? parseISO(referenceDate) : referenceDate;
+  // Fallback to now if invalid, though workflows should handle validity before calling
+  const validDate = isValid(dateObj) ? dateObj : new Date();
+
+  // Get last day of the month (month + 1, day 0)
+  const endOfMonth = new Date(validDate.getFullYear(), validDate.getMonth() + 1, 0);
+
+  // Set to Noon to avoid timezone rollover issues (e.g. becoming first day of prev month in UTC-6)
+  endOfMonth.setHours(12, 0, 0, 0);
+
+  return endOfMonth;
 }
 
 // ============================================================================
@@ -236,11 +260,11 @@ export function isEntityArchived(
  */
 export function reviveDates<T>(data: T): T {
   if (data === null || data === undefined) return data;
-  
+
   if (Array.isArray(data)) {
     return data.map(reviveDates) as T;
   }
-  
+
   if (typeof data === 'object') {
     const revived = {} as T;
     for (const [key, value] of Object.entries(data)) {
@@ -252,6 +276,6 @@ export function reviveDates<T>(data: T): T {
     }
     return revived;
   }
-  
+
   return data;
 }
