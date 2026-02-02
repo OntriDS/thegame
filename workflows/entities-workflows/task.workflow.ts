@@ -168,13 +168,17 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
       // User requirement: Snap to the end of the month the task was DONE
       // Time Travel Safe: If done in Jan but collected in Feb, it goes to Jan Archive
       defaultCollectedAt = calculateClosingDate(task.doneAt);
+      console.log(`[onTaskUpsert] Setting collectedAt based on doneAt (${task.doneAt.toISOString()}): ${defaultCollectedAt.toISOString()}`);
+    } else if (task.createdAt) {
+      // Fallback to createdAt if doneAt is missing (e.g. manual collection of incomplete task?)
+      defaultCollectedAt = calculateClosingDate(task.createdAt);
+      console.log(`[onTaskUpsert] Setting collectedAt based on createdAt (${task.createdAt.toISOString()}): ${defaultCollectedAt.toISOString()}`);
     } else {
-      // Fallback to adjusted current time (Costa Rica offset) if not done (rare for collected)
-      // Or if task is collected without being done (e.g. manual override)
+      // Absolute fallback
       const now = new Date();
-      // Adjust to CR time (UTC-6) roughly for "Today" fallback
       const adjustedNow = new Date(now.getTime() - 6 * 60 * 60 * 1000);
       defaultCollectedAt = calculateClosingDate(adjustedNow);
+      console.log(`[onTaskUpsert] Setting collectedAt based on NOW (fallback): ${defaultCollectedAt.toISOString()}`);
     }
 
     const collectedAt = task.collectedAt ?? defaultCollectedAt;

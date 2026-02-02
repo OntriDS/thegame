@@ -162,8 +162,21 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
   if (statusBecameCollected || flagBecameCollected) {
     // User requirement: collectedAt should be the last day of the sale's month
     // Snap-to-Month Logic
-    const saleDate = sale.saleDate ? new Date(sale.saleDate) : new Date();
-    const collectedAt = sale.collectedAt ?? calculateClosingDate(saleDate);
+    // FIX: Prefer existing dates over "Now" to ensure historical accuracy (e.g. Jan sale collected in Feb)
+    let defaultCollectedAt: Date;
+
+    if (sale.saleDate) {
+      defaultCollectedAt = calculateClosingDate(sale.saleDate);
+    } else if (sale.createdAt) {
+      defaultCollectedAt = calculateClosingDate(sale.createdAt);
+    } else {
+      const now = new Date();
+      // Adjust to CR time (UTC-6) roughly for "Today" fallback
+      const adjustedNow = new Date(now.getTime() - 6 * 60 * 60 * 1000);
+      defaultCollectedAt = calculateClosingDate(adjustedNow);
+    }
+
+    const collectedAt = sale.collectedAt ?? defaultCollectedAt;
 
     // Normalize both status and flag for consistency
     const normalizedSale = {

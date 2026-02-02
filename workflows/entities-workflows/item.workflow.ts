@@ -218,8 +218,21 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
   if (statusBecameCollected || flagBecameCollected) {
     // Snap-to-Month Logic
     // For items without a sale, we use the soldAt date (if set) or current date as reference
-    const referenceDate = item.soldAt ? new Date(item.soldAt) : new Date();
-    const collectedAt = item.collectedAt ?? calculateClosingDate(referenceDate);
+    // FIX: Prefer existing dates over "Now" to ensure historical accuracy (e.g. Jan item collected in Feb)
+    let defaultCollectedAt: Date;
+
+    if (item.soldAt) {
+      defaultCollectedAt = calculateClosingDate(item.soldAt);
+    } else if (item.createdAt) {
+      defaultCollectedAt = calculateClosingDate(item.createdAt);
+    } else {
+      const now = new Date();
+      // Adjust to CR time (UTC-6) roughly for "Today" fallback
+      const adjustedNow = new Date(now.getTime() - 6 * 60 * 60 * 1000);
+      defaultCollectedAt = calculateClosingDate(adjustedNow);
+    }
+
+    const collectedAt = item.collectedAt ?? defaultCollectedAt;
 
     await appendEntityLog(EntityType.ITEM, item.id, LogEventType.COLLECTED, {
       name: item.name,

@@ -1,5 +1,6 @@
 // workflows/entities-workflows/financial.workflow.ts
 // Financial-specific workflow with CHARGED, COLLECTED events
+import { isValid } from 'date-fns';
 
 import { EntityType, LogEventType, FinancialStatus, PLAYER_ONE_ID } from '@/types/enums';
 import type { FinancialRecord } from '@/types/entities';
@@ -227,10 +228,24 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
 
     // User requirement: collectedAt should be the last day of the record's month
     // Snap-to-Month Logic
-    // month is 1-based index (1=Jan, 11=Nov). 
-    // Construct a reference date for the helper (using the 1st of the month is fine, helper finds the end)
+    // FIX: Prefer existing dates over "Now" to ensure historical accuracy (e.g. Jan record collected in Feb)
+    let defaultCollectedAt: Date;
     const referenceDate = new Date(financial.year, financial.month - 1, 1);
-    const collectedAt = financial.collectedAt ?? calculateClosingDate(referenceDate);
+
+    if (isValid(referenceDate)) {
+      // Primary: Use the explicit accounting period which is the Source of Truth for Financial Records
+      defaultCollectedAt = calculateClosingDate(referenceDate);
+    } else if (financial.createdAt) {
+      // Secondary: Use creation date
+      defaultCollectedAt = calculateClosingDate(financial.createdAt);
+    } else {
+      const now = new Date();
+      // Adjust to CR time (UTC-6) roughly for "Today" fallback
+      const adjustedNow = new Date(now.getTime() - 6 * 60 * 60 * 1000);
+      defaultCollectedAt = calculateClosingDate(adjustedNow);
+    }
+
+    const collectedAt = financial.collectedAt ?? defaultCollectedAt;
 
     const snapshotEffectKey = EffectKeys.sideEffect('financial', financial.id, `financialSnapshot:${formatMonthKey(collectedAt)}`);
 
