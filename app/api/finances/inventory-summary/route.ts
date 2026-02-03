@@ -8,7 +8,7 @@ import { Item } from '@/types/entities';
 export const dynamic = 'force-dynamic';
 
 type InventoryBucketTotals = Record<
-    'materials' | 'equipment' | 'artworks' | 'prints' | 'stickers' | 'merch' | 'crafts',
+    'materials' | 'equipment' | 'artworks' | 'prints' | 'stickers' | 'stickerBundles' | 'merch' | 'crafts',
     { value: number; cost: number }
 >;
 
@@ -18,6 +18,7 @@ const EMPTY_INVENTORY_TOTALS: InventoryBucketTotals = {
     artworks: { value: 0, cost: 0 },
     prints: { value: 0, cost: 0 },
     stickers: { value: 0, cost: 0 },
+    stickerBundles: { value: 0, cost: 0 },
     merch: { value: 0, cost: 0 },
     crafts: { value: 0, cost: 0 },
 };
@@ -27,11 +28,11 @@ const ITEM_TYPE_TO_BUCKET: Partial<Record<ItemType, keyof InventoryBucketTotals>
     [ItemType.EQUIPMENT]: 'equipment',
     [ItemType.ARTWORK]: 'artworks',
     [ItemType.PRINT]: 'prints',
-    [ItemType.STICKER]: 'stickers',
+    // [ItemType.STICKER]: 'stickers', // Commented out as per user request to not count individual stickers for now
     [ItemType.MERCH]: 'merch',
     [ItemType.CRAFT]: 'crafts',
     [ItemType.DIGITAL]: 'artworks',
-    [ItemType.BUNDLE]: 'stickers',
+    [ItemType.BUNDLE]: 'stickerBundles', // Mapped to new specific bucket
 };
 
 export async function GET(req: NextRequest) {

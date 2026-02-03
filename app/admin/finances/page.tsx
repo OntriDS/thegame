@@ -78,7 +78,7 @@ const formatMonthYear = (year: number, month: number) => {
 };
 
 type InventoryBucketTotals = Record<
-  'materials' | 'equipment' | 'artworks' | 'prints' | 'stickers' | 'merch' | 'crafts',
+  'materials' | 'equipment' | 'artworks' | 'prints' | 'stickers' | 'stickerBundles' | 'merch' | 'crafts',
   { value: number; cost: number }
 >;
 
@@ -88,6 +88,7 @@ const EMPTY_INVENTORY_TOTALS: InventoryBucketTotals = {
   artworks: { value: 0, cost: 0 },
   prints: { value: 0, cost: 0 },
   stickers: { value: 0, cost: 0 },
+  stickerBundles: { value: 0, cost: 0 },
   merch: { value: 0, cost: 0 },
   crafts: { value: 0, cost: 0 },
 };
@@ -105,6 +106,7 @@ function mergeInventoryTotalsIntoAssets(assets: any, inventoryTotals: InventoryB
     artworks: inventoryTotals.artworks,
     prints: inventoryTotals.prints,
     stickers: inventoryTotals.stickers,
+    stickerBundles: inventoryTotals.stickerBundles,
     merch: inventoryTotals.merch,
     crafts: inventoryTotals.crafts,
   };
@@ -482,14 +484,14 @@ export default function FinancesPage() {
     if (!companyAssets) return 0;
     return (companyAssets.materials?.value || 0) + (companyAssets.equipment?.value || 0) +
       (companyAssets.artworks?.value || 0) + (companyAssets.prints?.value || 0) +
-      (companyAssets.stickers?.value || 0) + (companyAssets.merch?.value || 0) + (companyAssets.crafts?.value || 0);
+      (companyAssets.stickers?.value || 0) + (companyAssets.stickerBundles?.value || 0) + (companyAssets.merch?.value || 0) + (companyAssets.crafts?.value || 0);
   };
 
   const getCompanyInventoryCost = () => {
     if (!companyAssets) return 0;
     return (companyAssets.materials?.cost || 0) + (companyAssets.equipment?.cost || 0) +
       (companyAssets.artworks?.cost || 0) + (companyAssets.prints?.cost || 0) +
-      (companyAssets.stickers?.cost || 0) + (companyAssets.merch?.cost || 0) + (companyAssets.crafts?.cost || 0);
+      (companyAssets.stickers?.cost || 0) + (companyAssets.stickerBundles?.cost || 0) + (companyAssets.merch?.cost || 0) + (companyAssets.crafts?.cost || 0);
   };
 
   const getCompanyTotal = () => getCompanyMonetaryTotal() + getJungleCoinsTotal(getCompanyJ$Total(), exchangeRates) + getCompanyInventoryTotal();
@@ -867,16 +869,16 @@ export default function FinancesPage() {
                       <div className="text-right">${companyAssets.stickers.cost.toLocaleString()}</div>
 
                       <div>Sticker Bundles</div>
-                      <div className="text-right">$0</div>
-                      <div className="text-right">$0</div>
+                      <div className="text-right">${companyAssets.stickerBundles?.value.toLocaleString()}</div>
+                      <div className="text-right">${companyAssets.stickerBundles?.cost.toLocaleString()}</div>
 
                       <div>Merch</div>
                       <div className="text-right">${companyAssets.merch.value.toLocaleString()}</div>
                       <div className="text-right">${companyAssets.merch.cost.toLocaleString()}</div>
 
                       <div className="font-semibold border-t pt-1">Total</div>
-                      <div className="font-semibold text-right border-t pt-1">${(companyAssets.artworks.value + companyAssets.prints.value + companyAssets.stickers.value + companyAssets.merch.value).toLocaleString()}</div>
-                      <div className="font-semibold text-right border-t pt-1">${(companyAssets.artworks.cost + companyAssets.prints.cost + companyAssets.stickers.cost + companyAssets.merch.cost).toLocaleString()}</div>
+                      <div className="font-semibold text-right border-t pt-1">${(companyAssets.artworks.value + companyAssets.prints.value + companyAssets.stickers.value + (companyAssets.stickerBundles?.value || 0) + companyAssets.merch.value).toLocaleString()}</div>
+                      <div className="font-semibold text-right border-t pt-1">${(companyAssets.artworks.cost + companyAssets.prints.cost + companyAssets.stickers.cost + (companyAssets.stickerBundles?.cost || 0) + companyAssets.merch.cost).toLocaleString()}</div>
                     </div>
 
                     {/* Materials & Equipment Section */}
@@ -1178,6 +1180,7 @@ export default function FinancesPage() {
                     artworks: { value: companyAssets.artworks.value, cost: companyAssets.artworks.cost },
                     prints: { value: companyAssets.prints.value, cost: companyAssets.prints.cost },
                     stickers: { value: companyAssets.stickers.value, cost: companyAssets.stickers.cost },
+                    stickerBundles: { value: companyAssets.stickerBundles?.value || 0, cost: companyAssets.stickerBundles?.cost || 0 },
                     merch: { value: companyAssets.merch.value, cost: companyAssets.merch.cost },
                     crafts: { value: companyAssets.crafts.value, cost: companyAssets.crafts.cost }
                   };
