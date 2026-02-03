@@ -43,7 +43,7 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth() + 1);
   const [filterSoldByMonth, setFilterSoldByMonth] = useState(false);
 
-  const [activeTab, setActiveTab] = useState<InventoryTab>(InventoryTab.STICKERS);
+  const [activeTab, setActiveTab] = useState<InventoryTab>(InventoryTab.DIGITAL);
   const [showItemModal, setShowItemModal] = useState(false);
   const [editingItem, setEditingItem] = useState<Item | undefined>(undefined);
   const [defaultItemType, setDefaultItemType] = useState<ItemType>(ItemType.STICKER);
@@ -188,7 +188,7 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
 
   // Load active tab ONCE on mount
   useEffect(() => {
-    const savedActiveTab = getPreference('inventory-active-tab', InventoryTab.STICKERS);
+    const savedActiveTab = getPreference('inventory-active-tab', InventoryTab.DIGITAL);
     setActiveTab(savedActiveTab as InventoryTab);
   }, [getPreference]);
 
