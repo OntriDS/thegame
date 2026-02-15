@@ -259,7 +259,7 @@ export function SearchableSelect({
                     const isCollapsed = collapsedGroups.has(groupName);
 
                     return (
-                      <div key={groupName}>
+                      <React.Fragment key={groupName}>
                         {/* Collapsible Group Header */}
                         <div
                           className="flex items-center px-2 py-1.5 text-sm font-medium text-muted-foreground cursor-pointer hover:bg-accent/50 rounded-sm"
@@ -299,7 +299,7 @@ export function SearchableSelect({
                             ))}
                           </CommandGroup>
                         )}
-                      </div>
+                      </React.Fragment>
                     );
                   })
               )}
