@@ -306,45 +306,7 @@ export async function removeItem(id: string): Promise<void> {
 export async function upsertFinancial(financial: FinancialRecord, options?: { skipWorkflowEffects?: boolean; skipLinkEffects?: boolean; forceSave?: boolean }): Promise<FinancialRecord> {
   const previous = await repoGetFinancialById(financial.id);
 
-  // FUZZY DEDUPLICATION SHIELD
-  // If this is a NEW record (no previous ID) and forceSave is not enabled
-  if (!previous && !options?.forceSave) {
-    // 1. Fetch records for the same month context
-    const monthRecords = await getFinancialsForMonth(financial.year, financial.month);
 
-    // 2. Scan for "Business Duplicates"
-    const duplicate = monthRecords.find(existing => {
-      if (existing.id === financial.id) return false;
-
-      // A. Strict Type & Station Match
-      if (existing.type !== financial.type) return false;
-      if (existing.station !== financial.station) return false;
-
-      // B. Fuzzy Name Match (Case insensitive, trimmed)
-      if (existing.name.trim().toLowerCase() !== financial.name.trim().toLowerCase()) return false;
-
-      // C. Value Match (Cost OR Revenue)
-      const existingCost = existing.cost || 0;
-      const newCost = financial.cost || 0;
-      if (Math.abs(existingCost - newCost) > 0.01) return false;
-
-      const existingRevenue = existing.revenue || 0;
-      const newRevenue = financial.revenue || 0;
-      if (Math.abs(existingRevenue - newRevenue) > 0.01) return false;
-
-      // D. Time Match (within 2 minutes) - Important for preventing double-clicks
-      const existingTime = new Date(existing.createdAt).getTime();
-      const newTime = new Date(financial.createdAt).getTime();
-      if (Math.abs(existingTime - newTime) > 2 * 60 * 1000) return false;
-
-      return true;
-    });
-
-    if (duplicate) {
-      console.warn(`[DuplicateShield] Blocked duplicate financial creation. New: ${financial.id}, Existing: ${duplicate.id}`);
-      throw new Error(`DUPLICATE_FINANCIAL_DETECTED: Potential duplicate of record ${duplicate.id}`);
-    }
-  }
 
   const saved = await repoUpsertFinancial(financial);
 
@@ -405,44 +367,7 @@ export async function removeFinancial(id: string): Promise<void> {
 export async function upsertSale(sale: Sale, options?: { skipWorkflowEffects?: boolean; skipLinkEffects?: boolean; forceSave?: boolean }): Promise<Sale> {
   const previous = await repoGetSaleById(sale.id);
 
-  // FUZZY DEDUPLICATION SHIELD
-  // If this is a NEW sale (no previous ID) and forceSave is not enabled
-  if (!previous && !options?.forceSave) {
-    // 1. Fetch sales for the same month context
-    const saleDate = new Date(sale.saleDate);
-    const monthSales = await getSalesForMonth(saleDate.getFullYear(), saleDate.getMonth() + 1);
 
-    // 2. Scan for "Business Duplicates" (same core data, different ID)
-    const duplicate = monthSales.find(existing => {
-      // Must be different ID (obvious since we checked previous, but safety first)
-      if (existing.id === sale.id) return false;
-
-      // A. Strict Site & Type Match
-      if (existing.siteId !== sale.siteId) return false;
-      if (existing.type !== sale.type) return false;
-
-      // B. Fuzzy Time Match (within 2 minutes) - accounts for slight client clock drift or manual re-entry speed
-      const timeDiff = Math.abs(new Date(existing.saleDate).getTime() - saleDate.getTime());
-      if (timeDiff > 2 * 60 * 1000) return false;
-
-      // C. Identity Match (Customer/Counterparty)
-      if (existing.customerId !== sale.customerId) return false;
-      if (!existing.customerId && existing.counterpartyName !== sale.counterpartyName) return false;
-
-      // D. Value Match (Total Revenue)
-      // Use totals if available, otherwise fallback to simple line check (length)
-      const existingTotal = existing.totals?.totalRevenue ?? 0;
-      const newTotal = sale.totals?.totalRevenue ?? 0;
-      if (Math.abs(existingTotal - newTotal) > 0.01) return false;
-
-      return true;
-    });
-
-    if (duplicate) {
-      console.warn(`[DuplicateShield] Blocked duplicate sale creation. New: ${sale.id}, Existing: ${duplicate.id}`);
-      throw new Error(`DUPLICATE_SALE_DETECTED: Potential duplicate of sale ${duplicate.id}`);
-    }
-  }
 
   const saved = await repoUpsertSale(sale);
 

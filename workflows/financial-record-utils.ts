@@ -140,7 +140,7 @@ export async function createFinancialRecordFromTask(task: Task): Promise<Financi
 
     const currentDate = new Date();
     const newFinrec: FinancialRecord = {
-      id: `finrec-${task.id}-${Date.now()}`,
+      id: `finrec-${task.id}`,
       name: task.name,
       description: `Financial record from task: ${task.name}`,
       year: currentDate.getFullYear(),
@@ -168,7 +168,7 @@ export async function createFinancialRecordFromTask(task: Task): Promise<Financi
 
     // Store the financial record
     console.log(`[createFinancialRecordFromTask] Creating new financial record:`, newFinrec);
-    const createdFinrec = await upsertFinancial(newFinrec);
+    const createdFinrec = await upsertFinancial(newFinrec, { forceSave: true });
 
     // Create TASK_FINREC link with metadata
     const linkMetadata = {
@@ -367,7 +367,7 @@ export async function createFinancialRecordFromSale(sale: Sale): Promise<Financi
     }
 
     const newFinrec: FinancialRecord = {
-      id: `finrec-${sale.id}-${Date.now()}`,
+      id: `finrec-${sale.id}`,
       name: `Sale: ${displayName}`,
       description: `Financial record from sale: ${displayName}`,
       year: currentDate.getFullYear(),
@@ -394,7 +394,7 @@ export async function createFinancialRecordFromSale(sale: Sale): Promise<Financi
 
     // Store the financial record
     console.log(`[createFinancialRecordFromSale] Creating financial record:`, newFinrec);
-    const createdFinrec = await upsertFinancial(newFinrec);
+    const createdFinrec = await upsertFinancial(newFinrec, { forceSave: true });
 
     // Create SALE_FINREC link
     const linkMetadata = {
@@ -570,7 +570,7 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
           isNotCharged: sale.status !== 'CHARGED',
           updatedAt: new Date()
         };
-        await upsertFinancial(updatedIncome);
+        await upsertFinancial(updatedIncome, { forceSave: true });
         console.log(`[createFinancialRecordFromBoothSale] ✅ Updated Gross Income Record: ${incomeRecord.id}`);
       }
 
@@ -588,7 +588,7 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
             isNotPaid: sale.status !== SaleStatus.CHARGED,
             updatedAt: new Date()
           };
-          await upsertFinancial(updatedPayout);
+          await upsertFinancial(updatedPayout, { forceSave: true });
           console.log(`[createFinancialRecordFromBoothSale] ✅ Updated Payout Record: ${payoutRecord.id}`);
         } else {
           // Create new payout logic if it was missing but now needed
@@ -636,7 +636,7 @@ async function createBoothPayoutRecord(sale: Sale, associateNet: number, targetE
   const isPayoutPaid = sale.status === SaleStatus.CHARGED;
 
   const payoutFinrec: FinancialRecord = {
-    id: `finrec-payout-${sale.id}-${Date.now()}`,
+    id: `finrec-payout-${sale.id}`,
     name: `Payout: ${targetEntityName}`,
     description: `Associate payout for ${targetEntityName} (Split Share)`,
     year: currentDate.getFullYear(),
@@ -662,7 +662,7 @@ async function createBoothPayoutRecord(sale: Sale, associateNet: number, targetE
     links: []
   };
 
-  const createdPayout = await upsertFinancial(payoutFinrec);
+  const createdPayout = await upsertFinancial(payoutFinrec, { forceSave: true });
 
   // Link Payout to Sale
   const link = makeLink(
