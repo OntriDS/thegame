@@ -214,7 +214,7 @@ export function SearchableSelect({
           avoidCollisions={true}
           collisionPadding={8}
         >
-          <Command className="max-h-[300px]">
+          <Command className="max-h-[300px]" shouldFilter={false}>
             <CommandInput
               placeholder={`Search ${placeholder.toLowerCase()}...`}
               value={searchQuery}

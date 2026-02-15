@@ -25,7 +25,7 @@ import { createCharacterFromTask } from '../character-creation-utils';
 import { DEFAULT_POINTS_CONVERSION_RATES } from '@/lib/constants/financial-constants';
 import type { PointsConversionRates } from '@/lib/constants/financial-constants';
 import { getCategoryForTaskType } from '@/lib/utils/searchable-select-utils';
-import { kvGet, kvSet } from '@/data-store/kv';
+import { kvGet, kvSet, kvSRem } from '@/data-store/kv';
 import { buildLogKey } from '@/data-store/keys';
 import { formatMonthKey, calculateClosingDate } from '@/lib/utils/date-utils';
 import {
@@ -117,8 +117,8 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
       });
     }
 
-    // Handle uncompletion (Done → Other status)
-    if (previousTask!.status === 'Done' && task.status !== 'Done' && task.status !== 'Collected') {
+    // Handle uncompletion (Done/Collected → Other status)
+    if ((previousTask!.status === 'Done' || previousTask!.status === 'Collected') && task.status !== 'Done' && task.status !== 'Collected') {
       console.log(`[onTaskUpsert] Task uncompleted: ${task.name} (${previousTask!.status} → ${task.status})`);
 
       // Uncomplete the task and remove effects
@@ -169,16 +169,14 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
       // Time Travel Safe: If done in Jan but collected in Feb, it goes to Jan Archive
       defaultCollectedAt = calculateClosingDate(task.doneAt);
       console.log(`[onTaskUpsert] Setting collectedAt based on doneAt (${task.doneAt.toISOString()}): ${defaultCollectedAt.toISOString()}`);
-    } else if (task.createdAt) {
-      // Fallback to createdAt if doneAt is missing (e.g. manual collection of incomplete task?)
-      defaultCollectedAt = calculateClosingDate(task.createdAt);
-      console.log(`[onTaskUpsert] Setting collectedAt based on createdAt (${task.createdAt.toISOString()}): ${defaultCollectedAt.toISOString()}`);
     } else {
-      // Absolute fallback
+      // Fallback to NOW if doneAt is missing (e.g. manual collection without completion)
+      // This ensures tasks collected TODAY go into THIS month's archive, not backdated to creation
       const now = new Date();
-      const adjustedNow = new Date(now.getTime() - 6 * 60 * 60 * 1000);
-      defaultCollectedAt = calculateClosingDate(adjustedNow);
-      console.log(`[onTaskUpsert] Setting collectedAt based on NOW (fallback): ${defaultCollectedAt.toISOString()}`);
+      // Adjust for potential timezone offset if needed, or just use server time
+      // Using simple current time to catch "Right Now" actions
+      defaultCollectedAt = calculateClosingDate(now);
+      console.log(`[onTaskUpsert] Setting collectedAt based on NOW (no doneAt): ${defaultCollectedAt.toISOString()}`);
     }
 
     const collectedAt = task.collectedAt ?? defaultCollectedAt;
@@ -583,6 +581,26 @@ export async function removeTaskLogEntriesOnDelete(task: Task): Promise<void> {
       console.log(`[removeTaskLogEntriesOnDelete] ✅ Removed ${characterLog.length - filteredCharacterLog.length} entries from character log`);
     }
 
+    // 6. Remove from collected index (if applicable)
+    if (task.isCollected || task.status === 'Collected') {
+      try {
+        let collectedAt = task.collectedAt;
+        if (!collectedAt) {
+          if (task.doneAt) collectedAt = calculateClosingDate(task.doneAt);
+          else if (task.createdAt) collectedAt = calculateClosingDate(task.createdAt);
+        }
+
+        if (collectedAt) {
+          const monthKey = formatMonthKey(collectedAt);
+          const collectedIndexKey = `index:tasks:collected:${monthKey}`;
+          await kvSRem(collectedIndexKey, task.id);
+          console.log(`[removeTaskLogEntriesOnDelete] ✅ Removed task from collected index: ${collectedIndexKey}`);
+        }
+      } catch (err) {
+        console.error(`[removeTaskLogEntriesOnDelete] Failed to clean up collected index`, err);
+      }
+    }
+
     console.log(`[removeTaskLogEntriesOnDelete] ✅ Cleared effects, removed links, and removed log entries for task ${task.id}`);
   } catch (error) {
     console.error('Error removing task effects:', error);
@@ -751,6 +769,32 @@ export async function uncompleteTask(taskId: string): Promise<void> {
     await clearEffect(EffectKeys.sideEffect('task', taskId, 'financialCreated'));
     await clearEffect(EffectKeys.sideEffect('task', taskId, 'pointsAwarded'));
     console.log(`[uncompleteTask] ✅ Cleared effects registry entries (itemCreated, financialCreated, pointsAwarded)`);
+
+    // 3.5 Remove from collected index
+    try {
+      // Determine which month key it was in
+      let collectedAt = task.collectedAt;
+      if (!collectedAt) {
+        if (task.doneAt) collectedAt = calculateClosingDate(task.doneAt);
+        else if (task.createdAt) collectedAt = calculateClosingDate(task.createdAt);
+        else collectedAt = calculateClosingDate(new Date());
+      }
+
+      const monthKey = formatMonthKey(collectedAt);
+      const collectedIndexKey = `index:tasks:collected:${monthKey}`;
+
+      await kvSRem(collectedIndexKey, task.id);
+      console.log(`[uncompleteTask] ✅ Removed task from collected index: ${collectedIndexKey}`);
+
+      // Also check standard date-based key just in case (fallback)
+      const nowKey = formatMonthKey(new Date());
+      if (nowKey !== monthKey) {
+        // Best effort cleanup if date logic shifted
+        await kvSRem(`index:tasks:collected:${nowKey}`, task.id);
+      }
+    } catch (err) {
+      console.error(`[uncompleteTask] Failed to remove from collected index:`, err);
+    }
 
     // 4. Log UNCOMPLETED event
     await appendEntityLog(EntityType.TASK, taskId, LogEventType.UNCOMPLETED, {
