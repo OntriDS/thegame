@@ -683,7 +683,7 @@ export default function BoothSalesView({
         <div className="flex flex-col h-full bg-slate-50/50 dark:bg-slate-900/50 -mx-6 -mt-6 -mb-4 p-4 pt-4 overflow-hidden">
 
             {/* Header / Setup Toolbar */}
-            <div className="flex flex-wrap items-center gap-4 bg-white dark:bg-slate-800 p-2 rounded-lg shadow-sm border mb-4">
+            <div className="flex items-center gap-4 bg-white dark:bg-slate-800 p-2 rounded-lg shadow-sm border mb-4 shrink-0 overflow-x-auto">
 
                 {/* Date */}
                 <div className="flex items-center gap-2">
@@ -1281,135 +1281,137 @@ export default function BoothSalesView({
                     </div>
 
                 </div>
+                {/* Footer containing Payments and Actions */}
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4 pt-4 border-t border-slate-200 dark:border-slate-800 shrink-0 bg-slate-50 dark:bg-slate-900/50 -mx-4 px-4 pb-4">
 
+                    {/* Left/Center: Payment Distribution Inputs */}
+                    <div className="flex items-center gap-4">
+                        <div className="flex flex-wrap items-center gap-3">
+                            <Label className="text-[10px] text-muted-foreground uppercase tracking-wide font-bold mr-2">PAYMENTS</Label>
 
-                {/* Center: Payment Distribution Inputs */}
-                <div className="flex items-center gap-4 mx-4">
-                    <div className="flex items-center gap-3">
-                        <Label className="text-[10px] text-muted-foreground uppercase tracking-wide font-bold mr-2">PAYMENTS</Label>
+                            {/* Bitcoin Input */}
+                            <div className="flex items-center relative" title="Bitcoin Payment (BTC)">
+                                <span className="absolute left-3 text-base text-orange-500 font-bold z-10 top-1/2 -translate-y-1/2">₿</span>
+                                <NumericInput
+                                    value={paymentBitcoin}
+                                    onChange={setPaymentBitcoin}
+                                    className="h-10 w-28 pl-8 text-sm font-bold bg-slate-100 dark:bg-slate-950 border-orange-500/20 text-orange-600 dark:text-orange-400 focus:border-orange-500/50 rounded-md shadow-sm"
+                                    placeholder="BTC"
+                                />
+                            </div>
 
-                        {/* Bitcoin Input */}
-                        <div className="flex items-center relative" title="Bitcoin Payment (CRC)">
-                            <span className="absolute left-3 text-base text-orange-500 font-bold z-10 top-1/2 -translate-y-1/2">₿</span>
-                            <NumericInput
-                                value={paymentBitcoin}
-                                onChange={setPaymentBitcoin}
-                                className="h-12 w-32 pl-10 text-sm font-bold bg-slate-100 dark:bg-slate-950 border-orange-500/20 text-orange-600 dark:text-orange-400 focus:border-orange-500/50 rounded-lg shadow-sm"
-                                placeholder="BTC"
-                            />
+                            {/* Card Input */}
+                            <div className="flex items-center relative" title="Card Payment (CRC)">
+                                <span className="absolute left-3 text-base text-indigo-500 font-bold z-10 top-1/2 -translate-y-1/2">💳</span>
+                                <NumericInput
+                                    value={paymentCard}
+                                    onChange={setPaymentCard}
+                                    className="h-10 w-28 pl-8 text-sm font-bold bg-slate-100 dark:bg-slate-950 border-indigo-500/20 text-indigo-600 dark:text-indigo-400 focus:border-indigo-500/50 rounded-md shadow-sm"
+                                    placeholder="Card"
+                                />
+                            </div>
+
+                            {/* Cash CRC Input */}
+                            <div className="flex items-center relative" title="Cash Payment (CRC)">
+                                <span className="absolute left-3 text-base text-emerald-500 font-bold z-10 top-1/2 -translate-y-1/2">₡</span>
+                                <NumericInput
+                                    value={paymentCashCRC}
+                                    onChange={setPaymentCashCRC}
+                                    className="h-10 w-28 pl-8 text-sm font-bold bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400 focus:border-emerald-500/50 rounded-md shadow-sm"
+                                    placeholder="CRC"
+                                />
+                            </div>
+
+                            {/* Cash USD Input */}
+                            <div className="flex items-center relative" title="Cash Payment (USD)">
+                                <span className="absolute left-3 text-base text-emerald-500 font-bold z-10 top-1/2 -translate-y-1/2">$</span>
+                                <NumericInput
+                                    value={paymentCashUSD}
+                                    onChange={setPaymentCashUSD}
+                                    className="h-10 w-28 pl-8 text-sm font-bold bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400 focus:border-emerald-500/50 rounded-md shadow-sm"
+                                    placeholder="USD"
+                                />
+                            </div>
                         </div>
+                    </div>
 
-                        {/* Card Input */}
-                        <div className="flex items-center relative" title="Card Payment (CRC)">
-                            <span className="absolute left-3 text-base text-indigo-500 font-bold z-10 top-1/2 -translate-y-1/2">💳</span>
-                            <NumericInput
-                                value={paymentCard}
-                                onChange={setPaymentCard}
-                                className="h-12 w-32 pl-10 text-sm font-bold bg-slate-100 dark:bg-slate-950 border-indigo-500/20 text-indigo-600 dark:text-indigo-400 focus:border-indigo-500/50 rounded-lg shadow-sm"
-                                placeholder="Card"
-                            />
-                        </div>
-
-                        {/* Cash CRC Input */}
-                        <div className="flex items-center relative" title="Cash Payment (CRC)">
-                            <span className="absolute left-3 text-base text-emerald-500 font-bold z-10 top-1/2 -translate-y-1/2">₡</span>
-                            <NumericInput
-                                value={paymentCashCRC}
-                                onChange={setPaymentCashCRC}
-                                className="h-12 w-32 pl-10 text-sm font-bold bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400 focus:border-emerald-500/50 rounded-lg shadow-sm"
-                                placeholder="CRC"
-                            />
-                        </div>
-
-                        {/* Cash USD Input */}
-                        <div className="flex items-center relative" title="Cash Payment (USD)">
-                            <span className="absolute left-3 text-base text-emerald-500 font-bold z-10 top-1/2 -translate-y-1/2">$</span>
-                            <NumericInput
-                                value={paymentCashUSD}
-                                onChange={setPaymentCashUSD}
-                                className="h-12 w-32 pl-10 text-sm font-bold bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400 focus:border-emerald-500/50 rounded-lg shadow-sm"
-                                placeholder="USD"
-                            />
-                        </div>
+                    {/* Right Side: Action Buttons */}
+                    <div className="flex gap-2 shrink-0 ml-auto pt-2 sm:pt-0 border-t sm:border-0 w-full justify-end sm:w-auto mt-2 sm:mt-0">
+                        {onDelete && (
+                            <Button
+                                onClick={() => {
+                                    // Direct call to parent's onDelete (which handles confirmation)
+                                    // to avoid double confirmation prompts.
+                                    onDelete();
+                                }}
+                                disabled={isSaving}
+                                className="mr-auto sm:mr-0 bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/20 h-9"
+                            >
+                                Delete
+                            </Button>
+                        )}
+                        <Button variant="ghost" className="h-9" onClick={onCancel} disabled={isSaving}>Cancel</Button>
+                        <Button className="h-9 bg-indigo-600 hover:bg-indigo-700" onClick={() => handleSave()} disabled={isSaving}>
+                            {isSaving ? 'Processing...' : 'Confirm'}
+                        </Button>
                     </div>
                 </div>
 
-                {/* Right Side: Action Buttons */}
-                <div className="flex gap-2">
-                    {onDelete && (
-                        <Button
-                            onClick={() => {
-                                // Direct call to parent's onDelete (which handles confirmation)
-                                // to avoid double confirmation prompts.
-                                onDelete();
-                            }}
-                            disabled={isSaving}
-                            className="mr-auto bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/20 h-9"
-                        >
-                            Delete
-                        </Button>
-                    )}
-                    <Button variant="ghost" onClick={onCancel} disabled={isSaving}>Cancel</Button>
-                    <Button onClick={() => handleSave()} disabled={isSaving} className="bg-indigo-600 hover:bg-indigo-700">
-                        {isSaving ? 'Processing...' : 'Confirm'}
-                    </Button>
-                </div>
-            </div >
+                {/* Item Selector Sub-Modal */}
+                <SaleItemsSubModal
+                    open={showItemPicker}
+                    onOpenChange={setShowItemPicker}
+                    onSave={(selectedItems) => {
+                        // Convert SaleItemLine from submodal to ItemSaleLine for our lines
+                        const newLines: SaleLine[] = selectedItems.map(saleItem => ({
+                            lineId: uuid(), // Generate new ID or keep existing? Submodal generates new IDs, we accept them.
+                            // Actually, submodal returns SaleItemLine with an ID, but we usually regen on save or we can reuse.
+                            // Let's create new ItemSaleLines.
+                            kind: 'item',
+                            itemId: saleItem.itemId,
+                            unitPrice: saleItem.unitPrice,
+                            quantity: saleItem.quantity,
+                            description: saleItem.itemName,
+                            metadata: {
+                                usdExpression: saleItem.usdExpression,
+                                crcExpression: saleItem.crcExpression,
+                                totalUSD: saleItem.totalUSD,
+                                totalCRC: saleItem.totalCRC
+                            }
+                        } as ItemSaleLine));
 
-            {/* Item Selector Sub-Modal */}
-            <SaleItemsSubModal
-                open={showItemPicker}
-                onOpenChange={setShowItemPicker}
-                onSave={(selectedItems) => {
-                    // Convert SaleItemLine from submodal to ItemSaleLine for our lines
-                    const newLines: SaleLine[] = selectedItems.map(saleItem => ({
-                        lineId: uuid(), // Generate new ID or keep existing? Submodal generates new IDs, we accept them.
-                        // Actually, submodal returns SaleItemLine with an ID, but we usually regen on save or we can reuse.
-                        // Let's create new ItemSaleLines.
-                        kind: 'item',
-                        itemId: saleItem.itemId,
-                        unitPrice: saleItem.unitPrice,
-                        quantity: saleItem.quantity,
-                        description: saleItem.itemName,
-                        metadata: {
-                            usdExpression: saleItem.usdExpression,
-                            crcExpression: saleItem.crcExpression,
-                            totalUSD: saleItem.totalUSD,
-                            totalCRC: saleItem.totalCRC
-                        }
-                    } as ItemSaleLine));
+                        // Replace ALL item lines with the new selection (since modal manages the full list)
+                        // Keep non-item lines (like bundles if any, though we filtered them before? No, bundles are separate)
+                        // The logic here replaces the previous "add to list" logic.
+                        // User Edit Flow: "Open modal -> See current items -> Edit/Add/Remove -> Save -> Replace list".
 
-                    // Replace ALL item lines with the new selection (since modal manages the full list)
-                    // Keep non-item lines (like bundles if any, though we filtered them before? No, bundles are separate)
-                    // The logic here replaces the previous "add to list" logic.
-                    // User Edit Flow: "Open modal -> See current items -> Edit/Add/Remove -> Save -> Replace list".
+                        const nonItemLines = lines.filter(l => l.kind !== 'item');
+                        setLines([...nonItemLines, ...newLines]);
+                        setShowItemPicker(false);
+                    }}
+                    initialItems={
+                        lines.filter(l => l.kind === 'item').map(l => {
+                            const il = l as ItemSaleLine;
+                            const item = items.find(i => i.id === il.itemId);
+                            return {
+                                id: il.lineId,
+                                itemId: il.itemId,
+                                itemName: item ? item.name : 'Unknown Item',
+                                quantity: il.quantity,
+                                unitPrice: il.unitPrice || 0,
+                                total: (il.quantity || 0) * (il.unitPrice || 0),
+                                siteId: siteId,
+                                usdExpression: l.metadata?.usdExpression,
+                                crcExpression: l.metadata?.crcExpression
+                            };
+                        })
+                    }
+                    defaultSiteId={siteId}
+                    exchangeRate={exchangeRate}
+                />
 
-                    const nonItemLines = lines.filter(l => l.kind !== 'item');
-                    setLines([...nonItemLines, ...newLines]);
-                    setShowItemPicker(false);
-                }}
-                initialItems={
-                    lines.filter(l => l.kind === 'item').map(l => {
-                        const il = l as ItemSaleLine;
-                        const item = items.find(i => i.id === il.itemId);
-                        return {
-                            id: il.lineId,
-                            itemId: il.itemId,
-                            itemName: item ? item.name : 'Unknown Item',
-                            quantity: il.quantity,
-                            unitPrice: il.unitPrice || 0,
-                            total: (il.quantity || 0) * (il.unitPrice || 0),
-                            siteId: siteId,
-                            usdExpression: l.metadata?.usdExpression,
-                            crcExpression: l.metadata?.crcExpression
-                        };
-                    })
-                }
-                defaultSiteId={siteId}
-                exchangeRate={exchangeRate}
-            />
-
-            {/* Delete Confirmation Modal REMOVED - using Parent's Modal */}
-        </div >
+                {/* Delete Confirmation Modal REMOVED - using Parent's Modal */}
+            </div>
+        </div>
     );
 }
