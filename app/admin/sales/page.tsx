@@ -137,12 +137,16 @@ export default function SalesPage() {
     let cost = 0;
 
     if (sale.type === SaleType.BOOTH) {
-      const boothFee = sale.boothFee || 0;
-      // Associate payouts are lines with station 'Associate Sales'
+      // Typically boothFee is stored in Colones (CRC)
+      const exchangeRate = 500;
+      const boothFeeUSD = (sale.boothFee || 0) / exchangeRate;
+
+      // Associate payouts are lines with station 'Associate Sales', their revenue is in USD
       const associatePayouts = sale.lines
         .filter(l => l.kind === 'service' && (l as any).station === 'Associate Sales')
         .reduce((sum, l) => sum + ((l as any).revenue || 0), 0);
-      cost = boothFee + associatePayouts;
+
+      cost = boothFeeUSD + associatePayouts;
     } else {
       // General service costs
       const serviceLineCosts = sale.lines
@@ -395,17 +399,14 @@ export default function SalesPage() {
                           {sale.counterpartyName && <p>Client: {sale.counterpartyName}</p>}
                         </div>
                       </div>
-                      <div className="text-right space-y-1">
-                        <div className="text-xl font-bold text-green-600 dark:text-green-500">
-                          +${netProfit.toFixed(2)} <span className="text-xs font-normal text-muted-foreground">Profit</span>
-                        </div>
-                        {cost > 0 && (
-                          <div className="text-sm text-red-500/80">
-                            -${cost.toFixed(2)} <span className="text-xs text-muted-foreground">Cost</span>
-                          </div>
-                        )}
-                        <div className="text-xs text-muted-foreground">
-                          Gross: ${grossRevenue.toFixed(2)}
+                      <div className="text-right">
+                        <div className="text-base font-medium flex items-center gap-2 justify-end">
+                          <span className="text-muted-foreground font-normal text-sm">+${grossRevenue.toFixed(2)}</span>
+                          {cost > 0 && <span className="text-muted-foreground font-normal text-sm">- ${cost.toFixed(2)}</span>}
+                          <span className="text-muted-foreground font-normal text-sm">=</span>
+                          <span className={netProfit >= 0 ? "text-emerald-500 font-bold" : "text-red-500 font-bold"}>
+                            ${netProfit.toFixed(2)}
+                          </span>
                         </div>
                       </div>
                     </div>
