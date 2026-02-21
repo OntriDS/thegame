@@ -68,6 +68,9 @@ export default function SalesPage() {
       filtered = filtered.filter(sale => sale.siteId === selectedSite);
     }
 
+    // Sort by date descending (newest first)
+    filtered.sort((a, b) => new Date(b.saleDate).getTime() - new Date(a.saleDate).getTime());
+
     setFilteredSales(filtered);
   }, [sales, selectedType, selectedStatus, selectedSite, showCollected]);
 
@@ -127,6 +130,33 @@ export default function SalesPage() {
 
   const calculateTotalRevenue = () => {
     return filteredSales.reduce((total, sale) => total + sale.totals.totalRevenue, 0);
+  };
+
+  const getSaleFinancials = (sale: Sale) => {
+    const grossRevenue = sale.totals.totalRevenue;
+    let cost = 0;
+
+    if (sale.type === SaleType.BOOTH) {
+      const boothFee = sale.boothFee || 0;
+      // Associate payouts are lines with station 'Associate Sales'
+      const associatePayouts = sale.lines
+        .filter(l => l.kind === 'service' && (l as any).station === 'Associate Sales')
+        .reduce((sum, l) => sum + ((l as any).revenue || 0), 0);
+      cost = boothFee + associatePayouts;
+    } else {
+      // General service costs
+      const serviceLineCosts = sale.lines
+        .filter(l => l.kind === 'service' && (l as any).taskCost)
+        .reduce((sum, l) => sum + ((l as any).taskCost || 0), 0);
+      cost = serviceLineCosts;
+    }
+
+    const netProfit = grossRevenue - cost;
+    return { grossRevenue, cost, netProfit };
+  };
+
+  const calculateTotalProfit = () => {
+    return filteredSales.reduce((total, sale) => total + getSaleFinancials(sale).netProfit, 0);
   };
 
   const calculateTotalItems = () => {
@@ -232,13 +262,13 @@ export default function SalesPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Net Profit</CardTitle>
+            <DollarSign className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${calculateTotalRevenue().toFixed(2)}</div>
+            <div className="text-2xl font-bold text-green-600 dark:text-green-500">${calculateTotalProfit().toFixed(2)}</div>
             <p className="text-xs text-muted-foreground">
-              From filtered sales
+              Gross: ${calculateTotalRevenue().toFixed(2)}
             </p>
           </CardContent>
         </Card>
@@ -348,30 +378,40 @@ export default function SalesPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              {filteredSales.map((sale) => (
-                <div key={sale.id} className="border rounded-lg p-4 hover:bg-muted/50 transition-colors cursor-pointer" onClick={() => handleEditSale(sale)}>
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-semibold">{sale.name}</h3>
-                        {getTypeBadge(sale.type)}
-                        {getStatusBadge(sale.status)}
+              {filteredSales.map((sale) => {
+                const { grossRevenue, cost, netProfit } = getSaleFinancials(sale);
+                return (
+                  <div key={sale.id} className="border rounded-lg p-4 hover:bg-muted/50 transition-colors cursor-pointer" onClick={() => handleEditSale(sale)}>
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-semibold">{sale.name}</h3>
+                          {getTypeBadge(sale.type)}
+                          {getStatusBadge(sale.status)}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          <p>Date: {formatDateDDMMYYYY(new Date(sale.saleDate))}</p>
+                          <p>Site: {sale.siteId}</p>
+                          {sale.counterpartyName && <p>Client: {sale.counterpartyName}</p>}
+                        </div>
                       </div>
-                      <div className="text-sm text-muted-foreground">
-                        <p>Date: {formatDateDDMMYYYY(new Date(sale.saleDate))}</p>
-                        <p>Site: {sale.siteId}</p>
-                        {sale.counterpartyName && <p>Client: {sale.counterpartyName}</p>}
-                      </div>
-                    </div>
-                    <div className="text-right space-y-2">
-                      <div className="text-2xl font-bold">${sale.totals.totalRevenue.toFixed(2)}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {sale.lines.length} line{sale.lines.length !== 1 ? 's' : ''}
+                      <div className="text-right space-y-1">
+                        <div className="text-xl font-bold text-green-600 dark:text-green-500">
+                          +${netProfit.toFixed(2)} <span className="text-xs font-normal text-muted-foreground">Profit</span>
+                        </div>
+                        {cost > 0 && (
+                          <div className="text-sm text-red-500/80">
+                            -${cost.toFixed(2)} <span className="text-xs text-muted-foreground">Cost</span>
+                          </div>
+                        )}
+                        <div className="text-xs text-muted-foreground">
+                          Gross: ${grossRevenue.toFixed(2)}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </CardContent>
