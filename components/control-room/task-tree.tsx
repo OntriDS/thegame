@@ -34,7 +34,7 @@ interface TaskTreeProps {
 }
 
 // Helper to get root stations (all stations are root level now)
-const getRootStations = () => ['ADMIN', 'DESIGN', 'PRODUCTION', 'SALES', 'PERSONAL'] as const;
+const getRootStations = () => ['ADMIN', 'RESEARCH', 'DEV', 'ARTDESIGN', 'MAKERSPACE', 'SALES', 'PERSONAL'] as const;
 
 // Collect all nodes of a given type across the entire tree (recursive)
 function collectNodesByType(nodes: TreeNode[], type: TaskType): TreeNode[] {

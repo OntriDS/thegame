@@ -177,7 +177,7 @@ export interface Item extends BaseEntity {
   type: ItemType;
   collection?: Collection;
   status: ItemStatus;
-  station: Station;           // Primary work station (e.g., 'Strategy', 'Digital Art', 'Prints')
+  station: Station;           // Primary work station (e.g., 'Strategy', 'Digital-Art', 'Prints')
   stock: StockPoint[];          // multiple sites - SINGLE SOURCE OF TRUTH
 
   // Physical dimensions (for physical items)
@@ -263,7 +263,7 @@ export interface Task extends BaseEntity {
   type: TaskType;                   // MISSION, MILESTONE, GOAL, TASK, RECURRENT
   status: TaskStatus;
   priority: TaskPriority;
-  station: Station;                 // Primary work station (e.g., 'Strategy', 'Digital Art', 'Prints')
+  station: Station;                 // Primary work station (e.g., 'Strategy', 'Digital-Art', 'Prints')
   progress: number;                 // 0-100
   dueDate?: Date;
   scheduledStart?: Date;            // For Weekly Schedule view
@@ -329,7 +329,7 @@ export type FinancialCategory = CompanyFinancialCategory | PersonalFinancialCate
 export interface FinancialRecord extends BaseEntity {
   year: number;
   month: number; // 1-12
-  station: Station;                 // Main area: ADMIN, DESIGN, PRODUCTION, SALES, PERSONAL
+  station: Station;
   type: 'company' | 'personal';
   outputItemId?: string | null;     // Reuse existing inventory item when present
 
@@ -340,7 +340,7 @@ export interface FinancialRecord extends BaseEntity {
   playerCharacterId?: string | null;   // Player character who owns this record
   sourceTaskId?: string | null;     // Task that generated this financial record (optional)
   sourceSaleId?: string | null;     // Sale that generated this financial record (optional)
-  salesChannel?: Station | null;    // Sales channel station (for sales-derived records: 'Direct Sales', 'Network Sales', etc.)
+  salesChannel?: Station | null;    // Sales channel station (for sales-derived records: 'Direct-Sales', 'Network-Sales', etc.)
 
   // Emissary Fields
   newCustomerName?: string;         // EMISSARY: Name for new customer character creation
@@ -576,10 +576,10 @@ export interface Sale extends BaseEntity {
   siteId: string;                   // Site where sale occurred
   counterpartyName?: string;        // client/store/partner name
   customerId?: string | null;       // Character who is the customer (for tracking purchases)
-  associateId?: string | null;      // Character acting as Associate (Booth Sales)
-  partnerId?: string | null;        // Character acting as Partner (Booth Sales)
+  associateId?: string | null;      // Character acting as Associate (Booth-Sales)
+  partnerId?: string | null;        // Character acting as Partner (Booth-Sales)
   playerCharacterId?: string | null; // Player character who owns this sale
-  salesChannel?: Station | null;    // Sales channel station (e.g., 'Direct Sales', 'Network Sales', 'Feria Sales')
+  salesChannel?: Station | null;    // Sales channel station (e.g., 'Direct-Sales', 'Network-Sales', 'Feria Sales')
 
   // Emissary Fields
   newCustomerName?: string;         // Name for new customer character creation
@@ -593,7 +593,7 @@ export interface Sale extends BaseEntity {
   // Discounts
   overallDiscount?: Discount;    // applies to subtotal before tax
 
-  // Booth Sales Context (First-Class Fields)
+  // Booth-Sales Context (First-Class Fields)
   boothFee?: number;           // Cost of participation
   paymentBreakdown?: {         // Specific payment method breakdown
     cashUSD: number;

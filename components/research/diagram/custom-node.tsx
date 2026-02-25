@@ -11,7 +11,7 @@ const NODE_TYPES = {
         text: 'text-cyan-400',
         bg: 'bg-cyan-950/30'
     },
-    PRODUCTION: {
+    MAKERSPACE: {
         color: 'border-green-500',
         glow: 'shadow-[0_0_30px_rgba(34,197,94,0.4)]',
         text: 'text-green-400',
@@ -33,7 +33,7 @@ const NODE_TYPES = {
 
 const ICONS = {
     ADMIN: Cpu,
-    PRODUCTION: Zap,
+    MAKERSPACE: Zap,
     SALES: ShoppingCart,
     CREATIVE: Layout,
 };

@@ -29,7 +29,7 @@ export const Sidebar = () => {
 
                 <div
                     className="dndnode p-3 text-green-400 hover:bg-green-900/20 rounded-lg transition-colors cursor-grab active:cursor-grabbing border border-green-500/30"
-                    onDragStart={(event) => onDragStart(event, 'PRODUCTION')}
+                    onDragStart={(event) => onDragStart(event, 'MAKERSPACE')}
                     draggable
                     title="Production Node"
                 >

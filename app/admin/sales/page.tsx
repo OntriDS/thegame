@@ -141,9 +141,9 @@ export default function SalesPage() {
       const exchangeRate = 500;
       const boothFeeUSD = (sale.boothFee || 0) / exchangeRate;
 
-      // Associate payouts are lines with station 'Associate Sales', their revenue is in USD
+      // Associate payouts are lines with station 'Booth-Sales', their revenue is in USD
       const associatePayouts = sale.lines
-        .filter(l => l.kind === 'service' && (l as any).station === 'Associate Sales')
+        .filter(l => l.kind === 'service' && (l as any).station === 'Booth-Sales')
         .reduce((sum, l) => sum + ((l as any).revenue || 0), 0);
 
       cost = boothFeeUSD + associatePayouts;

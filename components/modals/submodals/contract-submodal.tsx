@@ -461,7 +461,7 @@ export function ContractSubmodal({
                                             <Plus className="h-3 w-3 mr-1" /> Principal Sales
                                         </Button>
                                         <Button size="sm" variant="outline" onClick={() => addClause(ContractClauseType.SALES_SERVICE)} className="h-7 text-xs">
-                                            <Plus className="h-3 w-3 mr-1" /> Associate Sales
+                                            <Plus className="h-3 w-3 mr-1" /> Booth-Sales
                                         </Button>
                                         <Button size="sm" variant="outline" onClick={() => addClause(ContractClauseType.EXPENSE_SHARING)} className="h-7 text-xs">
                                             <Plus className="h-3 w-3 mr-1" /> Exp. Share
@@ -484,7 +484,7 @@ export function ContractSubmodal({
                                                         <div>
                                                             <div className="text-xs font-bold uppercase tracking-wider text-foreground">
                                                                 {clause.type === ContractClauseType.SALES_COMMISSION && "Principal Commission"}
-                                                                {clause.type === ContractClauseType.SALES_SERVICE && "Associate Sales Service"}
+                                                                {clause.type === ContractClauseType.SALES_SERVICE && "Booth-Sales Service"}
                                                                 {clause.type === ContractClauseType.EXPENSE_SHARING && "Expense Sharing"}
                                                                 {clause.type === ContractClauseType.OTHER && "Other Term"}
                                                             </div>

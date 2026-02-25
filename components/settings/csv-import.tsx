@@ -68,10 +68,10 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
       const values: string[] = [];
       let current = '';
       let inQuotes = false;
-      
+
       for (let j = 0; j < line.length; j++) {
         const char = line[j];
-        
+
         if (char === '"') {
           inQuotes = !inQuotes;
         } else if (char === ',' && !inQuotes) {
@@ -82,7 +82,7 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
         }
       }
       values.push(current.trim()); // Add the last value
-      
+
       const row: any = {};
       headers.forEach((header, index) => {
         let value = values[index] || '';
@@ -92,36 +92,36 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
         }
         row[header] = value;
       });
-      
+
       data.push(row);
     }
 
     return data;
   };
 
-        // Validate that a subtype is valid for a given item type
-      const isValidSubItemType = (itemType: ItemType, subType: string): boolean => {
-        // Get valid subtypes from enums (this ensures consistency when enums change)
-        const validSubtypes = getSubTypesForItemType(itemType);
-        
-        // Type assertion to handle the string to SubItemType conversion
-        const isValid = validSubtypes.includes(subType as SubItemType);
-        
-        return isValid;
-      };
+  // Validate that a subtype is valid for a given item type
+  const isValidSubItemType = (itemType: ItemType, subType: string): boolean => {
+    // Get valid subtypes from enums (this ensures consistency when enums change)
+    const validSubtypes = getSubTypesForItemType(itemType);
 
-      // Validate that a station is valid
-      const isValidStation = (station: string): boolean => {
-        const validStations = getAllStations();
-        return validStations.includes(station as Station);
-      };
+    // Type assertion to handle the string to SubItemType conversion
+    const isValid = validSubtypes.includes(subType as SubItemType);
+
+    return isValid;
+  };
+
+  // Validate that a station is valid
+  const isValidStation = (station: string): boolean => {
+    const validStations = getAllStations();
+    return validStations.includes(station as Station);
+  };
 
   const convertToItems = async (csvData: any[], sitesToUse: Site[] = sites): Promise<{ items: (Item | null)[], warnings: string[] }> => {
     const warnings: string[] = [];
-    
+
     // Find "None" site once as default for invalid/missing sites
     const noneSite = sitesToUse.find(s => s.name === 'None' || s.id === 'none');
-    
+
     const items = await Promise.all(csvData.map(async (row, index) => {
       // Parse dimensions if they exist
       const width = parseFloat(row.Width || row.width || '0');
@@ -131,95 +131,95 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
       // Parse size field
       const size = row.Size || row.size || undefined;
 
-                           // Parse quantities - allow 0 for items that exist but aren't in stock
-        const quantity = parseInt(row.TotalQuantity || row.totalQuantity || row.Quantity || row.quantity || '0'); // Default to 0 if no quantity specified
+      // Parse quantities - allow 0 for items that exist but aren't in stock
+      const quantity = parseInt(row.TotalQuantity || row.totalQuantity || row.Quantity || row.quantity || '0'); // Default to 0 if no quantity specified
 
-       // Parse financial values with better locale handling
-       const parsePrice = (value: string): number => {
-         if (!value || value.trim() === '') return 0;
-         // Handle comma as decimal separator (European format)
-         const cleanValue = value.replace(',', '.');
-         return parseFloat(cleanValue) || 0;
-       };
-       
-       const unitCost = parsePrice(row.UnitCost || '0');
-       const additionalCost = parsePrice(row.AdditionalCost || '0');
-       const price = parsePrice(row.Price || '0');
-       const value = parsePrice(row.Value || '0');
-       const quantitySold = parseInt(row.QuantitySold || row.quantitySold || '0');
-       const targetAmount = row.TargetAmount ? parseInt(row.TargetAmount) : undefined;
-       const soldThisMonth = row.SoldThisMonth ? parseInt(row.SoldThisMonth) : undefined;
+      // Parse financial values with better locale handling
+      const parsePrice = (value: string): number => {
+        if (!value || value.trim() === '') return 0;
+        // Handle comma as decimal separator (European format)
+        const cleanValue = value.replace(',', '.');
+        return parseFloat(cleanValue) || 0;
+      };
+
+      const unitCost = parsePrice(row.UnitCost || '0');
+      const additionalCost = parsePrice(row.AdditionalCost || '0');
+      const price = parsePrice(row.Price || '0');
+      const value = parsePrice(row.Value || '0');
+      const quantitySold = parseInt(row.QuantitySold || row.quantitySold || '0');
+      const targetAmount = row.TargetAmount ? parseInt(row.TargetAmount) : undefined;
+      const soldThisMonth = row.SoldThisMonth ? parseInt(row.SoldThisMonth) : undefined;
       const lastRestockDate = row.LastRestockDate ? new Date(row.LastRestockDate) : undefined;
       // Validate sourceTaskId - set to null if empty, "0", invalid, or not found
       const rawSourceTaskId = row.SourceTaskId || row.sourceTaskId || '';
-      const sourceTaskId = (rawSourceTaskId && 
-                            rawSourceTaskId.trim() !== '' && 
-                            rawSourceTaskId !== '0' && 
-                            rawSourceTaskId !== 'null' &&
-                            !isNaN(Number(rawSourceTaskId)) && Number(rawSourceTaskId) > 0)
-                            ? rawSourceTaskId.trim() 
-                            : null;
-       
-                            // Parse site from CSV - simple and clean approach
-          let stock: { siteId: string; quantity: number }[] = [];
-         
-                   // Get site from Site field (correct field name)
-          const siteName = row.Site || row.site || row.Locations || row.locations || row.Location || row.location || '';
-        
-        if (siteName && siteName.trim() !== '') {
-          // Find matching site using proper site validation (including "None" if it exists as a site)
-          const matchingSite = getSiteByName(sitesToUse, siteName);
-          
-          if (matchingSite) {
-            // Site exists - assign stock to it
-            stock = [{ siteId: matchingSite.id, quantity: quantity }];
-          } else {
-            // Site doesn't exist - default to "None" site if available, otherwise skip assignment
-            const itemName = row.Name || row.name || `Row ${index + 1}`;
-            if (noneSite) {
-              warnings.push(`Row ${index + 1} (${itemName}): Site "${siteName}" does not exist. Item will be assigned to "None" site.`);
-              stock = [{ siteId: noneSite.id, quantity: quantity }];
-            } else {
-              warnings.push(`Row ${index + 1} (${itemName}): Site "${siteName}" does not exist and "None" site not found. Item will be imported without site assignment.`);
-              stock = [];
-            }
-          }
+      const sourceTaskId = (rawSourceTaskId &&
+        rawSourceTaskId.trim() !== '' &&
+        rawSourceTaskId !== '0' &&
+        rawSourceTaskId !== 'null' &&
+        !isNaN(Number(rawSourceTaskId)) && Number(rawSourceTaskId) > 0)
+        ? rawSourceTaskId.trim()
+        : null;
+
+      // Parse site from CSV - simple and clean approach
+      let stock: { siteId: string; quantity: number }[] = [];
+
+      // Get site from Site field (correct field name)
+      const siteName = row.Site || row.site || row.Locations || row.locations || row.Location || row.location || '';
+
+      if (siteName && siteName.trim() !== '') {
+        // Find matching site using proper site validation (including "None" if it exists as a site)
+        const matchingSite = getSiteByName(sitesToUse, siteName);
+
+        if (matchingSite) {
+          // Site exists - assign stock to it
+          stock = [{ siteId: matchingSite.id, quantity: quantity }];
         } else {
-          // No site specified - default to "None" site if available
+          // Site doesn't exist - default to "None" site if available, otherwise skip assignment
+          const itemName = row.Name || row.name || `Row ${index + 1}`;
           if (noneSite) {
+            warnings.push(`Row ${index + 1} (${itemName}): Site "${siteName}" does not exist. Item will be assigned to "None" site.`);
             stock = [{ siteId: noneSite.id, quantity: quantity }];
           } else {
-            // No "None" site found - create item without stock (for ideation items)
+            warnings.push(`Row ${index + 1} (${itemName}): Site "${siteName}" does not exist and "None" site not found. Item will be imported without site assignment.`);
             stock = [];
           }
         }
-      
+      } else {
+        // No site specified - default to "None" site if available
+        if (noneSite) {
+          stock = [{ siteId: noneSite.id, quantity: quantity }];
+        } else {
+          // No "None" site found - create item without stock (for ideation items)
+          stock = [];
+        }
+      }
+
       // Stock is already properly set above based on site validation
 
       // Determine item type from CSV or use selected type
       const itemTypeFromCSV = row.ItemType || row.itemType || ItemType.DIGITAL;
-      
+
       // Validate that the item type exists in our enums
       if (!Object.values(ItemType).includes(itemTypeFromCSV as ItemType)) {
         console.error(`Invalid item type in CSV: "${itemTypeFromCSV}" at row ${index + 1}`);
         console.error(`Valid types are:`, Object.values(ItemType));
         throw new Error(`Invalid item type: "${itemTypeFromCSV}" at row ${index + 1}. Valid types are: ${Object.values(ItemType).join(', ')}`);
       }
-      
+
       const finalItemType = itemTypeFromCSV as ItemType;
 
       // Handle collection - if empty, set to "No Collection"
       const collection = row.Collection || row.collection;
       const finalCollection = collection && collection.trim() !== '' ? collection : 'No Collection';
 
-      // Determine status - Digital Art defaults to "Idle", others to "For Sale"
+      // Determine status - Digital-Art defaults to "Idle", others to "For Sale"
       const status = row.Status || row.status;
       const finalStatus = status || (finalItemType === ItemType.DIGITAL ? ItemStatus.IDLE : ItemStatus.FOR_SALE);
 
       // Parse file attachments
       const parseFileReferences = (field: string): FileReference[] => {
         if (!field || field.trim() === '') return [];
-        
+
         return field.split(';').map(fileRef => {
           const parts = fileRef.split(':');
           if (parts.length >= 2) {
@@ -266,7 +266,7 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
         links: [] // ✅ Initialize links array (The Rosetta Stone)
       };
     }));
-    
+
     return { items, warnings };
   };
 
@@ -275,7 +275,7 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
 
     // Signal import start - this prevents status modals from interfering with import
     onImportStart?.();
-    
+
     setIsImporting(true);
     setImportResult(null);
 
@@ -292,16 +292,16 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
           // Continue anyway - sites might load during processing
         }
       }
-      
+
       const parsedData = parseCSV(csvData);
       // Use current sites state (may have just been updated)
       const currentSites = sites.length > 0 ? sites : await ClientAPI.getSites();
       const { items: itemsWithNulls, warnings: siteWarnings } = await convertToItems(parsedData, currentSites);
       const items = itemsWithNulls.filter((item): item is Item => item !== null);
-      
+
       // Validate items before import
       const validationErrors: string[] = [];
-      
+
       items.forEach((item, index) => {
         if (!item.name || item.name.trim() === '') {
           validationErrors.push(`Row ${index + 1}: Missing name`);
@@ -309,7 +309,7 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
         if (!item.type || !Object.values(ItemType).includes(item.type)) {
           validationErrors.push(`Row ${index + 1}: Missing or invalid type "${item.type}"`);
         }
-            // Allow items without stock (ideation - only validate if stock exists
+        // Allow items without stock (ideation - only validate if stock exists
         if (item.stock && item.stock.length > 0) {
           item.stock.forEach((stockPoint, stockIndex) => {
             // Note: Items with invalid sites will be imported without site assignment
@@ -325,12 +325,12 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
         if (item.collection && !Object.values(Collection).includes(item.collection)) {
           validationErrors.push(`Row ${index + 1}: Invalid collection "${item.collection}"`);
         }
-                 if (item.subItemType && !isValidSubItemType(item.type, item.subItemType)) {
-           const validSubtypes = getSubTypesForItemType(item.type);
-           validationErrors.push(`Row ${index + 1}: Invalid subtype "${item.subItemType}" for type "${item.type}". Valid subtypes are: ${validSubtypes.join(', ')}`);
-         }
+        if (item.subItemType && !isValidSubItemType(item.type, item.subItemType)) {
+          const validSubtypes = getSubTypesForItemType(item.type);
+          validationErrors.push(`Row ${index + 1}: Invalid subtype "${item.subItemType}" for type "${item.type}". Valid subtypes are: ${validSubtypes.join(', ')}`);
+        }
       });
-      
+
       if (validationErrors.length > 0) {
         setImportResult({
           success: 0,
@@ -338,13 +338,13 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
         });
         return;
       }
-      
+
       // Handle different import modes
       let success = false;
       let importedCount = 0;
       let skippedCount = 0;
       let operationErrors: string[] = [];
-      
+
       try {
         // Use unified bulk operation endpoint for all import modes
         const result = await ClientAPI.bulkOperation({
@@ -366,7 +366,7 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
         setIsImporting(false);
         return;
       }
-      
+
       if (success || importedCount > 0) {
         // Build success message with detailed breakdown
         const messages: string[] = [];
@@ -376,25 +376,25 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
         if (skippedCount > 0) {
           messages.push(`⏭️ Skipped ${skippedCount} duplicate${skippedCount !== 1 ? 's' : ''}`);
         }
-        
+
         // Add site warnings if any
         if (siteWarnings.length > 0) {
           messages.push(`⚠️ ${siteWarnings.length} item${siteWarnings.length !== 1 ? 's' : ''} imported without site assignment (site${siteWarnings.length !== 1 ? 's' : ''} not found)`);
         }
-        
+
         // Combine errors, warnings, and success messages
         const allMessages = [
           ...(operationErrors.length > 0 ? operationErrors : []),
           ...(siteWarnings.length > 0 ? siteWarnings : []),
           ...messages
         ];
-        
+
         setImportResult({
           success: importedCount,
           errors: allMessages.length > 0 ? allMessages : []
         });
         setCsvData('');
-        
+
         // Ensure the UI refreshes by adding a small delay
         setTimeout(() => {
           onImportComplete?.();
@@ -402,8 +402,8 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
       } else {
         setImportResult({
           success: 0,
-          errors: operationErrors.length > 0 
-            ? operationErrors 
+          errors: operationErrors.length > 0
+            ? operationErrors
             : ['Import operation failed - check console for details']
         });
       }
@@ -427,11 +427,11 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
     const merchSubtypes = getSubTypesForItemType(ItemType.MERCH);
     const materialSubtypes = getSubTypesForItemType(ItemType.MATERIAL);
     const equipmentSubtypes = getSubTypesForItemType(ItemType.EQUIPMENT);
-    
+
     // Get valid collections from enums to ensure template examples are always current
     const collections = Object.values(Collection);
-    
-            const template = `ItemType,SubItemType,Name,TotalQuantity,Site,Status,Collection,UnitCost,AdditionalCost,Price,Value,QuantitySold,TargetAmount,SoldThisMonth,LastRestockDate,SourceTaskId,Year,ImageUrl,OriginalFiles,AccessoryFiles,Width,Height,Size
+
+    const template = `ItemType,SubItemType,Name,TotalQuantity,Site,Status,Collection,UnitCost,AdditionalCost,Price,Value,QuantitySold,TargetAmount,SoldThisMonth,LastRestockDate,SourceTaskId,Year,ImageUrl,OriginalFiles,AccessoryFiles,Width,Height,Size
     "Digital","${digitalSubtypes[0]}","Organic Imaginary Digital",0,"Digital Space","Idle","${collections[1]}",0.00,0.00,25.00,0.00,0,,,,"",2024,https://example.com/organic-imaginary-digital.jpg,,,,,
     "Artwork","${artworkSubtypes[0]}","Organic Imaginary Canvas",1,"Home","For Sale","${collections[1]}",5.00,0.00,150.00,0.00,0,,,,"",2024,https://example.com/organic-imaginary-canvas.jpg,,,,30,40,
     "Print","${printSubtypes[0]}","Organic Imaginary Print",0,"None","To Order","${collections[1]}",5.00,0.00,25.00,0.00,0,,,,"",2024,https://example.com/organic-imaginary-canvas.jpg,,,,30,40,
@@ -441,7 +441,7 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
     "Merch","${merchSubtypes[2]}","Dope Crew Shoes",20,"Home","For Sale","${collections[6]}",15.00,0.00,45.00,0.00,0,,,,"",2024,https://example.com/dope-crew-tshirt.jpg,,,,,7.5,
     "Material","${materialSubtypes[0]}","Acrylic Paint Set",10,"Home","For Sale","Art Supplies",15.00,0.00,25.00,0.00,0,,,,"",2024,https://example.com/acrylic-paint-set.jpg,,,,,,,
     "Equipment","${equipmentSubtypes[0]}","Canvas Stretcher",2,"Home","For Sale","Art Tools",45.00,0.00,75.00,0.00,0,,,,"",2024,https://example.com/acrylic-paint-set.jpg,,,,,`;
-    
+
     const blob = new Blob([template], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -484,7 +484,7 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
               <SelectItem value="replace">Replace All - Clear inventory first</SelectItem>
             </SelectContent>
           </Select>
-          
+
           {importMode === 'replace' && (
             <div className="text-amber-600 text-sm bg-amber-50 border border-amber-200 rounded-md p-2">
               ⚠️ Warning: This will delete ALL existing inventory and replace it with the CSV data!
@@ -525,11 +525,10 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
         </div>
 
         {importResult && (
-          <div className={`p-3 rounded-md ${
-            importResult.success > 0 
-              ? 'bg-green-50 border border-green-200 text-green-800' 
+          <div className={`p-3 rounded-md ${importResult.success > 0
+              ? 'bg-green-50 border border-green-200 text-green-800'
               : 'bg-red-50 border border-red-200 text-red-800'
-          }`}>
+            }`}>
             {importResult.success > 0 ? (
               <p>Successfully imported {importResult.success} items!</p>
             ) : (

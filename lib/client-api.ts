@@ -631,7 +631,7 @@ export const ClientAPI = {
       usdCost: number;
       zapsCost?: number;
       cashOutType: 'USD' | 'ZAPS';
-      station: 'Founder' | 'Team';
+      station: 'Team';
       playerCharacterId?: string | null;
     }>;
   }> => {

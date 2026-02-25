@@ -834,7 +834,7 @@ export default function SalesModal({
     const newLine: SaleLine = {
       lineId: uuid(),
       kind: 'service',
-      station: 'Digital Art',
+      station: 'Digital-Art',
       revenue: 0,
       description: '',
       taxAmount: 0,
@@ -973,8 +973,8 @@ export default function SalesModal({
       setRevenue(Math.max(0, revenue - amount));
     }
 
-    // Set category to Other Sales
-    setTaskStation(STATION_CATEGORIES.SALES[7] as Station); // 'Other Sales'
+    // Set category to Other-Sales
+    setTaskStation(STATION_CATEGORIES.SALES[7] as Station); // 'Other-Sales'
   };
 
   const handleExchangeApplied = (description: string, value: number, category?: string) => {
@@ -994,11 +994,11 @@ export default function SalesModal({
     // Add to recorded payments
     setRecordedPayments([...recordedPayments, exchangePayment]);
 
-    // Set category based on exchange category if provided, otherwise default to "Other Sales"
+    // Set category based on exchange category if provided, otherwise default to "Other-Sales"
     if (category) {
       setTaskStation(category as Station);
     } else {
-      setTaskStation(STATION_CATEGORIES.SALES[7] as Station); // 'Other Sales'
+      setTaskStation(STATION_CATEGORIES.SALES[7] as Station); // 'Other-Sales'
     }
   };
 
@@ -2011,7 +2011,7 @@ export default function SalesModal({
                 </Button>
               </div>
 
-              {/* Booth Sales Lozenge - Footer Placement */}
+              {/* Booth-Sales Lozenge - Footer Placement */}
             </div>
           </DialogFooter>
         )}

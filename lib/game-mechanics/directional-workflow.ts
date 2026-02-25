@@ -43,7 +43,7 @@ export async function processWorkflowTrigger(
 
   try {
     // Find all links involving this entity
-    const entityLinks = existingLinks.filter(link => 
+    const entityLinks = existingLinks.filter(link =>
       link.source.type === trigger.entityType && link.source.id === trigger.entityId
     );
 
@@ -184,7 +184,7 @@ function generateTargetData(
         ...baseData,
         type: 'ARTWORK', // Default type, should be configurable
         status: 'FOR_SALE',
-        station: 'PRODUCTION',
+        station: 'ARTDESIGN',
         category: 'Artworks',
         stock: [],
         unitCost: 0,

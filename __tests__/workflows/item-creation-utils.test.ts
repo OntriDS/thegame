@@ -70,7 +70,7 @@ describe('createItemFromRecord', () => {
       type: 'MATERIAL' as any,
       collection: undefined,
       status: ItemStatus.IDLE,
-      station: 'PRODUCTION' as any,
+      station: 'ADMIN' as any,
       unitCost: 50,
       additionalCost: 0,
       price: 0,

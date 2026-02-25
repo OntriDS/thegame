@@ -97,7 +97,7 @@ type SettlementRow = {
 }
 
 // ============================================================================
-// Component Booth Sales
+// Component Booth-Sales
 // ============================================================================
 
 export default function BoothSalesView({
@@ -155,7 +155,7 @@ export default function BoothSalesView({
 
     // Derived State: Associate Entries (Single Source of Truth: lines)
     const associateEntries = useMemo(() => {
-        const serviceLines = lines.filter(l => l.kind === 'service' && l.station === 'Associate Sales') as ServiceLine[];
+        const serviceLines = lines.filter(l => l.kind === 'service' && l.station === 'Booth-Sales') as ServiceLine[];
         return serviceLines.map(sl => ({
             id: sl.lineId,
             description: sl.description || '',
@@ -273,10 +273,10 @@ export default function BoothSalesView({
         let associateNet = 0;
 
         // 1. Calculate Baselines (Respecting Currency)
-        // Assumption: All Inventory Items (Products & Bundles) are priced in USD for Booth Sales.
+        // Assumption: All Inventory Items (Products & Bundles) are priced in USD for Booth-Sales.
         const myItemsTotalUSD = myItems.reduce((s, i) => s + ((i.unitPrice || 0) * (i.quantity || 0)), 0);
 
-        // Normalize my sales to Colones for calculation (Standardizing on CRC for Booth Sales Ledger)
+        // Normalize my sales to Colones for calculation (Standardizing on CRC for Booth-Sales Ledger)
         const myItemsTotalValue_CRC = myItemsTotalUSD * exchangeRate;
 
         // Associate Entries are entered in Colones (and USD now)
@@ -526,7 +526,7 @@ export default function BoothSalesView({
         const newServiceLine: ServiceLine = {
             lineId: newLineId,
             kind: 'service',
-            station: 'Associate Sales' as Station,
+            station: 'Booth-Sales' as Station,
             // Revenue in USD (Source of Truth for Financials)
             revenue: ((amountCRC / safeExchangeRate) + amountUSD),
             // Descriptive label
@@ -575,7 +575,7 @@ export default function BoothSalesView({
         // 1. Re-process lines to ensure shares are up to date (Calculated Totals might have changed)
         // We iterate over the existing lines. If it's an Associate Service line, we update its metadata.
         const updatedLines = lines.map(line => {
-            if (line.kind === 'service' && line.station === 'Associate Sales') {
+            if (line.kind === 'service' && line.station === 'Booth-Sales') {
                 return {
                     ...line,
                     metadata: {
@@ -632,7 +632,7 @@ export default function BoothSalesView({
             isNotPaid: isNotPaid,
             isNotCharged: isNotCharged,
             siteId: siteId,
-            salesChannel: 'Booth Sales' as Station,
+            salesChannel: 'Booth-Sales' as Station,
             customerId: null, // Associate/Partner are NOT customers!
             associateId: (viewMode === 'Associate' && selectedAssociateId) ? selectedAssociateId : null,
             partnerId: (viewMode === 'Partner' && selectedAssociateId) ? selectedAssociateId : null,
@@ -733,10 +733,10 @@ export default function BoothSalesView({
 
 
 
-                {/* Booth Sales Lozenge (Relocated) */}
+                {/* Booth-Sales Lozenge (Relocated) */}
                 <div className="flex items-center gap-1.5 px-2 py-0.5 bg-indigo-500/10 rounded-md border border-indigo-500/20 ml-2">
                     <Store className="h-3 w-3 text-indigo-500" />
-                    <span className="text-[10px] font-bold text-indigo-500 whitespace-nowrap uppercase tracking-wider">Booth Sales</span>
+                    <span className="text-[10px] font-bold text-indigo-500 whitespace-nowrap uppercase tracking-wider">Booth-Sales</span>
                 </div>
 
                 <div className="w-px h-6 bg-slate-200 dark:bg-slate-700 mx-2 ml-auto" />

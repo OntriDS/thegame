@@ -164,8 +164,8 @@ export const AREA_COLORS = {
   ADMIN: 'purple',      // Strategy, management, administration
   RESEARCH: 'cyan',     // Studies, classes
   DEV: 'indigo',        // Systems Development
-  DESIGN: 'turquoise',  // Creative processes, design work
-  PRODUCTION: 'orange', // Manufacturing, production work
+  ARTDESIGN: 'turquoise',  // Creative processes, design work
+  MAKERSPACE: 'orange', // Manufacturing, production work
   SALES: 'yellow',      // Sales, marketing, bookings
   PERSONAL: 'brown',    // Personal tasks and activities
 } as const;
@@ -179,7 +179,7 @@ export const STATION_COLORS = {
   'Family': 'pink',       // Family activities
   'Health': 'green',      // Health and wellness
   'Earnings': 'gold',     // Personal earnings
-  'Rewards': 'gold',      // Personal rewards
+
 
   // Admin stations with custom colors
   'Projects': 'royalblue', // Project management

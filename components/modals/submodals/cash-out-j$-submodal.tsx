@@ -21,34 +21,32 @@ interface CashOutJ$ModalProps {
   onCashOut: (j$Sold: number, cashOutType: 'USD' | 'ZAPS', j$Rate?: number, zapsRate?: number) => Promise<void>;
 }
 
-export default function CashOutJ$Modal({ 
-  player, 
-  playerCharacter, 
-  currentJ$Balance, 
-  open, 
-  onOpenChange, 
-  onCashOut 
+export default function CashOutJ$Modal({
+  player,
+  playerCharacter,
+  currentJ$Balance,
+  open,
+  onOpenChange,
+  onCashOut
 }: CashOutJ$ModalProps) {
   const [j$ToCashOut, setJ$ToCashOut] = useState(0);
   const [cashOutType, setCashOutType] = useState<'USD' | 'ZAPS'>('USD');
   const [conversionRates, setConversionRates] = useState<any>(null);
   const [isCashingOut, setIsCashingOut] = useState(false);
-  const [companyStation, setCompanyStation] = useState<'Founder' | 'Team' | null>(null);
+  const [companyStation, setCompanyStation] = useState<'Team' | null>(null);
   const [zapsRate, setZapsRate] = useState<number | undefined>(undefined);
   const [bitcoinPriceError, setBitcoinPriceError] = useState<string | null>(null);
 
   // Determine company station from character role
   useEffect(() => {
     if (playerCharacter) {
-      if (playerCharacter.roles.includes(CharacterRole.FOUNDER)) {
-        setCompanyStation('Founder');
-      } else if (playerCharacter.roles.includes(CharacterRole.TEAM)) {
+      if (playerCharacter.roles.includes(CharacterRole.FOUNDER) || playerCharacter.roles.includes(CharacterRole.TEAM)) {
         setCompanyStation('Team');
       } else {
-        setCompanyStation('Founder'); // Default to Founder
+        setCompanyStation('Team'); // Default to Team
       }
     } else {
-      setCompanyStation('Founder'); // Default to Founder if no character
+      setCompanyStation('Team'); // Default to Team if no character
     }
   }, [playerCharacter]);
 
@@ -60,7 +58,7 @@ export default function CashOutJ$Modal({
           const rates = await ClientAPI.getFinancialConversionRates();
           setConversionRates(rates);
           setBitcoinPriceError(null);
-          
+
           // Calculate Zaps rate if Bitcoin price is available
           if (rates?.bitcoinToUsd && rates.bitcoinToUsd > 0) {
             const j$Rate = 10; // 1 J$ = $10 USD
@@ -77,7 +75,7 @@ export default function CashOutJ$Modal({
         }
       };
       loadRates();
-      
+
       // Reset form
       setJ$ToCashOut(0);
       setCashOutType('USD');
@@ -97,13 +95,13 @@ export default function CashOutJ$Modal({
   const zapsEquivalent = zapsRate ? j$ToCashOut * zapsRate : 0;
 
   // Validation
-  const canCashOut = j$ToCashOut > 0 && 
-                     j$ToCashOut <= currentJ$Balance &&
-                     (cashOutType === 'USD' || (cashOutType === 'ZAPS' && zapsRate !== undefined && !bitcoinPriceError));
+  const canCashOut = j$ToCashOut > 0 &&
+    j$ToCashOut <= currentJ$Balance &&
+    (cashOutType === 'USD' || (cashOutType === 'ZAPS' && zapsRate !== undefined && !bitcoinPriceError));
 
   const handleCashOut = async () => {
     if (!canCashOut) return;
-    
+
     setIsCashingOut(true);
     try {
       await onCashOut(
@@ -129,7 +127,7 @@ export default function CashOutJ$Modal({
             Cash Out J$
           </DialogTitle>
         </DialogHeader>
-        
+
         <div className="space-y-4 py-4">
           {/* Current Balance */}
           <Card className="bg-muted/30">
@@ -229,14 +227,14 @@ export default function CashOutJ$Modal({
                     </div>
                   )}
                 </div>
-                
+
                 {companyStation && (
                   <div className="text-center text-sm text-muted-foreground">
                     Company station: <span className="font-semibold">{companyStation}</span>
                   </div>
                 )}
 
-                <Button 
+                <Button
                   onClick={handleCashOut}
                   disabled={!canCashOut || isCashingOut}
                   className="w-full mt-4"
@@ -248,7 +246,7 @@ export default function CashOutJ$Modal({
             </CardContent>
           </Card>
         </div>
-        
+
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel

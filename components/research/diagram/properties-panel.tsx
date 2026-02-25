@@ -81,7 +81,7 @@ export const PropertiesPanel = ({ selectedNode, setNodes }: PropertiesPanelProps
                         <div>
                             <label className="text-xs uppercase font-bold text-slate-500 mb-2 block font-mono">Category Type</label>
                             <div className="grid grid-cols-2 gap-2">
-                                {['ADMIN', 'PRODUCTION', 'SALES', 'CREATIVE'].map(t => (
+                                {['ADMIN', 'MAKERSPACE', 'SALES', 'CREATIVE'].map(t => (
                                     <button
                                         key={t}
                                         onClick={() => handleTypeChange(t)}

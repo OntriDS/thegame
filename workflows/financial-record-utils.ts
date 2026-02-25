@@ -339,7 +339,7 @@ export async function createFinancialRecordFromSale(sale: Sale): Promise<Financi
 
     const currentDate = new Date();
     // Determine sales channel from Sale entity or derive from SaleType
-    const salesChannel = sale.salesChannel || getSalesChannelFromSaleType(sale.type) || ('Direct Sales' as Station);
+    const salesChannel = sale.salesChannel || getSalesChannelFromSaleType(sale.type) || ('Direct-Sales' as Station);
     // Use salesChannel as station for sales-derived financial records
     const station = salesChannel;
 
@@ -350,7 +350,7 @@ export async function createFinancialRecordFromSale(sale: Sale): Promise<Financi
       if (sale.type === SaleType.BOOTH) {
         if (sale.siteId) {
           try {
-            // Try to fetch site name for Booth Sales without a specific counterparty (Event Name)
+            // Try to fetch site name for Booth-Sales without a specific counterparty (Event Name)
             const { getSiteById } = await import('@/data-store/datastore');
             const site = await getSiteById(sale.siteId);
             displayName = site?.name || 'Booth Sale';
@@ -454,7 +454,7 @@ export async function createFinancialRecordFromSale(sale: Sale): Promise<Financi
 }
 
 /**
- * Create split financial records for Booth Sales
+ * Create split financial records for Booth-Sales
  * - Record 1: Gross Income (Total Sales)
  * - Record 2: Associate Payout (Expense)
  * IDEMPOTENT: Updates existing records if they exist.
@@ -500,7 +500,7 @@ export async function calculateAssociatePayout(sale: Sale): Promise<number> {
   if (sale.lines) {
     sale.lines.forEach(line => {
       // Is it an Associate Item? (Ref BoothSalesView logic)
-      const isAssociateItem = line.kind === 'service' && (line as ServiceLine).station === 'Associate Sales';
+      const isAssociateItem = line.kind === 'service' && (line as ServiceLine).station === 'Booth-Sales';
 
       let lineTotal = 0;
       if (line.kind === 'item') lineTotal = ((line as ItemSaleLine).unitPrice || 0) * ((line as ItemSaleLine).quantity || 0);
@@ -641,11 +641,11 @@ async function createBoothPayoutRecord(sale: Sale, associateNet: number, targetE
     description: `Associate payout for ${targetEntityName} (Split Share)`,
     year: currentDate.getFullYear(),
     month: currentDate.getMonth() + 1,
-    station: 'Booth Sales' as Station,
+    station: 'Booth-Sales' as Station,
     type: 'company', // Expense
     siteId: sale.siteId,
     sourceSaleId: sale.id,
-    salesChannel: 'Booth Sales' as Station,
+    salesChannel: 'Booth-Sales' as Station,
 
     cost: associateNet,
     revenue: 0,
@@ -713,9 +713,9 @@ export async function createFinancialRecordFromPointsExchange(
     console.log(`[createFinancialRecordFromPointsExchange] Creating financial record for points exchange: ${j$Received} J$`);
 
     const currentDate = new Date();
-    // Use 'Rewards' station from BUSINESS_STRUCTURE.PERSONAL (single source of truth)
-    const rewardsStation = BUSINESS_STRUCTURE.PERSONAL.find(s => s === 'Rewards');
-    if (!rewardsStation) throw new Error('Rewards station not found in BUSINESS_STRUCTURE');
+    // Use 'Earnings' station from BUSINESS_STRUCTURE.PERSONAL (single source of truth for exchanged points)
+    const rewardsStation = BUSINESS_STRUCTURE.PERSONAL.find(s => s === 'Earnings');
+    if (!rewardsStation) throw new Error('Earnings station not found in BUSINESS_STRUCTURE');
     const station = rewardsStation as Station;
 
     const newFinrec: FinancialRecord = {
@@ -797,30 +797,10 @@ export async function createFinancialRecordFromJ$CashOut(
   try {
     console.log(`[createFinancialRecordFromJ$CashOut] Creating financial records for cash-out: ${j$Sold} J$ for ${cashOutType}`);
 
-    // Determine company station based on character role
-    let companyStation: Station;
-    if (playerCharacterId) {
-      const character = await getCharacterById(playerCharacterId);
-      if (character?.roles.includes(CharacterRole.FOUNDER)) {
-        const founderStation = BUSINESS_STRUCTURE.ADMIN.find(s => s === 'Founder');
-        if (!founderStation) throw new Error('Founder station not found in BUSINESS_STRUCTURE');
-        companyStation = founderStation as Station;
-      } else if (character?.roles.includes(CharacterRole.TEAM)) {
-        const teamStation = BUSINESS_STRUCTURE.ADMIN.find(s => s === 'Team');
-        if (!teamStation) throw new Error('Team station not found in BUSINESS_STRUCTURE');
-        companyStation = teamStation as Station;
-      } else {
-        // Default to Founder if role not found
-        const founderStation = BUSINESS_STRUCTURE.ADMIN.find(s => s === 'Founder');
-        if (!founderStation) throw new Error('Founder station not found in BUSINESS_STRUCTURE');
-        companyStation = founderStation as Station;
-      }
-    } else {
-      // Default to Founder if no character
-      const founderStation = BUSINESS_STRUCTURE.ADMIN.find(s => s === 'Founder');
-      if (!founderStation) throw new Error('Founder station not found in BUSINESS_STRUCTURE');
-      companyStation = founderStation as Station;
-    }
+    // Determine company station (always Team for buybacks now that Founder is removed as a station)
+    const teamStation = BUSINESS_STRUCTURE.ADMIN.find(s => s === 'Team');
+    if (!teamStation) throw new Error('Team station not found in BUSINESS_STRUCTURE');
+    const companyStation = teamStation as Station;
 
     // Calculate payment amount based on cash-out type
     let amountPaid: number;

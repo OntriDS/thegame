@@ -7,17 +7,17 @@
 
 /** Business Structure - Single source of truth for sections and stations */
 export const BUSINESS_STRUCTURE = {
-  ADMIN: ['Strategy', 'Projects', 'Inventory', 'Transport', 'Team', 'Materials', 'Equipment', 'Rent', 'Founder', 'Investment'],
-  RESEARCH: ['Classes', 'Studies'],
-  DEV: ['Systems Dev'],
-  DESIGN: ['Digital Art', 'Creative Process', 'Game Design', '3D Modeling', 'Animation'],
-  PRODUCTION: ['Buy Orders', 'Paint', 'Craft', 'Dispatch'],
-  SALES: ['Direct Sales', 'Booth Sales', 'Associate Sales', 'Network Sales', 'Online Sales', 'Store Sales', 'Marketing', 'Bookings', 'Other Sales'],
-  PERSONAL: ['Health', 'Family', 'Food', 'Rewards', 'Earnings', 'Home', 'Transport P', 'Rent P', 'Other P']
+  ADMIN: ['Strategy', 'Finances', 'Team', 'Inventory', 'Materials', 'Equipment', 'Transport', 'Rent', 'Alliances', 'Projects'],
+  RESEARCH: ['Classes', 'Studies', 'Reviews', 'Knowledge-Center', 'Innovation'],
+  DEV: ['Systems-Dev', 'Websites'],
+  ARTDESIGN: ['Paint', 'Digital-Art', 'Design', 'Modeling', 'Game-Design', 'Animation'],
+  MAKERSPACE: ['Assemblage', 'Craft'],
+  SALES: ['Direct-Sales', 'Booth-Sales', 'Network-Sales', 'Marketing', 'Online-Sales', 'Gallery-Store', 'Bookings', 'Dispatches', 'Other-Sales'],
+  PERSONAL: ['Family', 'Food', 'Health', 'Earnings', 'Transport-P', 'Rent-P', 'Other-P']
 } as const;
 
 // Areas (top-level business areas)
-export const COMPANY_AREAS = ['ADMIN', 'RESEARCH', 'DEV', 'DESIGN', 'PRODUCTION', 'SALES'] as const;
+export const COMPANY_AREAS = ['ADMIN', 'RESEARCH', 'DEV', 'ARTDESIGN', 'MAKERSPACE', 'SALES'] as const;
 export const PERSONAL_AREAS = ['PERSONAL'] as const;
 export const ALL_AREAS = [...COMPANY_AREAS, ...PERSONAL_AREAS] as const;
 
@@ -34,8 +34,8 @@ export const STATION_CATEGORIES = {
   ADMIN: BUSINESS_STRUCTURE.ADMIN,
   RESEARCH: BUSINESS_STRUCTURE.RESEARCH,
   DEV: BUSINESS_STRUCTURE.DEV,
-  DESIGN: BUSINESS_STRUCTURE.DESIGN,
-  PRODUCTION: BUSINESS_STRUCTURE.PRODUCTION,
+  ARTDESIGN: BUSINESS_STRUCTURE.ARTDESIGN,
+  MAKERSPACE: BUSINESS_STRUCTURE.MAKERSPACE,
   SALES: BUSINESS_STRUCTURE.SALES,
   PERSONAL: BUSINESS_STRUCTURE.PERSONAL
 } as const;

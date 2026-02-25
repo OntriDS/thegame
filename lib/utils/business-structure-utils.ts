@@ -68,11 +68,11 @@ export function getSalesChannelFromSaleType(saleType: string): Station | null {
 
   // Map SaleType enum values to station names
   const typeToChannel: Record<string, Station> = {
-    'DIRECT': 'Direct Sales' as Station,
-    'BOOTH': 'Booth Sales' as Station,
-    'NETWORK': 'Network Sales' as Station, // Bundle or Consignment sales (not done yet)
-    'ONLINE': 'Online Sales' as Station,
-    'NFT': 'Online Sales' as Station,
+    'DIRECT': 'Direct-Sales' as Station,
+    'BOOTH': 'Booth-Sales' as Station,
+    'NETWORK': 'Network-Sales' as Station, // Bundle or Consignment sales (not done yet)
+    'ONLINE': 'Online-Sales' as Station,
+    'NFT': 'Online-Sales' as Station,
   };
 
   return typeToChannel[saleType] || null;

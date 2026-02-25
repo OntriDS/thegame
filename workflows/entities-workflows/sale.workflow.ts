@@ -224,7 +224,7 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
       console.log(`[onSaleUpsert] Propagating financial changes to records: ${sale.counterpartyName}`);
       await updateFinancialRecordsFromSale(sale, previousSale);
 
-      // [FIX] Update Sale Cost with Payout Amount (for Booth Sales)
+      // [FIX] Update Sale Cost with Payout Amount (for Booth-Sales)
       // This ensures "Sale Log" shows correct Profit (Revenue - Cost)
       if (sale.type === SaleType.BOOTH) {
         const { calculateAssociatePayout } = await import('@/workflows/financial-record-utils');

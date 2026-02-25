@@ -5,8 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { ClientAPI } from '@/lib/client-api';
-import { 
-  FinancialRecord, 
+import {
+  FinancialRecord,
   CompanyMonthlySummary,
   PersonalMonthlySummary,
 } from '@/types/entities';
@@ -18,8 +18,8 @@ import { getCompanyAreas, getPersonalAreas } from '@/lib/utils/business-structur
 import { MonthYearSelector } from '@/components/ui/month-year-selector';
 import { Switch } from '@/components/ui/switch';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
-import { 
-  aggregateRecordsByStation, 
+import {
+  aggregateRecordsByStation,
   calculateTotals,
   formatDecimal,
   formatCurrency,
@@ -38,7 +38,7 @@ export default function DashboardsPage() {
   const [companySummary, setCompanySummary] = useState<CompanyMonthlySummary | null>(null);
   const [personalSummary, setPersonalSummary] = useState<PersonalMonthlySummary | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
-  
+
   // Analytics data
   const [productPerformance, setProductPerformance] = useState<ProductPerformance[]>([]);
   const [channelPerformance, setChannelPerformance] = useState<ChannelPerformance[]>([]);
@@ -74,17 +74,17 @@ export default function DashboardsPage() {
       }
       return r.type === 'personal';
     });
-    
+
     // Aggregate company records by station
     const companyStations = getCompanyAreas().flatMap(area => BUSINESS_STRUCTURE[area]);
     const companyBreakdown = aggregateRecordsByStation(companyRecords, companyStations);
     const companyTotals = calculateTotals(companyBreakdown);
-    
+
     // Aggregate personal records by station
     const personalStations = BUSINESS_STRUCTURE.PERSONAL;
     const personalBreakdown = aggregateRecordsByStation(personalRecords, personalStations);
     const personalTotals = calculateTotals(personalBreakdown);
-    
+
     // Create summaries
     const company: CompanyMonthlySummary = {
       year: currentYear,
@@ -95,7 +95,7 @@ export default function DashboardsPage() {
       totalJungleCoins: companyTotals.totalJungleCoins,
       categoryBreakdown: companyBreakdown
     };
-    
+
     const personal: PersonalMonthlySummary = {
       year: currentYear,
       month: currentMonth,
@@ -105,7 +105,7 @@ export default function DashboardsPage() {
       totalJungleCoins: personalTotals.totalJungleCoins,
       categoryBreakdown: personalBreakdown
     };
-    
+
     setCompanySummary(company);
     setPersonalSummary(personal);
   }, [currentYear, currentMonth, filterByMonth]);
@@ -188,7 +188,7 @@ export default function DashboardsPage() {
             Multi-dimensional business performance analytics
           </p>
         </div>
-        
+
         <div className="flex items-center gap-4">
           <MonthYearSelector
             currentYear={currentYear}
@@ -255,10 +255,9 @@ export default function DashboardsPage() {
                     <CardTitle className="text-sm">Net Cashflow</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className={`text-2xl font-bold ${
-                      (companySummary?.netCashflow || 0) > 0 ? 'text-green-600' : 
+                    <div className={`text-2xl font-bold ${(companySummary?.netCashflow || 0) > 0 ? 'text-green-600' :
                       (companySummary?.netCashflow || 0) < 0 ? 'text-red-600' : 'text-muted-foreground'
-                    }`}>
+                      }`}>
                       {formatCurrency(companySummary?.netCashflow || 0)}
                     </div>
                   </CardContent>
@@ -276,9 +275,9 @@ export default function DashboardsPage() {
               </div>
 
               {/* Company Stations by Area */}
-              {['ADMIN', 'RESEARCH', 'DESIGN', 'PRODUCTION', 'SALES'].map(area => {
+              {['ADMIN', 'RESEARCH', 'ARTDESIGN', 'MAKERSPACE', 'SALES'].map(area => {
                 const areaStations = BUSINESS_STRUCTURE[area as keyof typeof BUSINESS_STRUCTURE];
-                
+
                 return (
                   <Card key={area} className="mb-4">
                     <CardHeader className="pb-3">
@@ -289,17 +288,16 @@ export default function DashboardsPage() {
                         {areaStations.map(station => {
                           const breakdown = companySummary?.categoryBreakdown[station];
                           const net = breakdown ? breakdown.net : 0;
-                           
+
                           return (
                             <Card key={station} className="border-muted">
                               <CardHeader className="pb-2">
                                 <CardTitle className="text-sm">{station}</CardTitle>
                               </CardHeader>
                               <CardContent>
-                                <div className={`text-lg font-bold ${
-                                  net === 0 ? 'text-muted-foreground' : 
+                                <div className={`text-lg font-bold ${net === 0 ? 'text-muted-foreground' :
                                   net > 0 ? 'text-green-600' : 'text-red-600'
-                                }`}>
+                                  }`}>
                                   {formatCurrency(net)}
                                 </div>
                                 <div className="text-xs text-muted-foreground mt-1">
@@ -364,10 +362,9 @@ export default function DashboardsPage() {
                     <CardTitle className="text-sm">Net Cashflow</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className={`text-2xl font-bold ${
-                      (personalSummary?.netCashflow || 0) > 0 ? 'text-green-600' : 
+                    <div className={`text-2xl font-bold ${(personalSummary?.netCashflow || 0) > 0 ? 'text-green-600' :
                       (personalSummary?.netCashflow || 0) < 0 ? 'text-red-600' : 'text-muted-foreground'
-                    }`}>
+                      }`}>
                       {formatCurrency(personalSummary?.netCashflow || 0)}
                     </div>
                   </CardContent>
@@ -394,17 +391,16 @@ export default function DashboardsPage() {
                     {BUSINESS_STRUCTURE.PERSONAL.map(station => {
                       const breakdown = personalSummary?.categoryBreakdown[station];
                       const net = breakdown ? breakdown.net : 0;
-                       
+
                       return (
                         <Card key={station} className="border-muted">
                           <CardHeader className="pb-2">
                             <CardTitle className="text-sm">{station}</CardTitle>
                           </CardHeader>
                           <CardContent>
-                            <div className={`text-lg font-bold ${
-                              net === 0 ? 'text-muted-foreground' : 
+                            <div className={`text-lg font-bold ${net === 0 ? 'text-muted-foreground' :
                               net > 0 ? 'text-green-600' : 'text-red-600'
-                            }`}>
+                              }`}>
                               {formatCurrency(net)}
                             </div>
                             <div className="text-xs text-muted-foreground mt-1">
@@ -465,7 +461,7 @@ export default function DashboardsPage() {
                       </Card>
                     ))}
                   </div>
-                  
+
                   <Card>
                     <CardHeader>
                       <CardTitle className="text-sm">Total Revenue</CardTitle>
@@ -518,7 +514,7 @@ export default function DashboardsPage() {
                       </Card>
                     ))}
                   </div>
-                  
+
                   <Card>
                     <CardHeader>
                       <CardTitle className="text-sm">Total Costs</CardTitle>
@@ -576,10 +572,9 @@ export default function DashboardsPage() {
                           </div>
                           <div className="flex justify-between text-sm border-t pt-2">
                             <span className="font-medium">Net Profit:</span>
-                            <span className={`font-bold ${
-                              product.netProfit > 0 ? 'text-green-600' : 
+                            <span className={`font-bold ${product.netProfit > 0 ? 'text-green-600' :
                               product.netProfit < 0 ? 'text-red-600' : 'text-muted-foreground'
-                            }`}>
+                              }`}>
                               {formatCurrency(product.netProfit)}
                             </span>
                           </div>
@@ -591,7 +586,7 @@ export default function DashboardsPage() {
                       </Card>
                     ))}
                   </div>
-                  
+
                   <Card>
                     <CardHeader>
                       <CardTitle className="text-sm">Total Performance</CardTitle>
@@ -612,9 +607,8 @@ export default function DashboardsPage() {
                         </div>
                         <div>
                           <div className="text-xs text-muted-foreground">Net Profit</div>
-                          <div className={`text-xl font-bold ${
-                            productPerformance.reduce((sum, p) => sum + p.netProfit, 0) > 0 ? 'text-green-600' : 'text-red-600'
-                          }`}>
+                          <div className={`text-xl font-bold ${productPerformance.reduce((sum, p) => sum + p.netProfit, 0) > 0 ? 'text-green-600' : 'text-red-600'
+                            }`}>
                             {formatCurrency(productPerformance.reduce((sum, p) => sum + p.netProfit, 0))}
                           </div>
                         </div>
