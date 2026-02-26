@@ -7,12 +7,12 @@
 
 /** Business Structure - Single source of truth for sections and stations */
 export const BUSINESS_STRUCTURE = {
-  ADMIN: ['Strategy', 'Finances', 'Team', 'Inventory', 'Materials', 'Equipment', 'Transport', 'Rents', 'Alliances', 'Projects'],
+  ADMIN: ['Strategy', 'Finances', 'Team', 'Inventory', 'Materials', 'Equipment', 'Transport', 'Rents', 'Partnerships', 'Projects'],
   RESEARCH: ['Classes', 'Studies', 'Reviews', 'Knowledge-Center', 'Innovation'],
   DEV: ['Systems-Dev', 'Websites'],
-  ARTDESIGN: ['Paint', 'Digital-Art', 'Design', 'Modeling', 'Game-Design', 'Animation'],
+  ARTDESIGN: ['Paint', 'Digital-Art', 'Design', 'Modeling', 'Game-Design', 'Animation', 'Portfolio'],
   MAKERSPACE: ['Assemblage', 'Craft'],
-  SALES: ['Direct-Sales', 'Booth-Sales', 'Network-Sales', 'Marketing', 'Online-Sales', 'Gallery-Store', 'Bookings', 'Dispatches', 'Other-Sales'],
+  SALES: ['Direct-Sales', 'Booth-Sales', 'Network', 'Marketing', 'Online-Sales', 'Gallery-Store', 'Bookings', 'Dispatches', 'Websites', 'Web3-Gallery', 'Other-Sales'],
   PERSONAL: ['Family', 'Food', 'Health', 'Earnings', 'Transport-P', 'Rent-P', 'Other-P']
 } as const;
 
