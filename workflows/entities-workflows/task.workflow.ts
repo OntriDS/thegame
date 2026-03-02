@@ -140,35 +140,6 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
         doneAt: task.doneAt,
         _logOrder: 1
       });
-
-      // NEW: Archive Index Tracking 
-      // Instead of duplicating data into Snapshots, we just append the task ID into the monthly index
-      const archiveMonth = calculateClosingDate(task.doneAt);
-      const archiveIndexEffectKey = EffectKeys.sideEffect('task', task.id, `archiveIndex:${formatMonthKey(archiveMonth)}`);
-
-      if (!(await hasEffect(archiveIndexEffectKey))) {
-        const monthKey = formatMonthKey(archiveMonth);
-        const { kvSAdd } = await import('@/data-store/kv');
-        // We keep using 'index:tasks:collected:MM-YY' as the archive index to maintain backward compatibility with the History Tab
-        const archiveIndexKey = `index:tasks:collected:${monthKey}`;
-        await kvSAdd(archiveIndexKey, task.id);
-
-        const { buildArchiveMonthsKey } = await import('@/data-store/keys');
-        await kvSAdd(buildArchiveMonthsKey(), monthKey);
-
-        // Also save provenance metadata to the actual task record itself
-        await repoUpsertTask({
-          ...task,
-          archiveMetadata: {
-            ...task.archiveMetadata,
-            archivedAt: new Date().toISOString(),
-            archiveMonth: monthKey
-          }
-        });
-
-        await markEffect(archiveIndexEffectKey);
-        console.log(`[onTaskUpsert] ✅ Task ${task.name} done - added to archive index ${monthKey} without snapshotting.`);
-      }
     }
   }
 
@@ -368,6 +339,47 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
       if ((previousTask as any)[field] !== (task as any)[field]) {
         await updateEntityLogField(EntityType.TASK, task.id, field, (previousTask as any)[field], (task as any)[field]);
       }
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Reactive Archive Indexing
+  // Ensure the entity is correctly placed in the right month's sorted set.
+  // If dates change, we un-index from the old month and re-index to the new one.
+  // ---------------------------------------------------------------------------
+  const isNowArchived = task.status === TaskStatus.DONE || task.status === TaskStatus.COLLECTED;
+  const wasArchived = previousTask && (previousTask.status === TaskStatus.DONE || previousTask.status === TaskStatus.COLLECTED);
+
+  const getTaskArchiveMonth = (t: Task) => {
+    const date = t.status === TaskStatus.COLLECTED ? (t.collectedAt || t.doneAt || t.createdAt) : (t.doneAt || t.createdAt);
+    return date ? formatMonthKey(calculateClosingDate(date)) : null;
+  };
+
+  const newMonth = isNowArchived ? getTaskArchiveMonth(task) : null;
+  const oldMonth = wasArchived ? getTaskArchiveMonth(previousTask) : null;
+
+  if (newMonth !== oldMonth) {
+    const { kvSAdd, kvSRem } = await import('@/data-store/kv');
+    const { buildArchiveMonthsKey } = await import('@/data-store/keys');
+
+    if (oldMonth) {
+      await kvSRem(`index:tasks:collected:${oldMonth}`, task.id);
+      console.log(`[onTaskUpsert] 📦 Removed task ${task.id} from old archive index: ${oldMonth}`);
+    }
+    if (newMonth) {
+      await kvSAdd(`index:tasks:collected:${newMonth}`, task.id);
+      await kvSAdd(buildArchiveMonthsKey(), newMonth);
+      console.log(`[onTaskUpsert] 📦 Task ${task.name} added to archive index: ${newMonth}`);
+
+      // Update provenance blindly (repoUpsertTask ignores workflows so no infinite loop)
+      await repoUpsertTask({
+        ...task,
+        archiveMetadata: {
+          ...task.archiveMetadata,
+          archivedAt: new Date().toISOString(),
+          archiveMonth: newMonth
+        }
+      });
     }
   }
 }

@@ -42,9 +42,9 @@ export default function DatesSubmodal({
     // Sync with props when opened
     React.useEffect(() => {
         if (open) {
-            setLocalCreatedAt(createdAt);
-            setLocalDoneAt(doneAt);
-            setLocalCollectedAt(collectedAt);
+            setLocalCreatedAt(createdAt ? new Date(createdAt) : undefined);
+            setLocalDoneAt(doneAt ? new Date(doneAt) : undefined);
+            setLocalCollectedAt(collectedAt ? new Date(collectedAt) : undefined);
         }
     }, [open, createdAt, doneAt, collectedAt]);
 

@@ -70,12 +70,11 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
       await processChargedSaleLines(sale);
     }
 
-    await maybeCreateSaleSnapshot(sale);
     return;
   }
 
   // Status changes - PENDING (not paid/not charged) vs DONE (paid and charged)
-  const wasPending = previousSale.isNotPaid || previousSale.isNotCharged;
+  const wasPending = previousSale!.isNotPaid || previousSale!.isNotCharged;
   const nowPending = sale.isNotPaid || sale.isNotCharged;
 
   if (previousSale.status !== sale.status) {
@@ -200,7 +199,6 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
       collectedAt: collectedAt.toISOString()
     });
   }
-  await maybeCreateSaleSnapshot(sale, previousSale);
 
   // COMPREHENSIVE UPDATE PROPAGATION - when sale properties change
   if (previousSale) {
@@ -253,9 +251,54 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
   }
 
   // Descriptive changes - update in-place
-  for (const field of DESCRIPTIVE_FIELDS) {
-    if ((previousSale as any)[field] !== (sale as any)[field]) {
-      await updateEntityLogField(EntityType.SALE, sale.id, field, (previousSale as any)[field], (sale as any)[field]);
+  if (previousSale) {
+    for (const field of DESCRIPTIVE_FIELDS) {
+      if ((previousSale as any)[field] !== (sale as any)[field]) {
+        await updateEntityLogField(EntityType.SALE, sale.id, field, (previousSale as any)[field], (sale as any)[field]);
+      }
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Reactive Archive Indexing
+  // Ensure the entity is correctly placed in the right month's sorted set.
+  // If dates change, we un-index from the old month and re-index to the new one.
+  // ---------------------------------------------------------------------------
+  const isNowArchived = sale.status === SaleStatus.COLLECTED || sale.isCollected;
+  const wasArchived = previousSale && (previousSale.status === SaleStatus.COLLECTED || previousSale.isCollected);
+
+  const getArchiveMonth = (s: Sale) => {
+    // User requirement: collectedAt should be the last day of the sale's month
+    const sDate = s.saleDate ? new Date(s.saleDate) : (s.createdAt ? new Date(s.createdAt) : new Date());
+    const date = s.collectedAt ?? calculateClosingDate(sDate);
+    return date ? formatMonthKey(calculateClosingDate(date)) : null;
+  };
+
+  const newMonth = isNowArchived ? getArchiveMonth(sale) : null;
+  const oldMonth = wasArchived ? getArchiveMonth(previousSale!) : null;
+
+  if (newMonth !== oldMonth) {
+    const { kvSAdd, kvSRem } = await import('@/data-store/kv');
+    const { buildArchiveMonthsKey } = await import('@/data-store/keys');
+
+    if (oldMonth) {
+      await kvSRem(`index:sales:collected:${oldMonth}`, sale.id);
+      console.log(`[onSaleUpsert] 📦 Removed sale ${sale.id} from old archive index: ${oldMonth}`);
+    }
+    if (newMonth) {
+      await kvSAdd(`index:sales:collected:${newMonth}`, sale.id);
+      await kvSAdd(buildArchiveMonthsKey(), newMonth);
+      console.log(`[onSaleUpsert] 📦 Sale ${sale.id} added to archive index: ${newMonth}`);
+
+      // Update provenance blindly (repoUpsertSale doesn't trigger workflows, but we use upsertSale with skipWorkflowEffects)
+      await upsertSale({
+        ...sale,
+        archiveMetadata: {
+          ...sale.archiveMetadata,
+          archivedAt: new Date().toISOString(),
+          archiveMonth: newMonth
+        }
+      }, { skipWorkflowEffects: true, skipLinkEffects: true });
     }
   }
 }
@@ -270,52 +313,6 @@ async function processChargedSaleLines(sale: Sale): Promise<void> {
   await processSaleLines(sale);
   await markEffect(linesProcessedKey);
   console.log(`[onSaleUpsert] ✅ Sale lines processed and effect marked: ${sale.counterpartyName}`);
-}
-
-async function maybeCreateSaleSnapshot(sale: Sale, previousSale?: Sale): Promise<void> {
-  // Dual detection: status OR flag change to COLLECTED
-  const statusBecameCollected =
-    sale.status === SaleStatus.COLLECTED &&
-    (!previousSale || previousSale.status !== SaleStatus.COLLECTED);
-
-  const flagBecameCollected =
-    !!sale.isCollected && (!previousSale || !previousSale.isCollected);
-
-  if (!statusBecameCollected && !flagBecameCollected) {
-    return;
-  }
-
-  // User requirement: collectedAt should be the last day of the sale's month
-  // Snap-to-Month Logic
-  const saleDate = sale.saleDate ? new Date(sale.saleDate) : new Date();
-  const collectedAt = sale.collectedAt ?? calculateClosingDate(saleDate);
-  const snapshotEffectKey = EffectKeys.sideEffect('sale', sale.id, `saleSnapshot:${formatMonthKey(collectedAt)}`);
-
-  if (await hasEffect(snapshotEffectKey)) {
-    return;
-  }
-
-  // Add to month-based collection index for efficient History Tab queries
-  const monthKey = formatMonthKey(collectedAt);
-  const { kvSAdd } = await import('@/data-store/kv');
-  const collectedIndexKey = `index:sales:collected:${monthKey}`;
-  await kvSAdd(collectedIndexKey, sale.id);
-
-  const { buildArchiveMonthsKey } = await import('@/data-store/keys');
-  await kvSAdd(buildArchiveMonthsKey(), monthKey);
-
-  // New Archive metadata tracking
-  await upsertSale({
-    ...sale,
-    archiveMetadata: {
-      ...sale.archiveMetadata,
-      archivedAt: new Date().toISOString(),
-      archiveMonth: monthKey
-    }
-  }, { skipWorkflowEffects: true, skipLinkEffects: true });
-
-  await markEffect(snapshotEffectKey);
-  console.log(`[maybeCreateSaleSnapshot] ✅ Added collected sale ${sale.id} to index ${monthKey} without snapshotting.`);
 }
 
 /**
