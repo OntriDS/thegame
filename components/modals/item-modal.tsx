@@ -1464,6 +1464,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
       <DatesSubmodal
         open={showDatesModal}
         onOpenChange={setShowDatesModal}
+        entityId={currentEditingItem?.id ? `data:item:${currentEditingItem.id}` : undefined}
         createdAt={currentEditingItem?.createdAt ? new Date(currentEditingItem.createdAt) : undefined}
         doneAt={localSoldAt}
         collectedAt={localCollectedAt}

@@ -260,14 +260,16 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
   }
 
   // ---------------------------------------------------------------------------
-  // Reactive Archive Indexing
+  // Reactive Archive Indexing & Ghost Cleanup
   // Ensure the entity is correctly placed in the right month's sorted set.
-  // If dates change, we un-index from the old month and re-index to the new one.
+  // We sweep all available months to completely eradicate Snapshot-era ghost duplicates.
   // ---------------------------------------------------------------------------
   const isNowArchived = sale.status === SaleStatus.COLLECTED || sale.isCollected;
   const wasArchived = previousSale && (previousSale.status === SaleStatus.COLLECTED || previousSale.isCollected);
 
   const getArchiveMonth = (s: Sale) => {
+    // Check archive metadata first as ultimate truth, otherwise fallback to date parsing
+    if (s.archiveMetadata?.archiveMonth) return s.archiveMetadata.archiveMonth;
     // User requirement: collectedAt should be the last day of the sale's month
     const sDate = s.saleDate ? new Date(s.saleDate) : (s.createdAt ? new Date(s.createdAt) : new Date());
     const date = s.collectedAt ?? calculateClosingDate(sDate);
@@ -277,18 +279,23 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
   const newMonth = isNowArchived ? getArchiveMonth(sale) : null;
   const oldMonth = wasArchived ? getArchiveMonth(previousSale!) : null;
 
-  if (newMonth !== oldMonth) {
+  if (newMonth !== oldMonth || (!newMonth && oldMonth)) {
     const { kvSAdd, kvSRem } = await import('@/data-store/kv');
+    const { getAvailableArchiveMonths } = await import('@/data-store/datastore');
     const { buildArchiveMonthsKey } = await import('@/data-store/keys');
 
-    if (oldMonth) {
-      await kvSRem(`index:sales:collected:${oldMonth}`, sale.id);
-      console.log(`[onSaleUpsert] 📦 Removed sale ${sale.id} from old archive index: ${oldMonth}`);
+    // BULLETPROOF CLEANUP: Remove from ALL other months to fix legacy ghost duplicates
+    const allMonths = await getAvailableArchiveMonths();
+    for (const m of allMonths) {
+      if (m !== newMonth) {
+        await kvSRem(`index:sales:collected:${m}`, sale.id);
+      }
     }
+
     if (newMonth) {
       await kvSAdd(`index:sales:collected:${newMonth}`, sale.id);
       await kvSAdd(buildArchiveMonthsKey(), newMonth);
-      console.log(`[onSaleUpsert] 📦 Sale ${sale.id} added to archive index: ${newMonth}`);
+      console.log(`[onSaleUpsert] 📦 Sale ${sale.id} secured in archive index: ${newMonth}`);
 
       // Update provenance blindly (repoUpsertSale doesn't trigger workflows, but we use upsertSale with skipWorkflowEffects)
       await upsertSale({

@@ -375,9 +375,67 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
   }
 
   // Descriptive changes - update in-place
-  for (const field of DESCRIPTIVE_FIELDS) {
-    if ((previousFinancial as any)[field] !== (financial as any)[field]) {
-      await updateEntityLogField(EntityType.FINANCIAL, financial.id, field, (previousFinancial as any)[field], (financial as any)[field]);
+  if (previousFinancial) {
+    for (const field of DESCRIPTIVE_FIELDS) {
+      if ((previousFinancial as any)[field] !== (financial as any)[field]) {
+        await updateEntityLogField(EntityType.FINANCIAL, financial.id, field, (previousFinancial as any)[field], (financial as any)[field]);
+      }
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Reactive Archive Indexing & Ghost Cleanup
+  // Ensure the entity is correctly placed in the right month's sorted set.
+  // We sweep all available months to completely eradicate Snapshot-era ghost duplicates.
+  // ---------------------------------------------------------------------------
+  if (previousFinancial) {
+    const isNowArchived = financial.status === FinancialStatus.COLLECTED || financial.isCollected || (!financial.isNotPaid && !financial.isNotCharged);
+    const wasArchived = previousFinancial.status === FinancialStatus.COLLECTED || previousFinancial.isCollected || (!previousFinancial.isNotPaid && !previousFinancial.isNotCharged);
+
+    const getArchiveMonth = (f: FinancialRecord) => {
+      if (f.archiveMetadata?.archiveMonth) return f.archiveMetadata.archiveMonth;
+
+      let snapshotDate = new Date(); // fallback
+      const referenceDate = new Date(f.year, f.month - 1, 1);
+      if (isValid(referenceDate)) {
+        snapshotDate = calculateClosingDate(referenceDate);
+      } else if (f.createdAt) {
+        snapshotDate = calculateClosingDate(f.createdAt);
+      }
+      return formatMonthKey(snapshotDate);
+    };
+
+    const newMonth = isNowArchived ? getArchiveMonth(financial) : null;
+    const oldMonth = wasArchived ? getArchiveMonth(previousFinancial) : null;
+
+    if (newMonth !== oldMonth || (!newMonth && oldMonth)) {
+      const { kvSAdd, kvSRem } = await import('@/data-store/kv');
+      const { getAvailableArchiveMonths } = await import('@/data-store/datastore');
+      const { buildArchiveMonthsKey } = await import('@/data-store/keys');
+
+      // BULLETPROOF CLEANUP: Remove from ALL other months to fix legacy ghost duplicates
+      const allMonths = await getAvailableArchiveMonths();
+      for (const m of allMonths) {
+        if (m !== newMonth) {
+          await kvSRem(`index:financials:collected:${m}`, financial.id);
+        }
+      }
+
+      if (newMonth) {
+        await kvSAdd(`index:financials:collected:${newMonth}`, financial.id);
+        await kvSAdd(buildArchiveMonthsKey(), newMonth);
+        console.log(`[onFinancialUpsert] 📦 Financial ${financial.id} secured in archive index: ${newMonth}`);
+
+        // Update provenance blindly (repoUpsert doesn't trigger workflows, but we use upsertFinancial with skips)
+        await upsertFinancial({
+          ...financial,
+          archiveMetadata: {
+            ...financial.archiveMetadata,
+            archivedAt: new Date().toISOString(),
+            archiveMonth: newMonth
+          }
+        }, { skipWorkflowEffects: true, skipLinkEffects: true });
+      }
     }
   }
 }

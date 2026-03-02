@@ -1144,6 +1144,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
       <DatesSubmodal
         open={showDatesModal}
         onOpenChange={setShowDatesModal}
+        entityId={record?.id ? `data:financial:${record.id}` : undefined}
         createdAt={record?.createdAt}
         collectedAt={localCollectedAt}
         onDatesChange={handleDatesUpdate}

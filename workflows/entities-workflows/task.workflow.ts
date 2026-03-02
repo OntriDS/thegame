@@ -343,14 +343,16 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
   }
 
   // ---------------------------------------------------------------------------
-  // Reactive Archive Indexing
+  // Reactive Archive Indexing & Ghost Cleanup
   // Ensure the entity is correctly placed in the right month's sorted set.
-  // If dates change, we un-index from the old month and re-index to the new one.
+  // We sweep all available months to completely eradicate Snapshot-era ghost duplicates.
   // ---------------------------------------------------------------------------
   const isNowArchived = task.status === TaskStatus.DONE || task.status === TaskStatus.COLLECTED;
   const wasArchived = previousTask && (previousTask.status === TaskStatus.DONE || previousTask.status === TaskStatus.COLLECTED);
 
   const getTaskArchiveMonth = (t: Task) => {
+    // Check archive metadata first as ultimate truth, otherwise fallback to date parsing
+    if (t.archiveMetadata?.archiveMonth) return t.archiveMetadata.archiveMonth;
     const date = t.status === TaskStatus.COLLECTED ? (t.collectedAt || t.doneAt || t.createdAt) : (t.doneAt || t.createdAt);
     return date ? formatMonthKey(calculateClosingDate(date)) : null;
   };
@@ -358,18 +360,23 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
   const newMonth = isNowArchived ? getTaskArchiveMonth(task) : null;
   const oldMonth = wasArchived ? getTaskArchiveMonth(previousTask) : null;
 
-  if (newMonth !== oldMonth) {
+  if (newMonth !== oldMonth || (!newMonth && oldMonth)) {
     const { kvSAdd, kvSRem } = await import('@/data-store/kv');
+    const { getAvailableArchiveMonths } = await import('@/data-store/datastore');
     const { buildArchiveMonthsKey } = await import('@/data-store/keys');
 
-    if (oldMonth) {
-      await kvSRem(`index:tasks:collected:${oldMonth}`, task.id);
-      console.log(`[onTaskUpsert] 📦 Removed task ${task.id} from old archive index: ${oldMonth}`);
+    // BULLETPROOF CLEANUP: Remove from ALL other months to fix legacy ghost duplicates
+    const allMonths = await getAvailableArchiveMonths();
+    for (const m of allMonths) {
+      if (m !== newMonth) {
+        await kvSRem(`index:tasks:collected:${m}`, task.id);
+      }
     }
+
     if (newMonth) {
       await kvSAdd(`index:tasks:collected:${newMonth}`, task.id);
       await kvSAdd(buildArchiveMonthsKey(), newMonth);
-      console.log(`[onTaskUpsert] 📦 Task ${task.name} added to archive index: ${newMonth}`);
+      console.log(`[onTaskUpsert] 📦 Task ${task.name} secured in archive index: ${newMonth}`);
 
       // Update provenance blindly (repoUpsertTask ignores workflows so no infinite loop)
       await repoUpsertTask({

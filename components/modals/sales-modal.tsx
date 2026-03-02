@@ -2191,6 +2191,7 @@ export default function SalesModal({
       <DatesSubmodal
         open={showDatesModal}
         onOpenChange={setShowDatesModal}
+        entityId={sale?.id ? `data:sale:${sale.id}` : undefined}
         createdAt={sale?.createdAt}
         doneAt={localDoneAt}
         collectedAt={localCollectedAt}

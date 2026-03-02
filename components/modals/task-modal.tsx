@@ -1541,10 +1541,11 @@ export default function TaskModal({
         </DialogContent>
       </Dialog>
 
-      {/* --- Dates & Activity Submodal --- */}
+      {/* Dates Submodal */}
       <DatesSubmodal
         open={showDatesModal}
         onOpenChange={setShowDatesModal}
+        entityId={task?.id ? `data:task:${task.id}` : undefined}
         createdAt={task?.createdAt}
         doneAt={localDoneAt}
         collectedAt={localCollectedAt}

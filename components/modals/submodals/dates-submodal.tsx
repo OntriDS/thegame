@@ -18,6 +18,7 @@ interface DatesSubmodalProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     title?: string;
+    entityId?: string;
     createdAt?: Date;
     doneAt?: Date;
     collectedAt?: Date;
@@ -28,6 +29,7 @@ export default function DatesSubmodal({
     open,
     onOpenChange,
     title = "Dates & Activity",
+    entityId,
     createdAt,
     doneAt,
     collectedAt,
@@ -71,6 +73,17 @@ export default function DatesSubmodal({
                 </DialogHeader>
 
                 <div className="space-y-6 py-4">
+                    {/* Entity ID (Read-only for debugging) */}
+                    {entityId && (
+                        <div className="space-y-2">
+                            <Label className="text-xs font-semibold">Entity ID</Label>
+                            <div className="text-sm font-mono text-muted-foreground bg-secondary/10 p-2 rounded-md border select-all">
+                                {entityId}
+                            </div>
+                            <p className="text-[10px] text-muted-foreground">Database identifier for CLI debugging.</p>
+                        </div>
+                    )}
+
                     {/* Created At (Read-only for now, but could be editable later) */}
                     <div className="space-y-2">
                         <Label className="text-xs font-semibold">Created At</Label>
