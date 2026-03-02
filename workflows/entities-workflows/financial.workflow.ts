@@ -11,7 +11,7 @@ import { kvGet, kvSet } from '@/data-store/kv';
 import { createLink, getLinksFor, removeLink } from '@/links/link-registry';
 import { getPlayerById, getFinancialById } from '@/data-store/datastore';
 import { createItemFromRecord, removeItemsCreatedByRecord } from '../item-creation-utils';
-import { awardPointsToPlayer, removePointsFromPlayer, resolveToPlayerIdMaybeCharacter, stagePointsForPlayer, vestPointsForPlayer } from '../points-rewards-utils';
+import { awardPointsToPlayer, removePointsFromPlayer, resolveToPlayerIdMaybeCharacter, stagePointsForPlayer, rewardPointsToPlayer, withdrawStagedPointsFromPlayer, unrewardPointsForPlayer } from '../points-rewards-utils';
 import {
   updateTasksFromFinancialRecord,
   updateItemsCreatedByRecord,
@@ -21,9 +21,8 @@ import {
   hasRewardsChanged
 } from '../update-propagation-utils';
 import { createCharacterFromFinancial } from '../character-creation-utils';
-import { archiveFinancialRecordSnapshot, upsertFinancial } from '@/data-store/datastore';
+import { upsertFinancial } from '@/data-store/datastore';
 import { formatMonthKey, calculateClosingDate } from '@/lib/utils/date-utils';
-import { createFinancialSnapshot } from '../snapshot-workflows';
 import { recalculateCharacterWallet } from '../financial-record-utils';
 
 const STATE_FIELDS = ['isNotPaid', 'isNotCharged', 'isCollected'];
@@ -97,7 +96,7 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
               const playerId = financial.playerCharacterId || PLAYER_ONE_ID;
               const points = financial.rewards?.points;
               if (points) {
-                await stagePointsForPlayer(playerId, {
+                await rewardPointsToPlayer(playerId, {
                   xp: points.xp || 0,
                   rp: points.rp || 0,
                   fp: points.fp || 0,
@@ -134,47 +133,78 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
     // Wait for all side effects to complete
     await Promise.all(sideEffects);
 
+    const isPending = financial.isNotPaid || financial.isNotCharged;
+
+    // Snapshot if created as DONE (not pending)
+    if (!isPending) {
+      let snapshotMonthDate: Date;
+      const referenceDate = new Date(financial.year, financial.month - 1, 1);
+      if (isValid(referenceDate)) {
+        snapshotMonthDate = calculateClosingDate(referenceDate);
+      } else if (financial.createdAt) {
+        snapshotMonthDate = calculateClosingDate(financial.createdAt);
+      } else {
+        const now = new Date();
+        const adjustedNow = new Date(now.getTime() - 6 * 60 * 60 * 1000);
+        snapshotMonthDate = calculateClosingDate(adjustedNow);
+      }
+
+      const archiveIndexEffectKey = EffectKeys.sideEffect('financial', financial.id, `archiveIndex:${formatMonthKey(snapshotMonthDate)}`);
+
+      if (!(await hasEffect(archiveIndexEffectKey))) {
+        const monthKey = formatMonthKey(snapshotMonthDate);
+        const { kvSAdd } = await import('@/data-store/kv');
+        const archiveIndexKey = `index:financials:collected:${monthKey}`;
+        await kvSAdd(archiveIndexKey, financial.id);
+
+        await upsertFinancial({
+          ...financial,
+          archiveMetadata: {
+            ...financial.archiveMetadata,
+            archivedAt: new Date().toISOString(),
+            archiveMonth: monthKey
+          }
+        }, { skipWorkflowEffects: true, skipLinkEffects: true });
+
+        await markEffect(archiveIndexEffectKey);
+        console.log(`[onFinancialUpsert] ✅ Added new done financial ${financial.name} to index ${monthKey} without snapshotting`);
+      }
+    }
+
+    // Vest points if created as COLLECTED
     if (financial.isCollected) {
       const collectedAt = financial.collectedAt ?? new Date();
-      const snapshotEffectKey = EffectKeys.sideEffect('financial', financial.id, `financialSnapshot:${formatMonthKey(collectedAt)}`);
 
-      if (!(await hasEffect(snapshotEffectKey))) {
-        // Ensure financial record has proper collection fields
-        const normalizedFinancial: FinancialRecord = {
-          ...financial,
-          isCollected: true,
-          collectedAt
-        };
+      // Ensure financial record has proper collection fields
+      const normalizedFinancial: FinancialRecord = {
+        ...financial,
+        isCollected: true,
+        collectedAt
+      };
 
-        if (!financial.collectedAt) {
-          await upsertFinancial(normalizedFinancial, { skipWorkflowEffects: true, skipLinkEffects: true });
-        }
+      if (!financial.collectedAt) {
+        await upsertFinancial(normalizedFinancial, { skipWorkflowEffects: true, skipLinkEffects: true });
+      }
 
-        // Create FinancialSnapshot using the new Archive-First approach
-        await createFinancialSnapshot(normalizedFinancial, collectedAt, financial.playerCharacterId || undefined);
-
-        // Add to month-based collection index for efficient History Tab queries
-        const monthKey = formatMonthKey(collectedAt);
-        const { kvSAdd } = await import('@/data-store/kv');
-        const collectedIndexKey = `index:financials:collected:${monthKey}`;
-        await kvSAdd(collectedIndexKey, financial.id);
-
-        // Vest points if rewards exist AND they were staged
+      const pointsRewardedEffectKey = EffectKeys.sideEffect('financial', financial.id, 'pointsRewarded');
+      if (!(await hasEffect(pointsRewardedEffectKey))) {
+        // Reward points if rewards exist AND they were staged (prevents double-counting legacy)
         const stagingEffectKey = EffectKeys.sideEffect('financial', financial.id, 'pointsStaged');
+        const pointsRewardedEffectKey = EffectKeys.sideEffect('financial', financial.id, 'pointsRewarded');
 
-        if (financial.rewards?.points && await hasEffect(stagingEffectKey)) {
-          const playerId = financial.playerCharacterId || PLAYER_ONE_ID;
-          await vestPointsForPlayer(playerId, {
-            xp: financial.rewards.points.xp || 0,
-            rp: financial.rewards.points.rp || 0,
-            fp: financial.rewards.points.fp || 0,
-            hp: financial.rewards.points.hp || 0
-          }, financial.id, EntityType.FINANCIAL);
-          console.log(`[onFinancialUpsert] 💰 Vested points for collected record: ${financial.name}`);
+        if (normalizedFinancial.rewards?.points && await hasEffect(stagingEffectKey)) {
+          const playerId = normalizedFinancial.playerCharacterId || PLAYER_ONE_ID;
+          await rewardPointsToPlayer(playerId, {
+            xp: normalizedFinancial.rewards.points.xp || 0,
+            rp: normalizedFinancial.rewards.points.rp || 0,
+            fp: normalizedFinancial.rewards.points.fp || 0,
+            hp: normalizedFinancial.rewards.points.hp || 0
+          }, normalizedFinancial.id, EntityType.FINANCIAL);
+          console.log(`[onFinancialUpsert] 💰 Rewarded points for collected record: ${normalizedFinancial.name}`);
         }
 
-        await markEffect(snapshotEffectKey);
-        console.log(`[onFinancialUpsert] ✅ Created snapshot for collected financial ${financial.name}, added to index ${monthKey}`);
+        await markEffect(pointsRewardedEffectKey); // Mark the rewarded effect, even if no points were rewarded (e.g., no rewards or not staged)
+        console.log(`[onFinancialUpsert] ✅ Financial ${financial.name} collected - points rewarded`);
       }
     }
 
@@ -197,6 +227,41 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
       isNotCharged: financial.isNotCharged,
       completedAt: new Date().toISOString()
     });
+
+    // NEW: Archive Index Tracking
+    let snapshotMonthDate: Date;
+    const referenceDate = new Date(financial.year, financial.month - 1, 1);
+
+    if (isValid(referenceDate)) {
+      snapshotMonthDate = calculateClosingDate(referenceDate);
+    } else if (financial.createdAt) {
+      snapshotMonthDate = calculateClosingDate(financial.createdAt);
+    } else {
+      const now = new Date();
+      const adjustedNow = new Date(now.getTime() - 6 * 60 * 60 * 1000);
+      snapshotMonthDate = calculateClosingDate(adjustedNow);
+    }
+
+    const archiveIndexEffectKey = EffectKeys.sideEffect('financial', financial.id, `archiveIndex:${formatMonthKey(snapshotMonthDate)}`);
+
+    if (!(await hasEffect(archiveIndexEffectKey))) {
+      const monthKey = formatMonthKey(snapshotMonthDate);
+      const { kvSAdd } = await import('@/data-store/kv');
+      const archiveIndexKey = `index:financials:collected:${monthKey}`;
+      await kvSAdd(archiveIndexKey, financial.id);
+
+      await upsertFinancial({
+        ...financial,
+        archiveMetadata: {
+          ...financial.archiveMetadata,
+          archivedAt: new Date().toISOString(),
+          archiveMonth: monthKey
+        }
+      }, { skipWorkflowEffects: true, skipLinkEffects: true });
+
+      await markEffect(archiveIndexEffectKey);
+      console.log(`[onFinancialUpsert] ✅ Added done financial ${financial.name} to index ${monthKey} without snapshotting`);
+    }
   } else if (!wasPending && nowPending) {
     // Reverted from DONE to PENDING (became unpaid or uncharged)
     await appendEntityLog(EntityType.FINANCIAL, financial.id, LogEventType.PENDING, {
@@ -219,73 +284,49 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
     !!financial.isCollected && (!previousFinancial || !previousFinancial.isCollected);
 
   if (statusBecameCollected || flagBecameCollected) {
-    await appendEntityLog(EntityType.FINANCIAL, financial.id, LogEventType.COLLECTED, {
-      name: financial.name,
-      type: financial.type,
-      station: financial.station,
-      collectedAt: new Date().toISOString()
-    });
-
-    // User requirement: collectedAt should be the last day of the record's month
-    // Snap-to-Month Logic
-    // FIX: Prefer existing dates over "Now" to ensure historical accuracy (e.g. Jan record collected in Feb)
-    let defaultCollectedAt: Date;
-    const referenceDate = new Date(financial.year, financial.month - 1, 1);
-
-    if (isValid(referenceDate)) {
-      // Primary: Use the explicit accounting period which is the Source of Truth for Financial Records
-      defaultCollectedAt = calculateClosingDate(referenceDate);
-    } else if (financial.createdAt) {
-      // Secondary: Use creation date
-      defaultCollectedAt = calculateClosingDate(financial.createdAt);
-    } else {
-      const now = new Date();
-      // Adjust to CR time (UTC-6) roughly for "Today" fallback
-      const adjustedNow = new Date(now.getTime() - 6 * 60 * 60 * 1000);
-      defaultCollectedAt = calculateClosingDate(adjustedNow);
-    }
-
-    const collectedAt = financial.collectedAt ?? defaultCollectedAt;
-
-    const snapshotEffectKey = EffectKeys.sideEffect('financial', financial.id, `financialSnapshot:${formatMonthKey(collectedAt)}`);
-
-    if (!(await hasEffect(snapshotEffectKey))) {
-      // Ensure financial record has proper collection fields
-      const normalizedFinancial: FinancialRecord = {
+    // User requirement: collectedAt is when points are actually claimed (often NOW)
+    let collectedAt = financial.collectedAt;
+    if (!collectedAt) {
+      collectedAt = new Date();
+      // Ensure financial record has proper collection fields saved
+      await upsertFinancial({
         ...financial,
         isCollected: true,
         collectedAt
-      };
+      }, { skipWorkflowEffects: true, skipLinkEffects: true });
+    }
 
-      if (!financial.collectedAt) {
-        await upsertFinancial(normalizedFinancial, { skipWorkflowEffects: true, skipLinkEffects: true });
+    const pointsRewardedEffectKey = EffectKeys.sideEffect('financial', financial.id, 'pointsRewarded');
+
+    if (!(await hasEffect(pointsRewardedEffectKey))) {
+      await appendEntityLog(EntityType.FINANCIAL, financial.id, LogEventType.COLLECTED, {
+        name: financial.name,
+        type: financial.type,
+        station: financial.station,
+        collectedAt: collectedAt.toISOString()
+      });
+
+      // Reward points if rewards exist AND they were staged (prevents double-counting legacy)
+      const stagingEffectKey = EffectKeys.sideEffect('financial', financial.id, 'pointsStaged');
+      const pointsRewardedEffectKey = EffectKeys.sideEffect('financial', financial.id, 'pointsRewarded');
+
+      if (financial.rewards?.points && await hasEffect(stagingEffectKey)) {
+        const playerId = await resolveToPlayerIdMaybeCharacter(financial.playerCharacterId);
+        if (playerId) {
+          await rewardPointsToPlayer(playerId, {
+            xp: financial.rewards.points.xp || 0,
+            rp: financial.rewards.points.rp || 0,
+            fp: financial.rewards.points.fp || 0,
+            hp: financial.rewards.points.hp || 0
+          }, financial.id, EntityType.FINANCIAL);
+          await appendEntityLog(EntityType.FINANCIAL, financial.id, LogEventType.UPDATED, {
+            detail: `Rewarded points for completed financial record`,
+          });
+        }
       }
 
-      // Create FinancialSnapshot using the new Archive-First approach
-      await createFinancialSnapshot(normalizedFinancial, collectedAt, financial.playerCharacterId || undefined);
-
-      // Add to month-based collection index for efficient History Tab queries
-      const monthKey = formatMonthKey(collectedAt);
-      const { kvSAdd } = await import('@/data-store/kv');
-      const collectedIndexKey = `index:financials:collected:${monthKey}`;
-      await kvSAdd(collectedIndexKey, financial.id);
-
-      // Vest points if rewards exist AND they were staged
-      const stagingEffectKey = EffectKeys.sideEffect('financial', normalizedFinancial.id, 'pointsStaged');
-
-      if (normalizedFinancial.rewards?.points && await hasEffect(stagingEffectKey)) {
-        const playerId = normalizedFinancial.playerCharacterId || PLAYER_ONE_ID;
-        await vestPointsForPlayer(playerId, {
-          xp: normalizedFinancial.rewards.points.xp || 0,
-          rp: normalizedFinancial.rewards.points.rp || 0,
-          fp: normalizedFinancial.rewards.points.fp || 0,
-          hp: normalizedFinancial.rewards.points.hp || 0
-        }, normalizedFinancial.id, EntityType.FINANCIAL);
-        console.log(`[onFinancialUpsert] 💰 Vested points for collected record: ${normalizedFinancial.name}`);
-      }
-
-      await markEffect(snapshotEffectKey);
-      console.log(`[onFinancialUpsert] ✅ Created snapshot for collected financial ${financial.name}, added to index ${monthKey}`);
+      await markEffect(pointsRewardedEffectKey);
+      console.log(`[onFinancialUpsert] ✅ Financial ${financial.name} collected - points rewarded`);
     }
   }
 
@@ -379,6 +420,8 @@ export async function removeRecordEffectsOnDelete(recordId: string): Promise<voi
     await clearEffect(EffectKeys.sideEffect('financial', recordId, 'characterCreated'));
     await clearEffect(EffectKeys.sideEffect('financial', recordId, 'itemCreated'));
     await clearEffect(EffectKeys.sideEffect('financial', recordId, 'pointsAwarded'));
+    await clearEffect(EffectKeys.sideEffect('financial', recordId, 'pointsVested')); // Remove old effect key
+    await clearEffect(EffectKeys.sideEffect('financial', recordId, 'pointsRewarded')); // Add new effect key
     await clearEffectsByPrefix(EntityType.FINANCIAL, recordId, 'pointsLogged:');
     await clearEffectsByPrefix(EntityType.FINANCIAL, recordId, 'financialLogged:');
 
@@ -399,6 +442,28 @@ export async function removeRecordEffectsOnDelete(recordId: string): Promise<voi
     if (filteredCharacterLog.length !== characterLog.length) {
       await kvSet(characterLogKey, filteredCharacterLog);
       console.log(`[removeRecordEffectsOnDelete] ✅ Removed ${characterLog.length - filteredCharacterLog.length} entries from character log`);
+    }
+
+    // 6. Remove from archive index
+    try {
+      const record = await getFinancialById(recordId);
+      if (record) {
+        let snapshotDate = new Date(); // fallback
+        const referenceDate = new Date(record.year, record.month - 1, 1);
+        if (isValid(referenceDate)) {
+          snapshotDate = calculateClosingDate(referenceDate);
+        } else if (record.createdAt) {
+          snapshotDate = calculateClosingDate(record.createdAt);
+        }
+        const monthKey = formatMonthKey(snapshotDate);
+        const { kvSRem } = await import('@/data-store/kv');
+        const archiveIndexKey = `index:financials:collected:${monthKey}`;
+        await kvSRem(archiveIndexKey, recordId);
+        await clearEffect(EffectKeys.sideEffect('financial', recordId, `financialSnapshot:${monthKey}`));
+        console.log(`[removeRecordEffectsOnDelete] ✅ Removed record from archive index: ${archiveIndexKey}`);
+      }
+    } catch (err) {
+      console.error(`[removeRecordEffectsOnDelete] Failed to clean up archive index`, err);
     }
 
     console.log(`[removeRecordEffectsOnDelete] ✅ Cleared effects, removed links, deleted created items, and removed log entries for record ${recordId}`);

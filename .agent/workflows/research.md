@@ -1,3 +1,7 @@
+---
+description: Research specific technical problems
+---
+
 # RESEARCH COMMAND
 
 **Purpose:** When facing complex issues requiring external knowledge, systematically research the problem.

@@ -11,17 +11,10 @@ import { getLinksFor, removeLink } from '@/links/link-registry';
 import { getPlayerById, getSaleById, getItemById, getFinancialsBySourceSaleId, removeFinancial, upsertItem } from '@/data-store/datastore';
 import { awardPointsToPlayer, removePointsFromPlayer, calculatePointsFromRevenue } from '../points-rewards-utils';
 import { processSaleLines } from '../sale-line-utils';
-import {
-  updateFinancialRecordsFromSale,
-  updateItemsFromSale,
-  updatePlayerPointsFromSource,
-  hasRevenueChanged,
-  hasLinesChanged
-} from '../update-propagation-utils';
+import { updateFinancialRecordsFromSale, updateItemsFromSale, updatePlayerPointsFromSource, hasRevenueChanged, hasLinesChanged } from '../update-propagation-utils';
 import { createCharacterFromSale } from '../character-creation-utils';
-import { archiveSaleSnapshot, upsertSale } from '@/data-store/datastore';
+import { upsertSale } from '@/data-store/datastore';
 import { formatMonthKey, calculateClosingDate } from '@/lib/utils/date-utils';
-import { createItemSnapshot, createSaleSnapshot } from '../snapshot-workflows';
 
 const STATE_FIELDS = ['status', 'isNotPaid', 'isNotCharged', 'isCollected', 'postedAt', 'doneAt', 'cancelledAt'];
 const DESCRIPTIVE_FIELDS = ['counterpartyName', 'totals'];
@@ -277,13 +270,6 @@ async function processChargedSaleLines(sale: Sale): Promise<void> {
   await processSaleLines(sale);
   await markEffect(linesProcessedKey);
   console.log(`[onSaleUpsert] ✅ Sale lines processed and effect marked: ${sale.counterpartyName}`);
-
-  // Create ItemSnapshots for sold items (Archive-First approach)
-  // ARCHIVE IS FOR COLLECTED ONLY.
-  // Sold Items Tab is handled by proper Item Entities in the items store.
-  if (sale.isCollected || sale.status === 'COLLECTED') {
-    await createItemSnapshotsFromSale(sale);
-  }
 }
 
 async function maybeCreateSaleSnapshot(sale: Sale, previousSale?: Sale): Promise<void> {
@@ -309,48 +295,24 @@ async function maybeCreateSaleSnapshot(sale: Sale, previousSale?: Sale): Promise
     return;
   }
 
-  // Create SaleSnapshot using the new Archive-First approach
-  await createSaleSnapshot(sale, collectedAt, sale.playerCharacterId || undefined);
-
   // Add to month-based collection index for efficient History Tab queries
   const monthKey = formatMonthKey(collectedAt);
   const { kvSAdd } = await import('@/data-store/kv');
   const collectedIndexKey = `index:sales:collected:${monthKey}`;
   await kvSAdd(collectedIndexKey, sale.id);
 
+  // New Archive metadata tracking
+  await upsertSale({
+    ...sale,
+    archiveMetadata: {
+      ...sale.archiveMetadata,
+      archivedAt: new Date().toISOString(),
+      archiveMonth: monthKey
+    }
+  }, { skipWorkflowEffects: true, skipLinkEffects: true });
+
   await markEffect(snapshotEffectKey);
-  console.log(`[maybeCreateSaleSnapshot] ✅ Created snapshot for collected sale ${sale.id}, added to index ${monthKey}`);
-}
-
-async function createItemSnapshotsFromSale(sale: Sale): Promise<void> {
-  if (!sale.lines || sale.lines.length === 0) {
-    return;
-  }
-
-  console.log(`[createItemSnapshotsFromSale] Creating snapshots for sold items in sale: ${sale.counterpartyName}`);
-
-  for (const line of sale.lines) {
-    if (line.kind !== 'item') continue;
-
-    const effectKey = EffectKeys.sideEffect('sale', sale.id, `itemSnapshot:${line.lineId}`);
-    if (await hasEffect(effectKey)) {
-      continue;
-    }
-
-    const item = await getItemById(line.itemId);
-    if (!item) {
-      console.warn(`[createItemSnapshotsFromSale] Item ${line.itemId} not found for sale ${sale.id}, skipping snapshot`);
-      continue;
-    }
-
-    // Create ItemSnapshot using the Archive-First approach
-    await createItemSnapshot(item, line.quantity, sale);
-
-
-
-    await markEffect(effectKey);
-    console.log(`[createItemSnapshotsFromSale] ✅ Created snapshot for sold item ${item.name} (${line.quantity} units)`);
-  }
+  console.log(`[maybeCreateSaleSnapshot] ✅ Added collected sale ${sale.id} to index ${monthKey} without snapshotting.`);
 }
 
 /**

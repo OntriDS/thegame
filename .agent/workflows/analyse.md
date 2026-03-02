@@ -1,3 +1,7 @@
+---
+description: Analyse system architecture and find issues
+---
+
 # ANALYSE COMMAND
 
 **When user types ANALYSE, you must:**

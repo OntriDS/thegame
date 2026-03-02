@@ -1,3 +1,7 @@
+---
+description: Force complete reading without skimming
+---
+
 # NOSKIM COMMAND
 
 **Purpose:** Force complete document reading without any skimming, scanning, or pattern-matching behavior.

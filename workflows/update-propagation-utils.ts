@@ -688,14 +688,14 @@ export async function updatePlayerPointsFromSource(
     }
 
     // Update player points and totalPoints
-    // Determine if we should update Vested (Available) or Pending points
+    // Determine if we should update Rewarded (Available) or Pending/Staged points
     const isCollected = newSource.isCollected === true;
 
     let updatedPlayer: any;
 
     if (isCollected) {
-      // If collected, update Vested Points and Lifetime Points
-      console.log(`[updatePlayerPointsFromSource] Updating VESTED points (Source Collected)`);
+      // If collected, update Rewarded Points and Lifetime Points
+      console.log(`[updatePlayerPointsFromSource] Updating REWARDED points (Source Collected)`);
       updatedPlayer = {
         ...player,
         points: {
@@ -713,7 +713,7 @@ export async function updatePlayerPointsFromSource(
         updatedAt: new Date()
       };
     } else {
-      // If NOT collected, update Pending Points only
+      // If NOT collected, update Pending (Staged) Points only
       console.log(`[updatePlayerPointsFromSource] Updating PENDING points (Source Not Collected)`);
       updatedPlayer = {
         ...player,

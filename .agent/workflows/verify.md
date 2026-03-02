@@ -1,3 +1,7 @@
+---
+description: Verify systems work correctly
+---
+
 # VERIFY COMMAND
 
 **Purpose:** Thoroughly investigate and verify that systems work correctly before making claims.

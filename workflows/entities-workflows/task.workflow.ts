@@ -16,10 +16,9 @@ import {
   upsertItem
 } from '@/data-store/datastore';
 import { upsertTask as repoUpsertTask } from '@/data-store/repositories/task.repo';
-import { archiveTaskSnapshot } from '@/data-store/datastore';
 import { getLinksFor, removeLink } from '@/links/link-registry';
 import { createItemFromTask, removeItemsCreatedByTask } from '../item-creation-utils';
-import { awardPointsToPlayer, removePointsFromPlayer, stagePointsForPlayer, vestPointsForPlayer } from '../points-rewards-utils';
+import { awardPointsToPlayer, removePointsFromPlayer, stagePointsForPlayer, rewardPointsToPlayer, withdrawStagedPointsFromPlayer, unrewardPointsForPlayer } from '../points-rewards-utils';
 import { createFinancialRecordFromTask, updateFinancialRecordFromTask, removeFinancialRecordsCreatedByTask } from '../financial-record-utils';
 import { createCharacterFromTask } from '../character-creation-utils';
 import { DEFAULT_POINTS_CONVERSION_RATES } from '@/lib/constants/financial-constants';
@@ -36,7 +35,6 @@ import {
   hasOutputPropsChanged,
   hasRewardsChanged
 } from '../update-propagation-utils';
-import { createTaskSnapshot } from '../snapshot-workflows';
 import {
   handleTemplateInstanceCreation,
   deleteTemplateCascade,
@@ -142,17 +140,33 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
         doneAt: task.doneAt,
         _logOrder: 1
       });
-    }
-  }
 
-  if (previousTask && !previousTask.collectedAt && task.collectedAt) {
-    await appendEntityLog(EntityType.TASK, task.id, LogEventType.COLLECTED, {
-      name: task.name,
-      taskType: task.type,
-      station: task.station,
-      priority: task.priority,
-      collectedAt: task.collectedAt
-    });
+      // NEW: Archive Index Tracking 
+      // Instead of duplicating data into Snapshots, we just append the task ID into the monthly index
+      const archiveMonth = calculateClosingDate(task.doneAt);
+      const archiveIndexEffectKey = EffectKeys.sideEffect('task', task.id, `archiveIndex:${formatMonthKey(archiveMonth)}`);
+
+      if (!(await hasEffect(archiveIndexEffectKey))) {
+        const monthKey = formatMonthKey(archiveMonth);
+        const { kvSAdd } = await import('@/data-store/kv');
+        // We keep using 'index:tasks:collected:MM-YY' as the archive index to maintain backward compatibility with the History Tab
+        const archiveIndexKey = `index:tasks:collected:${monthKey}`;
+        await kvSAdd(archiveIndexKey, task.id);
+
+        // Also save provenance metadata to the actual task record itself
+        await repoUpsertTask({
+          ...task,
+          archiveMetadata: {
+            ...task.archiveMetadata,
+            archivedAt: new Date().toISOString(),
+            archiveMonth: monthKey
+          }
+        });
+
+        await markEffect(archiveIndexEffectKey);
+        console.log(`[onTaskUpsert] ✅ Task ${task.name} done - added to archive index ${monthKey} without snapshotting.`);
+      }
+    }
   }
 
   const statusBecameCollected =
@@ -162,64 +176,39 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
     !!task.isCollected && (!previousTask || !previousTask.isCollected);
 
   if (statusBecameCollected || flagBecameCollected) {
-    let defaultCollectedAt: Date;
-
-    if (task.doneAt) {
-      // User requirement: Snap to the end of the month the task was DONE
-      // Time Travel Safe: If done in Jan but collected in Feb, it goes to Jan Archive
-      defaultCollectedAt = calculateClosingDate(task.doneAt);
-      console.log(`[onTaskUpsert] Setting collectedAt based on doneAt (${task.doneAt.toISOString()}): ${defaultCollectedAt.toISOString()}`);
-    } else {
-      // Fallback to NOW if doneAt is missing (e.g. manual collection without completion)
-      // This ensures tasks collected TODAY go into THIS month's archive, not backdated to creation
-      const now = new Date();
-      // Adjust for potential timezone offset if needed, or just use server time
-      // Using simple current time to catch "Right Now" actions
-      defaultCollectedAt = calculateClosingDate(now);
-      console.log(`[onTaskUpsert] Setting collectedAt based on NOW (no doneAt): ${defaultCollectedAt.toISOString()}`);
+    let collectedAt = task.collectedAt;
+    if (!collectedAt) {
+      collectedAt = new Date();
+      // Ensure the collectedAt timestamp is saved if it was missing
+      await repoUpsertTask({ ...task, isCollected: true, collectedAt, status: TaskStatus.COLLECTED });
     }
 
-    const collectedAt = task.collectedAt ?? defaultCollectedAt;
-    const snapshotEffectKey = EffectKeys.sideEffect('task', task.id, `taskSnapshot:${formatMonthKey(collectedAt)}`);
+    const pointsRewardedEffectKey = EffectKeys.sideEffect('task', task.id, 'pointsRewarded');
 
-    if (!(await hasEffect(snapshotEffectKey))) {
-      const updatedTask: Task = {
-        ...task,
-        isCollected: true,
-        collectedAt
-      };
-
-      await repoUpsertTask(updatedTask);
-
-      await createTaskSnapshot(updatedTask, collectedAt, updatedTask.playerCharacterId || undefined);
-
-      await appendEntityLog(EntityType.TASK, updatedTask.id, LogEventType.COLLECTED, {
-        name: updatedTask.name,
-        taskType: updatedTask.type,
-        station: updatedTask.station,
-        priority: updatedTask.priority,
+    if (!(await hasEffect(pointsRewardedEffectKey))) {
+      // Log COLLECTED event (Points Claimed)
+      await appendEntityLog(EntityType.TASK, task.id, LogEventType.COLLECTED, {
+        name: task.name,
+        taskType: task.type,
+        station: task.station,
+        priority: task.priority,
         collectedAt: collectedAt.toISOString()
       });
 
-      const monthKey = formatMonthKey(collectedAt);
-      const { kvSAdd } = await import('@/data-store/kv');
-      const collectedIndexKey = `index:tasks:collected:${monthKey}`;
-      await kvSAdd(collectedIndexKey, updatedTask.id);
+      // Reward points if rewards exist AND they were staged (prevents double-counting legacy tasks)
+      const stagingEffectKey = EffectKeys.sideEffect('task', task.id, 'pointsStaged');
 
-      // Vest points if rewards exist AND they were staged (prevents double-counting legacy tasks)
-      // We check for the 'pointsStaged' effect which only exists for tasks processed under the new system
-      const stagingEffectKey = EffectKeys.sideEffect('task', updatedTask.id, 'pointsStaged');
-
-      if (updatedTask.rewards?.points && await hasEffect(stagingEffectKey)) {
-        const playerId = updatedTask.playerCharacterId || PLAYER_ONE_ID;
-        await vestPointsForPlayer(playerId, updatedTask.rewards.points, updatedTask.id, EntityType.TASK);
-        console.log(`[onTaskUpsert] 💰 Vested points for collected task: ${updatedTask.name}`);
+      if (task.rewards?.points && await hasEffect(stagingEffectKey)) {
+        const playerId = task.playerCharacterId || PLAYER_ONE_ID;
+        await rewardPointsToPlayer(playerId, task.rewards.points, task.id, EntityType.TASK);
+        console.log(`[onTaskUpsert] 💰 Rewarded points for collected task: ${task.name}`);
       }
 
-      await markEffect(snapshotEffectKey);
-      console.log(`[onTaskUpsert] ✅ Task ${updatedTask.name} collected - snapshot created, added to index ${monthKey}`);
+      await markEffect(pointsRewardedEffectKey);
+      console.log(`[onTaskUpsert] ✅ Task ${task.name} collected - points rewarded`);
 
-      await cascadeCollectionToChildren(updatedTask, collectedAt);
+      // Cascade collection to child instances (only marks them as collected to reward points)
+      await cascadeCollectionToChildren(task, collectedAt);
     }
   }
 
@@ -581,23 +570,22 @@ export async function removeTaskLogEntriesOnDelete(task: Task): Promise<void> {
       console.log(`[removeTaskLogEntriesOnDelete] ✅ Removed ${characterLog.length - filteredCharacterLog.length} entries from character log`);
     }
 
-    // 6. Remove from collected index (if applicable)
-    if (task.isCollected || task.status === 'Collected') {
+    // 6. Remove from archive index (if applicable)
+    if (task.status === 'Done' || task.isCollected || task.status === 'Collected') {
       try {
-        let collectedAt = task.collectedAt;
-        if (!collectedAt) {
-          if (task.doneAt) collectedAt = calculateClosingDate(task.doneAt);
-          else if (task.createdAt) collectedAt = calculateClosingDate(task.createdAt);
-        }
+        let snapshotDate = task.doneAt;
+        if (!snapshotDate && task.collectedAt) snapshotDate = task.collectedAt;
+        if (!snapshotDate && task.createdAt) snapshotDate = task.createdAt;
 
-        if (collectedAt) {
-          const monthKey = formatMonthKey(collectedAt);
-          const collectedIndexKey = `index:tasks:collected:${monthKey}`;
-          await kvSRem(collectedIndexKey, task.id);
-          console.log(`[removeTaskLogEntriesOnDelete] ✅ Removed task from collected index: ${collectedIndexKey}`);
+        if (snapshotDate) {
+          const snapshotMonth = calculateClosingDate(snapshotDate);
+          const monthKey = formatMonthKey(snapshotMonth);
+          const archiveIndexKey = `index:tasks:collected:${monthKey}`;
+          await kvSRem(archiveIndexKey, task.id);
+          console.log(`[removeTaskLogEntriesOnDelete] ✅ Removed task from archive index: ${archiveIndexKey}`);
         }
       } catch (err) {
-        console.error(`[removeTaskLogEntriesOnDelete] Failed to clean up collected index`, err);
+        console.error(`[removeTaskLogEntriesOnDelete] Failed to clean up archive index`, err);
       }
     }
 
@@ -768,32 +756,29 @@ export async function uncompleteTask(taskId: string): Promise<void> {
     await clearEffect(EffectKeys.sideEffect('task', taskId, 'itemCreated'));
     await clearEffect(EffectKeys.sideEffect('task', taskId, 'financialCreated'));
     await clearEffect(EffectKeys.sideEffect('task', taskId, 'pointsAwarded'));
-    console.log(`[uncompleteTask] ✅ Cleared effects registry entries (itemCreated, financialCreated, pointsAwarded)`);
+    await clearEffect(EffectKeys.sideEffect('task', taskId, 'pointsRewarded')); // Clear the new effect key
+    console.log(`[uncompleteTask] ✅ Cleared effects registry entries (itemCreated, financialCreated, pointsAwarded, pointsRewarded)`);
 
-    // 3.5 Remove from collected index
+    // 3.5 Remove from archive index & clear snapshot effect
     try {
-      // Determine which month key it was in
-      let collectedAt = task.collectedAt;
-      if (!collectedAt) {
-        if (task.doneAt) collectedAt = calculateClosingDate(task.doneAt);
-        else if (task.createdAt) collectedAt = calculateClosingDate(task.createdAt);
-        else collectedAt = calculateClosingDate(new Date());
-      }
+      let snapshotDate = task.doneAt || task.collectedAt || task.createdAt || new Date();
+      const snapshotMonth = calculateClosingDate(snapshotDate);
+      const monthKey = formatMonthKey(snapshotMonth);
 
-      const monthKey = formatMonthKey(collectedAt);
-      const collectedIndexKey = `index:tasks:collected:${monthKey}`;
+      const archiveIndexKey = `index:tasks:collected:${monthKey}`;
+      await kvSRem(archiveIndexKey, task.id);
+      console.log(`[uncompleteTask] ✅ Removed task from archive index: ${archiveIndexKey}`);
 
-      await kvSRem(collectedIndexKey, task.id);
-      console.log(`[uncompleteTask] ✅ Removed task from collected index: ${collectedIndexKey}`);
+      await clearEffect(EffectKeys.sideEffect('task', taskId, `taskSnapshot:${monthKey}`));
 
       // Also check standard date-based key just in case (fallback)
-      const nowKey = formatMonthKey(new Date());
+      const nowKey = formatMonthKey(calculateClosingDate(new Date()));
       if (nowKey !== monthKey) {
         // Best effort cleanup if date logic shifted
         await kvSRem(`index:tasks:collected:${nowKey}`, task.id);
       }
     } catch (err) {
-      console.error(`[uncompleteTask] Failed to remove from collected index:`, err);
+      console.error(`[uncompleteTask] Failed to remove from archive index:`, err);
     }
 
     // 4. Log UNCOMPLETED event
@@ -825,7 +810,6 @@ async function cascadeCollectionToChildren(parentTask: Task, collectedAt: Date):
     const { formatMonthKey } = await import('@/lib/utils/date-utils');
     const { kvSAdd } = await import('@/data-store/kv');
     const { appendEntityLog } = await import('@/workflows/entities-logging');
-    const { createTaskSnapshot } = await import('@/workflows/snapshot-workflows');
 
     // Get all tasks to find children
     const allTasks = await getAllTasks();
@@ -847,6 +831,7 @@ async function cascadeCollectionToChildren(parentTask: Task, collectedAt: Date):
     // Collect each child instance
     for (const childInstance of childInstances) {
       const childEffectKey = `task:${childInstance.id}:collectionCascaded:${parentTask.id}`;
+      const childPointsRewardedEffectKey = EffectKeys.sideEffect('task', childInstance.id, 'pointsRewarded');
 
       if (!(await hasEffect(childEffectKey))) {
         // Create child snapshot for Archive Vault
@@ -857,8 +842,8 @@ async function cascadeCollectionToChildren(parentTask: Task, collectedAt: Date):
           status: TaskStatus.COLLECTED
         };
 
-        // 1. Create TaskSnapshot for child
-        await createTaskSnapshot(normalizedChild, collectedAt, childInstance.playerCharacterId || undefined);
+        // 1. We no longer CREATE a snapshot here, it's created on parent completion
+        // We only mark the record as collected to trigger point rewarding if applicable
 
         // 2. Log COLLECTED event for child
         await appendEntityLog(EntityType.TASK, childInstance.id, LogEventType.COLLECTED, {
@@ -870,16 +855,19 @@ async function cascadeCollectionToChildren(parentTask: Task, collectedAt: Date):
           cascadedFrom: parentTask.id
         });
 
-        // 3. Add child to month index
-        const childMonthKey = formatMonthKey(collectedAt);
-        const childCollectedIndexKey = `index:tasks:collected:${childMonthKey}`;
-        await kvSAdd(childCollectedIndexKey, childInstance.id);
+        // 3. Reward points if child has rewards and points were staged
+        const childStagingKey = EffectKeys.sideEffect('task', childInstance.id, 'pointsStaged');
+        if (childInstance.rewards?.points && await hasEffect(childStagingKey)) {
+          const playerId = childInstance.playerCharacterId || PLAYER_ONE_ID;
+          await rewardPointsToPlayer(playerId, childInstance.rewards.points, childInstance.id, EntityType.TASK);
+        }
 
         // 4. Update child task with collection data
         await upsertTask(normalizedChild);
 
         // Mark cascade effect to prevent duplicates
         await markEffect(childEffectKey);
+        await markEffect(childPointsRewardedEffectKey); // Mark points as rewarded for the child
 
         console.log(`[cascadeCollectionToChildren] ✅ Cascaded collection for child: ${childInstance.name}`);
       }

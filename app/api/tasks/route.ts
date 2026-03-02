@@ -2,7 +2,7 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { v4 as uuid } from 'uuid';
 import type { Task } from '@/types/entities';
-import { getAllTasks, upsertTask, getTasksForMonth } from '@/data-store/datastore';
+import { getAllTasks, getActiveTasks, upsertTask, getTasksForMonth } from '@/data-store/datastore';
 import { requireAdminAuth } from '@/lib/api-auth';
 
 // Force dynamic rendering - this route accesses cookies
@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
     } else {
       // Default: Return ALL active tasks (not collected)
       // This supports the "Active Task Tree" view which is not time-bound
-      data = await getAllTasks();
+      data = await getActiveTasks();
     }
     return NextResponse.json(data);
   } catch (error) {

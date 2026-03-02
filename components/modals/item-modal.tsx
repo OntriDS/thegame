@@ -21,12 +21,12 @@ import type { Station, SubItemType } from '@/types/type-aliases';
 import { CM_TO_M2_CONVERSION, PRICE_STEP, YEAR_MIN, YEAR_MAX } from '@/lib/constants/app-constants';
 import { v4 as uuid } from 'uuid';
 import { createSiteOptionsWithCategories } from '@/lib/utils/site-options-utils';
-import { Package, Trash2, User, Network } from 'lucide-react';
+import { Package, Trash2, User, Network, CalendarIcon } from 'lucide-react';
 import { ClientAPI } from '@/lib/client-api';
-import MoveItemsModal from './submodals/move-items-submodal';
 import DeleteModal from './submodals/delete-submodal';
 import { FileReference } from '@/types/entities';
 import LinksRelationshipsModal from './submodals/links-relationships-submodal';
+import DatesSubmodal from './submodals/dates-submodal';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
 import OwnerSubmodal from './submodals/owner-submodal';
 import { dispatchEntityUpdated, entityTypeToKind } from '@/lib/ui/ui-events';
@@ -87,11 +87,11 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
   const [size, setSize] = useState('');
   const [targetAmount, setTargetAmount] = useState('');
   const [site, setSite] = useState<string>('Home');
-  const [showMoveModal, setShowMoveModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [showMoreFields, setShowMoreFields] = useState(false);
   const [showLinksModal, setShowLinksModal] = useState(false);
+  const [showDatesModal, setShowDatesModal] = useState(false);
   const [showOwnerModal, setShowOwnerModal] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [ownerCharacterId, setOwnerCharacterId] = useState<string | null>(null);
@@ -518,6 +518,38 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
     quickSellSiteId,
     refreshItemAfterQuickSell
   ]);
+
+  const handleDatesUpdate = useCallback(async (updates: {
+    createdAt?: Date;
+    doneAt?: Date;
+    collectedAt?: Date;
+  }) => {
+    if (!currentEditingItem) return;
+
+    // Applying to currentEditingItem since items use standard dates internally too:
+    // doneAt (or equivalent like soldAt, but items use createdAt to track genesis, and updatedAt)
+    // Actually, items have: createdAt, updatedAt (and in item snapshot it uses soldAt for archive)
+    // We'll update the base fields and allow backend workflows to track sold timestamps if needed
+    const updated = {
+      ...currentEditingItem,
+      createdAt: updates.createdAt || currentEditingItem.createdAt,
+    };
+    await ClientAPI.upsertItem(updated as Item);
+
+    // Refresh local state if editing existing
+    if (selectedItemId) {
+      const refreshed = await ClientAPI.getItemById(selectedItemId);
+      if (refreshed) {
+        setExistingItems(prev => {
+          const idx = prev.findIndex(i => i.id === selectedItemId);
+          if (idx === -1) return prev;
+          const next = [...prev];
+          next[idx] = refreshed;
+          return next;
+        });
+      }
+    }
+  }, [currentEditingItem, selectedItemId]);
 
   // Save form data when modal closes
   useEffect(() => {
@@ -1193,11 +1225,11 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setShowMoveModal(true)}
-                    className="flex items-center gap-2 h-8 text-xs"
+                    onClick={() => setShowDatesModal(true)}
+                    className="h-8 text-xs bg-secondary/50"
                   >
-                    <Package className="h-3 w-3" />
-                    Move
+                    <CalendarIcon className="w-3 h-3 mr-2" />
+                    Timeline
                   </Button>
                 </>
               )}
@@ -1243,28 +1275,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         </DialogContent>
       </Dialog>
 
-      {/* MOVE Modal */}
-      <MoveItemsModal
-        open={showMoveModal}
-        onOpenChange={setShowMoveModal}
-        items={(item || (selectedItemId && existingItems.find(i => i.id === selectedItemId))) ? [item || existingItems.find(i => i.id === selectedItemId)!] : []}
-        sites={sites}
-        onComplete={() => {
-          setShowMoveModal(false);
-          onOpenChange(false); // Close the modal after moving
-        }}
-        onStatusCheck={(item, isMovingToSold) => {
-          // Handle status check from move operation
-          if (isMovingToSold) {
-            // Item is being moved to a sold item - emit to parent for handling
-            const updatedItem = { ...item, status: ItemStatus.SOLD };
-            onSave(updatedItem);
-          }
-          // Close the move modal after status check
-          setShowMoveModal(false);
-          onOpenChange(false);
-        }}
-      />
+
 
       {/* DELETE Modal */}
       <DeleteModal
@@ -1464,6 +1475,16 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
           }}
         />
       )}
+
+      {/* Dates & Timeline Submodal */}
+      <DatesSubmodal
+        open={showDatesModal}
+        onOpenChange={setShowDatesModal}
+        createdAt={currentEditingItem?.createdAt ? new Date(currentEditingItem.createdAt) : undefined}
+        doneAt={undefined}
+        collectedAt={undefined}
+        onDatesChange={handleDatesUpdate}
+      />
     </>
   );
 }

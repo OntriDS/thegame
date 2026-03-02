@@ -1,3 +1,7 @@
+---
+description: Systematic testing for complex bugs
+---
+
 # DEBUG COMMAND
 
 **Purpose:** When facing complex bugs, create systematic testing tools instead of endless debugging attempts.

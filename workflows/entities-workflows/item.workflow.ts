@@ -12,7 +12,6 @@ import { getLinksFor, removeLink } from '@/links/link-registry';
 import { getCategoryForItemType } from '@/lib/utils/searchable-select-utils';
 import { createCharacterFromItem } from '../character-creation-utils';
 import { upsertItem } from '@/data-store/datastore';
-import { createItemSnapshot } from '../snapshot-workflows';
 import { formatMonthKey, calculateClosingDate } from '@/lib/utils/date-utils';
 
 const STATE_FIELDS = ['status', 'stock', 'quantitySold', 'isCollected'];
@@ -64,28 +63,20 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
     return;
   }
 
-  // Stock changes - MOVED event (only log when Move Items Submodal is used)
+  // Stock changes - MOVED event
   const stockChanged = JSON.stringify(previousItem.stock) !== JSON.stringify(item.stock);
   if (stockChanged) {
-    // Check if this was moved via the Move Items Submodal (temporary flag)
-    const movedViaSubmodal = (item as any)._movedViaSubmodal === true;
-
-    if (movedViaSubmodal) {
-      await appendEntityLog(EntityType.ITEM, item.id, LogEventType.MOVED, {
-        name: item.name,
-        itemType: item.type,
-        station: item.station,
-        subItemType: item.subItemType,
-        collection: item.collection,
-        price: item.price,
-        unitCost: item.unitCost,
-        oldStock: previousItem.stock,
-        newStock: item.stock
-      });
-
-      // Remove temporary flag (clean up)
-      delete (item as any)._movedViaSubmodal;
-    }
+    await appendEntityLog(EntityType.ITEM, item.id, LogEventType.MOVED, {
+      name: item.name,
+      itemType: item.type,
+      station: item.station,
+      subItemType: item.subItemType,
+      collection: item.collection,
+      price: item.price,
+      unitCost: item.unitCost,
+      oldStock: previousItem.stock,
+      newStock: item.stock
+    });
   }
 
   // Manual SOLD status change - detect when status changes to SOLD without quantitySold change (not via sale)
@@ -125,23 +116,34 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
       return;
     }
 
-    // Create snapshot BEFORE updating item (capture current state)
-    // DISABLED: User requirement "ONLY COLLECTED SENDS THINGS TO ARCHIVE"
-    // Manual "Sold" status change does not imply "Collected" (money received).
-    // Therefore, we do NOT archive here.
-    // const soldAt = item.soldAt || new Date();
-    // await createItemSnapshot(item, quantityToSell, null, soldAt);
-    console.log(`[onItemUpsert] Manual SOLD status change processed for ${item.name} (${quantityToSell} units) - Archive skipped (Not Collected)`);
+    const soldAt = item.soldAt || new Date();
+    const archiveMonth = calculateClosingDate(soldAt);
+    const archiveIndexEffectKey = EffectKeys.sideEffect('item', item.id, `archiveIndex:${formatMonthKey(archiveMonth)}`);
 
     // Update item: deduct all remaining stock, update quantitySold, set soldAt
     const updatedItem: Item = {
       ...item,
       quantitySold: item.quantitySold + quantityToSell,
-      soldAt: item.soldAt || new Date(),
+      soldAt: soldAt,
       stock: [], // All stock is sold
       status: ItemStatus.SOLD,
       updatedAt: new Date()
     };
+
+    if (!(await hasEffect(archiveIndexEffectKey))) {
+      const monthKey = formatMonthKey(archiveMonth);
+      const { kvSAdd } = await import('@/data-store/kv');
+      const archiveIndexKey = `index:items:collected:${monthKey}`;
+      await kvSAdd(archiveIndexKey, item.id);
+
+      updatedItem.archiveMetadata = {
+        ...updatedItem.archiveMetadata,
+        archivedAt: new Date().toISOString(),
+        archiveMonth: monthKey
+      };
+      await markEffect(archiveIndexEffectKey);
+      console.log(`[onItemUpsert] ✅ Item ${item.name} SOLD - added to archive index ${monthKey}`);
+    }
 
     // Save updated item (skip workflow to avoid recursion)
     await upsertItem(updatedItem, { skipWorkflowEffects: true });
@@ -241,23 +243,28 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
       collectedAt: collectedAt.toISOString()
     });
 
-    // Create Item Snapshot for Archive (Fixing the Gap)
-    // Only if not already snapshotted (e.g. via Sale workflow)
-    const snapshotEffectKey = EffectKeys.sideEffect('item', item.id, `itemSnapshot:${formatMonthKey(collectedAt)}`);
+    // Record Archive Index for COLLECTED case 
+    // Usually items reach Archive on SOLD. But if they jump straight to COLLECTED, capture that.
+    const archiveMonth = calculateClosingDate(collectedAt);
+    const archiveIndexEffectKey = EffectKeys.sideEffect('item', item.id, `archiveIndex:${formatMonthKey(archiveMonth)}`);
 
-    if (!(await hasEffect(snapshotEffectKey))) {
-      // Create ItemSnapshot using the new Archive-First approach
-      // We pass 'undefined' for saleId as this is a manual collection (no parent sale)
-      await createItemSnapshot(item, item.quantitySold || 1, undefined);
-
-      // Add to month-based collection index for efficient History Tab queries
-      const monthKey = formatMonthKey(collectedAt);
+    if (!(await hasEffect(archiveIndexEffectKey))) {
+      const monthKey = formatMonthKey(archiveMonth);
       const { kvSAdd } = await import('@/data-store/kv');
       const collectedIndexKey = `index:items:collected:${monthKey}`;
       await kvSAdd(collectedIndexKey, item.id);
 
-      await markEffect(snapshotEffectKey);
-      console.log(`[onItemUpsert] ✅ Created snapshot for manually collected item ${item.name}, added to index ${monthKey}`);
+      await upsertItem({
+        ...item,
+        archiveMetadata: {
+          ...item.archiveMetadata,
+          archivedAt: new Date().toISOString(),
+          archiveMonth: monthKey
+        }
+      }, { skipWorkflowEffects: true });
+
+      await markEffect(archiveIndexEffectKey);
+      console.log(`[onItemUpsert] ✅ Item ${item.name} COLLECTED - added to archive index ${monthKey}`);
     }
   }
 

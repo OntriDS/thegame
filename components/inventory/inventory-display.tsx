@@ -14,7 +14,6 @@ import { ItemType, ItemCategory, ItemStatus, InventoryTab } from '@/types/enums'
 import { getItemCategory } from '@/lib/utils/item-utils';
 import ItemModal from '@/components/modals/item-modal';
 import BulkEditModal from '@/components/modals/submodals/bulk-edit-submodal';
-import MoveItemsModal from '@/components/modals/submodals/move-items-submodal';
 import InlineEditor from '@/components/control-room/inline-editor';
 import { MapPin, Pencil, Package, Settings, Package2, ChevronDown, ChevronRight, AlertTriangle } from 'lucide-react';
 import { Site } from '@/types/entities';
@@ -61,7 +60,7 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
   const [artworksViewBy, setArtworksViewBy] = useState<'collection' | 'subtype' | 'location'>('collection');
   const [merchViewBy, setMerchViewBy] = useState<'collection' | 'subtype' | 'location'>('subtype');
   const [printsViewBy, setPrintsViewBy] = useState<'collection' | 'subtype' | 'location'>('collection');
-  const [showMoveModal, setShowMoveModal] = useState(false);
+
   const [movingItem, setMovingItem] = useState<Item | undefined>(undefined);
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [statusModalConfig, setStatusModalConfig] = useState<{
@@ -1068,16 +1067,6 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
                               className="h-6 w-6 p-0"
                               onClick={() => handleEditItem(sticker)}
                             >
-                              <Pencil className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-6 w-6 p-0"
-                              onClick={() => handleMoveItem(sticker)}
-                              title="Move Item"
-                            >
-                              <Package className="w-4 h-4" />
                             </Button>
                           </div>
                         </div>
@@ -1853,17 +1842,6 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
     );
   };
 
-  const handleMoveItem = (item: Item) => {
-    setMovingItem(item);
-    setShowMoveModal(true);
-  };
-
-  const handleMoveComplete = () => {
-    setShowMoveModal(false);
-    setMovingItem(undefined);
-    loadItems();
-    window.dispatchEvent(new Event('itemsUpdated'));
-  };
 
   // Smart Status Management
   const checkAndHandleStatusChange = (item: Item, isMovingToSold: boolean) => {
@@ -2270,17 +2248,6 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
         onComplete={handleBulkEditComplete}
       />
 
-      {/* Move Item Modal */}
-      {showMoveModal && movingItem && (
-        <MoveItemsModal
-          open={showMoveModal}
-          onOpenChange={setShowMoveModal}
-          items={[movingItem]}
-          sites={sites}
-          onComplete={handleMoveComplete}
-          onStatusCheck={checkAndHandleStatusChange}
-        />
-      )}
 
       {/* Status Modal */}
       {showStatusModal && statusModalConfig && (

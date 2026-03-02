@@ -1,3 +1,7 @@
+---
+description: Clean old code and unused functionality
+---
+
 # CLEAN COMMAND
 
 **Purpose:** Automatically clean old code, remove unused functionality, and ensure DRY principles.

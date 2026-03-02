@@ -18,6 +18,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Checkbox } from '@/components/ui/checkbox';
 import DeleteModal from './submodals/delete-submodal';
 import LinksRelationshipsModal from './submodals/links-relationships-submodal';
+import DatesSubmodal from './submodals/dates-submodal';
 import { Task, Item, Site } from '@/types/entities';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
 import { getPointsMetadata } from '@/lib/utils/points-utils';
@@ -143,6 +144,9 @@ export default function TaskModal({
     affectedCount: number;
     isReversal: boolean;
   } | null>(null);
+
+  // Dates Submodal State
+  const [showDatesModal, setShowDatesModal] = useState(false);
 
   // Archive collection confirmation modal state (for status selector only)
   const [formData, setFormData] = useState({
@@ -636,6 +640,25 @@ export default function TaskModal({
     } finally {
       setCascadeData(null);
       setIsSaving(false);
+    }
+  };
+
+  const handleDatesUpdate = (newDates: { createdAt?: Date; doneAt?: Date; collectedAt?: Date }) => {
+    // Only update our local state if they actually picked dates. 
+    // The overarching Task entity has actual createdAt handling elsewhere if undefined
+    if (newDates.doneAt !== undefined) {
+      // NOTE: task-modal.tsx doesn't natively have doneAt state in this form currently,
+      // it is usually handled in task.workflow.ts upon transition.
+      // But we can mutate the core task object for saving if they overridden it.
+      if (task) {
+        task.doneAt = newDates.doneAt ? new Date(newDates.doneAt) : undefined;
+      }
+    }
+
+    if (newDates.collectedAt !== undefined) {
+      if (task) {
+        task.collectedAt = newDates.collectedAt ? new Date(newDates.collectedAt) : undefined;
+      }
     }
   };
 
@@ -1358,26 +1381,49 @@ export default function TaskModal({
           </div>
         </div>
 
+        {/* ------------------------------------------- */}
+        {/* MODAL BOTTOM BAR (Destructive & Secondary Actions) */}
+        {/* ------------------------------------------- */}
+        {task && (
+          <div className="flex gap-2 w-full pt-4 border-t mt-4 mb-2 px-6">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowDeleteModal(true)}
+              className="h-8 text-xs text-destructive hover:bg-destructive/10 border-destructive/20"
+            >
+              Delete
+            </Button>
+
+            <div className="flex-1" />
+
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowDatesModal(true)}
+              className="h-8 text-xs bg-secondary/50"
+            >
+              <CalendarIcon className="w-3 h-3 mr-2" />
+              Timeline
+            </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowRelationshipsModal(true)}
+              className="h-8 text-xs bg-secondary/50"
+            >
+              <Network className="w-3 h-3 mr-2" />
+              Links
+            </Button>
+          </div>
+        )}
 
         <DialogFooter className="flex items-center justify-between pt-4 border-t px-6 pb-6">
           <div className="flex items-center gap-4">
             {task && (
               <>
-                <Button
-                  variant="outline"
-                  onClick={() => setShowDeleteModal(true)}
-                  className="h-8 text-xs text-muted-foreground hover:text-foreground"
-                >
-                  Delete
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setShowRelationshipsModal(true)}
-                  className="h-8 text-xs"
-                >
-                  <Network className="w-3 h-3 mr-1" />
-                  Links
-                </Button>
+                {/* Original Delete and Links buttons removed from here */}
               </>
             )}
             <Button
@@ -1500,6 +1546,16 @@ export default function TaskModal({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* --- Dates & Activity Submodal --- */}
+      <DatesSubmodal
+        open={showDatesModal}
+        onOpenChange={setShowDatesModal}
+        createdAt={task?.createdAt}
+        doneAt={task?.doneAt ? new Date(task.doneAt) : undefined}
+        collectedAt={task?.collectedAt ? new Date(task.collectedAt) : undefined}
+        onDatesChange={handleDatesUpdate}
+      />
 
       {/* Links Relationships Modal */}
       {task && (

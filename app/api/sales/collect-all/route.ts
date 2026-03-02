@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdminAuth } from '@/lib/api-auth';
-import { getSalesForMonth, upsertSale, archiveSaleSnapshot } from '@/data-store/datastore';
+import { getSalesForMonth, upsertSale } from '@/data-store/datastore';
 import { addMonthToArchiveIndex } from '@/data-store/repositories/archive.repo';
 import { formatMonthKey } from '@/lib/utils/date-utils';
 import { SaleStatus, EntityType, LogEventType } from '@/types/enums'; // Added enums
@@ -63,11 +63,16 @@ export async function POST(request: NextRequest) {
                     ...sale,
                     isCollected: true,
                     collectedAt: endOfMonth,
-                    status: SaleStatus.COLLECTED
+                    status: SaleStatus.COLLECTED,
+                    archiveMetadata: {
+                        archivedAt: new Date().toISOString(),
+                        archiveMonth: monthKey
+                    }
                 };
 
-                // Archive snapshot
-                await archiveSaleSnapshot(updatedSale, monthKey);
+                // Add to index instead of snapshot
+                const { kvSAdd } = await import('@/data-store/kv');
+                await kvSAdd(`index:sales:collected:${monthKey}`, updatedSale.id);
 
                 // Save updated record
                 await upsertSale(updatedSale, { skipWorkflowEffects: true });

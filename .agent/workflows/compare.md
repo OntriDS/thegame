@@ -1,3 +1,7 @@
+---
+description: Compare items and provide structured analysis
+---
+
 # COMPARE COMMAND
 
 **Purpose:** Compare multiple items/options/approaches and provide a structured matrix or table comparison.

@@ -173,18 +173,121 @@ export async function stagePointsForPlayer(
 }
 
 /**
- * Vests points for a player (Pending -> Available)
- * Used when a task/sale/financial is Collected
+ * Completely withdraws points that were previously staged but have NOT yet been rewarded.
+ * Use when a task/record is deleted or unchecked before it was marked Collected.
  */
-export async function vestPointsForPlayer(
-  playerId: string,
+export async function withdrawStagedPointsFromPlayer(
+  characterId: string,
   points: Rewards['points'],
-  sourceId: string,
-  sourceType: string
+  sourceEntityId: string,
+  sourceEntityType: string
 ): Promise<void> {
   try {
-    const resolvedPlayerId = await resolveToPlayerIdMaybeCharacter(playerId);
-    console.log(`[vestPointsForPlayer] Vesting points for player ${resolvedPlayerId} from ${sourceType} ${sourceId}`);
+    const resolvedPlayerId = await resolveToPlayerIdMaybeCharacter(characterId);
+    console.log(`[withdrawStagedPointsFromPlayer] Withdrawing staged points for player ${resolvedPlayerId} from ${sourceEntityType} ${sourceEntityId}`);
+
+    const player = await getPlayerById(resolvedPlayerId);
+    if (!player) return;
+
+    const hasPoints = (points.xp || 0) > 0 || (points.rp || 0) > 0 ||
+      (points.fp || 0) > 0 || (points.hp || 0) > 0;
+
+    if (!hasPoints) return;
+
+    // Remove from pendingPoints (clamp to 0)
+    const updatedPlayer: Player = {
+      ...player,
+      pendingPoints: {
+        xp: Math.max(0, (player.pendingPoints?.xp || 0) - (points.xp || 0)),
+        rp: Math.max(0, (player.pendingPoints?.rp || 0) - (points.rp || 0)),
+        fp: Math.max(0, (player.pendingPoints?.fp || 0) - (points.fp || 0)),
+        hp: Math.max(0, (player.pendingPoints?.hp || 0) - (points.hp || 0))
+      },
+      updatedAt: new Date()
+    };
+
+    await upsertPlayer(updatedPlayer);
+    console.log(`[withdrawStagedPointsFromPlayer] ✅ Staged points withdrawn for player ${resolvedPlayerId}`);
+
+  } catch (error) {
+    console.error(`[withdrawStagedPointsFromPlayer] ❌ Failed to withdraw staged points:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Un-rewards points that were previously rewarded.
+ * This takes points OUT of the available balance and puts them BACK into pending/staged.
+ * Use this when a record transitions from Collected -> Done/Created.
+ */
+export async function unrewardPointsForPlayer(
+  characterId: string,
+  points: Rewards['points'],
+  sourceEntityId: string,
+  sourceEntityType: string
+): Promise<void> {
+  try {
+    const resolvedPlayerId = await resolveToPlayerIdMaybeCharacter(characterId);
+    console.log(`[unrewardPointsForPlayer] Un-rewarding points for player ${resolvedPlayerId} from ${sourceEntityType} ${sourceEntityId}`);
+
+    const player = await getPlayerById(resolvedPlayerId);
+    if (!player) return;
+
+    const hasPoints = (points.xp || 0) > 0 || (points.rp || 0) > 0 ||
+      (points.fp || 0) > 0 || (points.hp || 0) > 0;
+
+    if (!hasPoints) return;
+
+    // 1. Remove from points (Available)
+    // 2. Add back to pendingPoints (Staged)
+    const updatedPlayer: Player = {
+      ...player,
+      points: {
+        xp: Math.max(0, (player.points?.xp || 0) - (points.xp || 0)),
+        rp: Math.max(0, (player.points?.rp || 0) - (points.rp || 0)),
+        fp: Math.max(0, (player.points?.fp || 0) - (points.fp || 0)),
+        hp: Math.max(0, (player.points?.hp || 0) - (points.hp || 0))
+      },
+      pendingPoints: {
+        xp: (player.pendingPoints?.xp || 0) + (points.xp || 0),
+        rp: (player.pendingPoints?.rp || 0) + (points.rp || 0),
+        fp: (player.pendingPoints?.fp || 0) + (points.fp || 0),
+        hp: (player.pendingPoints?.hp || 0) + (points.hp || 0)
+      },
+      // Note: totalPoints are NOT reduced (they track lifetime earnings)
+      updatedAt: new Date()
+    };
+
+    await upsertPlayer(updatedPlayer);
+
+    // Log this action
+    console.log(`[unrewardPointsForPlayer] ✅ Points un-rewarded for player ${resolvedPlayerId}`);
+
+  } catch (error) {
+    console.error(`[unrewardPointsForPlayer] ❌ Failed to un-reward points:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Rewards previously staged points to a player (moves points from pending/staged to available balance).
+ * NOTE: This is an internal state update for the user. It does not create logs/transactions on its own.
+ * Use higher-level orchestrators for full transaction logic.
+ *
+ * @param characterId The player character ID
+ * @param points The points to reward (must be exactly what was previously staged/pending)
+ * @param sourceEntityId ID of the entity that triggered the reward
+ * @param sourceEntityType Type of the entity
+ */
+export async function rewardPointsToPlayer(
+  characterId: string,
+  points: Rewards['points'],
+  sourceEntityId: string,
+  sourceEntityType: string
+): Promise<void> {
+  try {
+    const resolvedPlayerId = await resolveToPlayerIdMaybeCharacter(characterId);
+    console.log(`[rewardPointsToPlayer] Rewarding points for player ${resolvedPlayerId} from ${sourceEntityType} ${sourceEntityId}`);
 
     const player = await getPlayerById(resolvedPlayerId);
     if (!player) return;
@@ -225,33 +328,33 @@ export async function vestPointsForPlayer(
     // Create Link and Log (Permanent Record)
     // We duplicate the awardPointsToPlayer logic here for full record keeping
     let linkType: LinkType;
-    let sourceEntityType: EntityType;
+    let resolvedSourceEntityType: EntityType;
 
-    switch (sourceType) {
-      case 'task': linkType = LinkType.TASK_PLAYER; sourceEntityType = EntityType.TASK; break;
-      case 'financial': linkType = LinkType.FINREC_PLAYER; sourceEntityType = EntityType.FINANCIAL; break;
-      case 'sale': linkType = LinkType.SALE_PLAYER; sourceEntityType = EntityType.SALE; break;
-      default: linkType = LinkType.TASK_PLAYER; sourceEntityType = EntityType.TASK; // Fallback
+    switch (sourceEntityType) {
+      case 'task': linkType = LinkType.TASK_PLAYER; resolvedSourceEntityType = EntityType.TASK; break;
+      case 'financial': linkType = LinkType.FINREC_PLAYER; resolvedSourceEntityType = EntityType.FINANCIAL; break;
+      case 'sale': linkType = LinkType.SALE_PLAYER; resolvedSourceEntityType = EntityType.SALE; break;
+      default: linkType = LinkType.TASK_PLAYER; resolvedSourceEntityType = EntityType.TASK; break;
     }
 
     const link = makeLink(
       linkType,
-      { type: sourceEntityType, id: sourceId },
+      { type: resolvedSourceEntityType, id: sourceEntityId },
       { type: EntityType.PLAYER, id: resolvedPlayerId },
       {
         points: points,
-        sourceType: sourceType,
-        vestedAt: new Date().toISOString()
+        sourceType: resolvedSourceEntityType,
+        rewardedAt: new Date().toISOString()
       }
     );
 
     await createLink(link);
-    await appendPlayerPointsLog(resolvedPlayerId, points, sourceId, sourceType);
+    await appendPlayerPointsLog(resolvedPlayerId, points, sourceEntityId, sourceEntityType);
 
-    console.log(`[vestPointsForPlayer] ✅ Points vested for player ${resolvedPlayerId}`);
+    console.log(`[rewardPointsToPlayer] ✅ Points rewarded for player ${resolvedPlayerId}`);
 
   } catch (error) {
-    console.error(`[vestPointsForPlayer] ❌ Failed to vest points:`, error);
+    console.error(`[rewardPointsToPlayer] ❌ Failed to reward points:`, error);
     throw error;
   }
 }

@@ -163,7 +163,7 @@ export function MonthlyHistoricalCashflows({ className, year, month }: MonthlyHi
               onClick={() => setShowCollectConfirm(true)}
             >
               <Archive className="w-3.5 h-3.5" />
-              Collect Financials
+              Claim Points & Settle
             </Button>
 
             <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(parseInt(value))}>
@@ -323,11 +323,11 @@ export function MonthlyHistoricalCashflows({ className, year, month }: MonthlyHi
       <Dialog open={showCollectConfirm} onOpenChange={setShowCollectConfirm}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Collect Financials</DialogTitle>
+            <DialogTitle>Claim Points & Settle Month</DialogTitle>
             <DialogDescription>
-              Are you sure you want to collect ALL done financials for <strong>{getMonthName(selectedMonth)} {selectedYear}</strong>?
+              Are you sure you want to settle ALL Done financials for <strong>{getMonthName(selectedMonth)} {selectedYear}</strong>?
               <br /><br />
-              This will create archive snapshots and mark them as collected.
+              This will vest points for all players involved and mark the records as Collected. The records were already snapshotted to the archive when they were marked Done.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -350,7 +350,7 @@ export function MonthlyHistoricalCashflows({ className, year, month }: MonthlyHi
                     setShowCollectConfirm(false);
                     // Use a simple toast or alert - simpler for now as we don't have Toast context handy in this file context check
                     // But we can fallback to window.alert or just refresh
-                    // alert(`Successfully collected ${data.collected} financial records!`);
+                    // alert(`Successfully settled ${data.collected} financial records!`);
                     // Reload financials
                     const financials = await ClientAPI.getFinancialRecords();
                     setAllFinancials(financials);

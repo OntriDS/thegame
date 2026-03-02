@@ -6,7 +6,6 @@ import {
   getArchivedFinancialRecordsByMonth,
   getArchivedItemsByMonth,
   getPlayerArchiveEventsByMonth,
-  archiveItemSnapshot,
 } from '@/data-store/datastore';
 import type { Item } from '@/types/entities';
 import { formatMonthKey } from '@/lib/utils/date-utils';
@@ -103,7 +102,10 @@ export async function POST(
     };
 
     const monthKey = formatMonthKey(soldAt);
-    await archiveItemSnapshot(normalizedSnapshot, monthKey);
+
+    // Add to index instead of snapshotting
+    const { kvSAdd } = await import('@/data-store/kv');
+    await kvSAdd(`index:items:collected:${monthKey}`, normalizedSnapshot.id);
 
     return NextResponse.json({ success: true });
   } catch (error) {

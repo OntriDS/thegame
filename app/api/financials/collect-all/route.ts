@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdminAuth } from '@/lib/api-auth';
-import { getFinancialsForMonth, upsertFinancial, archiveFinancialRecordSnapshot } from '@/data-store/datastore';
+import { getFinancialsForMonth, upsertFinancial } from '@/data-store/datastore';
 import { addMonthToArchiveIndex } from '@/data-store/repositories/archive.repo';
 import { formatMonthKey } from '@/lib/utils/date-utils';
-import { FinancialStatus, EntityType, LogEventType } from '@/types/enums';
-import { appendEntityLog } from '@/workflows/entities-logging';
+import { FinancialStatus } from '@/types/enums';
 
 export const dynamic = 'force-dynamic';
 
@@ -52,21 +51,12 @@ export async function POST(request: NextRequest) {
                 const updatedRecord = {
                     ...record,
                     isCollected: true,
-                    collectedAt: collectionDate,
+                    collectedAt: collectionDate, // Points claimed date
                     status: FinancialStatus.COLLECTED
                 };
 
-                // Archive snapshot
-                await archiveFinancialRecordSnapshot(updatedRecord, monthKey);
-
-                // Save updated record
-                await upsertFinancial(updatedRecord, { skipWorkflowEffects: true });
-
-                // Log COLLECTED event (since workflow effects are skipped)
-                await appendEntityLog(EntityType.FINANCIAL, updatedRecord.id, LogEventType.COLLECTED, {
-                    name: updatedRecord.name,
-                    collectedAt: updatedRecord.collectedAt
-                });
+                // The workflow handles Points Vesting and logging since we no longer skip workflow effects
+                await upsertFinancial(updatedRecord);
 
                 return { id: record.id, success: true };
             } catch (err: any) {

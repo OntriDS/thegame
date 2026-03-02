@@ -1,3 +1,7 @@
+---
+description: Force complete reading and prevent assumptions
+---
+
 # HONEST COMMAND
 
 **Purpose:** Force complete honesty and prevent lying, assumptions, and rushed implementations.

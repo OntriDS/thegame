@@ -26,7 +26,7 @@ import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
 import PlayerCharacterSelectorModal from './submodals/player-character-selector-submodal';
 // Side effects handled by parent component via API calls
 import { v4 as uuid } from 'uuid';
-import { Plus, Trash2, Package, DollarSign, Network, ListPlus, Wallet, Gift, User, Store } from 'lucide-react';
+import { Plus, Trash2, Package, DollarSign, Network, ListPlus, Wallet, Gift, User, Store, CalendarIcon } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import DeleteModal from './submodals/delete-submodal';
 import LinksRelationshipsModal from './submodals/links-relationships-submodal';
@@ -37,6 +37,7 @@ import PointsEmissarySubModal, { PointsData } from './submodals/points-emissary-
 import ConfirmationModal from './submodals/confirmation-submodal';
 import ArchiveCollectionConfirmationModal from './submodals/archive-collection-confirmation-submodal';
 import BoothSalesView from './submodals/booth-sales-view';
+import DatesSubmodal from './submodals/dates-submodal';
 
 interface SalesModalProps {
   sale?: Sale | null;
@@ -110,6 +111,7 @@ export default function SalesModal({
   } | null>(null);
   const [showItemsSubModal, setShowItemsSubModal] = useState(false);
   const [showPaymentsSubModal, setShowPaymentsSubModal] = useState(false);
+  const [showDatesModal, setShowDatesModal] = useState(false);
   const [paymentsModalMode, setPaymentsModalMode] = useState<'payments' | 'other-methods'>('payments');
   const [selectedItems, setSelectedItems] = useState<SaleItemLine[]>([]);
   const [recordedPayments, setRecordedPayments] = useState<SalePaymentLine[]>([]);
@@ -178,6 +180,18 @@ export default function SalesModal({
       setStatus(SaleStatus.CHARGED); // "CHARGED" (Is Charged)
       // Magic: When charged, automatically set as paid too
       setIsNotPaid(false);
+    }
+  };
+
+  const handleDatesUpdate = (newDates: { createdAt?: Date; doneAt?: Date; collectedAt?: Date }) => {
+    // We can mutate the core record object for saving if they overridden it.
+    if (sale) {
+      if (newDates.collectedAt !== undefined) {
+        sale.collectedAt = newDates.collectedAt ? new Date(newDates.collectedAt) : undefined;
+      }
+      if (newDates.doneAt !== undefined) {
+        sale.doneAt = newDates.doneAt ? new Date(newDates.doneAt) : undefined;
+      }
     }
   };
 
@@ -1915,6 +1929,14 @@ export default function SalesModal({
                   </Button>
                   <Button
                     variant="outline"
+                    onClick={() => setShowDatesModal(true)}
+                    className="h-8 text-xs"
+                  >
+                    <CalendarIcon className="w-3 h-3 mr-1" />
+                    Timeline
+                  </Button>
+                  <Button
+                    variant="outline"
                     onClick={() => setShowRelationshipsModal(true)}
                     className="h-8 text-xs"
                   >
@@ -2157,6 +2179,16 @@ export default function SalesModal({
           }
         }}
         onCancel={() => setShowDuplicateModal(false)}
+      />
+
+      {/* --- Dates & Activity Submodal --- */}
+      <DatesSubmodal
+        open={showDatesModal}
+        onOpenChange={setShowDatesModal}
+        createdAt={sale?.createdAt}
+        doneAt={sale?.doneAt ? new Date(sale.doneAt) : undefined}
+        collectedAt={sale?.collectedAt ? new Date(sale.collectedAt) : undefined}
+        onDatesChange={handleDatesUpdate}
       />
 
       {/* Archive Collection Confirmation Modal for status selector */}

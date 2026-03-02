@@ -83,15 +83,9 @@ import {
   getEntityLogMonths as workflowGetEntityLogMonths
 } from '@/workflows/entities-logging';
 import { getCurrentMonthKey, formatMonthKey, reviveDates } from '@/lib/utils/date-utils';
-import { kvMGet, kvSMembers } from './kv';
+import { kvMGet, kvSMembers, kvSRem } from './kv';
 import { buildDataKey, buildMonthIndexKey } from './keys';
 import type { PlayerArchiveRow } from '@/types/archive';
-import {
-  createTaskSnapshot,
-  createItemSnapshot,
-  createSaleSnapshot,
-  createFinancialSnapshot
-} from '@/workflows/snapshot-workflows';
 
 // TASKS
 export async function upsertTask(task: Task, options?: { skipWorkflowEffects?: boolean; skipLinkEffects?: boolean }): Promise<Task> {
@@ -169,7 +163,13 @@ export async function upsertTask(task: Task, options?: { skipWorkflowEffects?: b
 
 export async function getAllTasks(): Promise<Task[]> {
   const tasks = await repoGetAllTasks();
-  return reviveDates(tasks.filter(task => !task.isCollected));
+  return reviveDates(tasks);
+}
+
+// Added specifically for active boards that don't want completed/archived noise
+export async function getActiveTasks(): Promise<Task[]> {
+  const tasks = await repoGetAllTasks();
+  return reviveDates(tasks.filter(task => !task.isCollected && task.status !== 'Collected'));
 }
 
 // Phase 1 helpers: month-scoped, filter-after-load
@@ -324,9 +324,18 @@ export async function upsertFinancial(financial: FinancialRecord, options?: { sk
 
 export async function getAllFinancials(): Promise<FinancialRecord[]> {
   const financials = await repoGetAllFinancials();
+  // We DO NOT filter out isCollected (Analytics needs historical data)
+  // But we DO filter out PENDING records to prevent artificial inflation
+  return financials.filter(financial => financial.status !== 'PENDING');
+}
+
+// Added specifically for active boards that don't want pending noise
+export async function getActiveFinancials(): Promise<FinancialRecord[]> {
+  const financials = await repoGetAllFinancials();
   return financials.filter(financial =>
     !financial.isCollected &&
-    financial.status !== FinancialStatus.PENDING
+    financial.status !== 'Collected' &&
+    financial.status !== 'PENDING'
   );
 }
 
@@ -695,67 +704,45 @@ export async function getEntityLogMonths(entityType: EntityType): Promise<string
 // ARCHIVE ACCESSORS
 // ============================================================================
 
-export async function archiveTaskSnapshot(task: Task, mmyy: string): Promise<void> {
-  await createTaskSnapshot(task, task.collectedAt || new Date(), undefined);
-}
-
-export async function archiveItemSnapshot(item: Item, mmyy: string): Promise<void> {
-  // Use 1 as default quantity if not specified in context
-  await createItemSnapshot(item, 1, null, undefined);
-}
-
-export async function archiveSaleSnapshot(sale: Sale, mmyy: string): Promise<void> {
-  await createSaleSnapshot(sale, sale.collectedAt || new Date(), sale.playerCharacterId || undefined);
-}
-
-export async function archiveFinancialRecordSnapshot(
-  financial: FinancialRecord,
-  mmyy: string
-): Promise<void> {
-  await createFinancialSnapshot(financial, financial.collectedAt || new Date(), undefined);
-}
-
-export async function getArchivedTasksByMonth(mmyy: string): Promise<Task[]> {
-  const snapshots = await archiveRepo.getArchivedEntitiesByMonth<any>('task-snapshots', mmyy);
-  return snapshots.map(s => {
-    const data = s.data || s; // Support legacy raw entities
-    const task = reviveDates(data as Task);
-    return { ...task, _archiveId: s.id };
-  });
-}
-
-export async function getArchivedItemsByMonth(mmyy: string): Promise<Item[]> {
-  const snapshots = await archiveRepo.getArchivedEntitiesByMonth<any>('item-snapshots', mmyy, ['item']);
-  return snapshots.map(s => {
-    const data = s.data || s; // Support legacy raw entities
-    const item = reviveDates(data as Item);
-    // Inject snapshot ID for deletion (using a temporary property that won't break types at runtime)
-    return { ...item, _archiveId: s.id };
-  });
-}
 
 export async function deleteArchivedItem(id: string, mmyy: string): Promise<void> {
-  await archiveRepo.deleteEntityFromArchive('item-snapshots', mmyy, id);
+  await kvSRem(`index:items:collected:${mmyy}`, id);
 }
 
 export async function deleteArchivedTask(id: string, mmyy: string): Promise<void> {
-  await archiveRepo.deleteEntityFromArchive('task-snapshots', mmyy, id);
+  await kvSRem(`index:tasks:collected:${mmyy}`, id);
+}
+
+export async function getArchivedTasksByMonth(mmyy: string): Promise<Task[]> {
+  const ids = await kvSMembers(`index:tasks:collected:${mmyy}`);
+  if (!ids.length) return [];
+  const keys = ids.map(id => buildDataKey(EntityType.TASK, id));
+  const tasks = await kvMGet<Task>(keys);
+  return tasks.filter((t): t is Task => t !== null).map(t => reviveDates(t));
+}
+
+export async function getArchivedItemsByMonth(mmyy: string): Promise<Item[]> {
+  const ids = await kvSMembers(`index:items:collected:${mmyy}`);
+  if (!ids.length) return [];
+  const keys = ids.map(id => buildDataKey(EntityType.ITEM, id));
+  const items = await kvMGet<Item>(keys);
+  return items.filter((t): t is Item => t !== null).map(t => reviveDates(t));
 }
 
 export async function getArchivedSalesByMonth(mmyy: string): Promise<Sale[]> {
-  const snapshots = await archiveRepo.getArchivedEntitiesByMonth<any>('sale-snapshots', mmyy);
-  return snapshots.map(s => {
-    const data = s.data || s; // Support legacy raw entities
-    return reviveDates(data as Sale);
-  });
+  const ids = await kvSMembers(`index:sales:collected:${mmyy}`);
+  if (!ids.length) return [];
+  const keys = ids.map(id => buildDataKey(EntityType.SALE, id));
+  const sales = await kvMGet<Sale>(keys);
+  return sales.filter((t): t is Sale => t !== null).map(t => reviveDates(t));
 }
 
 export async function getArchivedFinancialRecordsByMonth(mmyy: string): Promise<FinancialRecord[]> {
-  const snapshots = await archiveRepo.getArchivedEntitiesByMonth<any>('financial-snapshots', mmyy);
-  return snapshots.map(s => {
-    const data = s.data || s; // Support legacy raw entities
-    return reviveDates(data as FinancialRecord);
-  });
+  const ids = await kvSMembers(`index:financials:collected:${mmyy}`);
+  if (!ids.length) return [];
+  const keys = ids.map(id => buildDataKey(EntityType.FINANCIAL, id));
+  const financials = await kvMGet<FinancialRecord>(keys);
+  return financials.filter((t): t is FinancialRecord => t !== null).map(t => reviveDates(t));
 }
 
 export async function getAvailableArchiveMonths(): Promise<string[]> {

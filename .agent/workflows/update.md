@@ -1,3 +1,7 @@
+---
+description: Update documentation and project status
+---
+
 # UPDATE COMMAND
 
 **Purpose:** Refresh the Wiki, README, Pages, and Components with the latest approved changes.

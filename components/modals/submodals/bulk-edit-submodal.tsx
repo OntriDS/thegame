@@ -16,7 +16,7 @@ import type { SubItemType } from '@/types/type-aliases';
 import { Item } from '@/types/entities';
 import { PRICE_STEP, DEFAULT_MIN_VALUE, MODAL_MAX_HEIGHT, MODAL_MAX_WIDTH } from '@/lib/constants/app-constants';
 import { MapPin, Package, Trash2 } from 'lucide-react';
-import MoveItemsModal from './move-items-submodal';
+
 import { getAllSiteNames } from '@/lib/utils/site-options-utils';
 import { ClientAPI } from '@/lib/client-api';
 import DeleteModal from './delete-submodal';
@@ -40,7 +40,7 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
   const [siteFilter, setSiteFilter] = useState<string>('all');
   const [subItemFilter, setSubItemFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [showMoveModal, setShowMoveModal] = useState(false);
+
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const fieldOptions = [
@@ -50,7 +50,7 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
     { value: 'collection', label: 'Collection' },
     { value: 'subItemType', label: 'Sub Type' },
     { value: 'size', label: 'Size' },
-            { value: EntityType.SITE, label: 'Site' }
+    { value: EntityType.SITE, label: 'Site' }
   ];
 
   // Load items when modal opens
@@ -87,16 +87,16 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
   const handleBulkEdit = async () => {
     // Check value and selected items
     if (!value.trim() || selectedItems.size === 0) return;
-    
+
     setIsProcessing(true);
-    
+
     try {
       const itemsToUpdate = items.filter(item => selectedItems.has(item.id));
-      
+
       // Update each selected item
       for (const item of itemsToUpdate) {
         let newValue: any = value;
-        
+
         // Convert value based on field type
         if (field === 'price' || field === 'unitCost') {
           newValue = parseFloat(value) || 0;
@@ -115,13 +115,13 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
           await ClientAPI.upsertItem(updatedItem);
         }
       }
-      
+
       // Dispatch events
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new Event('itemsUpdated'));
         window.dispatchEvent(new Event('linksUpdated'));
       }
-      
+
       onComplete();
       onOpenChange(false);
     } catch (error) {
@@ -146,7 +146,7 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
             </SelectContent>
           </Select>
         );
-      
+
       case 'collection':
         return (
           <Select value={value} onValueChange={setValue}>
@@ -161,7 +161,7 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
             </SelectContent>
           </Select>
         );
-      
+
       case 'subItemType':
         return (
           <Input
@@ -170,7 +170,7 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
             placeholder="Enter sub type"
           />
         );
-      
+
       case 'site':
         return (
           <Select value={value} onValueChange={setValue}>
@@ -186,7 +186,7 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
             </SelectContent>
           </Select>
         );
-      
+
       default:
         return (
           <NumericInput
@@ -220,18 +220,8 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
             Select fields to update and apply changes to multiple items at once.
           </DialogDescription>
           <div className="flex gap-2 mt-2">
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => setShowMoveModal(true)}
-              disabled={selectedItems.size === 0}
-              className="flex items-center gap-2"
-            >
-              <Package className="h-4 w-4" />
-              Move {selectedItems.size > 0 ? `(${selectedItems.size})` : ''}
-            </Button>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               size="sm"
               onClick={() => setShowDeleteModal(true)}
               disabled={selectedItems.size === 0}
@@ -242,7 +232,7 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
             </Button>
           </div>
         </DialogHeader>
-        
+
         <div className="space-y-4">
           {/* Field Selection */}
           <div className="grid grid-cols-2 gap-4">
@@ -261,13 +251,13 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="value">New Value</Label>
               {getFieldInput()}
             </div>
           </div>
-          
+
           {/* Item Selection */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
@@ -289,7 +279,7 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
                 <Label htmlFor="selectAll">Select All ({filteredItems.length})</Label>
               </div>
             </div>
-            
+
             {/* Filter Dropdowns */}
             <div className="grid grid-cols-4 gap-2">
               <Select value={collectionFilter} onValueChange={setCollectionFilter}>
@@ -303,7 +293,7 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
                   ))}
                 </SelectContent>
               </Select>
-              
+
               <Select value={siteFilter} onValueChange={setSiteFilter}>
                 <SelectTrigger className="h-8">
                   <SelectValue placeholder="Site" />
@@ -317,7 +307,7 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
                   ))}
                 </SelectContent>
               </Select>
-              
+
               <Select value={subItemFilter} onValueChange={setSubItemFilter}>
                 <SelectTrigger className="h-8">
                   <SelectValue placeholder="Sub Type" />
@@ -329,7 +319,7 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
                   ))}
                 </SelectContent>
               </Select>
-              
+
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="h-8">
                   <SelectValue placeholder="Status" />
@@ -342,7 +332,7 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="border rounded-lg max-h-60 overflow-y-auto">
               {filteredItems.map(item => (
                 <div key={item.id} className="flex items-center space-x-3 p-3 hover:bg-accent/50">
@@ -367,9 +357,9 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
               ))}
             </div>
           </div>
-           
+
           <div className="text-sm text-muted-foreground">
-            {selectedItems.size > 0 
+            {selectedItems.size > 0
               ? `This will update ${selectedItems.size} selected ${itemType} item${selectedItems.size > 1 ? 's' : ''}.`
               : `Please select at least one ${itemType} item to edit.`
             }
@@ -380,35 +370,18 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button 
-            onClick={handleBulkEdit} 
+          <Button
+            onClick={handleBulkEdit}
             disabled={!value.trim() || selectedItems.size === 0 || isProcessing}
           >
-            {isProcessing ? 'Processing...' : 
+            {isProcessing ? 'Processing...' :
               `Update ${selectedItems.size} Selected Item${selectedItems.size > 1 ? 's' : ''}`
             }
           </Button>
         </DialogFooter>
       </DialogContent>
-      
-      {/* MOVE Modal */}
-      <MoveItemsModal
-        open={showMoveModal}
-        onOpenChange={setShowMoveModal}
-        items={items.filter(item => selectedItems.has(item.id))}
-        sites={sites}
-        onComplete={async () => {
-          setShowMoveModal(false);
-          // Refresh items list and reset selection after move
-          const allItems = await ClientAPI.getItems();
-          const filteredItems = allItems.filter(item => item.type === itemType);
-          setItems(filteredItems);
-          setSelectedItems(new Set());
-          setSelectAll(false);
-          onComplete();
-        }}
-      />
-      
+
+
       {/* DELETE Modal */}
       <DeleteModal
         open={showDeleteModal}

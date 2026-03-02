@@ -1,9 +1,10 @@
 'use client';
-
 import { useEffect, useState, useRef, useCallback } from 'react';
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import DeleteModal from './submodals/delete-submodal';
 import LinksRelationshipsModal from './submodals/links-relationships-submodal';
+import DatesSubmodal from './submodals/dates-submodal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import NumericInput from '@/components/ui/numeric-input';
@@ -12,7 +13,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { ItemNameField } from '@/components/ui/item-name-field';
-import { Network, User } from 'lucide-react';
+import {
+  Plus,
+  Trash2,
+  Calendar,
+  Network,
+  CalendarIcon,
+  User
+} from 'lucide-react';
 import PlayerCharacterSelectorModal from './submodals/player-character-selector-submodal';
 import { FinancialRecord, Item, Site } from '@/types/entities';
 import {
@@ -160,6 +168,9 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
     onConfirm: () => void;
     onCancel: () => void;
   } | null>(null);
+
+  // Dates Submodal State
+  const [showDatesModal, setShowDatesModal] = useState(false);
 
   // Guard for one-time initialization of new records
   const didInitRef = useRef(false);
@@ -385,6 +396,16 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
       ...prev,
       station: newStation,
     }));
+  };
+
+  const handleDatesUpdate = (newDates: { createdAt?: Date; doneAt?: Date; collectedAt?: Date }) => {
+    // We can mutate the core record object for saving if they overridden it.
+    if (record) {
+      if (newDates.collectedAt !== undefined) {
+        // Financial records don't naturally have a doneAt, mostly collectedAt and createdAt.
+        record.collectedAt = newDates.collectedAt ? new Date(newDates.collectedAt) : undefined;
+      }
+    }
   };
 
   const handleItemTypeChange = (newItemType: ItemType | '') => {
@@ -982,29 +1003,47 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
                 </div>
               )}
             </div>
-          </div>
 
-          <DialogFooter className="flex items-center justify-between py-2 border-t px-6">
+            {/* ------------------------------------------- */}
+            {/* MODAL BOTTOM BAR (Destructive & Secondary Actions) */}
+            {/* ------------------------------------------- */}
+            {record && (
+              <div className="flex gap-2 w-full pt-4 border-t mt-4 mb-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowDeleteModal(true)}
+                  className="h-8 text-xs text-destructive hover:bg-destructive/10 border-destructive/20"
+                >
+                  Delete
+                </Button>
+
+                <div className="flex-1" />
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowDatesModal(true)}
+                  className="h-8 text-xs bg-secondary/50"
+                >
+                  <CalendarIcon className="w-3 h-3 mr-2" />
+                  Timeline
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowRelationshipsModal(true)}
+                  className="h-8 text-xs bg-secondary/50"
+                >
+                  <Network className="w-3 h-3 mr-2" />
+                  Links
+                </Button>
+              </div>
+            )}
+          </div>
+          <DialogFooter className="px-6 pb-6 pt-4 border-t">
             <div className="flex items-center gap-4">
-              {record && (
-                <>
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowDeleteModal(true)}
-                    className="h-8 text-xs text-muted-foreground hover:text-foreground"
-                  >
-                    Delete
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowRelationshipsModal(true)}
-                    className="h-8 text-xs"
-                  >
-                    <Network className="w-3 h-3 mr-1" />
-                    Links
-                  </Button>
-                </>
-              )}
               <Button
                 variant="outline"
                 onClick={() => setShowPlayerCharacterSelector(true)}
@@ -1104,6 +1143,15 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
         onOpenChange={setShowPlayerCharacterSelector}
         onSelect={setPlayerCharacterId}
         currentPlayerCharacterId={playerCharacterId}
+      />
+
+      {/* --- Dates & Activity Submodal --- */}
+      <DatesSubmodal
+        open={showDatesModal}
+        onOpenChange={setShowDatesModal}
+        createdAt={record?.createdAt}
+        collectedAt={record?.collectedAt ? new Date(record.collectedAt) : undefined}
+        onDatesChange={handleDatesUpdate}
       />
 
       {/* Archive Collection Confirmation Modal */}
