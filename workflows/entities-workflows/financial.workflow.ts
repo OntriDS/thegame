@@ -159,15 +159,7 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
 
         const { buildArchiveMonthsKey } = await import('@/data-store/keys');
         await kvSAdd(buildArchiveMonthsKey(), monthKey);
-
-        await upsertFinancial({
-          ...financial,
-          archiveMetadata: {
-            ...financial.archiveMetadata,
-            archivedAt: new Date().toISOString(),
-            archiveMonth: monthKey
-          }
-        }, { skipWorkflowEffects: true, skipLinkEffects: true });
+        // The financial record's existence in the index and its inherent dates are the single source of truth.
 
         await markEffect(archiveIndexEffectKey);
         console.log(`[onFinancialUpsert] ✅ Added new done financial ${financial.name} to index ${monthKey} without snapshotting`);
@@ -256,14 +248,7 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
       const { buildArchiveMonthsKey } = await import('@/data-store/keys');
       await kvSAdd(buildArchiveMonthsKey(), monthKey);
 
-      await upsertFinancial({
-        ...financial,
-        archiveMetadata: {
-          ...financial.archiveMetadata,
-          archivedAt: new Date().toISOString(),
-          archiveMonth: monthKey
-        }
-      }, { skipWorkflowEffects: true, skipLinkEffects: true });
+      // The financial record's existence in the index and its inherent dates are the single source of truth.
 
       await markEffect(archiveIndexEffectKey);
       console.log(`[onFinancialUpsert] ✅ Added done financial ${financial.name} to index ${monthKey} without snapshotting`);
@@ -393,8 +378,6 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
     const wasArchived = previousFinancial.status === FinancialStatus.COLLECTED || previousFinancial.isCollected || (!previousFinancial.isNotPaid && !previousFinancial.isNotCharged);
 
     const getArchiveMonth = (f: FinancialRecord) => {
-      if (f.archiveMetadata?.archiveMonth) return f.archiveMetadata.archiveMonth;
-
       let snapshotDate = new Date(); // fallback
       const referenceDate = new Date(f.year, f.month - 1, 1);
       if (isValid(referenceDate)) {
@@ -426,15 +409,7 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
         await kvSAdd(buildArchiveMonthsKey(), newMonth);
         console.log(`[onFinancialUpsert] 📦 Financial ${financial.id} secured in archive index: ${newMonth}`);
 
-        // Update provenance blindly (repoUpsert doesn't trigger workflows, but we use upsertFinancial with skips)
-        await upsertFinancial({
-          ...financial,
-          archiveMetadata: {
-            ...financial.archiveMetadata,
-            archivedAt: new Date().toISOString(),
-            archiveMonth: newMonth
-          }
-        }, { skipWorkflowEffects: true, skipLinkEffects: true });
+        // The financial record's existence in the index and its inherent dates are the single source of truth.
       }
     }
   }

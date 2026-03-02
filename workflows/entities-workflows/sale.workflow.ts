@@ -268,8 +268,6 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
   const wasArchived = previousSale && (previousSale.status === SaleStatus.COLLECTED || previousSale.isCollected);
 
   const getArchiveMonth = (s: Sale) => {
-    // Check archive metadata first as ultimate truth, otherwise fallback to date parsing
-    if (s.archiveMetadata?.archiveMonth) return s.archiveMetadata.archiveMonth;
     // User requirement: collectedAt should be the last day of the sale's month
     const sDate = s.saleDate ? new Date(s.saleDate) : (s.createdAt ? new Date(s.createdAt) : new Date());
     const date = s.collectedAt ?? calculateClosingDate(sDate);
@@ -297,15 +295,7 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
       await kvSAdd(buildArchiveMonthsKey(), newMonth);
       console.log(`[onSaleUpsert] 📦 Sale ${sale.id} secured in archive index: ${newMonth}`);
 
-      // Update provenance blindly (repoUpsertSale doesn't trigger workflows, but we use upsertSale with skipWorkflowEffects)
-      await upsertSale({
-        ...sale,
-        archiveMetadata: {
-          ...sale.archiveMetadata,
-          archivedAt: new Date().toISOString(),
-          archiveMonth: newMonth
-        }
-      }, { skipWorkflowEffects: true, skipLinkEffects: true });
+      // The sale record's existence in the index and its inherent dates are the single source of truth.
     }
   }
 }

@@ -106,12 +106,12 @@ function renderTaskHierarchy(tasks: EnrichedTask[], onSelectTask?: (task: Task) 
                                             <span>•</span>
                                             <span>Collected: {
                                                 !task || !(task as any).collectedAt
-                                                  ? 'Unknown'
-                                                  : (() => {
-                                                      const d = new Date((task as any).collectedAt as any);
-                                                      return isNaN(d.getTime()) ? 'Unknown' : format(d, 'PP p');
+                                                    ? 'Unknown'
+                                                    : (() => {
+                                                        const d = new Date((task as any).collectedAt as any);
+                                                        return isNaN(d.getTime()) ? 'Unknown' : format(d, 'PP p');
                                                     })()
-                                              }</span>
+                                            }</span>
                                         </div>
                                     </div>
                                     <div className="text-xs font-mono bg-muted px-2 py-1 rounded">
@@ -123,62 +123,20 @@ function renderTaskHierarchy(tasks: EnrichedTask[], onSelectTask?: (task: Task) 
                     })}
 
                     {/* Grouped tasks with parent headers */}
-                    {Array.from(groupedTasks.entries()).map(([parentId, childTasks]) => {
-                        const parentTask = childTasks[0]; // First child represents the parent
-
-                        if (!parentTask) return null;
-
-                        const Icon = TASK_TYPE_ICONS[parentTask.type as TaskType] || TASK_TYPE_ICONS[TaskType.ASSIGNMENT];
-                        const parentCollected = parentTask.isCollected;
-
+                    {Array.from(groupedTasks.entries()).map(([parentName, childTasks]) => {
                         return (
-                            <div key={parentId} className="space-y-2">
-                                {/* Parent task */}
-                                <Card
-                                    className={`hover:bg-muted/50 transition-colors cursor-pointer border-l-4 ${
-                                        parentCollected ? 'border-l-blue-500' : 'border-l-green-500'
-                                    }`}
-                                    onClick={() => onSelectTask?.(parentTask)}
-                                >
-                                    <CardContent className="p-3 flex items-center gap-3">
-                                        <Icon className="h-4 w-4 text-muted-foreground" />
-                                        <div className="flex-1 min-w-0">
-                                            <div className="font-medium truncate">{(parentTask as any)?.name?.toString()?.trim() || '(Untitled Task)'}</div>
-                                            <div className="text-xs text-muted-foreground flex gap-2">
-                                                <span>{(parentTask as any)?.station?.toString()?.trim() || 'Unknown'}</span>
-                                                <span>•</span>
-                                                <span>Collected: {
-                                                    !parentTask || !(parentTask as any).collectedAt
-                                                      ? 'Unknown'
-                                                      : (() => {
-                                                          const d = new Date((parentTask as any).collectedAt as any);
-                                                          return isNaN(d.getTime()) ? 'Unknown' : format(d, 'PP p');
-                                                        })()
-                                                  }</span>
-                                                {parentTask._hasCollectedParent && (
-                                                    <span className="text-blue-600">• Parent Collected</span>
-                                                )}
-                                            </div>
-                                        </div>
-                                        <div className="text-xs font-mono bg-muted px-2 py-1 rounded">
-                                            {parentTask.status}
-                                        </div>
-                                    </CardContent>
-                                </Card>
-
-                                {/* Parent trail */}
-                                {parentTask._parentTrail && parentTask._parentTrail.length > 0 && (
-                                    <div className="ml-8 mb-2 text-xs text-muted-foreground">
-                                        <FolderOpen className="h-3 w-3 inline mr-1" />
-                                        <span>{parentTask._parentTrail.join(' → ')}</span>
-                                    </div>
-                                )}
+                            <div key={parentName} className="space-y-2 mb-4">
+                                {/* True Parent Header */}
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground font-medium px-2 py-1 bg-muted/30 rounded-md border border-muted">
+                                    <FolderOpen className="h-4 w-4" />
+                                    <span>{parentName}</span>
+                                </div>
 
                                 {/* Child tasks */}
                                 <div className="ml-4 space-y-2">
                                     {childTasks.map((task, index) => {
                                         const Icon = TASK_TYPE_ICONS[task.type as TaskType] || TASK_TYPE_ICONS[TaskType.ASSIGNMENT];
-                                        const isFirstChild = index === 1;
+                                        const isFirstChild = index === 0;
 
                                         return (
                                             <Card

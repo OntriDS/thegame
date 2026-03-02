@@ -257,14 +257,7 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
       const collectedIndexKey = `index:items:collected:${monthKey}`;
       await kvSAdd(collectedIndexKey, item.id);
 
-      await upsertItem({
-        ...item,
-        archiveMetadata: {
-          ...item.archiveMetadata,
-          archivedAt: new Date().toISOString(),
-          archiveMonth: monthKey
-        }
-      }, { skipWorkflowEffects: true });
+      // The item's existence in the index and its inherent dates are the single source of truth.
 
       await markEffect(archiveIndexEffectKey);
       console.log(`[onItemUpsert] ✅ Item ${item.name} COLLECTED - added to archive index ${monthKey}`);

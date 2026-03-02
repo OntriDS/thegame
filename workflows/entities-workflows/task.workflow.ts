@@ -351,8 +351,6 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
   const wasArchived = previousTask && (previousTask.status === TaskStatus.DONE || previousTask.status === TaskStatus.COLLECTED);
 
   const getTaskArchiveMonth = (t: Task) => {
-    // Check archive metadata first as ultimate truth, otherwise fallback to date parsing
-    if (t.archiveMetadata?.archiveMonth) return t.archiveMetadata.archiveMonth;
     const date = t.status === TaskStatus.COLLECTED ? (t.collectedAt || t.doneAt || t.createdAt) : (t.doneAt || t.createdAt);
     return date ? formatMonthKey(calculateClosingDate(date)) : null;
   };
@@ -378,15 +376,7 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
       await kvSAdd(buildArchiveMonthsKey(), newMonth);
       console.log(`[onTaskUpsert] 📦 Task ${task.name} secured in archive index: ${newMonth}`);
 
-      // Update provenance blindly (repoUpsertTask ignores workflows so no infinite loop)
-      await repoUpsertTask({
-        ...task,
-        archiveMetadata: {
-          ...task.archiveMetadata,
-          archivedAt: new Date().toISOString(),
-          archiveMonth: newMonth
-        }
-      });
+      // The task's existence in the index and its inherent dates are the single source of truth.
     }
   }
 }
