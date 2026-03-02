@@ -1382,50 +1382,45 @@ export default function TaskModal({
         </div>
 
         {/* ------------------------------------------- */}
-        {/* MODAL BOTTOM BAR (Destructive & Secondary Actions) */}
+        {/* MODAL BOTTOM BAR */}
         {/* ------------------------------------------- */}
-        {task && (
-          <div className="flex gap-2 w-full pt-4 border-t mt-4 mb-2 px-6">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setShowDeleteModal(true)}
-              className="h-8 text-xs text-destructive hover:bg-destructive/10 border-destructive/20"
-            >
-              Delete
-            </Button>
+        <DialogFooter className="flex items-center justify-between w-full pt-4 border-t px-6 pb-6">
+          <div className="flex items-center gap-2 flex-wrap">
+            {task && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowDeleteModal(true)}
+                className="h-8 text-xs text-destructive hover:bg-destructive/10 border-destructive/20 mr-4"
+              >
+                Delete
+              </Button>
+            )}
 
-            <div className="flex-1" />
-
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setShowDatesModal(true)}
-              className="h-8 text-xs bg-secondary/50"
-            >
-              <CalendarIcon className="w-3 h-3 mr-2" />
-              Timeline
-            </Button>
-
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setShowRelationshipsModal(true)}
-              className="h-8 text-xs bg-secondary/50"
-            >
-              <Network className="w-3 h-3 mr-2" />
-              Links
-            </Button>
-          </div>
-        )}
-
-        <DialogFooter className="flex items-center justify-between pt-4 border-t px-6 pb-6">
-          <div className="flex items-center gap-4">
             {task && (
               <>
-                {/* Original Delete and Links buttons removed from here */}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowDatesModal(true)}
+                  className="h-8 text-xs bg-secondary/50"
+                >
+                  <CalendarIcon className="w-3 h-3 mr-2" />
+                  Timeline
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowRelationshipsModal(true)}
+                  className="h-8 text-xs bg-secondary/50"
+                >
+                  <Network className="w-3 h-3 mr-2" />
+                  Links
+                </Button>
               </>
             )}
+
             <Button
               variant="outline"
               onClick={() => setShowPlayerCharacterSelector(true)}

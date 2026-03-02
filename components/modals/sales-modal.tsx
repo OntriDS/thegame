@@ -1916,17 +1916,19 @@ export default function SalesModal({
         )}
 
         {type !== SaleType.BOOTH && (
-          <DialogFooter className="flex items-center justify-between py-2 border-t px-6">
-            <div className="flex items-center gap-4">
+          <DialogFooter className="flex items-center justify-between flex-wrap gap-4 py-4 border-t px-6">
+            <div className="flex items-center gap-2 flex-wrap">
+              {sale && (
+                <Button
+                  variant="outline"
+                  onClick={() => setShowDeleteModal(true)}
+                  className="h-8 text-xs text-destructive hover:bg-destructive/10 border-destructive/20 mr-4"
+                >
+                  Delete
+                </Button>
+              )}
               {sale && (
                 <>
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowDeleteModal(true)}
-                    className="h-8 text-xs text-muted-foreground hover:text-foreground"
-                  >
-                    Delete
-                  </Button>
                   <Button
                     variant="outline"
                     onClick={() => setShowDatesModal(true)}

@@ -1198,38 +1198,34 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
             )}
           </div>
 
-          <DialogFooter className="flex justify-between items-center pt-4 border-t">
-            <div className="flex gap-2">
+          <DialogFooter className="flex justify-between flex-wrap gap-4 items-center pt-4 border-t">
+            <div className="flex gap-2 flex-wrap items-center">
               {item && ( // Show DELETE/VIEW LINKS/MOVE for existing items
                 <>
                   <Button
                     variant="outline"
-                    size="sm"
                     onClick={() => setShowDeleteModal(true)}
-                    className="flex items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 h-8 text-xs"
+                    className="h-8 text-xs text-destructive hover:bg-destructive/10 border-destructive/20 mr-4"
                   >
-                    <Trash2 className="h-3 w-3" />
                     Delete
                   </Button>
 
                   <Button
                     variant="outline"
-                    size="sm"
-                    onClick={() => setShowLinksModal(true)}
-                    className="h-8 text-xs"
-                  >
-                    <Network className="w-3 h-3 mr-1" />
-                    Links
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
                     onClick={() => setShowDatesModal(true)}
                     className="h-8 text-xs bg-secondary/50"
                   >
                     <CalendarIcon className="w-3 h-3 mr-2" />
                     Timeline
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowLinksModal(true)}
+                    className="h-8 text-xs bg-secondary/50"
+                  >
+                    <Network className="w-3 h-3 mr-2" />
+                    Links
                   </Button>
                 </>
               )}
@@ -1237,11 +1233,10 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
               {/* Owner button - available for both creating and editing */}
               <Button
                 variant="outline"
-                size="sm"
                 onClick={() => setShowOwnerModal(true)}
-                className="flex items-center gap-2 h-8 text-xs"
+                className="h-8 text-xs"
               >
-                <User className="h-3 w-3" />
+                <User className="w-3 h-3 mr-1" />
                 {ownerCharacterId ? `Owner: ${ownerCharacterName}` : 'Set Owner'}
               </Button>
             </div>
