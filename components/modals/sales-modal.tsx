@@ -112,6 +112,8 @@ export default function SalesModal({
   const [showItemsSubModal, setShowItemsSubModal] = useState(false);
   const [showPaymentsSubModal, setShowPaymentsSubModal] = useState(false);
   const [showDatesModal, setShowDatesModal] = useState(false);
+  const [localDoneAt, setLocalDoneAt] = useState<Date | undefined>(sale?.doneAt ? new Date(sale.doneAt) : undefined);
+  const [localCollectedAt, setLocalCollectedAt] = useState<Date | undefined>(sale?.collectedAt ? new Date(sale.collectedAt) : undefined);
   const [paymentsModalMode, setPaymentsModalMode] = useState<'payments' | 'other-methods'>('payments');
   const [selectedItems, setSelectedItems] = useState<SaleItemLine[]>([]);
   const [recordedPayments, setRecordedPayments] = useState<SalePaymentLine[]>([]);
@@ -184,14 +186,11 @@ export default function SalesModal({
   };
 
   const handleDatesUpdate = (newDates: { createdAt?: Date; doneAt?: Date; collectedAt?: Date }) => {
-    // We can mutate the core record object for saving if they overridden it.
-    if (sale) {
-      if (newDates.collectedAt !== undefined) {
-        sale.collectedAt = newDates.collectedAt ? new Date(newDates.collectedAt) : undefined;
-      }
-      if (newDates.doneAt !== undefined) {
-        sale.doneAt = newDates.doneAt ? new Date(newDates.doneAt) : undefined;
-      }
+    if (newDates.collectedAt !== undefined) {
+      setLocalCollectedAt(newDates.collectedAt);
+    }
+    if (newDates.doneAt !== undefined) {
+      setLocalDoneAt(newDates.doneAt);
     }
   };
 
@@ -245,6 +244,8 @@ export default function SalesModal({
       setIsNotPaid(sale.isNotPaid || false);
       setIsNotCharged(sale.isNotCharged || false);
       setIsCollected(sale.isCollected || false);
+      setLocalDoneAt(sale.doneAt ? new Date(sale.doneAt) : undefined);
+      setLocalCollectedAt(sale.collectedAt ? new Date(sale.collectedAt) : undefined);
       setOverallDiscount(sale.overallDiscount || {});
       setLines(sale.lines || []);
       setPayments(sale.payments || []);
@@ -297,6 +298,8 @@ export default function SalesModal({
       didInitRef.current = true;
       // Generate new ID for new sale session
       draftId.current = uuid();
+      setLocalDoneAt(undefined);
+      setLocalCollectedAt(undefined);
     }
   }, [sale]);
 
@@ -691,7 +694,7 @@ export default function SalesModal({
         totalRevenue,
       },
       postedAt: sale?.postedAt,
-      doneAt: sale?.doneAt,
+      doneAt: localDoneAt,
       cancelledAt: sale?.cancelledAt,
       requiresReconciliation: sale?.requiresReconciliation,
       reconciliationTaskId: sale?.reconciliationTaskId,
@@ -701,6 +704,7 @@ export default function SalesModal({
       createdAt: sale?.createdAt || new Date(),
       updatedAt: new Date(),
       isCollected: status === SaleStatus.COLLECTED || isCollected,
+      collectedAt: localCollectedAt,
       links: sale?.links || [],  // NEW: Initialize links for Rosetta Stone
     };
 
@@ -2188,8 +2192,8 @@ export default function SalesModal({
         open={showDatesModal}
         onOpenChange={setShowDatesModal}
         createdAt={sale?.createdAt}
-        doneAt={sale?.doneAt ? new Date(sale.doneAt) : undefined}
-        collectedAt={sale?.collectedAt ? new Date(sale.collectedAt) : undefined}
+        doneAt={localDoneAt}
+        collectedAt={localCollectedAt}
         onDatesChange={handleDatesUpdate}
       />
 

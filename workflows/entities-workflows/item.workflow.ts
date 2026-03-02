@@ -277,6 +277,89 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
       await updateEntityLogField(EntityType.ITEM, item.id, field, (previousItem as any)[field], (item as any)[field]);
     }
   }
+
+  // ==========================================
+  // REACTIVE ARCHIVE INDEXING (Date changes)
+  // Ensures entity is in the correct monthly index if its date changes
+  // ==========================================
+  if (previousItem) {
+    // Only items that are SOLD or COLLECTED should be in an archive index
+    const isArchivable = item.status === ItemStatus.SOLD || item.status === ItemStatus.COLLECTED || !!item.isCollected;
+
+    if (isArchivable) {
+      // For items, we look at collectedAt, then soldAt, then createdAt to determine their target month
+      let currentTargetDate: Date;
+      if (item.collectedAt) {
+        currentTargetDate = new Date(item.collectedAt);
+      } else if (item.soldAt) {
+        currentTargetDate = new Date(item.soldAt);
+      } else if (item.createdAt) {
+        currentTargetDate = new Date(item.createdAt);
+      } else {
+        currentTargetDate = new Date();
+      }
+
+      const currentTargetMonth = formatMonthKey(calculateClosingDate(currentTargetDate));
+
+      let prevTargetMonth: string | null = null;
+      if (previousItem.status === ItemStatus.SOLD || previousItem.status === ItemStatus.COLLECTED || !!previousItem.isCollected) {
+        let prevTargetDate: Date;
+        if (previousItem.collectedAt) {
+          prevTargetDate = new Date(previousItem.collectedAt);
+        } else if (previousItem.soldAt) {
+          prevTargetDate = new Date(previousItem.soldAt);
+        } else if (previousItem.createdAt) {
+          prevTargetDate = new Date(previousItem.createdAt);
+        } else {
+          prevTargetDate = new Date();
+        }
+        prevTargetMonth = formatMonthKey(calculateClosingDate(prevTargetDate));
+      }
+
+      // If the target month has changed, or it wasn't archivable before
+      if (currentTargetMonth !== prevTargetMonth) {
+        const { kvSAdd, kvSRem } = await import('@/data-store/kv');
+        const { buildArchiveMonthsKey } = await import('@/data-store/keys');
+
+        // Remove from old index if it was there
+        if (prevTargetMonth) {
+          const oldIndexKey = `index:items:collected:${prevTargetMonth}`;
+          await kvSRem(oldIndexKey, item.id);
+          console.log(`[onItemUpsert] 📦 Reactive Archive: Removed item ${item.name} from old index ${prevTargetMonth}`);
+        }
+
+        // Add to new index
+        const newIndexKey = `index:items:collected:${currentTargetMonth}`;
+        await kvSAdd(newIndexKey, item.id);
+
+        // Ensure month is registered in active months set
+        await kvSAdd(buildArchiveMonthsKey(), currentTargetMonth);
+
+        console.log(`[onItemUpsert] 📦 Reactive Archive: Added item ${item.name} to new index ${currentTargetMonth} based on date change`);
+      }
+    } else {
+      // If it WAS archivable but now IS NOT, remove it from its old index
+      const wasArchivable = previousItem.status === ItemStatus.SOLD || previousItem.status === ItemStatus.COLLECTED || !!previousItem.isCollected;
+      if (wasArchivable) {
+        let prevTargetDate: Date;
+        if (previousItem.collectedAt) {
+          prevTargetDate = new Date(previousItem.collectedAt);
+        } else if (previousItem.soldAt) {
+          prevTargetDate = new Date(previousItem.soldAt);
+        } else if (previousItem.createdAt) {
+          prevTargetDate = new Date(previousItem.createdAt);
+        } else {
+          prevTargetDate = new Date();
+        }
+        const prevTargetMonth = formatMonthKey(calculateClosingDate(prevTargetDate));
+
+        const { kvSRem } = await import('@/data-store/kv');
+        const oldIndexKey = `index:items:collected:${prevTargetMonth}`;
+        await kvSRem(oldIndexKey, item.id);
+        console.log(`[onItemUpsert] 📦 Reactive Archive: Removed item ${item.name} from index ${prevTargetMonth} because it is no longer sold/collected`);
+      }
+    }
+  }
 }
 
 /**

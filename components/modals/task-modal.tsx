@@ -115,6 +115,8 @@ export default function TaskModal({
   const [stationCategory, setStationCategory] = useState<string>(getInitialStationCategory());
   const [progress, setProgress] = useState(0);
   const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
+  const [localDoneAt, setLocalDoneAt] = useState<Date | undefined>(task?.doneAt ? new Date(task.doneAt) : undefined);
+  const [localCollectedAt, setLocalCollectedAt] = useState<Date | undefined>(task?.collectedAt ? new Date(task.collectedAt) : undefined);
   const [scheduledStartDate, setScheduledStartDate] = useState<Date | undefined>(undefined);
   const [scheduledStartTime, setScheduledStartTime] = useState<string>('');
   const [scheduledEndDate, setScheduledEndDate] = useState<Date | undefined>(undefined);
@@ -262,6 +264,8 @@ export default function TaskModal({
     setStationCategory(computeStationCategoryValue(existingTask.station));
     setProgress(existingTask.progress);
     setDueDate(existingTask.dueDate ? new Date(existingTask.dueDate) : undefined);
+    setLocalDoneAt(existingTask.doneAt ? new Date(existingTask.doneAt) : undefined);
+    setLocalCollectedAt(existingTask.collectedAt ? new Date(existingTask.collectedAt) : undefined);
 
     if (existingTask.scheduledStart) {
       const start = new Date(existingTask.scheduledStart);
@@ -349,6 +353,8 @@ export default function TaskModal({
     setStationCategory(computeStationCategoryValue(lastStation));
     setProgress(0);
     setDueDate(undefined);
+    setLocalDoneAt(undefined);
+    setLocalCollectedAt(undefined);
     setScheduledStartDate(undefined);
     setScheduledStartTime('');
     setScheduledEndDate(undefined);
@@ -470,6 +476,8 @@ export default function TaskModal({
       station,
       progress,
       dueDate,
+      doneAt: localDoneAt,
+      collectedAt: localCollectedAt,
       scheduledStart: finalScheduledStart,
       scheduledEnd: finalScheduledEnd,
       frequencyConfig: (type === TaskType.RECURRENT_GROUP || type === TaskType.RECURRENT_TEMPLATE) ? frequencyConfig : undefined,
@@ -644,21 +652,12 @@ export default function TaskModal({
   };
 
   const handleDatesUpdate = (newDates: { createdAt?: Date; doneAt?: Date; collectedAt?: Date }) => {
-    // Only update our local state if they actually picked dates. 
-    // The overarching Task entity has actual createdAt handling elsewhere if undefined
     if (newDates.doneAt !== undefined) {
-      // NOTE: task-modal.tsx doesn't natively have doneAt state in this form currently,
-      // it is usually handled in task.workflow.ts upon transition.
-      // But we can mutate the core task object for saving if they overridden it.
-      if (task) {
-        task.doneAt = newDates.doneAt ? new Date(newDates.doneAt) : undefined;
-      }
+      setLocalDoneAt(newDates.doneAt);
     }
 
     if (newDates.collectedAt !== undefined) {
-      if (task) {
-        task.collectedAt = newDates.collectedAt ? new Date(newDates.collectedAt) : undefined;
-      }
+      setLocalCollectedAt(newDates.collectedAt);
     }
   };
 
@@ -1547,8 +1546,8 @@ export default function TaskModal({
         open={showDatesModal}
         onOpenChange={setShowDatesModal}
         createdAt={task?.createdAt}
-        doneAt={task?.doneAt ? new Date(task.doneAt) : undefined}
-        collectedAt={task?.collectedAt ? new Date(task.collectedAt) : undefined}
+        doneAt={localDoneAt}
+        collectedAt={localCollectedAt}
         onDatesChange={handleDatesUpdate}
       />
 

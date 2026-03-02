@@ -105,6 +105,8 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
   const [quickSellLoading, setQuickSellLoading] = useState(false);
   const [showSoldConfirmation, setShowSoldConfirmation] = useState(false);
   const [pendingSoldStatus, setPendingSoldStatus] = useState(false);
+  const [localSoldAt, setLocalSoldAt] = useState<Date | undefined>(item?.soldAt ? new Date(item.soldAt) : undefined);
+  const [localCollectedAt, setLocalCollectedAt] = useState<Date | undefined>(item?.collectedAt ? new Date(item.collectedAt) : undefined);
 
   // Item selection states for compound field
   const [isNewItem, setIsNewItem] = useState(true);
@@ -524,32 +526,13 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
     doneAt?: Date;
     collectedAt?: Date;
   }) => {
-    if (!currentEditingItem) return;
-
-    // Applying to currentEditingItem since items use standard dates internally too:
-    // doneAt (or equivalent like soldAt, but items use createdAt to track genesis, and updatedAt)
-    // Actually, items have: createdAt, updatedAt (and in item snapshot it uses soldAt for archive)
-    // We'll update the base fields and allow backend workflows to track sold timestamps if needed
-    const updated = {
-      ...currentEditingItem,
-      createdAt: updates.createdAt || currentEditingItem.createdAt,
-    };
-    await ClientAPI.upsertItem(updated as Item);
-
-    // Refresh local state if editing existing
-    if (selectedItemId) {
-      const refreshed = await ClientAPI.getItemById(selectedItemId);
-      if (refreshed) {
-        setExistingItems(prev => {
-          const idx = prev.findIndex(i => i.id === selectedItemId);
-          if (idx === -1) return prev;
-          const next = [...prev];
-          next[idx] = refreshed;
-          return next;
-        });
-      }
+    if (updates.doneAt !== undefined) {
+      setLocalSoldAt(updates.doneAt);
     }
-  }, [currentEditingItem, selectedItemId]);
+    if (updates.collectedAt !== undefined) {
+      setLocalCollectedAt(updates.collectedAt);
+    }
+  }, []);
 
   // Save form data when modal closes
   useEffect(() => {
@@ -665,6 +648,8 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
       draftId.current = uuid();
       const lastStation = getLastUsedStation();
       setStation(lastStation);
+      setLocalSoldAt(undefined);
+      setLocalCollectedAt(undefined);
       // Other fields remain as-is or are loaded from persisted draft via loadFormDataFromStorage
     }
   }, [item, defaultItemType, getLastUsedStation]);
@@ -755,6 +740,8 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         setTargetAmount(selectedItem.targetAmount?.toString() || '');
         // Get first stock point site or default
         setSite(selectedItem.stock?.[0]?.siteId || 'Home');
+        setLocalSoldAt(selectedItem.soldAt ? new Date(selectedItem.soldAt) : undefined);
+        setLocalCollectedAt(selectedItem.collectedAt ? new Date(selectedItem.collectedAt) : undefined);
         // Handle file references
         setOriginalFiles(Array.isArray(selectedItem.originalFiles) ? selectedItem.originalFiles.map(f => f.url || '').join(', ') : '');
         setAccessoryFiles(Array.isArray(selectedItem.accessoryFiles) ? selectedItem.accessoryFiles.map(f => f.url || '').join(', ') : '');
@@ -886,6 +873,8 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         // Preserve creation date if editing, otherwise new date
         createdAt: (item || existingItems.find(i => i.id === selectedItemId))?.createdAt || new Date(),
         updatedAt: new Date(),
+        soldAt: localSoldAt,
+        collectedAt: localCollectedAt,
         isCollected: (item || existingItems.find(i => i.id === selectedItemId))?.isCollected || false,        // Preserve collection status
         links: (item || existingItems.find(i => i.id === selectedItemId))?.links || [],  // Preserve links for Rosetta Stone
       };
@@ -1476,8 +1465,8 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         open={showDatesModal}
         onOpenChange={setShowDatesModal}
         createdAt={currentEditingItem?.createdAt ? new Date(currentEditingItem.createdAt) : undefined}
-        doneAt={undefined}
-        collectedAt={undefined}
+        doneAt={localSoldAt}
+        collectedAt={localCollectedAt}
         onDatesChange={handleDatesUpdate}
       />
     </>
