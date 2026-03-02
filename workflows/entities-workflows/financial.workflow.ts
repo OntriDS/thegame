@@ -157,6 +157,9 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
         const archiveIndexKey = `index:financials:collected:${monthKey}`;
         await kvSAdd(archiveIndexKey, financial.id);
 
+        const { buildArchiveMonthsKey } = await import('@/data-store/keys');
+        await kvSAdd(buildArchiveMonthsKey(), monthKey);
+
         await upsertFinancial({
           ...financial,
           archiveMetadata: {
@@ -249,6 +252,9 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
       const { kvSAdd } = await import('@/data-store/kv');
       const archiveIndexKey = `index:financials:collected:${monthKey}`;
       await kvSAdd(archiveIndexKey, financial.id);
+
+      const { buildArchiveMonthsKey } = await import('@/data-store/keys');
+      await kvSAdd(buildArchiveMonthsKey(), monthKey);
 
       await upsertFinancial({
         ...financial,

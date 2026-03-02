@@ -1,0 +1,6 @@
+app/api/admin/rebuild-archive-indices/route.ts(56,43): error TS2367: This comparison appears to be unintentional because the types 'ItemStatus.CREATED | ItemStatus.FOR_SALE | ItemStatus.TO_ORDER | ItemStatus.TO_DO | ItemStatus.GIFTED | ItemStatus.RESERVED | ItemStatus.CONSIGNMENT | ... 6 more ... | ItemStatus.TO_REPAIR' and '"SOLD"' have no overlap.
+app/api/admin/rebuild-archive-indices/route.ts(69,17): error TS2367: This comparison appears to be unintentional because the types 'SaleStatus' and '"Completed"' have no overlap.
+app/api/admin/rebuild-archive-indices/route.ts(69,48): error TS2367: This comparison appears to be unintentional because the types 'SaleStatus' and '"COMPLETED"' have no overlap.
+app/api/admin/rebuild-archive-indices/route.ts(69,79): error TS2367: This comparison appears to be unintentional because the types 'SaleStatus' and '"Collected"' have no overlap.
+app/api/admin/rebuild-archive-indices/route.ts(82,47): error TS2367: This comparison appears to be unintentional because the types 'FinancialStatus.PENDING | FinancialStatus.DONE | undefined' and '"COLLECTED"' have no overlap.
+app/api/admin/rebuild-archive-indices/route.ts(82,102): error TS2367: This comparison appears to be unintentional because the types 'FinancialStatus.PENDING | undefined' and '"DONE"' have no overlap.

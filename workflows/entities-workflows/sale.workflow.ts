@@ -301,6 +301,9 @@ async function maybeCreateSaleSnapshot(sale: Sale, previousSale?: Sale): Promise
   const collectedIndexKey = `index:sales:collected:${monthKey}`;
   await kvSAdd(collectedIndexKey, sale.id);
 
+  const { buildArchiveMonthsKey } = await import('@/data-store/keys');
+  await kvSAdd(buildArchiveMonthsKey(), monthKey);
+
   // New Archive metadata tracking
   await upsertSale({
     ...sale,

@@ -136,6 +136,9 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
       const archiveIndexKey = `index:items:collected:${monthKey}`;
       await kvSAdd(archiveIndexKey, item.id);
 
+      const { buildArchiveMonthsKey } = await import('@/data-store/keys');
+      await kvSAdd(buildArchiveMonthsKey(), monthKey);
+
       updatedItem.archiveMetadata = {
         ...updatedItem.archiveMetadata,
         archivedAt: new Date().toISOString(),

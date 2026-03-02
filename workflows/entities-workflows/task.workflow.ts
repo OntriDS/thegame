@@ -153,6 +153,9 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
         const archiveIndexKey = `index:tasks:collected:${monthKey}`;
         await kvSAdd(archiveIndexKey, task.id);
 
+        const { buildArchiveMonthsKey } = await import('@/data-store/keys');
+        await kvSAdd(buildArchiveMonthsKey(), monthKey);
+
         // Also save provenance metadata to the actual task record itself
         await repoUpsertTask({
           ...task,
