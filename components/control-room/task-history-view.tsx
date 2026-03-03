@@ -20,6 +20,7 @@ interface EnrichedTask extends Task {
     _parentTrail?: string[];
     _hasCollectedParent?: boolean;
     _displayParentId?: string | null | undefined;
+    parentName?: string;
 }
 
 // Build hierarchy from collected tasks + all tasks
@@ -56,6 +57,11 @@ const buildTaskHierarchy = (collectedTasks: Task[], allTasks: Task[]): EnrichedT
             ? parentTrail[parentTrail.length - 1]!
             : task.parentId || undefined;
 
+        // NEW: Store the actual parent name for rendering
+        if (task.parentId && allTaskMap.has(task.parentId)) {
+            enrichedTask.parentName = allTaskMap.get(task.parentId)!.name;
+        }
+
         return enrichedTask;
     });
 
@@ -69,11 +75,15 @@ function renderTaskHierarchy(tasks: EnrichedTask[], onSelectTask?: (task: Task) 
     const orphanTasks: EnrichedTask[] = [];
 
     tasks.forEach(task => {
-        const parentId = task._displayParentId;
-        if (parentId && groupedTasks.has(parentId)) {
-            groupedTasks.get(parentId)!.push(task);
-        } else if (parentId) {
-            groupedTasks.set(parentId, [task]);
+        // Group by the name of the parent to display it cleanly, or fallback to 'Unknown Parent' if it has an ID but wasn't mapped
+        const parentKey = task._hasCollectedParent
+            ? task._displayParentId
+            : (task.parentId ? (task as any).parentName || 'Unknown Parent' : undefined);
+
+        if (parentKey && groupedTasks.has(parentKey)) {
+            groupedTasks.get(parentKey)!.push(task);
+        } else if (parentKey) {
+            groupedTasks.set(parentKey, [task]);
         } else {
             // No parent to group under
             orphanTasks.push(task);
