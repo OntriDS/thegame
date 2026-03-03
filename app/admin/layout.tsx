@@ -2,7 +2,6 @@
 
 import { ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import AdminTabs from '@/components/admin-tabs';
 import { AdminHeader } from '@/components/admin-header';
 import { ThemeProvider } from '@/components/theme/theme-provider';
 import { KeyboardShortcutsProvider } from '@/lib/shortcuts/keyboard-shortcuts-provider';
@@ -38,7 +37,6 @@ function AdminLayoutContent({ children, router }: { children: ReactNode; router:
   return (
     <div className="flex flex-col h-screen">
       <AdminHeader />
-      <AdminTabs />
       <main className="flex-1 overflow-y-auto bg-background p-6">
         {children}
       </main>

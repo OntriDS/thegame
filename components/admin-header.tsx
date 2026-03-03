@@ -3,29 +3,47 @@
 import Link from 'next/link'
 import { ModeToggle } from '@/components/ui/mode-toggle'
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { showKeyboardShortcutsHelp } from '@/lib/hooks/use-keyboard-shortcuts'
 import { Button } from '@/components/ui/button'
-import { Keyboard } from 'lucide-react'
+import { Keyboard, CircleUserRound } from 'lucide-react'
 import { ClientAPI } from '@/lib/client-api'
+import { ADMIN_SECTIONS } from '@/lib/constants/sections'
 
 export function AdminHeader() {
   const router = useRouter();
+  const path = usePathname();
 
   return (
-    <header className="flex items-center justify-between px-10 py-2 border-b">
+    <header className="flex items-center justify-between px-6 border-b h-14">
       {/* left-side nav / logo */}
-      <div className="flex items-center space-x-4">
-      <h2 className="text-lg font-medium">TheGame</h2>
+      <div className="flex items-center min-w-fit pr-6">
+        <h2 className="text-lg font-medium">TheGame</h2>
       </div>
-      
-      {/* Center: Month/Year Selector */}
-      <div className="flex items-center">
-      <p> Adventure Starts Here</p>
-      </div>
-      
+
+      {/* Center: Navigation */}
+      <nav className="flex-1 flex h-full items-center overflow-x-auto no-scrollbar">
+        {ADMIN_SECTIONS.map(({ slug, label }) => {
+          const isActive = path.startsWith(`/admin/${slug}`);
+
+          return (
+            <Link
+              key={slug}
+              href={`/admin/${slug}`}
+              className={`px-4 h-full flex items-center text-sm font-medium border-b-2 transition-colors whitespace-nowrap
+                ${isActive
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted'
+                }`}
+            >
+              {label}
+            </Link>
+          );
+        })}
+      </nav>
+
       {/* Right side */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 min-w-fit pl-6">
         <Button
           variant="ghost"
           size="sm"
@@ -35,14 +53,9 @@ export function AdminHeader() {
         >
           <Keyboard className="h-4 w-4" />
         </Button>
-        <Link 
-          href="/" 
-          className="px-3 py-2 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors"
-        >
-          Home
-        </Link>
         <button
           type="button"
+          title="Logout"
           onClick={async () => {
             try {
               await ClientAPI.logout();
@@ -50,9 +63,9 @@ export function AdminHeader() {
               router.push('/');
             }
           }}
-          className="px-3 py-2 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors"
+          className="p-2 flex items-center justify-center rounded-md hover:bg-accent hover:text-accent-foreground transition-colors"
         >
-          Logout
+          <CircleUserRound className="h-5 w-5" />
         </button>
         <ModeToggle />
       </div>
