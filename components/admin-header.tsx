@@ -22,7 +22,7 @@ export function AdminHeader() {
       </div>
 
       {/* Center: Navigation */}
-      <nav className="flex-1 flex h-full items-center overflow-x-auto no-scrollbar">
+      <nav className="flex-1 flex h-full items-center justify-center overflow-x-auto no-scrollbar">
         {ADMIN_SECTIONS.map(({ slug, label }) => {
           const isActive = path.startsWith(`/admin/${slug}`);
 
