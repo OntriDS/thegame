@@ -251,6 +251,45 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate }: TaskD
 
   const { task, children } = node;
 
+  if (task.type === TaskType.AUTOMATION) {
+    return (
+      <div className="h-full overflow-y-auto p-4 sm:p-6 flex flex-col items-center justify-center text-center">
+        <Icon className="h-16 w-16 text-purple-600/50 mb-4" />
+        <h2 className="text-2xl font-bold mb-2">{task.name}</h2>
+        <p className="text-muted-foreground max-w-md mb-8">
+          {task.description || "This is a programmatic system automation. It runs securely in the background on its scheduled routine."}
+        </p>
+
+        <div className="p-6 border rounded-xl bg-card shadow-sm w-full max-w-md space-y-4">
+          <h3 className="font-semibold text-lg text-left">Manual Override</h3>
+          <p className="text-sm text-left text-muted-foreground">
+            Execute this automation immediately. This will trigger the backend workflow independent of the cron schedule.
+          </p>
+          <Button
+            variant="default"
+            size="lg"
+            className="w-full bg-purple-600 hover:bg-purple-700 text-white border-0 shadow-sm"
+            onClick={async () => {
+              try {
+                const now = new Date();
+                const targetMonth = now.getMonth() + 1; // 1-12
+                const targetYear = now.getFullYear();
+
+                const result = await ClientAPI.bulkCollectTasks(targetMonth, targetYear);
+                alert(`Rewards Collection Complete! Successfully collected ${result.collectedCount} tasks for ${now.toLocaleString('default', { month: 'long' })} ${targetYear}.`);
+              } catch (error: any) {
+                alert(`Collection Failed: ${error.message || "There was a problem collecting the tasks."}`);
+              }
+            }}
+          >
+            <Play className="h-5 w-5 mr-2" />
+            Run Now
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="h-full overflow-y-auto">
       <div className="p-4 sm:p-6">
@@ -298,29 +337,6 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate }: TaskD
             )}
           </div>
           <div className="flex gap-2">
-            {task.type === TaskType.AUTOMATION && (
-              <Button
-                variant="default"
-                size="sm"
-                className="bg-purple-600 hover:bg-purple-700 text-white border-0 shadow-sm"
-                onClick={async () => {
-                  try {
-                    const now = new Date();
-                    // TODO: In Phase 2 this will read from the specific Automation config if any.
-                    const targetMonth = now.getMonth() + 1; // 1-12
-                    const targetYear = now.getFullYear();
-
-                    const result = await ClientAPI.bulkCollectTasks(targetMonth, targetYear);
-                    alert(`Harvest Complete! Successfully collected ${result.collectedCount} tasks for ${now.toLocaleString('default', { month: 'long' })} ${targetYear}.`);
-                  } catch (error: any) {
-                    alert(`Harvest Failed: ${error.message || "There was a problem collecting the tasks."}`);
-                  }
-                }}
-              >
-                <Play className="h-4 w-4 mr-2" />
-                Run Now
-              </Button>
-            )}
             {task.type === TaskType.RECURRENT_GROUP && (
               <Button
                 variant="outline"

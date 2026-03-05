@@ -642,6 +642,12 @@ export default function ControlRoom() {
   };
 
   const handleEditTask = async (task: Task) => {
+    // SECURITY: Automation tasks are strictly programmatic. They must NEVER open the standard task edit modal.
+    if (task.type === TaskType.AUTOMATION) {
+      console.log('Automation tasks cannot be edited via the standard modal.');
+      return;
+    }
+
     // Always fetch fresh task data to avoid using filtered/modified task objects
     try {
       const freshTask = await ClientAPI.getTaskById(task.id);

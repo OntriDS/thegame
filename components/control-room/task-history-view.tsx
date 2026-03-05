@@ -116,7 +116,7 @@ function renderTaskHierarchy(tasks: EnrichedTask[], onSelectTask?: (task: Task) 
                                             <span>•</span>
                                             {task.status === TaskStatus.COLLECTED ? (
                                                 <span className="text-emerald-600 dark:text-emerald-400/80">
-                                                    Harvested: {
+                                                    Collected: {
                                                         !task || !(task as any).collectedAt
                                                             ? 'Unknown'
                                                             : (() => {
@@ -181,7 +181,7 @@ function renderTaskHierarchy(tasks: EnrichedTask[], onSelectTask?: (task: Task) 
                                                             <span>•</span>
                                                             {task.status === TaskStatus.COLLECTED ? (
                                                                 <span className="text-emerald-600 dark:text-emerald-400/80">
-                                                                    Harvested: {
+                                                                    Collected: {
                                                                         !task || !(task as any).collectedAt
                                                                             ? 'Unknown'
                                                                             : (() => {

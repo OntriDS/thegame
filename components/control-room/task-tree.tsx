@@ -200,13 +200,6 @@ const TreeNodeComponent = React.memo(function TreeNodeComponent({ node, depth, e
 
           {/* Name */}
           <span className="flex-1 truncate text-base font-medium">{node.task.name}</span>
-
-          {/* Automation Badge */}
-          {node.task.type === TaskType.AUTOMATION && (
-            <span className="ml-2 text-xs font-semibold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 border border-purple-200 shadow-sm whitespace-nowrap hidden sm:inline-block">
-              Automation
-            </span>
-          )}
         </button>
       </div>
 
@@ -400,10 +393,12 @@ export default function TaskTree({
               </>
             )}
           </div>
-          <Button variant="ghost" size="sm" onClick={onNewTask}>
-            <PlusCircle className="h-4 w-4 mr-2" />
-            {activeSubTab === 'recurrent-tasks' ? '+ New Recurrent' : '+ New Task'}
-          </Button>
+          {activeSubTab !== 'automation-tree' && (
+            <Button variant="ghost" size="sm" onClick={onNewTask}>
+              <PlusCircle className="h-4 w-4 mr-2" />
+              {activeSubTab === 'recurrent-tasks' ? '+ New Recurrent' : '+ New Task'}
+            </Button>
+          )}
         </div>
 
         {/* --- NEW: Filter Controls --- */}
