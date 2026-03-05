@@ -36,8 +36,15 @@ const buildTaskHierarchy = (collectedTasks: Task[], allTasks: Task[]): EnrichedT
         const parentTrail: string[] = [];
         let hasCollectedParentInChain = false;
         let currentId: string | null | undefined = task.parentId;
+        const visitedIds = new Set<string>();
 
         while (currentId) {
+            if (visitedIds.has(currentId)) {
+                console.warn(`[task-history-view] Circular reference detected! Breaking loop at task ID: ${currentId}`);
+                break;
+            }
+            visitedIds.add(currentId);
+
             const parent = allTaskMap.get(currentId);
             if (parent) {
                 parentTrail.unshift(parent.name || 'Unknown Parent');
