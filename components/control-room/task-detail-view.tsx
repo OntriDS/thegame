@@ -381,12 +381,10 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate }: TaskD
               )}
               {showDuplicateSuccess ? "Copied!" : "Duplicate"}
             </Button>
-            {task.type !== TaskType.AUTOMATION && (
-              <Button variant="outline" size="sm" onClick={() => onEditTask(task)}>
-                <Edit className="h-4 w-4 mr-2" />
-                Edit
-              </Button>
-            )}
+            <Button variant="outline" size="sm" onClick={() => onEditTask(task)}>
+              <Edit className="h-4 w-4 mr-2" />
+              Edit
+            </Button>
           </div>
         </div>
 

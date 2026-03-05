@@ -1,1 +1,0 @@
-components/modals/sales-modal.tsx(837,7): error TS2820: Type '"Digital Art"' is not assignable to type '"Strategy" | "Finances" | "Team" | "Inventory" | "Materials" | "Equipment" | "Transport" | "Rent" | "Alliances" | "Projects" | "Classes" | "Studies" | "Reviews" | "Knowledge-Center" | ... 29 more ... | "Other P"'. Did you mean '"Digital-Art"'?
