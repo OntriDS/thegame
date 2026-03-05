@@ -111,11 +111,12 @@ function renderTaskHierarchy(tasks: EnrichedTask[], onSelectTask?: (task: Task) 
                                     <Icon className="h-4 w-4 text-muted-foreground" />
                                     <div className="flex-1 min-w-0">
                                         <div className="font-medium truncate">{(task as any)?.name?.toString()?.trim() || '(Untitled Task)'}</div>
-                                        <div className="text-xs text-muted-foreground flex gap-2">
-                                            <span>{(task as any)?.station?.toString()?.trim() || 'Unknown'}</span>
-                                            <span>•</span>
+                                        <div className="text-xs text-muted-foreground flex items-center gap-2 mt-0.5">
+                                            <span className="px-1.5 py-0.5 bg-muted rounded-sm text-[10px] font-semibold uppercase tracking-wider">
+                                                {(task as any)?.station?.toString()?.trim() || 'Unknown'}
+                                            </span>
                                             {task.status === TaskStatus.COLLECTED ? (
-                                                <span className="text-emerald-600 dark:text-emerald-400/80">
+                                                <span className="text-emerald-600 dark:text-emerald-400/80 font-medium">
                                                     Collected: {
                                                         !task || !(task as any).collectedAt
                                                             ? 'Unknown'
@@ -126,7 +127,7 @@ function renderTaskHierarchy(tasks: EnrichedTask[], onSelectTask?: (task: Task) 
                                                     }
                                                 </span>
                                             ) : (
-                                                <span className="text-green-600 dark:text-green-400/80">
+                                                <span className="text-green-600 dark:text-green-400/80 font-medium">
                                                     Completed: {
                                                         !task || !(task as any).doneAt
                                                             ? 'Unknown'
@@ -138,9 +139,6 @@ function renderTaskHierarchy(tasks: EnrichedTask[], onSelectTask?: (task: Task) 
                                                 </span>
                                             )}
                                         </div>
-                                    </div>
-                                    <div className="text-xs font-mono bg-muted px-2 py-1 rounded">
-                                        {task.status}
                                     </div>
                                 </CardContent>
                             </Card>
@@ -176,11 +174,12 @@ function renderTaskHierarchy(tasks: EnrichedTask[], onSelectTask?: (task: Task) 
                                                     </div>
                                                     <div className="flex-1 min-w-0">
                                                         <div className="font-medium truncate">{(task as any)?.name?.toString()?.trim() || '(Untitled Task)'}</div>
-                                                        <div className="text-xs text-muted-foreground flex gap-2">
-                                                            <span>{(task as any)?.station?.toString()?.trim() || 'Unknown'}</span>
-                                                            <span>•</span>
+                                                        <div className="text-xs text-muted-foreground flex items-center gap-2 mt-0.5">
+                                                            <span className="px-1.5 py-0.5 bg-muted rounded-sm text-[10px] font-semibold uppercase tracking-wider">
+                                                                {(task as any)?.station?.toString()?.trim() || 'Unknown'}
+                                                            </span>
                                                             {task.status === TaskStatus.COLLECTED ? (
-                                                                <span className="text-emerald-600 dark:text-emerald-400/80">
+                                                                <span className="text-emerald-600 dark:text-emerald-400/80 font-medium">
                                                                     Collected: {
                                                                         !task || !(task as any).collectedAt
                                                                             ? 'Unknown'
@@ -191,7 +190,7 @@ function renderTaskHierarchy(tasks: EnrichedTask[], onSelectTask?: (task: Task) 
                                                                     }
                                                                 </span>
                                                             ) : (
-                                                                <span className="text-green-600 dark:text-green-400/80">
+                                                                <span className="text-green-600 dark:text-green-400/80 font-medium">
                                                                     Completed: {
                                                                         !task || !(task as any).doneAt
                                                                             ? 'Unknown'
@@ -203,9 +202,6 @@ function renderTaskHierarchy(tasks: EnrichedTask[], onSelectTask?: (task: Task) 
                                                                 </span>
                                                             )}
                                                         </div>
-                                                    </div>
-                                                    <div className="text-xs font-mono bg-muted px-2 py-1 rounded">
-                                                        {task.status}
                                                     </div>
                                                 </CardContent>
                                             </Card>

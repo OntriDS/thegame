@@ -2,6 +2,7 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { v4 as uuid } from 'uuid';
 import type { Task } from '@/types/entities';
+import { TaskType, TaskStatus, TaskPriority } from '@/types/enums';
 import { getAllTasks, getActiveTasks, upsertTask, getTasksForMonth } from '@/data-store/datastore';
 import { requireAdminAuth } from '@/lib/api-auth';
 
@@ -41,6 +42,34 @@ export async function GET(req: NextRequest) {
       // Default: Return ALL active tasks (not collected)
       // This supports the "Active Task Tree" view which is not time-bound
       data = await getActiveTasks();
+
+      // AUTO-SEED: Ensure the "Automated Monthly Rewards Collection" task exists
+      const hasAutomationTask = data.some(t => t.type === TaskType.AUTOMATION);
+      if (!hasAutomationTask) {
+        const seedAutomationTask: Task = {
+          id: 'system-automation-monthly-collection',
+          name: 'Automated Monthly Rewards Collection',
+          description: 'This is a programmatic system automation. It runs securely in the background on its scheduled routine at the end of every month.',
+          type: TaskType.AUTOMATION,
+          status: TaskStatus.CREATED,
+          priority: TaskPriority.NORMAL,
+          station: 'Control Room' as any,
+          progress: 0,
+          order: 0,
+          parentId: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          links: [],
+          isNotCharged: false,
+          isNotPaid: false,
+          isCollected: false,
+          cost: 0,
+          revenue: 0,
+          rewards: { points: { xp: 0, rp: 0, fp: 0, hp: 0 } }
+        };
+        await upsertTask(seedAutomationTask);
+        data.push(seedAutomationTask);
+      }
     }
     return NextResponse.json(data);
   } catch (error) {
