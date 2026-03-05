@@ -89,6 +89,12 @@ import type { PlayerArchiveRow } from '@/types/archive';
 
 // TASKS
 export async function upsertTask(task: Task, options?: { skipWorkflowEffects?: boolean; skipLinkEffects?: boolean }): Promise<Task> {
+  // Explicitly block self-referential parent assignment (circular reference)
+  if (task.parentId && task.parentId === task.id) {
+    console.warn(`[Datastore] Prevented Task ${task.id} from becoming its own parent.`);
+    task.parentId = null;
+  }
+
   const previous = await repoGetTaskById(task.id);
   const normalizedTask =
     task.status === TaskStatus.DONE

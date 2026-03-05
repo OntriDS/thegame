@@ -111,9 +111,19 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    const id = body.id || uuid();
+    let parentId = body.parentId;
+
+    // Explicitly block self-referential parent assignment (circular reference)
+    if (parentId === id) {
+      console.warn(`[API] Task ${id} attempted to become its own parent. Nullifying parentId.`);
+      parentId = null;
+    }
+
     const task = {
       ...body,
-      id: body.id || uuid(),
+      id,
+      parentId,
       links: body.links || [],
       createdAt: body.createdAt ? new Date(body.createdAt) : new Date(),
       updatedAt: new Date(),

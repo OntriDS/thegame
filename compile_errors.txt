@@ -1,2 +1,0 @@
-components/inventory/inventory-display.tsx(17,28): error TS2307: Cannot find module '@/components/modals/submodals/move-items-submodal' or its corresponding type declarations.
-components/modals/submodals/bulk-edit-submodal.tsx(19,28): error TS2307: Cannot find module './move-items-submodal' or its corresponding type declarations.
