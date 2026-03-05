@@ -200,6 +200,13 @@ const TreeNodeComponent = React.memo(function TreeNodeComponent({ node, depth, e
 
           {/* Name */}
           <span className="flex-1 truncate text-base font-medium">{node.task.name}</span>
+
+          {/* Automation Badge */}
+          {node.task.type === TaskType.AUTOMATION && (
+            <span className="ml-2 text-xs font-semibold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 border border-purple-200 shadow-sm whitespace-nowrap hidden sm:inline-block">
+              Automation
+            </span>
+          )}
         </button>
       </div>
 

@@ -241,7 +241,7 @@ Digital illustration, acrylic & mural painting, graphic design, 3D modelling, ga
 - Talented Designer, Highly Creative, Strategist
 - High-level systems thinker, Future-oriented
 - Rare blend of creativity + structure
-- Values: Innovation, Ingenious, Deep Analysis, Design Thinking
+- Values: Ingenious, Deep Analysis, Design Thinking
 - Likes: Making the complex simple, Pursues elegant simplicity, Solid foundations
 - Dislikes: Unnecessary extra work, Shallow 'feature-first' thinking
 
@@ -278,7 +278,7 @@ Digital illustration, acrylic & mural painting, graphic design, 3D modelling, ga
 - **Perfection Drag** – The same high bar can stall shipping. Guard against "one more refactor" syndrome
 - **Cognitive Overload** – Running parent duties, survival cashflow and architecting a meta-game can fry decision bandwidth
 - **Resource Risk Appetite** – The leap from king-move to fatal over-extension is big
-- **Delegation Paralysis** – Solo captain can steer a speedboat; building a battleship. If can't let go of sub-systems will bottleneck the whole fleet
+- **Delegation Paralysis** – Solo captain can steer a speedboat; not building a battleship. If can't let go of sub-systems will bottleneck the whole fleet
 - **Emotional Latency** – Processes threats intellectually first, emotions later. RTS-style time stress plus family duty is a cortisol cocktail
 
 ────────────────────────────────────────

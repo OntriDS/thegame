@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Edit, BarChart, Target, Award, CheckSquare, Flag, ChevronsRight, Users, Copy, Check, ChevronDown, Tag } from 'lucide-react';
+import { Edit, BarChart, Target, Award, CheckSquare, Flag, ChevronsRight, Users, Copy, Check, ChevronDown, Tag, Play } from 'lucide-react';
 import TaskModal from '@/components/modals/task-modal';
 import { useState, useRef, useEffect } from 'react';
 import { ClientAPI } from '@/lib/client-api';
@@ -298,6 +298,29 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate }: TaskD
             )}
           </div>
           <div className="flex gap-2">
+            {task.type === TaskType.AUTOMATION && (
+              <Button
+                variant="default"
+                size="sm"
+                className="bg-purple-600 hover:bg-purple-700 text-white border-0 shadow-sm"
+                onClick={async () => {
+                  try {
+                    const now = new Date();
+                    // TODO: In Phase 2 this will read from the specific Automation config if any.
+                    const targetMonth = now.getMonth() + 1; // 1-12
+                    const targetYear = now.getFullYear();
+
+                    const result = await ClientAPI.bulkCollectTasks(targetMonth, targetYear);
+                    alert(`Harvest Complete! Successfully collected ${result.collectedCount} tasks for ${now.toLocaleString('default', { month: 'long' })} ${targetYear}.`);
+                  } catch (error: any) {
+                    alert(`Harvest Failed: ${error.message || "There was a problem collecting the tasks."}`);
+                  }
+                }}
+              >
+                <Play className="h-4 w-4 mr-2" />
+                Run Now
+              </Button>
+            )}
             {task.type === TaskType.RECURRENT_GROUP && (
               <Button
                 variant="outline"
@@ -342,10 +365,12 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate }: TaskD
               )}
               {showDuplicateSuccess ? "Copied!" : "Duplicate"}
             </Button>
-            <Button variant="outline" size="sm" onClick={() => onEditTask(task)}>
-              <Edit className="h-4 w-4 mr-2" />
-              Edit
-            </Button>
+            {task.type !== TaskType.AUTOMATION && (
+              <Button variant="outline" size="sm" onClick={() => onEditTask(task)}>
+                <Edit className="h-4 w-4 mr-2" />
+                Edit
+              </Button>
+            )}
           </div>
         </div>
 
@@ -504,11 +529,11 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate }: TaskD
               <Card className="p-3">
                 <div className="text-xs font-medium mb-1">Profit</div>
                 <div className={`text-sm font-bold ${(() => {
-                    const actualCost = task.isNotPaid ? 0 : (task.cost || 0);
-                    const actualRevenue = task.isNotCharged ? 0 : (task.revenue || 0);
-                    const profit = actualRevenue - actualCost;
-                    return profit > 0 ? 'text-green-600' : profit < 0 ? 'text-red-600' : 'text-muted-foreground';
-                  })()
+                  const actualCost = task.isNotPaid ? 0 : (task.cost || 0);
+                  const actualRevenue = task.isNotCharged ? 0 : (task.revenue || 0);
+                  const profit = actualRevenue - actualCost;
+                  return profit > 0 ? 'text-green-600' : profit < 0 ? 'text-red-600' : 'text-muted-foreground';
+                })()
                   }`}>
                   ${(() => {
                     const actualCost = task.isNotPaid ? 0 : (task.cost || 0);

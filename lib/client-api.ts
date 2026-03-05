@@ -78,6 +78,16 @@ export const ClientAPI = {
     return result.queueId;
   },
 
+  bulkCollectTasks: async (month: number, year: number): Promise<{ collectedCount: number }> => {
+    const res = await fetch('/api/tasks/bulk-collect', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ month, year })
+    });
+    if (!res.ok) throw new Error('Failed to bulk collect tasks');
+    return await res.json();
+  },
+
   // ============================================================================
   // ITEMS - Item management operations
   // ============================================================================

@@ -94,7 +94,7 @@ function renderTaskHierarchy(tasks: EnrichedTask[], onSelectTask?: (task: Task) 
         <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-2">
             {groupedTasks.size === 0 && orphanTasks.length === 0 ? (
                 <div className="text-center text-muted-foreground py-10">
-                    No collected tasks found for this month.
+                    No completed tasks found for this month.
                 </div>
             ) : (
                 <>
@@ -104,7 +104,7 @@ function renderTaskHierarchy(tasks: EnrichedTask[], onSelectTask?: (task: Task) 
                         return (
                             <Card
                                 key={task.id}
-                                className="hover:bg-muted/50 transition-colors cursor-pointer border-l-4 border-l-green-500"
+                                className={`hover:bg-muted/50 transition-colors cursor-pointer border-l-4 ${task.status === TaskStatus.COLLECTED ? 'border-l-emerald-500' : 'border-l-green-400'}`}
                                 onClick={() => onSelectTask?.(task)}
                             >
                                 <CardContent className="p-3 flex items-center gap-3">
@@ -114,14 +114,29 @@ function renderTaskHierarchy(tasks: EnrichedTask[], onSelectTask?: (task: Task) 
                                         <div className="text-xs text-muted-foreground flex gap-2">
                                             <span>{(task as any)?.station?.toString()?.trim() || 'Unknown'}</span>
                                             <span>•</span>
-                                            <span>Collected: {
-                                                !task || !(task as any).collectedAt
-                                                    ? 'Unknown'
-                                                    : (() => {
-                                                        const d = new Date((task as any).collectedAt as any);
-                                                        return isNaN(d.getTime()) ? 'Unknown' : format(d, 'PP p');
-                                                    })()
-                                            }</span>
+                                            {task.status === TaskStatus.COLLECTED ? (
+                                                <span className="text-emerald-600 dark:text-emerald-400/80">
+                                                    Harvested: {
+                                                        !task || !(task as any).collectedAt
+                                                            ? 'Unknown'
+                                                            : (() => {
+                                                                const d = new Date((task as any).collectedAt as any);
+                                                                return isNaN(d.getTime()) ? 'Unknown' : format(d, 'PP p');
+                                                            })()
+                                                    }
+                                                </span>
+                                            ) : (
+                                                <span className="text-green-600 dark:text-green-400/80">
+                                                    Completed: {
+                                                        !task || !(task as any).doneAt
+                                                            ? 'Unknown'
+                                                            : (() => {
+                                                                const d = new Date((task as any).doneAt as any);
+                                                                return isNaN(d.getTime()) ? 'Unknown' : format(d, 'PP p');
+                                                            })()
+                                                    }
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
                                     <div className="text-xs font-mono bg-muted px-2 py-1 rounded">
@@ -151,7 +166,7 @@ function renderTaskHierarchy(tasks: EnrichedTask[], onSelectTask?: (task: Task) 
                                         return (
                                             <Card
                                                 key={task.id}
-                                                className="hover:bg-muted/50 transition-colors cursor-pointer border-l-4 border-l-green-500"
+                                                className={`hover:bg-muted/50 transition-colors cursor-pointer border-l-4 ${task.status === TaskStatus.COLLECTED ? 'border-l-emerald-500' : 'border-l-green-400'}`}
                                                 onClick={() => onSelectTask?.(task)}
                                             >
                                                 <CardContent className="p-3 flex items-center gap-3">
@@ -164,14 +179,29 @@ function renderTaskHierarchy(tasks: EnrichedTask[], onSelectTask?: (task: Task) 
                                                         <div className="text-xs text-muted-foreground flex gap-2">
                                                             <span>{(task as any)?.station?.toString()?.trim() || 'Unknown'}</span>
                                                             <span>•</span>
-                                                            <span>Collected: {
-                                                                !task || !(task as any).collectedAt
-                                                                    ? 'Unknown'
-                                                                    : (() => {
-                                                                        const d = new Date((task as any).collectedAt as any);
-                                                                        return isNaN(d.getTime()) ? 'Unknown' : format(d, 'PP p');
-                                                                    })()
-                                                            }</span>
+                                                            {task.status === TaskStatus.COLLECTED ? (
+                                                                <span className="text-emerald-600 dark:text-emerald-400/80">
+                                                                    Harvested: {
+                                                                        !task || !(task as any).collectedAt
+                                                                            ? 'Unknown'
+                                                                            : (() => {
+                                                                                const d = new Date((task as any).collectedAt as any);
+                                                                                return isNaN(d.getTime()) ? 'Unknown' : format(d, 'PP p');
+                                                                            })()
+                                                                    }
+                                                                </span>
+                                                            ) : (
+                                                                <span className="text-green-600 dark:text-green-400/80">
+                                                                    Completed: {
+                                                                        !task || !(task as any).doneAt
+                                                                            ? 'Unknown'
+                                                                            : (() => {
+                                                                                const d = new Date((task as any).doneAt as any);
+                                                                                return isNaN(d.getTime()) ? 'Unknown' : format(d, 'PP p');
+                                                                            })()
+                                                                    }
+                                                                </span>
+                                                            )}
                                                         </div>
                                                     </div>
                                                     <div className="text-xs font-mono bg-muted px-2 py-1 rounded">

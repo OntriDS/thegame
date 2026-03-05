@@ -123,8 +123,8 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
     isNotPaid: false,        // Payment status
     isNotCharged: false,     // Payment status
     status: FinancialStatus.DONE as FinancialStatus,  // Status field with default
-    site: 'Home',
-    targetSite: 'Home',
+    site: '',
+    targetSite: '',
     customerCharacterId: null as string | null,
     isNewCustomer: true,
     newCustomerName: '',
@@ -259,8 +259,8 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
         isNotPaid: record.isNotPaid || false,
         isNotCharged: record.isNotCharged || false,
         status: record.status || FinancialStatus.DONE,  // Load existing status or default
-        site: record.siteId || 'Home',
-        targetSite: record.targetSiteId || 'Home',
+        site: record.siteId || '',
+        targetSite: record.targetSiteId || '',
         customerCharacterId: record.customerCharacterId || null,
         isNewCustomer: !record.customerCharacterId, // Toggle based on whether customer exists
         newCustomerName: '',
@@ -332,8 +332,8 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
         isNotPaid: false,
         isNotCharged: false,
         status: FinancialStatus.DONE,  // Default status for new records
-        site: 'Home',
-        targetSite: 'Home',
+        site: '',
+        targetSite: '',
         customerCharacterId: null,
         isNewCustomer: true,
         newCustomerName: '',
