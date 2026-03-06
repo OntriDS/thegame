@@ -363,6 +363,11 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
     const { getAvailableArchiveMonths } = await import('@/data-store/datastore');
     const { buildArchiveMonthsKey } = await import('@/data-store/keys');
 
+    // Explicitly remove from oldMonth just in case it's not in the generalized list yet
+    if (oldMonth && oldMonth !== newMonth) {
+      await kvSRem(`index:tasks:collected:${oldMonth}`, task.id);
+    }
+
     // BULLETPROOF CLEANUP: Remove from ALL other months to fix legacy ghost duplicates
     const allMonths = await getAvailableArchiveMonths();
     for (const m of allMonths) {

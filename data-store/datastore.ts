@@ -180,12 +180,15 @@ export async function getActiveTasks(): Promise<Task[]> {
 
 // Phase 1 helpers: month-scoped, filter-after-load
 export async function getTasksForMonth(year: number, month: number): Promise<Task[]> {
-  const mmyy = formatMonthKey(new Date(year, month - 1, 1));
-  const ids = await kvSMembers(buildMonthIndexKey(EntityType.TASK, mmyy));
-  if (ids.length === 0) return [];
-  const keys = ids.map(id => buildDataKey(EntityType.TASK, id));
-  const tasks = await kvMGet<Task>(keys);
-  return reviveDates(tasks.filter((t): t is Task => t !== null && t !== undefined));
+  const allActiveTasks = await getActiveTasks();
+
+  return allActiveTasks.filter(t => {
+    const rawDate = t.doneAt || t.dueDate || t.createdAt;
+    if (!rawDate) return false;
+    const d = new Date(rawDate);
+    if (isNaN(d.getTime())) return false;
+    return d.getFullYear() === year && d.getMonth() + 1 === month;
+  });
 }
 
 export async function getTaskById(id: string): Promise<Task | null> {

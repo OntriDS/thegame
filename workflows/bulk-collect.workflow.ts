@@ -1,4 +1,4 @@
-import { getTasksForMonth, upsertTask } from '@/data-store/datastore';
+ import { getTasksForMonth, upsertTask } from '@/data-store/datastore';
 import { TaskStatus } from '@/types/enums';
 
 /**
@@ -23,6 +23,7 @@ export async function bulkCollectMonthTasks(month: number, year: number): Promis
                 const updatedTask = {
                     ...task,
                     status: TaskStatus.COLLECTED,
+                    collectedAt: new Date(),
                     updatedAt: new Date()
                 };
 

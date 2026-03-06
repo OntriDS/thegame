@@ -123,16 +123,21 @@ function renderTaskHierarchy(tasks: EnrichedTask[], onSelectTask?: (task: Task) 
                                                 {(task as any)?.station?.toString()?.trim() || 'Unknown'}
                                             </span>
                                             {task.status === TaskStatus.COLLECTED ? (
-                                                <span className="text-emerald-600 dark:text-emerald-400/80 font-medium">
-                                                    Collected: {
-                                                        !task || !(task as any).collectedAt
-                                                            ? 'Unknown'
-                                                            : (() => {
-                                                                const d = new Date((task as any).collectedAt as any);
-                                                                return isNaN(d.getTime()) ? 'Unknown' : format(d, 'PP p');
-                                                            })()
-                                                    }
-                                                </span>
+                                                <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400/80 font-medium whitespace-nowrap">
+                                                    <span>Done: {
+                                                        !task || !(task as any).doneAt ? 'Unknown' : (() => {
+                                                            const d = new Date((task as any).doneAt as any);
+                                                            return isNaN(d.getTime()) ? 'Unknown' : format(d, 'PP');
+                                                        })()}
+                                                    </span>
+                                                    <span className="opacity-50">•</span>
+                                                    <span>Collected: {
+                                                        !task || !(task as any).collectedAt ? 'Unknown' : (() => {
+                                                            const d = new Date((task as any).collectedAt as any);
+                                                            return isNaN(d.getTime()) ? 'Unknown' : format(d, 'PP');
+                                                        })()}
+                                                    </span>
+                                                </div>
                                             ) : (
                                                 <span className="text-green-600 dark:text-green-400/80 font-medium">
                                                     Completed: {
@@ -186,16 +191,21 @@ function renderTaskHierarchy(tasks: EnrichedTask[], onSelectTask?: (task: Task) 
                                                                 {(task as any)?.station?.toString()?.trim() || 'Unknown'}
                                                             </span>
                                                             {task.status === TaskStatus.COLLECTED ? (
-                                                                <span className="text-emerald-600 dark:text-emerald-400/80 font-medium">
-                                                                    Collected: {
-                                                                        !task || !(task as any).collectedAt
-                                                                            ? 'Unknown'
-                                                                            : (() => {
-                                                                                const d = new Date((task as any).collectedAt as any);
-                                                                                return isNaN(d.getTime()) ? 'Unknown' : format(d, 'PP p');
-                                                                            })()
-                                                                    }
-                                                                </span>
+                                                                <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400/80 font-medium whitespace-nowrap">
+                                                                    <span>Done: {
+                                                                        !task || !(task as any).doneAt ? 'Unknown' : (() => {
+                                                                            const d = new Date((task as any).doneAt as any);
+                                                                            return isNaN(d.getTime()) ? 'Unknown' : format(d, 'PP');
+                                                                        })()}
+                                                                    </span>
+                                                                    <span className="opacity-50">•</span>
+                                                                    <span>Collected: {
+                                                                        !task || !(task as any).collectedAt ? 'Unknown' : (() => {
+                                                                            const d = new Date((task as any).collectedAt as any);
+                                                                            return isNaN(d.getTime()) ? 'Unknown' : format(d, 'PP');
+                                                                        })()}
+                                                                    </span>
+                                                                </div>
                                                             ) : (
                                                                 <span className="text-green-600 dark:text-green-400/80 font-medium">
                                                                     Completed: {

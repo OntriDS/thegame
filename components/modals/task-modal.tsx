@@ -652,13 +652,9 @@ export default function TaskModal({
   };
 
   const handleDatesUpdate = (newDates: { createdAt?: Date; doneAt?: Date; collectedAt?: Date }) => {
-    if (newDates.doneAt !== undefined) {
-      setLocalDoneAt(newDates.doneAt);
-    }
-
-    if (newDates.collectedAt !== undefined) {
-      setLocalCollectedAt(newDates.collectedAt);
-    }
+    // Unconditionally update because 'undefined' means the user explicitly cleared it
+    setLocalDoneAt(newDates.doneAt);
+    setLocalCollectedAt(newDates.collectedAt);
   };
 
   const handleStationChange = (newStation: Station) => {
