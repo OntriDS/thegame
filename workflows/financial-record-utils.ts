@@ -139,12 +139,13 @@ export async function createFinancialRecordFromTask(task: Task): Promise<Financi
     console.log(`[createFinancialRecordFromTask] Creating new financial record (Effect Registry confirmed no existing record)`);
 
     const currentDate = new Date();
+    const dateToUse = task.collectedAt || task.doneAt || currentDate;
     const newFinrec: FinancialRecord = {
       id: `finrec-${task.id}`,
       name: task.name,
       description: `Financial record from task: ${task.name}`,
-      year: currentDate.getFullYear(),
-      month: currentDate.getMonth() + 1,
+      year: dateToUse.getFullYear(),
+      month: dateToUse.getMonth() + 1,
       station: task.station,
       type: getFinancialTypeForStation(task.station),
       siteId: task.siteId,
@@ -160,9 +161,10 @@ export async function createFinancialRecordFromTask(task: Task): Promise<Financi
       rewards: undefined, // ← FIXED: Don't copy rewards when created from task
       netCashflow: (task.revenue || 0) - (task.cost || 0),
       jungleCoinsValue: 0, // J$ no longer awarded as task rewards
-      isCollected: false,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      isCollected: !!task.isCollected,
+      collectedAt: task.collectedAt,
+      createdAt: currentDate,
+      updatedAt: currentDate,
       links: []
     };
 
@@ -338,6 +340,7 @@ export async function createFinancialRecordFromSale(sale: Sale): Promise<Financi
     console.log(`[createFinancialRecordFromSale] Creating new financial record (Effect Registry confirmed no existing record)`);
 
     const currentDate = new Date();
+    const dateToUse = sale.collectedAt || sale.doneAt || sale.saleDate || currentDate;
     // Determine sales channel from Sale entity or derive from SaleType
     const salesChannel = sale.salesChannel || getSalesChannelFromSaleType(sale.type) || ('Direct-Sales' as Station);
     // Use salesChannel as station for sales-derived financial records
@@ -370,8 +373,8 @@ export async function createFinancialRecordFromSale(sale: Sale): Promise<Financi
       id: `finrec-${sale.id}`,
       name: `Sale: ${displayName}`,
       description: `Financial record from sale: ${displayName}`,
-      year: currentDate.getFullYear(),
-      month: currentDate.getMonth() + 1,
+      year: dateToUse.getFullYear(),
+      month: dateToUse.getMonth() + 1,
       station: station,
       type: getFinancialTypeForStation(station),
       siteId: sale.siteId,
@@ -386,9 +389,10 @@ export async function createFinancialRecordFromSale(sale: Sale): Promise<Financi
       rewards: { points: { xp: 0, rp: 0, fp: 0, hp: 0 } }, // Points handled separately
       netCashflow: sale.totals.totalRevenue,
       jungleCoinsValue: 0,
-      isCollected: false,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      isCollected: !!sale.isCollected,
+      collectedAt: sale.collectedAt,
+      createdAt: currentDate,
+      updatedAt: currentDate,
       links: []
     };
 

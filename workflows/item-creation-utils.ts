@@ -18,7 +18,7 @@ export function getDefaultItemStatus(itemType: string, isSold: boolean = false):
   if (isSold) {
     return ItemStatus.SOLD;
   }
-  
+
   // All newly created items start as CREATED, regardless of type
   // Their status will change based on business logic later
   return ItemStatus.CREATED;
@@ -34,14 +34,14 @@ export async function createItemFromTask(task: Task): Promise<Item | null> {
     console.log(`[createItemFromTask] Starting item creation for task: ${task.name} (${task.id})`);
     console.log(`[createItemFromTask] outputItemType: ${task.outputItemType}`);
     console.log(`[createItemFromTask] outputQuantity: ${task.outputQuantity}`);
-    
+
     if (task.outputItemId && !task.isNewItem) {
       console.log(`[createItemFromTask] Existing item detected (outputItemId=${task.outputItemId}) - updating stock`);
       const existingItem = await getItemById(task.outputItemId);
       if (existingItem) {
         const destinationSiteId =
           (task.targetSiteId && task.targetSiteId !== 'none' ? task.targetSiteId :
-          (task.siteId && task.siteId !== 'none' ? task.siteId : null)) ||
+            (task.siteId && task.siteId !== 'none' ? task.siteId : null)) ||
           existingItem.stock?.[0]?.siteId ||
           'hq';
 
@@ -78,11 +78,11 @@ export async function createItemFromTask(task: Task): Promise<Item | null> {
       console.error('Cannot create item: outputItemType is required');
       return null;
     }
-    
+
     // OPTIMIZED: No need to check for existing items - Effects Registry already did!
     // The workflow only calls this when hasEffect('task:{id}:itemCreated') === false
     console.log(`[createItemFromTask] Creating new item (Effect Registry confirmed no existing item)`);
-    
+
     const newItem: Item = {
       id: `item-${task.id}-${Date.now()}`, // More predictable ID based on task ID
       name: task.outputItemName || `${task.outputItemType} from ${task.name}`,
@@ -98,26 +98,27 @@ export async function createItemFromTask(task: Task): Promise<Item | null> {
       quantitySold: 0,
       sourceTaskId: task.id, // Link item back to the task that created it
       ownerCharacterId: task.customerCharacterId || null, // Emissary: Pass customer as item owner
-      isCollected: false,
-      year: new Date().getFullYear(), // Set current year
+      isCollected: !!task.isCollected,
+      collectedAt: task.collectedAt,
+      year: (task.collectedAt || task.doneAt || new Date()).getFullYear(), // Use task's date
       createdAt: new Date(),
       updatedAt: new Date(),
       links: [],  // Initialize links array (The Rosetta Stone)
       stock: [
         {
           siteId: (task.targetSiteId && task.targetSiteId !== 'none' ? task.targetSiteId : null) ||
-                  (task.siteId && task.siteId !== 'none' ? task.siteId : null) ||
-                  'hq', // Default to HQ
+            (task.siteId && task.siteId !== 'none' ? task.siteId : null) ||
+            'hq', // Default to HQ
           quantity: task.outputQuantity || 1
         }
       ]
     };
-    
+
     // Store the item in DataStore
     console.log(`[createItemFromTask] Creating new item:`, newItem);
     const createdItem = await upsertItem(newItem);
     console.log(`[createItemFromTask] ✅ Item created successfully`);
-    
+
     return createdItem;
   } catch (error) {
     console.error('Error creating item from task:', error);
@@ -147,7 +148,7 @@ export async function createItemFromRecord(record: FinancialRecord): Promise<Ite
       if (existingItem) {
         const destinationSiteId =
           (isValidSite(record.targetSiteId) ? record.targetSiteId as string :
-          (isValidSite(record.siteId) ? record.siteId as string : null)) ||
+            (isValidSite(record.siteId) ? record.siteId as string : null)) ||
           existingItem.stock?.[0]?.siteId ||
           'None';
 
@@ -180,19 +181,19 @@ export async function createItemFromRecord(record: FinancialRecord): Promise<Ite
         console.warn(`[createItemFromRecord] outputItemId=${record.outputItemId} not found. Falling back to new item creation.`);
       }
     }
-    
+
     if (!record.outputItemType) {
       console.error('Cannot create item: outputItemType is required');
       return null;
     }
-    
+
     // OPTIMIZED: No need to check for existing items - Effects Registry already did!
     // The workflow only calls this when hasEffect('record:{id}:itemCreated') === false
     console.log(`[createItemFromRecord] Creating new item (Effect Registry confirmed no existing item)`);
-    
+
     const resolvedSiteId =
       (isValidSite(record.targetSiteId) ? record.targetSiteId as string :
-      (isValidSite(record.siteId) ? record.siteId as string : null)) ||
+        (isValidSite(record.siteId) ? record.siteId as string : null)) ||
       'None';
 
     const newItem: Item = {
@@ -210,7 +211,8 @@ export async function createItemFromRecord(record: FinancialRecord): Promise<Ite
       quantitySold: 0,
       sourceRecordId: record.id, // Link item back to the record that created it
       ownerCharacterId: resolvedOwnerCharacterId,
-      isCollected: false,
+      isCollected: !!record.isCollected,
+      collectedAt: record.collectedAt,
       year: record.year, // Use record's year
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -222,12 +224,12 @@ export async function createItemFromRecord(record: FinancialRecord): Promise<Ite
         }
       ]
     };
-    
+
     // Store the item in DataStore
     console.log(`[createItemFromRecord] Creating new item:`, newItem);
     const createdItem = await upsertItem(newItem);
     console.log(`[createItemFromRecord] ✅ Item created successfully`);
-    
+
     return createdItem;
   } catch (error) {
     console.error('Error creating item from record:', error);
@@ -243,12 +245,12 @@ export async function createItemFromRecord(record: FinancialRecord): Promise<Ite
 export async function removeItemsCreatedByTask(taskId: string): Promise<void> {
   try {
     console.log(`[removeItemsCreatedByTask] Removing items created by task: ${taskId}`);
-    
+
     // OPTIMIZED: Only load items created by this task, not all items
     const itemsToRemove = await getItemsBySourceTaskId(taskId);
-    
+
     console.log(`[removeItemsCreatedByTask] Found ${itemsToRemove.length} items to remove`);
-    
+
     // Remove each item created by this task
     for (const item of itemsToRemove) {
       try {
@@ -258,12 +260,12 @@ export async function removeItemsCreatedByTask(taskId: string): Promise<void> {
         console.error(`[removeItemsCreatedByTask] ❌ Failed to remove item ${item.id}:`, error);
       }
     }
-    
+
     // Dispatch event to update UI
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('itemsUpdated'));
     }
-    
+
     console.log(`[removeItemsCreatedByTask] ✅ Completed removal of ${itemsToRemove.length} items`);
   } catch (error) {
     console.error('Error removing items created by task:', error);
@@ -278,12 +280,12 @@ export async function removeItemsCreatedByTask(taskId: string): Promise<void> {
 export async function removeItemsCreatedByRecord(recordId: string): Promise<void> {
   try {
     console.log(`[removeItemsCreatedByRecord] Removing items created by record: ${recordId}`);
-    
+
     // OPTIMIZED: Only load items created by this record, not all items
     const itemsToRemove = await getItemsBySourceRecordId(recordId);
-    
+
     console.log(`[removeItemsCreatedByRecord] Found ${itemsToRemove.length} items to remove`);
-    
+
     // Remove each item created by this record
     for (const item of itemsToRemove) {
       try {
@@ -293,12 +295,12 @@ export async function removeItemsCreatedByRecord(recordId: string): Promise<void
         console.error(`[removeItemsCreatedByRecord] ❌ Failed to remove item ${item.id}:`, error);
       }
     }
-    
+
     // Dispatch event to update UI
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('itemsUpdated'));
     }
-    
+
     console.log(`[removeItemsCreatedByRecord] ✅ Completed removal of ${itemsToRemove.length} items`);
   } catch (error) {
     console.error('Error removing items created by record:', error);
@@ -310,6 +312,6 @@ export async function removeItemsCreatedByRecord(recordId: string): Promise<void
  */
 export async function processItemCreationWithLinks(item: Item): Promise<Item> {
   console.log(`[processItemCreationWithLinks] Processing item creation: ${item.name} (${item.id})`);
-  
+
   return item;
 }

@@ -42,7 +42,17 @@ export async function updateFinancialRecordsFromTask(
         task.name !== previousTask.name ||
         task.station !== previousTask.station;
 
-      if (financialPropsChanged) {
+      const statePropsChanged = hasStatePropsChanged(task, previousTask);
+
+      if (financialPropsChanged || statePropsChanged) {
+        let year = record.year;
+        let month = record.month;
+        if (statePropsChanged) {
+          const dateToUse = task.collectedAt || task.doneAt || record.createdAt;
+          year = dateToUse.getFullYear();
+          month = dateToUse.getMonth() + 1;
+        }
+
         const updatedRecord = {
           ...record,
           cost: task.cost,
@@ -51,6 +61,10 @@ export async function updateFinancialRecordsFromTask(
           isNotCharged: task.isNotCharged,
           name: task.name,
           station: task.station,
+          year,
+          month,
+          isCollected: !!task.isCollected,
+          collectedAt: task.collectedAt,
           updatedAt: new Date()
         };
 
@@ -108,7 +122,9 @@ export async function updateTasksFromFinancialRecord(
         record.name !== previousRecord.name ||
         record.station !== previousRecord.station;
 
-      if (financialPropsChanged) {
+      const statePropsChanged = hasStatePropsChanged(record, previousRecord);
+
+      if (financialPropsChanged || statePropsChanged) {
         const updatedTask = {
           ...task,
           cost: record.cost,
@@ -177,13 +193,24 @@ export async function updateItemsCreatedByTask(
           task.outputItemPrice !== previousTask.outputItemPrice ||
           task.station !== previousTask.station;
 
-        if (outputPropsChanged) {
+        const statePropsChanged = hasStatePropsChanged(task, previousTask);
+
+        if (outputPropsChanged || statePropsChanged) {
+          let year = item.year;
+          if (statePropsChanged) {
+            const dateToUse = task.collectedAt || task.doneAt || item.createdAt;
+            year = dateToUse.getFullYear();
+          }
+
           const updatedItem = {
             ...item,
             name: task.outputItemName || item.name,
             unitCost: task.outputUnitCost || item.unitCost,
             price: task.outputItemPrice || item.price,
             station: task.station || item.station,
+            year,
+            isCollected: !!task.isCollected,
+            collectedAt: task.collectedAt,
             updatedAt: new Date()
           };
 
@@ -353,13 +380,18 @@ export async function updateItemsCreatedByRecord(
         record.outputItemPrice !== previousRecord.outputItemPrice ||
         record.station !== previousRecord.station;
 
-      if (outputPropsChanged) {
+      const statePropsChanged = hasStatePropsChanged(record, previousRecord);
+
+      if (outputPropsChanged || statePropsChanged) {
         const updatedItem = {
           ...item,
           name: record.outputItemName || item.name,
           unitCost: record.outputUnitCost || item.unitCost,
           price: record.outputItemPrice || item.price,
           station: record.station || item.station,
+          year: record.year, // inherit year
+          isCollected: !!record.isCollected,
+          collectedAt: record.collectedAt,
           updatedAt: new Date()
         };
 
@@ -483,12 +515,26 @@ export async function updateFinancialRecordsFromSale(
         sale.isNotPaid !== previousSale.isNotPaid ||
         sale.status !== previousSale.status;
 
-      if (revenuePropsChanged) {
+      const statePropsChanged = hasStatePropsChanged(sale, previousSale);
+
+      if (revenuePropsChanged || statePropsChanged) {
+        let year = record.year;
+        let month = record.month;
+        if (statePropsChanged) {
+          const dateToUse = sale.collectedAt || sale.doneAt || sale.saleDate;
+          year = dateToUse.getFullYear();
+          month = dateToUse.getMonth() + 1;
+        }
+
         const updatedRecord = {
           ...record,
           revenue: sale.totals?.totalRevenue || 0,
           isNotPaid: sale.isNotPaid,
           isNotCharged: sale.status !== 'CHARGED',
+          year,
+          month,
+          isCollected: !!sale.isCollected,
+          collectedAt: sale.collectedAt,
           updatedAt: new Date()
         };
 
@@ -745,6 +791,16 @@ export async function updatePlayerPointsFromSource(
 // ============================================================================
 // PROPERTY CHANGE DETECTION HELPERS
 // ============================================================================
+
+export function hasStatePropsChanged(newEntity: any, oldEntity: any): boolean {
+  return (
+    newEntity.status !== oldEntity.status ||
+    newEntity.isCollected !== oldEntity.isCollected ||
+    newEntity.doneAt?.getTime() !== oldEntity.doneAt?.getTime() ||
+    newEntity.collectedAt?.getTime() !== oldEntity.collectedAt?.getTime() ||
+    newEntity.saleDate?.getTime() !== oldEntity.saleDate?.getTime()
+  );
+}
 
 export function hasFinancialPropsChanged(newEntity: any, oldEntity: any): boolean {
   return (
