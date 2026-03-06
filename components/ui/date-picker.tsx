@@ -15,6 +15,7 @@ interface DatePickerProps {
   onChange?: (date: Date | undefined) => void;
   placeholder?: string;
   className?: string;
+  disabled?: boolean;
 }
 
 export function DatePicker({
@@ -22,6 +23,7 @@ export function DatePicker({
   onChange,
   placeholder = 'Pick a date',
   className,
+  disabled = false,
 }: DatePickerProps) {
   const [open, setOpen] = React.useState(false);
 
@@ -35,6 +37,7 @@ export function DatePicker({
       <PopoverTrigger asChild>
         <Button
           variant="outline"
+          disabled={disabled}
           className={cn(
             'w-full justify-start text-left font-normal h-8 text-sm',
             !value && 'text-muted-foreground',
@@ -46,8 +49,8 @@ export function DatePicker({
         </Button>
       </PopoverTrigger>
       <PopoverPrimitive.Portal>
-        <PopoverContent 
-          className={`p-0 ${getInteractiveZIndex('SUPRA_FIELDS')}`} 
+        <PopoverContent
+          className={`p-0 ${getInteractiveZIndex('SUPRA_FIELDS')}`}
           align="start"
           side="bottom"
           avoidCollisions={true}

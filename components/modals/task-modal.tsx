@@ -1556,6 +1556,7 @@ export default function TaskModal({
         createdAt={task?.createdAt}
         doneAt={localDoneAt}
         collectedAt={localCollectedAt}
+        currentStatus={status}
         onDatesChange={handleDatesUpdate}
       />
 

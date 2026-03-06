@@ -22,6 +22,7 @@ interface DatesSubmodalProps {
     createdAt?: Date;
     doneAt?: Date;
     collectedAt?: Date;
+    currentStatus?: string;
     onDatesChange: (dates: { createdAt?: Date; doneAt?: Date; collectedAt?: Date }) => void;
 }
 
@@ -33,6 +34,7 @@ export default function DatesSubmodal({
     createdAt,
     doneAt,
     collectedAt,
+    currentStatus,
     onDatesChange
 }: DatesSubmodalProps) {
 
@@ -61,6 +63,9 @@ export default function DatesSubmodal({
 
     const handleClearDoneAt = () => setLocalDoneAt(undefined);
     const handleClearCollectedAt = () => setLocalCollectedAt(undefined);
+
+    const isDoneAllowed = currentStatus === 'Done' || currentStatus === 'Collected';
+    const isCollectedAllowed = currentStatus === 'Collected';
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -106,8 +111,13 @@ export default function DatesSubmodal({
                         <DatePicker
                             value={localDoneAt}
                             onChange={setLocalDoneAt}
+                            disabled={!isDoneAllowed}
                         />
-                        <p className="text-[10px] text-muted-foreground">When the action actually took place (affects monthly History).</p>
+                        {!isDoneAllowed ? (
+                            <p className="text-[10px] text-amber-600 dark:text-amber-500 font-medium">Please set the task status to Done or Collected first to unlock this date.</p>
+                        ) : (
+                            <p className="text-[10px] text-muted-foreground">When the action actually took place (affects monthly History).</p>
+                        )}
                     </div>
 
                     {/* Collected At */}
@@ -123,8 +133,13 @@ export default function DatesSubmodal({
                         <DatePicker
                             value={localCollectedAt}
                             onChange={setLocalCollectedAt}
+                            disabled={!isCollectedAllowed}
                         />
-                        <p className="text-[10px] text-muted-foreground">When points were rewarded to the player.</p>
+                        {!isCollectedAllowed ? (
+                            <p className="text-[10px] text-amber-600 dark:text-amber-500 font-medium">Please set the task status to Collected first to unlock this date.</p>
+                        ) : (
+                            <p className="text-[10px] text-muted-foreground">When points were rewarded to the player.</p>
+                        )}
                     </div>
                 </div>
 
