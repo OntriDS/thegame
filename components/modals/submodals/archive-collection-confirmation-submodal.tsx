@@ -114,14 +114,14 @@ export default function ArchiveCollectionConfirmationModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="py-4">
+        <div className="py-2">
           {/* Entity Info */}
-          <div className="bg-muted/50 rounded-lg p-4 space-y-3 mb-4">
+          <div className="bg-muted/50 rounded-lg p-3 space-y-2 mb-3">
             <div className="flex items-center gap-3">
               {getEntityIcon(entityType)}
               <div>
-                <div className="font-medium">{entityName}</div>
-                <div className="text-sm text-muted-foreground capitalize">
+                <div className="font-medium text-sm">{entityName}</div>
+                <div className="text-xs text-muted-foreground capitalize">
                   {getEntityTypeLabel(entityType)}
                 </div>
               </div>
@@ -129,73 +129,41 @@ export default function ArchiveCollectionConfirmationModal({
           </div>
 
           {/* Action Details */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
-            <div className="flex items-start gap-2">
-              <Archive className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
-              <div className="text-sm text-blue-800">
-                <p className="font-medium">Archive Snapshot Created</p>
-                <p className="mt-1">
-                  A permanent snapshot will be created in the Archive for historical records.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-2">
-              <TrendingUp className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
-              <div className="text-sm text-blue-800">
-                <p className="font-medium">
-                  {entityType === 'item' ? 'Moved to Sold Items Section' : 'Moved to Collected Section'}
-                </p>
-                <p className="mt-1">
-                  This {getEntityTypeLabel(entityType).toLowerCase()} will appear in the dedicated
-                  {entityType === 'item' ? ' "Sold Items" tab' : 'collected section'}.
-                </p>
-              </div>
-            </div>
-
-            {(hasPoints || hasRevenue) && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            {(hasPoints || hasRevenue) ? (
               <div className="flex items-start gap-2">
                 <Coins className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
                 <div className="text-sm text-blue-800">
-                  <p className="font-medium">Points Available for Exchange</p>
-                  <p className="mt-1">
-                    The points from this {getEntityTypeLabel(entityType).toLowerCase()} can now be
-                    exchanged for J$ (Jungle Coins), which can be converted to real currency.
+                  <p className="font-medium">Rewards Collection</p>
+                  <p className="mt-1 text-xs">
+                    Points and revenue will be permanently logged.
                   </p>
                   {hasPoints && (
-                    <div className="mt-2 p-2 bg-white rounded border border-blue-200">
-                      <div className="text-xs font-medium text-blue-700 mb-1">Points Earned:</div>
-                      <div className="grid grid-cols-4 gap-2 text-xs">
-                        {pointsValue.xp > 0 && <div>XP: {pointsValue.xp}</div>}
-                        {pointsValue.rp > 0 && <div>RP: {pointsValue.rp}</div>}
-                        {pointsValue.fp > 0 && <div>FP: {pointsValue.fp}</div>}
-                        {pointsValue.hp > 0 && <div>HP: {pointsValue.hp}</div>}
+                    <div className="mt-2 p-1.5 bg-white rounded border border-blue-200">
+                      <div className="flex gap-2 text-xs font-semibold">
+                        {pointsValue.xp > 0 && <span className="text-blue-600">XP: {pointsValue.xp}</span>}
+                        {pointsValue.rp > 0 && <span className="text-green-600">RP: {pointsValue.rp}</span>}
+                        {pointsValue.fp > 0 && <span className="text-yellow-600">FP: {pointsValue.fp}</span>}
+                        {pointsValue.hp > 0 && <span className="text-red-600">HP: {pointsValue.hp}</span>}
                       </div>
                     </div>
                   )}
                   {hasRevenue && (
-                    <div className="mt-2 p-2 bg-white rounded border border-blue-200">
-                      <div className="text-xs font-medium text-blue-700">Revenue: ${totalRevenue.toFixed(2)}</div>
+                    <div className="mt-2 p-1.5 bg-white rounded border border-blue-200">
+                      <div className="text-xs font-semibold text-emerald-700">Revenue: ${totalRevenue.toFixed(2)}</div>
                     </div>
                   )}
                 </div>
               </div>
-            )}
-          </div>
-
-          {/* Important Note */}
-          <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-            <div className="flex items-start gap-2">
-              <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
-              <div className="text-sm text-amber-800">
-                <p className="font-medium">Important Note</p>
-                <p className="mt-1">
-                  This action is part of the &ldquo;Archive-First&rdquo; lifecycle management.
-                  The {getEntityTypeLabel(entityType).toLowerCase()} will remain accessible in the active system
-                  but will be organized in its collected/sold section for better clarity.
-                </p>
+            ) : (
+              <div className="flex items-start gap-2">
+                <Archive className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                <div className="text-sm text-blue-800">
+                  <p className="font-medium">Archive Action</p>
+                  <p className="mt-1 text-xs">This item will be moved to the History logs.</p>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
 

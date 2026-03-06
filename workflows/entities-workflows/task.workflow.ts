@@ -204,9 +204,9 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
     }
   }
 
-  // PARALLEL SIDE EFFECTS - when task is completed (Done)
+  // PARALLEL SIDE EFFECTS - when task is completed (Done or Collected)
   // Run all independent side effects concurrently for 60-70% performance improvement
-  if (task.status === 'Done') {
+  if (task.status === 'Done' || task.status === 'Collected') {
     const sideEffects: Promise<void>[] = [];
 
     // Item creation from emissary fields

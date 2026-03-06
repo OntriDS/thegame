@@ -34,6 +34,7 @@ import { Network, User, Calendar as CalendarIcon, Repeat } from 'lucide-react';
 import { getEmissaryFields } from '@/types/diplomatic-fields';
 import CascadeStatusConfirmationModal from './submodals/cascade-status-confirmation-submodal';
 import ArchiveCollectionConfirmationModal from './submodals/archive-collection-confirmation-submodal';
+import ConfirmationModal from './submodals/confirmation-submodal';
 import { ClientAPI } from '@/lib/client-api';
 import CharacterSelectorSubmodal from './submodals/character-selector-submodal';
 import PlayerCharacterSelectorModal from './submodals/player-character-selector-submodal';
@@ -196,6 +197,9 @@ export default function TaskModal({
     onConfirm: () => void;
     onCancel: () => void;
   } | null>(null);
+
+  const [showNotDoneConfirmation, setShowNotDoneConfirmation] = useState(false);
+  const [pendingNotDoneStatus, setPendingNotDoneStatus] = useState<TaskStatus | null>(null);
 
   // UI data loading for form functionality
   const [items, setItems] = useState<Item[]>([]);
@@ -1438,8 +1442,15 @@ export default function TaskModal({
             <Select value={String(status)} onValueChange={(val) => {
               const newStatus = val as TaskStatus;
 
+              // Intercept COLLECTED if the task is not yet DONE
+              if (newStatus === TaskStatus.COLLECTED && status !== TaskStatus.DONE && status !== TaskStatus.COLLECTED) {
+                setPendingNotDoneStatus(newStatus);
+                setShowNotDoneConfirmation(true);
+                return;
+              }
+
               // Show confirmation for COLLECTED status
-              if (newStatus === TaskStatus.COLLECTED && status !== TaskStatus.COLLECTED) {
+              if (newStatus === TaskStatus.COLLECTED && status === TaskStatus.DONE) {
                 const originalStatus = status;
 
                 setPendingStatusChange({
@@ -1595,12 +1606,33 @@ export default function TaskModal({
           onOpenChange={setShowArchiveCollectionModal}
           entityType="task"
           entityName={name}
-          pointsValue={rewards?.points || { xp: 0, rp: 0, fp: 0, hp: 0 }}
-          totalRevenue={revenue || 0}
+          pointsValue={rewards.points}
+          totalRevenue={revenue}
           onConfirm={pendingStatusChange.onConfirm}
           onCancel={pendingStatusChange.onCancel}
         />
       )}
+
+      {/* Not Done Confirmation Modal */}
+      <ConfirmationModal
+        open={showNotDoneConfirmation}
+        onOpenChange={setShowNotDoneConfirmation}
+        title="Task Not Done"
+        description="To collect a task you must set it Done first. Do you want to do both?"
+        confirmText="Yes, Done & Collect"
+        onConfirm={() => {
+          if (pendingNotDoneStatus) {
+            setStatus(pendingNotDoneStatus);
+            setProgress(100);
+          }
+          setShowNotDoneConfirmation(false);
+          setPendingNotDoneStatus(null);
+        }}
+        onCancel={() => {
+          setShowNotDoneConfirmation(false);
+          setPendingNotDoneStatus(null);
+        }}
+      />
 
       {/* Smart Scheduler Submodal */}
       <SmartSchedulerSubmodal
