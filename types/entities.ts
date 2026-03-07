@@ -553,6 +553,9 @@ export interface ServiceLine extends SaleLineBase {
   revenue: number;
   createTask?: boolean;    // creates a basic Task if true
 
+  // Legacy fallback extension
+  salePriceCrc?: number;
+
   // Task creation fields (from mini-submodals)
   taskId?: string;         // existing task to link to
   taskType?: TaskType;     // task type

@@ -181,8 +181,8 @@ export default function BoothSalesView({
         return serviceLines.map(sl => ({
             id: sl.lineId,
             description: sl.description || '',
-            amountCRC: sl.metadata?.originalAmountCRC ?? 0,
-            amountUSD: sl.metadata?.originalAmountUSD ?? 0,
+            amountCRC: sl.metadata?.originalAmountCRC ?? sl.salePriceCrc ?? 0,
+            amountUSD: sl.metadata?.originalAmountUSD ?? sl.revenue ?? 0,
             category: sl.metadata?.category || (sl.description?.includes('] ') ? sl.description.split('] ')[1] : sl.description) || 'Other',
             associateId: sl.metadata?.associateId || sl.metadata?.customerCharacterId || sale?.associateId || ''
         }));
@@ -285,11 +285,14 @@ export default function BoothSalesView({
             return;
         }
 
-        // 1. Try Strict Match (ID matches both selected Principal and Counterparty business)
+        const associateBusiness = businesses.find(b => b.id === selectedAssociateId);
+        const linkedCharId = associateBusiness?.linkedCharacterId;
+
+        // 1. Try Strict Match (ID matches both selected Principal and Counterparty business OR its linked character for legacy contracts)
         let match = contracts.find(c =>
             c.status === ContractStatus.ACTIVE &&
-            ((c.principalBusinessId === selectedFounderBusinessId && c.counterpartyBusinessId === selectedAssociateId) ||
-                (c.counterpartyBusinessId === selectedFounderBusinessId && c.principalBusinessId === selectedAssociateId))
+            ((c.principalBusinessId === selectedFounderBusinessId && (c.counterpartyBusinessId === selectedAssociateId || c.counterpartyBusinessId === linkedCharId)) ||
+                (c.counterpartyBusinessId === selectedFounderBusinessId && (c.principalBusinessId === selectedAssociateId || c.principalBusinessId === linkedCharId)))
         );
 
         if (match) {
@@ -956,8 +959,10 @@ export default function BoothSalesView({
                                                             {contracts
                                                                 .filter(c => {
                                                                     if (!['Active', 'ACTIVE', 'active'].includes(c.status)) return false;
-                                                                    return (c.principalBusinessId === selectedAssociateId && c.counterpartyBusinessId === selectedFounderBusinessId) ||
-                                                                        (c.counterpartyBusinessId === selectedAssociateId && c.principalBusinessId === selectedFounderBusinessId);
+                                                                    const assocBusiness = businesses.find(b => b.id === selectedAssociateId);
+                                                                    const linkedCharId = assocBusiness?.linkedCharacterId;
+                                                                    return (c.principalBusinessId === selectedFounderBusinessId && (c.counterpartyBusinessId === selectedAssociateId || c.counterpartyBusinessId === linkedCharId)) ||
+                                                                        (c.counterpartyBusinessId === selectedFounderBusinessId && (c.principalBusinessId === selectedAssociateId || c.principalBusinessId === linkedCharId));
                                                                 })
                                                                 .map(c => (
                                                                     <option key={c.id} value={c.id}>
