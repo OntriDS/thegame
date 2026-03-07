@@ -122,7 +122,7 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
         // Note: We use 'all' type and client-side filtering because getItems status param might not be fully supported by all backends yet,
         // and we want to ensure we catch 'ItemStatus.SOLD' correctly.
 
-        const monthItems = await ClientAPI.getItems('all', month, year);
+        const monthItems = await ClientAPI.getItems('all', month, year, ItemStatus.SOLD);
 
         // Filter for items that are explicitly SOLD
         items = monthItems.filter(item => {
