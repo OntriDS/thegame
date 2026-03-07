@@ -177,15 +177,32 @@ export default function BoothSalesView({
 
     // Derived State: Associate Entries (Single Source of Truth: lines)
     const associateEntries = useMemo(() => {
-        const serviceLines = lines.filter(l => l.kind === 'service' && l.station === 'Booth-Sales') as ServiceLine[];
-        return serviceLines.map(sl => ({
-            id: sl.lineId,
-            description: sl.description || '',
-            amountCRC: sl.metadata?.originalAmountCRC ?? sl.salePriceCrc ?? 0,
-            amountUSD: sl.metadata?.originalAmountUSD ?? sl.revenue ?? 0,
-            category: sl.metadata?.category || (sl.description?.includes('] ') ? sl.description.split('] ')[1] : sl.description) || 'Other',
-            associateId: sl.metadata?.associateId || sl.metadata?.customerCharacterId || sale?.associateId || ''
-        }));
+        const serviceLines = lines.filter(l => {
+            // Aggressive fallback for legacy records that might have lost their 'station' or 'kind' enumerations
+            const isServiceOrItem = l.kind === 'service' || l.kind === 'item';
+            const hasAssociateStation = ['Booth-Sales', 'Associate-Sales', 'Associate Sales'].includes((l as any).station as string);
+            const hasLegacyDescription = l.description?.includes('[Associate:');
+            const hasAssociateVault = Boolean((l as any).metadata?.associateId);
+
+            return isServiceOrItem && (hasAssociateStation || hasLegacyDescription || hasAssociateVault);
+        }) as ServiceLine[];
+        return serviceLines.map(sl => {
+            // Safely cast to 'any' to dynamically extract either ServiceLine or ItemSaleLine values
+            const line = sl as any;
+            const amountCRC = line.metadata?.originalAmountCRC ?? line.salePriceCrc ?? 0;
+            const amountUSD = (line.metadata?.originalAmountUSD ?? line.revenue ?? (line.quantity * line.unitPrice)) || 0;
+            const desc = line.description || '';
+            const categoryMatch = desc.includes('] ') ? desc.split('] ')[1] : desc;
+
+            return {
+                id: line.lineId || line.itemId || uuid(),
+                description: desc,
+                amountCRC: Number.isFinite(amountCRC) ? amountCRC : 0,
+                amountUSD: Number.isFinite(amountUSD) ? amountUSD : 0,
+                category: line.metadata?.category || categoryMatch || 'Other',
+                associateId: line.metadata?.associateId || line.metadata?.customerCharacterId || sale?.associateId || ''
+            };
+        });
     }, [lines, sale?.associateId]);
 
     // Delete Confirmation State
