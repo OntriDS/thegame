@@ -146,7 +146,8 @@ export default function SalesPage() {
 
       // Check for advanced contract calculation first
       // myNet is stored in Colones (CRC)
-      const myNetCRC = sale.metadata?.boothSaleContext?.calculatedTotals?.myNet;
+      const myNetCRC = sale.metadata?.boothSaleContext?.calculatedTotals?.myNet ??
+        (sale as any).archiveMetadata?.boothSaleContext?.calculatedTotals?.myNet;
 
       if (myNetCRC !== undefined) {
         netProfit = myNetCRC / exchangeRate;

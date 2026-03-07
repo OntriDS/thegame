@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
@@ -136,21 +136,32 @@ export default function BoothSalesView({
 
     // State for Single Contract (Global for this sale)
     const [selectedContractId, setSelectedContractId] = useState<string>(() => {
-        return sale?.metadata?.boothSaleContext?.contractId || '';
+        return sale?.metadata?.boothSaleContext?.contractId || (sale as any)?.archiveMetadata?.boothSaleContext?.contractId || '';
     });
 
     // State for Founder Business (Us)
     const [selectedFounderBusinessId, setSelectedFounderBusinessId] = useState<string>(() => {
-        return sale?.metadata?.boothSaleContext?.principalBusinessId || '';
+        return sale?.metadata?.boothSaleContext?.principalBusinessId || (sale as any)?.archiveMetadata?.boothSaleContext?.principalBusinessId || '';
     });
 
     // State for Associate (Them)
-    // State for Associate (Them)
     const [selectedAssociateId, setSelectedAssociateId] = useState<string>(() => {
-        if (sale?.associateId) return sale.associateId;
-        if (sale?.partnerId) return sale.partnerId;
+        // 1. Try modern metadata first
+        if (sale?.metadata?.boothSaleContext?.counterpartyBusinessId) {
+            return sale.metadata.boothSaleContext.counterpartyBusinessId;
+        }
+        // 2. Try legacy archiveMetadata context
+        if ((sale as any)?.archiveMetadata?.boothSaleContext?.counterpartyBusinessId) {
+            return (sale as any).archiveMetadata.boothSaleContext.counterpartyBusinessId;
+        }
+        // 3. Fallback for VERY legacy sales (migrate Character ID to Business ID)
+        const charId = sale?.associateId || sale?.partnerId;
+        if (charId) {
+            const linkedBusiness = businesses.find(b => b.linkedCharacterId === charId);
+            if (linkedBusiness) return linkedBusiness.id;
+        }
         return '';
-    }); // Character ID
+    }); // Business ID
 
     // View Mode: 'Associate' | 'Partner' | 'Off'
     const [viewMode, setViewMode] = useState<'Associate' | 'Partner' | 'Off'>(() => {
@@ -236,19 +247,34 @@ export default function BoothSalesView({
     // Load Default Associate (One time)
     useEffect(() => {
         // Mocking "Maria" as default if she exists IF viewMode is NOT Off AND NOT EDITING
-        if (!sale && viewMode !== 'Off' && !selectedAssociateId && characters.length > 0) {
+        if (!sale && viewMode !== 'Off' && !selectedAssociateId && characters.length > 0 && businesses.length > 0) {
             const maria = characters.find(c => c.name.toLowerCase().includes('maria') || c.name.includes('O2'));
-            if (maria) setSelectedAssociateId(maria.id);
+            if (maria) {
+                const mariaBusiness = businesses.find(b => b.linkedCharacterId === maria.id);
+                if (mariaBusiness) setSelectedAssociateId(mariaBusiness.id);
+            }
         }
 
         // Clear selection if Off
         if (viewMode === 'Off') {
             setSelectedAssociateId('');
         }
-    }, [characters, selectedAssociateId, viewMode, sale]);
+    }, [characters, businesses, selectedAssociateId, viewMode, sale]);
+
+    const initialAssociateIdRef = useRef(selectedAssociateId);
+    const initialFounderIdRef = useRef(selectedFounderBusinessId);
 
     // Auto-select active contract when Associate or Founder Business changes
     useEffect(() => {
+        const isNewSale = !sale;
+        const didAssociateChange = selectedAssociateId !== initialAssociateIdRef.current;
+        const didFounderChange = selectedFounderBusinessId !== initialFounderIdRef.current;
+
+        // DO NOT overwrite the saved contract on mount for an existing sale!
+        if (!isNewSale && !didAssociateChange && !didFounderChange) {
+            return;
+        }
+
         if (!selectedAssociateId || !selectedFounderBusinessId) {
             setSelectedContractId('');
             return;
@@ -267,7 +293,7 @@ export default function BoothSalesView({
             // No contract found for this pair -> Clear selection (Default/No Contract)
             setSelectedContractId('');
         }
-    }, [selectedAssociateId, selectedFounderBusinessId, contracts]);
+    }, [selectedAssociateId, selectedFounderBusinessId, contracts, sale]);
     // ============================================================================
 
     const myItems = useMemo(() =>
@@ -607,6 +633,7 @@ export default function BoothSalesView({
         const boothMetadata = {
             boothSaleContext: {
                 principalBusinessId: selectedFounderBusinessId,
+                counterpartyBusinessId: selectedAssociateId,
                 contractId: selectedContractId,
                 boothCost: boothCost,
                 calculatedTotals: {

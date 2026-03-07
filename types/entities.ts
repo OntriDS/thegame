@@ -55,6 +55,7 @@ export interface Settlement {
  */
 export interface BoothSaleContext {
   principalBusinessId: string;
+  counterpartyBusinessId: string;
   contractId: string;
   boothCost: number;
   calculatedTotals: Record<string, any>;
