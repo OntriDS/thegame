@@ -388,7 +388,8 @@ export default function SalesModal({
 
   const loadItems = async () => {
     try {
-      const itemsData = await ClientAPI.getItems();
+      // Fetch 'all' items natively so historic sold items trigger the map appropriately instead of 'Unknown Item'
+      const itemsData = await ClientAPI.getItems(undefined, undefined, undefined, 'all');
       setItems(itemsData);
     } catch (error) {
       console.error('Failed to load items:', error);

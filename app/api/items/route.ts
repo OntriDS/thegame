@@ -69,14 +69,18 @@ export async function GET(req: NextRequest) {
   if (statusFilter) {
     // Case-insensitive status check
     const targetStatus = statusFilter.toLowerCase();
-    items = items.filter(item => {
-      const itemStatus = (item.status || '').toString().toLowerCase();
-      // Check for exact match or "ItemStatus.SOLD" literal match
-      return itemStatus === targetStatus ||
-        (targetStatus === 'sold' && itemStatus === 'itemstatus.sold');
-    });
+
+    // If 'all' is explicitly requested, bypass status filtering entirely to fetch everything (including SOLD)
+    if (targetStatus !== 'all') {
+      items = items.filter(item => {
+        const itemStatus = (item.status || '').toString().toLowerCase();
+        // Check for exact match or "ItemStatus.SOLD" literal match
+        return itemStatus === targetStatus ||
+          (targetStatus === 'sold' && itemStatus === 'itemstatus.sold');
+      });
+    }
   } else if (!month && !year) {
-    // Default behavior for Active Inventory (no month/year specified):
+    // Default behavior for Active Inventory (no month/year specified AND no explicit status):
     // Show only active items (unsold)
     items = items.filter(item => item.status !== ItemStatus.SOLD);
   }

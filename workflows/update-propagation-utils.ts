@@ -642,6 +642,16 @@ export async function updateItemsFromSale(
         await upsertItem(soldItemEntity, { skipWorkflowEffects: true });
         console.log(`[updateItemsFromSale] ✅ Created Sold Item Entity: ${soldItemEntity.id}`);
 
+        // FIX: Because we skipped workflow effects (to avoid duplicate logs), we MUST manually 
+        // register this item inside the Monthly Archive Index so the Archive Vault can find it.
+        const { calculateClosingDate, formatMonthKey } = await import('@/lib/utils/date-utils');
+        const { kvSAdd } = await import('@/data-store/kv');
+        const { buildArchiveMonthsKey } = await import('@/data-store/keys');
+        const archiveMonth = calculateClosingDate(soldItemEntity.soldAt || new Date());
+        const monthKey = formatMonthKey(archiveMonth);
+        await kvSAdd(`index:items:collected:${monthKey}`, soldItemEntity.id);
+        await kvSAdd(buildArchiveMonthsKey(), monthKey);
+
         await markEffect(updateKey);
       }
     }
