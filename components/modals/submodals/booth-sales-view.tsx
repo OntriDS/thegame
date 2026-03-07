@@ -138,6 +138,9 @@ export default function BoothSalesView({
     // State for Single Contract (Global for this sale)
     const [selectedContractId, setSelectedContractId] = useState<string>('');
 
+    // State for Founder Business (Us)
+    const [selectedFounderBusinessId, setSelectedFounderBusinessId] = useState<string>('');
+
     // State for Associate (Them)
     // State for Associate (Them)
     const [selectedAssociateId, setSelectedAssociateId] = useState<string>(() => {
@@ -205,7 +208,27 @@ export default function BoothSalesView({
         if (defaultContract && !selectedContractId && !sale) {
             setSelectedContractId(defaultContract.id);
         }
-    }, [sale, sale?.id, contracts, selectedContractId]);
+
+        // 2. Load Default Founder Business
+        if (!selectedFounderBusinessId && businesses.length > 0) {
+            // First try to find a founder business from archive metadata
+            const metaFounderId = sale?.archiveMetadata?.boothSaleContext?.principalBusinessId;
+            if (metaFounderId && businesses.some(b => b.id === metaFounderId)) {
+                setSelectedFounderBusinessId(metaFounderId);
+            } else {
+                // Otherwise find first founder business
+                const founderBusiness = businesses.find(b => {
+                    const linkedChar = characters.find(c => c.id === b.linkedCharacterId);
+                    return linkedChar && linkedChar.roles.includes(CharacterRole.FOUNDER);
+                });
+                if (founderBusiness) setSelectedFounderBusinessId(founderBusiness.id);
+                else {
+                    const firstActive = businesses.find(b => b.isActive);
+                    if (firstActive) setSelectedFounderBusinessId(firstActive.id);
+                }
+            }
+        }
+    }, [sale, contracts, businesses, characters, selectedContractId, selectedFounderBusinessId]);
 
     // Load Default Associate (One time)
     useEffect(() => {
@@ -221,40 +244,27 @@ export default function BoothSalesView({
         }
     }, [characters, selectedAssociateId, viewMode, sale]);
 
-    // Auto-select active contract when Associate changes
+    // Auto-select active contract when Associate or Founder Business changes
     useEffect(() => {
-        if (!selectedAssociateId) {
+        if (!selectedAssociateId || !selectedFounderBusinessId) {
             setSelectedContractId('');
             return;
         }
 
-        // 1. Try Strict Match (ID matches Principal or Counterparty)
-        // We look for any ACTIVE contract involving this entity
+        // 1. Try Strict Match (ID matches both selected Principal and Counterparty business)
         let match = contracts.find(c =>
             c.status === ContractStatus.ACTIVE &&
-            (c.counterpartyBusinessId === selectedAssociateId || c.principalBusinessId === selectedAssociateId)
+            ((c.principalBusinessId === selectedFounderBusinessId && c.counterpartyBusinessId === selectedAssociateId) ||
+                (c.counterpartyBusinessId === selectedFounderBusinessId && c.principalBusinessId === selectedAssociateId))
         );
-
-        // 2. Try Fuzzy Name Match (Fallback if strict ID fails)
-        if (!match) {
-            const associate = characters.find(char => char.id === selectedAssociateId);
-            if (associate) {
-                // Simple fuzzy: check if Contract Name contains the Associate's first name
-                const firstName = associate.name.split(' ')[0].toLowerCase();
-                match = contracts.find(c =>
-                    c.status === ContractStatus.ACTIVE &&
-                    c.name.toLowerCase().includes(firstName)
-                );
-            }
-        }
 
         if (match) {
             setSelectedContractId(match.id);
         } else {
-            // No contract found for this associate -> Clear selection (Default/No Contract)
+            // No contract found for this pair -> Clear selection (Default/No Contract)
             setSelectedContractId('');
         }
-    }, [selectedAssociateId, contracts, characters]);
+    }, [selectedAssociateId, selectedFounderBusinessId, contracts]);
     // ============================================================================
 
     const myItems = useMemo(() =>
@@ -593,6 +603,7 @@ export default function BoothSalesView({
         // 3. Construct Metadata Context
         const boothMetadata = {
             boothSaleContext: {
+                principalBusinessId: selectedFounderBusinessId,
                 contractId: selectedContractId,
                 boothCost: boothCost,
                 calculatedTotals: {
@@ -659,9 +670,7 @@ export default function BoothSalesView({
             archiveMetadata: {
                 ...(sale?.archiveMetadata || {}),
                 boothSaleContext: {
-                    ...boothMetadata.boothSaleContext,
-                    contractId: selectedContractId // Still store contract ID in metadata for now until we add contractId to Sale entity properly?
-                    // Actually, let's keep it in metadata as well to be safe during migration
+                    ...boothMetadata.boothSaleContext
                 }
             },
             links: sale?.links || [],
@@ -741,7 +750,7 @@ export default function BoothSalesView({
 
                 <div className="w-px h-6 bg-slate-200 dark:bg-slate-700 mx-2 ml-auto" />
 
-                {/* Associate / Partner Toggle & Selector (Moved to Header) */}
+                {/* Associate / Partner Toggle */}
                 <div className="flex items-center gap-2">
                     {/* Role Toggle 3-Way */}
                     <div className="flex bg-slate-900 rounded-md p-0.5 border border-slate-700 shrink-0">
@@ -763,84 +772,6 @@ export default function BoothSalesView({
                         >
                             Partner
                         </button>
-                    </div>
-
-                    {/* Entity Selector */}
-                    <div className="w-48">
-                        <div className="relative">
-                            <select
-                                value={selectedAssociateId}
-                                disabled={viewMode === 'Off'}
-                                onChange={(e) => setSelectedAssociateId(e.target.value)}
-                                className={cn(
-                                    "h-8 w-full rounded-md border bg-slate-900 px-3 py-1 text-xs shadow-sm focus:outline-none focus:ring-1 focus:ring-pink-500 truncate pr-8 appearance-none",
-                                    selectedAssociateId ? "border-pink-500/50 text-pink-200" : "border-slate-700 text-slate-400",
-                                    viewMode === 'Off' && "opacity-50 cursor-not-allowed border-slate-800 text-slate-600"
-                                )}
-                            >
-                                <option value="">{viewMode === 'Off' ? 'Disabled' : `Select ${viewMode}...`}</option>
-                                <optgroup label="People">
-                                    {characters
-                                        .filter(c => {
-                                            if (viewMode === 'Associate') return c.roles.includes(CharacterRole.ASSOCIATE);
-                                            if (viewMode === 'Partner') return c.roles.includes(CharacterRole.PARTNER);
-                                            return false;
-                                        })
-                                        .map(c => (
-                                            <option key={c.id} value={c.id}>
-                                                {c.name}
-                                            </option>
-                                        ))}
-                                </optgroup>
-                                <optgroup label="Businesses">
-                                    {businesses
-                                        .filter(b => {
-                                            // Filter Businesses:
-                                            // 1. Must be Active
-                                            if (!b.isActive) return false;
-
-                                            // 2. If 'Associate' mode, check if linked char is Associate OR has active Associate contract
-                                            if (viewMode === 'Associate') {
-                                                const linkedChar = characters.find(c => c.id === b.linkedCharacterId);
-                                                if (linkedChar && linkedChar.roles.includes(CharacterRole.ASSOCIATE)) return true;
-                                                // Check contracts
-                                                return contracts.some(c =>
-                                                    c.status === ContractStatus.ACTIVE &&
-                                                    (c.principalBusinessId === b.id || c.counterpartyBusinessId === b.id)
-                                                    // AND ideally check if contract implies 'Associate' relationship, but for now existence is enough approx?
-                                                    // Actually, if they have a contract, they are a partner/associate.
-                                                );
-                                            }
-
-                                            // 3. If 'Partner' mode
-                                            if (viewMode === 'Partner') {
-                                                const linkedChar = characters.find(c => c.id === b.linkedCharacterId);
-                                                if (linkedChar && linkedChar.roles.includes(CharacterRole.PARTNER)) return true;
-                                                return contracts.some(c =>
-                                                    c.status === ContractStatus.ACTIVE &&
-                                                    (c.principalBusinessId === b.id || c.counterpartyBusinessId === b.id)
-                                                );
-                                            }
-                                            return false;
-                                        })
-                                        .map(b => (
-                                            <option key={b.id} value={b.id}>
-                                                {b.name}
-                                            </option>
-                                        ))}
-                                </optgroup>
-                            </select>
-
-                            {/* Clear Button (Only if selected and Enabled) */}
-                            {selectedAssociateId && viewMode !== 'Off' && (
-                                <button
-                                    onClick={() => setSelectedAssociateId('')}
-                                    className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 hover:text-red-400"
-                                >
-                                    <Trash2 className="h-3 w-3" />
-                                </button>
-                            )}
-                        </div>
                     </div>
                 </div>
 
@@ -926,124 +857,160 @@ export default function BoothSalesView({
                             </CardContent>
                         </Card>
 
-                        {/* Card 2: Partner / Associate (Only if selected) */}
-                        {selectedAssociateId && (
+                        {/* Card 2: Partner / Associate */}
+                        {viewMode !== 'Off' && (
                             <Card className="border-pink-500/20 bg-pink-950/20">
                                 <CardContent className="p-4 space-y-3">
                                     <div className="flex flex-col gap-2">
-                                        <div className="flex justify-between items-center">
-                                            <div className="text-sm font-bold text-pink-400 flex items-center gap-2">
-                                                <User className="h-4 w-4" />
-                                                {getAssociateName(selectedAssociateId)}
-                                                <span className="text-[10px] font-normal text-pink-500/70">({viewMode})</span>
-                                            </div>
-                                            {/* Contract Selector - Moved to Header */}
-                                            <div className="flex items-center gap-2 w-auto">
-                                                <div className="w-auto text-[10px] text-pink-300 font-medium shrink-0">
-                                                    Contract:
-                                                </div>
-                                                <div className="w-48">
+                                        <div className="flex flex-wrap justify-between items-center gap-2">
+                                            <div className="text-sm font-bold text-pink-400 flex items-center gap-2 relative">
+                                                <User className="h-4 w-4 shrink-0" />
+                                                <div className="relative">
                                                     <select
-                                                        value={selectedContractId}
-                                                        onChange={(e) => setSelectedContractId(e.target.value)}
-                                                        className="h-6 w-full rounded border border-pink-500/30 bg-pink-950/30 px-2 text-[10px] shadow-sm focus:outline-none focus:ring-1 focus:ring-pink-500 text-pink-100 truncate"
+                                                        value={selectedAssociateId}
+                                                        onChange={(e) => setSelectedAssociateId(e.target.value)}
+                                                        className={cn(
+                                                            "h-8 w-44 rounded-md border bg-slate-900 px-3 py-1 text-xs shadow-sm focus:outline-none focus:ring-1 focus:ring-pink-500 truncate pr-6 appearance-none",
+                                                            selectedAssociateId ? "border-pink-500/50 text-pink-200" : "border-slate-700 text-slate-400"
+                                                        )}
                                                     >
-                                                        <option value="" disabled>Select Active Contract...</option>
-                                                        {contracts
-                                                            .filter(c => {
-                                                                // 1. Must be Active
-                                                                if (!['Active', 'ACTIVE', 'active'].includes(c.status)) return false;
-
-                                                                // 2. Must belong to the selected entity (Principal OR Counterparty)
-                                                                return c.principalBusinessId === selectedAssociateId || c.counterpartyBusinessId === selectedAssociateId;
+                                                        <option value="" disabled>Select Business...</option>
+                                                        {businesses
+                                                            .filter(b => {
+                                                                if (!b.isActive) return false;
+                                                                const linkedChar = characters.find(c => c.id === b.linkedCharacterId);
+                                                                if (viewMode === 'Associate') {
+                                                                    if (linkedChar && linkedChar.roles.includes(CharacterRole.ASSOCIATE)) return true;
+                                                                    return contracts.some(c => c.status === ContractStatus.ACTIVE && (c.principalBusinessId === b.id || c.counterpartyBusinessId === b.id));
+                                                                }
+                                                                if (viewMode === 'Partner') {
+                                                                    if (linkedChar && linkedChar.roles.includes(CharacterRole.PARTNER)) return true;
+                                                                    return contracts.some(c => c.status === ContractStatus.ACTIVE && (c.principalBusinessId === b.id || c.counterpartyBusinessId === b.id));
+                                                                }
+                                                                return false;
                                                             })
-                                                            .map(c => (
-                                                                <option key={c.id} value={c.id}>
-                                                                    {c.name}
-                                                                </option>
+                                                            .map(b => (
+                                                                <option key={b.id} value={b.id}>{b.name}</option>
                                                             ))}
                                                     </select>
+                                                    <span className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-pink-400/50 text-[10px]">▼</span>
+                                                </div>
+                                                {selectedAssociateId && (
+                                                    <span className="text-[10px] font-normal text-pink-500/70 ml-1">({viewMode})</span>
+                                                )}
+                                            </div>
+                                            {/* Contract Selector */}
+                                            {selectedAssociateId && (
+                                                <div className="flex items-center gap-2 w-auto border-l border-pink-500/20 pl-4 ml-auto">
+                                                    <div className="w-auto text-[10px] text-pink-300 font-medium shrink-0">
+                                                        Contract:
+                                                    </div>
+                                                    <div className="w-36 relative">
+                                                        <select
+                                                            value={selectedContractId}
+                                                            onChange={(e) => setSelectedContractId(e.target.value)}
+                                                            className="h-6 w-full rounded border border-pink-500/30 bg-pink-950/30 px-2 pr-5 text-[10px] shadow-sm focus:outline-none focus:ring-1 focus:ring-pink-500 text-pink-100 truncate appearance-none"
+                                                        >
+                                                            <option value="" disabled>Select Active Contract...</option>
+                                                            {contracts
+                                                                .filter(c => {
+                                                                    if (!['Active', 'ACTIVE', 'active'].includes(c.status)) return false;
+                                                                    return (c.principalBusinessId === selectedAssociateId && c.counterpartyBusinessId === selectedFounderBusinessId) ||
+                                                                        (c.counterpartyBusinessId === selectedAssociateId && c.principalBusinessId === selectedFounderBusinessId);
+                                                                })
+                                                                .map(c => (
+                                                                    <option key={c.id} value={c.id}>
+                                                                        {c.name}
+                                                                    </option>
+                                                                ))}
+                                                        </select>
+                                                        <span className="absolute right-1 top-1/2 -translate-y-1/2 pointer-events-none text-pink-400/50 text-[8px]">▼</span>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Quick Entry Form (Only show if associate is selected) */}
+                                    {selectedAssociateId && (
+                                        <>
+                                            <div className="bg-slate-900/50 p-3 rounded-lg border border-slate-800 space-y-2 mt-2">
+                                                <div className="flex gap-2">
+                                                    <div className="relative">
+                                                        <span className="absolute left-2 top-1.5 text-[10px] text-pink-500 font-bold">₡</span>
+                                                        <NumericInput
+                                                            value={parseFloat(quickAmountCRC) || 0}
+                                                            onChange={(val) => setQuickAmountCRC(val.toString())}
+                                                            placeholder="0"
+                                                            className="w-24 bg-slate-950 border-slate-700 h-8 text-xs pl-5"
+                                                        />
+                                                    </div>
+                                                    <div className="relative">
+                                                        <span className="absolute left-2 top-1.5 text-[10px] text-green-500 font-bold">$</span>
+                                                        <NumericInput
+                                                            value={parseFloat(quickAmountUSD) || 0}
+                                                            onChange={(val) => setQuickAmountUSD(val.toString())}
+                                                            placeholder="0.00"
+                                                            className="w-24 bg-slate-950 border-slate-700 h-8 text-xs pl-5"
+                                                        />
+                                                    </div>
+                                                    <Input
+                                                        value={quickCat}
+                                                        onChange={(e) => setQuickCat(e.target.value)}
+                                                        placeholder="Description / Category"
+                                                        className="flex-1 bg-slate-950 border-slate-700 h-8 text-xs"
+                                                    />
+                                                    <Button
+                                                        onClick={handleAddAssociateEntry}
+                                                        className="bg-pink-600 hover:bg-pink-700 text-white shrink-0 h-8 text-xs"
+                                                        disabled={!quickAmountCRC && !quickAmountUSD}
+                                                        size="sm"
+                                                    >
+                                                        Add
+                                                    </Button>
                                                 </div>
                                             </div>
-                                        </div>
-                                    </div>
 
-                                    {/* Quick Entry Form */}
-                                    <div className="bg-slate-900/50 p-3 rounded-lg border border-slate-800 space-y-2">
-                                        <div className="flex gap-2">
-                                            <div className="relative">
-                                                <span className="absolute left-2 top-1.5 text-[10px] text-pink-500 font-bold">₡</span>
-                                                <NumericInput
-                                                    value={parseFloat(quickAmountCRC) || 0}
-                                                    onChange={(val) => setQuickAmountCRC(val.toString())}
-                                                    placeholder="0"
-                                                    className="w-24 bg-slate-950 border-slate-700 h-8 text-xs pl-5"
-                                                />
+                                            {/* List - Table View */}
+                                            <div className="max-h-[200px] overflow-y-auto rounded-md border border-pink-500/20">
+                                                <table className="w-full text-xs text-left">
+                                                    <thead className="bg-pink-900/30 text-pink-200 sticky top-0 font-semibold">
+                                                        <tr>
+                                                            <th className="p-2 w-[40%]">Description</th>
+                                                            <th className="p-2 w-[25%] text-right">Amount ($)</th>
+                                                            <th className="p-2 w-[25%] text-right">Amount (₡)</th>
+                                                            <th className="p-2 w-[10%]"></th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="divide-y divide-pink-500/10">
+                                                        {associateEntries.length === 0 && (
+                                                            <tr>
+                                                                <td colSpan={4} className="p-4 text-center text-muted-foreground italic">
+                                                                    No entries yet.
+                                                                </td>
+                                                            </tr>
+                                                        )}
+                                                        {associateEntries.map(entry => (
+                                                            <tr key={entry.id} className="bg-slate-900/40 hover:bg-pink-500/10 transition-colors group">
+                                                                <td className="p-2 text-slate-300 font-medium">{entry.category || entry.description}</td>
+                                                                <td className="p-2 text-slate-400 text-right font-mono">
+                                                                    {entry.amountUSD ? `$${entry.amountUSD.toFixed(2)}` : '-'}
+                                                                </td>
+                                                                <td className="p-2 text-slate-400 text-right font-mono">
+                                                                    {entry.amountCRC ? `₡${entry.amountCRC.toLocaleString()}` : '-'}
+                                                                </td>
+                                                                <td className="p-2 text-right">
+                                                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-red-400 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleRemoveAssociateEntry(entry.id)}>
+                                                                        <Trash2 className="h-3 w-3" />
+                                                                    </Button>
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
                                             </div>
-                                            <div className="relative">
-                                                <span className="absolute left-2 top-1.5 text-[10px] text-green-500 font-bold">$</span>
-                                                <NumericInput
-                                                    value={parseFloat(quickAmountUSD) || 0}
-                                                    onChange={(val) => setQuickAmountUSD(val.toString())}
-                                                    placeholder="0.00"
-                                                    className="w-24 bg-slate-950 border-slate-700 h-8 text-xs pl-5"
-                                                />
-                                            </div>
-                                            <Input
-                                                value={quickCat}
-                                                onChange={(e) => setQuickCat(e.target.value)}
-                                                placeholder="Description / Category"
-                                                className="flex-1 bg-slate-950 border-slate-700 h-8 text-xs"
-                                            />
-                                            <Button
-                                                onClick={handleAddAssociateEntry}
-                                                className="bg-pink-600 hover:bg-pink-700 text-white shrink-0 h-8 text-xs"
-                                                disabled={!quickAmountCRC && !quickAmountUSD}
-                                                size="sm"
-                                            >
-                                                Add
-                                            </Button>
-                                        </div>
-                                    </div>
-
-                                    {/* List - Table View */}
-                                    <div className="max-h-[200px] overflow-y-auto rounded-md border border-pink-500/20">
-                                        <table className="w-full text-xs text-left">
-                                            <thead className="bg-pink-900/30 text-pink-200 sticky top-0 font-semibold">
-                                                <tr>
-                                                    <th className="p-2 w-[40%]">Description</th>
-                                                    <th className="p-2 w-[25%] text-right">Amount ($)</th>
-                                                    <th className="p-2 w-[25%] text-right">Amount (₡)</th>
-                                                    <th className="p-2 w-[10%]"></th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-pink-500/10">
-                                                {associateEntries.length === 0 && (
-                                                    <tr>
-                                                        <td colSpan={4} className="p-4 text-center text-muted-foreground italic">
-                                                            No entries yet.
-                                                        </td>
-                                                    </tr>
-                                                )}
-                                                {associateEntries.map(entry => (
-                                                    <tr key={entry.id} className="bg-slate-900/40 hover:bg-pink-500/10 transition-colors group">
-                                                        <td className="p-2 text-slate-300 font-medium">{entry.category || entry.description}</td>
-                                                        <td className="p-2 text-slate-400 text-right font-mono">
-                                                            {entry.amountUSD ? `$${entry.amountUSD.toFixed(2)}` : '-'}
-                                                        </td>
-                                                        <td className="p-2 text-slate-400 text-right font-mono">
-                                                            {entry.amountCRC ? `₡${entry.amountCRC.toLocaleString()}` : '-'}
-                                                        </td>
-                                                        <td className="p-2 text-right">
-                                                            <Button variant="ghost" size="icon" className="h-6 w-6 text-red-400 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleRemoveAssociateEntry(entry.id)}>
-                                                                <Trash2 className="h-3 w-3" />
-                                                            </Button>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
+                                        </>
+                                    )}
                                 </CardContent>
                             </Card>
                         )}
@@ -1125,9 +1092,31 @@ export default function BoothSalesView({
                             {/* My Payout */}
                             <div className="p-3 bg-slate-900 rounded-lg border border-indigo-500/20 shadow-sm">
                                 <div className="flex items-center gap-2 mb-2">
-                                    <div className="h-6 w-6 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold text-[10px]">C</div>
+                                    <div className="h-6 w-6 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold text-[10px]">
+                                        {selectedFounderBusinessId ? businesses.find(b => b.id === selectedFounderBusinessId)?.name.substring(0, 1).toUpperCase() : 'C'}
+                                    </div>
                                     <div>
-                                        <div className="text-xs font-bold text-indigo-100">TheCompany</div>
+                                        <div className="text-xs font-bold text-indigo-100 flex items-center gap-1">
+                                            <select
+                                                value={selectedFounderBusinessId}
+                                                onChange={(e) => setSelectedFounderBusinessId(e.target.value)}
+                                                className="bg-transparent border-none p-0 h-auto text-indigo-100 font-bold hover:text-indigo-300 focus:ring-0 cursor-pointer appearance-none outline-none truncate max-w-[140px]"
+                                            >
+                                                {businesses.filter(b => {
+                                                    const linkedChar = characters.find(c => c.id === b.linkedCharacterId);
+                                                    return linkedChar && linkedChar.roles.includes(CharacterRole.FOUNDER);
+                                                }).map(b => (
+                                                    <option key={b.id} value={b.id} className="bg-slate-900">{b.name}</option>
+                                                ))}
+                                                {/* Fallback if no founder-linked businesses */}
+                                                {!businesses.some(b => characters.find(c => c.id === b.linkedCharacterId)?.roles.includes(CharacterRole.FOUNDER)) && (
+                                                    businesses.map(b => (
+                                                        <option key={b.id} value={b.id} className="bg-slate-900">{b.name}</option>
+                                                    ))
+                                                )}
+                                            </select>
+                                            <span className="text-indigo-400/50 text-[10px]">▼</span>
+                                        </div>
                                     </div>
                                 </div>
                                 <div className="space-y-1 text-xs bg-indigo-950/10 p-2 rounded border border-indigo-500/10">

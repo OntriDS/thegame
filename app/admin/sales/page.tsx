@@ -135,27 +135,38 @@ export default function SalesPage() {
   const getSaleFinancials = (sale: Sale) => {
     const grossRevenue = sale.totals.totalRevenue;
     let cost = 0;
+    let netProfit = 0;
 
     if (sale.type === SaleType.BOOTH) {
-      // Typically boothFee is stored in Colones (CRC)
       const exchangeRate = 500;
-      const boothFeeUSD = (sale.boothFee || 0) / exchangeRate;
 
-      // Associate payouts are lines with station 'Booth-Sales', their revenue is in USD
-      const associatePayouts = sale.lines
-        .filter(l => l.kind === 'service' && (l as any).station === 'Booth-Sales')
-        .reduce((sum, l) => sum + ((l as any).revenue || 0), 0);
+      // Check for advanced contract calculation first
+      // myNet is stored in Colones (CRC)
+      const myNetCRC = sale.archiveMetadata?.boothSaleContext?.calculatedTotals?.myNet;
 
-      cost = boothFeeUSD + associatePayouts;
+      if (myNetCRC !== undefined) {
+        netProfit = myNetCRC / exchangeRate;
+        // Reverse-engineer apparent cost for consistent UI structure in dashboards
+        cost = grossRevenue - netProfit;
+      } else {
+        // Legacy calculation fallback
+        const boothFeeUSD = (sale.boothFee || 0) / exchangeRate;
+        const associatePayouts = sale.lines
+          .filter(l => l.kind === 'service' && (l as any).station === 'Booth-Sales')
+          .reduce((sum, l) => sum + ((l as any).revenue || 0), 0);
+
+        cost = boothFeeUSD + associatePayouts;
+        netProfit = grossRevenue - cost;
+      }
     } else {
       // General service costs
       const serviceLineCosts = sale.lines
         .filter(l => l.kind === 'service' && (l as any).taskCost)
         .reduce((sum, l) => sum + ((l as any).taskCost || 0), 0);
       cost = serviceLineCosts;
+      netProfit = grossRevenue - cost;
     }
 
-    const netProfit = grossRevenue - cost;
     return { grossRevenue, cost, netProfit };
   };
 
