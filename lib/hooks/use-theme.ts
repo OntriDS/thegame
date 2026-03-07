@@ -7,28 +7,44 @@ import { useUserPreferences } from './use-user-preferences';
 
 export function useTheme() {
   const { getPreference, setPreference, isLoading } = useUserPreferences();
-  const [currentTheme, setCurrentTheme] = useState<ThemeName>(DEFAULT_THEME);
-  const [isDark, setIsDark] = useState(false);
-  const [isInitialized, setIsInitialized] = useState(false);
+  const [currentTheme, setCurrentTheme] = useState<ThemeName>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('theme-color') as ThemeName;
+      if (saved && THEMES[saved]) return saved;
+    }
+    return DEFAULT_THEME;
+  });
+  const [isDark, setIsDark] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('theme-mode') === 'dark';
+    }
+    return false;
+  });
+  const [isInitialized, setIsInitialized] = useState(() => typeof window !== 'undefined');
 
-  // Load theme from preferences on mount
+  // Load theme from preferences on mount (KV DB sync)
   useEffect(() => {
     if (isLoading) return;
-    
+
     const savedColorTheme = getPreference('theme-color') as ThemeName;
-    const savedMode = getPreference('theme-mode') === 'dark';
-    
-    if (savedColorTheme && THEMES[savedColorTheme]) {
+    const dbModePrefs = getPreference('theme-mode');
+    const savedMode = dbModePrefs === 'dark';
+
+    // Only update and override if KV database differs from local storage
+    if (savedColorTheme && THEMES[savedColorTheme] && savedColorTheme !== currentTheme) {
       setCurrentTheme(savedColorTheme);
     }
-    setIsDark(savedMode);
-    setIsInitialized(true);
+    if (dbModePrefs !== undefined && savedMode !== isDark) {
+      setIsDark(savedMode);
+    }
+
+    if (!isInitialized) setIsInitialized(true);
   }, [isLoading, getPreference]);
 
   // Apply theme + dark mode to CSS variables
   useEffect(() => {
     if (!isInitialized || typeof window === 'undefined') return;
-    
+
     const theme = THEMES[currentTheme];
     const mode = isDark ? 'dark' : 'light';
     const colors = theme[mode];
@@ -42,7 +58,7 @@ export function useTheme() {
 
     // Apply dark mode class to html element
     root.classList.toggle('dark', isDark);
-    
+
     // Sync to localStorage for instant hydration (prevents flash on page load)
     localStorage.setItem('theme-mode', isDark ? 'dark' : 'light');
     localStorage.setItem('theme-color', currentTheme);

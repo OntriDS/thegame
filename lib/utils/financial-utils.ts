@@ -174,7 +174,7 @@ export const getToChargeTotal = (toCharge: number = 0, toChargeColones: number =
 
 // Calculate total USD value for toPay (USD + Colones converted)
 export const getToPayTotal = (toPay: number = 0, toPayColones: number = 0, exchangeRates: ExchangeRates): number => {
-  return toPay + (toPayColones / exchangeRates.colonesToUsd);
+  return Math.abs(toPay) + Math.abs(toPayColones / exchangeRates.colonesToUsd);
 };
 
 // Calculate core monetary total (cash + bank + bitcoin + crypto)
@@ -183,7 +183,7 @@ export const getCoreMonetaryTotal = (assets: MonetaryAssets, exchangeRates: Exch
   const bankTotal = getBankTotal(assets.bank, assets.bankColones, exchangeRates);
   const bitcoinTotal = getBitcoinTotal(assets.bitcoin, assets.bitcoinSats, exchangeRates);
   const cryptoTotal = includeCrypto ? (assets.crypto || 0) : 0;
-  
+
   return cashTotal + bankTotal + bitcoinTotal + cryptoTotal;
 };
 
@@ -192,8 +192,8 @@ export const getMonetaryTotal = (assets: MonetaryAssets, exchangeRates: Exchange
   const coreTotal = getCoreMonetaryTotal(assets, exchangeRates, includeCrypto);
   const toChargeTotal = getToChargeTotal(assets.toCharge, assets.toChargeColones, exchangeRates);
   const toPayTotal = getToPayTotal(assets.toPay, assets.toPayColones, exchangeRates);
-  
-  return coreTotal + toChargeTotal + toPayTotal;
+
+  return coreTotal + toChargeTotal - toPayTotal;
 };
 
 // Calculate jungle coins total in USD
@@ -229,7 +229,7 @@ export const getTotalNetWorth = (
   const jungleCoinsTotal = getJungleCoinsTotal(jungleCoins, exchangeRates);
   const inventoryTotal = getInventoryTotal(inventory);
   const otherTotal = getOtherAssetsTotal(otherAssets);
-  
+
   return monetaryTotal + jungleCoinsTotal + inventoryTotal + otherTotal;
 };
 

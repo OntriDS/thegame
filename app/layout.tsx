@@ -19,9 +19,8 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <Script
+        <script
           id="prevent-theme-flash"
-          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
@@ -47,7 +46,7 @@ export default function RootLayout({
                     
                     for (const [key, value] of Object.entries(colors)) {
                       const cssVar = '--' + key.replace(/([A-Z])/g, '-$1').toLowerCase();
-                      htmlElement.style.setProperty(cssVar, value as string);
+                      htmlElement.style.setProperty(cssVar, value);
                     }
                   }
                 } catch (e) {

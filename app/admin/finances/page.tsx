@@ -177,6 +177,23 @@ export default function FinancesPage() {
         const rates = await ClientAPI.getFinancialConversionRates();
         setPointsConversionRates(rates);
         setExchangeRates(rates);
+
+        // Fetch Bitcoin live price ONLY after DB fallback rates have been established
+        // This prevents the DB load from overwriting the live price due to race conditions
+        setIsFetchingBitcoin(true);
+        try {
+          const response = await fetch('/api/bitcoin/price', { cache: 'no-store' });
+          if (response.ok) {
+            const data = await response.json();
+            if (data?.price && data.price > 0) {
+              setExchangeRates(prev => ({ ...prev, bitcoinToUsd: data.price }));
+            }
+          }
+        } catch (btcError) {
+          console.warn('Failed to fetch Bitcoin live price, relying on DB fallback', btcError);
+        } finally {
+          setIsFetchingBitcoin(false);
+        }
       } catch (error) {
         console.error('Failed to load conversion rates:', error);
       }
@@ -409,7 +426,6 @@ export default function FinancesPage() {
   useEffect(() => {
     loadAssets();
     loadPartnershipData();
-    fetchBitcoinPrice();
 
     window.addEventListener('assetsUpdated', handleAssetsUpdate);
 
@@ -550,11 +566,6 @@ export default function FinancesPage() {
 
   const handleSaveSection = (sectionData: any) => {
     if (!editingSection) return;
-
-    // Convert ToPay from positive input to negative for storage
-    if (sectionData.toPay !== undefined) {
-      sectionData.toPay = -Math.abs(sectionData.toPay);
-    }
 
     if (editingSection.type === 'company') {
       const updatedAssets = { ...companyAssets, ...sectionData };
