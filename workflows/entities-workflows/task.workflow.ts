@@ -358,32 +358,27 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
   const newMonth = isNowArchived ? getTaskArchiveMonth(task) : null;
   const oldMonth = wasArchived ? getTaskArchiveMonth(previousTask) : null;
 
-  if (newMonth !== oldMonth || (!newMonth && oldMonth)) {
+  if (isNowArchived || wasArchived) {
     const { kvSAdd, kvSRem } = await import('@/data-store/kv');
     const { getAvailableArchiveMonths } = await import('@/data-store/datastore');
     const { buildArchiveMonthsKey } = await import('@/data-store/keys');
 
-    // Explicitly remove from oldMonth just in case it's not in the generalized list yet
-    if (oldMonth && oldMonth !== newMonth) {
-      await kvSRem(`index:tasks:collected:${oldMonth}`, task.id);
-    }
-
     // BULLETPROOF CLEANUP: Remove from ALL other months to fix legacy ghost duplicates
+    // We run this unconditionally to ensure no task is left behind in a wrong index
     const allMonths = await getAvailableArchiveMonths();
-    for (const m of allMonths) {
-      if (m !== newMonth) {
-        await kvSRem(`index:tasks:collected:${m}`, task.id);
-      }
-    }
+    await Promise.all(
+      allMonths.map(async (m) => {
+        if (m !== newMonth) {
+          await kvSRem(`index:tasks:collected:${m}`, task.id);
+        }
+      })
+    );
 
     if (newMonth) {
       await kvSAdd(`index:tasks:collected:${newMonth}`, task.id);
       await kvSAdd(buildArchiveMonthsKey(), newMonth);
-      console.log(`[onTaskUpsert] 📦 Task ${task.name} secured in archive index: ${newMonth}`);
-
-      // The task's existence in the index and its inherent dates are the single source of truth.
     }
-  }
+  } // The task's existence in the index and its inherent dates are the single source of truth.
 }
 
 /**
