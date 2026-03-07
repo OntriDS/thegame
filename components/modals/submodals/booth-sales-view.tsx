@@ -36,7 +36,6 @@ import { v4 as uuid } from 'uuid';
 import { createSiteOptionsWithCategories } from '@/lib/utils/site-options-utils';
 import SaleItemsSubModal from './sale-items-submodal';
 import ConfirmationModal from './confirmation-submodal';
-import { DEFAULT_CURRENCY_EXCHANGE_RATES } from '@/lib/constants/financial-constants';
 
 // ============================================================================
 // Types
@@ -72,6 +71,9 @@ export interface BoothSalesViewProps {
     setIsNotPaid: (val: boolean) => void;
     isNotCharged: boolean;
     setIsNotCharged: (val: boolean) => void;
+
+    // Financial
+    exchangeRate?: number;
 }
 
 interface AssociateQuickEntry {
@@ -122,7 +124,8 @@ export default function BoothSalesView({
     setIsNotPaid,
     isNotCharged,
     setIsNotCharged,
-    onDelete
+    onDelete,
+    exchangeRate = 500 // Deep fallback if network fails
 }: BoothSalesViewProps) {
 
     // 1. Local State
@@ -131,15 +134,15 @@ export default function BoothSalesView({
     // UI Toggles
     const [showItemPicker, setShowItemPicker] = useState(false);
 
-    // Financials
-    // const [boothCost, setBoothCost] = useState(0); // Removed duplicate
-    const exchangeRate = DEFAULT_CURRENCY_EXCHANGE_RATES.colonesToUsd;
-
     // State for Single Contract (Global for this sale)
-    const [selectedContractId, setSelectedContractId] = useState<string>('');
+    const [selectedContractId, setSelectedContractId] = useState<string>(() => {
+        return sale?.metadata?.boothSaleContext?.contractId || '';
+    });
 
     // State for Founder Business (Us)
-    const [selectedFounderBusinessId, setSelectedFounderBusinessId] = useState<string>('');
+    const [selectedFounderBusinessId, setSelectedFounderBusinessId] = useState<string>(() => {
+        return sale?.metadata?.boothSaleContext?.principalBusinessId || '';
+    });
 
     // State for Associate (Them)
     // State for Associate (Them)
@@ -211,8 +214,8 @@ export default function BoothSalesView({
 
         // 2. Load Default Founder Business
         if (!selectedFounderBusinessId && businesses.length > 0) {
-            // First try to find a founder business from archive metadata
-            const metaFounderId = sale?.archiveMetadata?.boothSaleContext?.principalBusinessId;
+            // First try to find a founder business from metadata
+            const metaFounderId = sale?.metadata?.boothSaleContext?.principalBusinessId;
             if (metaFounderId && businesses.some(b => b.id === metaFounderId)) {
                 setSelectedFounderBusinessId(metaFounderId);
             } else {
@@ -666,9 +669,9 @@ export default function BoothSalesView({
                 cashUSD: paymentCashUSD
             },
 
-            // Metadata & Links (Legacy Context kept for backward compatibility if needed, but primary truth is above)
-            archiveMetadata: {
-                ...(sale?.archiveMetadata || {}),
+            // Metadata Extension Payload
+            metadata: {
+                ...(sale?.metadata || {}),
                 boothSaleContext: {
                     ...boothMetadata.boothSaleContext
                 }

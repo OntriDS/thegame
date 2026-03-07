@@ -348,7 +348,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
       isCollected: true,
       restockable: targetItem.restockable,
       links: [],
-      archiveMetadata: {
+      metadata: {
         source: 'item-modal',
         mode: 'archive-only',
         siteId,

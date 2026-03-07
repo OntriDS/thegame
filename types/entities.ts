@@ -49,6 +49,23 @@ export interface Settlement {
   updatedAt: Date;
 }
 
+/**
+ * Extension Payload Pattern
+ * Strictly-typed extensions for entity sub-modules that don't belong in the root schema.
+ */
+export interface BoothSaleContext {
+  principalBusinessId: string;
+  contractId: string;
+  boothCost: number;
+  calculatedTotals: Record<string, any>;
+  paymentDistribution: Record<string, number>;
+}
+
+export interface EntityMetadataPayloads {
+  boothSaleContext?: BoothSaleContext;
+  [key: string]: any; // Allow other modules to bind payloads without polluting the schema
+}
+
 /** Shared core - All entities extend this */
 export interface BaseEntity {
   id: string;               // uuid
@@ -57,7 +74,7 @@ export interface BaseEntity {
   createdAt: Date;
   updatedAt: Date;
   links: Link[];            // The Rosetta Stone - Relationship tracking
-  archiveMetadata?: Record<string, any>; // Optional provenance metadata for archive snapshots
+  metadata?: EntityMetadataPayloads; // Strictly-typed Extension Dictionary
 }
 
 /** Link Entity - The Rosetta Stone of Relationships */

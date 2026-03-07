@@ -17,6 +17,7 @@ import { getZIndexClass } from '@/lib/utils/z-index-utils';
 import { SaleType, SaleStatus, PaymentMethod, Currency, ItemType, ItemStatus, TaskType, TaskPriority, Collection, STATION_CATEGORIES, CharacterRole, EntityType, PLAYER_ONE_ID } from '@/types/enums';
 import { getSubTypesForItemType } from '@/lib/utils/item-utils';
 import type { Station } from '@/types/type-aliases';
+import { CurrencyExchangeRates } from '@/lib/constants/financial-constants';
 import { createSiteOptionsWithCategories } from '@/lib/utils/site-options-utils';
 import { createCharacterOptions, createStationCategoryOptions, createTaskParentOptions, createItemTypeSubTypeOptions, getItemTypeFromCombined, createItemOptions, getCategoryFromCombined, getStationFromCombined } from '@/lib/utils/searchable-select-utils';
 import { getAreaForStation, getSalesChannelFromSaleType } from '@/lib/utils/business-structure-utils';
@@ -45,6 +46,7 @@ interface SalesModalProps {
   onOpenChange: (open: boolean) => void;
   onSave: (sale: Sale, force?: boolean) => Promise<void>;
   onDelete?: () => void; // Optional callback for when sale is deleted
+  exchangeRates?: CurrencyExchangeRates;
 }
 
 export default function SalesModal({
@@ -53,6 +55,7 @@ export default function SalesModal({
   onOpenChange,
   onSave,
   onDelete,
+  exchangeRates,
 }: SalesModalProps) {
   const { getPreference, setPreference } = useUserPreferences();
 
@@ -1182,6 +1185,7 @@ export default function SalesModal({
               updateSaleStatus(val);
             }}
             onDelete={sale?.id ? (() => setShowDeleteModal(true)) : undefined}
+            exchangeRate={exchangeRates?.colonesToUsd}
           />
         ) : (
           <div className="px-6 overflow-y-auto space-y-4" style={{ maxHeight: 'calc(90vh - 280px)' }}>

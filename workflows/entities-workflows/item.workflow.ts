@@ -138,12 +138,6 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
 
       const { buildArchiveMonthsKey } = await import('@/data-store/keys');
       await kvSAdd(buildArchiveMonthsKey(), monthKey);
-
-      updatedItem.archiveMetadata = {
-        ...updatedItem.archiveMetadata,
-        archivedAt: new Date().toISOString(),
-        archiveMonth: monthKey
-      };
       await markEffect(archiveIndexEffectKey);
       console.log(`[onItemUpsert] ✅ Item ${item.name} SOLD - added to archive index ${monthKey}`);
     }

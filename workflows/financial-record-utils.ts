@@ -467,7 +467,7 @@ export async function createFinancialRecordFromSale(sale: Sale): Promise<Financi
  * Calculate the associate's share of a sale
  */
 export async function calculateAssociatePayout(sale: Sale): Promise<number> {
-  const boothFee = sale.boothFee ?? sale.archiveMetadata?.boothSaleContext?.boothCost ?? 0;
+  const boothFee = sale.boothFee ?? sale.metadata?.boothSaleContext?.boothCost ?? 0;
 
   // Determine Target Entity ID
   const targetEntityId = sale.associateId || sale.partnerId || sale.customerId;
@@ -482,7 +482,7 @@ export async function calculateAssociatePayout(sale: Sale): Promise<number> {
   let shareOfExpenses_Me = 1.0; // I pay 100% of booth fee by default
 
   // Determine Contract ID
-  const contractId = sale.archiveMetadata?.boothSaleContext?.contractId;
+  const contractId = sale.metadata?.boothSaleContext?.contractId;
   let contract: Contract | null = null;
   if (contractId) {
     contract = await getContractById(contractId);

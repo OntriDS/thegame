@@ -18,6 +18,7 @@ import SalesModal from "@/components/modals/sales-modal";
 import { MonthYearSelector } from "@/components/ui/month-year-selector";
 import { getCurrentMonth } from "@/lib/constants/date-constants";
 import { Switch } from "@/components/ui/switch";
+import { CurrencyExchangeRates, DEFAULT_CURRENCY_EXCHANGE_RATES } from "@/lib/constants/financial-constants";
 
 export default function SalesPage() {
   const { activeBg } = useThemeColors();
@@ -36,8 +37,9 @@ export default function SalesPage() {
   const [showCollected, setShowCollected] = useState(false); // false=Active, true=Collected
   const [showCollectConfirm, setShowCollectConfirm] = useState(false);
   const [isCollecting, setIsCollecting] = useState(false);
+  const [exchangeRates, setExchangeRates] = useState<CurrencyExchangeRates>(DEFAULT_CURRENCY_EXCHANGE_RATES);
 
-  // Load sales data
+  // Load sales data & config
   useEffect(() => {
     loadSales();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -77,15 +79,17 @@ export default function SalesPage() {
   const loadSales = async () => {
     try {
       setIsLoading(true);
-      const [salesData, sitesData] = await Promise.all([
+      const [salesData, sitesData, ratesData] = await Promise.all([
         ClientAPI.getSales(
           filterByMonth ? currentMonth : undefined,
           filterByMonth ? currentYear : undefined
         ),
-        ClientAPI.getSites()
+        ClientAPI.getSites(),
+        ClientAPI.getFinancialConversionRates()
       ]);
       setSales(salesData);
       setSites(sitesData);
+      setExchangeRates(ratesData);
     } catch (error) {
       console.error('Failed to load sales:', error);
     } finally {
@@ -138,11 +142,11 @@ export default function SalesPage() {
     let netProfit = 0;
 
     if (sale.type === SaleType.BOOTH) {
-      const exchangeRate = 500;
+      const exchangeRate = exchangeRates.colonesToUsd || 500;
 
       // Check for advanced contract calculation first
       // myNet is stored in Colones (CRC)
-      const myNetCRC = sale.archiveMetadata?.boothSaleContext?.calculatedTotals?.myNet;
+      const myNetCRC = sale.metadata?.boothSaleContext?.calculatedTotals?.myNet;
 
       if (myNetCRC !== undefined) {
         netProfit = myNetCRC / exchangeRate;
@@ -436,6 +440,7 @@ export default function SalesPage() {
         onOpenChange={setShowSalesModal}
         onSave={handleSaveSale}
         onDelete={handleDeleteSale}
+        exchangeRates={exchangeRates}
       />
 
       <Dialog open={showCollectConfirm} onOpenChange={setShowCollectConfirm}>

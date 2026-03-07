@@ -63,11 +63,7 @@ export async function POST(request: NextRequest) {
                     ...sale,
                     isCollected: true,
                     collectedAt: endOfMonth,
-                    status: SaleStatus.COLLECTED,
-                    archiveMetadata: {
-                        archivedAt: new Date().toISOString(),
-                        archiveMonth: monthKey
-                    }
+                    status: SaleStatus.COLLECTED
                 };
 
                 // Add to index instead of snapshot
