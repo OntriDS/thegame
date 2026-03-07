@@ -87,7 +87,7 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
 
     // Return early ONLY if CREATED was already logged AND task is NOT Done
     // This prevents duplicates but allows Done tasks to proceed to DONE logging
-    if (alreadyLoggedCreated && task.status !== 'Done') {
+    if (alreadyLoggedCreated && task.status !== TaskStatus.DONE) {
       return;
     }
     // Continue to DONE logging below if task is Done (whether CREATED just logged or was already there)
@@ -116,7 +116,7 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
     }
 
     // Handle uncompletion (Done/Collected → Other status)
-    if ((previousTask!.status === 'Done' || previousTask!.status === 'Collected') && task.status !== 'Done' && task.status !== 'Collected') {
+    if ((previousTask!.status === TaskStatus.DONE || previousTask!.status === TaskStatus.COLLECTED) && task.status !== TaskStatus.DONE && task.status !== TaskStatus.COLLECTED) {
       console.log(`[onTaskUpsert] Task uncompleted: ${task.name} (${previousTask!.status} → ${task.status})`);
 
       // Uncomplete the task and remove effects
@@ -126,7 +126,7 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
   }
 
   // Log DONE event - either when status changes to Done OR when creating a task that's already Done
-  if (task.status === 'Done' && task.doneAt) {
+  if (task.status === TaskStatus.DONE && task.doneAt) {
     const shouldLogDone = !previousTask || !previousTask.doneAt;
     if (shouldLogDone) {
       await appendEntityLog(EntityType.TASK, task.id, LogEventType.DONE, {
@@ -206,7 +206,7 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
 
   // PARALLEL SIDE EFFECTS - when task is completed (Done or Collected)
   // Run all independent side effects concurrently for 60-70% performance improvement
-  if (task.status === 'Done' || task.status === 'Collected') {
+  if (task.status === TaskStatus.DONE || task.status === TaskStatus.COLLECTED) {
     const sideEffects: Promise<void>[] = [];
 
     // Item creation from emissary fields
@@ -313,7 +313,7 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
           console.log(`[onTaskUpsert] User requested to skip cascade for template: ${task.name}`);
         } else {
           // Detect template status reversal (uncascade)
-          const statusReverted = previousTask.status === 'Done' && task.status !== 'Done';
+          const statusReverted = previousTask.status === TaskStatus.DONE && task.status !== TaskStatus.DONE;
 
           if (statusReverted) {
             console.log(`[onTaskUpsert] Template status reverted, uncascading instances: ${task.name}`);
@@ -583,7 +583,7 @@ export async function removeTaskLogEntriesOnDelete(task: Task): Promise<void> {
     }
 
     // 6. Remove from archive index (if applicable)
-    if (task.status === 'Done' || task.isCollected || task.status === 'Collected') {
+    if (task.status === TaskStatus.DONE || task.isCollected || task.status === TaskStatus.COLLECTED) {
       try {
         let snapshotDate = task.doneAt;
         if (!snapshotDate && task.collectedAt) snapshotDate = task.collectedAt;

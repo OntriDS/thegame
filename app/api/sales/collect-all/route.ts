@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
         // We exclude Pending (not fully paid/charged/closed).
         // Sales usually go Pending -> Charged (Done) -> Collected
         const recordsToCollect = allSales.filter(sale =>
-            sale.status !== 'PENDING' &&
+            sale.status !== SaleStatus.PENDING &&
             !sale.isCollected
         );
 

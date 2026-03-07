@@ -1,3 +1,5 @@
+import { FinancialStatus, ItemStatus } from './enums';
+
 export interface AvailableArchiveMonth {
   key: string; // MM-YY
   label: string; // e.g., Jun 2025
@@ -86,7 +88,7 @@ export interface FinancialSnapshot extends BaseSnapshot {
     amount: number;
     type: 'income' | 'expense';
     company: string;
-    status: 'COLLECTED'; // Always COLLECTED in snapshot
+    status: FinancialStatus.COLLECTED; // Always COLLECTED in snapshot
     collectedAt: Date;
     collectedByCharacterId?: string;
     isNotCharged?: boolean;
@@ -126,7 +128,7 @@ export interface ItemSnapshot extends BaseSnapshot {
     name: string;
     type: string;
     subType?: string;
-    status: 'SOLD'; // Always SOLD in snapshot
+    status: ItemStatus.SOLD; // Always SOLD in snapshot
     soldAt: Date;
     saleId?: string; // Which sale caused this snapshot (optional for manual SOLD)
     quantitySold: number;

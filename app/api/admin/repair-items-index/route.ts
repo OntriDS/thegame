@@ -16,10 +16,18 @@ export async function GET(req: NextRequest) {
     try {
         const items = await getAllItems();
 
-        // Find all SOLD or COLLECTED items
-        const archivableItems = items.filter(
-            item => item.status === ItemStatus.SOLD || item.status === ItemStatus.COLLECTED || !!item.isCollected
-        );
+        // Find all SOLD or COLLECTED items using robust case-insensitive matching
+        // Built to catch legacy "Ghost Items" with status 'SOLD' instead of ItemStatus.SOLD
+        const archivableItems = items.filter(item => {
+            const itemStatus = (item.status || '').toString().toLowerCase();
+            return (
+                itemStatus === 'sold' ||
+                itemStatus === 'itemstatus.sold' ||
+                itemStatus === 'collected' ||
+                itemStatus === 'itemstatus.collected' ||
+                !!item.isCollected
+            );
+        });
 
         const results = {
             scanned: items.length,

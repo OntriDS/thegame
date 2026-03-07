@@ -1,7 +1,7 @@
 // links/links-workflows.ts
 // Universal entry point for creating links from entities (property inspection)
 
-import { EntityType, LinkType, LogEventType } from '@/types/enums';
+import { EntityType, LinkType, LogEventType, TaskStatus } from '@/types/enums';
 import type { Task, Item, Sale, FinancialRecord, Character, Player, Site, Link } from '@/types/entities';
 import { createLink, removeLink, getLinksFor } from './link-registry';
 import { appendLinkLog } from './links-logging';
@@ -93,7 +93,7 @@ export async function processTaskEffects(task: Task): Promise<void> {
   }
 
   // Create TASK_ITEM link for items created from task emissary fields
-  if (task.outputItemType && task.outputQuantity && task.status === 'Done') {
+  if (task.outputItemType && task.outputQuantity && task.status === TaskStatus.DONE) {
     // Find the item created by this task (optimized query)
     const taskItems = await getItemsBySourceTaskId(task.id);
     const createdItem = taskItems.find(item => item.type === task.outputItemType);

@@ -2,7 +2,7 @@
 // Comprehensive update propagation across ALL entity relationships
 
 import type { Task, Item, Sale, FinancialRecord, Character, Player } from '@/types/entities';
-import { EntityType, PLAYER_ONE_ID, ItemStatus } from '@/types/enums';
+import { EntityType, PLAYER_ONE_ID, ItemStatus, TaskStatus } from '@/types/enums';
 import { hasEffect, markEffect } from '@/data-store/effects-registry';
 import { getFinancialsBySourceTaskId, getFinancialsBySourceSaleId, upsertFinancial } from '@/data-store/datastore';
 import { getItemsBySourceTaskId, getItemsBySourceRecordId, getItemById, upsertItem, removeItem } from '@/data-store/datastore';
@@ -675,8 +675,8 @@ export async function updatePlayerPointsFromSource(
     // - Task: must be Done in both old and new versions
     // - Sale: must be charged (paid and charged) in both old and new versions
     if (sourceType === EntityType.TASK) {
-      const wasCompleted = oldSource?.status === 'Done' && !!oldSource?.doneAt;
-      const isCompleted = newSource?.status === 'Done' && !!newSource?.doneAt;
+      const wasCompleted = oldSource?.status === TaskStatus.DONE && !!oldSource?.doneAt;
+      const isCompleted = newSource?.status === TaskStatus.DONE && !!newSource?.doneAt;
       if (!wasCompleted || !isCompleted) {
         console.log('[updatePlayerPointsFromSource] Task not completed in both versions, skipping delta');
         return;

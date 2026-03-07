@@ -569,7 +569,7 @@ export default function TaskModal({
         const affectedCount = await ClientAPI.getUndoneInstancesCount(task.id, status);
 
         if (affectedCount > 0) {
-          const isReversal = task.status === 'Done' && status !== 'Done';
+          const isReversal = task.status === TaskStatus.DONE && status !== TaskStatus.DONE;
 
           setCascadeData({
             newStatus: status,

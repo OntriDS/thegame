@@ -2,7 +2,7 @@
 // Directional Workflow Engine for The Rosetta Stone
 
 import { Link } from '../../types/entities';
-import { LinkType, EntityType } from '../../types/enums';
+import { LinkType, EntityType, SaleStatus } from '../../types/enums';
 import { DirectionalRule, ENTITY_RULES } from './entity-rules';
 
 export interface WorkflowTrigger {
@@ -200,7 +200,7 @@ function generateTargetData(
         ...baseData,
         saleDate: new Date(),
         type: 'FERIA',
-        status: 'PENDING',
+        status: SaleStatus.PENDING,
         siteId: 'ECO_FERIA', // Default site
         lines: [],
         totals: {

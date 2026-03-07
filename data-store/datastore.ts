@@ -175,7 +175,7 @@ export async function getAllTasks(): Promise<Task[]> {
 // Added specifically for active boards that don't want completed/archived noise
 export async function getActiveTasks(): Promise<Task[]> {
   const tasks = await repoGetAllTasks();
-  return reviveDates(tasks.filter(task => !task.isCollected && task.status !== 'Collected'));
+  return reviveDates(tasks.filter(task => !task.isCollected && task.status !== TaskStatus.COLLECTED));
 }
 
 // Phase 1 helpers: month-scoped, filter-after-load
@@ -335,7 +335,7 @@ export async function getAllFinancials(): Promise<FinancialRecord[]> {
   const financials = await repoGetAllFinancials();
   // We DO NOT filter out isCollected (Analytics needs historical data)
   // But we DO filter out PENDING records to prevent artificial inflation
-  return financials.filter(financial => financial.status !== 'PENDING');
+  return financials.filter(financial => financial.status !== FinancialStatus.PENDING);
 }
 
 // Added specifically for active boards that don't want pending noise
@@ -343,8 +343,8 @@ export async function getActiveFinancials(): Promise<FinancialRecord[]> {
   const financials = await repoGetAllFinancials();
   return financials.filter(financial =>
     !financial.isCollected &&
-    financial.status !== 'Collected' &&
-    financial.status !== 'PENDING'
+    financial.status !== FinancialStatus.COLLECTED &&
+    financial.status !== FinancialStatus.PENDING
   );
 }
 

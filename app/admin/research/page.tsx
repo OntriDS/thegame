@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { BookOpen, Map, FileText, Compass, Zap, CheckCircle, AlertTriangle, X, Bot } from 'lucide-react';
 import { useState, useEffect, Suspense } from 'react';
-import { NotebookType } from '@/types/enums';
+import { NotebookType, TaskStatus } from '@/types/enums';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
 import { formatDateDDMMYYYY } from '@/lib/constants/date-constants';
 import { NotesTab } from '@/components/research/notes-tab';
@@ -268,7 +268,7 @@ function ResearchPageContent() {
     }
 
     const currentStatus = projectStatus.phasePlan[phaseKey].status;
-    const statusCycle = ['Not Started', 'In Progress', 'Done'];
+    const statusCycle = [TaskStatus.CREATED, TaskStatus.IN_PROGRESS, TaskStatus.DONE];
     const currentIndex = statusCycle.indexOf(currentStatus);
     const nextIndex = (currentIndex + 1) % statusCycle.length;
     const newStatus = statusCycle[nextIndex];
@@ -304,7 +304,7 @@ function ResearchPageContent() {
 
     // Check if all phases are "Done"
     const incompletePhasesList = Object.entries(projectStatus.phasePlan)
-      .filter(([phaseKey, phase]: [string, any]) => phase.status !== 'Done')
+      .filter(([phaseKey, phase]: [string, any]) => phase.status !== TaskStatus.DONE)
       .map(([phaseKey, phase]: [string, any]) => phase.phaseName);
 
     if (incompletePhasesList.length > 0) {
