@@ -154,9 +154,14 @@ export default function BoothSalesView({
         if ((sale as any)?.archiveMetadata?.boothSaleContext?.counterpartyBusinessId) {
             return (sale as any).archiveMetadata.boothSaleContext.counterpartyBusinessId;
         }
-        // 3. Fallback for VERY legacy sales (migrate Character ID to Business ID)
+        // 3. Fallback for VERY legacy sales (migrate Character ID to Business ID OR handle preexisting Business ID)
         const charId = sale?.associateId || sale?.partnerId;
         if (charId) {
+            // First check if it's already a Business ID
+            if (businesses.some(b => b.id === charId)) {
+                return charId;
+            }
+            // Otherwise try migrating Character ID to linked Business ID
             const linkedBusiness = businesses.find(b => b.linkedCharacterId === charId);
             if (linkedBusiness) return linkedBusiness.id;
         }
@@ -908,14 +913,20 @@ export default function BoothSalesView({
                                                         {businesses
                                                             .filter(b => {
                                                                 if (!b.isActive) return false;
+                                                                if (b.id === selectedFounderBusinessId) return false; // Explicitly blacklist Founder Business
+
                                                                 const linkedChar = characters.find(c => c.id === b.linkedCharacterId);
                                                                 if (viewMode === 'Associate') {
                                                                     if (linkedChar && linkedChar.roles.includes(CharacterRole.ASSOCIATE)) return true;
-                                                                    return contracts.some(c => c.status === ContractStatus.ACTIVE && (c.principalBusinessId === b.id || c.counterpartyBusinessId === b.id));
+                                                                    return contracts.some(c => c.status === ContractStatus.ACTIVE &&
+                                                                        ((c.principalBusinessId === selectedFounderBusinessId && c.counterpartyBusinessId === b.id) ||
+                                                                            (c.counterpartyBusinessId === selectedFounderBusinessId && c.principalBusinessId === b.id)));
                                                                 }
                                                                 if (viewMode === 'Partner') {
                                                                     if (linkedChar && linkedChar.roles.includes(CharacterRole.PARTNER)) return true;
-                                                                    return contracts.some(c => c.status === ContractStatus.ACTIVE && (c.principalBusinessId === b.id || c.counterpartyBusinessId === b.id));
+                                                                    return contracts.some(c => c.status === ContractStatus.ACTIVE &&
+                                                                        ((c.principalBusinessId === selectedFounderBusinessId && c.counterpartyBusinessId === b.id) ||
+                                                                            (c.counterpartyBusinessId === selectedFounderBusinessId && c.principalBusinessId === b.id)));
                                                                 }
                                                                 return false;
                                                             })
