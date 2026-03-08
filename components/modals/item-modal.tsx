@@ -988,11 +988,6 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
                     min={0}
                     className="h-8 text-sm mt-1"
                   />
-                  {item && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Current stock at {site}: {item.stock?.find(stock => stock.siteId === site)?.quantity || 0} units
-                    </p>
-                  )}
                 </div>
 
                 <div>
@@ -1055,17 +1050,6 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
                   />
                 </div>
               </div>
-
-              <div className="flex items-center gap-3 pt-1">
-                <Switch
-                  id="restockable"
-                  checked={restockable}
-                  onCheckedChange={(checked) => setRestockable(checked)}
-                />
-                <Label htmlFor="restockable" className="text-xs">
-                  Restock automatically when sold (set to To Order at zero stock)
-                </Label>
-              </div>
             </div>
 
             {/* Column 3 - AMBASSADOR (Site References) */}
@@ -1095,6 +1079,17 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="flex items-center gap-3 pt-1">
+                <Switch
+                  id="restockable"
+                  checked={restockable}
+                  onCheckedChange={(checked) => setRestockable(checked)}
+                />
+                <Label htmlFor="restockable" className="text-xs">
+                  Restock automatically when sold
+                </Label>
               </div>
             </div>
           </div>
