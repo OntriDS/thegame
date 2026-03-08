@@ -276,14 +276,14 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate }: TaskD
                 try {
                   const now = new Date();
                   await ClientAPI.collectAllEntities(now.getMonth() + 1, now.getFullYear());
-                  alert(`Mega-Collection Complete! Successfully processed all entities.`);
+                  alert(`Mega-Collection Complete! Successfully processed all items.`);
                 } catch (error: any) {
                   alert(`Collection Failed: ${error.message}`);
                 }
               }}
             >
               <Play className="h-5 w-5 mr-2" />
-              Run All Rewards Collection
+              Run All Monthly Rewards
             </Button>
 
             <div className="relative py-2">

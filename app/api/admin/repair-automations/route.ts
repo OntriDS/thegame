@@ -12,82 +12,56 @@ export async function POST(request: NextRequest) {
     }
 
     try {
+        const { getActiveTasks, upsertTask, removeTask } = await import('@/data-store/datastore');
         const data = await getActiveTasks();
 
-        const systemAutomationTasks = [
-            {
-                id: 'system-automation-tasks-collection',
-                name: 'Tasks Collection',
-                description: 'Process to finalize monthly Task rewards and archive DONE records.',
-            },
-            {
-                id: 'system-automation-sales-collection',
-                name: 'Sales Collection',
-                description: 'Process to finalize monthly Sales accounting and archive CHARGED records.',
-            },
-            {
-                id: 'system-automation-financials-collection',
-                name: 'Financials Collection',
-                description: 'Process to finalize monthly Financial records and claim processing rewards.',
-            },
-            {
-                id: 'system-automation-inventory-collection',
-                name: 'Inventory Collection',
-                description: 'Process to archive monthly Inventory status and sold item snapshots.',
-            },
-            {
-                id: 'system-automation-all-collection',
-                name: 'All Monthly Rewards Collection',
-                description: 'Master process that triggers all collection automations sequentially.',
-            }
+        // 1. DEEP CLEANUP: Delete every possible variant to ensure no ghosts remain in the tree
+        const legacyIds = [
+            'system-automation-tasks-collection',
+            'system-automation-sales-collection',
+            'system-automation-financials-collection',
+            'system-automation-inventory-collection',
+            'system-automation-all-collection',
+            'system-automation-monthly-collection',
+            'system-automation-rewards-collection',
+            'system-automation-monthly-rewards' // delete existing target to force fresh creation
         ];
 
-        let createdCount = 0;
-        let updatedCount = 0;
-
-        for (const config of systemAutomationTasks) {
-            const existingTask = data.find(t => t.id === config.id);
-
-            if (!existingTask) {
-                const seedTask: Task = {
-                    id: config.id,
-                    name: config.name,
-                    description: config.description,
-                    type: TaskType.AUTOMATION,
-                    status: TaskStatus.CREATED,
-                    priority: TaskPriority.NORMAL,
-                    station: 'Control Room' as any,
-                    progress: 0,
-                    order: 0,
-                    parentId: null,
-                    createdAt: new Date(),
-                    updatedAt: new Date(),
-                    links: [],
-                    isNotCharged: false,
-                    isNotPaid: false,
-                    isCollected: false,
-                    cost: 0,
-                    revenue: 0,
-                    rewards: { points: { xp: 0, rp: 0, fp: 0, hp: 0 } }
-                };
-                await upsertTask(seedTask);
-                createdCount++;
-            } else if (existingTask.name !== config.name || existingTask.description !== config.description) {
-                const updatedTask = {
-                    ...existingTask,
-                    name: config.name,
-                    description: config.description,
-                    updatedAt: new Date()
-                };
-                await upsertTask(updatedTask);
-                updatedCount++;
-            }
+        for (const id of legacyIds) {
+            try {
+                await removeTask(id);
+            } catch (e) { }
         }
+
+        // 2. UNIFIED SEED: Create the single "Monthly Rewards Collection" task
+        const masterTask: Task = {
+            id: 'system-automation-monthly-rewards',
+            name: 'Monthly Rewards Collection',
+            description: 'Centralized system process to finalize and collect all monthly rewards.',
+            type: TaskType.AUTOMATION,
+            status: TaskStatus.CREATED,
+            priority: TaskPriority.NORMAL,
+            station: 'Control Room' as any,
+            progress: 0,
+            order: 0,
+            parentId: null,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            links: [],
+            isNotCharged: false,
+            isNotPaid: false,
+            isCollected: false,
+            cost: 0,
+            revenue: 0,
+            rewards: { points: { xp: 0, rp: 0, fp: 0, hp: 0 } }
+        };
+
+        await upsertTask(masterTask);
 
         return NextResponse.json({
             success: true,
-            message: `Repair Complete. Created ${createdCount} tasks, Updated ${updatedCount} tasks.`,
-            stats: { createdCount, updatedCount }
+            message: `Deep Cleanup Complete. All legacy nodes removed. Only 'Monthly Rewards Collection' remains.`,
+            stats: { cleaned: legacyIds.length, current: 1 }
         });
 
     } catch (error: any) {
