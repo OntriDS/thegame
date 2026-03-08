@@ -47,9 +47,9 @@ export default function AdminLoginPage() {
         body: formData
       });
 
+      const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        setError(errorData.error || 'Invalid passphrase');
+        setError(data.error || 'Invalid passphrase');
         return;
       }
 
@@ -60,8 +60,8 @@ export default function AdminLoginPage() {
         localStorage.removeItem('last_player_id');
       }
 
-      // Success! Refresh auth state and redirect
-      await login(null, null, false);
+      // Success! Perform a full page redirect to ensure session sync
+      window.location.href = data.next || '/admin';
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
     }

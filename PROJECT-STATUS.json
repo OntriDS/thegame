@@ -60,7 +60,7 @@
         "Montly Close Automation Task, Automation Tree",
         "Booth Sales Multiple Bugs and Refactors",
         "Archive Sales Refactor, No snapshots, Entites are preserved in their Section by Month",
-        "Done Tasks Workflow Refactor, Collected Tasks Workflow Refactor, Items Sold, Auth Hybrid Middleware"
+        "Done Tasks Workflow Refactor, Collected Tasks Workflow Refactor, Items Sold, Auth Hybrid Login"
       ]
     }
   },

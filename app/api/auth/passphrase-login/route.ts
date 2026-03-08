@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
 
     if (!authenticated) {
       console.log('[Passphrase Login] Invalid credentials');
-      return NextResponse.redirect(new URL(`/admin/login?error=invalid&next=${encodeURIComponent(next)}`, req.url));
+      return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
 
     const expiresIn = remember ? 60 * 60 * 24 * 30 : 60 * 60 * 24 * 7;
@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
       expiresIn
     );
 
-    const res = NextResponse.redirect(new URL(next || '/admin', req.url), 303);
+    const res = NextResponse.json({ success: true, next: next || '/admin' });
     res.cookies.set('admin_session', token, {
       httpOnly: true,
       sameSite: 'lax',
@@ -69,6 +69,6 @@ export async function POST(req: NextRequest) {
     return res;
   } catch (err) {
     console.error('[Passphrase Login] Error:', err);
-    return NextResponse.redirect(new URL(`/admin/login?error=config&next=${encodeURIComponent(next)}`, req.url));
+    return NextResponse.json({ error: 'Authentication service error' }, { status: 500 });
   }
 }
