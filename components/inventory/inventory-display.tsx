@@ -1385,64 +1385,51 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
           </div>
         </div>
 
-        <div className="text-sm text-muted-foreground mb-4">
-          Items that have been sold and are ready for archive. These are filtered out of active inventory.
-          {isHydrated ? (
-            <>Showing items from {currentMonth}/{currentYear} {filterSoldByMonth ? '(custom selection)' : '(current month)'}.</>
-          ) : (
-            <>Loading calendar data...</>
-          )}
-        </div>
 
-        <div className="grid gap-3 md:grid-cols-4 lg:grid-cols-6">
-          {isHydrated && soldItems.map(item => (
-            <div key={item.id} className="bg-card border rounded p-3 hover:bg-accent/50 cursor-pointer transition-colors" onClick={() => handleEditItem(item)}>
-              <div className="text-center space-y-2">
-                {/* Item Image */}
-                <div className="w-16 h-16 mx-auto bg-muted rounded-md flex items-center justify-center">
-                  {item.imageUrl ? (
-                    <Image
-                      src={item.imageUrl}
-                      alt={item.name}
-                      width={64}
-                      height={64}
-                      className="w-full h-full object-cover rounded-md"
-                    />
-                  ) : (
-                    <Package className="w-6 h-6 text-muted-foreground" />
-                  )}
-                </div>
 
-                {/* Item Name */}
-                <div className="font-medium text-sm truncate">{item.name}</div>
+        <div className="grid gap-2 grid-cols-3 md:grid-cols-5 lg:grid-cols-7">
+          {isHydrated && soldItems.map(item => {
+            const siteName = item.stock?.[0]?.siteId || '';
+            const qty = item.quantitySold || 0;
+            const unitPrice = item.price || 0;
+            const total = item.value || (unitPrice * qty);
 
-                {/* Item Type Badge */}
-                <div className="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 px-2 py-1 rounded">
-                  {item.type}
-                </div>
+            return (
+              <div key={item.id} className="bg-card border rounded p-2 hover:bg-accent/50 cursor-pointer transition-colors" onClick={() => handleEditItem(item)}>
+                <div className="space-y-1">
+                  {/* Name */}
+                  <div className="font-medium text-xs truncate" title={item.name}>{item.name}</div>
 
-                {/* Sale Info */}
-                <div className="text-xs space-y-1">
-                  <div className="font-semibold text-green-600">
-                    ${item.value?.toFixed(2) || '0.00'}
+                  {/* Type + Site */}
+                  <div className="flex items-center gap-1 flex-wrap">
+                    <span className="text-[10px] bg-blue-900 text-blue-200 px-1.5 py-0.5 rounded">{item.type}</span>
+                    {siteName && <span className="text-[10px] text-muted-foreground truncate">• {siteName}</span>}
                   </div>
-                  <div className="text-muted-foreground">
-                    Sold: {item.quantitySold || 0}
+
+                  {/* Price breakdown */}
+                  <div className="text-xs">
+                    {unitPrice > 0 ? (
+                      <>
+                        <span className="font-semibold text-green-500">${total.toFixed(2)}</span>
+                        <span className="text-muted-foreground ml-1">
+                          (${unitPrice} × {qty})
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-muted-foreground">Sold: {qty}</span>
+                    )}
                   </div>
+
+                  {/* Date */}
                   {item.soldAt && (
-                    <div className="text-muted-foreground">
+                    <div className="text-[10px] text-muted-foreground">
                       {new Date(item.soldAt).toLocaleDateString()}
                     </div>
                   )}
                 </div>
-
-                {/* Edit Button */}
-                <div className="pt-2">
-                  <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={(e) => { e.stopPropagation(); handleEditItem(item); }}>Edit</Button>
-                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {soldItems.length === 0 && (

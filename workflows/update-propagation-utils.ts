@@ -637,12 +637,13 @@ export async function updateItemsFromSale(
           name: item.name,
           status: ItemStatus.SOLD,
           isCollected: sale.isCollected || false,
-          stock: [], // No active stock
+          stock: [{ siteId: sale.siteId || item.stock?.[0]?.siteId || 'Home', quantity: 0 }], // Sale site, qty 0 (historical)
           quantitySold: line.quantity || 0, // Represents quantity in this specific sale
           soldAt: sale.saleDate || new Date(),
           price: line.unitPrice,
           value: line.unitPrice * line.quantity,
           sourceRecordId: sale.id, // Link back to sale
+          ownerCharacterId: sale.customerId || item.ownerCharacterId || null, // Customer from sale
           updatedAt: new Date(),
           description: `Sold in sale ${sale.counterpartyName || 'Sale'} (${new Date(sale.saleDate || new Date()).toLocaleDateString()})`
         };
