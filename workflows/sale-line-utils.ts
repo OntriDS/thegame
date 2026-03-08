@@ -1,7 +1,7 @@
 // workflows/sale-line-utils.ts
 // Sale line processing utilities
 
-import type { Sale, ItemSaleLine, BundleSaleLine, ServiceLine, Task } from '@/types/entities';
+import type { Sale, Item, ItemSaleLine, BundleSaleLine, ServiceLine, Task } from '@/types/entities';
 import { LinkType, EntityType, LogEventType, ItemStatus } from '@/types/enums';
 import { getItemById, upsertItem, getAllItems, getItemsByType } from '@/data-store/datastore';
 import { upsertTask } from '@/data-store/datastore';
@@ -201,6 +201,46 @@ export async function processItemSaleLine(line: ItemSaleLine, sale: Sale): Promi
       saleId: sale.id,
       soldAt: sale.saleDate.toISOString()
     });
+
+    // =========================================================================
+    // CREATE SOLD ITEM ENTITY + Monthly Archive Index
+    // This creates a dedicated Item entity with status SOLD so it appears in
+    // the "Sold Items" tab and the Archive. Uses lineId for unique ID to
+    // support multiple lines of the same item at different prices.
+    // =========================================================================
+    const soldItemEffectKey = `sale:${sale.id}:soldItemCreated:${line.lineId}`;
+    if (!(await hasEffect(soldItemEffectKey))) {
+      const soldItemEntity: Item = {
+        ...item,
+        id: `${item.id}-sold-${line.lineId}`, // Unique per sale line (not per item)
+        name: item.name,
+        status: ItemStatus.SOLD,
+        isCollected: sale.isCollected || false,
+        stock: [], // No active stock - this is a historical record
+        quantitySold: line.quantity,
+        soldAt: sale.saleDate || new Date(),
+        price: line.unitPrice,
+        value: line.unitPrice * line.quantity,
+        sourceRecordId: sale.id, // Link back to sale
+        updatedAt: new Date(),
+        description: `Sold in sale ${sale.counterpartyName || 'Sale'} (${new Date(sale.saleDate || new Date()).toLocaleDateString()})`
+      };
+
+      // Save Sold Item entity (skip workflow to avoid duplicate logs)
+      await upsertItem(soldItemEntity, { skipWorkflowEffects: true });
+
+      // Register in Monthly Archive Index so Archive Vault can find it
+      const { calculateClosingDate, formatMonthKey } = await import('@/lib/utils/date-utils');
+      const { kvSAdd } = await import('@/data-store/kv');
+      const { buildArchiveMonthsKey } = await import('@/data-store/keys');
+      const archiveMonth = calculateClosingDate(soldItemEntity.soldAt || new Date());
+      const monthKey = formatMonthKey(archiveMonth);
+      await kvSAdd(`index:items:collected:${monthKey}`, soldItemEntity.id);
+      await kvSAdd(buildArchiveMonthsKey(), monthKey);
+
+      await markEffect(soldItemEffectKey);
+      console.log(`[processItemSaleLine] ✅ Created Sold Item Entity: ${soldItemEntity.id} indexed in ${monthKey}`);
+    }
 
     console.log(`[processItemSaleLine] ✅ Processed item sale: ${item.name} x${line.quantity}`);
 

@@ -555,30 +555,35 @@ export async function updateFinancialRecordsFromSale(
 
 export async function updateItemsFromSale(
   sale: Sale,
-  previousSale: Sale
+  previousSale?: Sale
 ): Promise<void> {
   try {
     console.log(`[updateItemsFromSale] Updating items for sale: ${sale.name}`);
     const { appendEntityLog } = await import('./entities-logging');
     const { LogEventType } = await import('@/types/enums');
 
-    // Check if sale lines changed
-    const linesChanged =
-      sale.lines?.length !== previousSale.lines?.length ||
-      JSON.stringify(sale.lines) !== JSON.stringify(previousSale.lines);
+    // Check if sale lines changed (skip if previousSale exists and lines are identical)
+    if (previousSale) {
+      const linesChanged =
+        sale.lines?.length !== previousSale.lines?.length ||
+        JSON.stringify(sale.lines) !== JSON.stringify(previousSale.lines);
 
-    if (!linesChanged) {
-      console.log(`[updateItemsFromSale] No line changes detected`);
-      return;
+      if (!linesChanged) {
+        console.log(`[updateItemsFromSale] No line changes detected`);
+        return;
+      }
     }
 
     // Process each sale line
     for (const line of sale.lines || []) {
       if (line.kind === 'item' && 'itemId' in line && line.itemId) {
-        const updateKey = `updateItemFromSale:${sale.id}:${line.itemId}:${sale.updatedAt?.getTime()}`;
+        // FIX: Use line.lineId (not line.itemId) so multiple lines for the same item
+        // each get their own idempotency key and Sold Item entity
+        const lineId = line.lineId || line.itemId; // Fallback for legacy lines without lineId
+        const updateKey = `updateItemFromSale:${sale.id}:${lineId}:${sale.updatedAt?.getTime()}`;
 
         if (await hasEffect(updateKey)) {
-          console.log(`[updateItemsFromSale] ⏭️ Already updated item: ${line.itemId}`);
+          console.log(`[updateItemsFromSale] ⏭️ Already updated for line: ${lineId}`);
           continue;
         }
 
@@ -624,26 +629,29 @@ export async function updateItemsFromSale(
 
         await appendEntityLog(EntityType.ITEM, item.id, LogEventType.SOLD, soldLogDetails);
 
+        // FIX: Use line.lineId for unique Sold Item ID (not sale.id.slice(-6))
+        // This prevents collisions when the same item appears on multiple lines at different prices
         const soldItemEntity: Item = {
           ...item,
-          id: `${item.id}-sold-${sale.id.slice(-6)}`, // Unique ID for this sale instance
-          name: `${item.name}`, // Keep same name
+          id: `${item.id}-sold-${lineId}`, // Unique per sale line
+          name: item.name,
           status: ItemStatus.SOLD,
           isCollected: sale.isCollected || false,
           stock: [], // No active stock
           quantitySold: line.quantity || 0, // Represents quantity in this specific sale
           soldAt: sale.saleDate || new Date(),
+          price: line.unitPrice,
+          value: line.unitPrice * line.quantity,
           sourceRecordId: sale.id, // Link back to sale
           updatedAt: new Date(),
-          description: `Sold in sale ${sale.counterpartyName} (${new Date(sale.saleDate || new Date()).toLocaleDateString()})`
+          description: `Sold in sale ${sale.counterpartyName || 'Sale'} (${new Date(sale.saleDate || new Date()).toLocaleDateString()})`
         };
 
-        // Save this "Ghost" entity to the main items store so "Sold Items Tab" finds it.
+        // Save Sold Item entity so "Sold Items Tab" and Archive find it
         await upsertItem(soldItemEntity, { skipWorkflowEffects: true });
         console.log(`[updateItemsFromSale] ✅ Created Sold Item Entity: ${soldItemEntity.id}`);
 
-        // FIX: Because we skipped workflow effects (to avoid duplicate logs), we MUST manually 
-        // register this item inside the Monthly Archive Index so the Archive Vault can find it.
+        // Register in Monthly Archive Index so the Archive Vault can find it
         const { calculateClosingDate, formatMonthKey } = await import('@/lib/utils/date-utils');
         const { kvSAdd } = await import('@/data-store/kv');
         const { buildArchiveMonthsKey } = await import('@/data-store/keys');
@@ -659,6 +667,7 @@ export async function updateItemsFromSale(
     console.error(`[updateItemsFromSale] Error updating items:`, error);
   }
 }
+
 
 // ============================================================================
 // TASK/FINANCIAL/SALE → PLAYER PROPAGATION (Points Delta)
