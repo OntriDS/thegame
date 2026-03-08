@@ -4,7 +4,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyJwt } from '@/lib/auth';
-import { authService } from '@/lib/auth-service';
+import { AuthService } from '@/lib/auth-service';
 
 export async function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
@@ -63,7 +63,7 @@ export async function middleware(request: NextRequest) {
         return NextResponse.next();
       }
 
-      const user = await authService.verifySession(usernameToken);
+      const user = await AuthService.verifySession(usernameToken);
       if (user) {
         console.log('[Middleware] ✅ Username auth valid, user:', user.username);
         return NextResponse.next();

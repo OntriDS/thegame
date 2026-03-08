@@ -18,6 +18,10 @@ export function buildDataKey(entity: string, id: string): string {
   return `data:${entity}:${id}`;
 }
 
+export function buildAccountKey(identifier: string): string {
+  return `account:${identifier}`;
+}
+
 export function buildIndexKey(entity: string): string {
   return `index:${entity}`; // set of ids
 }

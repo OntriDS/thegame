@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
         },
         permissions: {
           can: () => true, // FOUNDER has full access
-          hasRole: (role: string) => [CharacterRole.FOUNDER, CharacterRole.PLAYER].includes(role),
+          hasRole: (role: string) => [CharacterRole.FOUNDER, CharacterRole.PLAYER].includes(role as CharacterRole),
           hasAnyRole: () => true,
         },
       });

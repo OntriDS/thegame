@@ -274,12 +274,25 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
     const isArchivable = item.status === ItemStatus.SOLD || item.status === ItemStatus.COLLECTED || !!item.isCollected;
 
     if (isArchivable) {
-      // For items, we look at collectedAt, then soldAt, then createdAt to determine their target month
+      const wasArchivableBefore = previousItem.status === ItemStatus.SOLD || previousItem.status === ItemStatus.COLLECTED || !!previousItem.isCollected;
+
+      // Guard: only re-index if the relevant dates actually changed OR item newly became archivable.
+      // This prevents non-date saves (site, stock, price changes) from accidentally moving the archive bucket.
+      const soldAtChanged = (item.soldAt?.toString() ?? '') !== (previousItem.soldAt?.toString() ?? '');
+      const collectedAtChanged = (item.collectedAt?.toString() ?? '') !== (previousItem.collectedAt?.toString() ?? '');
+      const becameArchivable = isArchivable && !wasArchivableBefore;
+
+      if (!soldAtChanged && !collectedAtChanged && !becameArchivable) {
+        // Nothing date-related changed — skip re-indexing entirely
+        return;
+      }
+
+      // For items, we look at soldAt first (most reliable), then collectedAt, then createdAt
       let currentTargetDate: Date;
-      if (item.collectedAt) {
-        currentTargetDate = new Date(item.collectedAt);
-      } else if (item.soldAt) {
+      if (item.soldAt) {
         currentTargetDate = new Date(item.soldAt);
+      } else if (item.collectedAt) {
+        currentTargetDate = new Date(item.collectedAt);
       } else if (item.createdAt) {
         currentTargetDate = new Date(item.createdAt);
       } else {
@@ -289,12 +302,12 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
       const currentTargetMonth = formatMonthKey(calculateClosingDate(currentTargetDate));
 
       let prevTargetMonth: string | null = null;
-      if (previousItem.status === ItemStatus.SOLD || previousItem.status === ItemStatus.COLLECTED || !!previousItem.isCollected) {
+      if (wasArchivableBefore) {
         let prevTargetDate: Date;
-        if (previousItem.collectedAt) {
-          prevTargetDate = new Date(previousItem.collectedAt);
-        } else if (previousItem.soldAt) {
+        if (previousItem.soldAt) {
           prevTargetDate = new Date(previousItem.soldAt);
+        } else if (previousItem.collectedAt) {
+          prevTargetDate = new Date(previousItem.collectedAt);
         } else if (previousItem.createdAt) {
           prevTargetDate = new Date(previousItem.createdAt);
         } else {

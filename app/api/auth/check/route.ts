@@ -3,7 +3,7 @@
 // Returns authenticated user info with permissions
 
 import { NextRequest, NextResponse } from 'next/server';
-import { authService } from '@/lib/auth-service';
+import { AuthService } from '@/lib/auth-service';
 import { AuthCheckResponse, PermissionsResponse } from '@/types/auth-types';
 
 
@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     }
 
     // ✅ Verify session and get user info
-    const user = await authService.verifySession(token);
+    const user = await AuthService.verifySession(token);
 
     if (!user) {
       return NextResponse.json<AuthCheckResponse>(
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     }
 
     // ✅ Get permissions for user
-    const permissions = authService.getPermissions(user);
+    const permissions = AuthService.getPermissions(user);
 
     console.log('[Auth Check API] ✅ Authenticated:', user.username, 'Roles:', user.roles);
 

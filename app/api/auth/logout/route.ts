@@ -3,7 +3,7 @@
 // Revokes session and clears auth cookie
 
 import { NextRequest, NextResponse } from 'next/server';
-import { authService } from '@/lib/auth-service';
+import { AuthService } from '@/lib/auth-service';
 
 
 export async function POST(req: NextRequest) {
@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Verify token to get userId
-    const verified = await authService.verifySession(token);
+    const verified = await AuthService.verifySession(token);
 
     if (!verified) {
       console.log('[Logout API] Invalid token, just clearing cookie');
@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
     }
 
     // ✅ Logout user
-    await authService.logout(verified.userId);
+    await AuthService.logout(verified.userId);
 
     const response = NextResponse.json({ success: true });
     response.cookies.delete('auth_session');

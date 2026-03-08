@@ -5,7 +5,7 @@
 import * as bcrypt from 'bcryptjs';
 import { AuthUser, AuthSession, AuthPermissions, LoginRequest, LoginResponse, AuthCheckResponse, PermissionsResponse } from '@/types/auth-types';
 import { CharacterRole } from '@/types/enums';
-import type { User, Character, Account } from '@/types/entities';
+import type { Character, Account } from '@/types/entities';
 import { kvGet, kvSet, kvDel } from '@/data-store/kv';
 import { buildDataKey, buildAccountKey } from '@/data-store/keys';
 import { generateJwt, verifyJwt, getRequiredEnv } from './auth';
@@ -66,7 +66,7 @@ export class AuthService {
     console.log(`[AuthService] Login attempt for user: ${username}`);
 
     // 1. Find user by username
-    const user = await kvGet<User>(buildAccountKey(username.toLowerCase()));
+    const user = await kvGet<Account>(buildAccountKey(username.toLowerCase()));
     if (!user) {
       console.log('[AuthService] User not found');
       throw new Error('Invalid username or password');
@@ -109,7 +109,7 @@ export class AuthService {
     const token = await generateJwt({
       sub: user.id,
       email: user.email,
-      username: user.username,
+      username: user.name,
       roles: userRoles,
       characterId: characterId,
       isAdmin: userRoles.includes(CharacterRole.FOUNDER) || userRoles.includes(CharacterRole.ADMIN)
@@ -122,7 +122,7 @@ export class AuthService {
     const authSession: AuthSession = {
       user: {
         userId: user.id,
-        username: user.username,
+        username: user.name,
         email: user.email,
         characterId: characterId,
         roles: userRoles,
@@ -169,7 +169,7 @@ export class AuthService {
       return null;
     }
 
-    const user = await kvGet<User>(buildAccountKey(userId));
+    const user = await kvGet<Account>(buildAccountKey(userId));
     if (!user) {
       console.log('[AuthService] User not found');
       return null;
@@ -196,7 +196,7 @@ export class AuthService {
 
     const authUser: AuthUser = {
       userId: user.id,
-      username: user.username,
+      username: user.name,
       email: user.email,
       characterId: characterId,
       roles: character.roles || [],
@@ -241,7 +241,7 @@ export class AuthService {
 
         // Check if user has any of the required roles for these permissions
         const hasRequiredRole = matchingPermissions.some(perm =>
-          userRoles.includes(perm.role)
+          perm.roles.some(role => userRoles.includes(role))
         );
 
         return hasRequiredRole;
@@ -256,8 +256,9 @@ export class AuthService {
     username: string,
     email: string,
     password: string,
+    characterId: string,
     createdBy: string
-  ): Promise<User> {
+  ): Promise<Account> {
     console.log(`[AuthService] Creating user: ${username}`);
 
     // 1. Hash password
@@ -267,11 +268,21 @@ export class AuthService {
     // 2. Create user account
     const userId = `user-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
 
-    const newUser: User = {
+    const newUser: Account = {
       id: userId,
       name: username,
       email: email,
       passwordHash,
+      loginAttempts: 0,
+      isActive: true,
+      isVerified: false,
+      privacySettings: {
+        showEmail: false,
+        showPhone: false,
+        showRealName: true,
+      },
+      characterId: characterId,
+      lastActiveAt: new Date(),
       createdAt: new Date(),
       updatedAt: new Date(),
       links: [],
@@ -298,7 +309,7 @@ export class AuthService {
     // Note: This would need to be checked when implementing user management UI
 
     // 2. Get user's character
-    const user = await kvGet<User>(buildAccountKey(userId));
+    const user = await kvGet<Account>(buildAccountKey(userId));
     if (!user || !user.characterId) {
       console.log('[AuthService] User or character not found');
       throw new Error('User or character not found');

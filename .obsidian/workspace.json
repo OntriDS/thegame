@@ -186,6 +186,7 @@
   },
   "active": "276c6f319df4480c",
   "lastOpenFiles": [
+    "tsc_errors.txt",
     "temp-research/STAGE2_COMPLETE_SUMMARY.md",
     "app/api/auth/passphrase-login/logout/route.ts",
     "app/api/auth/passphrase-login/logout",

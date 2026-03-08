@@ -1,0 +1,6 @@
+lib/auth-service.ts(69,30): error TS2304: Cannot find name 'User'.
+lib/auth-service.ts(172,30): error TS2304: Cannot find name 'User'.
+lib/auth-service.ts(244,35): error TS2551: Property 'role' does not exist on type 'Permission'. Did you mean 'roles'?
+lib/auth-service.ts(260,14): error TS2304: Cannot find name 'User'.
+lib/auth-service.ts(270,20): error TS2304: Cannot find name 'User'.
+lib/auth-service.ts(301,30): error TS2304: Cannot find name 'User'.

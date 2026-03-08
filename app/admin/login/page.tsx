@@ -122,7 +122,6 @@ export default function AdminLoginPage() {
                   Remember me
                 </Label>
               </div>
-            </div>
             </form>
           </div>
 

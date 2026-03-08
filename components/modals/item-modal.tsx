@@ -876,7 +876,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         // Preserve creation date if editing, otherwise new date
         createdAt: (item || existingItems.find(i => i.id === selectedItemId))?.createdAt || new Date(),
         updatedAt: new Date(),
-        soldAt: localSoldAt,
+        soldAt: localSoldAt ?? item?.soldAt,
         collectedAt: localCollectedAt,
         isCollected: (item || existingItems.find(i => i.id === selectedItemId))?.isCollected || false,        // Preserve collection status
         links: (item || existingItems.find(i => i.id === selectedItemId))?.links || [],  // Preserve links for Rosetta Stone
@@ -1471,10 +1471,12 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
       <DatesSubmodal
         open={showDatesModal}
         onOpenChange={setShowDatesModal}
+        entityMode="item"
         entityId={currentEditingItem?.id ? `data:item:${currentEditingItem.id}` : undefined}
         createdAt={currentEditingItem?.createdAt ? new Date(currentEditingItem.createdAt) : undefined}
         doneAt={localSoldAt}
         collectedAt={localCollectedAt}
+        currentStatus={status}
         onDatesChange={handleDatesUpdate}
       />
     </>

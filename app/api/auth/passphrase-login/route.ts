@@ -5,15 +5,13 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { generateJwt, verifyJwt, getRequiredEnv } from '@/lib/auth';
 
-export const runtime = 'nodejs';
-
 export async function POST(req: NextRequest) {
-  try {
-    const formData = await req.formData();
-    const passphrase = formData.get('passphrase')?.toString() ?? '';
-    const remember = formData.get('remember')?.toString() === 'on';
-    const next = (formData.get('next')?.toString() ?? '/admin') as string;
+  const formData = await req.formData();
+  const passphrase = formData.get('passphrase')?.toString() ?? '';
+  const remember = formData.get('remember')?.toString() === 'on';
+  const next = (formData.get('next')?.toString() ?? '/admin') as string;
 
+  try {
     console.log('[Passphrase Login] Attempting login');
 
     // Your existing passphrase system

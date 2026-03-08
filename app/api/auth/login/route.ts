@@ -4,7 +4,7 @@
 
 import { NextResponse, NextRequest } from 'next/server';
 import { LoginRequest, LoginResponse } from '@/types/auth-types';
-import { authService } from '@/lib/auth-service';
+import { AuthService } from '@/lib/auth-service';
 
 
 export async function POST(req: NextRequest) {
@@ -15,11 +15,11 @@ export async function POST(req: NextRequest) {
     console.log('[Login API] Attempting login for:', username);
 
     // ✅ Use AuthService (single source of truth)
-    const session = await authService.login(username, password, rememberMe);
+    const session = await AuthService.login(username, password, rememberMe);
 
     const cookieOptions = {
       httpOnly: true,
-      sameSite: 'lax',
+      sameSite: 'lax' as const,
       secure: process.env.NODE_ENV === 'production',
       path: '/',
       maxAge: rememberMe ? 60 * 60 * 24 * 30 : 60 * 60 * 24 * 7, // 30 days or 7 days
