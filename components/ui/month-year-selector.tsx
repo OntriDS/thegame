@@ -23,13 +23,23 @@ interface MonthYearSelectorProps {
   className?: string;
 }
 
-export function MonthYearSelector({ 
-  currentMonth, 
-  currentYear, 
-  onMonthChange, 
+export function MonthYearSelector({
+  currentMonth,
+  currentYear,
+  onMonthChange,
   onYearChange,
   className = ""
 }: MonthYearSelectorProps) {
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Use currentYear for the center of the range to be stable during hydration.
+  // The user can change the range by selecting a different year.
+  const years = getYearRange(currentYear);
+
   return (
     <div className={`flex items-center gap-2 ${className}`}>
       <Select value={currentMonth.toString()} onValueChange={(v) => onMonthChange(parseInt(v))}>
@@ -44,13 +54,13 @@ export function MonthYearSelector({
           ))}
         </SelectContent>
       </Select>
-      
+
       <Select value={currentYear.toString()} onValueChange={(v) => onYearChange(parseInt(v))}>
         <SelectTrigger className="w-24">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          {getYearRange(new Date().getFullYear()).map(year => (
+          {isMounted && years.map(year => (
             <SelectItem key={year} value={year.toString()}>
               {year}
             </SelectItem>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -63,6 +63,7 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
   const [printsViewBy, setPrintsViewBy] = useState<'collection' | 'subtype' | 'location'>('collection');
 
   const [movingItem, setMovingItem] = useState<Item | undefined>(undefined);
+  const lastRequestIdRef = useRef(0);
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [statusModalConfig, setStatusModalConfig] = useState<{
     title: string;
@@ -109,6 +110,7 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
 
   const loadItems = useCallback(async () => {
     try {
+      const requestId = ++lastRequestIdRef.current;
       // First, load items for the active tab (fast, prioritized)
       const activeTabItemType = getItemTypeForTab(activeTab);
 
@@ -118,10 +120,6 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
         // Use status filter for sold items
         const month = filterSoldByMonth ? currentMonth : new Date().getMonth() + 1;
         const year = filterSoldByMonth ? currentYear : new Date().getFullYear();
-
-        // Fetch ALL items (including "Sold Entity" ghosts) and filter
-        // Note: We use 'all' type and client-side filtering because getItems status param might not be fully supported by all backends yet,
-        // and we want to ensure we catch 'ItemStatus.SOLD' correctly.
 
         const monthItems = await ClientAPI.getItems('all', month, year, ItemStatus.SOLD);
 
@@ -138,12 +136,17 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
         items = await ClientAPI.getItems(activeTabItemType);
       }
 
+      // If a newer request has started, ignore this one
+      if (requestId !== lastRequestIdRef.current) return;
+
       setItems(items); // Show items immediately
 
       // Then load additional items in the background (for instant tab switching)
       if (activeTab !== InventoryTab.SOLD_ITEMS) {
         const allItems = await ClientAPI.getItems();
-        setItems(allItems);
+        if (requestId === lastRequestIdRef.current) {
+          setItems(allItems);
+        }
       }
     } catch (error) {
       console.error('Failed to load items:', error);
@@ -271,7 +274,6 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
   // Listen for item updates to refresh the list
   useEntityUpdates('item', loadItems);
 
-  // Removed duplicate re-fetching block that was causing race conditions and overwriting specifically filtered items.
 
   // Helper function for consistent item sorting
   const sortItems = (items: Item[]): Item[] => {
@@ -1365,12 +1367,14 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold">Sold Items</h3>
           <div className="flex items-center gap-4">
-            <MonthYearSelector
-              currentYear={currentYear}
-              currentMonth={currentMonth}
-              onYearChange={setCurrentYear}
-              onMonthChange={setCurrentMonth}
-            />
+            {isHydrated && (
+              <MonthYearSelector
+                currentYear={currentYear}
+                currentMonth={currentMonth}
+                onYearChange={setCurrentYear}
+                onMonthChange={setCurrentMonth}
+              />
+            )}
             <div className="flex items-center gap-2 border rounded-md px-3 py-1.5">
               <Switch
                 checked={filterSoldByMonth}
