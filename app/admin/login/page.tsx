@@ -15,6 +15,7 @@ export default function AdminLoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [username, setUsername] = useState('');
+  const [playerId, setPlayerId] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
 
@@ -23,6 +24,12 @@ export default function AdminLoginPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     setError(params.get('error'));
+
+    // Load saved Player ID
+    const savedPlayerId = localStorage.getItem('last_player_id');
+    if (savedPlayerId) {
+      setPlayerId(savedPlayerId);
+    }
 
     // Auto-redirect if already logged in
     if (user && !isLoading) {
@@ -44,6 +51,13 @@ export default function AdminLoginPage() {
         const errorData = await response.json().catch(() => ({}));
         setError(errorData.error || 'Invalid passphrase');
         return;
+      }
+
+      // Save Player ID if "Stay logged in" is checked
+      if (formData.get('remember') === 'on') {
+        localStorage.setItem('last_player_id', playerId);
+      } else {
+        localStorage.removeItem('last_player_id');
       }
 
       // Success! Refresh auth state and redirect
@@ -69,11 +83,8 @@ export default function AdminLoginPage() {
         <CardHeader className="text-center pb-2">
           <CardTitle className="text-2xl font-bold flex items-center justify-center gap-2">
             <Loader2 className={`h-6 w-6 ${isLoading ? 'animate-spin text-primary' : 'text-primary/40'}`} />
-            TheGame Admin
+            TheGame Login
           </CardTitle>
-          <CardDescription>
-            Master Control Interface
-          </CardDescription>
         </CardHeader>
 
         <CardContent className="space-y-6 pt-4">
@@ -86,18 +97,35 @@ export default function AdminLoginPage() {
           {!showTeamLogin ? (
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
               <form onSubmit={handlePassphraseLogin} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="passphrase">Admin Passphrase</Label>
-                  <Input
-                    id="passphrase"
-                    name="passphrase"
-                    type="password"
-                    placeholder="••••••••••••••••"
-                    required
-                    autoFocus
-                    disabled={isLoading}
-                    className="h-12 text-lg text-center tracking-widest bg-accent/50 border-primary/20 focus:border-primary"
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="playerId">Player ID</Label>
+                    <Input
+                      id="playerId"
+                      name="playerId"
+                      type="text"
+                      placeholder="e.g. player-one"
+                      value={playerId}
+                      onChange={(e) => setPlayerId(e.target.value)}
+                      required
+                      autoFocus={!playerId}
+                      disabled={isLoading}
+                      className="bg-accent/50 border-primary/20 focus:border-primary"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="passphrase">Passphrase</Label>
+                    <Input
+                      id="passphrase"
+                      name="passphrase"
+                      type="password"
+                      placeholder=""
+                      required
+                      autoFocus={!!playerId}
+                      disabled={isLoading}
+                      className="text-center tracking-widest bg-accent/50 border-primary/20 focus:border-primary"
+                    />
+                  </div>
                 </div>
 
                 <div className="flex items-center justify-between">
@@ -127,9 +155,9 @@ export default function AdminLoginPage() {
                 <button
                   type="button"
                   onClick={() => setShowTeamLogin(true)}
-                  className="text-xs text-muted-foreground hover:text-primary transition-colors underline-offset-4 hover:underline"
+                  className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors underline-offset-4 hover:underline"
                 >
-                  Need team or multi-user access?
+                  Username/Email Login
                 </button>
               </div>
             </div>
@@ -167,7 +195,7 @@ export default function AdminLoginPage() {
                       id="password"
                       name="password"
                       type={showPassword ? 'text' : 'password'}
-                      placeholder="••••••••"
+                      placeholder=""
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
@@ -211,9 +239,6 @@ export default function AdminLoginPage() {
           )}
         </CardContent>
 
-        <div className="p-4 bg-accent/5 text-[10px] text-center text-muted-foreground border-t border-accent">
-          v2.1 Hybrid Authentication System Engine
-        </div>
       </Card>
     </div>
   );
