@@ -28,6 +28,13 @@ export default function RootLayout({
                   const themeMode = localStorage.getItem('theme-mode');
                   const themeColor = localStorage.getItem('theme-color') || '${DEFAULT_THEME}';
                   const isDark = themeMode === 'dark';
+
+                  // ✅ STORE IN WINDOW OBJECT
+                  window.__THEME_STATE__ = {
+                    mode: themeMode,
+                    color: themeColor,
+                    isDark: isDark
+                  };
                   
                   const htmlElement = document.documentElement;
                   
@@ -50,7 +57,8 @@ export default function RootLayout({
                     }
                   }
                 } catch (e) {
-                  // Silently fail if localStorage is unavailable
+                  // Signal localStorage unavailable
+                  window.__THEME_STATE__ = null;
                 }
               })();
             `,
