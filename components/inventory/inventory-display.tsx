@@ -16,6 +16,7 @@ import ItemModal from '@/components/modals/item-modal';
 import BulkEditModal from '@/components/modals/submodals/bulk-edit-submodal';
 import InlineEditor from '@/components/control-room/inline-editor';
 import { MapPin, Pencil, Package, Settings, Package2, ChevronDown, ChevronRight, AlertTriangle } from 'lucide-react';
+import { ITEM_TYPE_ICONS } from '@/lib/constants/icon-maps';
 import { Site } from '@/types/entities';
 import { DEFAULT_YELLOW_THRESHOLD } from '@/lib/constants/app-constants';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
@@ -1387,44 +1388,55 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
 
 
 
-        <div className="grid gap-2 grid-cols-3 md:grid-cols-5 lg:grid-cols-7">
+        <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
           {isHydrated && soldItems.map(item => {
             const siteName = item.stock?.[0]?.siteId || '';
             const qty = item.quantitySold || 0;
             const unitPrice = item.price || 0;
             const total = item.value || (unitPrice * qty);
+            const TypeIcon = ITEM_TYPE_ICONS[item.type?.toLowerCase()] || ITEM_TYPE_ICONS['default'] || Package;
 
             return (
-              <div key={item.id} className="bg-card border rounded p-2 hover:bg-accent/50 cursor-pointer transition-colors" onClick={() => handleEditItem(item)}>
-                <div className="space-y-1">
-                  {/* Name */}
-                  <div className="font-medium text-xs truncate" title={item.name}>{item.name}</div>
-
-                  {/* Type + Site */}
-                  <div className="flex items-center gap-1 flex-wrap">
-                    <span className="text-[10px] bg-blue-900 text-blue-200 px-1.5 py-0.5 rounded">{item.type}</span>
-                    {siteName && <span className="text-[10px] text-muted-foreground truncate">• {siteName}</span>}
+              <div
+                key={item.id}
+                className="group relative bg-card border border-border rounded-xl p-4 hover:border-primary/50 hover:shadow-md cursor-pointer transition-all duration-200"
+                onClick={() => handleEditItem(item)}
+              >
+                {/* Header row: icon + name */}
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="shrink-0 w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <TypeIcon className="w-4 h-4 text-primary" />
                   </div>
-
-                  {/* Price breakdown */}
-                  <div className="text-xs">
-                    {unitPrice > 0 ? (
-                      <>
-                        <span className="font-semibold text-green-500">${total.toFixed(2)}</span>
-                        <span className="text-muted-foreground ml-1">
-                          (${unitPrice} × {qty})
-                        </span>
-                      </>
-                    ) : (
-                      <span className="text-muted-foreground">Sold: {qty}</span>
-                    )}
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-sm leading-snug truncate" title={item.name}>{item.name}</p>
+                    <p className="text-[11px] text-muted-foreground capitalize">{item.type?.toLowerCase()}</p>
                   </div>
+                </div>
 
-                  {/* Date */}
-                  {item.soldAt && (
-                    <div className="text-[10px] text-muted-foreground">
-                      {new Date(item.soldAt).toLocaleDateString()}
-                    </div>
+                {/* Price */}
+                <div className="mb-3">
+                  {unitPrice > 0 ? (
+                    <>
+                      <p className="text-lg font-bold text-green-500 leading-none">${total.toFixed(2)}</p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">${unitPrice} × {qty} unit{qty !== 1 ? 's' : ''}</p>
+                    </>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">{qty} unit{qty !== 1 ? 's' : ''} sold</p>
+                  )}
+                </div>
+
+                {/* Footer: date + site */}
+                <div className="flex items-center justify-between gap-2">
+                  {item.soldAt ? (
+                    <span className="text-[11px] text-muted-foreground">
+                      {new Date(item.soldAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    </span>
+                  ) : <span />}
+                  {siteName && (
+                    <span className="flex items-center gap-1 text-[10px] bg-muted/60 text-muted-foreground px-1.5 py-0.5 rounded-full truncate max-w-[40%]">
+                      <MapPin className="w-2.5 h-2.5 shrink-0" />
+                      {siteName}
+                    </span>
                   )}
                 </div>
               </div>

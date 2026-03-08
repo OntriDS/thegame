@@ -1,80 +1,189 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Eye, EyeOff } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Loader2 } from 'lucide-react';
+import { useAuth } from '@/lib/hooks/use-auth';
 
 export default function AdminLoginPage() {
+  const { user, isLoading, login } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
-  const [nextParam, setNextParam] = useState('/admin');
   const [error, setError] = useState<string | null>(null);
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
 
-  // Get search params on client side
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    setNextParam(params.get('next') ?? '/admin');
     setError(params.get('error'));
   }, []);
 
-  const togglePasswordVisibility = () => {
-    setShowPassword(!showPassword);
+  const handlePassphraseLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const formData = new FormData();
+    formData.append('passphrase', (e.target as any).passphrase?.value || '');
+    formData.append('remember', (e.target as any).remember?.value || 'off');
+    formData.append('next', window.location.pathname);
+
+    try {
+      const response = await fetch('/api/auth/passphrase-login', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        setError(errorData.error || 'Login failed');
+        return;
+      }
+
+      await login(null, null, false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Login failed');
+    }
+  };
+
+  const handleUsernameLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const formData = new FormData();
+    formData.append('username', username);
+    formData.append('password', password);
+    formData.append('rememberMe', rememberMe ? 'on' : 'off');
+
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password, rememberMe })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        setError(errorData.error || 'Login failed');
+        return;
+      }
+
+      await login(username, password, rememberMe);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Login failed');
+    }
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6">
-      <Card className="w-full max-w-sm">
+      <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>Access required</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Loader2 className="h-5 w-5" />
+            TheGame Admin Login
+          </CardTitle>
+          <CardDescription>
+            Secure access to your admin panel
+          </CardDescription>
         </CardHeader>
-        <CardContent>
-          {error === 'invalid' ? (
-            <p className="mb-3 text-sm text-destructive">Invalid passphrase. Try again.</p>
-          ) : null}
-          {error === 'config' ? (
-            <p className="mb-3 text-sm text-destructive">Server configuration missing. Set ADMIN_ACCESS_KEY and ADMIN_SESSION_SECRET.</p>
-          ) : null}
+        <CardContent className="space-y-6">
+          {error && (
+            <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md">
+              {error === 'invalid' ? 'Invalid passphrase or credentials' : error}
+            </div>
+          )}
 
-          <form action="/admin/login/submit" method="POST" className="space-y-4">
-            <input type="hidden" name="next" value={nextParam} />
-            <div className="space-y-2">
-              <Label htmlFor="passphrase">Passphrase</Label>
-              <div className="relative">
-                <Input 
-                  id="passphrase" 
-                  name="passphrase" 
-                  type={showPassword ? "text" : "password"} 
-                  required 
-                  autoFocus 
-                  className="pr-10"
+          {/* ✅ PASSPHRASE LOGIN (For You, Creator) */}
+          <div className="border-t pt-4">
+            <h3 className="text-lg font-semibold mb-4">Quick Login (Passphrase)</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Enter your admin passphrase for quick access
+            </p>
+            <form onSubmit={handlePassphraseLogin} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="passphrase">Passphrase</Label>
+                <Input
+                  id="passphrase"
+                  name="passphrase"
+                  type="password"
+                  placeholder="Enter your passphrase"
+                  required
+                  autoFocus
+                  disabled={isLoading}
                 />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                  onClick={togglePasswordVisibility}
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-4 w-4 text-muted-foreground" />
-                  ) : (
-                    <Eye className="h-4 w-4 text-muted-foreground" />
-                  )}
-                </Button>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="remember"
+                  name="remember"
+                  defaultChecked={false}
+                  className="h-4 w-4"
+                />
+                <Label htmlFor="remember" className="text-sm cursor-pointer">
+                  Remember me
+                </Label>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <input id="remember" name="remember" type="checkbox" defaultChecked />
-              <Label htmlFor="remember">Remember me</Label>
-            </div>
-            <Button type="submit" className="w-full">Continue</Button>
-          </form>
+            </form>
+          </div>
+
+          {/* ✅ USERNAME LOGIN (For Regular Users) */}
+          <div className="border-t pt-4">
+            <h3 className="text-lg font-semibold mb-4">Email/Username Login</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              For team members, customers, and multi-user access
+            </p>
+            <form onSubmit={handleUsernameLogin} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="username">Username or Email</Label>
+                <Input
+                  id="username"
+                  name="username"
+                  type="text"
+                  placeholder="Enter your username or email"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  required
+                  disabled={isLoading}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    name="password"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    disabled={isLoading}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-0 top-0 p-2 hover:bg-accent"
+                  >
+                    {showPassword ? 'Hide' : 'Show'}
+                  </button>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="rememberMe"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="h-4 w-4"
+                />
+                <Label htmlFor="rememberMe" className="text-sm cursor-pointer">
+                  Remember me
+                </Label>
+              </div>
+            </form>
+          </div>
         </CardContent>
       </Card>
     </div>
   );
 }
-
-

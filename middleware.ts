@@ -1,8 +1,11 @@
 // middleware.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { verifyJwt } from '@/lib/auth-edge';
+// Hybrid Auth Middleware - Supports Both Passphrase and Username Systems
+// Gradual transition approach - keeps passphrase working while adding username system
 
-// Protect /admin routes except /admin/login
+import { NextRequest, NextResponse } from 'next/server';
+import { verifyJwt } from '@/lib/auth';
+import { authService } from '@/lib/auth-service';
+
 export async function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
 
@@ -11,38 +14,70 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Allow the login page and any nested login routes
+  // Allow login page
   if (pathname === '/admin/login' || pathname.startsWith('/admin/login/')) {
     return NextResponse.next();
   }
 
-  // Read session cookie
-  const token = request.cookies.get('admin_session')?.value;
-  const secret = process.env.ADMIN_SESSION_SECRET || '';
+  // ✅ CHECK BOTH AUTH SYSTEMS
+  const passphraseToken = request.cookies.get('admin_session')?.value;
+  const usernameToken = request.cookies.get('auth_session')?.value;
 
-  // If cookie exists but no secret at edge runtime, allow temporarily to avoid loop
-  // and to diagnose env loading differences between Node and Edge on Vercel.
-  if (token && !secret) {
-    return NextResponse.next();
+  const hasPassphraseToken = !!passphraseToken;
+  const hasUsernameToken = !!usernameToken;
+
+  console.log('[Middleware] Passphrase token:', hasPassphraseToken);
+  console.log('[Middleware] Username token:', hasUsernameToken);
+
+  // System 1: Passphrase Login (Your Current System)
+  if (hasPassphraseToken) {
+    try {
+      const secret = process.env.ADMIN_SESSION_SECRET || '';
+
+      if (!secret) {
+        console.log('[Middleware] No passphrase secret - allow (temporary)');
+        return NextResponse.next();
+      }
+
+      const verified = await verifyJwt(passphraseToken, secret);
+      if (verified.valid) {
+        console.log('[Middleware] ✅ Passphrase auth valid');
+        return NextResponse.next();
+      } else {
+        console.log('[Middleware] ❌ Passphrase auth invalid');
+        return NextResponse.redirect(new URL('/admin/login', request.url));
+      }
+    } catch (error) {
+      console.error('[Middleware] Passphrase auth error:', error);
+      return NextResponse.redirect(new URL('/admin/login', request.url));
+    }
   }
 
-  if (!token || !secret) {
-    const url = new URL('/admin/login', request.url);
-    url.searchParams.set('next', pathname + (search || ''));
-    return NextResponse.redirect(url);
+  // System 2: Username Login (New Multi-User System)
+  if (hasUsernameToken) {
+    try {
+      const secret = process.env.ADMIN_SESSION_SECRET || '';
+
+      if (!secret) {
+        console.log('[Middleware] No username secret - allow (temporary)');
+        return NextResponse.next();
+      }
+
+      const user = await authService.verifySession(usernameToken);
+      if (user) {
+        console.log('[Middleware] ✅ Username auth valid, user:', user.username);
+        return NextResponse.next();
+      } else {
+        console.log('[Middleware] ❌ Username auth invalid');
+        return NextResponse.redirect(new URL('/admin/login', request.url));
+      }
+    } catch (error) {
+      console.error('[Middleware] Username auth error:', error);
+      return NextResponse.redirect(new URL('/admin/login', request.url));
+    }
   }
 
-  const verified = await verifyJwt(token, secret);
-  if (!verified.valid) {
-    // Debug hint: attach reason to query in non-prod if needed
-    const url = new URL('/admin/login', request.url);
-    url.searchParams.set('next', pathname + (search || ''));
-    return NextResponse.redirect(url);
-  }
-
-  return NextResponse.next();
+  // No valid auth token - redirect to login
+  const loginUrl = new URL('/admin/login', request.url);
+  return NextResponse.redirect(loginUrl);
 }
-
-export const config = {
-  matcher: ['/admin/:path*', '/api/:path*']
-};

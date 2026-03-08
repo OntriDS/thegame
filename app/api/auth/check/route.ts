@@ -1,29 +1,49 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { verifyJwt } from '@/lib/auth-edge';
+// app/api/auth/check/route.ts
+// Multi-User Auth Check Endpoint
+// Returns authenticated user info with permissions
 
-// Force dynamic rendering since this route accesses request cookies
-export const dynamic = 'force-dynamic';
+import { NextRequest, NextResponse } from 'next/server';
+import { authService } from '@/lib/auth-service';
+import { AuthCheckResponse, PermissionsResponse } from '@/types/auth-types';
+
+export const runtime = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
-    const token = request.cookies.get('admin_session')?.value;
-    const secret = process.env.ADMIN_SESSION_SECRET;
+    const token = request.cookies.get('auth_session')?.value;
 
-    // Debug logging for production troubleshooting
-
-    if (!token || !secret) {
-      return NextResponse.json({ authenticated: false, error: 'Missing credentials' }, { status: 401 });
+    if (!token) {
+      return NextResponse.json<AuthCheckResponse>(
+        { authenticated: false, error: 'No session token' },
+        { status: 401 }
+      );
     }
 
-    const verified = await verifyJwt(token, secret);
+    // ✅ Verify session and get user info
+    const user = await authService.verifySession(token);
 
-    if (!verified.valid) {
-      return NextResponse.json({ authenticated: false, error: 'Invalid token' }, { status: 401 });
+    if (!user) {
+      return NextResponse.json<AuthCheckResponse>(
+        { authenticated: false, error: 'Invalid or expired session' },
+        { status: 401 }
+      );
     }
 
-    return NextResponse.json({ authenticated: true, user: verified.payload });
+    // ✅ Get permissions for user
+    const permissions = authService.getPermissions(user);
+
+    console.log('[Auth Check API] ✅ Authenticated:', user.username, 'Roles:', user.roles);
+
+    return NextResponse.json<AuthCheckResponse>({
+      authenticated: true,
+      user,
+      permissions,
+    });
   } catch (error) {
-    console.error('[Auth Check] Error:', error);
-    return NextResponse.json({ authenticated: false, error: 'Auth check failed' }, { status: 401 });
+    console.error('[Auth Check API] Error:', error);
+    return NextResponse.json<AuthCheckResponse>(
+      { authenticated: false, error: 'Auth check failed' },
+      { status: 500 }
+    );
   }
 }
