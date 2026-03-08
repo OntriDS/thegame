@@ -202,46 +202,6 @@ export async function processItemSaleLine(line: ItemSaleLine, sale: Sale): Promi
       soldAt: sale.saleDate.toISOString()
     });
 
-    // =========================================================================
-    // CREATE SOLD ITEM ENTITY + Monthly Archive Index
-    // This creates a dedicated Item entity with status SOLD so it appears in
-    // the "Sold Items" tab and the Archive. Uses lineId for unique ID to
-    // support multiple lines of the same item at different prices.
-    // =========================================================================
-    const soldItemEffectKey = `sale:${sale.id}:soldItemCreated:${line.lineId}`;
-    if (!(await hasEffect(soldItemEffectKey))) {
-      const soldItemEntity: Item = {
-        ...item,
-        id: `${item.id}-sold-${line.lineId}`, // Unique per sale line (not per item)
-        name: item.name,
-        status: ItemStatus.SOLD,
-        isCollected: sale.isCollected || false,
-        stock: [], // No active stock - this is a historical record
-        quantitySold: line.quantity,
-        soldAt: sale.saleDate || new Date(),
-        price: line.unitPrice,
-        value: line.unitPrice * line.quantity,
-        sourceRecordId: sale.id, // Link back to sale
-        updatedAt: new Date(),
-        description: `Sold in sale ${sale.counterpartyName || 'Sale'} (${new Date(sale.saleDate || new Date()).toLocaleDateString()})`
-      };
-
-      // Save Sold Item entity (skip workflow to avoid duplicate logs)
-      await upsertItem(soldItemEntity, { skipWorkflowEffects: true });
-
-      // Register in Monthly Archive Index so Archive Vault can find it
-      const { calculateClosingDate, formatMonthKey } = await import('@/lib/utils/date-utils');
-      const { kvSAdd } = await import('@/data-store/kv');
-      const { buildArchiveMonthsKey } = await import('@/data-store/keys');
-      const archiveMonth = calculateClosingDate(soldItemEntity.soldAt || new Date());
-      const monthKey = formatMonthKey(archiveMonth);
-      await kvSAdd(`index:items:collected:${monthKey}`, soldItemEntity.id);
-      await kvSAdd(buildArchiveMonthsKey(), monthKey);
-
-      await markEffect(soldItemEffectKey);
-      console.log(`[processItemSaleLine] ✅ Created Sold Item Entity: ${soldItemEntity.id} indexed in ${monthKey}`);
-    }
-
     console.log(`[processItemSaleLine] ✅ Processed item sale: ${item.name} x${line.quantity}`);
 
   } catch (error) {
@@ -514,3 +474,86 @@ export async function processServiceLine(line: ServiceLine, sale: Sale): Promise
   }
 }
 
+/**
+ * Ensure Sold Item entities exist for all item lines in a sale.
+ * This runs INDEPENDENTLY of stock processing or line-change detection.
+ * Each line gets its own idempotency key so it's safe to call on every save.
+ * This is the single function that guarantees items appear in Sold Items tab + Archive.
+ */
+export async function ensureSoldItemEntities(sale: Sale): Promise<void> {
+  try {
+    const itemLines = (sale.lines || []).filter(
+      (l): l is ItemSaleLine => l.kind === 'item' && 'itemId' in l && !!l.itemId
+    );
+
+    if (itemLines.length === 0) return;
+
+    console.log(`[ensureSoldItemEntities] Ensuring ${itemLines.length} sold item entities for sale: ${sale.id}`);
+
+    for (const line of itemLines) {
+      const lineId = line.lineId || line.itemId; // Fallback for legacy lines
+      const effectKey = `sale:${sale.id}:soldItemEntity:${lineId}`;
+
+      if (await hasEffect(effectKey)) {
+        console.log(`[ensureSoldItemEntities] ⏭️ Already exists for line: ${lineId}`);
+        continue;
+      }
+
+      // Get the source item to inherit properties
+      const item = await getItemById(line.itemId);
+      if (!item) {
+        console.warn(`[ensureSoldItemEntities] Item not found: ${line.itemId}, skipping`);
+        continue;
+      }
+
+      // Create the Sold Item entity
+      const soldItemEntity: Item = {
+        ...item,
+        id: `${item.id}-sold-${lineId}`, // Unique per sale line
+        name: item.name,
+        status: ItemStatus.SOLD,
+        isCollected: sale.isCollected || false,
+        stock: [], // Historical record, no active stock
+        quantitySold: line.quantity || 0,
+        soldAt: sale.saleDate || new Date(),
+        price: line.unitPrice,
+        value: (line.unitPrice || 0) * (line.quantity || 0),
+        sourceRecordId: sale.id, // Link back to sale
+        updatedAt: new Date(),
+        description: `Sold in ${sale.counterpartyName || 'Sale'} (${new Date(sale.saleDate || new Date()).toLocaleDateString()})`
+      };
+
+      // Persist the Sold Item entity (skip workflows to avoid duplicate logs)
+      await upsertItem(soldItemEntity, { skipWorkflowEffects: true });
+
+      // Register in Monthly Archive Index
+      const { calculateClosingDate, formatMonthKey } = await import('@/lib/utils/date-utils');
+      const { kvSAdd } = await import('@/data-store/kv');
+      const { buildArchiveMonthsKey } = await import('@/data-store/keys');
+      const archiveMonth = calculateClosingDate(soldItemEntity.soldAt || new Date());
+      const monthKey = formatMonthKey(archiveMonth);
+      await kvSAdd(`index:items:collected:${monthKey}`, soldItemEntity.id);
+      await kvSAdd(buildArchiveMonthsKey(), monthKey);
+
+      // Create SALE_ITEM link for the sold item entity
+      const soldItemLink = makeLink(
+        LinkType.SALE_ITEM,
+        { type: EntityType.SALE, id: sale.id },
+        { type: EntityType.ITEM, id: soldItemEntity.id },
+        {
+          quantity: line.quantity,
+          unitPrice: line.unitPrice,
+          total: (line.unitPrice || 0) * (line.quantity || 0),
+          soldAt: sale.saleDate ? new Date(sale.saleDate).toISOString() : new Date().toISOString(),
+          isSoldItemEntity: true
+        }
+      );
+      await createLink(soldItemLink);
+
+      await markEffect(effectKey);
+      console.log(`[ensureSoldItemEntities] ✅ Created: ${soldItemEntity.id} (${item.name} x${line.quantity} @ $${line.unitPrice}) → ${monthKey}`);
+    }
+  } catch (error) {
+    console.error(`[ensureSoldItemEntities] ❌ Error:`, error);
+  }
+}

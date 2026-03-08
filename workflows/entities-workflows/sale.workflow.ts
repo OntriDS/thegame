@@ -10,7 +10,7 @@ import { kvGet, kvSet } from '@/data-store/kv';
 import { getLinksFor, removeLink } from '@/links/link-registry';
 import { getPlayerById, getSaleById, getItemById, getFinancialsBySourceSaleId, removeFinancial, upsertItem } from '@/data-store/datastore';
 import { awardPointsToPlayer, removePointsFromPlayer, calculatePointsFromRevenue } from '../points-rewards-utils';
-import { processSaleLines } from '../sale-line-utils';
+import { processSaleLines, ensureSoldItemEntities } from '../sale-line-utils';
 import { updateFinancialRecordsFromSale, updateItemsFromSale, updatePlayerPointsFromSource, hasRevenueChanged, hasLinesChanged } from '../update-propagation-utils';
 import { createCharacterFromSale } from '../character-creation-utils';
 import { upsertSale } from '@/data-store/datastore';
@@ -297,6 +297,18 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
 
       // The sale record's existence in the index and its inherent dates are the single source of truth.
     }
+  }
+
+  // =========================================================================
+  // ENSURE SOLD ITEM ENTITIES (Unconditional, Idempotent)
+  // This runs on EVERY upsert - both new and resaved sales.
+  // It creates Sold Item entities so they appear in Sold Items tab + Archive.
+  // The function has its own idempotency per lineId, so calling it repeatedly is safe.
+  // =========================================================================
+  const isSaleCharged = !sale.isNotPaid && !sale.isNotCharged;
+  const hasItemLines = sale.lines?.some(l => l.kind === 'item' || l.kind === 'bundle');
+  if (isSaleCharged && hasItemLines) {
+    await ensureSoldItemEntities(sale);
   }
 }
 
