@@ -262,58 +262,98 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate }: TaskD
 
         <div className="p-6 border rounded-xl bg-card shadow-sm w-full max-w-md space-y-4">
           <h3 className="font-semibold text-lg text-left">Manual Override</h3>
-          <p className="text-sm text-left text-muted-foreground">
-            Execute this automation immediately. This will trigger the backend workflow independent of the cron schedule.
+          <p className="text-sm text-left text-muted-foreground mb-4">
+            Execute these automations immediately. This will trigger the backend workflow independent of the cron schedule.
           </p>
-          <Button
-            variant="default"
-            size="lg"
-            className="w-full bg-purple-600 hover:bg-purple-700 text-white border-0 shadow-sm"
-            onClick={async () => {
-              try {
-                const now = new Date();
-                const targetMonth = now.getMonth() + 1; // 1-12
-                const targetYear = now.getFullYear();
-                let result;
-                let entityName = "Items";
 
-                if (task.id === 'system-automation-tasks-collection') {
-                  result = await ClientAPI.bulkCollectTasks(targetMonth, targetYear);
-                  entityName = "Tasks";
-                } else if (task.id === 'system-automation-sales-collection') {
-                  result = await ClientAPI.collectSales(targetMonth, targetYear);
-                  entityName = "Sales";
-                } else if (task.id === 'system-automation-financials-collection') {
-                  result = await ClientAPI.collectFinancials(targetMonth, targetYear);
-                  entityName = "Financials";
-                } else if (task.id === 'system-automation-inventory-collection') {
-                  result = await ClientAPI.collectInventory(targetMonth, targetYear);
-                  entityName = "Inventory Items";
-                } else if (task.id === 'system-automation-all-collection') {
-                  result = await ClientAPI.collectAllEntities(targetMonth, targetYear);
-                  entityName = "All Rewards";
-                } else {
-                  throw new Error("Unknown automation task ID");
+          <div className="flex flex-col gap-3">
+            {/* Master Trigger */}
+            <Button
+              variant="default"
+              size="lg"
+              className="w-full bg-purple-600 hover:bg-purple-700 text-white border-0 shadow-md font-bold"
+              onClick={async () => {
+                try {
+                  const now = new Date();
+                  await ClientAPI.collectAllEntities(now.getMonth() + 1, now.getFullYear());
+                  alert(`Mega-Collection Complete! Successfully processed all entities.`);
+                } catch (error: any) {
+                  alert(`Collection Failed: ${error.message}`);
                 }
+              }}
+            >
+              <Play className="h-5 w-5 mr-2" />
+              Run All Rewards Collection
+            </Button>
 
-                // Standardize count extraction
-                const count = (result as any).collectedCount !== undefined
-                  ? (result as any).collectedCount
-                  : (result as any).collected || 0;
+            <div className="relative py-2">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-card px-2 text-muted-foreground">Individual Collections</span>
+              </div>
+            </div>
 
-                if (task.id === 'system-automation-all-collection') {
-                  alert(`Mega-Collection Complete! Successfully processed all entities for ${now.toLocaleString('default', { month: 'long' })} ${targetYear}.`);
-                } else {
-                  alert(`${entityName} Collection Complete! Successfully processed ${count} records for ${now.toLocaleString('default', { month: 'long' })} ${targetYear}.`);
-                }
-              } catch (error: any) {
-                alert(`Collection Failed: ${error.message || "There was a problem executing the automation."}`);
-              }
-            }}
-          >
-            <Play className="h-5 w-5 mr-2" />
-            Run Now
-          </Button>
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs"
+                onClick={async () => {
+                  try {
+                    const now = new Date();
+                    const res = await ClientAPI.bulkCollectTasks(now.getMonth() + 1, now.getFullYear());
+                    alert(`Tasks Collection Complete! Processed ${(res as any).collected || 0} records.`);
+                  } catch (error: any) { alert(error.message); }
+                }}
+              >
+                Tasks Only
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs"
+                onClick={async () => {
+                  try {
+                    const now = new Date();
+                    const res = await ClientAPI.collectSales(now.getMonth() + 1, now.getFullYear());
+                    alert(`Sales Collection Complete! Processed ${(res as any).collected || 0} records.`);
+                  } catch (error: any) { alert(error.message); }
+                }}
+              >
+                Sales Only
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs"
+                onClick={async () => {
+                  try {
+                    const now = new Date();
+                    const res = await ClientAPI.collectFinancials(now.getMonth() + 1, now.getFullYear());
+                    alert(`Financials Collection Complete! Processed ${(res as any).collected || 0} records.`);
+                  } catch (error: any) { alert(error.message); }
+                }}
+              >
+                Financials Only
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs"
+                onClick={async () => {
+                  try {
+                    const now = new Date();
+                    const res = await ClientAPI.collectInventory(now.getMonth() + 1, now.getFullYear());
+                    alert(`Inventory Collection Complete! Processed ${(res as any).collected || 0} records.`);
+                  } catch (error: any) { alert(error.message); }
+                }}
+              >
+                Inventory Only
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
     );
