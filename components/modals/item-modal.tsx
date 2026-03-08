@@ -79,13 +79,14 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
   const [quantity, setQuantity] = useState(0);
   const [unitCost, setUnitCost] = useState(0);
   const [price, setPrice] = useState(0);
-  const [restockable, setRestockable] = useState<boolean>(getDefaultRestockableForType(defaultItemType || ItemType.STICKER));
+  const [restockable, setRestockable] = useState<boolean>(false);
   const [year, setYear] = useState(new Date().getFullYear());
   const [imageUrl, setImageUrl] = useState('');
   const [width, setWidth] = useState('');
   const [height, setHeight] = useState('');
   const [size, setSize] = useState('');
   const [targetAmount, setTargetAmount] = useState('');
+  const [quantitySold, setQuantitySold] = useState(0);
   const [site, setSite] = useState<string>('Home');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
@@ -626,6 +627,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
       setHeight(item.dimensions?.height?.toString() || '');
       setSize(item.size || '');
       setTargetAmount(item.targetAmount?.toString() || '');
+      setQuantitySold(item.quantitySold || 0);
       const itemSiteId = item.stock?.[0]?.siteId || 'Home';
       setSite(itemSiteId);
 
@@ -738,6 +740,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         setHeight(selectedItem.dimensions?.height?.toString() || '');
         setSize(selectedItem.size || '');
         setTargetAmount(selectedItem.targetAmount?.toString() || '');
+        setQuantitySold(selectedItem.quantitySold || 0);
         // Get first stock point site or default
         setSite(selectedItem.stock?.[0]?.siteId || 'Home');
         setLocalSoldAt(selectedItem.soldAt ? new Date(selectedItem.soldAt) : undefined);
@@ -860,7 +863,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         price,
         value: 0,
         restockable,
-        quantitySold: 0,
+        quantitySold: item?.quantitySold || quantitySold || 0,
         year,
         imageUrl,
         stock: updatedStock,
@@ -975,7 +978,6 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
 
             {/* Column 2 - NATIVE (Item Data) */}
             <div className="space-y-3">
-              {/* <h3 className="text-sm font-semibold text-muted-foreground border-b pb-1">🧬 NATIVE</h3>*/}
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <Label htmlFor="quantity" className="text-xs">Quantity *</Label>
@@ -994,13 +996,13 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
                 </div>
 
                 <div>
-                  <Label htmlFor="targetAmount" className="text-xs">Target Q</Label>
+                  <Label htmlFor="quantitySold" className="text-xs">Sold Q</Label>
                   <NumericInput
-                    id="targetAmount"
-                    value={targetAmount ? parseFloat(targetAmount) : 0}
-                    onChange={(value) => setTargetAmount(value.toString())}
+                    id="quantitySold"
+                    value={quantitySold}
+                    onChange={(value) => setQuantitySold(value)}
                     min={0}
-                    placeholder="Target"
+                    placeholder="Sold"
                     className="h-8 text-sm mt-1"
                   />
                 </div>
@@ -1030,18 +1032,15 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <Label htmlFor="collection" className="text-xs">Collection</Label>
-                  <Select value={collection} onValueChange={(value) => setCollection(value as Collection | 'none')}>
-                    <SelectTrigger className="h-8 text-sm mt-1">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={Collection.NO_COLLECTION}>None</SelectItem>
-                      {Object.values(Collection).filter(c => c !== Collection.NO_COLLECTION).map(collection => (
-                        <SelectItem key={collection} value={collection}>{collection}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="targetAmount" className="text-xs">Target Q</Label>
+                  <NumericInput
+                    id="targetAmount"
+                    value={targetAmount ? parseFloat(targetAmount) : 0}
+                    onChange={(value) => setTargetAmount(value.toString())}
+                    min={0}
+                    placeholder="Target"
+                    className="h-8 text-sm mt-1"
+                  />
                 </div>
 
                 <div>
@@ -1071,8 +1070,6 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
 
             {/* Column 3 - AMBASSADOR (Site References) */}
             <div className="space-y-3">
-              {/* <h3 className="text-sm font-semibold text-muted-foreground border-b pb-1">🏛️ AMBASSADOR</h3>*/}
-
               <div>
                 <Label htmlFor="site" className="text-xs">Site</Label>
                 <SearchableSelect
@@ -1083,6 +1080,21 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
                   autoGroupByCategory={true}
                   className="h-8 text-sm"
                 />
+              </div>
+
+              <div>
+                <Label htmlFor="collection" className="text-xs">Collection</Label>
+                <Select value={collection} onValueChange={(value) => setCollection(value as Collection | 'none')}>
+                  <SelectTrigger className="h-8 text-sm mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={Collection.NO_COLLECTION}>None</SelectItem>
+                    {Object.values(Collection).filter(c => c !== Collection.NO_COLLECTION).map(collection => (
+                      <SelectItem key={collection} value={collection}>{collection}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </div>

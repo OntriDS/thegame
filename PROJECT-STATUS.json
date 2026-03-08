@@ -37,7 +37,7 @@
     },
     "phase13.3": {
       "phaseName": "Dashboards Section, Month Selectors connected to Archive System and Events Tab",
-      "status": "Not Started",
+      "status": "In Progress",
       "description": "Implement month/year selectors and connect it to Archive System and Dashboards Section",
       "deliverables": [
         "Add Month Selector to Archive Section for historical data viewing",
@@ -55,9 +55,12 @@
     "phase13.4": {
       "phaseName": "Monthly close workflow and many bug fixing all around",
       "status": "In Progress",
-      "description": "",
+      "description": "Monthly Close Wrokkflow, Automation Tasks, Multiple Bug Fixing",
       "deliverables": [
-        
+        "Montly Close Automation Task, Automation Tree",
+        "Booth Sales Multiple Bugs and Refactors",
+        "Archive Sales Refactor, No snapshots, Entites are preserved in their Section by Month",
+        "Done Tasks Workflow Refactor, Collected Tasks Workflow Refactor, Items Sold,"
       ]
     }
   },
