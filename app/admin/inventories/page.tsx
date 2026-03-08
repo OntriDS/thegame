@@ -11,6 +11,17 @@ import { ClientAPI } from "@/lib/client-api";
 import { ItemStatus } from "@/types/enums";
 import { Site } from "@/types/entities";
 import { getZIndexClass } from "@/lib/utils/z-index-utils";
+import { MonthYearSelector } from "@/components/ui/month-year-selector";
+import { getCurrentMonth, getMonthName } from "@/lib/constants/date-constants";
+import { Archive, Loader2 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 export default function InventoriesPage() {
   const { activeBg } = useThemeColors();
@@ -18,6 +29,10 @@ export default function InventoriesPage() {
   const [selectedSite, setSelectedSite] = useState<string | 'all'>('all');
   const [selectedStatus, setSelectedStatus] = useState<ItemStatus | 'all'>('all');
   const [sites, setSites] = useState<Site[]>([]);
+
+  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
+  const [currentMonth, setCurrentMonth] = useState(getCurrentMonth());
+
 
   // Load sites on mount
   useEffect(() => {
@@ -35,10 +50,10 @@ export default function InventoriesPage() {
   // Load saved preferences on mount (wait for KV to load)
   useEffect(() => {
     if (isLoading) return;
-    
+
     const savedSite = getPreference('inventory-selected-site', 'all');
     const savedStatus = getPreference('inventory-selected-status', 'all');
-    
+
     if (savedSite) setSelectedSite(savedSite);
     if (savedStatus) setSelectedStatus(savedStatus);
   }, [getPreference, isLoading]);
@@ -51,11 +66,11 @@ export default function InventoriesPage() {
         <div className="flex items-center gap-4">
           {/* Compact Filters */}
           <div className="flex items-center gap-2 text-sm">
-                         <span className="text-muted-foreground">Site:</span>
-              <Select value={selectedSite} onValueChange={(value) => {
-                setSelectedSite(value);
-                setPreference('inventory-selected-site', value);
-              }}>
+            <span className="text-muted-foreground">Site:</span>
+            <Select value={selectedSite} onValueChange={(value) => {
+              setSelectedSite(value);
+              setPreference('inventory-selected-site', value);
+            }}>
               <SelectTrigger className="w-32 h-8">
                 <SelectValue />
               </SelectTrigger>
@@ -67,7 +82,7 @@ export default function InventoriesPage() {
               </SelectContent>
             </Select>
           </div>
-          
+
           <div className="flex items-center gap-2">
             <span className="text-muted-foreground">Status:</span>
             <Select value={selectedStatus} onValueChange={(value) => {
@@ -87,16 +102,24 @@ export default function InventoriesPage() {
             </Select>
           </div>
 
+          <div className="flex items-center gap-4">
+            <MonthYearSelector
+              currentYear={currentYear}
+              currentMonth={currentMonth}
+              onYearChange={setCurrentYear}
+              onMonthChange={setCurrentMonth}
+            />
+
+          </div>
         </div>
       </div>
 
       {/* Inventory Display */}
-      <InventoryDisplay 
+      <InventoryDisplay
         sites={sites}
         selectedSite={selectedSite}
         selectedStatus={selectedStatus}
       />
-
 
 
     </div>

@@ -3,7 +3,7 @@
 
 import type { Task, Item, FinancialRecord, Sale, Character, Player, Site, Settlement, Account, Business, Contract } from '@/types/entities';
 import type { TaskSnapshot, ItemSnapshot, SaleSnapshot, FinancialSnapshot } from '@/types/archive';
-import { EntityType, ItemType, TaskPriority, TaskStatus, FinancialStatus, TaskType } from '@/types/enums';
+import { EntityType, ItemType, TaskPriority, TaskStatus, FinancialStatus, TaskType, SaleStatus } from '@/types/enums';
 import {
   upsertTask as repoUpsertTask,
   getAllTasks as repoGetAllTasks,
@@ -739,11 +739,14 @@ export async function getArchivedItemsByMonth(mmyy: string): Promise<Item[]> {
 }
 
 export async function getArchivedSalesByMonth(mmyy: string): Promise<Sale[]> {
-  const ids = await kvSMembers(`index:sales:collected:${mmyy}`);
+  const ids = await kvSMembers(buildMonthIndexKey(EntityType.SALE, mmyy));
   if (!ids.length) return [];
   const keys = ids.map(id => buildDataKey(EntityType.SALE, id));
   const sales = await kvMGet<Sale>(keys);
-  return sales.filter((t): t is Sale => t !== null).map(t => reviveDates(t));
+  return sales
+    .filter((s): s is Sale => s !== null && s !== undefined)
+    .filter(s => s.status === SaleStatus.CHARGED || s.status === SaleStatus.COLLECTED || s.isCollected)
+    .map(s => reviveDates(s));
 }
 
 export async function getArchivedFinancialRecordsByMonth(mmyy: string): Promise<FinancialRecord[]> {

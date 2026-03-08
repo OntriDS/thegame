@@ -37,15 +37,15 @@ export async function upsertSale(sale: Sale): Promise<Sale> {
   await kvSet(key, sale);
   await kvSAdd(indexKey, sale.id);
 
-  // Maintain month index (collectedAt → saleDate → createdAt)
-  const date = (sale as any).collectedAt || (sale as any).saleDate || (sale as any).createdAt;
+  // Maintain month index (chargedAt → collectedAt → saleDate → createdAt)
+  const date = (sale as any).chargedAt || (sale as any).collectedAt || (sale as any).saleDate || (sale as any).createdAt;
   if (date) {
     const monthKey = formatMonthKey(date);
     await kvSAdd(buildMonthIndexKey(ENTITY, monthKey), sale.id);
   }
 
   if (previous) {
-    const prevDate = (previous as any).collectedAt || (previous as any).saleDate || (previous as any).createdAt;
+    const prevDate = (previous as any).chargedAt || (previous as any).collectedAt || (previous as any).saleDate || (previous as any).createdAt;
     if (prevDate) {
       const prevMonthKey = formatMonthKey(prevDate);
       const currMonthKey = date ? formatMonthKey(date) : prevMonthKey;
@@ -64,7 +64,7 @@ export async function deleteSale(id: string): Promise<void> {
 
   const existing = await kvGet<Sale>(key);
   if (existing) {
-    const prevDate = (existing as any).collectedAt || (existing as any).saleDate || (existing as any).createdAt;
+    const prevDate = (existing as any).chargedAt || (existing as any).collectedAt || (existing as any).saleDate || (existing as any).createdAt;
     if (prevDate) {
       const prevMonthKey = formatMonthKey(prevDate);
       await kvSRem(buildMonthIndexKey(ENTITY, prevMonthKey), id);

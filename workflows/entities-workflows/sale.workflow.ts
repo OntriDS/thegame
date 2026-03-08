@@ -9,7 +9,7 @@ import { EffectKeys, buildLogKey } from '@/data-store/keys';
 import { kvGet, kvSet } from '@/data-store/kv';
 import { getLinksFor, removeLink } from '@/links/link-registry';
 import { getPlayerById, getSaleById, getItemById, getFinancialsBySourceSaleId, removeFinancial, upsertItem } from '@/data-store/datastore';
-import { awardPointsToPlayer, removePointsFromPlayer, calculatePointsFromRevenue } from '../points-rewards-utils';
+import { stagePointsForPlayer, removePointsFromPlayer, calculatePointsFromRevenue } from '../points-rewards-utils';
 import { processSaleLines, ensureSoldItemEntities } from '../sale-line-utils';
 import { updateFinancialRecordsFromSale, updateItemsFromSale, updatePlayerPointsFromSource, hasRevenueChanged, hasLinesChanged } from '../update-propagation-utils';
 import { createCharacterFromSale } from '../character-creation-utils';
@@ -44,14 +44,12 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
     if (sale.newCustomerName && !sale.customerId) {
       const characterEffectKey = EffectKeys.sideEffect('sale', sale.id, 'characterCreated');
       if (!(await hasEffect(characterEffectKey))) {
-        console.log(`[onSaleUpsert] Creating character from sale emissary fields: ${sale.counterpartyName}`);
         const createdCharacter = await createCharacterFromSale(sale);
         if (createdCharacter) {
           // Update sale with the created character ID
           const updatedSale = { ...sale, customerId: createdCharacter.id };
           await upsertSale(updatedSale, { skipWorkflowEffects: true, skipLinkEffects: true });
           await markEffect(characterEffectKey);
-          console.log(`[onSaleUpsert] ✅ Character created and sale updated: ${createdCharacter.name}`);
         }
       }
     }
@@ -91,8 +89,12 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
         },
         cancelledAt: sale.cancelledAt || new Date().toISOString()
       });
-    } else if (wasPending && !nowPending) {
       // Transitioned from PENDING to CHARGED (both paid and charged)
+      const chargedAt = new Date().toISOString();
+
+      // Update the sale object with chargedAt
+      (sale as any).chargedAt = new Date(chargedAt);
+
       await appendEntityLog(EntityType.SALE, sale.id, LogEventType.DONE, {
         type: sale.type,
         status: sale.status,
@@ -105,20 +107,20 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
         },
         isNotPaid: sale.isNotPaid,
         isNotCharged: sale.isNotCharged,
-        completedAt: new Date().toISOString()
+        completedAt: chargedAt,
+        chargedAt
       });
 
       // Points awarding - ONLY when sale transitions to CHARGED (both paid and charged)
       // Use sale.playerCharacterId directly as playerId (unified ID)
       if (sale.totals.totalRevenue > 0) {
-        const pointsEffectKey = EffectKeys.sideEffect('sale', sale.id, 'pointsAwarded');
+        // Use 'pointsStaged' key to distinguish from legacy 'pointsAwarded'
+        const pointsEffectKey = EffectKeys.sideEffect('sale', sale.id, 'pointsStaged');
         if (!(await hasEffect(pointsEffectKey))) {
-          console.log(`[onSaleUpsert] Awarding points from charged sale: ${sale.counterpartyName}`);
           const points = calculatePointsFromRevenue(sale.totals.totalRevenue);
           const playerId = sale.playerCharacterId || PLAYER_ONE_ID;
-          await awardPointsToPlayer(playerId, points, sale.id, EntityType.SALE);
+          await stagePointsForPlayer(playerId, points, sale.id, EntityType.SALE);
           await markEffect(pointsEffectKey);
-          console.log(`[onSaleUpsert] ✅ Points awarded to player ${playerId} for charged sale: ${sale.counterpartyName}`);
         }
       }
 
@@ -212,7 +214,6 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
 
     // Propagate to Financial Records
     if (hasFinancialDriversChanged) {
-      console.log(`[onSaleUpsert] Propagating financial changes to records: ${sale.counterpartyName}`);
       await updateFinancialRecordsFromSale(sale, previousSale);
 
       // [FIX] Update Sale Cost with Payout Amount (for Booth-Sales)
@@ -223,7 +224,6 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
 
         // If calculated payout differs from current cost, update it
         if (payout >= 0 && Math.abs((sale.totals.totalCost || 0) - payout) > 0.01) {
-          console.log(`[onSaleUpsert] Updating sale cost with associate payout: $${payout}`);
           const updatedSaleWithCost = {
             ...sale,
             totals: {
@@ -239,13 +239,11 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
 
     // Propagate to Items (stock updates)
     if (hasLinesChanged(sale, previousSale)) {
-      console.log(`[onSaleUpsert] Propagating line changes to items: ${sale.counterpartyName}`);
       await updateItemsFromSale(sale, previousSale);
     }
 
     // Propagate to Player (points delta from revenue)
     if (hasRevenueChanged(sale, previousSale)) { // Player points ONLY care about Revenue
-      console.log(`[onSaleUpsert] Propagating revenue changes to player points: ${sale.counterpartyName}`);
       await updatePlayerPointsFromSource(EntityType.SALE, sale, previousSale);
     }
   }
@@ -293,7 +291,6 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
     if (newMonth) {
       await kvSAdd(`index:sales:collected:${newMonth}`, sale.id);
       await kvSAdd(buildArchiveMonthsKey(), newMonth);
-      console.log(`[onSaleUpsert] 📦 Sale ${sale.id} secured in archive index: ${newMonth}`);
 
       // The sale record's existence in the index and its inherent dates are the single source of truth.
     }
@@ -318,10 +315,8 @@ async function processChargedSaleLines(sale: Sale): Promise<void> {
     return;
   }
 
-  console.log(`[onSaleUpsert] Processing sale lines for charged sale: ${sale.counterpartyName}`);
   await processSaleLines(sale);
   await markEffect(linesProcessedKey);
-  console.log(`[onSaleUpsert] ✅ Sale lines processed and effect marked: ${sale.counterpartyName}`);
 }
 
 /**
@@ -330,7 +325,6 @@ async function processChargedSaleLines(sale: Sale): Promise<void> {
  */
 export async function removeSaleEffectsOnDelete(saleId: string): Promise<void> {
   try {
-    console.log(`[removeSaleEffectsOnDelete] Starting cleanup for sale: ${saleId}`);
 
     // 0. Revert Inventory (Restore Stock)
     await revertSaleInventory(saleId);
@@ -340,12 +334,10 @@ export async function removeSaleEffectsOnDelete(saleId: string): Promise<void> {
 
     // 2. Remove all Links related to this sale
     const saleLinks = await getLinksFor({ type: EntityType.SALE, id: saleId });
-    console.log(`[removeSaleEffectsOnDelete] Found ${saleLinks.length} links to remove`);
 
     for (const link of saleLinks) {
       try {
         await removeLink(link.id);
-        console.log(`[removeSaleEffectsOnDelete] ✅ Removed link: ${link.linkType}`);
       } catch (error) {
         console.error(`[removeSaleEffectsOnDelete] ❌ Failed to remove link ${link.id}:`, error);
       }
@@ -353,12 +345,10 @@ export async function removeSaleEffectsOnDelete(saleId: string): Promise<void> {
 
     // 2.5 Remove associated Financial Records
     const financialRecords = await getFinancialsBySourceSaleId(saleId);
-    console.log(`[removeSaleEffectsOnDelete] Found ${financialRecords.length} financial records to remove`);
 
     for (const record of financialRecords) {
       try {
         await removeFinancial(record.id);
-        console.log(`[removeSaleEffectsOnDelete] ✅ Removed financial record: ${record.name}`);
       } catch (error) {
         console.error(`[removeSaleEffectsOnDelete] ❌ Failed to remove financial record ${record.id}:`, error);
       }
@@ -375,7 +365,6 @@ export async function removeSaleEffectsOnDelete(saleId: string): Promise<void> {
     await clearEffect(EffectKeys.sideEffect('sale', saleId, 'pointsAwarded'));
 
     // 4. Remove log entries from all relevant logs
-    console.log(`[removeSaleEffectsOnDelete] Starting log entry removal for sale: ${saleId}`);
 
     // Remove from sales log
     const salesLogKey = buildLogKey(EntityType.SALE);
@@ -383,7 +372,6 @@ export async function removeSaleEffectsOnDelete(saleId: string): Promise<void> {
     const filteredSalesLog = salesLog.filter(entry => entry.entityId !== saleId);
     if (filteredSalesLog.length !== salesLog.length) {
       await kvSet(salesLogKey, filteredSalesLog);
-      console.log(`[removeSaleEffectsOnDelete] ✅ Removed ${salesLog.length - filteredSalesLog.length} entries from sales log`);
     }
 
     // Also check and remove from player log if this sale awarded points
@@ -394,7 +382,6 @@ export async function removeSaleEffectsOnDelete(saleId: string): Promise<void> {
       const filteredPlayerLog = playerLog.filter(entry => entry.sourceId !== saleId && entry.sourceSaleId !== saleId);
       if (filteredPlayerLog.length !== playerLog.length) {
         await kvSet(playerLogKey, filteredPlayerLog);
-        console.log(`[removeSaleEffectsOnDelete] ✅ Removed ${playerLog.length - filteredPlayerLog.length} entries from player log`);
       }
     }
 
@@ -404,7 +391,6 @@ export async function removeSaleEffectsOnDelete(saleId: string): Promise<void> {
     const filteredCharacterLog = characterLog.filter(entry => entry.saleId !== saleId && entry.sourceSaleId !== saleId);
     if (filteredCharacterLog.length !== characterLog.length) {
       await kvSet(characterLogKey, filteredCharacterLog);
-      console.log(`[removeSaleEffectsOnDelete] ✅ Removed ${characterLog.length - filteredCharacterLog.length} entries from character log`);
     }
 
     // [New] Remove from ITEM Logs (Lifecycle events)
@@ -417,10 +403,8 @@ export async function removeSaleEffectsOnDelete(saleId: string): Promise<void> {
 
     if (filteredItemLog.length !== itemLog.length) {
       await kvSet(itemLogKey, filteredItemLog);
-      console.log(`[removeSaleEffectsOnDelete] ✅ Removed ${itemLog.length - filteredItemLog.length} entries from item log`);
     }
 
-    console.log(`[removeSaleEffectsOnDelete] ✅ Cleared effects, removed links, and removed log entries for sale ${saleId}`);
   } catch (error) {
     console.error('Error removing sale effects:', error);
   }
@@ -432,13 +416,11 @@ export async function removeSaleEffectsOnDelete(saleId: string): Promise<void> {
  */
 async function removePlayerPointsFromSale(saleId: string): Promise<void> {
   try {
-    console.log(`[removePlayerPointsFromSale] Removing points for sale: ${saleId}`);
 
     // Get the sale to find what points were awarded
     const sale = await getSaleById(saleId);
 
     if (!sale || sale.totals.totalRevenue <= 0) {
-      console.log(`[removePlayerPointsFromSale] Sale ${saleId} has no revenue to remove points from`);
       return;
     }
 
@@ -447,7 +429,6 @@ async function removePlayerPointsFromSale(saleId: string): Promise<void> {
     const player = await getPlayerById(playerId);
 
     if (!player) {
-      console.log(`[removePlayerPointsFromSale] Player ${playerId} not found, skipping points removal`);
       return;
     }
 
@@ -459,13 +440,11 @@ async function removePlayerPointsFromSale(saleId: string): Promise<void> {
       (pointsToRemove.fp || 0) > 0 || (pointsToRemove.hp || 0) > 0;
 
     if (!hasPoints) {
-      console.log(`[removePlayerPointsFromSale] No points to remove from sale ${saleId} (revenue: ${sale.totals.totalRevenue})`);
       return;
     }
 
     // Remove the points from the player
     await removePointsFromPlayer(playerId, pointsToRemove);
-    console.log(`[removePlayerPointsFromSale] ✅ Removed points from player: ${JSON.stringify(pointsToRemove)} (sale revenue: ${sale.totals.totalRevenue})`);
 
   } catch (error) {
     console.error(`[removePlayerPointsFromSale] ❌ Failed to remove player points for sale ${saleId}:`, error);
@@ -479,7 +458,6 @@ async function removePlayerPointsFromSale(saleId: string): Promise<void> {
  */
 async function revertSaleInventory(saleId: string): Promise<void> {
   try {
-    console.log(`[revertSaleInventory] Reverting inventory for sale: ${saleId}`);
     const sale = await getSaleById(saleId);
     if (!sale || !sale.lines) return;
 
@@ -497,7 +475,6 @@ async function revertSaleInventory(saleId: string): Promise<void> {
         continue;
       }
 
-      console.log(`[revertSaleInventory] Restoring ${quantityToRestore} units to item ${item.name}`);
 
       // 1. Restore Stock Point
       // We look for a stock point matching the sale's site, or default to the first one available
@@ -535,7 +512,6 @@ async function revertSaleInventory(saleId: string): Promise<void> {
       };
 
       await upsertItem(updatedItem);
-      console.log(`[revertSaleInventory] ✅ Restored stock for item ${item.id}. New Qty in ${targetSiteId}: ${updatedStock.find(s => s.siteId === targetSiteId)?.quantity}`);
     }
   } catch (error) {
     console.error(`[revertSaleInventory] ❌ Failed to revert inventory for sale ${saleId}:`, error);

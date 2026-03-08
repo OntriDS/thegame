@@ -299,10 +299,6 @@ export enum ItemStatus {
   DAMAGED = 'Damaged',
   IDLE = 'Idle',
   COLLECTED = 'Collected',
-  // Temporary while building
-  ON_HOLD = 'On Hold',
-  STORED = 'Stored',
-  TO_REPAIR = 'To Repair',
 }
 
 /** Creative collections */

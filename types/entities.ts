@@ -249,6 +249,9 @@ export interface Item extends BaseEntity {
   // Archive field
   isCollected: boolean;            // Item collected (monthly close)
   collectedAt?: Date;              // When item was collected (monthly close)
+
+  // Rewards (DNA for RNA)
+  rewards?: Rewards;               // Standard rewards (XP, RP, FP, HP)
 }
 
 
@@ -638,6 +641,7 @@ export interface Sale extends BaseEntity {
 
   // Lifecycle timestamps (never overwritten once set)
   postedAt?: Date;               // when effects were applied
+  chargedAt?: Date;              // when payment was confirmed (charged)
   doneAt?: Date;                 // when finalized
   cancelledAt?: Date;            // when cancelled & rolled back
 

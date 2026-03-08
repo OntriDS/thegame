@@ -24,8 +24,6 @@ const STATUS_COLOR_BASE = {
   OBSOLETE: 'border-red-500 bg-red-100 text-red-800',
   DAMAGED: 'border-red-500 bg-red-100 text-red-800',
   IDLE: 'border-gray-500 bg-gray-100 text-gray-800',
-  STORED: 'border-gray-500 bg-gray-100 text-gray-800',
-  TO_REPAIR: 'border-orange-500 bg-orange-100 text-orange-800',
 } as const;
 
 // ============================================================================
@@ -51,15 +49,12 @@ export const ITEM_STATUS_COLORS = {
   [ItemStatus.SOLD]: { light: STATUS_COLOR_BASE.SOLD, dark: STATUS_COLOR_BASE.SOLD },
   [ItemStatus.TO_ORDER]: { light: STATUS_COLOR_BASE.IN_PROGRESS, dark: STATUS_COLOR_BASE.IN_PROGRESS },
   [ItemStatus.TO_DO]: { light: STATUS_COLOR_BASE.IN_PROGRESS, dark: STATUS_COLOR_BASE.IN_PROGRESS },
-  [ItemStatus.ON_HOLD]: { light: STATUS_COLOR_BASE.ON_HOLD, dark: STATUS_COLOR_BASE.ON_HOLD },
-  [ItemStatus.GIFTED]: { light: STATUS_COLOR_BASE.STORED, dark: STATUS_COLOR_BASE.STORED },
+  [ItemStatus.GIFTED]: { light: 'border-gray-500 bg-gray-100 text-gray-800', dark: 'border-gray-500 bg-gray-100 text-gray-800' },
   [ItemStatus.RESERVED]: { light: STATUS_COLOR_BASE.FINISHING, dark: STATUS_COLOR_BASE.FINISHING },
   [ItemStatus.OBSOLETE]: { light: STATUS_COLOR_BASE.OBSOLETE, dark: STATUS_COLOR_BASE.OBSOLETE },
   [ItemStatus.DAMAGED]: { light: STATUS_COLOR_BASE.DAMAGED, dark: STATUS_COLOR_BASE.DAMAGED },
   [ItemStatus.IDLE]: { light: STATUS_COLOR_BASE.IDLE, dark: STATUS_COLOR_BASE.IDLE },
   [ItemStatus.COLLECTED]: { light: STATUS_COLOR_BASE.COLLECTED, dark: STATUS_COLOR_BASE.COLLECTED },
-  [ItemStatus.STORED]: { light: STATUS_COLOR_BASE.STORED, dark: STATUS_COLOR_BASE.STORED },
-  [ItemStatus.TO_REPAIR]: { light: STATUS_COLOR_BASE.TO_REPAIR, dark: STATUS_COLOR_BASE.TO_REPAIR },
   [ItemStatus.CONSIGNMENT]: { light: STATUS_COLOR_BASE.FINISHING, dark: STATUS_COLOR_BASE.FINISHING },
 } as const;
 

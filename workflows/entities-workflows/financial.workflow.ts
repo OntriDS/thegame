@@ -50,14 +50,12 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
     if (financial.newCustomerName && !financial.customerCharacterId) {
       const characterEffectKey = EffectKeys.sideEffect('financial', financial.id, 'characterCreated');
       if (!(await hasEffect(characterEffectKey))) {
-        console.log(`[onFinancialUpsert] Creating character from financial record emissary fields: ${financial.name}`);
         const createdCharacter = await createCharacterFromFinancial(financial);
         if (createdCharacter) {
           // Update financial record with the created character ID
           const updatedFinancial = { ...financial, customerCharacterId: createdCharacter.id };
           await upsertFinancial(updatedFinancial, { skipWorkflowEffects: true });
           await markEffect(characterEffectKey);
-          console.log(`[onFinancialUpsert] ✅ Character created and financial record updated: ${createdCharacter.name}`);
         }
       }
     }
@@ -72,11 +70,9 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
         (async () => {
           const itemEffectKey = EffectKeys.sideEffect('financial', financial.id, 'itemCreated');
           if (!(await hasEffect(itemEffectKey))) {
-            console.log(`[onFinancialUpsert] Creating item from financial record emissary fields: ${financial.name}`);
             const createdItem = await createItemFromRecord(financial);
             if (createdItem) {
               await markEffect(itemEffectKey);
-              console.log(`[onFinancialUpsert] ✅ Item created and effect marked: ${createdItem.name}`);
             }
           }
         })()
@@ -96,7 +92,7 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
               const playerId = financial.playerCharacterId || PLAYER_ONE_ID;
               const points = financial.rewards?.points;
               if (points) {
-                await rewardPointsToPlayer(playerId, {
+                await stagePointsForPlayer(playerId, {
                   xp: points.xp || 0,
                   rp: points.rp || 0,
                   fp: points.fp || 0,
@@ -162,7 +158,6 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
         // The financial record's existence in the index and its inherent dates are the single source of truth.
 
         await markEffect(archiveIndexEffectKey);
-        console.log(`[onFinancialUpsert] ✅ Added new done financial ${financial.name} to index ${monthKey} without snapshotting`);
       }
     }
 
@@ -195,11 +190,9 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
             fp: normalizedFinancial.rewards.points.fp || 0,
             hp: normalizedFinancial.rewards.points.hp || 0
           }, normalizedFinancial.id, EntityType.FINANCIAL);
-          console.log(`[onFinancialUpsert] 💰 Rewarded points for collected record: ${normalizedFinancial.name}`);
         }
 
         await markEffect(pointsRewardedEffectKey); // Mark the rewarded effect, even if no points were rewarded (e.g., no rewards or not staged)
-        console.log(`[onFinancialUpsert] ✅ Financial ${financial.name} collected - points rewarded`);
       }
     }
 
@@ -251,7 +244,6 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
       // The financial record's existence in the index and its inherent dates are the single source of truth.
 
       await markEffect(archiveIndexEffectKey);
-      console.log(`[onFinancialUpsert] ✅ Added done financial ${financial.name} to index ${monthKey} without snapshotting`);
     }
   } else if (!wasPending && nowPending) {
     // Reverted from DONE to PENDING (became unpaid or uncharged)
@@ -317,7 +309,6 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
       }
 
       await markEffect(pointsRewardedEffectKey);
-      console.log(`[onFinancialUpsert] ✅ Financial ${financial.name} collected - points rewarded`);
     }
   }
 
@@ -325,26 +316,22 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
   if (previousFinancial) {
     // Propagate to Tasks
     if (hasFinancialPropsChanged(financial, previousFinancial)) {
-      console.log(`[onFinancialUpsert] Propagating financial changes to tasks: ${financial.name}`);
       await updateTasksFromFinancialRecord(financial, previousFinancial);
     }
 
     // Propagate to Items
     if (hasOutputPropsChanged(financial, previousFinancial)) {
-      console.log(`[onFinancialUpsert] Propagating output changes to items: ${financial.name}`);
       await updateItemsCreatedByRecord(financial, previousFinancial);
     }
 
     // Propagate to Player (points delta)
     if (hasRewardsChanged(financial, previousFinancial)) {
-      console.log(`[onFinancialUpsert] Propagating points changes to player: ${financial.name}`);
       await updatePlayerPointsFromSource(EntityType.FINANCIAL, financial, previousFinancial);
     }
 
 
     // Propagate J$ changes to Character Wallet Cache
     if (financial.jungleCoins !== previousFinancial.jungleCoins) {
-      console.log(`[onFinancialUpsert] Propagating J$ changes to wallet cache: ${financial.name}`);
       if (financial.customerCharacterId) await recalculateCharacterWallet(financial.customerCharacterId);
       if (financial.playerCharacterId) await recalculateCharacterWallet(financial.playerCharacterId);
 
@@ -407,7 +394,6 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
       if (newMonth) {
         await kvSAdd(`index:financials:collected:${newMonth}`, financial.id);
         await kvSAdd(buildArchiveMonthsKey(), newMonth);
-        console.log(`[onFinancialUpsert] 📦 Financial ${financial.id} secured in archive index: ${newMonth}`);
 
         // The financial record's existence in the index and its inherent dates are the single source of truth.
       }
@@ -421,7 +407,6 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
  */
 export async function removeRecordEffectsOnDelete(recordId: string): Promise<void> {
   try {
-    console.log(`[removeRecordEffectsOnDelete] Starting cleanup for record: ${recordId}`);
 
     // 1. Remove items created by this record
     await removeItemsCreatedByRecord(recordId);
@@ -430,7 +415,6 @@ export async function removeRecordEffectsOnDelete(recordId: string): Promise<voi
     await removePlayerPointsFromRecord(recordId);
     // 3. Remove all Links related to this record
     const recordLinks = await getLinksFor({ type: EntityType.FINANCIAL, id: recordId });
-    console.log(`[removeRecordEffectsOnDelete] Found ${recordLinks.length} links to remove`);
 
     // Extract character IDs from links before deleting them
     const affectedCharacterIds = new Set<string>();
@@ -442,7 +426,6 @@ export async function removeRecordEffectsOnDelete(recordId: string): Promise<voi
     for (const link of recordLinks) {
       try {
         await removeLink(link.id);
-        console.log(`[removeRecordEffectsOnDelete] ✅ Removed link: ${link.linkType}`);
       } catch (error) {
         console.error(`[removeRecordEffectsOnDelete] ❌ Failed to remove link ${link.id}:`, error);
       }
@@ -451,7 +434,6 @@ export async function removeRecordEffectsOnDelete(recordId: string): Promise<voi
     // Recalculate for all affected characters found via links
     for (const charId of affectedCharacterIds) {
       await recalculateCharacterWallet(charId);
-      console.log(`[removeRecordEffectsOnDelete] ✅ Recalculated wallet for character: ${charId}`);
     }
 
     // 4. Clear effects registry
@@ -465,13 +447,11 @@ export async function removeRecordEffectsOnDelete(recordId: string): Promise<voi
     await clearEffectsByPrefix(EntityType.FINANCIAL, recordId, 'financialLogged:');
 
     // 5. Remove log entries from financials log
-    console.log(`[removeRecordEffectsOnDelete] Removing log entries for record: ${recordId}`);
     const financialsLogKey = buildLogKey(EntityType.FINANCIAL);
     const financialsLog = (await kvGet<any[]>(financialsLogKey)) || [];
     const filteredFinancialsLog = financialsLog.filter(entry => entry.entityId !== recordId);
     if (filteredFinancialsLog.length !== financialsLog.length) {
       await kvSet(financialsLogKey, filteredFinancialsLog);
-      console.log(`[removeRecordEffectsOnDelete] ✅ Removed ${financialsLog.length - filteredFinancialsLog.length} entries from financials log`);
     }
 
     // Check and remove from character log if this record was linked to a character
@@ -480,7 +460,6 @@ export async function removeRecordEffectsOnDelete(recordId: string): Promise<voi
     const filteredCharacterLog = characterLog.filter(entry => entry.financialId !== recordId && entry.sourceFinancialId !== recordId);
     if (filteredCharacterLog.length !== characterLog.length) {
       await kvSet(characterLogKey, filteredCharacterLog);
-      console.log(`[removeRecordEffectsOnDelete] ✅ Removed ${characterLog.length - filteredCharacterLog.length} entries from character log`);
     }
 
     // 6. Remove from archive index
@@ -499,13 +478,11 @@ export async function removeRecordEffectsOnDelete(recordId: string): Promise<voi
         const archiveIndexKey = `index:financials:collected:${monthKey}`;
         await kvSRem(archiveIndexKey, recordId);
         await clearEffect(EffectKeys.sideEffect('financial', recordId, `financialSnapshot:${monthKey}`));
-        console.log(`[removeRecordEffectsOnDelete] ✅ Removed record from archive index: ${archiveIndexKey}`);
       }
     } catch (err) {
       console.error(`[removeRecordEffectsOnDelete] Failed to clean up archive index`, err);
     }
 
-    console.log(`[removeRecordEffectsOnDelete] ✅ Cleared effects, removed links, deleted created items, and removed log entries for record ${recordId}`);
   } catch (error) {
     console.error('Error removing record effects:', error);
   }
@@ -517,13 +494,11 @@ export async function removeRecordEffectsOnDelete(recordId: string): Promise<voi
  */
 async function removePlayerPointsFromRecord(recordId: string): Promise<void> {
   try {
-    console.log(`[removePlayerPointsFromRecord] Removing points for record: ${recordId}`);
 
     // Get the record to find what points were awarded
     const record = await getFinancialById(recordId);
 
     if (!record || !record.rewards?.points) {
-      console.log(`[removePlayerPointsFromRecord] Record ${recordId} has no points to remove`);
       return;
     }
 
@@ -532,7 +507,6 @@ async function removePlayerPointsFromRecord(recordId: string): Promise<void> {
     const player = await getPlayerById(playerId);
 
     if (!player) {
-      console.log(`[removePlayerPointsFromRecord] Player ${playerId} not found, skipping points removal`);
       return;
     }
 
@@ -542,7 +516,6 @@ async function removePlayerPointsFromRecord(recordId: string): Promise<void> {
       (pointsToRemove.fp || 0) > 0 || (pointsToRemove.hp || 0) > 0;
 
     if (!hasPoints) {
-      console.log(`[removePlayerPointsFromRecord] No points to remove from record ${recordId}`);
       return;
     }
 
@@ -553,7 +526,6 @@ async function removePlayerPointsFromRecord(recordId: string): Promise<void> {
       fp: pointsToRemove.fp || 0,
       hp: pointsToRemove.hp || 0
     });
-    console.log(`[removePlayerPointsFromRecord] ✅ Removed points from player: ${JSON.stringify(pointsToRemove)}`);
 
   } catch (error) {
     console.error(`[removePlayerPointsFromRecord] ❌ Failed to remove player points for record ${recordId}:`, error);

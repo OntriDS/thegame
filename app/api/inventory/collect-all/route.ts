@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Missing month or year' }, { status: 400 });
         }
 
-        const { collectedCount } = await CollectionService.collectFinancials(month, year);
+        const { collectedCount } = await CollectionService.collectInventory(month, year);
 
         return NextResponse.json({
             success: true,
@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
         });
 
     } catch (error: any) {
-        console.error('[COLLECT-FINANCIALS] General error:', error);
+        console.error('[COLLECT-INVENTORY] General error:', error);
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }

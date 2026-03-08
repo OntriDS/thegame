@@ -1137,6 +1137,36 @@ export const ClientAPI = {
     });
     if (!res.ok) throw new Error('Failed to delete archived task');
   },
+
+  collectSales: async (month: number, year: number): Promise<{ success: boolean; collected: number }> => {
+    const res = await fetch('/api/sales/collect-all', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ month, year })
+    });
+    if (!res.ok) throw new Error('Failed to collect sales');
+    return await res.json();
+  },
+
+  collectFinancials: async (month: number, year: number): Promise<{ success: boolean; collected: number }> => {
+    const res = await fetch('/api/financials/collect-all', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ month, year })
+    });
+    if (!res.ok) throw new Error('Failed to collect financials');
+    return await res.json();
+  },
+
+  collectInventory: async (month: number, year: number): Promise<{ success: boolean; collected: number }> => {
+    const res = await fetch('/api/inventory/collect-all', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ month, year })
+    });
+    if (!res.ok) throw new Error('Failed to collect inventory');
+    return await res.json();
+  },
 };
 
 // Historical placement: keep alias methods at the end to avoid duplicate keys

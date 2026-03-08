@@ -274,11 +274,33 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate }: TaskD
                 const now = new Date();
                 const targetMonth = now.getMonth() + 1; // 1-12
                 const targetYear = now.getFullYear();
+                let result;
+                let entityName = "Items";
 
-                const result = await ClientAPI.bulkCollectTasks(targetMonth, targetYear);
-                alert(`Rewards Collection Complete! Successfully collected ${result.collectedCount} tasks for ${now.toLocaleString('default', { month: 'long' })} ${targetYear}.`);
+                if (task.id === 'system-automation-tasks-collection') {
+                  result = await ClientAPI.bulkCollectTasks(targetMonth, targetYear);
+                  entityName = "Tasks";
+                } else if (task.id === 'system-automation-sales-collection') {
+                  result = await ClientAPI.collectSales(targetMonth, targetYear);
+                  entityName = "Sales";
+                } else if (task.id === 'system-automation-financials-collection') {
+                  result = await ClientAPI.collectFinancials(targetMonth, targetYear);
+                  entityName = "Financials";
+                } else if (task.id === 'system-automation-inventory-collection') {
+                  result = await ClientAPI.collectInventory(targetMonth, targetYear);
+                  entityName = "Inventory Items";
+                } else {
+                  throw new Error("Unknown automation task ID");
+                }
+
+                // Standardize count extraction
+                const count = (result as any).collectedCount !== undefined
+                  ? (result as any).collectedCount
+                  : (result as any).collected;
+
+                alert(`${entityName} Collection Complete! Successfully processed ${count} records for ${now.toLocaleString('default', { month: 'long' })} ${targetYear}.`);
               } catch (error: any) {
-                alert(`Collection Failed: ${error.message || "There was a problem collecting the tasks."}`);
+                alert(`Collection Failed: ${error.message || "There was a problem executing the automation."}`);
               }
             }}
           >

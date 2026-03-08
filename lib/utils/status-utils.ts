@@ -43,9 +43,6 @@ export const itemStatusKeyMap: Record<ItemStatus, string> = {
   [ItemStatus.DAMAGED]: 'damaged',
   [ItemStatus.IDLE]: 'idle',
   [ItemStatus.COLLECTED]: 'collected',
-  [ItemStatus.ON_HOLD]: 'onHold',
-  [ItemStatus.STORED]: 'stored',
-  [ItemStatus.TO_REPAIR]: 'toRepair',
   [ItemStatus.CONSIGNMENT]: 'consignment',
 };
 

@@ -4,6 +4,14 @@ import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from '@/components/ui/input';
 import { NumericInput } from '@/components/ui/numeric-input';
 import { Label } from '@/components/ui/label';
@@ -21,7 +29,7 @@ import {
   PersonalMonthlySummary,
   Item,
 } from '@/types/entities';
-import { Plus, DollarSign, TrendingUp, TrendingDown, Building2, User } from 'lucide-react';
+import { Plus, DollarSign, TrendingUp, TrendingDown, Building2, User, Archive, Loader2 } from 'lucide-react';
 import { MONTHS, getYearRange, getMonthName, getCurrentMonth } from '@/lib/constants/date-constants';
 import { BUSINESS_STRUCTURE, ItemType, PLAYER_ONE_ID } from '@/types/enums';
 import { getCompanyAreas, getPersonalAreas, isCompanyStation, getAreaForStation } from '@/lib/utils/business-structure-utils';
@@ -125,6 +133,7 @@ export default function FinancesPage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [showConversionRatesModal, setShowConversionRatesModal] = useState(false);
   const [showFinancialsModal, setShowFinancialsModal] = useState(false);
+
 
   // Keyboard shortcuts for modal navigation
   useKeyboardShortcuts({
@@ -601,6 +610,7 @@ export default function FinancesPage() {
             />
             <span className="text-sm text-muted-foreground">Filter by month</span>
           </div>
+
           <Button
             onClick={() => setShowFinancialsModal(true)}
             size="sm"
@@ -1275,6 +1285,7 @@ export default function FinancesPage() {
           }
         }}
       />
+
 
     </div>
   );

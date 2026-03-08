@@ -1,7 +1,7 @@
 // workflows/entities-workflows/item.workflow.ts
 // Item-specific workflow with MOVED, SOLD, COLLECTED events
 
-import { EntityType, LogEventType } from '@/types/enums';
+import { EntityType, LogEventType, PLAYER_ONE_ID } from '@/types/enums';
 import type { Item } from '@/types/entities';
 import { ItemStatus } from '@/types/enums';
 import { appendEntityLog, updateEntityLogField } from '../entities-logging';
@@ -13,6 +13,7 @@ import { getCategoryForItemType } from '@/lib/utils/searchable-select-utils';
 import { createCharacterFromItem } from '../character-creation-utils';
 import { upsertItem } from '@/data-store/datastore';
 import { formatMonthKey, calculateClosingDate } from '@/lib/utils/date-utils';
+import { stagePointsForPlayer } from '../points-rewards-utils';
 
 const STATE_FIELDS = ['status', 'stock', 'quantitySold', 'isCollected'];
 const DESCRIPTIVE_FIELDS = ['name', 'description', 'price', 'unitCost', 'additionalCost', 'value'];
@@ -48,14 +49,12 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
     if (item.newOwnerName && !item.ownerCharacterId) {
       const characterEffectKey = EffectKeys.sideEffect('item', item.id, 'characterCreated');
       if (!(await hasEffect(characterEffectKey))) {
-        console.log(`[onItemUpsert] Creating character from item emissary fields: ${item.name}`);
         const createdCharacter = await createCharacterFromItem(item);
         if (createdCharacter) {
           // Update item with the created character ID
           const updatedItem = { ...item, ownerCharacterId: createdCharacter.id };
           await upsertItem(updatedItem, { skipWorkflowEffects: true });
           await markEffect(characterEffectKey);
-          console.log(`[onItemUpsert] ✅ Character created and item updated: ${createdCharacter.name}`);
         }
       }
     }
@@ -99,11 +98,9 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
     const quantityToSell = remainingStock;
 
     if (quantityToSell <= 0) {
-      console.log(`[onItemUpsert] No remaining stock to sell for item ${item.name}`);
 
       // CRITICAL FIX: Even if no stock to sell, ensure soldAt is set if missing
       if (!item.soldAt) {
-        console.log(`[onItemUpsert] Fixing missing soldAt for manually sold item ${item.name}`);
         const fixedItem = {
           ...item,
           soldAt: item.updatedAt || new Date(),
@@ -139,7 +136,6 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
       const { buildArchiveMonthsKey } = await import('@/data-store/keys');
       await kvSAdd(buildArchiveMonthsKey(), monthKey);
       await markEffect(archiveIndexEffectKey);
-      console.log(`[onItemUpsert] ✅ Item ${item.name} SOLD - added to archive index ${monthKey}`);
     }
 
     // Save updated item (skip workflow to avoid recursion)
@@ -173,7 +169,17 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
 
     await appendEntityLog(EntityType.ITEM, item.id, LogEventType.SOLD, soldLogDetails);
     await markEffect(manualSoldEffectKey);
-    console.log(`[onItemUpsert] ✅ Processed manual SOLD for item ${item.name}: sold ${quantityToSell} units`);
+
+    // Points Staging - for manually sold items
+    if (item.rewards?.points) {
+      const pointsStagingKey = EffectKeys.sideEffect('item', item.id, 'pointsStaged');
+      if (!(await hasEffect(pointsStagingKey))) {
+        const playerId = item.ownerCharacterId || PLAYER_ONE_ID; // In V0.1 we use ownerCharacterId as placeholder for player
+        await stagePointsForPlayer(playerId, item.rewards.points, item.id, EntityType.ITEM);
+        await markEffect(pointsStagingKey);
+      }
+    }
+
   }
 
   // Quantity sold changes - SOLD event (via sale)
@@ -203,6 +209,16 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
     }
 
     await appendEntityLog(EntityType.ITEM, item.id, LogEventType.SOLD, soldLogDetails);
+
+    // Points Staging - for sales-triggered quantity changes
+    if (item.rewards?.points) {
+      const pointsStagingKey = EffectKeys.sideEffect('item', item.id, 'pointsStaged');
+      if (!(await hasEffect(pointsStagingKey))) {
+        const playerId = item.ownerCharacterId || PLAYER_ONE_ID;
+        await stagePointsForPlayer(playerId, item.rewards.points, item.id, EntityType.ITEM);
+        await markEffect(pointsStagingKey);
+      }
+    }
   }
 
   // Collection status - COLLECTED event
@@ -254,7 +270,6 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
       // The item's existence in the index and its inherent dates are the single source of truth.
 
       await markEffect(archiveIndexEffectKey);
-      console.log(`[onItemUpsert] ✅ Item ${item.name} COLLECTED - added to archive index ${monthKey}`);
     }
   }
 
@@ -325,7 +340,6 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
         if (prevTargetMonth) {
           const oldIndexKey = `index:items:collected:${prevTargetMonth}`;
           await kvSRem(oldIndexKey, item.id);
-          console.log(`[onItemUpsert] 📦 Reactive Archive: Removed item ${item.name} from old index ${prevTargetMonth}`);
         }
 
         // Add to new index
@@ -335,7 +349,6 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
         // Ensure month is registered in active months set
         await kvSAdd(buildArchiveMonthsKey(), currentTargetMonth);
 
-        console.log(`[onItemUpsert] 📦 Reactive Archive: Added item ${item.name} to new index ${currentTargetMonth} based on date change`);
       }
     } else {
       // If it WAS archivable but now IS NOT, remove it from its old index
@@ -356,7 +369,6 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
         const { kvSRem } = await import('@/data-store/kv');
         const oldIndexKey = `index:items:collected:${prevTargetMonth}`;
         await kvSRem(oldIndexKey, item.id);
-        console.log(`[onItemUpsert] 📦 Reactive Archive: Removed item ${item.name} from index ${prevTargetMonth} because it is no longer sold/collected`);
       }
     }
   }
@@ -368,16 +380,13 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
  */
 export async function removeItemEffectsOnDelete(itemId: string): Promise<void> {
   try {
-    console.log(`[removeItemEffectsOnDelete] Starting cleanup for item: ${itemId}`);
 
     // 1. Remove all Links related to this item
     const itemLinks = await getLinksFor({ type: EntityType.ITEM, id: itemId });
-    console.log(`[removeItemEffectsOnDelete] Found ${itemLinks.length} links to remove`);
 
     for (const link of itemLinks) {
       try {
         await removeLink(link.id);
-        console.log(`[removeItemEffectsOnDelete] ✅ Removed link: ${link.linkType}`);
       } catch (error) {
         console.error(`[removeItemEffectsOnDelete] ❌ Failed to remove link ${link.id}:`, error);
       }
@@ -390,13 +399,11 @@ export async function removeItemEffectsOnDelete(itemId: string): Promise<void> {
     await clearEffectsByPrefix(EntityType.ITEM, itemId, 'pointsLogged:');
 
     // 3. Remove log entries from items log
-    console.log(`[removeItemEffectsOnDelete] Removing log entries for item: ${itemId}`);
     const itemsLogKey = buildLogKey(EntityType.ITEM);
     const itemsLog = (await kvGet<any[]>(itemsLogKey)) || [];
     const filteredItemsLog = itemsLog.filter(entry => entry.entityId !== itemId);
     if (filteredItemsLog.length !== itemsLog.length) {
       await kvSet(itemsLogKey, filteredItemsLog);
-      console.log(`[removeItemEffectsOnDelete] ✅ Removed ${itemsLog.length - filteredItemsLog.length} entries from items log`);
     }
 
     // Check and remove from character log if this item is owned by a character
@@ -405,10 +412,8 @@ export async function removeItemEffectsOnDelete(itemId: string): Promise<void> {
     const filteredCharacterLog = characterLog.filter(entry => entry.itemId !== itemId && entry.sourceItemId !== itemId);
     if (filteredCharacterLog.length !== characterLog.length) {
       await kvSet(characterLogKey, filteredCharacterLog);
-      console.log(`[removeItemEffectsOnDelete] ✅ Removed ${characterLog.length - filteredCharacterLog.length} entries from character log`);
     }
 
-    console.log(`[removeItemEffectsOnDelete] ✅ Cleared effects, removed links, and removed log entries for item ${itemId}`);
   } catch (error) {
     console.error('Error removing item effects:', error);
   }
@@ -419,7 +424,6 @@ export async function removeItemEffectsOnDelete(itemId: string): Promise<void> {
  * Handles side effects when item is created directly (not from task/record)
  */
 export async function processItemCreationEffects(item: Item): Promise<void> {
-  console.log(`[processItemCreationEffects] Processing item creation effects for: ${item.name} (${item.id})`);
 
 
   // Items created from Item Modal have NO financial effects

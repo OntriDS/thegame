@@ -43,32 +43,57 @@ export async function GET(req: NextRequest) {
       // This supports the "Active Task Tree" view which is not time-bound
       data = await getActiveTasks();
 
-      // AUTO-SEED: Ensure the "Automated Monthly Rewards Collection" task exists
-      const hasAutomationTask = data.some(t => t.type === TaskType.AUTOMATION);
-      if (!hasAutomationTask) {
-        const seedAutomationTask: Task = {
-          id: 'system-automation-monthly-collection',
-          name: 'Automated Monthly Rewards Collection',
-          description: 'This is a programmatic system automation. It runs securely in the background on its scheduled routine at the end of every month.',
-          type: TaskType.AUTOMATION,
-          status: TaskStatus.CREATED,
-          priority: TaskPriority.NORMAL,
-          station: 'Control Room' as any,
-          progress: 0,
-          order: 0,
-          parentId: null,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          links: [],
-          isNotCharged: false,
-          isNotPaid: false,
-          isCollected: false,
-          cost: 0,
-          revenue: 0,
-          rewards: { points: { xp: 0, rp: 0, fp: 0, hp: 0 } }
-        };
-        await upsertTask(seedAutomationTask);
-        data.push(seedAutomationTask);
+      // AUTO-SEED: Ensure the 4 distinct system automation tasks exist
+      const systemAutomationTasks = [
+        {
+          id: 'system-automation-tasks-collection',
+          name: 'Automated Monthly Tasks Collection',
+          description: 'System process to finalize monthly Task rewards and archive DONE records.',
+        },
+        {
+          id: 'system-automation-sales-collection',
+          name: 'Automated Monthly Sales Collection',
+          description: 'System process to finalize monthly Sales accounting and archive CHARGED records.',
+        },
+        {
+          id: 'system-automation-financials-collection',
+          name: 'Automated Monthly Financials Collection',
+          description: 'System process to finalize monthly Financial records and claim processing rewards.',
+        },
+        {
+          id: 'system-automation-inventory-collection',
+          name: 'Automated Monthly Inventory Collection',
+          description: 'System process to archive monthly Inventory status and sold item snapshots.',
+        }
+      ];
+
+      for (const config of systemAutomationTasks) {
+        const exists = data.some(t => t.id === config.id);
+        if (!exists) {
+          const seedTask: Task = {
+            id: config.id,
+            name: config.name,
+            description: config.description,
+            type: TaskType.AUTOMATION,
+            status: TaskStatus.CREATED,
+            priority: TaskPriority.NORMAL,
+            station: 'Control Room' as any,
+            progress: 0,
+            order: 0,
+            parentId: null,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            links: [],
+            isNotCharged: false,
+            isNotPaid: false,
+            isCollected: false,
+            cost: 0,
+            revenue: 0,
+            rewards: { points: { xp: 0, rp: 0, fp: 0, hp: 0 } }
+          };
+          await upsertTask(seedTask);
+          data.push(seedTask);
+        }
       }
     }
     return NextResponse.json(data);

@@ -41,15 +41,10 @@ export async function awardPointsToPlayer(
 ): Promise<void> {
   try {
     const resolvedPlayerId = await resolveToPlayerIdMaybeCharacter(playerId);
-    if (resolvedPlayerId !== playerId) {
-      console.log(`[awardPointsToPlayer] Mapped id ${playerId} → player ${resolvedPlayerId}`);
-    }
-    console.log(`[awardPointsToPlayer] Awarding points to player ${resolvedPlayerId} from ${sourceType} ${sourceId}`);
 
     // Get the player
     const player = await getPlayerById(resolvedPlayerId);
     if (!player) {
-      console.log(`[awardPointsToPlayer] Player ${resolvedPlayerId} not found, skipping`);
       return;
     }
 
@@ -58,7 +53,6 @@ export async function awardPointsToPlayer(
       (points.fp || 0) > 0 || (points.hp || 0) > 0;
 
     if (!hasPoints) {
-      console.log(`[awardPointsToPlayer] No points to award, skipping`);
       return;
     }
 
@@ -100,6 +94,10 @@ export async function awardPointsToPlayer(
         linkType = LinkType.SALE_PLAYER;
         sourceEntityType = EntityType.SALE;
         break;
+      case 'item':
+        linkType = LinkType.ITEM_PLAYER;
+        sourceEntityType = EntityType.ITEM;
+        break;
       default:
         console.warn(`[awardPointsToPlayer] Unknown source type: ${sourceType}`);
         return;
@@ -137,7 +135,6 @@ export async function stagePointsForPlayer(
 ): Promise<void> {
   try {
     const resolvedPlayerId = await resolveToPlayerIdMaybeCharacter(playerId);
-    console.log(`[stagePointsForPlayer] Staging points for player ${resolvedPlayerId} from ${sourceType} ${sourceId}`);
 
     const player = await getPlayerById(resolvedPlayerId);
     if (!player) return;
@@ -162,9 +159,6 @@ export async function stagePointsForPlayer(
 
     await upsertPlayer(updatedPlayer);
 
-    // Log staging ?? Maybe just console for now, or specific log event?
-    // We'll trust the console logs for now as this is a transient state
-    console.log(`[stagePointsForPlayer] ✅ Points staged for player ${resolvedPlayerId}`);
 
   } catch (error) {
     console.error(`[stagePointsForPlayer] ❌ Failed to stage points:`, error);
@@ -184,7 +178,6 @@ export async function withdrawStagedPointsFromPlayer(
 ): Promise<void> {
   try {
     const resolvedPlayerId = await resolveToPlayerIdMaybeCharacter(characterId);
-    console.log(`[withdrawStagedPointsFromPlayer] Withdrawing staged points for player ${resolvedPlayerId} from ${sourceEntityType} ${sourceEntityId}`);
 
     const player = await getPlayerById(resolvedPlayerId);
     if (!player) return;
@@ -207,7 +200,6 @@ export async function withdrawStagedPointsFromPlayer(
     };
 
     await upsertPlayer(updatedPlayer);
-    console.log(`[withdrawStagedPointsFromPlayer] ✅ Staged points withdrawn for player ${resolvedPlayerId}`);
 
   } catch (error) {
     console.error(`[withdrawStagedPointsFromPlayer] ❌ Failed to withdraw staged points:`, error);
@@ -228,7 +220,6 @@ export async function unrewardPointsForPlayer(
 ): Promise<void> {
   try {
     const resolvedPlayerId = await resolveToPlayerIdMaybeCharacter(characterId);
-    console.log(`[unrewardPointsForPlayer] Un-rewarding points for player ${resolvedPlayerId} from ${sourceEntityType} ${sourceEntityId}`);
 
     const player = await getPlayerById(resolvedPlayerId);
     if (!player) return;
@@ -260,8 +251,6 @@ export async function unrewardPointsForPlayer(
 
     await upsertPlayer(updatedPlayer);
 
-    // Log this action
-    console.log(`[unrewardPointsForPlayer] ✅ Points un-rewarded for player ${resolvedPlayerId}`);
 
   } catch (error) {
     console.error(`[unrewardPointsForPlayer] ❌ Failed to un-reward points:`, error);
@@ -287,7 +276,6 @@ export async function rewardPointsToPlayer(
 ): Promise<void> {
   try {
     const resolvedPlayerId = await resolveToPlayerIdMaybeCharacter(characterId);
-    console.log(`[rewardPointsToPlayer] Rewarding points for player ${resolvedPlayerId} from ${sourceEntityType} ${sourceEntityId}`);
 
     const player = await getPlayerById(resolvedPlayerId);
     if (!player) return;
@@ -334,6 +322,7 @@ export async function rewardPointsToPlayer(
       case 'task': linkType = LinkType.TASK_PLAYER; resolvedSourceEntityType = EntityType.TASK; break;
       case 'financial': linkType = LinkType.FINREC_PLAYER; resolvedSourceEntityType = EntityType.FINANCIAL; break;
       case 'sale': linkType = LinkType.SALE_PLAYER; resolvedSourceEntityType = EntityType.SALE; break;
+      case 'item': linkType = LinkType.ITEM_PLAYER; resolvedSourceEntityType = EntityType.ITEM; break;
       default: linkType = LinkType.TASK_PLAYER; resolvedSourceEntityType = EntityType.TASK; break;
     }
 
@@ -351,7 +340,6 @@ export async function rewardPointsToPlayer(
     await createLink(link);
     await appendPlayerPointsLog(resolvedPlayerId, points, sourceEntityId, sourceEntityType);
 
-    console.log(`[rewardPointsToPlayer] ✅ Points rewarded for player ${resolvedPlayerId}`);
 
   } catch (error) {
     console.error(`[rewardPointsToPlayer] ❌ Failed to reward points:`, error);
@@ -369,23 +357,15 @@ export async function removePointsFromPlayer(
   points: Rewards['points']
 ): Promise<void> {
   try {
-    console.log(`[removePointsFromPlayer] Removing points from player ${playerId}`);
-
     // Get the player
     const player = await getPlayerById(playerId);
-    if (!player) {
-      console.log(`[removePointsFromPlayer] Player ${playerId} not found, skipping`);
-      return;
-    }
+    if (!player) return;
 
     // Check if any points to remove
     const hasPoints = (points.xp || 0) > 0 || (points.rp || 0) > 0 ||
       (points.fp || 0) > 0 || (points.hp || 0) > 0;
 
-    if (!hasPoints) {
-      console.log(`[removePointsFromPlayer] No points to remove, skipping`);
-      return;
-    }
+    if (!hasPoints) return;
 
     // Update player points (ensure they don't go negative)
     const updatedPlayer: Player = {

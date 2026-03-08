@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { bulkCollectMonthTasks } from '@/workflows/bulk-collect.workflow';
+import { CollectionService } from '@/workflows/collection.service';
 
 export async function POST(request: Request) {
     try {
@@ -10,7 +10,7 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Month and year are required' }, { status: 400 });
         }
 
-        const { collectedCount } = await bulkCollectMonthTasks(month, year);
+        const { collectedCount } = await CollectionService.collectTasks(month, year);
         return NextResponse.json({ collectedCount });
     } catch (error) {
         console.error('[API] Error in bulk collect tasks:', error);
