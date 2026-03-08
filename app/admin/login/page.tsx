@@ -110,17 +110,22 @@ export default function AdminLoginPage() {
                   disabled={isLoading}
                 />
               </div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="remember"
-                  name="remember"
-                  defaultChecked={false}
-                  className="h-4 w-4"
-                />
-                <Label htmlFor="remember" className="text-sm cursor-pointer">
-                  Remember me
-                </Label>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="remember"
+                    name="remember"
+                    defaultChecked={false}
+                    className="h-4 w-4 rounded border-gray-300"
+                  />
+                  <Label htmlFor="remember" className="text-sm cursor-pointer">
+                    Remember me
+                  </Label>
+                </div>
+                <Button type="submit" disabled={isLoading} className="w-24 bg-primary text-primary-foreground hover:bg-primary/90">
+                  {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Login'}
+                </Button>
               </div>
             </form>
           </div>
@@ -157,27 +162,33 @@ export default function AdminLoginPage() {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     disabled={isLoading}
+                    className="pr-16"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-0 top-0 p-2 hover:bg-accent"
+                    className="absolute right-0 top-0 h-full px-3 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
                   >
                     {showPassword ? 'Hide' : 'Show'}
                   </button>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="rememberMe"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  className="h-4 w-4"
-                />
-                <Label htmlFor="rememberMe" className="text-sm cursor-pointer">
-                  Remember me
-                </Label>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="rememberMe"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="h-4 w-4 rounded border-gray-300"
+                  />
+                  <Label htmlFor="rememberMe" className="text-sm cursor-pointer">
+                    Remember me
+                  </Label>
+                </div>
+                <Button type="submit" variant="outline" disabled={isLoading} className="w-24 border-primary text-primary hover:bg-primary/10">
+                  {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Sign In'}
+                </Button>
               </div>
             </form>
           </div>

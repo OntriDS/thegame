@@ -9,7 +9,8 @@ import { AuthCheckResponse, PermissionsResponse } from '@/types/auth-types';
 
 export async function GET(request: NextRequest) {
   try {
-    const token = request.cookies.get('auth_session')?.value;
+    // Check for both legacy and multi-user cookies
+    const token = request.cookies.get('auth_session')?.value || request.cookies.get('admin_session')?.value;
 
     if (!token) {
       return NextResponse.json<AuthCheckResponse>(

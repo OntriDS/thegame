@@ -4,7 +4,7 @@
 
 import * as bcrypt from 'bcryptjs';
 import { AuthUser, AuthSession, AuthPermissions, LoginRequest, LoginResponse, AuthCheckResponse, PermissionsResponse } from '@/types/auth-types';
-import { CharacterRole } from '@/types/enums';
+import { CharacterRole, EntityType, LogEventType, PLAYER_ONE_ID } from '@/types/enums';
 import type { Character, Account } from '@/types/entities';
 import { kvGet, kvSet, kvDel } from '@/data-store/kv';
 import { buildDataKey, buildAccountKey } from '@/data-store/keys';
@@ -163,9 +163,17 @@ export class AuthService {
       return null;
     }
 
-    const userId = (verified.payload as any).userId;
+    // Support both multi-user payload (userId) and legacy passphrase payload (sub)
+    let userId = (verified.payload as any).userId || (verified.payload as any).sub;
+    const isLegacyAdmin = (verified.payload as any).sub === 'admin';
+
+    // Map legacy 'admin' subject to PLAYER_ONE_ID
+    if (userId === 'admin') {
+      userId = PLAYER_ONE_ID;
+    }
+
     if (!userId) {
-      console.log('[AuthService] No userId in token');
+      console.log('[AuthService] No userId or sub in token');
       return null;
     }
 
@@ -190,8 +198,11 @@ export class AuthService {
 
     // 4. Check if account is active
     if (!user.isActive || !user.isVerified) {
-      console.log('[AuthService] Account not active or not verified');
-      return null;
+      // Legacy admin is always active/verified for now
+      if (!isLegacyAdmin) {
+        console.log('[AuthService] Account not active or not verified');
+        return null;
+      }
     }
 
     const authUser: AuthUser = {
@@ -199,7 +210,7 @@ export class AuthService {
       username: user.name,
       email: user.email,
       characterId: characterId,
-      roles: character.roles || [],
+      roles: Array.from(new Set([...(character.roles || []), ...(isLegacyAdmin ? [CharacterRole.FOUNDER, CharacterRole.ADMIN] : [])])),
       isActive: user.isActive,
     };
 
@@ -225,6 +236,8 @@ export class AuthService {
     return {
       // Check if user has specific role
       hasRole: (role: string) => {
+        // Special case for admin role
+        if (role === 'admin' && userRoles.includes(CharacterRole.ADMIN)) return true;
         return userRoles.includes(role);
       },
 
