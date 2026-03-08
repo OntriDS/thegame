@@ -2,10 +2,7 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { requireAdminAuth } from '@/lib/api-auth';
 import { EntityType } from '@/types/enums';
-import { buildLogKey } from '@/data-store/keys';
-import path from 'path';
 
-// Force dynamic rendering - this route accesses cookies
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
@@ -14,17 +11,14 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Try KV first (production)
-    const { kvGet } = await import('@/data-store/kv');
-    const salesLog = await kvGet(buildLogKey(EntityType.SALE));
+    const { searchParams } = new URL(request.url);
+    const month = searchParams.get('month') || undefined;
 
-    if (salesLog) {
-      return NextResponse.json({ entries: salesLog });
-    }
+    const { getEntityLogs, getEntityLogMonths } = await import('@/data-store/datastore');
+    const entries = await getEntityLogs(EntityType.SALE, { month });
+    const months = await getEntityLogMonths(EntityType.SALE);
 
-    // KV-only system - return empty array if no data in KV
-    return NextResponse.json({ entries: [] });
-
+    return NextResponse.json({ entries, months });
   } catch (error) {
     console.error('Error fetching sales log:', error);
     return NextResponse.json({ error: 'Failed to fetch sales log' }, { status: 500 });

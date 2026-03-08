@@ -64,17 +64,17 @@ export async function kvMSet<T>(keyValues: Record<string, T>): Promise<void> {
 export async function kvScan(prefix: string, limit = 100): Promise<string[]> {
   const keys: string[] = [];
   let cursor = 0;
-  
+
   do {
-    const [newCursor, foundKeys] = await kv.scan(cursor, { 
-      match: `${prefix}*`, 
-      count: limit 
+    const [newCursor, foundKeys] = await kv.scan(cursor, {
+      match: `${prefix}*`,
+      count: limit
     });
-    
+
     keys.push(...foundKeys);
     cursor = parseInt(newCursor);
   } while (cursor !== 0);
-  
+
   return keys;
 }
 
@@ -93,9 +93,18 @@ export async function kvSMembers(key: string): Promise<string[]> {
 
 export async function kvDelMany(keys: string[]): Promise<void> {
   if (keys.length === 0) return;
-  
+
   // Use the del method with multiple keys (Redis DEL command supports multiple keys)
   await kv.del(keys[0], ...keys.slice(1));
+}
+
+// Redis List operations — O(1) append, range-based reads
+export async function kvLPush(key: string, ...values: string[]): Promise<void> {
+  if (values.length) await kv.lpush(key, ...(values as [string, ...string[]]));
+}
+
+export async function kvLRange(key: string, start: number, stop: number): Promise<string[]> {
+  return (await kv.lrange(key, start, stop)) ?? [];
 }
 
 

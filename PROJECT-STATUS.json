@@ -15,7 +15,8 @@
         "Move all records to archive (inherently completed data)",
         "Design and implement Active vs Archive data strategy (filters and views for working set)",
         "Implement the Weekly Schedule, Calendar and Gantt Chart Views in the Control Room",
-        "Create the Smart Scheduler"
+        "Create the Smart Scheduler",
+        "Archive System Refactor, No snapshots, Entites are preserved in their Section by Month"
       ]
     },
     "Phase13.2": {
@@ -32,7 +33,7 @@
         "Implement player effects logging for points and achievements",
         "Update logging logic to track complete data lifecycle",
         "Ensure logs track lifecycle events, not current state",
-        "Test logging system with real workflow examples"
+        "Redis Lists + Monthly Keys"
       ]
     },
     "phase13.3": {
@@ -46,10 +47,7 @@
         "Ensure proper data isolation between current and historical views",
         "Create Basic Dashboard Section and prepare to visualize data across all sections",
         "Connect Dashboards to Archive System and the Month Selectors",
-        "Create connectivity with all other sections.",
-        "Define and Create Events Tab in the Control Room",
-        "Conected to Events to the system and Manage Events, tracking Tasks and Items sales in a specific timeframe.",
-        "Events temporarily take over regular workflow during time-bound campaigns (e.g. Special Week Sale)."
+        "Create connectivity with all other sections."
       ]
     },
     "phase13.4": {
@@ -59,10 +57,8 @@
       "deliverables": [
         "Montly Close Automation Task, Automation Tree",
         "Booth Sales Multiple Bugs and Refactors",
-        "Archive Sales Refactor, No snapshots, Entites are preserved in their Section by Month",
         "Done Tasks Workflow Refactor, Collected Tasks Workflow Refactor, Items Sold, Auth Hybrid Login",
         "Basic Badges and Achievements Creation in Player Progression"
-
       ]
     }
   },
@@ -88,7 +84,11 @@
       "phaseName": "",
       "status": "Improve UI and Gameplay",
       "description": "",
-      "deliverables": []
+      "deliverables": [
+        "Define and Create Events Tab in the Control Room",
+        "Connect Events to the system and Manage Events, tracking Tasks and Items sales in a specific timeframe",
+        "Events temporarily take over regular workflow during time-bound campaigns (e.g. Special Week Sale)"
+      ]
     },
     "phaseX.3": {
       "phaseName": "Complete every aspect of the game for version V0.1",

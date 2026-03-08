@@ -4,10 +4,9 @@ import { isValid } from 'date-fns';
 
 import { EntityType, LogEventType, FinancialStatus, PLAYER_ONE_ID } from '@/types/enums';
 import type { FinancialRecord } from '@/types/entities';
-import { appendEntityLog, updateEntityLogField } from '../entities-logging';
+import { appendEntityLog, updateEntityLogField, removeLogEntriesAcrossMonths } from '../entities-logging';
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
-import { EffectKeys, buildLogKey } from '@/data-store/keys';
-import { kvGet, kvSet } from '@/data-store/kv';
+import { EffectKeys } from '@/data-store/keys';
 import { createLink, getLinksFor, removeLink } from '@/links/link-registry';
 import { getPlayerById, getFinancialById } from '@/data-store/datastore';
 import { createItemFromRecord, removeItemsCreatedByRecord } from '../item-creation-utils';
@@ -446,21 +445,11 @@ export async function removeRecordEffectsOnDelete(recordId: string): Promise<voi
     await clearEffectsByPrefix(EntityType.FINANCIAL, recordId, 'pointsLogged:');
     await clearEffectsByPrefix(EntityType.FINANCIAL, recordId, 'financialLogged:');
 
-    // 5. Remove log entries from financials log
-    const financialsLogKey = buildLogKey(EntityType.FINANCIAL);
-    const financialsLog = (await kvGet<any[]>(financialsLogKey)) || [];
-    const filteredFinancialsLog = financialsLog.filter(entry => entry.entityId !== recordId);
-    if (filteredFinancialsLog.length !== financialsLog.length) {
-      await kvSet(financialsLogKey, filteredFinancialsLog);
-    }
+    // 5. Remove log entries from financials log (monthly lists)
+    await removeLogEntriesAcrossMonths(EntityType.FINANCIAL, entry => entry.entityId === recordId);
 
     // Check and remove from character log if this record was linked to a character
-    const characterLogKey = buildLogKey(EntityType.CHARACTER);
-    const characterLog = (await kvGet<any[]>(characterLogKey)) || [];
-    const filteredCharacterLog = characterLog.filter(entry => entry.financialId !== recordId && entry.sourceFinancialId !== recordId);
-    if (filteredCharacterLog.length !== characterLog.length) {
-      await kvSet(characterLogKey, filteredCharacterLog);
-    }
+    await removeLogEntriesAcrossMonths(EntityType.CHARACTER, entry => entry.financialId === recordId || entry.sourceFinancialId === recordId);
 
     // 6. Remove from archive index
     try {

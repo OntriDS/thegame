@@ -24,8 +24,8 @@ import { createCharacterFromTask } from '../character-creation-utils';
 import { DEFAULT_POINTS_CONVERSION_RATES } from '@/lib/constants/financial-constants';
 import type { PointsConversionRates } from '@/lib/constants/financial-constants';
 import { getCategoryForTaskType } from '@/lib/utils/searchable-select-utils';
-import { kvGet, kvSet, kvSRem } from '@/data-store/kv';
-import { buildLogKey } from '@/data-store/keys';
+import { kvSRem } from '@/data-store/kv';
+
 import { formatMonthKey, calculateClosingDate } from '@/lib/utils/date-utils';
 import {
   updateFinancialRecordsFromTask,
@@ -365,6 +365,9 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
  */
 export async function removeTaskLogEntriesOnDelete(task: Task): Promise<void> {
   try {
+    // Import the cross-month cleanup helper
+    const { removeLogEntriesAcrossMonths } = await import('../entities-logging');
+
     // Handle recurrent template cascade deletion
     if (task.type === TaskType.RECURRENT_TEMPLATE || task.type === TaskType.RECURRENT_GROUP) {
       // Get all tasks that will be deleted (template/group + instances + child templates)
@@ -372,17 +375,12 @@ export async function removeTaskLogEntriesOnDelete(task: Task): Promise<void> {
       let toDelete: Task[] = [];
 
       if (task.type === TaskType.RECURRENT_TEMPLATE) {
-        // Delete template + its instances
         toDelete = tasks.filter(t =>
           t.id === task.id ||
           (t.parentId === task.id && t.type === TaskType.RECURRENT_INSTANCE)
         );
       } else if (task.type === TaskType.RECURRENT_GROUP) {
-        // Collect all tasks that will be deleted (before deletion) for log cleanup
-        // This includes nested groups, templates, and instances
         toDelete = [task];
-
-        // Recursive function to collect all descendants
         const collectDescendants = (parentId: string) => {
           const childGroups = tasks.filter((t: Task) =>
             t.parentId === parentId && t.type === TaskType.RECURRENT_GROUP
@@ -390,10 +388,9 @@ export async function removeTaskLogEntriesOnDelete(task: Task): Promise<void> {
           const childTemplates = tasks.filter((t: Task) =>
             t.parentId === parentId && t.type === TaskType.RECURRENT_TEMPLATE
           );
-
           childGroups.forEach(g => {
             toDelete.push(g);
-            collectDescendants(g.id); // Recursively process nested groups
+            collectDescendants(g.id);
           });
           childTemplates.forEach(t => {
             toDelete.push(t);
@@ -403,7 +400,6 @@ export async function removeTaskLogEntriesOnDelete(task: Task): Promise<void> {
             toDelete.push(...templateInstances);
           });
         };
-
         collectDescendants(task.id);
       }
 
@@ -411,55 +407,28 @@ export async function removeTaskLogEntriesOnDelete(task: Task): Promise<void> {
       const deletedCount = task.type === TaskType.RECURRENT_TEMPLATE
         ? await deleteTemplateCascade(task.id)
         : await deleteGroupCascade(task.id);
-      // Now clean up logs for ALL deleted tasks
-      const taskIds = toDelete.map(t => t.id);
-      // Remove from tasks log for all deleted tasks
-      const tasksLogKey = buildLogKey(EntityType.TASK);
-      const tasksLog = (await kvGet<any[]>(tasksLogKey)) || [];
-      const filteredTasksLog = tasksLog.filter(entry => !taskIds.includes(entry.entityId));
-      if (filteredTasksLog.length !== tasksLog.length) {
-        await kvSet(tasksLogKey, filteredTasksLog);
-      }
 
-      // Clean up other logs (player, items, financials, character) for all deleted tasks
+      const taskIds = new Set(toDelete.map(t => t.id));
+
+      // Remove from tasks log across all months
+      await removeLogEntriesAcrossMonths(EntityType.TASK, entry => taskIds.has(entry.entityId));
+
+      // Clean up other logs for all deleted tasks
       for (const deletedTask of toDelete) {
-        // Check and remove from player log
         if (deletedTask.rewards?.points) {
-          const playerLogKey = buildLogKey(EntityType.PLAYER);
-          const playerLog = (await kvGet<any[]>(playerLogKey)) || [];
-          const filteredPlayerLog = playerLog.filter(entry =>
-            entry.sourceId !== deletedTask.id && entry.sourceTaskId !== deletedTask.id
+          await removeLogEntriesAcrossMonths(EntityType.PLAYER, entry =>
+            entry.sourceId === deletedTask.id || entry.sourceTaskId === deletedTask.id
           );
-          if (filteredPlayerLog.length !== playerLog.length) {
-            await kvSet(playerLogKey, filteredPlayerLog);
-          }
         }
-
-        // Check and remove from items log
-        const itemsLogKey = buildLogKey(EntityType.ITEM);
-        const itemsLog = (await kvGet<any[]>(itemsLogKey)) || [];
-        const filteredItemsLog = itemsLog.filter(entry => entry.sourceTaskId !== deletedTask.id);
-        if (filteredItemsLog.length !== itemsLog.length) {
-          await kvSet(itemsLogKey, filteredItemsLog);
-        }
-
-        // Check and remove from financials log
-        const financialsLogKey = buildLogKey(EntityType.FINANCIAL);
-        const financialsLog = (await kvGet<any[]>(financialsLogKey)) || [];
-        const filteredFinancialsLog = financialsLog.filter(entry => entry.sourceTaskId !== deletedTask.id);
-        if (filteredFinancialsLog.length !== financialsLog.length) {
-          await kvSet(financialsLogKey, filteredFinancialsLog);
-        }
-
-        // Check and remove from character log
-        const characterLogKey = buildLogKey(EntityType.CHARACTER);
-        const characterLog = (await kvGet<any[]>(characterLogKey)) || [];
-        const filteredCharacterLog = characterLog.filter(entry =>
-          entry.taskId !== deletedTask.id && entry.sourceTaskId !== deletedTask.id
+        await removeLogEntriesAcrossMonths(EntityType.ITEM, entry =>
+          entry.sourceTaskId === deletedTask.id
         );
-        if (filteredCharacterLog.length !== characterLog.length) {
-          await kvSet(characterLogKey, filteredCharacterLog);
-        }
+        await removeLogEntriesAcrossMonths(EntityType.FINANCIAL, entry =>
+          entry.sourceTaskId === deletedTask.id
+        );
+        await removeLogEntriesAcrossMonths(EntityType.CHARACTER, entry =>
+          entry.taskId === deletedTask.id || entry.sourceTaskId === deletedTask.id
+        );
       }
 
       return;
@@ -471,10 +440,10 @@ export async function removeTaskLogEntriesOnDelete(task: Task): Promise<void> {
     // 2. Remove financial records created by this task
     await removeFinancialRecordsCreatedByTask(task.id);
 
-    // 3. Remove player points that were awarded by this task (if points were badly given)
+    // 3. Remove player points that were awarded by this task
     await removePlayerPointsFromTask(task);
 
-    // 3. Remove all Links related to this task
+    // 4. Remove all Links related to this task
     const taskLinks = await getLinksFor({ type: EntityType.TASK, id: task.id });
     for (const link of taskLinks) {
       try {
@@ -484,7 +453,7 @@ export async function removeTaskLogEntriesOnDelete(task: Task): Promise<void> {
       }
     }
 
-    // 4. Clear effects registry
+    // 5. Clear effects registry
     await clearEffect(EffectKeys.created('task', task.id));
     await clearEffect(EffectKeys.sideEffect('task', task.id, 'characterCreated'));
     await clearEffect(EffectKeys.sideEffect('task', task.id, 'itemCreated'));
@@ -493,51 +462,28 @@ export async function removeTaskLogEntriesOnDelete(task: Task): Promise<void> {
     await clearEffectsByPrefix(EntityType.TASK, task.id, 'pointsLogged:');
     await clearEffectsByPrefix(EntityType.TASK, task.id, 'financialLogged:');
 
-    // 5. Remove log entries from all relevant logs
-    // Remove from tasks log
-    const tasksLogKey = buildLogKey(EntityType.TASK);
-    const tasksLog = (await kvGet<any[]>(tasksLogKey)) || [];
-    const filteredTasksLog = tasksLog.filter(entry => entry.entityId !== task.id);
-    if (filteredTasksLog.length !== tasksLog.length) {
-      await kvSet(tasksLogKey, filteredTasksLog);
-      console.log(`[removeTaskLogEntriesOnDelete] ✅ Removed ${tasksLog.length - filteredTasksLog.length} entries from tasks log`);
-    }
+    // 6. Remove log entries across all months using the new helper
+    await removeLogEntriesAcrossMonths(EntityType.TASK, entry => entry.entityId === task.id);
 
-    // Also check and remove from player log if this task awarded points
     if (task.rewards?.points) {
-      const playerLogKey = buildLogKey(EntityType.PLAYER);
-      const playerLog = (await kvGet<any[]>(playerLogKey)) || [];
-      const filteredPlayerLog = playerLog.filter(entry => entry.sourceId !== task.id && entry.sourceTaskId !== task.id);
-      if (filteredPlayerLog.length !== playerLog.length) {
-        await kvSet(playerLogKey, filteredPlayerLog);
-      }
+      await removeLogEntriesAcrossMonths(EntityType.PLAYER, entry =>
+        entry.sourceId === task.id || entry.sourceTaskId === task.id
+      );
     }
 
-    // Check and remove from items log if this task created items
-    const itemsLogKey = buildLogKey(EntityType.ITEM);
-    const itemsLog = (await kvGet<any[]>(itemsLogKey)) || [];
-    const filteredItemsLog = itemsLog.filter(entry => entry.sourceTaskId !== task.id);
-    if (filteredItemsLog.length !== itemsLog.length) {
-      await kvSet(itemsLogKey, filteredItemsLog);
-    }
+    await removeLogEntriesAcrossMonths(EntityType.ITEM, entry =>
+      entry.sourceTaskId === task.id
+    );
 
-    // Check and remove from financials log if this task created financial records
-    const financialsLogKey = buildLogKey(EntityType.FINANCIAL);
-    const financialsLog = (await kvGet<any[]>(financialsLogKey)) || [];
-    const filteredFinancialsLog = financialsLog.filter(entry => entry.sourceTaskId !== task.id);
-    if (filteredFinancialsLog.length !== financialsLog.length) {
-      await kvSet(financialsLogKey, filteredFinancialsLog);
-    }
+    await removeLogEntriesAcrossMonths(EntityType.FINANCIAL, entry =>
+      entry.sourceTaskId === task.id
+    );
 
-    // Check and remove from character log if this task was requested by a character
-    const characterLogKey = buildLogKey(EntityType.CHARACTER);
-    const characterLog = (await kvGet<any[]>(characterLogKey)) || [];
-    const filteredCharacterLog = characterLog.filter(entry => entry.taskId !== task.id && entry.sourceTaskId !== task.id);
-    if (filteredCharacterLog.length !== characterLog.length) {
-      await kvSet(characterLogKey, filteredCharacterLog);
-    }
+    await removeLogEntriesAcrossMonths(EntityType.CHARACTER, entry =>
+      entry.taskId === task.id || entry.sourceTaskId === task.id
+    );
 
-    // 6. Remove from archive index (if applicable)
+    // 7. Remove from archive index (if applicable)
     if (task.status === TaskStatus.DONE || task.isCollected || task.status === TaskStatus.COLLECTED) {
       try {
         let snapshotDate = task.doneAt;

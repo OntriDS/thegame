@@ -21,6 +21,15 @@ import { SalesLogTab } from '@/components/data-center/sales-log-tab';
 import { SitesLogTab } from '@/components/data-center/sites-log-tab';
 import { LinksTab } from '@/components/data-center/links-tab';
 import { deduplicateTasksLog } from '@/lib/utils/logging-utils';
+import { MonthSelector } from '../../../components/data-center/month-selector';
+
+/** Returns current month key in MM-YY format */
+function getCurrentMonthKey(): string {
+  const now = new Date();
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const yy = String(now.getFullYear()).slice(-2);
+  return `${mm}-${yy}`;
+}
 
 export default function DataCenterPage() {
   const { textColor } = useThemeColors();
@@ -34,14 +43,32 @@ export default function DataCenterPage() {
   const [tasksLog, setTasksLog] = useState<any>(null);
   const [logOrder, setLogOrder] = useState<'newest' | 'oldest'>('newest');
   const [isReloading, setIsReloading] = useState(false);
-  
-  
-  // Generic log loading function
-  const loadLog = useCallback(async (logType: string, setter: (data: any) => void, isTasksLog = false) => {
+
+  // Month selector state — shared across all tabs
+  const [selectedMonth, setSelectedMonth] = useState<string>(getCurrentMonthKey());
+  const [availableMonths, setAvailableMonths] = useState<string[]>([getCurrentMonthKey()]);
+
+  // Generic log loading function — month-aware
+  const loadLog = useCallback(async (logType: string, setter: (data: any) => void, isTasksLog = false, month?: string) => {
     try {
-      const response = await fetch(`/api/${logType}-log`);
+      const monthParam = month || selectedMonth;
+      const response = await fetch(`/api/${logType}-log?month=${monthParam}`);
       if (response.ok) {
         const data = await response.json();
+        // Collect available months from any tab that returns them
+        if (data.months && Array.isArray(data.months) && data.months.length > 0) {
+          setAvailableMonths(prev => {
+            const merged = Array.from(new Set([...prev, ...data.months])).sort((a, b) => {
+              const [amStr, ayStr] = a.split('-');
+              const [bmStr, byStr] = b.split('-');
+              const ay = parseInt(`20${ayStr}`, 10);
+              const by = parseInt(`20${byStr}`, 10);
+              if (ay !== by) return by - ay;
+              return parseInt(bmStr, 10) - parseInt(amStr, 10);
+            });
+            return merged;
+          });
+        }
         if (isTasksLog) {
           setter(deduplicateTasksLog(data));
         } else {
@@ -51,11 +78,11 @@ export default function DataCenterPage() {
     } catch (error) {
       // Failed to load log
     }
-  }, []);
-  
+  }, [selectedMonth]);
+
   // Main tab state
   const [activeMainTab, setActiveMainTab] = useState<string>('tasks-lifecycle');
-  
+
   // Sub-tab states
   const [activeTasksSubTab, setActiveTasksSubTab] = useState<string>('lifecycle-log');
   const [activeItemsSubTab, setActiveItemsSubTab] = useState<string>('lifecycle-log');
@@ -69,7 +96,7 @@ export default function DataCenterPage() {
     const savedItemsSubTab = getPreference('data-center-active-items-sub-tab', 'lifecycle-log');
     const savedDevSubTab = getPreference('data-center-active-dev-sub-tab', 'sprints');
     const savedFinancialsSubTab = getPreference('data-center-active-financials-sub-tab', 'all-financials');
-    
+
     const normalizedMainTab = savedMainTab === 'player-statistics' ? 'player-log' : savedMainTab;
 
     setActiveMainTab(normalizedMainTab);
@@ -83,94 +110,73 @@ export default function DataCenterPage() {
     }
   }, [getPreference, setPreference]);
 
-
-  // Load character log
+  // Reload all logs when selectedMonth changes
   useEffect(() => {
-    loadLog(EntityType.CHARACTER, setCharacterLog);
-  }, [loadLog]);
+    loadLog(EntityType.CHARACTER, setCharacterLog, false, selectedMonth);
+    loadLog(EntityType.PLAYER, setPlayerLog, false, selectedMonth);
+    loadLog('sales', setSalesLog, false, selectedMonth);
+    loadLog('sites', setSitesLog, false, selectedMonth);
+    loadLog('financials', setFinancialsLog, false, selectedMonth);
+    loadLog('items', setItemsLog, false, selectedMonth);
+    loadLog('tasks', setTasksLog, true, selectedMonth);
+  }, [selectedMonth, loadLog]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Load player log
-  useEffect(() => {
-    loadLog(EntityType.PLAYER, setPlayerLog);
-  }, [loadLog]);
+  // Listen for entity updates to refresh relevant log (stays on currently selected month)
+  useEntityUpdates('financial', () => loadLog('financials', setFinancialsLog, false, selectedMonth));
+  useEntityUpdates('item', () => loadLog('items', setItemsLog, false, selectedMonth));
+  useEntityUpdates('task', () => loadLog('tasks', setTasksLog, true, selectedMonth));
 
-  // Load sales log
-  useEffect(() => {
-    loadLog('sales', setSalesLog);
-  }, [loadLog]);
-
-  // Load sites log
-  useEffect(() => {
-    loadLog('sites', setSitesLog);
-  }, [loadLog]);
-
-  // Load financials log
-  useEffect(() => {
-    loadLog('financials', setFinancialsLog);
-  }, [loadLog]);
-
-  // Listen for financials updates to refresh financials log
-  useEntityUpdates('financial', () => loadLog('financials', setFinancialsLog));
-
-  // Load items log
-  useEffect(() => {
-    loadLog('items', setItemsLog);
-  }, [loadLog]);
-
-  // Listen for items updates to refresh items log
-  useEntityUpdates('item', () => loadLog('items', setItemsLog));
-
-  // Load tasks log
-  useEffect(() => {
-    loadLog('tasks', setTasksLog, true);
-  }, [loadLog]);
-
-  // Listen for tasks updates to refresh tasks log
-  useEntityUpdates('task', () => loadLog('tasks', setTasksLog, true));
-
-
-  // Reload all logs (all 7 entity logs)
+  // Reload all logs (keeps same month)
   const handleReloadLogs = async () => {
     setIsReloading(true);
     try {
-      // Reload all 7 entity logs
+      const month = selectedMonth;
       const [characterResponse, playerResponse, salesResponse, sitesResponse, financialsResponse, itemsResponse, tasksResponse] = await Promise.all([
-        fetch('/api/character-log'),
-        fetch('/api/player-log'),
-        fetch('/api/sales-log'),
-        fetch('/api/sites-log'),
-        fetch('/api/financials-log'),
-        fetch('/api/items-log'),
-        fetch('/api/tasks-log')
+        fetch(`/api/character-log?month=${month}`),
+        fetch(`/api/player-log?month=${month}`),
+        fetch(`/api/sales-log?month=${month}`),
+        fetch(`/api/sites-log?month=${month}`),
+        fetch(`/api/financials-log?month=${month}`),
+        fetch(`/api/items-log?month=${month}`),
+        fetch(`/api/tasks-log?month=${month}`)
       ]);
 
       if (characterResponse.ok) {
         const data = await characterResponse.json();
         setCharacterLog(data);
+        if (data.months) setAvailableMonths(prev => Array.from(new Set([...prev, ...data.months])));
       }
       if (playerResponse.ok) {
         const data = await playerResponse.json();
         setPlayerLog(data);
+        if (data.months) setAvailableMonths(prev => Array.from(new Set([...prev, ...data.months])));
       }
       if (salesResponse.ok) {
         const data = await salesResponse.json();
         setSalesLog(data);
+        if (data.months) setAvailableMonths(prev => Array.from(new Set([...prev, ...data.months])));
       }
       if (sitesResponse.ok) {
         const data = await sitesResponse.json();
         setSitesLog(data);
+        if (data.months) setAvailableMonths(prev => Array.from(new Set([...prev, ...data.months])));
       }
       if (financialsResponse.ok) {
         const data = await financialsResponse.json();
         setFinancialsLog(data);
+        if (data.months) setAvailableMonths(prev => Array.from(new Set([...prev, ...data.months])));
       }
       if (itemsResponse.ok) {
         const data = await itemsResponse.json();
         setItemsLog(data);
+        if (data.months) setAvailableMonths(prev => Array.from(new Set([...prev, ...data.months])));
       }
       if (tasksResponse.ok) {
         const data = await tasksResponse.json();
         setTasksLog(deduplicateTasksLog(data));
+        if (data.months) {
+          setAvailableMonths(prev => Array.from(new Set([...prev, ...data.months])));
+        }
       }
     } catch (error) {
       console.error('Error reloading logs:', error);
@@ -186,6 +192,15 @@ export default function DataCenterPage() {
         setActiveMainTab(value);
         setPreference('data-center-active-main-tab', value);
       }} className="w-full">
+        {/* Month Selector — shown above all tabs */}
+        <div className="flex items-center justify-between mb-2">
+          <MonthSelector
+            selectedMonth={selectedMonth}
+            availableMonths={availableMonths}
+            onChange={setSelectedMonth}
+          />
+        </div>
+
         <TabsList className="grid w-full grid-cols-8">
           <TabsTrigger value="tasks-lifecycle" className="flex items-center gap-2">
             <CheckCircle className="h-4 w-4" />
@@ -223,7 +238,7 @@ export default function DataCenterPage() {
 
         {/* Tasks Lifecycle Tab */}
         <TabsContent value="tasks-lifecycle" className="space-y-4">
-          <TasksLifecycleTab 
+          <TasksLifecycleTab
             tasksLog={tasksLog}
             onReload={handleReloadLogs}
             isReloading={isReloading}
@@ -232,22 +247,22 @@ export default function DataCenterPage() {
 
         {/* Items Lifecycle Tab */}
         <TabsContent value="items-lifecycle" className="space-y-4">
-          <ItemsLifecycleTab 
+          <ItemsLifecycleTab
             itemsLog={itemsLog}
             onReload={handleReloadLogs}
             isReloading={isReloading}
           />
-                </TabsContent>
-                
+        </TabsContent>
+
         {/* Financials Log Tab */}
         <TabsContent value="financials-history" className="space-y-4">
-          <FinancialsTab 
+          <FinancialsTab
             financialsLog={financialsLog}
             onReload={handleReloadLogs}
             isReloading={isReloading}
           />
-                </TabsContent>
-                
+        </TabsContent>
+
         {/* Sales Log Tab */}
         <TabsContent value="sales-log" className="space-y-4">
           <SalesLogTab
@@ -292,7 +307,7 @@ export default function DataCenterPage() {
           />
         </TabsContent>
 
-                
+
 
       </Tabs>
 

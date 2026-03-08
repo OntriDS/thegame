@@ -80,7 +80,8 @@ import {
   appendEntityLog,
   getEntityLogs as workflowGetEntityLogs,
   rotateEntityLogsToMonth as workflowRotateEntityLogsToMonth,
-  getEntityLogMonths as workflowGetEntityLogMonths
+  getEntityLogMonths as workflowGetEntityLogMonths,
+  removeLogEntriesAcrossMonths as workflowRemoveLogEntriesAcrossMonths
 } from '@/workflows/entities-logging';
 import { getCurrentMonthKey, formatMonthKey, reviveDates } from '@/lib/utils/date-utils';
 import { kvMGet, kvSMembers, kvSRem } from './kv';
@@ -693,7 +694,7 @@ export async function getSitesByRadius(
 
 export async function getEntityLogs(
   entityType: EntityType,
-  options?: { month?: string }
+  options?: { month?: string; start?: number; count?: number }
 ): Promise<any[]> {
   return await workflowGetEntityLogs(entityType, options);
 }
@@ -707,6 +708,13 @@ export async function rotateEntityLogs(
 
 export async function getEntityLogMonths(entityType: EntityType): Promise<string[]> {
   return await workflowGetEntityLogMonths(entityType);
+}
+
+export async function removeLogEntriesAcrossMonths(
+  entityType: EntityType,
+  filterFn: (entry: any) => boolean
+): Promise<number> {
+  return await workflowRemoveLogEntriesAcrossMonths(entityType, filterFn);
 }
 
 // ============================================================================

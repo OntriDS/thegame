@@ -1,16 +1,39 @@
 // workflows/entities-logging.ts
-// Append-only lifecycle logs + in-place field updates for descriptive changes
+// Redis List-based lifecycle logs with monthly key partitioning
+// Writes: LPUSH (O(1), no read needed)
+// Reads: LRANGE (paginated, scoped to one month)
+// Edit/Delete: read-modify-write on monthly list (rare operations, ~50 entries)
 
-import { kvGet, kvSet, kvSAdd, kvSMembers } from '@/data-store/kv';
-import { buildLogActiveKey, buildLogMonthKey, buildLogMonthsIndexKey } from '@/data-store/keys';
+import { kvLPush, kvLRange, kvSAdd, kvSMembers, kvDel } from '@/data-store/kv';
+import { buildLogMonthKey, buildLogMonthsIndexKey } from '@/data-store/keys';
 import { EntityType, LogEventType } from '@/types/enums';
+import { kv } from '@/data-store/kv';
 import { v4 as uuid } from 'uuid';
+
+// ============================================================================
+// Helpers
+// ============================================================================
+
+function getCurrentMonthKey(): string {
+  const now = new Date();
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const yy = String(now.getFullYear()).slice(-2);
+  return `${mm}-${yy}`;
+}
+
+function getMonthKeyFromTimestamp(timestamp: string | Date): string {
+  const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
+  if (isNaN(date.getTime())) return getCurrentMonthKey();
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const yy = String(date.getFullYear()).slice(-2);
+  return `${mm}-${yy}`;
+}
 
 function normalizeLogEntry(entry: any): any {
   if (entry?.id) {
     return entry;
   }
-  return { ...entry, id: ensureLogEntryId(entry) };
+  return { ...entry, id: uuid() };
 }
 
 function sortMonthsDesc(months: string[]): string[] {
@@ -31,100 +54,168 @@ function sortMonthsDesc(months: string[]): string[] {
   });
 }
 
+/** Parse a raw LRANGE element into a JS object */
+function parseEntry(raw: string | any): any {
+  if (typeof raw === 'string') {
+    try { return JSON.parse(raw); } catch { return raw; }
+  }
+  return raw;
+}
+
+/** Read full monthly list as parsed objects */
+async function readMonthlyList(entityType: EntityType, monthKey: string): Promise<any[]> {
+  const listKey = buildLogMonthKey(entityType, monthKey);
+  const raw = await kvLRange(listKey, 0, -1);
+  return raw.map(parseEntry).map(normalizeLogEntry);
+}
+
+/** Rebuild a monthly list (DEL + RPUSH). Used for rare edit/delete ops. */
+async function rebuildMonthlyList(entityType: EntityType, monthKey: string, entries: any[]): Promise<void> {
+  const listKey = buildLogMonthKey(entityType, monthKey);
+  await kvDel(listKey);
+  if (entries.length > 0) {
+    // LPUSH pushes to head, so reverse to maintain original order (newest-first)
+    const serialized = entries.map(e => JSON.stringify(e));
+    await kvLPush(listKey, ...serialized);
+  }
+}
+
+// ============================================================================
+// Core: Append (O(1) via LPUSH)
+// ============================================================================
+
 export async function appendEntityLog(
-  entityType: EntityType, 
+  entityType: EntityType,
   entityId: string,
   event: LogEventType,
   details: Record<string, any>
 ): Promise<void> {
-  const key = buildLogActiveKey(entityType);
-  const list = (await kvGet<any[]>(key)) || [];
-  
-  const entry = { 
-    id: uuid(), // Add unique ID to each new entry
+  const monthKey = getCurrentMonthKey();
+  const listKey = buildLogMonthKey(entityType, monthKey);
+
+  const entry = {
+    id: uuid(),
     event,
     entityId,
     ...details,
-    timestamp: new Date().toISOString() 
+    timestamp: new Date().toISOString()
   };
-  
-  list.push(entry);
-  await kvSet(key, list);
+
+  // O(1) write — no read needed!
+  await kvLPush(listKey, JSON.stringify(entry));
+  // Track this month in the months index
+  await kvSAdd(buildLogMonthsIndexKey(entityType), monthKey);
 }
 
+// ============================================================================
+// Core: Read (LRANGE with pagination)
+// ============================================================================
+
+export async function getEntityLogs(
+  entityType: EntityType,
+  options?: { month?: string; start?: number; count?: number }
+): Promise<any[]> {
+  const monthKey = options?.month || getCurrentMonthKey();
+  const listKey = buildLogMonthKey(entityType, monthKey);
+  const start = options?.start ?? 0;
+  const stop = options?.count ? start + options.count - 1 : -1;
+
+  const raw = await kvLRange(listKey, start, stop);
+  return raw.map(parseEntry).map(normalizeLogEntry);
+}
+
+// ============================================================================
+// Field Updates (rare — read-modify-write on monthly list)
+// ============================================================================
+
 export async function updateEntityLogField(
-  entityType: EntityType, 
-  entityId: string, 
+  entityType: EntityType,
+  entityId: string,
   fieldName: string,
   oldValue: any,
   newValue: any
 ): Promise<void> {
-  const key = buildLogActiveKey(entityType);
-  const list = (await kvGet<any[]>(key)) || [];
-  
-  // For CREATED entries specifically, update only the CREATED entry
-  // For other event types, update the most recent matching entry
-  const createdEntry = list.find(entry => 
-    entry.entityId === entityId && 
-    entry.event?.toLowerCase() === 'created'
-  );
-  
-  if (createdEntry) {
-    // Update CREATED entry directly
-    createdEntry[fieldName] = newValue;
-    createdEntry.lastUpdated = new Date().toISOString();
-  } else {
-    // Find the most recent log entry for this entity as fallback
-    for (let i = list.length - 1; i >= 0; i--) {
+  // Search current month first, then all months
+  const months = await getEntityLogMonths(entityType);
+  const searchOrder = [getCurrentMonthKey(), ...months.filter(m => m !== getCurrentMonthKey())];
+
+  for (const monthKey of searchOrder) {
+    const list = await readMonthlyList(entityType, monthKey);
+
+    // Find CREATED entry first, fallback to most recent entry for this entity
+    const createdEntry = list.find(entry =>
+      entry.entityId === entityId &&
+      entry.event?.toLowerCase() === 'created'
+    );
+
+    if (createdEntry) {
+      createdEntry[fieldName] = newValue;
+      createdEntry.lastUpdated = new Date().toISOString();
+      await rebuildMonthlyList(entityType, monthKey, list);
+      return;
+    }
+
+    // Fallback: find most recent entry for this entity in this month
+    for (let i = 0; i < list.length; i++) {
       if (list[i]?.entityId === entityId) {
         list[i][fieldName] = newValue;
         list[i].lastUpdated = new Date().toISOString();
-        break;
+        await rebuildMonthlyList(entityType, monthKey, list);
+        return;
       }
     }
   }
-  
-  await kvSet(key, list);
 }
 
-// Safer helpers: update CREATED entry fields (descriptive corrections only)
 export async function updateCreatedEntryFields(
   entityType: EntityType,
   entityId: string,
   partial: Record<string, any>
 ): Promise<void> {
-  const key = buildLogActiveKey(entityType);
-  const list = (await kvGet<any[]>(key)) || [];
-  const createdEntry = list.find(entry => 
-    entry.entityId === entityId && 
-    String(entry.event ?? entry.status ?? '').toLowerCase() === 'created'
-  );
-  if (createdEntry) {
-    Object.assign(createdEntry, partial, { lastUpdated: new Date().toISOString() });
-    await kvSet(key, list);
+  const months = await getEntityLogMonths(entityType);
+  const searchOrder = [getCurrentMonthKey(), ...months.filter(m => m !== getCurrentMonthKey())];
+
+  for (const monthKey of searchOrder) {
+    const list = await readMonthlyList(entityType, monthKey);
+    const createdEntry = list.find(entry =>
+      entry.entityId === entityId &&
+      String(entry.event ?? entry.status ?? '').toLowerCase() === 'created'
+    );
+    if (createdEntry) {
+      Object.assign(createdEntry, partial, { lastUpdated: new Date().toISOString() });
+      await rebuildMonthlyList(entityType, monthKey, list);
+      return;
+    }
   }
 }
 
-// Safer helpers: update latest entry of specific event kind
 export async function updateLatestEventFields(
   entityType: EntityType,
   entityId: string,
   eventKind: string,
   partial: Record<string, any>
 ): Promise<void> {
-  const key = buildLogActiveKey(entityType);
-  const list = (await kvGet<any[]>(key)) || [];
+  const months = await getEntityLogMonths(entityType);
+  const searchOrder = [getCurrentMonthKey(), ...months.filter(m => m !== getCurrentMonthKey())];
   const kind = eventKind.toLowerCase();
-  for (let i = list.length - 1; i >= 0; i--) {
-    const e = list[i];
-    const ek = String(e?.event ?? e?.status ?? '').toLowerCase();
-    if (e?.entityId === entityId && ek === kind) {
-      Object.assign(e, partial, { lastUpdated: new Date().toISOString() });
-      await kvSet(key, list);
-      break;
+
+  for (const monthKey of searchOrder) {
+    const list = await readMonthlyList(entityType, monthKey);
+    for (let i = 0; i < list.length; i++) {
+      const e = list[i];
+      const ek = String(e?.event ?? e?.status ?? '').toLowerCase();
+      if (e?.entityId === entityId && ek === kind) {
+        Object.assign(e, partial, { lastUpdated: new Date().toISOString() });
+        await rebuildMonthlyList(entityType, monthKey, list);
+        return;
+      }
     }
   }
 }
+
+// ============================================================================
+// Bulk Operations
+// ============================================================================
 
 export async function appendBulkOperationLog(
   entityType: EntityType,
@@ -137,13 +228,14 @@ export async function appendBulkOperationLog(
     extra?: any;
   }
 ): Promise<void> {
-  const key = buildLogActiveKey(entityType);
-  const list = (await kvGet<any[]>(key)) || [];
-  
+  const monthKey = getCurrentMonthKey();
+  const listKey = buildLogMonthKey(entityType, monthKey);
+
   const event: LogEventType = operation === 'import' ? LogEventType.BULK_IMPORT : LogEventType.BULK_EXPORT;
   const operationId = uuid();
-  
-  list.push({
+
+  const entry = {
+    id: uuid(),
     event,
     operationId,
     operation,
@@ -153,27 +245,27 @@ export async function appendBulkOperationLog(
     exportFormat: details.exportFormat,
     extra: details.extra,
     timestamp: new Date().toISOString()
-  });
-  
-  await kvSet(key, list);
+  };
+
+  await kvLPush(listKey, JSON.stringify(entry));
+  await kvSAdd(buildLogMonthsIndexKey(entityType), monthKey);
 }
 
+// ============================================================================
+// Player Points Logging
+// ============================================================================
 
-
-/**
- * Log player points award with source tracking
- * Used for points awarded from tasks, financial records, or sales
- */
 export async function appendPlayerPointsLog(
   playerId: string,
   points: { xp: number; rp: number; fp: number; hp: number },
   sourceId: string,
   sourceType: string
 ): Promise<void> {
-  const key = buildLogActiveKey(EntityType.PLAYER);
-  const list = (await kvGet<any[]>(key)) || [];
-  
+  const monthKey = getCurrentMonthKey();
+  const listKey = buildLogMonthKey(EntityType.PLAYER, monthKey);
+
   const logEntry = {
+    id: uuid(),
     event: LogEventType.WIN_POINTS,
     entityId: playerId,
     points: points,
@@ -182,24 +274,21 @@ export async function appendPlayerPointsLog(
     description: `XP+${points.xp}, RP+${points.rp}, FP+${points.fp}, HP+${points.hp} from ${sourceType}`,
     timestamp: new Date().toISOString()
   };
-  
-  list.push(logEntry);
-  await kvSet(key, list);
+
+  await kvLPush(listKey, JSON.stringify(logEntry));
+  await kvSAdd(buildLogMonthsIndexKey(EntityType.PLAYER), monthKey);
 }
 
-/**
- * Log player total points after changes
- * Shows the actual total points the player has after any change
- */
 export async function appendPlayerPointsChangedLog(
   playerId: string,
   totalPoints: { xp: number; rp: number; fp: number; hp: number },
   points: { xp: number; rp: number; fp: number; hp: number }
 ): Promise<void> {
-  const key = buildLogActiveKey(EntityType.PLAYER);
-  const list = (await kvGet<any[]>(key)) || [];
-  
+  const monthKey = getCurrentMonthKey();
+  const listKey = buildLogMonthKey(EntityType.PLAYER, monthKey);
+
   const logEntry = {
+    id: uuid(),
     event: LogEventType.POINTS_CHANGED,
     entityId: playerId,
     totalPoints: totalPoints,
@@ -207,130 +296,93 @@ export async function appendPlayerPointsChangedLog(
     description: `Total points: XP=${points.xp}, RP=${points.rp}, FP=${points.fp}, HP=${points.hp}`,
     timestamp: new Date().toISOString()
   };
-  
-  list.push(logEntry);
-  await kvSet(key, list);
+
+  await kvLPush(listKey, JSON.stringify(logEntry));
+  await kvSAdd(buildLogMonthsIndexKey(EntityType.PLAYER), monthKey);
 }
 
-/**
- * Update player points changed log entry in-place (idempotent)
- * Updates the most recent POINTS_CHANGED entry if it exists, otherwise creates a new one
- */
 export async function upsertPlayerPointsChangedLog(
   playerId: string,
   totalPoints: { xp: number; rp: number; fp: number; hp: number },
   points: { xp: number; rp: number; fp: number; hp: number }
 ): Promise<void> {
-  const key = buildLogActiveKey(EntityType.PLAYER);
-  const list = (await kvGet<any[]>(key)) || [];
-  
+  const monthKey = getCurrentMonthKey();
+  const list = await readMonthlyList(EntityType.PLAYER, monthKey);
+
   // Find the most recent POINTS_CHANGED entry
   let found = false;
-  for (let i = list.length - 1; i >= 0; i--) {
+  for (let i = 0; i < list.length; i++) {
     const entry = list[i];
     if (entry.entityId === playerId && entry.event === LogEventType.POINTS_CHANGED) {
-      // Update existing entry in-place
       entry.totalPoints = totalPoints;
       entry.points = points;
       entry.lastUpdated = new Date().toISOString();
       found = true;
-      console.log(`[upsertPlayerPointsChangedLog] Updated existing POINTS_CHANGED entry for player ${playerId}`);
       break;
     }
   }
-  
-  // If no existing entry found, create a new one
-  if (!found) {
-    const logEntry = {
-      event: LogEventType.POINTS_CHANGED,
-      entityId: playerId,
-      totalPoints: totalPoints,
-      points: points,
-      description: `Total points: XP=${points.xp}, RP=${points.rp}, FP=${points.fp}, HP=${points.hp}`,
-      timestamp: new Date().toISOString()
-    };
-    list.push(logEntry);
-    console.log(`[upsertPlayerPointsChangedLog] Created new POINTS_CHANGED entry for player ${playerId}`);
+
+  if (found) {
+    await rebuildMonthlyList(EntityType.PLAYER, monthKey, list);
+  } else {
+    // No existing entry — append new one
+    await appendPlayerPointsChangedLog(playerId, totalPoints, points);
   }
-  
-  await kvSet(key, list);
 }
 
-/**
- * Log player points update with change tracking
- * Used when task rewards change and points need to be updated
- * This function UPDATES existing log entries in-place instead of creating new ones
- */
 export async function appendPlayerPointsUpdateLog(
   playerId: string,
   oldPoints: { xp: number; rp: number; fp: number; hp: number },
   newPoints: { xp: number; rp: number; fp: number; hp: number },
   sourceId: string
 ): Promise<void> {
-  const key = buildLogActiveKey(EntityType.PLAYER);
-  const list = (await kvGet<any[]>(key)) || [];
-  
-  // 1. Find and update the existing "Win Points" entry for this source task
+  // Search current month first for existing entries to update
+  const monthKey = getCurrentMonthKey();
+  const months = await getEntityLogMonths(EntityType.PLAYER);
+  const searchOrder = [monthKey, ...months.filter(m => m !== monthKey)];
+
+  // 1. Find and update existing "Win Points" entry for this source
   let winPointsUpdated = false;
-  for (let i = list.length - 1; i >= 0; i--) {
-    const entry = list[i];
-    if (entry.entityId === playerId && 
-        entry.event === LogEventType.WIN_POINTS && 
+  for (const month of searchOrder) {
+    const list = await readMonthlyList(EntityType.PLAYER, month);
+    for (let i = 0; i < list.length; i++) {
+      const entry = list[i];
+      if (entry.entityId === playerId &&
+        entry.event === LogEventType.WIN_POINTS &&
         entry.sourceId === sourceId) {
-      // Update the existing "Win Points" entry
-      entry.points = newPoints;
-      entry.description = `XP+${newPoints.xp}, RP+${newPoints.rp}, FP+${newPoints.fp}, HP+${newPoints.hp} from task`;
-      entry.lastUpdated = new Date().toISOString();
-      winPointsUpdated = true;
-      console.log(`[appendPlayerPointsUpdateLog] Updated existing "Win Points" log entry for sourceId: ${sourceId}`);
-      break;
+        entry.points = newPoints;
+        entry.description = `XP+${newPoints.xp}, RP+${newPoints.rp}, FP+${newPoints.fp}, HP+${newPoints.hp} from task`;
+        entry.lastUpdated = new Date().toISOString();
+        winPointsUpdated = true;
+        await rebuildMonthlyList(EntityType.PLAYER, month, list);
+        break;
+      }
     }
+    if (winPointsUpdated) break;
   }
-  
-  // If no existing "Win Points" entry found, create a new one (shouldn't happen in normal flow)
+
   if (!winPointsUpdated) {
-    console.warn(`[appendPlayerPointsUpdateLog] No existing "Win Points" log entry found for sourceId: ${sourceId}, creating new entry`);
-    const winPointsEntry = {
-      event: LogEventType.WIN_POINTS,
-      entityId: playerId,
-      points: newPoints,
-      sourceId: sourceId,
-      sourceType: 'task',
-      description: `XP+${newPoints.xp}, RP+${newPoints.rp}, FP+${newPoints.fp}, HP+${newPoints.hp} from task`,
-      timestamp: new Date().toISOString()
-    };
-    list.push(winPointsEntry);
+    // Create new Win Points entry if not found
+    await appendPlayerPointsLog(playerId, newPoints, sourceId, 'task');
   }
-  
-  // 2. Find and update the most recent "Points Changed" entry
-  // This entry doesn't have sourceId, so we update the most recent one for this player
-  let pointsChangedUpdated = false;
-  for (let i = list.length - 1; i >= 0; i--) {
-    const entry = list[i];
+
+  // 2. Find and update most recent "Points Changed" entry in current month
+  const currentList = await readMonthlyList(EntityType.PLAYER, monthKey);
+  for (let i = 0; i < currentList.length; i++) {
+    const entry = currentList[i];
     if (entry.entityId === playerId && entry.event === LogEventType.POINTS_CHANGED) {
-      // Update the existing "Points Changed" entry
       entry.points = newPoints;
       entry.lastUpdated = new Date().toISOString();
-      pointsChangedUpdated = true;
-      console.log(`[appendPlayerPointsUpdateLog] Updated existing "Points Changed" log entry`);
+      await rebuildMonthlyList(EntityType.PLAYER, monthKey, currentList);
       break;
     }
   }
-  
-  // If no "Points Changed" entry found, we don't create one here
-  // It will be created by the player entity workflow when needed
-  if (!pointsChangedUpdated) {
-    console.log(`[appendPlayerPointsUpdateLog] No existing "Points Changed" entry found to update`);
-  }
-  
-  await kvSet(key, list);
 }
 
-/**
- * Ensure a log entry has a unique ID
- * If entry already has an ID, return it. Otherwise, generate and add one.
- * Used for backward compatibility with existing logs that don't have IDs yet.
- */
+// ============================================================================
+// Entry ID Management
+// ============================================================================
+
 export function ensureLogEntryId(entry: any): string {
   if (entry.id) {
     return entry.id;
@@ -338,125 +390,108 @@ export function ensureLogEntryId(entry: any): string {
   return uuid();
 }
 
-/**
- * Soft-delete a specific log entry
- * - Marks entry as deleted with timestamp and actor
- * - Preserves original entry for audit
- * - Does NOT remove entry from log array
- */
+// ============================================================================
+// Soft Delete, Restore, Permanent Delete, Edit
+// (Rare operations — read-modify-write on one month, ~50 entries)
+// ============================================================================
+
 export async function softDeleteLogEntry(
   entityType: EntityType,
   entryId: string,
   characterId: string,
   reason?: string
 ): Promise<void> {
-  const key = buildLogActiveKey(entityType);
-  const list = (await kvGet<any[]>(key)) || [];
-  
-  const entry = list.find(e => e.id === entryId);
-  if (!entry) {
-    throw new Error(`Log entry ${entryId} not found in ${entityType} log`);
+  const months = await getEntityLogMonths(entityType);
+  const searchOrder = [getCurrentMonthKey(), ...months.filter(m => m !== getCurrentMonthKey())];
+
+  for (const monthKey of searchOrder) {
+    const list = await readMonthlyList(entityType, monthKey);
+    const entry = list.find(e => e.id === entryId);
+
+    if (entry) {
+      entry.isDeleted = true;
+      entry.deletedAt = new Date().toISOString();
+      entry.deletedBy = characterId;
+      if (reason) entry.deleteReason = reason;
+
+      if (!entry.editHistory) entry.editHistory = [];
+      entry.editHistory.push({
+        editedAt: new Date().toISOString(),
+        editedBy: characterId,
+        action: 'delete',
+        reason
+      });
+
+      await rebuildMonthlyList(entityType, monthKey, list);
+      return;
+    }
   }
-  
-  // Mark entry as deleted
-  entry.isDeleted = true;
-  entry.deletedAt = new Date().toISOString();
-  entry.deletedBy = characterId;
-  if (reason) {
-    entry.deleteReason = reason;
-  }
-  
-  // Append audit record to entry's edit history
-  if (!entry.editHistory) {
-    entry.editHistory = [];
-  }
-  entry.editHistory.push({
-    editedAt: new Date().toISOString(),
-    editedBy: characterId,
-    action: 'delete',
-    reason
-  });
-  
-  await kvSet(key, list);
-  console.log(`[softDeleteLogEntry] Entry ${entryId} soft-deleted in ${entityType} log`);
+
+  throw new Error(`Log entry ${entryId} not found in ${entityType} log`);
 }
 
-/**
- * Restore a soft-deleted entry
- * - Removes deletedAt/isDeleted/deletedBy flags
- * - Appends restoration audit entry
- */
 export async function restoreLogEntry(
   entityType: EntityType,
   entryId: string,
   characterId: string,
   reason?: string
 ): Promise<void> {
-  const key = buildLogActiveKey(entityType);
-  const list = (await kvGet<any[]>(key)) || [];
-  
-  const entry = list.find(e => e.id === entryId);
-  if (!entry) {
-    throw new Error(`Log entry ${entryId} not found in ${entityType} log`);
+  const months = await getEntityLogMonths(entityType);
+  const searchOrder = [getCurrentMonthKey(), ...months.filter(m => m !== getCurrentMonthKey())];
+
+  for (const monthKey of searchOrder) {
+    const list = await readMonthlyList(entityType, monthKey);
+    const entry = list.find(e => e.id === entryId);
+
+    if (entry) {
+      if (!entry.isDeleted) {
+        throw new Error(`Log entry ${entryId} is not deleted`);
+      }
+
+      entry.isDeleted = false;
+      delete entry.deletedAt;
+      delete entry.deletedBy;
+      delete entry.deleteReason;
+
+      if (!entry.editHistory) entry.editHistory = [];
+      entry.editHistory.push({
+        editedAt: new Date().toISOString(),
+        editedBy: characterId,
+        action: 'restore',
+        reason
+      });
+
+      await rebuildMonthlyList(entityType, monthKey, list);
+      return;
+    }
   }
-  
-  if (!entry.isDeleted) {
-    throw new Error(`Log entry ${entryId} is not deleted`);
-  }
-  
-  // Remove deletion flags
-  entry.isDeleted = false;
-  delete entry.deletedAt;
-  delete entry.deletedBy;
-  delete entry.deleteReason;
-  
-  // Append audit record to entry's edit history
-  if (!entry.editHistory) {
-    entry.editHistory = [];
-  }
-  entry.editHistory.push({
-    editedAt: new Date().toISOString(),
-    editedBy: characterId,
-    action: 'restore',
-    reason
-  });
-  
-  await kvSet(key, list);
-  console.log(`[restoreLogEntry] Entry ${entryId} restored in ${entityType} log`);
+
+  throw new Error(`Log entry ${entryId} not found in ${entityType} log`);
 }
 
-/**
- * Permanently delete a log entry
- * - Removes entry from log array completely
- * - Cannot be undone
- */
 export async function permanentDeleteLogEntry(
   entityType: EntityType,
   entryId: string,
   characterId: string,
   reason?: string
 ): Promise<void> {
-  const key = buildLogActiveKey(entityType);
-  const list = (await kvGet<any[]>(key)) || [];
+  const months = await getEntityLogMonths(entityType);
+  const searchOrder = [getCurrentMonthKey(), ...months.filter(m => m !== getCurrentMonthKey())];
 
-  const entryIndex = list.findIndex(e => e.id === entryId);
-  if (entryIndex === -1) {
-    throw new Error(`Log entry ${entryId} not found in ${entityType} log`);
+  for (const monthKey of searchOrder) {
+    const list = await readMonthlyList(entityType, monthKey);
+    const entryIndex = list.findIndex(e => e.id === entryId);
+
+    if (entryIndex !== -1) {
+      list.splice(entryIndex, 1);
+      await rebuildMonthlyList(entityType, monthKey, list);
+      return;
+    }
   }
 
-  // Remove entry from array completely
-  list.splice(entryIndex, 1);
-
-  await kvSet(key, list);
-  console.log(`[permanentDeleteLogEntry] Entry ${entryId} permanently deleted from ${entityType} log`);
+  throw new Error(`Log entry ${entryId} not found in ${entityType} log`);
 }
 
-/**
- * Edit a specific log entry
- * - Creates audit record of changes
- * - Updates entry with new values
- * - Tracks who made the change
- */
 export async function editLogEntry(
   entityType: EntityType,
   entryId: string,
@@ -464,116 +499,133 @@ export async function editLogEntry(
   characterId: string,
   reason?: string
 ): Promise<void> {
-  const key = buildLogActiveKey(entityType);
-  const list = (await kvGet<any[]>(key)) || [];
-  
-  const entry = list.find(e => e.id === entryId);
-  if (!entry) {
-    throw new Error(`Log entry ${entryId} not found in ${entityType} log`);
-  }
-  
-  if (entry.isDeleted) {
-    throw new Error(`Cannot edit deleted log entry ${entryId}`);
-  }
-  
-  // Create audit record of changes
-  const changes: Array<{ field: string; oldValue: any; newValue: any }> = [];
-  
-  // Update fields and track changes
-  for (const [field, newValue] of Object.entries(updates)) {
-    // Skip immutable fields
-    if (['id', 'entityId', 'timestamp', 'event'].includes(field)) {
-      console.warn(`[editLogEntry] Attempted to modify immutable field: ${field}`);
-      continue;
+  const months = await getEntityLogMonths(entityType);
+  const searchOrder = [getCurrentMonthKey(), ...months.filter(m => m !== getCurrentMonthKey())];
+
+  for (const monthKey of searchOrder) {
+    const list = await readMonthlyList(entityType, monthKey);
+    const entry = list.find(e => e.id === entryId);
+
+    if (entry) {
+      if (entry.isDeleted) {
+        throw new Error(`Cannot edit deleted log entry ${entryId}`);
+      }
+
+      const changes: Array<{ field: string; oldValue: any; newValue: any }> = [];
+
+      for (const [field, newValue] of Object.entries(updates)) {
+        if (['id', 'entityId', 'timestamp', 'event'].includes(field)) {
+          continue;
+        }
+        const oldValue = entry[field];
+        if (oldValue !== newValue) {
+          changes.push({ field, oldValue, newValue });
+          entry[field] = newValue;
+        }
+      }
+
+      if (changes.length === 0) return;
+
+      entry.editedAt = new Date().toISOString();
+      entry.editedBy = characterId;
+      entry.lastUpdated = new Date().toISOString();
+
+      if (!entry.editHistory) entry.editHistory = [];
+      entry.editHistory.push({
+        editedAt: new Date().toISOString(),
+        editedBy: characterId,
+        action: 'edit',
+        changes,
+        reason
+      });
+
+      await rebuildMonthlyList(entityType, monthKey, list);
+      return;
     }
-    
-    const oldValue = entry[field];
-    if (oldValue !== newValue) {
-      changes.push({ field, oldValue, newValue });
-      entry[field] = newValue;
-    }
   }
-  
-  if (changes.length === 0) {
-    console.log(`[editLogEntry] No changes detected for entry ${entryId}`);
-    return;
-  }
-  
-  // Add audit metadata
-  entry.editedAt = new Date().toISOString();
-  entry.editedBy = characterId;
-  entry.lastUpdated = new Date().toISOString();
-  
-  // Append audit record to entry's edit history
-  if (!entry.editHistory) {
-    entry.editHistory = [];
-  }
-  entry.editHistory.push({
-    editedAt: new Date().toISOString(),
-    editedBy: characterId,
-    action: 'edit',
-    changes,
-    reason
-  });
-  
-  await kvSet(key, list);
-  console.log(`[editLogEntry] Entry ${entryId} updated in ${entityType} log with ${changes.length} changes`);
+
+  throw new Error(`Log entry ${entryId} not found in ${entityType} log`);
 }
 
 // REMOVED: Account logging functions - Account is infrastructure entity, not Core Entity
 // Account only handles: triforce creation, player linking, character linking
 
-export async function getEntityLogs(
-  entityType: EntityType,
-  options?: { month?: string }
-): Promise<any[]> {
-  const key = options?.month
-    ? buildLogMonthKey(entityType, options.month)
-    : buildLogActiveKey(entityType);
-  const logs = await kvGet<any[]>(key);
-  if (!logs) return [];
-  return logs.map(normalizeLogEntry);
-}
-
-export async function rotateEntityLogsToMonth(
-  entityType: EntityType,
-  mmyy: string
-): Promise<number> {
-  const activeKey = buildLogActiveKey(entityType);
-  const monthKey = buildLogMonthKey(entityType, mmyy);
-  const monthsIndexKey = buildLogMonthsIndexKey(entityType);
-
-  const activeLogs = ((await kvGet<any[]>(activeKey)) || []).map(normalizeLogEntry);
-  const existingLogs = ((await kvGet<any[]>(monthKey)) || []).map(normalizeLogEntry);
-
-  if (activeLogs.length === 0 && existingLogs.length === 0) {
-    return 0;
-  }
-
-  const merged = [...existingLogs];
-  const seenIds = new Set(existingLogs.map(entry => entry.id));
-
-  for (const entry of activeLogs) {
-    if (!seenIds.has(entry.id)) {
-      seenIds.add(entry.id);
-      merged.push(entry);
-    }
-  }
-
-  if (merged.length > 0) {
-    await kvSet(monthKey, merged);
-    await kvSAdd(monthsIndexKey, mmyy);
-  }
-
-  if (activeLogs.length > 0) {
-    await kvSet(activeKey, []);
-  }
-
-  return activeLogs.length;
-}
+// ============================================================================
+// Query: Get logs + month index
+// ============================================================================
 
 export async function getEntityLogMonths(entityType: EntityType): Promise<string[]> {
   const monthsIndexKey = buildLogMonthsIndexKey(entityType);
   const months = await kvSMembers(monthsIndexKey);
   return sortMonthsDesc(months);
+}
+
+// ============================================================================
+// Cross-Entity Log Cleanup (used by task.workflow.ts on delete)
+// ============================================================================
+
+/**
+ * Remove all log entries matching a filter across all months for an entity type.
+ * Used when deleting entities that have log entries across multiple months.
+ */
+export async function removeLogEntriesAcrossMonths(
+  entityType: EntityType,
+  filterFn: (entry: any) => boolean
+): Promise<number> {
+  const months = await getEntityLogMonths(entityType);
+  let totalRemoved = 0;
+
+  for (const monthKey of months) {
+    const list = await readMonthlyList(entityType, monthKey);
+    const filtered = list.filter(entry => !filterFn(entry));
+    const removed = list.length - filtered.length;
+
+    if (removed > 0) {
+      await rebuildMonthlyList(entityType, monthKey, filtered);
+      totalRemoved += removed;
+    }
+  }
+
+  return totalRemoved;
+}
+
+// ============================================================================
+// Legacy: Rotation (kept for backward compat but not commonly needed now)
+// ============================================================================
+
+export async function rotateEntityLogsToMonth(
+  entityType: EntityType,
+  mmyy: string
+): Promise<number> {
+  // With the new monthly key architecture, logs are already written to monthly keys.
+  // This function is kept for backward compatibility — it moves any entries from the
+  // legacy active key to the specified month key.
+  const legacyActiveKey = `logs:${entityType}`;
+  const { kvGet } = await import('@/data-store/kv');
+  const activeLogs = ((await kvGet<any[]>(legacyActiveKey)) || []).map(normalizeLogEntry);
+
+  if (activeLogs.length === 0) return 0;
+
+  // Group by month based on timestamps
+  const byMonth = new Map<string, any[]>();
+  for (const entry of activeLogs) {
+    const entryMonth = entry.timestamp ? getMonthKeyFromTimestamp(entry.timestamp) : mmyy;
+    if (!byMonth.has(entryMonth)) byMonth.set(entryMonth, []);
+    byMonth.get(entryMonth)!.push(entry);
+  }
+
+  let totalMoved = 0;
+  for (const [month, entries] of byMonth) {
+    const listKey = buildLogMonthKey(entityType, month);
+    const serialized = entries.map(e => JSON.stringify(e));
+    await kvLPush(listKey, ...serialized);
+    await kvSAdd(buildLogMonthsIndexKey(entityType), month);
+    totalMoved += entries.length;
+  }
+
+  // Clear legacy key
+  const { kvSet } = await import('@/data-store/kv');
+  await kvSet(legacyActiveKey, []);
+
+  return totalMoved;
 }

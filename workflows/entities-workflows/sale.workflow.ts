@@ -3,10 +3,9 @@
 
 import { EntityType, LogEventType, PLAYER_ONE_ID, SaleStatus, SaleType } from '@/types/enums';
 import type { Item, Sale } from '@/types/entities';
-import { appendEntityLog, updateEntityLogField } from '../entities-logging';
+import { appendEntityLog, updateEntityLogField, removeLogEntriesAcrossMonths } from '../entities-logging';
 import { hasEffect, markEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
-import { EffectKeys, buildLogKey } from '@/data-store/keys';
-import { kvGet, kvSet } from '@/data-store/kv';
+import { EffectKeys } from '@/data-store/keys';
 import { getLinksFor, removeLink } from '@/links/link-registry';
 import { getPlayerById, getSaleById, getItemById, getFinancialsBySourceSaleId, removeFinancial, upsertItem } from '@/data-store/datastore';
 import { stagePointsForPlayer, removePointsFromPlayer, calculatePointsFromRevenue } from '../points-rewards-utils';
@@ -364,46 +363,22 @@ export async function removeSaleEffectsOnDelete(saleId: string): Promise<void> {
     await clearEffect(EffectKeys.sideEffect('sale', saleId, 'characterCreated'));
     await clearEffect(EffectKeys.sideEffect('sale', saleId, 'pointsAwarded'));
 
-    // 4. Remove log entries from all relevant logs
+    // 4. Remove log entries from all relevant monthly lists
 
     // Remove from sales log
-    const salesLogKey = buildLogKey(EntityType.SALE);
-    const salesLog = (await kvGet<any[]>(salesLogKey)) || [];
-    const filteredSalesLog = salesLog.filter(entry => entry.entityId !== saleId);
-    if (filteredSalesLog.length !== salesLog.length) {
-      await kvSet(salesLogKey, filteredSalesLog);
-    }
+    await removeLogEntriesAcrossMonths(EntityType.SALE, entry => entry.entityId === saleId);
 
     // Also check and remove from player log if this sale awarded points
     const sale = await getSaleById(saleId);
     if (sale && sale.totals.totalRevenue > 0) {
-      const playerLogKey = buildLogKey(EntityType.PLAYER);
-      const playerLog = (await kvGet<any[]>(playerLogKey)) || [];
-      const filteredPlayerLog = playerLog.filter(entry => entry.sourceId !== saleId && entry.sourceSaleId !== saleId);
-      if (filteredPlayerLog.length !== playerLog.length) {
-        await kvSet(playerLogKey, filteredPlayerLog);
-      }
+      await removeLogEntriesAcrossMonths(EntityType.PLAYER, entry => entry.sourceId === saleId || entry.sourceSaleId === saleId);
     }
 
     // Check and remove from character log if this sale was purchased by a character
-    const characterLogKey = buildLogKey(EntityType.CHARACTER);
-    const characterLog = (await kvGet<any[]>(characterLogKey)) || [];
-    const filteredCharacterLog = characterLog.filter(entry => entry.saleId !== saleId && entry.sourceSaleId !== saleId);
-    if (filteredCharacterLog.length !== characterLog.length) {
-      await kvSet(characterLogKey, filteredCharacterLog);
-    }
+    await removeLogEntriesAcrossMonths(EntityType.CHARACTER, entry => entry.saleId === saleId || entry.sourceSaleId === saleId);
 
-    // [New] Remove from ITEM Logs (Lifecycle events)
-    // Items log keys are typically generic 'item' log or specific to item. 
-    // Assuming 'item' log key:
-    const itemLogKey = buildLogKey(EntityType.ITEM);
-    const itemLog = (await kvGet<any[]>(itemLogKey)) || [];
-    // Filter out entries where sourceSaleId matches
-    const filteredItemLog = itemLog.filter(entry => entry.sourceSaleId !== saleId && entry.saleId !== saleId);
-
-    if (filteredItemLog.length !== itemLog.length) {
-      await kvSet(itemLogKey, filteredItemLog);
-    }
+    // Remove from ITEM Logs (Lifecycle events)
+    await removeLogEntriesAcrossMonths(EntityType.ITEM, entry => entry.sourceSaleId === saleId || entry.saleId === saleId);
 
   } catch (error) {
     console.error('Error removing sale effects:', error);
