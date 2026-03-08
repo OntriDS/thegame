@@ -83,7 +83,7 @@ export default function AdminLoginPage() {
         <CardHeader className="text-center pb-2">
           <CardTitle className="text-2xl font-bold flex items-center justify-center gap-2">
             <Loader2 className={`h-6 w-6 ${isLoading ? 'animate-spin text-primary' : 'text-primary/40'}`} />
-            TheGame Login
+            TheGame
           </CardTitle>
         </CardHeader>
 
@@ -103,8 +103,8 @@ export default function AdminLoginPage() {
                     <Input
                       id="playerId"
                       name="playerId"
-                      type="text"
-                      placeholder="e.g. player-one"
+                      type="password"
+                      placeholder=""
                       value={playerId}
                       onChange={(e) => setPlayerId(e.target.value)}
                       required
@@ -146,7 +146,7 @@ export default function AdminLoginPage() {
                     disabled={isLoading}
                     className="w-32 h-11 bg-primary text-primary-foreground font-semibold hover:shadow-lg transition-all"
                   >
-                    {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Enter System'}
+                    {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Login'}
                   </Button>
                 </div>
               </form>

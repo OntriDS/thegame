@@ -27,8 +27,10 @@
 3. **Sale** - Transaction records
 4. **FinancialRecord** - Entities financial records and past completed financial actions
 5. **Site** - Locations of different types
-6. **Character** - Character Roles Business role - Achievements - Inventory - (HOW they interact)
-7. **Player** - Game progression - Points, Level, Achievements - (WHAT they've achieved)
+6. **Character** (Persona/Role): THE HOW. Identity in business context. Roles, skills, occupation.
+7. **Player** (Progression): THE GROWTH. Real-world activity, XP, points (HP, FP, RP, XP).
+8. **Founder**: The ultimate authority (Player-One). Creator/Owner with system Admin status.
+9. **Player (Role)**: Active participants (Team or Special Roles).
 
 ### INFRA ENTITIES (Supporting Data)
 1. **Settlement** - Location areas/territories (reference data for Sites)

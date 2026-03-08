@@ -286,21 +286,24 @@ Digital illustration, acrylic & mural painting, graphic design, 3D modelling, ga
 ## 5. THE SYSTEM
 
 ### Game Rules
-- **Two Superior entity classee**: Account, Links
-  - **Account** = Identity & authentication (WHO the user is) - Single source of truth for current user and personal data
-  - **Links** = Connector Entity, that serves as bridge between all other entities workflows.
 - **Seven core entity classes**:  Player, Character, Task, Item, Financial, Sale, Site
-  - **Player** = Game progression (WHAT they've achieved) - Points, level, achievements
-  - **Character** = Business role (HOW they interact) - Roles, jungleCoins, inventory
+- **Two Superior entity classee**: Account, Links
+- **The Triforce Architecture (Account ↔ Player ↔ Character)**:
+  - **Account** (Identity): THE WHO. Real-world identity and authentication. Single source of truth for personal data and security.
+  - **Player** (Progression): THE GROWTH. Real-world progression, XP, points (HP, FP, RP, XP), and achievements.
+  - **Character** (Persona/Role): THE HOW. The identity within the business/game context. Holds roles, Jungle Coins, and interacts with the system.
+- **Roles Philosophy**:
+  - **Founder**: The ultimate authority (Player-One). The original creator and owner. Has system-level "Admin" rights by definition.
+  - **Player**: Active participants in the system. Can be team members or have other special roles.
+  - **Characters/Regular Roles**: Define occupation, skills of 'Personas'. These are real people or ai agents that execute tasks and interact with the business world of the app. Sometimes grating access to some system features or game mechanics or describing them.
+- **V0.1 Reality**: Player One (bootstrap identity) with Account, Player, and Character entities linked.
+- **V0.2 Vision**: Universal system where users can connect their "Personas" to TheGame digital-verse, using in-game currency ad other assets across internal projects of the Founders's Businesses
+  - **Links** = Connector Entity, that serves as bridge between all other entities workflows.
   - **Tasks** = Future missions, recurrent work, strategic planning (things that will happen)
   - **Items** = Physical/digital assets created by Tasks or Records (artworks, prints, stickers, materials, equipment)
   - **FinancialRecords** = Past completed financial actions (company/personal expenses, income, purchases)
   - **Sales** = Transaction records (ferias, consignment sales, direct sales, exchanges)
-  - **Sites** = Locations of different types - physical (real life sites), cloud (digital), system (others) 
-- **The Triforce**: Account + Player + Character permanently linked from system start
-- **Character Roles** = Define what a character can do in the system (FOUNDER, PLAYER, CUSTOMER, DESIGNER, etc.)
-- **V0.1 Reality**: Player One (bootstrap identity) with Account, Player, and Character entities linked
-- **V0.2 Vision**: Multiple users with accounts, players, and characters (one character per person per game)
+  - **Sites** = Locations of different types - physical (real life sites), cloud (digital), system (others)
 - **Every entity gets a globally unique ID** (UUID)
 - **Jungle Coin (J$)** ≡ $10 USD; awarded to characters for logged completions (In-Game Currency, could be a real crypto coin in the future)
 - **Points** = Real progression system for players (HP, FP, RP, XP) - separate from character game mechanics

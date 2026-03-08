@@ -240,7 +240,10 @@ export class AuthService {
       username: user.name,
       email: user.email,
       characterId: characterId,
-      roles: Array.from(new Set([...(character.roles || []), ...(isLegacyAdmin ? [CharacterRole.FOUNDER, CharacterRole.ADMIN] : [])])),
+      roles: Array.from(new Set([
+        ...(character.roles || []),
+        ...(isLegacyAdmin || user.id === 'player-one' || user.id === PLAYER_ONE_ID ? [CharacterRole.FOUNDER, CharacterRole.ADMIN] : [])
+      ])),
       isActive: user.isActive,
     };
 
@@ -265,10 +268,11 @@ export class AuthService {
 
     return {
       // Check if user has specific role
-      hasRole: (role: string) => {
-        // Special case for admin role
-        if (role === 'admin' && userRoles.includes(CharacterRole.ADMIN)) return true;
-        return userRoles.includes(role);
+      hasRole: (role: string | CharacterRole) => {
+        // FOUNDER has ultimate authority and effectively holds all roles
+        if (userRoles.includes(CharacterRole.FOUNDER)) return true;
+
+        return userRoles.includes(role as any);
       },
 
       // Check if user has any of multiple roles
