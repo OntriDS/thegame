@@ -24,33 +24,33 @@ const DEFAULT_ACCOUNT_ONE: Account = {
   id: PLAYER_ONE_ID,
   name: 'Akiles',  // Source of truth for name (user fills this in)
   description: 'Player One Account',
-  
+
   // Identity
   email: '',
   phone: '',
-  
+
   // Authentication (empty - not connected to real login yet)
   passwordHash: '',
   loginAttempts: 0,
-  
+
   // Access Control
   isActive: true,
   isVerified: true,
-  
+
   // Privacy Settings
   privacySettings: {
     showEmail: false,
     showPhone: false,
     showRealName: true
   },
-  
+
   // Relationships - The Triforce Link
   playerId: PLAYER_ONE_ID,
   characterId: PLAYER_ONE_ID,
-  
+
   // Lifecycle
   lastActiveAt: new Date(),
-  
+
   // Timestamps
   createdAt: new Date(),
   updatedAt: new Date(),
@@ -65,40 +65,41 @@ const DEFAULT_PLAYER_ONE: Player = {
   id: PLAYER_ONE_ID,
   name: '',  // Will be synced from Account
   description: 'Player One',
-  
+
   // Account Ambassador - Permanently linked from start
   accountId: PLAYER_ONE_ID,
   // Temporary auth fields (empty - to be filled from Account)
   email: '',
   passwordHash: '',
-  
+
   // Progression
   level: 0,
   totalPoints: { xp: 0, rp: 0, fp: 0, hp: 0 },
   points: { xp: 0, rp: 0, fp: 0, hp: 0 },
   // J$ is stored in FinancialRecord ledger, not on Player entity
-  
+
   // Character management
   characterIds: [PLAYER_ONE_ID],
-  
-  // Achievements
-  achievementsPlayer: [],
-  
+
+  // Badges & Achievements
+  badges: [],
+  achievements: [],
+
   // RPG Stats (V0.2)
   skills: undefined,
   intellectualFunctions: undefined,
   attributes: undefined,
-  
+
   // Metrics
   lastActiveAt: new Date(),
   totalTasksCompleted: 0,
   totalSalesCompleted: 0,
   totalItemsSold: 0,
   metrics: undefined,
-  
+
   // Status
   isActive: true,
-  
+
   // Timestamps
   createdAt: new Date(),
   updatedAt: new Date(),
@@ -113,37 +114,37 @@ const DEFAULT_CHARACTER_ONE: Character = {
   id: PLAYER_ONE_ID,
   name: '',  // Will be synced from Account
   description: 'Player One Character',
-  
+
   // Account Ambassador - Permanently linked from start
   accountId: PLAYER_ONE_ID,
-  
+
   // Roles
   roles: [CharacterRole.FOUNDER, CharacterRole.PLAYER],
-  
+
   // Contact info (empty - user can add from Character Modal)
   contactEmail: undefined,
   contactPhone: undefined,
-  
+
   // Communication
   commColor: undefined,
-  
+
   // Progression
   CP: undefined,
   achievementsCharacter: [],
-  
+
   // Business metrics
   // J$ is stored in FinancialRecord ledger, not on Character entity
   purchasedAmount: 0,
   inventory: [],
-  
+
   // Relationships
   playerId: PLAYER_ONE_ID,
   relationships: undefined,
-  
+
   // Lifecycle
   lastActiveAt: new Date(),
   isActive: true,
-  
+
   // Timestamps
   createdAt: new Date(),
   updatedAt: new Date(),
@@ -178,18 +179,18 @@ export async function ensurePlayerOne(
     console.log('[ensurePlayerOne] 🚩 Force flag received - resetting initialization state');
     playerOneInitialized = false;
   }
-  
+
   // Check if already initialized in this session (but allow re-initialization after reset)
   if (playerOneInitialized && !force) {
     // Double-check if entities actually exist (in case of reset)
     const players = await getPlayers();
     const characters = await getCharacters();
     const accounts = await getAccounts();
-    
+
     const accountExists = accounts.find(a => a.id === PLAYER_ONE_ID);
     const playerExists = players.find(p => p.id === PLAYER_ONE_ID);
     const characterExists = characters.find(c => c.id === PLAYER_ONE_ID);
-    
+
     if (accountExists && playerExists && characterExists) {
       console.log('[ensurePlayerOne] ✅ The Triforce exists and is properly initialized');
       return;
@@ -198,26 +199,26 @@ export async function ensurePlayerOne(
       playerOneInitialized = false; // Allow re-initialization
     }
   }
-  
+
   try {
     const players = await getPlayers();
     const characters = await getCharacters();
-    
+
     // Check if Player and Character exist (Account will be added later)
     const playerExists = players.find(p => p.id === PLAYER_ONE_ID);
     const characterExists = characters.find(c => c.id === PLAYER_ONE_ID);
-    
+
     if (playerExists && characterExists) {
       console.log('[ensurePlayerOne] ✅ Player and Character exist - skipping');
       playerOneInitialized = true;
       return;
     }
-    
+
     console.log('[ensurePlayerOne] 🌱 No Player/Character found - creating defaults');
-    
+
     // Use atomic creation instead of sequential upserts
     await createTriforceAtomic(upsertAccount, upsertPlayer, upsertCharacter);
-    
+
     playerOneInitialized = true;
   } catch (error) {
     console.error('[ensurePlayerOne] ❌ Failed to ensure Player One:', error);
@@ -237,7 +238,7 @@ export async function createTriforceAtomic(
   upsertCharacter: (character: Character, options?: any) => Promise<Character>
 ): Promise<void> {
   console.log('[createTriforceAtomic] 🔺 Creating Triforce atomically (unified ID: creator)...');
-  
+
   try {
     // STEP 1: Create Account entity FIRST (foundation of The Triforce)
     // All three use the same ID 'creator'
@@ -247,12 +248,12 @@ export async function createTriforceAtomic(
       playerId: PLAYER_ONE_ID,
       characterId: PLAYER_ONE_ID
     };
-    const savedAccount = await upsertAccount(completeAccount, { 
+    const savedAccount = await upsertAccount(completeAccount, {
       skipWorkflowEffects: true,
       skipLinkEffects: true // Skip link creation - we'll create links manually in STEP 4
     });
     console.log('[createTriforceAtomic] ✅ Account created (workflows skipped)');
-    
+
     // STEP 2: Create Player entity
     const completePlayer = {
       ...DEFAULT_PLAYER_ONE,
@@ -260,12 +261,12 @@ export async function createTriforceAtomic(
       accountId: PLAYER_ONE_ID,
       characterIds: [PLAYER_ONE_ID]
     };
-    const savedPlayer = await upsertPlayer(completePlayer, { 
+    const savedPlayer = await upsertPlayer(completePlayer, {
       skipWorkflowEffects: true,
       skipLinkEffects: true // Skip link creation - prevents creating PLAYER_CHARACTER before Character exists
     });
     console.log('[createTriforceAtomic] ✅ Player created (workflows skipped)');
-    
+
     // STEP 3: Create Character entity
     const completeCharacter = {
       ...DEFAULT_CHARACTER_ONE,
@@ -273,17 +274,17 @@ export async function createTriforceAtomic(
       accountId: PLAYER_ONE_ID,
       playerId: PLAYER_ONE_ID
     };
-    const savedCharacter = await upsertCharacter(completeCharacter, { 
+    const savedCharacter = await upsertCharacter(completeCharacter, {
       skipWorkflowEffects: true,
       skipLinkEffects: true // Skip link creation - prevents creating CHARACTER_PLAYER
     });
     console.log('[createTriforceAtomic] ✅ Character created (workflows skipped)');
-    
+
     // STEP 4: Create ALL Triforce Links
     const { createLink } = await import('@/links/link-registry');
-    
+
     console.log('[createTriforceAtomic] 🔗 Creating Triforce links...');
-    
+
     // Link: Account → Player (both use 'creator' ID)
     try {
       await createLink({
@@ -297,7 +298,7 @@ export async function createTriforceAtomic(
     } catch (error) {
       console.error('[createTriforceAtomic] ❌ Failed to create ACCOUNT_PLAYER link:', error);
     }
-    
+
     // Link: Account → Character (both use 'creator' ID)
     try {
       await createLink({
@@ -311,7 +312,7 @@ export async function createTriforceAtomic(
     } catch (error) {
       console.error('[createTriforceAtomic] ❌ Failed to create ACCOUNT_CHARACTER link:', error);
     }
-    
+
     // Link: Player → Character (both use 'creator' ID)
     try {
       await createLink({
@@ -325,7 +326,7 @@ export async function createTriforceAtomic(
     } catch (error) {
       console.error('[createTriforceAtomic] ❌ Failed to create PLAYER_CHARACTER link:', error);
     }
-    
+
     // STEP 5: Log all three entities
     const { appendEntityLog } = await import('@/workflows/entities-logging');
 
@@ -372,17 +373,17 @@ export async function createTriforceAtomic(
       }
     );
     console.log('[createTriforceAtomic] ✅ Character logged to character log');
-    
+
     console.log('[createTriforceAtomic] 📝 All logs created');
-    
+
     // STEP 6: Mark effects as complete (prevent duplicate processing)
     const { markEffect } = await import('@/data-store/effects-registry');
     await markEffect(`account:${PLAYER_ONE_ID}:created`);
     await markEffect(`player:${PLAYER_ONE_ID}:created`);
     await markEffect(`character:${PLAYER_ONE_ID}:created`);
-    
+
     console.log('[createTriforceAtomic] 🔺 The Triforce created! Account ↔ Player ↔ Character');
-    
+
   } catch (error) {
     console.error('[createTriforceAtomic] ❌ Failed to create Triforce atomically:', error);
     throw error; // Improved error handling - throw instead of console.error

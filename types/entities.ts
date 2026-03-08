@@ -691,6 +691,23 @@ export interface Relationship {
   notes?: string;                // additional context
 }
 
+/** Player Badge - Role-based recognition */
+export interface PlayerBadge {
+  id: string;
+  name: string;
+  description?: string;
+  requiredRoles: CharacterRole[];  // Roles the Character must have to earn this badge
+  createdAt: Date;
+}
+
+/** Player Achievement - User-defined milestones */
+export interface PlayerAchievement {
+  id: string;
+  name: string;
+  description?: string;
+  createdAt: Date;
+}
+
 /**
  * PLAYER ENTITY - The Boss (YOU - Single Player Mode V0.1)
  * 
@@ -747,8 +764,9 @@ export interface Player extends BaseEntity {
   // 4. CHARACTER MANAGEMENT - One-to-many relationship (Ambassador Fields)
   characterIds: string[];        // 🏛️ Characters linked to this player
 
-  // 5. ACHIEVEMENTS - Player-specific accomplishments (real-life milestones)
-  achievementsPlayer: string[];   // Player progression badges and rewards/achievements tree
+  // 5. BADGES & ACHIEVEMENTS - Player-specific accomplishments
+  badges: PlayerBadge[];           // Role-based recognition badges (user-created)
+  achievements: PlayerAchievement[]; // User-defined milestones and goals
 
   // 6. LIFECYCLE & METRICS
   lastActiveAt: Date;

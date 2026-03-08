@@ -80,11 +80,11 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
             const players = await ClientAPI.getPlayers();
             playerToLoad = players.find(p => p.name === 'Player One') || players[0];
           }
-          
+
           if (playerToLoad) {
             // Parallel data fetching for better performance
             const [playerCharacters, assets, j$Balance, ratesData] = await Promise.all([
-              ClientAPI.getCharacters().then(chars => 
+              ClientAPI.getCharacters().then(chars =>
                 chars.filter(c => c.playerId === playerToLoad!.id)
               ).catch(error => {
                 console.error('Failed to load characters:', error);
@@ -94,7 +94,7 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
                 console.error('Failed to load personal assets:', error);
                 return null;
               }),
-              ClientAPI.getPlayerJungleCoinsBalance(playerToLoad.id).then(result => 
+              ClientAPI.getPlayerJungleCoinsBalance(playerToLoad.id).then(result =>
                 result.totalJ$ || 0
               ).catch(error => {
                 console.error('Failed to load Jungle Coins balance:', error);
@@ -102,16 +102,16 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
               }),
               ClientAPI.getPlayerConversionRates().catch(error => {
                 console.error('Failed to load conversion rates:', error);
-                return { 
+                return {
                   xpToJ$: 1,
                   rpToJ$: 1,
                   fpToJ$: 1,
                   hpToJ$: 1,
-                  j$ToUSD: 10 
+                  j$ToUSD: 10
                 };
               })
             ]);
-            
+
             setPlayerData(playerToLoad);
             setCharacters(playerCharacters);
             setPersonalAssets(assets);
@@ -130,7 +130,7 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
           setIsLoading(false);
         }
       };
-      
+
       loadData();
     }
   }, [open, player]);
@@ -196,16 +196,16 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
             {/* Tab Content */}
             <div className="mt-4 overflow-y-auto max-h-[calc(90vh-12rem)] pr-2">
               <TabsContent value="state" className="mt-0">
-                <PlayerStateContent 
+                <PlayerStateContent
                   playerData={playerData}
                   currentMonthMetrics={currentMonthMetrics}
                   personalAssets={personalAssets}
                   conversionRates={conversionRates}
                 />
               </TabsContent>
-              
+
               <TabsContent value="stats" className="mt-0">
-                <PlayerStatsContent 
+                <PlayerStatsContent
                   playerData={playerData}
                   personalAssets={personalAssets}
                   jungleCoinsBalance={jungleCoinsBalance}
@@ -213,10 +213,14 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
                   onViewTransactions={() => setShowTransactionHistory(true)}
                 />
               </TabsContent>
-              
+
               <TabsContent value="progression" className="mt-0">
-                <PlayerProgressionContent 
+                <PlayerProgressionContent
                   playerData={playerData}
+                  onSave={async (updatedPlayer) => {
+                    setPlayerData(updatedPlayer);
+                    await onSave(updatedPlayer);
+                  }}
                 />
               </TabsContent>
             </div>
@@ -299,7 +303,7 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
             setPlayerData(updatedPlayer);
             await onSave(updatedPlayer);
             setShowPersonalData(false);
-            
+
             // Dispatch events AFTER successful save
             dispatchEntityUpdated(entityTypeToKind(EntityType.PLAYER));
           } catch (error) {
@@ -349,10 +353,10 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
               hp: (playerData.points?.hp || 0) - pointsToExchange.hp,
             }
           };
-          
+
           // Get player's character ID (use first character if available)
           const playerCharacterId = characters.length > 0 ? characters[0].id : null;
-          
+
           try {
             // Create FinancialRecord for the exchange (moves J$ to financial system)
             await ClientAPI.exchangePointsForJungleCoins(
@@ -361,10 +365,10 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
               pointsToExchange,
               j$Received
             );
-            
+
             // Save player (points deducted)
             await ClientAPI.upsertPlayer(updatedPlayer);
-            
+
             // Reload J$ balance from FinancialRecord entries
             try {
               const j$BalanceResult = await ClientAPI.getPlayerJungleCoinsBalance(playerData.id);
@@ -372,11 +376,11 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
             } catch (error) {
               console.error('Failed to reload J$ balance:', error);
             }
-            
+
             // Update local state
             setPlayerData(updatedPlayer);
             setShowExchangeModal(false);
-            
+
             // Trigger financials update event AFTER successful save
             dispatchEntityUpdated(entityTypeToKind(EntityType.PLAYER));
             dispatchEntityUpdated(entityTypeToKind(EntityType.FINANCIAL));
