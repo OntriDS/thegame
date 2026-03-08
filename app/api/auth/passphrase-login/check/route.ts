@@ -6,7 +6,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyJwt } from '@/lib/auth';
 import { CharacterRole } from '@/types/enums';
 
-export const runtime = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {

@@ -5,7 +5,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authService } from '@/lib/auth-service';
 
-export const runtime = 'nodejs';
 
 export async function POST(req: NextRequest) {
   try {

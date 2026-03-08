@@ -6,7 +6,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { authService } from '@/lib/auth-service';
 import { PermissionsResponse } from '@/types/auth-types';
 
-export const runtime = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
