@@ -289,6 +289,9 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate }: TaskD
                 } else if (task.id === 'system-automation-inventory-collection') {
                   result = await ClientAPI.collectInventory(targetMonth, targetYear);
                   entityName = "Inventory Items";
+                } else if (task.id === 'system-automation-all-collection') {
+                  result = await ClientAPI.collectAllEntities(targetMonth, targetYear);
+                  entityName = "All Rewards";
                 } else {
                   throw new Error("Unknown automation task ID");
                 }
@@ -296,9 +299,13 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate }: TaskD
                 // Standardize count extraction
                 const count = (result as any).collectedCount !== undefined
                   ? (result as any).collectedCount
-                  : (result as any).collected;
+                  : (result as any).collected || 0;
 
-                alert(`${entityName} Collection Complete! Successfully processed ${count} records for ${now.toLocaleString('default', { month: 'long' })} ${targetYear}.`);
+                if (task.id === 'system-automation-all-collection') {
+                  alert(`Mega-Collection Complete! Successfully processed all entities for ${now.toLocaleString('default', { month: 'long' })} ${targetYear}.`);
+                } else {
+                  alert(`${entityName} Collection Complete! Successfully processed ${count} records for ${now.toLocaleString('default', { month: 'long' })} ${targetYear}.`);
+                }
               } catch (error: any) {
                 alert(`Collection Failed: ${error.message || "There was a problem executing the automation."}`);
               }

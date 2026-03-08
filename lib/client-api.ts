@@ -1167,6 +1167,25 @@ export const ClientAPI = {
     if (!res.ok) throw new Error('Failed to collect inventory');
     return await res.json();
   },
+
+  collectAllEntities: async (month: number, year: number): Promise<{ success: boolean; results: any }> => {
+    const res = await fetch('/api/tasks/collect-all-orchestrated', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ month, year })
+    });
+    if (!res.ok) throw new Error('Failed to collect all entities');
+    return await res.json();
+  },
+
+  repairAutomations: async (): Promise<{ success: boolean; message: string; stats: any }> => {
+    const res = await fetch('/api/admin/repair-automations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    if (!res.ok) throw new Error('Failed to repair automations');
+    return await res.json();
+  },
 };
 
 // Historical placement: keep alias methods at the end to avoid duplicate keys

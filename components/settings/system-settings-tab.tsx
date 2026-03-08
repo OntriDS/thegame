@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import { Palette, Bell, User, FileText, AlertTriangle } from 'lucide-react';
 import { ThemeSelector } from '@/components/theme/theme-selector';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
@@ -44,12 +45,12 @@ export function SystemSettingsTab() {
                 Allow modification of log entries in Data Center
               </p>
             </div>
-            <Switch 
+            <Switch
               checked={logManagementEnabled}
               onCheckedChange={handleToggleLogManagement}
             />
           </div>
-          
+
           {logManagementEnabled && (
             <Alert>
               <AlertTriangle className="h-4 w-4" />
@@ -59,6 +60,46 @@ export function SystemSettingsTab() {
               </AlertDescription>
             </Alert>
           )}
+        </CardContent>
+      </Card>
+
+      {/* System Maintenance Card */}
+      <Card className="border-red-200 dark:border-red-900/30">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-red-600 dark:text-red-400">
+            <AlertTriangle className="h-5 w-5" />
+            System Maintenance
+          </CardTitle>
+          <CardDescription>
+            Tools to repair and synchronize system-critical data
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between p-4 bg-red-50/50 dark:bg-red-950/20 rounded-lg border border-red-100 dark:border-red-900/40">
+            <div className="space-y-1">
+              <p className="text-sm font-medium">Repair System Automations</p>
+              <p className="text-xs text-muted-foreground">
+                Synchronize and recreate the 5 system automation tasks in the Control Room.
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-red-600 text-red-600 hover:bg-red-600 hover:text-white"
+              onClick={async () => {
+                if (confirm("Are you sure you want to sync system automations? This will recreate or rename the legacy automation tasks.")) {
+                  try {
+                    const res = await import('@/lib/client-api').then(m => m.ClientAPI.repairAutomations());
+                    alert(res.message);
+                  } catch (e: any) {
+                    alert("Repair failed: " + e.message);
+                  }
+                }
+              }}
+            >
+              Sync Now
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
