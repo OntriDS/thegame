@@ -37,10 +37,11 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
   const [items, setItems] = useState<Item[]>([]);
   const { getPreference, setPreference } = useUserPreferences();
 
-  // Month selector state for Sold Items tab
-  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
-  const [currentMonth, setCurrentMonth] = useState(new Date().getMonth() + 1);
+  // Month selector state for Sold Items tab - Initialize with fixed defaults to avoid hydration mismatch
+  const [currentYear, setCurrentYear] = useState<number>(2026);
+  const [currentMonth, setCurrentMonth] = useState<number>(3);
   const [filterSoldByMonth, setFilterSoldByMonth] = useState(false);
+  const [isHydrated, setIsHydrated] = useState(false);
 
   const [activeTab, setActiveTab] = useState<InventoryTab>(InventoryTab.DIGITAL);
   const [showItemModal, setShowItemModal] = useState(false);
@@ -149,8 +150,18 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
     }
   }, [activeTab, currentYear, currentMonth, filterSoldByMonth]);
 
+  // Hydration sync - runs only once on mount
   useEffect(() => {
-    // Load items when component mounts
+    setIsHydrated(true);
+    const now = new Date();
+    setCurrentYear(now.getFullYear());
+    setCurrentMonth(now.getMonth() + 1);
+  }, []);
+
+  useEffect(() => {
+    // Only fetch when hydrated or if preferences already changed state
+    if (!isHydrated) return;
+
     loadItems();
     const handleItemsUpdated = () => loadItems();
     const handleImportStarted = () => setIsImporting(true);
@@ -163,7 +174,7 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
       window.removeEventListener('importStarted', handleImportStarted);
       window.removeEventListener('importComplete', handleImportComplete);
     };
-  }, [loadItems]);
+  }, [loadItems, isHydrated]);
 
   // Save thresholds to preferences when they change (but not during initial load)
   useEffect(() => {
@@ -260,41 +271,7 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
   // Listen for item updates to refresh the list
   useEntityUpdates('item', loadItems);
 
-  // Progressive loading: reload items when tab changes
-  useEffect(() => {
-    const reloadItems = async () => {
-      try {
-        // First, load items for the active tab (fast, prioritized)
-        const activeTabItemType = getItemTypeForTab(activeTab);
-
-        let items: Item[];
-
-        if (activeTab === InventoryTab.SOLD_ITEMS) {
-          // Use status filter for sold items; when month filter is off, fetch across all months
-          const month = filterSoldByMonth ? currentMonth : undefined;
-          const year = filterSoldByMonth ? currentYear : undefined;
-          items = await ClientAPI.getItems('all', month, year, 'Sold');
-        } else if (activeTabItemType === 'all') {
-          // Load all items
-          items = await ClientAPI.getItems();
-        } else {
-          // Load specific item type
-          items = await ClientAPI.getItems(activeTabItemType);
-        }
-
-        setItems(items); // Show items immediately
-
-        // Then load additional items in the background (for instant tab switching)
-        if (activeTab !== InventoryTab.SOLD_ITEMS) {
-          const allItems = await ClientAPI.getItems();
-          setItems(allItems);
-        }
-      } catch (error) {
-        console.error('Failed to load items:', error);
-      }
-    };
-    reloadItems();
-  }, [activeTab, currentYear, currentMonth, filterSoldByMonth]);
+  // Removed duplicate re-fetching block that was causing race conditions and overwriting specifically filtered items.
 
   // Helper function for consistent item sorting
   const sortItems = (items: Item[]): Item[] => {
@@ -1406,11 +1383,15 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
 
         <div className="text-sm text-muted-foreground mb-4">
           Items that have been sold and are ready for archive. These are filtered out of active inventory.
-          Showing items from {currentMonth}/{currentYear} {filterSoldByMonth ? '(custom selection)' : '(current month)'}.
+          {isHydrated ? (
+            <>Showing items from {currentMonth}/{currentYear} {filterSoldByMonth ? '(custom selection)' : '(current month)'}.</>
+          ) : (
+            <>Loading calendar data...</>
+          )}
         </div>
 
         <div className="grid gap-3 md:grid-cols-4 lg:grid-cols-6">
-          {soldItems.map(item => (
+          {isHydrated && soldItems.map(item => (
             <div key={item.id} className="bg-card border rounded p-3 hover:bg-accent/50 cursor-pointer transition-colors" onClick={() => handleEditItem(item)}>
               <div className="text-center space-y-2">
                 {/* Item Image */}
