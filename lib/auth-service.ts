@@ -163,11 +163,11 @@ export class AuthService {
       return null;
     }
 
-    // Support both multi-user payload (userId) and legacy passphrase payload (sub)
+    // 1. Extract identity (multi-user userId or legacy sub)
     let userId = (verified.payload as any).userId || (verified.payload as any).sub;
     const isLegacyAdmin = (verified.payload as any).sub === 'admin';
 
-    // Map legacy 'admin' subject to PLAYER_ONE_ID
+    // Map legacy 'admin' to PLAYER_ONE_ID for consistent internal handling
     if (userId === 'admin') {
       userId = PLAYER_ONE_ID;
     }
@@ -177,22 +177,52 @@ export class AuthService {
       return null;
     }
 
+    // 2. Load account with FAIL-SAFE FALLBACK
     const user = await kvGet<Account>(buildAccountKey(userId));
     if (!user) {
-      console.log('[AuthService] User not found');
+      console.log('[AuthService] User not found during verify:', userId);
+      // ✅ FALL-SAFE: If it's the legacy admin or the primary creator, don't lock them out!
+      if (isLegacyAdmin || userId === 'player-one' || userId === 'admin') {
+        console.log('[AuthService] 🛡️ Using synthetic fallback for admin/founder access');
+        return {
+          userId: PLAYER_ONE_ID,
+          username: 'Akiles',
+          characterId: PLAYER_ONE_ID,
+          roles: [CharacterRole.FOUNDER, CharacterRole.ADMIN, CharacterRole.PLAYER],
+          isActive: true,
+        } as AuthUser;
+      }
       return null;
     }
 
     // 3. Get user's character (for roles)
     const characterId = user.characterId;
     if (!characterId) {
-      console.log('[AuthService] No character linked to account');
+      console.log('[AuthService] No character linked to account during verify');
+      if (isLegacyAdmin || userId === PLAYER_ONE_ID) {
+        return {
+          userId: user.id,
+          username: user.name,
+          characterId: PLAYER_ONE_ID,
+          roles: [CharacterRole.FOUNDER, CharacterRole.ADMIN],
+          isActive: true,
+        } as AuthUser;
+      }
       return null;
     }
 
     const character = await kvGet<Character>(buildDataKey('character', characterId));
     if (!character) {
-      console.log('[AuthService] Character not found');
+      console.log('[AuthService] Character not found during verify:', characterId);
+      if (isLegacyAdmin || userId === PLAYER_ONE_ID) {
+        return {
+          userId: user.id,
+          username: user.name,
+          characterId: characterId,
+          roles: [CharacterRole.FOUNDER, CharacterRole.ADMIN],
+          isActive: true,
+        } as AuthUser;
+      }
       return null;
     }
 

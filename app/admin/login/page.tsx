@@ -7,8 +7,10 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/lib/hooks/use-auth';
+import { useRouter } from 'next/navigation';
 
 export default function AdminLoginPage() {
+  const router = useRouter();
   const { user, isLoading, login } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -16,17 +18,21 @@ export default function AdminLoginPage() {
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
 
+  const [showTeamLogin, setShowTeamLogin] = useState(false);
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     setError(params.get('error'));
-  }, []);
+
+    // Auto-redirect if already logged in
+    if (user && !isLoading) {
+      router.push('/admin');
+    }
+  }, [user, isLoading, router]);
 
   const handlePassphraseLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const formData = new FormData();
-    formData.append('passphrase', (e.target as any).passphrase?.value || '');
-    formData.append('remember', (e.target as any).remember?.value || 'off');
-    formData.append('next', window.location.pathname);
+    const formData = new FormData(e.target as HTMLFormElement);
 
     try {
       const response = await fetch('/api/auth/passphrase-login', {
@@ -35,11 +41,12 @@ export default function AdminLoginPage() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        setError(errorData.error || 'Login failed');
+        const errorData = await response.json().catch(() => ({}));
+        setError(errorData.error || 'Invalid passphrase');
         return;
       }
 
+      // Success! Refresh auth state and redirect
       await login(null, null, false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
@@ -48,24 +55,7 @@ export default function AdminLoginPage() {
 
   const handleUsernameLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const formData = new FormData();
-    formData.append('username', username);
-    formData.append('password', password);
-    formData.append('rememberMe', rememberMe ? 'on' : 'off');
-
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password, rememberMe })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        setError(errorData.error || 'Login failed');
-        return;
-      }
-
       await login(username, password, rememberMe);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
@@ -73,126 +63,157 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Loader2 className="h-5 w-5" />
-            TheGame Admin Login
+    <div className="min-h-screen flex items-center justify-center p-6 bg-background">
+      <Card className="w-full max-w-md border-primary/20 shadow-xl overflow-hidden">
+        <div className="h-1 bg-primary w-full" />
+        <CardHeader className="text-center pb-2">
+          <CardTitle className="text-2xl font-bold flex items-center justify-center gap-2">
+            <Loader2 className={`h-6 w-6 ${isLoading ? 'animate-spin text-primary' : 'text-primary/40'}`} />
+            TheGame Admin
           </CardTitle>
           <CardDescription>
-            Secure access to your admin panel
+            Master Control Interface
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
+
+        <CardContent className="space-y-6 pt-4">
           {error && (
-            <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md">
+            <div className="p-3 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md animate-in fade-in slide-in-from-top-1">
               {error === 'invalid' ? 'Invalid passphrase or credentials' : error}
             </div>
           )}
 
-          {/* ✅ PASSPHRASE LOGIN (For You, Creator) */}
-          <div className="border-t pt-4">
-            <h3 className="text-lg font-semibold mb-4">Quick Login (Passphrase)</h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              Enter your admin passphrase for quick access
-            </p>
-            <form onSubmit={handlePassphraseLogin} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="passphrase">Passphrase</Label>
-                <Input
-                  id="passphrase"
-                  name="passphrase"
-                  type="password"
-                  placeholder="Enter your passphrase"
-                  required
-                  autoFocus
-                  disabled={isLoading}
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="remember"
-                    name="remember"
-                    defaultChecked={false}
-                    className="h-4 w-4 rounded border-gray-300"
-                  />
-                  <Label htmlFor="remember" className="text-sm cursor-pointer">
-                    Remember me
-                  </Label>
-                </div>
-                <Button type="submit" disabled={isLoading} className="w-24 bg-primary text-primary-foreground hover:bg-primary/90">
-                  {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Login'}
-                </Button>
-              </div>
-            </form>
-          </div>
-
-          {/* ✅ USERNAME LOGIN (For Regular Users) */}
-          <div className="border-t pt-4">
-            <h3 className="text-lg font-semibold mb-4">Email/Username Login</h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              For team members, customers, and multi-user access
-            </p>
-            <form onSubmit={handleUsernameLogin} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="username">Username or Email</Label>
-                <Input
-                  id="username"
-                  name="username"
-                  type="text"
-                  placeholder="Enter your username or email"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  required
-                  disabled={isLoading}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <div className="relative">
+          {!showTeamLogin ? (
+            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <form onSubmit={handlePassphraseLogin} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="passphrase">Admin Passphrase</Label>
                   <Input
-                    id="password"
-                    name="password"
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder="Enter your password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    id="passphrase"
+                    name="passphrase"
+                    type="password"
+                    placeholder="••••••••••••••••"
+                    required
+                    autoFocus
+                    disabled={isLoading}
+                    className="h-12 text-lg text-center tracking-widest bg-accent/50 border-primary/20 focus:border-primary"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="remember"
+                      name="remember"
+                      defaultChecked={true}
+                      className="h-4 w-4 rounded border-primary/30 text-primary focus:ring-primary"
+                    />
+                    <Label htmlFor="remember" className="text-sm cursor-pointer opacity-70">
+                      Stay logged in
+                    </Label>
+                  </div>
+                  <Button
+                    type="submit"
+                    disabled={isLoading}
+                    className="w-32 h-11 bg-primary text-primary-foreground font-semibold hover:shadow-lg transition-all"
+                  >
+                    {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Enter System'}
+                  </Button>
+                </div>
+              </form>
+
+              <div className="pt-4 text-center">
+                <button
+                  type="button"
+                  onClick={() => setShowTeamLogin(true)}
+                  className="text-xs text-muted-foreground hover:text-primary transition-colors underline-offset-4 hover:underline"
+                >
+                  Need team or multi-user access?
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <div className="flex items-center gap-2 mb-2">
+                <button
+                  onClick={() => setShowTeamLogin(false)}
+                  className="text-xs p-1 hover:bg-accent rounded"
+                >
+                  ← Back
+                </button>
+                <h3 className="text-sm font-semibold text-muted-foreground">Team Member Login</h3>
+              </div>
+
+              <form onSubmit={handleUsernameLogin} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="username">Username or Email</Label>
+                  <Input
+                    id="username"
+                    name="username"
+                    type="text"
+                    placeholder="Enter your username"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
                     required
                     disabled={isLoading}
-                    className="pr-16"
+                    className="bg-accent/30"
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-0 top-0 h-full px-3 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      name="password"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      disabled={isLoading}
+                      className="bg-accent/30 pr-12"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-0 top-0 h-full px-3 flex items-center justify-center text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {showPassword ? 'Hide' : 'Show'}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-2">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="rememberMe"
+                      checked={rememberMe}
+                      onChange={(e) => setRememberMe(e.target.checked)}
+                      className="h-4 w-4 rounded border-primary/30 text-primary focus:ring-primary"
+                    />
+                    <Label htmlFor="rememberMe" className="text-sm cursor-pointer opacity-70">
+                      Remember me
+                    </Label>
+                  </div>
+                  <Button
+                    type="submit"
+                    variant="outline"
+                    disabled={isLoading}
+                    className="w-32 border-primary/50 text-foreground hover:bg-primary/5"
                   >
-                    {showPassword ? 'Hide' : 'Show'}
-                  </button>
+                    {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Sign In'}
+                  </Button>
                 </div>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="rememberMe"
-                    checked={rememberMe}
-                    onChange={(e) => setRememberMe(e.target.checked)}
-                    className="h-4 w-4 rounded border-gray-300"
-                  />
-                  <Label htmlFor="rememberMe" className="text-sm cursor-pointer">
-                    Remember me
-                  </Label>
-                </div>
-                <Button type="submit" variant="outline" disabled={isLoading} className="w-24 border-primary text-primary hover:bg-primary/10">
-                  {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Sign In'}
-                </Button>
-              </div>
-            </form>
-          </div>
+              </form>
+            </div>
+          )}
         </CardContent>
+
+        <div className="p-4 bg-accent/5 text-[10px] text-center text-muted-foreground border-t border-accent">
+          v2.1 Hybrid Authentication System Engine
+        </div>
       </Card>
     </div>
   );
