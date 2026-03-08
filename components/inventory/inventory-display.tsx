@@ -40,7 +40,7 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
   // Month selector state for Sold Items tab - Initialize with fixed defaults to avoid hydration mismatch
   const [currentYear, setCurrentYear] = useState<number>(2026);
   const [currentMonth, setCurrentMonth] = useState<number>(3);
-  const [filterSoldByMonth, setFilterSoldByMonth] = useState(false);
+  const [filterSoldByMonth, setFilterSoldByMonth] = useState(true);
   const [isHydrated, setIsHydrated] = useState(false);
 
   const [activeTab, setActiveTab] = useState<InventoryTab>(InventoryTab.DIGITAL);
