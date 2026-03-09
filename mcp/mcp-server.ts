@@ -1,23 +1,118 @@
 // lib/mcp/mcp-server.ts
 // MCP Server for AI model integration with existing DataStore
+// Enhanced for pixelbrain integration with tool metadata and capabilities
 
 import * as DataStore from '@/data-store/datastore';
 import { appendEntityLog, updateEntityLogField } from '@/workflows/entities-logging';
 import { Task, Item, Character, Player, Site, Sale } from '@/types/entities';
 import { ItemStatus, TaskType, TaskStatus, TaskPriority, ItemType, ItemCategory } from '@/types/enums';
+import { logger } from '@/lib/utils/logger';
 
+// ============================================================================
+// TYPE DEFINITIONS
+// ============================================================================
+
+/**
+ * Tool capability for pixelbrain discovery
+ */
+export interface ToolCapability {
+  name: string;
+  description: string;
+  parameters: string[];
+  returns: string[];
+  requiresAuth: boolean;
+  rateLimit?: number;
+  caching?: boolean;
+  cacheTTL?: number;
+}
+
+/**
+ * Tool metadata for discovery and documentation
+ */
+export interface ToolMetadata {
+  version: string;
+  category: string;
+  capabilities: ToolCapability[];
+  deprecated: boolean;
+  deprecationDate?: Date;
+  replacementTool?: string;
+  examples: ToolExample[];
+  tags: string[];
+}
+
+/**
+ * Tool usage statistics
+ */
+export interface ToolUsageStats {
+  toolName: string;
+  totalCalls: number;
+  successfulCalls: number;
+  failedCalls: number;
+  averageLatency: number;
+  lastCalled: Date;
+  lastError?: string;
+}
+
+/**
+ * Tool example for documentation
+ */
+export interface ToolExample {
+  name: string;
+  description: string;
+  input: Record<string, any>;
+  output: any;
+}
+
+/**
+ * Enhanced MCP Tool interface with metadata
+ */
 export interface MCPTool {
   name: string;
   description: string;
   inputSchema: any;
   handler: (args: any) => Promise<any>;
+  metadata?: ToolMetadata;
 }
 
 export class MCPServer {
   private tools: Map<string, MCPTool> = new Map();
+  private usageStats: Map<string, ToolUsageStats> = new Map();
+  private serverVersion: string = '1.2.0';
+  private serverCapabilities: string[] = [
+    'tasks',
+    'items',
+    'characters',
+    'players',
+    'sites',
+    'sales',
+    'logs',
+    'system',
+    'archive',
+    'analytics',
+  ];
 
   constructor() {
     this.registerTools();
+    this.initializeUsageTracking();
+  }
+
+  /**
+   * Initialize usage tracking for all tools
+   * @private
+   */
+  private initializeUsageTracking(): void {
+    this.tools.forEach((tool, toolName) => {
+      this.usageStats.set(toolName, {
+        toolName,
+        totalCalls: 0,
+        successfulCalls: 0,
+        failedCalls: 0,
+        averageLatency: 0,
+        lastCalled: new Date(),
+      });
+    });
+
+    logger.info('Usage tracking initialized', { toolCount: this.tools.size });
   }
 
   private registerTools() {
