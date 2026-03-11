@@ -47,25 +47,27 @@
         "Ensure proper data isolation between current and historical views",
         "Create Basic Dashboard Section and prepare to visualize data across all sections",
         "Connect Dashboards to Archive System and the Month Selectors",
-        "Create connectivity with all other sections."
+        "Create connectivity with all other sections.",
+        "Refactor to Stateless Edge Auth and Rate Limit for Bandwidth Protection"
       ]
     },
     "phase13.4": {
       "phaseName": "Monthly close workflow and many bug fixing all around",
       "status": "In Progress",
-      "description": "Monthly Close Wrokkflow, Automation Tasks, Multiple Bug Fixing",
+      "description": "Monthly Close Wrokkflow, Automation Tasks, Multiple Bug Fixing, thegame DB namespace",
       "deliverables": [
         "Montly Close Automation Task, Automation Tree",
         "Booth Sales Multiple Bugs and Refactors",
         "Done Tasks Workflow Refactor, Collected Tasks Workflow Refactor, Items Sold, Auth Hybrid Login",
-        "Basic Badges and Achievements Creation in Player Progression"
+        "Basic Badges and Achievements Creation in Player Progression",
+        "Implement Strict Key Namespacing and DB thegame namespaceMigration Script"
       ]
     }
   },
   "nextSprintPlan": {
     "phaseX.1": {
       "phaseName": "",
-      "status": "Implement automation tasks, AI agents and MCP",
+      "status": "Implement automation tasks, Connect to 'Pixelbrain' AI agents and MCP",
       "description": "",
       "deliverables": [
         "Define and Develop 'Pixel Brain', a 'Manager Agent' to Manage a Set of 'AI Agents'",
