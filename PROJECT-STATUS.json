@@ -47,8 +47,7 @@
         "Ensure proper data isolation between current and historical views",
         "Create Basic Dashboard Section and prepare to visualize data across all sections",
         "Connect Dashboards to Archive System and the Month Selectors",
-        "Create connectivity with all other sections.",
-        "Refactor to Stateless Edge Auth and Rate Limit for Bandwidth Protection"
+        "Dashboard connectivity with all other sections"
       ]
     },
     "phase13.4": {
@@ -60,7 +59,8 @@
         "Booth Sales Multiple Bugs and Refactors",
         "Done Tasks Workflow Refactor, Collected Tasks Workflow Refactor, Items Sold, Auth Hybrid Login",
         "Basic Badges and Achievements Creation in Player Progression",
-        "Implement Strict Key Namespacing and DB thegame namespaceMigration Script"
+        "Implement Strict Key Namespacing and DB thegame namespace Migration",
+        "Refactor to Stateless Edge Auth and Rate Limit for Bandwidth Protection"
       ]
     }
   },
