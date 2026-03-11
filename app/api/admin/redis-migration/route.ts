@@ -66,16 +66,41 @@ export async function POST(request: NextRequest) {
           summary.migrated++;
         } else {
           try {
-            const value = await kv.get(key);
-            if (value === null || value === undefined) {
-              logs.push(`[Skip] Key "${key}" vanished during scan`);
+            // 1. Detect Type
+            // @ts-ignore - kv is Upstash Redis client
+            const type = await kv.type(key);
+            
+            if (type === 'string') {
+              const value = await kv.get(key);
+              await kv.set(newKey, value);
+            } else if (type === 'set') {
+              // @ts-ignore
+              const members = await kv.smembers(key);
+              if (members && members.length > 0) {
+                // @ts-ignore
+                await kv.sadd(newKey, ...members);
+              }
+            } else if (type === 'list') {
+              // @ts-ignore
+              const elements = await kv.lrange(key, 0, -1);
+              if (elements && elements.length > 0) {
+                // @ts-ignore
+                await kv.rpush(newKey, ...elements);
+              }
+            } else if (type === 'hash') {
+              // @ts-ignore
+              const hash = await kv.hgetall(key);
+              if (hash && Object.keys(hash).length > 0) {
+                // @ts-ignore
+                await kv.hset(newKey, hash);
+              }
+            } else {
+              logs.push(`[Skip] Key "${key}" has unhandled type: ${type}`);
               continue;
             }
             
-            await kv.set(newKey, value);
             await kv.del(key);
-            
-            logs.push(`[Live] SUCCESS: "${key}" -> "${newKey}"`);
+            logs.push(`[Live] SUCCESS [${type}]: "${key}" -> "${newKey}"`);
             summary.migrated++;
           } catch (err: any) {
             summary.failed++;
