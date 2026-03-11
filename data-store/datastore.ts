@@ -85,7 +85,7 @@ import {
 } from '@/workflows/entities-logging';
 import { getCurrentMonthKey, formatMonthKey, reviveDates } from '@/lib/utils/date-utils';
 import { kvMGet, kvSMembers, kvSRem } from './kv';
-import { buildDataKey, buildMonthIndexKey } from './keys';
+import { buildDataKey, buildMonthIndexKey, buildArchiveCollectionIndexKey } from './keys';
 import type { PlayerArchiveRow } from '@/types/archive';
 
 // TASKS
@@ -723,15 +723,15 @@ export async function removeLogEntriesAcrossMonths(
 
 
 export async function deleteArchivedItem(id: string, mmyy: string): Promise<void> {
-  await kvSRem(`index:items:collected:${mmyy}`, id);
+  await kvSRem(buildArchiveCollectionIndexKey('items', mmyy), id);
 }
 
 export async function deleteArchivedTask(id: string, mmyy: string): Promise<void> {
-  await kvSRem(`index:tasks:collected:${mmyy}`, id);
+  await kvSRem(buildArchiveCollectionIndexKey('tasks', mmyy), id);
 }
 
 export async function getArchivedTasksByMonth(mmyy: string): Promise<Task[]> {
-  const ids = await kvSMembers(`index:tasks:collected:${mmyy}`);
+  const ids = await kvSMembers(buildArchiveCollectionIndexKey('tasks', mmyy));
   if (!ids.length) return [];
   const keys = ids.map(id => buildDataKey(EntityType.TASK, id));
   const tasks = await kvMGet<Task>(keys);
@@ -739,7 +739,7 @@ export async function getArchivedTasksByMonth(mmyy: string): Promise<Task[]> {
 }
 
 export async function getArchivedItemsByMonth(mmyy: string): Promise<Item[]> {
-  const ids = await kvSMembers(`index:items:collected:${mmyy}`);
+  const ids = await kvSMembers(buildArchiveCollectionIndexKey('items', mmyy));
   if (!ids.length) return [];
   const keys = ids.map(id => buildDataKey(EntityType.ITEM, id));
   const items = await kvMGet<Item>(keys);
@@ -758,7 +758,7 @@ export async function getArchivedSalesByMonth(mmyy: string): Promise<Sale[]> {
 }
 
 export async function getArchivedFinancialRecordsByMonth(mmyy: string): Promise<FinancialRecord[]> {
-  const ids = await kvSMembers(`index:financials:collected:${mmyy}`);
+  const ids = await kvSMembers(buildArchiveCollectionIndexKey('financials', mmyy));
   if (!ids.length) return [];
   const keys = ids.map(id => buildDataKey(EntityType.FINANCIAL, id));
   const financials = await kvMGet<FinancialRecord>(keys);

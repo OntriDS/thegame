@@ -25,7 +25,9 @@ export async function POST(request: NextRequest) {
 
   const { searchParams } = new URL(request.url);
   const action = searchParams.get('action');
-  const dryRun = searchParams.get('dryRun') !== 'false'; // Default to true for safety
+  const dryRun = searchParams.get('dryRun') !== 'false';
+  const cursorParam = searchParams.get('cursor') || '0';
+  const batchSize = parseInt(searchParams.get('batchSize') || '1000');
 
   if (action !== 'migrate') {
     return NextResponse.json({ error: 'Invalid action. Supported: migrate' }, { status: 400 });
@@ -43,78 +45,69 @@ export async function POST(request: NextRequest) {
       failed: 0,
     };
 
-    let cursor = 0;
+    // 1. SCAN for a single batch
+    const [nextCursor, keys] = await kv.scan(parseInt(cursorParam), { count: batchSize });
     
-    // We scan for all keys because we need to filter them manually to be sure
-    do {
-      const [newCursor, keys] = await kv.scan(cursor, { count: 1000 });
-      cursor = parseInt(newCursor);
+    // 2. Process keys in this batch
+    // To avoid Vercel timeouts, we limit the number of ACTUAL renames per request
+    const MAX_RENAMES_PER_REQUEST = 300; 
 
-      for (const key of keys) {
-        summary.totalFound++;
-        
-        // Skip keys that already have a known project prefix
-        if (IGNORE_PREFIXES.some(p => key.startsWith(p))) {
-          summary.skipped++;
-          continue;
-        }
+    for (const key of keys) {
+      summary.totalFound++;
+      
+      if (summary.migrated >= MAX_RENAMES_PER_REQUEST && !dryRun) {
+        logs.push(`[Info] Reached batch limit of ${MAX_RENAMES_PER_REQUEST} renames. Please continue with next cursor.`);
+        break;
+      }
 
-        const newKey = `${NAMESPACE}${key}`;
-        
-        if (dryRun) {
-          logs.push(`[Dry Run] RENAMING: "${key}" -> "${newKey}"`);
-          summary.migrated++;
-        } else {
-          try {
-            // 1. Detect Type
-            // @ts-ignore - kv is Upstash Redis client
-            const type = await kv.type(key);
-            
-            if (type === 'string') {
-              const value = await kv.get(key);
-              await kv.set(newKey, value);
-            } else if (type === 'set') {
-              // @ts-ignore
-              const members = await kv.smembers(key);
-              if (members && members.length > 0) {
-                // @ts-ignore
-                await kv.sadd(newKey, ...members);
-              }
-            } else if (type === 'list') {
-              // @ts-ignore
-              const elements = await kv.lrange(key, 0, -1);
-              if (elements && elements.length > 0) {
-                // @ts-ignore
-                await kv.rpush(newKey, ...elements);
-              }
-            } else if (type === 'hash') {
-              // @ts-ignore
-              const hash = await kv.hgetall(key);
-              if (hash && Object.keys(hash).length > 0) {
-                // @ts-ignore
-                await kv.hset(newKey, hash);
-              }
-            } else {
-              logs.push(`[Skip] Key "${key}" has unhandled type: ${type}`);
-              continue;
-            }
-            
-            await kv.del(key);
-            logs.push(`[Live] SUCCESS [${type}]: "${key}" -> "${newKey}"`);
-            summary.migrated++;
-          } catch (err: any) {
-            summary.failed++;
-            logs.push(`[Error] FAILED "${key}": ${err.message}`);
+      if (IGNORE_PREFIXES.some(p => key.startsWith(p))) {
+        summary.skipped++;
+        continue;
+      }
+
+      const newKey = `${NAMESPACE}${key}`;
+      
+      if (dryRun) {
+        logs.push(`[Dry Run] "${key}" -> "${newKey}"`);
+        summary.migrated++;
+      } else {
+        try {
+          const type = await (kv as any).type(key);
+          
+          if (type === 'string') {
+            const value = await kv.get(key);
+            await kv.set(newKey, value);
+          } else if (type === 'set') {
+            const members = await (kv as any).smembers(key);
+            if (members?.length) await (kv as any).sadd(newKey, ...members);
+          } else if (type === 'list') {
+            const elements = await (kv as any).lrange(key, 0, -1);
+            if (elements?.length) await (kv as any).rpush(newKey, ...elements);
+          } else if (type === 'hash') {
+            const hash = await (kv as any).hgetall(key);
+            if (hash && Object.keys(hash).length > 0) await (kv as any).hset(newKey, hash);
+          } else {
+            logs.push(`[Skip] Unhandled type ${type} for "${key}"`);
+            continue;
           }
+          
+          await kv.del(key);
+          logs.push(`[Live] SUCCESS [${type}]: "${key}" -> "${newKey}"`);
+          summary.migrated++;
+        } catch (err: any) {
+          summary.failed++;
+          logs.push(`[Error] FAILED "${key}": ${err.message}`);
         }
       }
-    } while (cursor !== 0);
+    }
 
     return NextResponse.json({
       success: true,
       dryRun,
       summary,
-      logs: logs.slice(0, 500) // Truncate logs for response size
+      nextCursor: nextCursor.toString(),
+      hasMore: nextCursor !== '0',
+      logs: logs.slice(0, 500)
     });
 
   } catch (error: any) {

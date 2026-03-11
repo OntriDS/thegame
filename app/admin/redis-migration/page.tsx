@@ -33,17 +33,48 @@ export default function RedisMigrationPage() {
 
     setLoading(true);
     setError(null);
+    let currentCursor = '0';
+    let cumulativeSummary = { totalFound: 0, migrated: 0, skipped: 0, failed: 0 };
+    let cumulativeLogs: string[] = [];
+
     try {
-      const resp = await fetch(`/api/admin/redis-migration?action=migrate&dryRun=${dryRun}`, {
-        method: 'POST'
-      });
-      const data = await resp.json();
-      if (data.success) {
-        setResults(data);
-      } else {
-        setError(data.error || 'Migration failed');
+      while (true) {
+        const resp = await fetch(
+          `/api/admin/redis-migration?action=migrate&dryRun=${dryRun}&cursor=${currentCursor}&batchSize=1000`, 
+          { method: 'POST' }
+        );
+        const data = await resp.json();
+        
+        if (!data.success) {
+          throw new Error(data.error || 'Migration failed');
+        }
+
+        // Update cumulative stats
+        cumulativeSummary.totalFound += data.summary.totalFound;
+        cumulativeSummary.migrated += data.summary.migrated;
+        cumulativeSummary.skipped += data.summary.skipped;
+        cumulativeSummary.failed += data.summary.failed;
+        
+        // Update logs (prepend new ones, limit total size)
+        cumulativeLogs = [...data.logs, ...cumulativeLogs].slice(0, 1000);
+
+        setResults({
+          success: true,
+          dryRun,
+          summary: { ...cumulativeSummary },
+          logs: [...cumulativeLogs]
+        });
+
+        currentCursor = data.nextCursor;
+        if (!data.hasMore || currentCursor === '0') {
+          break;
+        }
+
+        // Small delay to prevent UI freezing
+        await new Promise(r => setTimeout(r, 50));
       }
     } catch (err: any) {
+      console.error('Migration error:', err);
       setError(err.message || 'An error occurred');
     } finally {
       setLoading(false);
