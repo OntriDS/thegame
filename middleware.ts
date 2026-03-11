@@ -1,83 +1,49 @@
 // middleware.ts
-// Hybrid Auth Middleware - Supports Both Passphrase and Username Systems
-// Gradual transition approach - keeps passphrase working while adding username system
+// Stateless Edge Auth Middleware
+// 0 Redis calls - Peak Performance & Bandwidth Protection
 
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyJwt } from '@/lib/auth';
 import { AuthService } from '@/lib/auth-service';
 
+export const config = {
+  runtime: 'edge', // Officially enable Edge Runtime
+  matcher: ['/admin/:path*'],
+};
+
 export async function middleware(request: NextRequest) {
-  const { pathname, search } = request.nextUrl;
+  const { pathname } = request.nextUrl;
 
-  // Allow non-admin paths
-  if (!pathname.startsWith('/admin')) {
-    return NextResponse.next();
-  }
-
-  // Allow login page
+  // 1. Allow login page
   if (pathname === '/admin/login' || pathname.startsWith('/admin/login/')) {
     return NextResponse.next();
   }
 
-  // ✅ CHECK BOTH AUTH SYSTEMS
+  // 2. Extract tokens
   const passphraseToken = request.cookies.get('admin_session')?.value;
   const usernameToken = request.cookies.get('auth_session')?.value;
+  
+  const token = usernameToken || passphraseToken;
 
-  const hasPassphraseToken = !!passphraseToken;
-  const hasUsernameToken = !!usernameToken;
-
-  console.log('[Middleware] Passphrase token:', hasPassphraseToken);
-  console.log('[Middleware] Username token:', hasUsernameToken);
-
-  // System 1: Passphrase Login (Your Current System)
-  if (hasPassphraseToken) {
-    try {
-      const secret = process.env.ADMIN_SESSION_SECRET || '';
-
-      if (!secret) {
-        console.log('[Middleware] No passphrase secret - allow (temporary)');
-        return NextResponse.next();
-      }
-
-      const verified = await verifyJwt(passphraseToken, secret);
-      if (verified.valid) {
-        console.log('[Middleware] ✅ Passphrase auth valid');
-        return NextResponse.next();
-      } else {
-        console.log('[Middleware] ❌ Passphrase auth invalid');
-        return NextResponse.redirect(new URL('/admin/login', request.url));
-      }
-    } catch (error) {
-      console.error('[Middleware] Passphrase auth error:', error);
-      return NextResponse.redirect(new URL('/admin/login', request.url));
-    }
+  if (!token) {
+    console.log('[Middleware] No token found - redirecting to login');
+    return NextResponse.redirect(new URL('/admin/login', request.url));
   }
 
-  // System 2: Username Login (New Multi-User System)
-  if (hasUsernameToken) {
-    try {
-      const secret = process.env.ADMIN_SESSION_SECRET || '';
+  try {
+    // 3. STATLESS VERIFICATION (Zero Redis)
+    // We pass 'true' for stateless mode to avoid any KV calls in the Edge runtime
+    const user = await AuthService.verifySession(token, true);
 
-      if (!secret) {
-        console.log('[Middleware] No username secret - allow (temporary)');
-        return NextResponse.next();
-      }
-
-      const user = await AuthService.verifySession(usernameToken);
-      if (user) {
-        console.log('[Middleware] ✅ Username auth valid, user:', user.username);
-        return NextResponse.next();
-      } else {
-        console.log('[Middleware] ❌ Username auth invalid');
-        return NextResponse.redirect(new URL('/admin/login', request.url));
-      }
-    } catch (error) {
-      console.error('[Middleware] Username auth error:', error);
-      return NextResponse.redirect(new URL('/admin/login', request.url));
+    if (user && user.isActive) {
+      // console.log(`[Middleware] ✅ Authorized: ${user.username}`);
+      return NextResponse.next();
     }
-  }
 
-  // No valid auth token - redirect to login
-  const loginUrl = new URL('/admin/login', request.url);
-  return NextResponse.redirect(loginUrl);
+    console.log('[Middleware] ❌ Invalid or inactive session');
+    return NextResponse.redirect(new URL('/admin/login', request.url));
+  } catch (error) {
+    console.error('[Middleware] 🔥 Critical Auth Error:', error);
+    // On error, we fail safe and redirect to login
+    return NextResponse.redirect(new URL('/admin/login', request.url));
+  }
 }

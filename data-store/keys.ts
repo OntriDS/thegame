@@ -5,6 +5,7 @@
 import { EntityType } from '@/types/enums';
 
 const MMYY_REGEX = /^(0[1-9]|1[0-2])-\d{2}$/;
+const NAMESPACE = 'thegame:';
 
 function normalizeMonthKey(mmyy: string): string {
   const value = mmyy.trim();
@@ -15,71 +16,71 @@ function normalizeMonthKey(mmyy: string): string {
 }
 
 export function buildDataKey(entity: string, id: string): string {
-  return `data:${entity}:${id}`;
+  return `${NAMESPACE}data:${entity}:${id}`;
 }
 
 export function buildAccountKey(identifier: string): string {
-  return `account:${identifier}`;
+  return `${NAMESPACE}account:${identifier}`;
 }
 
 export function buildIndexKey(entity: string): string {
-  return `index:${entity}`; // set of ids
+  return `${NAMESPACE}index:${entity}`; // set of ids
 }
 
 export function buildArchiveDataKey(entity: string, mmyy: string, id: string): string {
   const monthKey = normalizeMonthKey(mmyy);
-  return `archive:${entity}:${monthKey}:${id}`;
+  return `${NAMESPACE}archive:${entity}:${monthKey}:${id}`;
 }
 
 export function buildArchiveIndexKey(entity: string, mmyy: string): string {
   const monthKey = normalizeMonthKey(mmyy);
-  return `archive:index:${monthKey}:${entity}`;
+  return `${NAMESPACE}archive:index:${monthKey}:${entity}`;
 }
 
 export function buildArchiveMonthsKey(): string {
-  return 'archive:months';
+  return `${NAMESPACE}archive:months`;
 }
 
 export function buildMonthIndexKey(entity: string, mmyy: string): string {
   const monthKey = normalizeMonthKey(mmyy);
-  return `index:${entity}:by-month:${monthKey}`;
+  return `${NAMESPACE}index:${entity}:by-month:${monthKey}`;
 }
 
 export function buildLinksIndexKey(entityType: string, id: string): string {
-  return `index:links:by-entity:${entityType}:${id}`; // set of link ids
+  return `${NAMESPACE}index:links:by-entity:${entityType}:${id}`; // set of link ids
 }
 
 export function buildLinkKey(id: string): string {
-  return `links:link:${id}`;
+  return `${NAMESPACE}links:link:${id}`;
 }
 
 export function buildEffectKey(effectKey: string): string {
-  return `effects:${effectKey}`;
+  return `${NAMESPACE}effects:${effectKey}`;
 }
 
 // Unified effect key builders
 export const EffectKeys = {
   created(entity: string, id: string): string {
-    return `${entity}:${id}:created`;
+    return `${NAMESPACE}${entity}:${id}:created`;
   },
   status(entity: string, id: string, from: string, to: string, bucket?: string): string {
-    const base = `${entity}:${id}:status:${from}->${to}`;
+    const base = `${NAMESPACE}${entity}:${id}:status:${from}->${to}`;
     return bucket ? `${base}:${bucket}` : base;
   },
   sideEffect(entity: string, id: string, kind: string): string {
-    return `${entity}:${id}:${kind}`; // e.g. task:123:itemCreated
+    return `${NAMESPACE}${entity}:${id}:${kind}`; // e.g. task:123:itemCreated
   },
   monthly(entity: string, id: string, kind: string, yyyymm: string): string {
-    return `${entity}:${id}:${kind}:${yyyymm}`; // e.g. task:123:pointsLogged:2025-10
+    return `${NAMESPACE}${entity}:${id}:${kind}:${yyyymm}`; // e.g. task:123:pointsLogged:2025-10
   }
 };
 
 export function buildLogKey(entity: EntityType | string, yyyymm?: string): string {
   if (yyyymm) {
     const monthKey = normalizeMonthKey(yyyymm);
-    return `logs:${entity}:${monthKey}`;
+    return `${NAMESPACE}logs:${entity}:${monthKey}`;
   }
-  return `logs:${entity}`;
+  return `${NAMESPACE}logs:${entity}`;
 }
 
 export function buildLogActiveKey(entity: EntityType | string): string {
@@ -91,7 +92,7 @@ export function buildLogMonthKey(entity: EntityType | string, mmyy: string): str
 }
 
 export function buildLogMonthsIndexKey(entity: EntityType | string): string {
-  return `logs:index:months:${entity}`;
+  return `${NAMESPACE}logs:index:months:${entity}`;
 }
 
 

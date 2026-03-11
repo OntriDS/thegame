@@ -151,21 +151,25 @@ export class AuthService {
 
   /**
    * Verify session token and return user info
+   * @param token JWT session token
+   * @param stateless If true, skips Redis calls and reconstructs user from JWT payload (Edge safe)
    */
-  static async verifySession(token: string): Promise<AuthUser | null> {
-    console.log('[AuthService] Verifying session token');
+  static async verifySession(token: string, stateless: boolean = false): Promise<AuthUser | null> {
+    console.log(`[AuthService] Verifying session token (${stateless ? 'stateless' : 'stateful'})`);
 
     const secret = getRequiredEnv('ADMIN_SESSION_SECRET');
     const verified = await verifyJwt(token, secret);
 
-    if (!verified.valid) {
+    if (!verified.valid || !verified.payload) {
       console.log('[AuthService] Invalid token:', verified.reason);
       return null;
     }
 
+    const payload = verified.payload;
+
     // 1. Extract identity (multi-user userId or legacy sub)
-    let userId = (verified.payload as any).userId || (verified.payload as any).sub;
-    const isLegacyAdmin = (verified.payload as any).sub === 'admin';
+    let userId = (payload as any).userId || payload.sub;
+    const isLegacyAdmin = payload.sub === 'admin';
 
     // Map legacy 'admin' to PLAYER_ONE_ID for consistent internal handling
     if (userId === 'admin') {
@@ -177,12 +181,29 @@ export class AuthService {
       return null;
     }
 
-    // 2. Load account with FAIL-SAFE FALLBACK
+    // 2. STATELESS MODE (Zero Redis) - Used by Middleware
+    if (stateless) {
+      // Reconstruct AuthUser directly from protected JWT payload
+      return {
+        userId: userId,
+        username: payload.username || (isLegacyAdmin ? 'Akiles' : 'Unknown'),
+        email: payload.email || '',
+        characterId: payload.characterId || (isLegacyAdmin ? PLAYER_ONE_ID : ''),
+        roles: Array.from(new Set([
+          ...(payload.roles || []),
+          ...(isLegacyAdmin || userId === PLAYER_ONE_ID ? [CharacterRole.FOUNDER, CharacterRole.ADMIN] : [])
+        ])),
+        isActive: true, // We trust the active JWT in stateless mode
+      };
+    }
+
+    // 3. STATEFUL MODE (Standard) - Used by API routes for high-security checks
+    // Load account from Redis
     const user = await kvGet<Account>(buildAccountKey(userId));
     if (!user) {
       console.log('[AuthService] User not found during verify:', userId);
-      // ✅ FALL-SAFE: If it's the legacy admin or the primary creator, don't lock them out!
-      if (isLegacyAdmin || userId === 'player-one' || userId === 'admin') {
+      // ✅ FAIL-SAFE: If it's the legacy admin or the primary creator, don't lock them out if Redis is being updated
+      if (isLegacyAdmin || userId === 'player-one' || userId === PLAYER_ONE_ID) {
         console.log('[AuthService] 🛡️ Using synthetic fallback for admin/founder access');
         return {
           userId: PLAYER_ONE_ID,
@@ -195,41 +216,21 @@ export class AuthService {
       return null;
     }
 
-    // 3. Get user's character (for roles)
-    const characterId = user.characterId;
-    if (!characterId) {
-      console.log('[AuthService] No character linked to account during verify');
-      if (isLegacyAdmin || userId === PLAYER_ONE_ID) {
-        return {
-          userId: user.id,
-          username: user.name,
-          characterId: PLAYER_ONE_ID,
-          roles: [CharacterRole.FOUNDER, CharacterRole.ADMIN],
-          isActive: true,
-        } as AuthUser;
+    // Load character for roles consistency
+    const characterId = user.characterId || payload.characterId;
+    let roles = payload.roles || [];
+
+    if (characterId) {
+      const character = await kvGet<Character>(buildDataKey('character', characterId));
+      if (character && character.roles) {
+        roles = character.roles;
       }
-      return null;
     }
 
-    const character = await kvGet<Character>(buildDataKey('character', characterId));
-    if (!character) {
-      console.log('[AuthService] Character not found during verify:', characterId);
-      if (isLegacyAdmin || userId === PLAYER_ONE_ID) {
-        return {
-          userId: user.id,
-          username: user.name,
-          characterId: characterId,
-          roles: [CharacterRole.FOUNDER, CharacterRole.ADMIN],
-          isActive: true,
-        } as AuthUser;
-      }
-      return null;
-    }
-
-    // 4. Check if account is active
+    // Check if account is active
     if (!user.isActive || !user.isVerified) {
       // Legacy admin is always active/verified for now
-      if (!isLegacyAdmin) {
+      if (!isLegacyAdmin && user.id !== PLAYER_ONE_ID) {
         console.log('[AuthService] Account not active or not verified');
         return null;
       }
@@ -239,15 +240,15 @@ export class AuthService {
       userId: user.id,
       username: user.name,
       email: user.email,
-      characterId: characterId,
+      characterId: characterId || '',
       roles: Array.from(new Set([
-        ...(character.roles || []),
+        ...roles,
         ...(isLegacyAdmin || user.id === 'player-one' || user.id === PLAYER_ONE_ID ? [CharacterRole.FOUNDER, CharacterRole.ADMIN] : [])
       ])),
       isActive: user.isActive,
     };
 
-    console.log('[AuthService] ✅ Session verified');
+    console.log('[AuthService] ✅ Session verified (stateful)');
     return authUser;
   }
 

@@ -4,9 +4,13 @@ import { SignJWT, jwtVerify } from 'jose';
 
 export interface JwtClaims {
   sub: string;
-  role: string;
-  iat: number; // issued at (seconds since epoch)
-  exp: number; // expiry (seconds since epoch)
+  email: string;
+  username: string;
+  roles: string[];
+  characterId: string;
+  isAdmin: boolean;
+  iat: number;
+  exp: number;
   [key: string]: unknown;
 }
 
