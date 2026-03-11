@@ -6,7 +6,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { AuthService } from '@/lib/auth-service';
 
 export const config = {
-  runtime: 'edge', // Officially enable Edge Runtime
   matcher: ['/admin/:path*'],
 };
 
