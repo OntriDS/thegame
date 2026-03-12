@@ -1,9 +1,9 @@
-// middleware.ts
+  // middleware.ts
 // Stateless Edge Auth Middleware
 // 0 Redis calls for Auth - Integrated Rate Limiting
  
 import { NextRequest, NextResponse } from 'next/server';
-import { AuthService } from '@/lib/auth-service';
+import { verifySessionStateless } from '@/lib/auth-edge';
 import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
 
@@ -57,10 +57,20 @@ export async function middleware(request: NextRequest) {
 
   try {
     // 4. STATLESS VERIFICATION (Zero Redis)
-    const user = await AuthService.verifySession(token, true);
+    const user = await verifySessionStateless(token);
 
     if (user && user.isActive) {
-      const response = NextResponse.next();
+      // 5. Inject Headers for downstream consistency
+      const requestHeaders = new Headers(request.headers);
+      requestHeaders.set('x-account-id', user.userId);
+      requestHeaders.set('x-user-roles', JSON.stringify(user.roles));
+
+      const response = NextResponse.next({
+        request: {
+          headers: requestHeaders,
+        },
+      });
+
       // Add headers for observability
       response.headers.set('X-RateLimit-Remaining', remaining.toString());
       return response;
