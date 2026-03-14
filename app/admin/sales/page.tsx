@@ -37,7 +37,6 @@ export default function SalesPage() {
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
   const [selectedMonthKey, setSelectedMonthKey] = useState(getCurrentMonthKey());
   const [availableMonths, setAvailableMonths] = useState<string[]>([]);
-  const [filterByMonth, setFilterByMonth] = useState(true);
   const [showCollected, setShowCollected] = useState(false); // false=Active, true=Collected
   const [exchangeRates, setExchangeRates] = useState<CurrencyExchangeRates>(DEFAULT_CURRENCY_EXCHANGE_RATES);
 
@@ -60,7 +59,7 @@ export default function SalesPage() {
   useEffect(() => {
     loadSales();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedMonthKey, filterByMonth]);
+  }, [selectedMonthKey]);
 
   // Filter sales based on selected criteria
   useEffect(() => {
@@ -109,8 +108,8 @@ export default function SalesPage() {
       setIsLoading(true);
       const [salesData, sitesData, ratesData] = await Promise.all([
         ClientAPI.getSales(
-          filterByMonth ? monthNum : undefined,
-          filterByMonth ? yearNum : undefined
+          monthNum,
+          yearNum
         ),
         ClientAPI.getSites(),
         ClientAPI.getFinancialConversionRates()
@@ -263,13 +262,6 @@ export default function SalesPage() {
             availableMonths={availableMonths}
             onChange={setSelectedMonthKey}
           />
-          <div className="flex items-center gap-2 border rounded-md px-3 py-1.5">
-            <Switch
-              checked={filterByMonth}
-              onCheckedChange={setFilterByMonth}
-            />
-            <span className="text-sm text-muted-foreground">Filter by month</span>
-          </div>
 
           <div className="flex items-center gap-2 border rounded-md px-3 py-1.5">
             <Switch
@@ -299,7 +291,7 @@ export default function SalesPage() {
               {formatCurrency(atomicSummary?.revenue || 0)}
             </div>
             <p className="text-xs text-muted-foreground">
-              {filterByMonth ? 'Static Month Total' : 'Aggregated View'}
+              Monthly Total
             </p>
           </CardContent>
         </Card>

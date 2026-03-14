@@ -124,7 +124,6 @@ function mergeInventoryTotalsIntoAssets(assets: any, inventoryTotals: InventoryB
 
 export default function FinancesPage() {
   const { getPreference, setPreference, isLoading: preferencesLoading } = useUserPreferences();
-  const [filterByMonth, setFilterByMonth] = useState(true); // Default to true, will sync from preferences
   const [selectedMonthKey, setSelectedMonthKey] = useState(getCurrentMonthKey());
   const [availableMonths, setAvailableMonths] = useState<string[]>([]);
   const [atomicSummary, setAtomicSummary] = useState<SummaryTotals | null>(null);
@@ -173,20 +172,6 @@ export default function FinancesPage() {
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [characters, setCharacters] = useState<Character[]>([]);
   const [sites, setSites] = useState<Site[]>([]);
-
-  // Load saved filter preference once preferences are loaded
-  useEffect(() => {
-    if (!preferencesLoading) {
-      const savedFilter = getPreference('finances-filter-by-month', true);
-      setFilterByMonth(savedFilter);
-    }
-  }, [preferencesLoading, getPreference]);
-
-  // Handle filter toggle
-  const handleFilterToggle = (checked: boolean) => {
-    setFilterByMonth(checked);
-    setPreference('finances-filter-by-month', checked);
-  };
 
   // Load conversion rates
   useEffect(() => {
@@ -253,8 +238,8 @@ export default function FinancesPage() {
     setIsDetailLoading(true);
     try {
         const data = await ClientAPI.getFinancialSummary(
-          filterByMonth ? monthNum : undefined,
-          filterByMonth ? yearNum : undefined
+          monthNum,
+          yearNum
         );
 
         setCompanySummary(data.companySummary);
@@ -267,7 +252,7 @@ export default function FinancesPage() {
     } finally {
         setIsDetailLoading(false);
     }
-  }, [selectedMonthKey, filterByMonth]);
+  }, [selectedMonthKey]);
 
   // Load summaries for current month
   useEffect(() => {
@@ -647,13 +632,6 @@ export default function FinancesPage() {
             availableMonths={availableMonths}
             onChange={setSelectedMonthKey}
           />
-          <div className="flex items-center gap-2 border rounded-md px-3 py-1.5">
-            <Switch
-              checked={filterByMonth}
-              onCheckedChange={handleFilterToggle}
-            />
-            <span className="text-sm text-muted-foreground">Filter by month</span>
-          </div>
 
           <Button
             onClick={() => setShowFinancialsModal(true)}
@@ -1190,8 +1168,8 @@ export default function FinancesPage() {
           </div>
           <CompanyRecordsList
             key={`company-${recordsRefreshKey}`}
-            year={filterByMonth ? currentYearNum : 0}
-            month={filterByMonth ? currentMonthNum : 0}
+            year={currentYearNum}
+            month={currentMonthNum}
             onRecordUpdated={loadSummaries}
             onRecordEdit={(record) => {
               // This is handled by CompanyRecordsList component
@@ -1207,8 +1185,8 @@ export default function FinancesPage() {
           </div>
           <PersonalRecordsList
             key={`personal-${recordsRefreshKey}`}
-            year={filterByMonth ? currentYearNum : 0}
-            month={filterByMonth ? currentMonthNum : 0}
+            year={currentYearNum}
+            month={currentMonthNum}
             onRecordUpdated={loadSummaries}
             onRecordEdit={(record) => {
               // This is handled by PersonalRecordsList component
