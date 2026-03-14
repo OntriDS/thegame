@@ -14,34 +14,27 @@ export async function GET(req: NextRequest) {
   const monthParam = params.get('month');
   const yearParam = params.get('year');
 
-  const normalizeYear = (y: string | null): number | null => {
-    if (!y) return null;
-    const n = parseInt(y, 10);
-    if (isNaN(n)) return null;
-    return n < 100 ? 2000 + n : n;
-  };
-  const parseMonth = (m: string | null): number | null => {
-    if (!m) return null;
-    const n = parseInt(m, 10);
-    if (isNaN(n) || n < 1 || n > 12) return null;
-    return n;
-  };
+  const now = new Date();
+  // Adjust for UTC rollover (User is UTC-6)
+  const adjustedNow = new Date(now.getTime() - 6 * 60 * 60 * 1000);
 
-  const month = parseMonth(monthParam);
-  const year = normalizeYear(yearParam);
+  // 1. Strict Parsing and Validation
+  let year = yearParam ? parseInt(yearParam, 10) : adjustedNow.getFullYear();
+  let month = monthParam ? parseInt(monthParam, 10) : adjustedNow.getMonth() + 1;
+
+  // Normalize year (e.g. 26 -> 2026)
+  if (year < 100) year += 2000;
+
+  // Bounds validation
+  if (isNaN(year) || year < 2024 || year > 2100) year = adjustedNow.getFullYear();
+  if (isNaN(month) || month < 1 || month > 12) month = adjustedNow.getMonth() + 1;
 
   try {
-    let data: FinancialRecord[];
-    if (month && year) {
-      data = await getFinancialsForMonth(year, month);
-    } else {
-      const now = new Date();
-      // Adjust for UTC rollover (User is UTC-6)
-      const adjustedNow = new Date(now.getTime() - 6 * 60 * 60 * 1000);
-      data = await getFinancialsForMonth(adjustedNow.getFullYear(), adjustedNow.getMonth() + 1);
-    }
+    // 2. Optimized Unified Fetching (Active + Archive)
+    const data = await getFinancialsForMonth(year, month);
     return NextResponse.json(data);
   } catch (error) {
+    console.error('[API] Failed to fetch financials:', error);
     return NextResponse.json({ error: 'Failed to fetch financial records' }, { status: 500 });
   }
 }

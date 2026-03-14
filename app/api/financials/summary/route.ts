@@ -11,22 +11,22 @@ export async function GET(request: Request) {
         const monthParam = searchParams.get('month');
         const yearParam = searchParams.get('year');
 
-        let records;
-        let year: number;
-        let month: number;
+        const now = new Date();
+        const adjustedNow = new Date(now.getTime() - 6 * 60 * 60 * 1000);
 
-        if (monthParam && yearParam) {
-            year = parseInt(yearParam);
-            month = parseInt(monthParam);
-            records = await getFinancialsForMonth(year, month);
-        } else {
-            // Fallback: If no date params provided, fetch all records.
-            // This matches the behavior required for complete historical aggregation.
-            records = await getAllFinancials();
-            const now = new Date();
-            year = now.getFullYear();
-            month = now.getMonth() + 1;
-        }
+        // 1. Strict Parsing and Validation
+        let year = yearParam ? parseInt(yearParam, 10) : adjustedNow.getFullYear();
+        let month = monthParam ? parseInt(monthParam, 10) : adjustedNow.getMonth() + 1;
+
+        // Normalize year
+        if (year < 100) year += 2000;
+
+        // Bounds validation
+        if (isNaN(year) || year < 2024 || year > 2100) year = adjustedNow.getFullYear();
+        if (isNaN(month) || month < 1 || month > 12) month = adjustedNow.getMonth() + 1;
+
+        // 2. Optimized Unified Fetching (Active + Archive)
+        const records = await getFinancialsForMonth(year, month);
 
         const companyRecords = records.filter(r => r.type === 'company');
         const personalRecords = records.filter(r => r.type === 'personal');

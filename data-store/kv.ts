@@ -17,6 +17,7 @@ type KVClient = {
   lpush: (key: string, ...values: string[]) => Promise<void>;
   lrange: (key: string, start: number, stop: number) => Promise<string[]>;
   keys: (pattern: string) => Promise<string[]>;
+  sunion: (...keys: string[]) => Promise<string[]>;
   multi: () => {
     del: (key: string, ...keys: string[]) => void;
     set: (key: string, value: unknown) => void;
@@ -89,6 +90,16 @@ export async function kvSRem(key: string, ...members: string[]): Promise<void> {
 export async function kvSMembers(key: string): Promise<string[]> {
   const members = await kv.smembers(key);
   return members ?? [];
+}
+
+/**
+ * SUNION operation - returns the union of multiple sets
+ * Efficiently deduplicates IDs across multiple indices at the DB layer
+ */
+export async function kvSUnion(...keys: string[]): Promise<string[]> {
+  if (keys.length === 0) return [];
+  if (keys.length === 1) return await kvSMembers(keys[0]);
+  return await kv.sunion(...keys);
 }
 
 export async function kvDelMany(keys: string[]): Promise<void> {

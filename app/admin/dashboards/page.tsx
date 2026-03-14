@@ -61,19 +61,12 @@ export default function DashboardsPage() {
   };
 
   const loadSummaries = useCallback(async () => {
-    const records = await ClientAPI.getFinancialRecords();
-    const companyRecords = records.filter(r => {
-      if (filterByMonth) {
-        return r.year === currentYear && r.month === currentMonth && r.type === 'company';
-      }
-      return r.type === 'company';
-    });
-    const personalRecords = records.filter(r => {
-      if (filterByMonth) {
-        return r.year === currentYear && r.month === currentMonth && r.type === 'personal';
-      }
-      return r.type === 'personal';
-    });
+    const records = filterByMonth
+      ? await ClientAPI.getFinancialRecords(currentMonth, currentYear)
+      : await ClientAPI.getFinancialRecords();
+
+    const companyRecords = records.filter(r => r.type === 'company');
+    const personalRecords = records.filter(r => r.type === 'personal');
 
     // Aggregate company records by station
     const companyStations = getCompanyAreas().flatMap(area => BUSINESS_STRUCTURE[area]);

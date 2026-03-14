@@ -349,13 +349,34 @@ export async function getActiveFinancials(): Promise<FinancialRecord[]> {
   );
 }
 
+// Helper to chunk arrays for Redis MGET (prevents payload size errors)
+const chunkArray = <T>(arr: T[], size: number): T[][] =>
+  arr.length ? [arr.slice(0, size), ...chunkArray(arr.slice(size), size)] : [];
+
 export async function getFinancialsForMonth(year: number, month: number): Promise<FinancialRecord[]> {
   const mmyy = formatMonthKey(new Date(year, month - 1, 1));
-  const ids = await kvSMembers(buildMonthIndexKey(EntityType.FINANCIAL, mmyy));
-  if (ids.length === 0) return [];
-  const keys = ids.map(id => buildDataKey(EntityType.FINANCIAL, id));
-  const financials = await kvMGet<FinancialRecord>(keys);
-  return financials.filter((f): f is FinancialRecord => f !== null && f !== undefined);
+  const activeIndexKey = buildMonthIndexKey(EntityType.FINANCIAL, mmyy);
+  const archiveIndexKey = buildArchiveCollectionIndexKey('financials', mmyy);
+
+  // 1. Fetch and deduplicate IDs in a SINGLE Upstash request via SUNION
+  const { kvSUnion } = await import('./kv');
+  const allIds = await kvSUnion(activeIndexKey, archiveIndexKey);
+
+  if (!allIds || allIds.length === 0) return [];
+
+  // 2. Map IDs to storage keys
+  const recordKeys = allIds.map(id => buildDataKey(EntityType.FINANCIAL, id));
+
+  // 3. Fetch ALL records in chunks of 500 (Upstash safety limit)
+  const chunks = chunkArray(recordKeys, 500);
+  const financials: FinancialRecord[] = [];
+
+  for (const chunk of chunks) {
+    const chunkResults = await kvMGet<FinancialRecord>(chunk);
+    financials.push(...chunkResults.filter((f): f is FinancialRecord => f !== null));
+  }
+
+  return reviveDates(financials);
 }
 
 export async function getFinancialById(id: string): Promise<FinancialRecord | null> {

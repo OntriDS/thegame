@@ -2,7 +2,7 @@
 // Server-side API route for costs by product station analytics
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAllFinancials } from '@/data-store/datastore';
+import { getAllFinancials, getFinancialsForMonth } from '@/data-store/datastore';
 import { getCostsByProductStation } from '@/lib/analytics/financial-analytics';
 
 export async function POST(request: NextRequest) {
@@ -10,19 +10,32 @@ export async function POST(request: NextRequest) {
   let memoryBefore: number | null = null;
 
   try {
-    const { year, month, filterByMonth } = await request.json().catch(() => ({}));
+    let { year, month, filterByMonth } = await request.json().catch(() => ({}));
+
+    // 1. Strict Parsing and Validation for filtering
+    if (filterByMonth) {
+      const now = new Date();
+      const adjustedNow = new Date(now.getTime() - 6 * 60 * 60 * 1000);
+      
+      year = year ? parseInt(year, 10) : adjustedNow.getFullYear();
+      month = month ? parseInt(month, 10) : adjustedNow.getMonth() + 1;
+      
+      if (year < 100) year += 2000;
+      if (isNaN(year) || year < 2024 || year > 2100) year = adjustedNow.getFullYear();
+      if (isNaN(month) || month < 1 || month > 12) month = adjustedNow.getMonth() + 1;
+    }
 
     // Performance monitoring
     if (typeof process !== 'undefined' && process.memoryUsage) {
       memoryBefore = process.memoryUsage().heapUsed;
     }
 
-    const records = await getAllFinancials();
-    const filteredRecords = filterByMonth && year && month
-      ? records.filter(r => r.year === year && r.month === month)
-      : records;
+    // 2. Fetch scoped data if filtering, otherwise fallback
+    const records = (filterByMonth && year && month)
+      ? await getFinancialsForMonth(year, month)
+      : await getAllFinancials();
 
-    const costs = await getCostsByProductStation(filteredRecords);
+    const costs = await getCostsByProductStation(records);
 
     // Calculate performance metrics
     const processingTime = Date.now() - startTime;
@@ -34,7 +47,7 @@ export async function POST(request: NextRequest) {
     console.log(`[Analytics Performance] costs-by-product-station:`, {
       processingTime: `${processingTime}ms`,
       totalRecords: records.length,
-      filteredRecords: filteredRecords.length,
+      filteredRecords: records.length,
       memoryUsed: memoryUsed ? `${Math.round(memoryUsed / 1024 / 1024)}MB` : 'N/A',
       usingMonthFilter: filterByMonth && year && month
     });
