@@ -46,6 +46,10 @@ export function buildMonthIndexKey(entity: string, mmyy: string): string {
   return `${NAMESPACE}index:${entity}:by-month:${monthKey}`;
 }
 
+export function buildTaskChildrenKey(parentId: string): string {
+  return `${NAMESPACE}index:task:children:${parentId}`; // set of child task ids
+}
+
 export function buildLinksIndexKey(entityType: string, id: string): string {
   return `${NAMESPACE}index:links:by-entity:${entityType}:${id}`; // set of link ids
 }

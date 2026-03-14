@@ -3,7 +3,7 @@
 
 import { Task } from '@/types/entities';
 import { TaskType, RecurrentFrequency, TaskStatus, EntityType, LogEventType } from '@/types/enums';
-import { getAllTasks, upsertTask, removeTask as deleteTask } from '@/data-store/datastore';
+import { getAllTasks, upsertTask, removeTask as deleteTask, getTasksByParentId, getTaskById } from '@/data-store/datastore';
 import { hasEffect, markEffect } from '@/data-store/effects-registry';
 import { appendEntityLog } from '@/workflows/entities-logging';
 import { FrequencyConfig } from '@/components/ui/frequency-calendar';
@@ -244,11 +244,13 @@ export async function getRecurrentHierarchy(parentId: string): Promise<{
   templates: Task[];
   instances: Task[];
 }> {
-  const tasks = await getAllTasks();
+  const [parent, children] = await Promise.all([
+    getTaskById(parentId),
+    getTasksByParentId(parentId)
+  ]);
 
-  const parent = tasks.find(t => t.id === parentId && t.isRecurrentGroup) || null;
-  const templates = tasks.filter(t => t.parentId === parentId && t.isTemplate);
-  const instances = tasks.filter(t => t.parentId === parentId && t.type === TaskType.RECURRENT_INSTANCE);
+  const templates = children.filter(t => t.isTemplate);
+  const instances = children.filter(t => t.type === TaskType.RECURRENT_INSTANCE);
 
   return { parent, templates, instances };
 }
@@ -257,9 +259,8 @@ export async function getRecurrentHierarchy(parentId: string): Promise<{
  * Archives completed instances (for monthly close)
  */
 export async function archiveCompletedInstances(parentId: string): Promise<Task[]> {
-  const tasks = await getAllTasks();
-  const instances = tasks.filter((t: Task) =>
-    t.parentId === parentId &&
+  const children = await getTasksByParentId(parentId);
+  const instances = children.filter((t: Task) =>
     t.type === TaskType.RECURRENT_INSTANCE &&
     (t.status === TaskStatus.DONE || t.status === TaskStatus.COLLECTED)
   );
@@ -309,9 +310,8 @@ export async function handleTemplateInstanceCreation(template: Task): Promise<Ta
   }
 
   // Get existing instances for this template
-  const tasks = await getAllTasks();
-  const existingInstances = tasks
-    .filter((t: Task) => t.parentId === template.id && t.type === TaskType.RECURRENT_INSTANCE)
+  const existingInstances = (await getTasksByParentId(template.id))
+    .filter((t: Task) => t.type === TaskType.RECURRENT_INSTANCE)
     .sort((a, b) => (a.order || 0) - (b.order || 0));
 
   await Promise.all(
@@ -351,40 +351,26 @@ export async function handleTemplateInstanceCreation(template: Task): Promise<Ta
  * Deletes a recurrent group and all its child templates, instances, and nested groups.
  */
 export async function deleteGroupCascade(groupId: string): Promise<number> {
-  const tasks = await getAllTasks();
   const toDelete = new Set<string>([groupId]);
 
   // Recursive function to collect all descendants
-  const collectDescendants = (parentId: string) => {
-    // Find all child groups (nested groups)
-    const childGroups = tasks.filter((t: Task) =>
-      t.parentId === parentId && t.type === TaskType.RECURRENT_GROUP
-    );
-
-    // Find all child templates
-    const childTemplates = tasks.filter((t: Task) =>
-      t.parentId === parentId && t.type === TaskType.RECURRENT_TEMPLATE
-    );
-
-    // Add child groups and recursively process them
-    childGroups.forEach(g => {
-      toDelete.add(g.id);
-      collectDescendants(g.id); // Recursively process nested groups
-    });
-
-    // Add templates
-    childTemplates.forEach(t => toDelete.add(t.id));
-
-    // Find all instances of those templates
-    const templateIds = childTemplates.map(t => t.id);
-    const childInstances = tasks.filter((t: Task) =>
-      templateIds.includes(t.parentId || '') && t.type === TaskType.RECURRENT_INSTANCE
-    );
-    childInstances.forEach(i => toDelete.add(i.id));
+  const collectDescendants = async (id: string) => {
+    const children = await getTasksByParentId(id);
+    
+    for (const child of children) {
+      if (toDelete.has(child.id)) continue;
+      
+      toDelete.add(child.id);
+      
+      // If it's a group or template, it might have its own children/instances
+      if (child.type === TaskType.RECURRENT_GROUP || child.type === TaskType.RECURRENT_TEMPLATE) {
+        await collectDescendants(child.id);
+      }
+    }
   };
 
   // Start recursive collection from the root group
-  collectDescendants(groupId);
+  await collectDescendants(groupId);
 
   // Delete all collected tasks
   for (const taskId of toDelete) {
@@ -398,10 +384,12 @@ export async function deleteGroupCascade(groupId: string): Promise<number> {
  * Deletes a template and all its direct instances.
  */
 export async function deleteTemplateCascade(templateId: string): Promise<number> {
-  const tasks = await getAllTasks();
-  const toDelete = tasks.filter((t: Task) => t.id === templateId || (t.parentId === templateId && t.type === TaskType.RECURRENT_INSTANCE));
-  for (const t of toDelete) {
-    await deleteTask(t.id);
+  const children = await getTasksByParentId(templateId);
+  const instances = children.filter(t => t.type === TaskType.RECURRENT_INSTANCE);
+  
+  const toDelete = [templateId, ...instances.map(i => i.id)];
+  for (const taskId of toDelete) {
+    await deleteTask(taskId);
   }
   return toDelete.length;
 }
@@ -421,9 +409,8 @@ export async function cascadeStatusToInstances(
     return { updated: [], count: 0 };
   }
 
-  const tasks = await getAllTasks();
-  const instances = tasks.filter((t: Task) =>
-    t.parentId === templateId &&
+  const children = await getTasksByParentId(templateId);
+  const instances = children.filter((t: Task) =>
     t.type === TaskType.RECURRENT_INSTANCE &&
     t.status !== newStatus // Only update instances that don't already have the target status
   );
@@ -460,9 +447,8 @@ export async function cascadeStatusToInstances(
  * Gets count of instances that are not at the target status
  */
 export async function getUndoneInstancesCount(templateId: string, targetStatus: string): Promise<number> {
-  const tasks = await getAllTasks();
-  return tasks.filter(t =>
-    t.parentId === templateId &&
+  const children = await getTasksByParentId(templateId);
+  return children.filter(t =>
     t.type === TaskType.RECURRENT_INSTANCE &&
     t.status !== targetStatus
   ).length;
@@ -482,9 +468,8 @@ export async function uncascadeStatusFromInstances(
     return { reverted: [], count: 0 };
   }
 
-  const tasks = await getAllTasks();
-  const instances = tasks.filter(t =>
-    t.parentId === templateId &&
+  const children = await getTasksByParentId(templateId);
+  const instances = children.filter(t =>
     t.type === TaskType.RECURRENT_INSTANCE &&
     t.status !== revertToStatus // Only revert instances that don't already have the target status
   );

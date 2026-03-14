@@ -8,7 +8,8 @@ import {
   upsertTask as repoUpsertTask,
   getAllTasks as repoGetAllTasks,
   getTaskById as repoGetTaskById,
-  deleteTask as repoDeleteTask
+  deleteTask as repoDeleteTask,
+  getTasksByParentId as repoGetTasksByParentId
 } from './repositories/task.repo';
 import {
   upsertItem as repoUpsertItem,
@@ -182,6 +183,11 @@ export async function getAllTasks(): Promise<Task[]> {
 export async function getActiveTasks(): Promise<Task[]> {
   const tasks = await repoGetAllTasks();
   return reviveDates(tasks.filter(task => !task.isCollected && task.status !== TaskStatus.COLLECTED));
+}
+
+export async function getTasksByParentId(parentId: string): Promise<Task[]> {
+  const tasks = await repoGetTasksByParentId(parentId);
+  return reviveDates(tasks);
 }
 
 // Phase 4: Unified & Optimized Tasks fetching (Active + Archive)
