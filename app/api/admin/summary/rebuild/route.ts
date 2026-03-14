@@ -5,6 +5,14 @@ import { SummaryService } from '@/data-store/services/summary.service';
 export const dynamic = 'force-dynamic';
 
 export async function POST() {
+  return await handleRebuild();
+}
+
+export async function GET() {
+  return await handleRebuild();
+}
+
+async function handleRebuild() {
   try {
     console.log('[Summary Rebuilder] Starting full rebuild...');
     const result = await SummaryService.rebuildAllSummaries();
