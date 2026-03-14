@@ -46,7 +46,7 @@
         "Test month switching functionality across all sections",
         "Ensure proper data isolation between current and historical views",
         "Create Basic Dashboard Section and prepare to visualize data across all sections",
-        "X: Connect Dashboards to Archive System and the Month Selectors",
+        "Dashboard & Archive Integration and their Month Selectors",
         "Dashboard connectivity with all other sections"
       ]
     },

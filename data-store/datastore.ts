@@ -179,17 +179,31 @@ export async function getActiveTasks(): Promise<Task[]> {
   return reviveDates(tasks.filter(task => !task.isCollected && task.status !== TaskStatus.COLLECTED));
 }
 
-// Phase 1 helpers: month-scoped, filter-after-load
+// Phase 4: Unified & Optimized Tasks fetching (Active + Archive)
 export async function getTasksForMonth(year: number, month: number): Promise<Task[]> {
-  const allActiveTasks = await getActiveTasks();
+  const mmyy = formatMonthKey(new Date(year, month - 1, 1));
+  const activeIndexKey = buildMonthIndexKey(EntityType.TASK, mmyy);
+  const archiveIndexKey = buildArchiveCollectionIndexKey('tasks', mmyy);
 
-  return allActiveTasks.filter(t => {
-    const rawDate = t.doneAt || t.dueDate || t.createdAt;
-    if (!rawDate) return false;
-    const d = new Date(rawDate);
-    if (isNaN(d.getTime())) return false;
-    return d.getFullYear() === year && d.getMonth() + 1 === month;
-  });
+  // 1. Fetch and deduplicate IDs in a SINGLE Upstash request via SUNION
+  const { kvSUnion } = await import('./kv');
+  const allIds = await kvSUnion(activeIndexKey, archiveIndexKey);
+
+  if (!allIds || allIds.length === 0) return [];
+
+  // 2. Map IDs to storage keys
+  const recordKeys = allIds.map(id => buildDataKey(EntityType.TASK, id));
+
+  // 3. Fetch ALL records in chunks of 500
+  const chunks = chunkArray(recordKeys, 500);
+  const tasks: Task[] = [];
+
+  for (const chunk of chunks) {
+    const chunkResults = await kvMGet<Task>(chunk);
+    tasks.push(...chunkResults.filter((t): t is Task => t !== null));
+  }
+
+  return reviveDates(tasks);
 }
 
 export async function getTaskById(id: string): Promise<Task | null> {
@@ -273,13 +287,31 @@ export async function getAllItems(): Promise<Item[]> {
   return await repoGetAllItems();
 }
 
+// Phase 6: Unified & Optimized Items fetching (Active + Archive)
 export async function getItemsForMonth(year: number, month: number): Promise<Item[]> {
   const mmyy = formatMonthKey(new Date(year, month - 1, 1));
-  const ids = await kvSMembers(buildMonthIndexKey(EntityType.ITEM, mmyy));
-  if (ids.length === 0) return [];
-  const keys = ids.map(id => buildDataKey(EntityType.ITEM, id));
-  const items = await kvMGet<Item>(keys);
-  return items.filter((i): i is Item => i !== null && i !== undefined);
+  const activeIndexKey = buildMonthIndexKey(EntityType.ITEM, mmyy);
+  const archiveIndexKey = buildArchiveCollectionIndexKey('items', mmyy);
+
+  // 1. Fetch and deduplicate IDs in a SINGLE Upstash request via SUNION
+  const { kvSUnion } = await import('./kv');
+  const allIds = await kvSUnion(activeIndexKey, archiveIndexKey);
+
+  if (!allIds || allIds.length === 0) return [];
+
+  // 2. Map IDs to storage keys
+  const recordKeys = allIds.map(id => buildDataKey(EntityType.ITEM, id));
+
+  // 3. Fetch ALL records in chunks of 500
+  const chunks = chunkArray(recordKeys, 500);
+  const items: Item[] = [];
+
+  for (const chunk of chunks) {
+    const chunkResults = await kvMGet<Item>(chunk);
+    items.push(...chunkResults.filter((i): i is Item => i !== null));
+  }
+
+  return reviveDates(items);
 }
 
 export async function getItemById(id: string): Promise<Item | null> {
@@ -316,7 +348,35 @@ export async function removeItem(id: string): Promise<void> {
 export async function upsertFinancial(financial: FinancialRecord, options?: { skipWorkflowEffects?: boolean; skipLinkEffects?: boolean; forceSave?: boolean }): Promise<FinancialRecord> {
   const previous = await repoGetFinancialById(financial.id);
 
+  // Identity Shield: Time-Window Deduplication (2 minutes)
+  // Only apply to NEW financials (no previous record found) to allow legitimate updates
+  if (!previous) {
+    const DUPLICATION_WINDOW_MS = 2 * 60 * 1000; // 2 minutes
+    const now = new Date();
 
+    // Fetch recent financials
+    const recentFinancials = (await repoGetAllFinancials()).filter(f =>
+      f.id !== financial.id && // exclude self
+      f.createdAt &&
+      (now.getTime() - new Date(f.createdAt).getTime() < DUPLICATION_WINDOW_MS)
+    );
+
+    const isDuplicate = recentFinancials.some(existing => {
+      // 1. Basic Identity Match
+      return (
+        existing.name === financial.name &&
+        existing.status === financial.status &&
+        existing.year === financial.year &&
+        existing.month === financial.month &&
+        existing.type === financial.type
+      );
+    });
+
+    if (isDuplicate) {
+      console.warn(`[upsertFinancial] Prevented duplicate financial creation: ${financial.name}`);
+      throw new Error(`DUPLICATE_FINANCIAL_DETECTED: A similar financial record was created less than 2 minutes ago.`);
+    }
+  }
 
   const saved = await repoUpsertFinancial(financial);
 
@@ -407,7 +467,33 @@ export async function removeFinancial(id: string): Promise<void> {
 export async function upsertSale(sale: Sale, options?: { skipWorkflowEffects?: boolean; skipLinkEffects?: boolean; forceSave?: boolean }): Promise<Sale> {
   const previous = await repoGetSaleById(sale.id);
 
+  // Identity Shield: Time-Window Deduplication (2 minutes)
+  // Only apply to NEW sales (no previous record found) to allow legitimate updates
+  if (!previous) {
+    const DUPLICATION_WINDOW_MS = 2 * 60 * 1000; // 2 minutes
+    const now = new Date();
 
+    // Fetch recent sales
+    const recentSales = (await repoGetAllSales()).filter(s =>
+      s.id !== sale.id && // exclude self
+      s.createdAt &&
+      (now.getTime() - new Date(s.createdAt).getTime() < DUPLICATION_WINDOW_MS)
+    );
+
+    const isDuplicate = recentSales.some(existing => {
+      // 1. Basic Identity Match
+      return (
+        existing.counterpartyName === sale.counterpartyName &&
+        existing.status === sale.status &&
+        existing.saleDate === sale.saleDate
+      );
+    });
+
+    if (isDuplicate) {
+      console.warn(`[upsertSale] Prevented duplicate sale creation: ${sale.counterpartyName}`);
+      throw new Error(`DUPLICATE_SALE_DETECTED: A similar sale was created less than 2 minutes ago.`);
+    }
+  }
 
   const saved = await repoUpsertSale(sale);
 
@@ -428,13 +514,35 @@ export async function getAllSales(): Promise<Sale[]> {
   return sales.filter(sale => !sale.isCollected);
 }
 
+// Phase 5: Unified & Optimized Sales fetching (Active + Archive)
 export async function getSalesForMonth(year: number, month: number): Promise<Sale[]> {
   const mmyy = formatMonthKey(new Date(year, month - 1, 1));
-  const ids = await kvSMembers(buildMonthIndexKey(EntityType.SALE, mmyy));
-  if (ids.length === 0) return [];
-  const keys = ids.map(id => buildDataKey(EntityType.SALE, id));
-  const sales = await kvMGet<Sale>(keys);
-  return sales.filter((s): s is Sale => s !== null && s !== undefined);
+  const activeIndexKey = buildMonthIndexKey(EntityType.SALE, mmyy);
+  const archiveIndexKey = buildArchiveCollectionIndexKey('sales', mmyy);
+
+  // 1. Fetch and deduplicate IDs in a SINGLE Upstash request via SUNION
+  const { kvSUnion } = await import('./kv');
+  const allIds = await kvSUnion(activeIndexKey, archiveIndexKey);
+
+  if (!allIds || allIds.length === 0) return [];
+
+  // 2. Map IDs to storage keys
+  const recordKeys = allIds.map(id => buildDataKey(EntityType.SALE, id));
+
+  // 3. Fetch ALL records in chunks of 500
+  const chunks = chunkArray(recordKeys, 500);
+  const sales: Sale[] = [];
+
+  for (const chunk of chunks) {
+    const chunkResults = await kvMGet<Sale>(chunk);
+    sales.push(...chunkResults.filter((s): s is Sale => s !== null));
+  }
+
+  // Filter for completed/archived sales if needed, but for "For Month" we usually want them all
+  // The Vault specifically filters for CHARGED/COLLECTED.
+  // I will leave filtering to the consumer if they want specific statuses, 
+  // but for the "Sales Archive" tab, we should probably follow the existing logic.
+  return reviveDates(sales);
 }
 
 export async function getSaleById(id: string): Promise<Sale | null> {
@@ -752,38 +860,34 @@ export async function deleteArchivedTask(id: string, mmyy: string): Promise<void
 }
 
 export async function getArchivedTasksByMonth(mmyy: string): Promise<Task[]> {
-  const ids = await kvSMembers(buildArchiveCollectionIndexKey('tasks', mmyy));
-  if (!ids.length) return [];
-  const keys = ids.map(id => buildDataKey(EntityType.TASK, id));
-  const tasks = await kvMGet<Task>(keys);
-  return tasks.filter((t): t is Task => t !== null).map(t => reviveDates(t));
+  const [month, yearShort] = mmyy.split('-');
+  const year = parseInt(`20${yearShort}`, 10);
+  return await getTasksForMonth(year, parseInt(month, 10));
 }
 
 export async function getArchivedItemsByMonth(mmyy: string): Promise<Item[]> {
-  const ids = await kvSMembers(buildArchiveCollectionIndexKey('items', mmyy));
-  if (!ids.length) return [];
-  const keys = ids.map(id => buildDataKey(EntityType.ITEM, id));
-  const items = await kvMGet<Item>(keys);
-  return items.filter((t): t is Item => t !== null).map(t => reviveDates(t));
+  const [month, yearShort] = mmyy.split('-');
+  const year = parseInt(`20${yearShort}`, 10);
+  return await getItemsForMonth(year, parseInt(month, 10));
 }
 
 export async function getArchivedSalesByMonth(mmyy: string): Promise<Sale[]> {
-  const ids = await kvSMembers(buildMonthIndexKey(EntityType.SALE, mmyy));
-  if (!ids.length) return [];
-  const keys = ids.map(id => buildDataKey(EntityType.SALE, id));
-  const sales = await kvMGet<Sale>(keys);
-  return sales
-    .filter((s): s is Sale => s !== null && s !== undefined)
-    .filter(s => s.status === SaleStatus.CHARGED || s.status === SaleStatus.COLLECTED || s.isCollected)
-    .map(s => reviveDates(s));
+  const [month, yearShort] = mmyy.split('-');
+  const year = parseInt(`20${yearShort}`, 10);
+  const sales = await getSalesForMonth(year, parseInt(month, 10));
+
+  // Maintain existing Archive Vault filtering logic
+  return sales.filter(s =>
+    s.status === SaleStatus.CHARGED ||
+    s.status === SaleStatus.COLLECTED ||
+    s.isCollected
+  );
 }
 
 export async function getArchivedFinancialRecordsByMonth(mmyy: string): Promise<FinancialRecord[]> {
-  const ids = await kvSMembers(buildArchiveCollectionIndexKey('financials', mmyy));
-  if (!ids.length) return [];
-  const keys = ids.map(id => buildDataKey(EntityType.FINANCIAL, id));
-  const financials = await kvMGet<FinancialRecord>(keys);
-  return financials.filter((t): t is FinancialRecord => t !== null).map(t => reviveDates(t));
+  const [month, yearShort] = mmyy.split('-');
+  const year = parseInt(`20${yearShort}`, 10);
+  return await getFinancialsForMonth(year, parseInt(month, 10));
 }
 
 export async function getAvailableArchiveMonths(): Promise<string[]> {
