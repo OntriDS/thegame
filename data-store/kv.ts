@@ -18,6 +18,13 @@ type KVClient = {
   lrange: (key: string, start: number, stop: number) => Promise<string[]>;
   keys: (pattern: string) => Promise<string[]>;
   sunion: (...keys: string[]) => Promise<string[]>;
+  hincrbyfloat: (key: string, field: string, increment: number) => Promise<number>;
+  hgetall: <T>(key: string) => Promise<T | null>;
+  pipeline: () => {
+    hincrbyfloat: (key: string, field: string, increment: number) => any;
+    exec: () => Promise<any[]>;
+    [key: string]: any;
+  };
   multi: () => {
     del: (key: string, ...keys: string[]) => void;
     set: (key: string, value: unknown) => void;

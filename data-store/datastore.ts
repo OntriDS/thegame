@@ -83,6 +83,8 @@ import {
   getEntityLogMonths as workflowGetEntityLogMonths,
   removeLogEntriesAcrossMonths as workflowRemoveLogEntriesAcrossMonths
 } from '@/workflows/entities-logging';
+import { SummaryService } from './services/summary.service';
+import { SummaryRepository } from './repositories/summary.repo';
 import { getCurrentMonthKey, formatMonthKey, reviveDates } from '@/lib/utils/date-utils';
 import { kvMGet, kvSMembers, kvSRem } from './kv';
 import { buildDataKey, buildMonthIndexKey, buildArchiveCollectionIndexKey } from './keys';
@@ -156,6 +158,9 @@ export async function upsertTask(task: Task, options?: { skipWorkflowEffects?: b
     }
   }
 
+  // Phase 2: Rolling Summary Update
+  await SummaryService.updateTaskCounters(saved, previous || undefined);
+
   if (!options?.skipWorkflowEffects) {
     const { onTaskUpsert } = await import('@/workflows/entities-workflows/task.workflow');
     await onTaskUpsert(saved, previous || undefined);
@@ -214,6 +219,9 @@ export async function removeTask(id: string): Promise<void> {
   const existing = await repoGetTaskById(id);
   await repoDeleteTask(id);
   if (existing) {
+    // Phase 2: Rolling Summary Update
+    await SummaryService.handleTaskDeletion(existing);
+
     // Call task deletion workflow for cleanup - pass the task object since it's already deleted from DB
     const { removeTaskLogEntriesOnDelete } = await import('@/workflows/entities-workflows/task.workflow');
     await removeTaskLogEntriesOnDelete(existing);
@@ -270,6 +278,9 @@ export async function upsertItem(item: Item, options?: { skipWorkflowEffects?: b
   }
 
   const saved = await repoUpsertItem(item);  // ✅ Item persisted here
+
+  // Phase 2: Rolling Summary Update
+  await SummaryService.updateItemCounters(saved, previous || undefined);
 
   if (!options?.skipWorkflowEffects) {
     const { onItemUpsert } = await import('@/workflows/entities-workflows/item.workflow');
@@ -338,6 +349,9 @@ export async function removeItem(id: string): Promise<void> {
   const existing = await repoGetItemById(id);
   await repoDeleteItem(id);
   if (existing) {
+    // Phase 2: Rolling Summary Update
+    await SummaryService.handleItemDeletion(existing);
+
     // Call item deletion workflow for cleanup
     const { removeItemEffectsOnDelete } = await import('@/workflows/entities-workflows/item.workflow');
     await removeItemEffectsOnDelete(id);
@@ -379,6 +393,9 @@ export async function upsertFinancial(financial: FinancialRecord, options?: { sk
   }
 
   const saved = await repoUpsertFinancial(financial);
+
+  // Phase 2: Rolling Summary Update (Delta Approach)
+  await SummaryService.updateFinancialCounters(saved, previous || undefined);
 
   if (!options?.skipWorkflowEffects) {
     const { onFinancialUpsert } = await import('@/workflows/entities-workflows/financial.workflow');
@@ -457,6 +474,9 @@ export async function removeFinancial(id: string): Promise<void> {
   const existing = await repoGetFinancialById(id);
   await repoDeleteFinancial(id);
   if (existing) {
+    // Phase 2: Rolling Summary Update (Subtraction)
+    await SummaryService.handleFinancialDeletion(existing);
+
     // Call financial deletion workflow for cleanup
     const { removeRecordEffectsOnDelete } = await import('@/workflows/entities-workflows/financial.workflow');
     await removeRecordEffectsOnDelete(id);
@@ -496,6 +516,9 @@ export async function upsertSale(sale: Sale, options?: { skipWorkflowEffects?: b
   }
 
   const saved = await repoUpsertSale(sale);
+
+  // Phase 2: Rolling Summary Update
+  await SummaryService.updateSalesCounters(saved, previous || undefined);
 
   if (!options?.skipWorkflowEffects) {
     const { onSaleUpsert } = await import('@/workflows/entities-workflows/sale.workflow');
@@ -553,6 +576,9 @@ export async function removeSale(id: string): Promise<void> {
   const existing = await repoGetSaleById(id);
   await repoDeleteSale(id);
   if (existing) {
+    // Phase 2: Rolling Summary Update
+    await SummaryService.handleSaleDeletion(existing);
+
     // Call sale deletion workflow for cleanup
     const { removeSaleEffectsOnDelete } = await import('@/workflows/entities-workflows/sale.workflow');
     await removeSaleEffectsOnDelete(id);
@@ -715,6 +741,7 @@ export async function upsertBusiness(entity: Business): Promise<Business> {
   }
 
   const saved = await repoUpsertBusiness(entity);
+
   return saved;
 }
 
@@ -727,11 +754,16 @@ export async function getBusinessById(id: string): Promise<Business | null> {
 }
 
 export async function removeBusiness(id: string): Promise<void> {
+  const existing = await repoGetBusinessById(id);
   await repoDeleteBusiness(id);
+  if (existing) {
+    // Call business deletion effects if any
+  }
 }
 
 // CONTRACTS
 export async function upsertContract(contract: Contract): Promise<Contract> {
+  const previous = await repoGetContractById(contract.id);
   const saved = await repoUpsertContract(contract);
   return saved;
 }
@@ -745,7 +777,11 @@ export async function getContractById(id: string): Promise<Contract | null> {
 }
 
 export async function removeContract(id: string): Promise<void> {
+  const existing = await repoGetContractById(id);
   await repoDeleteContract(id);
+  if (existing) {
+    // Call contract deletion effects if any
+  }
 }
 
 // SITES
@@ -862,13 +898,30 @@ export async function deleteArchivedTask(id: string, mmyy: string): Promise<void
 export async function getArchivedTasksByMonth(mmyy: string): Promise<Task[]> {
   const [month, yearShort] = mmyy.split('-');
   const year = parseInt(`20${yearShort}`, 10);
-  return await getTasksForMonth(year, parseInt(month, 10));
+  const tasks = await getTasksForMonth(year, parseInt(month, 10));
+
+  // Archive Vault Filter: Only show completed/collected tasks
+  const { TaskStatus } = await import('@/types/enums');
+  return tasks.filter(t =>
+    t.status === TaskStatus.DONE ||
+    t.status === TaskStatus.COLLECTED ||
+    t.isCollected
+  );
 }
 
 export async function getArchivedItemsByMonth(mmyy: string): Promise<Item[]> {
   const [month, yearShort] = mmyy.split('-');
   const year = parseInt(`20${yearShort}`, 10);
-  return await getItemsForMonth(year, parseInt(month, 10));
+  const items = await getItemsForMonth(year, parseInt(month, 10));
+
+  // Archive Vault Filter: Only show sold/collected items
+  const { ItemStatus } = await import('@/types/enums');
+  return items.filter(i =>
+    (i.status as string || '').toUpperCase() === 'SOLD' ||
+    (i.status as string || '').toUpperCase() === 'ITEMSTATUS.SOLD' ||
+    (i.status as string || '').toUpperCase() === 'COLLECTED' ||
+    i.isCollected
+  );
 }
 
 export async function getArchivedSalesByMonth(mmyy: string): Promise<Sale[]> {
