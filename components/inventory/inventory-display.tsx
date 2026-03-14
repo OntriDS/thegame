@@ -25,6 +25,7 @@ import { useKeyboardShortcuts } from '@/lib/hooks/use-keyboard-shortcuts';
 import { getAreaForStation } from '@/lib/utils/business-structure-utils';
 import { MonthSelector } from '@/components/ui/month-selector';
 import { Switch } from '@/components/ui/switch';
+import { getCurrentMonthKey, sortMonthKeys } from '@/lib/utils/date-utils';
 
 
 interface InventoryDisplayProps {
@@ -32,17 +33,23 @@ interface InventoryDisplayProps {
   onRefresh?: () => void;
   selectedSite: string | 'all';
   selectedStatus: ItemStatus | 'all';
-  selectedMonthKey: string;
-  availableMonths: string[];
+  selectedMonthKey?: string;
+  availableMonths?: string[];
 }
 
-export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatus, selectedMonthKey, availableMonths }: InventoryDisplayProps) {
+export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatus, selectedMonthKey: parentMonthKey, availableMonths: parentAvailableMonths }: InventoryDisplayProps) {
   const [items, setItems] = useState<Item[]>([]);
   const { getPreference, setPreference } = useUserPreferences();
 
-  // Month selector state for Sold Items tab - Inherited from parent or managed locally
+  // Month selector state for Sold Items tab - Local management if parent doesn't provide
+  const [localSelectedMonthKey, setLocalSelectedMonthKey] = useState(getCurrentMonthKey());
+  const [localAvailableMonths, setLocalAvailableMonths] = useState<string[]>([]);
   const [filterSoldByMonth, setFilterSoldByMonth] = useState(true);
   const [isHydrated, setIsHydrated] = useState(false);
+
+  // Use parent values if provided, otherwise use local state
+  const selectedMonthKey = parentMonthKey || localSelectedMonthKey;
+  const availableMonths = parentAvailableMonths || localAvailableMonths;
 
   const [activeTab, setActiveTab] = useState<InventoryTab>(InventoryTab.DIGITAL);
   const [showItemModal, setShowItemModal] = useState(false);
@@ -180,6 +187,23 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
   useEffect(() => {
     setIsHydrated(true);
   }, []);
+
+  // Load available months locally if parent doesn't provide them
+  useEffect(() => {
+    if (parentAvailableMonths) return; // Parent provides months, skip loading
+
+    const loadMonths = async () => {
+      try {
+        const months = await ClientAPI.getAvailableSummaryMonths();
+        const current = getCurrentMonthKey();
+        const allMonths = months.includes(current) ? months : [current, ...months];
+        setLocalAvailableMonths(sortMonthKeys(allMonths));
+      } catch (err) {
+        setLocalAvailableMonths([getCurrentMonthKey()]);
+      }
+    };
+    loadMonths();
+  }, [parentAvailableMonths]);
 
   useEffect(() => {
     // Only fetch when hydrated or if preferences already changed state
@@ -1387,22 +1411,13 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold">Sold Items</h3>
           <div className="flex items-center gap-4">
-            {isHydrated && (
-              <div className="flex items-center gap-4">
-                <MonthSelector
-                  selectedMonth={selectedMonthKey}
-                  availableMonths={availableMonths}
-                  onChange={() => {}} // Controlled by parent
-                />
-                <div className="flex items-center gap-2 border rounded-md px-3 py-1.5 bg-background">
-                  <Switch
-                    checked={filterSoldByMonth}
-                    onCheckedChange={setFilterSoldByMonth}
-                  />
-                  <span className="text-sm text-muted-foreground">Filter by month</span>
-                </div>
-              </div>
-            )}
+            <div className="flex items-center gap-2 border rounded-md px-3 py-1.5 bg-background">
+              <Switch
+                checked={filterSoldByMonth}
+                onCheckedChange={setFilterSoldByMonth}
+              />
+              <span className="text-sm text-muted-foreground">Filter by month</span>
+            </div>
           </div>
         </div>
 

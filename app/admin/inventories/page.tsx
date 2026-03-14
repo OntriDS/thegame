@@ -12,10 +12,6 @@ import { ItemStatus } from "@/types/enums";
 import { Site } from "@/types/entities";
 import { getZIndexClass } from "@/lib/utils/z-index-utils";
 import { CurrencyExchangeRates, DEFAULT_CURRENCY_EXCHANGE_RATES } from "@/lib/constants/financial-constants";
-import { SummaryTotals } from "@/types/entities";
-import { formatCurrency } from "@/lib/utils/financial-utils";
-import { MonthSelector } from "@/components/ui/month-selector";
-import { getCurrentMonthKey, sortMonthKeys } from "@/lib/utils/date-utils";
 import { Archive, Loader2 } from "lucide-react";
 import {
   Dialog,
@@ -25,6 +21,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { MonthSelector } from "@/components/ui/month-selector";
+import { getCurrentMonthKey, sortMonthKeys } from "@/lib/utils/date-utils";
+import { InventoryTab } from "@/types/enums";
 
 export default function InventoriesPage() {
   const { activeBg } = useThemeColors();
@@ -32,47 +31,28 @@ export default function InventoriesPage() {
   const [selectedSite, setSelectedSite] = useState<string | 'all'>('all');
   const [selectedStatus, setSelectedStatus] = useState<ItemStatus | 'all'>('all');
   const [sites, setSites] = useState<Site[]>([]);
-
   const [selectedMonthKey, setSelectedMonthKey] = useState(getCurrentMonthKey());
   const [availableMonths, setAvailableMonths] = useState<string[]>([]);
-  const [atomicSummary, setAtomicSummary] = useState<SummaryTotals | null>(null);
-  const [isAtomicLoading, setIsAtomicLoading] = useState(false);
 
-
-  // Load available months once
-  useEffect(() => {
-    const loadMonths = async () => {
-      try {
-        const months = await ClientAPI.getAvailableSummaryMonths();
-        const current = getCurrentMonthKey();
-        const allMonths = months.includes(current) ? months : [current, ...months];
-        setAvailableMonths(sortMonthKeys(allMonths));
-      } catch (err) {
-        setAvailableMonths([getCurrentMonthKey()]);
-      }
-    };
-    loadMonths();
-  }, []);
-
-  // Load sites and summary
+  // Load sites and available months
   useEffect(() => {
     const loadData = async () => {
       try {
-        // 1. Fetch Atomic Summary (INSTANT)
-        setIsAtomicLoading(true);
-        ClientAPI.getSummary(selectedMonthKey)
-          .then(setAtomicSummary)
-          .finally(() => setIsAtomicLoading(false));
-
-        // 2. Fetch Sites
-        const sitesData = await ClientAPI.getSites();
+        const [sitesData, monthsData] = await Promise.all([
+          ClientAPI.getSites(),
+          ClientAPI.getAvailableSummaryMonths()
+        ]);
         setSites(sitesData);
+        
+        const current = getCurrentMonthKey();
+        const allMonths = monthsData.includes(current) ? monthsData : [current, ...monthsData];
+        setAvailableMonths(sortMonthKeys(allMonths));
       } catch (error) {
         console.error('Failed to load inventories data:', error);
       }
     };
     loadData();
-  }, [selectedMonthKey]);
+  }, []);
 
   // Load saved preferences on mount (wait for KV to load)
   useEffect(() => {
@@ -111,13 +91,22 @@ export default function InventoriesPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-muted-foreground">Status:</span>
+            <span className="text-muted-foreground text-sm font-medium">Month:</span>
+            <MonthSelector
+              selectedMonth={selectedMonthKey}
+              availableMonths={availableMonths}
+              onChange={setSelectedMonthKey}
+            />
+          </div>
+
+          <div className="flex items-center gap-2 border rounded-md px-3 py-1 bg-background/50 h-8">
+            <span className="text-muted-foreground text-xs font-medium">Status:</span>
             <Select value={selectedStatus} onValueChange={(value) => {
               const newStatus = value as ItemStatus | 'all';
               setSelectedStatus(newStatus);
               setPreference('inventory-selected-status', newStatus);
             }}>
-              <SelectTrigger className="w-32 h-8">
+              <SelectTrigger className="w-28 h-6 border-none bg-transparent shadow-none hover:bg-accent/50 transition-colors">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -130,50 +119,6 @@ export default function InventoriesPage() {
           </div>
 
         </div>
-      </div>
-
-      {/* Atomic Summary Row */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Inventory Value</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {formatCurrency(atomicSummary?.inventoryValue || 0)}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Inventory Cost</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">
-              {formatCurrency(atomicSummary?.inventoryCost || 0)}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Potential Profit</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">
-              {formatCurrency((atomicSummary?.inventoryValue || 0) - (atomicSummary?.inventoryCost || 0))}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Jungle Coins Assets</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">
-              {atomicSummary?.inventoryJ$ || 0} J$
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Inventory Display */}
