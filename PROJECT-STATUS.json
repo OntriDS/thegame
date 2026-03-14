@@ -61,7 +61,7 @@
         "Basic Badges and Achievements Creation in Player Progression",
         "Implement Strict Key Namespacing and DB thegame namespace Migration",
         "Refactor to Stateless Edge Auth and Rate Limit for Bandwidth Protection",
-        "Align the 'Digital Universe"
+        "Align the 'Digital Universe' Middleware and Packages"
       ]
     }
   },
