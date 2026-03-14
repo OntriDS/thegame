@@ -2,7 +2,15 @@
 import { NextResponse } from 'next/server';
 import { rebuildTaskParentChildIndex } from '@/lib/utils/task-index-migration';
 
+export async function GET() {
+  return handleRebuild();
+}
+
 export async function POST() {
+  return handleRebuild();
+}
+
+async function handleRebuild() {
   try {
     const result = await rebuildTaskParentChildIndex();
     return NextResponse.json({ 

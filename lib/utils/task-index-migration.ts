@@ -10,15 +10,21 @@ import { buildTaskChildrenKey } from '@/data-store/keys';
 export async function rebuildTaskParentChildIndex() {
   console.log('[Migration] Starting parent-child index rebuild...');
   const tasks = await getAllTasks();
-  let count = 0;
+  let indexedCount = 0;
 
-  for (const task of tasks) {
-    if (task.parentId) {
-      await kvSAdd(buildTaskChildrenKey(task.parentId), task.id);
-      count++;
-    }
+  const tasksWithParents = tasks.filter(t => t.parentId);
+  
+  // Processing in chunks to avoid overloading the network/CPU
+  const CHUNK_SIZE = 50;
+  for (let i = 0; i < tasksWithParents.length; i += CHUNK_SIZE) {
+    const chunk = tasksWithParents.slice(i, i + CHUNK_SIZE);
+    await Promise.all(
+      chunk.map(task => kvSAdd(buildTaskChildrenKey(task.parentId!), task.id))
+    );
+    indexedCount += chunk.length;
+    console.log(`[Migration] Indexed ${indexedCount}/${tasksWithParents.length} relations...`);
   }
 
-  console.log(`[Migration] Finished. Indexed ${count} parent-child relationships.`);
-  return { indexedCount: count, totalTasks: tasks.length };
+  console.log(`[Migration] Finished. Indexed ${indexedCount} parent-child relationships.`);
+  return { indexedCount, totalTasks: tasks.length };
 }

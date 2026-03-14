@@ -9,6 +9,7 @@ import { appendEntityLog } from '@/workflows/entities-logging';
 import { FrequencyConfig } from '@/components/ui/frequency-calendar';
 import { v4 as uuid } from 'uuid';
 import { ORDER_INCREMENT } from '@/lib/constants/app-constants';
+import { addDays, addWeeks, addMonths } from 'date-fns';
 
 export interface RecurrentTaskConfig {
   type: RecurrentFrequency;
@@ -174,13 +175,13 @@ export function calculateNextDueDates(
     // Move to next occurrence based on frequency type
     switch (config.type) {
       case RecurrentFrequency.DAILY:
-        currentDate.setDate(currentDate.getDate() + (config.interval || 1));
+        currentDate = addDays(currentDate, config.interval || 1);
         break;
       case RecurrentFrequency.WEEKLY:
-        currentDate.setDate(currentDate.getDate() + 7 * (config.interval || 1));
+        currentDate = addWeeks(currentDate, config.interval || 1);
         break;
       case RecurrentFrequency.MONTHLY:
-        currentDate.setMonth(currentDate.getMonth() + (config.interval || 1));
+        currentDate = addMonths(currentDate, config.interval || 1);
         break;
       case RecurrentFrequency.CUSTOM:
         // For custom frequency, use the normalized custom days
@@ -203,7 +204,7 @@ export function calculateNextDueDates(
         break;
       case RecurrentFrequency.ALWAYS:
         // Continuous - create instances up to safety limit
-        currentDate.setDate(currentDate.getDate() + (config.interval || 1));
+        currentDate = addDays(currentDate, config.interval || 1);
         break;
       default:
         break;
@@ -266,12 +267,16 @@ export async function archiveCompletedInstances(parentId: string): Promise<Task[
   );
 
   // Update instances to collected status (Archived)
-  const updatedInstances: Task[] = [];
-  for (const instance of instances) {
-    const updated = { ...instance, status: TaskStatus.COLLECTED as any, isCollected: true, updatedAt: new Date() } as Task;
-    await upsertTask(updated, { skipWorkflowEffects: true });
-    updatedInstances.push(updated);
-  }
+  const updatedInstances = instances.map(instance => ({
+    ...instance,
+    status: TaskStatus.COLLECTED as any,
+    isCollected: true,
+    updatedAt: new Date()
+  } as Task));
+
+  await Promise.all(
+    updatedInstances.map(updated => upsertTask(updated, { skipWorkflowEffects: true }))
+  );
 
   return updatedInstances;
 }
@@ -335,16 +340,16 @@ export async function handleTemplateInstanceCreation(template: Task): Promise<Ta
 
   // Save new instances with sequential order appended after existing ones
   let nextIndex = existingInstances.length;
-  const createdInstances: Task[] = [];
-  for (const instance of uniqueNewInstances) {
+  const uniqueNewInstancesWithOrder = uniqueNewInstances.map(instance => {
     nextIndex += 1;
-    const desiredOrder = nextIndex * ORDER_INCREMENT;
-    const instanceWithOrder: Task = { ...instance, order: desiredOrder };
-    await upsertTask(instanceWithOrder, { skipWorkflowEffects: true });
-    createdInstances.push(instanceWithOrder);
-  }
+    return { ...instance, order: nextIndex * ORDER_INCREMENT } as Task;
+  });
 
-  return createdInstances;
+  await Promise.all(
+    uniqueNewInstancesWithOrder.map(instance => upsertTask(instance, { skipWorkflowEffects: true }))
+  );
+
+  return uniqueNewInstancesWithOrder;
 }
 
 /**
@@ -372,10 +377,10 @@ export async function deleteGroupCascade(groupId: string): Promise<number> {
   // Start recursive collection from the root group
   await collectDescendants(groupId);
 
-  // Delete all collected tasks
-  for (const taskId of toDelete) {
-    await deleteTask(taskId);
-  }
+  // Delete all collected tasks in parallel
+  await Promise.all(
+    Array.from(toDelete).map(taskId => deleteTask(taskId))
+  );
 
   return toDelete.size;
 }
@@ -388,9 +393,7 @@ export async function deleteTemplateCascade(templateId: string): Promise<number>
   const instances = children.filter(t => t.type === TaskType.RECURRENT_INSTANCE);
   
   const toDelete = [templateId, ...instances.map(i => i.id)];
-  for (const taskId of toDelete) {
-    await deleteTask(taskId);
-  }
+  await Promise.all(toDelete.map(taskId => deleteTask(taskId)));
   return toDelete.length;
 }
 
@@ -415,26 +418,27 @@ export async function cascadeStatusToInstances(
     t.status !== newStatus // Only update instances that don't already have the target status
   );
 
-  const updatedInstances: Task[] = [];
-  for (const instance of instances) {
-    const updated = {
-      ...instance,
-      status: newStatus as any,
-      updatedAt: new Date()
-    } as Task;
-    await upsertTask(updated, { skipWorkflowEffects: true });
-    updatedInstances.push(updated);
+  const updatedInstances = instances.map(instance => ({
+    ...instance,
+    status: newStatus as any,
+    updatedAt: new Date()
+  } as Task));
 
-    // Log status change for each instance with cascade context
-    await appendEntityLog(EntityType.TASK, instance.id, LogEventType.UPDATED, {
-      oldStatus: instance.status,
-      newStatus: newStatus,
-      name: instance.name,
-      cascadedFrom: templateId,
-      transition: `${instance.status} → ${newStatus}`,
-      changedAt: new Date().toISOString()
-    });
-  }
+  await Promise.all(
+    updatedInstances.map(async (updated) => {
+      await upsertTask(updated, { skipWorkflowEffects: true });
+      
+      // Log status change for each instance with cascade context
+      await appendEntityLog(EntityType.TASK, updated.id, LogEventType.UPDATED, {
+        oldStatus: instances.find(i => i.id === updated.id)?.status, // Get old status from memory
+        newStatus: newStatus,
+        name: updated.name,
+        cascadedFrom: templateId,
+        transition: `${instances.find(i => i.id === updated.id)?.status} → ${newStatus}`,
+        changedAt: new Date().toISOString()
+      });
+    })
+  );
 
   // Mark effect to prevent duplicate operations
   await markEffect(effectKey);
@@ -474,26 +478,27 @@ export async function uncascadeStatusFromInstances(
     t.status !== revertToStatus // Only revert instances that don't already have the target status
   );
 
-  const revertedInstances: Task[] = [];
-  for (const instance of instances) {
-    const updated = {
-      ...instance,
-      status: revertToStatus as any,
-      updatedAt: new Date()
-    } as Task;
-    await upsertTask(updated, { skipWorkflowEffects: true });
-    revertedInstances.push(updated);
+  const revertedInstances = instances.map(instance => ({
+    ...instance,
+    status: revertToStatus as any,
+    updatedAt: new Date()
+  } as Task));
 
-    // Log status reversal for each instance with uncascade context
-    await appendEntityLog(EntityType.TASK, instance.id, LogEventType.UPDATED, {
-      oldStatus: instance.status,
-      newStatus: revertToStatus,
-      name: instance.name,
-      uncascadedFrom: templateId,
-      transition: `${instance.status} → ${revertToStatus}`,
-      changedAt: new Date().toISOString()
-    });
-  }
+  await Promise.all(
+    revertedInstances.map(async (updated) => {
+      await upsertTask(updated, { skipWorkflowEffects: true });
+
+      // Log status reversal for each instance with uncascade context
+      await appendEntityLog(EntityType.TASK, updated.id, LogEventType.UPDATED, {
+        oldStatus: instances.find(i => i.id === updated.id)?.status,
+        newStatus: revertToStatus,
+        name: updated.name,
+        uncascadedFrom: templateId,
+        transition: `${instances.find(i => i.id === updated.id)?.status} → ${revertToStatus}`,
+        changedAt: new Date().toISOString()
+      });
+    })
+  );
 
   // Mark effect to prevent duplicate operations
   await markEffect(effectKey);
