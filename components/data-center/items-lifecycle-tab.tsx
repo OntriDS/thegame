@@ -387,22 +387,11 @@ export function ItemsLifecycleTab({ itemsLog, onReload, isReloading }: ItemsLife
                             );
                           })()}
 
-                          {eventKind === LogEventType.MOVED.toLowerCase() && (() => {
-                            const formatStock = (stock: Array<{ siteId?: string; quantity: number }> | undefined) => {
-                              if (!Array.isArray(stock) || stock.length === 0) return '-';
-                              return stock
-                                .map(point => `${point.siteId || '—'}:${point.quantity}`)
-                                .join(', ');
-                            };
-                            const oldStockSummary = formatStock(entry.oldStock);
-                            const newStockSummary = formatStock(entry.newStock);
-                            if (oldStockSummary === '-' && newStockSummary === '-') return null;
-                            return (
-                              <span className="text-muted-foreground min-w-0 flex-shrink-0">
-                                stock: {oldStockSummary} → {newStockSummary}
-                              </span>
-                            );
-                          })()}
+                          {eventKind === LogEventType.UPDATED.toLowerCase() && entry.oldStatus && entry.newStatus && (
+                            <span className="text-muted-foreground min-w-0 flex-shrink-0">
+                              {entry.oldStatus} → {entry.newStatus}
+                            </span>
+                          )}
 
                           {eventKind === LogEventType.COLLECTED.toLowerCase() && entry.collectedAt && (
                             <span className="text-muted-foreground min-w-0 flex-shrink-0">

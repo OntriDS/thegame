@@ -61,20 +61,24 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
     return;
   }
 
-  // Stock changes - MOVED event
-  const stockChanged = JSON.stringify(previousItem.stock) !== JSON.stringify(item.stock);
-  if (stockChanged) {
-    await appendEntityLog(EntityType.ITEM, item.id, LogEventType.MOVED, {
-      name: item.name,
-      itemType: item.type,
-      station: item.station,
-      subItemType: item.subItemType,
-      collection: item.collection,
-      price: item.price,
-      unitCost: item.unitCost,
-      oldStock: previousItem.stock,
-      newStock: item.stock
-    });
+  // Status changes - UPDATED event (for non-Sold/Collected statuses)
+  if (previousItem.status !== item.status) {
+    const skipUpdatedForStatuses = [ItemStatus.SOLD, ItemStatus.COLLECTED];
+    if (!skipUpdatedForStatuses.includes(item.status)) {
+      await appendEntityLog(EntityType.ITEM, item.id, LogEventType.UPDATED, {
+        name: item.name,
+        itemType: item.type,
+        station: item.station,
+        subItemType: item.subItemType,
+        collection: item.collection,
+        price: item.price,
+        unitCost: item.unitCost,
+        oldStatus: previousItem.status,
+        newStatus: item.status,
+        transition: `${previousItem.status} → ${item.status}`,
+        changedAt: new Date().toISOString()
+      });
+    }
   }
 
   // Manual SOLD status change - detect when status changes to SOLD without quantitySold change (not via sale)

@@ -41,12 +41,12 @@
       "status": "In Progress",
       "description": "Implement month/year selectors and connect it to Archive System and Dashboards Section",
       "deliverables": [
-        "Add Month Selector to Archive Section for historical data viewing",
+        "Archive Section Set for historical data viewing",
         "Add Month Selector to Financials Section for monthly financials",
         "Test month switching functionality across all sections",
         "Ensure proper data isolation between current and historical views",
         "Create Basic Dashboard Section and prepare to visualize data across all sections",
-        "Connect Dashboards to Archive System and the Month Selectors",
+        "X: Connect Dashboards to Archive System and the Month Selectors",
         "Dashboard connectivity with all other sections"
       ]
     },
@@ -60,7 +60,8 @@
         "Done Tasks Workflow Refactor, Collected Tasks Workflow Refactor, Items Sold, Auth Hybrid Login",
         "Basic Badges and Achievements Creation in Player Progression",
         "Implement Strict Key Namespacing and DB thegame namespace Migration",
-        "Refactor to Stateless Edge Auth and Rate Limit for Bandwidth Protection"
+        "Refactor to Stateless Edge Auth and Rate Limit for Bandwidth Protection",
+        "Align the 'Digital Universe"
       ]
     }
   },
