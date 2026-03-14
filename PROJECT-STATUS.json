@@ -38,7 +38,7 @@
     },
     "phase13.3": {
       "phaseName": "Dashboards Section, Month Selectors, Summary Repo, Archive System",
-      "status": "In Progress",
+      "status": "Done",
       "description": "Implement month/year selectors and connect it to Archive System and Dashboards Section",
       "deliverables": [
         "Archive Section Set for historical data viewing",
@@ -53,7 +53,7 @@
     },
     "phase13.4": {
       "phaseName": "Monthly close workflow and many bug fixing all around",
-      "status": "In Progress",
+      "status": "Done",
       "description": "Monthly Close Wrokkflow, Automation Tasks, Multiple Bug Fixing, thegame DB namespace",
       "deliverables": [
         "Montly Close Automation Task, Automation Tree",
