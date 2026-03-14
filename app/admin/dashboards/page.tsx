@@ -12,7 +12,7 @@ import {
 } from '@/types/entities';
 import { Building2, User, TrendingUp, TrendingDown, BarChart3, Grid3x3, Calendar } from 'lucide-react';
 import { MONTHS, getYearRange, getMonthName, getCurrentMonth } from '@/lib/constants/date-constants';
-import { formatMonthKey, getCurrentMonthKey } from '@/lib/utils/date-utils';
+import { formatMonthKey, getCurrentMonthKey, sortMonthKeys } from '@/lib/utils/date-utils';
 import { BUSINESS_STRUCTURE } from '@/types/enums';
 import { getCompanyAreas, getPersonalAreas } from '@/lib/utils/business-structure-utils';
 import { MonthSelector } from '@/components/ui/month-selector';
@@ -71,7 +71,7 @@ export default function DashboardsPage() {
         const months = await ClientAPI.getAvailableSummaryMonths();
         const current = getCurrentMonthKey();
         const allMonths = months.includes(current) ? months : [current, ...months];
-        setAvailableMonths(allMonths.sort((a,b) => b.localeCompare(a)));
+        setAvailableMonths(sortMonthKeys(allMonths));
       } catch (err) {
         setAvailableMonths([getCurrentMonthKey()]);
       }

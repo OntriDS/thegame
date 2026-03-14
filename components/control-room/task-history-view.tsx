@@ -6,7 +6,7 @@ import { ClientAPI } from '@/lib/client-api';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { MonthSelector } from '@/components/ui/month-selector';
-import { getCurrentMonthKey } from '@/lib/utils/date-utils';
+import { getCurrentMonthKey, sortMonthKeys } from '@/lib/utils/date-utils';
 import { format } from 'date-fns';
 import { Loader2, Calendar, ChevronRight, FolderOpen } from 'lucide-react';
 import { reviveDates } from '@/lib/utils/date-utils';
@@ -257,7 +257,7 @@ interface AvailableMonth {
                 const months = await ClientAPI.getAvailableSummaryMonths();
                 const current = getCurrentMonthKey();
                 const allMonths = months.includes(current) ? months : [current, ...months];
-                setAvailableMonths(allMonths.sort((a,b) => b.localeCompare(a)));
+                setAvailableMonths(sortMonthKeys(allMonths));
             } catch (error) {
                 console.error('Failed to load archive months:', error);
                 setAvailableMonths([getCurrentMonthKey()]);

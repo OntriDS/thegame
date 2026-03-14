@@ -2,7 +2,8 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileText, Calendar, CheckCircle, TrendingUp, Zap, AlertTriangle, X, User, MapPin, ShoppingCart } from 'lucide-react';
+import { MonthSelector } from '@/components/ui/month-selector';
+import { Boxes, Link as LinkIcon, Users, UserCircle, History, Package, Loader2, FileText, Calendar, CheckCircle, TrendingUp, Zap, AlertTriangle, X, User, MapPin, ShoppingCart } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -21,15 +22,7 @@ import { SalesLogTab } from '@/components/data-center/sales-log-tab';
 import { SitesLogTab } from '@/components/data-center/sites-log-tab';
 import { LinksTab } from '@/components/data-center/links-tab';
 import { deduplicateTasksLog } from '@/lib/utils/logging-utils';
-import { MonthSelector } from '../../../components/data-center/month-selector';
-
-/** Returns current month key in MM-YY format */
-function getCurrentMonthKey(): string {
-  const now = new Date();
-  const mm = String(now.getMonth() + 1).padStart(2, '0');
-  const yy = String(now.getFullYear()).slice(-2);
-  return `${mm}-${yy}`;
-}
+import { sortMonthKeys, getCurrentMonthKey } from '@/lib/utils/date-utils';
 
 export default function DataCenterPage() {
   const { textColor } = useThemeColors();
@@ -57,17 +50,7 @@ export default function DataCenterPage() {
         const data = await response.json();
         // Collect available months from any tab that returns them
         if (data.months && Array.isArray(data.months) && data.months.length > 0) {
-          setAvailableMonths(prev => {
-            const merged = Array.from(new Set([...prev, ...data.months])).sort((a, b) => {
-              const [amStr, ayStr] = a.split('-');
-              const [bmStr, byStr] = b.split('-');
-              const ay = parseInt(`20${ayStr}`, 10);
-              const by = parseInt(`20${byStr}`, 10);
-              if (ay !== by) return by - ay;
-              return parseInt(bmStr, 10) - parseInt(amStr, 10);
-            });
-            return merged;
-          });
+          setAvailableMonths(prev => sortMonthKeys(Array.from(new Set([...prev, ...data.months]))));
         }
         if (isTasksLog) {
           setter(deduplicateTasksLog(data));
@@ -144,38 +127,38 @@ export default function DataCenterPage() {
       if (characterResponse.ok) {
         const data = await characterResponse.json();
         setCharacterLog(data);
-        if (data.months) setAvailableMonths(prev => Array.from(new Set([...prev, ...data.months])));
+        if (data.months) setAvailableMonths(prev => sortMonthKeys(Array.from(new Set([...prev, ...data.months]))));
       }
       if (playerResponse.ok) {
         const data = await playerResponse.json();
         setPlayerLog(data);
-        if (data.months) setAvailableMonths(prev => Array.from(new Set([...prev, ...data.months])));
+        if (data.months) setAvailableMonths(prev => sortMonthKeys(Array.from(new Set([...prev, ...data.months]))));
       }
       if (salesResponse.ok) {
         const data = await salesResponse.json();
         setSalesLog(data);
-        if (data.months) setAvailableMonths(prev => Array.from(new Set([...prev, ...data.months])));
+        if (data.months) setAvailableMonths(prev => sortMonthKeys(Array.from(new Set([...prev, ...data.months]))));
       }
       if (sitesResponse.ok) {
         const data = await sitesResponse.json();
         setSitesLog(data);
-        if (data.months) setAvailableMonths(prev => Array.from(new Set([...prev, ...data.months])));
+        if (data.months) setAvailableMonths(prev => sortMonthKeys(Array.from(new Set([...prev, ...data.months]))));
       }
       if (financialsResponse.ok) {
         const data = await financialsResponse.json();
         setFinancialsLog(data);
-        if (data.months) setAvailableMonths(prev => Array.from(new Set([...prev, ...data.months])));
+        if (data.months) setAvailableMonths(prev => sortMonthKeys(Array.from(new Set([...prev, ...data.months]))));
       }
       if (itemsResponse.ok) {
         const data = await itemsResponse.json();
         setItemsLog(data);
-        if (data.months) setAvailableMonths(prev => Array.from(new Set([...prev, ...data.months])));
+        if (data.months) setAvailableMonths(prev => sortMonthKeys(Array.from(new Set([...prev, ...data.months]))));
       }
       if (tasksResponse.ok) {
         const data = await tasksResponse.json();
         setTasksLog(deduplicateTasksLog(data));
         if (data.months) {
-          setAvailableMonths(prev => Array.from(new Set([...prev, ...data.months])));
+          setAvailableMonths(prev => sortMonthKeys(Array.from(new Set([...prev, ...data.months]))));
         }
       }
     } catch (error) {

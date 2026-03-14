@@ -20,7 +20,7 @@ import { Switch } from "@/components/ui/switch";
 import { CurrencyExchangeRates, DEFAULT_CURRENCY_EXCHANGE_RATES } from "@/lib/constants/financial-constants";
 import { SummaryTotals } from "@/types/entities";
 import { formatCurrency } from "@/lib/utils/financial-utils";
-import { getCurrentMonthKey } from "@/lib/utils/date-utils";
+import { getCurrentMonthKey, sortMonthKeys } from "@/lib/utils/date-utils";
 
 export default function SalesPage() {
   const { activeBg } = useThemeColors();
@@ -48,7 +48,7 @@ export default function SalesPage() {
         const months = await ClientAPI.getAvailableSummaryMonths();
         const current = getCurrentMonthKey();
         const allMonths = months.includes(current) ? months : [current, ...months];
-        setAvailableMonths(allMonths.sort((a,b) => b.localeCompare(a)));
+        setAvailableMonths(sortMonthKeys(allMonths));
       } catch (err) {
         setAvailableMonths([getCurrentMonthKey()]);
       }

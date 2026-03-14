@@ -37,7 +37,7 @@ import { getCompanyAreas, getPersonalAreas, isCompanyStation, getAreaForStation 
 import { CompanyRecordsList, PersonalRecordsList } from '@/components/finances/financial-records-components';
 import { MonthlyHistoricalCashflows } from '@/components/finances/monthly-historical-cashflows';
 import { MonthSelector } from '@/components/ui/month-selector';
-import { formatMonthKey, getCurrentMonthKey } from '@/lib/utils/date-utils';
+import { formatMonthKey, getCurrentMonthKey, sortMonthKeys } from '@/lib/utils/date-utils';
 import { Switch } from '@/components/ui/switch';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
 import {
@@ -228,7 +228,7 @@ export default function FinancesPage() {
         // Ensure current month is always in the list if not there
         const current = getCurrentMonthKey();
         const allMonths = months.includes(current) ? months : [current, ...months];
-        setAvailableMonths(allMonths.sort((a,b) => b.localeCompare(a)));
+        setAvailableMonths(sortMonthKeys(allMonths));
       } catch (err) {
         console.warn("Failed to load available months", err);
         setAvailableMonths([getCurrentMonthKey()]);

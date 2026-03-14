@@ -11,22 +11,21 @@ import {
 } from '@/components/ui/select';
 
 interface MonthSelectorProps {
-    selectedMonth: string;      // MM-YY
-    availableMonths: string[];  // sorted newest-first
+    selectedMonth: string;
+    availableMonths: string[];
     onChange: (month: string) => void;
+    label?: string;
     className?: string;
 }
 
-/** Convert MM-YY to a readable label like "Mar 2026" */
-function monthLabel(mmyy: string): string {
-    if (!mmyy || !mmyy.includes('-')) return 'Select Month';
+const monthLabel = (mmyy: string) => {
+    if (!mmyy || !mmyy.includes('-')) return mmyy;
     const [mm, yy] = mmyy.split('-');
-    const year = yy.length === 2 ? 2000 + parseInt(yy, 10) : parseInt(yy, 10);
-    const date = new Date(year, parseInt(mm, 10) - 1, 1);
+    const date = new Date(yy.length === 2 ? 2000 + parseInt(yy, 10) : parseInt(yy, 10), parseInt(mm, 10) - 1, 1);
     return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
 }
 
-export function MonthSelector({ selectedMonth, availableMonths, onChange, className = "" }: MonthSelectorProps) {
+export function MonthSelector({ selectedMonth, availableMonths, onChange, label = "Period:", className = "" }: MonthSelectorProps) {
     const months = availableMonths.length > 0 ? availableMonths : [selectedMonth];
     const currentIndex = months.indexOf(selectedMonth);
 
@@ -49,8 +48,9 @@ export function MonthSelector({ selectedMonth, availableMonths, onChange, classN
 
     return (
         <div className={`flex items-center gap-2 ${className}`}>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm text-muted-foreground font-medium">Period:</span>
+            <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">
+                {label}
+            </span>
 
             <Button
                 variant="outline"

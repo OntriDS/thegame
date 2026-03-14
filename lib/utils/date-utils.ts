@@ -130,6 +130,23 @@ export function getCurrentMonthKey(): string {
 }
 
 /**
+ * Sort month keys (MM-YY) in descending order (newest first).
+ * Handles year boundaries correctly.
+ */
+export function sortMonthKeys(keys: string[]): string[] {
+  return [...keys].sort((a, b) => {
+    const [amStr, ayStr] = a.split('-');
+    const [bmStr, byStr] = b.split('-');
+    
+    const ay = parseInt(`20${ayStr}`, 10);
+    const by = parseInt(`20${byStr}`, 10);
+    
+    if (ay !== by) return by - ay; // Year desc
+    return parseInt(bmStr, 10) - parseInt(amStr, 10); // Month desc
+  });
+}
+
+/**
  * Parse a date string from HTML input format (YYYY-MM-DD) to Date object
  * @param dateString - Date string in YYYY-MM-DD format
  * @returns Date object or null if invalid

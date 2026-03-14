@@ -15,7 +15,7 @@ import { CurrencyExchangeRates, DEFAULT_CURRENCY_EXCHANGE_RATES } from "@/lib/co
 import { SummaryTotals } from "@/types/entities";
 import { formatCurrency } from "@/lib/utils/financial-utils";
 import { MonthSelector } from "@/components/ui/month-selector";
-import { getCurrentMonthKey } from "@/lib/utils/date-utils";
+import { getCurrentMonthKey, sortMonthKeys } from "@/lib/utils/date-utils";
 import { Archive, Loader2 } from "lucide-react";
 import {
   Dialog,
@@ -46,7 +46,7 @@ export default function InventoriesPage() {
         const months = await ClientAPI.getAvailableSummaryMonths();
         const current = getCurrentMonthKey();
         const allMonths = months.includes(current) ? months : [current, ...months];
-        setAvailableMonths(allMonths.sort((a,b) => b.localeCompare(a)));
+        setAvailableMonths(sortMonthKeys(allMonths));
       } catch (err) {
         setAvailableMonths([getCurrentMonthKey()]);
       }
