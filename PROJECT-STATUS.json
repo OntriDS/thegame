@@ -47,8 +47,8 @@
         "Ensure proper data isolation between current and historical views",
         "Create Basic Dashboard Section and prepare to visualize data across all sections",
         "Dashboard & Archive Integration and their Month Selectors",
-        "Dashboard connectivity with all other sections",
-        "Refactor and Standarization of Month Selector, Summary Repo, Repos Optimization Patterns"
+        "Dashboard connectivity with all other sections, Summary Repos",
+        "Refactor and Standarization of Month Selector, Refactor DashboardTabs and Data Patterns Optimization"
       ]
     },
     "phase13.4": {
@@ -62,7 +62,7 @@
         "Basic Badges and Achievements Creation in Player Progression",
         "Implement Strict Key Namespacing and DB thegame namespace Migration",
         "Refactor to Stateless Edge Auth and Rate Limit for Bandwidth Protection",
-        "Align the 'Digital Universe' Middleware and Packages"
+        "Align the 'Digital Universe' Middleware and Packages to connect TheGame, Pixelbrain and Akiles-Ecosystem"
       ]
     }
   },

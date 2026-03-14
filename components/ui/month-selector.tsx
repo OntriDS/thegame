@@ -16,6 +16,7 @@ interface MonthSelectorProps {
     onChange: (month: string) => void;
     label?: string;
     className?: string;
+    disabled?: boolean;
 }
 
 const monthLabel = (mmyy: string) => {
@@ -25,7 +26,14 @@ const monthLabel = (mmyy: string) => {
     return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
 }
 
-export function MonthSelector({ selectedMonth, availableMonths, onChange, label = "Month:", className = "" }: MonthSelectorProps) {
+export function MonthSelector({ 
+    selectedMonth, 
+    availableMonths, 
+    onChange, 
+    label = "Month:", 
+    className = "",
+    disabled = false
+}: MonthSelectorProps) {
     const months = availableMonths.length > 0 ? availableMonths : [selectedMonth];
     const currentIndex = months.indexOf(selectedMonth);
 
@@ -47,7 +55,7 @@ export function MonthSelector({ selectedMonth, availableMonths, onChange, label 
     const isOldest = currentIndex === months.length - 1;
 
     return (
-        <div className={`flex items-center gap-2 ${className}`}>
+        <div className={`flex items-center gap-2 ${className} ${disabled ? 'opacity-50 pointer-events-none' : ''}`}>
             <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">
                 {label}
             </span>
@@ -57,13 +65,13 @@ export function MonthSelector({ selectedMonth, availableMonths, onChange, label 
                 size="icon"
                 className="h-7 w-7"
                 onClick={goToPrev}
-                disabled={isOldest}
+                disabled={isOldest || disabled}
                 title="Older month"
             >
                 <ChevronLeft className="h-4 w-4" />
             </Button>
 
-            <Select value={selectedMonth} onValueChange={onChange}>
+            <Select value={selectedMonth} onValueChange={onChange} disabled={disabled}>
                 <SelectTrigger className="h-7 w-[130px] text-xs font-semibold">
                     <SelectValue>{monthLabel(selectedMonth)}</SelectValue>
                 </SelectTrigger>
