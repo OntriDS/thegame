@@ -318,7 +318,7 @@ export default function BoothSalesView({
             // No contract found for this pair -> Clear selection (Default/No Contract)
             setSelectedContractId('');
         }
-    }, [selectedAssociateId, selectedFounderBusinessId, contracts, sale]);
+    }, [selectedAssociateId, selectedFounderBusinessId, contracts, sale, businesses]);
     // ============================================================================
 
     const myItems = useMemo(() =>

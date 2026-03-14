@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -59,7 +59,7 @@ export function ConnectionIndicator({
   const toggleDetails = externalOnToggleDetails || (() => setInternalShowDetails(!internalShowDetails));
 
   // Fetch connection status
-  const fetchConnectionStatus = async () => {
+  const fetchConnectionStatus = useCallback(async () => {
     setIsRefreshing(true);
     try {
       const response = await fetch('/api/pixelbrain/status', {
@@ -85,14 +85,14 @@ export function ConnectionIndicator({
     } finally {
       setIsRefreshing(false);
     }
-  };
+  }, []);
 
   // Initial fetch and periodic refresh
   useEffect(() => {
     fetchConnectionStatus();
     const interval = setInterval(fetchConnectionStatus, 30000); // Refresh every 30 seconds
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchConnectionStatus]);
 
   // Format uptime
   const formatUptime = (milliseconds: number): string => {

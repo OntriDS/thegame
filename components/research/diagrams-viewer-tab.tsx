@@ -200,18 +200,23 @@ export function DiagramsViewerTab() {
                         >
                             {/* Using standard img tag for drag/drop flexibility and preventing Next.js Image strict sizing issues in this interactive context, 
                   but can switch to Next/Image if needed with layout='fill' and object-contain in a wrapper */}
-                            <img
-                                ref={imgRef}
+                            <Image
+                                ref={imgRef as any}
                                 src={selectedDiagram.imagePath}
                                 alt={selectedDiagram.name}
                                 draggable={false}
-                                onLoad={handleFitToScreen}
+                                onLoadingComplete={handleFitToScreen}
+                                unoptimized
+                                width={100} // Values don't matter much with unoptimized/custom styles but required
+                                height={100}
                                 className="max-w-none shadow-2xl transition-opacity duration-300"
                                 style={{
                                     // Prevent image selection during drag
                                     userSelect: 'none',
                                     pointerEvents: 'none',
-                                    border: '1px solid rgba(255,255,255,0.05)'
+                                    border: '1px solid rgba(255,255,255,0.05)',
+                                    width: 'auto',
+                                    height: 'auto'
                                 }}
                             />
                         </div>

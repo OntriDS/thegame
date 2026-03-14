@@ -48,7 +48,7 @@
         "Create Basic Dashboard Section and prepare to visualize data across all sections",
         "Dashboard & Archive Integration and their Month Selectors",
         "Dashboard connectivity with all other sections",
-        "Refactor and Standarization of Month Selector, Summary Repo"
+        "Refactor and Standarization of Month Selector, Summary Repo, Repos Optimization Patterns"
       ]
     },
     "phase13.4": {

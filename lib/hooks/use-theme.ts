@@ -60,7 +60,7 @@ export function useTheme() {
       setIsDark(savedMode);
       localStorage.setItem('theme-mode', savedMode ? 'dark' : 'light');
     }
-  }, [isMounted, kvLoading, getPreference]);
+  }, [isMounted, kvLoading, getPreference, currentTheme, isDark]);
 
   // ✅ APPLY THEME (only when different from initial)
   useEffect(() => {

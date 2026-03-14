@@ -638,7 +638,7 @@ export default function DashboardsPage() {
                 <CardTitle className="text-sm text-muted-foreground">Tasks Completed</CardTitle>
               </CardHeader>
               <CardContent className="text-center text-sm text-muted-foreground border-t pt-4">
-                This month's completed operational actions.
+                This month&apos;s completed operational actions.
               </CardContent>
             </Card>
 
