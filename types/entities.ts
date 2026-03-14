@@ -442,6 +442,7 @@ export interface SummaryTotals {
     revenue: number;
     costs: number;
     profit: number;
+    salesRevenue: number;
     salesVolume: number;
     itemsSold: number;
     taskCount: number;

@@ -288,7 +288,7 @@ export default function SalesPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              {formatCurrency(atomicSummary?.revenue || 0)}
+              {formatCurrency(atomicSummary?.salesRevenue || 0)}
             </div>
             <p className="text-xs text-muted-foreground">
               Monthly Total

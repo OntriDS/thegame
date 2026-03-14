@@ -17,6 +17,7 @@ export class SummaryRepository {
     monthYear,
     revenueDelta = 0,
     costDelta = 0,
+    salesRevenueDelta = 0,
     salesVolumeDelta = 0,
     itemsSoldDelta = 0,
     taskCountDelta = 0,
@@ -28,6 +29,7 @@ export class SummaryRepository {
     monthYear: string;
     revenueDelta?: number;
     costDelta?: number;
+    salesRevenueDelta?: number;
     salesVolumeDelta?: number;
     itemsSoldDelta?: number;
     taskCountDelta?: number;
@@ -46,6 +48,7 @@ export class SummaryRepository {
     if (revenueDelta !== 0) pipeline.hincrbyfloat(monthlyKey, 'revenue', revenueDelta);
     if (costDelta !== 0) pipeline.hincrbyfloat(monthlyKey, 'costs', costDelta);
     if (profitDelta !== 0) pipeline.hincrbyfloat(monthlyKey, 'profit', profitDelta);
+    if (salesRevenueDelta !== 0) pipeline.hincrbyfloat(monthlyKey, 'salesRevenue', salesRevenueDelta);
     if (salesVolumeDelta !== 0) pipeline.hincrbyfloat(monthlyKey, 'salesVolume', salesVolumeDelta);
     if (itemsSoldDelta !== 0) pipeline.hincrbyfloat(monthlyKey, 'itemsSold', itemsSoldDelta);
     if (taskCountDelta !== 0) pipeline.hincrbyfloat(monthlyKey, 'taskCount', taskCountDelta);
@@ -58,6 +61,7 @@ export class SummaryRepository {
     if (revenueDelta !== 0) pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'revenue', revenueDelta);
     if (costDelta !== 0) pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'costs', costDelta);
     if (profitDelta !== 0) pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'profit', profitDelta);
+    if (salesRevenueDelta !== 0) pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'salesRevenue', salesRevenueDelta);
     if (salesVolumeDelta !== 0) pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'salesVolume', salesVolumeDelta);
     if (itemsSoldDelta !== 0) pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'itemsSold', itemsSoldDelta);
     if (taskCountDelta !== 0) pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'taskCount', taskCountDelta);
@@ -89,6 +93,7 @@ export class SummaryRepository {
       revenue: Number(data?.revenue || 0),
       costs: Number(data?.costs || 0),
       profit: Number(data?.profit || 0),
+      salesRevenue: Number(data?.salesRevenue || 0),
       salesVolume: Number(data?.salesVolume || 0),
       itemsSold: Number(data?.itemsSold || 0),
       taskCount: Number(data?.taskCount || 0),

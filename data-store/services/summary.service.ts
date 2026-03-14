@@ -39,7 +39,7 @@ export class SummaryService {
   }
 
   /**
-   * SALES: Updates Sales Volume (Count of transactions)
+   * SALES: Updates Sales Revenue and Sales Volume (Count of transactions)
    */
   static async updateSalesCounters(
     newSale: Sale,
@@ -48,18 +48,27 @@ export class SummaryService {
     const date = newSale.collectedAt || newSale.saleDate || new Date();
     const monthYear = formatMonthKey(new Date(date));
     let salesVolumeDelta = 0;
+    let salesRevenueDelta = 0;
 
-    const isCountable = (status?: string) => 
+    const isCountable = (status?: string) =>
       status === SaleStatus.CHARGED || status === SaleStatus.COLLECTED;
 
     const wasCountable = oldSale ? isCountable(oldSale.status) : false;
     const isNowCountable = isCountable(newSale.status);
 
-    if (!wasCountable && isNowCountable) salesVolumeDelta = 1;
-    else if (wasCountable && !isNowCountable) salesVolumeDelta = -1;
+    if (!wasCountable && isNowCountable) {
+      salesVolumeDelta = 1;
+      salesRevenueDelta = newSale.totals.totalRevenue || 0;
+    } else if (wasCountable && !isNowCountable) {
+      salesVolumeDelta = -1;
+      salesRevenueDelta = -(oldSale?.totals.totalRevenue || 0);
+    } else if (wasCountable && isNowCountable) {
+      salesVolumeDelta = 0; // Count stays the same
+      salesRevenueDelta = (newSale.totals.totalRevenue || 0) - (oldSale?.totals.totalRevenue || 0);
+    }
 
-    if (salesVolumeDelta !== 0) {
-      await SummaryRepository.updateCounters({ monthYear, salesVolumeDelta });
+    if (salesVolumeDelta !== 0 || salesRevenueDelta !== 0) {
+      await SummaryRepository.updateCounters({ monthYear, salesVolumeDelta, salesRevenueDelta });
     }
   }
 
@@ -135,7 +144,8 @@ export class SummaryService {
     const date = sale.collectedAt || sale.saleDate || new Date();
     await SummaryRepository.updateCounters({
       monthYear: formatMonthKey(new Date(date)),
-      salesVolumeDelta: -1
+      salesVolumeDelta: -1,
+      salesRevenueDelta: -(sale.totals.totalRevenue || 0)
     });
   }
 
@@ -186,6 +196,7 @@ export class SummaryService {
         monthYear: mmyy,
         revenueDelta: financials.reduce((sum, f) => sum + (f.revenue || 0), 0),
         costDelta: financials.reduce((sum, f) => sum + (f.cost || 0), 0),
+        salesRevenueDelta: sales.reduce((sum, s) => sum + (s.totals.totalRevenue || 0), 0),
         salesVolumeDelta: sales.length,
         itemsSoldDelta: items.reduce((sum, i) => sum + (i.quantitySold || 0), 0),
         taskCountDelta: tasks.length,
