@@ -16,9 +16,11 @@ import { Plus, Calendar, DollarSign, Package, TrendingUp, Archive, Loader2 } fro
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import SalesModal from "@/components/modals/sales-modal";
 import { MonthSelector } from "@/components/ui/month-selector";
-import { getCurrentMonthKey } from "@/lib/utils/date-utils";
 import { Switch } from "@/components/ui/switch";
 import { CurrencyExchangeRates, DEFAULT_CURRENCY_EXCHANGE_RATES } from "@/lib/constants/financial-constants";
+import { SummaryTotals } from "@/types/entities";
+import { formatCurrency } from "@/lib/utils/financial-utils";
+import { getCurrentMonthKey } from "@/lib/utils/date-utils";
 
 export default function SalesPage() {
   const { activeBg } = useThemeColors();
@@ -29,6 +31,8 @@ export default function SalesPage() {
   const [selectedStatus, setSelectedStatus] = useState<SaleStatus | 'all'>('all');
   const [selectedSite, setSelectedSite] = useState<string | 'all'>('all');
   const [isLoading, setIsLoading] = useState(true);
+  const [isAtomicLoading, setIsAtomicLoading] = useState(false);
+  const [atomicSummary, setAtomicSummary] = useState<SummaryTotals | null>(null);
   const [showSalesModal, setShowSalesModal] = useState(false);
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
   const [selectedMonthKey, setSelectedMonthKey] = useState(getCurrentMonthKey());
@@ -91,11 +95,18 @@ export default function SalesPage() {
 
   const loadSales = async () => {
     try {
-      setIsLoading(true);
       const [mm, yy] = selectedMonthKey.split('-');
       const monthNum = parseInt(mm, 10);
       const yearNum = 2000 + parseInt(yy, 10);
 
+      // 1. Fetch Atomic Summary (INSTANT & NON-BLOCKING)
+      setIsAtomicLoading(true);
+      ClientAPI.getSummary(selectedMonthKey)
+        .then(setAtomicSummary)
+        .finally(() => setIsAtomicLoading(false));
+
+      // 2. Fetch Full Detailed Sales (O(N) - BACKGROUND)
+      setIsLoading(true);
       const [salesData, sitesData, ratesData] = await Promise.all([
         ClientAPI.getSales(
           filterByMonth ? monthNum : undefined,
@@ -108,7 +119,7 @@ export default function SalesPage() {
       setSites(sitesData);
       setExchangeRates(ratesData);
     } catch (error) {
-      console.error('Failed to load sales:', error);
+      console.error('Failed to load sales history:', error);
     } finally {
       setIsLoading(false);
     }
@@ -259,6 +270,7 @@ export default function SalesPage() {
             />
             <span className="text-sm text-muted-foreground">Filter by month</span>
           </div>
+
           <div className="flex items-center gap-2 border rounded-md px-3 py-1.5">
             <Switch
               checked={showCollected}
@@ -276,56 +288,66 @@ export default function SalesPage() {
 
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-4">
+        {/* Monthly Revenue (Atomic) */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Sales</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{filteredSales.length}</div>
-            <p className="text-xs text-muted-foreground">
-              {sales.length} total sales
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Net Profit</CardTitle>
+            <CardTitle className="text-sm font-medium">Monthly Revenue</CardTitle>
             <DollarSign className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600 dark:text-green-500">${calculateTotalProfit().toFixed(2)}</div>
+            <div className="text-2xl font-bold text-green-600">
+              {formatCurrency(atomicSummary?.revenue || 0)}
+            </div>
             <p className="text-xs text-muted-foreground">
-              Gross: ${calculateTotalRevenue().toFixed(2)}
+              {filterByMonth ? 'Static Month Total' : 'Aggregated View'}
             </p>
           </CardContent>
         </Card>
 
+        {/* Net Profit (Dynamic) - Keeping as secondary/detailed */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Net Profit (Detail)</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600 dark:text-green-500">
+              {formatCurrency(calculateTotalProfit())}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Based on {filteredSales.length} records
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Sales Volume (Atomic) */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Sales Volume</CardTitle>
+            <Archive className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {atomicSummary?.salesVolume || 0}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Transactions recorded
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Items Sold (Atomic) */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Items Sold</CardTitle>
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{calculateTotalItems()}</div>
-            <p className="text-xs text-muted-foreground">
-              Items and bundles
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Average Sale</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
             <div className="text-2xl font-bold">
-              ${filteredSales.length > 0 ? (calculateTotalRevenue() / filteredSales.length).toFixed(2) : '0.00'}
+              {atomicSummary?.itemsSold || 0}
             </div>
             <p className="text-xs text-muted-foreground">
-              Per transaction
+              Physical items delivered
             </p>
           </CardContent>
         </Card>
@@ -333,14 +355,15 @@ export default function SalesPage() {
 
       {/* Filters */}
       <Card>
-        <CardHeader>
+        <CardHeader className="pb-3 px-6 pt-6">
+          <CardTitle className="text-base font-medium">Active Filters</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">Type:</span>
               <Select value={selectedType} onValueChange={(value) => setSelectedType(value as SaleType | 'all')}>
-                <SelectTrigger className="w-40">
+                <SelectTrigger className="w-40 h-8">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -355,7 +378,7 @@ export default function SalesPage() {
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">Status:</span>
               <Select value={selectedStatus} onValueChange={(value) => setSelectedStatus(value as SaleStatus | 'all')}>
-                <SelectTrigger className="w-32">
+                <SelectTrigger className="w-32 h-8">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -370,7 +393,7 @@ export default function SalesPage() {
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">Site:</span>
               <Select value={selectedSite} onValueChange={(value) => setSelectedSite(value)}>
-                <SelectTrigger className="w-40">
+                <SelectTrigger className="w-40 h-8">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -399,6 +422,7 @@ export default function SalesPage() {
         <CardContent>
           {isLoading ? (
             <div className="text-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2 text-primary" />
               <p className="text-muted-foreground">Loading sales...</p>
             </div>
           ) : filteredSales.length === 0 ? (
@@ -452,8 +476,6 @@ export default function SalesPage() {
         onDelete={handleDeleteSale}
         exchangeRates={exchangeRates}
       />
-
-
     </div>
   );
-}
+}

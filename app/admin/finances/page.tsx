@@ -134,7 +134,8 @@ export default function FinancesPage() {
   const [aggregatedCategoryData, setAggregatedCategoryData] = useState<any>(null);
   const [recordsRefreshKey, setRecordsRefreshKey] = useState(0);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [isSummaryLoading, setIsSummaryLoading] = useState(false);
+  const [isAtomicLoading, setIsAtomicLoading] = useState(false);
+  const [isDetailLoading, setIsDetailLoading] = useState(false);
   const [showConversionRatesModal, setShowConversionRatesModal] = useState(false);
   const [showFinancialsModal, setShowFinancialsModal] = useState(false);
 
@@ -237,17 +238,20 @@ export default function FinancesPage() {
   }, []);
 
   const loadSummaries = useCallback(async () => {
-    setIsSummaryLoading(true);
+    // Parse selected month key
+    const [mm, yy] = selectedMonthKey.split('-');
+    const monthNum = parseInt(mm, 10);
+    const yearNum = 2000 + parseInt(yy, 10);
+
+    // 1. Fetch Atomic Summary (INSTANT & NON-BLOCKING)
+    setIsAtomicLoading(true);
+    ClientAPI.getSummary(selectedMonthKey)
+      .then(setAtomicSummary)
+      .finally(() => setIsAtomicLoading(false));
+
+    // 2. Fetch Full Detailed Summary (O(N) - BACKGROUND)
+    setIsDetailLoading(true);
     try {
-        // Parse selected month key
-        const [mm, yy] = selectedMonthKey.split('-');
-        const monthNum = parseInt(mm, 10);
-        const yearNum = 2000 + parseInt(yy, 10);
-
-        // 1. Fetch Atomic Summary (INSTANT)
-        ClientAPI.getSummary(selectedMonthKey).then(setAtomicSummary);
-
-        // 2. Fetch Full Detailed Summary (BACKGROUND)
         const data = await ClientAPI.getFinancialSummary(
           filterByMonth ? monthNum : undefined,
           filterByMonth ? yearNum : undefined
@@ -259,9 +263,9 @@ export default function FinancesPage() {
         setAggregatedCategoryData(data.aggregatedCategoryData);
         setRecordsRefreshKey(prev => prev + 1);
     } catch (err) {
-        console.error("Failed to load summaries", err);
+        console.error("Failed to load detailed financial totals", err);
     } finally {
-        setIsSummaryLoading(false);
+        setIsDetailLoading(false);
     }
   }, [selectedMonthKey, filterByMonth]);
 
@@ -696,29 +700,24 @@ export default function FinancesPage() {
               <CardContent className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Revenue</span>
-                  <span className="font-medium">{atomicSummary ? formatCurrency(atomicSummary.revenue) : formatCurrency(aggregatedFinancialData?.totalRevenue || 0)}</span>
+                  <span className="font-medium text-green-600">{formatCurrency(atomicSummary?.revenue || 0)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>Cost</span>
-                  <span className="font-medium">{atomicSummary ? formatCurrency(atomicSummary.costs) : formatCurrency(aggregatedFinancialData?.totalCost || 0)}</span>
+                  <span className="font-medium text-red-600">{formatCurrency(atomicSummary?.costs || 0)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>Net</span>
-                  <span className={`font-bold ${(atomicSummary?.profit || aggregatedFinancialData?.net || 0) === 0 ? 'text-muted-foreground' :
-                    (atomicSummary?.profit || aggregatedFinancialData?.net || 0) > 0 ? 'text-foreground' : 'text-muted-foreground'
+                  <span className={`font-bold ${(atomicSummary?.profit || 0) === 0 ? 'text-muted-foreground' :
+                    (atomicSummary?.profit || 0) > 0 ? 'text-green-600' : 'text-red-600'
                     }`}>
-                    {atomicSummary ? formatCurrency(atomicSummary.profit) : formatCurrency(aggregatedFinancialData?.net || 0)}
+                    {formatCurrency(atomicSummary?.profit || 0)}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span>J$ Paid Out</span>
+                  <span>J$ Paid</span>
                   <span className="font-medium">
-                    {atomicSummary 
-                      ? `${atomicSummary.jungleCoins} J$ (${formatCurrency(atomicSummary.jungleCoins * exchangeRates.j$ToUSD)})`
-                      : aggregatedFinancialData?.totalJungleCoins 
-                        ? `${aggregatedFinancialData.totalJungleCoins} J$ (${formatCurrency(aggregatedFinancialData.totalJungleCoins * exchangeRates.j$ToUSD)})`
-                        : '0 J$'
-                    }
+                    {atomicSummary?.jungleCoins || 0} J$ ({formatCurrency((atomicSummary?.jungleCoins || 0) * (exchangeRates.j$ToUSD || 0.40))})
                   </span>
                 </div>
               </CardContent>
@@ -735,18 +734,18 @@ export default function FinancesPage() {
               <CardContent className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Revenue</span>
-                  <span className="font-medium">{personalSummary?.totalRevenue ? formatCurrency(personalSummary.totalRevenue) : '$0'}</span>
+                  <span className="font-medium text-green-600">{formatCurrency(personalSummary?.totalRevenue || 0)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>Cost</span>
-                  <span className="font-medium">{personalSummary?.totalCost ? formatCurrency(personalSummary.totalCost) : '$0'}</span>
+                  <span className="font-medium text-red-600">{formatCurrency(personalSummary?.totalCost || 0)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>Net</span>
-                  <span className={`font-bold ${personalSummary?.netCashflow === 0 ? 'text-muted-foreground' :
-                    (personalSummary?.netCashflow ?? 0) > 0 ? 'text-foreground' : 'text-muted-foreground'
+                  <span className={`font-bold ${(personalSummary?.netCashflow || 0) === 0 ? 'text-muted-foreground' :
+                    (personalSummary?.netCashflow || 0) > 0 ? 'text-green-600' : 'text-red-600'
                     }`}>
-                    {personalSummary?.netCashflow ? formatCurrency(personalSummary.netCashflow) : '$0'}
+                    {formatCurrency(personalSummary?.netCashflow || 0)}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
@@ -1197,6 +1196,7 @@ export default function FinancesPage() {
             onRecordEdit={(record) => {
               // This is handled by CompanyRecordsList component
             }}
+            isLoading={isDetailLoading}
           />
         </TabsContent>
 
@@ -1213,6 +1213,7 @@ export default function FinancesPage() {
             onRecordEdit={(record) => {
               // This is handled by PersonalRecordsList component
             }}
+            isLoading={isDetailLoading}
           />
         </TabsContent>
       </Tabs>

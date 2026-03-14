@@ -40,7 +40,8 @@ export default function DashboardsPage() {
   const [companySummary, setCompanySummary] = useState<CompanyMonthlySummary | null>(null);
   const [personalSummary, setPersonalSummary] = useState<PersonalMonthlySummary | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [isSummaryLoading, setIsSummaryLoading] = useState(false);
+  const [isAtomicLoading, setIsAtomicLoading] = useState(false);
+  const [isDetailLoading, setIsDetailLoading] = useState(false);
 
   // Analytics data
   const [productPerformance, setProductPerformance] = useState<ProductPerformance[]>([]);
@@ -79,16 +80,19 @@ export default function DashboardsPage() {
   }, []);
 
   const loadSummaries = useCallback(async () => {
-    setIsSummaryLoading(true);
+    const [mm, yy] = selectedMonthKey.split('-');
+    const monthNum = parseInt(mm, 10);
+    const yearNum = 2000 + parseInt(yy, 10);
+
+    // 1. Fetch Atomic Summary (INSTANT & NON-BLOCKING)
+    setIsAtomicLoading(true);
+    ClientAPI.getSummary(selectedMonthKey)
+      .then(setAtomicSummary)
+      .finally(() => setIsAtomicLoading(false));
+
+    // 2. Fetch Full Detailed Summary (O(N) - BACKGROUND)
+    setIsDetailLoading(true);
     try {
-      const [mm, yy] = selectedMonthKey.split('-');
-      const monthNum = parseInt(mm, 10);
-      const yearNum = 2000 + parseInt(yy, 10);
-
-      // 1. Fetch Atomic Summary (INSTANT)
-      ClientAPI.getSummary(selectedMonthKey).then(setAtomicSummary);
-
-      // 2. Fetch Full Detailed Summary (BACKGROUND - keeping for breakdown data)
       const records = filterByMonth
         ? await ClientAPI.getFinancialRecords(monthNum, yearNum)
         : await ClientAPI.getFinancialRecords();
@@ -126,9 +130,9 @@ export default function DashboardsPage() {
         categoryBreakdown: personalBreakdown
       });
     } catch (err) {
-      console.error("Failed to load dashboard summaries", err);
+      console.error("Failed to load dashboard detail breakdown", err);
     } finally {
-      setIsSummaryLoading(false);
+      setIsDetailLoading(false);
     }
   }, [selectedMonthKey, filterByMonth]);
 
@@ -260,7 +264,7 @@ export default function DashboardsPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold text-green-600">
-                      {formatCurrency(companySummary?.totalRevenue || 0)}
+                      {formatCurrency(atomicSummary?.revenue || 0)}
                     </div>
                   </CardContent>
                 </Card>
@@ -270,7 +274,7 @@ export default function DashboardsPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold text-red-600">
-                      {formatCurrency(companySummary?.totalCost || 0)}
+                      {formatCurrency(atomicSummary?.costs || 0)}
                     </div>
                   </CardContent>
                 </Card>
@@ -279,10 +283,10 @@ export default function DashboardsPage() {
                     <CardTitle className="text-sm">Net Cashflow</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className={`text-2xl font-bold ${(companySummary?.netCashflow || 0) > 0 ? 'text-green-600' :
-                      (companySummary?.netCashflow || 0) < 0 ? 'text-red-600' : 'text-muted-foreground'
+                    <div className={`text-2xl font-bold ${(atomicSummary?.profit || 0) > 0 ? 'text-green-600' :
+                      (atomicSummary?.profit || 0) < 0 ? 'text-red-600' : 'text-muted-foreground'
                       }`}>
-                      {formatCurrency(companySummary?.netCashflow || 0)}
+                      {formatCurrency(atomicSummary?.profit || 0)}
                     </div>
                   </CardContent>
                 </Card>
@@ -292,85 +296,66 @@ export default function DashboardsPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">
-                      {companySummary?.totalJungleCoins || 0} J$
+                      {atomicSummary?.jungleCoins || 0} J$
                     </div>
                   </CardContent>
                 </Card>
               </div>
 
-              <Card className="mb-4">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg">Atomic Summary</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Revenue</span>
-                    <span className="font-medium">{atomicSummary ? formatCurrency(atomicSummary.revenue) : formatCurrency(companySummary?.totalRevenue || 0)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span>Cost</span>
-                    <span className="font-medium">{atomicSummary ? formatCurrency(atomicSummary.costs) : formatCurrency(companySummary?.totalCost || 0)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span>Net</span>
-                    <span className={`font-bold ${(atomicSummary?.profit ?? companySummary?.netCashflow ?? 0) === 0 ? 'text-muted-foreground' :
-                      (atomicSummary?.profit ?? companySummary?.netCashflow ?? 0) > 0 ? 'text-green-600' : 'text-red-600'
-                      }`}>
-                      {atomicSummary ? formatCurrency(atomicSummary.profit) : formatCurrency(companySummary?.netCashflow || 0)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span>J$ Paid {atomicSummary ? `(${atomicSummary.jungleCoins} J$)` : companySummary?.totalJungleCoins ? `(${companySummary.totalJungleCoins} J$)` : ''}</span>
-                    <span className="font-medium">-{atomicSummary ? formatCurrency(atomicSummary.jungleCoins * 0.40) : formatCurrency((companySummary?.totalJungleCoins || 0) * 0.40)}</span>
-                  </div>
-                </CardContent>
-              </Card>
+              {/* Station breakdowns will show here */}
 
               {/* Company Stations by Area */}
-              {['ADMIN', 'RESEARCH', 'ARTDESIGN', 'MAKERSPACE', 'SALES'].map((area: string) => {
-                const areaStations = (BUSINESS_STRUCTURE as any)[area] || [];
+              {isDetailLoading ? (
+                <div className="flex flex-col items-center justify-center p-12 space-y-4">
+                  <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+                  <p className="text-sm text-muted-foreground">Loading station breakdowns...</p>
+                </div>
+              ) : (
+                ['ADMIN', 'RESEARCH', 'ARTDESIGN', 'MAKERSPACE', 'SALES'].map((area: string) => {
+                  const areaStations = (BUSINESS_STRUCTURE as any)[area] || [];
 
-                return (
-                  <Card key={area} className="mb-4">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-lg">{area} Area</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                        {areaStations.map((station: string) => {
-                          const breakdown = companySummary?.categoryBreakdown[station];
-                          const net = breakdown ? breakdown.net : 0;
+                  return (
+                    <Card key={area} className="mb-4">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-lg">{area} Area</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                          {areaStations.map((station: string) => {
+                            const breakdown = companySummary?.categoryBreakdown[station];
+                            const net = breakdown ? breakdown.net : 0;
 
-                          return (
-                            <Card key={station} className="border-muted">
-                              <CardHeader className="pb-2">
-                                <CardTitle className="text-sm">{station}</CardTitle>
-                              </CardHeader>
-                              <CardContent>
-                                <div className={`text-lg font-bold ${net === 0 ? 'text-muted-foreground' :
-                                  net > 0 ? 'text-green-600' : 'text-red-600'
-                                  }`}>
-                                  {formatCurrency(net)}
-                                </div>
-                                <div className="text-xs text-muted-foreground mt-1">
-                                  {breakdown ? (
-                                    <>
-                                      <div>Revenue: {formatCurrency(breakdown.revenue)}</div>
-                                      <div>Cost: {formatCurrency(breakdown.cost)}</div>
-                                    </>
-                                  ) : (
-                                    'No data'
-                                  )}
-                                </div>
-                              </CardContent>
-                            </Card>
-                          );
-                        })}
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
+                            return (
+                              <Card key={station} className="border-muted">
+                                <CardHeader className="pb-2">
+                                  <CardTitle className="text-sm">{station}</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                  <div className={`text-lg font-bold ${net === 0 ? 'text-muted-foreground' :
+                                    net > 0 ? 'text-green-600' : 'text-red-600'
+                                    }`}>
+                                    {formatCurrency(net)}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground mt-1">
+                                    {breakdown ? (
+                                      <>
+                                        <div>Revenue: {formatCurrency(breakdown.revenue)}</div>
+                                        <div>Cost: {formatCurrency(breakdown.cost)}</div>
+                                      </>
+                                    ) : (
+                                      'No data'
+                                    )}
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            );
+                          })}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -434,44 +419,51 @@ export default function DashboardsPage() {
               </div>
 
               {/* Personal Stations */}
-              <Card className="mb-4">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg">Personal Categories</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {(BUSINESS_STRUCTURE.PERSONAL as unknown as string[]).map((station: string) => {
-                      const data = personalSummary?.categoryBreakdown[station];
-                      const net = data ? data.net : 0;
+              {isDetailLoading ? (
+                <div className="flex flex-col items-center justify-center p-12 space-y-4">
+                  <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+                  <p className="text-sm text-muted-foreground">Loading personal categories...</p>
+                </div>
+              ) : (
+                <Card className="mb-4">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg">Personal Categories</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {(BUSINESS_STRUCTURE.PERSONAL as unknown as string[]).map((station: string) => {
+                        const data = personalSummary?.categoryBreakdown[station];
+                        const net = data ? data.net : 0;
 
-                      return (
-                        <Card key={station} className="border-muted">
-                          <CardHeader className="pb-2">
-                            <CardTitle className="text-sm">{station}</CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <div className={`text-lg font-bold ${net === 0 ? 'text-muted-foreground' :
-                              net > 0 ? 'text-green-600' : 'text-red-600'
-                              }`}>
-                              {formatCurrency(net)}
-                            </div>
-                            <div className="text-xs text-muted-foreground mt-1">
-                              {data ? (
-                                <>
-                                  <div>Revenue: {formatCurrency(data.revenue)}</div>
-                                  <div>Cost: {formatCurrency(data.cost)}</div>
-                                </>
-                              ) : (
-                                'No data'
-                              )}
-                            </div>
-                          </CardContent>
-                        </Card>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
+                        return (
+                          <Card key={station} className="border-muted">
+                            <CardHeader className="pb-2">
+                              <CardTitle className="text-sm">{station}</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <div className={`text-lg font-bold ${net === 0 ? 'text-muted-foreground' :
+                                net > 0 ? 'text-green-600' : 'text-red-600'
+                                }`}>
+                                {formatCurrency(net)}
+                              </div>
+                              <div className="text-xs text-muted-foreground mt-1">
+                                {data ? (
+                                  <>
+                                    <div>Revenue: {formatCurrency(data.revenue)}</div>
+                                    <div>Cost: {formatCurrency(data.cost)}</div>
+                                  </>
+                                ) : (
+                                  'No data'
+                                )}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

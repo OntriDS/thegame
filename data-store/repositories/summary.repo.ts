@@ -1,4 +1,3 @@
-// @/data-store/repositories/summary.repo.ts
 import { kv } from '@/data-store/kv';
 import type { SummaryTotals } from '@/types/entities';
 
@@ -22,6 +21,9 @@ export class SummaryRepository {
     itemsSoldDelta = 0,
     taskCountDelta = 0,
     jungleCoinsDelta = 0,
+    inventoryValueDelta = 0,
+    inventoryCostDelta = 0,
+    inventoryJ$Delta = 0,
   }: {
     monthYear: string;
     revenueDelta?: number;
@@ -30,10 +32,15 @@ export class SummaryRepository {
     itemsSoldDelta?: number;
     taskCountDelta?: number;
     jungleCoinsDelta?: number;
+    inventoryValueDelta?: number;
+    inventoryCostDelta?: number;
+    inventoryJ$Delta?: number;
   }) {
     const profitDelta = revenueDelta - costDelta;
     const monthlyKey = this.getMonthlyKey(monthYear);
-    const pipeline = (await import('@/data-store/kv')).kv.pipeline();
+    
+    // Create an atomic pipeline
+    const pipeline = kv.pipeline();
 
     // Monthly scope
     if (revenueDelta !== 0) pipeline.hincrbyfloat(monthlyKey, 'revenue', revenueDelta);
@@ -43,6 +50,9 @@ export class SummaryRepository {
     if (itemsSoldDelta !== 0) pipeline.hincrbyfloat(monthlyKey, 'itemsSold', itemsSoldDelta);
     if (taskCountDelta !== 0) pipeline.hincrbyfloat(monthlyKey, 'taskCount', taskCountDelta);
     if (jungleCoinsDelta !== 0) pipeline.hincrbyfloat(monthlyKey, 'jungleCoins', jungleCoinsDelta);
+    if (inventoryValueDelta !== 0) pipeline.hincrbyfloat(monthlyKey, 'inventoryValue', inventoryValueDelta);
+    if (inventoryCostDelta !== 0) pipeline.hincrbyfloat(monthlyKey, 'inventoryCost', inventoryCostDelta);
+    if (inventoryJ$Delta !== 0) pipeline.hincrbyfloat(monthlyKey, 'inventoryJ$', inventoryJ$Delta);
 
     // All-Time scope
     if (revenueDelta !== 0) pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'revenue', revenueDelta);
@@ -52,7 +62,11 @@ export class SummaryRepository {
     if (itemsSoldDelta !== 0) pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'itemsSold', itemsSoldDelta);
     if (taskCountDelta !== 0) pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'taskCount', taskCountDelta);
     if (jungleCoinsDelta !== 0) pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'jungleCoins', jungleCoinsDelta);
+    if (inventoryValueDelta !== 0) pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'inventoryValue', inventoryValueDelta);
+    if (inventoryCostDelta !== 0) pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'inventoryCost', inventoryCostDelta);
+    if (inventoryJ$Delta !== 0) pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'inventoryJ$', inventoryJ$Delta);
 
+    // Execute all commands atomically in a single network round-trip
     await pipeline.exec();
   }
 
@@ -79,6 +93,9 @@ export class SummaryRepository {
       itemsSold: Number(data?.itemsSold || 0),
       taskCount: Number(data?.taskCount || 0),
       jungleCoins: Number(data?.jungleCoins || 0),
+      inventoryValue: Number(data?.inventoryValue || 0),
+      inventoryCost: Number(data?.inventoryCost || 0),
+      inventoryJ$: Number(data?.inventoryJ$ || 0),
     };
   }
 }

@@ -14,12 +14,14 @@ export function CompanyRecordsList({
   year,
   month,
   onRecordUpdated,
-  onRecordEdit
+  onRecordEdit,
+  isLoading = false
 }: {
   year: number;
   month: number;
   onRecordUpdated: () => void;
   onRecordEdit: (record: FinancialRecord) => void;
+  isLoading?: boolean;
 }) {
   const [records, setRecords] = useState<FinancialRecord[]>([]);
   const [recordToEdit, setRecordToEdit] = useState<FinancialRecord | null>(null);
@@ -62,7 +64,12 @@ export function CompanyRecordsList({
 
   return (
     <>
-      {records.length === 0 ? (
+      {isLoading ? (
+        <div className="flex flex-col items-center justify-center p-8 space-y-4">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
+          <p className="text-xs text-muted-foreground">Loading company records...</p>
+        </div>
+      ) : records.length === 0 ? (
         <Card>
           <CardContent className="text-center py-8">
             <p className="text-muted-foreground">
@@ -175,12 +182,14 @@ export function PersonalRecordsList({
   year,
   month,
   onRecordUpdated,
-  onRecordEdit
+  onRecordEdit,
+  isLoading = false
 }: {
   year: number;
   month: number;
   onRecordUpdated: () => void;
   onRecordEdit: (record: FinancialRecord) => void;
+  isLoading?: boolean;
 }) {
   const [records, setRecords] = useState<FinancialRecord[]>([]);
   const [recordToEdit, setRecordToEdit] = useState<FinancialRecord | null>(null);
@@ -252,7 +261,12 @@ This action cannot be undone.`);
 
   return (
     <>
-      {records.length === 0 ? (
+      {isLoading ? (
+        <div className="flex flex-col items-center justify-center p-8 space-y-4">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
+          <p className="text-xs text-muted-foreground">Loading personal records...</p>
+        </div>
+      ) : records.length === 0 ? (
         <Card>
           <CardContent className="text-center py-8">
             <p className="text-muted-foreground">

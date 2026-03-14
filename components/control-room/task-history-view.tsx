@@ -241,27 +241,23 @@ interface AvailableMonth {
     summary: {
         tasks: number;
     };
-}
-
-export default function TaskHistoryView({ onSelectTask }: TaskHistoryViewProps) {
+}export default function TaskHistoryView({ onSelectTask }: TaskHistoryViewProps) {
     const [availableMonths, setAvailableMonths] = useState<string[]>([]);
     const [selectedMonthKey, setSelectedMonthKey] = useState(getCurrentMonthKey());
     const [tasks, setTasks] = useState<Task[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [isLoadingMonths, setIsLoadingMonths] = useState(true);
+    const [atomicSummary, setAtomicSummary] = useState<any>(null);
+    const [isAtomicLoading, setIsAtomicLoading] = useState(false);
 
     // Load available months
     useEffect(() => {
         const loadMonths = async () => {
             try {
-                // Use standardized available months or archive specific ones
-                const response = await fetch('/api/archive/months');
-                if (response.ok) {
-                    const data = await response.json();
-                    setAvailableMonths(data.map((m: any) => m.key).sort((a: string, b: string) => b.localeCompare(a)));
-                } else {
-                    setAvailableMonths([getCurrentMonthKey()]);
-                }
+                const months = await ClientAPI.getAvailableSummaryMonths();
+                const current = getCurrentMonthKey();
+                const allMonths = months.includes(current) ? months : [current, ...months];
+                setAvailableMonths(allMonths.sort((a,b) => b.localeCompare(a)));
             } catch (error) {
                 console.error('Failed to load archive months:', error);
                 setAvailableMonths([getCurrentMonthKey()]);
@@ -275,23 +271,29 @@ export default function TaskHistoryView({ onSelectTask }: TaskHistoryViewProps) 
     // Load tasks for selected month/year + all tasks for hierarchy
     useEffect(() => {
         const loadTasks = async () => {
+            // 1. Fetch Atomic Summary (INSTANT)
+            setIsAtomicLoading(true);
+            ClientAPI.getSummary(selectedMonthKey)
+                .then(setAtomicSummary)
+                .finally(() => setIsAtomicLoading(false));
+
+            // 2. Fetch Full Detailed History (O(N) - BACKGROUND)
             setIsLoading(true);
             try {
                 const [mm, yy] = selectedMonthKey.split('-');
                 const monthNum = parseInt(mm, 10);
                 const yearNum = 2000 + parseInt(yy, 10);
 
-                // Load collected tasks
+                // Load collected tasks from history API
                 const collectedResponse = await fetch(`/api/tasks/history?month=${monthNum}&year=${yearNum}`);
                 if (collectedResponse.ok) {
                     const collectedData = await collectedResponse.json();
 
-                    // Load all tasks to build parent relationships
-                    const allResponse = await fetch('/api/tasks/all');
-                    const allTasks = allResponse.ok ? reviveDates(await allResponse.json()) : [];
+                    // Load all tasks to build parent relationships (using ClientAPI for consistency)
+                    const allTasks = reviveDates(await ClientAPI.getTasks());
 
                     // Merge data and build hierarchy
-                    setTasks(buildTaskHierarchy(collectedData, allTasks));
+                    setTasks(buildTaskHierarchy(collectedData, allTasks as any));
                 }
             } catch (error) {
                 console.error('Failed to load task history:', error);
@@ -315,10 +317,13 @@ export default function TaskHistoryView({ onSelectTask }: TaskHistoryViewProps) 
     return (
         <div className="h-full flex flex-col space-y-4 p-4">
             <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold flex items-center gap-2">
-                    <Calendar className="h-5 w-5" />
-                    Task History
-                </h2>
+                <div>
+                    <h2 className="text-xl font-bold flex items-center gap-2">
+                        <Calendar className="h-6 w-6 text-primary" />
+                        Task History
+                    </h2>
+                    <p className="text-sm text-muted-foreground">Review completed missions and assignments</p>
+                </div>
                 <MonthSelector
                     selectedMonth={selectedMonthKey}
                     availableMonths={availableMonths}
@@ -326,10 +331,45 @@ export default function TaskHistoryView({ onSelectTask }: TaskHistoryViewProps) 
                 />
             </div>
 
+            {/* Atomic Summary Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Card className="bg-primary/5 border-primary/20">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Total Tasks Completed</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold text-primary">
+                            {isAtomicLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : (atomicSummary?.taskCount || 0)}
+                        </div>
+                    </CardContent>
+                </Card>
+                <Card className="bg-green-500/5 border-green-500/20">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Completion Rate</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold text-green-600">
+                            {atomicSummary?.taskCount ? '100%' : '0%'}
+                        </div>
+                    </CardContent>
+                </Card>
+                <Card className="bg-yellow-500/5 border-yellow-500/20">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">History Focus</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold text-yellow-600">
+                            {selectedMonthKey}
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+
             <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-2">
                 {isLoading ? (
-                    <div className="flex items-center justify-center h-40">
-                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    <div className="flex flex-col items-center justify-center h-40 gap-2">
+                        <Loader2 className="h-8 w-8 animate-spin text-primary/60" />
+                        <p className="text-sm text-muted-foreground animate-pulse">Rebuilding hierarchy...</p>
                     </div>
                 ) : (
                     renderTaskHierarchy(tasks, onSelectTask)
@@ -337,4 +377,4 @@ export default function TaskHistoryView({ onSelectTask }: TaskHistoryViewProps) 
             </div>
         </div>
     );
-}
+}

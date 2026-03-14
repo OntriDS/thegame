@@ -446,6 +446,9 @@ export interface SummaryTotals {
     itemsSold: number;
     taskCount: number;
     jungleCoins: number;
+    inventoryValue: number;
+    inventoryCost: number;
+    inventoryJ$: number;
 }
 
 /** Combined financial dashboard data */

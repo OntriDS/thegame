@@ -11,6 +11,9 @@ import { ClientAPI } from "@/lib/client-api";
 import { ItemStatus } from "@/types/enums";
 import { Site } from "@/types/entities";
 import { getZIndexClass } from "@/lib/utils/z-index-utils";
+import { CurrencyExchangeRates, DEFAULT_CURRENCY_EXCHANGE_RATES } from "@/lib/constants/financial-constants";
+import { SummaryTotals } from "@/types/entities";
+import { formatCurrency } from "@/lib/utils/financial-utils";
 import { MonthSelector } from "@/components/ui/month-selector";
 import { getCurrentMonthKey } from "@/lib/utils/date-utils";
 import { Archive, Loader2 } from "lucide-react";
@@ -32,6 +35,8 @@ export default function InventoriesPage() {
 
   const [selectedMonthKey, setSelectedMonthKey] = useState(getCurrentMonthKey());
   const [availableMonths, setAvailableMonths] = useState<string[]>([]);
+  const [atomicSummary, setAtomicSummary] = useState<SummaryTotals | null>(null);
+  const [isAtomicLoading, setIsAtomicLoading] = useState(false);
 
 
   // Load available months once
@@ -49,18 +54,25 @@ export default function InventoriesPage() {
     loadMonths();
   }, []);
 
-  // Load sites on mount
+  // Load sites and summary
   useEffect(() => {
-    const loadSites = async () => {
+    const loadData = async () => {
       try {
+        // 1. Fetch Atomic Summary (INSTANT)
+        setIsAtomicLoading(true);
+        ClientAPI.getSummary(selectedMonthKey)
+          .then(setAtomicSummary)
+          .finally(() => setIsAtomicLoading(false));
+
+        // 2. Fetch Sites
         const sitesData = await ClientAPI.getSites();
         setSites(sitesData);
       } catch (error) {
-        console.error('Failed to load sites:', error);
+        console.error('Failed to load inventories data:', error);
       }
     };
-    loadSites();
-  }, []);
+    loadData();
+  }, [selectedMonthKey]);
 
   // Load saved preferences on mount (wait for KV to load)
   useEffect(() => {
@@ -117,14 +129,51 @@ export default function InventoriesPage() {
             </Select>
           </div>
 
-          <div className="flex items-center gap-4">
-            <MonthSelector
-              selectedMonth={selectedMonthKey}
-              availableMonths={availableMonths}
-              onChange={setSelectedMonthKey}
-            />
-          </div>
         </div>
+      </div>
+
+      {/* Atomic Summary Row */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Inventory Value</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">
+              {formatCurrency(atomicSummary?.inventoryValue || 0)}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Inventory Cost</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-600">
+              {formatCurrency(atomicSummary?.inventoryCost || 0)}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Potential Profit</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">
+              {formatCurrency((atomicSummary?.inventoryValue || 0) - (atomicSummary?.inventoryCost || 0))}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Jungle Coins Assets</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-yellow-600">
+              {atomicSummary?.inventoryJ$ || 0} J$
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Inventory Display */}
