@@ -10,7 +10,7 @@ import {
   CompanyMonthlySummary,
   PersonalMonthlySummary,
 } from '@/types/entities';
-import { Building2, User, TrendingUp, TrendingDown, BarChart3, Grid3x3, Calendar } from 'lucide-react';
+import { Building2, User, TrendingUp, TrendingDown, BarChart3, Grid3x3, Calendar, ShoppingBag, Package, CheckSquare, Layers } from 'lucide-react';
 import { MONTHS, getYearRange, getMonthName, getCurrentMonth } from '@/lib/constants/date-constants';
 import { formatMonthKey, getCurrentMonthKey, sortMonthKeys } from '@/lib/utils/date-utils';
 import { BUSINESS_STRUCTURE } from '@/types/enums';
@@ -234,18 +234,17 @@ export default function DashboardsPage() {
         </div>
       </div>
 
-      <Tabs defaultValue="company-monthly" className="w-full">
-        <TabsList className="grid w-full grid-cols-6">
-          <TabsTrigger value="company-monthly">Company Monthly</TabsTrigger>
-          <TabsTrigger value="personal-monthly">Personal Monthly</TabsTrigger>
-          <TabsTrigger value="revenue-by-channel">Revenue by Channel</TabsTrigger>
-          <TabsTrigger value="costs-by-product">Costs by Product</TabsTrigger>
-          <TabsTrigger value="product-performance">Product Performance</TabsTrigger>
-          <TabsTrigger value="channel-product-matrix">Channel × Product</TabsTrigger>
+      <Tabs defaultValue="company-finances" className="w-full">
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="company-finances">Company Finances</TabsTrigger>
+          <TabsTrigger value="personal-finances">Personal Finances</TabsTrigger>
+          <TabsTrigger value="sales-performance">Sales Performance</TabsTrigger>
+          <TabsTrigger value="item-performance">Item Performance</TabsTrigger>
+          <TabsTrigger value="task-performance">Task Performance</TabsTrigger>
         </TabsList>
 
         {/* Company Monthly Finances Tab */}
-        <TabsContent value="company-monthly" className="space-y-4">
+        <TabsContent value="company-finances" className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -258,38 +257,6 @@ export default function DashboardsPage() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">Total Revenue</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold text-green-600">
-                      {formatCurrency(atomicSummary?.revenue || 0)}
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">Total Cost</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold text-red-600">
-                      {formatCurrency(atomicSummary?.costs || 0)}
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">Net Cashflow</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className={`text-2xl font-bold ${(atomicSummary?.profit || 0) > 0 ? 'text-green-600' :
-                      (atomicSummary?.profit || 0) < 0 ? 'text-red-600' : 'text-muted-foreground'
-                      }`}>
-                      {formatCurrency(atomicSummary?.profit || 0)}
-                    </div>
-                  </CardContent>
-                </Card>
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm">Jungle Coins</CardTitle>
@@ -361,7 +328,7 @@ export default function DashboardsPage() {
         </TabsContent>
 
         {/* Personal Monthly Finances Tab */}
-        <TabsContent value="personal-monthly" className="space-y-4">
+        <TabsContent value="personal-finances" className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -374,38 +341,6 @@ export default function DashboardsPage() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">Total Revenue</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold text-green-600">
-                      {formatCurrency(personalSummary?.totalRevenue || 0)}
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">Total Cost</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold text-red-600">
-                      {formatCurrency(personalSummary?.totalCost || 0)}
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">Net Cashflow</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className={`text-2xl font-bold ${(personalSummary?.netCashflow || 0) > 0 ? 'text-green-600' :
-                      (personalSummary?.netCashflow || 0) < 0 ? 'text-red-600' : 'text-muted-foreground'
-                      }`}>
-                      {formatCurrency(personalSummary?.netCashflow || 0)}
-                    </div>
-                  </CardContent>
-                </Card>
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm">Jungle Coins</CardTitle>
@@ -468,287 +403,259 @@ export default function DashboardsPage() {
           </Card>
         </TabsContent>
 
-        {/* Revenue by Sales Channel Tab */}
-        <TabsContent value="revenue-by-channel" className="space-y-4">
+        {/* Sales Performance Tab */}
+        <TabsContent value="sales-performance" className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2 text-muted-foreground">
+                  <ShoppingBag className="h-4 w-4" />
+                  Total Sales Volume
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">{atomicSummary?.salesVolume || 0}</div>
+                <p className="text-xs text-muted-foreground mt-1">Transactions this month</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2 text-muted-foreground">
+                  <TrendingUp className="h-4 w-4" />
+                  Gross Sales Revenue
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-green-600">
+                  {formatCurrency(atomicSummary?.salesRevenue || 0)}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">Direct from sales records</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2 text-muted-foreground">
+                  <User className="h-4 w-4" />
+                  Avg. Ticket
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">
+                  {formatCurrency((atomicSummary?.salesRevenue || 0) / (atomicSummary?.salesVolume || 1))}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">Revenue per sale</p>
+              </CardContent>
+            </Card>
+          </div>
+
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <TrendingUp className="h-5 w-5" />
                 Revenue by Sales Channel
               </CardTitle>
-              <CardDescription>
-                Revenue performance across different sales channels
-              </CardDescription>
             </CardHeader>
             <CardContent>
               {isLoadingAnalytics ? (
                 <div className="text-center py-8 text-muted-foreground">Loading analytics...</div>
               ) : channelPerformance.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">No sales channel data available</div>
+                <div className="text-center py-8 text-muted-foreground">No channel data</div>
               ) : (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {channelPerformance.map(channel => (
-                      <Card key={channel.salesChannel}>
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-sm">{channel.salesChannel}</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="text-2xl font-bold text-green-600">
-                            {formatCurrency(channel.totalRevenue)}
-                          </div>
-                          <div className="text-xs text-muted-foreground mt-2">
-                            <div>Transactions: {channel.transactionCount}</div>
-                            <div>Avg: {formatCurrency(channel.averageTransaction)}</div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-sm">Total Revenue</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-3xl font-bold text-green-600">
-                        {formatCurrency(channelPerformance.reduce((sum, c) => sum + c.totalRevenue, 0))}
-                      </div>
-                    </CardContent>
-                  </Card>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {channelPerformance.map(channel => (
+                    <Card key={channel.salesChannel} className="border-muted">
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">{channel.salesChannel}</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-xl font-bold text-green-600">
+                          {formatCurrency(channel.totalRevenue)}
+                        </div>
+                        <div className="text-xs text-muted-foreground">{channel.transactionCount} Sales</div>
+                      </CardContent>
+                    </Card>
+                  ))}
                 </div>
               )}
             </CardContent>
           </Card>
-        </TabsContent>
 
-        {/* Costs by Product Station Tab */}
-        <TabsContent value="costs-by-product" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingDown className="h-5 w-5" />
-                Costs by Product Station
-              </CardTitle>
-              <CardDescription>
-                Production costs grouped by product station (Item.station)
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {isLoadingAnalytics ? (
-                <div className="text-center py-8 text-muted-foreground">Loading analytics...</div>
-              ) : Object.keys(costsByProductStation).length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">No product station cost data available</div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {Object.entries(costsByProductStation).map(([station, data]) => (
-                      <Card key={station}>
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-sm">{station}</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="text-2xl font-bold text-red-600">
-                            {formatCurrency(data.cost)}
-                          </div>
-                          <div className="text-xs text-muted-foreground mt-2">
-                            Records: {data.recordCount}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-sm">Total Costs</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-3xl font-bold text-red-600">
-                        {formatCurrency(Object.values(costsByProductStation).reduce((sum, d) => sum + d.cost, 0))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Product Performance Tab */}
-        <TabsContent value="product-performance" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <BarChart3 className="h-5 w-5" />
-                Product Performance
-              </CardTitle>
-              <CardDescription>
-                Cost, revenue, and profit by product type
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {isLoadingAnalytics ? (
-                <div className="text-center py-8 text-muted-foreground">Loading analytics...</div>
-              ) : productPerformance.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">No product performance data available</div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {productPerformance.map(product => (
-                      <Card key={product.itemType}>
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-sm">
-                            {product.itemType}
-                            {product.subItemType && (
-                              <span className="text-xs text-muted-foreground ml-2">({product.subItemType})</span>
-                            )}
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-2">
-                          <div className="flex justify-between text-sm">
-                            <span>Cost:</span>
-                            <span className="text-red-600 font-medium">{formatCurrency(product.totalCost)}</span>
-                          </div>
-                          <div className="flex justify-between text-sm">
-                            <span>Revenue:</span>
-                            <span className="text-green-600 font-medium">{formatCurrency(product.totalRevenue)}</span>
-                          </div>
-                          <div className="flex justify-between text-sm border-t pt-2">
-                            <span className="font-medium">Net Profit:</span>
-                            <span className={`font-bold ${product.netProfit > 0 ? 'text-green-600' :
-                              product.netProfit < 0 ? 'text-red-600' : 'text-muted-foreground'
-                              }`}>
-                              {formatCurrency(product.netProfit)}
-                            </span>
-                          </div>
-                          <div className="text-xs text-muted-foreground mt-2">
-                            <div>Quantity Sold: {product.quantitySold}</div>
-                            <div>Items: {product.itemIds.length}</div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-sm">Total Performance</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-3 gap-4">
-                        <div>
-                          <div className="text-xs text-muted-foreground">Total Cost</div>
-                          <div className="text-xl font-bold text-red-600">
-                            {formatCurrency(productPerformance.reduce((sum, p) => sum + p.totalCost, 0))}
-                          </div>
-                        </div>
-                        <div>
-                          <div className="text-xs text-muted-foreground">Total Revenue</div>
-                          <div className="text-xl font-bold text-green-600">
-                            {formatCurrency(productPerformance.reduce((sum, p) => sum + p.totalRevenue, 0))}
-                          </div>
-                        </div>
-                        <div>
-                          <div className="text-xs text-muted-foreground">Net Profit</div>
-                          <div className={`text-xl font-bold ${productPerformance.reduce((sum, p) => sum + p.netProfit, 0) > 0 ? 'text-green-600' : 'text-red-600'
-                            }`}>
-                            {formatCurrency(productPerformance.reduce((sum, p) => sum + p.netProfit, 0))}
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Channel × Product Matrix Tab */}
-        <TabsContent value="channel-product-matrix" className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Grid3x3 className="h-5 w-5" />
                 Channel × Product Matrix
               </CardTitle>
-              <CardDescription>
-                2D breakdown of revenue by sales channel and product type
-              </CardDescription>
             </CardHeader>
             <CardContent>
               {isLoadingAnalytics ? (
                 <div className="text-center py-8 text-muted-foreground">Loading analytics...</div>
-              ) : Object.keys(productChannelMatrix).length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">No matrix data available</div>
               ) : (
-                <div className="space-y-4">
-                  <div className="overflow-x-auto">
-                    <table className="w-full border-collapse">
-                      <thead>
-                        <tr>
-                          <th className="border p-2 text-left">Product</th>
-                          {Array.from(new Set(
-                            Object.values(productChannelMatrix).flatMap(product => Object.keys(product))
-                          )).map(channel => (
-                            <th key={channel} className="border p-2 text-right">{channel}</th>
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr>
+                        <th className="border p-2 text-left text-sm">Product</th>
+                        {Array.from(new Set(Object.values(productChannelMatrix).flatMap(p => Object.keys(p)))).map(channel => (
+                          <th key={channel} className="border p-2 text-right text-xs">{channel}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {Object.entries(productChannelMatrix).map(([product, channels]) => (
+                        <tr key={product}>
+                          <td className="border p-2 text-sm font-medium">{product}</td>
+                          {Array.from(new Set(Object.values(productChannelMatrix).flatMap(p => Object.keys(p)))).map(channel => (
+                            <td key={channel} className="border p-2 text-right text-xs">
+                              {formatCurrency(channels[channel]?.revenue || 0)}
+                            </td>
                           ))}
-                          <th className="border p-2 text-right font-bold">Total</th>
                         </tr>
-                      </thead>
-                      <tbody>
-                        {Object.entries(productChannelMatrix).map(([product, channels]) => {
-                          const productTotal = Object.values(channels).reduce((sum, c) => sum + c.revenue, 0);
-                          return (
-                            <tr key={product}>
-                              <td className="border p-2 font-medium">{product}</td>
-                              {Array.from(new Set(
-                                Object.values(productChannelMatrix).flatMap(p => Object.keys(p))
-                              )).map(channel => {
-                                const data = channels[channel] || { revenue: 0, quantity: 0 };
-                                return (
-                                  <td key={channel} className="border p-2 text-right">
-                                    <div className="text-sm font-medium">{formatCurrency(data.revenue)}</div>
-                                    <div className="text-xs text-muted-foreground">Qty: {data.quantity}</div>
-                                  </td>
-                                );
-                              })}
-                              <td className="border p-2 text-right font-bold">
-                                {formatCurrency(productTotal)}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                        <tr className="bg-muted/50">
-                          <td className="border p-2 font-bold">Total</td>
-                          {Array.from(new Set(
-                            Object.values(productChannelMatrix).flatMap(p => Object.keys(p))
-                          )).map(channel => {
-                            const channelTotal = Object.values(productChannelMatrix).reduce((sum, product) => {
-                              return sum + (product[channel]?.revenue || 0);
-                            }, 0);
-                            return (
-                              <td key={channel} className="border p-2 text-right font-bold">
-                                {formatCurrency(channelTotal)}
-                              </td>
-                            );
-                          })}
-                          <td className="border p-2 text-right font-bold">
-                            {formatCurrency(
-                              Object.values(productChannelMatrix).reduce((sum, product) => {
-                                return sum + Object.values(product).reduce((s, c) => s + c.revenue, 0);
-                              }, 0)
-                            )}
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Item Performance Tab */}
+        <TabsContent value="item-performance" className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2 text-muted-foreground">
+                  <Package className="h-4 w-4" />
+                  Items Sold
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">{atomicSummary?.itemsSold || 0}</div>
+                <p className="text-xs text-muted-foreground mt-1">Total quantity</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2 text-muted-foreground">
+                  <Layers className="h-4 w-4" />
+                  Inventory Value
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-blue-600">
+                  {formatCurrency(atomicSummary?.inventoryValue || 0)}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">Estimated sale value</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2 text-muted-foreground">
+                  <TrendingDown className="h-4 w-4" />
+                  Inventory Cost
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-red-600">
+                  {formatCurrency(atomicSummary?.inventoryCost || 0)}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">Investment in stock</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5" />
+                Product Type Performance
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoadingAnalytics ? (
+                <div className="text-center py-8 text-muted-foreground">Loading analytics...</div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {productPerformance.map(product => (
+                    <Card key={product.itemType} className="border-muted">
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">{product.itemType}</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-1">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-muted-foreground">Profit:</span>
+                          <span className={product.netProfit >= 0 ? 'text-green-600' : 'text-red-600'}>
+                            {formatCurrency(product.netProfit)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-muted-foreground">Qty:</span>
+                          <span>{product.quantitySold}</span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Building2 className="h-5 w-5" />
+                Costs by Production Station
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoadingAnalytics ? (
+                <div className="text-center py-8 text-muted-foreground">Loading...</div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {Object.entries(costsByProductStation).map(([station, data]) => (
+                    <div key={station} className="flex justify-between items-center p-3 border rounded-lg">
+                      <span className="text-sm font-medium">{station}</span>
+                      <span className="text-sm text-red-600 font-bold">{formatCurrency(data.cost)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Task Performance Tab */}
+        <TabsContent value="task-performance" className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Card>
+              <CardHeader className="pb-3 text-center">
+                <CardDescription>Operational Engine</CardDescription>
+                <CardTitle className="text-3xl font-bold flex items-center justify-center gap-3">
+                  <CheckSquare className="h-8 w-8 text-purple-600" />
+                  {atomicSummary?.taskCount || 0}
+                </CardTitle>
+                <CardTitle className="text-sm text-muted-foreground">Tasks Completed</CardTitle>
+              </CardHeader>
+              <CardContent className="text-center text-sm text-muted-foreground border-t pt-4">
+                This month's completed operational actions.
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-3 text-center">
+                <CardDescription>Productivity Ratio</CardDescription>
+                <CardTitle className="text-3xl font-bold flex items-center justify-center gap-3 text-green-600">
+                  <TrendingUp className="h-8 w-8" />
+                  {formatCurrency((atomicSummary?.profit || 0) / (atomicSummary?.taskCount || 1))}
+                </CardTitle>
+                <CardTitle className="text-sm text-muted-foreground">Profit per Task</CardTitle>
+              </CardHeader>
+              <CardContent className="text-center text-sm text-muted-foreground border-t pt-4">
+                Average value generated per completed task.
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
     </div>
