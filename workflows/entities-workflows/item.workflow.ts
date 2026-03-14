@@ -13,6 +13,7 @@ import { createCharacterFromItem } from '../character-creation-utils';
 import { upsertItem } from '@/data-store/datastore';
 import { formatMonthKey, calculateClosingDate } from '@/lib/utils/date-utils';
 import { stagePointsForPlayer } from '../points-rewards-utils';
+import { isSoldStatus, isCollectedStatus } from '@/lib/utils/status-utils';
 
 const STATE_FIELDS = ['status', 'stock', 'quantitySold', 'isCollected'];
 const DESCRIPTIVE_FIELDS = ['name', 'description', 'price', 'unitCost', 'additionalCost', 'value'];
@@ -63,8 +64,7 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
 
   // Status changes - UPDATED event (for non-Sold/Collected statuses)
   if (previousItem.status !== item.status) {
-    const skipUpdatedForStatuses = [ItemStatus.SOLD, ItemStatus.COLLECTED];
-    if (!skipUpdatedForStatuses.includes(item.status)) {
+    if (!isSoldStatus(item.status) && !isCollectedStatus(item.status)) {
       await appendEntityLog(EntityType.ITEM, item.id, LogEventType.UPDATED, {
         name: item.name,
         itemType: item.type,
@@ -83,8 +83,8 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
 
   // Manual SOLD status change - detect when status changes to SOLD without quantitySold change (not via sale)
   const statusChangedToSold =
-    previousItem.status !== ItemStatus.SOLD &&
-    item.status === ItemStatus.SOLD; // No quantitySold change means manual status change
+    !isSoldStatus(previousItem.status) &&
+    isSoldStatus(item.status); // No quantitySold change means manual status change
 
   if (statusChangedToSold) {
     const manualSoldEffectKey = EffectKeys.sideEffect('item', item.id, 'manualSold');
@@ -227,8 +227,8 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
   // Collection status - COLLECTED event
   // Dual detection: status OR flag change to COLLECTED
   const statusBecameCollected =
-    item.status === ItemStatus.COLLECTED &&
-    (!previousItem || previousItem.status !== ItemStatus.COLLECTED);
+    isCollectedStatus(item.status) &&
+    (!previousItem || !isCollectedStatus(previousItem.status));
 
   const flagBecameCollected =
     !!item.isCollected && (!previousItem || !previousItem.isCollected);
@@ -289,10 +289,10 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
   // ==========================================
   if (previousItem) {
     // Only items that are SOLD or COLLECTED should be in an archive index
-    const isArchivable = item.status === ItemStatus.SOLD || item.status === ItemStatus.COLLECTED || !!item.isCollected;
+    const isArchivable = isSoldStatus(item.status) || isCollectedStatus(item.status) || !!item.isCollected;
 
     if (isArchivable) {
-      const wasArchivableBefore = previousItem.status === ItemStatus.SOLD || previousItem.status === ItemStatus.COLLECTED || !!previousItem.isCollected;
+      const wasArchivableBefore = isSoldStatus(previousItem.status) || isCollectedStatus(previousItem.status) || !!previousItem.isCollected;
 
       // Guard: only re-index if the relevant dates actually changed OR item newly became archivable.
       // This prevents non-date saves (site, stock, price changes) from accidentally moving the archive bucket.
@@ -355,7 +355,7 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
       }
     } else {
       // If it WAS archivable but now IS NOT, remove it from its old index
-      const wasArchivable = previousItem.status === ItemStatus.SOLD || previousItem.status === ItemStatus.COLLECTED || !!previousItem.isCollected;
+      const wasArchivable = isSoldStatus(previousItem.status) || isCollectedStatus(previousItem.status) || !!previousItem.isCollected;
       if (wasArchivable) {
         let prevTargetDate: Date;
         if (previousItem.collectedAt) {

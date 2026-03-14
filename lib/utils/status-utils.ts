@@ -86,3 +86,16 @@ export const isValidStatus = (status: string, entityType: EntityType | 'record' 
       return false;
   }
 };
+/** Check if an item status represents a SOLD state (robust check for legacy variations) */
+export const isSoldStatus = (status: any): boolean => {
+  if (!status) return false;
+  const s = status.toString().toLowerCase();
+  return s === 'sold' || s === 'itemstatus.sold' || status === ItemStatus.SOLD;
+};
+
+/** Check if an entity status represents a COLLECTED state (robust check for legacy variations) */
+export const isCollectedStatus = (status: any): boolean => {
+  if (!status) return false;
+  const s = status.toString().toLowerCase();
+  return s === 'collected' || s === 'itemstatus.collected' || status === TaskStatus.COLLECTED || status === ItemStatus.COLLECTED;
+};

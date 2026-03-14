@@ -5,6 +5,7 @@ import type { Item } from '@/types/entities';
 import { getAllItems, getItemsByType, upsertItem, getItemsForMonth, getArchivedItemsByMonth } from '@/data-store/datastore';
 import { requireAdminAuth } from '@/lib/api-auth';
 import { ItemStatus } from '@/types/enums';
+import { isSoldStatus } from '@/lib/utils/status-utils';
 import { formatMonthKey } from '@/lib/utils/date-utils';
 
 // Force dynamic rendering - this route accesses cookies
@@ -68,22 +69,21 @@ export async function GET(req: NextRequest) {
 
   // 2. Status Filter
   if (statusFilter) {
-    // Case-insensitive status check
     const targetStatus = statusFilter.toLowerCase();
 
     // If 'all' is explicitly requested, bypass status filtering entirely to fetch everything (including SOLD)
     if (targetStatus !== 'all') {
       items = items.filter(item => {
-        const itemStatus = (item.status || '').toString().toLowerCase();
-        // Check for exact match or "ItemStatus.SOLD" literal match
-        return itemStatus === targetStatus ||
-          (targetStatus === 'sold' && itemStatus === 'itemstatus.sold');
+        const isSold = isSoldStatus(item.status);
+          
+        if (targetStatus === 'sold') return isSold;
+        return (item.status || '').toString().toLowerCase() === targetStatus;
       });
     }
   } else if (!month && !year) {
     // Default behavior for Active Inventory (no month/year specified AND no explicit status):
     // Show only active items (unsold)
-    items = items.filter(item => item.status !== ItemStatus.SOLD);
+    items = items.filter(item => !isSoldStatus(item.status));
   }
 
   // 3. Month Filter (if not using Strategy 1)

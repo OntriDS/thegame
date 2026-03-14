@@ -11,6 +11,7 @@ import { ClientAPI } from '@/lib/client-api';
 import { Item } from '@/types/entities';
 import { useEntityUpdates } from '@/lib/hooks/use-entity-updates';
 import { ItemType, ItemCategory, ItemStatus, InventoryTab } from '@/types/enums';
+import { isSoldStatus } from '@/lib/utils/status-utils';
 import { getItemCategory } from '@/lib/utils/item-utils';
 import ItemModal from '@/components/modals/item-modal';
 import BulkEditModal from '@/components/modals/submodals/bulk-edit-submodal';
@@ -335,16 +336,14 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
 
   const getFilteredItems = (itemType: ItemType) => {
     const filtered = items.filter(item => {
-      const s = (item.status || '').toString().toLowerCase();
-      return item.type === itemType && s !== 'sold' && (item.status as any) !== 'ItemStatus.SOLD';
+      return item.type === itemType && !isSoldStatus(item.status);
     });
     return sortItems(filtered);
   };
 
   const getFilteredItemsByCategory = (category: ItemCategory) => {
     return items.filter(item => {
-      const s = (item.status || '').toString().toLowerCase();
-      return getItemCategory(item.type) === category && s !== 'sold' && (item.status as any) !== 'ItemStatus.SOLD';
+      return getItemCategory(item.type) === category && !isSoldStatus(item.status);
     });
   };
 

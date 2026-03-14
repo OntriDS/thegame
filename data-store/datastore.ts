@@ -3,7 +3,7 @@
 
 import type { Task, Item, FinancialRecord, Sale, Character, Player, Site, Settlement, Account, Business, Contract } from '@/types/entities';
 import type { TaskSnapshot, ItemSnapshot, SaleSnapshot, FinancialSnapshot } from '@/types/archive';
-import { EntityType, ItemType, TaskPriority, TaskStatus, FinancialStatus, TaskType, SaleStatus } from '@/types/enums';
+import { EntityType, ItemType, TaskPriority, TaskStatus, FinancialStatus, TaskType, SaleStatus, ItemStatus } from '@/types/enums';
 import {
   upsertTask as repoUpsertTask,
   getAllTasks as repoGetAllTasks,
@@ -277,7 +277,18 @@ export async function upsertItem(item: Item, options?: { skipWorkflowEffects?: b
     }
   }
 
-  const saved = await repoUpsertItem(item);  // ✅ Item persisted here
+  // Data Normalization: Standardize status strings to Enum values
+  const rawStatus = (item.status || '').toString().toLowerCase();
+  let normalizedStatus = item.status;
+
+  if (rawStatus === 'sold' || rawStatus === 'itemstatus.sold') {
+    normalizedStatus = ItemStatus.SOLD;
+  }
+
+  const saved = await repoUpsertItem({
+    ...item,
+    status: normalizedStatus
+  });  // ✅ Item persisted here
 
   // Phase 2: Rolling Summary Update
   await SummaryService.updateItemCounters(saved, previous || undefined);

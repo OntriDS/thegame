@@ -57,6 +57,7 @@ export function getCategoryForItemType(type: ItemType): ItemCategory {
 /**
  * Standard item options (Simple ID)
  * Groups by Category -> Type
+ * AGGREGATES BY MODEL to prevent duplicates
  */
 export function createItemOptions(
     items: Item[],
@@ -64,17 +65,43 @@ export function createItemOptions(
     groupByStation = false,
     sites: Site[] = []
 ) {
-    const options: Array<{ value: string; label: string; group: string; category: string }> = items.map(item => {
-        const category = getCategoryForItemType(item.type);
-        const totalQty = item.stock?.reduce((sum, s) => sum + s.quantity, 0) || 0;
+    // 1. Group by MODEL (Name | Type | SubItemType | Collection)
+    const models: Record<string, { 
+        primaryId: string; 
+        name: string; 
+        type: ItemType; 
+        station: string;
+        totalQty: number;
+    }> = {};
 
-        return {
-            value: item.id,
-            label: `${item.name} (${totalQty})`,
-            group: groupByStation ? item.station : item.type,
-            category: category // Use category for high-level grouping
-        };
+    items.forEach(item => {
+        const key = `${item.name}|${item.type}|${item.subItemType || ''}|${item.collection || ''}`;
+        const qty = item.stock?.reduce((sum, s) => sum + s.quantity, 0) || 0;
+
+        if (!models[key]) {
+            models[key] = {
+                primaryId: item.id,
+                name: item.name,
+                type: item.type,
+                station: item.station || 'Other',
+                totalQty: qty
+            };
+        } else {
+            models[key].totalQty += qty;
+        }
     });
+
+    // 2. Map models to options
+    const options: Array<{ value: string; label: string; group: string; category: string }> = 
+        Object.values(models).map(model => {
+            const category = getCategoryForItemType(model.type);
+            return {
+                value: model.primaryId,
+                label: `${model.name} (${model.totalQty})`,
+                group: groupByStation ? model.station : model.type,
+                category: category
+            };
+        });
 
     if (includeNone) {
         options.unshift({ value: 'none', label: 'None', group: 'Other', category: 'Other' });
@@ -87,7 +114,7 @@ export function createItemOptions(
  * Enhanced item options with SITE SPLIT LOGIC
  * Returns composite value: "itemId:siteId"
  * Label format: "Item Name - Site Name: Quantity"
- * strictly enforcing the "One Item = One Site" rule visually per option
+ * AGGREGATES BY MODEL PER SITE to prevent duplicates
  */
 export function createItemOptionsForSite(
     items: Item[],
@@ -95,28 +122,61 @@ export function createItemOptionsForSite(
     includeNone = false,
     sites: Site[] = []
 ) {
-    const options: Array<{ value: string; label: string; group: string; category: string }> = [];
     const siteMap = new Map(sites.map(s => [s.id, s.name]));
-
-    // Helper to resolve site name
     const getSiteName = (id: string) => siteMap.get(id) || 'Unknown Site';
 
-    items.forEach(item => {
-        const category = getCategoryForItemType(item.type);
-        const hasStock = item.stock && item.stock.length > 0;
+    // 1. Group by MODEL + SITE
+    // Key: "modelKey|siteId"
+    const modelSiteMap: Record<string, {
+        primaryId: string;
+        name: string;
+        type: ItemType;
+        siteId: string;
+        quantity: number;
+    }> = {};
 
-        if (hasStock) {
-            item.stock!.forEach(stockPoint => {
-                const siteName = getSiteName(stockPoint.siteId);
-                options.push({
-                    value: `${item.id}:${stockPoint.siteId}`,
-                    label: `${item.name} - ${siteName}: ${stockPoint.quantity}`,
-                    group: item.type,
-                    category: category
-                });
+    items.forEach(item => {
+        const modelKey = `${item.name}|${item.type}|${item.subItemType || ''}|${item.collection || ''}`;
+        
+        if (item.stock && item.stock.length > 0) {
+            item.stock.forEach(sp => {
+                const combinedKey = `${modelKey}|${sp.siteId}`;
+                if (!modelSiteMap[combinedKey]) {
+                    modelSiteMap[combinedKey] = {
+                        primaryId: item.id,
+                        name: item.name,
+                        type: item.type,
+                        siteId: sp.siteId,
+                        quantity: sp.quantity
+                    };
+                } else {
+                    modelSiteMap[combinedKey].quantity += sp.quantity;
+                }
             });
-        } else {
-            // Create a "No Stock" / Generic option
+        }
+    });
+
+    // 2. Convert to options
+    const options: Array<{ value: string; label: string; group: string; category: string }> = 
+        Object.values(modelSiteMap).map(m => {
+            const category = getCategoryForItemType(m.type);
+            const siteName = getSiteName(m.siteId);
+            return {
+                value: `${m.primaryId}:${m.siteId}`,
+                label: `${m.name} - ${siteName}: ${m.quantity}`,
+                group: m.type,
+                category: category
+            };
+        });
+
+    // 3. Add entries for models with NO stock (at least one entry per unique model)
+    const uniqueModelKeys = new Set(items.map(i => `${i.name}|${i.type}|${i.subItemType || ''}|${i.collection || ''}`));
+    const modelsWithStockKeys = new Set(Object.keys(modelSiteMap).map(k => k.substring(0, k.lastIndexOf('|'))));
+
+    uniqueModelKeys.forEach(modelKey => {
+        if (!modelsWithStockKeys.has(modelKey)) {
+            const item = items.find(i => `${i.name}|${i.type}|${i.subItemType || ''}|${i.collection || ''}` === modelKey)!;
+            const category = getCategoryForItemType(item.type);
             options.push({
                 value: `${item.id}:none`,
                 label: `${item.name} (Qty: 0)`,
@@ -130,7 +190,8 @@ export function createItemOptionsForSite(
         options.unshift({ value: 'none', label: 'None', group: 'Other', category: 'Other' });
     }
 
-    return options;
+    // Sort by name for better UX
+    return options.sort((a, b) => a.label.localeCompare(b.label));
 }
 
 export function createItemTypeOptionsWithCategories() {
