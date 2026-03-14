@@ -324,45 +324,31 @@ interface AvailableMonth {
                     </h2>
                     <p className="text-sm text-muted-foreground">Review completed missions and assignments</p>
                 </div>
-                <MonthSelector
-                    selectedMonth={selectedMonthKey}
-                    availableMonths={availableMonths}
-                    onChange={setSelectedMonthKey}
-                />
-            </div>
-
-            {/* Atomic Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card className="bg-primary/5 border-primary/20">
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Total Tasks Completed</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold text-primary">
-                            {isAtomicLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : (atomicSummary?.taskCount || 0)}
+                
+                <div className="flex items-center gap-4">
+                    {/* Compact Atomic Summary */}
+                    {!isAtomicLoading && atomicSummary && (
+                        <div className="flex items-center gap-3 px-3 py-1.5 bg-muted/50 rounded-lg border border-muted text-xs font-medium">
+                            <div className="flex items-center gap-1.5">
+                                <span className="text-muted-foreground uppercase tracking-tight">Tasks Done:</span>
+                                <span className="text-primary font-bold">{atomicSummary.taskCount || 0}</span>
+                            </div>
+                            <div className="w-px h-3 bg-muted-foreground/20" />
+                            <div className="flex items-center gap-1.5">
+                                <span className="text-muted-foreground uppercase tracking-tight">Collected:</span>
+                                <span className="text-emerald-600 dark:text-emerald-400 font-bold">
+                                    {tasks.filter(t => t.status === TaskStatus.COLLECTED).length}
+                                </span>
+                            </div>
                         </div>
-                    </CardContent>
-                </Card>
-                <Card className="bg-green-500/5 border-green-500/20">
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Completion Rate</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold text-green-600">
-                            {atomicSummary?.taskCount ? '100%' : '0%'}
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card className="bg-yellow-500/5 border-yellow-500/20">
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">History Focus</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold text-yellow-600">
-                            {selectedMonthKey}
-                        </div>
-                    </CardContent>
-                </Card>
+                    )}
+                    
+                    <MonthSelector
+                        selectedMonth={selectedMonthKey}
+                        availableMonths={availableMonths}
+                        onChange={setSelectedMonthKey}
+                    />
+                </div>
             </div>
 
             <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-2">

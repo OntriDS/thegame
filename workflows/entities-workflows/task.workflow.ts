@@ -150,7 +150,7 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
     if (!collectedAt) {
       collectedAt = new Date();
       // Ensure the collectedAt timestamp is saved if it was missing
-      await repoUpsertTask({ ...task, isCollected: true, collectedAt, status: TaskStatus.COLLECTED });
+      await upsertTask({ ...task, isCollected: true, collectedAt, status: TaskStatus.COLLECTED }, { skipWorkflowEffects: true });
     }
 
     const pointsRewardedEffectKey = EffectKeys.sideEffect('task', task.id, 'pointsRewarded');

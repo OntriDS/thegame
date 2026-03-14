@@ -2,12 +2,10 @@
 // Recurrent task management utilities
 
 import { Task } from '@/types/entities';
-import { TaskType, RecurrentFrequency, TaskStatus } from '@/types/enums';
-import { getAllTasks, upsertTask } from '@/data-store/repositories/task.repo';
-import { removeTask as deleteTask } from '@/data-store/datastore';
+import { TaskType, RecurrentFrequency, TaskStatus, EntityType, LogEventType } from '@/types/enums';
+import { getAllTasks, upsertTask, removeTask as deleteTask } from '@/data-store/datastore';
 import { hasEffect, markEffect } from '@/data-store/effects-registry';
 import { appendEntityLog } from '@/workflows/entities-logging';
-import { EntityType, LogEventType } from '@/types/enums';
 import { FrequencyConfig } from '@/components/ui/frequency-calendar';
 import { v4 as uuid } from 'uuid';
 import { ORDER_INCREMENT } from '@/lib/constants/app-constants';
@@ -270,7 +268,7 @@ export async function archiveCompletedInstances(parentId: string): Promise<Task[
   const updatedInstances: Task[] = [];
   for (const instance of instances) {
     const updated = { ...instance, status: TaskStatus.COLLECTED as any, isCollected: true, updatedAt: new Date() } as Task;
-    await upsertTask(updated);
+    await upsertTask(updated, { skipWorkflowEffects: true });
     updatedInstances.push(updated);
   }
 
@@ -320,7 +318,7 @@ export async function handleTemplateInstanceCreation(template: Task): Promise<Ta
     existingInstances.map((instance, index) => {
       const desiredOrder = (index + 1) * ORDER_INCREMENT;
       if ((instance.order || 0) !== desiredOrder) {
-        return upsertTask({ ...instance, order: desiredOrder });
+        return upsertTask({ ...instance, order: desiredOrder }, { skipWorkflowEffects: true });
       }
       return Promise.resolve();
     })
@@ -342,7 +340,7 @@ export async function handleTemplateInstanceCreation(template: Task): Promise<Ta
     nextIndex += 1;
     const desiredOrder = nextIndex * ORDER_INCREMENT;
     const instanceWithOrder: Task = { ...instance, order: desiredOrder };
-    await upsertTask(instanceWithOrder);
+    await upsertTask(instanceWithOrder, { skipWorkflowEffects: true });
     createdInstances.push(instanceWithOrder);
   }
 
@@ -437,7 +435,7 @@ export async function cascadeStatusToInstances(
       status: newStatus as any,
       updatedAt: new Date()
     } as Task;
-    await upsertTask(updated);
+    await upsertTask(updated, { skipWorkflowEffects: true });
     updatedInstances.push(updated);
 
     // Log status change for each instance with cascade context
@@ -498,7 +496,7 @@ export async function uncascadeStatusFromInstances(
       status: revertToStatus as any,
       updatedAt: new Date()
     } as Task;
-    await upsertTask(updated);
+    await upsertTask(updated, { skipWorkflowEffects: true });
     revertedInstances.push(updated);
 
     // Log status reversal for each instance with uncascade context

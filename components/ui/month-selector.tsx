@@ -25,7 +25,7 @@ const monthLabel = (mmyy: string) => {
     return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
 }
 
-export function MonthSelector({ selectedMonth, availableMonths, onChange, label = "Period:", className = "" }: MonthSelectorProps) {
+export function MonthSelector({ selectedMonth, availableMonths, onChange, label = "Month:", className = "" }: MonthSelectorProps) {
     const months = availableMonths.length > 0 ? availableMonths : [selectedMonth];
     const currentIndex = months.indexOf(selectedMonth);
 
