@@ -188,7 +188,8 @@ export class SummaryService {
         costDelta: financials.reduce((sum, f) => sum + (f.cost || 0), 0),
         salesVolumeDelta: sales.length,
         itemsSoldDelta: items.reduce((sum, i) => sum + (i.quantitySold || 0), 0),
-        taskCountDelta: tasks.length
+        taskCountDelta: tasks.length,
+        jungleCoinsDelta: financials.reduce((sum, f) => sum + (f.jungleCoins || 0), 0),
       };
 
       // Push to Redis (Hash keys)

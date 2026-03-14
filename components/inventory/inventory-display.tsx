@@ -23,7 +23,7 @@ import { getZIndexClass } from '@/lib/utils/z-index-utils';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
 import { useKeyboardShortcuts } from '@/lib/hooks/use-keyboard-shortcuts';
 import { getAreaForStation } from '@/lib/utils/business-structure-utils';
-import { MonthYearSelector } from '@/components/ui/month-year-selector';
+import { MonthSelector } from '@/components/ui/month-selector';
 import { Switch } from '@/components/ui/switch';
 
 
@@ -32,15 +32,15 @@ interface InventoryDisplayProps {
   onRefresh?: () => void;
   selectedSite: string | 'all';
   selectedStatus: ItemStatus | 'all';
+  selectedMonthKey: string;
+  availableMonths: string[];
 }
 
-export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatus }: InventoryDisplayProps) {
+export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatus, selectedMonthKey, availableMonths }: InventoryDisplayProps) {
   const [items, setItems] = useState<Item[]>([]);
   const { getPreference, setPreference } = useUserPreferences();
 
-  // Month selector state for Sold Items tab - Initialize with fixed defaults to avoid hydration mismatch
-  const [currentYear, setCurrentYear] = useState<number>(2026);
-  const [currentMonth, setCurrentMonth] = useState<number>(3);
+  // Month selector state for Sold Items tab - Inherited from parent or managed locally
   const [filterSoldByMonth, setFilterSoldByMonth] = useState(true);
   const [isHydrated, setIsHydrated] = useState(false);
 
@@ -119,10 +119,20 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
 
       if (activeTab === InventoryTab.SOLD_ITEMS) {
         // Use status filter for sold items
-        const month = filterSoldByMonth ? currentMonth : new Date().getMonth() + 1;
-        const year = filterSoldByMonth ? currentYear : new Date().getFullYear();
+        const [mm, yy] = selectedMonthKey.split('-');
+        const monthNum = parseInt(mm, 10);
+        const yearNum = 2000 + parseInt(yy, 10);
 
-        const monthItems = await ClientAPI.getItems('all', month, year, ItemStatus.SOLD);
+        const month = filterSoldByMonth ? monthNum : undefined;
+        const year = filterSoldByMonth ? yearNum : undefined;
+
+        const monthItems = await ClientAPI.getItems(
+          'all',
+          month,
+          year,
+          ItemStatus.SOLD,
+          selectedSite === 'all' ? undefined : selectedSite
+        );
 
         // Filter for items that are explicitly SOLD
         items = monthItems.filter(item => {
@@ -131,10 +141,22 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
         });
       } else if (activeTabItemType === 'all') {
         // Load all items
-        items = await ClientAPI.getItems();
+        items = await ClientAPI.getItems(
+          undefined,
+          undefined,
+          undefined,
+          selectedStatus === 'all' ? undefined : selectedStatus,
+          selectedSite === 'all' ? undefined : selectedSite
+        );
       } else {
         // Load specific item type
-        items = await ClientAPI.getItems(activeTabItemType);
+        items = await ClientAPI.getItems(
+          activeTabItemType,
+          undefined,
+          undefined,
+          selectedStatus === 'all' ? undefined : selectedStatus,
+          selectedSite === 'all' ? undefined : selectedSite
+        );
       }
 
       // If a newer request has started, ignore this one
@@ -152,14 +174,11 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
     } catch (error) {
       console.error('Failed to load items:', error);
     }
-  }, [activeTab, currentYear, currentMonth, filterSoldByMonth]);
+  }, [activeTab, selectedSite, selectedStatus, selectedMonthKey, filterSoldByMonth]);
 
   // Hydration sync - runs only once on mount
   useEffect(() => {
     setIsHydrated(true);
-    const now = new Date();
-    setCurrentYear(now.getFullYear());
-    setCurrentMonth(now.getMonth() + 1);
   }, []);
 
   useEffect(() => {
@@ -407,9 +426,9 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
     await ClientAPI.upsertItem(updatedItem);
 
     // Check for status changes when quantity changes
-    if (field === 'quantity') {
-      checkQuantityZero(updatedItem, value);
-    }
+    // if (field === 'quantity') {
+    //   checkQuantityZero(updatedItem, value);
+    // }
 
     // Refresh data (including sticker bundles)
     loadItems();
@@ -1369,20 +1388,21 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
           <h3 className="text-lg font-semibold">Sold Items</h3>
           <div className="flex items-center gap-4">
             {isHydrated && (
-              <MonthYearSelector
-                currentYear={currentYear}
-                currentMonth={currentMonth}
-                onYearChange={setCurrentYear}
-                onMonthChange={setCurrentMonth}
-              />
+              <div className="flex items-center gap-4">
+                <MonthSelector
+                  selectedMonth={selectedMonthKey}
+                  availableMonths={availableMonths}
+                  onChange={() => {}} // Controlled by parent
+                />
+                <div className="flex items-center gap-2 border rounded-md px-3 py-1.5 bg-background">
+                  <Switch
+                    checked={filterSoldByMonth}
+                    onCheckedChange={setFilterSoldByMonth}
+                  />
+                  <span className="text-sm text-muted-foreground">Filter by month</span>
+                </div>
+              </div>
             )}
-            <div className="flex items-center gap-2 border rounded-md px-3 py-1.5">
-              <Switch
-                checked={filterSoldByMonth}
-                onCheckedChange={setFilterSoldByMonth}
-              />
-              <span className="text-sm text-muted-foreground">Filter by month</span>
-            </div>
           </div>
         </div>
 

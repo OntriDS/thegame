@@ -434,6 +434,20 @@ export interface PersonalMonthlySummary {
   categoryBreakdown: { [station: string]: { revenue: number; cost: number; net: number; jungleCoins: number } };
 }
 
+/** 
+ * Atomic summary totals from rolling counters.
+ * Used for instant "Summary View" dashboards.
+ */
+export interface SummaryTotals {
+    revenue: number;
+    costs: number;
+    profit: number;
+    salesVolume: number;
+    itemsSold: number;
+    taskCount: number;
+    jungleCoins: number;
+}
+
 /** Combined financial dashboard data */
 export interface FinancialDashboard {
   company: CompanyMonthlySummary[];

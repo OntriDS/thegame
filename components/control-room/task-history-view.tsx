@@ -5,7 +5,8 @@ import { Task } from '@/types/entities';
 import { ClientAPI } from '@/lib/client-api';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { MonthYearSelector } from '@/components/ui/month-year-selector';
+import { MonthSelector } from '@/components/ui/month-selector';
+import { getCurrentMonthKey } from '@/lib/utils/date-utils';
 import { format } from 'date-fns';
 import { Loader2, Calendar, ChevronRight, FolderOpen } from 'lucide-react';
 import { reviveDates } from '@/lib/utils/date-utils';
@@ -243,9 +244,8 @@ interface AvailableMonth {
 }
 
 export default function TaskHistoryView({ onSelectTask }: TaskHistoryViewProps) {
-    const [months, setMonths] = useState<AvailableMonth[]>([]);
-    const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
-    const [currentMonth, setCurrentMonth] = useState(new Date().getMonth() + 1); // 1-12
+    const [availableMonths, setAvailableMonths] = useState<string[]>([]);
+    const [selectedMonthKey, setSelectedMonthKey] = useState(getCurrentMonthKey());
     const [tasks, setTasks] = useState<Task[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [isLoadingMonths, setIsLoadingMonths] = useState(true);
@@ -254,14 +254,17 @@ export default function TaskHistoryView({ onSelectTask }: TaskHistoryViewProps) 
     useEffect(() => {
         const loadMonths = async () => {
             try {
+                // Use standardized available months or archive specific ones
                 const response = await fetch('/api/archive/months');
                 if (response.ok) {
                     const data = await response.json();
-                    setMonths(data);
-                    // No need to set selectedMonth - we use currentMonth/currentYear state
+                    setAvailableMonths(data.map((m: any) => m.key).sort((a: string, b: string) => b.localeCompare(a)));
+                } else {
+                    setAvailableMonths([getCurrentMonthKey()]);
                 }
             } catch (error) {
                 console.error('Failed to load archive months:', error);
+                setAvailableMonths([getCurrentMonthKey()]);
             } finally {
                 setIsLoadingMonths(false);
             }
@@ -274,8 +277,12 @@ export default function TaskHistoryView({ onSelectTask }: TaskHistoryViewProps) 
         const loadTasks = async () => {
             setIsLoading(true);
             try {
+                const [mm, yy] = selectedMonthKey.split('-');
+                const monthNum = parseInt(mm, 10);
+                const yearNum = 2000 + parseInt(yy, 10);
+
                 // Load collected tasks
-                const collectedResponse = await fetch(`/api/tasks/history?month=${currentMonth}&year=${currentYear}`);
+                const collectedResponse = await fetch(`/api/tasks/history?month=${monthNum}&year=${yearNum}`);
                 if (collectedResponse.ok) {
                     const collectedData = await collectedResponse.json();
 
@@ -295,7 +302,7 @@ export default function TaskHistoryView({ onSelectTask }: TaskHistoryViewProps) 
         };
 
         loadTasks();
-    }, [currentMonth, currentYear]);
+    }, [selectedMonthKey]);
 
     if (isLoadingMonths) {
         return (
@@ -312,11 +319,10 @@ export default function TaskHistoryView({ onSelectTask }: TaskHistoryViewProps) 
                     <Calendar className="h-5 w-5" />
                     Task History
                 </h2>
-                <MonthYearSelector
-                    currentMonth={currentMonth}
-                    currentYear={currentYear}
-                    onMonthChange={setCurrentMonth}
-                    onYearChange={setCurrentYear}
+                <MonthSelector
+                    selectedMonth={selectedMonthKey}
+                    availableMonths={availableMonths}
+                    onChange={setSelectedMonthKey}
                 />
             </div>
 

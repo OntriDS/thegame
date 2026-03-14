@@ -11,8 +11,8 @@ import { ClientAPI } from "@/lib/client-api";
 import { ItemStatus } from "@/types/enums";
 import { Site } from "@/types/entities";
 import { getZIndexClass } from "@/lib/utils/z-index-utils";
-import { MonthYearSelector } from "@/components/ui/month-year-selector";
-import { getCurrentMonth, getMonthName } from "@/lib/constants/date-constants";
+import { MonthSelector } from "@/components/ui/month-selector";
+import { getCurrentMonthKey } from "@/lib/utils/date-utils";
 import { Archive, Loader2 } from "lucide-react";
 import {
   Dialog,
@@ -30,9 +30,24 @@ export default function InventoriesPage() {
   const [selectedStatus, setSelectedStatus] = useState<ItemStatus | 'all'>('all');
   const [sites, setSites] = useState<Site[]>([]);
 
-  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
-  const [currentMonth, setCurrentMonth] = useState(getCurrentMonth());
+  const [selectedMonthKey, setSelectedMonthKey] = useState(getCurrentMonthKey());
+  const [availableMonths, setAvailableMonths] = useState<string[]>([]);
 
+
+  // Load available months once
+  useEffect(() => {
+    const loadMonths = async () => {
+      try {
+        const months = await ClientAPI.getAvailableSummaryMonths();
+        const current = getCurrentMonthKey();
+        const allMonths = months.includes(current) ? months : [current, ...months];
+        setAvailableMonths(allMonths.sort((a,b) => b.localeCompare(a)));
+      } catch (err) {
+        setAvailableMonths([getCurrentMonthKey()]);
+      }
+    };
+    loadMonths();
+  }, []);
 
   // Load sites on mount
   useEffect(() => {
@@ -103,13 +118,11 @@ export default function InventoriesPage() {
           </div>
 
           <div className="flex items-center gap-4">
-            <MonthYearSelector
-              currentYear={currentYear}
-              currentMonth={currentMonth}
-              onYearChange={setCurrentYear}
-              onMonthChange={setCurrentMonth}
+            <MonthSelector
+              selectedMonth={selectedMonthKey}
+              availableMonths={availableMonths}
+              onChange={setSelectedMonthKey}
             />
-
           </div>
         </div>
       </div>
@@ -119,6 +132,8 @@ export default function InventoriesPage() {
         sites={sites}
         selectedSite={selectedSite}
         selectedStatus={selectedStatus}
+        selectedMonthKey={selectedMonthKey}
+        availableMonths={availableMonths}
       />
 
 

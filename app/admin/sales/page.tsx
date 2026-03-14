@@ -15,8 +15,8 @@ import { getAllSiteNames } from "@/lib/utils/site-options-utils";
 import { Plus, Calendar, DollarSign, Package, TrendingUp, Archive, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import SalesModal from "@/components/modals/sales-modal";
-import { MonthYearSelector } from "@/components/ui/month-year-selector";
-import { getCurrentMonth } from "@/lib/constants/date-constants";
+import { MonthSelector } from "@/components/ui/month-selector";
+import { getCurrentMonthKey } from "@/lib/utils/date-utils";
 import { Switch } from "@/components/ui/switch";
 import { CurrencyExchangeRates, DEFAULT_CURRENCY_EXCHANGE_RATES } from "@/lib/constants/financial-constants";
 
@@ -31,17 +31,32 @@ export default function SalesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [showSalesModal, setShowSalesModal] = useState(false);
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
-  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
-  const [currentMonth, setCurrentMonth] = useState(getCurrentMonth());
+  const [selectedMonthKey, setSelectedMonthKey] = useState(getCurrentMonthKey());
+  const [availableMonths, setAvailableMonths] = useState<string[]>([]);
   const [filterByMonth, setFilterByMonth] = useState(true);
   const [showCollected, setShowCollected] = useState(false); // false=Active, true=Collected
   const [exchangeRates, setExchangeRates] = useState<CurrencyExchangeRates>(DEFAULT_CURRENCY_EXCHANGE_RATES);
+
+  // Load available months once
+  useEffect(() => {
+    const loadMonths = async () => {
+      try {
+        const months = await ClientAPI.getAvailableSummaryMonths();
+        const current = getCurrentMonthKey();
+        const allMonths = months.includes(current) ? months : [current, ...months];
+        setAvailableMonths(allMonths.sort((a,b) => b.localeCompare(a)));
+      } catch (err) {
+        setAvailableMonths([getCurrentMonthKey()]);
+      }
+    };
+    loadMonths();
+  }, []);
 
   // Load sales data & config
   useEffect(() => {
     loadSales();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentYear, currentMonth, filterByMonth]);
+  }, [selectedMonthKey, filterByMonth]);
 
   // Filter sales based on selected criteria
   useEffect(() => {
@@ -77,10 +92,14 @@ export default function SalesPage() {
   const loadSales = async () => {
     try {
       setIsLoading(true);
+      const [mm, yy] = selectedMonthKey.split('-');
+      const monthNum = parseInt(mm, 10);
+      const yearNum = 2000 + parseInt(yy, 10);
+
       const [salesData, sitesData, ratesData] = await Promise.all([
         ClientAPI.getSales(
-          filterByMonth ? currentMonth : undefined,
-          filterByMonth ? currentYear : undefined
+          filterByMonth ? monthNum : undefined,
+          filterByMonth ? yearNum : undefined
         ),
         ClientAPI.getSites(),
         ClientAPI.getFinancialConversionRates()
@@ -228,11 +247,10 @@ export default function SalesPage() {
           </p>
         </div>
         <div className="flex items-center gap-4">
-          <MonthYearSelector
-            currentYear={currentYear}
-            currentMonth={currentMonth}
-            onYearChange={setCurrentYear}
-            onMonthChange={setCurrentMonth}
+          <MonthSelector
+            selectedMonth={selectedMonthKey}
+            availableMonths={availableMonths}
+            onChange={setSelectedMonthKey}
           />
           <div className="flex items-center gap-2 border rounded-md px-3 py-1.5">
             <Switch

@@ -10,14 +10,15 @@ import {
   CompanyMonthlySummary,
   PersonalMonthlySummary,
 } from '@/types/entities';
-import { Building2, User, TrendingUp, TrendingDown, BarChart3, Grid3x3 } from 'lucide-react';
+import { Building2, User, TrendingUp, TrendingDown, BarChart3, Grid3x3, Calendar } from 'lucide-react';
 import { MONTHS, getYearRange, getMonthName, getCurrentMonth } from '@/lib/constants/date-constants';
-import { formatMonthYear } from '@/lib/utils/date-utils';
+import { formatMonthKey, getCurrentMonthKey } from '@/lib/utils/date-utils';
 import { BUSINESS_STRUCTURE } from '@/types/enums';
 import { getCompanyAreas, getPersonalAreas } from '@/lib/utils/business-structure-utils';
-import { MonthYearSelector } from '@/components/ui/month-year-selector';
+import { MonthSelector } from '@/components/ui/month-selector';
 import { Switch } from '@/components/ui/switch';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
+import { SummaryTotals } from '@/types/entities';
 import {
   aggregateRecordsByStation,
   calculateTotals,
@@ -33,11 +34,13 @@ import type {
 export default function DashboardsPage() {
   const { getPreference, setPreference, isLoading: preferencesLoading } = useUserPreferences();
   const [filterByMonth, setFilterByMonth] = useState(true);
-  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
-  const [currentMonth, setCurrentMonth] = useState(getCurrentMonth());
+  const [selectedMonthKey, setSelectedMonthKey] = useState(getCurrentMonthKey());
+  const [availableMonths, setAvailableMonths] = useState<string[]>([]);
+  const [atomicSummary, setAtomicSummary] = useState<SummaryTotals | null>(null);
   const [companySummary, setCompanySummary] = useState<CompanyMonthlySummary | null>(null);
   const [personalSummary, setPersonalSummary] = useState<PersonalMonthlySummary | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [isSummaryLoading, setIsSummaryLoading] = useState(false);
 
   // Analytics data
   const [productPerformance, setProductPerformance] = useState<ProductPerformance[]>([]);
@@ -60,55 +63,85 @@ export default function DashboardsPage() {
     setPreference('dashboards-filter-by-month', checked);
   };
 
+  // Load available months once
+  useEffect(() => {
+    const loadMonths = async () => {
+      try {
+        const months = await ClientAPI.getAvailableSummaryMonths();
+        const current = getCurrentMonthKey();
+        const allMonths = months.includes(current) ? months : [current, ...months];
+        setAvailableMonths(allMonths.sort((a,b) => b.localeCompare(a)));
+      } catch (err) {
+        setAvailableMonths([getCurrentMonthKey()]);
+      }
+    };
+    loadMonths();
+  }, []);
+
   const loadSummaries = useCallback(async () => {
-    const records = filterByMonth
-      ? await ClientAPI.getFinancialRecords(currentMonth, currentYear)
-      : await ClientAPI.getFinancialRecords();
+    setIsSummaryLoading(true);
+    try {
+      const [mm, yy] = selectedMonthKey.split('-');
+      const monthNum = parseInt(mm, 10);
+      const yearNum = 2000 + parseInt(yy, 10);
 
-    const companyRecords = records.filter(r => r.type === 'company');
-    const personalRecords = records.filter(r => r.type === 'personal');
+      // 1. Fetch Atomic Summary (INSTANT)
+      ClientAPI.getSummary(selectedMonthKey).then(setAtomicSummary);
 
-    // Aggregate company records by station
-    const companyStations = getCompanyAreas().flatMap(area => BUSINESS_STRUCTURE[area]);
-    const companyBreakdown = aggregateRecordsByStation(companyRecords, companyStations);
-    const companyTotals = calculateTotals(companyBreakdown);
+      // 2. Fetch Full Detailed Summary (BACKGROUND - keeping for breakdown data)
+      const records = filterByMonth
+        ? await ClientAPI.getFinancialRecords(monthNum, yearNum)
+        : await ClientAPI.getFinancialRecords();
 
-    // Aggregate personal records by station
-    const personalStations = BUSINESS_STRUCTURE.PERSONAL;
-    const personalBreakdown = aggregateRecordsByStation(personalRecords, personalStations);
-    const personalTotals = calculateTotals(personalBreakdown);
+      const companyRecords = records.filter(r => r.type === 'company');
+      const personalRecords = records.filter(r => r.type === 'personal');
 
-    // Create summaries
-    const company: CompanyMonthlySummary = {
-      year: currentYear,
-      month: currentMonth,
-      totalRevenue: companyTotals.totalRevenue,
-      totalCost: companyTotals.totalCost,
-      netCashflow: companyTotals.net,
-      totalJungleCoins: companyTotals.totalJungleCoins,
-      categoryBreakdown: companyBreakdown
-    };
+      // Aggregate
+      const companyAreas = getCompanyAreas();
+      const companyStations = companyAreas.flatMap(area => (BUSINESS_STRUCTURE as any)[area] || []);
+      const companyBreakdown = aggregateRecordsByStation(companyRecords, companyStations);
+      const companyTotals = calculateTotals(companyBreakdown);
 
-    const personal: PersonalMonthlySummary = {
-      year: currentYear,
-      month: currentMonth,
-      totalRevenue: personalTotals.totalRevenue,
-      totalCost: personalTotals.totalCost,
-      netCashflow: personalTotals.net,
-      totalJungleCoins: personalTotals.totalJungleCoins,
-      categoryBreakdown: personalBreakdown
-    };
+      const personalStations = BUSINESS_STRUCTURE.PERSONAL;
+      const personalBreakdown = aggregateRecordsByStation(personalRecords, personalStations as any);
+      const personalTotals = calculateTotals(personalBreakdown);
 
-    setCompanySummary(company);
-    setPersonalSummary(personal);
-  }, [currentYear, currentMonth, filterByMonth]);
+      setCompanySummary({
+        year: yearNum,
+        month: monthNum,
+        totalRevenue: companyTotals.totalRevenue,
+        totalCost: companyTotals.totalCost,
+        netCashflow: companyTotals.net,
+        totalJungleCoins: companyTotals.totalJungleCoins,
+        categoryBreakdown: companyBreakdown
+      });
+
+      setPersonalSummary({
+        year: yearNum,
+        month: monthNum,
+        totalRevenue: personalTotals.totalRevenue,
+        totalCost: personalTotals.totalCost,
+        netCashflow: personalTotals.net,
+        totalJungleCoins: personalTotals.totalJungleCoins,
+        categoryBreakdown: personalBreakdown
+      });
+    } catch (err) {
+      console.error("Failed to load dashboard summaries", err);
+    } finally {
+      setIsSummaryLoading(false);
+    }
+  }, [selectedMonthKey, filterByMonth]);
 
   const loadAnalytics = useCallback(async () => {
     setIsLoadingAnalytics(true);
     try {
+      const [mm, yy] = selectedMonthKey.split('-');
+      const monthNum = parseInt(mm, 10);
+      const yearNum = 2000 + parseInt(yy, 10);
+
       const params = {
-        year: currentYear,
-        month: currentMonth,
+        year: monthNum,
+        month: yearNum,
         filterByMonth
       };
 
@@ -165,7 +198,7 @@ export default function DashboardsPage() {
     } finally {
       setIsLoadingAnalytics(false);
     }
-  }, [currentYear, currentMonth, filterByMonth]);
+  }, [selectedMonthKey, filterByMonth]);
 
   useEffect(() => {
     loadSummaries();
@@ -181,13 +214,11 @@ export default function DashboardsPage() {
             Multi-dimensional business performance analytics
           </p>
         </div>
-
         <div className="flex items-center gap-4">
-          <MonthYearSelector
-            currentYear={currentYear}
-            currentMonth={currentMonth}
-            onYearChange={setCurrentYear}
-            onMonthChange={setCurrentMonth}
+          <MonthSelector
+            selectedMonth={selectedMonthKey}
+            availableMonths={availableMonths}
+            onChange={setSelectedMonthKey}
           />
           <div className="flex items-center gap-2 border rounded-md px-3 py-1.5">
             <Switch
@@ -215,7 +246,7 @@ export default function DashboardsPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Building2 className="h-5 w-5" />
-                Company Monthly Finances - {getMonthName(currentMonth)} {currentYear}
+                Company Monthly Finances - {formatMonthKey(selectedMonthKey)}
               </CardTitle>
               <CardDescription>
                 Financial breakdown by process station
@@ -267,9 +298,37 @@ export default function DashboardsPage() {
                 </Card>
               </div>
 
+              <Card className="mb-4">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg">Atomic Summary</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Revenue</span>
+                    <span className="font-medium">{atomicSummary ? formatCurrency(atomicSummary.revenue) : formatCurrency(companySummary?.totalRevenue || 0)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Cost</span>
+                    <span className="font-medium">{atomicSummary ? formatCurrency(atomicSummary.costs) : formatCurrency(companySummary?.totalCost || 0)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Net</span>
+                    <span className={`font-bold ${(atomicSummary?.profit ?? companySummary?.netCashflow ?? 0) === 0 ? 'text-muted-foreground' :
+                      (atomicSummary?.profit ?? companySummary?.netCashflow ?? 0) > 0 ? 'text-green-600' : 'text-red-600'
+                      }`}>
+                      {atomicSummary ? formatCurrency(atomicSummary.profit) : formatCurrency(companySummary?.netCashflow || 0)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>J$ Paid {atomicSummary ? `(${atomicSummary.jungleCoins} J$)` : companySummary?.totalJungleCoins ? `(${companySummary.totalJungleCoins} J$)` : ''}</span>
+                    <span className="font-medium">-{atomicSummary ? formatCurrency(atomicSummary.jungleCoins * 0.40) : formatCurrency((companySummary?.totalJungleCoins || 0) * 0.40)}</span>
+                  </div>
+                </CardContent>
+              </Card>
+
               {/* Company Stations by Area */}
-              {['ADMIN', 'RESEARCH', 'ARTDESIGN', 'MAKERSPACE', 'SALES'].map(area => {
-                const areaStations = BUSINESS_STRUCTURE[area as keyof typeof BUSINESS_STRUCTURE];
+              {['ADMIN', 'RESEARCH', 'ARTDESIGN', 'MAKERSPACE', 'SALES'].map((area: string) => {
+                const areaStations = (BUSINESS_STRUCTURE as any)[area] || [];
 
                 return (
                   <Card key={area} className="mb-4">
@@ -278,7 +337,7 @@ export default function DashboardsPage() {
                     </CardHeader>
                     <CardContent>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                        {areaStations.map(station => {
+                        {areaStations.map((station: string) => {
                           const breakdown = companySummary?.categoryBreakdown[station];
                           const net = breakdown ? breakdown.net : 0;
 
@@ -322,7 +381,7 @@ export default function DashboardsPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <User className="h-5 w-5" />
-                Personal Monthly Finances - {getMonthName(currentMonth)} {currentYear}
+                Personal Monthly Finances - {formatMonthKey(selectedMonthKey)}
               </CardTitle>
               <CardDescription>
                 Personal financial breakdown by category
@@ -381,9 +440,9 @@ export default function DashboardsPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {BUSINESS_STRUCTURE.PERSONAL.map(station => {
-                      const breakdown = personalSummary?.categoryBreakdown[station];
-                      const net = breakdown ? breakdown.net : 0;
+                    {(BUSINESS_STRUCTURE.PERSONAL as unknown as string[]).map((station: string) => {
+                      const data = personalSummary?.categoryBreakdown[station];
+                      const net = data ? data.net : 0;
 
                       return (
                         <Card key={station} className="border-muted">
@@ -397,10 +456,10 @@ export default function DashboardsPage() {
                               {formatCurrency(net)}
                             </div>
                             <div className="text-xs text-muted-foreground mt-1">
-                              {breakdown ? (
+                              {data ? (
                                 <>
-                                  <div>Revenue: {formatCurrency(breakdown.revenue)}</div>
-                                  <div>Cost: {formatCurrency(breakdown.cost)}</div>
+                                  <div>Revenue: {formatCurrency(data.revenue)}</div>
+                                  <div>Cost: {formatCurrency(data.cost)}</div>
                                 </>
                               ) : (
                                 'No data'

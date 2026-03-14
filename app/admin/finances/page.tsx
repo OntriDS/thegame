@@ -28,13 +28,16 @@ import {
   CompanyMonthlySummary,
   PersonalMonthlySummary,
   Item,
+  SummaryTotals,
 } from '@/types/entities';
-import { Plus, DollarSign, TrendingUp, TrendingDown, Building2, User, Archive, Loader2 } from 'lucide-react';
+import { Plus, DollarSign, TrendingUp, TrendingDown, Building2, User, Archive, Loader2, Calendar } from 'lucide-react';
 import { MONTHS, getYearRange, getMonthName, getCurrentMonth } from '@/lib/constants/date-constants';
 import { BUSINESS_STRUCTURE, ItemType, PLAYER_ONE_ID } from '@/types/enums';
 import { getCompanyAreas, getPersonalAreas, isCompanyStation, getAreaForStation } from '@/lib/utils/business-structure-utils';
 import { CompanyRecordsList, PersonalRecordsList } from '@/components/finances/financial-records-components';
 import { MonthlyHistoricalCashflows } from '@/components/finances/monthly-historical-cashflows';
+import { MonthSelector } from '@/components/ui/month-selector';
+import { formatMonthKey, getCurrentMonthKey } from '@/lib/utils/date-utils';
 import { Switch } from '@/components/ui/switch';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
 import {
@@ -57,8 +60,7 @@ import {
 } from '@/lib/utils/financial-utils';
 import { PRICE_STEP, DECIMAL_STEP, J$_TO_USD_RATE, PRIMARY_CURRENCY, USD_CURRENCY } from '@/lib/constants/app-constants';
 import { VALIDATION_CONSTANTS } from '@/lib/constants/financial-constants';
-// formatMonthYear will be implemented inline
-import { MonthYearSelector } from '@/components/ui/month-year-selector'
+// MonthYearSelector replaced by MonthSelector
 import AssetsEditModal from '@/components/modals/submodals/assets-edit-submodal'
 import ConversionRatesModal from '@/components/modals/submodals/conversion-rates-submodal'
 import FinancialsModal from '@/components/modals/financials-modal'
@@ -123,16 +125,22 @@ function mergeInventoryTotalsIntoAssets(assets: any, inventoryTotals: InventoryB
 export default function FinancesPage() {
   const { getPreference, setPreference, isLoading: preferencesLoading } = useUserPreferences();
   const [filterByMonth, setFilterByMonth] = useState(true); // Default to true, will sync from preferences
-  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
-  const [currentMonth, setCurrentMonth] = useState(getCurrentMonth());
+  const [selectedMonthKey, setSelectedMonthKey] = useState(getCurrentMonthKey());
+  const [availableMonths, setAvailableMonths] = useState<string[]>([]);
+  const [atomicSummary, setAtomicSummary] = useState<SummaryTotals | null>(null);
   const [companySummary, setCompanySummary] = useState<CompanyMonthlySummary | null>(null);
   const [personalSummary, setPersonalSummary] = useState<PersonalMonthlySummary | null>(null);
   const [aggregatedFinancialData, setAggregatedFinancialData] = useState<any>(null);
   const [aggregatedCategoryData, setAggregatedCategoryData] = useState<any>(null);
   const [recordsRefreshKey, setRecordsRefreshKey] = useState(0);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [isSummaryLoading, setIsSummaryLoading] = useState(false);
   const [showConversionRatesModal, setShowConversionRatesModal] = useState(false);
   const [showFinancialsModal, setShowFinancialsModal] = useState(false);
+
+  // Derived date values for legacy components and modals
+  const currentMonthNum = parseInt(selectedMonthKey.split('-')[0], 10);
+  const currentYearNum = 2000 + parseInt(selectedMonthKey.split('-')[1], 10);
 
 
   // Keyboard shortcuts for modal navigation
@@ -211,23 +219,56 @@ export default function FinancesPage() {
     loadConversionRates();
   }, []);
 
-  const loadSummaries = useCallback(async () => {
-    const data = await ClientAPI.getFinancialSummary(
-      filterByMonth ? currentMonth : undefined,
-      filterByMonth ? currentYear : undefined
-    );
+  // Load available months once
+  useEffect(() => {
+    const loadMonths = async () => {
+      try {
+        const months = await ClientAPI.getAvailableSummaryMonths();
+        // Ensure current month is always in the list if not there
+        const current = getCurrentMonthKey();
+        const allMonths = months.includes(current) ? months : [current, ...months];
+        setAvailableMonths(allMonths.sort((a,b) => b.localeCompare(a)));
+      } catch (err) {
+        console.warn("Failed to load available months", err);
+        setAvailableMonths([getCurrentMonthKey()]);
+      }
+    };
+    loadMonths();
+  }, []);
 
-    setCompanySummary(data.companySummary);
-    setPersonalSummary(data.personalSummary);
-    setAggregatedFinancialData(data.aggregatedFinancialData);
-    setAggregatedCategoryData(data.aggregatedCategoryData);
-    setRecordsRefreshKey(prev => prev + 1);
-  }, [currentYear, currentMonth, filterByMonth]);
+  const loadSummaries = useCallback(async () => {
+    setIsSummaryLoading(true);
+    try {
+        // Parse selected month key
+        const [mm, yy] = selectedMonthKey.split('-');
+        const monthNum = parseInt(mm, 10);
+        const yearNum = 2000 + parseInt(yy, 10);
+
+        // 1. Fetch Atomic Summary (INSTANT)
+        ClientAPI.getSummary(selectedMonthKey).then(setAtomicSummary);
+
+        // 2. Fetch Full Detailed Summary (BACKGROUND)
+        const data = await ClientAPI.getFinancialSummary(
+          filterByMonth ? monthNum : undefined,
+          filterByMonth ? yearNum : undefined
+        );
+
+        setCompanySummary(data.companySummary);
+        setPersonalSummary(data.personalSummary);
+        setAggregatedFinancialData(data.aggregatedFinancialData);
+        setAggregatedCategoryData(data.aggregatedCategoryData);
+        setRecordsRefreshKey(prev => prev + 1);
+    } catch (err) {
+        console.error("Failed to load summaries", err);
+    } finally {
+        setIsSummaryLoading(false);
+    }
+  }, [selectedMonthKey, filterByMonth]);
 
   // Load summaries for current month
   useEffect(() => {
     loadSummaries();
-  }, [loadSummaries]);
+  }, [loadSummaries, refreshKey]);
 
 
   const fetchBitcoinPrice = async () => {
@@ -597,11 +638,10 @@ export default function FinancesPage() {
         </div>
 
         <div className="flex items-center gap-4">
-          <MonthYearSelector
-            currentYear={currentYear}
-            currentMonth={currentMonth}
-            onYearChange={setCurrentYear}
-            onMonthChange={setCurrentMonth}
+          <MonthSelector
+            selectedMonth={selectedMonthKey}
+            availableMonths={availableMonths}
+            onChange={setSelectedMonthKey}
           />
           <div className="flex items-center gap-2 border rounded-md px-3 py-1.5">
             <Switch
@@ -656,23 +696,30 @@ export default function FinancesPage() {
               <CardContent className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Revenue</span>
-                  <span className="font-medium">{aggregatedFinancialData?.totalRevenue ? formatCurrency(aggregatedFinancialData.totalRevenue) : '$0'}</span>
+                  <span className="font-medium">{atomicSummary ? formatCurrency(atomicSummary.revenue) : formatCurrency(aggregatedFinancialData?.totalRevenue || 0)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>Cost</span>
-                  <span className="font-medium">{aggregatedFinancialData?.totalCost ? formatCurrency(aggregatedFinancialData.totalCost) : '$0'}</span>
+                  <span className="font-medium">{atomicSummary ? formatCurrency(atomicSummary.costs) : formatCurrency(aggregatedFinancialData?.totalCost || 0)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>Net</span>
-                  <span className={`font-bold ${aggregatedFinancialData?.net === 0 ? 'text-muted-foreground' :
-                    aggregatedFinancialData?.net > 0 ? 'text-foreground' : 'text-muted-foreground'
+                  <span className={`font-bold ${(atomicSummary?.profit || aggregatedFinancialData?.net || 0) === 0 ? 'text-muted-foreground' :
+                    (atomicSummary?.profit || aggregatedFinancialData?.net || 0) > 0 ? 'text-foreground' : 'text-muted-foreground'
                     }`}>
-                    {aggregatedFinancialData?.net ? formatCurrency(aggregatedFinancialData.net) : '$0'}
+                    {atomicSummary ? formatCurrency(atomicSummary.profit) : formatCurrency(aggregatedFinancialData?.net || 0)}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>J$ Paid Out</span>
-                  <span className="font-medium">{aggregatedFinancialData?.totalJungleCoins ? `-${aggregatedFinancialData.totalJungleCoins} J$ (${formatCurrency(aggregatedFinancialData.totalJungleCoins * exchangeRates.j$ToUSD)})` : '0 J$'}</span>
+                  <span className="font-medium">
+                    {atomicSummary 
+                      ? `${atomicSummary.jungleCoins} J$ (${formatCurrency(atomicSummary.jungleCoins * exchangeRates.j$ToUSD)})`
+                      : aggregatedFinancialData?.totalJungleCoins 
+                        ? `${aggregatedFinancialData.totalJungleCoins} J$ (${formatCurrency(aggregatedFinancialData.totalJungleCoins * exchangeRates.j$ToUSD)})`
+                        : '0 J$'
+                    }
+                  </span>
                 </div>
               </CardContent>
             </Card>
@@ -711,7 +758,10 @@ export default function FinancesPage() {
           </div>
 
           {/* Monthly Historical Cashflows */}
-          <MonthlyHistoricalCashflows year={currentYear} month={currentMonth} />
+          <MonthlyHistoricalCashflows 
+            year={2000 + parseInt(selectedMonthKey.split('-')[1], 10)} 
+            month={parseInt(selectedMonthKey.split('-')[0], 10)} 
+          />
 
           {/* Company Assets */}
           <Card>
@@ -1141,8 +1191,8 @@ export default function FinancesPage() {
           </div>
           <CompanyRecordsList
             key={`company-${recordsRefreshKey}`}
-            year={filterByMonth ? currentYear : 0}
-            month={filterByMonth ? currentMonth : 0}
+            year={filterByMonth ? currentYearNum : 0}
+            month={filterByMonth ? currentMonthNum : 0}
             onRecordUpdated={loadSummaries}
             onRecordEdit={(record) => {
               // This is handled by CompanyRecordsList component
@@ -1157,8 +1207,8 @@ export default function FinancesPage() {
           </div>
           <PersonalRecordsList
             key={`personal-${recordsRefreshKey}`}
-            year={filterByMonth ? currentYear : 0}
-            month={filterByMonth ? currentMonth : 0}
+            year={filterByMonth ? currentYearNum : 0}
+            month={filterByMonth ? currentMonthNum : 0}
             onRecordUpdated={loadSummaries}
             onRecordEdit={(record) => {
               // This is handled by PersonalRecordsList component
@@ -1266,8 +1316,8 @@ export default function FinancesPage() {
       {/* Record Modal */}
       <FinancialsModal
         record={null}
-        year={currentYear}
-        month={currentMonth}
+        year={currentYearNum}
+        month={currentMonthNum}
         open={showFinancialsModal}
         onOpenChange={setShowFinancialsModal}
         onSave={async (record: FinancialRecord) => {

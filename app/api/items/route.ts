@@ -20,6 +20,7 @@ export async function GET(req: NextRequest) {
   const monthParam = searchParams.get('month');
   const yearParam = searchParams.get('year');
   const statusFilter = searchParams.get('status');
+  const siteFilter = searchParams.get('siteId');
 
   const normalizeYear = (y: string | null): number | null => {
     if (!y) return null;
@@ -104,6 +105,15 @@ export async function GET(req: NextRequest) {
         return d.getMonth() + 1 === month && d.getFullYear() === year;
       });
     }
+  }
+  
+  // 4. Site Filter
+  if (siteFilter) {
+    items = items.filter(item => {
+      // Check if any stock entry matches the siteId
+      const stockAtSite = item.stock?.some(s => s.siteId === siteFilter);
+      return !!stockAtSite;
+    });
   }
 
   return NextResponse.json(items);

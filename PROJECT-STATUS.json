@@ -37,7 +37,7 @@
       ]
     },
     "phase13.3": {
-      "phaseName": "Dashboards Section, Month Selectors connected to Archive System and Events Tab",
+      "phaseName": "Dashboards Section, Month Selectors, Summary Repo, Archive System",
       "status": "In Progress",
       "description": "Implement month/year selectors and connect it to Archive System and Dashboards Section",
       "deliverables": [
@@ -47,7 +47,8 @@
         "Ensure proper data isolation between current and historical views",
         "Create Basic Dashboard Section and prepare to visualize data across all sections",
         "Dashboard & Archive Integration and their Month Selectors",
-        "Dashboard connectivity with all other sections"
+        "Dashboard connectivity with all other sections",
+        "Refactor and Standarization of Month Selector, Summary Repo"
       ]
     },
     "phase13.4": {

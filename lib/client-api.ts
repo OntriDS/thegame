@@ -12,9 +12,22 @@
  * from @/data-store/datastore, which is server-side only.
  */
 
-import type { Task, Item, Sale, FinancialRecord, Character, Player, Site, Account, Settlement, AISession, Business, Contract } from '@/types/entities';
+import type { Task, Item, Sale, FinancialRecord, Character, Player, Site, Account, Settlement, AISession, Business, Contract, SummaryTotals } from '@/types/entities';
 
 export const ClientAPI = {
+  getSummary: async (monthYear?: string): Promise<SummaryTotals> => {
+    let url = '/api/summary';
+    if (monthYear) url += `?month=${encodeURIComponent(monthYear)}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('Failed to fetch summary');
+    return await res.json();
+  },
+
+  getAvailableSummaryMonths: async (): Promise<string[]> => {
+    const res = await fetch('/api/summary/months');
+    if (!res.ok) throw new Error('Failed to fetch available months');
+    return await res.json();
+  },
   // ============================================================================
   // TASKS - Task management operations
   // ============================================================================
@@ -91,7 +104,7 @@ export const ClientAPI = {
   // ============================================================================
   // ITEMS - Item management operations
   // ============================================================================
-  getItems: async (itemTypes?: string | string[], month?: number, year?: number, status?: string): Promise<Item[]> => {
+  getItems: async (itemTypes?: string | string[], month?: number, year?: number, status?: string, siteId?: string): Promise<Item[]> => {
     let base = '/api/items';
     const params = new URLSearchParams();
     if (itemTypes) {
@@ -101,6 +114,7 @@ export const ClientAPI = {
     if (typeof month === 'number') params.append('month', String(month));
     if (typeof year === 'number') params.append('year', String(year));
     if (status) params.append('status', status);
+    if (siteId) params.append('siteId', siteId);
 
     const url = params.toString() ? `${base}?${params.toString()}` : base;
     const res = await fetch(url);
