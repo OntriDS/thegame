@@ -662,20 +662,20 @@
             "Effects-registry verified for idempotency; no server→server HTTP anti-patterns"
           ]
         },
-         {
-           "id": "phase12.2",
-           "phaseName": "Links & Logging Idempotency + Parity Fixes",
-           "description": "Make link creation idempotent, clean up stale links on edits, and align UI with logging semantics.",
-           "completedAt": "25-10-2025",
-           "completedFeatures": [
-             "createLink made idempotent (duplicate-safe) with clear debug logs",
-             "Link validation uses retry for KV eventual consistency; bootstrap links allow skipValidation",
-             "Item effects clean up ITEM_TASK/ITEM_SITE/ITEM_CHARACTER links before re-creating",
-             "Lifecycle logging parity: append events + update-in-place for descriptive fields",
-             "Data Center logs fixed to read flat entry fields before nested (tasks/items/financials)",
-             "API error messages surfaced consistently in route handlers"
-           ]
-         },
+        {
+          "id": "phase12.2",
+          "phaseName": "Links & Logging Idempotency + Parity Fixes",
+          "description": "Make link creation idempotent, clean up stale links on edits, and align UI with logging semantics.",
+          "completedAt": "25-10-2025",
+          "completedFeatures": [
+            "createLink made idempotent (duplicate-safe) with clear debug logs",
+            "Link validation uses retry for KV eventual consistency; bootstrap links allow skipValidation",
+            "Item effects clean up ITEM_TASK/ITEM_SITE/ITEM_CHARACTER links before re-creating",
+            "Lifecycle logging parity: append events + update-in-place for descriptive fields",
+            "Data Center logs fixed to read flat entry fields before nested (tasks/items/financials)",
+            "API error messages surfaced consistently in route handlers"
+          ]
+        },
         {
           "id": "phase12.3",
           "phaseName": "Real-time UI Updates Unification",
@@ -702,6 +702,81 @@
             "Documentation updated clarifying System State vs Configuration (assets/rates) and reset policy",
             "DRY enforcement: station/category usage via BUSINESS_STRUCTURE; CSV/enum/icon/color usages aligned",
             "Recurrent tasks wiring and cascade status confirmation integrated per workflow plan"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sprint-13",
+      "sprintName": "Sprint 13",
+      "description": "Sprint 13 completed successfully",
+      "completedAt": "14-03-2026",
+      "challenge": "System Development",
+      "phases": [
+        {
+          "id": "phase13.1",
+          "phaseName": "Archive System Foundation and basic Calendar and Schedule",
+          "description": "Create archive structure with monthly organization and entity archival",
+          "completedAt": "14-03-2026",
+          "completedFeatures": [
+            "Create archives/ folder structure with monthly organization",
+            "Implement archives/index.json for archived months index",
+            "Move Collected tasks to archive with proper status preservation",
+            "Move Sold items to archive maintaining final status",
+            "Move all records to archive (inherently completed data)",
+            "Design and implement Active vs Archive data strategy (filters and views for working set)",
+            "Implement the Weekly Schedule, Calendar and Gantt Chart Views in the Control Room",
+            "Create the Smart Scheduler",
+            "Archive System Refactor, No snapshots, Entites are preserved in their Section by Month"
+          ]
+        },
+        {
+          "id": "Phase13.2",
+          "phaseName": "Monthly Logging System, Booth Sales, Contracts and Legal Entities",
+          "description": "Implement comprehensive monthly logging for data lifecycle tracking, Contracts and Legal Entities",
+          "completedAt": "14-03-2026",
+          "completedFeatures": [
+            "Create Contracts and Legal Entities, Use it in Booth Sales",
+            "Create monthly log file structure (tasks-log-MM-YY.json format)",
+            "Implement task lifecycle logging (Created, Started, Done)",
+            "Implement item lifecycle logging (Created, Moved, Sold)",
+            "Implement record lifecycle logging (Created)",
+            "Implement financial effects logging with proper categorization",
+            "Implement player effects logging for points and achievements",
+            "Update logging logic to track complete data lifecycle",
+            "Ensure logs track lifecycle events, not current state",
+            "Redis Lists and Monthly Keys Refactor"
+          ]
+        },
+        {
+          "id": "phase13.3",
+          "phaseName": "Dashboards Section, Month Selectors, Summary Repo, Archive System",
+          "description": "Implement month/year selectors and connect it to Archive System and Dashboards Section",
+          "completedAt": "14-03-2026",
+          "completedFeatures": [
+            "Archive Section Set for historical data viewing",
+            "Add Month Selector to Financials Section for monthly financials",
+            "Test month switching functionality across all sections",
+            "Ensure proper data isolation between current and historical views",
+            "Create Basic Dashboard Section and prepare to visualize data across all sections",
+            "Dashboard & Archive Integration and their Month Selectors",
+            "Dashboard connectivity with all other sections, Summary Repos",
+            "Refactor and Standarization of Month Selector, Refactor DashboardTabs and Data Patterns Optimization"
+          ]
+        },
+        {
+          "id": "phase13.4",
+          "phaseName": "Monthly close workflow and many bug fixing all around",
+          "description": "Monthly Close Wrokkflow, Automation Tasks, Multiple Bug Fixing, thegame DB namespace",
+          "completedAt": "14-03-2026",
+          "completedFeatures": [
+            "Montly Close Automation Task, Automation Tree",
+            "Booth Sales Multiple Bugs and Refactors",
+            "Done Tasks Workflow Refactor, Collected Tasks Workflow Refactor, Items Sold, Auth Hybrid Login",
+            "Basic Badges and Achievements Creation in Player Progression",
+            "Implement Strict Key Namespacing and DB thegame namespace Migration",
+            "Refactor to Stateless Edge Auth and Rate Limit for Bandwidth Protection",
+            "Align the 'Digital Universe' Middleware and Packages to connect TheGame, Pixelbrain and Akiles-Ecosystem"
           ]
         }
       ]
@@ -844,14 +919,14 @@
       "completedAt": "25-10-2025",
       "description": "Phase \"KV-only Cutover Hardening & Server-First Workflows\" marked as completed"
     },
-     {
-       "id": "1761414995960-phase12.2",
-       "type": "phase_completion",
-       "phaseKey": "phase12.2",
-       "phaseName": "Links & Logging Idempotency + Parity Fixes",
-       "completedAt": "25-10-2025",
-       "description": "Phase \"Links & Logging Idempotency + Parity Fixes\" marked as completed"
-     },
+    {
+      "id": "1761414995960-phase12.2",
+      "type": "phase_completion",
+      "phaseKey": "phase12.2",
+      "phaseName": "Links & Logging Idempotency + Parity Fixes",
+      "completedAt": "25-10-2025",
+      "description": "Phase \"Links & Logging Idempotency + Parity Fixes\" marked as completed"
+    },
     {
       "id": "1761414995960-phase12.3",
       "type": "phase_completion",
@@ -867,6 +942,38 @@
       "phaseName": "Sites/Settlements, Z-Index & Data Architecture Cleanups",
       "completedAt": "25-10-2025",
       "description": "Phase \"Sites/Settlements, Z-Index & Data Architecture Cleanups\" marked as completed"
+    },
+    {
+      "id": "1773530364702-phase13.1",
+      "type": "phase_completion",
+      "phaseKey": "phase13.1",
+      "phaseName": "Archive System Foundation and basic Calendar and Schedule",
+      "completedAt": "14-03-2026",
+      "description": "Phase \"Archive System Foundation and basic Calendar and Schedule\" marked as completed"
+    },
+    {
+      "id": "1773530364702-Phase13.2",
+      "type": "phase_completion",
+      "phaseKey": "Phase13.2",
+      "phaseName": "Monthly Logging System, Booth Sales, Contracts and Legal Entities",
+      "completedAt": "14-03-2026",
+      "description": "Phase \"Monthly Logging System, Booth Sales, Contracts and Legal Entities\" marked as completed"
+    },
+    {
+      "id": "1773530364702-phase13.3",
+      "type": "phase_completion",
+      "phaseKey": "phase13.3",
+      "phaseName": "Dashboards Section, Month Selectors, Summary Repo, Archive System",
+      "completedAt": "14-03-2026",
+      "description": "Phase \"Dashboards Section, Month Selectors, Summary Repo, Archive System\" marked as completed"
+    },
+    {
+      "id": "1773530364702-phase13.4",
+      "type": "phase_completion",
+      "phaseKey": "phase13.4",
+      "phaseName": "Monthly close workflow and many bug fixing all around",
+      "completedAt": "14-03-2026",
+      "description": "Phase \"Monthly close workflow and many bug fixing all around\" marked as completed"
     }
   ],
   "lastUpdated": "2025-09-30T01:46:46.890Z",

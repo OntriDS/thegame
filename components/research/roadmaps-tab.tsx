@@ -228,7 +228,7 @@ export function RoadmapsTab({ projectStatus }: { projectStatus: ProjectStatus | 
           {!systems ? (
             <div className="text-center py-10 text-muted-foreground">
               <p className="mb-1">No project status data available.</p>
-              <p className="text-xs">Make sure PROJECT-STATUS.json is accessible via the API.</p>
+              <p className="text-xs">Make sure project-status/PROJECT-STATUS.json is accessible via the API.</p>
             </div>
           ) : (
             <SmartBuilding systems={systems} />

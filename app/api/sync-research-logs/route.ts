@@ -278,13 +278,13 @@ async function getLocalFileData(logType: string): Promise<any | null> {
     let filePath: string;
     switch (logType) {
       case 'project-status':
-        filePath = path.join(process.cwd(), 'PROJECT-STATUS.json');
+        filePath = path.join(process.cwd(), 'project-status', 'PROJECT-STATUS.json');
         break;
       case 'dev-log':
-        filePath = path.join(process.cwd(), 'logs-research', 'dev-log.json');
+        filePath = path.join(process.cwd(), 'project-status', 'dev-log.json');
         break;
       case 'notes-log':
-        filePath = path.join(process.cwd(), 'logs-research', 'notes-log.json');
+        filePath = path.join(process.cwd(), 'notes', 'notes-log.json');
         break;
       default:
         return null;
@@ -304,10 +304,10 @@ async function getFileStats(logType: string): Promise<any> {
   let filePath: string;
   switch (logType) {
     case 'project-status':
-      filePath = path.join(process.cwd(), 'PROJECT-STATUS.json');
+      filePath = path.join(process.cwd(), 'project-status', 'PROJECT-STATUS.json');
       break;
     case 'dev-log':
-      filePath = path.join(process.cwd(), 'logs-research', 'dev-log.json');
+      filePath = path.join(process.cwd(), 'project-status', 'dev-log.json');
       break;
     case 'notes-log':
       filePath = path.join(process.cwd(), 'logs-research', 'notes-log.json');

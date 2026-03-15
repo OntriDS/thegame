@@ -12,7 +12,7 @@ export const ADMIN_SECTIONS = [
   { slug: 'data-center',    label: 'Data Center' },
   { slug: 'research',       label: 'Research' },
   { slug: 'settings',       label: 'Settings' },
-  { slug: 'pixelbrain', label: 'PixelBrain' },
+  { slug: 'pixelbrain',     label: 'PixelBrain' },
 ] as const;
 
 export type AdminSectionSlug = typeof ADMIN_SECTIONS[number]['slug']; 

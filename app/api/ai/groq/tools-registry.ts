@@ -22,7 +22,7 @@ export const GROQ_TOOLS = [
     type: 'function',
     function: {
       name: 'get_project_status',
-      description: 'Get current project status and sprint information from PROJECT-STATUS.json',
+      description: 'Get current project status and sprint information from project-status/PROJECT-STATUS.json',
       parameters: {
         type: 'object',
         properties: {
@@ -170,7 +170,7 @@ function truncateOutput(result: any): any {
 
 async function getProjectStatus(includeRoadmap: boolean): Promise<any> {
   try {
-    const projectStatusPath = join(process.cwd(), 'PROJECT-STATUS.json');
+    const projectStatusPath = join(process.cwd(), 'project-status', 'PROJECT-STATUS.json');
     const projectStatus = JSON.parse(readFileSync(projectStatusPath, 'utf-8'));
     
     const result: any = {

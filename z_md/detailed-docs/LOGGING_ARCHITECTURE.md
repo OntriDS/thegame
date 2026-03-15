@@ -492,8 +492,11 @@ logs-entities/                      # Entity logs (development)
 ├── character-log.json             # Character lifecycle/history (append-only)
 └── player-progress-log.json       # Player role points/progression (append-only)
 
-logs-research/                      # Research logs (deployed)
-├── dev-log.json                   # Development notes
+project-status/                    # Project status files (deployed)
+├── PROJECT-STATUS.json           # Project status and sprint information
+└── dev-log.json                   # Development notes
+
+notes/                             # Research notes (deployed)
 └── notes-log.json                 # Research notes
 
 KV Storage (Production):            # Namespaced keys

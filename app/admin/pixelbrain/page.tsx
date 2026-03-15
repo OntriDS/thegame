@@ -62,142 +62,13 @@ export default function PixelbrainDashboardPage() {
   // Error messages
   const [errorMessage, setErrorMessage] = useState<string>('');
 
-  // Mock data initialization
+  // Initial data fetch
   useEffect(() => {
-    setAgents([
-      {
-        id: 'data-integrity',
-        name: 'Data Integrity Validator',
-        status: 'running',
-        health: 'healthy',
-        activeTasks: 3,
-        completedTasks: 1250,
-        failedTasks: 15,
-        errorRate: 0.012,
-        uptime: '72h 30m',
-      },
-      {
-        id: 'time-planning',
-        name: 'Time Planning Agent',
-        status: 'running',
-        health: 'healthy',
-        activeTasks: 1,
-        completedTasks: 890,
-        failedTasks: 8,
-        errorRate: 0.009,
-        uptime: '68h 15m',
-      },
-      {
-        id: 'tasks-organization',
-        name: 'Tasks Organization Agent',
-        status: 'running',
-        health: 'degraded',
-        activeTasks: 2,
-        completedTasks: 756,
-        failedTasks: 12,
-        errorRate: 0.016,
-        uptime: '65h 45m',
-      },
-      {
-        id: 'data-analysis',
-        name: 'Data Analysis Agent',
-        status: 'running',
-        health: 'healthy',
-        activeTasks: 1,
-        completedTasks: 623,
-        failedTasks: 5,
-        errorRate: 0.008,
-        uptime: '58h 20m',
-      },
-      {
-        id: 'prepare-classes',
-        name: 'Prepare Classes Agent',
-        status: 'stopped',
-        health: 'healthy',
-        activeTasks: 0,
-        completedTasks: 234,
-        failedTasks: 2,
-        errorRate: 0.009,
-        uptime: '0h 0m',
-      },
-      {
-        id: 'marketing',
-        name: 'Marketing Agent',
-        status: 'stopped',
-        health: 'healthy',
-        activeTasks: 0,
-        completedTasks: 189,
-        failedTasks: 3,
-        errorRate: 0.016,
-        uptime: '0h 0m',
-      },
-      {
-        id: 'game-design',
-        name: 'Game Design Agent',
-        status: 'error',
-        health: 'unhealthy',
-        activeTasks: 0,
-        completedTasks: 312,
-        failedTasks: 28,
-        errorRate: 0.082,
-        uptime: '12h 45m',
-      },
-    ]);
-
-    setRecentTasks([
-      {
-        id: 'task-001',
-        type: 'validation',
-        agent: 'Data Integrity Validator',
-        status: 'completed',
-        duration: '2.3s',
-        cost: 0.004,
-        timestamp: new Date(Date.now() - 5 * 60 * 1000),
-      },
-      {
-        id: 'task-002',
-        type: 'planning',
-        agent: 'Time Planning Agent',
-        status: 'in-progress',
-        duration: '4.1s',
-        cost: 0.012,
-        timestamp: new Date(Date.now() - 2 * 60 * 1000),
-      },
-      {
-        id: 'task-003',
-        type: 'analysis',
-        agent: 'Data Analysis Agent',
-        status: 'queued',
-        duration: '-',
-        cost: 0,
-        timestamp: new Date(Date.now() - 1 * 60 * 1000),
-      },
-      {
-        id: 'task-004',
-        type: 'validation',
-        agent: 'Data Integrity Validator',
-        status: 'completed',
-        duration: '1.8s',
-        cost: 0.003,
-        timestamp: new Date(Date.now() - 8 * 60 * 1000),
-      },
-      {
-        id: 'task-005',
-        type: 'organization',
-        agent: 'Tasks Organization Agent',
-        status: 'failed',
-        duration: '3.2s',
-        cost: 0.008,
-        timestamp: new Date(Date.now() - 10 * 60 * 1000),
-      },
-    ]);
-
-    setActiveAgents(4);
-    setSystemLoad(45);
-    setLatency(125);
-    setTotalRequests(4258);
-    setConnectionStatus('healthy');
-    setUptime('72h 30m');
+    fetchDashboardData();
+    
+    // Set up auto-refresh
+    const interval = setInterval(fetchDashboardData, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   // Fetch dashboard data
@@ -214,17 +85,22 @@ export default function PixelbrainDashboardPage() {
 
       const data = await response.json();
 
-      if (data.success) {
+      if (response.ok) {
         setConnectionStatus(data.systemHealth);
         setActiveAgents(data.activeAgents);
         setLatency(data.latency);
         setTotalRequests(data.totalRequests);
-        setLastActivity(new Date(data.lastActivity));
+        if (data.lastActivity) {
+          setLastActivity(new Date(data.lastActivity));
+        }
+        setErrorMessage('');
       } else {
-        setErrorMessage('Failed to fetch pixelbrain status');
+        setErrorMessage(data.error || 'Failed to fetch pixelbrain status');
+        setConnectionStatus('unhealthy');
       }
     } catch (error) {
       setErrorMessage('Failed to connect to pixelbrain. Please check your connection settings.');
+      setConnectionStatus('unhealthy');
     } finally {
       setIsRefreshing(false);
     }

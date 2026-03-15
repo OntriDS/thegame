@@ -1,73 +1,9 @@
 {
-  "lastUpdated": "2025-10-25T17:56:36.488Z",
-  "currentSprint": "Sprint 13",
-  "currentSprintNumber": 13,
+  "lastUpdated": "2026-03-14T23:19:25.162Z",
+  "currentSprint": "Sprint 14",
+  "currentSprintNumber": 14,
   "phasePlan": {
-    "phase13.1": {
-      "phaseName": "Archive System Foundation and basic Calendar and Schedule",
-      "status": "Done",
-      "description": "Create archive structure with monthly organization and entity archival",
-      "deliverables": [
-        "Create archives/ folder structure with monthly organization",
-        "Implement archives/index.json for archived months index",
-        "Move Collected tasks to archive with proper status preservation",
-        "Move Sold items to archive maintaining final status",
-        "Move all records to archive (inherently completed data)",
-        "Design and implement Active vs Archive data strategy (filters and views for working set)",
-        "Implement the Weekly Schedule, Calendar and Gantt Chart Views in the Control Room",
-        "Create the Smart Scheduler",
-        "Archive System Refactor, No snapshots, Entites are preserved in their Section by Month"
-      ]
-    },
-    "Phase13.2": {
-      "phaseName": "Monthly Logging System, Booth Sales, Contracts and Legal Entities",
-      "status": "Done",
-      "description": "Implement comprehensive monthly logging for data lifecycle tracking, Contracts and Legal Entities",
-      "deliverables": [
-        "Create Contracts and Legal Entities, Use it in Booth Sales",
-        "Create monthly log file structure (tasks-log-MM-YY.json format)",
-        "Implement task lifecycle logging (Created, Started, Done)",
-        "Implement item lifecycle logging (Created, Moved, Sold)",
-        "Implement record lifecycle logging (Created)",
-        "Implement financial effects logging with proper categorization",
-        "Implement player effects logging for points and achievements",
-        "Update logging logic to track complete data lifecycle",
-        "Ensure logs track lifecycle events, not current state",
-        "Redis Lists and Monthly Keys Refactor"
-      ]
-    },
-    "phase13.3": {
-      "phaseName": "Dashboards Section, Month Selectors, Summary Repo, Archive System",
-      "status": "Done",
-      "description": "Implement month/year selectors and connect it to Archive System and Dashboards Section",
-      "deliverables": [
-        "Archive Section Set for historical data viewing",
-        "Add Month Selector to Financials Section for monthly financials",
-        "Test month switching functionality across all sections",
-        "Ensure proper data isolation between current and historical views",
-        "Create Basic Dashboard Section and prepare to visualize data across all sections",
-        "Dashboard & Archive Integration and their Month Selectors",
-        "Dashboard connectivity with all other sections, Summary Repos",
-        "Refactor and Standarization of Month Selector, Refactor DashboardTabs and Data Patterns Optimization"
-      ]
-    },
-    "phase13.4": {
-      "phaseName": "Monthly close workflow and many bug fixing all around",
-      "status": "Done",
-      "description": "Monthly Close Wrokkflow, Automation Tasks, Multiple Bug Fixing, thegame DB namespace",
-      "deliverables": [
-        "Montly Close Automation Task, Automation Tree",
-        "Booth Sales Multiple Bugs and Refactors",
-        "Done Tasks Workflow Refactor, Collected Tasks Workflow Refactor, Items Sold, Auth Hybrid Login",
-        "Basic Badges and Achievements Creation in Player Progression",
-        "Implement Strict Key Namespacing and DB thegame namespace Migration",
-        "Refactor to Stateless Edge Auth and Rate Limit for Bandwidth Protection",
-        "Align the 'Digital Universe' Middleware and Packages to connect TheGame, Pixelbrain and Akiles-Ecosystem"
-      ]
-    }
-  },
-  "nextSprintPlan": {
-    "phaseX.1": {
+    "phase14.1": {
       "phaseName": "",
       "status": "Implement automation tasks, Connect to 'Pixelbrain' AI agents and MCP",
       "description": "",
@@ -84,7 +20,7 @@
         "The Agent must checkCollected/Sold status consistency, Month index accuracy, Archive snapshot completeness"
       ]
     },
-    "phaseX.2": {
+    "phase14.2": {
       "phaseName": "",
       "status": "Complete Maps Section, Improve UI and Gameplay (Player and Personas)",
       "description": "",
@@ -98,7 +34,7 @@
         "Basic Badges and Achievements systems improved"
       ]
     },
-    "phaseX.3": {
+    "phase14.3": {
       "phaseName": "Debug and Optimize every aspect of the TheGame V0.1",
       "status": "Not Started",
       "description": "",
@@ -107,7 +43,7 @@
         ""
       ]
     },
-    "phaseX.4": {
+    "phase14.4": {
       "phaseName": "Clean Code and Documentation",
       "status": "Not Started",
       "description": "",
@@ -116,8 +52,34 @@
       ]
     }
   },
+  "nextSprintPlan": {
+    "phaseX.1": {
+      "phaseName": "",
+      "status": "Not Started",
+      "description": "",
+      "deliverables": []
+    },
+    "phaseX.2": {
+      "phaseName": "",
+      "status": "Not Started",
+      "description": "",
+      "deliverables": []
+    },
+    "phaseX.3": {
+      "phaseName": "",
+      "status": "Not Started",
+      "description": "",
+      "deliverables": []
+    },
+    "phaseX.4": {
+      "phaseName": "",
+      "status": "Not Started",
+      "description": "",
+      "deliverables": []
+    }
+  },
   "systems": {
-    "foundations": {
+    "system": {
       "status": "Done",
       "version": "v0.1",
       "description": "Foundation with proper enums, entities, and data flow"
@@ -163,8 +125,8 @@
       "description": "Central repository for Logs, tracking Status changes"
     },
     "archive": {
-      "status": "In Progress",
-      "version": "v0.0",
+      "status": "Done",
+      "version": "v0.1",
       "description": "Basic Archive system for storing full entities historical data"
     },
     "player": {
@@ -184,7 +146,7 @@
     },
     "pixelbrain": {
       "status": "In Progress",
-      "version": "v0.0",
+      "version": "v0.5",
       "description": "Basic MCP and AI Agents System"
     }
   },

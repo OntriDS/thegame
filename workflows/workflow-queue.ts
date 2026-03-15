@@ -153,9 +153,13 @@ export class WorkflowQueue {
       return; // Already processing
     }
 
+    // TODO: Centralize in Pixelbrain Orchestrator
+    console.log('[WorkflowQueue] 🛑 Local background processing disabled - Waiting for Pixelbrain integration');
+    /*
     this.processingInterval = setInterval(() => {
       this.processQueue();
     }, 1000); // Check every second
+    */
   }
 
   /**

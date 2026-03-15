@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
       }
     } else {
       // In development, read from filesystem
-      const filePath = path.join(process.cwd(), 'logs-research', 'dev-log.json');
+      const filePath = path.join(process.cwd(), 'project-status', 'dev-log.json');
 
       try {
         const fileContent = fs.readFileSync(filePath, 'utf8');
@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, message: 'Dev log updated successfully' });
     } else {
       // In development, write to filesystem
-      const filePath = path.join(process.cwd(), 'logs-research', 'dev-log.json');
+      const filePath = path.join(process.cwd(), 'project-status', 'dev-log.json');
       fs.writeFileSync(filePath, JSON.stringify(devLogData, null, 2));
       return NextResponse.json({ success: true, message: 'Dev log updated successfully' });
     }

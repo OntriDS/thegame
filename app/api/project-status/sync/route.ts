@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
 
     try {
         // 1. Read from the filesystem (The Source of Truth for this action)
-        const filePath = path.join(process.cwd(), 'PROJECT-STATUS.json');
+        const filePath = path.join(process.cwd(), 'project-status', 'PROJECT-STATUS.json');
 
         let fileStatusData;
         try {

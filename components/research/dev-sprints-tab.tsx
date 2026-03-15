@@ -260,7 +260,7 @@ export function DevSprintsTab({
                     variant="outline"
                     size="sm"
                     onClick={async () => {
-                      if (!confirm('This will overwrite the database (KV) with the contents of PROJECT-STATUS.json. Are you sure?')) return;
+                      if (!confirm('This will overwrite the database (KV) with the contents of project-status/PROJECT-STATUS.json. Are you sure?')) return;
                       try {
                         const res = await fetch('/api/project-status/sync', { method: 'POST' });
                         if (res.ok) {
@@ -273,7 +273,7 @@ export function DevSprintsTab({
                         alert('Error syncing.');
                       }
                     }}
-                    title="Force Sync from PROJECT-STATUS.json"
+                    title="Force Sync from project-status/PROJECT-STATUS.json"
                   >
                     <RefreshCw className="h-4 w-4 mr-2" />
                     Sync File

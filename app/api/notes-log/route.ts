@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
       }
     } else {
       // In development, read from filesystem
-      const filePath = path.join(process.cwd(), 'logs-research', 'notes-log.json');
+      const filePath = path.join(process.cwd(), 'notes', 'notes-log.json');
 
       try {
         const fileContent = fs.readFileSync(filePath, 'utf8');
@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ note: newNote });
     } else {
       // In development, write to filesystem
-      const filePath = path.join(process.cwd(), 'logs-research', 'notes-log.json');
+      const filePath = path.join(process.cwd(), 'notes', 'notes-log.json');
 
       // Read current data
       let currentData = { entries: [], lastUpdated: new Date().toISOString() };
@@ -154,7 +154,7 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ note: updatedNote });
     } else {
       // In development, write to filesystem
-      const filePath = path.join(process.cwd(), 'logs-research', 'notes-log.json');
+      const filePath = path.join(process.cwd(), 'notes', 'notes-log.json');
 
       // Read current data
       let currentData = { entries: [], lastUpdated: new Date().toISOString() };
@@ -224,7 +224,7 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ success: true });
     } else {
       // In development, write to filesystem
-      const filePath = path.join(process.cwd(), 'logs-research', 'notes-log.json');
+      const filePath = path.join(process.cwd(), 'notes', 'notes-log.json');
 
       // Read current data
       let currentData = { entries: [], lastUpdated: new Date().toISOString() };

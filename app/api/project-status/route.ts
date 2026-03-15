@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
       }
     } else {
       // In development, read from filesystem
-      const filePath = path.join(process.cwd(), 'PROJECT-STATUS.json');
+      const filePath = path.join(process.cwd(), 'project-status', 'PROJECT-STATUS.json');
 
       try {
         const fileContent = fs.readFileSync(filePath, 'utf8');
@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, message: 'Project status updated successfully' });
     } else {
       // In development, write to filesystem
-      const filePath = path.join(process.cwd(), 'PROJECT-STATUS.json');
+      const filePath = path.join(process.cwd(), 'project-status', 'PROJECT-STATUS.json');
       fs.writeFileSync(filePath, JSON.stringify(projectStatusData, null, 2));
       return NextResponse.json({ success: true, message: 'Project status updated successfully' });
     }
@@ -96,7 +96,7 @@ export async function PUT(req: NextRequest) {
       }
     } else {
       // In development, read from filesystem
-      const filePath = path.join(process.cwd(), 'PROJECT-STATUS.json');
+      const filePath = path.join(process.cwd(), 'project-status', 'PROJECT-STATUS.json');
       projectStatus = JSON.parse(fs.readFileSync(filePath, 'utf8'));
 
       if (projectStatus.phasePlan && projectStatus.phasePlan[phaseKey]) {
