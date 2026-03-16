@@ -11,8 +11,8 @@ import { Redis } from '@upstash/redis';
 // Limit: 60 requests per minute per IP for general admin access
 const ratelimit = new Ratelimit({
   redis: Redis.fromEnv(),
-  limiter: Ratelimit.slidingWindow(60, '1 m'),
-  analytics: true,
+  limiter: Ratelimit.fixedWindow(60, '1 m'),
+  analytics: false,
   prefix: 'thegame:ratelimit',
 });
 

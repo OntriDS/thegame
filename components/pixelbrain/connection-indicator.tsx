@@ -87,11 +87,15 @@ export function ConnectionIndicator({
     }
   }, []);
 
-  // Initial fetch and periodic refresh
+  // Listen for external error events to trigger a check
   useEffect(() => {
-    fetchConnectionStatus();
-    const interval = setInterval(fetchConnectionStatus, 30000); // Refresh every 30 seconds
-    return () => clearInterval(interval);
+    const handleCheckRequest = () => {
+      console.log('[ConnectionIndicator] Check triggered by error/manual request');
+      fetchConnectionStatus();
+    };
+
+    window.addEventListener('pixelbrain-check-connection', handleCheckRequest);
+    return () => window.removeEventListener('pixelbrain-check-connection', handleCheckRequest);
   }, [fetchConnectionStatus]);
 
   // Format uptime

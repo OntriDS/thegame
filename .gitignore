@@ -82,7 +82,7 @@ ehthumbs.db
 Thumbs.db
 
 # Logs
-logs-entities/
+backup/
 
 # Backup files
 *.backup

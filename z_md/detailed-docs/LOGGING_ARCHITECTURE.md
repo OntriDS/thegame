@@ -363,7 +363,7 @@ export class LoggingHybridAdapter implements LoggingAdapter {
 5. Workflow → EffectsRegistry.hasEffect(taskId, 'itemCreated')
 6. If false: createItemFromTask() + markEffect() + logItemCreation()
 7. LoggingDataStore → LoggingLocalAdapter.addLogEntry() (append-only)
-8. LoggingLocalAdapter → /api/local-logs → filesystem write (logs-entities/)
+8. LoggingLocalAdapter → /api/local-logs → filesystem write (backup/)
 ```
 
 ### Production Environment (HybridAdapter + EffectsRegistry)
@@ -395,7 +395,7 @@ export class LoggingHybridAdapter implements LoggingAdapter {
    ↓
 6. If effect not done: execute effect + mark in registry + log (append-only)
    ↓
-7. LoggingDataStore → LoggingLocalAdapter (filesystem to logs-entities/)
+7. LoggingDataStore → LoggingLocalAdapter (filesystem to backup/)
 
 ### Production Flow (HybridAdapter + EffectsRegistry)
 1. User saves in Modal
@@ -471,7 +471,7 @@ export class LoggingHybridAdapter implements LoggingAdapter {
 lib/
 ├── data-store.ts                    # Contains LoggingDataStore (append-only)
 ├── adapters/
-│   ├── logging-local-adapter.ts     # filesystem operations (logs-entities/)
+│   ├── logging-local-adapter.ts     # filesystem operations (backup/)
 │   ├── logging-hybrid-adapter.ts    # KV operations (append-only)
 │   ├── local-adapter.ts            # Updated to use LoggingDataStore
 │   └── hybrid-adapter.ts           # Updated to use LoggingDataStore
@@ -485,7 +485,7 @@ lib/
 ## Directory Structure
 
 ```
-logs-entities/                      # Entity logs (development)
+backup/                           # Entity logs (backup)
 ├── tasks-log.json                 # Task lifecycle events (append-only)
 ├── items-log.json                 # Item creation/updates (append-only)
 ├── financials-log.json            # Financial transactions (append-only)

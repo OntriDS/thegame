@@ -65,10 +65,6 @@ export default function PixelbrainDashboardPage() {
   // Initial data fetch
   useEffect(() => {
     fetchDashboardData();
-    
-    // Set up auto-refresh
-    const interval = setInterval(fetchDashboardData, 30000);
-    return () => clearInterval(interval);
   }, []);
 
   // Fetch dashboard data
