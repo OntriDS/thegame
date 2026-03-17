@@ -3,37 +3,18 @@
 // Revokes session and clears auth cookie
 
 import { NextRequest, NextResponse } from 'next/server';
-import { AuthService } from '@/lib/auth-service';
+import { iamService } from '@/lib/iam-service';
 
 
 export async function POST(req: NextRequest) {
   try {
-    const token = req.cookies.get('auth_session')?.value;
-
-    if (!token) {
-      console.log('[Logout API] No auth session found');
-      const response = NextResponse.json({ success: true });
-      response.cookies.delete('auth_session');
-      return response;
-    }
-
-    // Verify token to get userId
-    const verified = await AuthService.verifySession(token);
-
-    if (!verified) {
-      console.log('[Logout API] Invalid token, just clearing cookie');
-      const response = NextResponse.json({ success: true });
-      response.cookies.delete('auth_session');
-      return response;
-    }
-
-    // ✅ Logout user
-    await AuthService.logout(verified.userId);
-
     const response = NextResponse.json({ success: true });
+    
+    // Clear both possible session cookies
     response.cookies.delete('auth_session');
+    response.cookies.delete('admin_session');
 
-    console.log('[Logout API] ✅ Logout successful');
+    console.log('[Logout API] ✅ Logout successful (cookies cleared)');
     return response;
   } catch (error) {
     console.error('[Logout API] Error:', error);

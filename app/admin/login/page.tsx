@@ -86,7 +86,7 @@ export default function AdminLoginPage() {
         return;
       }
 
-      // Save Player ID if "Stay logged in" is checked
+      // Save User ID if "Stay logged in" is checked
       if (formData.get('remember') === 'on') {
         localStorage.setItem('last_player_id', playerId);
       } else {
@@ -132,12 +132,12 @@ export default function AdminLoginPage() {
               <form onSubmit={handlePassphraseLogin} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="playerId">Player ID</Label>
+                    <Label htmlFor="playerId">User ID</Label>
                     <Input
                       id="playerId"
                       name="playerId"
                       type="password"
-                      placeholder=""
+                      placeholder="Enter your User ID"
                       value={playerId}
                       onChange={(e) => setPlayerId(e.target.value)}
                       required

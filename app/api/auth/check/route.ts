@@ -3,6 +3,7 @@
 // Returns authenticated user info with permissions
 
 import { NextRequest, NextResponse } from 'next/server';
+import { iamService } from '@/lib/iam-service';
 import { AuthService } from '@/lib/auth-service';
 import { AuthCheckResponse, PermissionsResponse } from '@/types/auth-types';
 
@@ -19,8 +20,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // ✅ Verify session and get user info
-    const user = await AuthService.verifySession(token);
+    // Verify the JWT token using centralized IAM service
+    const user = await iamService.verifyJWT(token);
 
     if (!user) {
       return NextResponse.json<AuthCheckResponse>(
