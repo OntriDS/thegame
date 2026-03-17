@@ -12,6 +12,7 @@ export const ADMIN_SECTIONS = [
   { slug: 'data-center',    label: 'Data Center' },
   { slug: 'research',       label: 'Research' },
   { slug: 'settings',       label: 'Settings' },
+  { slug: 'iam',            label: 'IAM Console' },
   { slug: 'pixelbrain',     label: 'PixelBrain' },
 ] as const;
 

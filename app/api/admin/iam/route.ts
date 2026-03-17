@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
 import { iamService, CharacterRole } from '@/lib/iam-service';
 import { kvSMembers, kvGet } from '@/data-store/kv';
 import { IAM_ACCOUNTS_INDEX, IAM_CHARACTERS_INDEX, IAM_PLAYERS_INDEX, buildM2MKey } from '@/lib/keys';
@@ -7,18 +7,28 @@ import { IAM_ACCOUNTS_INDEX, IAM_CHARACTERS_INDEX, IAM_PLAYERS_INDEX, buildM2MKe
  * IAM System Console Data API (Admin Only)
  * Provides a Snapshot of the Digital Universe Identity Layer.
  */
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   try {
     const adminKey = req.headers.get('x-admin-key');
     if (!adminKey || adminKey !== process.env.ADMIN_ACCESS_KEY) {
-      // Also allow if they have a valid admin session cookie
-      const { cookies } = await import('next/headers');
-      const cookieStore = await cookies();
-      const token = cookieStore.get('admin_session')?.value;
+      // Robust cookie retrieval using NextRequest or next/headers
+      const token = req.cookies.get('admin_session')?.value || req.cookies.get('auth_session')?.value;
+      
+      console.log(`[IAM Console API] Cookie found: ${token ? 'YES' : 'NO'}`);
+      
       const user = token ? await iamService.verifyJWT(token) : null;
       
-      if (!user || (!user.roles.includes(CharacterRole.FOUNDER) && !user.roles.includes(CharacterRole.ADMIN))) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      if (!user) {
+        console.log('[IAM Console API] No user found for token or verification failed');
+        return NextResponse.json({ error: 'Unauthorized: Session invalid or expired' }, { status: 401 });
+      }
+
+      // Check for Founder or Admin roles
+      const hasPermission = user.roles.includes('founder' as any) || user.roles.includes('admin' as any);
+      
+      if (!hasPermission) {
+        console.log('[IAM Console API] User lacks required roles:', user.roles);
+        return NextResponse.json({ error: 'Unauthorized: Insufficient permissions' }, { status: 401 });
       }
     }
 
