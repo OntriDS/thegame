@@ -1045,7 +1045,7 @@ Apply same pattern to:
 - `/admin/control-room`
 - `/admin/map`
 - `/admin/player`
-- `/admin/personas`
+- `/admin/characters`
 - `/admin/research`
 - `/admin/settings`
 

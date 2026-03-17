@@ -7,7 +7,7 @@ export const ADMIN_SECTIONS = [
   { slug: 'sales',          label: 'Sales' },
   { slug: 'map',            label: 'Map' },
   { slug: 'player',         label: 'Player' },
-  { slug: 'personas',       label: 'Personas' },
+  { slug: 'characters',     label: 'Characters' },
   { slug: 'archive',        label: 'Archive' },
   { slug: 'data-center',    label: 'Data Center' },
   { slug: 'research',       label: 'Research' },

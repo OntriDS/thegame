@@ -12,7 +12,7 @@ import { CharacterRole, CHARACTER_ROLE_TYPES } from '@/types/enums';
 import { ROLE_COLORS } from '@/lib/constants/color-constants';
 import { Plus, User, Mail, Phone } from 'lucide-react';
 
-export default function PersonasPage() {
+export default function CharactersPage() {
   const [showCharacterModal, setShowCharacterModal] = useState(false);
   const [selectedCharacter, setSelectedCharacter] = useState<Character | null>(null);
   const [characters, setCharacters] = useState<Character[]>([]);
@@ -34,7 +34,7 @@ export default function PersonasPage() {
       setCharacters(charactersData || []);
       setIsHydrated(true);
     } catch (error) {
-      console.error('[Personas Section] Failed to load personas:', error);
+      console.error('[Characters Section] Failed to load characters:', error);
     } finally {
       isLoadingRef.current = false;
       lastRefreshRef.current = Date.now();
@@ -61,8 +61,7 @@ export default function PersonasPage() {
       setSelectedCharacter(null);
       await loadCharacters();
     } catch (error) {
-      console.error('Failed to save persona:', error);
-      alert('Failed to save persona');
+      console.error('Failed to save character:', error);
     }
   }, [loadCharacters]);
 
@@ -90,14 +89,14 @@ export default function PersonasPage() {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold">Personas</h1>
+          <h1 className="text-3xl font-bold">Characters</h1>
           <Button onClick={handleCreateCharacter} size="sm" variant="default" className="flex items-center gap-2">
             <Plus className="h-4 w-4" />
-            Add Persona
+            Add Character
           </Button>
         </div>
         <div className="flex items-center justify-center h-64">
-          <div className="text-muted-foreground">Loading personas...</div>
+          <div className="text-muted-foreground">Loading characters...</div>
         </div>
       </div>
     );
@@ -106,7 +105,7 @@ export default function PersonasPage() {
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="text-3xl font-bold">Personas</h1>
+        <h1 className="text-3xl font-bold">Characters</h1>
         <div className="flex items-center gap-2">
           <select
             className="h-8 rounded-md border border-input bg-background px-3 text-sm"
@@ -125,7 +124,7 @@ export default function PersonasPage() {
           </select>
           <Button onClick={handleCreateCharacter} size="sm" variant="default" className="flex items-center gap-2">
             <Plus className="h-4 w-4" />
-            Add Persona
+            Add Character
           </Button>
         </div>
       </div>
@@ -135,8 +134,8 @@ export default function PersonasPage() {
           {filteredCharacters.length === 0 ? (
             <div className="text-center text-muted-foreground py-8">
               {roleFilter === 'ALL'
-                ? 'No personas yet. Create the first one!'
-                : `No personas with ${roleFilter} role.`}
+                ? 'No characters yet. Create the first one!'
+                : `No characters with ${roleFilter} role.`}
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

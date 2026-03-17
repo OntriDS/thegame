@@ -17,7 +17,7 @@ interface KeyboardShortcutsProps {
   onNavigateToSales?: () => void;
   onNavigateToMap?: () => void;
   onNavigateToPlayer?: () => void;
-  onNavigateToPersonas?: () => void;
+  onNavigateToCharacters?: () => void;
   onNavigateToSettings?: () => void;
   onMoveSelectionUp?: (options: { alt: boolean }) => void;
   onMoveSelectionDown?: (options: { alt: boolean }) => void;
@@ -38,7 +38,7 @@ export function useKeyboardShortcuts({
   onNavigateToSales,
   onNavigateToMap,
   onNavigateToPlayer,
-  onNavigateToPersonas,
+  onNavigateToCharacters,
   onNavigateToSettings,
   onMoveSelectionUp,
   onMoveSelectionDown,
@@ -263,7 +263,7 @@ export function useKeyboardShortcuts({
     allowInInputs: false,
     priority: 20,
     handler: () => {
-      if (onNavigateToPersonas) onNavigateToPersonas();
+      if (onNavigateToCharacters) onNavigateToCharacters();
     },
   });
 
@@ -287,7 +287,7 @@ export function showKeyboardShortcutsHelp() {
     'Ctrl + F = Financials Modal',
     'Ctrl + S = Sales Modal',
     'Ctrl + M = Sites Modal',
-    'Ctrl + R = Personas Modal',
+    'Ctrl + R = Characters Modal',
     'Ctrl + P = Players Modal',
     '',
     '=== SECTION NAVIGATION ===',
@@ -297,7 +297,7 @@ export function showKeyboardShortcutsHelp() {
     'Alt + S = Sales Section',
     'Alt + M = Map Section',
     'Alt + P = Player Section',
-    'Alt + R = Personas Section (Roles)',
+    'Alt + R = Characters Section (Roles)',
     'Alt + E = Settings Section',
     '',
     '=== TEXT INPUT ===',

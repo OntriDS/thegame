@@ -291,13 +291,13 @@ Digital illustration, acrylic & mural painting, graphic design, 3D modelling, ga
 - **The Triforce Architecture (Account ↔ Player ↔ Character)**:
   - **Account** (Identity): THE WHO. Real-world identity and authentication. Single source of truth for personal data and security.
   - **Player** (Progression): THE GROWTH. Real-world progression, XP, points (HP, FP, RP, XP), and achievements.
-  - **Character** (Persona/Role): THE HOW. The identity within the business/game context. Holds roles, Jungle Coins, and interacts with the system.
+  - **Character** (Identity/Role): THE HOW. The identity within the business/game context. Holds roles, Jungle Coins, and interacts with the system.
 - **Roles Philosophy**:
   - **Founder**: The ultimate authority (Player-One). The original creator and owner. Has system-level "Admin" rights by definition.
   - **Player**: Active participants in the system. Can be team members or have other special roles.
-  - **Characters/Regular Roles**: Define occupation, skills of 'Personas'. These are real people or ai agents that execute tasks and interact with the business world of the app. Sometimes grating access to some system features or game mechanics or describing them.
+  - **Characters/Regular Roles**: Define occupation, skills of 'Characters'. These are real people or ai agents that execute tasks and interact with the business world of the app. Sometimes grating access to some system features or game mechanics or describing them.
 - **V0.1 Reality**: Player One (bootstrap identity) with Account, Player, and Character entities linked.
-- **V0.2 Vision**: Universal system where users can connect their "Personas" to TheGame digital-verse, using in-game currency ad other assets across internal projects of the Founders's Businesses
+- **V0.2 Vision**: Universal system where users can connect their "Characters" to TheGame digital-verse, using in-game currency ad other assets across internal projects of the Founders's Businesses
   - **Links** = Connector Entity, that serves as bridge between all other entities workflows.
   - **Tasks** = Future missions, recurrent work, strategic planning (things that will happen)
   - **Items** = Physical/digital assets created by Tasks or Records (artworks, prints, stickers, materials, equipment)

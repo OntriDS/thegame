@@ -207,7 +207,7 @@ useEffect(() => {
 - Update `/admin/control-room` with standard pattern
 - Update `/admin/map` with standard pattern
 - Update `/admin/player` with standard pattern
-- Update `/admin/personas` with standard pattern
+- Update `/admin/characters` with standard pattern
 - Update `/admin/research` with standard pattern
 - Update `/admin/settings` with standard pattern
 
