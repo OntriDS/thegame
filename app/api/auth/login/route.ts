@@ -1,43 +1,51 @@
-// app/api/auth/login/route.ts
-// Multi-User Login Endpoint
-// Supports username/email login with proper user management
+import { NextResponse } from 'next/server';
+import { iamService } from '@/lib/iam-service';
 
-import { NextResponse, NextRequest } from 'next/server';
-import { LoginRequest, LoginResponse } from '@/types/auth-types';
-import { AuthService } from '@/lib/auth-service';
-
-
-export async function POST(req: NextRequest) {
+/**
+ * Login API Route
+ * Handles passphrase authentication for the Founder/Team.
+ */
+export async function POST(req: Request) {
   try {
-    const body: LoginRequest = await req.json();
-    const { username, password, rememberMe } = body;
+    const { passphrase } = await req.json();
 
-    console.log('[Login API] Attempting login for:', username);
+    if (!passphrase) {
+      return NextResponse.json({ error: 'Passphrase required' }, { status: 400 });
+    }
 
-    // ✅ Use AuthService (single source of truth)
-    const session = await AuthService.login(username, password, rememberMe);
+    const result = await iamService.authenticatePassphrase(passphrase);
 
-    const cookieOptions = {
-      httpOnly: true,
-      sameSite: 'lax' as const,
-      secure: process.env.NODE_ENV === 'production',
-      path: '/',
-      maxAge: rememberMe ? 60 * 60 * 24 * 30 : 60 * 60 * 24 * 7, // 30 days or 7 days
-    };
+    if (!result.success || !result.token) {
+      return NextResponse.json({ error: result.error || 'Authentication failed' }, { status: 401 });
+    }
 
-    const response = NextResponse.json<LoginResponse>({
+    // Set cookie
+    const response = NextResponse.json({
       success: true,
-      user: session.user,
+      user: result.user
     });
-    response.cookies.set('auth_session', session.token, cookieOptions);
 
-    console.log('[Login API] ✅ Login successful');
+    response.cookies.set('admin_session', result.token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 60 * 60 * 24 // 24 hours
+    });
+
+    // Also set legacy auth_session for compatibility if needed
+    response.cookies.set('auth_session', result.token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 60 * 60 * 24
+    });
+
     return response;
-  } catch (error) {
-    console.error('[Login API] Error:', error);
-    return NextResponse.json<LoginResponse>(
-      { success: false, error: error instanceof Error ? error.message : 'Login failed' },
-      { status: 500 }
-    );
+
+  } catch (error: any) {
+    console.error('[Auth] Login error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

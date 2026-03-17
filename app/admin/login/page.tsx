@@ -20,10 +20,20 @@ export default function AdminLoginPage() {
   const [rememberMe, setRememberMe] = useState(false);
 
   const [showTeamLogin, setShowTeamLogin] = useState(false);
+  const [isHandshaking, setIsHandshaking] = useState(false);
+
+  const isActuallyLoading = isLoading || isHandshaking;
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     setError(params.get('error'));
+
+    // --- HANDSHAKE LOGIC ---
+    const handshakeToken = params.get('handshake');
+    if (handshakeToken) {
+      handleHandshake(handshakeToken);
+    }
+    // -----------------------
 
     // Load saved Player ID
     const savedPlayerId = localStorage.getItem('last_player_id');
@@ -37,14 +47,37 @@ export default function AdminLoginPage() {
     }
   }, [user, isLoading, router]);
 
+  const handleHandshake = async (token: string) => {
+    setIsHandshaking(true);
+    try {
+      const response = await fetch('/api/auth/handshake', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token })
+      });
+
+      if (response.ok) {
+        window.location.href = '/admin';
+      } else {
+        const data = await response.json();
+        setError(data.error || 'Handshake failed');
+      }
+    } catch (err) {
+      setError('Handshake synchronization failure');
+    } finally {
+      setIsHandshaking(false);
+    }
+  };
+
   const handlePassphraseLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     const formData = new FormData(e.target as HTMLFormElement);
 
     try {
-      const response = await fetch('/api/auth/passphrase-login', {
+      const response = await fetch('/api/auth/login', {
         method: 'POST',
-        body: formData
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ passphrase: formData.get('passphrase') })
       });
 
       const data = await response.json().catch(() => ({}));
@@ -82,7 +115,7 @@ export default function AdminLoginPage() {
         <div className="h-1 bg-primary w-full" />
         <CardHeader className="text-center pb-2">
           <CardTitle className="text-2xl font-bold flex items-center justify-center gap-2">
-            <Loader2 className={`h-6 w-6 ${isLoading ? 'animate-spin text-primary' : 'text-primary/40'}`} />
+            <Loader2 className={`h-6 w-6 ${isActuallyLoading ? 'animate-spin text-primary' : 'text-primary/40'}`} />
             TheGame
           </CardTitle>
         </CardHeader>
@@ -109,7 +142,7 @@ export default function AdminLoginPage() {
                       onChange={(e) => setPlayerId(e.target.value)}
                       required
                       autoFocus={!playerId}
-                      disabled={isLoading}
+                      disabled={isActuallyLoading}
                       className="bg-accent/50 border-primary/20 focus:border-primary"
                     />
                   </div>
@@ -122,7 +155,7 @@ export default function AdminLoginPage() {
                       placeholder=""
                       required
                       autoFocus={!!playerId}
-                      disabled={isLoading}
+                      disabled={isActuallyLoading}
                       className="text-center tracking-widest bg-accent/50 border-primary/20 focus:border-primary"
                     />
                   </div>
@@ -143,10 +176,10 @@ export default function AdminLoginPage() {
                   </div>
                   <Button
                     type="submit"
-                    disabled={isLoading}
+                    disabled={isActuallyLoading}
                     className="w-32 h-11 bg-primary text-primary-foreground font-semibold hover:shadow-lg transition-all"
                   >
-                    {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Login'}
+                    {isActuallyLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Login'}
                   </Button>
                 </div>
               </form>
@@ -184,7 +217,7 @@ export default function AdminLoginPage() {
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     required
-                    disabled={isLoading}
+                    disabled={isActuallyLoading}
                     className="bg-accent/30"
                   />
                 </div>
@@ -199,7 +232,7 @@ export default function AdminLoginPage() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
-                      disabled={isLoading}
+                      disabled={isActuallyLoading}
                       className="bg-accent/30 pr-12"
                     />
                     <button
@@ -228,10 +261,10 @@ export default function AdminLoginPage() {
                   <Button
                     type="submit"
                     variant="outline"
-                    disabled={isLoading}
+                    disabled={isActuallyLoading}
                     className="w-32 border-primary/50 text-foreground hover:bg-primary/5"
                   >
-                    {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Sign In'}
+                    {isActuallyLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Sign In'}
                   </Button>
                 </div>
               </form>

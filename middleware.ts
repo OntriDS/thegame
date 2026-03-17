@@ -3,7 +3,7 @@
 // 0 Redis calls for Auth - Integrated Rate Limiting
  
 import { NextRequest, NextResponse } from 'next/server';
-import { verifySessionStateless } from '@/lib/auth-edge';
+import { iamService } from '@/lib/iam-service';
 import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
 
@@ -56,13 +56,13 @@ export async function middleware(request: NextRequest) {
   }
 
   try {
-    // 4. STATLESS VERIFICATION (Zero Redis)
-    const user = await verifySessionStateless(token);
+    // 4. CENTRALIZED IAM VERIFICATION
+    const user = await iamService.verifyJWT(token);
 
     if (user && user.isActive) {
       // 5. Inject Headers for downstream consistency
       const requestHeaders = new Headers(request.headers);
-      requestHeaders.set('x-account-id', user.userId);
+      requestHeaders.set('x-account-id', user.accountId);
       requestHeaders.set('x-user-roles', JSON.stringify(user.roles));
 
       const response = NextResponse.next({
