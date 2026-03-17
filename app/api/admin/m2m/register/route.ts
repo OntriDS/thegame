@@ -32,3 +32,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+/**
+ * GET Handler (Informative)
+ * Helps users understand it's a POST-only route.
+ */
+export async function GET() {
+  return NextResponse.json({ 
+    error: 'Method Not Allowed', 
+    instruction: 'This endpoint requires a POST request with "appId" in the body and "x-admin-key" in the header.',
+    example_curl: 'curl -X POST https://thegame-app.vercel.app/api/admin/m2m/register -H "Content-Type: application/json" -H "x-admin-key: YOUR_KEY" -d \'{"appId":"pixelbrain"}\''
+  }, { status: 405 });
+}
