@@ -1,14 +1,28 @@
-import { NextResponse } from 'next/server';
-import { iamService } from '@/lib/iam-service';
+import { NextResponse, NextRequest } from 'next/server';
+import { iamService, CharacterRole } from '@/lib/iam-service';
 
 /**
  * M2M Registration API Route (Admin Only)
  * Generates an API key for a system component (e.g., pixelbrain).
  */
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     const adminKey = req.headers.get('x-admin-key');
-    if (!adminKey || adminKey !== process.env.ADMIN_ACCESS_KEY) {
+    let isAuthorized = false;
+
+    if (adminKey && adminKey === process.env.ADMIN_ACCESS_KEY) {
+      isAuthorized = true;
+    } else {
+      // Fallback: Check for valid admin session cookie for UI-based registration
+      const token = req.cookies.get('admin_session')?.value || req.cookies.get('auth_session')?.value;
+      const user = token ? await iamService.verifyJWT(token) : null;
+      
+      if (user && (user.roles.includes('founder' as any) || user.roles.includes('admin' as any))) {
+        isAuthorized = true;
+      }
+    }
+
+    if (!isAuthorized) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
