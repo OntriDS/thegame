@@ -93,14 +93,24 @@ export async function POST(req: NextRequest) {
       password: password.trim()
     });
 
-    // If characterId provided, link account to character
+    // If characterId provided, create character and link it
     if (characterId) {
-      // Character linking is handled by iamService.createCharacter method
-      // Just validate that character exists
-      const character = await iamService.getCharacterById(characterId);
-      if (!character) {
-        return NextResponse.json({ error: 'Character not found' }, { status: 404 });
-      }
+      // Create character linked to this account using iamService.createCharacter
+      const character = await iamService.createCharacter(accountId, {
+        name: 'Team Member',
+        roles: [CharacterRole.TEAM],
+        profile: { createdBy: 'Accounts' }
+      });
+
+      // Return character with accountId set
+      return NextResponse.json({
+        success: true,
+        account: {
+          ...account,
+          characterId: character.id
+        },
+        character
+      });
     }
 
     return NextResponse.json({
