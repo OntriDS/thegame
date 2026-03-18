@@ -313,6 +313,27 @@ export const ClientAPI = {
     return await res.json();
   },
 
+  getAccounts: async (): Promise<Account[]> => {
+    const res = await fetch('/api/admin/accounts');
+    if (!res.ok) {
+      console.error('Failed to fetch accounts');
+      return [];
+    }
+    return await res.json();
+  },
+
+  upsertAccount: async (account: Account): Promise<Account> => {
+    const res = await fetch('/api/admin/accounts', {
+      method: account.id ? 'PUT' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(account)
+    });
+    if (!res.ok) {
+      throw new Error('Failed to save account');
+    }
+    return await res.json();
+  },
+
   upsertCharacter: async (character: Character): Promise<Character> => {
     const res = await fetch('/api/characters', {
       method: 'POST',

@@ -4,9 +4,9 @@
   "currentSprintNumber": 14,
   "phasePlan": {
     "phase14.1": {
-      "phaseName": "",
-      "status": "Automation tasks, Create and Connect 'Pixelbrain' AI agents and MCP",
-      "description": "",
+      "phaseName": "Automation tasks, 'Pixelbrain' AI Agents and MCP",
+      "status": "In Progress",
+      "description": "Automation tasks, Create 'Pixelbrain' project (AI Agents and MCP) and connect it to TheGame",
       "deliverables": [
         "Develop 'Pixelbrain', a 'Orchestrator Agent' to Manage a Set of 'AI Agents'",
         "Define all the AI Agents Roles and Responsabilities",
@@ -18,11 +18,17 @@
       ]
     },
     "phase14.2": {
-      "phaseName": "",
-      "status": "",
-      "description": "",
+      "phaseName": "Maps and Accounts Sections, UI and Gameplay",
+      "status": "In Progress",
+      "description": "Complete Maps and Accounts Sections, Improve UI and Gameplay (Player and Characters)",
       "deliverables": [
-
+        "Make the Map and Sites visible with GoogleMap",
+        "Define if to Create Events Tab in the Control Room",
+        "Connect Events to the system and Manage Events, tracking Tasks and Items sales in a specific timeframe",
+        "Events temporarily take over regular workflow during time-bound campaigns (e.g. Special Week Sale)",
+        "JungleCoins and its equivalent (Usd) Produced, visible in the Dashboard and Player Section",
+        "Personal Finances well conected to Player Points and Personal Earnings",
+        "Accounts Section, Accounts Modal, for Accounts Managment (only Founder)"
       ]
     },
     "phase14.3": {
@@ -33,8 +39,8 @@
         "Network Sales System",
         "Basic Badges and Achievements systems improved",
         "Personas to Characters Rollback, so Personas is a feature of Characters",
-        "Refactor the Authentication System with the IAM Service"
-      
+        "Refactor the Authentication System with the IAM Service",
+        "Fix the Month Selector to show all the months with data (Archive + Summary)"
       ]
     },
     "phase14.4": {
@@ -50,15 +56,8 @@
     "phaseX.1": {
       "phaseName": "",
       "status": "Not Started",
-      "description": "Complete Maps Section, Improve UI and Gameplay (Player and Characters)",
-      "deliverables": [
-        "Make the Map and Sites visible with GoogleMap",
-        "Define if to Create Events Tab in the Control Room",
-        "Connect Events to the system and Manage Events, tracking Tasks and Items sales in a specific timeframe",
-        "Events temporarily take over regular workflow during time-bound campaigns (e.g. Special Week Sale)",
-        "JungleCoins and its equivalent (Usd) Produced, visible in the Dashboard and Player Section",
-        "Personal Finances well conected to Player Points and Personal Earnings"
-      ]
+      "description": "",
+      "deliverables": []
     },
     "phaseX.2": {
       "phaseName": "",
@@ -135,7 +134,12 @@
       "version": "v0.1",
       "description": "Basic Player system with Points"
     },
-    "personas": {
+    "accounts": {
+      "status": "done",
+      "version": "v0.1",
+      "description": "Accounts section with account management (create/edit/delete accounts and link to characters)"
+    },
+    "characters": {
       "status": "done",
       "version": "v0.1",
       "description": "Basic Character system with Roles"

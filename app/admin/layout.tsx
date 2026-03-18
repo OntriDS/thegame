@@ -31,6 +31,7 @@ function AdminLayoutContent({ children, router }: { children: ReactNode; router:
     onNavigateToMap: () => router.push('/admin/map'),
     onNavigateToPlayer: () => router.push('/admin/player'),
     onNavigateToCharacters: () => router.push('/admin/characters'),
+    onNavigateToAccounts: () => router.push('/admin/accounts'),
     onNavigateToSettings: () => router.push('/admin/settings'),
   });
 

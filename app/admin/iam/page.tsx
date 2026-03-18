@@ -1,8 +1,8 @@
 import IAMConsole from '@/components/admin/iam-console';
 
 export const metadata = {
-  title: 'IAM Console | Digital Universe',
-  description: 'Manage identities, roles and system connections.',
+  title: 'Accounts | Digital Universe',
+  description: 'Manage user accounts, characters and system connections.',
 };
 
 export default function IAMConsolePage() {
