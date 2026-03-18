@@ -45,7 +45,6 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
   // Month selector state for Sold Items tab - Local management if parent doesn't provide
   const [localSelectedMonthKey, setLocalSelectedMonthKey] = useState(getCurrentMonthKey());
   const [localAvailableMonths, setLocalAvailableMonths] = useState<string[]>([]);
-  const [filterSoldByMonth, setFilterSoldByMonth] = useState(true);
   const [isHydrated, setIsHydrated] = useState(false);
 
   // Use parent values if provided, otherwise use local state
@@ -126,27 +125,21 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
       let items: Item[];
 
       if (activeTab === InventoryTab.SOLD_ITEMS) {
-        // Use status filter for sold items
+        // Use status filter for sold items with month selector
         const [mm, yy] = selectedMonthKey.split('-');
         const monthNum = parseInt(mm, 10);
         const yearNum = 2000 + parseInt(yy, 10);
 
-        const month = filterSoldByMonth ? monthNum : undefined;
-        const year = filterSoldByMonth ? yearNum : undefined;
-
         const monthItems = await ClientAPI.getItems(
           'all',
-          month,
-          year,
+          monthNum,
+          yearNum,
           ItemStatus.SOLD,
           selectedSite === 'all' ? undefined : selectedSite
         );
 
-        // Filter for items that are explicitly SOLD
-        items = monthItems.filter(item => {
-          const s = (item.status as string || '').toUpperCase();
-          return s === 'SOLD' || s === 'ITEMSTATUS.SOLD';
-        });
+        // Items are already filtered by month from API, no need for additional filtering
+        items = monthItems;
       } else if (activeTabItemType === 'all') {
         // Load all items
         items = await ClientAPI.getItems(
@@ -182,7 +175,7 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
     } catch (error) {
       console.error('Failed to load items:', error);
     }
-  }, [activeTab, selectedSite, selectedStatus, selectedMonthKey, filterSoldByMonth]);
+  }, [activeTab, selectedSite, selectedStatus, selectedMonthKey]);
 
   // Hydration sync - runs only once on mount
   useEffect(() => {
@@ -222,7 +215,7 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
       window.removeEventListener('importStarted', handleImportStarted);
       window.removeEventListener('importComplete', handleImportComplete);
     };
-  }, [loadItems, isHydrated]);
+  }, [loadItems, isHydrated, selectedMonthKey, selectedSite, activeTab]);
 
   // Save thresholds to preferences when they change (but not during initial load)
   useEffect(() => {
