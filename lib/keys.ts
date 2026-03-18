@@ -4,6 +4,7 @@
  */
 
 export const buildAccountKey = (id: string) => `iam:account:${id}`;
+export const buildAccountByEmailKey = (email: string) => `iam:account_by_email:${email.toLowerCase()}`;
 export const buildCharacterKey = (id: string) => `iam:character:${id}`;
 export const buildPlayerKey = (id: string) => `iam:player:${id}`;
 

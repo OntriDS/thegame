@@ -5,16 +5,13 @@
   "phasePlan": {
     "phase14.1": {
       "phaseName": "",
-      "status": "Implement automation tasks, Connect to 'Pixelbrain' AI agents and MCP",
+      "status": "Automation tasks, Create and Connect 'Pixelbrain' AI agents and MCP",
       "description": "",
       "deliverables": [
-        "Define and Develop 'Pixel Brain', a 'Manager Agent' to Manage a Set of 'AI Agents'",
-        "Create one AI Agent for Time Planning, one for Prepare classes and one for Tasks Organization",
-        "Create one AI Marketing Agent to Manage Social Media Apps, Marketing Campaings and Content Creation",
-        "Create one AI Agent for Data Analysis and Reporting of Business Data with Performance Metrics",
-        "Create one AI Agent for Game Design improvements, Player Analysis and UX, Game Balance and Game Mechanics",
-        "Create a set of Automations: Voice to Text. Image to Text, Text to Speech, PDF Converter, Image Creator",
-        "Implement Monthly Close Automation Task (orchestrates archiving of all completed entities)",
+        "Develop 'Pixelbrain', a 'Orchestrator Agent' to Manage a Set of 'AI Agents'",
+        "Define all the AI Agents Roles and Responsabilities",
+        "Implement the M2M Authentication between TheGame and Pixelbrain",
+        "Implement Monthly Close Automation Task",
         "Implement automated monthly summary generation and analysis based on archive data (post Monthly Close)",
         "Create one AI Agent for Data Integrity Validation that checks: Link consistency across all entity relationships",
         "The Agent must checkCollected/Sold status consistency, Month index accuracy, Archive snapshot completeness"
@@ -35,7 +32,9 @@
       "deliverables": [
         "Network Sales System",
         "Basic Badges and Achievements systems improved",
-        "Personas to Characters Rollback, so Personas is a feature of Characters"
+        "Personas to Characters Rollback, so Personas is a feature of Characters",
+        "Refactor the Authentication System with the IAM Service"
+      
       ]
     },
     "phase14.4": {

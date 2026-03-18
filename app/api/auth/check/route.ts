@@ -4,8 +4,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { iamService } from '@/lib/iam-service';
-import { AuthService } from '@/lib/auth-service';
-import { AuthCheckResponse, PermissionsResponse } from '@/types/auth-types';
+import { AuthCheckResponse } from '@/types/auth-types';
 
 
 export async function GET(request: NextRequest) {
@@ -31,7 +30,7 @@ export async function GET(request: NextRequest) {
     }
 
     // ✅ Get permissions for user
-    const permissions = AuthService.getPermissions(user);
+    const permissions = iamService.getPermissions(user);
 
     console.log('[Auth Check API] ✅ Authenticated:', user.username, 'Roles:', user.roles);
 

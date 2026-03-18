@@ -7,6 +7,7 @@
 import { kvGet, kvSet, kvSAdd, kvSMembers } from '@/data-store/kv';
 import { 
   buildAccountKey, 
+  buildAccountByEmailKey,
   buildCharacterKey, 
   buildPlayerKey, 
   buildLinkKey,
@@ -17,8 +18,6 @@ import {
 } from './keys';
 import { v4 as uuidv4 } from 'uuid';
 import { SignJWT, jwtVerify } from 'jose';
-
-const HANDSHAKE_PREFIX = 'iam:handshake:';
 
 // --- Interfaces (Standardized) ---
 
@@ -81,6 +80,16 @@ export interface AuthResult {
   token?: string;
 }
 
+export interface AuthUser {
+  userId: string;
+  accountId: string;
+  username: string;
+  email: string;
+  characterId: string;
+  roles: CharacterRole[];
+  isActive: boolean;
+}
+
 interface CreateAccountDTO {
   name: string;
   email: string;
@@ -95,15 +104,52 @@ interface CreateCharacterDTO {
   profile?: Record<string, any>;
 }
 
-export interface AuthUser {
-  userId: string;
-  accountId: string;
-  username: string;
-  email: string;
-  characterId: string;
+const HANDSHAKE_PREFIX = 'iam:handshake:';
+
+// --- Permissions & RBAC (Legacy Consolidated) ---
+
+export interface Permission {
+  resource: string;
+  action: string;
   roles: CharacterRole[];
-  isActive: boolean;
 }
+
+export interface AuthPermissions {
+  hasRole: (role: string | CharacterRole) => boolean;
+  hasAnyRole: (roles: (string | CharacterRole)[]) => boolean;
+  can: (resource: string, action: string) => boolean;
+}
+
+const PERMISSION_MATRIX: Permission[] = [
+  // Tasks
+  { resource: 'tasks', action: 'read', roles: [CharacterRole.FOUNDER, CharacterRole.TEAM] },
+  { resource: 'tasks', action: 'write', roles: [CharacterRole.FOUNDER, CharacterRole.TEAM] },
+  { resource: 'tasks', action: 'delete', roles: [CharacterRole.FOUNDER] },
+
+  // Finances
+  { resource: 'finances', action: 'read', roles: [CharacterRole.FOUNDER] },
+  { resource: 'finances', action: 'write', roles: [CharacterRole.FOUNDER] },
+
+  // Inventory
+  { resource: 'inventory', action: 'read', roles: [CharacterRole.FOUNDER, CharacterRole.TEAM] },
+  { resource: 'inventory', action: 'write', roles: [CharacterRole.FOUNDER, CharacterRole.TEAM] },
+
+  // Sales
+  { resource: 'sales', action: 'read', roles: [CharacterRole.FOUNDER, CharacterRole.TEAM] },
+  { resource: 'sales', action: 'write', roles: [CharacterRole.FOUNDER, CharacterRole.TEAM] },
+
+  // Player Management
+  { resource: 'players', action: 'read', roles: [CharacterRole.FOUNDER] },
+  { resource: 'players', action: 'write', roles: [CharacterRole.FOUNDER] },
+
+  // User Management
+  { resource: 'users', action: 'read', roles: [CharacterRole.FOUNDER] },
+  { resource: 'users', action: 'write', roles: [CharacterRole.FOUNDER] },
+
+  // Settings
+  { resource: 'settings', action: 'read', roles: [CharacterRole.FOUNDER] },
+  { resource: 'settings', action: 'write', roles: [CharacterRole.FOUNDER] },
+];
 
 // --- IAM Service Implementation ---
 
@@ -126,6 +172,7 @@ export class IAMService {
     };
 
     await kvSet(buildAccountKey(account.id), account);
+    await kvSet(buildAccountByEmailKey(account.email), { accountId: account.id });
     await kvSAdd(IAM_ACCOUNTS_INDEX, account.id);
     
     return account;
@@ -208,12 +255,65 @@ export class IAMService {
     return await kvGet<Account>(buildAccountKey(id));
   }
 
+  async getAccountByEmail(email: string): Promise<Account | null> {
+    const mapping = await kvGet<any>(buildAccountByEmailKey(email));
+    if (!mapping) return null;
+    
+    // Fix: Handle both legacy string mapping and new object mapping
+    let accountId: string;
+    if (typeof mapping === 'string') {
+      accountId = mapping;
+    } else if (mapping && typeof mapping === 'object' && mapping.accountId) {
+      accountId = mapping.accountId;
+    } else {
+      console.error(`[IAM] Invalid email mapping format for ${email}:`, mapping);
+      return null;
+    }
+
+    // Fix: Normalize ID by stripping common prefixes if accidentally present
+    // This handles "iam:account:ID" or "thegame:account:ID" accidentally stored as the ID
+    accountId = accountId.split(':').pop() || accountId;
+
+    return await this.getAccountById(accountId);
+  }
+
   async getCharacterById(id: string): Promise<Character | null> {
     return await kvGet<Character>(buildCharacterKey(id));
   }
 
   async getPlayerById(id: string): Promise<Player | null> {
     return await kvGet<Player>(buildPlayerKey(id));
+  }
+
+  /**
+   * Get pre-bound permissions helper for a user
+   */
+  getPermissions(user: AuthUser): AuthPermissions {
+    const userRoles = user.roles || [];
+
+    return {
+      hasRole: (role: string | CharacterRole) => {
+        if (userRoles.includes(CharacterRole.FOUNDER)) return true;
+        return userRoles.includes(role as any);
+      },
+
+      hasAnyRole: (roles: (string | CharacterRole)[]) => {
+        if (userRoles.includes(CharacterRole.FOUNDER)) return true;
+        return roles.some(role => userRoles.includes(role as any));
+      },
+
+      can: (resource: string, action: string) => {
+        if (userRoles.includes(CharacterRole.FOUNDER)) return true;
+        
+        const matchingPermissions = PERMISSION_MATRIX.filter(
+          perm => perm.resource === resource && perm.action === action
+        );
+
+        return matchingPermissions.some(perm =>
+          perm.roles.some(role => userRoles.includes(role))
+        );
+      },
+    };
   }
 
   async getCharacterByAccountId(accountId: string): Promise<Character | null> {
@@ -279,17 +379,8 @@ export class IAMService {
       return { success: false, error: 'Invalid passphrase' };
     }
 
-    // Find the Founder account
-    const accountIds = await kvSMembers(IAM_ACCOUNTS_INDEX);
-    let account: Account | null = null;
-
-    for (const id of accountIds) {
-      const acc = await this.getAccountById(id);
-      if (acc?.email === founderEmail.toLowerCase()) {
-        account = acc;
-        break;
-      }
-    }
+    // Find the Founder account via O(1) lookup
+    const account = await this.getAccountByEmail(founderEmail);
 
     if (!account || !account.isActive) {
       return { success: false, error: 'Founder account not found or inactive' };

@@ -3,7 +3,7 @@
 // Verifies if user is authenticated via passphrase system
 
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyJwt } from '@/lib/auth';
+import { iamService } from '@/lib/iam-service';
 import { CharacterRole } from '@/types/enums';
 
 
@@ -19,22 +19,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const verified = await verifyJwt(token, secret);
+    const user = await iamService.verifyJWT(token);
 
-    if (verified.valid) {
+    if (user && user.isActive) {
+      const permissions = iamService.getPermissions(user);
       return NextResponse.json({
         authenticated: true,
-        user: {
-          userId: 'admin',
-          username: 'Akiles',
-          email: '',
-          roles: [CharacterRole.FOUNDER, CharacterRole.PLAYER],
-          isActive: true,
-        },
+        user,
         permissions: {
-          can: () => true, // FOUNDER has full access
-          hasRole: (role: string) => [CharacterRole.FOUNDER, CharacterRole.PLAYER].includes(role as CharacterRole),
-          hasAnyRole: () => true,
+          isAdmin: permissions.hasRole('founder') || permissions.hasRole('admin'),
+          roles: user.roles,
         },
       });
     } else {

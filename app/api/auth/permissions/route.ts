@@ -28,14 +28,12 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // ✅ Get permissions for user
-    // Note: iamService doesn't have a direct getPermissions object yet,
-    // but we can check roles directly from the user object.
-    const isAdmin = user.roles.includes('founder' as any) || user.roles.includes('admin' as any);
+    // ✅ Get permissions for user using centralized IAM logic
+    const permissions = iamService.getPermissions(user);
     
     return NextResponse.json({ 
       permissions: {
-        isAdmin,
+        isAdmin: permissions.hasRole('founder') || permissions.hasRole('admin'),
         roles: user.roles
       }
     });
