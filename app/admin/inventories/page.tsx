@@ -90,15 +90,6 @@ export default function InventoriesPage() {
             </Select>
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className="text-muted-foreground text-sm font-medium">Month:</span>
-            <MonthSelector
-              selectedMonth={selectedMonthKey}
-              availableMonths={availableMonths}
-              onChange={setSelectedMonthKey}
-            />
-          </div>
-
           <div className="flex items-center gap-2 border rounded-md px-3 py-1 bg-background/50 h-8">
             <span className="text-muted-foreground text-xs font-medium">Status:</span>
             <Select value={selectedStatus} onValueChange={(value) => {

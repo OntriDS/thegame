@@ -12,13 +12,11 @@ import {
 
 interface SalesPerformanceTabProps {
   selectedMonthKey: string;
-  filterByMonth: boolean;
   atomicSummary: SummaryTotals | null;
 }
 
 export function SalesPerformanceTab({
   selectedMonthKey,
-  filterByMonth,
   atomicSummary,
 }: SalesPerformanceTabProps) {
   const [channelPerformance, setChannelPerformance] = useState<ChannelPerformance[]>([]);
@@ -35,7 +33,7 @@ export function SalesPerformanceTab({
       const params = {
         year: yearNum,
         month: monthNum,
-        filterByMonth
+        filterByMonth: true // Always filter by month in this tab
       };
 
       const safeFetch = (url: string, body: any) =>
@@ -62,7 +60,7 @@ export function SalesPerformanceTab({
     } finally {
       setIsLoading(false);
     }
-  }, [selectedMonthKey, filterByMonth]);
+  }, [selectedMonthKey]);
 
   useEffect(() => {
     loadSalesAnalytics();

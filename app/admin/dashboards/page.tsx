@@ -39,7 +39,6 @@ import { TaskPerformanceTab } from '@/components/dashboards/TaskPerformanceTab';
 
 export default function DashboardsPage() {
   const { getPreference, setPreference, isLoading: preferencesLoading } = useUserPreferences();
-  const [filterByMonth, setFilterByMonth] = useState(true);
   const [selectedMonthKey, setSelectedMonthKey] = useState(getCurrentMonthKey());
   const [availableMonths, setAvailableMonths] = useState<string[]>([]);
   const [atomicSummary, setAtomicSummary] = useState<SummaryTotals | null>(null);
@@ -53,8 +52,7 @@ export default function DashboardsPage() {
   // Load preferences
   useEffect(() => {
     if (!preferencesLoading) {
-      const savedFilter = getPreference('dashboards-filter-by-month', true);
-      setFilterByMonth(savedFilter);
+      // Preference load removed
     }
   }, [preferencesLoading, getPreference]);
 
@@ -76,9 +74,7 @@ export default function DashboardsPage() {
     setIsDetailLoading(true);
     try {
       // 1. Atomic Summary (Used by almost all tabs)
-      const atomic = await ClientAPI.getSummary(
-        filterByMonth ? selectedMonthKey : undefined
-      );
+      const atomic = await ClientAPI.getSummary(selectedMonthKey);
       setAtomicSummary(atomic);
       setIsAtomicLoading(false);
 
@@ -127,7 +123,7 @@ export default function DashboardsPage() {
       setIsDetailLoading(false);
       setIsAtomicLoading(false);
     }
-  }, [selectedMonthKey, filterByMonth]);
+  }, [selectedMonthKey]);
 
   useEffect(() => {
     loadSummaries();
@@ -138,24 +134,13 @@ export default function DashboardsPage() {
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100 flex items-center gap-3">
           <BarChart3 className="h-8 w-8 text-primary" />
-          Command Center
+          Dashboards
         </h2>
         <div className="flex items-center gap-4">
-          <div className="flex items-center space-x-2 bg-white dark:bg-slate-900 px-3 py-1.5 rounded-full border shadow-sm">
-            <span className="text-xs font-medium text-slate-500">Filter by Month</span>
-            <Switch
-              checked={filterByMonth}
-              onCheckedChange={(val) => {
-                setFilterByMonth(val);
-                setPreference('dashboards-filter-by-month', val);
-              }}
-            />
-          </div>
           <MonthSelector
             selectedMonth={selectedMonthKey}
             onChange={setSelectedMonthKey}
             availableMonths={availableMonths}
-            disabled={!filterByMonth}
           />
           <Button
             size="sm"
@@ -209,7 +194,6 @@ export default function DashboardsPage() {
         <TabsContent value="sales-performance" className="space-y-4 mt-2">
           <SalesPerformanceTab
             selectedMonthKey={selectedMonthKey}
-            filterByMonth={filterByMonth}
             atomicSummary={atomicSummary}
           />
         </TabsContent>
@@ -217,7 +201,6 @@ export default function DashboardsPage() {
         <TabsContent value="item-performance" className="space-y-4 mt-2">
           <ItemPerformanceTab
             selectedMonthKey={selectedMonthKey}
-            filterByMonth={filterByMonth}
             atomicSummary={atomicSummary}
           />
         </TabsContent>

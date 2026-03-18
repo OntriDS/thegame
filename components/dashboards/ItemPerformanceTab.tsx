@@ -9,13 +9,11 @@ import { ProductPerformance } from '@/lib/analytics/financial-analytics';
 
 interface ItemPerformanceTabProps {
   selectedMonthKey: string;
-  filterByMonth: boolean;
   atomicSummary: SummaryTotals | null;
 }
 
 export function ItemPerformanceTab({
   selectedMonthKey,
-  filterByMonth,
   atomicSummary,
 }: ItemPerformanceTabProps) {
   const [productPerformance, setProductPerformance] = useState<ProductPerformance[]>([]);
@@ -32,7 +30,7 @@ export function ItemPerformanceTab({
       const params = {
         year: yearNum,
         month: monthNum,
-        filterByMonth
+        filterByMonth: true // Always filter by month in this tab
       };
 
       const safeFetch = (url: string, body: any) =>
@@ -59,7 +57,7 @@ export function ItemPerformanceTab({
     } finally {
       setIsLoading(false);
     }
-  }, [selectedMonthKey, filterByMonth]);
+  }, [selectedMonthKey]);
 
   useEffect(() => {
     loadItemAnalytics();
