@@ -348,12 +348,12 @@ export class IAMService {
 
     try {
       const secretBytes = new TextEncoder().encode(secret);
-      const { payload } = await jwtVerify(token, secretBytes, {
+      const { payload: jwtPayload } = await jwtVerify(token, secretBytes, {
         algorithms: ['HS256'],
         issuer: 'iam-service'
       });
 
-      const data = payload as any;
+      const data = jwtPayload as any;
 
       if (data.type === 'm2m') {
         return {
@@ -365,6 +365,14 @@ export class IAMService {
           roles: [CharacterRole.ADMIN, CharacterRole.DEVELOPER],
           isActive: true
         };
+      }
+
+      // Role Normalization & Validation (Enum-based & Lowercase)
+      if (data.roles && Array.isArray(data.roles)) {
+        const validRoles = Object.values(CharacterRole) as string[];
+        data.roles = data.roles
+          .map((r: string) => r.toLowerCase())
+          .filter((r: string) => validRoles.includes(r));
       }
 
       return data as unknown as AuthUser;
