@@ -1,63 +1,29 @@
-// app/api/auth/passphrase-login/route.ts
-// Passphrase Login Endpoint (Kept Separate for Hybrid Approach)
-// Maintains your current working passphrase login system
-
 import { NextResponse, NextRequest } from 'next/server';
-import { generateJwt, verifyJwt, getRequiredEnv } from '@/lib/auth';
+import { iamService } from '@/lib/iam-service';
 
 export async function POST(req: NextRequest) {
   const formData = await req.formData();
-  const playerId = formData.get('playerId')?.toString() ?? '';
+  // Note: we'll ignore playerId and just use the passphrase for the Founder
   const passphrase = formData.get('passphrase')?.toString() ?? '';
   const remember = formData.get('remember')?.toString() === 'on';
   const next = (formData.get('next')?.toString() ?? '/admin') as string;
 
   try {
-    console.log(`[Passphrase Login] Attempting login for Player: ${playerId}`);
+    console.log(`[Passphrase Login] Attempting unified IAM login`);
 
-    const secret = getRequiredEnv('ADMIN_SESSION_SECRET');
-    let authenticated = false;
-    let userData = { sub: playerId, role: 'admin' };
+    const authResult = await iamService.authenticatePassphrase(passphrase);
 
-    // 1. LEGACY/CREATOR FALLBACK
-    const adminKey = getRequiredEnv('ADMIN_ACCESS_KEY');
-    if (playerId === 'player-one' && passphrase === adminKey) {
-      console.log('[Passphrase Login] Using legacy admin fallback');
-      authenticated = true;
-      userData = { sub: 'player-one', role: 'admin' };
-    }
-    // 2. ACCOUNT-BASED VERIFICATION
-    else {
-      const { kvGet } = await import('@/data-store/kv');
-      const { buildAccountKey } = await import('@/data-store/keys');
-      const bcrypt = await import('bcryptjs');
-      const { CharacterRole } = await import('@/types/enums');
-
-      const account = await kvGet<any>(buildAccountKey(playerId));
-      if (account) {
-        const match = await bcrypt.compare(passphrase, account.passwordHash);
-        if (match) {
-          console.log('[Passphrase Login] Account verification successful');
-          authenticated = true;
-          userData = { sub: account.id, role: 'admin' };
-        }
-      }
-    }
-
-    if (!authenticated) {
-      console.log('[Passphrase Login] Invalid credentials');
-      return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
+    if (!authResult.success || !authResult.token) {
+      console.log('[Passphrase Login] Invalid credentials or IAM error:', authResult.error);
+      return NextResponse.json({ error: authResult.error || 'Invalid credentials' }, { status: 401 });
     }
 
     const expiresIn = remember ? 60 * 60 * 24 * 30 : 60 * 60 * 24 * 7;
-    const token = await generateJwt(
-      userData,
-      secret,
-      expiresIn
-    );
-
+    
     const res = NextResponse.json({ success: true, next: next || '/admin' });
-    res.cookies.set('admin_session', token, {
+    
+    // Set the standardized IAM token in the admin_session cookie
+    res.cookies.set('admin_session', authResult.token, {
       httpOnly: true,
       sameSite: 'lax',
       secure: process.env.NODE_ENV === 'production',
@@ -65,10 +31,10 @@ export async function POST(req: NextRequest) {
       maxAge: expiresIn,
     });
 
-    console.log('[Passphrase Login] ✅ Login successful');
+    console.log('[Passphrase Login] ✅ Unified Login successful');
     return res;
-  } catch (err) {
+  } catch (err: any) {
     console.error('[Passphrase Login] Error:', err);
-    return NextResponse.json({ error: 'Authentication service error' }, { status: 500 });
+    return NextResponse.json({ error: 'Authentication service error', details: err.message }, { status: 500 });
   }
 }

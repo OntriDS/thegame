@@ -11,11 +11,13 @@ import { iamService } from './iam-service';
  */
 export async function requireAdminAuth(req: NextRequest): Promise<boolean> {
   try {
-    // Get the admin session token from cookies (check both systems)
-    const token = req.cookies.get('auth_session')?.value || req.cookies.get('admin_session')?.value;
+    // Get the admin session token from cookies or Authorization header
+    const authHeader = req.headers.get('Authorization');
+    const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null;
+    const token = bearerToken || req.cookies.get('auth_session')?.value || req.cookies.get('admin_session')?.value;
 
     if (!token) {
-      console.log('[API Auth] No token found in cookies');
+      console.log('[API Auth] No token found in cookies or header');
       return false;
     }
 

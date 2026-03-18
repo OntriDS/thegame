@@ -22,25 +22,20 @@
     },
     "phase14.2": {
       "phaseName": "",
-      "status": "Complete Maps Section, Improve UI and Gameplay (Player and Personas)",
+      "status": "",
       "description": "",
       "deliverables": [
-        "Make the Map and Sites visible with GoogleMap",
-        "Define if to Create Events Tab in the Control Room",
-        "Connect Events to the system and Manage Events, tracking Tasks and Items sales in a specific timeframe",
-        "Events temporarily take over regular workflow during time-bound campaigns (e.g. Special Week Sale)",
-        "JungleCoins and its equivalent (Usd) Produced, visible in the Dashboard and Player Section",
-        "Personal Finances well conected to Player Points and Personal Earnings",
-        "Basic Badges and Achievements systems improved"
+
       ]
     },
     "phase14.3": {
-      "phaseName": "Debug and Optimize every aspect of the TheGame V0.1",
-      "status": "Not Started",
+      "phaseName": "Debug and Optimize V0.1",
+      "status": "In Progress",
       "description": "",
       "deliverables": [
         "Network Sales System",
-        ""
+        "Basic Badges and Achievements systems improved",
+        "Personas to Characters Rollback, so Personas is a feature of Characters"
       ]
     },
     "phase14.4": {
@@ -56,8 +51,15 @@
     "phaseX.1": {
       "phaseName": "",
       "status": "Not Started",
-      "description": "",
-      "deliverables": []
+      "description": "Complete Maps Section, Improve UI and Gameplay (Player and Characters)",
+      "deliverables": [
+        "Make the Map and Sites visible with GoogleMap",
+        "Define if to Create Events Tab in the Control Room",
+        "Connect Events to the system and Manage Events, tracking Tasks and Items sales in a specific timeframe",
+        "Events temporarily take over regular workflow during time-bound campaigns (e.g. Special Week Sale)",
+        "JungleCoins and its equivalent (Usd) Produced, visible in the Dashboard and Player Section",
+        "Personal Finances well conected to Player Points and Personal Earnings"
+      ]
     },
     "phaseX.2": {
       "phaseName": "",

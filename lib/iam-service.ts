@@ -353,7 +353,21 @@ export class IAMService {
         issuer: 'iam-service'
       });
 
-      return payload as unknown as AuthUser;
+      const data = payload as any;
+
+      if (data.type === 'm2m') {
+        return {
+          userId: `system:${data.appId}`,
+          accountId: 'system',
+          username: data.appId as string,
+          email: `${data.appId}@du.system`,
+          characterId: 'system',
+          roles: [CharacterRole.ADMIN, CharacterRole.DEVELOPER],
+          isActive: true
+        };
+      }
+
+      return data as unknown as AuthUser;
     } catch (error) {
       console.error('[IAM] JWT Verification failed:', error);
       return null;

@@ -33,7 +33,7 @@ export function normalizeCombo(event: KeyboardEvent): string {
   if (event.shiftKey) parts.push('shift');
   if (event.metaKey) parts.push('meta');
   
-  const key = event.key.toLowerCase();
+  const key = (event.key || '').toLowerCase();
   // Normalize arrow keys
   if (key === 'arrowup') parts.push('arrowup');
   else if (key === 'arrowdown') parts.push('arrowdown');

@@ -48,7 +48,11 @@ export async function middleware(request: NextRequest) {
   const passphraseToken = request.cookies.get('admin_session')?.value;
   const usernameToken = request.cookies.get('auth_session')?.value;
   
-  const token = usernameToken || passphraseToken;
+  // Support Bearer Token for M2M / API access
+  const authHeader = request.headers.get('Authorization');
+  const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null;
+  
+  const token = bearerToken || usernameToken || passphraseToken;
 
   if (!token) {
     console.log('[Middleware] No token found - redirecting to login');
