@@ -5,11 +5,11 @@
  */
 
 import { kvGet, kvSet, kvSAdd, kvSMembers } from '@/data-store/kv';
-import { 
-  buildAccountKey, 
+import {
+  buildAccountKey,
   buildAccountByEmailKey,
-  buildCharacterKey, 
-  buildPlayerKey, 
+  buildCharacterKey,
+  buildPlayerKey,
   buildLinkKey,
   buildM2MKey,
   IAM_ACCOUNTS_INDEX,
@@ -18,6 +18,7 @@ import {
 } from './keys';
 import { v4 as uuidv4 } from 'uuid';
 import { SignJWT, jwtVerify } from 'jose';
+import bcrypt from 'bcryptjs';
 
 // --- Interfaces (Standardized) ---
 
@@ -158,12 +159,20 @@ export class IAMService {
    * Create a new Account (The Egg)
    */
   async createAccount(data: CreateAccountDTO): Promise<Account> {
+    let passwordHash: string | null = null;
+
+    // Hash password if provided
+    if (data.password) {
+      const saltRounds = 10;
+      passwordHash = await bcrypt.hash(data.password, saltRounds);
+    }
+
     const account: Account = {
       id: uuidv4(),
       name: data.name,
       email: data.email.toLowerCase(),
       phone: data.phone,
-      passwordHash: null, // Password hashing to be implemented in auth phase
+      passwordHash,
       passphraseFlag: data.passphraseFlag || false,
       isActive: true,
       isVerified: false,
@@ -174,7 +183,7 @@ export class IAMService {
     await kvSet(buildAccountKey(account.id), account);
     await kvSet(buildAccountByEmailKey(account.email), { accountId: account.id });
     await kvSAdd(IAM_ACCOUNTS_INDEX, account.id);
-    
+
     return account;
   }
 
@@ -393,6 +402,62 @@ export class IAMService {
 
     const authUser: AuthUser = {
       userId: account.id, // Primary ID
+      accountId: account.id,
+      username: account.name,
+      email: account.email,
+      characterId: character.id,
+      roles: character.roles,
+      isActive: account.isActive
+    };
+
+    const token = await this.generateJWT(authUser);
+
+    return {
+      success: true,
+      user: authUser,
+      token
+    };
+  }
+
+  /**
+   * Email/Password Authentication for regular users
+   */
+  async authenticateEmailPassword(email: string, password: string): Promise<AuthResult> {
+    // Validate inputs
+    if (!email || !password) {
+      return { success: false, error: 'Email and password are required' };
+    }
+
+    // Find account by email
+    const account = await this.getAccountByEmail(email.toLowerCase());
+
+    if (!account) {
+      return { success: false, error: 'Invalid email or password' };
+    }
+
+    if (!account.isActive) {
+      return { success: false, error: 'Account is inactive' };
+    }
+
+    // Check if account has a password set
+    if (!account.passwordHash) {
+      return { success: false, error: 'Account does not have a password set' };
+    }
+
+    // Verify password
+    const isPasswordValid = await bcrypt.compare(password, account.passwordHash);
+    if (!isPasswordValid) {
+      return { success: false, error: 'Invalid email or password' };
+    }
+
+    // Find associated character
+    const character = await this.getCharacterByAccountId(account.id);
+    if (!character) {
+      return { success: false, error: 'Character not found for account' };
+    }
+
+    const authUser: AuthUser = {
+      userId: account.id,
       accountId: account.id,
       username: account.name,
       email: account.email,
