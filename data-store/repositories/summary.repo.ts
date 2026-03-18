@@ -1,4 +1,5 @@
 import { kv } from '@/data-store/kv';
+import { buildSummaryMonthsKey } from '../keys';
 import type { SummaryTotals } from '@/types/entities';
 
 export class SummaryRepository {
@@ -43,6 +44,9 @@ export class SummaryRepository {
     
     // Create an atomic pipeline
     const pipeline = kv.pipeline();
+
+    // Track this month in the summary activity index
+    pipeline.sadd(buildSummaryMonthsKey(), monthYear);
 
     // Monthly scope
     if (revenueDelta !== 0) pipeline.hincrbyfloat(monthlyKey, 'revenue', revenueDelta);

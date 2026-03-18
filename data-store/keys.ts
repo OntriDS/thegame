@@ -41,6 +41,10 @@ export function buildArchiveMonthsKey(): string {
   return `${NAMESPACE}archive:months`;
 }
 
+export function buildSummaryMonthsKey(): string {
+  return `${NAMESPACE}summary:months`;
+}
+
 export function buildMonthIndexKey(entity: string, mmyy: string): string {
   const monthKey = normalizeMonthKey(mmyy);
   return `${NAMESPACE}index:${entity}:by-month:${monthKey}`;

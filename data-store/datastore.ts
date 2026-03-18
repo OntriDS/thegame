@@ -88,7 +88,7 @@ import { SummaryService } from './services/summary.service';
 import { SummaryRepository } from './repositories/summary.repo';
 import { getCurrentMonthKey, formatMonthKey, reviveDates } from '@/lib/utils/date-utils';
 import { kvMGet, kvSMembers, kvSRem } from './kv';
-import { buildDataKey, buildMonthIndexKey, buildArchiveCollectionIndexKey } from './keys';
+import { buildDataKey, buildMonthIndexKey, buildArchiveCollectionIndexKey, buildArchiveMonthsKey, buildSummaryMonthsKey } from './keys';
 import type { PlayerArchiveRow } from '@/types/archive';
 
 // TASKS
@@ -962,6 +962,32 @@ export async function getArchivedFinancialRecordsByMonth(mmyy: string): Promise<
 
 export async function getAvailableArchiveMonths(): Promise<string[]> {
   return await archiveRepo.getAvailableArchiveMonths();
+}
+
+
+/**
+ * THE STANDARDIZED MONTH SELECTOR SOURCE:
+ * Returns any month that has either Archived data 
+ * OR Summary data (active sales/finances/inventory).
+ */
+export async function getAvailableMonths(): Promise<string[]> {
+  const { kvSUnion } = await import('./kv');
+  
+  // Union of Archive months and Summary months
+  const months = await kvSUnion(buildArchiveMonthsKey(), buildSummaryMonthsKey());
+  
+  // Custom sort (descending: newest first)
+  return [...months].sort((a, b) => {
+    const [am, ay] = a.split('-').map(n => parseInt(n, 10));
+    const [bm, by] = b.split('-').map(n => parseInt(n, 10));
+    
+    // Normalize years (assume 20xx for 2-digit years)
+    const ayFull = ay < 100 ? 2000 + ay : ay;
+    const byFull = by < 100 ? 2000 + by : by;
+    
+    if (ayFull !== byFull) return byFull - ayFull;
+    return bm - am;
+  });
 }
 
 export async function getCurrentMonthArchivedTasks(): Promise<Task[]> {

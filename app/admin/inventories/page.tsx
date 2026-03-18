@@ -128,6 +128,7 @@ export default function InventoriesPage() {
         selectedStatus={selectedStatus}
         selectedMonthKey={selectedMonthKey}
         availableMonths={availableMonths}
+        onMonthChange={setSelectedMonthKey}
       />
 
 

@@ -28,23 +28,28 @@ import { MonthSelector } from '@/components/ui/month-selector';
 import { Switch } from '@/components/ui/switch';
 import { getCurrentMonthKey, sortMonthKeys } from '@/lib/utils/date-utils';
 
-
 interface InventoryDisplayProps {
   sites: Site[];
   onRefresh?: () => void;
   selectedSite: string | 'all';
   selectedStatus: ItemStatus | 'all';
-  selectedMonthKey?: string;
-  availableMonths?: string[];
+  selectedMonthKey: string;
+  availableMonths: string[];
+  onMonthChange: (month: string) => void;
 }
 
-export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatus, selectedMonthKey: parentMonthKey, availableMonths: parentAvailableMonths }: InventoryDisplayProps) {
+export function InventoryDisplay({ 
+  sites, 
+  onRefresh, 
+  selectedSite, 
+  selectedStatus, 
+  selectedMonthKey, 
+  availableMonths, 
+  onMonthChange 
+}: InventoryDisplayProps) {
   const [items, setItems] = useState<Item[]>([]);
   const { getPreference, setPreference } = useUserPreferences();
 
-  // Month selector state for Sold Items tab - Always use local state
-  const [selectedMonthKey, setSelectedMonthKey] = useState(getCurrentMonthKey());
-  const [availableMonths, setAvailableMonths] = useState<string[]>([]);
   const [isHydrated, setIsHydrated] = useState(false);
 
   const [activeTab, setActiveTab] = useState<InventoryTab>(InventoryTab.DIGITAL);
@@ -178,22 +183,6 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
     setIsHydrated(true);
   }, []);
 
-  // Load available months locally if parent doesn't provide them
-  useEffect(() => {
-    if (parentAvailableMonths) return; // Parent provides months, skip loading
-
-    const loadMonths = async () => {
-      try {
-        const months = await ClientAPI.getAvailableSummaryMonths();
-        const current = getCurrentMonthKey();
-        const allMonths = months.includes(current) ? months : [current, ...months];
-        setAvailableMonths(sortMonthKeys(allMonths));
-      } catch (err) {
-        setAvailableMonths([getCurrentMonthKey()]);
-      }
-    };
-    loadMonths();
-  }, [parentAvailableMonths]);
 
   useEffect(() => {
     // Only fetch when hydrated or if preferences already changed state
@@ -1397,7 +1386,7 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
           <MonthSelector
             selectedMonth={selectedMonthKey}
             availableMonths={availableMonths}
-            onChange={setSelectedMonthKey}
+            onChange={onMonthChange}
             className="ml-auto"
           />
         </div>
