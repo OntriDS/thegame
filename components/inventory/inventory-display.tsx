@@ -42,14 +42,10 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
   const [items, setItems] = useState<Item[]>([]);
   const { getPreference, setPreference } = useUserPreferences();
 
-  // Month selector state for Sold Items tab - Local management if parent doesn't provide
-  const [localSelectedMonthKey, setLocalSelectedMonthKey] = useState(getCurrentMonthKey());
-  const [localAvailableMonths, setLocalAvailableMonths] = useState<string[]>([]);
+  // Month selector state for Sold Items tab - Always use local state
+  const [selectedMonthKey, setSelectedMonthKey] = useState(getCurrentMonthKey());
+  const [availableMonths, setAvailableMonths] = useState<string[]>([]);
   const [isHydrated, setIsHydrated] = useState(false);
-
-  // Use parent values if provided, otherwise use local state
-  const selectedMonthKey = parentMonthKey || localSelectedMonthKey;
-  const availableMonths = parentAvailableMonths || localAvailableMonths;
 
   const [activeTab, setActiveTab] = useState<InventoryTab>(InventoryTab.DIGITAL);
   const [showItemModal, setShowItemModal] = useState(false);
@@ -191,9 +187,9 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
         const months = await ClientAPI.getAvailableSummaryMonths();
         const current = getCurrentMonthKey();
         const allMonths = months.includes(current) ? months : [current, ...months];
-        setLocalAvailableMonths(sortMonthKeys(allMonths));
+        setAvailableMonths(sortMonthKeys(allMonths));
       } catch (err) {
-        setLocalAvailableMonths([getCurrentMonthKey()]);
+        setAvailableMonths([getCurrentMonthKey()]);
       }
     };
     loadMonths();
@@ -1401,7 +1397,7 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
           <MonthSelector
             selectedMonth={selectedMonthKey}
             availableMonths={availableMonths}
-            onChange={setLocalSelectedMonthKey}
+            onChange={setSelectedMonthKey}
             className="ml-auto"
           />
         </div>
