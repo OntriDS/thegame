@@ -1400,30 +1400,23 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
 
   // Sold Items Tab - Lifecycle Management
   const renderSoldItemsTab = () => {
-    const soldItems = items.filter(item => {
-      const s = (item.status || '').toString().toLowerCase();
-      return s === 'sold' || (item.status as any) === 'ItemStatus.SOLD';
-    });
-
+    // API now handles filtering by month directly, so we use items as-is
     return (
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold">Sold Items</h3>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 border rounded-md px-3 py-1.5 bg-background">
-              <Switch
-                checked={filterSoldByMonth}
-                onCheckedChange={setFilterSoldByMonth}
-              />
-              <span className="text-sm text-muted-foreground">Filter by month</span>
-            </div>
-          </div>
+          <MonthSelector
+            selectedMonth={selectedMonthKey}
+            availableMonths={availableMonths}
+            onChange={setLocalSelectedMonthKey}
+            className="ml-auto"
+          />
         </div>
 
 
 
         <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-          {isHydrated && soldItems.map(item => {
+          {isHydrated && items.map(item => {
             const siteName = item.stock?.[0]?.siteId || '';
             const qty = item.quantitySold || 0;
             const unitPrice = item.price || 0;
@@ -1478,11 +1471,11 @@ export function InventoryDisplay({ sites, onRefresh, selectedSite, selectedStatu
           })}
         </div>
 
-        {soldItems.length === 0 && (
+        {items.length === 0 && (
           <div className="text-center py-8 text-muted-foreground">
             <Package className="w-12 h-12 mx-auto mb-4 opacity-50" />
-            <p>No sold items found.</p>
-            <p className="text-sm">Items will appear here after they are sold.</p>
+            <p>No sold items found for this month.</p>
+            <p className="text-sm">Select a different month to view sold items.</p>
           </div>
         )}
       </div>
