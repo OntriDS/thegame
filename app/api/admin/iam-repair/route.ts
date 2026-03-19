@@ -1,30 +1,27 @@
 import { NextResponse } from 'next/server';
 import { iamService } from '@/lib/iam-service';
-import { CharacterRole } from '@/types/enums';
+import { CharacterRole, FOUNDER_CHARACTER_ID } from '@/types/enums';
 import { kvSet } from '@/data-store/kv';
 import { buildAccountByEmailKey } from '@/lib/keys';
+import { getAllCharacters } from '@/data-store/repositories/character.repo';
 
 /**
- * IAM Repair — re-links Founder account ↔ character and ensures email mapping.
+ * IAM Repair — re-links the Founder IAM account to the Founder
+ * Data-Store character via ACCOUNT_CHARACTER Rosetta Stone link.
  *
- * - **POST** `{ "passphrase": "<ADMIN_ACCESS_KEY>" }` — preferred (secret not in URL).
- * - **GET** `?passphrase=` — convenient in browser; passphrase may appear in history/logs — rotate key after use.
+ * GET  ?passphrase=KEY  (browser)
+ * POST {"passphrase":"KEY"}
  */
 async function runRepair(passphrase: string | undefined): Promise<NextResponse> {
   const adminKey = process.env.ADMIN_ACCESS_KEY;
-
   if (!adminKey || passphrase !== adminKey) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  // 1. Find founder IAM account
   const accounts = await iamService.listAccounts();
   if (accounts.length === 0) {
     return NextResponse.json({ error: 'No IAM accounts found' }, { status: 404 });
-  }
-
-  const characters = await iamService.listCharacters();
-  if (characters.length === 0) {
-    return NextResponse.json({ error: 'No IAM characters found' }, { status: 404 });
   }
 
   const passphraseAccounts = accounts.filter(a => a.passphraseFlag);
@@ -37,14 +34,34 @@ async function runRepair(passphrase: string | undefined): Promise<NextResponse> 
     );
   }
 
-  const founderCharacters = characters.filter(c => c.roles?.includes(CharacterRole.FOUNDER));
-  let founderCharacter = founderCharacters.length === 1 ? founderCharacters[0] : null;
-  if (!founderCharacter && characters.length === 1) founderCharacter = characters[0];
-  if (!founderCharacter) {
-    return NextResponse.json({ error: 'Founder character not found (ambiguous).' }, { status: 400 });
+  // 2. Find founder character in the Game Data-Store
+  const dsCharacters = await getAllCharacters();
+  if (dsCharacters.length === 0) {
+    return NextResponse.json(
+      { error: 'No characters found in Data-Store (thegame:data:character:*).' },
+      { status: 404 }
+    );
   }
 
-  await iamService.assignCharacterToAccount(founderAccount.id, founderCharacter.id);
+  let founderCharacter = dsCharacters.find(c => c.id === FOUNDER_CHARACTER_ID) ?? null;
+  if (!founderCharacter) {
+    const byRole = dsCharacters.filter(c => c.roles?.includes(CharacterRole.FOUNDER));
+    founderCharacter = byRole.length === 1 ? byRole[0] : null;
+  }
+  if (!founderCharacter && dsCharacters.length === 1) {
+    founderCharacter = dsCharacters[0];
+  }
+  if (!founderCharacter) {
+    return NextResponse.json(
+      { error: `Founder character not found. Expected id=${FOUNDER_CHARACTER_ID} or a single FOUNDER-role character.` },
+      { status: 400 }
+    );
+  }
+
+  // 3. Link account → character via Rosetta Stone
+  await iamService.linkAccountToCharacter(founderAccount.id, founderCharacter.id);
+
+  // 4. Ensure email mapping
   await kvSet(buildAccountByEmailKey(founderAccount.email), { accountId: founderAccount.id });
 
   return NextResponse.json({
@@ -58,11 +75,8 @@ async function runRepair(passphrase: string | undefined): Promise<NextResponse> 
 export async function GET(req: Request) {
   try {
     const url = new URL(req.url);
-    const passphrase =
-      url.searchParams.get('passphrase') ??
-      url.searchParams.get('key') ??
-      undefined;
-    return await runRepair(passphrase ?? undefined);
+    const passphrase = url.searchParams.get('passphrase') ?? url.searchParams.get('key') ?? undefined;
+    return await runRepair(passphrase);
   } catch (error: any) {
     console.error('[IAM Repair GET] Error:', error);
     return NextResponse.json({ error: error.message || 'IAM repair failed' }, { status: 500 });
@@ -80,19 +94,13 @@ export async function POST(req: Request) {
         passphrase = body.passphrase;
       } catch {
         return NextResponse.json(
-          {
-            error:
-              'Invalid JSON. Send {"passphrase":"..."} or open GET /api/admin/iam-repair?passphrase=YOUR_KEY in the browser (less safe).',
-          },
+          { error: 'Invalid JSON. Send {"passphrase":"..."} or GET ?passphrase=YOUR_KEY' },
           { status: 400 }
         );
       }
     } else {
       return NextResponse.json(
-        {
-          error:
-            'Missing body. Use POST with JSON {"passphrase":"..."} or GET ?passphrase=...',
-        },
+        { error: 'Missing body. Use POST {"passphrase":"..."} or GET ?passphrase=...' },
         { status: 400 }
       );
     }

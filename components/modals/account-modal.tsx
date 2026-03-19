@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
 import { v4 as uuid } from 'uuid';
 import type { Account, Character } from '@/types/entities';
-import { iamService, CharacterRole } from '@/lib/iam-service';
+import { CharacterRole } from '@/types/enums';
 import { ClientAPI } from '@/lib/client-api';
 import { dispatchEntityUpdated } from '@/lib/ui/ui-events';
 import { Loader2, User, Mail, Lock, Save } from 'lucide-react';
@@ -57,7 +57,7 @@ export default function AccountModal({ account, character, open, onOpenChange, o
       if (!open) return;
       setIsLoadingCharacters(true);
       try {
-        const chars = await ClientAPI.getCharacters();
+        const chars = await ClientAPI.getCharacters('special');
         const accounts = await ClientAPI.getAccounts();
 
         // Get character IDs that already have accounts

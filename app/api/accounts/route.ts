@@ -1,63 +1,64 @@
-// app/api/accounts/route.ts
-// IAM-backed Accounts CRUD so email/password login and permissions work immediately.
+/**
+ * Accounts API  (IAM-backed, Rosetta-Stone linked)
+ *
+ * GET  — list all IAM accounts (+ M2M apps) with their linked DS characters.
+ * POST — create or update an IAM account and link it to a DS character.
+ */
 import { NextResponse, NextRequest } from 'next/server';
 import { requireAdminAuth } from '@/lib/api-auth';
 import { iamService, CharacterRole } from '@/lib/iam-service';
+import { getCharacterById } from '@/data-store/repositories/character.repo';
 import type { Account } from '@/types/entities';
 
 export const dynamic = 'force-dynamic';
 
-async function toUiAccount(iamAccount: Awaited<ReturnType<typeof iamService.getAccountById>>, opts?: { type?: string }) {
+// ── helpers ──────────────────────────────────────────────────────
+
+async function toUiAccount(
+  iamAccount: NonNullable<Awaited<ReturnType<typeof iamService.getAccountById>>>,
+  opts?: { type?: string }
+) {
   const type = opts?.type;
 
-  // For non-M2M accounts, we need a character payload so the UI can show roles and badges.
   let character: any = null;
-  if (iamAccount?.id && type !== 'm2m') {
-    const char = iamAccount.characterId
-      ? await iamService.getCharacterById(iamAccount.characterId)
-      : await iamService.getCharacterByAccountId(iamAccount.id);
-      character = char
-        ? {
-            ...char, // Include all fields to satisfy Character interface
-            id: char.id,
-            name: char.name,
-            roles: char.roles,
-            accountId: char.accountId,
-          }
-        : null;
+  if (iamAccount.id && type !== 'm2m') {
+    const char = await iamService.resolveCharacterForAccount(iamAccount.id);
+    if (char) {
+      character = {
+        id: char.id,
+        name: char.name,
+        roles: char.roles,
+        accountId: char.accountId,
+      };
+    }
   }
 
-  const ui: any = {
-    id: iamAccount?.id,
-    name: iamAccount?.name,
-    email: iamAccount?.email,
-    phone: iamAccount?.phone,
-    isActive: iamAccount?.isActive ?? true,
-    isVerified: iamAccount?.isVerified ?? false,
-    // DS Account requires these fields; fill minimal defaults.
-    passwordHash: '', // never send hashed password back to the UI
+  return {
+    id: iamAccount.id,
+    name: iamAccount.name,
+    email: iamAccount.email,
+    phone: iamAccount.phone,
+    isActive: iamAccount.isActive ?? true,
+    isVerified: iamAccount.isVerified ?? false,
+    passwordHash: '',
     sessionToken: undefined,
-    loginAttempts: (iamAccount as any)?.loginAttempts ?? 0,
+    loginAttempts: 0,
     verificationToken: undefined,
     resetToken: undefined,
     resetTokenExpiry: undefined,
-    privacySettings: {
-      showEmail: false,
-      showPhone: false,
-      showRealName: true,
-    },
-    characterId: type === 'm2m' ? '' : (iamAccount?.characterId || character?.id || ''),
+    privacySettings: { showEmail: false, showPhone: false, showRealName: true },
+    characterId: type === 'm2m' ? '' : (iamAccount.characterId || character?.id || ''),
     playerId: undefined,
-    lastActiveAt: new Date(iamAccount?.updatedAt || Date.now()),
+    lastActiveAt: new Date(iamAccount.updatedAt || Date.now()),
     links: [],
     character,
     type,
-    createdAt: new Date(iamAccount?.createdAt || Date.now()),
-    updatedAt: new Date(iamAccount?.updatedAt || Date.now()),
-  };
-
-  return ui as Account;
+    createdAt: new Date(iamAccount.createdAt || Date.now()),
+    updatedAt: new Date(iamAccount.updatedAt || Date.now()),
+  } as Account;
 }
+
+// ── GET ──────────────────────────────────────────────────────────
 
 export async function GET(req: NextRequest) {
   if (!(await requireAdminAuth(req))) {
@@ -68,7 +69,6 @@ export async function GET(req: NextRequest) {
     const iamAccounts = await iamService.listAccounts();
     const accounts = await Promise.all(iamAccounts.map(acc => toUiAccount(acc)));
 
-    // M2M "accounts" so the Accounts table shows systems too.
     const m2mApps = await iamService.listM2MApps();
     const m2mAccounts = m2mApps.map(app => ({
       id: app.appId,
@@ -83,11 +83,7 @@ export async function GET(req: NextRequest) {
       verificationToken: undefined,
       resetToken: undefined,
       resetTokenExpiry: undefined,
-      privacySettings: {
-        showEmail: false,
-        showPhone: false,
-        showRealName: true,
-      },
+      privacySettings: { showEmail: false, showPhone: false, showRealName: true },
       characterId: '',
       playerId: undefined,
       lastActiveAt: new Date(app.createdAt),
@@ -97,7 +93,6 @@ export async function GET(req: NextRequest) {
         name: app.appId,
         roles: [CharacterRole.AI_AGENT],
         accountId: 'system',
-        // Provide missing required Character fields for UI summary
         description: 'System-managed M2M Application',
         achievementsCharacter: [],
         purchasedAmount: 0,
@@ -116,10 +111,12 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json([...accounts, ...m2mAccounts]);
   } catch (error: any) {
-    console.error('[Accounts API] IAM GET error:', error);
+    console.error('[Accounts API] GET error:', error);
     return NextResponse.json({ error: 'Failed to fetch accounts' }, { status: 500 });
   }
 }
+
+// ── POST  (create / update) ─────────────────────────────────────
 
 export async function POST(req: NextRequest) {
   if (!(await requireAdminAuth(req))) {
@@ -128,16 +125,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const {
-      id,
-      name,
-      email,
-      phone,
-      password,
-      isActive,
-      isVerified,
-      characterId,
-    } = body || {};
+    const { id, name, email, phone, password, isActive, isVerified, characterId } = body || {};
 
     if (!name || !email) {
       return NextResponse.json({ error: 'Name and email are required' }, { status: 400 });
@@ -146,10 +134,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'characterId is required (select a character)' }, { status: 400 });
     }
 
+    const dsChar = await getCharacterById(characterId);
+    if (!dsChar) {
+      return NextResponse.json({ error: 'Selected character does not exist in the Data-Store' }, { status: 400 });
+    }
+
     const existing = id ? await iamService.getAccountById(id) : null;
 
     if (!existing) {
-      // New account: IAM generates the real UUID id.
+      // ── Create new account ──
       const created = await iamService.createAccount({
         name: String(name),
         email: String(email),
@@ -157,7 +150,6 @@ export async function POST(req: NextRequest) {
         password: typeof password === 'string' && password.trim() ? password.trim() : undefined,
       });
 
-      // Apply activation flags if provided.
       if (isActive !== undefined || isVerified !== undefined) {
         await iamService.updateAccount(created.id, {
           isActive: isActive !== undefined ? !!isActive : undefined,
@@ -165,13 +157,13 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      await iamService.assignCharacterToAccount(created.id, String(characterId));
+      await iamService.linkAccountToCharacter(created.id, String(characterId));
 
       const updated = await iamService.getAccountById(created.id);
       return NextResponse.json(updated);
     }
 
-    // Update existing account.
+    // ── Update existing account ──
     await iamService.updateAccount(existing.id, {
       name: String(name),
       email: String(email),
@@ -181,12 +173,14 @@ export async function POST(req: NextRequest) {
       isVerified: isVerified !== undefined ? !!isVerified : undefined,
     });
 
-    await iamService.assignCharacterToAccount(existing.id, String(characterId));
+    if (existing.characterId !== String(characterId)) {
+      await iamService.linkAccountToCharacter(existing.id, String(characterId));
+    }
 
     const updated = await iamService.getAccountById(existing.id);
     return NextResponse.json(updated);
   } catch (error: any) {
-    console.error('[Accounts API] IAM POST error:', error);
+    console.error('[Accounts API] POST error:', error);
     return NextResponse.json({ error: error.message || 'Failed to save account' }, { status: 500 });
   }
 }

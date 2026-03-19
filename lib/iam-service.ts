@@ -1,19 +1,17 @@
 /**
  * IAM Service
- * Central service for Account, Character, and Player management.
- * Standardized across thegame, pixelbrain, and akiles-ecosystem.
+ * Manages Accounts (identity/credentials) and authentication.
+ * Characters are NOT stored in IAM — they live in the Game Data-Store.
+ * The ACCOUNT_CHARACTER link (Rosetta Stone) bridges the two.
  */
 
-import { kvGet, kvSet, kvSAdd, kvSRem, kvSMembers, kvScan, kvDel } from '@/data-store/kv';
+import { kvGet, kvSet, kvSAdd, kvSRem, kvSMembers, kvDel } from '@/data-store/kv';
 import {
   buildAccountKey,
   buildAccountByEmailKey,
-  buildCharacterKey,
   buildPlayerKey,
-  buildLinkKey,
   buildM2MKey,
   IAM_ACCOUNTS_INDEX,
-  IAM_CHARACTERS_INDEX,
   IAM_PLAYERS_INDEX,
   IAM_M2M_INDEX
 } from './keys';
@@ -21,10 +19,14 @@ import { v4 as uuidv4 } from 'uuid';
 import { SignJWT, jwtVerify } from 'jose';
 import bcrypt from 'bcryptjs';
 
-// --- Interfaces (Standardized) ---
-
-import { CharacterRole } from '@/types/enums';
+import { CharacterRole, EntityType, LinkType } from '@/types/enums';
 export { CharacterRole };
+
+import { getCharacterById as dsGetCharacterById } from '@/data-store/repositories/character.repo';
+import { getLinksFor, createLink as rosettaCreateLink } from '@/links/link-registry';
+import type { Character as GameCharacter, Link } from '@/types/entities';
+
+// --- Interfaces ---
 
 export interface Account {
   id: string;
@@ -35,18 +37,8 @@ export interface Account {
   passphraseFlag: boolean;
   isActive: boolean;
   isVerified: boolean;
-  characterId?: string; 
+  characterId?: string;
   playerId?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface Character {
-  id: string;
-  accountId: string;
-  name: string;
-  roles: CharacterRole[];
-  profile: Record<string, any>;
   createdAt: string;
   updatedAt: string;
 }
@@ -63,15 +55,7 @@ export interface Player {
 export interface AuthResult {
   success: boolean;
   error?: string;
-  user?: {
-    userId: string;
-    accountId: string;
-    username: string;
-    email: string;
-    characterId: string;
-    roles: CharacterRole[];
-    isActive: boolean;
-  };
+  user?: AuthUser;
   token?: string;
 }
 
@@ -93,15 +77,9 @@ interface CreateAccountDTO {
   passphraseFlag?: boolean;
 }
 
-interface CreateCharacterDTO {
-  name: string;
-  roles: CharacterRole[];
-  profile?: Record<string, any>;
-}
-
 const HANDSHAKE_PREFIX = 'iam:handshake:';
 
-// --- Permissions & RBAC (Legacy Consolidated) ---
+// --- Permissions & RBAC ---
 
 export interface Permission {
   resource: string;
@@ -116,32 +94,19 @@ export interface AuthPermissions {
 }
 
 const PERMISSION_MATRIX: Permission[] = [
-  // Tasks
   { resource: 'tasks', action: 'read', roles: [CharacterRole.FOUNDER, CharacterRole.TEAM] },
   { resource: 'tasks', action: 'write', roles: [CharacterRole.FOUNDER, CharacterRole.TEAM] },
   { resource: 'tasks', action: 'delete', roles: [CharacterRole.FOUNDER] },
-
-  // Finances
   { resource: 'finances', action: 'read', roles: [CharacterRole.FOUNDER] },
   { resource: 'finances', action: 'write', roles: [CharacterRole.FOUNDER] },
-
-  // Inventory
   { resource: 'inventory', action: 'read', roles: [CharacterRole.FOUNDER, CharacterRole.TEAM] },
   { resource: 'inventory', action: 'write', roles: [CharacterRole.FOUNDER, CharacterRole.TEAM] },
-
-  // Sales
   { resource: 'sales', action: 'read', roles: [CharacterRole.FOUNDER, CharacterRole.TEAM] },
   { resource: 'sales', action: 'write', roles: [CharacterRole.FOUNDER, CharacterRole.TEAM] },
-
-  // Player Management
   { resource: 'players', action: 'read', roles: [CharacterRole.FOUNDER] },
   { resource: 'players', action: 'write', roles: [CharacterRole.FOUNDER] },
-
-  // User Management
   { resource: 'users', action: 'read', roles: [CharacterRole.FOUNDER] },
   { resource: 'users', action: 'write', roles: [CharacterRole.FOUNDER] },
-
-  // Settings
   { resource: 'settings', action: 'read', roles: [CharacterRole.FOUNDER] },
   { resource: 'settings', action: 'write', roles: [CharacterRole.FOUNDER] },
 ];
@@ -149,13 +114,14 @@ const PERMISSION_MATRIX: Permission[] = [
 // --- IAM Service Implementation ---
 
 export class IAMService {
-  /**
-   * Create a new Account (The Egg)
-   */
+
+  // ═══════════════════════════════════════════════════════════════
+  // ACCOUNT CRUD (iam:account:*)
+  // ═══════════════════════════════════════════════════════════════
+
   async createAccount(data: CreateAccountDTO): Promise<Account> {
     let passwordHash: string | null = null;
 
-    // Hash password if provided
     if (data.password) {
       const saltRounds = 10;
       passwordHash = await bcrypt.hash(data.password, saltRounds);
@@ -181,106 +147,13 @@ export class IAMService {
     return account;
   }
 
-  /**
-   * Create a new Character (The Hatchling) linked to an Account
-   */
-  async createCharacter(accountId: string, data: CreateCharacterDTO): Promise<Character> {
-    const character: Character = {
-      id: uuidv4(),
-      accountId: accountId,
-      name: data.name,
-      roles: data.roles,
-      profile: data.profile || {},
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    await kvSet(buildCharacterKey(character.id), character);
-    await kvSAdd(IAM_CHARACTERS_INDEX, character.id);
-
-    // Link Account ↔ Character
-    await this.createLink(accountId, character.id, 'ACCOUNT_CHARACTER');
-
-    return character;
-  }
-
-  /**
-   * Create a new Player Entity (The Evolution) granted to a Character
-   * Requirement: Character must have the 'player' role
-   */
-  async createPlayer(characterId: string): Promise<Player> {
-    const character = await this.getCharacterById(characterId);
-    if (!character) throw new Error('Character not found');
-
-    const hasPlayerRole = character.roles.includes(CharacterRole.PLAYER) || 
-                          character.roles.includes(CharacterRole.FOUNDER);
-
-    if (!hasPlayerRole) {
-      throw new Error('Character does not have the PLAYER role. Contact Founder for grant.');
-    }
-
-    const player: Player = {
-      id: uuidv4(),
-      characterId: characterId,
-      jungleCoins: 0,
-      level: 1,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    await kvSet(buildPlayerKey(player.id), player);
-    await kvSAdd(IAM_PLAYERS_INDEX, player.id);
-
-    // Link Character ↔ Player
-    await this.createLink(characterId, player.id, 'CHARACTER_PLAYER');
-
-    return player;
-  }
-
-  /**
-   * Generic link creation helper
-   */
-  private async createLink(sourceId: string, targetId: string, type: string): Promise<void> {
-    const key = buildLinkKey(sourceId, targetId, type);
-    const linkData = {
-      id: uuidv4(),
-      sourceId,
-      targetId,
-      type,
-      createdAt: new Date().toISOString()
-    };
-    await kvSet(key, linkData);
-  }
-
-  // --- Retrieval Methods ---
-
-  /**
-   * IDs in IAM_CHARACTERS_INDEX, or — if the set is empty — keys under iam:character:* (legacy / index drift).
-   * When discovered via scan, the index is backfilled so list/get stay consistent.
-   */
-  private async resolveCharacterIdsFromIndexOrScan(): Promise<string[]> {
-    let characterIds = await kvSMembers(IAM_CHARACTERS_INDEX);
-    if (characterIds.length > 0) return characterIds;
-
-    const allKeys = await kvScan('iam:character:');
-    characterIds = [...new Set(allKeys.map((k: string) => k.split(':').pop() || '').filter(Boolean))];
-    if (characterIds.length > 0) {
-      await kvSAdd(IAM_CHARACTERS_INDEX, ...characterIds);
-    }
-    return characterIds;
-  }
-
   async getAccountById(id: string): Promise<Account | null> {
     return await kvGet<Account>(buildAccountKey(id));
   }
 
-  /**
-   * List all IAM accounts (does not include M2M "accounts"; those are listed separately).
-   */
   async listAccounts(): Promise<Account[]> {
     const accountIds = await kvSMembers(IAM_ACCOUNTS_INDEX);
     if (accountIds.length === 0) return [];
-
     const accounts = await Promise.all(accountIds.map(id => this.getAccountById(id)));
     return accounts.filter((a): a is Account => !!a);
   }
@@ -288,8 +161,7 @@ export class IAMService {
   async getAccountByEmail(email: string): Promise<Account | null> {
     const mapping = await kvGet<any>(buildAccountByEmailKey(email));
     if (!mapping) return null;
-    
-    // Fix: Handle both legacy string mapping and new object mapping
+
     let accountId: string;
     if (typeof mapping === 'string') {
       accountId = mapping;
@@ -300,135 +172,10 @@ export class IAMService {
       return null;
     }
 
-    // Fix: Normalize ID by stripping common prefixes if accidentally present
-    // This handles "iam:account:ID" or "thegame:account:ID" accidentally stored as the ID
     accountId = accountId.split(':').pop() || accountId;
-
     return await this.getAccountById(accountId);
   }
 
-  async getCharacterById(id: string): Promise<Character | null> {
-    return await kvGet<Character>(buildCharacterKey(id));
-  }
-
-  /**
-   * List all IAM characters.
-   */
-  async listCharacters(): Promise<Character[]> {
-    const characterIds = await this.resolveCharacterIdsFromIndexOrScan();
-    if (characterIds.length === 0) return [];
-
-    const characters = await Promise.all(characterIds.map(id => this.getCharacterById(id)));
-    return characters.filter((c): c is Character => !!c);
-  }
-
-  async getPlayerById(id: string): Promise<Player | null> {
-    return await kvGet<Player>(buildPlayerKey(id));
-  }
-
-  /**
-   * Get pre-bound permissions helper for a user
-   */
-  getPermissions(user: AuthUser): AuthPermissions {
-    const userRoles = user.roles || [];
-
-    return {
-      hasRole: (role: string | CharacterRole) => {
-        if (userRoles.includes(CharacterRole.FOUNDER)) return true;
-        return userRoles.includes(role as any);
-      },
-
-      hasAnyRole: (roles: (string | CharacterRole)[]) => {
-        if (userRoles.includes(CharacterRole.FOUNDER)) return true;
-        return roles.some(role => userRoles.includes(role as any));
-      },
-
-      can: (resource: string, action: string) => {
-        if (userRoles.includes(CharacterRole.FOUNDER)) return true;
-        
-        const matchingPermissions = PERMISSION_MATRIX.filter(
-          perm => perm.resource === resource && perm.action === action
-        );
-
-        return matchingPermissions.some(perm =>
-          perm.roles.some(role => userRoles.includes(role))
-        );
-      },
-    };
-  }
-
-  async getCharacterByAccountId(accountId: string, email?: string): Promise<Character | null> {
-    const characterIds = await this.resolveCharacterIdsFromIndexOrScan();
-
-    for (const id of characterIds) {
-      const char = await this.getCharacterById(id);
-      if (char?.accountId === accountId) return char;
-      if (email && char?.accountId?.toLowerCase() === email.toLowerCase()) return char;
-    }
-    return null;
-  }
-
-  async getPlayerByCharacterId(characterId: string): Promise<Player | null> {
-    const playerIds = await kvSMembers(IAM_PLAYERS_INDEX);
-    for (const id of playerIds) {
-      const player = await this.getPlayerById(id);
-      if (player?.characterId === characterId) return player;
-    }
-    return null;
-  }
-
-  /**
-   * Admin operation: link an existing IAM character to an existing IAM account.
-   * This is the missing bridge so the `Accounts` UI can create credentials that login can authorize.
-   */
-  async assignCharacterToAccount(accountId: string, characterId: string): Promise<{ account: Account; character: Character }> {
-    const account = await this.getAccountById(accountId);
-    if (!account) throw new Error('Account not found');
-
-    const character = await this.getCharacterById(characterId);
-    if (!character) throw new Error('Character not found');
-
-    const previousAccountId = character.accountId;
-
-    // 1) Update character -> account ambassador field
-    character.accountId = accountId;
-    character.updatedAt = new Date().toISOString();
-    await kvSet(buildCharacterKey(characterId), character);
-
-    // 2) Update account -> character ambassador field (for UI)
-    account.characterId = characterId;
-    account.updatedAt = new Date().toISOString();
-    await kvSet(buildAccountKey(accountId), account);
-
-    // 3) If character was previously linked to a different account, clear that account's pointer for UI sanity.
-    if (previousAccountId && previousAccountId !== accountId) {
-      const prevAcc = await this.getAccountById(previousAccountId);
-      if (prevAcc) {
-        prevAcc.characterId = undefined;
-        prevAcc.updatedAt = new Date().toISOString();
-        await kvSet(buildAccountKey(previousAccountId), prevAcc);
-      }
-    }
-
-    // 4) Create the Rosetta-Stone relationship link (Account <-> Character).
-    await this.createLink(accountId, characterId, 'ACCOUNT_CHARACTER');
-
-    // 5) Ensure evolution: if this character is eligible for a Player, create one if missing.
-    const isNowPlayer = character.roles.includes(CharacterRole.PLAYER) || character.roles.includes(CharacterRole.FOUNDER);
-    if (isNowPlayer) {
-      const existingPlayer = await this.getPlayerByCharacterId(characterId);
-      if (!existingPlayer) {
-        await this.createPlayer(characterId);
-      }
-    }
-
-    return { account, character };
-  }
-
-  /**
-   * Admin operation: update IAM account fields (email, activation flags, and optional password update).
-   * NOTE: character linking is handled separately by `assignCharacterToAccount()`.
-   */
   async updateAccount(
     accountId: string,
     updates: {
@@ -457,11 +204,9 @@ export class IAMService {
     const nextEmail = updates.email ? updates.email.toLowerCase().trim() : account.email;
     const prevEmail = account.email;
 
-    // If email changes, update email->account mapping key.
     if (nextEmail !== prevEmail) {
       await kvDel(buildAccountByEmailKey(prevEmail));
     }
-    // Always ensure current email mapping exists.
     await kvSet(buildAccountByEmailKey(nextEmail), { accountId: account.id });
 
     const updated: Account = {
@@ -479,10 +224,6 @@ export class IAMService {
     return updated;
   }
 
-  /**
-   * Admin operation: disable (not hard-delete) an IAM account.
-   * Disabling blocks future logins; existing JWT cookies remain until the user logs out.
-   */
   async disableAccount(accountId: string): Promise<void> {
     const account = await this.getAccountById(accountId);
     if (!account) return;
@@ -494,47 +235,147 @@ export class IAMService {
     };
 
     await kvSet(buildAccountKey(accountId), updated);
-
-    // Remove from admin listing + prevent email-based lookup.
     await kvSRem(IAM_ACCOUNTS_INDEX, accountId);
     await kvDel(buildAccountByEmailKey(account.email));
   }
 
-  // --- Role Management & Evolution ---
+  // ═══════════════════════════════════════════════════════════════
+  // ACCOUNT ↔ CHARACTER LINK (Rosetta Stone — the only bridge)
+  // Characters live ONLY in thegame:data:character:*
+  // ═══════════════════════════════════════════════════════════════
 
   /**
-   * Assign roles to a character and trigger evolution if necessary
+   * Link an IAM account to an existing Game Data-Store character using the
+   * Rosetta Stone ACCOUNT_CHARACTER link. Updates account.characterId pointer
+   * for O(1) lookup during auth.
    */
-  async assignCharacterRoles(characterId: string, roles: CharacterRole[]): Promise<Character> {
-    const character = await this.getCharacterById(characterId);
-    if (!character) throw new Error('Character not found');
+  async linkAccountToCharacter(accountId: string, characterId: string): Promise<{ account: Account; character: GameCharacter }> {
+    const account = await this.getAccountById(accountId);
+    if (!account) throw new Error('Account not found');
 
-    const oldRoles = character.roles;
-    character.roles = Array.from(new Set(roles));
-    character.updatedAt = new Date().toISOString();
+    const character = await dsGetCharacterById(characterId);
+    if (!character) throw new Error('Character not found in Game Data-Store');
 
-    await kvSet(buildCharacterKey(characterId), character);
+    account.characterId = characterId;
+    account.updatedAt = new Date().toISOString();
+    await kvSet(buildAccountKey(accountId), account);
 
-    // Evolution Trigger: If PLAYER or FOUNDER role is added and no player exists, create one
-    const isNowPlayer = character.roles.includes(CharacterRole.PLAYER) || character.roles.includes(CharacterRole.FOUNDER);
-    const wasAlreadyPlayer = oldRoles.includes(CharacterRole.PLAYER) || oldRoles.includes(CharacterRole.FOUNDER);
+    const link: Link = {
+      id: uuidv4(),
+      linkType: LinkType.ACCOUNT_CHARACTER,
+      source: { type: EntityType.ACCOUNT, id: accountId },
+      target: { type: EntityType.CHARACTER, id: characterId },
+      createdAt: new Date(),
+    };
+    await rosettaCreateLink(link, { skipValidation: true });
 
-    if (isNowPlayer && !wasAlreadyPlayer) {
-      const existingPlayer = await this.getPlayerByCharacterId(characterId);
-      if (!existingPlayer) {
-        console.log(`[IAM] Evolution Trigger: Creating player for character ${characterId}`);
-        await this.createPlayer(characterId);
-      }
-    }
-
-    return character;
+    return { account, character };
   }
 
-  // --- Authentication Methods ---
-
   /**
-   * Simple Passphrase Authentication for Founder/Team
+   * Resolve the Game Data-Store character for an IAM account.
+   * Fast path: account.characterId → direct DS lookup.
+   * Fallback: query ACCOUNT_CHARACTER links in Rosetta Stone.
    */
+  async resolveCharacterForAccount(accountId: string): Promise<GameCharacter | null> {
+    const account = await this.getAccountById(accountId);
+    if (!account) return null;
+
+    if (account.characterId) {
+      const char = await dsGetCharacterById(account.characterId);
+      if (char) return char;
+    }
+
+    const links = await getLinksFor({ type: EntityType.ACCOUNT, id: accountId });
+    const acLink = links.find(l => l.linkType === LinkType.ACCOUNT_CHARACTER);
+    if (!acLink) return null;
+
+    const char = await dsGetCharacterById(acLink.target.id);
+    if (char && !account.characterId) {
+      account.characterId = char.id;
+      account.updatedAt = new Date().toISOString();
+      await kvSet(buildAccountKey(accountId), account);
+    }
+    return char;
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // PLAYER (iam:player:* — stays in IAM for now, game progression)
+  // ═══════════════════════════════════════════════════════════════
+
+  async getPlayerById(id: string): Promise<Player | null> {
+    return await kvGet<Player>(buildPlayerKey(id));
+  }
+
+  async getPlayerByCharacterId(characterId: string): Promise<Player | null> {
+    const playerIds = await kvSMembers(IAM_PLAYERS_INDEX);
+    for (const id of playerIds) {
+      const player = await this.getPlayerById(id);
+      if (player?.characterId === characterId) return player;
+    }
+    return null;
+  }
+
+  async createPlayer(characterId: string): Promise<Player> {
+    const character = await dsGetCharacterById(characterId);
+    if (!character) throw new Error('Character not found in Game Data-Store');
+
+    const hasPlayerRole = character.roles.includes(CharacterRole.PLAYER) ||
+                          character.roles.includes(CharacterRole.FOUNDER);
+
+    if (!hasPlayerRole) {
+      throw new Error('Character does not have the PLAYER role.');
+    }
+
+    const player: Player = {
+      id: uuidv4(),
+      characterId,
+      jungleCoins: 0,
+      level: 1,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    await kvSet(buildPlayerKey(player.id), player);
+    await kvSAdd(IAM_PLAYERS_INDEX, player.id);
+
+    return player;
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // PERMISSIONS
+  // ═══════════════════════════════════════════════════════════════
+
+  getPermissions(user: AuthUser): AuthPermissions {
+    const userRoles = user.roles || [];
+
+    return {
+      hasRole: (role: string | CharacterRole) => {
+        if (userRoles.includes(CharacterRole.FOUNDER)) return true;
+        return userRoles.includes(role as any);
+      },
+
+      hasAnyRole: (roles: (string | CharacterRole)[]) => {
+        if (userRoles.includes(CharacterRole.FOUNDER)) return true;
+        return roles.some(role => userRoles.includes(role as any));
+      },
+
+      can: (resource: string, action: string) => {
+        if (userRoles.includes(CharacterRole.FOUNDER)) return true;
+        const matchingPermissions = PERMISSION_MATRIX.filter(
+          perm => perm.resource === resource && perm.action === action
+        );
+        return matchingPermissions.some(perm =>
+          perm.roles.some(role => userRoles.includes(role))
+        );
+      },
+    };
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // AUTHENTICATION (resolves Account → Link → DS Character)
+  // ═══════════════════════════════════════════════════════════════
+
   async authenticatePassphrase(passphrase: string): Promise<AuthResult> {
     const adminKey = process.env.ADMIN_ACCESS_KEY;
     const founderEmail = process.env.FOUNDER_EMAIL?.toLowerCase().trim();
@@ -564,70 +405,9 @@ export class IAMService {
       return { success: false, error: 'Founder account not found or inactive' };
     }
 
-    const character = await this.getCharacterByAccountId(account.id);
+    const character = await this.resolveCharacterForAccount(account.id);
     if (!character) {
-      return { success: false, error: 'Character not found for account' };
-    }
-
-    const authUser: AuthUser = {
-      userId: account.id, // Primary ID
-      accountId: account.id,
-      username: account.name,
-      email: account.email,
-      characterId: character.id,
-      roles: character.roles,
-      isActive: account.isActive
-    };
-
-    const token = await this.generateJWT(authUser);
-
-    return {
-      success: true,
-      user: authUser,
-      token
-    };
-  }
-
-  /**
-   * Email/Password Authentication for regular users
-   */
-  async authenticateEmailPassword(email: string, password: string): Promise<AuthResult> {
-    // Validate inputs
-    if (!email || !password) {
-      return { success: false, error: 'Email and password are required' };
-    }
-
-    // Find account by email
-    const mapping = await kvGet<{ accountId: string }>(buildAccountByEmailKey(email.trim().toLowerCase()));
-    if (!mapping) {
-      return { success: false, error: 'Invalid email or password' };
-    }
-
-    const account = await this.getAccountById(mapping.accountId);
-    if (!account) {
-      // This case should ideally not happen if mapping exists, but good for robustness
-      return { success: false, error: 'Invalid email or password' };
-    }
-
-    if (!account.isActive) {
-      return { success: false, error: 'Account is inactive' };
-    }
-
-    // Check if account has a password set
-    if (!account.passwordHash) {
-      return { success: false, error: 'Account does not have a password set' };
-    }
-
-    // Verify password
-    const isPasswordValid = await bcrypt.compare(password, account.passwordHash);
-    if (!isPasswordValid) {
-      return { success: false, error: 'Invalid email or password' };
-    }
-
-    // Find associated character
-    const character = await this.getCharacterByAccountId(account.id);
-    if (!character) {
-      return { success: false, error: 'Character not found for account' };
+      return { success: false, error: 'Character not found for account. Check ACCOUNT_CHARACTER link.' };
     }
 
     const authUser: AuthUser = {
@@ -641,37 +421,73 @@ export class IAMService {
     };
 
     const token = await this.generateJWT(authUser);
-
-    return {
-      success: true,
-      user: authUser,
-      token
-    };
+    return { success: true, user: authUser, token };
   }
 
-  /**
-   * Generate a JWT for cross-project session persistence
-   */
+  async authenticateEmailPassword(email: string, password: string): Promise<AuthResult> {
+    if (!email || !password) {
+      return { success: false, error: 'Email and password are required' };
+    }
+
+    const mapping = await kvGet<{ accountId: string }>(buildAccountByEmailKey(email.trim().toLowerCase()));
+    if (!mapping) {
+      return { success: false, error: 'Invalid email or password' };
+    }
+
+    const account = await this.getAccountById(mapping.accountId);
+    if (!account) {
+      return { success: false, error: 'Invalid email or password' };
+    }
+
+    if (!account.isActive) {
+      return { success: false, error: 'Account is inactive' };
+    }
+
+    if (!account.passwordHash) {
+      return { success: false, error: 'Account does not have a password set' };
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, account.passwordHash);
+    if (!isPasswordValid) {
+      return { success: false, error: 'Invalid email or password' };
+    }
+
+    const character = await this.resolveCharacterForAccount(account.id);
+    if (!character) {
+      return { success: false, error: 'Character not found for account. Check ACCOUNT_CHARACTER link.' };
+    }
+
+    const authUser: AuthUser = {
+      userId: account.id,
+      accountId: account.id,
+      username: account.name,
+      email: account.email,
+      characterId: character.id,
+      roles: character.roles,
+      isActive: account.isActive
+    };
+
+    const token = await this.generateJWT(authUser);
+    return { success: true, user: authUser, token };
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // JWT
+  // ═══════════════════════════════════════════════════════════════
+
   async generateJWT(user: AuthUser): Promise<string> {
     const secret = process.env.ADMIN_SESSION_SECRET;
     if (!secret) throw new Error('ADMIN_SESSION_SECRET not configured');
 
     const secretBytes = new TextEncoder().encode(secret);
-    const alg = 'HS256';
-
-    const token = await new SignJWT({ ...user })
-      .setProtectedHeader({ alg })
+    return await new SignJWT({ ...user })
+      .setProtectedHeader({ alg: 'HS256' })
       .setIssuedAt()
       .setIssuer('iam-service')
       .setExpirationTime('24h')
       .sign(secretBytes);
-
-    return token;
   }
 
-  /**
-   * Verify a JWT and return the AuthUser
-   */
   async verifyJWT(token: string): Promise<AuthUser | null> {
     const secret = process.env.ADMIN_SESSION_SECRET;
     if (!secret) return null;
@@ -697,7 +513,6 @@ export class IAMService {
         };
       }
 
-      // Role Normalization & Validation (Enum-based & Lowercase)
       if (data.roles && Array.isArray(data.roles)) {
         const validRoles = Object.values(CharacterRole) as string[];
         data.roles = data.roles
@@ -712,13 +527,12 @@ export class IAMService {
     }
   }
 
-  // --- M2M & Handshake Methods ---
+  // ═══════════════════════════════════════════════════════════════
+  // M2M & HANDSHAKE
+  // ═══════════════════════════════════════════════════════════════
 
-  /**
-   * Register an API key for a system component (M2M)
-   */
   async generateM2MKey(appId: string): Promise<string> {
-    const apiKey = `du_${uuidv4().replace(/-/g, '')}`; // du_ prefix for Digital Universe
+    const apiKey = `du_${uuidv4().replace(/-/g, '')}`;
     await kvSet(buildM2MKey(appId), {
       appId,
       apiKey,
@@ -728,14 +542,10 @@ export class IAMService {
     return apiKey;
   }
 
-  /**
-   * Authenticate a system component via API Key
-   */
   async authenticateM2M(appId: string, apiKey: string): Promise<string | null> {
     const data = await kvGet<{ appId: string, apiKey: string }>(buildM2MKey(appId));
     if (!data || data.apiKey !== apiKey) return null;
 
-    // Generate a short-lived M2M token
     const secret = process.env.ADMIN_SESSION_SECRET;
     if (!secret) return null;
 
@@ -744,41 +554,28 @@ export class IAMService {
       .setProtectedHeader({ alg: 'HS256' })
       .setIssuedAt()
       .setIssuer('iam-service')
-      .setExpirationTime('10m') // M2M tokens are very short-lived
+      .setExpirationTime('10m')
       .sign(secretBytes);
   }
 
-  /**
-   * Generate a single-use handshake token for SSO-lite
-   */
   async generateHandshakeToken(targetApp: string, user: AuthUser): Promise<string> {
     const token = uuidv4();
     const key = `${HANDSHAKE_PREFIX}${token}`;
-    
-    // Use raw kv.set to handle TTL (ex: 60)
     const { kv } = await import('@/data-store/kv');
     await (kv as any).set(key, { ...user, aud: targetApp }, { ex: 60 });
     return token;
   }
 
-  /**
-   * Consume a handshake token (one-time use)
-   */
   async consumeHandshakeToken(token: string, currentApp: string): Promise<AuthUser | null> {
     const key = `${HANDSHAKE_PREFIX}${token}`;
     const data = await kvGet<AuthUser & { aud: string }>(key);
-    
     if (!data) return null;
 
-    // Audience Guard
     if (data.aud !== currentApp) {
       console.warn(`[IAM] Handshake audience mismatch: expected ${data.aud}, got ${currentApp}`);
       return null;
     }
 
-    // Burn-after-reading: Delete immediately
-    // In thegame we use kv.del via data-store wrapper
-    // (Note: kv.ts has del but it might not be exported as kvDel, checking...)
     const { kv } = await import('@/data-store/kv');
     await kv.del(key);
 
@@ -786,13 +583,11 @@ export class IAMService {
     return user;
   }
 
-  /**
-   * List all M2M applications
-   */
   async listM2MApps(): Promise<{ appId: string; createdAt: string }[]> {
     let appIds = await kvSMembers(IAM_M2M_INDEX);
-    
+
     if (appIds.length === 0) {
+      const { kvScan } = await import('@/data-store/kv');
       const allKeys = await kvScan('iam:m2m:');
       appIds = allKeys.map((k: string) => k.split(':').pop() || '');
     }

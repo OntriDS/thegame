@@ -301,8 +301,9 @@ export const ClientAPI = {
   // ============================================================================
   // CHARACTERS - Character management operations
   // ============================================================================
-  getCharacters: async (): Promise<Character[]> => {
-    const res = await fetch('/api/characters');
+  getCharacters: async (filter?: 'special'): Promise<Character[]> => {
+    const url = filter ? `/api/characters?filter=${filter}` : '/api/characters';
+    const res = await fetch(url);
     if (!res.ok) throw new Error('Failed to fetch characters');
     return await res.json();
   },

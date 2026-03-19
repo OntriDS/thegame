@@ -1,14 +1,11 @@
 import { NextResponse, NextRequest } from 'next/server';
-import { iamService } from '@/lib/iam-service';
+import { iamService, CharacterRole } from '@/lib/iam-service';
 import { requireAdminAuth } from '@/lib/api-auth';
-import { kvSMembers, kvSRem } from '@/data-store/kv';
-import { kvSet } from '@/data-store/kv';
-import { buildAccountKey, IAM_ACCOUNTS_INDEX } from '@/lib/keys';
-import { Account, CharacterRole } from '@/lib/iam-service';
+import { getCharacterById } from '@/data-store/repositories/character.repo';
 
 /**
- * Accounts Management API (Admin Only)
- * Create and list accounts using IAM Service
+ * Admin Accounts API — list + create accounts.
+ * Characters come from the Game Data-Store; links via Rosetta Stone.
  */
 export const dynamic = 'force-dynamic';
 
@@ -18,42 +15,21 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    // Get all accounts from IAM service
-    const accountIds = await kvSMembers(IAM_ACCOUNTS_INDEX);
-    const accounts = await Promise.all(
-      accountIds.map(async (id) => {
-        const account = await iamService.getAccountById(id);
-        if (!account) return null;
-        
-        // Fetch character data to get roles
-        let character = (account as any).characterId 
-          ? await iamService.getCharacterById((account as any).characterId)
-          : null;
-
-        if (!character) {
-          character = await iamService.getCharacterByAccountId(id, account.email);
-          // Auto-healing: If found via fallback, save the ID back to the account
-          if (character && !(account as any).characterId) {
-            (account as any).characterId = character.id;
-            await kvSet(buildAccountKey(id), account);
-            
-            // Also save the direct link for O(1) in the service
-            await kvSet(`iam:account:${id}:character`, character.id);
-          }
-        }
-
+    const accounts = await iamService.listAccounts();
+    const enriched = await Promise.all(
+      accounts.map(async (account) => {
+        const character = await iamService.resolveCharacterForAccount(account.id);
         return {
           ...account,
-          name: character?.name || account.name, // Use Character name if linked
-          character
+          name: character?.name || account.name,
+          character: character
+            ? { id: character.id, name: character.name, roles: character.roles, accountId: character.accountId }
+            : null,
         };
       })
     );
 
-    // Get all M2M apps
     const m2mApps = await iamService.listM2MApps();
-    
-    // Convert M2M apps to account-like format for UI display
     const m2mAccounts = m2mApps.map(app => ({
       id: app.appId,
       name: app.appId,
@@ -61,59 +37,16 @@ export async function GET(req: NextRequest) {
       isActive: true,
       createdAt: app.createdAt,
       updatedAt: app.createdAt,
-      type: 'm2m', // Extra field for UI
-      character: {
-        roles: [CharacterRole.AI_AGENT] // Default system roles
-      }
+      type: 'm2m',
+      character: { roles: [CharacterRole.AI_AGENT] },
     }));
 
     return NextResponse.json({
-      accounts: [...accounts.filter(Boolean), ...m2mAccounts]
+      accounts: [...enriched.filter(Boolean), ...m2mAccounts],
     });
   } catch (error: any) {
-    console.error('[Accounts API] Error:', error);
+    console.error('[Admin Accounts API] Error:', error);
     return NextResponse.json({ error: 'Failed to fetch accounts' }, { status: 500 });
-  }
-}
-
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
-  if (!(await requireAdminAuth(req))) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  try {
-    const body = await req.json();
-    const { name, email, phone, isActive, isVerified } = body;
-
-    // Validation
-    if (!name || !email) {
-      return NextResponse.json({ error: 'Name and email are required' }, { status: 400 });
-    }
-
-    // Get existing account
-    const existingAccount = await iamService.getAccountById(params.id);
-    if (!existingAccount) {
-      return NextResponse.json({ error: 'Account not found' }, { status: 404 });
-    }
-
-    // Update account fields
-    const updatedAccount: Account = {
-      ...existingAccount,
-      name: name.trim(),
-      email: email.trim(),
-      phone: phone?.trim(),
-      isActive: isActive ?? existingAccount.isActive,
-      isVerified: isVerified ?? existingAccount.isVerified,
-      updatedAt: new Date().toISOString()
-    };
-
-    // Save updated account
-    await kvSet(buildAccountKey(params.id), updatedAccount);
-
-    return NextResponse.json({ success: true, account: updatedAccount });
-  } catch (error: any) {
-    console.error('[Accounts API] Error updating account:', error);
-    return NextResponse.json({ error: error.message || 'Failed to update account' }, { status: 500 });
   }
 }
 
@@ -126,70 +59,34 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { name, email, password, phone, characterId } = body;
 
-    // Validation
     if (!name || !email) {
       return NextResponse.json({ error: 'Name and email are required' }, { status: 400 });
     }
+    if (!characterId) {
+      return NextResponse.json({ error: 'characterId is required' }, { status: 400 });
+    }
 
-    // Create account using IAM service
+    const dsChar = await getCharacterById(characterId);
+    if (!dsChar) {
+      return NextResponse.json({ error: 'Character not found in Data-Store' }, { status: 400 });
+    }
+
     const account = await iamService.createAccount({
       name: name.trim(),
       email: email.trim(),
       phone: phone?.trim(),
-      password: password.trim()
+      password: password?.trim(),
     });
 
-    // If characterId provided, create character and link it
-    if (characterId) {
-      // Create character linked to this account using iamService.createCharacter
-      const character = await iamService.createCharacter(account.id, {
-        name: 'Team Member',
-        roles: [CharacterRole.TEAM],
-        profile: { createdBy: 'Accounts' }
-      });
-
-      // Return character with accountId set
-      return NextResponse.json({
-        success: true,
-        account: {
-          ...account,
-          characterId: character.id
-        },
-        character
-      });
-    }
+    await iamService.linkAccountToCharacter(account.id, characterId);
 
     return NextResponse.json({
       success: true,
-      account
+      account: { ...account, characterId },
+      character: { id: dsChar.id, name: dsChar.name, roles: dsChar.roles },
     });
   } catch (error: any) {
-    console.error('[Accounts API] Error creating account:', error);
-    return NextResponse.json(
-      { error: error.message || 'Failed to create account' },
-      { status: 500 }
-    );
-  }
-}
-
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
-  if (!(await requireAdminAuth(req))) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  try {
-    // Delete account entity
-    await kvSet(buildAccountKey(params.id), null);
-
-    // Remove account from index
-    await kvSRem(IAM_ACCOUNTS_INDEX, params.id);
-
-    return NextResponse.json({ success: true });
-  } catch (error: any) {
-    console.error('[Accounts API] Error deleting account:', error);
-    return NextResponse.json(
-      { error: error.message || 'Failed to delete account' },
-      { status: 500 }
-    );
+    console.error('[Admin Accounts API] Error creating account:', error);
+    return NextResponse.json({ error: error.message || 'Failed to create account' }, { status: 500 });
   }
 }
