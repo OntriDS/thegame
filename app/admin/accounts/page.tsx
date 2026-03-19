@@ -108,7 +108,7 @@ export default function AccountsPage() {
         </div>
         <div className="flex flex-col items-center justify-center h-64 space-y-4">
           <div className="h-8 w-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-          <div className="text-sm font-bold uppercase tracking-widest opacity-50">Synchronizing Identity Layer...</div>
+          <div className="text-sm font-bold uppercase tracking-widest opacity-50">Loading Accounts...</div>
         </div>
       </div>
     );
@@ -116,22 +116,31 @@ export default function AccountsPage() {
 
   // Calculate role stats
   const roleStats = {
-    founder: accounts.filter(a => a.character?.roles?.includes(CharacterRole.FOUNDER)).length,
-    team: accounts.filter(a => a.character?.roles?.includes(CharacterRole.TEAM)).length,
-    agent: accounts.filter(a => (a as any).type === 'm2m' || a.character?.roles?.includes(CharacterRole.AI_AGENT)).length,
-    player: accounts.filter(a => a.character?.roles?.includes(CharacterRole.PLAYER)).length,
+    founder: accounts.filter(a => 
+      a.character?.roles?.some(r => r.toLowerCase() === CharacterRole.FOUNDER)
+    ).length,
+    team: accounts.filter(a => 
+      a.character?.roles?.some(r => r.toLowerCase() === CharacterRole.TEAM)
+    ).length,
+    agent: accounts.filter(a => 
+      (a as any).type === 'm2m' || 
+      a.character?.roles?.some(r => r.toLowerCase() === CharacterRole.AI_AGENT)
+    ).length,
+    player: accounts.filter(a => 
+      a.character?.roles?.some(r => r.toLowerCase() === CharacterRole.PLAYER)
+    ).length,
   };
 
   return (
     <div className="min-h-screen bg-background p-6 space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-4xl font-black uppercase tracking-tightest leading-none">Identity Layer</h1>
-          <p className="text-xs font-bold text-muted-foreground mt-1 uppercase tracking-widest opacity-50">Account & Character Management</p>
+          <h1 className="text-3xl font-black uppercase tracking-tightest leading-none text-primary">Accounts</h1>
+          <p className="text-[10px] font-bold text-muted-foreground mt-1 uppercase tracking-widest opacity-50">System Identity & Access Management</p>
         </div>
-        <Button onClick={handleCreateAccount} size="lg" className="bg-primary hover:bg-primary/90 font-black uppercase tracking-widest shadow-xl shadow-primary/20 transition-all hover:scale-105 active:scale-95">
-          <Plus className="h-5 w-5 mr-2 stroke-[3px]" />
-          Create Identity
+        <Button onClick={handleCreateAccount} size="sm" className="bg-primary hover:bg-primary/90 font-bold uppercase tracking-widest shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95 px-6">
+          <Plus className="h-4 w-4 mr-2" />
+          Add Account
         </Button>
       </div>
 
@@ -185,9 +194,9 @@ export default function AccountsPage() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-primary/10 bg-muted/30">
-                  <th className="p-4 font-black uppercase tracking-widest text-[10px] opacity-50">Identity</th>
+                  <th className="p-4 font-black uppercase tracking-widest text-[10px] opacity-50">Account</th>
                   <th className="p-4 font-black uppercase tracking-widest text-[10px] opacity-50">Email / System ID</th>
-                  <th className="p-4 font-black uppercase tracking-widest text-[10px] opacity-50">Roles</th>
+                  <th className="p-4 font-black uppercase tracking-widest text-[10px] opacity-50 text-center">Roles</th>
                   <th className="p-4 font-black uppercase tracking-widest text-[10px] opacity-50">Status</th>
                   <th className="p-4 font-black uppercase tracking-widest text-[10px] opacity-50 text-right">Settings</th>
                 </tr>
@@ -197,16 +206,18 @@ export default function AccountsPage() {
                   <tr key={account.id} className="group hover:bg-primary/5 transition-colors">
                     <td className="p-4">
                       <div className="flex items-center gap-3">
-                        <div className={`h-10 w-10 rounded-xl flex items-center justify-center font-black text-xl shadow-inner ${account.type === 'm2m' ? 'bg-amber-500/20 text-amber-600' : 'bg-primary/10 text-primary'}`}>
+                        <div className={`h-10 w-10 rounded-xl flex items-center justify-center font-black text-xl shadow-inner ${account.type === 'm2m' ? 'bg-amber-500/20 text-amber-600 border border-amber-500/30' : 'bg-primary/10 text-primary border border-primary/20'}`}>
                           {account.type === 'm2m' ? '🤖' : account.name[0].toUpperCase()}
                         </div>
                         <div>
-                          <div className="font-black uppercase tracking-tighter text-base leading-none group-hover:text-primary transition-colors">{account.name}</div>
+                          <div className="font-black uppercase tracking-tighter text-base leading-none group-hover:text-primary transition-colors flex items-center gap-2">
+                            {account.name}
+                            {account.type === 'm2m' && (
+                              <span className="px-1.5 py-0.5 rounded text-[8px] font-black bg-amber-500 text-white uppercase tracking-widest">M2M</span>
+                            )}
+                          </div>
                           <div className="text-[10px] font-bold opacity-30 mt-1 font-mono">{account.id}</div>
                         </div>
-                        {account.type === 'm2m' && (
-                          <span className="px-1.5 py-0.5 rounded text-[8px] font-black bg-amber-500 text-white uppercase tracking-widest ml-1">M2M</span>
-                        )}
                       </div>
                     </td>
                     <td className="p-4">
@@ -216,9 +227,9 @@ export default function AccountsPage() {
                       </div>
                     </td>
                     <td className="p-4">
-                      <div className="flex flex-wrap gap-1">
+                      <div className="flex flex-wrap justify-center gap-1">
                         {account.character?.roles?.map((role: string) => getRoleBadge(role)) || 
-                         (account.type !== 'm2m' && <span className="text-[10px] opacity-30 italic font-bold">No Character Linked</span>)}
+                         (account.type !== 'm2m' && <span className="text-[10px] opacity-30 italic font-bold text-destructive">Missing Character Link</span>)}
                       </div>
                     </td>
                     <td className="p-4">
@@ -253,6 +264,17 @@ export default function AccountsPage() {
                     </td>
                   </tr>
                 ))}
+
+                {accounts.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="p-12 text-center">
+                      <div className="flex flex-col items-center gap-2 opacity-30">
+                        <User className="h-12 w-12" />
+                        <div className="font-black uppercase tracking-widest text-sm">No Accounts Found</div>
+                      </div>
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>

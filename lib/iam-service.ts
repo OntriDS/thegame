@@ -35,6 +35,8 @@ export interface Account {
   passphraseFlag: boolean;
   isActive: boolean;
   isVerified: boolean;
+  characterId?: string; 
+  playerId?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -608,7 +610,21 @@ export class IAMService {
    * List all M2M applications
    */
   async listM2MApps(): Promise<{ appId: string; createdAt: string }[]> {
-    const appIds = await kvSMembers(IAM_M2M_INDEX);
+    let appIds = await kvSMembers(IAM_M2M_INDEX);
+    
+    // Robustness: If index is empty, try to find existing apps via scan (if possible)
+    // For now, we assume if it's missing, we might have lost the index
+    if (appIds.length === 0) {
+      // Note: kvSMembers is used in this environment, scanning might be limited
+      // but we expect at least 'pixelbrain' if it exists.
+      // If we can't scan, we'll try to explicitly check 'pixelbrain'
+      const pixelbrain = await kvGet(buildM2MKey('pixelbrain'));
+      if (pixelbrain) {
+        appIds = ['pixelbrain'];
+        await kvSAdd(IAM_M2M_INDEX, 'pixelbrain');
+      }
+    }
+
     const apps = await Promise.all(
       appIds.map(async (appId) => {
         const data = await kvGet<{ appId: string; createdAt: string }>(buildM2MKey(appId));

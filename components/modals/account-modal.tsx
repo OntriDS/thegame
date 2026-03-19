@@ -134,6 +134,12 @@ export default function AccountModal({ account, character, open, onOpenChange, o
       return;
     }
 
+    // Character validation (Mandatory)
+    if (!selectedCharacterId) {
+      setError('A character must be linked to this account');
+      return;
+    }
+
     setIsSaving(true);
     setError(null);
 
@@ -147,6 +153,7 @@ export default function AccountModal({ account, character, open, onOpenChange, o
         password: password.trim(), // Password will be hashed by API
         isActive: account?.isActive ?? true,
         isVerified: account?.isVerified ?? false,
+        characterId: selectedCharacterId || undefined,
         loginAttempts: account?.loginAttempts || 0,
         createdAt: account?.createdAt || new Date(),
         updatedAt: new Date(),
@@ -210,7 +217,7 @@ export default function AccountModal({ account, character, open, onOpenChange, o
               {account ? 'Edit Account' : 'Create Account'}
             </DialogTitle>
             <DialogDescription className="text-xs">
-              {account ? 'Update account information' : 'Create a new account and link it to a character'}
+              {account ? 'Update account information' : 'Create a new account and link it to a character.'}
             </DialogDescription>
           </DialogHeader>
 
@@ -299,7 +306,7 @@ export default function AccountModal({ account, character, open, onOpenChange, o
                 disabled={isSaving || isLoadingCharacters || !!account?.characterId}
                 className={`w-full h-10 px-3 py-2 bg-accent/30 border border-primary/20 rounded-md focus:outline-none focus:ring-2 focus:ring-primary ${!!account?.characterId ? 'opacity-70 cursor-not-allowed' : ''}`}
               >
-                <option value="">Select a character (optional)</option>
+                <option value="" disabled>Select a character</option>
                 {characters.map((char) => (
                   <option key={char.id} value={char.id}>
                     {char.name} {char.roles && char.roles.length > 0 && `(${char.roles.join(', ')})`}

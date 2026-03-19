@@ -26,7 +26,20 @@ export async function GET(req: NextRequest) {
         if (!account) return null;
         
         // Fetch character data to get roles
-        const character = await iamService.getCharacterByAccountId(id);
+        let character = null;
+        if ((account as any).characterId) {
+          character = await iamService.getCharacterById((account as any).characterId);
+        }
+        
+        if (!character) {
+          character = await iamService.getCharacterByAccountId(id);
+          // Auto-healing: If found via scan, save the ID back to the account for O(1) next time
+          if (character && !(account as any).characterId) {
+            (account as any).characterId = character.id;
+            await kvSet(buildAccountKey(id), account);
+          }
+        }
+
         return {
           ...account,
           character
