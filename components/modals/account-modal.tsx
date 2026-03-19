@@ -212,6 +212,16 @@ export default function AccountModal({ account, character, open, onOpenChange, o
     }
   };
 
+  // Auto-populate name when character is selected
+  useEffect(() => {
+    if (selectedCharacterId && !account) {
+      const char = characters.find(c => c.id === selectedCharacterId);
+      if (char) {
+        setName(char.name);
+      }
+    }
+  }, [selectedCharacterId, characters, account]);
+
   const selectedCharacter = characters.find(char => char.id === selectedCharacterId);
 
   return (
@@ -235,18 +245,17 @@ export default function AccountModal({ account, character, open, onOpenChange, o
               </div>
             )}
 
-            {/* Name Field */}
+            {/* Name Field - Read-only, derived from linked character */}
             <div className="space-y-2">
               <Label htmlFor="name">Name</Label>
               <Input
                 id="name"
-                placeholder="Account holder name"
+                placeholder="Select a character to auto-fill name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                disabled={isSaving || isLoadingCharacters}
-                autoFocus={!account}
+                disabled={true}
                 autoComplete="off"
-                className="bg-accent/30"
+                className="bg-accent/30 opacity-70"
               />
             </div>
 
@@ -320,7 +329,7 @@ export default function AccountModal({ account, character, open, onOpenChange, o
                 <option value="" disabled>Select a character</option>
                 {characters.map((char) => (
                   <option key={char.id} value={char.id}>
-                    {char.name} {char.roles && char.roles.length > 0 && `(${char.roles.join(', ')})`}
+                    {char.roles && char.roles.length > 0 ? char.roles.join(', ') : 'No roles'}
                   </option>
                 ))}
               </select>
