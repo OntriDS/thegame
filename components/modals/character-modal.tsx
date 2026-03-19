@@ -28,6 +28,8 @@ import { Business } from '@/types/entities'; // Ensure Business is imported
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
 
 import { JungleCoinWallet } from '@/components/wallet/jungle-coin-wallet';
+import CharacterWalletSubmodal from './submodals/character-wallet-submodal';
+import { Wallet } from 'lucide-react';
 
 interface CharacterModalProps {
   character?: Character | null;
@@ -75,6 +77,7 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
   const [showInventoryModal, setShowInventoryModal] = useState(false);
   const [showOwnedSitesModal, setShowOwnedSitesModal] = useState(false);
   const [showLegalEntityModal, setShowLegalEntityModal] = useState(false);
+  const [showWalletModal, setShowWalletModal] = useState(false);
 
   const [jungleCoinsBalance, setJungleCoinsBalance] = useState<number>(0);
 
@@ -166,7 +169,8 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
   const isPlayerOne = character?.id === PLAYER_ONE_ID || character?.playerId === PLAYER_ONE_ID;
 
   // For new characters, also show SpecialFields (they should be able to assign special roles)
-  const shouldShowSpecialFields = isPlayerOne || !character;
+  // Also show if character already has special roles
+  const shouldShowSpecialFields = isPlayerOne || !character || roles.some(role => specialRolesList.includes(role));
 
   // Check if character has PLAYER role (personal data should be read-only from Account)
   const hasPlayerRole = character?.roles?.includes(CharacterRole.PLAYER) || false;
@@ -417,12 +421,6 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
                   </div>
                 )}
 
-                {/* Wallet Integration */}
-                {(roles.includes(CharacterRole.FOUNDER) || roles.includes(CharacterRole.PLAYER) || roles.includes(CharacterRole.TEAM) || roles.includes(CharacterRole.PARTNER) || roles.includes(CharacterRole.ASSOCIATE) || roles.includes(CharacterRole.CUSTOMER) || roles.includes(CharacterRole.FAMILY)) && character?.id && (
-                  <div className="mt-4 pt-2 border-t">
-                    <JungleCoinWallet characterId={character.id} className="w-full border-0 shadow-none p-0" />
-                  </div>
-                )}
               </div>
             </div>
           </div>
@@ -485,6 +483,18 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
                 >
                   <Network className="w-3 h-3 mr-1" />
                   Links
+                </Button>
+              )}
+
+              {/* Wallet Button */}
+              {character && (roles.includes(CharacterRole.FOUNDER) || roles.includes(CharacterRole.PLAYER) || roles.includes(CharacterRole.TEAM) || roles.includes(CharacterRole.PARTNER) || roles.includes(CharacterRole.ASSOCIATE) || roles.includes(CharacterRole.CUSTOMER) || roles.includes(CharacterRole.FAMILY)) && (
+                <Button
+                  variant="outline"
+                  onClick={() => setShowWalletModal(true)}
+                  className="h-8 text-xs"
+                >
+                  <Wallet className="w-3 h-3 mr-1" />
+                  Wallet
                 </Button>
               )}
 
@@ -631,6 +641,18 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
           <CharacterLegalEntitiesSubmodal
             open={showLegalEntityModal}
             onOpenChange={setShowLegalEntityModal}
+            characterId={character.id}
+            characterName={character.name}
+          />
+        )
+      }
+
+      {/* Character Wallet Submodal */}
+      {
+        character && (
+          <CharacterWalletSubmodal
+            open={showWalletModal}
+            onOpenChange={setShowWalletModal}
             characterId={character.id}
             characterName={character.name}
           />
