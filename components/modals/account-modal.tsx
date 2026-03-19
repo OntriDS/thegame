@@ -36,6 +36,7 @@ export default function AccountModal({ account, character, open, onOpenChange, o
 
   // Character selection for linking
   const [characters, setCharacters] = useState<Character[]>([]);
+  const [availableCharacters, setAvailableCharacters] = useState<Character[]>([]);
   const [selectedCharacterId, setSelectedCharacterId] = useState<string>('');
   const [isLoadingCharacters, setIsLoadingCharacters] = useState(false);
 
@@ -57,7 +58,28 @@ export default function AccountModal({ account, character, open, onOpenChange, o
       setIsLoadingCharacters(true);
       try {
         const chars = await ClientAPI.getCharacters();
+        const accounts = await ClientAPI.getAccounts();
+
+        // Get character IDs that already have accounts
+        const linkedCharacterIds = new Set(
+          accounts
+            .filter(acc => acc.characterId && acc.id !== account?.id) // Exclude current account being edited
+            .map(acc => acc.characterId)
+        );
+
+        // Filter out characters that already have accounts
+        let available = chars.filter(char => !linkedCharacterIds.has(char.id));
+
+        // If editing, include the currently linked character
+        if (account?.characterId) {
+          const currentChar = chars.find(char => char.id === account.characterId);
+          if (currentChar && !available.includes(currentChar)) {
+            available = [...available, currentChar];
+          }
+        }
+
         setCharacters(chars || []);
+        setAvailableCharacters(available || []);
       } catch (error) {
         console.error('[Account Modal] Failed to load characters:', error);
       } finally {
@@ -66,7 +88,7 @@ export default function AccountModal({ account, character, open, onOpenChange, o
     };
 
     loadCharacters();
-  }, [open]);
+  }, [open, account?.id, account?.characterId]);
 
   // Initialize when opening
   useEffect(() => {
@@ -216,7 +238,7 @@ export default function AccountModal({ account, character, open, onOpenChange, o
   const selectedCharacter = characters.find(char => char.id === selectedCharacterId);
 
   // Create character options for SearchableSelect - each character appears under each of their roles
-  const characterOptions = characters.flatMap((char) => {
+  const characterOptions = availableCharacters.flatMap((char) => {
     const roles = char.roles && char.roles.length > 0 ? char.roles : ['No roles'];
     return roles.map((role) => ({
       value: char.id,
