@@ -30,7 +30,6 @@ interface AccountModalProps {
  */
 export default function AccountModal({ account, character, open, onOpenChange, onSave }: AccountModalProps) {
   // Form fields
-  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [phone, setPhone] = useState('');
@@ -75,7 +74,6 @@ export default function AccountModal({ account, character, open, onOpenChange, o
       if (open) {
         if (account) {
           // Editing existing account
-          setName(account.name || '');
           setEmail(account.email || '');
           setPhone(account.phone || '');
           setPassword(''); // Don't show existing password
@@ -92,7 +90,6 @@ export default function AccountModal({ account, character, open, onOpenChange, o
           didInitRef.current = true;
           // Generate new ID for new session
           draftId.current = uuid();
-          setName('');
           setEmail('');
           setPhone('');
           setPassword('');
@@ -103,7 +100,6 @@ export default function AccountModal({ account, character, open, onOpenChange, o
       if (!open) {
         didInitRef.current = false;
         // Force clear state when closing to prevent leak to next session
-        setName('');
         setEmail('');
         setPhone('');
         setPassword('');
@@ -119,19 +115,8 @@ export default function AccountModal({ account, character, open, onOpenChange, o
     if (isSaving) return;
 
     // Validation
-    if (!name.trim()) {
-      setError('Name is required');
-      return;
-    }
-
     if (!email.trim()) {
       setError('Email is required');
-      return;
-    }
-
-    // For new accounts, password is required
-    if (!account && !password.trim()) {
-      setError('Password is required');
       return;
     }
 
@@ -164,10 +149,14 @@ export default function AccountModal({ account, character, open, onOpenChange, o
     setError(null);
 
     try {
+      // Get character name from selected character
+      const selectedChar = characters.find(char => char.id === selectedCharacterId);
+      const characterName = selectedChar?.name || account?.name || '';
+
       const accountData: Account = {
         ...account, // Preserve existing fields for update
         id: account?.id || draftId.current,
-        name: name.trim(),
+        name: characterName.trim(),
         email: email.trim(),
         phone: phone.trim() || undefined,
         password: password.trim(), // Password will be hashed by API
@@ -192,7 +181,6 @@ export default function AccountModal({ account, character, open, onOpenChange, o
 
       // Clear form for next create
       if (!account) {
-        setName('');
         setEmail('');
         setPhone('');
         setPassword('');
@@ -225,24 +213,17 @@ export default function AccountModal({ account, character, open, onOpenChange, o
     }
   };
 
-  // Auto-populate name when character is selected
-  useEffect(() => {
-    if (selectedCharacterId && !account) {
-      const char = characters.find(c => c.id === selectedCharacterId);
-      if (char) {
-        setName(char.name);
-      }
-    }
-  }, [selectedCharacterId, characters, account]);
-
   const selectedCharacter = characters.find(char => char.id === selectedCharacterId);
 
-  // Create character options for SearchableSelect
-  const characterOptions = characters.map((char) => ({
-    value: char.id,
-    label: char.name,
-    group: char.roles && char.roles.length > 0 ? char.roles.join(', ') : 'No roles',
-  }));
+  // Create character options for SearchableSelect - each character appears under each of their roles
+  const characterOptions = characters.flatMap((char) => {
+    const roles = char.roles && char.roles.length > 0 ? char.roles : ['No roles'];
+    return roles.map((role) => ({
+      value: char.id,
+      label: char.name,
+      group: role,
+    }));
+  });
 
   return (
     <>
@@ -265,18 +246,33 @@ export default function AccountModal({ account, character, open, onOpenChange, o
               </div>
             )}
 
-            {/* Name Field - Read-only, derived from linked character */}
+            {/* Character Selection Searchable Select - replaces Name field */}
             <div className="space-y-2">
-              <Label htmlFor="name">Name</Label>
-              <Input
-                id="name"
-                placeholder="Select a character to auto-fill name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                disabled={true}
-                autoComplete="off"
-                className="bg-accent/30 opacity-70"
+              <Label htmlFor="character" className="flex items-center gap-2">
+                <User className="h-4 w-4" />
+                Character
+              </Label>
+              <SearchableSelect
+                value={selectedCharacterId}
+                onValueChange={setSelectedCharacterId}
+                placeholder="Search characters..."
+                options={characterOptions}
+                disabled={isSaving || isLoadingCharacters || !!account?.characterId}
+                className={!!account?.characterId ? 'opacity-70' : ''}
               />
+              {selectedCharacter && selectedCharacter && (
+                <div className="text-xs text-muted-foreground mt-1">
+                  Selected: <span className="font-medium">{selectedCharacter.name}</span>
+                  {selectedCharacter.roles && selectedCharacter.roles.length > 0 && (
+                    <span className="ml-2">Roles: {selectedCharacter.roles.join(', ')}</span>
+                  )}
+                </div>
+              )}
+              {!!account?.characterId && (
+                <p className="text-[10px] text-muted-foreground italic mt-1">
+                  * Account identity is permanent and cannot be re-linked to another character.
+                </p>
+              )}
             </div>
 
             {/* Email Field */}
@@ -292,7 +288,7 @@ export default function AccountModal({ account, character, open, onOpenChange, o
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={isSaving || isLoadingCharacters}
-                autoComplete="new-password" 
+                autoComplete="new-password"
                 className="bg-accent/30"
               />
             </div>
@@ -332,35 +328,6 @@ export default function AccountModal({ account, character, open, onOpenChange, o
                 />
               </div>
             )}
-
-            {/* Character Selection Searchable Select */}
-            <div className="space-y-2">
-              <Label htmlFor="character" className="flex items-center gap-2">
-                <User className="h-4 w-4" />
-                Link to Character
-              </Label>
-              <SearchableSelect
-                value={selectedCharacterId}
-                onValueChange={setSelectedCharacterId}
-                placeholder="Search characters..."
-                options={characterOptions}
-                disabled={isSaving || isLoadingCharacters || !!account?.characterId}
-                className={!!account?.characterId ? 'opacity-70' : ''}
-              />
-              {selectedCharacter && selectedCharacter && (
-                <div className="text-xs text-muted-foreground mt-1">
-                  Linking to: <span className="font-medium">{selectedCharacter.name}</span>
-                  {selectedCharacter.roles && selectedCharacter.roles.length > 0 && (
-                    <span className="ml-2">Roles: {selectedCharacter.roles.join(', ')}</span>
-                  )}
-                </div>
-              )}
-              {!!account?.characterId && (
-                <p className="text-[10px] text-muted-foreground italic mt-1">
-                  * Account identity is permanent and cannot be re-linked to another character.
-                </p>
-              )}
-            </div>
           </div>
 
           <DialogFooter className="flex items-center justify-between">
