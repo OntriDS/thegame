@@ -14,7 +14,8 @@ import {
   buildM2MKey,
   IAM_ACCOUNTS_INDEX,
   IAM_CHARACTERS_INDEX,
-  IAM_PLAYERS_INDEX
+  IAM_PLAYERS_INDEX,
+  IAM_M2M_INDEX
 } from './keys';
 import { v4 as uuidv4 } from 'uuid';
 import { SignJWT, jwtVerify } from 'jose';
@@ -22,17 +23,8 @@ import bcrypt from 'bcryptjs';
 
 // --- Interfaces (Standardized) ---
 
-export enum CharacterRole {
-  CUSTOMER = 'customer',
-  TEAM = 'team',
-  FOUNDER = 'founder',
-  ADMIN = 'admin',
-  OPERATOR = 'operator', // For Pixelbrain
-  DEVELOPER = 'developer',
-  INVESTOR = 'investor',
-  SELLER = 'seller',
-  PLAYER = 'player',   // Specific role for gameplay access
-}
+import { CharacterRole } from '@/types/enums';
+export { CharacterRole };
 
 export interface Account {
   id: string;
@@ -550,6 +542,7 @@ export class IAMService {
       apiKey,
       createdAt: new Date().toISOString()
     });
+    await kvSAdd(IAM_M2M_INDEX, appId);
     return apiKey;
   }
 
@@ -609,6 +602,20 @@ export class IAMService {
 
     const { aud, ...user } = data;
     return user;
+  }
+
+  /**
+   * List all M2M applications
+   */
+  async listM2MApps(): Promise<{ appId: string; createdAt: string }[]> {
+    const appIds = await kvSMembers(IAM_M2M_INDEX);
+    const apps = await Promise.all(
+      appIds.map(async (appId) => {
+        const data = await kvGet<{ appId: string; createdAt: string }>(buildM2MKey(appId));
+        return data;
+      })
+    );
+    return apps.filter(Boolean) as { appId: string; createdAt: string }[];
   }
 }
 

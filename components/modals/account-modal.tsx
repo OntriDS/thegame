@@ -296,8 +296,8 @@ export default function AccountModal({ account, character, open, onOpenChange, o
                 id="character"
                 value={selectedCharacterId}
                 onChange={(e) => setSelectedCharacterId(e.target.value)}
-                disabled={isSaving || isLoadingCharacters}
-                className="w-full h-10 px-3 py-2 bg-accent/30 border border-primary/20 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                disabled={isSaving || isLoadingCharacters || !!account?.characterId}
+                className={`w-full h-10 px-3 py-2 bg-accent/30 border border-primary/20 rounded-md focus:outline-none focus:ring-2 focus:ring-primary ${!!account?.characterId ? 'opacity-70 cursor-not-allowed' : ''}`}
               >
                 <option value="">Select a character (optional)</option>
                 {characters.map((char) => (
@@ -313,6 +313,11 @@ export default function AccountModal({ account, character, open, onOpenChange, o
                     <span className="ml-2">Roles: {selectedCharacter.roles.join(', ')}</span>
                   )}
                 </div>
+              )}
+              {!!account?.characterId && (
+                <p className="text-[10px] text-muted-foreground italic mt-1">
+                  * Account identity is permanent and cannot be re-linked to another character.
+                </p>
               )}
             </div>
           </div>

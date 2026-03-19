@@ -19,11 +19,40 @@ export async function GET(req: NextRequest) {
 
   try {
     // Get all accounts from IAM service
-    const accountIds = await kvSMembers('iam:index:accounts');
-    const accounts = await Promise.all(accountIds.map(id => iamService.getAccountById(id)));
+    const accountIds = await kvSMembers(IAM_ACCOUNTS_INDEX);
+    const accounts = await Promise.all(
+      accountIds.map(async (id) => {
+        const account = await iamService.getAccountById(id);
+        if (!account) return null;
+        
+        // Fetch character data to get roles
+        const character = await iamService.getCharacterByAccountId(id);
+        return {
+          ...account,
+          character
+        };
+      })
+    );
+
+    // Get all M2M apps
+    const m2mApps = await iamService.listM2MApps();
+    
+    // Convert M2M apps to account-like format for UI display
+    const m2mAccounts = m2mApps.map(app => ({
+      id: app.appId,
+      name: app.appId,
+      email: `${app.appId}@m2m.system`,
+      isActive: true,
+      createdAt: app.createdAt,
+      updatedAt: app.createdAt,
+      type: 'm2m', // Extra field for UI
+      character: {
+        roles: [CharacterRole.AI_AGENT] // Default system roles
+      }
+    }));
 
     return NextResponse.json({
-      accounts: accounts.filter(Boolean)
+      accounts: [...accounts.filter(Boolean), ...m2mAccounts]
     });
   } catch (error: any) {
     console.error('[Accounts API] Error:', error);

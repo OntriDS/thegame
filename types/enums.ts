@@ -475,8 +475,8 @@ export enum CharacterRole {
 
 /** Character role types for UI organization and permissions */
 export const CHARACTER_ROLE_TYPES = {
-  REGULAR: ['admin', 'designer', 'producer', 'seller', 'researcher', 'developer', 'collaborator', 'customer', 'student', 'ai-agent', 'other'],
-  SPECIAL: ['founder', 'player', 'padawan', 'team', 'family', 'boss', 'investor', 'associate', 'partner']
+  REGULAR: ['admin', 'researcher', 'developer', 'designer', 'maker', 'seller', 'collaborator', 'boss', 'customer', 'assistant', 'student'],
+  SPECIAL: ['founder', 'player', 'apprentice', 'team', 'family', 'investor', 'associate', 'partner', 'ai-agent']
 } as const;
 
 export enum IntelectualFunction {

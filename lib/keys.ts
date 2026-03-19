@@ -19,3 +19,4 @@ export const buildM2MKey = (appId: string) => `iam:m2m:${appId}`;
 export const IAM_ACCOUNTS_INDEX = 'iam:index:accounts';
 export const IAM_CHARACTERS_INDEX = 'iam:index:characters';
 export const IAM_PLAYERS_INDEX = 'iam:index:players';
+export const IAM_M2M_INDEX = 'iam:index:m2m';
