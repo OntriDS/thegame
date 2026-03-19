@@ -124,14 +124,14 @@ export default function AdminLoginPage() {
                     id="passphrase"
                     name="passphrase"
                     type="password"
-                    placeholder="••••••••"
+                    placeholder=""
                     required
                     autoFocus
                     disabled={isActuallyLoading}
                     className="text-center tracking-[0.5em] text-lg bg-accent/50 border-primary/20 focus:border-primary placeholder:tracking-normal placeholder:opacity-30"
                   />
                   <p className="text-[10px] text-center text-muted-foreground opacity-50 uppercase tracking-widest pt-1">
-                    FOUNDER RESTRICTED ACCESS
+                    RESTRICTED ACCESS
                   </p>
                 </div>
 
