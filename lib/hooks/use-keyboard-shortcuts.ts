@@ -18,6 +18,7 @@ interface KeyboardShortcutsProps {
   onNavigateToMap?: () => void;
   onNavigateToPlayer?: () => void;
   onNavigateToCharacters?: () => void;
+  onNavigateToAccounts?: () => void;
   onNavigateToSettings?: () => void;
   onMoveSelectionUp?: (options: { alt: boolean }) => void;
   onMoveSelectionDown?: (options: { alt: boolean }) => void;
@@ -39,6 +40,7 @@ export function useKeyboardShortcuts({
   onNavigateToMap,
   onNavigateToPlayer,
   onNavigateToCharacters,
+  onNavigateToAccounts,
   onNavigateToSettings,
   onMoveSelectionUp,
   onMoveSelectionDown,
@@ -269,6 +271,16 @@ export function useKeyboardShortcuts({
 
   useRegisterShortcut({
     scope: GLOBAL_SCOPE,
+    combo: 'alt+a',
+    allowInInputs: false,
+    priority: 20,
+    handler: () => {
+      if (onNavigateToAccounts) onNavigateToAccounts();
+    },
+  });
+
+  useRegisterShortcut({
+    scope: GLOBAL_SCOPE,
     combo: 'alt+e',
     allowInInputs: false,
     priority: 20,
@@ -298,6 +310,7 @@ export function showKeyboardShortcutsHelp() {
     'Alt + M = Map Section',
     'Alt + P = Player Section',
     'Alt + R = Characters Section (Roles)',
+    'Alt + A = Accounts Section',
     'Alt + E = Settings Section',
     '',
     '=== TEXT INPUT ===',

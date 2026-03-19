@@ -313,10 +313,6 @@ export const ClientAPI = {
     return await res.json();
   },
 
-  // ACCOUNTS - Placeholder for consolidated section below
-
-  // upsertAccount consolidated below
-
   upsertCharacter: async (character: Character): Promise<Character> => {
     const res = await fetch('/api/characters', {
       method: 'POST',
