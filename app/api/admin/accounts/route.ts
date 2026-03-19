@@ -26,22 +26,25 @@ export async function GET(req: NextRequest) {
         if (!account) return null;
         
         // Fetch character data to get roles
-        let character = null;
-        if ((account as any).characterId) {
-          character = await iamService.getCharacterById((account as any).characterId);
-        }
-        
+        let character = (account as any).characterId 
+          ? await iamService.getCharacterById((account as any).characterId)
+          : null;
+
         if (!character) {
-          character = await iamService.getCharacterByAccountId(id);
-          // Auto-healing: If found via scan, save the ID back to the account for O(1) next time
+          character = await iamService.getCharacterByAccountId(id, account.email);
+          // Auto-healing: If found via fallback, save the ID back to the account
           if (character && !(account as any).characterId) {
             (account as any).characterId = character.id;
             await kvSet(buildAccountKey(id), account);
+            
+            // Also save the direct link for O(1) in the service
+            await kvSet(`iam:account:${id}:character`, character.id);
           }
         }
 
         return {
           ...account,
+          name: character?.name || account.name, // Use Character name if linked
           character
         };
       })

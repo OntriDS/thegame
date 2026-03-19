@@ -101,6 +101,13 @@ export default function AccountModal({ account, character, open, onOpenChange, o
 
       if (!open) {
         didInitRef.current = false;
+        // Force clear state when closing to prevent leak to next session
+        setName('');
+        setEmail('');
+        setPhone('');
+        setPassword('');
+        setSelectedCharacterId('');
+        setError(null);
       }
     };
 
@@ -238,6 +245,7 @@ export default function AccountModal({ account, character, open, onOpenChange, o
                 onChange={(e) => setName(e.target.value)}
                 disabled={isSaving || isLoadingCharacters}
                 autoFocus={!account}
+                autoComplete="off"
                 className="bg-accent/30"
               />
             </div>
@@ -255,6 +263,7 @@ export default function AccountModal({ account, character, open, onOpenChange, o
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={isSaving || isLoadingCharacters}
+                autoComplete="new-password" 
                 className="bg-accent/30"
               />
             </div>
@@ -269,6 +278,7 @@ export default function AccountModal({ account, character, open, onOpenChange, o
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 disabled={isSaving || isLoadingCharacters}
+                autoComplete="off"
                 className="bg-accent/30"
               />
             </div>
@@ -287,6 +297,7 @@ export default function AccountModal({ account, character, open, onOpenChange, o
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   disabled={isSaving || isLoadingCharacters}
+                  autoComplete="new-password"
                   className="bg-accent/30"
                   minLength={6}
                 />

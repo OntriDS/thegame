@@ -4,7 +4,7 @@
  * Standardized across thegame, pixelbrain, and akiles-ecosystem.
  */
 
-import { kvGet, kvSet, kvSAdd, kvSMembers } from '@/data-store/kv';
+import { kvGet, kvSet, kvSAdd, kvSMembers, kvScan } from '@/data-store/kv';
 import {
   buildAccountKey,
   buildAccountByEmailKey,
@@ -319,13 +319,19 @@ export class IAMService {
     };
   }
 
-  async getCharacterByAccountId(accountId: string): Promise<Character | null> {
-    // In V0.1 we assume 1:1 for Founder/Team for simplicity
-    // But we use the scan pattern if needed or index
-    const characterIds = await kvSMembers(IAM_CHARACTERS_INDEX);
+  async getCharacterByAccountId(accountId: string, email?: string): Promise<Character | null> {
+    let characterIds = await kvSMembers(IAM_CHARACTERS_INDEX);
+    
+    // Scan if index is empty
+    if (characterIds.length === 0) {
+      const allKeys = await kvScan('iam:character:');
+      characterIds = allKeys.map((k: string) => k.split(':').pop() || '');
+    }
+
     for (const id of characterIds) {
       const char = await this.getCharacterById(id);
       if (char?.accountId === accountId) return char;
+      if (email && char?.accountId?.toLowerCase() === email.toLowerCase()) return char;
     }
     return null;
   }
@@ -612,17 +618,9 @@ export class IAMService {
   async listM2MApps(): Promise<{ appId: string; createdAt: string }[]> {
     let appIds = await kvSMembers(IAM_M2M_INDEX);
     
-    // Robustness: If index is empty, try to find existing apps via scan (if possible)
-    // For now, we assume if it's missing, we might have lost the index
     if (appIds.length === 0) {
-      // Note: kvSMembers is used in this environment, scanning might be limited
-      // but we expect at least 'pixelbrain' if it exists.
-      // If we can't scan, we'll try to explicitly check 'pixelbrain'
-      const pixelbrain = await kvGet(buildM2MKey('pixelbrain'));
-      if (pixelbrain) {
-        appIds = ['pixelbrain'];
-        await kvSAdd(IAM_M2M_INDEX, 'pixelbrain');
-      }
+      const allKeys = await kvScan('iam:m2m:');
+      appIds = allKeys.map((k: string) => k.split(':').pop() || '');
     }
 
     const apps = await Promise.all(

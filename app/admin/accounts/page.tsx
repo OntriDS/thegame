@@ -100,7 +100,7 @@ export default function AccountsPage() {
     return (
       <div className="space-y-6 p-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-black uppercase tracking-tighter">Accounts</h1>
+          <h1 className="text-1xl font-white uppercase tracking-tighter">Accounts</h1>
           <Button onClick={handleCreateAccount} size="sm" className="bg-primary hover:bg-primary/90">
             <Plus className="h-4 w-4 mr-2" />
             Add Account
@@ -135,7 +135,7 @@ export default function AccountsPage() {
     <div className="min-h-screen bg-background p-6 space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-black uppercase tracking-tightest leading-none text-primary">Accounts</h1>
+          <h1 className="text-1xl font-black uppercase tracking-tightest leading-none text-white drop-shadow-sm">Accounts</h1>
           <p className="text-[10px] font-bold text-muted-foreground mt-1 uppercase tracking-widest opacity-50">System Identity & Access Management</p>
         </div>
         <Button onClick={handleCreateAccount} size="sm" className="bg-primary hover:bg-primary/90 font-bold uppercase tracking-widest shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95 px-6">
@@ -228,8 +228,11 @@ export default function AccountsPage() {
                     </td>
                     <td className="p-4">
                       <div className="flex flex-wrap justify-center gap-1">
-                        {account.character?.roles?.map((role: string) => getRoleBadge(role)) || 
-                         (account.type !== 'm2m' && <span className="text-[10px] opacity-30 italic font-bold text-destructive">Missing Character Link</span>)}
+                        {account.type === 'm2m' ? 
+                          getRoleBadge('ai-agent') : 
+                          (account.character?.roles?.map((role: string) => getRoleBadge(role)) || 
+                           <span className="text-[10px] opacity-30 italic font-bold text-destructive">Missing Character Link</span>)
+                        }
                       </div>
                     </td>
                     <td className="p-4">
