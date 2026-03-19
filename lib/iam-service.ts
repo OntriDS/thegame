@@ -450,8 +450,9 @@ export class IAMService {
     // If email changes, update email->account mapping key.
     if (nextEmail !== prevEmail) {
       await kvDel(buildAccountByEmailKey(prevEmail));
-      await kvSet(buildAccountByEmailKey(nextEmail), { accountId: account.id });
     }
+    // Always ensure current email mapping exists.
+    await kvSet(buildAccountByEmailKey(nextEmail), { accountId: account.id });
 
     const updated: Account = {
       ...account,
@@ -526,14 +527,28 @@ export class IAMService {
    */
   async authenticatePassphrase(passphrase: string): Promise<AuthResult> {
     const adminKey = process.env.ADMIN_ACCESS_KEY;
-    const founderEmail = process.env.FOUNDER_EMAIL || 'aquiles.segovia.villamizar@gmail.com';
+    const founderEmail = process.env.FOUNDER_EMAIL?.toLowerCase().trim();
 
     if (!adminKey || passphrase !== adminKey) {
       return { success: false, error: 'Invalid passphrase' };
     }
 
-    // Find the Founder account via O(1) lookup
-    const account = await this.getAccountByEmail(founderEmail);
+    let account: Account | null = null;
+    if (founderEmail) {
+      account = await this.getAccountByEmail(founderEmail);
+    }
+
+    if (!account) {
+      const accounts = await this.listAccounts();
+      const passphraseAccounts = accounts.filter(a => a.passphraseFlag);
+      if (passphraseAccounts.length === 1) {
+        account = passphraseAccounts[0];
+      } else if (passphraseAccounts.length === 0 && accounts.length === 1) {
+        account = accounts[0];
+      } else if (passphraseAccounts.length > 1) {
+        return { success: false, error: 'Multiple passphrase accounts found. Set FOUNDER_EMAIL to disambiguate.' };
+      }
+    }
 
     if (!account || !account.isActive) {
       return { success: false, error: 'Founder account not found or inactive' };
@@ -573,9 +588,14 @@ export class IAMService {
     }
 
     // Find account by email
-    const account = await this.getAccountByEmail(email.toLowerCase());
+    const mapping = await kvGet<{ accountId: string }>(buildAccountByEmailKey(email.trim().toLowerCase()));
+    if (!mapping) {
+      return { success: false, error: 'Invalid email or password' };
+    }
 
+    const account = await this.getAccountById(mapping.accountId);
     if (!account) {
+      // This case should ideally not happen if mapping exists, but good for robustness
       return { success: false, error: 'Invalid email or password' };
     }
 
