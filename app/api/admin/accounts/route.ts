@@ -3,7 +3,8 @@ import { iamService } from '@/lib/iam-service';
 import { requireAdminAuth } from '@/lib/api-auth';
 import { kvSMembers, kvSRem } from '@/data-store/kv';
 import { kvSet } from '@/data-store/kv';
-import { buildAccountKey } from '@/lib/keys';
+import { buildAccountKey, IAM_ACCOUNTS_INDEX } from '@/lib/keys';
+import { Account, CharacterRole } from '@/lib/iam-service';
 
 /**
  * Accounts Management API (Admin Only)
@@ -58,7 +59,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       phone: phone?.trim(),
       isActive: isActive ?? existingAccount.isActive,
       isVerified: isVerified ?? existingAccount.isVerified,
-      updatedAt: new Date()
+      updatedAt: new Date().toISOString()
     };
 
     // Save updated account
@@ -96,7 +97,7 @@ export async function POST(req: NextRequest) {
     // If characterId provided, create character and link it
     if (characterId) {
       // Create character linked to this account using iamService.createCharacter
-      const character = await iamService.createCharacter(accountId, {
+      const character = await iamService.createCharacter(account.id, {
         name: 'Team Member',
         roles: [CharacterRole.TEAM],
         profile: { createdBy: 'Accounts' }
