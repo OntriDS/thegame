@@ -15,7 +15,6 @@ export default function AdminLoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [username, setUsername] = useState('');
-  const [playerId, setPlayerId] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
 
@@ -36,11 +35,6 @@ export default function AdminLoginPage() {
     }
     // -----------------------
 
-    // Load saved Player ID
-    const savedPlayerId = localStorage.getItem('last_player_id');
-    if (savedPlayerId) {
-      setPlayerId(savedPlayerId);
-    }
 
     // Auto-redirect if already logged in
     if (user && !isLoading) {
@@ -87,14 +81,7 @@ export default function AdminLoginPage() {
         return;
       }
 
-      // Save User ID if "Stay logged in" is checked
-      if (formData.get('remember') === 'on') {
-        localStorage.setItem('last_player_id', playerId);
-      } else {
-        localStorage.removeItem('last_player_id');
-      }
-
-      // Success! Perform a full page redirect to ensure session sync
+      // Perform a full page redirect to ensure session sync
       window.location.href = data.next || '/admin';
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
@@ -131,35 +118,21 @@ export default function AdminLoginPage() {
           {!showTeamLogin ? (
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
               <form onSubmit={handlePassphraseLogin} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="playerId">User ID</Label>
-                    <Input
-                      id="playerId"
-                      name="playerId"
-                      type="password"
-                      placeholder="Enter your User ID"
-                      value={playerId}
-                      onChange={(e) => setPlayerId(e.target.value)}
-                      required
-                      autoFocus={!playerId}
-                      disabled={isActuallyLoading}
-                      className="bg-accent/50 border-primary/20 focus:border-primary"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="passphrase">Passphrase</Label>
-                    <Input
-                      id="passphrase"
-                      name="passphrase"
-                      type="password"
-                      placeholder=""
-                      required
-                      autoFocus={!!playerId}
-                      disabled={isActuallyLoading}
-                      className="text-center tracking-widest bg-accent/50 border-primary/20 focus:border-primary"
-                    />
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="passphrase">Admin Passkey</Label>
+                  <Input
+                    id="passphrase"
+                    name="passphrase"
+                    type="password"
+                    placeholder="••••••••"
+                    required
+                    autoFocus
+                    disabled={isActuallyLoading}
+                    className="text-center tracking-[0.5em] text-lg bg-accent/50 border-primary/20 focus:border-primary placeholder:tracking-normal placeholder:opacity-30"
+                  />
+                  <p className="text-[10px] text-center text-muted-foreground opacity-50 uppercase tracking-widest pt-1">
+                    FOUNDER RESTRICTED ACCESS
+                  </p>
                 </div>
 
                 <div className="flex items-center justify-between">
