@@ -254,6 +254,22 @@ export class IAMService {
 
   // --- Retrieval Methods ---
 
+  /**
+   * IDs in IAM_CHARACTERS_INDEX, or — if the set is empty — keys under iam:character:* (legacy / index drift).
+   * When discovered via scan, the index is backfilled so list/get stay consistent.
+   */
+  private async resolveCharacterIdsFromIndexOrScan(): Promise<string[]> {
+    let characterIds = await kvSMembers(IAM_CHARACTERS_INDEX);
+    if (characterIds.length > 0) return characterIds;
+
+    const allKeys = await kvScan('iam:character:');
+    characterIds = [...new Set(allKeys.map((k: string) => k.split(':').pop() || '').filter(Boolean))];
+    if (characterIds.length > 0) {
+      await kvSAdd(IAM_CHARACTERS_INDEX, ...characterIds);
+    }
+    return characterIds;
+  }
+
   async getAccountById(id: string): Promise<Account | null> {
     return await kvGet<Account>(buildAccountKey(id));
   }
@@ -299,7 +315,7 @@ export class IAMService {
    * List all IAM characters.
    */
   async listCharacters(): Promise<Character[]> {
-    const characterIds = await kvSMembers(IAM_CHARACTERS_INDEX);
+    const characterIds = await this.resolveCharacterIdsFromIndexOrScan();
     if (characterIds.length === 0) return [];
 
     const characters = await Promise.all(characterIds.map(id => this.getCharacterById(id)));
@@ -342,13 +358,7 @@ export class IAMService {
   }
 
   async getCharacterByAccountId(accountId: string, email?: string): Promise<Character | null> {
-    let characterIds = await kvSMembers(IAM_CHARACTERS_INDEX);
-    
-    // Scan if index is empty
-    if (characterIds.length === 0) {
-      const allKeys = await kvScan('iam:character:');
-      characterIds = allKeys.map((k: string) => k.split(':').pop() || '');
-    }
+    const characterIds = await this.resolveCharacterIdsFromIndexOrScan();
 
     for (const id of characterIds) {
       const char = await this.getCharacterById(id);
