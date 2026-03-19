@@ -206,9 +206,6 @@ export default function AccountsPage() {
                   <tr key={account.id} className="group hover:bg-primary/5 transition-colors">
                     <td className="p-4">
                       <div className="flex items-center gap-3">
-                        <div className={`h-10 w-10 rounded-xl flex items-center justify-center font-black text-xl shadow-inner ${account.type === 'm2m' ? 'bg-amber-500/20 text-amber-600 border border-amber-500/30' : 'bg-primary/10 text-primary border border-primary/20'}`}>
-                          {account.type === 'm2m' ? '🤖' : account.name[0].toUpperCase()}
-                        </div>
                         <div>
                           <div className="font-black uppercase tracking-tighter text-base leading-none group-hover:text-primary transition-colors flex items-center gap-2">
                             {account.name}
@@ -216,7 +213,6 @@ export default function AccountsPage() {
                               <span className="px-1.5 py-0.5 rounded text-[8px] font-black bg-amber-500 text-white uppercase tracking-widest">M2M</span>
                             )}
                           </div>
-                          <div className="text-[10px] font-bold opacity-30 mt-1 font-mono">{account.id}</div>
                         </div>
                       </div>
                     </td>
@@ -228,10 +224,10 @@ export default function AccountsPage() {
                     </td>
                     <td className="p-4">
                       <div className="flex flex-wrap justify-center gap-1">
-                        {account.type === 'm2m' ? 
-                          getRoleBadge('ai-agent') : 
-                          (account.character?.roles?.map((role: string) => getRoleBadge(role)) || 
-                           <span className="text-[10px] opacity-30 italic font-bold text-destructive">Missing Character Link</span>)
+                        {account.type === 'm2m' ?
+                          getRoleBadge('ai-agent') :
+                          account.character?.roles?.map((role: string) => getRoleBadge(role)) ||
+                          <span className="text-[10px] opacity-30 italic font-bold text-destructive">Missing Character Link</span>
                         }
                       </div>
                     </td>

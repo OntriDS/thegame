@@ -2,7 +2,7 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { v4 as uuid } from 'uuid';
 import type { Account } from '@/types/entities';
-import { getAllAccounts, upsertAccount } from '@/data-store/datastore';
+import { getAllAccounts, upsertAccount, getCharacterById } from '@/data-store/datastore';
 import { requireAdminAuth } from '@/lib/api-auth';
 
 // Force dynamic rendering - this route accesses cookies
@@ -12,9 +12,24 @@ export async function GET(req: NextRequest) {
   if (!(await requireAdminAuth(req))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-  
+
   const accounts = await getAllAccounts();
-  return NextResponse.json(accounts);
+
+  // Populate character data for each account
+  const accountsWithCharacters = await Promise.all(
+    accounts.map(async (account) => {
+      if (account.characterId) {
+        const character = await getCharacterById(account.characterId);
+        return {
+          ...account,
+          character,
+        };
+      }
+      return account;
+    })
+  );
+
+  return NextResponse.json(accountsWithCharacters);
 }
 
 export async function POST(req: NextRequest) {

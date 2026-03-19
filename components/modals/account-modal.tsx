@@ -268,6 +268,19 @@ export default function AccountModal({ account, character, open, onOpenChange, o
               </div>
             )}
 
+            {/* Account ID - only visible when editing */}
+            {account && (
+              <div className="space-y-2">
+                <Label htmlFor="account-id">Account ID</Label>
+                <Input
+                  id="account-id"
+                  value={account.id}
+                  disabled={true}
+                  className="bg-accent/30 opacity-70 font-mono text-xs"
+                />
+              </div>
+            )}
+
             {/* Character Selection Searchable Select - replaces Name field */}
             <div className="space-y-2">
               <Label htmlFor="character" className="flex items-center gap-2">
