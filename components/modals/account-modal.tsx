@@ -282,18 +282,10 @@ export default function AccountModal({ account, character, open, onOpenChange, o
                 disabled={isSaving || isLoadingCharacters || !!account?.characterId}
                 className={!!account?.characterId ? 'opacity-70' : ''}
               />
-              {selectedCharacter && selectedCharacter && (
+              {selectedCharacter && selectedCharacter.roles && selectedCharacter.roles.length > 0 && (
                 <div className="text-xs text-muted-foreground mt-1">
-                  Selected: <span className="font-medium">{selectedCharacter.name}</span>
-                  {selectedCharacter.roles && selectedCharacter.roles.length > 0 && (
-                    <span className="ml-2">Roles: {selectedCharacter.roles.join(', ')}</span>
-                  )}
+                  Character Roles: {selectedCharacter.roles.join(', ')}
                 </div>
-              )}
-              {!!account?.characterId && (
-                <p className="text-[10px] text-muted-foreground italic mt-1">
-                  * Account identity is permanent and cannot be re-linked to another character.
-                </p>
               )}
             </div>
 
