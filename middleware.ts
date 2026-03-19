@@ -1,4 +1,4 @@
-  // middleware.ts
+// middleware.ts
 // Stateless Edge Auth Middleware
 // 0 Redis calls for Auth - Integrated Rate Limiting
  
@@ -7,8 +7,7 @@ import { iamService } from '@/lib/iam-service';
 import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
 
-// Initialize Rate Limiter
-// Limit: 60 requests per minute per IP for general admin access
+// Initialize Rate Limiter: 60 requests per minute per IP
 const ratelimit = new Ratelimit({
   redis: Redis.fromEnv(),
   limiter: Ratelimit.fixedWindow(60, '1 m'),
@@ -22,6 +21,7 @@ export const config = {
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const isLoginPage = pathname === '/admin/login' || pathname.startsWith('/admin/login/');
 
   // 1. Rate Limiting (Edge Compatible)
   const ip = request.ip || '127.0.0.1';
@@ -39,31 +39,34 @@ export async function middleware(request: NextRequest) {
     });
   }
 
-  // 2. Allow login page
-  if (pathname === '/admin/login' || pathname.startsWith('/admin/login/')) {
-    return NextResponse.next();
-  }
-
-  // 3. Extract tokens
-  const passphraseToken = request.cookies.get('admin_session')?.value;
-  const usernameToken = request.cookies.get('auth_session')?.value;
+  // 2. Extract Token (SINGLE SOURCE OF TRUTH)
+  const sessionCookie = request.cookies.get('auth_session')?.value;
   
-  // Support Bearer Token for M2M / API access
+  // Support Bearer Token for M2M (Pixelbrain) / API access
   const authHeader = request.headers.get('Authorization');
   const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null;
   
-  const token = bearerToken || usernameToken || passphraseToken;
+  const token = bearerToken || sessionCookie;
 
+  // 3. No Token Flow
   if (!token) {
+    if (isLoginPage) return NextResponse.next(); // Let them see the login page
+    
     console.log('[Middleware] No token found - redirecting to login');
     return NextResponse.redirect(new URL('/admin/login', request.url));
   }
 
+  // 4. Token Verification Flow
   try {
-    // 4. CENTRALIZED IAM VERIFICATION
     const user = await iamService.verifyJWT(token);
 
     if (user && user.isActive) {
+      
+      // UX WIN: If they are already logged in, don't let them sit on the login page!
+      if (isLoginPage) {
+        return NextResponse.redirect(new URL('/admin', request.url));
+      }
+
       // 5. Inject Headers for downstream consistency
       const requestHeaders = new Headers(request.headers);
       requestHeaders.set('x-account-id', user.accountId);
@@ -80,10 +83,24 @@ export async function middleware(request: NextRequest) {
       return response;
     }
 
+    // Invalid or inactive user
     console.log('[Middleware] ❌ Invalid or inactive session');
-    return NextResponse.redirect(new URL('/admin/login', request.url));
+    
+    // If they are on the login page with a BAD cookie, let them stay to log in again, but clear the bad cookie
+    if (isLoginPage) {
+      const response = NextResponse.next();
+      response.cookies.delete('auth_session');
+      return response;
+    }
+
+    // Otherwise, redirect to login and clear the bad cookie
+    const response = NextResponse.redirect(new URL('/admin/login', request.url));
+    response.cookies.delete('auth_session');
+    return response;
+
   } catch (error) {
     console.error('[Middleware] 🔥 Critical Auth Error:', error);
+    if (isLoginPage) return NextResponse.next();
     return NextResponse.redirect(new URL('/admin/login', request.url));
   }
 }

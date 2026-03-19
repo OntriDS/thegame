@@ -2,32 +2,37 @@ import { NextResponse } from 'next/server';
 import { iamService } from '@/lib/iam-service';
 
 /**
- * Login API Route
- * Handles both passphrase authentication (for Founder/Team) and email/password authentication (for regular users).
+ * Unified Login API Route
+ * Handles Passphrase (Founder) and Email/Password (Team/Users)
+ * Resolves via the single IAM Service and sets a unified session cookie.
  */
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { passphrase, username, password, rememberMe } = body;
+    
+    // Support 'email' natively, fallback to 'username' if the frontend hasn't been updated yet
+    const { passphrase, email, username, password, rememberMe } = body;
+    const loginEmail = email || username;
 
     let result;
 
-    // Route to appropriate authentication method based on request type
+    // 1. Route to appropriate authentication method
     if (passphrase) {
-      // Passphrase login for Founder/Team
       console.log('[Login API] Attempting passphrase authentication');
       result = await iamService.authenticatePassphrase(passphrase);
-    } else if (username && password) {
-      // Email/password login for regular users
-      console.log('[Login API] Attempting email/password authentication for:', username);
-      result = await iamService.authenticateEmailPassword(username, password);
-    } else {
+    } 
+    else if (loginEmail && password) {
+      console.log(`[Login API] Attempting email/password authentication for: ${loginEmail}`);
+      result = await iamService.authenticateEmailPassword(loginEmail, password);
+    } 
+    else {
       return NextResponse.json(
-        { error: 'Either passphrase or username/password required' },
+        { error: 'Either passphrase or email/password is required' },
         { status: 400 }
       );
     }
 
+    // 2. Handle Authentication Failure
     if (!result.success || !result.token || !result.user) {
       return NextResponse.json(
         { error: result.error || 'Authentication failed' },
@@ -35,25 +40,16 @@ export async function POST(req: Request) {
       );
     }
 
-    // Calculate cookie expiry based on rememberMe preference
-    const cookieMaxAge = rememberMe ? 60 * 60 * 24 * 30 : 60 * 60 * 24; // 30 days or 1 day
+    // 3. Configure Session Duration (7 days default, 30 days if remembered)
+    const cookieMaxAge = rememberMe ? 60 * 60 * 24 * 30 : 60 * 60 * 24 * 7;
 
-    // Set cookie with user info and permissions
     const response = NextResponse.json({
       success: true,
       user: result.user,
       next: '/admin'
     });
 
-    response.cookies.set('admin_session', result.token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      maxAge: cookieMaxAge
-    });
-
-    // Also set legacy auth_session for compatibility
+    // 4. Set the SINGLE Canonical Auth Cookie
     response.cookies.set('auth_session', result.token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -62,7 +58,7 @@ export async function POST(req: Request) {
       maxAge: cookieMaxAge
     });
 
-    console.log('[Login API] ✅ Authentication successful for:', result.user.username);
+    console.log(`[Login API] ✅ Authentication successful for: ${result.user.email}`);
     return response;
 
   } catch (error: any) {

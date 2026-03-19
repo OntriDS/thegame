@@ -1,25 +1,27 @@
-// app/api/auth/logout/route.ts
-// Multi-User Logout Endpoint
-// Revokes session and clears auth cookie
+import { NextResponse } from 'next/server';
 
-import { NextRequest, NextResponse } from 'next/server';
-import { iamService } from '@/lib/iam-service';
-
-
-export async function POST(req: NextRequest) {
+/**
+ * Unified Logout API Route
+ * Revokes the session by clearing the authentication cookies.
+ */
+export async function POST() {
   try {
-    const response = NextResponse.json({ success: true });
+    const response = NextResponse.json({ success: true, next: '/admin/login' });
     
-    // Clear both possible session cookies
+    // 1. Clear the canonical auth cookie
     response.cookies.delete('auth_session');
+
+    // 2. Legacy Cleanup: Sweep away the old ghost cookie 
+    // (Prevents caching issues for users who logged in before the IAM migration)
     response.cookies.delete('admin_session');
 
     console.log('[Logout API] ✅ Logout successful (cookies cleared)');
     return response;
+
   } catch (error) {
     console.error('[Logout API] Error:', error);
     return NextResponse.json(
-      { success: false, error: 'Logout failed' },
+      { error: 'Internal server error during logout' },
       { status: 500 }
     );
   }
