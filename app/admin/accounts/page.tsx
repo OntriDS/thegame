@@ -33,9 +33,10 @@ export default function AccountsPage() {
 
   const handleUpdate = useCallback(() => {
     const now = Date.now();
-    if (isLoading) return;
-    loadAccounts();
-  }, [loadAccounts]);
+    if (!isLoading) {
+      loadAccounts();
+    }
+  }, [loadAccounts, isLoading]);
 
   useEntityUpdates('account', handleUpdate);
 

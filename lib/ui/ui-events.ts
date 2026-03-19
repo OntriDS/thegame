@@ -9,7 +9,7 @@
 
 import { EntityType } from '@/types/enums';
 
-export type EntityKind = 'task' | 'item' | 'financial' | 'sale' | 'site' | 'character' | 'player';
+export type EntityKind = 'task' | 'item' | 'financial' | 'sale' | 'site' | 'character' | 'player' | 'account';
 
 const EVENT_MAP: Record<EntityKind, string> = {
   task: 'tasksUpdated',
@@ -19,6 +19,7 @@ const EVENT_MAP: Record<EntityKind, string> = {
   site: 'sitesUpdated',
   character: 'charactersUpdated',
   player: 'playersUpdated',
+  account: 'accountsUpdated',
 } as const;
 
 /**
@@ -95,5 +96,6 @@ export const EVENT_NAMES = {
   SITES_UPDATED: 'sitesUpdated',
   CHARACTERS_UPDATED: 'charactersUpdated',
   PLAYERS_UPDATED: 'playersUpdated',
+  ACCOUNTS_UPDATED: 'accountsUpdated',
   LINKS_UPDATED: 'linksUpdated',
 } as const;

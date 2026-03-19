@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,8 +10,10 @@ import { v4 as uuid } from 'uuid';
 import type { Account, Character } from '@/types/entities';
 import { iamService, CharacterRole } from '@/lib/iam-service';
 import { ClientAPI } from '@/lib/client-api';
+import { dispatchEntityUpdated } from '@/lib/ui/ui-events';
 import { Loader2, User, Mail, Lock, Save } from 'lucide-react';
 import DeleteModal from './submodals/delete-submodal';
+import { EntityType } from '@/types/enums';
 
 interface AccountModalProps {
   account?: Account | null;
@@ -77,8 +79,10 @@ export default function AccountModal({ account, character, open, onOpenChange, o
           setPhone(account.phone || '');
           setPassword(''); // Don't show existing password
 
-          // Set selected character if account has one linked
-          setSelectedCharacterId(character?.id || account.accountId || '');
+          // Set selected character
+          if (account.characterId) {
+            setSelectedCharacterId(account.characterId);
+          }
 
           // Reset init guard when editing
           didInitRef.current = false;
@@ -135,6 +139,7 @@ export default function AccountModal({ account, character, open, onOpenChange, o
 
     try {
       const accountData: Account = {
+        ...account, // Preserve existing fields for update
         id: account?.id || draftId.current,
         name: name.trim(),
         email: email.trim(),
@@ -146,11 +151,17 @@ export default function AccountModal({ account, character, open, onOpenChange, o
         createdAt: account?.createdAt || new Date(),
         updatedAt: new Date(),
         links: account?.links || [],
-        // Character linking will be handled by API
-        accountId: selectedCharacterId || null,
-      };
+      } as any; // Cast to any to include password for API
 
       await ClientAPI.upsertAccount(accountData);
+
+      // Dispatch update event
+      dispatchEntityUpdated('account');
+
+      // Call parent onSave if provided
+      if (onSave) {
+        await onSave(accountData);
+      }
 
       // Clear form for next create
       if (!account) {
@@ -175,6 +186,10 @@ export default function AccountModal({ account, character, open, onOpenChange, o
 
     try {
       await ClientAPI.deleteAccount(account.id);
+      
+      // Dispatch update event
+      dispatchEntityUpdated('account');
+      
       setShowDeleteModal(false);
       onOpenChange(false);
     } catch (error) {
@@ -350,10 +365,9 @@ export default function AccountModal({ account, character, open, onOpenChange, o
         <DeleteModal
           open={showDeleteModal}
           onOpenChange={setShowDeleteModal}
-          entityType="Account"
-          entityName={account.name}
-          entityId={account.id}
-          onDelete={handleDelete}
+          entityType={EntityType.ACCOUNT}
+          entities={account ? [account] : []}
+          onComplete={handleDelete}
         />
       )}
     </>

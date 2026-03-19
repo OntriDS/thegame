@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Task, Item, FinancialRecord, Sale, Site } from '@/types/entities';
+import { Task, Item, FinancialRecord, Sale, Site, Account } from '@/types/entities';
 import { EntityType, SiteType } from '@/types/enums';
 import { Trash2 } from 'lucide-react';
 import { ClientAPI } from '@/lib/client-api';
@@ -16,13 +16,13 @@ import { dispatchEntityUpdated, entityTypeToKind } from '@/lib/ui/ui-events';
 import { Character } from '@/types/entities';
 
 // Supported entity types for deletion (subset of EntityType enum)
-type DeletableEntityType = EntityType.TASK | EntityType.ITEM | EntityType.FINANCIAL | EntityType.SALE | EntityType.SITE | EntityType.CHARACTER;
+type DeletableEntityType = EntityType.TASK | EntityType.ITEM | EntityType.FINANCIAL | EntityType.SALE | EntityType.SITE | EntityType.CHARACTER | EntityType.ACCOUNT;
 
 interface DeleteModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   entityType: DeletableEntityType;
-  entities: (Task | Item | FinancialRecord | Sale | Site | Character)[];
+  entities: (Task | Item | FinancialRecord | Sale | Site | Character | Account)[];
   onComplete?: () => void; // Optional callback after successful deletion
 }
 
@@ -34,6 +34,7 @@ const ENTITY_TYPE_LABELS: Record<DeletableEntityType, { singular: string; plural
   [EntityType.SALE]: { singular: 'Sale', plural: 'Sales' },
   [EntityType.SITE]: { singular: 'Site', plural: 'Sites' },
   [EntityType.CHARACTER]: { singular: 'Character', plural: 'Characters' },
+  [EntityType.ACCOUNT]: { singular: 'Account', plural: 'Accounts' },
 };
 
 // Entity type to lowercase label for warnings
@@ -44,6 +45,7 @@ const ENTITY_TYPE_WARNING_LABELS: Record<DeletableEntityType, string> = {
   [EntityType.SALE]: 'sale',
   [EntityType.SITE]: 'site',
   [EntityType.CHARACTER]: 'character',
+  [EntityType.ACCOUNT]: 'account',
 };
 
 // Entity types that can have related items (for checking sourceTaskId/sourceRecordId)
@@ -174,6 +176,10 @@ export default function DeleteModal({
         for (const item of entities as Item[]) {
           await ClientAPI.deleteItem(item.id);
         }
+      } else if (entityType === EntityType.ACCOUNT) {
+        for (const account of entities as Account[]) {
+          await ClientAPI.deleteAccount(account.id);
+        }
       } else {
         console.warn('Unknown entity type for deletion:', entityType);
       }
@@ -197,7 +203,7 @@ export default function DeleteModal({
     }
   };
 
-  const getEntityDisplayName = (entity: Task | Item | FinancialRecord | Sale | Site | Character): string => {
+  const getEntityDisplayName = (entity: Task | Item | FinancialRecord | Sale | Site | Character | Account): string => {
     switch (entityType) {
       case EntityType.TASK:
         return (entity as Task).name;
@@ -211,6 +217,8 @@ export default function DeleteModal({
         return (entity as Site).name;
       case EntityType.CHARACTER:
         return (entity as Character).name;
+      case EntityType.ACCOUNT:
+        return (entity as Account).name;
       default:
         return 'Unknown';
     }
@@ -222,7 +230,7 @@ export default function DeleteModal({
     return `Delete ${count} ${count > 1 ? label.plural : label.singular}`;
   };
 
-  const getEntityDescription = (entity: Task | Item | FinancialRecord | Sale | Site | Character): string => {
+  const getEntityDescription = (entity: Task | Item | FinancialRecord | Sale | Site | Character | Account): string => {
     switch (entityType) {
       case EntityType.TASK:
         return (entity as Task).description || 'No description';
@@ -238,6 +246,9 @@ export default function DeleteModal({
       case EntityType.CHARACTER:
         const character = entity as Character;
         return `${character.roles?.join(', ') || 'No roles'}`;
+      case EntityType.ACCOUNT:
+        const account = entity as Account;
+        return account.email;
       default:
         return '';
     }

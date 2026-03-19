@@ -313,26 +313,9 @@ export const ClientAPI = {
     return await res.json();
   },
 
-  getAccounts: async (): Promise<Account[]> => {
-    const res = await fetch('/api/admin/accounts');
-    if (!res.ok) {
-      console.error('Failed to fetch accounts');
-      return [];
-    }
-    return await res.json();
-  },
+  // ACCOUNTS - Placeholder for consolidated section below
 
-  upsertAccount: async (account: Account): Promise<Account> => {
-    const res = await fetch('/api/admin/accounts', {
-      method: account.id ? 'PUT' : 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(account)
-    });
-    if (!res.ok) {
-      throw new Error('Failed to save account');
-    }
-    return await res.json();
-  },
+  // upsertAccount consolidated below
 
   upsertCharacter: async (character: Character): Promise<Character> => {
     const res = await fetch('/api/characters', {
@@ -382,7 +365,7 @@ export const ClientAPI = {
   // ============================================================================
   // ACCOUNTS - Account management operations
   // ============================================================================
-  getAllAccounts: async (): Promise<Account[]> => {
+  getAccounts: async (): Promise<Account[]> => {
     const res = await fetch('/api/accounts');
     if (!res.ok) {
       console.error('Failed to fetch accounts');
@@ -584,12 +567,7 @@ export const ClientAPI = {
   // Note: getAccounts is defined below in the bulk ops section for historical reasons
 
   getAccount: async (id: string): Promise<Account | null> => {
-    const res = await fetch(`/api/accounts/${id}`);
-    if (!res.ok) {
-      return null;
-    }
-    const account = await res.json();
-    return account;
+    return ClientAPI.getAccountById(id);
   },
 
   // ============================================================================
@@ -891,14 +869,6 @@ export const ClientAPI = {
     }
   },
 
-  getAccounts: async (): Promise<Account[]> => {
-    const res = await fetch('/api/accounts');
-    if (!res.ok) {
-      console.error('Failed to fetch accounts');
-      return [];
-    }
-    return await res.json();
-  },
 
   // ============================================================================
   // BULK OPERATIONS - Bulk import/export and logging
@@ -1221,16 +1191,4 @@ export const ClientAPI = {
     if (!res.ok) throw new Error('Failed to repair automations');
     return await res.json();
   },
-};
-
-// Historical placement: keep alias methods at the end to avoid duplicate keys
-// @ts-ignore
-ClientAPI.getAccounts = async (): Promise<Account[]> => {
-  const res = await fetch('/api/accounts');
-  if (!res.ok) {
-    console.error('Failed to fetch accounts');
-    return [];
-  }
-  const accounts = await res.json();
-  return accounts;
 };
