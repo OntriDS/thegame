@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Label } from '@/components/ui/label';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
 import { v4 as uuid } from 'uuid';
@@ -141,6 +142,18 @@ export default function AccountModal({ account, character, open, onOpenChange, o
       return;
     }
 
+    // Password validation (required for new accounts)
+    if (!account && !password.trim()) {
+      setError('Password is required');
+      return;
+    }
+
+    // Password length validation
+    if (password.trim() && password.trim().length < 6) {
+      setError('Password must be at least 6 characters');
+      return;
+    }
+
     // Character validation (Mandatory)
     if (!selectedCharacterId) {
       setError('A character must be linked to this account');
@@ -223,6 +236,13 @@ export default function AccountModal({ account, character, open, onOpenChange, o
   }, [selectedCharacterId, characters, account]);
 
   const selectedCharacter = characters.find(char => char.id === selectedCharacterId);
+
+  // Create character options for SearchableSelect
+  const characterOptions = characters.map((char) => ({
+    value: char.id,
+    label: char.name,
+    group: char.roles && char.roles.length > 0 ? char.roles.join(', ') : 'No roles',
+  }));
 
   return (
     <>
@@ -313,26 +333,20 @@ export default function AccountModal({ account, character, open, onOpenChange, o
               </div>
             )}
 
-            {/* Character Selection Dropdown */}
+            {/* Character Selection Searchable Select */}
             <div className="space-y-2">
               <Label htmlFor="character" className="flex items-center gap-2">
                 <User className="h-4 w-4" />
                 Link to Character
               </Label>
-              <select
-                id="character"
+              <SearchableSelect
                 value={selectedCharacterId}
-                onChange={(e) => setSelectedCharacterId(e.target.value)}
+                onValueChange={setSelectedCharacterId}
+                placeholder="Search characters..."
+                options={characterOptions}
                 disabled={isSaving || isLoadingCharacters || !!account?.characterId}
-                className={`w-full h-10 px-3 py-2 bg-accent/30 border border-primary/20 rounded-md focus:outline-none focus:ring-2 focus:ring-primary ${!!account?.characterId ? 'opacity-70 cursor-not-allowed' : ''}`}
-              >
-                <option value="" disabled>Select a character</option>
-                {characters.map((char) => (
-                  <option key={char.id} value={char.id}>
-                    {char.roles && char.roles.length > 0 ? char.roles.join(', ') : 'No roles'}
-                  </option>
-                ))}
-              </select>
+                className={!!account?.characterId ? 'opacity-70' : ''}
+              />
               {selectedCharacter && selectedCharacter && (
                 <div className="text-xs text-muted-foreground mt-1">
                   Linking to: <span className="font-medium">{selectedCharacter.name}</span>
