@@ -198,6 +198,15 @@ export default function AdminLoginPage() {
           ) : (
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
               <h3 className="text-sm font-semibold text-muted-foreground">Sign in</h3>
+              <div className="pt-1 text-center">
+                <button
+                  type="button"
+                  onClick={() => setShowTeamLogin(false)}
+                  className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors underline-offset-4 hover:underline"
+                >
+                  Use Founder passphrase
+                </button>
+              </div>
 
               <form onSubmit={handleUsernameLogin} className="space-y-4">
                 <div className="space-y-2">
