@@ -578,7 +578,7 @@ export class IAMService {
           username: data.appId as string,
           email: `${data.appId}@du.system`,
           characterId: 'system',
-          roles: [CharacterRole.ADMIN, CharacterRole.DEVELOPER],
+          roles: [CharacterRole.AI_AGENT],
           isActive: true
         };
       }
