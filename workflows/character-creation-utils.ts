@@ -3,7 +3,7 @@
 // Creates characters from Tasks, Sales, Financial Records, and Items using emissary fields
 
 import type { Task, Sale, FinancialRecord, Item, Character } from '@/types/entities';
-import { CharacterRole, PLAYER_ONE_ID } from '@/types/enums';
+import { CharacterRole, PLAYER_ONE_ID, FOUNDER_PLAYER_ID } from '@/types/enums';
 import { upsertCharacter } from '@/data-store/datastore';
 import { hasEffect, markEffect } from '@/data-store/effects-registry';
 import { EffectKeys } from '@/data-store/keys';
@@ -46,7 +46,7 @@ export async function createCharacterFromEntity(
       inventory: [],
       achievementsCharacter: [],
       purchasedAmount: 0,
-      playerId: PLAYER_ONE_ID, // Default to Player One for now
+      playerId: FOUNDER_PLAYER_ID, // Use Founder Player ID for characters created from entities
       lastActiveAt: new Date(),
       isActive: true,
       createdAt: new Date(),

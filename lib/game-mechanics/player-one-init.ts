@@ -13,7 +13,7 @@
  */
 
 import { Player, Character, Account } from '@/types/entities';
-import { CharacterRole, EntityType, LogEventType, PLAYER_ONE_ID } from '@/types/enums';
+import { CharacterRole, EntityType, LogEventType, FOUNDER_CHARACTER_ID, FOUNDER_PLAYER_ID, PLAYER_ONE_ID } from '@/types/enums';
 
 /**
  * Default Account One - The Source of Truth for Identity
@@ -21,7 +21,7 @@ import { CharacterRole, EntityType, LogEventType, PLAYER_ONE_ID } from '@/types/
  * This is the "Triforce" - Account/Player/Character all linked
  */
 const DEFAULT_ACCOUNT_ONE: Account = {
-  id: PLAYER_ONE_ID,
+  id: FOUNDER_CHARACTER_ID,
   name: 'Akiles',  // Source of truth for name (user fills this in)
   description: 'Player One Account',
 
@@ -45,8 +45,8 @@ const DEFAULT_ACCOUNT_ONE: Account = {
   },
 
   // Relationships - The Triforce Link
-  playerId: PLAYER_ONE_ID,
-  characterId: PLAYER_ONE_ID,
+  playerId: FOUNDER_PLAYER_ID,
+  characterId: FOUNDER_CHARACTER_ID,
 
   // Lifecycle
   lastActiveAt: new Date(),
@@ -62,12 +62,12 @@ const DEFAULT_ACCOUNT_ONE: Account = {
  * User edits account info from Player Modal → Account submodal
  */
 const DEFAULT_PLAYER_ONE: Player = {
-  id: PLAYER_ONE_ID,
+  id: FOUNDER_PLAYER_ID,
   name: '',  // Will be synced from Account
   description: 'Player One',
 
   // Account Ambassador - Permanently linked from start
-  accountId: PLAYER_ONE_ID,
+  accountId: FOUNDER_CHARACTER_ID,
   // Temporary auth fields (empty - to be filled from Account)
   email: '',
   passwordHash: '',
@@ -79,7 +79,7 @@ const DEFAULT_PLAYER_ONE: Player = {
   // J$ is stored in FinancialRecord ledger, not on Player entity
 
   // Character management
-  characterIds: [PLAYER_ONE_ID],
+  characterIds: [FOUNDER_CHARACTER_ID],
 
   // Badges & Achievements
   badges: [],
@@ -111,12 +111,12 @@ const DEFAULT_PLAYER_ONE: Player = {
  * Contact info stored in Account entity
  */
 const DEFAULT_CHARACTER_ONE: Character = {
-  id: PLAYER_ONE_ID,
+  id: FOUNDER_CHARACTER_ID,
   name: '',  // Will be synced from Account
   description: 'Player One Character',
 
   // Account Ambassador - Permanently linked from start
-  accountId: PLAYER_ONE_ID,
+  accountId: FOUNDER_CHARACTER_ID,
 
   // Roles
   roles: [CharacterRole.FOUNDER, CharacterRole.PLAYER],
@@ -138,7 +138,7 @@ const DEFAULT_CHARACTER_ONE: Character = {
   inventory: [],
 
   // Relationships
-  playerId: PLAYER_ONE_ID,
+  playerId: FOUNDER_PLAYER_ID,
   relationships: undefined,
 
   // Lifecycle
@@ -187,9 +187,9 @@ export async function ensurePlayerOne(
     const characters = await getCharacters();
     const accounts = await getAccounts();
 
-    const accountExists = accounts.find(a => a.id === PLAYER_ONE_ID);
-    const playerExists = players.find(p => p.id === PLAYER_ONE_ID);
-    const characterExists = characters.find(c => c.id === PLAYER_ONE_ID);
+    const accountExists = accounts.find(a => a.id === FOUNDER_CHARACTER_ID);
+    const playerExists = players.find(p => p.id === FOUNDER_PLAYER_ID);
+    const characterExists = characters.find(c => c.id === FOUNDER_CHARACTER_ID);
 
     if (accountExists && playerExists && characterExists) {
       console.log('[ensurePlayerOne] ✅ The Triforce exists and is properly initialized');
@@ -205,8 +205,8 @@ export async function ensurePlayerOne(
     const characters = await getCharacters();
 
     // Check if Player and Character exist (Account will be added later)
-    const playerExists = players.find(p => p.id === PLAYER_ONE_ID);
-    const characterExists = characters.find(c => c.id === PLAYER_ONE_ID);
+    const playerExists = players.find(p => p.id === FOUNDER_PLAYER_ID);
+    const characterExists = characters.find(c => c.id === FOUNDER_CHARACTER_ID);
 
     if (playerExists && characterExists) {
       console.log('[ensurePlayerOne] ✅ Player and Character exist - skipping');
@@ -245,8 +245,8 @@ export async function createTriforceAtomic(
     const completeAccount = {
       ...DEFAULT_ACCOUNT_ONE,
       name: 'Akiles', // Default name
-      playerId: PLAYER_ONE_ID,
-      characterId: PLAYER_ONE_ID
+      playerId: FOUNDER_PLAYER_ID,
+      characterId: FOUNDER_CHARACTER_ID
     };
     const savedAccount = await upsertAccount(completeAccount, {
       skipWorkflowEffects: true,
@@ -258,8 +258,8 @@ export async function createTriforceAtomic(
     const completePlayer = {
       ...DEFAULT_PLAYER_ONE,
       name: 'Akiles', // Default name
-      accountId: PLAYER_ONE_ID,
-      characterIds: [PLAYER_ONE_ID]
+      accountId: FOUNDER_CHARACTER_ID,
+      characterIds: [FOUNDER_CHARACTER_ID]
     };
     const savedPlayer = await upsertPlayer(completePlayer, {
       skipWorkflowEffects: true,
@@ -271,8 +271,8 @@ export async function createTriforceAtomic(
     const completeCharacter = {
       ...DEFAULT_CHARACTER_ONE,
       name: 'Akiles', // Default name
-      accountId: PLAYER_ONE_ID,
-      playerId: PLAYER_ONE_ID
+      accountId: FOUNDER_CHARACTER_ID,
+      playerId: FOUNDER_PLAYER_ID
     };
     const savedCharacter = await upsertCharacter(completeCharacter, {
       skipWorkflowEffects: true,
@@ -290,8 +290,8 @@ export async function createTriforceAtomic(
       await createLink({
         id: `link-account-player-creator-creator`,
         linkType: 'ACCOUNT_PLAYER' as any,
-        source: { type: EntityType.ACCOUNT, id: PLAYER_ONE_ID },
-        target: { type: EntityType.PLAYER, id: PLAYER_ONE_ID },
+        source: { type: EntityType.ACCOUNT, id: FOUNDER_CHARACTER_ID },
+        target: { type: EntityType.PLAYER, id: FOUNDER_PLAYER_ID },
         createdAt: new Date()
       }, { skipValidation: true });
       console.log('[createTriforceAtomic] ✅ ACCOUNT_PLAYER link created');
@@ -304,8 +304,8 @@ export async function createTriforceAtomic(
       await createLink({
         id: `link-account-character-creator-creator`,
         linkType: 'ACCOUNT_CHARACTER' as any,
-        source: { type: EntityType.ACCOUNT, id: PLAYER_ONE_ID },
-        target: { type: EntityType.CHARACTER, id: PLAYER_ONE_ID },
+        source: { type: EntityType.ACCOUNT, id: FOUNDER_CHARACTER_ID },
+        target: { type: EntityType.CHARACTER, id: FOUNDER_CHARACTER_ID },
         createdAt: new Date()
       }, { skipValidation: true });
       console.log('[createTriforceAtomic] ✅ ACCOUNT_CHARACTER link created');
@@ -318,8 +318,8 @@ export async function createTriforceAtomic(
       await createLink({
         id: `link-player-character-creator-creator`,
         linkType: 'PLAYER_CHARACTER' as any,
-        source: { type: EntityType.PLAYER, id: PLAYER_ONE_ID },
-        target: { type: EntityType.CHARACTER, id: PLAYER_ONE_ID },
+        source: { type: EntityType.PLAYER, id: FOUNDER_PLAYER_ID },
+        target: { type: EntityType.CHARACTER, id: FOUNDER_CHARACTER_ID },
         createdAt: new Date()
       }, { skipValidation: true });
       console.log('[createTriforceAtomic] ✅ PLAYER_CHARACTER link created');
@@ -333,7 +333,7 @@ export async function createTriforceAtomic(
     // Log Account creation
     await appendEntityLog(
       EntityType.ACCOUNT,
-      PLAYER_ONE_ID,
+      FOUNDER_CHARACTER_ID,
       LogEventType.CREATED,
       {
         name: savedAccount.name,
@@ -348,7 +348,7 @@ export async function createTriforceAtomic(
     // Log Player creation
     await appendEntityLog(
       EntityType.PLAYER,
-      PLAYER_ONE_ID,
+      FOUNDER_PLAYER_ID,
       LogEventType.CREATED,
       {
         name: savedPlayer.name,
@@ -363,7 +363,7 @@ export async function createTriforceAtomic(
     // Log Character creation
     await appendEntityLog(
       EntityType.CHARACTER,
-      PLAYER_ONE_ID,
+      FOUNDER_CHARACTER_ID,
       LogEventType.CREATED,
       {
         name: savedCharacter.name,
@@ -378,9 +378,9 @@ export async function createTriforceAtomic(
 
     // STEP 6: Mark effects as complete (prevent duplicate processing)
     const { markEffect } = await import('@/data-store/effects-registry');
-    await markEffect(`account:${PLAYER_ONE_ID}:created`);
-    await markEffect(`player:${PLAYER_ONE_ID}:created`);
-    await markEffect(`character:${PLAYER_ONE_ID}:created`);
+    await markEffect(`account:${FOUNDER_CHARACTER_ID}:created`);
+    await markEffect(`player:${FOUNDER_PLAYER_ID}:created`);
+    await markEffect(`character:${FOUNDER_CHARACTER_ID}:created`);
 
     console.log('[createTriforceAtomic] 🔺 The Triforce created! Account ↔ Player ↔ Character');
 

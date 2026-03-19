@@ -19,7 +19,8 @@ export default function AdminLoginPage() {
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
 
-  const [showTeamLogin, setShowTeamLogin] = useState(false);
+  // Default to email/password login only (passphrase reserved for future auth paths).
+  const [showTeamLogin, setShowTeamLogin] = useState(true);
   const [isHandshaking, setIsHandshaking] = useState(false);
 
   const isActuallyLoading = isLoading || isHandshaking;
@@ -196,15 +197,7 @@ export default function AdminLoginPage() {
             </div>
           ) : (
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-              <div className="flex items-center gap-2 mb-2">
-                <button
-                  onClick={() => setShowTeamLogin(false)}
-                  className="text-xs p-1 hover:bg-accent rounded"
-                >
-                  ← Back
-                </button>
-                <h3 className="text-sm font-semibold text-muted-foreground">Team Member Login</h3>
-              </div>
+              <h3 className="text-sm font-semibold text-muted-foreground">Sign in</h3>
 
               <form onSubmit={handleUsernameLogin} className="space-y-4">
                 <div className="space-y-2">

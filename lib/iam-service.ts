@@ -4,7 +4,7 @@
  * Standardized across thegame, pixelbrain, and akiles-ecosystem.
  */
 
-import { kvGet, kvSet, kvSAdd, kvSMembers, kvScan } from '@/data-store/kv';
+import { kvGet, kvSet, kvSAdd, kvSRem, kvSMembers, kvScan, kvDel } from '@/data-store/kv';
 import {
   buildAccountKey,
   buildAccountByEmailKey,
@@ -258,6 +258,17 @@ export class IAMService {
     return await kvGet<Account>(buildAccountKey(id));
   }
 
+  /**
+   * List all IAM accounts (does not include M2M "accounts"; those are listed separately).
+   */
+  async listAccounts(): Promise<Account[]> {
+    const accountIds = await kvSMembers(IAM_ACCOUNTS_INDEX);
+    if (accountIds.length === 0) return [];
+
+    const accounts = await Promise.all(accountIds.map(id => this.getAccountById(id)));
+    return accounts.filter((a): a is Account => !!a);
+  }
+
   async getAccountByEmail(email: string): Promise<Account | null> {
     const mapping = await kvGet<any>(buildAccountByEmailKey(email));
     if (!mapping) return null;
@@ -282,6 +293,17 @@ export class IAMService {
 
   async getCharacterById(id: string): Promise<Character | null> {
     return await kvGet<Character>(buildCharacterKey(id));
+  }
+
+  /**
+   * List all IAM characters.
+   */
+  async listCharacters(): Promise<Character[]> {
+    const characterIds = await kvSMembers(IAM_CHARACTERS_INDEX);
+    if (characterIds.length === 0) return [];
+
+    const characters = await Promise.all(characterIds.map(id => this.getCharacterById(id)));
+    return characters.filter((c): c is Character => !!c);
   }
 
   async getPlayerById(id: string): Promise<Player | null> {
@@ -343,6 +365,128 @@ export class IAMService {
       if (player?.characterId === characterId) return player;
     }
     return null;
+  }
+
+  /**
+   * Admin operation: link an existing IAM character to an existing IAM account.
+   * This is the missing bridge so the `Accounts` UI can create credentials that login can authorize.
+   */
+  async assignCharacterToAccount(accountId: string, characterId: string): Promise<{ account: Account; character: Character }> {
+    const account = await this.getAccountById(accountId);
+    if (!account) throw new Error('Account not found');
+
+    const character = await this.getCharacterById(characterId);
+    if (!character) throw new Error('Character not found');
+
+    const previousAccountId = character.accountId;
+
+    // 1) Update character -> account ambassador field
+    character.accountId = accountId;
+    character.updatedAt = new Date().toISOString();
+    await kvSet(buildCharacterKey(characterId), character);
+
+    // 2) Update account -> character ambassador field (for UI)
+    account.characterId = characterId;
+    account.updatedAt = new Date().toISOString();
+    await kvSet(buildAccountKey(accountId), account);
+
+    // 3) If character was previously linked to a different account, clear that account's pointer for UI sanity.
+    if (previousAccountId && previousAccountId !== accountId) {
+      const prevAcc = await this.getAccountById(previousAccountId);
+      if (prevAcc) {
+        prevAcc.characterId = undefined;
+        prevAcc.updatedAt = new Date().toISOString();
+        await kvSet(buildAccountKey(previousAccountId), prevAcc);
+      }
+    }
+
+    // 4) Create the Rosetta-Stone relationship link (Account <-> Character).
+    await this.createLink(accountId, characterId, 'ACCOUNT_CHARACTER');
+
+    // 5) Ensure evolution: if this character is eligible for a Player, create one if missing.
+    const isNowPlayer = character.roles.includes(CharacterRole.PLAYER) || character.roles.includes(CharacterRole.FOUNDER);
+    if (isNowPlayer) {
+      const existingPlayer = await this.getPlayerByCharacterId(characterId);
+      if (!existingPlayer) {
+        await this.createPlayer(characterId);
+      }
+    }
+
+    return { account, character };
+  }
+
+  /**
+   * Admin operation: update IAM account fields (email, activation flags, and optional password update).
+   * NOTE: character linking is handled separately by `assignCharacterToAccount()`.
+   */
+  async updateAccount(
+    accountId: string,
+    updates: {
+      name?: string;
+      email?: string;
+      phone?: string | undefined;
+      password?: string;
+      isActive?: boolean;
+      isVerified?: boolean;
+    }
+  ): Promise<Account> {
+    const account = await this.getAccountById(accountId);
+    if (!account) throw new Error('Account not found');
+
+    let passwordHash: string | null | undefined;
+    if (updates.password !== undefined) {
+      const pwd = updates.password?.trim();
+      if (pwd) {
+        const saltRounds = 10;
+        passwordHash = await bcrypt.hash(pwd, saltRounds);
+      } else {
+        passwordHash = account.passwordHash;
+      }
+    }
+
+    const nextEmail = updates.email ? updates.email.toLowerCase().trim() : account.email;
+    const prevEmail = account.email;
+
+    // If email changes, update email->account mapping key.
+    if (nextEmail !== prevEmail) {
+      await kvDel(buildAccountByEmailKey(prevEmail));
+      await kvSet(buildAccountByEmailKey(nextEmail), { accountId: account.id });
+    }
+
+    const updated: Account = {
+      ...account,
+      name: updates.name !== undefined ? updates.name.trim() : account.name,
+      email: nextEmail,
+      phone: updates.phone !== undefined ? updates.phone?.trim() : account.phone,
+      passwordHash: passwordHash !== undefined ? passwordHash : account.passwordHash,
+      isActive: updates.isActive !== undefined ? updates.isActive : account.isActive,
+      isVerified: updates.isVerified !== undefined ? updates.isVerified : account.isVerified,
+      updatedAt: new Date().toISOString(),
+    };
+
+    await kvSet(buildAccountKey(accountId), updated);
+    return updated;
+  }
+
+  /**
+   * Admin operation: disable (not hard-delete) an IAM account.
+   * Disabling blocks future logins; existing JWT cookies remain until the user logs out.
+   */
+  async disableAccount(accountId: string): Promise<void> {
+    const account = await this.getAccountById(accountId);
+    if (!account) return;
+
+    const updated: Account = {
+      ...account,
+      isActive: false,
+      updatedAt: new Date().toISOString(),
+    };
+
+    await kvSet(buildAccountKey(accountId), updated);
+
+    // Remove from admin listing + prevent email-based lookup.
+    await kvSRem(IAM_ACCOUNTS_INDEX, accountId);
+    await kvDel(buildAccountByEmailKey(account.email));
   }
 
   // --- Role Management & Evolution ---

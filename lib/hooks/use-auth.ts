@@ -21,7 +21,12 @@ export function useAuth() {
   const [permissions, setPermissions] = useState<AuthPermissions | null>(null);
 
   // ✅ DETECT WHICH AUTH SYSTEM
-  const isPassphraseUser = typeof document !== 'undefined' && getCookie('admin_session') !== undefined;
+  // Passphrase-only flow sets `admin_session` but does NOT set `auth_session`.
+  // Email/password flow sets both cookies.
+  const isPassphraseUser =
+    typeof document !== 'undefined' &&
+    getCookie('admin_session') !== undefined &&
+    getCookie('auth_session') === undefined;
 
   // ✅ LOAD AUTH STATE BASED ON SYSTEM
   useEffect(() => {

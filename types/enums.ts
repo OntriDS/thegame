@@ -759,11 +759,20 @@ export enum NotebookType {
 }
 
 // ============================================================================
-// TRIFORCE CONSTANT
+// BOOTSTRAP CONSTANTS
 // ============================================================================
 
-/** Player One ID - Bootstrap identity for the system */
-export const PLAYER_ONE_ID = 'player-one';
+/** 
+ * FOUNDATIONAL BOOTSTRAP IDs 
+ * These IDs are used to initialize the "First User" (The Triforce) in the system.
+ * They must remain constant to ensure the bootstrap process and founder-only logic
+ * (like special UI permissions) are deterministic.
+ */
+export const FOUNDER_CHARACTER_ID = 'cc4ba319-8788-436e-ab46-56a7a92b2564';
+export const FOUNDER_PLAYER_ID = 'c83b2249-60a1-4b09-9874-5612f95c5da2';
+
+/** @deprecated Use FOUNDER_CHARACTER_ID for new code. Points to the current founder UUID. */
+export const PLAYER_ONE_ID = FOUNDER_CHARACTER_ID;
 
 // ============================================================================
 // NOTE SYSTEM TAGS
