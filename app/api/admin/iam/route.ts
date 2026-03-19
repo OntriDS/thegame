@@ -1,8 +1,9 @@
 import { NextResponse, NextRequest } from 'next/server';
-import { iamService, CharacterRole } from '@/lib/iam-service';
+import { iamService } from '@/lib/iam-service';
 import { kvSMembers, kvGet } from '@/data-store/kv';
-import { IAM_ACCOUNTS_INDEX, IAM_PLAYERS_INDEX, buildM2MKey } from '@/lib/keys';
+import { IAM_ACCOUNTS_INDEX, buildM2MKey } from '@/lib/keys';
 import { getAllCharacters } from '@/data-store/repositories/character.repo';
+import { getAllPlayers } from '@/data-store/repositories/player.repo';
 
 /**
  * IAM System Console Data API (Admin Only)
@@ -31,8 +32,7 @@ export async function GET(req: NextRequest) {
 
     const characters = await getAllCharacters();
 
-    const playerIds = await kvSMembers(IAM_PLAYERS_INDEX);
-    const players = await Promise.all(playerIds.map(id => iamService.getPlayerById(id)));
+    const players = await getAllPlayers();
 
     const systems = [];
     const pixelbrainM2M = await kvGet(buildM2MKey('pixelbrain'));

@@ -29,6 +29,7 @@ async function toUiAccount(
         name: char.name,
         roles: char.roles,
         accountId: char.accountId,
+        playerId: char.playerId,
       };
     }
   }
@@ -48,7 +49,10 @@ async function toUiAccount(
     resetTokenExpiry: undefined,
     privacySettings: { showEmail: false, showPhone: false, showRealName: true },
     characterId: type === 'm2m' ? '' : (iamAccount.characterId || character?.id || ''),
-    playerId: undefined,
+    playerId:
+      type === 'm2m'
+        ? ''
+        : iamAccount.playerId || (character as any)?.playerId || '',
     lastActiveAt: new Date(iamAccount.updatedAt || Date.now()),
     links: [],
     character,

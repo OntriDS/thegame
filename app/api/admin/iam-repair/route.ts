@@ -18,20 +18,47 @@ async function runRepair(passphrase: string | undefined): Promise<NextResponse> 
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // 1. Find founder IAM account
+  // 1. Find or create founder IAM account (repair vs genesis)
+  let genesisCreated = false;
   const accounts = await iamService.listAccounts();
+  let founderAccount: Awaited<ReturnType<typeof iamService.getAccountById>>;
+
   if (accounts.length === 0) {
-    return NextResponse.json({ error: 'No IAM accounts found' }, { status: 404 });
+    const founderEmail = process.env.FOUNDER_EMAIL?.trim().toLowerCase();
+    if (!founderEmail) {
+      return NextResponse.json(
+        {
+          error:
+            'Empty IAM: set FOUNDER_EMAIL in env, then call iam-repair again to create the Genesis founder account.',
+        },
+        { status: 500 }
+      );
+    }
+
+    console.log('[IAM Repair] GENESIS: no iam:index:accounts — creating founder IAM account');
+    const displayName = process.env.FOUNDER_DISPLAY_NAME?.trim() || 'Founder';
+    const created = await iamService.createAccount({
+      name: displayName,
+      email: founderEmail,
+      passphraseFlag: true,
+    });
+    founderAccount = await iamService.updateAccount(created.id, { isVerified: true });
+    genesisCreated = true;
+  } else {
+    const passphraseAccounts = accounts.filter(a => a.passphraseFlag);
+    founderAccount =
+      passphraseAccounts.length === 1 ? passphraseAccounts[0] : null;
+    if (!founderAccount && accounts.length === 1) founderAccount = accounts[0];
+    if (!founderAccount) {
+      return NextResponse.json(
+        { error: 'Founder account not found (ambiguous). Set FOUNDER_EMAIL to disambiguate.' },
+        { status: 400 }
+      );
+    }
   }
 
-  const passphraseAccounts = accounts.filter(a => a.passphraseFlag);
-  let founderAccount = passphraseAccounts.length === 1 ? passphraseAccounts[0] : null;
-  if (!founderAccount && accounts.length === 1) founderAccount = accounts[0];
   if (!founderAccount) {
-    return NextResponse.json(
-      { error: 'Founder account not found (ambiguous). Set FOUNDER_EMAIL to disambiguate.' },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: 'Founder account could not be resolved' }, { status: 500 });
   }
 
   // 2. Find founder character in the Game Data-Store
@@ -66,9 +93,13 @@ async function runRepair(passphrase: string | undefined): Promise<NextResponse> 
 
   return NextResponse.json({
     success: true,
+    genesis: genesisCreated,
     accountId: founderAccount.id,
     characterId: founderCharacter.id,
     email: founderAccount.email,
+    message: genesisCreated
+      ? 'Genesis IAM account created and linked to founder character. Set a password in Admin → Accounts if you use email login.'
+      : 'Founder account linked to founder character.',
   });
 }
 

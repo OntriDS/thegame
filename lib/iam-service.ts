@@ -2,19 +2,12 @@
  * IAM Service
  * Manages Accounts (identity/credentials) and authentication.
  * Characters are NOT stored in IAM — they live in the Game Data-Store.
- * The ACCOUNT_CHARACTER link (Rosetta Stone) bridges the two.
+ * ACCOUNT_CHARACTER + CHARACTER_PLAYER / PLAYER_CHARACTER Rosetta links bridge identity.
+ * Players live only in the Game Data-Store (`thegame:data:player:*`), not `iam:player:*`.
  */
 
 import { kvGet, kvSet, kvSAdd, kvSRem, kvSMembers, kvDel } from '@/data-store/kv';
-import {
-  buildAccountKey,
-  buildAccountByEmailKey,
-  buildPlayerKey,
-  buildM2MKey,
-  IAM_ACCOUNTS_INDEX,
-  IAM_PLAYERS_INDEX,
-  IAM_M2M_INDEX
-} from './keys';
+import { buildAccountKey, buildAccountByEmailKey, buildM2MKey, IAM_ACCOUNTS_INDEX, IAM_M2M_INDEX } from './keys';
 import { v4 as uuidv4 } from 'uuid';
 import { SignJWT, jwtVerify } from 'jose';
 import bcrypt from 'bcryptjs';
@@ -23,8 +16,10 @@ import { CharacterRole, EntityType, LinkType } from '@/types/enums';
 export { CharacterRole };
 
 import { getCharacterById as dsGetCharacterById } from '@/data-store/repositories/character.repo';
+import { getPlayerById as dsGetPlayerById } from '@/data-store/repositories/player.repo';
+import { upsertCharacter, upsertPlayer } from '@/data-store/datastore';
 import { getLinksFor, createLink as rosettaCreateLink } from '@/links/link-registry';
-import type { Character as GameCharacter, Link } from '@/types/entities';
+import type { Character as GameCharacter, Link, Player } from '@/types/entities';
 
 // --- Interfaces ---
 
@@ -43,14 +38,7 @@ export interface Account {
   updatedAt: string;
 }
 
-export interface Player {
-  id: string;
-  characterId: string;
-  jungleCoins: number;
-  level: number;
-  createdAt: string;
-  updatedAt: string;
-}
+export type { Player } from '@/types/entities';
 
 export interface AuthResult {
   success: boolean;
@@ -253,7 +241,7 @@ export class IAMService {
     const account = await this.getAccountById(accountId);
     if (!account) throw new Error('Account not found');
 
-    const character = await dsGetCharacterById(characterId);
+    let character = await dsGetCharacterById(characterId);
     if (!character) throw new Error('Character not found in Game Data-Store');
 
     account.characterId = characterId;
@@ -269,7 +257,13 @@ export class IAMService {
     };
     await rosettaCreateLink(link, { skipValidation: true });
 
-    return { account, character };
+    // DS Player + Character↔Player links only (never ACCOUNT_PLAYER — IAM account is not a DS entity)
+    await this.ensureDataStorePlayerForLinkedCharacter(accountId, characterId, character);
+
+    const freshAccount = await this.getAccountById(accountId);
+    character = (await dsGetCharacterById(characterId))!;
+
+    return { account: freshAccount!, character };
   }
 
   /**
@@ -300,46 +294,122 @@ export class IAMService {
   }
 
   // ═══════════════════════════════════════════════════════════════
-  // PLAYER (iam:player:* — stays in IAM for now, game progression)
+  // PLAYER — Game Data-Store only (`thegame:data:player:*`)
+  // Resolve via character.playerId and/or CHARACTER_PLAYER / PLAYER_CHARACTER links.
   // ═══════════════════════════════════════════════════════════════
 
   async getPlayerById(id: string): Promise<Player | null> {
-    return await kvGet<Player>(buildPlayerKey(id));
+    return dsGetPlayerById(id);
   }
 
   async getPlayerByCharacterId(characterId: string): Promise<Player | null> {
-    const playerIds = await kvSMembers(IAM_PLAYERS_INDEX);
-    for (const id of playerIds) {
-      const player = await this.getPlayerById(id);
-      if (player?.characterId === characterId) return player;
+    const character = await dsGetCharacterById(characterId);
+    if (character?.playerId) {
+      const byField = await dsGetPlayerById(character.playerId);
+      if (byField) return byField;
+    }
+
+    const links = await getLinksFor({ type: EntityType.CHARACTER, id: characterId });
+    for (const l of links) {
+      if (l.linkType === LinkType.CHARACTER_PLAYER && l.target.type === EntityType.PLAYER) {
+        const p = await dsGetPlayerById(l.target.id);
+        if (p) return p;
+      }
+      if (
+        l.linkType === LinkType.PLAYER_CHARACTER &&
+        l.source.type === EntityType.PLAYER &&
+        l.target.id === characterId
+      ) {
+        const p = await dsGetPlayerById(l.source.id);
+        if (p) return p;
+      }
     }
     return null;
   }
 
-  async createPlayer(characterId: string): Promise<Player> {
-    const character = await dsGetCharacterById(characterId);
-    if (!character) throw new Error('Character not found in Game Data-Store');
+  /**
+   * When an IAM account links to a character, ensure a DS Player exists and
+   * Character↔Player Rosetta links (CHARACTER_PLAYER + PLAYER_CHARACTER).
+   * Does NOT create ACCOUNT_PLAYER (IAM accounts are not `thegame:data:account` rows).
+   */
+  private async ensureDataStorePlayerForLinkedCharacter(
+    accountId: string,
+    characterId: string,
+    character: GameCharacter
+  ): Promise<void> {
+    const account = await this.getAccountById(accountId);
+    if (!account) return;
 
-    const hasPlayerRole = character.roles.includes(CharacterRole.PLAYER) ||
-                          character.roles.includes(CharacterRole.FOUNDER);
-
-    if (!hasPlayerRole) {
-      throw new Error('Character does not have the PLAYER role.');
+    const existing = await this.getPlayerByCharacterId(characterId);
+    if (existing) {
+      account.playerId = existing.id;
+      account.updatedAt = new Date().toISOString();
+      await kvSet(buildAccountKey(accountId), account);
+      return;
     }
 
-    const player: Player = {
+    const eligible =
+      character.roles.includes(CharacterRole.PLAYER) || character.roles.includes(CharacterRole.FOUNDER);
+    if (!eligible) return;
+
+    const now = new Date();
+    const newPlayer: Player = {
       id: uuidv4(),
-      characterId,
-      jungleCoins: 0,
+      name: character.name || account.name,
+      description: `Player for character ${character.name || characterId}`,
+      accountId,
+      email: account.email || '',
+      passwordHash: '',
       level: 1,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      totalPoints: { hp: 0, fp: 0, rp: 0, xp: 0 },
+      points: { hp: 0, fp: 0, rp: 0, xp: 0 },
+      characterIds: [characterId],
+      badges: [],
+      achievements: [],
+      lastActiveAt: now,
+      totalTasksCompleted: 0,
+      totalSalesCompleted: 0,
+      totalItemsSold: 0,
+      isActive: true,
+      createdAt: now,
+      updatedAt: now,
+      links: [],
     };
 
-    await kvSet(buildPlayerKey(player.id), player);
-    await kvSAdd(IAM_PLAYERS_INDEX, player.id);
+    await upsertPlayer(newPlayer, { skipWorkflowEffects: true, skipLinkEffects: true });
 
-    return player;
+    const updatedChar: GameCharacter = {
+      ...character,
+      playerId: newPlayer.id,
+      updatedAt: now,
+    };
+    await upsertCharacter(updatedChar, { skipWorkflowEffects: true, skipLinkEffects: true });
+
+    await rosettaCreateLink(
+      {
+        id: uuidv4(),
+        linkType: LinkType.CHARACTER_PLAYER,
+        source: { type: EntityType.CHARACTER, id: characterId },
+        target: { type: EntityType.PLAYER, id: newPlayer.id },
+        createdAt: now,
+      },
+      { skipValidation: true }
+    );
+
+    await rosettaCreateLink(
+      {
+        id: uuidv4(),
+        linkType: LinkType.PLAYER_CHARACTER,
+        source: { type: EntityType.PLAYER, id: newPlayer.id },
+        target: { type: EntityType.CHARACTER, id: characterId },
+        createdAt: now,
+      },
+      { skipValidation: true }
+    );
+
+    account.playerId = newPlayer.id;
+    account.updatedAt = new Date().toISOString();
+    await kvSet(buildAccountKey(accountId), account);
   }
 
   // ═══════════════════════════════════════════════════════════════

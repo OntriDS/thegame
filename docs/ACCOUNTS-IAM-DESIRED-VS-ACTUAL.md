@@ -28,6 +28,17 @@ The Account Modal calls `ClientAPI.getCharacters('special')`.
    - Fallback: query `ACCOUNT_CHARACTER` link in Rosetta Stone → fetch target character from DS.
 3. Pack the DS character's roles into the JWT.
 
+### Rule 5 — Single Source of Truth for Players
+Players live **only** in the Game Data-Store: `thegame:data:player:{uuid}`.
+IAM never writes `iam:player:*` or `iam:index:players`.
+
+After `linkAccountToCharacter`, if the character is eligible (PLAYER or FOUNDER role), `ensureDataStorePlayerForLinkedCharacter`:
+1. Reuses an existing DS player if `character.playerId` or `CHARACTER_PLAYER` / `PLAYER_CHARACTER` links already resolve one.
+2. Otherwise creates a DS `Player` via `upsertPlayer`, sets `character.playerId`, and creates **CHARACTER_PLAYER** + **PLAYER_CHARACTER** Rosetta links.
+3. Sets optional **`account.playerId`** on the IAM account for UI convenience only (not a second player store).
+
+**Intentionally not used for IAM:** `ACCOUNT_PLAYER` — IAM accounts are not `thegame:data:account` rows, so that link type is reserved for legacy Triforce / DS-only account entities.
+
 ---
 
 ## Key Files
@@ -44,6 +55,7 @@ The Account Modal calls `ClientAPI.getCharacters('special')`.
 | IAM Repair (founder re-link) | `app/api/admin/iam-repair/route.ts` |
 | Rosetta Stone Links | `links/link-registry.ts`, `links/link-validation.ts` |
 | DS Character repo | `data-store/repositories/character.repo.ts` |
+| DS Player repo | `data-store/repositories/player.repo.ts` |
 | Client API | `lib/client-api.ts` |
 
 ---
@@ -61,15 +73,21 @@ The Account Modal calls `ClientAPI.getCharacters('special')`.
 - `IAMService.assignCharacterRoles()` — deleted (roles live on DS character, not IAM).
 - `IAMService.hydrateCharactersFromDataStore()` — deleted (no IAM characters to hydrate).
 - Private IAM `createLink()` method (wrote to `iam:link:*`) — replaced by Rosetta Stone `createLink()`.
+- `iam:player:{uuid}` keys — no longer written or read.
+- `iam:index:players` and `buildPlayerKey` — removed from `lib/keys.ts`.
+- `IAMService.createPlayer()` (IAM duplicate) — replaced by DS `upsertPlayer` inside `ensureDataStorePlayerForLinkedCharacter`.
 
 ---
 
 ## Genesis / Repair
 
-`GET /api/admin/iam-repair?passphrase=KEY` finds the Founder IAM account + the
-Founder DS character (by `FOUNDER_CHARACTER_ID` or FOUNDER role), then calls
-`linkAccountToCharacter()` to create the Rosetta Stone bridge. No IAM character
-duplication occurs.
+`GET /api/admin/iam-repair?passphrase=KEY` (or POST with body):
+
+- **Repair:** If `iam:index:accounts` already has rows, it picks the founder (passphrase flag / single account), then links to the DS founder character.
+- **Genesis:** If there are **no** IAM accounts, it **creates** the founder IAM account (requires **`FOUNDER_EMAIL`** in env; optional **`FOUNDER_DISPLAY_NAME`**, default `Founder`), sets `passphraseFlag: true`, verifies the account, then runs the same character link.
+- If IAM is empty and `FOUNDER_EMAIL` is missing, returns **500** with a clear message (so you don’t “repair” into a dead end).
+
+After Genesis, use **passphrase** login or set email/password in Admin → Accounts.
 
 ---
 
