@@ -17,6 +17,15 @@ export default function AdminLoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+
+  // Forgot Password state
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [resetToken, setResetToken] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [resetStep, setResetStep] = useState<'request' | 'reset'>('request');
+  const [isResetting, setIsResetting] = useState(false);
 
   // Default to email/password login only (passphrase reserved for future auth paths).
   const [showTeamLogin, setShowTeamLogin] = useState(true);
@@ -94,6 +103,74 @@ export default function AdminLoginPage() {
       await login(username, password, rememberMe);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
+    }
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsResetting(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/auth/reset-password-request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: forgotEmail })
+      });
+
+      const data = await response.json();
+
+      if (data.token) {
+        setResetToken(data.token);
+        setResetStep('reset');
+        setError('Reset token generated! Use it below to set your new password.');
+        setTimeout(() => setError(null), 5000);
+      } else {
+        setError(data.message || 'Reset request failed');
+      }
+    } catch (err) {
+      setError('Failed to request password reset');
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsResetting(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token: resetToken,
+          password: newPassword,
+          confirmPassword
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setError('Password reset successful! You can now login with your new password.');
+        setTimeout(() => {
+          setShowForgotPassword(false);
+          setResetStep('request');
+          setForgotEmail('');
+          setResetToken('');
+          setNewPassword('');
+          setConfirmPassword('');
+          setError(null);
+        }, 3000);
+      } else {
+        setError(data.error || 'Password reset failed');
+      }
+    } catch (err) {
+      setError('Failed to reset password');
+    } finally {
+      setIsResetting(false);
     }
   };
 
@@ -243,11 +320,161 @@ export default function AdminLoginPage() {
                   </Button>
                 </div>
               </form>
+
+              {/* Forgot Password Link */}
+              <div className="pt-4 text-center">
+                <button
+                  type="button"
+                  onClick={() => setShowForgotPassword(true)}
+                  className="text-sm font-medium text-primary hover:text-primary/80 transition-colors underline-offset-4 hover:underline"
+                >
+                  Forgot your password?
+                </button>
+              </div>
             </div>
           )}
         </CardContent>
 
       </Card>
+
+      {/* Forgot Password Modal */}
+      {showForgotPassword && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in">
+          <Card className="w-full max-w-md border-primary/20 shadow-xl overflow-hidden">
+            <div className="h-1 bg-primary w-full" />
+            <CardHeader className="text-center pb-2">
+              <CardTitle className="text-2xl font-bold flex items-center justify-center gap-2">
+                {isResetting ? <Loader2 className="h-6 w-6 animate-spin text-primary" /> : null}
+                {resetStep === 'request' ? 'Forgot Password' : 'Reset Password'}
+              </CardTitle>
+              <CardDescription className="text-xs">
+                {resetStep === 'request'
+                  ? 'Enter your email to receive a password reset token'
+                  : 'Use the reset token to set your new password'}
+              </CardDescription>
+            </CardHeader>
+
+            <CardContent className="space-y-4 pt-4">
+              {error && (
+                <div className="p-3 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md animate-in fade-in slide-in-from-top-1">
+                  {error}
+                </div>
+              )}
+
+              {resetStep === 'request' ? (
+                <form onSubmit={handleForgotPassword} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="forgot-email">Email Address</Label>
+                    <Input
+                      id="forgot-email"
+                      type="email"
+                      placeholder="Enter your email"
+                      value={forgotEmail}
+                      onChange={(e) => setForgotEmail(e.target.value)}
+                      disabled={isResetting}
+                      autoComplete="email"
+                      className="bg-accent/50"
+                      required
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setShowForgotPassword(false)}
+                      disabled={isResetting}
+                      className="w-32"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={isResetting || !forgotEmail}
+                      className="w-32 bg-primary text-primary-foreground font-semibold"
+                    >
+                      {isResetting ? 'Sending...' : 'Get Token'}
+                    </Button>
+                  </div>
+                </form>
+              ) : (
+                <form onSubmit={handlePasswordReset} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="reset-token">Reset Token</Label>
+                    <Input
+                      id="reset-token"
+                      type="text"
+                      placeholder="Paste reset token here"
+                      value={resetToken}
+                      onChange={(e) => setResetToken(e.target.value)}
+                      disabled={isResetting}
+                      autoComplete="one-time-code"
+                      className="bg-accent/50 font-mono"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="new-password">New Password</Label>
+                    <Input
+                      id="new-password"
+                      type="password"
+                      placeholder="Enter new password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      disabled={isResetting}
+                      autoComplete="new-password"
+                      className="bg-accent/50"
+                      minLength={6}
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="confirm-password">Confirm New Password</Label>
+                    <Input
+                      id="confirm-password"
+                      type="password"
+                      placeholder="Confirm new password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      disabled={isResetting}
+                      autoComplete="new-password"
+                      className="bg-accent/50"
+                      minLength={6}
+                      required
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setResetStep('request');
+                        setResetToken('');
+                        setNewPassword('');
+                        setConfirmPassword('');
+                      }}
+                      disabled={isResetting}
+                      className="w-32"
+                    >
+                      Back
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={isResetting || !resetToken || !newPassword || !confirmPassword}
+                      className="w-32 bg-primary text-primary-foreground font-semibold"
+                    >
+                      {isResetting ? 'Resetting...' : 'Reset Password'}
+                    </Button>
+                  </div>
+                </form>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

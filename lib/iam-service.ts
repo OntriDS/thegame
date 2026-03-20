@@ -147,21 +147,10 @@ export class IAMService {
   }
 
   async getAccountByEmail(email: string): Promise<Account | null> {
-    const mapping = await kvGet<any>(buildAccountByEmailKey(email));
-    if (!mapping) return null;
+    const mapping = await kvGet<{ accountId: string }>(buildAccountByEmailKey(email));
+    if (!mapping?.accountId) return null;
 
-    let accountId: string;
-    if (typeof mapping === 'string') {
-      accountId = mapping;
-    } else if (mapping && typeof mapping === 'object' && mapping.accountId) {
-      accountId = mapping.accountId;
-    } else {
-      console.error(`[IAM] Invalid email mapping format for ${email}:`, mapping);
-      return null;
-    }
-
-    accountId = accountId.split(':').pop() || accountId;
-    return await this.getAccountById(accountId);
+    return await this.getAccountById(mapping.accountId);
   }
 
   async updateAccount(
@@ -225,6 +214,106 @@ export class IAMService {
     await kvSet(buildAccountKey(accountId), updated);
     await kvSRem(IAM_ACCOUNTS_INDEX, accountId);
     await kvDel(buildAccountByEmailKey(account.email));
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // PASSWORD RESET
+  // ═══════════════════════════════════════════════════════════════
+
+  /**
+   * Generate a password reset token for an account by email
+   * Token is valid for 1 hour
+   */
+  async generatePasswordResetToken(email: string): Promise<{ success: boolean; token?: string; error?: string }> {
+    const account = await this.getAccountByEmail(email);
+    if (!account) {
+      return { success: false, error: 'Account not found' };
+    }
+
+    if (!account.isActive) {
+      return { success: false, error: 'Account is inactive' };
+    }
+
+    const token = uuidv4();
+    const expiry = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // 1 hour
+
+    const resetKey = `iam:reset:${token}`;
+    await kvSet(resetKey, {
+      accountId: account.id,
+      email: account.email,
+      expiresAt: expiry
+    });
+
+    // Store token reference on account for easy lookup
+    const updated: Account = {
+      ...account,
+      resetToken: token,
+      resetTokenExpiry: expiry,
+      updatedAt: new Date().toISOString()
+    };
+    await kvSet(buildAccountKey(account.id), updated);
+
+    return { success: true, token };
+  }
+
+  /**
+   * Validate a password reset token
+   */
+  async validatePasswordResetToken(token: string): Promise<{ valid: boolean; accountId?: string; email?: string }> {
+    const resetKey = `iam:reset:${token}`;
+    const resetData = await kvGet<{ accountId: string; email: string; expiresAt: string }>(resetKey);
+
+    if (!resetData) {
+      return { valid: false };
+    }
+
+    // Check expiry
+    if (new Date(resetData.expiresAt) < new Date()) {
+      await kvDel(resetKey);
+      return { valid: false };
+    }
+
+    return {
+      valid: true,
+      accountId: resetData.accountId,
+      email: resetData.email
+    };
+  }
+
+  /**
+   * Reset password using a valid token
+   */
+  async resetPasswordWithToken(token: string, newPassword: string): Promise<{ success: boolean; error?: string }> {
+    const validation = await this.validatePasswordResetToken(token);
+
+    if (!validation.valid || !validation.accountId) {
+      return { success: false, error: 'Invalid or expired reset token' };
+    }
+
+    // Update password
+    const saltRounds = 10;
+    const passwordHash = await bcrypt.hash(newPassword, saltRounds);
+
+    const account = await this.getAccountById(validation.accountId);
+    if (!account) {
+      return { success: false, error: 'Account not found' };
+    }
+
+    const updated: Account = {
+      ...account,
+      passwordHash,
+      resetToken: undefined,
+      resetTokenExpiry: undefined,
+      updatedAt: new Date().toISOString()
+    };
+
+    await kvSet(buildAccountKey(account.id), updated);
+
+    // Clear reset token
+    const resetKey = `iam:reset:${token}`;
+    await kvDel(resetKey);
+
+    return { success: true };
   }
 
   // ═══════════════════════════════════════════════════════════════

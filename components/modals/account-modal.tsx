@@ -12,7 +12,9 @@ import type { Account, Character } from '@/types/entities';
 import { filterRolesToSpecialOnly } from '@/lib/character-roles';
 import { ClientAPI } from '@/lib/client-api';
 import { dispatchEntityUpdated } from '@/lib/ui/ui-events';
-import { Loader2, User, Mail, Lock, Save } from 'lucide-react';
+import { useAuth } from '@/lib/hooks/use-auth';
+import { CharacterRole } from '@/types/enums';
+import { Loader2, User, Mail, Lock, Save, KeyRound } from 'lucide-react';
 import DeleteModal from './submodals/delete-submodal';
 import { EntityType } from '@/types/enums';
 
@@ -29,10 +31,19 @@ interface AccountModalProps {
  * Simple account creation modal for linking accounts to characters
  */
 export default function AccountModal({ account, character, open, onOpenChange, onSave }: AccountModalProps) {
+  const { user } = useAuth();
+  const isFounder = user?.roles?.includes(CharacterRole.FOUNDER);
+
   // Form fields
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [phone, setPhone] = useState('');
+
+  // Password update fields (only for editing)
+  const [showPasswordUpdate, setShowPasswordUpdate] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
 
   // Character selection for linking
   const [characters, setCharacters] = useState<Character[]>([]);
@@ -126,12 +137,59 @@ export default function AccountModal({ account, character, open, onOpenChange, o
         setPhone('');
         setPassword('');
         setSelectedCharacterId('');
+        setShowPasswordUpdate(false);
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
         setError(null);
       }
     };
 
     loadData();
   }, [open, account, character]);
+
+  const handlePasswordUpdate = async () => {
+    if (isSaving) return;
+
+    // Password update validation
+    if (!currentPassword.trim() || !newPassword.trim() || !confirmPassword.trim()) {
+      setError('All password fields are required');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setError('New passwords do not match');
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setError('Password must be at least 6 characters');
+      return;
+    }
+
+    setIsSaving(true);
+    setError(null);
+
+    try {
+      await ClientAPI.updateAccount(account!.id, { password: newPassword });
+
+      // Clear password fields
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setShowPasswordUpdate(false);
+
+      // Show success message (could be improved with toast)
+      setError('Password updated successfully');
+      setTimeout(() => setError(null), 3000);
+
+      setIsSaving(false);
+    } catch (error) {
+      console.error('[Account Modal] Failed to update password:', error);
+      setError(error instanceof Error ? error.message : 'Failed to update password');
+      setIsSaving(false);
+    }
+  };
 
   const handleSave = async () => {
     if (isSaving) return;
@@ -355,6 +413,86 @@ export default function AccountModal({ account, character, open, onOpenChange, o
                   className="bg-accent/30"
                   minLength={6}
                 />
+              </div>
+            )}
+
+            {/* Password Update Section - only for existing accounts and Founder role */}
+            {account && isFounder && (
+              <div className="space-y-3 pt-4 border-t border-primary/10">
+                <div className="flex items-center justify-between">
+                  <Label className="flex items-center gap-2 text-sm font-semibold">
+                    <KeyRound className="h-4 w-4 text-primary" />
+                    Change Password
+                  </Label>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowPasswordUpdate(!showPasswordUpdate)}
+                    className="text-xs"
+                  >
+                    {showPasswordUpdate ? 'Cancel' : 'Update'}
+                  </Button>
+                </div>
+
+                {showPasswordUpdate && (
+                  <div className="space-y-3 animate-in fade-in slide-in-from-top-2">
+                    <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-md">
+                      <p className="text-xs text-amber-700 font-medium">
+                        Founder-only: You can change this user's password. The user will need to use the new password on next login.
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="new-password" className="text-xs font-medium">New Password</Label>
+                      <Input
+                        id="new-password"
+                        type="password"
+                        placeholder="Enter new password"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        disabled={isSaving}
+                        autoComplete="new-password"
+                        className="bg-accent/30"
+                        minLength={6}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="confirm-password" className="text-xs font-medium">Confirm New Password</Label>
+                      <Input
+                        id="confirm-password"
+                        type="password"
+                        placeholder="Confirm new password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        disabled={isSaving}
+                        autoComplete="new-password"
+                        className="bg-accent/30"
+                        minLength={6}
+                      />
+                    </div>
+
+                    <Button
+                      type="button"
+                      onClick={handlePasswordUpdate}
+                      disabled={isSaving || !newPassword || !confirmPassword}
+                      className="w-full bg-primary text-primary-foreground font-semibold"
+                    >
+                      {isSaving ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          Updating...
+                        </>
+                      ) : (
+                        <>
+                          <KeyRound className="h-4 w-4 mr-2" />
+                          Update Password
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
           </div>

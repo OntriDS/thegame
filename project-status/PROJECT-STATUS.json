@@ -29,7 +29,7 @@
         "JungleCoins and its equivalent (Usd) Produced, visible in the Dashboard and Player Section",
         "Personal Finances well conected to Player Points and Personal Earnings",
         "Accounts Section, Accounts Modal, for Accounts Managment (only Founder)",
-        "Account Creation Process, Accounts Section UI improvements",
+        "Account Creation Process, Accounts Section UI improvements and standarization",
         "Ledger with Passphrase protection, Accounts Email + Password and Phone (Optional)"
       ]
     },
@@ -64,7 +64,8 @@
       " Cahracters: Improve Ledger Wallet",
       "Player: Player Progression and Points Balance (machinations)",
       "Research: Machinations Display of Player Data",
-      "Pixelbrain: Debuger Agent + Local Automation Tasks"
+      "Pixelbrain: Debuger Agent + Local Automation Tasks",
+      "Genesis flow for brand new app, with proper frontend setup wizard"
     ]
     },
     "phaseX.2": {

@@ -55,3 +55,30 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   await iamService.disableAccount(params.id);
   return new NextResponse(null, { status: 204 });
 }
+
+export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+  if (!(await requireAdminAuth(req))) return new NextResponse('Unauthorized', { status: 401 });
+
+  try {
+    const body = await req.json();
+    const { password } = body;
+
+    if (!password) {
+      return new NextResponse('Password is required', { status: 400 });
+    }
+
+    if (password.length < 6) {
+      return new NextResponse('Password must be at least 6 characters', { status: 400 });
+    }
+
+    const updatedAccount = await iamService.updateAccount(params.id, { password });
+
+    return new NextResponse.json({
+      success: true,
+      account: await toUiAccount(updatedAccount)
+    });
+  } catch (error: any) {
+    console.error('[Account API] Error updating account:', error);
+    return new NextResponse(error.message || 'Failed to update account', { status: 500 });
+  }
+}
