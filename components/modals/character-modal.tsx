@@ -732,7 +732,7 @@ function AccountInfoModal({ character, open, onOpenChange }: AccountInfoModalPro
               <div className="space-y-2">
                 <Label>Name</Label>
                 <Input
-                  value={account.name || ''}
+                  value={name}
                   readOnly
                   disabled
                   className="bg-muted/50"
@@ -763,15 +763,15 @@ function AccountInfoModal({ character, open, onOpenChange }: AccountInfoModalPro
               <div className="border-t pt-3 space-y-2">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Account Status:</span>
-                  <span className={account.isActive ? 'text-green-600' : 'text-red-600'}>
-                    {account.isActive ? 'Active' : 'Inactive'}
+                  <span className={accountData?.isActive ? 'text-green-600' : 'text-red-600'}>
+                    {accountData?.isActive ? 'Active' : 'Inactive'}
                   </span>
                 </div>
 
-                {account.lastActiveAt && (
+                {accountData?.lastActiveAt && (
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Last Active:</span>
-                    <span className="text-xs">{new Date(account.lastActiveAt).toLocaleString()}</span>
+                    <span className="text-xs">{new Date(accountData.lastActiveAt).toLocaleString()}</span>
                   </div>
                 )}
               </div>
