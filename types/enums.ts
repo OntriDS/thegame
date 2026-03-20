@@ -771,9 +771,6 @@ export enum NotebookType {
 export const FOUNDER_CHARACTER_ID = 'cc4ba319-8788-436e-ab46-56a7a92b2564';
 export const FOUNDER_PLAYER_ID = 'c83b2249-60a1-4b09-9874-5612f95c5da2';
 
-/** @deprecated Use FOUNDER_CHARACTER_ID for new code. Points to the current founder UUID. */
-export const PLAYER_ONE_ID = FOUNDER_CHARACTER_ID;
-
 // ============================================================================
 // NOTE SYSTEM TAGS
 // ============================================================================

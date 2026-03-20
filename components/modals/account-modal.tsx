@@ -439,7 +439,7 @@ export default function AccountModal({ account, character, open, onOpenChange, o
                   <div className="space-y-3 animate-in fade-in slide-in-from-top-2">
                     <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-md">
                       <p className="text-xs text-amber-700 font-medium">
-                        Founder-only: You can change this user's password. The user will need to use the new password on next login.
+                        Founder-only: You can change this user&apos;s password. The user will need to use the new password on next login.
                       </p>
                     </div>
 

@@ -16,7 +16,6 @@ const RESETTABLE_ENTITY_TYPES = [
   EntityType.FINANCIAL,
   EntityType.CHARACTER,
   EntityType.PLAYER,
-  EntityType.ACCOUNT,
   EntityType.SITE
 ];
 
@@ -67,13 +66,28 @@ export interface ResetOptions {
 }
 
 export class ResetDataWorkflow {
-  
+
   /**
    * Execute reset data operation with timeout and progress tracking
    */
-  static async execute(mode: 'clear' | 'defaults' | 'backfill' = 'defaults', progressCallback?: ProgressCallback): Promise<SettingsResult> {
+  static async execute(
+    mode: 'clear' | 'defaults' | 'backfill' = 'defaults', 
+    accessKey?: string,
+    progressCallback?: ProgressCallback
+  ): Promise<SettingsResult> {
     try {
       console.log(`[ResetDataWorkflow] 🔄 Starting reset data operation (mode: ${mode})...`);
+
+      // SECURITY CHECK: Require admin access key for catastrophic operations
+      const ADMIN_KEY = process.env.ADMIN_ACCESS_KEY;
+      if (!accessKey || accessKey !== ADMIN_KEY) {
+        console.error('[ResetDataWorkflow] ❌ Unauthorized reset attempt - Invalid Access Key');
+        return {
+          success: false,
+          message: 'Unauthorized: Invalid Admin Access Key required for data reset',
+          data: { results: [], errors: ['Invalid Access Key'], mode, environment: 'unknown' }
+        };
+      }
 
       const isKV = Boolean(process.env.UPSTASH_REDIS_REST_URL);
       const isServer = typeof window === 'undefined';
@@ -137,7 +151,7 @@ export class ResetDataWorkflow {
 
       // Use TransactionManager for rollback support
       const transactionManager = new TransactionManager();
-      
+
       const result = await transactionManager.execute(async () => {
         // CORRECT ORDER (FIXED):
         // 1. Clear entities
@@ -145,7 +159,7 @@ export class ResetDataWorkflow {
         // 3. Clear logs - BEFORE entity creation
         // 4. Clear Effects Registry and Processing Stack - CRITICAL for idempotency
         // 5. Clear System State (assets)
-        // 6. Initialize Player One (The Triforce) - AFTER log clearing
+        // 6. Reset System Finances - Only clear game financials, NOT identity
         // 7. Seed default sites
 
         // Step 1: Clear all entity data
@@ -226,18 +240,18 @@ export class ResetDataWorkflow {
           throw new Error(errorMsg);
         }
 
-        // Step 6: Initialize Player One (The Triforce) AFTER log clearing
+        // Step 6: Reset System Finances (Foundation) AFTER log clearing
         if (mode === 'defaults') {
           try {
-            checkTimeoutAndProgress('Initializing Player One');
-            console.log('[ResetDataWorkflow] 🔺 Starting Triforce initialization...');
-            await this.initializePlayerOne(results, errors);
-            console.log('[ResetDataWorkflow] ✅ Triforce initialization completed');
+            checkTimeoutAndProgress('Resetting System Finances');
+            console.log('[ResetDataWorkflow] 💰 Resetting System Finances...');
+            await this.resetSystemFinances(results, errors);
+            console.log('[ResetDataWorkflow] ✅ System Finances reset completed');
           } catch (error) {
             if (error instanceof Error && error.message.includes('timeout')) {
               throw error; // Re-throw timeout errors
             }
-            const errorMsg = `Failed to initialize Player One: ${error instanceof Error ? error.message : 'Unknown error'}`;
+            const errorMsg = `Failed to reset finances: ${error instanceof Error ? error.message : 'Unknown error'}`;
             errors.push(errorMsg);
             console.error(`[ResetDataWorkflow] ❌ ${errorMsg}`);
             throw new Error(errorMsg); // Throw to trigger rollback
@@ -280,7 +294,7 @@ export class ResetDataWorkflow {
         console.error('[ResetDataWorkflow] 🚨 Critical errors detected, operation may be incomplete');
         throw new Error(`Critical errors encountered: ${criticalErrors.join(', ')}`);
       }
-      
+
       const success = errors.length === 0;
       const message = success
         ? `Successfully reset data (${mode} mode) - ${results.length} operations completed: ${results.join(', ')}`
@@ -350,7 +364,7 @@ export class ResetDataWorkflow {
       };
     }
   }
-  
+
   /**
    * Clear all entity data from KV with batch processing
    */
@@ -397,7 +411,7 @@ export class ResetDataWorkflow {
           } else {
             results.push(`No ${entityType} entities to clear`);
           }
-          
+
           // Clear secondary indexes for entities that have them
           await this.clearSecondaryIndexes(entityType, results, errors);
         } catch (error) {
@@ -412,7 +426,7 @@ export class ResetDataWorkflow {
       console.error(`[ResetDataWorkflow] ❌ ${errorMsg}`);
     }
   }
-  
+
   /**
    * Clear secondary indexes for entities that have them
    */
@@ -424,42 +438,42 @@ export class ResetDataWorkflow {
         const typeIndexKeys = await kvScan('index:item:type:');
         const sourceTaskIndexKeys = await kvScan('index:item:sourceTaskId:');
         const sourceRecordIndexKeys = await kvScan('index:item:sourceRecordId:');
-        
+
         const allItemIndexKeys = [...typeIndexKeys, ...sourceTaskIndexKeys, ...sourceRecordIndexKeys];
-        
+
         if (allItemIndexKeys.length > 0) {
           const BATCH_SIZE = 100;
           const totalBatches = Math.ceil(allItemIndexKeys.length / BATCH_SIZE);
-          
+
           for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
             const startIndex = batchIndex * BATCH_SIZE;
             const endIndex = Math.min(startIndex + BATCH_SIZE, allItemIndexKeys.length);
             const batchKeys = allItemIndexKeys.slice(startIndex, endIndex);
-            
+
             await kvDelMany(batchKeys);
             console.log(`[ResetDataWorkflow] ✅ Cleared item secondary index batch ${batchIndex + 1}/${totalBatches}`);
           }
-          
+
           results.push(`Cleared ${allItemIndexKeys.length} item secondary indexes`);
           console.log(`[ResetDataWorkflow] ✅ Cleared ${allItemIndexKeys.length} item secondary indexes`);
         }
       } else if (entityType === EntityType.FINANCIAL) {
         // Clear financial sourceTaskId indexes
         const sourceTaskIndexKeys = await kvScan('index:financial:sourceTaskId:');
-        
+
         if (sourceTaskIndexKeys.length > 0) {
           const BATCH_SIZE = 100;
           const totalBatches = Math.ceil(sourceTaskIndexKeys.length / BATCH_SIZE);
-          
+
           for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
             const startIndex = batchIndex * BATCH_SIZE;
             const endIndex = Math.min(startIndex + BATCH_SIZE, sourceTaskIndexKeys.length);
             const batchKeys = sourceTaskIndexKeys.slice(startIndex, endIndex);
-            
+
             await kvDelMany(batchKeys);
             console.log(`[ResetDataWorkflow] ✅ Cleared financial secondary index batch ${batchIndex + 1}/${totalBatches}`);
           }
-          
+
           results.push(`Cleared ${sourceTaskIndexKeys.length} financial secondary indexes`);
           console.log(`[ResetDataWorkflow] ✅ Cleared ${sourceTaskIndexKeys.length} financial secondary indexes`);
         }
@@ -470,7 +484,7 @@ export class ResetDataWorkflow {
       console.error(`[ResetDataWorkflow] ❌ ${errorMsg}`);
     }
   }
-  
+
   /**
    * Clear all links from KV with batch processing
    */
@@ -505,7 +519,7 @@ export class ResetDataWorkflow {
         const entityLinkKeys = await kvScan('index:links:by-entity:');
         if (entityLinkKeys.length > 0) {
           console.log(`[ResetDataWorkflow] 📊 Found ${entityLinkKeys.length} entity link indexes to clear`);
-          
+
           const indexBatches = Math.ceil(entityLinkKeys.length / BATCH_SIZE);
           for (let indexBatch = 0; indexBatch < indexBatches; indexBatch++) {
             const startIndex = indexBatch * BATCH_SIZE;
@@ -528,20 +542,20 @@ export class ResetDataWorkflow {
       console.error(`[ResetDataWorkflow] ❌ ${errorMsg}`);
     }
   }
-  
+
   /**
    * Clear all logs from KV
    */
   private static async clearAllLogs(results: string[], errors: string[]): Promise<void> {
     try {
       console.log('[ResetDataWorkflow] 📝 Clearing ENTITY logs only (preserving research logs)...');
-      
+
       // ONLY clear entity logs, NOT research logs
       const entityLogTypes = [...RESETTABLE_ENTITY_TYPES, 'links'];
-      
+
       console.log('[ResetDataWorkflow] Entity logs to clear:', entityLogTypes);
       console.log('[ResetDataWorkflow] ⚠️ Research logs (notes-log, dev-log) will NOT be cleared');
-      
+
       for (const logType of entityLogTypes) {
         try {
           const logKey = buildLogKey(logType);
@@ -555,7 +569,7 @@ export class ResetDataWorkflow {
           console.error(`[ResetDataWorkflow] ❌ ${errorMsg}`);
         }
       }
-      
+
       // Verify research logs still exist
       console.log('[ResetDataWorkflow] 🔍 Verifying research logs are preserved...');
       const notesLog = await kv.get('data:notes-log');
@@ -564,14 +578,14 @@ export class ResetDataWorkflow {
         notesLog: notesLog ? 'EXISTS' : 'MISSING',
         devLog: devLog ? 'EXISTS' : 'MISSING'
       });
-      
+
       if (notesLog) {
         results.push('Preserved notes-log (research)');
       }
       if (devLog) {
         results.push('Preserved dev-log (research)');
       }
-      
+
     } catch (error) {
       const errorMsg = `Failed to clear logs: ${error instanceof Error ? error.message : 'Unknown error'}`;
       errors.push(errorMsg);
@@ -586,7 +600,7 @@ export class ResetDataWorkflow {
   private static async clearSystemState(results: string[], errors: string[]): Promise<void> {
     try {
       console.log('[ResetDataWorkflow] 🗑️ Clearing System State...');
-      
+
       for (const key of SYSTEM_STATE_KEYS) {
         try {
           await kv.del(key);
@@ -597,7 +611,7 @@ export class ResetDataWorkflow {
           console.error(`[ResetDataWorkflow] ❌ ${errorMsg}`);
         }
       }
-      
+
       results.push(`Cleared ${SYSTEM_STATE_KEYS.length} System State keys`);
       console.log('[ResetDataWorkflow] ✅ System State cleared successfully');
     } catch (error) {
@@ -606,7 +620,7 @@ export class ResetDataWorkflow {
       console.error(`[ResetDataWorkflow] ❌ ${errorMsg}`);
     }
   }
-  
+
   /**
    * Seed default sites with batch processing
    */
@@ -702,104 +716,34 @@ export class ResetDataWorkflow {
 
 
   /**
-   * Initialize Player One (The Triforce) - Account + Player + Character
+   * Initialize System State to baseline values (Financials)
    */
-  private static async initializePlayerOne(results: string[], errors: string[]): Promise<void> {
+  private static async resetSystemFinances(results: string[], errors: string[]): Promise<void> {
     try {
-      console.log('[ResetDataWorkflow] 🔺 Initializing Player One (The Triforce)...');
+      console.log('[ResetDataWorkflow] 💰 Resetting System Finances...');
 
-      // Import required functions
-      const { ensurePlayerOne } = await import('@/lib/game-mechanics/player-one-init');
-      const {
-        getAllPlayers,
-        getAllCharacters,
-        getAllAccounts,
-        upsertPlayer,
-        upsertCharacter,
-        upsertAccount
-      } = await import('@/data-store/datastore');
-
-      console.log('[ResetDataWorkflow] 🔍 About to call ensurePlayerOne...');
-
-      // Initialize Player One
-      await ensurePlayerOne(
-        getAllPlayers,
-        getAllCharacters,
-        getAllAccounts,    // ← REAL IMPLEMENTATION
-        upsertPlayer,
-        upsertCharacter,
-        upsertAccount,     // ← REAL IMPLEMENTATION
-        true, // force
-        { skipLogging: false }
-      );
-
-      console.log('[ResetDataWorkflow] 🔍 ensurePlayerOne completed, checking results...');
-
-      // Verify the Triforce was created
-      const players = await getAllPlayers();
-      const characters = await getAllCharacters();
-      const accounts = await getAllAccounts();
-
-      console.log('[ResetDataWorkflow] 🔍 Post-creation verification:', {
-        playersCount: players.length,
-        charactersCount: characters.length,
-        accountsCount: accounts.length,
-        playerIds: players.map(p => p.id),
-        characterIds: characters.map(c => c.id),
-        accountIds: accounts.map(a => a.id)
-      });
-
-      results.push('Initialized Player One (Account + Player + Character)');
-      console.log('[ResetDataWorkflow] ✅ Player One initialized successfully');
-
-      // Initialize System State to baseline values
       const { saveCompanyAssets, savePersonalAssets } = await import('@/data-store/datastore');
 
       // Initialize company assets to zero
       await saveCompanyAssets({
-        cash: 0,
-        bank: 0,
-        bitcoin: 0,
-        toCharge: 0,
-        toPay: 0,
-        companyJ$: 0,
-        cashColones: 0,
-        bankColones: 0,
-        toChargeColones: 0,
-        toPayColones: 0,
-        bitcoinSats: 0,
-        materials: { value: 0, cost: 0 },
-        equipment: { value: 0, cost: 0 },
-        artworks: { value: 0, cost: 0 },
-        prints: { value: 0, cost: 0 },
-        stickers: { value: 0, cost: 0 },
-        merch: { value: 0, cost: 0 }
+        cash: 0, bank: 0, bitcoin: 0, toCharge: 0, toPay: 0, companyJ$: 0,
+        cashColones: 0, bankColones: 0, toChargeColones: 0, toPayColones: 0, bitcoinSats: 0,
+        materials: { value: 0, cost: 0 }, equipment: { value: 0, cost: 0 },
+        artworks: { value: 0, cost: 0 }, prints: { value: 0, cost: 0 },
+        stickers: { value: 0, cost: 0 }, merch: { value: 0, cost: 0 }
       });
 
       // Initialize personal assets to zero
       await savePersonalAssets({
-        cash: 0,
-        bank: 0,
-        bitcoin: 0,
-        crypto: 0,
-        toCharge: 0,
-        toPay: 0,
-        personalJ$: 0,
-        cashColones: 0,
-        bankColones: 0,
-        toChargeColones: 0,
-        toPayColones: 0,
-        bitcoinSats: 0,
-        vehicle: 0,
-        properties: 0,
-        nfts: 0,
-        other: 0
+        cash: 0, bank: 0, bitcoin: 0, crypto: 0, toCharge: 0, toPay: 0, personalJ$: 0,
+        cashColones: 0, bankColones: 0, toChargeColones: 0, toPayColones: 0, bitcoinSats: 0,
+        vehicle: 0, properties: 0, nfts: 0, other: 0
       });
 
       results.push('Initialized System State (assets zeroed)');
       console.log('[ResetDataWorkflow] ✅ System State initialized to baseline values');
     } catch (error) {
-      const errorMsg = `Failed to initialize Player One: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      const errorMsg = `Failed to reset finances: ${error instanceof Error ? error.message : 'Unknown error'}`;
       errors.push(errorMsg);
       console.error(`[ResetDataWorkflow] ❌ ${errorMsg}`);
     }
