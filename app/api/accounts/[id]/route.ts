@@ -73,7 +73,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
     const updatedAccount = await iamService.updateAccount(params.id, { password });
 
-    return new NextResponse.json({
+    return NextResponse.json({
       success: true,
       account: await toUiAccount(updatedAccount)
     });
