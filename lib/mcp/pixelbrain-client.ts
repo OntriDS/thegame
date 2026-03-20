@@ -9,6 +9,10 @@
  */
 
 import { logger } from '@/lib/utils/logger';
+import {
+  getCachedPixelbrainOutboundToken,
+  clearPixelbrainOutboundM2MTokenCache,
+} from '@/lib/auth/outbound-pixelbrain-m2m';
 
 // ============================================================================
 // INTERNAL HTTP CLIENT (using fetch instead of axios)
@@ -447,8 +451,23 @@ export interface TokenUsage {
  * });
  * ```
  */
+/** Map TheGame UI task types to Pixelbrain AgentTask.type */
+function mapTaskTypeToPixelbrain(taskType: TaskType): string {
+  const typeMap: Record<TaskType, string> = {
+    validation: 'integrity',
+    planning: 'strategy',
+    organization: 'orchestration',
+    preparation: 'general',
+    marketing: 'promotion',
+    analysis: 'audit',
+    design: 'design',
+  };
+  return typeMap[taskType] || 'general';
+}
+
 export class PixelbrainClient {
-  private readonly baseURL: string;
+  /** Origin + `/api` — Pixelbrain routes are `/api/...` (no `/api/v1`). */
+  private readonly apiRoot: string;
   private readonly timeout: number;
   private defaultHeaders: Record<string, string>;
   private socket: SocketStub | null = null;
@@ -480,7 +499,8 @@ export class PixelbrainClient {
       ...config,
     };
 
-    this.baseURL = `${config.endpoint}/api/${this.connectionConfig.apiVersion}`;
+    const base = config.endpoint.replace(/\/$/, '');
+    this.apiRoot = `${base}/api`;
     this.timeout = this.connectionConfig.timeout || 30000;
     this.defaultHeaders = {
       'Content-Type': 'application/json',
@@ -504,7 +524,7 @@ export class PixelbrainClient {
    * Internal HTTP GET request
    */
   private async httpGet<T = unknown>(path: string, params?: Record<string, unknown>): Promise<HttpResponse<T>> {
-    const url = new URL(`${this.baseURL}${path}`);
+    const url = new URL(`${this.apiRoot}${path}`);
     if (params) {
       Object.entries(params).forEach(([k, v]) => {
         if (v !== undefined && v !== null) url.searchParams.set(k, String(v));
@@ -543,7 +563,7 @@ export class PixelbrainClient {
     const timeoutId = setTimeout(() => controller.abort(), this.timeout);
 
     try {
-      const res = await fetch(`${this.baseURL}${path}`, {
+      const res = await fetch(`${this.apiRoot}${path}`, {
         method: 'POST',
         headers,
         body: body ? JSON.stringify(body) : undefined,
@@ -570,64 +590,26 @@ export class PixelbrainClient {
    * @returns Authentication token
    * @throws Error if authentication fails
    */
+  /**
+   * Mint M2M JWT via TheGame IAM (cached); Pixelbrain verifies the same secret.
+   */
   async authenticate(apiKey: string): Promise<AuthToken> {
     try {
-      logger.debug('Authenticating with pixelbrain');
+      logger.debug('Minting outbound M2M JWT for Pixelbrain');
 
-      const response = await this.httpPost('/auth/token', {
-        apiKey,
-        clientId: 'thegame',
-        systemName: 'thegame',
-        capabilities: [
-          'tasks',
-          'items',
-          'sales',
-          'archive',
-          'analytics',
-          'financials',
-        ],
-      });
-
-      const { token, expiresAt, refreshToken } = (response.data as any);
+      const { token, expiresAt } = await getCachedPixelbrainOutboundToken(apiKey);
 
       this.authToken = {
         token,
-        expiresAt: new Date(expiresAt),
-        refreshToken,
+        expiresAt,
       };
 
-      logger.info('Authentication successful', {
-        expiresAt: this.authToken.expiresAt,
-      });
+      logger.info('Outbound M2M token ready', { expiresAt: this.authToken.expiresAt });
 
       return this.authToken;
     } catch (error) {
       logger.error('Authentication failed', { error });
       throw new Error(`Authentication failed: ${(error as Error).message}`);
-    }
-  }
-
-  /**
-   * Register client with pixelbrain
-   *
-   * @param clientInfo - Client registration information
-   * @returns Client ID
-   * @throws Error if registration fails
-   */
-  async registerClient(clientInfo: ClientInfo): Promise<string> {
-    try {
-      logger.debug('Registering client', { clientInfo });
-
-      const response = await this.httpPost('/clients/register', clientInfo);
-
-      const { clientId } = (response.data as any);
-
-      logger.info('Client registered successfully', { clientId });
-
-      return clientId;
-    } catch (error) {
-      logger.error('Client registration failed', { error });
-      throw new Error(`Client registration failed: ${(error as Error).message}`);
     }
   }
 
@@ -656,64 +638,32 @@ export class PixelbrainClient {
         throw new Error('API key is required for connection');
       }
 
-      // Authenticate
       await this.authenticate(this.connectionConfig.apiKey);
 
-      // Register client
-      const clientId = await this.registerClient({
-        clientId: 'thegame',
-        systemName: 'thegame',
-        version: '1.0.0',
-        capabilities: [
-          'tasks',
-          'items',
-          'sales',
-          'archive',
-          'analytics',
-          'financials',
-        ],
-        environment: (process.env.NODE_ENV as any) || 'development',
+      const discoverRes = await this.httpPost('/mcp/tools/discover', {
+        systemId: 'thegame',
       });
+      const tools = (discoverRes.data as any)?.tools;
+      const discoveredTools = Array.isArray(tools) ? tools.length : 0;
 
-      // Establish connection
-      const response = await this.httpPost('/systems/connect', {
-        systemId: clientId,
-        systemName: 'thegame',
-        version: '1.0.0',
-        capabilities: [
-          'tasks',
-          'items',
-          'sales',
-          'archive',
-          'analytics',
-          'financials',
-        ],
-        authentication: {
-          type: 'apiKey',
-          apiKey: this.connectionConfig.apiKey,
-        },
-      });
+      const verRes = await this.httpGet('/version');
+      const serverVersion = String((verRes.data as any)?.version ?? 'unknown');
 
-      const data = (response.data as any);
-
-      // Update connection state
-      this.connectionId = data.connectionId;
+      this.connectionId = `m2m-${Date.now()}`;
       this.isConnected = true;
       this.lastActivity = new Date();
       this.connectionStartTime = new Date();
 
-      // Initialize WebSocket if enabled
       if (this.connectionConfig.enableWebSockets) {
         await this.initializeWebSocket();
       }
 
-      // Reset circuit breaker on successful connection
       this.circuitBreaker.reset();
 
       logger.info('Connected to pixelbrain', {
         connectionId: this.connectionId,
-        serverVersion: data.serverVersion,
-        discoveredTools: data.discoveredTools,
+        serverVersion,
+        discoveredTools,
       });
 
       return {
@@ -721,8 +671,8 @@ export class PixelbrainClient {
         connectionId: this.connectionId ?? '',
         status: 'connected',
         authToken: this.authToken!,
-        discoveredTools: data.discoveredTools,
-        serverVersion: data.serverVersion,
+        discoveredTools,
+        serverVersion,
         message: 'Connected to pixelbrain successfully',
       };
     } catch (error) {
@@ -747,18 +697,10 @@ export class PixelbrainClient {
         this.socket = null;
       }
 
-      // Unsubscribe from all events
       this.eventSubscriptions.clear();
 
-      // Disconnect from server
-      if (this.connectionId) {
-        await this.httpPost('/systems/disconnect', {
-          systemId: 'thegame',
-          connectionId: this.connectionId,
-        });
-      }
+      clearPixelbrainOutboundM2MTokenCache();
 
-      // Clear connection state
       this.isConnected = false;
       this.connectionId = null;
       this.authToken = null;
@@ -793,22 +735,21 @@ export class PixelbrainClient {
         throw new Error('Not connected to pixelbrain');
       }
 
-      const response = await this.httpGet('/systems/thegame/status');
+      const response = await this.httpGet('/systems/thegame/state');
       const data = (response.data as any);
 
-      // Update local tracking
       this.lastActivity = new Date();
       this.totalRequests++;
 
       return {
         connected: true,
         connectionId: this.connectionId!,
-        lastActivity: new Date(data.lastActivity),
-        systemHealth: data.health,
-        activeAgents: data.activeAgents,
-        uptime: data.uptime,
-        latency: data.averageLatency,
-        totalRequests: data.totalRequests,
+        lastActivity: new Date(),
+        systemHealth: data?.health ?? 'healthy',
+        activeAgents: 0,
+        uptime: 0,
+        latency: data?.averageLatency ?? 0,
+        totalRequests: data?.totalRequests ?? 0,
       };
     } catch (error) {
       logger.error('Failed to get connection status', { error });
@@ -836,43 +777,60 @@ export class PixelbrainClient {
 
       logger.debug('Requesting agent', { agentName, task });
 
-      const response = await this.httpPost(`/agents/${agentName}/execute`, {
-        task: {
-          id: task.id,
-          type: task.type,
-          priority: task.priority,
-          parameters: task.parameters,
-          context: task.context,
+      const delegateTask = {
+        id: task.id,
+        type: mapTaskTypeToPixelbrain(task.type),
+        priority: task.priority,
+        context: {
+          system: task.context?.system ?? 'thegame',
+          userId: task.context?.userId,
+          requestId: task.id,
         },
-        options: task.options,
+        parameters: {
+          ...task.parameters,
+          requestedAgentName: agentName,
+        },
+        requester: 'thegame',
+      };
+
+      const response = await this.httpPost('/orchestration/delegate', {
+        task: delegateTask,
+        constraints: task.options ?? {},
       });
 
       const data = (response.data as any);
 
-      // Update local tracking
       this.lastActivity = new Date();
       this.totalRequests++;
 
-      logger.info('Agent task requested', {
+      const pbStatus = data?.status as string | undefined;
+      const uiStatus: TaskResult['status'] =
+        pbStatus === 'success'
+          ? 'completed'
+          : pbStatus === 'failed'
+            ? 'failed'
+            : 'in-progress';
+
+      logger.info('Agent task delegated', {
         agentName,
-        taskId: data.taskId,
-        status: data.status,
+        taskId: data?.taskId,
+        status: pbStatus,
       });
 
       return {
-        taskId: data.taskId,
-        agentId: data.agentId,
-        status: data.status,
-        data: data.data,
-        errors: data.errors,
+        taskId: data?.taskId ?? task.id,
+        agentId: data?.metadata?.agentId ?? data?.agentId ?? agentName,
+        status: uiStatus,
+        data: data?.data,
+        errors: data?.errors,
         metadata: {
-          executionTime: data.metadata?.executionTime || 0,
-          llmProvider: data.metadata?.llmProvider,
-          tokenUsage: data.metadata?.tokenUsage,
-          cost: data.metadata?.cost,
+          executionTime: data?.metadata?.executionTime || 0,
+          llmProvider: data?.metadata?.llmProvider,
+          tokenUsage: data?.metadata?.tokenUsage,
+          cost: data?.metadata?.cost,
           timestamp: new Date(),
         },
-        estimatedCompletion: data.estimatedCompletion
+        estimatedCompletion: data?.estimatedCompletion
           ? new Date(data.estimatedCompletion)
           : undefined,
       };
@@ -895,26 +853,27 @@ export class PixelbrainClient {
         throw new Error('Not connected to pixelbrain');
       }
 
-      const response = await this.httpGet(`/agents/${agentName}/status`);
+      const response = await this.httpGet(`/agents/${encodeURIComponent(agentName)}`);
       const data = (response.data as any);
 
       // Update local tracking
       this.lastActivity = new Date();
       this.totalRequests++;
 
+      const health = data.health || {};
       return {
-        agentId: data.agentId,
-        name: data.name,
-        type: data.type,
-        status: data.status,
-        health: data.health,
-        activeTasks: data.activeTasks,
-        completedTasks: data.completedTasks,
-        failedTasks: data.failedTasks,
-        errorRate: data.errorRate,
-        uptime: data.uptime,
-        lastActivity: new Date(data.lastActivity),
-        capabilities: data.capabilities,
+        agentId: data.agentId ?? agentName,
+        name: data.name ?? agentName,
+        type: data.type ?? 'unknown',
+        status: (data.status as AgentStatus['status']) || 'running',
+        health: (health.status as AgentStatus['health']) || 'healthy',
+        activeTasks: data.activeTasks ?? health.activeTasks ?? 0,
+        completedTasks: data.completedTasks ?? 0,
+        failedTasks: data.failedTasks ?? 0,
+        errorRate: data.errorRate ?? health.errorRate ?? 0,
+        uptime: data.uptime ?? health.uptime ?? 0,
+        lastActivity: data.lastActivity ? new Date(data.lastActivity) : new Date(),
+        capabilities: data.capabilities ?? [],
         llmProvider: data.llmProvider,
       };
     } catch (error) {
@@ -936,18 +895,23 @@ export class PixelbrainClient {
       }
 
       const response = await this.httpGet('/agents');
-      const agents = (response.data as any).agents || [];
+      const raw = response.data as any;
+      const agents = Array.isArray(raw) ? raw : raw?.agents || [];
 
       // Update local tracking
       this.lastActivity = new Date();
       this.totalRequests++;
 
+      const names = agents.map((a: any) =>
+        typeof a === 'string' ? a : a?.id || a?.name || ''
+      ).filter(Boolean);
+
       logger.info('Available agents retrieved', {
-        count: agents.length,
-        agents: agents,
+        count: names.length,
+        agents: names,
       });
 
-      return agents;
+      return names;
     } catch (error) {
       logger.error('Failed to get available agents', { error });
       throw new Error(`Failed to get available agents: ${(error as Error).message}`);

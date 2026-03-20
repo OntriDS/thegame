@@ -13,8 +13,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import PixelbrainClient from '@/lib/mcp/pixelbrain-client';
-import { loadPixelbrainConfig } from '@/lib/config/pixelbrain-config';
 import { logger } from '@/lib/utils/logger';
+import { verifyPixelbrainRouteAccess } from '@/lib/auth/pixelbrain-route-auth';
 
 /**
  * Agent request body
@@ -72,16 +72,15 @@ export async function POST(request: NextRequest) {
   const startTime = Date.now();
 
   try {
-    // Authenticate request (placeholder for JWT middleware)
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader) {
+    const auth = await verifyPixelbrainRouteAccess(request);
+    if (!auth.ok) {
       const errorResponse: ErrorResponse = {
         success: false,
-        error: 'Unauthorized',
-        details: 'Missing or invalid authentication token',
+        error: auth.status === 403 ? 'Forbidden' : 'Unauthorized',
+        details: auth.message,
         timestamp: new Date().toISOString(),
       };
-      return NextResponse.json(errorResponse, { status: 401 });
+      return NextResponse.json(errorResponse, { status: auth.status });
     }
 
     // Parse request body
@@ -123,9 +122,6 @@ export async function POST(request: NextRequest) {
       taskType: body.task.type,
       priority: body.task.priority,
     });
-
-    // Load configuration
-    const config = await loadPixelbrainConfig();
 
     // Get or create pixelbrain client
     let client = (global as any).pixelbrainClient as PixelbrainClient;
