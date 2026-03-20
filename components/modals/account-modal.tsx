@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
 import { v4 as uuid } from 'uuid';
 import type { Account, Character } from '@/types/entities';
-import { CharacterRole } from '@/types/enums';
+import { filterRolesToSpecialOnly } from '@/lib/character-roles';
 import { ClientAPI } from '@/lib/client-api';
 import { dispatchEntityUpdated } from '@/lib/ui/ui-events';
 import { Loader2, User, Mail, Lock, Save } from 'lucide-react';
@@ -237,9 +237,11 @@ export default function AccountModal({ account, character, open, onOpenChange, o
 
   const selectedCharacter = characters.find(char => char.id === selectedCharacterId);
 
-  // Create character options for SearchableSelect - each character appears under each of their roles
+  // SearchableSelect groups: only SPECIAL roles (`@/lib/character-roles` + `CHARACTER_ROLE_TYPES.SPECIAL`).
+  // API already returns special-eligible characters; this hides regular groups (admin, designer, seller, …).
   const characterOptions = availableCharacters.flatMap((char) => {
-    const roles = char.roles && char.roles.length > 0 ? char.roles : ['No roles'];
+    const specialRoles = filterRolesToSpecialOnly(char.roles);
+    const roles = specialRoles.length > 0 ? specialRoles : ['eligible'];
     return roles.map((role) => ({
       value: char.id,
       label: char.name,

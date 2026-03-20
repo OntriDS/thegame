@@ -1,13 +1,11 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { v4 as uuid } from 'uuid';
 import { requireAdminAuth } from '@/lib/api-auth';
-import { CHARACTER_ROLE_TYPES } from '@/types/enums';
+import { characterHasSpecialRole } from '@/lib/character-roles';
 import { getAllCharacters, upsertCharacter } from '@/data-store/datastore';
 import type { Character } from '@/types/entities';
 
 export const dynamic = 'force-dynamic';
-
-const SPECIAL_ROLES = new Set(CHARACTER_ROLE_TYPES.SPECIAL as readonly string[]);
 
 /**
  * GET /api/characters
@@ -24,9 +22,7 @@ export async function GET(req: NextRequest) {
   let characters = await getAllCharacters();
 
   if (filter === 'special') {
-    characters = characters.filter(c =>
-      c.roles?.some(role => SPECIAL_ROLES.has(role as string))
-    );
+    characters = characters.filter(c => characterHasSpecialRole(c.roles));
   }
 
   return NextResponse.json(characters);
