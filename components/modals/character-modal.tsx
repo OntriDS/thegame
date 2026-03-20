@@ -685,8 +685,8 @@ function AccountInfoModal({ character, open, onOpenChange }: AccountInfoModalPro
       if (open && character.accountId) {
         setIsLoading(true);
         try {
-          const accountData = await ClientAPI.getAccount(character.accountId);
-          setAccount(accountData);
+          const loaded = await ClientAPI.getAccount(character.accountId);
+          setAccount(loaded);
         } catch (error) {
           console.error('Failed to load account:', error);
           setAccount(null);
@@ -717,7 +717,7 @@ function AccountInfoModal({ character, open, onOpenChange }: AccountInfoModalPro
               <p>No Account entity linked to this character yet.</p>
               <p className="text-xs mt-2">Account will be created when email/phone is added.</p>
             </div>
-          ) : !accountData ? (
+          ) : !account ? (
             <div className="text-center py-6 text-muted-foreground">
               <p>Account entity not found.</p>
               <p className="text-xs mt-2">Account ID: {character.accountId}</p>
@@ -726,13 +726,13 @@ function AccountInfoModal({ character, open, onOpenChange }: AccountInfoModalPro
             <>
               <div className="text-xs p-2 border rounded-lg bg-blue-50 dark:bg-blue-950/30">
                 <p className="font-semibold">Account Entity (Read-Only)</p>
-                <p className="text-muted-foreground mt-1">ID: {accountData?.id}</p>
+                <p className="text-muted-foreground mt-1">ID: {account?.id}</p>
               </div>
 
               <div className="space-y-2">
                 <Label>Name</Label>
                 <Input
-                  value={name}
+                  value={account?.name ?? ''}
                   readOnly
                   disabled
                   className="bg-muted/50"
@@ -742,7 +742,7 @@ function AccountInfoModal({ character, open, onOpenChange }: AccountInfoModalPro
               <div className="space-y-2">
                 <Label>Email</Label>
                 <Input
-                  value={accountData?.email || ''}
+                  value={account?.email || ''}
                   readOnly
                   disabled
                   className="bg-muted/50"
@@ -752,7 +752,7 @@ function AccountInfoModal({ character, open, onOpenChange }: AccountInfoModalPro
               <div className="space-y-2">
                 <Label>Phone</Label>
                 <Input
-                  value={accountData?.phone || ''}
+                  value={account?.phone || ''}
                   readOnly
                   disabled
                   className="bg-muted/50"
@@ -763,15 +763,15 @@ function AccountInfoModal({ character, open, onOpenChange }: AccountInfoModalPro
               <div className="border-t pt-3 space-y-2">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Account Status:</span>
-                  <span className={accountData?.isActive ? 'text-green-600' : 'text-red-600'}>
-                    {accountData?.isActive ? 'Active' : 'Inactive'}
+                  <span className={account?.isActive ? 'text-green-600' : 'text-red-600'}>
+                    {account?.isActive ? 'Active' : 'Inactive'}
                   </span>
                 </div>
 
-                {accountData?.lastActiveAt && (
+                {account?.lastActiveAt && (
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Last Active:</span>
-                    <span className="text-xs">{new Date(accountData.lastActiveAt).toLocaleString()}</span>
+                    <span className="text-xs">{new Date(account.lastActiveAt).toLocaleString()}</span>
                   </div>
                 )}
               </div>
