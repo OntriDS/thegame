@@ -40,7 +40,7 @@ export const ROLE_BEHAVIORS = {
     requiresJungleCoins: true, // Special condition: needs J$ to appear
     isDisplayOnly: true,      // Cannot be toggled when assigned
   },
-  [CharacterRole.PADAWAN]: {
+  [CharacterRole.APPRENTICE]: {
     isImmutable: false,
     hideIfNotAssigned: false,
     isDisplayOnly: false,     // Can be freely toggled
@@ -168,13 +168,13 @@ export const ROLE_BENEFITS = {
     ],
     requirements: ["Only Founder can grant this role"]
   },
-  [CharacterRole.PADAWAN]: {
-    description: "Padawan will grant special benefits",
+  [CharacterRole.APPRENTICE]: {
+    description: "Apprentice will grant special benefits",
     benefits: [
       "Secret achivement with Perks and Missions for the character",
       "Will be consider a more special character by the system", // by agents
       "Must have login account connected to founder account",
-      "Unlocks the Unique Padawan achievement (once get, achievement cant be removed)",
+      "Unlocks the Unique Apprentice achievement (once get, achievement cant be removed)",
       "Immutable role (cannot be removed) in the Character Modal"
       // "Can login to the portal.space and interact with character", // In Ideation
     ],
@@ -189,7 +189,7 @@ export const ROLE_BENEFITS = {
 export const BUSINESS_ROLES = [
   CharacterRole.ADMIN,
   CharacterRole.DESIGNER,
-  CharacterRole.PRODUCER,
+  CharacterRole.MAKER,
   CharacterRole.SELLER,
   CharacterRole.RESEARCHER,
   CharacterRole.DEVELOPER,

@@ -269,7 +269,7 @@ const token = await generateJwt({ sub: 'admin', role: 'admin' }, secret, expires
 export enum CharacterRole {
   FOUNDER = 'founder',
   PLAYER = 'player',
-  PADAWAN = 'padawan',
+  APPRENTICE = 'apprentice',
   BOSS = 'boss',
   INVESTOR = 'investor',
   TEAM = 'team',

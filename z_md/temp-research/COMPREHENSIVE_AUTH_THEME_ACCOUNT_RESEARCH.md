@@ -436,7 +436,7 @@ export function getRoleBenefits(characterRoles: CharacterRole[]): string[] {
 export const BUSINESS_ROLES = [
   CharacterRole.ADMIN,
   CharacterRole.DESIGNER,
-  CharacterRole.PRODUCER,
+  CharacterRole.MAKER,
   CharacterRole.SELLER,
   CharacterRole.RESEARCHER,
   CharacterRole.DEVELOPER,
@@ -855,7 +855,7 @@ const token = await generateJwt({
 const BUSINESS_ROLES = [
   CharacterRole.ADMIN,
   CharacterRole.DESIGNER,
-  CharacterRole.PRODUCER,
+  CharacterRole.MAKER,
   CharacterRole.SELLER,
   CharacterRole.RESEARCHER,
   CharacterRole.DEVELOPER,

@@ -116,7 +116,7 @@ const SPECIAL_ROLE_FOUNDER = 'border-purple-600 bg-purple-600 text-white hover:b
 const SPECIAL_ROLE_PLAYER = 'border-primary bg-primary text-white hover:bg-primary/90 dark:bg-primary dark:text-white dark:hover:bg-primary/90';
 const SPECIAL_ROLE_TEAM = 'border-green-600 bg-green-600 text-white hover:bg-green-700 dark:bg-green-500 dark:text-white dark:hover:bg-green-600';
 const SPECIAL_ROLE_INVESTOR = 'border-yellow-500 bg-yellow-500 text-white hover:bg-yellow-900 dark:bg-yellow-800 dark:text-white dark:hover:bg-yellow-600';
-const SPECIAL_ROLE_PADAWAN = 'border-teal-500 bg-teal-500 text-white hover:bg-teal-700 dark:bg-teal-800 dark:text-white dark:hover:bg-teal-600';
+const SPECIAL_ROLE_APPRENTICE = 'border-teal-500 bg-teal-500 text-white hover:bg-teal-700 dark:bg-teal-800 dark:text-white dark:hover:bg-teal-600';
 const SPECIAL_ROLE_FAMILY = 'border-pink-500 bg-pink-500 text-white hover:bg-pink-700 dark:bg-pink-800 dark:text-white dark:hover:bg-pink-600';
 const SPECIAL_ROLE_FRIEND = 'border-stone-500 bg-stone-500 text-white hover:bg-stone-700 dark:bg-stone-800 dark:text-white dark:hover:bg-stone-600';
 const REGULAR_ROLE_DEFAULT = 'border-gray-400 bg-gray-100 text-white dark:bg-gray-700 dark:text-white';
@@ -125,7 +125,7 @@ export const ROLE_COLORS = {
   // Special Roles - High contrast, vibrant colors
   FOUNDER: SPECIAL_ROLE_FOUNDER,
   PLAYER: SPECIAL_ROLE_PLAYER,
-  PADAWAN: SPECIAL_ROLE_PADAWAN,
+  APPRENTICE: SPECIAL_ROLE_APPRENTICE,
   TEAM: SPECIAL_ROLE_TEAM,
   INVESTOR: SPECIAL_ROLE_INVESTOR,
   FAMILY: SPECIAL_ROLE_FAMILY,
@@ -134,7 +134,7 @@ export const ROLE_COLORS = {
   CUSTOMER: REGULAR_ROLE_DEFAULT,
   ADMIN: REGULAR_ROLE_DEFAULT,
   DESIGNER: REGULAR_ROLE_DEFAULT,
-  PRODUCER: REGULAR_ROLE_DEFAULT,
+  MAKER: REGULAR_ROLE_DEFAULT,
   SELLER: REGULAR_ROLE_DEFAULT,
   RESEARCHER: REGULAR_ROLE_DEFAULT,
   DEVELOPER: REGULAR_ROLE_DEFAULT,
