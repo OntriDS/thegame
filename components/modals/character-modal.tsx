@@ -90,21 +90,20 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
       if (open) {
         if (character) {
           // Editing existing character
-          // If character has PLAYER role and Account linked, load from Account
-          if (character.roles?.includes(CharacterRole.PLAYER) && character.accountId) {
+          // Linked IAM account (`accountId`): hydrate identity from Account — not gated on PLAYER;
+          // auth already uses this character + roles (FOUNDER, TEAM, etc.); name may only live on Account.
+          const shouldLoadLinkedAccount = !!character.accountId;
+          if (shouldLoadLinkedAccount) {
             try {
-              const account = await ClientAPI.getAccount(character.accountId);
+              const account = await ClientAPI.getAccount(character.accountId!);
               if (account) {
-                // Store account data for display fields
                 setAccountData(account);
-                // Use character name as primary (don't overwrite with account name)
-                setName(character?.name);
+                setName((character.name?.trim() || account.name?.trim() || '').trim());
                 setContactEmail(account.email || character?.contactEmail || '');
                 setContactPhone(account.phone || character?.contactPhone || '');
               }
             } catch (error) {
               console.error('Failed to load account data:', error);
-              // Fallback to character data
               setAccountData(null);
               setName(character?.name || '');
               setContactPhone(character?.contactPhone || '');
@@ -179,8 +178,8 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
   // Also show if character already has special roles
   const shouldShowSpecialFields = isPlayerOne || !character || roles.some(role => specialRolesList.includes(role));
 
-  // Check if character has PLAYER role (personal data should be read-only from Account)
-  const hasPlayerRole = character?.roles?.includes(CharacterRole.PLAYER) || false;
+  // Identity fields follow IAM when this DS character is linked (`accountId`), regardless of PLAYER badge on roles
+  const identityManagedByAccount = !!character?.accountId;
 
   // Get theme for dark mode detection
   const { isDark } = useTheme();
@@ -212,7 +211,7 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
 
     try {
       // If character has PLAYER role, don't save name/email/phone (they're from Account)
-      const shouldPreserveContactInfo = hasPlayerRole;
+      const shouldPreserveContactInfo = identityManagedByAccount;
 
       const newCharacter: Character = {
         id: character?.id || draftId.current,
@@ -307,7 +306,7 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
               {/* Column 1: NATIVE (Contact Info) */}
               <div className="space-y-3">
                 {/* Personal Data - Read-only for PLAYER role */}
-                {hasPlayerRole && (
+                {identityManagedByAccount && (
                   <div className="text-xs p-2 border rounded bg-blue-50 dark:bg-blue-950/30 text-blue-800 dark:text-blue-200">
                     Personal data managed by Account. Edit from <strong>Player Modal → Edit Account</strong>.
                   </div>
@@ -315,7 +314,7 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
 
                 <div className="space-y-2">
                   <Label htmlFor="char-name" className="text-xs">
-                    Name * {hasPlayerRole && <span className="text-muted-foreground">(from Account)</span>}
+                    Name * {identityManagedByAccount && <span className="text-muted-foreground">(from Account)</span>}
                   </Label>
                   <Input
                     id="char-name"
@@ -323,14 +322,14 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Character name"
                     className="h-8 text-sm"
-                    readOnly={hasPlayerRole}
-                    disabled={hasPlayerRole}
+                    readOnly={identityManagedByAccount}
+                    disabled={identityManagedByAccount}
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="char-phone" className="text-xs">
-                    Phone {hasPlayerRole && <span className="text-muted-foreground">(from Account)</span>}
+                    Phone {identityManagedByAccount && <span className="text-muted-foreground">(from Account)</span>}
                   </Label>
                   <Input
                     id="char-phone"
@@ -338,14 +337,14 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
                     onChange={(e) => setContactPhone(e.target.value)}
                     placeholder="+1 555 123 4567"
                     className="h-8 text-sm"
-                    readOnly={hasPlayerRole}
-                    disabled={hasPlayerRole}
+                    readOnly={identityManagedByAccount}
+                    disabled={identityManagedByAccount}
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="char-email" className="text-xs">
-                    Email {hasPlayerRole && <span className="text-muted-foreground">(from Account)</span>}
+                    Email {identityManagedByAccount && <span className="text-muted-foreground">(from Account)</span>}
                   </Label>
                   <Input
                     id="char-email"
@@ -353,8 +352,8 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
                     onChange={(e) => setContactEmail(e.target.value)}
                     placeholder="name@email.com"
                     className="h-8 text-sm"
-                    readOnly={hasPlayerRole}
-                    disabled={hasPlayerRole}
+                    readOnly={identityManagedByAccount}
+                    disabled={identityManagedByAccount}
                   />
                 </div>
 

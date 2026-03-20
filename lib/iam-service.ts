@@ -439,8 +439,11 @@ export class IAMService {
       return;
     }
 
+    // DS Player + CHARACTER_PLAYER links for any login-linked staff role (not only the `player` badge).
     const eligible =
-      character.roles.includes(CharacterRole.PLAYER) || character.roles.includes(CharacterRole.FOUNDER);
+      character.roles.includes(CharacterRole.PLAYER) ||
+      character.roles.includes(CharacterRole.FOUNDER) ||
+      character.roles.includes(CharacterRole.TEAM);
     if (!eligible) return;
 
     const now = new Date();

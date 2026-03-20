@@ -32,7 +32,7 @@ The Account Modal calls `ClientAPI.getCharacters('special')`.
 Players live **only** in the Game Data-Store: `thegame:data:player:{uuid}`.
 IAM never writes `iam:player:*` or `iam:index:players`.
 
-After `linkAccountToCharacter`, if the character is eligible (PLAYER or FOUNDER role), `ensureDataStorePlayerForLinkedCharacter`:
+After `linkAccountToCharacter`, if the character is eligible (PLAYER, FOUNDER, or TEAM role), `ensureDataStorePlayerForLinkedCharacter`:
 1. Reuses an existing DS player if `character.playerId` or `CHARACTER_PLAYER` / `PLAYER_CHARACTER` links already resolve one.
 2. Otherwise creates a DS `Player` via `upsertPlayer`, sets `character.playerId`, and creates **CHARACTER_PLAYER** + **PLAYER_CHARACTER** Rosetta links.
 3. Sets optional **`account.playerId`** on the IAM account for UI convenience only (not a second player store).
