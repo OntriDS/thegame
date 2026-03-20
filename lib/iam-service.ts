@@ -34,6 +34,8 @@ export interface Account {
   isVerified: boolean;
   characterId?: string;
   playerId?: string;
+  resetToken?: string;
+  resetTokenExpiry?: string;
   createdAt: string;
   updatedAt: string;
 }
