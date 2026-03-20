@@ -1,12 +1,13 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Key, Shield, User, Zap, RefreshCw, Cpu, Activity, Database, Check, Copy } from 'lucide-react';
+import { Key, Shield, User, Zap, RefreshCw, Cpu, Activity, Database, Check, Copy, Users } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 /**
@@ -96,6 +97,13 @@ export default function IAMConsole() {
           <p className="text-muted-foreground font-medium uppercase tracking-widest text-xs mt-1">Identity & Access Management</p>
         </div>
         <div className="flex items-center gap-3">
+          <Link
+            href="/admin/accounts"
+            className="inline-flex items-center justify-center rounded-md text-sm font-bold uppercase tracking-widest transition-colors border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-3 gap-2 border-primary/20"
+          >
+            <Users className="h-4 w-4" />
+            Accounts
+          </Link>
           <Button onClick={fetchIAMData} disabled={isLoading} variant="outline" size="sm" className="gap-2 border-primary/20">
             <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
             Sync Vault
