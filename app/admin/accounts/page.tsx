@@ -1,13 +1,14 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ClientAPI } from '@/lib/client-api';
 import { useEntityUpdates } from '@/lib/hooks/use-entity-updates';
 import AccountModal from '@/components/modals/account-modal';
 import type { Account } from '@/types/entities';
-import { User, Plus, Mail, Lock, Edit, Trash2 } from 'lucide-react';
+import { User, Plus, Mail, Lock, Edit, Trash2, Shield } from 'lucide-react';
 import { CharacterRole } from '@/types/enums';
 
 export default function AccountsPage() {
@@ -101,10 +102,19 @@ export default function AccountsPage() {
       <div className="space-y-6 p-6">
         <div className="flex items-center justify-between">
           <h1 className="text-1xl font-white uppercase tracking-tighter">Accounts</h1>
-          <Button onClick={handleCreateAccount} size="sm" className="bg-primary hover:bg-primary/90">
-            <Plus className="h-4 w-4 mr-2" />
-            Add Account
-          </Button>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/admin/iam"
+              className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-3 font-bold uppercase tracking-widest"
+            >
+              <Shield className="h-4 w-4 mr-2" />
+              IAM Console
+            </Link>
+            <Button onClick={handleCreateAccount} size="sm" className="bg-primary hover:bg-primary/90">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Account
+            </Button>
+          </div>
         </div>
         <div className="flex flex-col items-center justify-center h-64 space-y-4">
           <div className="h-8 w-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
@@ -138,10 +148,19 @@ export default function AccountsPage() {
           <h1 className="text-1xl font-black uppercase tracking-tightest leading-none text-white drop-shadow-sm">Accounts</h1>
           <p className="text-[10px] font-bold text-muted-foreground mt-1 uppercase tracking-widest opacity-50">System Identity & Access Management</p>
         </div>
-        <Button onClick={handleCreateAccount} size="sm" className="bg-primary hover:bg-primary/90 font-bold uppercase tracking-widest shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95 px-6">
-          <Plus className="h-4 w-4 mr-2" />
-          Add Account
-        </Button>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/admin/iam"
+            className="inline-flex items-center justify-center rounded-md text-sm font-bold uppercase tracking-widest transition-colors border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-4 shadow-sm"
+          >
+            <Shield className="h-4 w-4 mr-2" />
+            IAM Console
+          </Link>
+          <Button onClick={handleCreateAccount} size="sm" className="bg-primary hover:bg-primary/90 font-bold uppercase tracking-widest shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95 px-6">
+            <Plus className="h-4 w-4 mr-2" />
+            Add Account
+          </Button>
+        </div>
       </div>
 
       {/* Stats Overview */}

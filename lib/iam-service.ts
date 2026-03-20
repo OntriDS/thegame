@@ -748,13 +748,22 @@ export class IAMService {
   }
 
   async listM2MApps(): Promise<{ appId: string; createdAt: string }[]> {
-    let appIds = await kvSMembers(IAM_M2M_INDEX);
+    const indexed = await kvSMembers(IAM_M2M_INDEX);
+    const { kvScan } = await import('@/data-store/kv');
+    const allKeys = await kvScan('iam:m2m:');
+    const fromKeys = allKeys
+      .map((k: string) => k.split(':').pop() || '')
+      .filter(Boolean);
 
-    if (appIds.length === 0) {
-      const { kvScan } = await import('@/data-store/kv');
-      const allKeys = await kvScan('iam:m2m:');
-      appIds = allKeys.map((k: string) => k.split(':').pop() || '');
+    const indexSet = new Set(indexed);
+    for (const appId of fromKeys) {
+      if (!indexSet.has(appId)) {
+        await kvSAdd(IAM_M2M_INDEX, appId);
+        indexSet.add(appId);
+      }
     }
+
+    const appIds = Array.from(new Set([...indexed, ...fromKeys]));
 
     const apps = await Promise.all(
       appIds.map(async (appId) => {
