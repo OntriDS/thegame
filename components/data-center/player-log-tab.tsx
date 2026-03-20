@@ -12,7 +12,7 @@ import { getPointsMetadata } from '@/lib/utils/points-utils';
 import { ClientAPI } from '@/lib/client-api';
 import { cn } from '@/lib/utils';
 import { processLogData } from '@/lib/utils/logging-utils';
-import { PLAYER_ONE_ID } from '@/types/enums';
+import { FOUNDER_CHARACTER_ID } from '@/types/enums';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
 import { LogViewFilter } from '@/components/log-management/log-view-filter';
 import { useLogViewFilter } from '@/lib/hooks/use-log-view-filter';
@@ -211,7 +211,7 @@ export function PlayerLogTab({ playerLog, onReload, isReloading }: PlayerLogTabP
                 );
               }
               
-              const playerId = entry.entityId || PLAYER_ONE_ID;
+              const playerId = entry.entityId || FOUNDER_CHARACTER_ID;
               
               return (
                 <div 
@@ -281,11 +281,11 @@ export function PlayerLogTab({ playerLog, onReload, isReloading }: PlayerLogTabP
                         const { ClientAPI } = await import('@/lib/client-api');
                         
                         // Always fetch links for the main player
-                        const response = await fetch(`/api/links?entityType=player&entityId=${PLAYER_ONE_ID}`);
+                        const response = await fetch(`/api/links?entityType=player&entityId=${FOUNDER_CHARACTER_ID}`);
                         const links = await response.json();
                         
                         setPlayerLinks(links);
-                        setSelectedPlayerId(PLAYER_ONE_ID);
+                        setSelectedPlayerId(FOUNDER_CHARACTER_ID);
                         setSelectedLogEntry(entry);
                         setShowLinksModal(true);
                       } catch (error) {

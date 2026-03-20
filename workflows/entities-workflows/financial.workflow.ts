@@ -2,7 +2,7 @@
 // Financial-specific workflow with CHARGED, COLLECTED events
 import { isValid } from 'date-fns';
 
-import { EntityType, LogEventType, FinancialStatus, PLAYER_ONE_ID } from '@/types/enums';
+import { EntityType, LogEventType, FinancialStatus, FOUNDER_CHARACTER_ID } from '@/types/enums';
 import type { FinancialRecord } from '@/types/entities';
 import { appendEntityLog, updateEntityLogField, removeLogEntriesAcrossMonths } from '../entities-logging';
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
@@ -88,7 +88,7 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
             const legacyKey = EffectKeys.sideEffect('financial', financial.id, 'pointsAwarded');
 
             if (!(await hasEffect(stagingKey)) && !(await hasEffect(legacyKey))) {
-              const playerId = financial.playerCharacterId || PLAYER_ONE_ID;
+              const playerId = financial.playerCharacterId || FOUNDER_CHARACTER_ID;
               const points = financial.rewards?.points;
               if (points) {
                 await stagePointsForPlayer(playerId, {
@@ -182,7 +182,7 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
         const pointsRewardedEffectKey = EffectKeys.sideEffect('financial', financial.id, 'pointsRewarded');
 
         if (normalizedFinancial.rewards?.points && await hasEffect(stagingEffectKey)) {
-          const playerId = normalizedFinancial.playerCharacterId || PLAYER_ONE_ID;
+          const playerId = normalizedFinancial.playerCharacterId || FOUNDER_CHARACTER_ID;
           await rewardPointsToPlayer(playerId, {
             xp: normalizedFinancial.rewards.points.xp || 0,
             rp: normalizedFinancial.rewards.points.rp || 0,
@@ -492,7 +492,7 @@ async function removePlayerPointsFromRecord(recordId: string): Promise<void> {
     }
 
     // Get the player from the record (same logic as creation)
-    const playerId = record.playerCharacterId || PLAYER_ONE_ID;
+    const playerId = record.playerCharacterId || FOUNDER_CHARACTER_ID;
     const player = await getPlayerById(playerId);
 
     if (!player) {

@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useEntityUpdates } from '@/lib/hooks/use-entity-updates';
 import { ClientAPI } from '@/lib/client-api';
-import { PLAYER_ONE_ID } from '@/types/enums';
+import { FOUNDER_CHARACTER_ID } from '@/types/enums';
 import type { Player } from '@/types/entities';
 import { Coins, TrendingUp, User } from 'lucide-react';
 import { PlayerModal } from '@/components/modals/player-modal';
@@ -103,7 +103,7 @@ export default function PlayerPage() {
 
   const mainPlayer = useMemo(() => {
     if (!players?.length) return null;
-    return players.find((p) => p.id === PLAYER_ONE_ID) || players[0];
+    return players.find((p) => p.id === FOUNDER_CHARACTER_ID) || players[0];
   }, [players]);
 
   const handlePlayerModalOpen = useCallback(
@@ -168,7 +168,7 @@ export default function PlayerPage() {
       setPersonalAssets(personalAssetsData ?? null);
 
       // Fetch J$ balance for the main player (multiplayer-ready)
-      const mainPlayer = playersData?.find((p) => p.id === PLAYER_ONE_ID) || playersData?.[0] || null;
+      const mainPlayer = playersData?.find((p) => p.id === FOUNDER_CHARACTER_ID) || playersData?.[0] || null;
       if (mainPlayer) {
         try {
           const j$BalanceData = await ClientAPI.getPlayerJungleCoinsBalance(mainPlayer.id);

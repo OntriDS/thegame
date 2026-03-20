@@ -9,7 +9,7 @@ import {
     upsertFinancial,
     upsertItem
 } from '@/data-store/datastore';
-import { TaskStatus, SaleStatus, FinancialStatus, ItemStatus, EntityType, PLAYER_ONE_ID } from '@/types/enums';
+import { TaskStatus, SaleStatus, FinancialStatus, ItemStatus, EntityType, FOUNDER_CHARACTER_ID } from '@/types/enums';
 import { rewardPointsToPlayer } from './points-rewards-utils';
 import { calculateClosingDate, formatMonthKey } from '@/lib/utils/date-utils';
 import { kvSAdd } from '@/data-store/kv';
@@ -41,7 +41,7 @@ export const CollectionService = {
 
             // Vest Points
             if (task.rewards?.points) {
-                const playerId = task.playerCharacterId || PLAYER_ONE_ID;
+                const playerId = task.playerCharacterId || FOUNDER_CHARACTER_ID;
                 await rewardPointsToPlayer(playerId, {
                     xp: task.rewards.points.xp || 0,
                     rp: task.rewards.points.rp || 0,
@@ -81,7 +81,7 @@ export const CollectionService = {
             // but they are calculated on the fly in the workflow.
             const { calculatePointsFromRevenue } = await import('./points-rewards-utils');
             const points = calculatePointsFromRevenue(sale.totals.totalRevenue);
-            const playerId = sale.playerCharacterId || PLAYER_ONE_ID;
+            const playerId = sale.playerCharacterId || FOUNDER_CHARACTER_ID;
             await rewardPointsToPlayer(playerId, points, sale.id, EntityType.SALE);
 
             count++;
@@ -112,7 +112,7 @@ export const CollectionService = {
 
             // Vest Points
             if (financial.rewards?.points) {
-                const playerId = financial.playerCharacterId || PLAYER_ONE_ID;
+                const playerId = financial.playerCharacterId || FOUNDER_CHARACTER_ID;
                 await rewardPointsToPlayer(playerId, {
                     xp: financial.rewards.points.xp || 0,
                     rp: financial.rewards.points.rp || 0,
@@ -149,7 +149,7 @@ export const CollectionService = {
 
             // Vest Points (New logic for Items)
             if (item.rewards?.points) {
-                const playerId = item.ownerCharacterId || PLAYER_ONE_ID;
+                const playerId = item.ownerCharacterId || FOUNDER_CHARACTER_ID;
                 await rewardPointsToPlayer(playerId, {
                     xp: item.rewards.points.xp || 0,
                     rp: item.rewards.points.rp || 0,

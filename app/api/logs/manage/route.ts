@@ -6,7 +6,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAdminAuth } from '@/lib/api-auth';
 import { EntityType } from '@/types/enums';
 import { softDeleteLogEntry, restoreLogEntry, editLogEntry } from '@/workflows/entities-logging';
-import { PLAYER_ONE_ID } from '@/types/enums';
+import { FOUNDER_CHARACTER_ID } from '@/types/enums';
 
 export const dynamic = 'force-dynamic';
 
@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Get character ID (V0.1: Player One = FOUNDER)
-    const characterId = PLAYER_ONE_ID;
+    const characterId = FOUNDER_CHARACTER_ID;
 
     // Route to appropriate handler based on action
     let auditEntry;

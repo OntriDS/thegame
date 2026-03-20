@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import NumericInput from '@/components/ui/numeric-input';
 
 import type { Character } from '@/types/entities';
-import { CharacterRole, CHARACTER_ROLE_TYPES, EntityType, PLAYER_ONE_ID, LinkType } from '@/types/enums';
+import { CharacterRole, CHARACTER_ROLE_TYPES, EntityType, FOUNDER_CHARACTER_ID, LinkType } from '@/types/enums';
 import { ROLE_COLORS } from '@/lib/constants/color-constants';
 import { useTheme } from '@/lib/hooks/use-theme';
 import { ROLE_BEHAVIORS, canViewAccountInfo } from '@/lib/game-mechanics/roles-rules';
@@ -166,7 +166,7 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
   const specialRolesList = CHARACTER_ROLE_TYPES.SPECIAL.map(r => r as CharacterRole);
 
   // Check if editing Player One (Founder)
-  const isPlayerOne = character?.id === PLAYER_ONE_ID || character?.playerId === PLAYER_ONE_ID;
+  const isPlayerOne = character?.id === FOUNDER_CHARACTER_ID || character?.playerId === FOUNDER_CHARACTER_ID;
 
   // For new characters, also show SpecialFields (they should be able to assign special roles)
   // Also show if character already has special roles
@@ -237,7 +237,7 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
         inventory: character?.inventory || [], // Empty array for new characters
 
         // Relationships - V0.1: Founder player is the default
-        playerId: character?.playerId || PLAYER_ONE_ID,
+        playerId: character?.playerId || FOUNDER_CHARACTER_ID,
 
         // Lifecycle
         lastActiveAt: character?.lastActiveAt || new Date(),

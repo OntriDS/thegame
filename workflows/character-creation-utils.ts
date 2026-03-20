@@ -3,7 +3,7 @@
 // Creates characters from Tasks, Sales, Financial Records, and Items using emissary fields
 
 import type { Task, Sale, FinancialRecord, Item, Character } from '@/types/entities';
-import { CharacterRole, PLAYER_ONE_ID, FOUNDER_PLAYER_ID } from '@/types/enums';
+import { CharacterRole, FOUNDER_CHARACTER_ID, FOUNDER_PLAYER_ID } from '@/types/enums';
 import { upsertCharacter } from '@/data-store/datastore';
 import { hasEffect, markEffect } from '@/data-store/effects-registry';
 import { EffectKeys } from '@/data-store/keys';

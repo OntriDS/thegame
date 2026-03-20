@@ -29,7 +29,7 @@ import {
 } from '@/types/enums';
 import { getCompanyAreas, getPersonalAreas, isCompanyStation, isPersonalStation, getAreaForStation } from '@/lib/utils/business-structure-utils';
 import type { Station, SubItemType } from '@/types/type-aliases';
-import { ItemType, Collection, CharacterRole, PLAYER_ONE_ID, EntityType } from '@/types/enums';
+import { ItemType, Collection, CharacterRole, FOUNDER_CHARACTER_ID, EntityType } from '@/types/enums';
 import { getSubTypesForItemType } from '@/lib/utils/item-utils';
 import { getCategoryForItemType, createItemTypeOptionsWithCategories, createStationCategoryOptions, createCharacterOptions, createItemTypeSubTypeOptions, getItemTypeFromCombined, getCategoryFromCombined, getStationFromCombined } from '@/lib/utils/searchable-select-utils';
 import { createSiteOptionsWithCategories } from '@/lib/utils/site-options-utils';
@@ -294,7 +294,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
       });
 
       // Initialize player character
-      setPlayerCharacterId(record.playerCharacterId || PLAYER_ONE_ID);
+      setPlayerCharacterId(record.playerCharacterId || FOUNDER_CHARACTER_ID);
       setSelectedItemId(record.outputItemId || '');
       setLocalCollectedAt(record.collectedAt ? new Date(record.collectedAt) : undefined);
 
@@ -355,7 +355,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
         year: year,
         month: month
       });
-      setPlayerCharacterId(PLAYER_ONE_ID);
+      setPlayerCharacterId(FOUNDER_CHARACTER_ID);
       setSelectedItemId('');
       setOutputItemTypeSubType('none:');
       setOutputItemStatus(ItemStatus.FOR_SALE);

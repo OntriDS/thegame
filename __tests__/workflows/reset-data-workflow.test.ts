@@ -5,9 +5,9 @@ import { ResetDataWorkflow } from '@/workflows/settings/reset-data-workflow';
 import { TransactionManager } from '@/workflows/settings/transaction-manager';
 import { getAllPlayers, getAllCharacters, getAllAccounts, getAllSites } from '@/data-store/datastore';
 // Unified Triforce ID
-const PLAYER_ONE_ID = 'creator';
-const CHARACTER_ONE_ID = PLAYER_ONE_ID;
-const PLAYER_ONE_ACCOUNT_ID = PLAYER_ONE_ID;
+const FOUNDER_CHARACTER_ID = 'creator';
+const CHARACTER_ONE_ID = FOUNDER_CHARACTER_ID;
+const PLAYER_ONE_ACCOUNT_ID = FOUNDER_CHARACTER_ID;
 
 describe('ResetDataWorkflow', () => {
   let transactionManager: TransactionManager;
@@ -31,7 +31,7 @@ describe('ResetDataWorkflow', () => {
       const sites = await getAllSites();
       
       // Should have Player One
-      const playerOne = players.find(p => p.id === PLAYER_ONE_ID);
+      const playerOne = players.find(p => p.id === FOUNDER_CHARACTER_ID);
       expect(playerOne).toBeDefined();
       expect(playerOne?.name).toBe('Akiles');
       expect(playerOne?.accountId).toBe(PLAYER_ONE_ACCOUNT_ID);
@@ -42,13 +42,13 @@ describe('ResetDataWorkflow', () => {
       expect(characterOne).toBeDefined();
       expect(characterOne?.name).toBe('Akiles');
       expect(characterOne?.accountId).toBe(PLAYER_ONE_ACCOUNT_ID);
-      expect(characterOne?.playerId).toBe(PLAYER_ONE_ID);
+      expect(characterOne?.playerId).toBe(FOUNDER_CHARACTER_ID);
       
       // Should have Account One
       const accountOne = accounts.find(a => a.id === PLAYER_ONE_ACCOUNT_ID);
       expect(accountOne).toBeDefined();
       expect(accountOne?.name).toBe('Akiles');
-      expect(accountOne?.playerId).toBe(PLAYER_ONE_ID);
+      expect(accountOne?.playerId).toBe(FOUNDER_CHARACTER_ID);
       expect(accountOne?.characterId).toBe(CHARACTER_ONE_ID);
       
       // Should have 3 default sites

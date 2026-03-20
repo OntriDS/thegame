@@ -1,7 +1,7 @@
 // workflows/entities-workflows/player.workflow.ts
 // Player-specific workflow with LEVEL_UP, POINTS_CHANGED events
 
-import { EntityType, LogEventType, PLAYER_ONE_ID } from '@/types/enums';
+import { EntityType, LogEventType, FOUNDER_CHARACTER_ID } from '@/types/enums';
 import type { Player } from '@/types/entities';
 import { appendEntityLog, updateEntityLogField, appendPlayerPointsChangedLog, upsertPlayerPointsChangedLog } from '../entities-logging';
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
@@ -131,7 +131,7 @@ export async function logPlayerEffect(task: Task): Promise<void> {
     }
     
     // Get main player ID (V0.1 constant)
-    const mainPlayerId = PLAYER_ONE_ID;
+    const mainPlayerId = FOUNDER_CHARACTER_ID;
     
     await appendPlayerPointsLog(
       mainPlayerId,
@@ -172,7 +172,7 @@ export async function logPlayerEffectFromRecord(record: FinancialRecord): Promis
     }
     
     // Get main player ID (V0.1 constant)
-    const mainPlayerId = PLAYER_ONE_ID;
+    const mainPlayerId = FOUNDER_CHARACTER_ID;
     
     await appendPlayerPointsLog(
       mainPlayerId,
@@ -211,7 +211,7 @@ export async function logPlayerUpdateFromTask(task: Task, oldTask: Task): Promis
     }
     
     // Get main player ID (V0.1 constant)
-    const mainPlayerId = PLAYER_ONE_ID;
+    const mainPlayerId = FOUNDER_CHARACTER_ID;
     
     await appendPlayerPointsUpdateLog(
       mainPlayerId,
@@ -263,7 +263,7 @@ export async function updatePlayerPointsFromTask(task: Task, oldTask: Task): Pro
     }
     
     // Get main player
-    const mainPlayerId = PLAYER_ONE_ID;
+    const mainPlayerId = FOUNDER_CHARACTER_ID;
     const mainPlayer = await getPlayerById(mainPlayerId);
     
     if (!mainPlayer) {

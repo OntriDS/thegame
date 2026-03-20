@@ -1,7 +1,7 @@
 // workflows/entities-workflows/item.workflow.ts
 // Item-specific workflow with MOVED, SOLD, COLLECTED events
 
-import { EntityType, LogEventType, PLAYER_ONE_ID } from '@/types/enums';
+import { EntityType, LogEventType, FOUNDER_CHARACTER_ID } from '@/types/enums';
 import type { Item } from '@/types/entities';
 import { ItemStatus } from '@/types/enums';
 import { appendEntityLog, updateEntityLogField, removeLogEntriesAcrossMonths } from '../entities-logging';
@@ -177,7 +177,7 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
     if (item.rewards?.points) {
       const pointsStagingKey = EffectKeys.sideEffect('item', item.id, 'pointsStaged');
       if (!(await hasEffect(pointsStagingKey))) {
-        const playerId = item.ownerCharacterId || PLAYER_ONE_ID; // In V0.1 we use ownerCharacterId as placeholder for player
+        const playerId = item.ownerCharacterId || FOUNDER_CHARACTER_ID; // In V0.1 we use ownerCharacterId as placeholder for player
         await stagePointsForPlayer(playerId, item.rewards.points, item.id, EntityType.ITEM);
         await markEffect(pointsStagingKey);
       }
@@ -217,7 +217,7 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
     if (item.rewards?.points) {
       const pointsStagingKey = EffectKeys.sideEffect('item', item.id, 'pointsStaged');
       if (!(await hasEffect(pointsStagingKey))) {
-        const playerId = item.ownerCharacterId || PLAYER_ONE_ID;
+        const playerId = item.ownerCharacterId || FOUNDER_CHARACTER_ID;
         await stagePointsForPlayer(playerId, item.rewards.points, item.id, EntityType.ITEM);
         await markEffect(pointsStagingKey);
       }

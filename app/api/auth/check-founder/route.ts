@@ -15,16 +15,16 @@ export async function GET(request: NextRequest) {
     // V0.1 Simple check: authenticated admin = Player One = FOUNDER
     const { kvGet } = await import('@/data-store/kv');
     const { buildDataKey } = await import('@/data-store/keys');
-    const { PLAYER_ONE_ID, CharacterRole } = await import('@/types/enums');
+    const { FOUNDER_CHARACTER_ID, CharacterRole } = await import('@/types/enums');
     
-    const characterData = await kvGet<any>(buildDataKey('character', PLAYER_ONE_ID));
+    const characterData = await kvGet<any>(buildDataKey('character', FOUNDER_CHARACTER_ID));
     const character = characterData as Character;
     
     const isAuthorized = character?.roles?.includes(CharacterRole.FOUNDER);
     
     return NextResponse.json({
       isAuthorized,
-      characterId: isAuthorized ? PLAYER_ONE_ID : undefined
+      characterId: isAuthorized ? FOUNDER_CHARACTER_ID : undefined
     });
   } catch (error) {
     console.error('[Auth Check Founder] Error:', error);

@@ -2,7 +2,7 @@
 // Comprehensive update propagation across ALL entity relationships
 
 import type { Task, Item, Sale, FinancialRecord, Character, Player } from '@/types/entities';
-import { EntityType, PLAYER_ONE_ID, ItemStatus, TaskStatus } from '@/types/enums';
+import { EntityType, FOUNDER_CHARACTER_ID, ItemStatus, TaskStatus } from '@/types/enums';
 import { hasEffect, markEffect } from '@/data-store/effects-registry';
 import { getFinancialsBySourceTaskId, getFinancialsBySourceSaleId, upsertFinancial } from '@/data-store/datastore';
 import { getItemsBySourceTaskId, getItemsBySourceRecordId, getItemById, upsertItem, removeItem } from '@/data-store/datastore';
@@ -737,7 +737,7 @@ export async function updatePlayerPointsFromSource(
     }
 
     // Find the target player (resolve from playerCharacterId when present)
-    const playerIdCandidate = newSource?.playerCharacterId || oldSource?.playerCharacterId || PLAYER_ONE_ID;
+    const playerIdCandidate = newSource?.playerCharacterId || oldSource?.playerCharacterId || FOUNDER_CHARACTER_ID;
     const playerId = await resolveToPlayerIdMaybeCharacter(playerIdCandidate);
     const player = await getPlayerById(playerId);
 

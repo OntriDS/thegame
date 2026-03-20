@@ -1,7 +1,7 @@
 // workflows/entities-workflows/sale.workflow.ts
 // Sale-specific workflow with CHARGED, CANCELLED, COLLECTED events
 
-import { EntityType, LogEventType, PLAYER_ONE_ID, SaleStatus, SaleType } from '@/types/enums';
+import { EntityType, LogEventType, FOUNDER_CHARACTER_ID, SaleStatus, SaleType } from '@/types/enums';
 import type { Item, Sale } from '@/types/entities';
 import { appendEntityLog, updateEntityLogField, removeLogEntriesAcrossMonths } from '../entities-logging';
 import { hasEffect, markEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
@@ -117,7 +117,7 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
         const pointsEffectKey = EffectKeys.sideEffect('sale', sale.id, 'pointsStaged');
         if (!(await hasEffect(pointsEffectKey))) {
           const points = calculatePointsFromRevenue(sale.totals.totalRevenue);
-          const playerId = sale.playerCharacterId || PLAYER_ONE_ID;
+          const playerId = sale.playerCharacterId || FOUNDER_CHARACTER_ID;
           await stagePointsForPlayer(playerId, points, sale.id, EntityType.SALE);
           await markEffect(pointsEffectKey);
         }
@@ -400,7 +400,7 @@ async function removePlayerPointsFromSale(saleId: string): Promise<void> {
     }
 
     // Get the player from the sale (same logic as creation)
-    const playerId = sale.playerCharacterId || PLAYER_ONE_ID;
+    const playerId = sale.playerCharacterId || FOUNDER_CHARACTER_ID;
     const player = await getPlayerById(playerId);
 
     if (!player) {

@@ -3,14 +3,14 @@ import type { Player, Rewards } from '@/types/entities';
 import { getPlayerById, getCharacterById, upsertPlayer } from '@/data-store/datastore';
 import { makeLink } from '@/links/links-workflows';
 import { createLink } from '@/links/link-registry';
-import { LinkType, EntityType, PLAYER_ONE_ID } from '@/types/enums';
+import { LinkType, EntityType, FOUNDER_CHARACTER_ID } from '@/types/enums';
 import { appendPlayerPointsLog } from './entities-logging';
 
 /**
  * Resolve a candidate id (playerId or characterId) to a valid playerId.
  * - If it's already a player id, return as-is.
  * - Else, if it's a character id, return character.playerId.
- * - Else, fallback to PLAYER_ONE_ID.
+ * - Else, fallback to FOUNDER_CHARACTER_ID.
  */
 export async function resolveToPlayerIdMaybeCharacter(candidateId?: string | null): Promise<string> {
   try {
@@ -23,7 +23,7 @@ export async function resolveToPlayerIdMaybeCharacter(candidateId?: string | nul
   } catch (e) {
     console.warn('[resolveToPlayerIdMaybeCharacter] Resolution error, falling back:', e);
   }
-  return PLAYER_ONE_ID;
+  return FOUNDER_CHARACTER_ID;
 }
 
 /**
@@ -418,7 +418,7 @@ export function calculatePointsFromRevenue(revenue: number): Rewards['points'] {
  * TODO: V0.2 - Use character.playerId field
  */
 export function getMainPlayerId(): string {
-  return PLAYER_ONE_ID; // V0.1 constant
+  return FOUNDER_CHARACTER_ID; // V0.1 constant
 }
 
 

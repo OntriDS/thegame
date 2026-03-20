@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
@@ -14,7 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Sale, SaleLine, Item, Discount, Site, Character, Task, ItemSaleLine, BundleSaleLine, Business, Contract } from '@/types/entities';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
-import { SaleType, SaleStatus, PaymentMethod, Currency, ItemType, ItemStatus, TaskType, TaskPriority, Collection, STATION_CATEGORIES, CharacterRole, EntityType, PLAYER_ONE_ID } from '@/types/enums';
+import { SaleType, SaleStatus, PaymentMethod, Currency, ItemType, ItemStatus, TaskType, TaskPriority, Collection, STATION_CATEGORIES, CharacterRole, EntityType, FOUNDER_CHARACTER_ID } from '@/types/enums';
 import { getSubTypesForItemType } from '@/lib/utils/item-utils';
 import type { Station } from '@/types/type-aliases';
 import { CurrencyExchangeRates } from '@/lib/constants/financial-constants';
@@ -286,7 +286,7 @@ export default function SalesModal({
       }
 
       // Initialize player character
-      setPlayerCharacterId(sale.playerCharacterId || PLAYER_ONE_ID);
+      setPlayerCharacterId(sale.playerCharacterId || FOUNDER_CHARACTER_ID);
 
       // Reset init guard when editing
       didInitRef.current = false;
@@ -296,7 +296,7 @@ export default function SalesModal({
       // New sale - always reset form when sale is null/undefined
       resetForm();
       // Initialize player character for new sale
-      setPlayerCharacterId(PLAYER_ONE_ID);
+      setPlayerCharacterId(FOUNDER_CHARACTER_ID);
       // Mark as initialized
       didInitRef.current = true;
       // Generate new ID for new sale session

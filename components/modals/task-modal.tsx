@@ -22,7 +22,7 @@ import DatesSubmodal from './submodals/dates-submodal';
 import { Task, Item, Site } from '@/types/entities';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
 import { getPointsMetadata } from '@/lib/utils/points-utils';
-import { TaskType, TaskStatus, TaskPriority, STATION_CATEGORIES, ItemType, RecurrentFrequency, Collection, ItemStatus, CharacterRole, PLAYER_ONE_ID, EntityType } from '@/types/enums';
+import { TaskType, TaskStatus, TaskPriority, STATION_CATEGORIES, ItemType, RecurrentFrequency, Collection, ItemStatus, CharacterRole, FOUNDER_CHARACTER_ID, EntityType } from '@/types/enums';
 import { getSubTypesForItemType } from '@/lib/utils/item-utils';
 import { getCategoryForItemType, getCategoryForTaskType, createStationCategoryOptions, getStationFromCombined, getCategoryFromCombined, createTaskParentOptions, createItemTypeSubTypeOptions, getItemTypeFromCombined, getSubTypeFromCombined, createCharacterOptions } from '@/lib/utils/searchable-select-utils';
 import { getAreaForStation } from '@/lib/utils/business-structure-utils';
@@ -180,7 +180,7 @@ export default function TaskModal({
   const [customerCharacterName, setCustomerCharacterName] = useState<string>('');
   const [isNewCustomer, setIsNewCustomer] = useState(true);
   const [newCustomerName, setNewCustomerName] = useState('');
-  const [playerCharacterId, setPlayerCharacterId] = useState<string | null>(PLAYER_ONE_ID);
+  const [playerCharacterId, setPlayerCharacterId] = useState<string | null>(FOUNDER_CHARACTER_ID);
   const [showCharacterSelector, setShowCharacterSelector] = useState(false);
   const [showPlayerCharacterSelector, setShowPlayerCharacterSelector] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -323,7 +323,7 @@ export default function TaskModal({
     const isUsingExistingCustomer = Boolean(existingTask.customerCharacterId);
     setIsNewCustomer(!isUsingExistingCustomer);
     setNewCustomerName(existingTask.newCustomerName || '');
-    setPlayerCharacterId(existingTask.playerCharacterId || PLAYER_ONE_ID);
+    setPlayerCharacterId(existingTask.playerCharacterId || FOUNDER_CHARACTER_ID);
     setRewards({
       points: {
         xp: existingTask.rewards?.points?.xp || 0,
@@ -453,7 +453,7 @@ export default function TaskModal({
 
   // Helper function to build task from form state - eliminates duplication
   const buildTaskFromForm = (statusOverride?: TaskStatus): Task => {
-    const finalPlayerCharacterId = playerCharacterId || PLAYER_ONE_ID;
+    const finalPlayerCharacterId = playerCharacterId || FOUNDER_CHARACTER_ID;
     const finalStatus = statusOverride !== undefined ? statusOverride : status;
 
     let finalScheduledStart: Date | undefined = undefined;

@@ -1,7 +1,7 @@
 // workflows/entities-workflows/task.workflow.ts
 // Task-specific workflow with state vs descriptive field detection
 
-import { EntityType, LogEventType, TaskStatus, TaskType, PLAYER_ONE_ID } from '@/types/enums';
+import { EntityType, LogEventType, TaskStatus, TaskType, FOUNDER_CHARACTER_ID } from '@/types/enums';
 import type { Task } from '@/types/entities';
 import { appendEntityLog, updateEntityLogField } from '../entities-logging';
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
@@ -169,7 +169,7 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
       const stagingEffectKey = EffectKeys.sideEffect('task', task.id, 'pointsStaged');
 
       if (task.rewards?.points && await hasEffect(stagingEffectKey)) {
-        const playerId = task.playerCharacterId || PLAYER_ONE_ID;
+        const playerId = task.playerCharacterId || FOUNDER_CHARACTER_ID;
         await rewardPointsToPlayer(playerId, task.rewards.points, task.id, EntityType.TASK);
       }
 
@@ -227,7 +227,7 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
             const legacyKey = EffectKeys.sideEffect('task', task.id, 'pointsAwarded');
 
             if (!(await hasEffect(stagingKey)) && !(await hasEffect(legacyKey))) {
-              const playerId = task.playerCharacterId || PLAYER_ONE_ID;
+              const playerId = task.playerCharacterId || FOUNDER_CHARACTER_ID;
               await stagePointsForPlayer(playerId, task.rewards.points, task.id, EntityType.TASK);
               await markEffect(stagingKey);
             }
@@ -515,7 +515,7 @@ async function removePlayerPointsFromTask(task: Task): Promise<void> {
     if (!task.rewards?.points) return;
 
     // Get the player from the task (same logic as creation)
-    const playerId = task.playerCharacterId || PLAYER_ONE_ID;
+    const playerId = task.playerCharacterId || FOUNDER_CHARACTER_ID;
     const player = await getPlayerById(playerId);
 
     if (!player) return;
@@ -728,7 +728,7 @@ async function cascadeCollectionToChildren(parentTask: Task, collectedAt: Date):
         // 3. Reward points if child has rewards and points were staged
         const childStagingKey = EffectKeys.sideEffect('task', childInstance.id, 'pointsStaged');
         if (childInstance.rewards?.points && await hasEffect(childStagingKey)) {
-          const playerId = childInstance.playerCharacterId || PLAYER_ONE_ID;
+          const playerId = childInstance.playerCharacterId || FOUNDER_CHARACTER_ID;
           await rewardPointsToPlayer(playerId, childInstance.rewards.points, childInstance.id, EntityType.TASK);
         }
 
