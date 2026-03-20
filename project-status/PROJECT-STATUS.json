@@ -173,6 +173,16 @@
           "Integrate with Site and Location System"
         ],
         "priority": "low"
+      },
+      "Game Design and Mechanics": {
+        "description": "Game Design and Mechanics Features",
+        "features": [
+          "Should Founder be able to modify Character roles?",
+          "Are roles earned/progression-based, with which requirements?",
+          "When Character roles change, should it affect login access?",
+          ""
+        ],
+        "priority": "low"
       }
     }
   }

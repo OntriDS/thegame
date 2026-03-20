@@ -55,6 +55,7 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
 
   // Account Info Modal
   const [showAccountInfo, setShowAccountInfo] = useState(false);
+  const [accountData, setAccountData] = useState<any>(null);
 
   // Loading state
   const [isSaving, setIsSaving] = useState(false);
@@ -94,18 +95,24 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
             try {
               const account = await ClientAPI.getAccount(character.accountId);
               if (account) {
-                setName(account.name || '');
-                setContactEmail(account.email || '');
-                setContactPhone(account.phone || '');
+                // Store account data for display fields
+                setAccountData(account);
+                // Use character name as primary (don't overwrite with account name)
+                setName(character?.name);
+                setContactEmail(account.email || character?.contactEmail || '');
+                setContactPhone(account.phone || character?.contactPhone || '');
               }
             } catch (error) {
               console.error('Failed to load account data:', error);
               // Fallback to character data
+              setAccountData(null);
               setName(character?.name || '');
               setContactPhone(character?.contactPhone || '');
               setContactEmail(character?.contactEmail || '');
             }
           } else {
+            // Clear account data for non-account characters
+            setAccountData(null);
             setName(character?.name || '');
             setContactPhone(character?.contactPhone || '');
             setContactEmail(character?.contactEmail || '');
@@ -710,7 +717,7 @@ function AccountInfoModal({ character, open, onOpenChange }: AccountInfoModalPro
               <p>No Account entity linked to this character yet.</p>
               <p className="text-xs mt-2">Account will be created when email/phone is added.</p>
             </div>
-          ) : !account ? (
+          ) : !accountData ? (
             <div className="text-center py-6 text-muted-foreground">
               <p>Account entity not found.</p>
               <p className="text-xs mt-2">Account ID: {character.accountId}</p>
@@ -719,7 +726,7 @@ function AccountInfoModal({ character, open, onOpenChange }: AccountInfoModalPro
             <>
               <div className="text-xs p-2 border rounded-lg bg-blue-50 dark:bg-blue-950/30">
                 <p className="font-semibold">Account Entity (Read-Only)</p>
-                <p className="text-muted-foreground mt-1">ID: {account.id}</p>
+                <p className="text-muted-foreground mt-1">ID: {accountData?.id}</p>
               </div>
 
               <div className="space-y-2">
@@ -735,7 +742,7 @@ function AccountInfoModal({ character, open, onOpenChange }: AccountInfoModalPro
               <div className="space-y-2">
                 <Label>Email</Label>
                 <Input
-                  value={account.email || ''}
+                  value={accountData?.email || ''}
                   readOnly
                   disabled
                   className="bg-muted/50"
@@ -745,7 +752,7 @@ function AccountInfoModal({ character, open, onOpenChange }: AccountInfoModalPro
               <div className="space-y-2">
                 <Label>Phone</Label>
                 <Input
-                  value={account.phone || ''}
+                  value={accountData?.phone || ''}
                   readOnly
                   disabled
                   className="bg-muted/50"
