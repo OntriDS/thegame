@@ -1075,8 +1075,8 @@ export const ClientAPI = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         message,
-        model: model || 'openai/gpt-oss-120b',
-        provider: 'groq',
+        // Pass model as-is; server validates and falls back to session or default if empty
+        model: model || undefined,
         sessionId,
         enableTools,
         targetAgent: targetAgent != null && String(targetAgent).trim() !== '' ? String(targetAgent).trim() : 'auto',

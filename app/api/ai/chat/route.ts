@@ -43,10 +43,14 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: 'Message is required' }, { status: 400 });
     }
 
+    // Validate incoming model (may be undefined → will fall back to session or default)
     const modelValidation = validateAiAssistantModelInput(rawModel);
     if ('error' in modelValidation) {
       return Response.json({ error: modelValidation.error }, { status: 400 });
     }
+    // If rawModel was explicitly provided and valid, use it; otherwise fall back later
+    const incomingModelExplicit =
+      typeof rawModel === 'string' && rawModel.trim() ? modelValidation.model : null;
     let modelToUse: AiAssistantModelId = modelValidation.model;
 
     const apiKey = process.env.PIXELBRAIN_M2M_KEY;
@@ -74,12 +78,18 @@ export async function POST(request: NextRequest) {
       const session = await SessionManager.getSession(currentSessionId);
       if (session) {
         currentSession = session;
-        if (session.model) {
+        // Only fall back to session.model if request didn't explicitly provide one
+        if (!incomingModelExplicit && session.model) {
           modelToUse = aiAssistantModelFromSession(session.model);
         }
       } else {
         currentSessionId = null;
       }
+    }
+
+    // Persist model choice on session so future messages default to it
+    if (currentSession && incomingModelExplicit && currentSession.model !== incomingModelExplicit) {
+      await SessionManager.updateSessionModel(currentSession.id, incomingModelExplicit);
     }
 
     const targetAgent =
