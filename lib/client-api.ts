@@ -1064,7 +1064,16 @@ export const ClientAPI = {
         enableTools
       })
     });
-    if (!res.ok) throw new Error('Failed to get AI response');
+    if (!res.ok) {
+      let detail = '';
+      try {
+        const errBody = await res.clone().json();
+        if (errBody && typeof errBody.error === 'string') detail = `: ${errBody.error}`;
+      } catch {
+        /* ignore */
+      }
+      throw new Error(`Failed to get AI response (${res.status})${detail}`);
+    }
     return await res.json();
   },
 
