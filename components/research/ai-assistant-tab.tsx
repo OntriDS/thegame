@@ -7,6 +7,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Bot, Send, Trash2, Loader2, Settings, Wrench, Database, Zap, MessageSquare, Users } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import AiSessionManagerSubmodal from '@/components/modals/submodals/ai-session-manager-submodal';
 import SystemPromptSubmodal from '@/components/modals/submodals/system-prompt-submodal';
 import { useAIChat, ChatMessage } from '@/lib/hooks/use-ai-chat';
@@ -413,7 +415,45 @@ export function AIAssistantTab() {
                         : 'bg-muted'
                     }`}
                   >
-                    <p className="whitespace-pre-wrap">{message.content}</p>
+                    {message.role === 'assistant' ? (
+                      <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
+                        components={{
+                          table: ({ children }) => (
+                            <div className="my-3 w-full overflow-x-auto">
+                              <table className="w-full border-collapse border border-border text-sm">
+                                {children}
+                              </table>
+                            </div>
+                          ),
+                          thead: ({ children }) => <thead className="bg-background/70">{children}</thead>,
+                          th: ({ children }) => (
+                            <th className="border border-border px-2 py-1.5 text-left font-semibold">
+                              {children}
+                            </th>
+                          ),
+                          td: ({ children }) => (
+                            <td className="border border-border px-2 py-1.5 align-top">{children}</td>
+                          ),
+                          tr: ({ children }) => <tr className="even:bg-background/40">{children}</tr>,
+                          ul: ({ children }) => <ul className="my-2 list-disc pl-6 space-y-1">{children}</ul>,
+                          ol: ({ children }) => <ol className="my-2 list-decimal pl-6 space-y-1">{children}</ol>,
+                          code: ({ children, className }) =>
+                            !(className || '').includes('language-') ? (
+                              <code className="rounded bg-background px-1 py-0.5 text-xs">{children}</code>
+                            ) : (
+                              <code className="block overflow-x-auto rounded border border-border bg-background p-3 text-xs">
+                                {children}
+                              </code>
+                            ),
+                          p: ({ children }) => <p className="my-2 whitespace-pre-wrap leading-relaxed">{children}</p>,
+                        }}
+                      >
+                        {message.content}
+                      </ReactMarkdown>
+                    ) : (
+                      <p className="whitespace-pre-wrap">{message.content}</p>
+                    )}
                   </div>
                 </div>
               ))}
