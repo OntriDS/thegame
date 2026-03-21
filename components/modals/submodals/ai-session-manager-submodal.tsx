@@ -16,6 +16,10 @@ import {
 import { Trash2, Edit2, Check, X, Plus, Bot, Download, Upload } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { AISession } from '@/types/entities';
+import {
+  AI_ASSISTANT_MODELS,
+  AI_ASSISTANT_MODEL_CATEGORY_ORDER,
+} from '@/lib/ai/ai-assistant-models';
 
 interface Props {
   open: boolean;
@@ -32,22 +36,7 @@ export default function AiSessionManagerSubmodal({ open, onOpenChange, onSession
   const [showNewSessionForm, setShowNewSessionForm] = useState(false);
   const [selectedModel, setSelectedModel] = useState<string>('openai/gpt-oss-120b');
   const fileInputRef = useRef<HTMLInputElement>(null);
-  // Curated model list with tiers (same as AI Assistant Tab)
-  const availableModels = [
-    // TIER 1: Reasoners
-    { id: 'openai/gpt-oss-120b', displayName: 'gpt-oss-120b (Top reasoning)', category: 'Reasoners' },
-    { id: 'llama-3.3-70b-versatile', displayName: 'llama-3.3-70b (Versatile)', category: 'Reasoners' },
-
-    // TIER 2: Specialists
-    { id: 'moonshotai/kimi-k2-instruct-0905', displayName: 'moonshotai-kimi-1000B-32b (Analysis, Large)', category: 'Specialists' },
-    { id: 'qwen/qwen3-32b', displayName: 'qwen3-32b (Balance)', category: 'Specialists' },
-    { id: 'meta-llama/llama-4-maverick-17b-128e-instruct', displayName: 'llama-4-128e-17b (Creative, Large)', category: 'Specialists' },
-
-    // TIER 3: Speed
-    { id: 'openai/gpt-oss-20b', displayName: 'gpt-oss-20b (Performance)', category: 'Speed' },
-    { id: 'groq/compound', displayName: 'groq/compound (Fast)', category: 'Speed' },
-    { id: 'meta-llama/llama-4-scout-17b-16e-instruct', displayName: 'llama-4-scout-16e-17b (Info gathering)', category: 'Speed' }
-  ];
+  const availableModels = [...AI_ASSISTANT_MODELS];
 
   const load = async () => {
     setLoading(true);
@@ -217,7 +206,7 @@ export default function AiSessionManagerSubmodal({ open, onOpenChange, onSession
                     <SelectContent>
                       {/* Group models by category */}
                       <div className="p-2">
-                        {['Reasoners', 'Specialists', 'Speed'].map(category => {
+                        {AI_ASSISTANT_MODEL_CATEGORY_ORDER.map((category) => {
                           const categoryModels = availableModels.filter(model => model.category === category);
                           return (
                             <div key={category} className="mb-4 last:mb-0">
@@ -289,7 +278,7 @@ export default function AiSessionManagerSubmodal({ open, onOpenChange, onSession
                           <SelectContent>
                             {/* Group models by category */}
                             <div className="p-2">
-                              {['Reasoners', 'Specialists', 'Speed'].map(category => {
+                              {AI_ASSISTANT_MODEL_CATEGORY_ORDER.map((category) => {
                                 const categoryModels = availableModels.filter(model => model.category === category);
                                 return (
                                   <div key={category} className="mb-4 last:mb-0">

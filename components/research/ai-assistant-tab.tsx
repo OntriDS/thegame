@@ -11,7 +11,10 @@ import AiSessionManagerSubmodal from '@/components/modals/submodals/ai-session-m
 import SystemPromptSubmodal from '@/components/modals/submodals/system-prompt-submodal';
 import { useAIChat, ChatMessage } from '@/lib/hooks/use-ai-chat';
 import { ClientAPI } from '@/lib/client-api';
-import { AI_ASSISTANT_MODELS } from '@/lib/ai/ai-assistant-models';
+import {
+  AI_ASSISTANT_MODELS,
+  AI_ASSISTANT_MODEL_CATEGORY_ORDER,
+} from '@/lib/ai/ai-assistant-models';
 import {
   fetchPixelbrainAgentsCatalog,
   type PixelbrainAgentCatalogEntry,
@@ -353,7 +356,7 @@ export function AIAssistantTab() {
               <SelectContent>
                 {/* Group models by category */}
                 <div className="p-2">
-                  {['Reasoners', 'Specialists', 'Speed'].map(category => {
+                  {AI_ASSISTANT_MODEL_CATEGORY_ORDER.map((category) => {
                     const categoryModels = availableModels.filter(model => model.category === category);
                     return (
                       <div key={category} className="mb-4 last:mb-0">

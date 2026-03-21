@@ -1,13 +1,27 @@
 /**
- * AI Assistant — LLM model allowlist (Groq / OpenAI-style ids).
+ * AI Assistant — LLM model allowlist (Groq vendor ids + Z.AI Coding PaaS ids).
  *
  * Single source of truth: `ai-assistant-tab` imports this list; `/api/ai/chat` validates the same ids.
  * Unknown ids → 400 on the wire; legacy session values not in the list fall back to default only.
+ *
+ * Z.AI: id must match what Pixelbrain sends to `POST /chat/completions` (default `ZAI_MODEL` on Pixelbrain is `glm-4.7`).
  */
+
+export const AI_ASSISTANT_MODEL_CATEGORY_ORDER = [
+  'Reasoners',
+  'Z.AI',
+  'Specialists',
+  'Speed',
+] as const;
 
 export const AI_ASSISTANT_MODELS = [
   { id: 'openai/gpt-oss-120b', displayName: 'gpt-oss-120b (Top reasoning)', category: 'Reasoners' },
   { id: 'llama-3.3-70b-versatile', displayName: 'llama-3.3-70b (Versatile)', category: 'Reasoners' },
+  {
+    id: 'glm-4.7',
+    displayName: 'Z.AI glm-4.7 (Reasoning — Z API quota)',
+    category: 'Z.AI',
+  },
   { id: 'moonshotai/kimi-k2-instruct-0905', displayName: 'moonshotai-kimi-1000B-32b (Analysis, Large)', category: 'Specialists' },
   { id: 'qwen/qwen3-32b', displayName: 'qwen3-32b (Balance)', category: 'Specialists' },
   { id: 'meta-llama/llama-4-maverick-17b-128e-instruct', displayName: 'llama-4-128e-17b (Creative, Large)', category: 'Specialists' },
