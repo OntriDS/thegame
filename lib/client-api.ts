@@ -13,6 +13,7 @@
  */
 
 import type { Task, Item, Sale, FinancialRecord, Character, Player, Site, Account, Settlement, AISession, Business, Contract, SummaryTotals } from '@/types/entities';
+import type { AISystemPreset } from '@/lib/ai/system-presets';
 
 export const ClientAPI = {
   getSummary: async (monthYear?: string): Promise<SummaryTotals> => {
@@ -1000,13 +1001,23 @@ export const ClientAPI = {
     return await res.json();
   },
 
-  updateSessionPrompt: async (id: string, systemPrompt?: string, systemPreset?: 'analyst' | 'strategist' | 'assistant' | 'accounter' | 'empty' | 'custom'): Promise<AISession> => {
+  updateSessionPrompt: async (id: string, systemPrompt?: string, systemPreset?: AISystemPreset): Promise<AISession> => {
     const res = await fetch(`/api/ai/sessions/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ systemPrompt, systemPreset })
     });
     if (!res.ok) throw new Error('Failed to update session prompt');
+    return await res.json();
+  },
+
+  updateSessionPixelbrainTarget: async (id: string, pixelbrainTargetAgent: string): Promise<AISession> => {
+    const res = await fetch(`/api/ai/sessions/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pixelbrainTargetAgent })
+    });
+    if (!res.ok) throw new Error('Failed to update Pixelbrain target agent');
     return await res.json();
   },
 
@@ -1052,7 +1063,13 @@ export const ClientAPI = {
     return await res.json();
   },
 
-  sendChatMessage: async (message: string, model?: string, sessionId?: string, enableTools?: boolean): Promise<any> => {
+  sendChatMessage: async (
+    message: string,
+    model?: string,
+    sessionId?: string,
+    enableTools?: boolean,
+    targetAgent?: string
+  ): Promise<any> => {
     const res = await fetch('/api/ai/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1061,7 +1078,8 @@ export const ClientAPI = {
         model: model || 'openai/gpt-oss-120b',
         provider: 'groq',
         sessionId,
-        enableTools
+        enableTools,
+        targetAgent: targetAgent != null && String(targetAgent).trim() !== '' ? String(targetAgent).trim() : 'auto',
       })
     });
     if (!res.ok) {

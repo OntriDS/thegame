@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ClientAPI } from '@/lib/client-api';
+import { coerceStoredSystemPreset, type AISystemPreset } from '@/lib/ai/system-presets';
 
 export interface ChatMessage {
   role: 'user' | 'assistant';
@@ -38,7 +39,8 @@ export function useAIChat() {
     toolResults: []
   });
   const [systemPrompt, setSystemPrompt] = useState<string | undefined>(undefined);
-  const [systemPreset, setSystemPreset] = useState<'analyst' | 'strategist' | 'assistant' | 'accounter' | 'empty' | 'custom' | undefined>(undefined);
+  const [systemPreset, setSystemPreset] = useState<AISystemPreset | undefined>(undefined);
+  const [selectedTargetAgent, setSelectedTargetAgent] = useState<string>('auto');
 
   // Hydrate model from active session on mount
   useEffect(() => {
@@ -57,6 +59,9 @@ export function useAIChat() {
         if (session?.model) {
           setSelectedModel(session.model);
           setSessionId(activeId);
+        }
+        if (typeof session?.pixelbrainTargetAgent === 'string' && session.pixelbrainTargetAgent.trim()) {
+          setSelectedTargetAgent(session.pixelbrainTargetAgent.trim().toLowerCase());
         }
       } catch {
         // silent fail; session will be created with backend default when first message is sent
@@ -90,7 +95,13 @@ export function useAIChat() {
       // Use the passed model, or selectedModel from state (which should be the session's model if loaded)
       const modelToUse = model || selectedModel;
 
-      const data = await ClientAPI.sendChatMessage(message, modelToUse, sessionId || undefined, enableTools);
+      const data = await ClientAPI.sendChatMessage(
+        message,
+        modelToUse,
+        sessionId || undefined,
+        enableTools,
+        selectedTargetAgent
+      );
       
       // Update model if returned from API (in case it used session's model)
       if (data.model) {
@@ -164,6 +175,7 @@ export function useAIChat() {
     setError(null);
     setSystemPrompt(undefined);
     setSystemPreset(undefined);
+    setSelectedTargetAgent('auto');
     setToolExecution({
       isExecuting: false,
       currentTool: null,
@@ -198,7 +210,12 @@ export function useAIChat() {
 
         // Load system prompt data
         setSystemPrompt(sessionData.systemPrompt);
-        setSystemPreset(sessionData.systemPreset);
+        setSystemPreset(coerceStoredSystemPreset(sessionData.systemPreset));
+        if (typeof sessionData.pixelbrainTargetAgent === 'string' && sessionData.pixelbrainTargetAgent.trim()) {
+          setSelectedTargetAgent(sessionData.pixelbrainTargetAgent.trim().toLowerCase());
+        } else {
+          setSelectedTargetAgent('auto');
+        }
       }
     } catch (error) {
       console.error('Error loading session:', error);
@@ -251,6 +268,8 @@ export function useAIChat() {
     toolExecution,
     systemPrompt,
     systemPreset,
+    selectedTargetAgent,
+    setSelectedTargetAgent,
   };
 }
 

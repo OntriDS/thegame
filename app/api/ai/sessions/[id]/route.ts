@@ -31,9 +31,18 @@ export async function PUT(
   }
 
   try {
-    const { name, model, messages, systemPrompt, systemPreset } = await request.json();
-    if (!name && !model && !messages && systemPrompt === undefined && systemPreset === undefined) {
-      return Response.json({ error: 'Name, model, messages, systemPrompt, or systemPreset is required' }, { status: 400 });
+    const { name, model, messages, systemPrompt, systemPreset, pixelbrainTargetAgent } = await request.json();
+    if (
+      !name &&
+      !model &&
+      !messages &&
+      systemPrompt === undefined &&
+      systemPreset === undefined &&
+      pixelbrainTargetAgent === undefined
+    ) {
+      return Response.json({
+        error: 'Name, model, messages, systemPrompt, systemPreset, or pixelbrainTargetAgent is required',
+      }, { status: 400 });
     }
 
     if (name) {
@@ -47,6 +56,9 @@ export async function PUT(
     }
     if (systemPrompt !== undefined || systemPreset !== undefined) {
       await SessionManager.updateSessionSystemPrompt(params.id, systemPrompt, systemPreset);
+    }
+    if (pixelbrainTargetAgent !== undefined && typeof pixelbrainTargetAgent === 'string') {
+      await SessionManager.updateSessionPixelbrainTargetAgent(params.id, pixelbrainTargetAgent);
     }
 
     const session = await SessionManager.getSession(params.id);

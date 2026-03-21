@@ -1,20 +1,43 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Bot, Send, Trash2, Loader2, Settings, Wrench, Database, Zap, MessageSquare } from 'lucide-react';
+import { Bot, Send, Trash2, Loader2, Settings, Wrench, Database, Zap, MessageSquare, Users } from 'lucide-react';
 import AiSessionManagerSubmodal from '@/components/modals/submodals/ai-session-manager-submodal';
 import SystemPromptSubmodal from '@/components/modals/submodals/system-prompt-submodal';
 import { useAIChat, ChatMessage } from '@/lib/hooks/use-ai-chat';
 import { ClientAPI } from '@/lib/client-api';
 import { AI_ASSISTANT_MODELS } from '@/lib/ai/ai-assistant-models';
+import {
+  fetchPixelbrainAgentsCatalog,
+  type PixelbrainAgentCatalogEntry,
+} from '@/lib/pixelbrain/agents-catalog-cache';
 
 export function AIAssistantTab() {
-  const { messages, isLoading, error, sendMessage, clearMessages, clearSession, loadSession, saveSession, selectedModel, setSelectedModel, selectedProvider, rateLimits, sessionId, toolExecution, systemPrompt, systemPreset } = useAIChat();
+  const {
+    messages,
+    isLoading,
+    error,
+    sendMessage,
+    clearMessages,
+    clearSession,
+    loadSession,
+    saveSession,
+    selectedModel,
+    setSelectedModel,
+    selectedProvider,
+    rateLimits,
+    sessionId,
+    toolExecution,
+    systemPrompt,
+    systemPreset,
+    selectedTargetAgent,
+    setSelectedTargetAgent,
+  } = useAIChat();
   const [showModelSelect, setShowModelSelect] = useState(false);
   const [input, setInput] = useState('');
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -24,6 +47,33 @@ export function AIAssistantTab() {
   const [enableTools, setEnableTools] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [pixelbrainAgents, setPixelbrainAgents] = useState<PixelbrainAgentCatalogEntry[]>([]);
+  const [agentsCatalogError, setAgentsCatalogError] = useState<string | null>(null);
+
+  const loadAgentsCatalog = useCallback(async () => {
+    try {
+      setAgentsCatalogError(null);
+      const agents = await fetchPixelbrainAgentsCatalog();
+      setPixelbrainAgents(agents);
+    } catch (e) {
+      setAgentsCatalogError(e instanceof Error ? e.message : 'Failed to load agents');
+    }
+  }, []);
+
+  useEffect(() => {
+    loadAgentsCatalog();
+  }, [loadAgentsCatalog]);
+
+  /** Persist Pixelbrain routing choice on the AI session (debounced). */
+  useEffect(() => {
+    if (!sessionId) return;
+    const t = setTimeout(() => {
+      ClientAPI.updateSessionPixelbrainTarget(sessionId, selectedTargetAgent).catch(() => {
+        /* non-fatal */
+      });
+    }, 400);
+    return () => clearTimeout(t);
+  }, [selectedTargetAgent, sessionId]);
 
   /** Same ids as `/api/ai/chat` allowlist — @/lib/ai/ai-assistant-models */
   const availableModels = [...AI_ASSISTANT_MODELS];
@@ -176,6 +226,35 @@ export function AIAssistantTab() {
                 <Zap className="h-3 w-3" />
                 Tools {enableTools ? 'ON' : 'OFF'}
               </Button>
+              <div className="flex items-center gap-1 min-w-0 max-w-[min(100%,240px)]" title="Pixelbrain agent">
+                <Users className="h-3 w-3 shrink-0 text-muted-foreground" aria-hidden />
+                <Select value={selectedTargetAgent} onValueChange={setSelectedTargetAgent}>
+                  <SelectTrigger className="h-7 text-xs py-0" title="Route chat to a Pixelbrain agent">
+                    <SelectValue placeholder="Agent" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="auto">Auto (Orchestrator)</SelectItem>
+                    {pixelbrainAgents.map((a) => (
+                      <SelectItem key={a.id} value={a.id}>
+                        {a.codeName ? `${a.name} (${a.codeName})` : a.name}
+                      </SelectItem>
+                    ))}
+                    {selectedTargetAgent !== 'auto' &&
+                      !pixelbrainAgents.some((a) => a.id === selectedTargetAgent) && (
+                        <SelectItem value={selectedTargetAgent}>{selectedTargetAgent}</SelectItem>
+                      )}
+                  </SelectContent>
+                </Select>
+              </div>
+              {agentsCatalogError && (
+                <button
+                  type="button"
+                  className="text-[10px] text-destructive underline"
+                  onClick={() => loadAgentsCatalog()}
+                >
+                  Retry agents
+                </button>
+              )}
               {sessionId && (
                 <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded bg-green-50 border border-green-200 text-green-800">
                   <Database className="h-3 w-3" /> {sessionId.substring(0, 8)}...

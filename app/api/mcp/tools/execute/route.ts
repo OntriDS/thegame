@@ -1,13 +1,37 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { verifyPixelbrainRouteAccess } from '@/lib/auth/pixelbrain-route-auth';
-import { getAllSales, getAllTasks, getAllPlayers } from '@/data-store/datastore';
+import {
+  getAllSales,
+  getAllTasks,
+  getAllPlayers,
+  getAllFinancials,
+  getAllItems,
+  getAllSites,
+  getAllCharacters,
+} from '@/data-store/datastore';
 import {
   auditArchiveCompleteness,
   auditLinkConsistency,
   auditMonthIndexAccuracy,
   auditStatusConsistency,
 } from '@/lib/integrity/integrity-audits';
+import { auditTaskTimelineVsMonthIndex } from '@/lib/integrity/task-timeline-audit';
+
+const DEFAULT_LIST_LIMIT = 50;
+const MAX_LIST_LIMIT = 200;
+
+function clampLimit(raw: unknown): number {
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 1) return DEFAULT_LIST_LIMIT;
+  return Math.min(Math.floor(n), MAX_LIST_LIMIT);
+}
+
+function clampOffset(raw: unknown): number {
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 0) return 0;
+  return Math.floor(n);
+}
 
 function parseMonthYear(params: Record<string, unknown>): { month: number; year: number } | null {
   const month = Number(params.month);
@@ -41,22 +65,30 @@ export async function POST(req: NextRequest) {
   try {
     switch (toolId) {
       case 'get_tasks': {
-        const limit = Math.min(Number(parameters.limit) || 100, 500);
-        const offset = Number(parameters.offset) || 0;
+        const limit = clampLimit(parameters.limit);
+        const offset = clampOffset(parameters.offset);
         const filter = parameters.filter as { status?: string } | undefined;
         let tasks = await getAllTasks();
         if (filter?.status) {
           tasks = tasks.filter((t) => String(t.status) === filter.status);
         }
         const slice = tasks.slice(offset, offset + limit);
+        const hasMore = offset + limit < tasks.length;
         return NextResponse.json({
           success: true,
-          data: { tasks: slice, count: slice.length, total: tasks.length },
+          data: {
+            tasks: slice,
+            count: slice.length,
+            total: tasks.length,
+            offset,
+            limit,
+            hasMore,
+          },
         });
       }
       case 'get_sales': {
-        const limit = Math.min(Number(parameters.limit) || 100, 500);
-        const offset = Number(parameters.offset) || 0;
+        const limit = clampLimit(parameters.limit);
+        const offset = clampOffset(parameters.offset);
         const dateRange = parameters.dateRange as { start?: string; end?: string } | undefined;
         let sales = await getAllSales();
         if (dateRange?.start && dateRange?.end) {
@@ -68,6 +100,7 @@ export async function POST(req: NextRequest) {
           });
         }
         const slice = sales.slice(offset, offset + limit);
+        const hasMore = offset + limit < sales.length;
         return NextResponse.json({
           success: true,
           data: {
@@ -79,16 +112,72 @@ export async function POST(req: NextRequest) {
             })),
             count: slice.length,
             total: sales.length,
+            offset,
+            limit,
+            hasMore,
           },
         });
       }
       case 'get_players': {
-        const limit = Math.min(Number(parameters.limit) || 100, 500);
+        const limit = clampLimit(parameters.limit);
+        const offset = clampOffset(parameters.offset);
         const players = await getAllPlayers();
-        const slice = players.slice(0, limit);
+        const slice = players.slice(offset, offset + limit);
+        const hasMore = offset + limit < players.length;
         return NextResponse.json({
           success: true,
-          data: { players: slice, count: slice.length, total: players.length },
+          data: { players: slice, count: slice.length, total: players.length, offset, limit, hasMore },
+        });
+      }
+      case 'get_financials': {
+        const limit = clampLimit(parameters.limit);
+        const offset = clampOffset(parameters.offset);
+        const financials = await getAllFinancials();
+        const slice = financials.slice(offset, offset + limit);
+        const hasMore = offset + limit < financials.length;
+        return NextResponse.json({
+          success: true,
+          data: { financials: slice, count: slice.length, total: financials.length, offset, limit, hasMore },
+        });
+      }
+      case 'get_items': {
+        const limit = clampLimit(parameters.limit);
+        const offset = clampOffset(parameters.offset);
+        const items = await getAllItems();
+        const slice = items.slice(offset, offset + limit);
+        const hasMore = offset + limit < items.length;
+        return NextResponse.json({
+          success: true,
+          data: { items: slice, count: slice.length, total: items.length, offset, limit, hasMore },
+        });
+      }
+      case 'get_sites': {
+        const limit = clampLimit(parameters.limit);
+        const offset = clampOffset(parameters.offset);
+        const sites = await getAllSites();
+        const slice = sites.slice(offset, offset + limit);
+        const hasMore = offset + limit < sites.length;
+        return NextResponse.json({
+          success: true,
+          data: { sites: slice, count: slice.length, total: sites.length, offset, limit, hasMore },
+        });
+      }
+      case 'get_characters': {
+        const limit = clampLimit(parameters.limit);
+        const offset = clampOffset(parameters.offset);
+        const characters = await getAllCharacters();
+        const slice = characters.slice(offset, offset + limit);
+        const hasMore = offset + limit < characters.length;
+        return NextResponse.json({
+          success: true,
+          data: {
+            characters: slice,
+            count: slice.length,
+            total: characters.length,
+            offset,
+            limit,
+            hasMore,
+          },
         });
       }
       case 'thegame.integrity.linkConsistency': {
@@ -133,6 +222,17 @@ export async function POST(req: NextRequest) {
           );
         }
         const data = await auditArchiveCompleteness(my.month, my.year);
+        return NextResponse.json({ success: true, data });
+      }
+      case 'thegame.integrity.taskTimelineVsMonthIndex': {
+        const my = parseMonthYear(parameters);
+        if (!my) {
+          return NextResponse.json(
+            { success: false, error: 'month and year (valid calendar) are required' },
+            { status: 400 }
+          );
+        }
+        const data = await auditTaskTimelineVsMonthIndex(my.month, my.year);
         return NextResponse.json({ success: true, data });
       }
       default:

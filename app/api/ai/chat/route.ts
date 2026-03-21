@@ -10,12 +10,17 @@ import {
 
 const activeSessionKey = 'active:session:akiles';
 
+/** Safe Pixelbrain routing id: auto | orchestrator | specialist ids from catalog. */
+function sanitizeTargetAgent(raw: unknown): string {
+  if (raw == null || typeof raw !== 'string') return 'auto';
+  const t = raw.trim().toLowerCase();
+  if (!t || t === 'default') return 'auto';
+  if (!/^[a-z][a-z0-9_-]{0,47}$/.test(t)) return 'auto';
+  return t;
+}
+
 function pixelbrainBaseUrl(): string {
-  const base =
-    process.env.PIXELBRAIN_API_URL ||
-    process.env.NEXT_PUBLIC_PIXELBRAIN_URL ||
-    process.env.NEXT_PUBLIC_PIXELBRAIN_ENDPOINT ||
-    '';
+  const base = process.env.PIXELBRAIN_API_URL || '';
   return base.replace(/\/$/, '');
 }
 
@@ -31,6 +36,7 @@ export async function POST(request: NextRequest) {
       model: rawModel,
       sessionId: incomingSessionId,
       enableTools = false,
+      targetAgent: targetAgentBody,
     } = body;
 
     if (!message || typeof message !== 'string') {
@@ -51,7 +57,7 @@ export async function POST(request: NextRequest) {
     const base = pixelbrainBaseUrl();
     if (!base) {
       return Response.json(
-        { error: 'PIXELBRAIN_API_URL or NEXT_PUBLIC_PIXELBRAIN_URL not configured' },
+        { error: 'PIXELBRAIN_API_URL not configured' },
         { status: 500 }
       );
     }
@@ -75,6 +81,11 @@ export async function POST(request: NextRequest) {
         currentSessionId = null;
       }
     }
+
+    const targetAgent =
+      targetAgentBody !== undefined && targetAgentBody !== null && String(targetAgentBody).trim() !== ''
+        ? sanitizeTargetAgent(targetAgentBody)
+        : sanitizeTargetAgent(currentSession?.pixelbrainTargetAgent ?? 'auto');
 
     const systemMessage = SessionManager.getSystemMessage(currentSession);
     const rawHistory = currentSessionId
@@ -101,7 +112,7 @@ export async function POST(request: NextRequest) {
         message,
         sessionId: currentSessionId ?? undefined,
         model: modelToUse,
-        targetAgent: 'orchestrator',
+        targetAgent,
         enableTools,
         systemMessage: systemMessage ?? undefined,
         conversationMessages,

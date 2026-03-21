@@ -1,4 +1,5 @@
 // types/entities.ts
+import type { AISystemPreset } from '@/lib/ai/system-presets';
 import {
   TaskType,
   TaskStatus,
@@ -1019,5 +1020,8 @@ export interface AISession extends BaseEntity {
     preferences?: Record<string, any>; // User preferences stored as key-value pairs
   };
   systemPrompt?: string; // Custom system prompt text
-  systemPreset?: 'analyst' | 'strategist' | 'assistant' | 'accounter' | 'empty' | 'custom'; // Preset type for system prompt
+  /** Preset aligned with Pixelbrain agents */
+  systemPreset?: AISystemPreset;
+  /** Pixelbrain routing: `auto` (LLM routing), `orchestrator`, or specialist id */
+  pixelbrainTargetAgent?: string;
 }

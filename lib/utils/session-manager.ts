@@ -1,6 +1,7 @@
 // lib/utils/session-manager.ts
 import { v4 as uuidv4 } from 'uuid';
 import type { AISession } from '@/types/entities';
+import { SYSTEM_PRESET_PROMPTS, type AISystemPreset } from '@/lib/ai/system-presets';
 import { getSessionById, getAllSessions, upsertSession, deleteSession as repoDeleteSession } from '@/data-store/repositories/session.repo';
 
 const MAX_SESSIONS = 20; // Maximum number of sessions allowed
@@ -50,28 +51,29 @@ export class SessionManager {
     // Generate default name based on timestamp
     const defaultName = `Session ${now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}`;
 
-    const session: AISession = {
-      id: sessionId,
-      name: defaultName,
-      description: '',
-      links: [],
-      userId,
-      model,
-      messageCount: 0,
-      messages: [],
-      context: {
-        user: userId,
-        project,
-        preferences: {
-          ai_assistant: 'Groq',
-          communication_style: 'Direct and technical'
-        }
-      },
-      createdAt: now,
-      updatedAt: now,
-      lastAccessedAt: now,
-      expiresAt: new Date('2099-12-31') // Far future date to effectively disable TTL
-    };
+      const session: AISession = {
+        id: sessionId,
+        name: defaultName,
+        description: '',
+        links: [],
+        userId,
+        model,
+        messageCount: 0,
+        messages: [],
+        context: {
+          user: userId,
+          project,
+          preferences: {
+            ai_assistant: 'Groq',
+            communication_style: 'Direct and technical'
+          }
+        },
+        pixelbrainTargetAgent: 'auto',
+        createdAt: now,
+        updatedAt: now,
+        lastAccessedAt: now,
+        expiresAt: new Date('2099-12-31') // Far future date to effectively disable TTL
+      };
 
     await upsertSession(session);
     return session;
@@ -258,6 +260,9 @@ export class SessionManager {
         messageCount: sessionData.messageCount,
         messages: sessionData.messages,
         context: sessionData.context,
+        pixelbrainTargetAgent: sessionData.pixelbrainTargetAgent,
+        systemPrompt: sessionData.systemPrompt,
+        systemPreset: sessionData.systemPreset,
         createdAt: new Date(sessionData.createdAt),
         updatedAt: new Date(), // Fresh timestamp for import
         lastAccessedAt: new Date(), // Fresh timestamp for import
@@ -372,7 +377,11 @@ export class SessionManager {
   /**
    * Update session system prompt
    */
-  static async updateSessionSystemPrompt(sessionId: string, systemPrompt: string | undefined, systemPreset: 'analyst' | 'strategist' | 'assistant' | 'accounter' | 'empty' | 'custom' | undefined): Promise<void> {
+  static async updateSessionSystemPrompt(
+    sessionId: string,
+    systemPrompt: string | undefined,
+    systemPreset: AISystemPreset | undefined
+  ): Promise<void> {
     const session = await this.getSession(sessionId);
     if (!session) {
       throw new Error('Session not found');
@@ -384,40 +393,43 @@ export class SessionManager {
   }
 
   /**
+   * Pixelbrain agent target for AI Assistant (auto | orchestrator | specialist id).
+   */
+  static async updateSessionPixelbrainTargetAgent(sessionId: string, pixelbrainTargetAgent: string): Promise<void> {
+    const session = await this.getSession(sessionId);
+    if (!session) {
+      throw new Error('Session not found');
+    }
+    session.pixelbrainTargetAgent = pixelbrainTargetAgent;
+    await this.saveSession(session);
+  }
+
+  /**
    * Get system message content from session
    * Returns the system prompt text based on preset or custom prompt
    */
   static getSystemMessage(session: AISession | null): string | null {
     if (!session) return null;
 
-    // If preset is 'empty', return null (no system message)
-    if (session.systemPreset === 'empty') {
+    const preset = session.systemPreset;
+    if (!preset || preset === 'empty') {
       return null;
     }
 
-    // If custom prompt is provided, use it
-    if (session.systemPreset === 'custom' && session.systemPrompt) {
+    if (preset === 'custom') {
+      return session.systemPrompt?.trim() || null;
+    }
+
+    // Saved text (edited template or prior save) wins over defaults
+    if (session.systemPrompt?.trim()) {
       return session.systemPrompt;
     }
 
-    // Use preset templates
-    switch (session.systemPreset) {
-      case 'analyst':
-        return 'You are a precise analyst for a creative project management app. Format your responses using markdown for clarity: use ## headings for sections, **bold** for key terms, bullet points for lists, and a final "Action Items" section when applicable. Keep answers concise, structured, and data-driven.';
-      
-      case 'strategist':
-        return 'You are a strategic planning assistant for a creative project management app. Format your responses using markdown: use ## headings for major sections, bullet points for lists, and include sections for Objectives, Phases, Risks/Mitigations, and Success Metrics when planning. Provide clear, actionable strategic guidance.';
-      
-      case 'assistant':
-        return 'You are an organizational assistant for a creative project management app. Format your responses using markdown with checklists, priorities, and next steps. Use - [ ] for checkboxes, **bold** for priorities, and structured bullet points. Focus on actionable, organizational tasks.';
-      
-      case 'accounter':
-        return 'You are a financial accountant and asset management specialist for a creative project management app. You have deep knowledge of finances, assets, inventory, sales, and financial records. Format your responses using markdown: use ## headings for sections, **bold** for key financial terms and amounts, bullet points for lists, and tables for financial data when applicable. Always include relevant financial metrics, asset valuations, and clear financial insights. Focus on financial analysis, budgeting, asset tracking, and financial planning.';
-      
-      default:
-        // If no preset or custom, return null (no system message)
-        return null;
+    if (preset in SYSTEM_PRESET_PROMPTS) {
+      return SYSTEM_PRESET_PROMPTS[preset as keyof typeof SYSTEM_PRESET_PROMPTS];
     }
+
+    return null;
   }
 }
 

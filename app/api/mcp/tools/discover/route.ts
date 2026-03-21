@@ -7,21 +7,22 @@ const TOOLS = [
   {
     id: 'get_tasks',
     name: 'get_tasks',
-    description: 'List tasks with optional status filter and limit.',
+    description: 'List tasks with optional status filter. limit is required (default 50 server-side if invalid; max 200).',
     systemId: 'thegame',
     parameters: {
       type: 'object',
       properties: {
         filter: { type: 'object' },
-        limit: { type: 'number' },
+        limit: { type: 'number', description: 'Required for agents; max 200 per page' },
         offset: { type: 'number' },
       },
+      required: ['limit'],
     },
   },
   {
     id: 'get_sales',
     name: 'get_sales',
-    description: 'List sales with optional date range and limit.',
+    description: 'List sales with optional date range. limit required (max 200).',
     systemId: 'thegame',
     parameters: {
       type: 'object',
@@ -30,16 +31,77 @@ const TOOLS = [
         limit: { type: 'number' },
         offset: { type: 'number' },
       },
+      required: ['limit'],
     },
   },
   {
     id: 'get_players',
     name: 'get_players',
-    description: 'List players (capped).',
+    description: 'List players with pagination. limit required (max 200).',
     systemId: 'thegame',
     parameters: {
       type: 'object',
-      properties: { limit: { type: 'number' } },
+      properties: {
+        limit: { type: 'number' },
+        offset: { type: 'number' },
+      },
+      required: ['limit'],
+    },
+  },
+  {
+    id: 'get_financials',
+    name: 'get_financials',
+    description: 'List financial records. limit required (max 200).',
+    systemId: 'thegame',
+    parameters: {
+      type: 'object',
+      properties: {
+        limit: { type: 'number' },
+        offset: { type: 'number' },
+      },
+      required: ['limit'],
+    },
+  },
+  {
+    id: 'get_items',
+    name: 'get_items',
+    description: 'List items. limit required (max 200).',
+    systemId: 'thegame',
+    parameters: {
+      type: 'object',
+      properties: {
+        limit: { type: 'number' },
+        offset: { type: 'number' },
+      },
+      required: ['limit'],
+    },
+  },
+  {
+    id: 'get_sites',
+    name: 'get_sites',
+    description: 'List sites. limit required (max 200).',
+    systemId: 'thegame',
+    parameters: {
+      type: 'object',
+      properties: {
+        limit: { type: 'number' },
+        offset: { type: 'number' },
+      },
+      required: ['limit'],
+    },
+  },
+  {
+    id: 'get_characters',
+    name: 'get_characters',
+    description: 'List characters. limit required (max 200).',
+    systemId: 'thegame',
+    parameters: {
+      type: 'object',
+      properties: {
+        limit: { type: 'number' },
+        offset: { type: 'number' },
+      },
+      required: ['limit'],
     },
   },
   {
@@ -94,6 +156,21 @@ const TOOLS = [
       properties: {
         month: { type: 'number' },
         year: { type: 'number' },
+      },
+      required: ['month', 'year'],
+    },
+  },
+  {
+    id: 'thegame.integrity.taskTimelineVsMonthIndex',
+    name: 'Task timeline vs month index',
+    description:
+      'Audit tasks in History scope for a month: collected index and active DONE; flags missing or wrong-month doneAt/collectedAt.',
+    systemId: 'thegame',
+    parameters: {
+      type: 'object',
+      properties: {
+        month: { type: 'number', description: '1-12' },
+        year: { type: 'number', description: 'e.g. 2026' },
       },
       required: ['month', 'year'],
     },
