@@ -2,6 +2,11 @@ import { NextRequest } from 'next/server';
 import { SessionManager } from '@/lib/utils/session-manager';
 import { kvGet, kvSet } from '@/data-store/kv';
 import { getCachedPixelbrainOutboundToken } from '@/lib/auth/outbound-pixelbrain-m2m';
+import {
+  aiAssistantModelFromSession,
+  validateAiAssistantModelInput,
+  type AiAssistantModelId,
+} from '@/lib/ai/ai-assistant-models';
 
 const activeSessionKey = 'active:session:akiles';
 
@@ -15,7 +20,7 @@ function pixelbrainBaseUrl(): string {
 }
 
 /**
- * Proxies Research AI chat to Pixelbrain orchestration ingress.
+ * Proxies AI Assistant chat to Pixelbrain orchestration ingress.
  * Preserves SessionManager + response shape expected by use-ai-chat (same as former groq/route).
  */
 export async function POST(request: NextRequest) {
@@ -23,7 +28,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const {
       message,
-      model = 'openai/gpt-oss-120b',
+      model: rawModel,
       sessionId: incomingSessionId,
       enableTools = false,
     } = body;
@@ -31,6 +36,12 @@ export async function POST(request: NextRequest) {
     if (!message || typeof message !== 'string') {
       return Response.json({ error: 'Message is required' }, { status: 400 });
     }
+
+    const modelValidation = validateAiAssistantModelInput(rawModel);
+    if ('error' in modelValidation) {
+      return Response.json({ error: modelValidation.error }, { status: 400 });
+    }
+    let modelToUse: AiAssistantModelId = modelValidation.model;
 
     const apiKey = process.env.PIXELBRAIN_M2M_KEY;
     if (!apiKey) {
@@ -51,7 +62,6 @@ export async function POST(request: NextRequest) {
       if (saved) currentSessionId = saved;
     }
 
-    let modelToUse = model || 'openai/gpt-oss-120b';
     let currentSession: Awaited<ReturnType<typeof SessionManager.getSession>> = null;
 
     if (currentSessionId) {
@@ -59,7 +69,7 @@ export async function POST(request: NextRequest) {
       if (session) {
         currentSession = session;
         if (session.model) {
-          modelToUse = session.model;
+          modelToUse = aiAssistantModelFromSession(session.model);
         }
       } else {
         currentSessionId = null;

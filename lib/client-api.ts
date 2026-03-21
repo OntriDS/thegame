@@ -1044,7 +1044,7 @@ export const ClientAPI = {
   },
 
   // ============================================================================
-  // AI CHAT - AI chat and model operations
+  // AI ASSISTANT — chat and model operations (Pixelbrain orchestration)
   // ============================================================================
   getGroqModels: async (): Promise<{ models: any[] }> => {
     const res = await fetch('/api/ai/groq/models');
