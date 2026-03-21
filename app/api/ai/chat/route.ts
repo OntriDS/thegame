@@ -80,7 +80,8 @@ export async function POST(request: NextRequest) {
 
     const { token } = await getCachedPixelbrainOutboundToken(apiKey);
 
-    const pbRes = await fetch(`${base}/api/orchestration/chat`, {
+    const pbUrl = `${base}/api/orchestration/chat`;
+    const pbRes = await fetch(pbUrl, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -98,20 +99,57 @@ export async function POST(request: NextRequest) {
     });
 
     const pbText = await pbRes.text();
+
+    /** Cap raw body in JSON responses (avoid huge HTML error pages). */
+    const bodyPreview = pbText.length > 12000 ? `${pbText.slice(0, 12000)}…` : pbText;
+
+    if (!pbRes.ok) {
+      console.error('[api/ai/chat] Pixelbrain HTTP error', {
+        status: pbRes.status,
+        url: pbUrl,
+        body: pbText,
+      });
+
+      let parsedErr: string | undefined;
+      try {
+        const j = pbText ? JSON.parse(pbText) : null;
+        if (j && typeof j === 'object' && typeof (j as { error?: unknown }).error === 'string') {
+          parsedErr = (j as { error: string }).error;
+        }
+      } catch {
+        /* body is not JSON — use raw text below */
+      }
+
+      const errorMessage = parsedErr ?? (bodyPreview || `HTTP ${pbRes.status}`);
+      const proxyStatus = pbRes.status >= 400 && pbRes.status < 600 ? pbRes.status : 502;
+
+      return Response.json(
+        {
+          error: errorMessage,
+          pixelbrainStatus: pbRes.status,
+          pixelbrainBody: bodyPreview,
+        },
+        { status: proxyStatus }
+      );
+    }
+
     let pbJson: Record<string, unknown>;
     try {
       pbJson = pbText ? JSON.parse(pbText) : {};
     } catch {
+      console.error('[api/ai/chat] Pixelbrain returned non-JSON (ok status)', {
+        status: pbRes.status,
+        url: pbUrl,
+        body: pbText,
+      });
       return Response.json(
-        { error: 'Invalid response from Pixelbrain' },
+        {
+          error: bodyPreview || 'Empty or non-JSON body from Pixelbrain',
+          pixelbrainStatus: pbRes.status,
+          pixelbrainBody: bodyPreview,
+        },
         { status: 502 }
       );
-    }
-
-    if (!pbRes.ok) {
-      const errMsg =
-        typeof pbJson.error === 'string' ? pbJson.error : `Pixelbrain HTTP ${pbRes.status}`;
-      return Response.json({ error: errMsg }, { status: pbRes.status >= 400 ? pbRes.status : 502 });
     }
 
     const assistantResponse =
