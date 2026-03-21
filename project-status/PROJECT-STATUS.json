@@ -11,6 +11,7 @@
         "Develop 'Pixelbrain', a 'Orchestrator Agent' to Manage a Set of 'AI Agents'",
         "Define all the AI Agents Roles and Responsabilities",
         "Implement the M2M Authentication between TheGame and Pixelbrain",
+        "Integrate MCP Pixelbrain Tools with TheGame and optimize the Chat Interface",
         "Implement Monthly Close Automation Task",
         "Implement automated monthly summary generation and analysis based on archive data (post Monthly Close)",
         "Create one AI Agent for Data Integrity Validation that checks: Link consistency across all entity relationships",
