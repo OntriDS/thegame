@@ -85,7 +85,7 @@ export default function ToolboxSubmodal({ open, onOpenChange }: Props) {
 
   const selectedTitle =
     selectedKey === 'shared'
-      ? 'Shared / Core (TheGame reads)'
+      ? 'Shared Tools'
       : data?.agents.find((a) => a.id === selectedKey)?.name || selectedKey;
 
   const selectedSubtitle =
