@@ -107,6 +107,11 @@
       "version": "v0.1",
       "description": "Implemented with hierarchical task management"
     },
+    "inventories": {
+      "status": "Done",
+      "version": "v0.1",
+      "description": "Unified Stock management at different Sites"
+    },
     "finances": {
       "status": "Done",
       "version": "v0.1",
@@ -117,20 +122,15 @@
       "version": "v0.1",
       "description": "Track Sales from different sources"
     },
-    "inventories": {
-      "status": "Done",
-      "version": "v0.1",
-      "description": "Unified Stock management at different Sites"
-    },
     "maps": {
       "status": "In Progress",
-      "version": "v0.05",
+      "version": "v0.1",
       "description": "Basic Sites System and World Map"
     },
-    "research": {
-      "status": "Done",
+    "characters": {
+      "status": "done",
       "version": "v0.1",
-      "description": "Basic Project Development, Diagrams, Notes"
+      "description": "Basic Character system with Roles"
     },
     "dataCenter": {
       "status": "Done",
@@ -150,22 +150,27 @@
     "accounts": {
       "status": "done",
       "version": "v0.1",
-      "description": "Accounts section with account management (create/edit/delete accounts and link to characters)"
+      "description": "Accounts Section and Management"
     },
-    "characters": {
-      "status": "done",
+    "research": {
+      "status": "Done",
       "version": "v0.1",
-      "description": "Basic Character system with Roles"
+      "description": "Basic Project Development, Diagrams, Notes"
     },
     "settings": {
       "status": "Done",
       "version": "v0.1",
-      "description": "Basic Settings system"
+      "description": "Basic Settings System"
     },
-    "pixelbrain": {
+    "pixelbrain-integration": {
       "status": "In Progress",
-      "version": "v0.5",
+      "version": "v0.1",
       "description": "Basic MCP and AI Agents System"
+    },
+    "ecosystem-integration": {
+      "status": "In Progress",
+      "version": "v0.1",
+      "description": "Available Items, Inventory and Accounts Integration"
     }
   },
   "nextChallenges": {
@@ -183,8 +188,7 @@
         "features": [
           "Should Founder be able to modify Character roles?",
           "Are roles earned/progression-based, with which requirements?",
-          "When Character roles change, should it affect login access?",
-          ""
+          "When Character roles change, should it affect login access?"
         ],
         "priority": "low"
       }
