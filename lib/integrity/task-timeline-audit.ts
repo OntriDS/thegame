@@ -1,10 +1,11 @@
 import 'server-only';
 
 import { isValid } from 'date-fns';
-import { getTaskById } from '@/data-store/datastore';
+import { getAllTasks, getAvailableArchiveMonths, getTaskById } from '@/data-store/datastore';
 import { kvSMembers } from '@/data-store/kv';
-import { buildArchiveCollectionIndexKey } from '@/data-store/keys';
+import { buildArchiveCollectionIndexKey, buildTaskActiveIndexKey } from '@/data-store/keys';
 import { formatMonthKey } from '@/lib/utils/date-utils';
+import { isTaskActive, isTaskCompleted } from '@/lib/utils/task-active-utils';
 import { TaskStatus, EntityType } from '@/types/enums';
 import { INTEGRITY_ISSUES_CAP, type IntegrityAuditResult, type IntegrityIssue } from './types';
 import { toMMYY } from './integrity-audits';
@@ -95,6 +96,87 @@ export async function auditTaskTimelineVsMonthIndex(month: number, year: number)
       totalIssueCount: total.n,
       truncated: total.n > INTEGRITY_ISSUES_CAP,
       notes: `Scanned collected index (${collectedIds.length} ids) for ${mmyy}.`,
+    },
+    issues,
+  };
+}
+
+/**
+ * Completed tasks (Done or Collected) must appear in at least one monthly index set.
+ * Redis key shape remains `thegame:index:tasks:collected:MM-YY` until a key rename migration.
+ */
+export async function auditCompletedTasksMissingFromCompletedIndex(): Promise<IntegrityAuditResult> {
+  const tasks = await getAllTasks();
+  const months = await getAvailableArchiveMonths();
+  const monthlyIdSet = new Set<string>();
+  for (const mmyy of months) {
+    const key = buildArchiveCollectionIndexKey('tasks', mmyy);
+    const ids = await kvSMembers(key);
+    for (const id of ids) monthlyIdSet.add(id);
+  }
+
+  const issues: IntegrityIssue[] = [];
+  const total = { n: 0 };
+
+  for (const task of tasks) {
+    if (isTaskCompleted(task) && !monthlyIdSet.has(task.id)) {
+      pushIssue(
+        issues,
+        total,
+        'TASK_COMPLETED_MISSING_FROM_ALL_MONTHLY_INDEXES',
+        `Task ${task.id} is Done or Collected but not in any monthly tasks index (${months.length} months scanned)`,
+        EntityType.TASK,
+        task.id
+      );
+    }
+  }
+
+  const mmyy = 'global';
+  return {
+    ok: total.n === 0,
+    audit: 'completedTasksMissingFromCompletedIndex',
+    scope: { month: 0, year: 0, mmyy },
+    summary: {
+      totalIssueCount: total.n,
+      truncated: total.n > INTEGRITY_ISSUES_CAP,
+      notes: `Scanned ${tasks.length} tasks; union of monthly index ids size ${monthlyIdSet.size} (${months.length} month keys).`,
+    },
+    issues,
+  };
+}
+
+/** Not-yet-completed tasks should be listed in thegame:index:task:active (after upsert/repair). */
+export async function auditActiveTasksMissingFromActiveIndex(): Promise<IntegrityAuditResult> {
+  const tasks = await getAllTasks();
+  const activeKey = buildTaskActiveIndexKey();
+  const activeMembers = await kvSMembers(activeKey);
+  const activeSet = new Set(activeMembers);
+
+  const issues: IntegrityIssue[] = [];
+  const total = { n: 0 };
+
+  for (const task of tasks) {
+    if (isTaskActive(task) && !activeSet.has(task.id)) {
+      pushIssue(
+        issues,
+        total,
+        'TASK_ACTIVE_BUT_MISSING_FROM_ACTIVE_INDEX',
+        `Task ${task.id} is not Done/Collected but is missing from ${activeKey}`,
+        EntityType.TASK,
+        task.id
+      );
+    }
+  }
+
+  const mmyy = 'global';
+  return {
+    ok: total.n === 0,
+    audit: 'activeTasksMissingFromActiveIndex',
+    scope: { month: 0, year: 0, mmyy },
+    summary: {
+      totalIssueCount: total.n,
+      truncated: total.n > INTEGRITY_ISSUES_CAP,
+      notes: `Scanned ${tasks.length} tasks; active index size ${activeSet.size}.`,
     },
     issues,
   };

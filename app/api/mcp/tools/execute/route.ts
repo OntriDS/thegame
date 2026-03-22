@@ -17,7 +17,11 @@ import {
   auditMonthIndexAccuracy,
   auditStatusConsistency,
 } from '@/lib/integrity/integrity-audits';
-import { auditTaskTimelineVsMonthIndex } from '@/lib/integrity/task-timeline-audit';
+import {
+  auditActiveTasksMissingFromActiveIndex,
+  auditCompletedTasksMissingFromCompletedIndex,
+  auditTaskTimelineVsMonthIndex,
+} from '@/lib/integrity/task-timeline-audit';
 
 const DEFAULT_LIST_LIMIT = 50;
 const MAX_LIST_LIMIT = 200;
@@ -234,6 +238,14 @@ export async function POST(req: NextRequest) {
           );
         }
         const data = await auditTaskTimelineVsMonthIndex(my.month, my.year);
+        return NextResponse.json({ success: true, data });
+      }
+      case 'thegame.integrity.completedTasksMissingFromCompletedIndex': {
+        const data = await auditCompletedTasksMissingFromCompletedIndex();
+        return NextResponse.json({ success: true, data });
+      }
+      case 'thegame.integrity.activeTasksMissingFromActiveIndex': {
+        const data = await auditActiveTasksMissingFromActiveIndex();
         return NextResponse.json({ success: true, data });
       }
       case 'thegame.tasks.repairActiveIndex': {

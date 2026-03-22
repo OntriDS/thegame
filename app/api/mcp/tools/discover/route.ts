@@ -176,6 +176,28 @@ const TOOLS = [
     },
   },
   {
+    id: 'thegame.integrity.completedTasksMissingFromCompletedIndex',
+    name: 'Completed tasks vs monthly index',
+    description:
+      'Done or Collected tasks that are not in any monthly tasks index (Redis: thegame:index:tasks:collected:MM-YY). No month parameters.',
+    systemId: 'thegame',
+    parameters: {
+      type: 'object',
+      properties: {},
+    },
+  },
+  {
+    id: 'thegame.integrity.activeTasksMissingFromActiveIndex',
+    name: 'Active tasks vs active index',
+    description:
+      'Tasks not yet Done/Collected that are missing from thegame:index:task:active. No month parameters.',
+    systemId: 'thegame',
+    parameters: {
+      type: 'object',
+      properties: {},
+    },
+  },
+  {
     id: 'thegame.tasks.repairActiveIndex',
     name: 'Repair active tasks index',
     description:

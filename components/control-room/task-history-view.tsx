@@ -76,6 +76,29 @@ const buildTaskHierarchy = (collectedTasks: Task[], allTasks: Task[]): EnrichedT
     return enrichedTasks;
 };
 
+function formatTaskHistoryDate(value: unknown): string {
+    if (value == null || value === '') return 'Unknown';
+    const d = new Date(value as string | number | Date);
+    return isNaN(d.getTime()) ? 'Unknown' : format(d, 'PP');
+}
+
+/** Same line for every History row: Done + Collected (status only affects styling elsewhere). */
+function TaskHistoryDoneCollectedLine({ task }: { task: Task | EnrichedTask }) {
+    const doneLabel = formatTaskHistoryDate(task.doneAt);
+    const collectedLabel = formatTaskHistoryDate(task.collectedAt);
+    const tone =
+        task.status === TaskStatus.COLLECTED
+            ? 'text-emerald-600 dark:text-emerald-400/80'
+            : 'text-green-600 dark:text-green-400/80';
+    return (
+        <div className={`flex items-center gap-1.5 font-medium whitespace-nowrap ${tone}`}>
+            <span>Done: {doneLabel}</span>
+            <span className="opacity-50">•</span>
+            <span>Collected: {collectedLabel}</span>
+        </div>
+    );
+}
+
 // Render tasks with hierarchy and parent trails
 function renderTaskHierarchy(tasks: EnrichedTask[], onSelectTask?: (task: Task) => void): JSX.Element {
     // Group tasks by immediate parent
@@ -123,34 +146,7 @@ function renderTaskHierarchy(tasks: EnrichedTask[], onSelectTask?: (task: Task) 
                                             <span className="px-1.5 py-0.5 bg-muted rounded-sm text-[10px] font-semibold uppercase tracking-wider">
                                                 {(task as any)?.station?.toString()?.trim() || 'Unknown'}
                                             </span>
-                                            {task.status === TaskStatus.COLLECTED ? (
-                                                <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400/80 font-medium whitespace-nowrap">
-                                                    <span>Done: {
-                                                        !task || !(task as any).doneAt ? 'Unknown' : (() => {
-                                                            const d = new Date((task as any).doneAt as any);
-                                                            return isNaN(d.getTime()) ? 'Unknown' : format(d, 'PP');
-                                                        })()}
-                                                    </span>
-                                                    <span className="opacity-50">•</span>
-                                                    <span>Collected: {
-                                                        !task || !(task as any).collectedAt ? 'Unknown' : (() => {
-                                                            const d = new Date((task as any).collectedAt as any);
-                                                            return isNaN(d.getTime()) ? 'Unknown' : format(d, 'PP');
-                                                        })()}
-                                                    </span>
-                                                </div>
-                                            ) : (
-                                                <span className="text-green-600 dark:text-green-400/80 font-medium">
-                                                    Completed: {
-                                                        !task || !(task as any).doneAt
-                                                            ? 'Unknown'
-                                                            : (() => {
-                                                                const d = new Date((task as any).doneAt as any);
-                                                                return isNaN(d.getTime()) ? 'Unknown' : format(d, 'PP p');
-                                                            })()
-                                                    }
-                                                </span>
-                                            )}
+                                            <TaskHistoryDoneCollectedLine task={task} />
                                         </div>
                                     </div>
                                 </CardContent>
@@ -191,34 +187,7 @@ function renderTaskHierarchy(tasks: EnrichedTask[], onSelectTask?: (task: Task) 
                                                             <span className="px-1.5 py-0.5 bg-muted rounded-sm text-[10px] font-semibold uppercase tracking-wider">
                                                                 {(task as any)?.station?.toString()?.trim() || 'Unknown'}
                                                             </span>
-                                                            {task.status === TaskStatus.COLLECTED ? (
-                                                                <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400/80 font-medium whitespace-nowrap">
-                                                                    <span>Done: {
-                                                                        !task || !(task as any).doneAt ? 'Unknown' : (() => {
-                                                                            const d = new Date((task as any).doneAt as any);
-                                                                            return isNaN(d.getTime()) ? 'Unknown' : format(d, 'PP');
-                                                                        })()}
-                                                                    </span>
-                                                                    <span className="opacity-50">•</span>
-                                                                    <span>Collected: {
-                                                                        !task || !(task as any).collectedAt ? 'Unknown' : (() => {
-                                                                            const d = new Date((task as any).collectedAt as any);
-                                                                            return isNaN(d.getTime()) ? 'Unknown' : format(d, 'PP');
-                                                                        })()}
-                                                                    </span>
-                                                                </div>
-                                                            ) : (
-                                                                <span className="text-green-600 dark:text-green-400/80 font-medium">
-                                                                    Completed: {
-                                                                        !task || !(task as any).doneAt
-                                                                            ? 'Unknown'
-                                                                            : (() => {
-                                                                                const d = new Date((task as any).doneAt as any);
-                                                                                return isNaN(d.getTime()) ? 'Unknown' : format(d, 'PP p');
-                                                                            })()
-                                                                    }
-                                                                </span>
-                                                            )}
+                                                            <TaskHistoryDoneCollectedLine task={task} />
                                                         </div>
                                                     </div>
                                                 </CardContent>
@@ -241,7 +210,9 @@ interface AvailableMonth {
     summary: {
         tasks: number;
     };
-}export default function TaskHistoryView({ onSelectTask }: TaskHistoryViewProps) {
+}
+
+export default function TaskHistoryView({ onSelectTask }: TaskHistoryViewProps) {
     const [availableMonths, setAvailableMonths] = useState<string[]>([]);
     const [selectedMonthKey, setSelectedMonthKey] = useState(getCurrentMonthKey());
     const [tasks, setTasks] = useState<Task[]>([]);
