@@ -158,10 +158,10 @@ export default function ToolboxSubmodal({ open, onOpenChange }: Props) {
           </div>
 
           <div className="flex-1 flex flex-col min-w-0">
-            <div className="px-4 py-3 border-b shrink-0">
-              <h3 className="font-semibold text-sm">{selectedTitle}</h3>
+            <div className="px-4 py-4 border-b shrink-0 bg-muted/10">
+              <h3 className="font-bold text-lg">{selectedTitle}</h3>
               {selectedSubtitle && (
-                <p className="text-xs text-muted-foreground">{selectedSubtitle}</p>
+                <p className="text-sm text-muted-foreground">{selectedSubtitle}</p>
               )}
             </div>
             <ScrollArea className="flex-1 h-[min(60vh,520px)]">
@@ -186,10 +186,12 @@ export default function ToolboxSubmodal({ open, onOpenChange }: Props) {
                 {selectedTools.map((tool, idx) => (
                   <article
                     key={`${tool.function.name}-${idx}`}
-                    className="rounded-lg border bg-card p-4 space-y-2 text-lg"
+                    className="rounded-lg border bg-card p-6 space-y-4 shadow-sm hover:shadow-md transition-shadow"
                   >
-                    <h4 className="font-mono text-sm font-semibold">{tool.function.name}</h4>
-                    <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
+                    <h4 className="font-mono text-2xl font-bold text-center tracking-tight text-primary">
+                      {tool.function.name}
+                    </h4>
+                    <p className="text-md text-muted-foreground leading-relaxed whitespace-pre-wrap text-center max-w-2xl mx-auto">
                       {tool.function.description}
                     </p>
                     <details className="text-xs group">
