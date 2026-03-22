@@ -16,12 +16,9 @@ export const AI_ASSISTANT_MODEL_CATEGORY_ORDER = [
 ] as const;
 
 export const AI_ASSISTANT_MODELS = [
-  { id: 'gemini-1.5-pro', displayName: 'Gemini 1.5 Pro', category: 'Gemini' },
-  { id: 'gemini-1.5-flash', displayName: 'Gemini 1.5 Flash', category: 'Gemini' },
-  { id: 'gemini-2.5-pro', displayName: 'Gemini 2.5 Pro', category: 'Gemini' },
+  { id: 'gemini-2.0-flash', displayName: 'Gemini 2.0 Flash', category: 'Gemini' },
   { id: 'gemini-2.5-flash', displayName: 'Gemini 2.5 Flash', category: 'Gemini' },
-  { id: 'gemini-3.0-pro', displayName: 'Gemini 3.0 Pro', category: 'Gemini' },
-  { id: 'gemini-3.0-flash', displayName: 'Gemini 3.0 Flash', category: 'Gemini' },
+  { id: 'gemini-2.5-pro', displayName: 'Gemini 2.5 Pro', category: 'Gemini' },
   { id: 'openai/gpt-oss-120b', displayName: 'gpt-oss-120b (Top reasoning)', category: 'Groq Reasoners' },
   { id: 'llama-3.3-70b-versatile', displayName: 'llama-3.3-70b (Versatile)', category: 'Groq Reasoners' },
   { id: 'moonshotai/kimi-k2-instruct-0905', displayName: 'moonshotai-kimi-1000B-32b (Analysis, Large)', category: 'Groq Specialists' },
