@@ -96,7 +96,7 @@ import {
   buildSummaryMonthsKey,
   buildTaskActiveIndexKey,
 } from './keys';
-import { isTaskActive } from '@/lib/utils/task-active-utils';
+import { isTaskActive, isTaskCompleted } from '@/lib/utils/task-active-utils';
 import type { PlayerArchiveRow } from '@/types/archive';
 
 // TASKS
@@ -293,6 +293,97 @@ export async function repairTaskActiveIndex(): Promise<RepairTaskActiveIndexResu
     unchangedCount,
     addedToActive,
     removedFromActive,
+    truncated: listTooLong,
+  };
+}
+
+export type RepairTaskCompletedIndexResult = {
+  totalCompletedTasks: number;
+  totalScanned: number;
+  monthsRebuilt: number;
+  addedCount: number;
+  removedCount: number;
+  unchangedCount: number;
+  samplesAdded: string[];
+  samplesRemoved: string[];
+  truncated: boolean;
+};
+
+/**
+ * Rebuild ALL `thegame:index:tasks:collected:MM-YY` sets from all tasks marked as completed.
+ */
+export async function repairTaskCompletedIndex(): Promise<RepairTaskCompletedIndexResult> {
+  const tasks = await repoGetAllTasks();
+  
+  const desiredIdsByMonth: Record<string, Set<string>> = {};
+  
+  for (const t of tasks) {
+    if (isTaskCompleted(t)) {
+      let date: Date | null = null;
+      if (t.collectedAt) date = new Date(t.collectedAt);
+      else if (t.doneAt) date = new Date(t.doneAt);
+      else if (t.updatedAt) date = new Date(t.updatedAt);
+      else if (t.createdAt) date = new Date(t.createdAt);
+      else date = new Date();
+      
+      if (isNaN(date.getTime())) date = new Date();
+      
+      const mmyy = formatMonthKey(date);
+      if (!desiredIdsByMonth[mmyy]) desiredIdsByMonth[mmyy] = new Set<string>();
+      desiredIdsByMonth[mmyy].add(t.id);
+    }
+  }
+
+  const months = await getAvailableArchiveMonths();
+  const allMonths = new Set<string>([...months, ...Object.keys(desiredIdsByMonth)]);
+  
+  const addedFull: string[] = [];
+  const removedFull: string[] = [];
+  let unchangedCount = 0;
+  let totalCompletedTasks = 0;
+  
+  for (const mmyy of allMonths) {
+    const key = buildArchiveCollectionIndexKey('tasks', mmyy);
+    const beforeMembers = await kvSMembers(key);
+    const beforeIds = new Set(beforeMembers);
+    const desiredIds = desiredIdsByMonth[mmyy] || new Set<string>();
+    
+    totalCompletedTasks += desiredIds.size;
+    
+    for (const id of desiredIds) {
+      if (!beforeIds.has(id)) addedFull.push(id);
+      else unchangedCount += 1;
+    }
+    for (const id of beforeIds) {
+      if (!desiredIds.has(id)) removedFull.push(id);
+    }
+    
+    await kvDel(key);
+    const desiredArray = [...desiredIds];
+    for (let i = 0; i < desiredArray.length; i += 500) {
+      const slice = desiredArray.slice(i, i + 500);
+      if (slice.length > 0) {
+        await kvSAdd(key, ...slice);
+      }
+    }
+    
+    const monthSetKey = buildArchiveMonthsKey();
+    await kvSAdd(monthSetKey, mmyy);
+  }
+  
+  const listTooLong = addedFull.length > REPAIR_ACTIVE_INDEX_LIST_CAP || removedFull.length > REPAIR_ACTIVE_INDEX_LIST_CAP;
+  const samplesAdded = listTooLong ? addedFull.slice(0, REPAIR_ACTIVE_INDEX_LIST_CAP) : [...addedFull];
+  const samplesRemoved = listTooLong ? removedFull.slice(0, REPAIR_ACTIVE_INDEX_LIST_CAP) : [...removedFull];
+  
+  return {
+    totalCompletedTasks,
+    totalScanned: tasks.length,
+    monthsRebuilt: allMonths.size,
+    addedCount: addedFull.length,
+    removedCount: removedFull.length,
+    unchangedCount,
+    samplesAdded,
+    samplesRemoved,
     truncated: listTooLong,
   };
 }

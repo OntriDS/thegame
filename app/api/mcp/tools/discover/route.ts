@@ -208,6 +208,17 @@ const TOOLS = [
       properties: {},
     },
   },
+  {
+    id: 'thegame.tasks.repairCompletedIndex',
+    name: 'Repair completed tasks index',
+    description:
+      'Rebuild all thegame:index:tasks:collected:MM-YY sets from all tasks marked as Done or Collected. Returns rebuilt months count and id samples.',
+    systemId: 'thegame',
+    parameters: {
+      type: 'object',
+      properties: {},
+    },
+  },
 ];
 
 export async function GET(req: NextRequest) {

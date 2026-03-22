@@ -10,6 +10,7 @@ import {
   getAllSites,
   getAllCharacters,
   repairTaskActiveIndex,
+  repairTaskCompletedIndex,
 } from '@/data-store/datastore';
 import {
   auditArchiveCompleteness,
@@ -250,6 +251,10 @@ export async function POST(req: NextRequest) {
       }
       case 'thegame.tasks.repairActiveIndex': {
         const data = await repairTaskActiveIndex();
+        return NextResponse.json({ success: true, data });
+      }
+      case 'thegame.tasks.repairCompletedIndex': {
+        const data = await repairTaskCompletedIndex();
         return NextResponse.json({ success: true, data });
       }
       default:
