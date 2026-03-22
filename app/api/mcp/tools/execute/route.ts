@@ -9,6 +9,7 @@ import {
   getAllItems,
   getAllSites,
   getAllCharacters,
+  repairTaskActiveIndex,
 } from '@/data-store/datastore';
 import {
   auditArchiveCompleteness,
@@ -233,6 +234,10 @@ export async function POST(req: NextRequest) {
           );
         }
         const data = await auditTaskTimelineVsMonthIndex(my.month, my.year);
+        return NextResponse.json({ success: true, data });
+      }
+      case 'thegame.tasks.repairActiveIndex': {
+        const data = await repairTaskActiveIndex();
         return NextResponse.json({ success: true, data });
       }
       default:

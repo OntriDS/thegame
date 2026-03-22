@@ -164,7 +164,7 @@ const TOOLS = [
     id: 'thegame.integrity.taskTimelineVsMonthIndex',
     name: 'Task timeline vs month index',
     description:
-      'Audit tasks in History scope for a month: collected index only; flags missing or wrong-month doneAt/collectedAt.',
+      'Audit tasks in History scope for a month: collected index; flags missing or wrong-month doneAt/collectedAt.',
     systemId: 'thegame',
     parameters: {
       type: 'object',
@@ -173,6 +173,17 @@ const TOOLS = [
         year: { type: 'number', description: 'e.g. 2026' },
       },
       required: ['month', 'year'],
+    },
+  },
+  {
+    id: 'thegame.tasks.repairActiveIndex',
+    name: 'Repair active tasks index',
+    description:
+      'Rebuild thegame:index:task:active from all tasks (excludes ids in any tasks collected-month set). Returns diff counts and id samples.',
+    systemId: 'thegame',
+    parameters: {
+      type: 'object',
+      properties: {},
     },
   },
 ];

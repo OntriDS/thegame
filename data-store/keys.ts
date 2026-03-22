@@ -54,6 +54,11 @@ export function buildTaskChildrenKey(parentId: string): string {
   return `${NAMESPACE}index:task:children:${parentId}`; // set of child task ids
 }
 
+/** Task ids eligible for mission/recurrent/automation trees (not collected). */
+export function buildTaskActiveIndexKey(): string {
+  return `${NAMESPACE}index:task:active`;
+}
+
 export function buildLinksIndexKey(entityType: string, id: string): string {
   return `${NAMESPACE}index:links:by-entity:${entityType}:${id}`; // set of link ids
 }

@@ -87,8 +87,16 @@ import {
 import { SummaryService } from './services/summary.service';
 import { SummaryRepository } from './repositories/summary.repo';
 import { getCurrentMonthKey, formatMonthKey, reviveDates } from '@/lib/utils/date-utils';
-import { kvMGet, kvSMembers, kvSRem } from './kv';
-import { buildDataKey, buildMonthIndexKey, buildArchiveCollectionIndexKey, buildArchiveMonthsKey, buildSummaryMonthsKey } from './keys';
+import { kvDel, kvMGet, kvSAdd, kvSMembers, kvSRem } from './kv';
+import {
+  buildDataKey,
+  buildMonthIndexKey,
+  buildArchiveCollectionIndexKey,
+  buildArchiveMonthsKey,
+  buildSummaryMonthsKey,
+  buildTaskActiveIndexKey,
+} from './keys';
+import { isTaskActive } from '@/lib/utils/task-active-utils';
 import type { PlayerArchiveRow } from '@/types/archive';
 
 // TASKS
@@ -181,8 +189,112 @@ export async function getAllTasks(): Promise<Task[]> {
 
 // Added specifically for active boards that don't want completed/archived noise
 export async function getActiveTasks(): Promise<Task[]> {
+  const activeKey = buildTaskActiveIndexKey();
+  const ids = await kvSMembers(activeKey);
+  if (ids.length === 0) {
+    const tasks = await repoGetAllTasks();
+    return reviveDates(tasks.filter(isTaskActive));
+  }
+
+  const recordKeys = ids.map((id) => buildDataKey(EntityType.TASK, id));
+  const chunks = chunkArray(recordKeys, 500);
+  const tasks: Task[] = [];
+  for (const chunk of chunks) {
+    const chunkResults = await kvMGet<Task>(chunk);
+    tasks.push(...chunkResults.filter((t): t is Task => t !== null));
+  }
+  // Drop stale index members (e.g. collected but not yet removed from set)
+  return reviveDates(tasks.filter(isTaskActive));
+}
+
+const REPAIR_ACTIVE_INDEX_LIST_CAP = 200;
+
+export type RepairTaskActiveIndexResult = {
+  activeCount: number;
+  totalScanned: number;
+  collectedIndexUnionSize: number;
+  excludedByCollectedIndexCount: number;
+  addedToActiveCount: number;
+  removedFromActiveCount: number;
+  unchangedCount: number;
+  addedToActive: string[];
+  removedFromActive: string[];
+  truncated: boolean;
+};
+
+/**
+ * Rebuild `thegame:index:task:active` from all tasks. Excludes ids present in any monthly collected set.
+ */
+export async function repairTaskActiveIndex(): Promise<RepairTaskActiveIndexResult> {
+  const activeKey = buildTaskActiveIndexKey();
+  const beforeMembers = await kvSMembers(activeKey);
+  const beforeIds = new Set(beforeMembers);
+
   const tasks = await repoGetAllTasks();
-  return reviveDates(tasks.filter(task => !task.isCollected && task.status !== TaskStatus.COLLECTED));
+  const collectedIdSet = new Set<string>();
+  const months = await getAvailableArchiveMonths();
+  for (const mmyy of months) {
+    const key = buildArchiveCollectionIndexKey('tasks', mmyy);
+    const memberIds = await kvSMembers(key);
+    for (const id of memberIds) {
+      collectedIdSet.add(id);
+    }
+  }
+
+  const activeByRecord = tasks.filter(isTaskActive);
+  let excludedByCollectedIndexCount = 0;
+  const desiredIds = new Set<string>();
+  for (const t of activeByRecord) {
+    if (collectedIdSet.has(t.id)) {
+      excludedByCollectedIndexCount += 1;
+    } else {
+      desiredIds.add(t.id);
+    }
+  }
+
+  const addedFull: string[] = [];
+  const removedFull: string[] = [];
+  for (const id of desiredIds) {
+    if (!beforeIds.has(id)) addedFull.push(id);
+  }
+  for (const id of beforeIds) {
+    if (!desiredIds.has(id)) removedFull.push(id);
+  }
+  let unchangedCount = 0;
+  for (const id of desiredIds) {
+    if (beforeIds.has(id)) unchangedCount += 1;
+  }
+
+  await kvDel(activeKey);
+  const desiredArray = [...desiredIds];
+  for (let i = 0; i < desiredArray.length; i += 500) {
+    const slice = desiredArray.slice(i, i + 500);
+    if (slice.length > 0) {
+      await kvSAdd(activeKey, ...slice);
+    }
+  }
+
+  const listTooLong =
+    addedFull.length > REPAIR_ACTIVE_INDEX_LIST_CAP || removedFull.length > REPAIR_ACTIVE_INDEX_LIST_CAP;
+  const addedToActive = listTooLong
+    ? addedFull.slice(0, REPAIR_ACTIVE_INDEX_LIST_CAP)
+    : [...addedFull];
+  const removedFromActive = listTooLong
+    ? removedFull.slice(0, REPAIR_ACTIVE_INDEX_LIST_CAP)
+    : [...removedFull];
+
+  return {
+    activeCount: desiredIds.size,
+    totalScanned: tasks.length,
+    collectedIndexUnionSize: collectedIdSet.size,
+    excludedByCollectedIndexCount,
+    addedToActiveCount: addedFull.length,
+    removedFromActiveCount: removedFull.length,
+    unchangedCount,
+    addedToActive,
+    removedFromActive,
+    truncated: listTooLong,
+  };
 }
 
 export async function getTasksByParentId(parentId: string): Promise<Task[]> {

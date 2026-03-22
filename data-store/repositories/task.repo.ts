@@ -1,9 +1,9 @@
 // data-store/repositories/task.repo.ts
 import type { Task } from '@/types/entities';
 import { kvGet, kvMGet, kvSet, kvDel, kvSMembers, kvSAdd, kvSRem } from '@/data-store/kv';
-import { buildDataKey, buildIndexKey, buildTaskChildrenKey } from '@/data-store/keys';
+import { buildDataKey, buildIndexKey, buildTaskActiveIndexKey, buildTaskChildrenKey } from '@/data-store/keys';
 import { EntityType } from '@/types/enums';
-import { formatMonthKey } from '@/lib/utils/date-utils';
+import { isTaskActive } from '@/lib/utils/task-active-utils';
 
 const ENTITY = EntityType.TASK;
 
@@ -85,6 +85,13 @@ export async function upsertTask(task: Task): Promise<Task> {
     await kvSRem(buildTaskChildrenKey(previous.parentId), task.id);
   }
 
+  const activeKey = buildTaskActiveIndexKey();
+  if (isTaskActive(task)) {
+    await kvSAdd(activeKey, task.id);
+  } else {
+    await kvSRem(activeKey, task.id);
+  }
+
   return task;
 }
 
@@ -99,6 +106,7 @@ export async function deleteTask(id: string): Promise<void> {
   
   await kvDel(key);
   await kvSRem(indexKey, id);
+  await kvSRem(buildTaskActiveIndexKey(), id);
 }
 
 
