@@ -1,7 +1,7 @@
 import 'server-only';
 
 import { isValid } from 'date-fns';
-import { getTaskById, getTasksForMonth } from '@/data-store/datastore';
+import { getTaskById } from '@/data-store/datastore';
 import { kvSMembers } from '@/data-store/kv';
 import { buildArchiveCollectionIndexKey } from '@/data-store/keys';
 import { formatMonthKey } from '@/lib/utils/date-utils';
@@ -87,32 +87,6 @@ export async function auditTaskTimelineVsMonthIndex(month: number, year: number)
     }
   }
 
-  const activeForMonth = await getTasksForMonth(year, month);
-  const doneActive = activeForMonth.filter((t) => t.status === TaskStatus.DONE);
-
-  for (const task of doneActive) {
-    const da = toDate(task.doneAt as unknown);
-    if (da == null) {
-      pushIssue(
-        issues,
-        total,
-        'TASK_DONE_ACTIVE_MISSING_DONE_AT',
-        `Task ${task.id} is DONE in active month ${mmyy} but doneAt is missing`,
-        EntityType.TASK,
-        task.id
-      );
-    } else if (!inCalendarMonth(da, month, year)) {
-      pushIssue(
-        issues,
-        total,
-        'TASK_DONE_ACTIVE_WRONG_DONE_MONTH',
-        `Task ${task.id} is DONE in month ${mmyy} active list but doneAt is ${da.toISOString()} (different month)`,
-        EntityType.TASK,
-        task.id
-      );
-    }
-  }
-
   return {
     ok: total.n === 0,
     audit: 'taskTimelineVsMonthIndex',
@@ -120,7 +94,7 @@ export async function auditTaskTimelineVsMonthIndex(month: number, year: number)
     summary: {
       totalIssueCount: total.n,
       truncated: total.n > INTEGRITY_ISSUES_CAP,
-      notes: `Scanned collected index (${collectedIds.length} ids) and ${doneActive.length} active DONE tasks for ${mmyy}.`,
+      notes: `Scanned collected index (${collectedIds.length} ids) for ${mmyy}.`,
     },
     issues,
   };

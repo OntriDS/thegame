@@ -193,12 +193,11 @@ export async function getTasksByParentId(parentId: string): Promise<Task[]> {
 // Phase 4: Unified & Optimized Tasks fetching (Active + Archive)
 export async function getTasksForMonth(year: number, month: number): Promise<Task[]> {
   const mmyy = formatMonthKey(new Date(year, month - 1, 1));
-  const activeIndexKey = buildMonthIndexKey(EntityType.TASK, mmyy);
   const archiveIndexKey = buildArchiveCollectionIndexKey('tasks', mmyy);
 
-  // 1. Fetch and deduplicate IDs in a SINGLE Upstash request via SUNION
-  const { kvSUnion } = await import('./kv');
-  const allIds = await kvSUnion(activeIndexKey, archiveIndexKey);
+  // Tasks are indexed by collected/done month
+  const { kvSMembers } = await import('./kv');
+  const allIds = await kvSMembers(archiveIndexKey);
 
   if (!allIds || allIds.length === 0) return [];
 

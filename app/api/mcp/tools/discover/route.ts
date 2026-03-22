@@ -164,7 +164,7 @@ const TOOLS = [
     id: 'thegame.integrity.taskTimelineVsMonthIndex',
     name: 'Task timeline vs month index',
     description:
-      'Audit tasks in History scope for a month: collected index and active DONE; flags missing or wrong-month doneAt/collectedAt.',
+      'Audit tasks in History scope for a month: collected index only; flags missing or wrong-month doneAt/collectedAt.',
     systemId: 'thegame',
     parameters: {
       type: 'object',
