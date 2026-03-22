@@ -9,6 +9,7 @@ import {
   getAllItems,
   getAllSites,
   getAllCharacters,
+  repairPrimaryTaskIndex,
   repairTaskActiveIndex,
   repairTaskCompletedIndex,
   getGlobalTaskCounts,
@@ -248,6 +249,10 @@ export async function POST(req: NextRequest) {
       }
       case 'thegame.integrity.activeTasksMissingFromActiveIndex': {
         const data = await auditActiveTasksMissingFromActiveIndex();
+        return NextResponse.json({ success: true, data });
+      }
+      case 'thegame.tasks.repairPrimaryIndex': {
+        const data = await repairPrimaryTaskIndex();
         return NextResponse.json({ success: true, data });
       }
       case 'thegame.tasks.repairActiveIndex': {

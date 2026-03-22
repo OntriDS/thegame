@@ -90,6 +90,7 @@ import { getCurrentMonthKey, formatMonthKey, reviveDates } from '@/lib/utils/dat
 import { kvDel, kvMGet, kvSAdd, kvSMembers, kvSRem } from './kv';
 import {
   buildDataKey,
+  buildIndexKey,
   buildMonthIndexKey,
   buildArchiveCollectionIndexKey,
   buildArchiveMonthsKey,
@@ -327,7 +328,49 @@ export type RepairTaskCompletedIndexResult = {
   samplesRemoved: string[];
   truncated: boolean;
 };
+export type RepairPrimaryTaskIndexResult = {
+  scannedKeys: number;
+  addedOrphans: number;
+  totalInIndexNow: number;
+  orphanIdsSample: string[];
+};
 
+/**
+ * Deep scan of the Upstash Redis database to find any tasks that exist as records (thegame:task:*)
+ * but have fallen out of the master index (thegame:index:task).
+ * This completely fixes "Ghost Tasks" that the system forgot about!
+ */
+export async function repairPrimaryTaskIndex(): Promise<RepairPrimaryTaskIndexResult> {
+  const prefix = buildDataKey(EntityType.TASK, ''); // "thegame:task:"
+  const { kvScan } = await import('./kv');
+  const allTaskKeys = await kvScan(prefix, 1000);
+  
+  const extractedIds = allTaskKeys.map(k => k.replace(prefix, ''));
+  
+  const indexKey = buildIndexKey(EntityType.TASK);
+  const beforeMembers = await kvSMembers(indexKey);
+  const beforeSet = new Set(beforeMembers);
+  
+  const orphans: string[] = [];
+  for (const id of extractedIds) {
+    if (!beforeSet.has(id)) {
+      orphans.push(id);
+    }
+  }
+  
+  if (orphans.length > 0) {
+    for (let i = 0; i < orphans.length; i += 500) {
+      await kvSAdd(indexKey, ...orphans.slice(i, i + 500));
+    }
+  }
+  
+  return {
+    scannedKeys: allTaskKeys.length,
+    addedOrphans: orphans.length,
+    totalInIndexNow: beforeSet.size + orphans.length,
+    orphanIdsSample: orphans.slice(0, 100) // Give the agent/user a sample to analyze
+  };
+}
 /**
  * Rebuild ALL `thegame:index:tasks:collected:MM-YY` sets from all tasks marked as completed.
  */
@@ -341,8 +384,10 @@ export async function repairTaskCompletedIndex(): Promise<RepairTaskCompletedInd
       let date: Date | null = null;
       if (t.collectedAt) date = new Date(t.collectedAt);
       else if (t.doneAt) date = new Date(t.doneAt);
-      else if (t.updatedAt) date = new Date(t.updatedAt);
+      else if (t.dueDate) date = new Date(t.dueDate);
+      else if (t.scheduledStart) date = new Date(t.scheduledStart);
       else if (t.createdAt) date = new Date(t.createdAt);
+      else if (t.updatedAt) date = new Date(t.updatedAt);
       else date = new Date();
       
       if (isNaN(date.getTime())) date = new Date();
