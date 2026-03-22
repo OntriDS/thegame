@@ -29,7 +29,8 @@ import { getAreaForStation } from '@/lib/utils/business-structure-utils';
 import { createSiteOptionsWithCategories, getSiteNameFromId } from '@/lib/utils/site-options-utils';
 import type { Station, SubItemType } from '@/types/type-aliases';
 import { v4 as uuid } from 'uuid';
-import { PROGRESS_MAX, PROGRESS_STEP, PRICE_STEP } from '@/lib/constants/app-constants';
+import { ORDER_INCREMENT, PROGRESS_MAX, PROGRESS_STEP, PRICE_STEP } from '@/lib/constants/app-constants';
+import { computeNextSiblingOrder } from '@/lib/utils/task-order-utils';
 import { Network, User, Calendar as CalendarIcon, Repeat } from 'lucide-react';
 import { getEmissaryFields } from '@/types/diplomatic-fields';
 import CascadeStatusConfirmationModal from './submodals/cascade-status-confirmation-submodal';
@@ -49,6 +50,8 @@ interface TaskModalProps {
   onSave: (task: Task) => Promise<void>;
   onComplete?: () => void;
   isRecurrentModal?: boolean;
+  /** When set, new tasks / reparented tasks get max(sibling order)+ORDER_INCREMENT instead of Date.now(). */
+  allTasksForOrder?: Task[];
 }
 
 
@@ -76,6 +79,7 @@ export default function TaskModal({
   onSave,
   onComplete,
   isRecurrentModal = false,
+  allTasksForOrder,
 }: TaskModalProps) {
   const { getPreference, setPreference } = useUserPreferences();
 
@@ -470,6 +474,28 @@ export default function TaskModal({
       finalScheduledEnd.setHours(hours, minutes);
     }
 
+    /** Drag-drop uses 1000-steps and fractional midpoints; Date.now() defaults were ~1e12+ and broke sibling sort. */
+    const TIMESTAMP_LIKE_ORDER_THRESHOLD = 1_000_000_000_000;
+
+    const resolveOrder = (): number => {
+      const editingExisting = !!task?.id;
+      const parentUnchanged =
+        editingExisting && (parentId ?? null) === (task?.parentId ?? null);
+      if (editingExisting && parentUnchanged && task!.order != null && !Number.isNaN(Number(task!.order))) {
+        const o = Number(task!.order);
+        if (o < TIMESTAMP_LIKE_ORDER_THRESHOLD) {
+          return o;
+        }
+      }
+      if (allTasksForOrder && allTasksForOrder.length > 0) {
+        return computeNextSiblingOrder(allTasksForOrder, parentId, draftId.current);
+      }
+      if (editingExisting && task!.order != null && !Number.isNaN(Number(task!.order))) {
+        return Number(task!.order);
+      }
+      return ORDER_INCREMENT;
+    };
+
     return {
       id: draftId.current,
       name,
@@ -514,7 +540,7 @@ export default function TaskModal({
       createdAt: task?.createdAt || new Date(),
       updatedAt: new Date(),
       isCollected: status === TaskStatus.COLLECTED || isCollected,
-      order: task?.order || Date.now(),
+      order: resolveOrder(),
       parentId,
       isRecurrentGroup,
       isTemplate,

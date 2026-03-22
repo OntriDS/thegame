@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { Task } from '@/types/entities';
 import { ClientAPI } from '@/lib/client-api';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -247,9 +247,6 @@ interface AvailableMonth {
     const [tasks, setTasks] = useState<Task[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [isLoadingMonths, setIsLoadingMonths] = useState(true);
-    const [atomicSummary, setAtomicSummary] = useState<any>(null);
-    const [isAtomicLoading, setIsAtomicLoading] = useState(false);
-
     // Load available months
     useEffect(() => {
         const loadMonths = async () => {
@@ -271,13 +268,6 @@ interface AvailableMonth {
     // Load tasks for selected month/year + all tasks for hierarchy
     useEffect(() => {
         const loadTasks = async () => {
-            // 1. Fetch Atomic Summary (INSTANT)
-            setIsAtomicLoading(true);
-            ClientAPI.getSummary(selectedMonthKey)
-                .then(setAtomicSummary)
-                .finally(() => setIsAtomicLoading(false));
-
-            // 2. Fetch Full Detailed History (O(N) - BACKGROUND)
             setIsLoading(true);
             try {
                 const [mm, yy] = selectedMonthKey.split('-');
@@ -326,12 +316,12 @@ interface AvailableMonth {
                 </div>
                 
                 <div className="flex items-center gap-4">
-                    {/* Compact Atomic Summary */}
-                    {!isAtomicLoading && atomicSummary && (
+                    {/* Counts match the filtered history list (same month as selector), not rolling summary hash */}
+                    {!isLoading && (
                         <div className="flex items-center gap-3 px-3 py-1.5 bg-muted/50 rounded-lg border border-muted text-xs font-medium">
                             <div className="flex items-center gap-1.5">
                                 <span className="text-muted-foreground uppercase tracking-tight">Tasks Done:</span>
-                                <span className="text-primary font-bold">{atomicSummary.taskCount || 0}</span>
+                                <span className="text-primary font-bold">{tasks.length}</span>
                             </div>
                             <div className="w-px h-3 bg-muted-foreground/20" />
                             <div className="flex items-center gap-1.5">
@@ -363,4 +353,4 @@ interface AvailableMonth {
             </div>
         </div>
     );
-}
+}

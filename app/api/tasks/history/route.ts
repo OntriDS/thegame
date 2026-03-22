@@ -2,10 +2,25 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAdminAuth } from '@/lib/api-auth';
 import { getTaskById, getTasksForMonth } from '@/data-store/datastore';
 import { kvSMembers } from '@/data-store/kv';
-import { formatMonthKey } from '@/lib/utils/date-utils';
+import { buildArchiveCollectionIndexKey } from '@/data-store/keys';
+import { calculateClosingDate, formatMonthKey } from '@/lib/utils/date-utils';
 import { TaskStatus } from '@/types/enums';
+import type { Task } from '@/types/entities';
 
 export const dynamic = 'force-dynamic';
+
+/** Same month bucket as task.workflow archive indexing (doneAt vs collectedAt). */
+function resolveTaskHistoryMonthKey(task: Task): string | null {
+    if (task.status !== TaskStatus.DONE && task.status !== TaskStatus.COLLECTED) return null;
+    const raw =
+        task.status === TaskStatus.COLLECTED
+            ? task.collectedAt || task.doneAt || task.createdAt
+            : task.doneAt || task.createdAt;
+    if (!raw) return null;
+    const d = typeof raw === 'string' ? new Date(raw) : raw;
+    if (Number.isNaN(d.getTime())) return null;
+    return formatMonthKey(calculateClosingDate(d));
+}
 
 export async function GET(request: NextRequest) {
     if (!(await requireAdminAuth(request))) {
@@ -35,8 +50,7 @@ export async function GET(request: NextRequest) {
         const date = new Date(year, month - 1, 1);
         const monthKey = formatMonthKey(date);
 
-        // Get collected task IDs from month index (efficient!)
-        const collectedIndexKey = `index:tasks:collected:${monthKey}`;
+        const collectedIndexKey = buildArchiveCollectionIndexKey('tasks', monthKey);
         const taskIds = await kvSMembers(collectedIndexKey);
 
 
@@ -57,14 +71,19 @@ export async function GET(request: NextRequest) {
 
         // Merge Collected and Done tasks, then deduplicate by ID just in case
         const combinedTasks = [...validCollectedTasks, ...doneActiveTasks];
-        const uniqueTasksMap = new Map();
+        const uniqueTasksMap = new Map<string, Task>();
         combinedTasks.forEach(t => {
             if (t && t.id) {
                 uniqueTasksMap.set(t.id, t);
             }
         });
 
-        return NextResponse.json(Array.from(uniqueTasksMap.values()));
+        // Drop stale index members (wrong month) — matches workflow bucket logic
+        const inSelectedMonth = Array.from(uniqueTasksMap.values()).filter(
+            (t) => resolveTaskHistoryMonthKey(t) === monthKey
+        );
+
+        return NextResponse.json(inSelectedMonth);
     } catch (error) {
         console.error('[GET /api/tasks/history] Failed:', error);
         return NextResponse.json({ error: 'Failed to load task history' }, { status: 500 });

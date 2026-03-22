@@ -291,7 +291,7 @@ export interface Task extends BaseEntity {
   scheduledStart?: Date;            // For Weekly Schedule view
   scheduledEnd?: Date;              // For Weekly Schedule view
   frequencyConfig?: any;            // For complex frequency configuration (includes type)
-  order: number;                    // Represents sort order among siblings
+  order: number;                    // Sort key among siblings (1000,2000,… + drag midpoints); not 1,2,3 — tree UI shows ordinal separately
 
   // Hierarchy
   parentId?: string | null;         // Single parent field - can be Mission, Milestone, Goal, or Recurrent Parent/Template

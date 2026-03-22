@@ -5,7 +5,7 @@ import { EntityType, LogEventType, TaskStatus, TaskType, FOUNDER_CHARACTER_ID } 
 import type { Task } from '@/types/entities';
 import { appendEntityLog, updateEntityLogField } from '../entities-logging';
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
-import { EffectKeys } from '@/data-store/keys';
+import { EffectKeys, buildArchiveCollectionIndexKey, buildArchiveMonthsKey } from '@/data-store/keys';
 import {
   getPlayerConversionRates,
   getTaskById,
@@ -339,21 +339,26 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
   if (isNowArchived || wasArchived) {
     const { kvSAdd, kvSRem } = await import('@/data-store/kv');
     const { getAvailableArchiveMonths } = await import('@/data-store/datastore');
-    const { buildArchiveMonthsKey } = await import('@/data-store/keys');
 
-    // BULLETPROOF CLEANUP: Remove from ALL other months to fix legacy ghost duplicates
-    // We run this unconditionally to ensure no task is left behind in a wrong index
+    const monthIndex = (m: string) => buildArchiveCollectionIndexKey('tasks', m);
+
+    // Sweep months we know about + previous/next bucket so ghosts are removed even when
+    // thegame:archive:months is incomplete (common cause of wrong-month history rows).
     const allMonths = await getAvailableArchiveMonths();
+    const monthsToSweep = new Set<string>(allMonths);
+    if (oldMonth) monthsToSweep.add(oldMonth);
+    if (newMonth) monthsToSweep.add(newMonth);
+
     await Promise.all(
-      allMonths.map(async (m) => {
+      [...monthsToSweep].map(async (m) => {
         if (m !== newMonth) {
-          await kvSRem(`index:tasks:collected:${m}`, task.id);
+          await kvSRem(monthIndex(m), task.id);
         }
       })
     );
 
     if (newMonth) {
-      await kvSAdd(`index:tasks:collected:${newMonth}`, task.id);
+      await kvSAdd(monthIndex(newMonth), task.id);
       await kvSAdd(buildArchiveMonthsKey(), newMonth);
     }
   } // The task's existence in the index and its inherent dates are the single source of truth.
@@ -493,8 +498,7 @@ export async function removeTaskLogEntriesOnDelete(task: Task): Promise<void> {
         if (snapshotDate) {
           const snapshotMonth = calculateClosingDate(snapshotDate);
           const monthKey = formatMonthKey(snapshotMonth);
-          const archiveIndexKey = `index:tasks:collected:${monthKey}`;
-          await kvSRem(archiveIndexKey, task.id);
+          await kvSRem(buildArchiveCollectionIndexKey('tasks', monthKey), task.id);
         }
       } catch (err) {
         console.error(`[removeTaskLogEntriesOnDelete] Failed to clean up archive index`, err);
@@ -637,15 +641,13 @@ export async function uncompleteTask(taskId: string): Promise<void> {
       const snapshotMonth = calculateClosingDate(snapshotDate);
       const monthKey = formatMonthKey(snapshotMonth);
 
-      const archiveIndexKey = `index:tasks:collected:${monthKey}`;
-      await kvSRem(archiveIndexKey, task.id);
+      await kvSRem(buildArchiveCollectionIndexKey('tasks', monthKey), task.id);
       await clearEffect(EffectKeys.sideEffect('task', taskId, `taskSnapshot:${monthKey}`));
 
       // Also check standard date-based key just in case (fallback)
       const nowKey = formatMonthKey(calculateClosingDate(new Date()));
       if (nowKey !== monthKey) {
-        // Best effort cleanup if date logic shifted
-        await kvSRem(`index:tasks:collected:${nowKey}`, task.id);
+        await kvSRem(buildArchiveCollectionIndexKey('tasks', nowKey), task.id);
       }
     } catch (err) {
       console.error(`[uncompleteTask] Failed to remove from archive index:`, err);

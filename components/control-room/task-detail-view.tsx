@@ -17,12 +17,16 @@ import { Edit, BarChart, Target, Award, CheckSquare, Flag, ChevronsRight, Users,
 import TaskModal from '@/components/modals/task-modal';
 import { useState, useRef, useEffect } from 'react';
 import { ClientAPI } from '@/lib/client-api';
+import { ORDER_INCREMENT } from '@/lib/constants/app-constants';
+import { computeNextSiblingOrder } from '@/lib/utils/task-order-utils';
 import { useThemeColors } from '@/lib/hooks/use-theme-colors';
 
 interface TaskDetailViewProps {
   node: TreeNode | null;
   onEditTask: (task: Task) => void;
   onTaskUpdate?: () => void;
+  /** Used to assign sibling order (1000, 2000, …) for quick-create prefills instead of Date.now(). */
+  allTasks?: Task[];
 }
 
 // Re-use the same icon mapping from the tree for consistency
@@ -39,7 +43,7 @@ const getStatusColor = (status: string, isDarkMode: boolean = false) => {
   return isDarkMode ? TASK_STATUS_COLORS[TaskStatus.NONE].dark : TASK_STATUS_COLORS[TaskStatus.NONE].light;
 };
 
-export default function TaskDetailView({ node, onEditTask, onTaskUpdate }: TaskDetailViewProps) {
+export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTasks = [] }: TaskDetailViewProps) {
   const { isDarkMode } = useThemeColors();
   const Icon = node ? (categoryIcons[node.task.type as keyof typeof categoryIcons] || CheckSquare) : BarChart;
 
@@ -147,15 +151,20 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate }: TaskD
   const handleDuplicateTask = async () => {
     if (!node) return;
 
+    const newId = crypto.randomUUID();
     const duplicatedTask: Task = {
       ...node.task,
-      id: crypto.randomUUID(),
+      id: newId,
       name: node.task.name,
       status: TaskStatus.CREATED,
       progress: 0,
       createdAt: new Date(),
       updatedAt: new Date(),
       parentId: node.task.parentId || null,
+      order:
+        allTasks.length > 0
+          ? computeNextSiblingOrder(allTasks, node.task.parentId ?? null, newId)
+          : (Number(node.task.order) || 0) + ORDER_INCREMENT,
     };
 
     // Save the task first - logging is handled server-side automatically
@@ -172,8 +181,9 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate }: TaskD
     if (!node) return;
     const parent = node.task;
     if (parent.type !== TaskType.RECURRENT_GROUP) return;
+    const prefillId = crypto.randomUUID();
     const prefill: Task = {
-      id: crypto.randomUUID(),
+      id: prefillId,
       name: `${parent.name} • Template`,
       description: parent.description || '',
       type: TaskType.RECURRENT_TEMPLATE,
@@ -181,7 +191,10 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate }: TaskD
       priority: parent.priority || TaskPriority.NORMAL,
       station: parent.station as any,
       progress: 0,
-      order: Date.now(),
+      order:
+        allTasks.length > 0
+          ? computeNextSiblingOrder(allTasks, parent.id, prefillId)
+          : ORDER_INCREMENT,
       parentId: parent.id,
       isRecurrentGroup: false,
       isTemplate: true,
@@ -207,8 +220,9 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate }: TaskD
   const handleOpenMissionTreeTask = (taskType: TaskType) => {
     if (!node) return;
     const parent = node.task;
+    const prefillId = crypto.randomUUID();
     const prefill: Task = {
-      id: crypto.randomUUID(),
+      id: prefillId,
       name: taskType === TaskType.MILESTONE ? `${parent.name} • Milestone` :
         taskType === TaskType.GOAL ? `${parent.name} • Goal` : 'New Task',
       description: '',
@@ -217,7 +231,10 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate }: TaskD
       priority: parent.priority || TaskPriority.NORMAL,
       station: parent.station as any,
       progress: 0,
-      order: Date.now(),
+      order:
+        allTasks.length > 0
+          ? computeNextSiblingOrder(allTasks, parent.id, prefillId)
+          : ORDER_INCREMENT,
       parentId: parent.id,
       isRecurrentGroup: false,
       isTemplate: false,
@@ -721,6 +738,7 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate }: TaskD
           open={showTemplateModal}
           onOpenChange={setShowTemplateModal}
           isRecurrentModal={true}
+          allTasksForOrder={allTasks}
           onSave={async (newTask) => {
             // Save as new template, do not set side effects beyond creation flag
             await ClientAPI.upsertTask(newTask);
@@ -736,6 +754,7 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate }: TaskD
           task={prefillMissionTreeTask}
           open={showMissionTreeModal}
           onOpenChange={setShowMissionTreeModal}
+          allTasksForOrder={allTasks}
           onSave={async (newTask) => {
             // Save as new Mission Tree task, do not set side effects beyond creation flag
             await ClientAPI.upsertTask(newTask);

@@ -43,7 +43,8 @@
         "Basic Badges and Achievements systems improved",
         "Personas to Characters Rollback, so Personas is a feature of Characters",
         "Refactor the Authentication System with the IAM Service",
-        "Fix the Month Selector to show all the months with data (Archive + Summary)"
+        "Fix the Month Selector to show all the months with data (Archive + Summary)",
+        "Analyst Agent performing Data Integrity Validation, ai-chat reading markdown files"
       ]
     },
     "phase14.4": {

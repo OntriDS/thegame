@@ -3,6 +3,7 @@ import 'server-only';
 import { isValid } from 'date-fns';
 import { getTaskById, getTasksForMonth } from '@/data-store/datastore';
 import { kvSMembers } from '@/data-store/kv';
+import { buildArchiveCollectionIndexKey } from '@/data-store/keys';
 import { formatMonthKey } from '@/lib/utils/date-utils';
 import { TaskStatus, EntityType } from '@/types/enums';
 import { INTEGRITY_ISSUES_CAP, type IntegrityAuditResult, type IntegrityIssue } from './types';
@@ -49,8 +50,7 @@ export async function auditTaskTimelineVsMonthIndex(month: number, year: number)
   const issues: IntegrityIssue[] = [];
   const total = { n: 0 };
 
-  const collectedIndexKey = `index:tasks:collected:${monthKey}`;
-  const collectedIds = await kvSMembers(collectedIndexKey);
+  const collectedIds = await kvSMembers(buildArchiveCollectionIndexKey('tasks', monthKey));
 
   for (const id of collectedIds) {
     const task = await getTaskById(id);

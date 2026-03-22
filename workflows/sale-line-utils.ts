@@ -10,6 +10,7 @@ import { createLink } from '@/links/link-registry';
 import { hasEffect, markEffect } from '@/data-store/effects-registry';
 import { appendEntityLog } from './entities-logging';
 import { createFinancialRecordFromSale } from './financial-record-utils';
+import { ORDER_INCREMENT } from '@/lib/constants/app-constants';
 
 /**
  * Process all sale lines in a sale
@@ -402,7 +403,7 @@ export async function processServiceLine(line: ServiceLine, sale: Sale): Promise
       priority: 'Normal' as any,
       station: line.station,
       progress: 0,
-      order: Date.now(),
+      order: ORDER_INCREMENT,
       cost: line.taskCost || 0,
       revenue: 0, // Tasks from sales don't get revenue - it stays in the sale
       rewards: line.taskRewards ? { points: line.taskRewards } : { points: { xp: 0, rp: 0, fp: 0, hp: 0 } },

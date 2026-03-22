@@ -108,4 +108,3 @@ export function buildArchiveCollectionIndexKey(entity: string, mmyy: string): st
   return `${NAMESPACE}index:${entity}:collected:${monthKey}`;
 }
 
-

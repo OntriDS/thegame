@@ -889,6 +889,7 @@ export default function ControlRoom() {
                   node={selectedNode}
                   onEditTask={handleEditTask}
                   onTaskUpdate={loadTasks}
+                  allTasks={allTasks}
                 />
               </div>
             </TabsContent>
@@ -927,6 +928,7 @@ export default function ControlRoom() {
                   node={selectedNode}
                   onEditTask={handleEditTask}
                   onTaskUpdate={loadTasks}
+                  allTasks={allTasks}
                 />
               </div>
             </TabsContent>
@@ -965,6 +967,7 @@ export default function ControlRoom() {
                   node={selectedNode}
                   onEditTask={handleEditTask}
                   onTaskUpdate={loadTasks}
+                  allTasks={allTasks}
                 />
               </div>
             </TabsContent>
@@ -1015,6 +1018,7 @@ export default function ControlRoom() {
           task={taskToEdit.id ? taskToEdit : null}
           open={!!taskToEdit}
           onOpenChange={isOpen => !isOpen && setTaskToEdit(null)}
+          allTasksForOrder={allTasks}
           isRecurrentModal={
             activeSubTab === 'recurrent-tasks' ||
             (
