@@ -8,26 +8,29 @@
  */
 
 export const AI_ASSISTANT_MODEL_CATEGORY_ORDER = [
-  'Reasoners',
-  'Z.AI',
-  'Specialists',
-  'Speed',
+  'Gemini',
+  'Groq Reasoners',
+  'Groq Specialists',
+  'Groq Speed',
+  'Z.ai',
 ] as const;
 
 export const AI_ASSISTANT_MODELS = [
-  { id: 'openai/gpt-oss-120b', displayName: 'gpt-oss-120b (Top reasoning)', category: 'Reasoners' },
-  { id: 'llama-3.3-70b-versatile', displayName: 'llama-3.3-70b (Versatile)', category: 'Reasoners' },
-  {
-    id: 'glm-4.7',
-    displayName: 'Z.AI glm-4.7 (Reasoning — Z API quota)',
-    category: 'Z.AI',
-  },
-  { id: 'moonshotai/kimi-k2-instruct-0905', displayName: 'moonshotai-kimi-1000B-32b (Analysis, Large)', category: 'Specialists' },
-  { id: 'qwen/qwen3-32b', displayName: 'qwen3-32b (Balance)', category: 'Specialists' },
-  { id: 'meta-llama/llama-4-maverick-17b-128e-instruct', displayName: 'llama-4-128e-17b (Creative, Large)', category: 'Specialists' },
-  { id: 'openai/gpt-oss-20b', displayName: 'gpt-oss-20b (Performance)', category: 'Speed' },
-  { id: 'groq/compound', displayName: 'groq/compound (Fast)', category: 'Speed' },
-  { id: 'meta-llama/llama-4-scout-17b-16e-instruct', displayName: 'llama-4-scout-16e-17b (Info gathering)', category: 'Speed' },
+  { id: 'gemini-1.5-pro', displayName: 'Gemini 1.5 Pro', category: 'Gemini' },
+  { id: 'gemini-1.5-flash', displayName: 'Gemini 1.5 Flash', category: 'Gemini' },
+  { id: 'gemini-2.5-pro', displayName: 'Gemini 2.5 Pro', category: 'Gemini' },
+  { id: 'gemini-2.5-flash', displayName: 'Gemini 2.5 Flash', category: 'Gemini' },
+  { id: 'gemini-3.0-pro', displayName: 'Gemini 3.0 Pro', category: 'Gemini' },
+  { id: 'gemini-3.0-flash', displayName: 'Gemini 3.0 Flash', category: 'Gemini' },
+  { id: 'openai/gpt-oss-120b', displayName: 'gpt-oss-120b (Top reasoning)', category: 'Groq Reasoners' },
+  { id: 'llama-3.3-70b-versatile', displayName: 'llama-3.3-70b (Versatile)', category: 'Groq Reasoners' },
+  { id: 'moonshotai/kimi-k2-instruct-0905', displayName: 'moonshotai-kimi-1000B-32b (Analysis, Large)', category: 'Groq Specialists' },
+  { id: 'qwen/qwen3-32b', displayName: 'qwen3-32b (Balance)', category: 'Groq Specialists' },
+  { id: 'meta-llama/llama-4-maverick-17b-128e-instruct', displayName: 'llama-4-128e-17b (Creative, Large)', category: 'Groq Specialists' },
+  { id: 'openai/gpt-oss-20b', displayName: 'gpt-oss-20b (Performance)', category: 'Groq Speed' },
+  { id: 'groq/compound', displayName: 'groq/compound (Fast)', category: 'Groq Speed' },
+  { id: 'meta-llama/llama-4-scout-17b-16e-instruct', displayName: 'llama-4-scout-16e-17b (Info gathering)', category: 'Groq Speed' },
+  { id: 'glm-4.7', displayName: 'Z.ai glm-4.7', category: 'Z.ai' },
 ] as const;
 
 export type AiAssistantModelId = (typeof AI_ASSISTANT_MODELS)[number]['id'];

@@ -2,17 +2,17 @@
 export const ADMIN_SECTIONS = [
   { slug: 'dashboards',     label: 'Dashboards' },
   { slug: 'control-room',   label: 'Control Room' },
-  { slug: 'finances',       label: 'Finances' },
   { slug: 'inventories',    label: 'Inventories' },
+  { slug: 'finances',       label: 'Finances' },
   { slug: 'sales',          label: 'Sales' },
   { slug: 'map',            label: 'Map' },
-  { slug: 'player',         label: 'Player' },
   { slug: 'characters',     label: 'Characters' },
-  { slug: 'archive',        label: 'Archive' },
+  { slug: 'player',         label: 'Player' },
+  { slug: 'accounts',       label: 'Accounts' },
   { slug: 'data-center',    label: 'Data Center' },
+  { slug: 'archive',        label: 'Archive' },
   { slug: 'research',       label: 'Research' },
   { slug: 'settings',       label: 'Settings' },
-  { slug: 'accounts',        label: 'Accounts' },
 ] as const;
 
 export type AdminSectionSlug = typeof ADMIN_SECTIONS[number]['slug'];
