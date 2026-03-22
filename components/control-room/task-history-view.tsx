@@ -15,6 +15,7 @@ import { TaskType, TaskStatus } from '@/types/enums';
 
 interface TaskHistoryViewProps {
     onSelectTask?: (task: Task) => void;
+    refreshKey?: number;
 }
 
 interface EnrichedTask extends Task {
@@ -212,7 +213,7 @@ interface AvailableMonth {
     };
 }
 
-export default function TaskHistoryView({ onSelectTask }: TaskHistoryViewProps) {
+export default function TaskHistoryView({ onSelectTask, refreshKey = 0 }: TaskHistoryViewProps) {
     const [availableMonths, setAvailableMonths] = useState<string[]>([]);
     const [selectedMonthKey, setSelectedMonthKey] = useState(getCurrentMonthKey());
     const [tasks, setTasks] = useState<Task[]>([]);
@@ -265,7 +266,7 @@ export default function TaskHistoryView({ onSelectTask }: TaskHistoryViewProps) 
         };
 
         loadTasks();
-    }, [selectedMonthKey]);
+    }, [selectedMonthKey, refreshKey]);
 
     if (isLoadingMonths) {
         return (

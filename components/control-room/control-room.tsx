@@ -1003,6 +1003,7 @@ export default function ControlRoom() {
             {/* Task History Tab Content */}
             <TabsContent value="task-history" className="mt-0 p-0 data-[state=active]:flex flex-col flex-1 min-h-0">
               <TaskHistoryView
+                refreshKey={refreshKey}
                 onSelectTask={(task) => {
                   handleEditTask(task);
                 }}
