@@ -186,7 +186,7 @@ export default function ToolboxSubmodal({ open, onOpenChange }: Props) {
                 {selectedTools.map((tool, idx) => (
                   <article
                     key={`${tool.function.name}-${idx}`}
-                    className="rounded-lg border bg-card p-4 space-y-2"
+                    className="rounded-lg border bg-card p-4 space-y-2 text-lg"
                   >
                     <h4 className="font-mono text-sm font-semibold">{tool.function.name}</h4>
                     <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
