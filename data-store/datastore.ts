@@ -187,6 +187,25 @@ export async function getAllTasks(): Promise<Task[]> {
   return reviveDates(tasks);
 }
 
+/**
+ * Returns a high-level count of total, active, and completed tasks across the entire database.
+ * Useful for global data integrity audits.
+ */
+export async function getGlobalTaskCounts(): Promise<{ totalTasks: number; activeTasks: number; completedTasks: number; }> {
+  const tasks = await repoGetAllTasks();
+  let active = 0;
+  let completed = 0;
+  for (const t of tasks) {
+    if (isTaskActive(t)) active++;
+    if (isTaskCompleted(t)) completed++;
+  }
+  return {
+    totalTasks: tasks.length,
+    activeTasks: active,
+    completedTasks: completed
+  };
+}
+
 // Added specifically for active boards that don't want completed/archived noise
 export async function getActiveTasks(): Promise<Task[]> {
   const activeKey = buildTaskActiveIndexKey();

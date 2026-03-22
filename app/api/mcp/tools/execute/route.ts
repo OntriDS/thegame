@@ -11,6 +11,7 @@ import {
   getAllCharacters,
   repairTaskActiveIndex,
   repairTaskCompletedIndex,
+  getGlobalTaskCounts,
 } from '@/data-store/datastore';
 import {
   auditArchiveCompleteness,
@@ -255,6 +256,10 @@ export async function POST(req: NextRequest) {
       }
       case 'thegame.tasks.repairCompletedIndex': {
         const data = await repairTaskCompletedIndex();
+        return NextResponse.json({ success: true, data });
+      }
+      case 'thegame.tasks.getGlobalTaskCounts': {
+        const data = await getGlobalTaskCounts();
         return NextResponse.json({ success: true, data });
       }
       default:
