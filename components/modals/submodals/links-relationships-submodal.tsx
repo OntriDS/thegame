@@ -270,8 +270,11 @@ function LinkCard({
             <div className="text-sm font-medium">
               {currentEntity.type.toUpperCase()}
             </div>
-            <div className="text-xs text-muted-foreground truncate">
+            <div className="text-xs text-muted-foreground truncate font-semibold">
               {getEntityDisplayName(currentEntity.type, currentEntity.id)}
+            </div>
+            <div className="text-[10px] text-muted-foreground/70 font-mono mt-0.5 select-all break-all">
+              {currentEntity.id}
             </div>
           </div>
 
@@ -281,8 +284,11 @@ function LinkCard({
             <div className="text-sm font-medium">
               {otherEntity.type.toUpperCase()}
             </div>
-            <div className="text-xs text-muted-foreground truncate">
+            <div className="text-xs text-muted-foreground truncate font-semibold">
               {getEntityDisplayName(otherEntity.type, otherEntity.id)}
+            </div>
+            <div className="text-[10px] text-muted-foreground/70 font-mono mt-0.5 select-all break-all">
+              {otherEntity.id}
             </div>
           </div>
         </div>
