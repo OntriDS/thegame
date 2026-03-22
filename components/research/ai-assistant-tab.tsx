@@ -6,11 +6,12 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Bot, Send, Trash2, Loader2, Settings, Wrench, Database, Zap, MessageSquare, Users } from 'lucide-react';
+import { Bot, Send, Trash2, Loader2, Settings, Wrench, Database, Zap, MessageSquare, Users, Boxes } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import AiSessionManagerSubmodal from '@/components/modals/submodals/ai-session-manager-submodal';
 import SystemPromptSubmodal from '@/components/modals/submodals/system-prompt-submodal';
+import ToolboxSubmodal from '@/components/modals/submodals/toolbox-submodal';
 import { useAIChat, ChatMessage } from '@/lib/hooks/use-ai-chat';
 import { ClientAPI } from '@/lib/client-api';
 import {
@@ -48,6 +49,7 @@ export function AIAssistantTab() {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [showSessionMgr, setShowSessionMgr] = useState(false);
+  const [showToolbox, setShowToolbox] = useState(false);
   const [showSystemPrompt, setShowSystemPrompt] = useState(false);
   const [enableTools, setEnableTools] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -233,12 +235,18 @@ export function AIAssistantTab() {
               </Button>
               <div className="flex items-center gap-1 min-w-0 max-w-[min(100%,240px)]" title="Pixelbrain agent">
                 <Users className="h-3 w-3 shrink-0 text-muted-foreground" aria-hidden />
-                <Select value={selectedTargetAgent} onValueChange={setSelectedTargetAgent}>
+                <Select
+                  value={selectedTargetAgent}
+                  onValueChange={(value) => {
+                    setSelectedTargetAgent(value);
+                    setEnableTools(value !== 'auto');
+                  }}
+                >
                   <SelectTrigger className="h-7 text-xs py-0" title="Route chat to a Pixelbrain agent">
                     <SelectValue placeholder="Agent" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="auto">Auto (Orchestrator)</SelectItem>
+                    <SelectItem value="auto">Auto (Pixelbrain)</SelectItem>
                     {pixelbrainAgents.map((a) => (
                       <SelectItem key={a.id} value={a.id}>
                         {a.codeName ? `${a.name} (${a.codeName})` : a.name}
@@ -312,7 +320,10 @@ export function AIAssistantTab() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={clearSession}
+                    onClick={() => {
+                      clearSession();
+                      setEnableTools(false);
+                    }}
                     className="gap-2"
                     title="Clear session and start fresh"
                   >
@@ -329,6 +340,16 @@ export function AIAssistantTab() {
                 title="Manage all sessions"
               >
                 Session Manager
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowToolbox(true)}
+                className="gap-2"
+                title="Browse LLM tools (Pixelbrain)"
+              >
+                <Boxes className="h-4 w-4" />
+                Tool box
               </Button>
             </div>
           
@@ -545,6 +566,7 @@ export function AIAssistantTab() {
 
       </CardContent>
       <AiSessionManagerSubmodal open={showSessionMgr} onOpenChange={setShowSessionMgr} onSessionLoad={loadSession} />
+      <ToolboxSubmodal open={showToolbox} onOpenChange={setShowToolbox} />
       {sessionId && (
         <SystemPromptSubmodal
           open={showSystemPrompt}
