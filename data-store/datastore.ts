@@ -386,8 +386,8 @@ export async function repairTaskCompletedIndex(): Promise<RepairTaskCompletedInd
       else if (t.doneAt) date = new Date(t.doneAt);
       else if (t.dueDate) date = new Date(t.dueDate);
       else if (t.scheduledStart) date = new Date(t.scheduledStart);
-      else if (t.createdAt) date = new Date(t.createdAt);
       else if (t.updatedAt) date = new Date(t.updatedAt);
+      else if (t.createdAt) date = new Date(t.createdAt);
       else date = new Date();
       
       if (isNaN(date.getTime())) date = new Date();

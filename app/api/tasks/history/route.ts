@@ -12,10 +12,15 @@ export const dynamic = 'force-dynamic';
 /** Same month bucket as task.workflow archive indexing (doneAt vs collectedAt). */
 function resolveTaskHistoryMonthKey(task: Task): string | null {
     if (task.status !== TaskStatus.DONE && task.status !== TaskStatus.COLLECTED) return null;
+    // Priority MUST match repairTaskCompletedIndex in datastore.ts:
+    // collectedAt → doneAt → dueDate → scheduledStart → createdAt
     const raw =
-        task.status === TaskStatus.COLLECTED
-            ? task.collectedAt || task.doneAt || task.createdAt
-            : task.doneAt || task.createdAt;
+        task.collectedAt ||
+        task.doneAt ||
+        task.dueDate ||
+        task.scheduledStart ||
+        task.updatedAt ||
+        task.createdAt;
     if (!raw) return null;
     const d = typeof raw === 'string' ? new Date(raw) : raw;
     if (Number.isNaN(d.getTime())) return null;
