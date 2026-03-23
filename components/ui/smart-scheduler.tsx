@@ -37,15 +37,21 @@ export function SmartScheduler({
     const [isOpen, setIsOpen] = React.useState(false);
     const [showFrequency, setShowFrequency] = React.useState(!!value.frequencyConfig);
 
-    // Initialize showFrequency based on incoming value
+    // Sync showFrequency with incoming value
     React.useEffect(() => {
-        if (value.frequencyConfig && !showFrequency) {
-            setShowFrequency(true);
-        }
-    }, [value.frequencyConfig, showFrequency]);
+        setShowFrequency(!!value.frequencyConfig);
+    }, [value.frequencyConfig]);
 
     const handleDateSelect = (date: Date | undefined) => {
-        if (!date) return;
+        if (!date) {
+            onChange({
+                ...value,
+                dueDate: undefined,
+                scheduledStart: undefined,
+                scheduledEnd: undefined,
+            });
+            return;
+        }
 
         // If we have a start time, preserve it
         let newStart = date;

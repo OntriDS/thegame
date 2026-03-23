@@ -15,7 +15,8 @@
         "Implement Monthly Close Automation Task",
         "Implement automated monthly summary generation and analysis based on archive data (post Monthly Close)",
         "Create one AI Agent for Data Integrity Validation that checks: Link consistency across all entity relationships",
-        "The Agent must checkCollected/Sold status consistency, Month index accuracy, Archive snapshot completeness"
+        "The Agent must checkCollected/Sold status consistency, Month index accuracy, Archive snapshot completeness",
+        "CognitiveGovernor, RequestChunker, and MCPGateway fully integrated, "
       ]
     },
     "phase14.2": {
@@ -39,14 +40,14 @@
       "status": "In Progress",
       "description": "",
       "deliverables": [
-        "Network Sales System",
+        "Network Sales in Sales Modal",
         "Basic Badges and Achievements systems improved",
         "Personas to Characters Rollback, so Personas is a feature of Characters",
         "Refactor the Authentication System with the IAM Service",
         "Fix the Month Selector to show all the months with data (Archive + Summary)",
         "Analyst Agent performing Data Integrity tasks, ai-chat reading markdown files",
-        "Tasks Indexes"
-
+        "Tasks Indexes created, Agents upgraded, Database purged ghost tasks and agents cards",
+        "Calendar submodal bugs fixes"
       ]
     },
     "phase14.4": {
