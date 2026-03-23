@@ -127,11 +127,11 @@ export default function TaskModal({
   const [scheduledEndDate, setScheduledEndDate] = useState<Date | undefined>(undefined);
   const [scheduledEndTime, setScheduledEndTime] = useState<string>('');
   const [frequencyConfig, setFrequencyConfig] = useState<FrequencyConfig | undefined>(
-    task?.frequencyConfig || {
+    task?.frequencyConfig || (isRecurrentModal ? {
       type: RecurrentFrequency.ONCE,
       interval: 1,
       repeatMode: 'periodically',
-    }
+    } : undefined)
   );
   const [cost, setCost] = useState(0);
   const [costString, setCostString] = useState('0');
