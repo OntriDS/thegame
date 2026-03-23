@@ -153,11 +153,12 @@ export const SITE_CATEGORIES = {
 
 /** Mission Tree & hierarchies */
 export enum TaskType {
+  MISSION_GROUP = 'Mission Group',   // Folder/container for missions tree tasks
   MISSION = 'Mission',
   MILESTONE = 'Milestone',
   GOAL = 'Goal',
   ASSIGNMENT = 'Assignment',
-  RECURRENT_GROUP = 'Recurrent Group',      // Folder/container for recurrent tasks
+  RECURRENT_GROUP = 'Recurrent Group',      // Folder/container for recurrent tree tasks
   RECURRENT_TEMPLATE = 'Recurrent Template',   // Sets frequency pattern for instances
   RECURRENT_INSTANCE = 'Recurrent Instance',    // Spawned with due date from templates or Individual creation
   AUTOMATION = 'Automation'            // Automation tasks (e.g., monthly close) for User and Agents
@@ -165,7 +166,7 @@ export enum TaskType {
 
 /** Task categories for UI organization and SearchableSelect grouping */
 export const TASK_CATEGORIES = {
-  MISSION: ['Mission', 'Milestone', 'Goal', 'Assignment'],
+  MISSION: ['Mission Group', 'Mission', 'Milestone', 'Goal', 'Assignment'],
   RECURRENT: ['Recurrent Group', 'Recurrent Template', 'Recurrent Instance'],
   AUTOMATION: ['Automation']
 } as const;

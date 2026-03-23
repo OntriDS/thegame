@@ -255,6 +255,7 @@ export default function TaskTree({
 
   // --- Optimization: Memoize node collections ---
   // These specific traversals were previously happening multiple times per render
+  const missionGroupNodes = React.useMemo(() => collectNodesByType(tree, TaskType.MISSION_GROUP), [tree]);
   const missionNodes = React.useMemo(() => collectNodesByType(tree, TaskType.MISSION), [tree]);
   const milestoneNodes = React.useMemo(() => collectNodesByType(tree, TaskType.MILESTONE), [tree]);
   const recurrentGroupNodes = React.useMemo(() => collectNodesByType(tree, TaskType.RECURRENT_GROUP), [tree]);
@@ -262,6 +263,10 @@ export default function TaskTree({
 
   // --- Optimization: Memoize states derived from expanded set ---
   // This avoids re-scanning arrays on every render, only when expanded set changes
+  const allMissionGroupsExpanded = React.useMemo(() =>
+    missionGroupNodes.length > 0 && missionGroupNodes.every(node => expanded.has(node.task.id)),
+    [missionGroupNodes, expanded]);
+
   const allMissionsExpanded = React.useMemo(() =>
     missionNodes.length > 0 && missionNodes.every(node => expanded.has(node.task.id)),
     [missionNodes, expanded]);
@@ -279,6 +284,18 @@ export default function TaskTree({
     [recurrentTemplateNodes, expanded]);
 
   // Handlers for bulk toggles using memoized lists
+  const handleToggleMissionGroups = () => {
+    if (allMissionGroupsExpanded) {
+      missionGroupNodes.forEach(node => onToggle(node.task.id));
+    } else {
+      missionGroupNodes.forEach(node => {
+        if (!expanded.has(node.task.id)) {
+          onToggle(node.task.id);
+        }
+      });
+    }
+  };
+
   const handleToggleMissions = () => {
     if (allMissionsExpanded) {
       missionNodes.forEach(node => onToggle(node.task.id));
@@ -300,8 +317,11 @@ export default function TaskTree({
       milestoneNodes.forEach(node => {
         if (!expanded.has(node.task.id)) onToggle(node.task.id);
       });
-      // Also turn ON all missions
+      // Also turn ON all missions tree task
       missionNodes.forEach(node => {
+        if (!expanded.has(node.task.id)) onToggle(node.task.id);
+      });
+      missionGroupNodes.forEach(node => {
         if (!expanded.has(node.task.id)) onToggle(node.task.id);
       });
     }
@@ -344,6 +364,17 @@ export default function TaskTree({
           <div className="flex gap-1">
             {activeSubTab === 'mission-tree' && (
               <>
+                {/* Mission Group Toggle */}
+                {missionGroupNodes.length > 0 && (
+                  <Button
+                    variant={allMissionGroupsExpanded ? "default" : "ghost"}
+                    size="sm"
+                    className="text-xs px-2"
+                    onClick={handleToggleMissionGroups}
+                  >
+                    {React.createElement(TASK_TYPE_ICONS[TaskType.MISSION_GROUP] || TASK_TYPE_ICONS[TaskType.ASSIGNMENT], { className: "h-4 w-4" })}
+                  </Button>
+                )}
                 {/* Mission Toggle */}
                 {missionNodes.length > 0 && (
                   <Button

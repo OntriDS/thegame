@@ -1070,7 +1070,8 @@ export default function TaskModal({
                               taskType === TaskType.RECURRENT_TEMPLATE ||
                               taskType === TaskType.RECURRENT_INSTANCE;
                           } else {
-                            return taskType === TaskType.MISSION ||
+                            return taskType === TaskType.MISSION_GROUP ||
+                              taskType === TaskType.MISSION ||
                               taskType === TaskType.MILESTONE ||
                               taskType === TaskType.GOAL ||
                               taskType === TaskType.ASSIGNMENT;
