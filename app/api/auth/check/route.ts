@@ -32,8 +32,6 @@ export async function GET(request: NextRequest) {
     // ✅ Get permissions for user
     const permissions = iamService.getPermissions(user);
 
-    console.log('[Auth Check API] ✅ Authenticated:', user.username, 'Roles:', user.roles);
-
     return NextResponse.json<AuthCheckResponse>({
       authenticated: true,
       user,

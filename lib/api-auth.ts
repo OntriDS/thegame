@@ -17,7 +17,6 @@ export async function requireAdminAuth(req: NextRequest): Promise<boolean> {
     const token = bearerToken || req.cookies.get('auth_session')?.value || req.cookies.get('admin_session')?.value;
 
     if (!token) {
-      console.log('[API Auth] No token found in cookies or header');
       return false;
     }
 
@@ -28,7 +27,6 @@ export async function requireAdminAuth(req: NextRequest): Promise<boolean> {
       // console.log('[API Auth] User authenticated successfully');
       return true;
     } else {
-      console.log('[API Auth] Invalid session or inactive user');
       return false;
     }
   } catch (error) {

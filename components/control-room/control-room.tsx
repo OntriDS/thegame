@@ -125,6 +125,8 @@ export default function ControlRoom() {
   };
   const [expanded, setExpanded] = useState<Set<string>>(parseExpandedPreference);
   const [selectedNode, setSelectedNode] = useState<TreeNode | null>(null);
+  const selectedNodeRef = useRef<TreeNode | null>(null);
+  selectedNodeRef.current = selectedNode;
   const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
   // Sidebar width with persistence
   const getInitialSidebarWidth = () => {
@@ -579,7 +581,7 @@ export default function ControlRoom() {
     setActiveSubTab(allowedTabs.includes(savedSubTab as ControlRoomTab) ? savedSubTab as ControlRoomTab : 'mission-tree');
   }, [getPreference]);
 
-  // Update selectedNode when tasks change (avoid render loops by only updating on real changes)
+  // Update selectedNode when selection or global task refresh changes (deps avoid infinite loops with setSelectedNode)
   const selectedTaskId = selectedNode?.task.id;
   useEffect(() => {
     if (!selectedTaskId) return;
@@ -591,19 +593,19 @@ export default function ControlRoom() {
         if (!updatedTask) return;
 
         // Only update when task actually changed (compare updatedAt timestamp or shallow props)
-        const prevUpdatedAt = selectedNode?.task.updatedAt?.toString();
+        const prevUpdatedAt = selectedNodeRef.current?.task.updatedAt?.toString();
         const nextUpdatedAt = updatedTask.updatedAt?.toString();
         const hasMeaningfulChange = prevUpdatedAt !== nextUpdatedAt;
 
-        if (hasMeaningfulChange && !cancelled && selectedNode) {
-          setSelectedNode({ ...selectedNode, task: updatedTask });
+        if (hasMeaningfulChange && !cancelled && selectedNodeRef.current) {
+          setSelectedNode({ ...selectedNodeRef.current, task: updatedTask });
         }
       } catch (error) {
         console.error('Failed to update selected node:', error);
       }
     })();
     return () => { cancelled = true; };
-  }, [tree, selectedTaskId, selectedNode]);
+  }, [selectedTaskId, refreshKey]);
 
   // Listen for task updates to refresh the tree
   useEntityUpdates('task', () => setRefreshKey(prev => prev + 1));
@@ -724,12 +726,15 @@ export default function ControlRoom() {
 
     const updatedTaskMap = new Map<string, Task>();
     reordered.forEach((task, idx) => {
-      const updated: Task = {
-        ...task,
-        parentId: newParentId,
-        order: (idx + 1) * ORDER_INCREMENT,
-      };
-      updatedTaskMap.set(updated.id, updated);
+      const desiredOrder = (idx + 1) * ORDER_INCREMENT;
+      if ((task.parentId ?? null) !== newParentId || (task.order ?? 0) !== desiredOrder) {
+        const updated: Task = {
+          ...task,
+          parentId: newParentId,
+          order: desiredOrder,
+        };
+        updatedTaskMap.set(updated.id, updated);
+      }
     });
 
     const updatedTasks: Task[] = tasks.map(task => updatedTaskMap.get(task.id) ?? task);
