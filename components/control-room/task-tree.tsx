@@ -545,7 +545,7 @@ export default function TaskTree({
             ref={treeRef}
             renderCursor={ThemedCursor}
             renderDragPreview={dragPreviewRenderer}
-            className="absolute inset-0"
+            className="absolute inset-0 custom-scrollbar"
           >
             {TaskTreeNode}
           </Tree>
