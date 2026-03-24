@@ -4,16 +4,14 @@ import { TreeNode } from '@/lib/utils/tree-utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
-import { TaskType, STATION_CATEGORIES, TaskStatus, TaskPriority } from '@/types/enums';
+import { TaskType, TaskStatus, TaskPriority } from '@/types/enums';
 import type { Station } from '@/types/type-aliases';
-import { ChevronRight, ChevronDown, PlusCircle, Filter } from 'lucide-react';
-import { DRAG_Z_INDEX, MIN_WIDTH_150, TRANSITION_DURATION_150, TASK_TYPE_ICONS } from '@/lib/constants/app-constants';
+import { ChevronRight, ChevronDown, PlusCircle } from 'lucide-react';
+import { TRANSITION_DURATION_150, TASK_TYPE_ICONS } from '@/lib/constants/app-constants';
 import { TASK_PRIORITY_ICON_COLORS, TASK_STATUS_ICON_COLORS } from '@/lib/constants/color-constants';
-import { getInteractiveInnerModalZIndex, getInteractiveSubModalZIndex } from '@/lib/utils/z-index-utils';
-import { useDraggable, useDroppable } from '@dnd-kit/core';
-import { CSS } from '@dnd-kit/utilities';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Tree } from 'react-arborist';
+import type { CursorProps, DragPreviewProps, MoveHandler, NodeRendererProps, TreeApi } from 'react-arborist';
 
 // --- UPDATED Props Interface ---
 interface TaskTreeProps {
@@ -31,6 +29,7 @@ interface TaskTreeProps {
   // --- NEW Tab Props ---
   activeSubTab: 'mission-tree' | 'recurrent-tasks' | 'automation-tree' | 'schedule' | 'calendar';
   onChangeOrder: (taskId: string, parentId: string | null, newPosition: number) => Promise<void> | void;
+  onMove?: MoveHandler<TreeNode>;
 }
 
 // Helper to get root stations (all stations are root level now)
@@ -53,178 +52,53 @@ function collectNodesByType(nodes: TreeNode[], type: TaskType): TreeNode[] {
 
 
 // ——— NEW: TreeNode Component (can use hooks) ———
-interface TreeNodeProps {
-  node: TreeNode;
-  depth: number;
-  expanded: Set<string>;
-  selectedNode: TreeNode | null;
-  onToggle: (nodeId: string) => void;
-  onSelectNode: (node: TreeNode) => void;
-  position: number;
-  count: number;
-  onChangeOrder: (taskId: string, parentId: string | null, newPosition: number) => Promise<void> | void;
-}
-
-const TreeNodeComponent = React.memo(function TreeNodeComponent({ node, depth, expanded, selectedNode, onToggle, onSelectNode, position, count, onChangeOrder }: TreeNodeProps) {
-  const nodeId = node.task.id;
-  const isExpanded = expanded.has(nodeId);
-  const isSelected = selectedNode?.task.id === nodeId;
-  const hasChildren = node.children.length > 0;
-
-  // --- dnd-kit hooks ---
-  const { attributes, listeners, setNodeRef: draggableRef, transform, isDragging } = useDraggable({ id: nodeId });
-  const { setNodeRef: droppableRef, isOver } = useDroppable({ id: nodeId });
-
-  const style = {
-    transform: CSS.Translate.toString(transform),
-    opacity: isDragging ? 0.5 : 1,
-    zIndex: isDragging ? DRAG_Z_INDEX : 'auto',
-  };
-
-  const dropLine = isOver && !isDragging
-    ? 'after:absolute after:left-0 after:right-0 after:-bottom-[1px] after:h-0 after:border-b-2 after:border-accent/60'
-    : '';
-
-  const Icon = TASK_TYPE_ICONS[node.task.type as keyof typeof TASK_TYPE_ICONS] || TASK_TYPE_ICONS[TaskType.ASSIGNMENT];
-  const getTaskIconColorClass = (task: TreeNode['task']): string => {
-    if (task.status === TaskStatus.DONE) {
-      return TASK_STATUS_ICON_COLORS[TaskStatus.DONE];
-    }
-
-    const priority = task.priority as TaskPriority | undefined;
-    if (priority && priority !== TaskPriority.NORMAL) {
-      const color = TASK_PRIORITY_ICON_COLORS[priority as keyof typeof TASK_PRIORITY_ICON_COLORS];
-      if (color) return color;
-    }
-
-    return 'text-muted-foreground';
-  };
-  const iconColorClass = getTaskIconColorClass(node.task);
-  const [isEditingOrder, setIsEditingOrder] = useState(false);
-  const [orderInput, setOrderInput] = useState(String(position + 1));
-
-  useEffect(() => {
-    setOrderInput(String(position + 1));
-  }, [position, count]);
-
-  const submitOrderChange = async () => {
-    const parsed = parseInt(orderInput, 10);
-    if (!Number.isNaN(parsed) && parsed >= 1 && parsed <= count) {
-      try {
-        await onChangeOrder(node.task.id, node.task.parentId || null, parsed);
-      } catch (error) {
-        console.error('Failed to change order:', error);
-      }
-    }
-    setIsEditingOrder(false);
-  };
-
+const ThemedCursor: React.FC<CursorProps> = ({ top, left, indent }) => {
   return (
-    <div ref={droppableRef} style={style} className={`relative ${dropLine}`}>
-      <div className="flex items-center">
-        {/* Main Button is now the draggable element */}
-        <button
-          ref={draggableRef}
-          {...listeners}
-          {...attributes}
-          onClick={() => onSelectNode(node)}
-          style={{ paddingLeft: `${depth * 1.25}rem`, cursor: isDragging ? 'grabbing' : 'pointer' }}
-          className={`flex-1 text-left flex items-center gap-3 py-3 rounded-md transition-all duration-${TRANSITION_DURATION_150} ${isSelected ? 'bg-primary/10' : 'hover:bg-muted/50'
-            } ${isOver ? 'ring-2 ring-accent ring-offset-2 ring-offset-background bg-accent/10' : ''
-            } ${isDragging ? 'shadow-lg scale-105' : ''
-            }`}
-        >
-          {/* Toggle Chevron */}
-          <div className="w-6 h-6 flex items-center justify-center">
-            {hasChildren && (
-              <span
-                onClick={(e) => { e.stopPropagation(); onToggle(nodeId); }}
-                className="p-1 hover:bg-muted/50 rounded cursor-pointer transition-colors"
-              >
-                {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-              </span>
-            )}
-          </div>
-
-          {/* Category Icon */}
-          <Icon className={`h-4 w-4 ${iconColorClass}`} />
-
-          {/* Ordinal badge */}
-          <div className="flex items-center">
-            {isEditingOrder ? (
-              <div
-                className="flex items-center gap-1"
-                onPointerDown={(e) => e.stopPropagation()}
-              >
-                <Input
-                  type="text"
-                  inputMode="numeric"
-                  className="w-10 h-5 text-[0.625rem] px-1 border rounded bg-background"
-                  value={orderInput}
-                  // min/max not supported on text input directly, handled via validation
-                  onChange={(e) => setOrderInput(e.target.value)}
-                  onBlur={submitOrderChange}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      submitOrderChange();
-                    } else if (e.key === 'Escape') {
-                      e.preventDefault();
-                      setOrderInput(String(position + 1));
-                      setIsEditingOrder(false);
-                    }
-                  }}
-                  autoFocus
-                />
-                <span className="text-[0.625rem] text-muted-foreground whitespace-nowrap">
-                  /{count}
-                </span>
-              </div>
-            ) : (
-              <span
-                className="text-[0.625rem] px-1 py-0.5 rounded bg-muted text-muted-foreground cursor-text"
-                onPointerDown={(e) => {
-                  e.stopPropagation();
-                }}
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setOrderInput(String(position + 1));
-                  setIsEditingOrder(true);
-                }}
-              >
-                {position + 1}/{count}
-              </span>
-            )}
-          </div>
-
-          {/* Name */}
-          <span className="flex-1 truncate text-base font-medium">{node.task.name}</span>
-        </button>
-      </div>
-
-      {/* Children */}
-      {hasChildren && isExpanded && (
-        <div>
-          {node.children.map((child, idx) => (
-            <TreeNodeComponent
-              key={child.task.id}
-              node={child}
-              depth={depth + 1}
-              expanded={expanded}
-              selectedNode={selectedNode}
-              onToggle={onToggle}
-              onSelectNode={onSelectNode}
-              position={idx}
-              count={node.children.length}
-              onChangeOrder={onChangeOrder}
-            />
-          ))}
-        </div>
-      )}
-    </div>
+    <div
+      style={{
+        position: 'absolute',
+        top,
+        left: left + indent,
+        right: 0,
+        height: 2,
+        borderRadius: 9999,
+      }}
+      className="bg-primary"
+    />
   );
-});
+};
+
+const makeDragPreview = (treeRef: React.RefObject<TreeApi<TreeNode>>) =>
+  function DragPreview({ id, isDragging }: DragPreviewProps) {
+    if (!id || !isDragging) return null;
+    const node = treeRef.current?.get(id);
+    if (!node) return null;
+    const treeNode = node.data as TreeNode;
+    const Icon = TASK_TYPE_ICONS[treeNode.task.type as keyof typeof TASK_TYPE_ICONS] || TASK_TYPE_ICONS[TaskType.ASSIGNMENT];
+
+    const getTaskIconColorClass = (task: TreeNode['task']): string => {
+      if (task.status === TaskStatus.DONE) {
+        return TASK_STATUS_ICON_COLORS[TaskStatus.DONE];
+      }
+
+      const priority = task.priority as TaskPriority | undefined;
+      if (priority && priority !== TaskPriority.NORMAL) {
+        const color = TASK_PRIORITY_ICON_COLORS[priority as keyof typeof TASK_PRIORITY_ICON_COLORS];
+        if (color) return color;
+      }
+
+      return 'text-muted-foreground';
+    };
+
+    const iconColorClass = getTaskIconColorClass(treeNode.task);
+
+    return (
+      <div className="pointer-events-none select-none rounded-md bg-background/90 shadow-lg ring-1 ring-primary/20 px-3 py-2 flex items-center gap-3">
+        <Icon className={`h-4 w-4 ${iconColorClass}`} />
+        <span className="text-sm font-medium truncate max-w-[280px]">{treeNode.task.name}</span>
+      </div>
+    );
+  };
 
 
 export default function TaskTree({
@@ -238,6 +112,7 @@ export default function TaskTree({
   onTypeFilterChange,
   activeSubTab,
   onChangeOrder,
+  onMove,
   ...props
 }: TaskTreeProps) {
   const typeOptions: TaskType[] =
@@ -283,14 +158,43 @@ export default function TaskTree({
     recurrentTemplateNodes.length > 0 && recurrentTemplateNodes.every(node => expanded.has(node.task.id)),
     [recurrentTemplateNodes, expanded]);
 
-  // Handlers for bulk toggles using memoized lists
+  const treeRef = useRef<TreeApi<TreeNode> | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [containerSize, setContainerSize] = useState<{ width: number; height: number }>({
+    width: 0,
+    height: 0,
+  });
+
+  useLayoutEffect(() => {
+    const element = containerRef.current;
+    if (!element || typeof ResizeObserver === 'undefined') return;
+
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect;
+        setContainerSize(prev => {
+          if (prev.width === width && prev.height === height) return prev;
+          return { width, height };
+        });
+      }
+    });
+
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
+  const toggleNode = useCallback((nodeId: string) => {
+    treeRef.current?.toggle(nodeId);
+    onToggle(nodeId);
+  }, [onToggle]);
+
   const handleToggleMissionGroups = () => {
     if (allMissionGroupsExpanded) {
-      missionGroupNodes.forEach(node => onToggle(node.task.id));
+      missionGroupNodes.forEach(node => toggleNode(node.task.id));
     } else {
       missionGroupNodes.forEach(node => {
         if (!expanded.has(node.task.id)) {
-          onToggle(node.task.id);
+          toggleNode(node.task.id);
         }
       });
     }
@@ -298,11 +202,11 @@ export default function TaskTree({
 
   const handleToggleMissions = () => {
     if (allMissionsExpanded) {
-      missionNodes.forEach(node => onToggle(node.task.id));
+      missionNodes.forEach(node => toggleNode(node.task.id));
     } else {
       missionNodes.forEach(node => {
         if (!expanded.has(node.task.id)) {
-          onToggle(node.task.id);
+          toggleNode(node.task.id);
         }
       });
     }
@@ -310,48 +214,200 @@ export default function TaskTree({
 
   const handleToggleMilestones = () => {
     if (allMilestonesExpanded) {
-      // Turn OFF milestones
-      milestoneNodes.forEach(node => onToggle(node.task.id));
+      milestoneNodes.forEach(node => toggleNode(node.task.id));
     } else {
-      // Turn ON milestones - this also turns ON missions (hierarchical requirement)
       milestoneNodes.forEach(node => {
-        if (!expanded.has(node.task.id)) onToggle(node.task.id);
+        if (!expanded.has(node.task.id)) toggleNode(node.task.id);
       });
-      // Also turn ON all missions tree task
       missionNodes.forEach(node => {
-        if (!expanded.has(node.task.id)) onToggle(node.task.id);
+        if (!expanded.has(node.task.id)) toggleNode(node.task.id);
       });
       missionGroupNodes.forEach(node => {
-        if (!expanded.has(node.task.id)) onToggle(node.task.id);
+        if (!expanded.has(node.task.id)) toggleNode(node.task.id);
       });
     }
   };
 
   const handleToggleRecurrentGroups = () => {
     if (allRecurrentGroupsExpanded) {
-      recurrentGroupNodes.forEach(node => onToggle(node.task.id));
+      recurrentGroupNodes.forEach(node => toggleNode(node.task.id));
     } else {
       recurrentGroupNodes.forEach(node => {
-        if (!expanded.has(node.task.id)) onToggle(node.task.id);
+        if (!expanded.has(node.task.id)) {
+          toggleNode(node.task.id);
+        }
       });
     }
   };
 
   const handleToggleRecurrentTemplates = () => {
     if (allRecurrentTemplatesExpanded) {
-      // Turn OFF templates
-      recurrentTemplateNodes.forEach(node => onToggle(node.task.id));
+      recurrentTemplateNodes.forEach(node => toggleNode(node.task.id));
     } else {
-      // Turn ON templates - also turns ON parents
       recurrentTemplateNodes.forEach(node => {
-        if (!expanded.has(node.task.id)) onToggle(node.task.id);
+        if (!expanded.has(node.task.id)) toggleNode(node.task.id);
       });
-      // Also turn ON all parents
       recurrentGroupNodes.forEach(node => {
-        if (!expanded.has(node.task.id)) onToggle(node.task.id);
+        if (!expanded.has(node.task.id)) toggleNode(node.task.id);
       });
     }
   };
+
+  const initialOpenState = useMemo(() => {
+    const map: Record<string, boolean> = {};
+    expanded.forEach(id => {
+      map[id] = true;
+    });
+    return map;
+  }, [expanded]);
+
+  const handleSelectFromTree = useCallback(
+    (nodes: any[]) => {
+      const first = nodes[0];
+      const data = first?.data as TreeNode | undefined;
+      if (data && props.onSelectNode) {
+        props.onSelectNode(data);
+      }
+    },
+    [props.onSelectNode]
+  );
+
+  const TaskTreeNode: React.FC<NodeRendererProps<TreeNode>> = ({ node, style, dragHandle, preview }) => {
+      const treeNode = node.data as TreeNode;
+      const hasChildren = !!treeNode.children.length;
+
+      const Icon = TASK_TYPE_ICONS[treeNode.task.type as keyof typeof TASK_TYPE_ICONS] || TASK_TYPE_ICONS[TaskType.ASSIGNMENT];
+
+      const getTaskIconColorClass = (task: TreeNode['task']): string => {
+        if (task.status === TaskStatus.DONE) {
+          return TASK_STATUS_ICON_COLORS[TaskStatus.DONE];
+        }
+
+        const priority = task.priority as TaskPriority | undefined;
+        if (priority && priority !== TaskPriority.NORMAL) {
+          const color = TASK_PRIORITY_ICON_COLORS[priority as keyof typeof TASK_PRIORITY_ICON_COLORS];
+          if (color) return color;
+        }
+
+        return 'text-muted-foreground';
+      };
+
+      const iconColorClass = getTaskIconColorClass(treeNode.task);
+
+      const parent = node.parent;
+      const siblingCount = parent?.children?.length ?? 1;
+      const position = node.childIndex >= 0 ? node.childIndex : 0;
+
+      const [isEditingOrder, setIsEditingOrder] = useState(false);
+      const [orderInput, setOrderInput] = useState(String(position + 1));
+
+      useEffect(() => {
+        setOrderInput(String(position + 1));
+      }, [position, siblingCount]);
+
+      const submitOrderChange = async () => {
+        const parsed = parseInt(orderInput, 10);
+        if (!Number.isNaN(parsed) && parsed >= 1 && parsed <= siblingCount) {
+          try {
+            const parentId = (treeNode.task.parentId || null) as string | null;
+            await onChangeOrder(treeNode.task.id, parentId, parsed);
+          } catch (error) {
+            console.error('Failed to change order:', error);
+          }
+        }
+        setIsEditingOrder(false);
+      };
+
+      return (
+        <div
+          style={style}
+          ref={dragHandle}
+          className={`flex items-center ${preview ? 'opacity-80' : ''}`}
+        >
+          <button
+            onClick={node.handleClick}
+            style={{
+              paddingLeft: `${node.level * 1.25}rem`,
+              cursor: node.isDragging ? 'grabbing' : 'pointer',
+            }}
+            className={[
+              'flex-1 text-left flex items-center gap-3 py-3 rounded-md',
+              `transition-all duration-${TRANSITION_DURATION_150}`,
+              node.isSelected ? 'bg-primary/10' : 'hover:bg-muted/50',
+              node.willReceiveDrop ? 'ring-2 ring-primary ring-offset-2 ring-offset-background bg-primary/5' : '',
+              node.isDragging ? 'shadow-lg scale-105' : '',
+            ].join(' ')}
+          >
+            <div className="w-6 h-6 flex items-center justify-center">
+              {hasChildren && (
+                <span
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    node.toggle();
+                  }}
+                  className="p-1 hover:bg-muted/50 rounded cursor-pointer transition-colors"
+                >
+                  {node.isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                </span>
+              )}
+            </div>
+
+            <Icon className={`h-4 w-4 ${iconColorClass}`} />
+
+            <div className="flex items-center">
+              {isEditingOrder ? (
+                <div
+                  className="flex items-center gap-1"
+                  onPointerDown={(e) => e.stopPropagation()}
+                >
+                  <Input
+                    type="text"
+                    inputMode="numeric"
+                    className="w-10 h-5 text-[0.625rem] px-1 border rounded bg-background"
+                    value={orderInput}
+                    onChange={(e) => setOrderInput(e.target.value)}
+                    onBlur={submitOrderChange}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        submitOrderChange();
+                      } else if (e.key === 'Escape') {
+                        e.preventDefault();
+                        setOrderInput(String(position + 1));
+                        setIsEditingOrder(false);
+                      }
+                    }}
+                    autoFocus
+                  />
+                  <span className="text-[0.625rem] text-muted-foreground whitespace-nowrap">
+                    /{siblingCount}
+                  </span>
+                </div>
+              ) : (
+                <span
+                  className="text-[0.625rem] px-1 py-0.5 rounded bg-muted text-muted-foreground cursor-text"
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                  }}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setOrderInput(String(position + 1));
+                    setIsEditingOrder(true);
+                  }}
+                >
+                  {position + 1}/{siblingCount}
+                </span>
+              )}
+            </div>
+
+            <span className="flex-1 truncate text-base font-medium">{treeNode.task.name}</span>
+          </button>
+        </div>
+      );
+    };
+
+  const dragPreviewRenderer = useMemo(() => makeDragPreview(treeRef), []);
 
   return (
     <aside className="w-full h-full border-b sm:border-b-0 sm:border-r bg-muted/20 flex flex-col overflow-hidden">
@@ -471,21 +527,29 @@ export default function TaskTree({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
-        {tree.map((root, idx) => (
-          <TreeNodeComponent
-            key={root.task.id}
-            node={root}
-            depth={0}
-            expanded={expanded}
-            selectedNode={props.selectedNode}
+      <div ref={containerRef} className="flex-1 overflow-hidden relative">
+        {containerSize.height > 0 && (
+          <Tree
+            data={tree}
+            height={containerSize.height}
+            width={containerSize.width || '100%'}
+            rowHeight={40}
+            indent={24}
+            idAccessor={(node: TreeNode) => node.task.id}
+            childrenAccessor={(node: TreeNode) => node.children}
+            selection={props.selectedNode?.task.id}
+            onSelect={handleSelectFromTree}
+            onMove={onMove}
             onToggle={onToggle}
-            onSelectNode={props.onSelectNode}
-            position={idx}
-            count={tree.length}
-            onChangeOrder={onChangeOrder}
-          />
-        ))}
+            initialOpenState={initialOpenState}
+            ref={treeRef}
+            renderCursor={ThemedCursor}
+            renderDragPreview={dragPreviewRenderer}
+            className="absolute inset-0"
+          >
+            {TaskTreeNode}
+          </Tree>
+        )}
       </div>
     </aside>
   );

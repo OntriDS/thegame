@@ -1,9 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { DndContext, closestCenter, DragEndEvent, DragOverEvent } from '@dnd-kit/core';
-import { useSensors, useSensor, PointerSensor } from '@dnd-kit/core';
-import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
+import type { MoveHandler } from 'react-arborist';
 import { Task } from '@/types/entities';
 import { TaskType } from '@/types/enums';
 import type { Station } from '@/types/type-aliases';
@@ -17,7 +15,7 @@ import { useEntityUpdates } from '@/lib/hooks/use-entity-updates';
 import { useShortcutScope } from '@/lib/shortcuts/keyboard-shortcuts-provider';
 import TaskModal from '@/components/modals/task-modal';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { ORDER_INCREMENT, SIDEBAR_MIN_WIDTH, SIDEBAR_MAX_WIDTH, SIDEBAR_DEFAULT_WIDTH, DRAG_ACTIVATION_DISTANCE } from '@/lib/constants/app-constants';
+import { ORDER_INCREMENT, SIDEBAR_MIN_WIDTH, SIDEBAR_MAX_WIDTH, SIDEBAR_DEFAULT_WIDTH } from '@/lib/constants/app-constants';
 import TaskTree from './task-tree';
 import WeeklySchedule from './weekly-schedule';
 import CalendarView from './calendar-view';
@@ -149,17 +147,6 @@ export default function ControlRoom() {
   const [activeSubTab, setActiveSubTab] = useState<ControlRoomTab>('mission-tree');
   const [refreshKey, setRefreshKey] = useState(0);
   const [allTasks, setAllTasks] = useState<Task[]>([]);
-
-  // Define sensors with an activation constraint
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      // Require the mouse to move by DRAG_ACTIVATION_DISTANCE px before starting a drag
-      // This allows onClick events to fire on the draggable element
-      activationConstraint: {
-        distance: DRAG_ACTIVATION_DISTANCE,
-      },
-    })
-  );
 
   const { activeBg, readableTextColor } = useThemeColors();
   const { setActiveScope } = useShortcutScope();
@@ -332,8 +319,6 @@ export default function ControlRoom() {
       })
     );
   }, []);
-
-  const dropIntentRef = useRef<{ targetId: string; intent: 'before' | 'after' | 'nest' } | null>(null);
 
   // Reentrancy guard for move operations
   const isMovingRef = useRef(false);
@@ -675,167 +660,113 @@ export default function ControlRoom() {
     }
   };
 
-  // Drag and Drop Handler
-  const handleDragOver = useCallback((event: DragOverEvent) => {
-    const { over, active } = event;
-    if (!over) {
-      dropIntentRef.current = null;
-      return;
-    }
+  const flattenTasks = (nodes: TreeNode[]): Task[] => {
+    const result: Task[] = [];
+    const visit = (node: TreeNode) => {
+      result.push(node.task);
+      node.children.forEach(visit);
+    };
+    nodes.forEach(visit);
+    return result;
+  };
 
-    const overRect = over.rect;
-    const activeRect = active.rect.current?.translated ?? active.rect.current?.initial;
-    if (!overRect || !activeRect) {
-      dropIntentRef.current = { targetId: over.id as string, intent: 'after' };
-      return;
-    }
+  const handleTreeMove = useCallback<MoveHandler<TreeNode>>(({ dragIds, parentId, index }) => {
+    if (!dragIds.length) return;
 
-    const pointerY = activeRect.top + activeRect.height / 2;
-    const ratio = (pointerY - overRect.top) / overRect.height;
+    // Enforce business rules about which task types can be nested under which parents
+    if (parentId && (activeSubTab === 'mission-tree' || activeSubTab === 'recurrent-tasks')) {
+      const parentNode = findNodeInTree(tree, parentId);
+      if (!parentNode) return;
 
-    let intent: 'before' | 'after' | 'nest';
-    if (ratio <= 0.25) {
-      intent = 'before';
-    } else if (ratio >= 0.75) {
-      intent = 'after';
-    } else {
-      intent = 'nest';
-    }
-
-    dropIntentRef.current = { targetId: over.id as string, intent };
-  }, []);
-
-  const handleDragEnd = async (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) {
-      dropIntentRef.current = null;
-      return;
-    }
-
-    const draggedId = active.id as string;
-    const targetId = over.id as string;
-    const allTasks = reviveDates<Task[]>(await ClientAPI.getTasks());
-
-    const draggedTask = allTasks.find(task => task.id === draggedId);
-    const targetTask = allTasks.find(task => task.id === targetId);
-
-    if (!draggedTask || !targetTask) {
-      dropIntentRef.current = null;
-      return;
-    }
-
-    let intent: 'before' | 'after' | 'nest' = 'after';
-    if (dropIntentRef.current && dropIntentRef.current.targetId === targetId) {
-      intent = dropIntentRef.current.intent;
-    }
-
-    let canBeParent = false;
-    if (activeSubTab === 'recurrent-tasks') {
-      canBeParent = canBeParentRecurrent(targetTask.type, draggedTask.type);
-    } else if (activeSubTab === 'mission-tree') {
-      canBeParent = canBeParentMission(targetTask.type, draggedTask.type);
-    }
-
-    if (intent === 'nest' && !canBeParent) {
-      intent = 'after';
-    }
-
-    let newParentId: string | null = draggedTask.parentId || null;
-    let updatedTasks = [...allTasks];
-
-    if (intent === 'nest' && canBeParent) {
-      newParentId = targetTask.id;
-      const targetChildren = allTasks
-        .filter(task => task.parentId === targetTask.id && task.id !== draggedTask.id)
-        .sort((a, b) => (a.order || 0) - (b.order || 0));
-
-      const newOrder = targetChildren.length > 0
-        ? (targetChildren[targetChildren.length - 1].order || 0) + ORDER_INCREMENT
-        : ORDER_INCREMENT;
-
-      await ClientAPI.upsertTask({
-        ...draggedTask,
-        parentId: targetTask.id,
-        order: newOrder,
-      });
-
-      updatedTasks = updatedTasks.map(task => {
-        if (task.id === draggedTask.id) {
-          return { ...draggedTask, parentId: targetTask.id, order: newOrder };
+      const parentType = parentNode.task.type;
+      const isValid = dragIds.every(id => {
+        const childNode = findNodeInTree(tree, id);
+        if (!childNode) return false;
+        const childType = childNode.task.type;
+        if (activeSubTab === 'mission-tree') {
+          return canBeParentMission(parentType, childType);
         }
-        return task;
+        if (activeSubTab === 'recurrent-tasks') {
+          return canBeParentRecurrent(parentType, childType);
+        }
+        return true;
       });
 
-      await normalizeSiblings(targetTask.id, updatedTasks);
-      const newTree = await loadTasks();
-      const updatedNode = findNodeInTree(newTree, draggedId);
-      if (updatedNode) {
-        setSelectedNode(updatedNode);
-      }
-      dropIntentRef.current = null;
-      return;
+      if (!isValid) return;
     }
 
-    newParentId = targetTask.parentId || null;
-    const siblings = allTasks
-      .filter(task => (task.parentId || null) === newParentId && task.id !== draggedTask.id)
+    const tasks = flattenTasks(tree);
+    const taskById = new Map<string, Task>();
+    tasks.forEach(t => taskById.set(t.id, t));
+
+    const movedTasks: Task[] = [];
+    const previousParentIds = new Set<string | null>();
+
+    for (const id of dragIds) {
+      const task = taskById.get(id);
+      if (!task) continue;
+      previousParentIds.add(task.parentId || null);
+      movedTasks.push(task);
+    }
+
+    if (!movedTasks.length) return;
+
+    const newParentId = parentId ?? null;
+
+    // Build the new sibling list under the destination parent, excluding moved tasks.
+    const siblings = tasks
+      .filter(task => (task.parentId || null) === newParentId && !dragIds.includes(task.id))
       .sort((a, b) => (a.order || 0) - (b.order || 0));
 
-    const targetIndex = siblings.findIndex(task => task.id === targetId);
-    if (targetIndex === -1) {
-      dropIntentRef.current = null;
-      return;
-    }
+    const clampedIndex = Math.min(Math.max(index, 0), siblings.length);
+    const reordered = [...siblings];
+    reordered.splice(clampedIndex, 0, ...movedTasks);
 
-    const targetOrder = targetTask.order || 0;
-    let newOrder: number;
-
-    if (intent === 'before') {
-      const beforeSibling = targetIndex > 0 ? siblings[targetIndex - 1] : null;
-      newOrder = beforeSibling
-        ? ((beforeSibling.order || 0) + targetOrder) / 2
-        : targetOrder - ORDER_INCREMENT;
-    } else {
-      const afterSibling = targetIndex < siblings.length - 1 ? siblings[targetIndex + 1] : null;
-      newOrder = afterSibling
-        ? ((afterSibling.order || 0) + targetOrder) / 2
-        : targetOrder + ORDER_INCREMENT;
-    }
-
-    await ClientAPI.upsertTask({
-      ...draggedTask,
-      parentId: newParentId,
-      order: newOrder,
+    const updatedTaskMap = new Map<string, Task>();
+    reordered.forEach((task, idx) => {
+      const updated: Task = {
+        ...task,
+        parentId: newParentId,
+        order: (idx + 1) * ORDER_INCREMENT,
+      };
+      updatedTaskMap.set(updated.id, updated);
     });
 
-    updatedTasks = updatedTasks.map(task => {
-      if (task.id === draggedTask.id) {
-        return { ...draggedTask, parentId: newParentId, order: newOrder };
-      }
-      return task;
-    });
+    const updatedTasks: Task[] = tasks.map(task => updatedTaskMap.get(task.id) ?? task);
 
-    await normalizeSiblings(newParentId, updatedTasks);
-    const newTree = await loadTasks();
-    const updatedNode = findNodeInTree(newTree, draggedId);
+    // Optimistic UI: update local tree immediately
+    const optimisticTree = buildTaskTree(updatedTasks);
+    setTree(optimisticTree);
+
+    const primaryDraggedId = dragIds[0];
+    const updatedNode = findNodeInTree(optimisticTree, primaryDraggedId);
     if (updatedNode) {
       setSelectedNode(updatedNode);
     }
 
-    dropIntentRef.current = null;
-  };
+    // Persist changes in the background without blocking the UI
+    (async () => {
+      try {
+        await Promise.all(
+          Array.from(updatedTaskMap.values()).map(task => ClientAPI.upsertTask(task))
+        );
+
+        const parentsToNormalize = new Set<string | null>([newParentId, ...previousParentIds]);
+        for (const pid of parentsToNormalize) {
+          await normalizeSiblings(pid, updatedTasks);
+        }
+
+        await loadTasks();
+      } catch (error) {
+        console.error('Failed to persist task move:', error);
+        await loadTasks();
+      }
+    })();
+  }, [tree, activeSubTab, normalizeSiblings, loadTasks]);
 
   return (
     <TooltipProvider>
-      <DndContext
-        collisionDetection={closestCenter}
-        modifiers={[restrictToVerticalAxis]}
-        sensors={sensors}
-        autoScroll={true}
-        onDragOver={handleDragOver}
-        onDragEnd={handleDragEnd}
-      >
-        <div className="flex flex-col border-2 border-muted shadow-2xl rounded-xl h-[calc(100vh-12rem)] min-h-[600px] bg-background">
+      <div className="flex flex-col border-2 border-muted shadow-2xl rounded-xl h-[calc(100vh-12rem)] min-h-[600px] bg-background">
 
           {/* Sub-tabs */}
           <Tabs value={activeSubTab} onValueChange={(value) => {
@@ -877,6 +808,7 @@ export default function ControlRoom() {
                     onTypeFilterChange={setTypeFilter}
                     activeSubTab="mission-tree"
                     onChangeOrder={handleChangeOrder}
+                    onMove={handleTreeMove}
                   />
                 </ResizableSidebar>
               ) : (
@@ -916,6 +848,7 @@ export default function ControlRoom() {
                     onTypeFilterChange={setTypeFilter}
                     activeSubTab="recurrent-tasks"
                     onChangeOrder={handleChangeOrder}
+                    onMove={handleTreeMove}
                   />
                 </ResizableSidebar>
               ) : (
@@ -955,6 +888,7 @@ export default function ControlRoom() {
                     onTypeFilterChange={setTypeFilter}
                     activeSubTab="automation-tree"
                     onChangeOrder={handleChangeOrder}
+                    onMove={handleTreeMove}
                   />
                 </ResizableSidebar>
               ) : (
@@ -1011,7 +945,6 @@ export default function ControlRoom() {
             </TabsContent>
           </Tabs>
         </div>
-      </DndContext>
 
       {/* Modal for Creating/Editing Tasks */}
       {taskToEdit && (
