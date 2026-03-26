@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Coins, ArrowRightLeft, History, PlusCircle, ArrowUpRight } from "lucide-react";
+import { formatDisplayDate } from '@/lib/utils/date-utils';
 import { Skeleton } from "@/components/ui/skeleton";
 import { TransferFundsModal } from "./transfer-funds-modal";
 import { ExchangeFundsModal } from "./exchange-funds-modal";
@@ -123,7 +124,7 @@ export function JungleCoinWallet({ characterId, className, onBalanceChange }: Ju
                                         <div key={record.id} className="flex justify-between items-start text-sm border-b border-border/50 pb-2 last:border-0">
                                             <div className="flex flex-col gap-0.5">
                                                 <span className="font-medium text-foreground">{record.name}</span>
-                                                <span className="text-xs text-muted-foreground">{new Date(record.createdAt).toLocaleDateString()}</span>
+                                                <span className="text-xs text-muted-foreground">{formatDisplayDate(record.createdAt)}</span>
                                             </div>
                                             <div className={`font-mono font-medium ${record.jungleCoins > 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
                                                 {record.jungleCoins > 0 ? '+' : ''}{record.jungleCoins} J$

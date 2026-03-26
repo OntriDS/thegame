@@ -26,7 +26,7 @@ export async function onPlayerUpsert(player: Player, previousPlayer?: Player): P
     await appendEntityLog(EntityType.PLAYER, player.id, LogEventType.CREATED, { 
       name: player.name, 
       level: player.level
-    });
+    }, player.createdAt);
     
     await markEffect(effectKey);
     return;

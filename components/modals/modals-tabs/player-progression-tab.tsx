@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Flag, Award, Target, Star, Crown, Zap, Plus, Shield, X, Trophy } from 'lucide-react';
 import { Player, PlayerBadge, PlayerAchievement } from '@/types/entities';
 import { CharacterRole, CHARACTER_ROLE_TYPES } from '@/types/enums';
+import { formatDisplayDate } from '@/lib/utils/date-utils';
 
 // ============================================================================
 // BADGES SECTION - Role-based recognition
@@ -330,7 +331,7 @@ function AchievementsSection({
                       <div className="text-sm text-muted-foreground">{achievement.description}</div>
                     )}
                     <div className="text-xs text-muted-foreground mt-1">
-                      {new Date(achievement.createdAt).toLocaleDateString()}
+                      {formatDisplayDate(achievement.createdAt)}
                     </div>
                   </div>
                 </div>

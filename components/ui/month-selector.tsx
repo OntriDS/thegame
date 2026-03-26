@@ -23,7 +23,9 @@ const monthLabel = (mmyy: string) => {
     if (!mmyy || !mmyy.includes('-')) return mmyy;
     const [mm, yy] = mmyy.split('-');
     const date = new Date(yy.length === 2 ? 2000 + parseInt(yy, 10) : parseInt(yy, 10), parseInt(mm, 10) - 1, 1);
-    return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    const monthName = date.toLocaleDateString('en-US', { month: 'short' });
+    const yearShort = yy.length === 4 ? yy.slice(-2) : yy;
+    return `${monthName} ${yearShort}`;
 }
 
 export function MonthSelector({ 

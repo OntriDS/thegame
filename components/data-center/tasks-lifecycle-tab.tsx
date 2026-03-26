@@ -9,6 +9,7 @@ import { LinksSubModal } from '@/components/modals/submodals/links-submodal';
 import { useState, useEffect } from 'react';
 import { TaskStatus, TaskType, EntityType, LogEventType } from '@/types/enums';
 import { TASK_STATUS_COLORS } from '@/lib/constants/color-constants';
+import { formatDisplayDate } from '@/lib/utils/date-utils';
 import { calculateTaskProfitPercentage } from '@/lib/utils/business-utils';
 import { useThemeColors } from '@/lib/hooks/use-theme-colors';
 import { processLogData } from '@/lib/utils/logging-utils';
@@ -329,7 +330,7 @@ export function TasksLifecycleTab({ tasksLog, onReload, isReloading }: TasksLife
                           {/* Due Date */}
                           {dueDate && (
                             <span className="text-xs text-muted-foreground min-w-0 flex-shrink-0">
-                              due: {new Date(dueDate).toLocaleDateString()}
+                              due: {formatDisplayDate(dueDate)}
                             </span>
                           )}
                           

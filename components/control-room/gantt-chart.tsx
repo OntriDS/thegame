@@ -129,9 +129,9 @@ export default function GanttChart({ tasks, onNewTask, onEditTask }: GanttChartP
                             <ChevronLeft className="h-4 w-4" />
                         </Button>
                         <span className="text-sm font-medium min-w-[120px] text-center">
-                            {viewMode === 'Day' && format(currentDate, 'MMM d, yyyy')}
+                            {viewMode === 'Day' && format(currentDate, 'MMM d, yy')}
                             {viewMode === 'Week' && `Week of ${format(startDate, 'MMM d')}`}
-                            {viewMode === 'Month' && format(currentDate, 'MMMM yyyy')}
+                            {viewMode === 'Month' && format(currentDate, 'MMMM yy')}
                         </span>
                         <Button variant="outline" size="icon" className="h-7 w-7" onClick={handleNext}>
                             <ChevronRight className="h-4 w-4" />

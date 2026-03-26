@@ -43,7 +43,7 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
     const effectKey = EffectKeys.created('sale', sale.id);
     if (await hasEffect(effectKey)) return;
 
-    await appendEntityLog(EntityType.SALE, sale.id, LogEventType.CREATED, getSaleLogDetails(sale));
+    await appendEntityLog(EntityType.SALE, sale.id, LogEventType.CREATED, getSaleLogDetails(sale), sale.saleDate || sale.createdAt);
     await markEffect(effectKey);
 
     // Character creation from emissary fields - when newCustomerName is provided
@@ -83,7 +83,7 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
 
   if (previousSale.status !== sale.status) {
     if (sale.status === 'CANCELLED') {
-      await appendEntityLog(EntityType.SALE, sale.id, LogEventType.CANCELLED, getSaleLogDetails(sale));
+      await appendEntityLog(EntityType.SALE, sale.id, LogEventType.CANCELLED, getSaleLogDetails(sale), sale.cancelledAt || sale.saleDate || new Date());
       // Transitioned from PENDING to CHARGED (both paid and charged)
       const chargedAt = new Date().toISOString();
 
@@ -93,7 +93,7 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
       await appendEntityLog(EntityType.SALE, sale.id, LogEventType.DONE, {
         ...getSaleLogDetails(sale),
         completedAt: chargedAt
-      });
+      }, sale.saleDate || chargedAt);
 
       // Points awarding - ONLY when sale transitions to CHARGED (both paid and charged)
       // Use sale.playerCharacterId directly as playerId (unified ID)
@@ -103,7 +103,7 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
         if (!(await hasEffect(pointsEffectKey))) {
           const points = calculatePointsFromRevenue(sale.totals.totalRevenue);
           const playerId = sale.playerCharacterId || FOUNDER_CHARACTER_ID;
-          await stagePointsForPlayer(playerId, points, sale.id, EntityType.SALE);
+          await stagePointsForPlayer(playerId, points, sale.id, EntityType.SALE, sale.saleDate || new Date());
           await markEffect(pointsEffectKey);
         }
       }
@@ -112,7 +112,7 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
       await processChargedSaleLines(sale);
     } else if (!wasPending && nowPending) {
       // Reverted from DONE to PENDING (became unpaid or uncharged)
-      await appendEntityLog(EntityType.SALE, sale.id, LogEventType.PENDING, getSaleLogDetails(sale));
+      await appendEntityLog(EntityType.SALE, sale.id, LogEventType.PENDING, getSaleLogDetails(sale), sale.saleDate || new Date());
     }
   }
 
@@ -163,7 +163,7 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
     await appendEntityLog(EntityType.SALE, sale.id, LogEventType.COLLECTED, {
       ...getSaleLogDetails(sale),
       collectedAt: collectedAt.toISOString()
-    });
+    }, collectedAt);
   }
 
   // COMPREHENSIVE UPDATE PROPAGATION - when sale properties change

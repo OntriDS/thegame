@@ -12,6 +12,41 @@ import {
 } from '@/lib/constants/app-constants';
 
 /**
+ * Robustly parse a date from various possible formats.
+ * Handles: ISO, DD-MM-YYYY (Display), YYYY-MM-DD (Input), and Date objects.
+ */
+export function parseFlexibleDate(date: Date | string | null | undefined): Date {
+  if (!date) return new Date();
+  if (date instanceof Date) return isValid(date) ? date : new Date();
+  
+  // 1. Try ISO (YYYY-MM-DD...)
+  const iso = parseISO(date);
+  if (isValid(iso)) return iso;
+  
+  try {
+    const { parse } = require('date-fns');
+    
+    // 2. Try DD-MM-YYYY (App Display Format)
+    const display = parse(date, DATE_FORMAT_DISPLAY, new Date());
+    if (isValid(display)) return display;
+    
+    // 3. Try YYYY-MM-DD (HTML Input Format)
+    const input = parse(date, DATE_FORMAT_INPUT, new Date());
+    if (isValid(input)) return input;
+    
+    // 4. Try DD/MM/YY (App Short Format)
+    const short = parse(date, DATE_FORMAT_SHORT, new Date());
+    if (isValid(short)) return short;
+
+  } catch (e) {
+    // Fallback to native Date
+  }
+  
+  const native = new Date(date);
+  return isValid(native) ? native : new Date();
+}
+
+/**
  * Format a date using the application's standard display format (DD-MM-YYYY)
  * @param date - Date object or date string
  * @returns Formatted date string or empty string if invalid
@@ -20,7 +55,7 @@ export function formatDisplayDate(date: Date | string | null | undefined): strin
   if (!date) return '';
 
   try {
-    const dateObj = typeof date === 'string' ? parseISO(date) : date;
+    const dateObj = parseFlexibleDate(date);
     if (!isValid(dateObj)) return '';
 
     return format(dateObj, DATE_FORMAT_DISPLAY);
@@ -108,11 +143,7 @@ export function formatMonthYear(date: Date | string | null | undefined): string 
  */
 export function formatMonthKey(date: Date | string | null | undefined): string {
   try {
-    const dateObj = !date
-      ? new Date()
-      : typeof date === 'string'
-        ? parseISO(date)
-        : date;
+    const dateObj = parseFlexibleDate(date);
 
     return isValid(dateObj)
       ? format(dateObj, DATE_FORMAT_MONTH_KEY)
@@ -189,9 +220,7 @@ export function getCurrentInputDate(): string {
  * @returns Date object set to the end of that month
  */
 export function calculateClosingDate(referenceDate: Date | string): Date {
-  const dateObj = typeof referenceDate === 'string' ? parseISO(referenceDate) : referenceDate;
-  // Fallback to now if invalid, though workflows should handle validity before calling
-  const validDate = isValid(dateObj) ? dateObj : new Date();
+  const validDate = parseFlexibleDate(referenceDate);
 
   // Get last day of the month (month + 1, day 0)
   const endOfMonth = new Date(validDate.getFullYear(), validDate.getMonth() + 1, 0);
@@ -284,9 +313,14 @@ export function reviveDates<T>(data: T): T {
 
   if (typeof data === 'object') {
     const revived = {} as T;
+    const dateFields = [
+      'createdAt', 'updatedAt', 'saleDate', 'dueDate', 
+      'collectedAt', 'doneAt', 'soldAt', 'lastRestockDate'
+    ];
+
     for (const [key, value] of Object.entries(data)) {
-      if (key === 'createdAt' || key === 'updatedAt' || key === 'saleDate' || key === 'dueDate' || key === 'collectedAt' || key === 'doneAt') {
-        (revived as any)[key] = value ? new Date(value) : value;
+      if (dateFields.includes(key)) {
+        (revived as any)[key] = value ? parseFlexibleDate(value as string) : value;
       } else {
         (revived as any)[key] = reviveDates(value);
       }

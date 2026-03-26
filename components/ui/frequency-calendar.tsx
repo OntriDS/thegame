@@ -211,7 +211,7 @@ export function FrequencyCalendar({
                       <Button variant="outline" className="w-full justify-start h-8 text-sm">
                         <CalendarIcon className="mr-2 h-3 w-3" />
                         {config.type === RecurrentFrequency.DAILY ?
-                          (customDays.length > 0 && customDays[0] instanceof Date ? customDays[0].toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }) : 'Select starting day') :
+                          (customDays.length > 0 && customDays[0] instanceof Date ? `${customDays[0].toLocaleDateString('en-US', { weekday: 'long' })}, ${formatDisplayDate(customDays[0])}` : 'Select starting day') :
                           config.type === RecurrentFrequency.WEEKLY ?
                             (customDays.length > 0 && customDays[0] instanceof Date ? customDays[0].toLocaleDateString('en-US', { weekday: 'long' }) : 'Select starting day of week') :
                             config.type === RecurrentFrequency.MONTHLY ?

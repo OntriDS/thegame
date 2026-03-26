@@ -27,6 +27,8 @@ import { recalculateCharacterWallet } from '../financial-record-utils';
 
 const STATE_FIELDS = ['isNotPaid', 'isNotCharged', 'isCollected'];
 
+const getFinancialDate = (f: FinancialRecord) => new Date(f.year, f.month - 1, 1);
+
 export async function onFinancialUpsert(financial: FinancialRecord, previousFinancial?: FinancialRecord): Promise<void> {
   // New financial record creation
   if (!previousFinancial) {
@@ -41,7 +43,7 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
       revenue: financial.revenue,
       isNotPaid: financial.isNotPaid,
       isNotCharged: financial.isNotCharged
-    });
+    }, financial.createdAt || getFinancialDate(financial));
     await markEffect(effectKey);
 
     // Character creation from emissary fields - when newCustomerName is provided
@@ -96,7 +98,7 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
                   rp: points.rp || 0,
                   fp: points.fp || 0,
                   hp: points.hp || 0
-                }, financial.id, EntityType.FINANCIAL);
+                }, financial.id, EntityType.FINANCIAL, getFinancialDate(financial));
                 await markEffect(stagingKey);
               }
             }
@@ -188,7 +190,7 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
             rp: normalizedFinancial.rewards.points.rp || 0,
             fp: normalizedFinancial.rewards.points.fp || 0,
             hp: normalizedFinancial.rewards.points.hp || 0
-          }, normalizedFinancial.id, EntityType.FINANCIAL);
+          }, normalizedFinancial.id, EntityType.FINANCIAL, collectedAt);
         }
 
         await markEffect(pointsRewardedEffectKey); // Mark the rewarded effect, even if no points were rewarded (e.g., no rewards or not staged)
@@ -212,8 +214,8 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
       revenue: financial.revenue,
       isNotPaid: financial.isNotPaid,
       isNotCharged: financial.isNotCharged,
-      completedAt: new Date().toISOString()
-    });
+      pendingAt: new Date().toISOString()
+    }, getFinancialDate(financial));
 
     // NEW: Archive Index Tracking
     let snapshotMonthDate: Date;
@@ -255,7 +257,7 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
       isNotPaid: financial.isNotPaid,
       isNotCharged: financial.isNotCharged,
       pendingAt: new Date().toISOString()
-    });
+    }, getFinancialDate(financial));
   }
 
   // Collection detection - Dual detection: status OR flag change to COLLECTED
@@ -288,7 +290,7 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
         cost: financial.cost,
         revenue: financial.revenue,
         collectedAt: collectedAt.toISOString()
-      });
+      }, collectedAt);
 
       // Reward points if rewards exist AND they were staged (prevents double-counting legacy)
       const stagingEffectKey = EffectKeys.sideEffect('financial', financial.id, 'pointsStaged');
@@ -302,7 +304,7 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
             rp: financial.rewards.points.rp || 0,
             fp: financial.rewards.points.fp || 0,
             hp: financial.rewards.points.hp || 0
-          }, financial.id, EntityType.FINANCIAL);
+          }, financial.id, EntityType.FINANCIAL, collectedAt);
           await appendEntityLog(EntityType.FINANCIAL, financial.id, LogEventType.UPDATED, {
             name: financial.name,
             type: financial.type,

@@ -37,7 +37,8 @@ export async function awardPointsToPlayer(
   playerId: string,
   points: Rewards['points'],
   sourceId: string,
-  sourceType: string
+  sourceType: string,
+  customTimestamp?: string | Date
 ): Promise<void> {
   try {
     const resolvedPlayerId = await resolveToPlayerIdMaybeCharacter(playerId);
@@ -116,7 +117,7 @@ export async function awardPointsToPlayer(
     );
 
     await createLink(link);
-    await appendPlayerPointsLog(resolvedPlayerId, points, sourceId, sourceType);
+    await appendPlayerPointsLog(resolvedPlayerId, points, sourceId, sourceType, customTimestamp);
   } catch (error) {
     console.error(`[awardPointsToPlayer] ❌ Failed to award points:`, error);
     throw error;
@@ -131,7 +132,8 @@ export async function stagePointsForPlayer(
   playerId: string,
   points: Rewards['points'],
   sourceId: string,
-  sourceType: string
+  sourceType: string,
+  customTimestamp?: string | Date
 ): Promise<void> {
   try {
     const resolvedPlayerId = await resolveToPlayerIdMaybeCharacter(playerId);
@@ -272,7 +274,8 @@ export async function rewardPointsToPlayer(
   characterId: string,
   points: Rewards['points'],
   sourceEntityId: string,
-  sourceEntityType: string
+  sourceEntityType: string,
+  customTimestamp?: string | Date
 ): Promise<void> {
   try {
     const resolvedPlayerId = await resolveToPlayerIdMaybeCharacter(characterId);
@@ -338,7 +341,7 @@ export async function rewardPointsToPlayer(
     );
 
     await createLink(link);
-    await appendPlayerPointsLog(resolvedPlayerId, points, sourceEntityId, sourceEntityType);
+    await appendPlayerPointsLog(resolvedPlayerId, points, sourceEntityId, sourceEntityType, customTimestamp);
 
 
   } catch (error) {

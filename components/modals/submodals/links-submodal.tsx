@@ -6,6 +6,7 @@ import { getZIndexClass } from '@/lib/utils/z-index-utils';
 import { EntityType } from '@/types/enums';
 import { useEffect, useState } from 'react';
 import { ClientAPI } from '@/lib/client-api';
+import { formatDisplayDate } from '@/lib/utils/date-utils';
 
 interface LinksSubModalProps {
   open: boolean;
@@ -365,7 +366,7 @@ function LinkCard({ link, getDisplayName }: { link: any; getDisplayName: (type: 
         </span>
         {link.createdAt && (
           <span className="text-xs text-muted-foreground shrink-0 ml-2">
-            {new Date(link.createdAt).toLocaleDateString()}
+            {formatDisplayDate(link.createdAt)}
           </span>
         )}
       </div>

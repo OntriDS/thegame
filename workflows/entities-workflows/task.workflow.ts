@@ -69,7 +69,7 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
         dueDate: task.dueDate,
         frequencyConfig: task.frequencyConfig,
         _logOrder: 0
-      });
+      }, task.createdAt);
       await markEffect(effectKey);
     }
 
@@ -134,7 +134,7 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
         frequencyConfig: task.frequencyConfig,
         doneAt: task.doneAt,
         _logOrder: 1
-      });
+      }, task.doneAt);
     }
   }
 
@@ -162,14 +162,14 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
         station: task.station,
         priority: task.priority,
         collectedAt: collectedAt.toISOString()
-      });
+      }, collectedAt);
 
       // Reward points if rewards exist AND they were staged (prevents double-counting legacy tasks)
       const stagingEffectKey = EffectKeys.sideEffect('task', task.id, 'pointsStaged');
 
       if (task.rewards?.points && await hasEffect(stagingEffectKey)) {
         const playerId = task.playerCharacterId || FOUNDER_CHARACTER_ID;
-        await rewardPointsToPlayer(playerId, task.rewards.points, task.id, EntityType.TASK);
+        await rewardPointsToPlayer(playerId, task.rewards.points, task.id, EntityType.TASK, collectedAt);
       }
 
       await markEffect(pointsRewardedEffectKey);
@@ -726,13 +726,13 @@ async function cascadeCollectionToChildren(parentTask: Task, collectedAt: Date):
           priority: childInstance.priority,
           collectedAt: collectedAt.toISOString(),
           cascadedFrom: parentTask.id
-        });
+        }, collectedAt);
 
         // 3. Reward points if child has rewards and points were staged
         const childStagingKey = EffectKeys.sideEffect('task', childInstance.id, 'pointsStaged');
         if (childInstance.rewards?.points && await hasEffect(childStagingKey)) {
           const playerId = childInstance.playerCharacterId || FOUNDER_CHARACTER_ID;
-          await rewardPointsToPlayer(playerId, childInstance.rewards.points, childInstance.id, EntityType.TASK);
+          await rewardPointsToPlayer(playerId, childInstance.rewards.points, childInstance.id, EntityType.TASK, collectedAt);
         }
 
         // 4. Update child task with collection data

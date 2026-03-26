@@ -11,6 +11,7 @@ import { getTaskById, upsertTask } from '@/data-store/datastore';
 import { getPlayerById, upsertPlayer } from '@/data-store/datastore';
 import { getAllCharacters, upsertCharacter } from '@/data-store/datastore';
 import { resolveToPlayerIdMaybeCharacter } from './points-rewards-utils';
+import { formatDisplayDate } from '@/lib/utils/date-utils';
 
 // ============================================================================
 // TASK → FINANCIAL RECORD PROPAGATION
@@ -242,7 +243,7 @@ export async function updateItemsCreatedByTask(
             itemType: updatedItem.type,
             subItemType: updatedItem.subItemType,
             quantity: updatedItem.stock?.reduce((sum, s) => sum + s.quantity, 0) || 0
-          });
+          }, task.updatedAt || new Date());
 
           await markEffect(updateKey);
 
@@ -416,7 +417,7 @@ export async function updateItemsCreatedByRecord(
           itemType: updatedItem.type,
           subItemType: updatedItem.subItemType,
           quantity: updatedItem.stock?.reduce((sum, s) => sum + s.quantity, 0) || 0
-        });
+        }, record.updatedAt || new Date(record.year, record.month - 1, 1));
 
         await markEffect(updateKey);
 
@@ -600,7 +601,7 @@ export async function updateItemsFromSale(
           itemType: item.type,
           subItemType: item.subItemType,
           quantity: line.quantity
-        });
+        }, sale.saleDate || sale.doneAt || new Date());
 
         // FIX: Use line.lineId for unique Sold Item ID (not sale.id.slice(-6))
         // This prevents collisions when the same item appears on multiple lines at different prices
@@ -618,7 +619,7 @@ export async function updateItemsFromSale(
           sourceRecordId: sale.id, // Link back to sale
           ownerCharacterId: sale.customerId || item.ownerCharacterId || null, // Customer from sale
           updatedAt: new Date(),
-          description: `Sold in sale ${sale.counterpartyName || 'Sale'} (${new Date(sale.saleDate || new Date()).toLocaleDateString()})`
+          description: `Sold in sale ${sale.counterpartyName || 'Sale'} (${formatDisplayDate(sale.saleDate || new Date())})`
         };
 
         // Save Sold Item entity so "Sold Items Tab" and Archive find it

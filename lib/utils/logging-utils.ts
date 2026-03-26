@@ -1,5 +1,6 @@
 // lib/utils/logging-utils.ts
 import { formatDateDDMMYYYY } from '@/lib/constants/date-constants';
+import { formatDisplayDate } from '@/lib/utils/date-utils';
 import { EntityType } from '@/types/enums';
 // IMPORTANT: Do not import server-only logging module here.
 // We provide a tiny local helper to ensure an ID without touching KV.
@@ -344,11 +345,7 @@ export function formatLogEntry(entry: LogEntry): LogEntry & { formattedDate: str
   if (typeof raw === 'string' && /T/.test(raw)) {
     const d = new Date(raw);
     if (!isNaN(d.getTime())) {
-      formattedDate = d.toLocaleDateString('en-GB', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-      });
+      formattedDate = formatDisplayDate(d);
       formattedTime = d.toLocaleTimeString('en-GB', {
         hour: '2-digit',
         minute: '2-digit'

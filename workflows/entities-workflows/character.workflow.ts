@@ -21,7 +21,7 @@ export async function onCharacterUpsert(character: Character, previousCharacter?
     await appendEntityLog(EntityType.CHARACTER, character.id, LogEventType.CREATED, { 
       name: character.name, 
       roles: character.roles
-    });
+    }, character.createdAt);
     
     await markEffect(effectKey);
     return;

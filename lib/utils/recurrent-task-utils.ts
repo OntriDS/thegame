@@ -8,6 +8,7 @@ import { hasEffect, markEffect } from '@/data-store/effects-registry';
 import { appendEntityLog } from '@/workflows/entities-logging';
 import { FrequencyConfig } from '@/components/ui/frequency-calendar';
 import { v4 as uuid } from 'uuid';
+import { formatDisplayDate } from '@/lib/utils/date-utils';
 import { ORDER_INCREMENT } from '@/lib/constants/app-constants';
 import { addDays, addWeeks, addMonths } from 'date-fns';
 
@@ -97,11 +98,7 @@ export function spawnRecurrentInstance(
   template: Task,
   dueDate: Date
 ): Task {
-  const formattedDate = dueDate.toLocaleDateString('en-GB', {
-    day: '2-digit',
-    month: 'short',
-    year: '2-digit'
-  }).replace(/\s/, '\u00A0'); // keep day-month together
+  const formattedDate = formatDisplayDate(dueDate);
   const separator = ' \u2022 ';
   const instanceOrder = dueDate.getTime();
   return {

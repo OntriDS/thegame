@@ -8,7 +8,8 @@ import { upsertTask } from '@/data-store/datastore';
 import { makeLink } from '@/links/links-workflows';
 import { createLink } from '@/links/link-registry';
 import { hasEffect, markEffect } from '@/data-store/effects-registry';
-import { EffectKeys, buildArchiveCollectionIndexKey } from '@/data-store/keys';
+import { EffectKeys, buildArchiveCollectionIndexKey, buildArchiveMonthsKey, buildMonthIndexKey } from '@/data-store/keys';
+import { calculateClosingDate, formatMonthKey, formatDisplayDate } from '@/lib/utils/date-utils';
 import { appendEntityLog } from './entities-logging';
 import { createFinancialRecordFromSale } from './financial-record-utils';
 import { ORDER_INCREMENT } from '@/lib/constants/app-constants';
@@ -195,7 +196,7 @@ export async function processItemSaleLine(line: ItemSaleLine, sale: Sale): Promi
       itemType: item.type,
       subItemType: item.subItemType,
       quantity: line.quantity
-    });
+    }, sale.saleDate);
 
     console.log(`[processItemSaleLine] ✅ Processed item sale: ${item.name} x${line.quantity}`);
 
@@ -257,7 +258,7 @@ export async function processBundleSaleLine(line: BundleSaleLine, sale: Sale): P
         itemType: bundleItem.type,
         subItemType: bundleItem.subItemType,
         quantity: line.quantity
-      });
+      }, sale.saleDate);
 
       // Create SALE_ITEM link for the bundle
       const bundleLink = makeLink(
@@ -330,7 +331,7 @@ export async function processBundleSaleLine(line: BundleSaleLine, sale: Sale): P
           itemType: item.type,
           subItemType: item.subItemType,
           quantity: toDeduct
-        });
+        }, sale.saleDate);
         processedItems.push({ item, quantity: toDeduct });
 
         // Create SALE_ITEM link for each item consumed
@@ -452,7 +453,7 @@ export async function processServiceLine(line: ServiceLine, sale: Sale): Promise
       saleId: sale.id,
       serviceDescription: line.description,
       station: line.station
-    });
+    }, sale.saleDate || serviceTask.createdAt);
 
     console.log(`[processServiceLine] ✅ Created task from service: ${serviceTask.name}`);
 
@@ -525,7 +526,7 @@ export async function ensureSoldItemEntities(sale: Sale): Promise<void> {
         sourceRecordId: sale.id, // Link back to sale
         ownerCharacterId: sale.customerId || item.ownerCharacterId || null, // Customer from sale
         updatedAt: new Date(),
-        description: `Sold in ${sale.counterpartyName || 'Sale'} (${new Date(sale.saleDate || new Date()).toLocaleDateString()})`
+        description: `Sold in ${sale.counterpartyName || 'Sale'} (${formatDisplayDate(sale.saleDate || new Date())})`
       };
 
       // Persist the Sold Item entity (skip workflows to avoid duplicate logs)
@@ -534,7 +535,7 @@ export async function ensureSoldItemEntities(sale: Sale): Promise<void> {
       // Register in Monthly Archive Index
       const archiveMonth = calculateClosingDate(soldItemEntity.soldAt || new Date());
       const monthKey = formatMonthKey(archiveMonth);
-      await kvSAdd(buildArchiveCollectionIndexKey('items', monthKey), soldItemEntity.id);
+      await kvSAdd(buildMonthIndexKey(EntityType.ITEM, monthKey), soldItemEntity.id);
       await kvSAdd(buildArchiveMonthsKey(), monthKey);
 
       // Create SALE_ITEM link for the sold item entity
@@ -598,7 +599,7 @@ export async function ensureSoldItemEntities(sale: Sale): Promise<void> {
         sourceRecordId: sale.id, // Link back to sale
         ownerCharacterId: sale.customerId || bundleItem.ownerCharacterId || null, // Customer from sale
         updatedAt: new Date(),
-        description: `Bundle Sold in ${sale.counterpartyName || 'Sale'} (${new Date(sale.saleDate || new Date()).toLocaleDateString()}) - ${line.quantity} bundles`
+        description: `Bundle Sold in ${sale.counterpartyName || 'Sale'} (${formatDisplayDate(sale.saleDate || new Date())}) - ${line.quantity} bundles`
       };
 
       // Persist the Sold Bundle Item entity
@@ -607,7 +608,7 @@ export async function ensureSoldItemEntities(sale: Sale): Promise<void> {
       // Register in Monthly Archive Index
       const bundleArchiveMonth = calculateClosingDate(soldBundleItemEntity.soldAt as Date || new Date());
       const bundleMonthKey = formatMonthKey(bundleArchiveMonth);
-      await kvSAdd(buildArchiveCollectionIndexKey('items', bundleMonthKey), soldBundleItemEntity.id);
+      await kvSAdd(buildMonthIndexKey(EntityType.ITEM, bundleMonthKey), soldBundleItemEntity.id);
       await kvSAdd(buildArchiveMonthsKey(), bundleMonthKey);
 
       // Create SALE_ITEM link for the sold bundle entity

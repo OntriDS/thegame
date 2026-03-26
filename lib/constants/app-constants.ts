@@ -35,11 +35,11 @@ export const YEAR_MIN = 2000; // Minimum year for date inputs
 export const YEAR_MAX = 2050; // Maximum year for date inputs
 
 // Date format system - DD-MM-YYYY (day-month-year) - logical progression from smallest to largest
-export const DATE_FORMAT_DISPLAY = 'dd-MM-yyyy'; // Display format: 25-12-2024
+export const DATE_FORMAT_DISPLAY = 'dd-MM-yy'; // Display format: 25-12-24
 export const DATE_FORMAT_INPUT = 'yyyy-MM-dd'; // Input format: 2024-12-25 (HTML date input)
-export const DATE_FORMAT_LONG = 'dd MMMM yyyy'; // Long format: 25 December 2024
+export const DATE_FORMAT_LONG = 'dd MMMM yy'; // Long format: 25 December 24
 export const DATE_FORMAT_SHORT = 'dd/MM/yy'; // Short format: 25/12/24
-export const DATE_FORMAT_MONTH_YEAR = 'MMMM yyyy'; // Month year: December 2024
+export const DATE_FORMAT_MONTH_YEAR = 'MMMM yy'; // Month year: December 24
 export const DATE_FORMAT_MONTH_KEY = 'MM-yy'; // Archive key format: 12-24
 
 // Currency and financial constants

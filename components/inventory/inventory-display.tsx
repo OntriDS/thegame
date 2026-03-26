@@ -26,7 +26,7 @@ import { useKeyboardShortcuts } from '@/lib/hooks/use-keyboard-shortcuts';
 import { getAreaForStation } from '@/lib/utils/business-structure-utils';
 import { MonthSelector } from '@/components/ui/month-selector';
 import { Switch } from '@/components/ui/switch';
-import { getCurrentMonthKey, sortMonthKeys } from '@/lib/utils/date-utils';
+import { getCurrentMonthKey, sortMonthKeys, formatDisplayDate } from '@/lib/utils/date-utils';
 
 interface InventoryDisplayProps {
   sites: Site[];
@@ -1434,7 +1434,7 @@ export function InventoryDisplay({
                 <div className="flex items-center justify-between gap-2">
                   {item.soldAt ? (
                     <span className="text-[11px] text-muted-foreground">
-                      {new Date(item.soldAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      {item.soldAt ? formatDisplayDate(item.soldAt) : '-'}
                     </span>
                   ) : <span />}
                   {siteName && (

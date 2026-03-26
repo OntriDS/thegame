@@ -88,9 +88,10 @@ export async function appendEntityLog(
   entityType: EntityType,
   entityId: string,
   event: LogEventType,
-  details: Record<string, any>
+  details: Record<string, any>,
+  customTimestamp?: string | Date
 ): Promise<void> {
-  const monthKey = getCurrentMonthKey();
+  const monthKey = customTimestamp ? getMonthKeyFromTimestamp(customTimestamp) : getCurrentMonthKey();
   const listKey = buildLogMonthKey(entityType, monthKey);
 
   // 1. Construct the Strict Lean Payload based on EntityType
@@ -99,7 +100,7 @@ export async function appendEntityLog(
     id: uuid(),
     entityId,
     event,
-    timestamp: new Date().toISOString()
+    timestamp: customTimestamp ? (typeof customTimestamp === 'string' ? customTimestamp : customTimestamp.toISOString()) : new Date().toISOString()
   };
 
   switch (entityType) {
@@ -368,9 +369,10 @@ export async function appendPlayerPointsLog(
   playerId: string,
   points: { xp: number; rp: number; fp: number; hp: number },
   sourceId: string,
-  sourceType: string
+  sourceType: string,
+  customTimestamp?: string | Date
 ): Promise<void> {
-  const monthKey = getCurrentMonthKey();
+  const monthKey = customTimestamp ? getMonthKeyFromTimestamp(customTimestamp) : getCurrentMonthKey();
   const listKey = buildLogMonthKey(EntityType.PLAYER, monthKey);
 
   const logEntry = {
@@ -381,7 +383,7 @@ export async function appendPlayerPointsLog(
     sourceId: sourceId,
     sourceType: sourceType,
     description: `XP+${points.xp}, RP+${points.rp}, FP+${points.fp}, HP+${points.hp} from ${sourceType}`,
-    timestamp: new Date().toISOString()
+    timestamp: customTimestamp ? (typeof customTimestamp === 'string' ? customTimestamp : customTimestamp.toISOString()) : new Date().toISOString()
   };
 
   await kvLPush(listKey, JSON.stringify(logEntry));
@@ -391,9 +393,10 @@ export async function appendPlayerPointsLog(
 export async function appendPlayerPointsChangedLog(
   playerId: string,
   totalPoints: { xp: number; rp: number; fp: number; hp: number },
-  points: { xp: number; rp: number; fp: number; hp: number }
+  points: { xp: number; rp: number; fp: number; hp: number },
+  customTimestamp?: string | Date
 ): Promise<void> {
-  const monthKey = getCurrentMonthKey();
+  const monthKey = customTimestamp ? getMonthKeyFromTimestamp(customTimestamp) : getCurrentMonthKey();
   const listKey = buildLogMonthKey(EntityType.PLAYER, monthKey);
 
   const logEntry = {
@@ -403,7 +406,7 @@ export async function appendPlayerPointsChangedLog(
     totalPoints: totalPoints,
     points: points,
     description: `Total points: XP=${points.xp}, RP=${points.rp}, FP=${points.fp}, HP=${points.hp}`,
-    timestamp: new Date().toISOString()
+    timestamp: customTimestamp ? (typeof customTimestamp === 'string' ? customTimestamp : customTimestamp.toISOString()) : new Date().toISOString()
   };
 
   await kvLPush(listKey, JSON.stringify(logEntry));

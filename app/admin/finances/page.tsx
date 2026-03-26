@@ -37,7 +37,7 @@ import { getCompanyAreas, getPersonalAreas, isCompanyStation, getAreaForStation 
 import { CompanyRecordsList, PersonalRecordsList } from '@/components/finances/financial-records-components';
 import { MonthlyHistoricalCashflows } from '@/components/finances/monthly-historical-cashflows';
 import { MonthSelector } from '@/components/ui/month-selector';
-import { formatMonthKey, getCurrentMonthKey, sortMonthKeys } from '@/lib/utils/date-utils';
+import { formatMonthKey, getCurrentMonthKey, sortMonthKeys, formatDisplayDate } from '@/lib/utils/date-utils';
 import { Switch } from '@/components/ui/switch';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
 import {
@@ -84,7 +84,8 @@ import {
 // Helper function for formatting month/year
 const formatMonthYear = (year: number, month: number) => {
   const monthName = getMonthName(month);
-  return `${monthName} ${year}`;
+  const yy = String(year).slice(-2);
+  return `${monthName} ${yy}`;
 };
 
 type InventoryBucketTotals = Record<
@@ -865,7 +866,7 @@ export default function FinancesPage() {
                                 {treasuryData.buybacks.map((buyback: any) => (
                                   <div key={buyback.id} className="text-xs border border-border/30 rounded-md p-2.5 bg-muted/20 hover:bg-muted/30 transition-colors">
                                     <div className="flex justify-between items-start mb-1">
-                                      <div className="font-medium text-foreground/90">{new Date(buyback.date).toLocaleDateString()}</div>
+                                      <div className="font-medium text-foreground/90">{formatDisplayDate(buyback.date)}</div>
                                       <div className="text-right">
                                         <div className="font-semibold text-foreground">{buyback.j$BoughtBack.toFixed(2)} J$</div>
                                         {buyback.cashOutType === 'USD' ? (

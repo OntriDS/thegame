@@ -32,7 +32,7 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
       itemType: item.type,
       subItemType: item.subItemType,
       soldQuantity: item.stock?.reduce((sum: number, stock: any) => sum + stock.quantity, 0) || 0
-    });
+    }, item.createdAt);
 
     await markEffect(effectKey);
 
@@ -61,7 +61,7 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
         itemType: item.type,
         subItemType: item.subItemType,
         quantity: 1
-      });
+      }, item.updatedAt || new Date());
     }
   }
 
@@ -113,8 +113,10 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
     
     await upsertItem(soldItemClone, { skipWorkflowEffects: true });
     
+    // THEGAME MARCH FIX: Standardize on monthly index, no 'collected' archive for items
+    const { buildMonthIndexKey } = await import('@/data-store/keys');
     const { kvSAdd } = await import('@/data-store/kv');
-    await kvSAdd(buildArchiveCollectionIndexKey('items', monthKey), cloneId);
+    await kvSAdd(buildMonthIndexKey(EntityType.ITEM, monthKey), cloneId);
     await kvSAdd(buildArchiveMonthsKey(), monthKey);
 
     // 3. MANAGE THE BASE ITEM (Inventory Shell)
@@ -152,7 +154,9 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
           soldAt: soldAt,
           updatedAt: new Date()
         };
-        await kvSAdd(buildArchiveCollectionIndexKey('items', monthKey), item.id);
+        // THEGAME MARCH FIX: Use standard monthly index
+        const { buildMonthIndexKey } = await import('@/data-store/keys');
+        await kvSAdd(buildMonthIndexKey(EntityType.ITEM, monthKey), item.id);
       }
     }
 
@@ -164,7 +168,7 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
       itemType: item.type,
       subItemType: item.subItemType,
       soldQuantity: quantityToSell
-    });
+    }, item.soldAt || soldAt);
 
     if (item.rewards?.points) {
       const playerId = item.ownerCharacterId || FOUNDER_CHARACTER_ID;
@@ -219,7 +223,7 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
       itemType: item.type,
       subItemType: item.subItemType,
       soldQuantity: item.quantitySold || 1
-    });
+    }, collectedAt);
 
     // Record Archive Index for COLLECTED case 
     // Usually items reach Archive on SOLD. But if they jump straight to COLLECTED, capture that.
@@ -229,10 +233,9 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
     if (!(await hasEffect(archiveIndexEffectKey))) {
       const monthKey = formatMonthKey(archiveMonth);
       const { kvSAdd } = await import('@/data-store/kv');
-      const collectedIndexKey = buildArchiveCollectionIndexKey('items', monthKey);
-      await kvSAdd(collectedIndexKey, item.id);
-
-      // The item's existence in the index and its inherent dates are the single source of truth.
+      const { buildMonthIndexKey } = await import('@/data-store/keys');
+      const itemsMonthKey = buildMonthIndexKey(EntityType.ITEM, monthKey);
+      await kvSAdd(itemsMonthKey, item.id);
 
       await markEffect(archiveIndexEffectKey);
     }
@@ -267,30 +270,30 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
     const isArchivable = isSoldStatus(item.status) || isCollectedStatus(item.status) || !!item.isCollected;
 
     if (isArchivable) {
-      let currentTargetDate = item.soldAt || item.collectedAt || item.createdAt || new Date();
+      const currentTargetDate = item.soldAt || item.collectedAt || item.createdAt || new Date();
       const targetMonth = formatMonthKey(calculateClosingDate(currentTargetDate));
 
       const { kvSAdd, kvSRem } = await import('@/data-store/kv');
+      const { buildMonthIndexKey } = await import('@/data-store/keys');
 
       // Remove from all other months to ensure single source of truth
       const allMonths = await getAvailableArchiveMonths();
       for (const m of allMonths) {
         if (m !== targetMonth) {
-          await kvSRem(buildArchiveCollectionIndexKey('items', m), item.id);
+          await kvSRem(buildMonthIndexKey(EntityType.ITEM, m), item.id);
         }
       }
 
       // Add to the correct designated month
-      await kvSAdd(buildArchiveCollectionIndexKey('items', targetMonth), item.id);
+      await kvSAdd(buildMonthIndexKey(EntityType.ITEM, targetMonth), item.id);
       await kvSAdd(buildArchiveMonthsKey(), targetMonth);
-
     } else {
       // Clean up indexes if item reverts to an active inventory state
       const { kvSRem } = await import('@/data-store/kv');
-      const { buildArchiveCollectionIndexKey } = await import('@/data-store/keys');
+      const { buildMonthIndexKey } = await import('@/data-store/keys');
       const allMonths = await getAvailableArchiveMonths();
       for (const m of allMonths) {
-        await kvSRem(buildArchiveCollectionIndexKey('items', m), item.id);
+        await kvSRem(buildMonthIndexKey(EntityType.ITEM, m), item.id);
       }
     }
   }

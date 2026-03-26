@@ -11,6 +11,7 @@ import { processLogData } from '@/lib/utils/logging-utils';
 import { EntityType, LogEventType } from '@/types/enums';
 import { LOG_DISPLAY_ICONS, FINANCIAL_ABBREVIATIONS } from '@/lib/constants/icon-maps';
 import { ItemStatus, ItemType } from '@/types/enums';
+import { formatDisplayDate } from '@/lib/utils/date-utils';
 import { ITEM_STATUS_COLORS } from '@/lib/constants/color-constants';
 import { useThemeColors } from '@/lib/hooks/use-theme-colors';
 import { ITEM_TYPE_ICONS } from '@/lib/constants/icon-maps';
@@ -395,7 +396,7 @@ export function ItemsLifecycleTab({ itemsLog, onReload, isReloading }: ItemsLife
 
                           {eventKind === LogEventType.COLLECTED.toLowerCase() && entry.collectedAt && (
                             <span className="text-muted-foreground min-w-0 flex-shrink-0">
-                              collected at: {new Date(entry.collectedAt).toLocaleDateString()}
+                              collected at: {entry.collectedAt ? formatDisplayDate(entry.collectedAt) : 'N/A'}
                             </span>
                           )}
 

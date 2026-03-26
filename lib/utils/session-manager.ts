@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import type { AISession } from '@/types/entities';
 import { SYSTEM_PRESET_PROMPTS, type AISystemPreset } from '@/lib/ai/system-presets';
 import { getSessionById, getAllSessions, upsertSession, deleteSession as repoDeleteSession } from '@/data-store/repositories/session.repo';
+import { formatDisplayDate } from '@/lib/utils/date-utils';
 
 const MAX_SESSIONS = 20; // Maximum number of sessions allowed
 
@@ -49,7 +50,9 @@ export class SessionManager {
     const now = new Date();
 
     // Generate default name based on timestamp
-    const defaultName = `Session ${now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}`;
+    // Generate default name based on timestamp (DD-MM-YY HH:mm)
+    const timeStr = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    const defaultName = `Session ${formatDisplayDate(now)} ${timeStr}`;
 
       const session: AISession = {
         id: sessionId,

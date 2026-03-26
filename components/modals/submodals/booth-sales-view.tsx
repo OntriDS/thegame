@@ -34,6 +34,7 @@ import {
 import { Sale, SaleLine, Item, Site, Character, ServiceLine, ItemSaleLine, BundleSaleLine, Business, Contract } from '@/types/entities';
 import { v4 as uuid } from 'uuid';
 import { createSiteOptionsWithCategories } from '@/lib/utils/site-options-utils';
+import { formatDisplayDate } from '@/lib/utils/date-utils';
 import SaleItemsSubModal from './sale-items-submodal';
 import ConfirmationModal from './confirmation-submodal';
 
@@ -686,7 +687,7 @@ export default function BoothSalesView({
         // 4. Construct FULL Valid Sale Object
         // Using CHARGED as the standard 'Completed' status for sales
         const saleId = sale?.id || uuid(); // Preserve ID if exists
-        const saleName = `Booth Sale ${saleDate.toLocaleDateString()}`;
+        const saleName = `Booth Sale ${formatDisplayDate(saleDate)}`;
 
         const fullSale: Sale = {
             id: saleId,
@@ -756,7 +757,7 @@ export default function BoothSalesView({
                         <PopoverTrigger asChild>
                             <Button variant="outline" size="sm" className="h-8 justify-start text-left font-normal w-32">
                                 <CalendarIcon className="mr-2 h-3 w-3" />
-                                {saleDate ? format(saleDate, "dd-MM-yyyy") : <span>Pick a date</span>}
+                                {saleDate ? formatDisplayDate(saleDate) : <span>Pick a date</span>}
                             </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0" align="start">

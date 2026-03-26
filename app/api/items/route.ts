@@ -95,13 +95,15 @@ export async function GET(req: NextRequest) {
         // Fallback to updatedAt or createdAt if soldAt is missing (e.g. imported items)
         const dateStr = item.soldAt || item.updatedAt || item.createdAt;
         if (!dateStr) return false;
-        const d = new Date(dateStr);
+        const { parseFlexibleDate } = require('@/lib/utils/date-utils');
+        const d = parseFlexibleDate(dateStr);
         return d.getMonth() + 1 === month && d.getFullYear() === year;
       });
     } else {
       // For other items, use createdAt or similar logic if needed
       items = items.filter(item => {
-        const d = new Date(item.createdAt);
+        const { parseFlexibleDate } = require('@/lib/utils/date-utils');
+        const d = parseFlexibleDate(item.createdAt);
         return d.getMonth() + 1 === month && d.getFullYear() === year;
       });
     }

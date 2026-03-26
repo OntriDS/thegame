@@ -269,7 +269,7 @@ export async function updateFinancialRecordFromTask(task: Task, previousTask: Ta
       station: existingFinrec.station,
       cost: task.cost || 0,
       revenue: task.revenue || 0
-    });
+    }, task.updatedAt || new Date());
 
     console.log(`[updateFinancialRecordFromTask] ✅ Financial record updated successfully for task: ${task.name}`);
 
