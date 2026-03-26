@@ -228,7 +228,6 @@ export async function updateEntityLogField(
 
     if (createdEntry) {
       createdEntry[fieldName] = newValue;
-      createdEntry.lastUpdated = new Date().toISOString();
       await rebuildMonthlyList(entityType, monthKey, list);
       return;
     }
@@ -237,7 +236,6 @@ export async function updateEntityLogField(
     for (let i = 0; i < list.length; i++) {
       if (list[i]?.entityId === entityId) {
         list[i][fieldName] = newValue;
-        list[i].lastUpdated = new Date().toISOString();
         await rebuildMonthlyList(entityType, monthKey, list);
         return;
       }
@@ -260,7 +258,7 @@ export async function updateCreatedEntryFields(
       String(entry.event ?? entry.status ?? '').toLowerCase() === 'created'
     );
     if (createdEntry) {
-      Object.assign(createdEntry, partial, { lastUpdated: new Date().toISOString() });
+      Object.assign(createdEntry, partial);
       await rebuildMonthlyList(entityType, monthKey, list);
       return;
     }
@@ -288,7 +286,7 @@ export async function updateEntityLeanFields(
 
     for (const entry of list) {
       if (entry.entityId === entityId) {
-        Object.assign(entry, partial, { lastUpdated: new Date().toISOString() });
+        Object.assign(entry, partial);
         changed = true;
       }
     }
@@ -315,7 +313,7 @@ export async function updateLatestEventFields(
       const e = list[i];
       const ek = String(e?.event ?? e?.status ?? '').toLowerCase();
       if (e?.entityId === entityId && ek === kind) {
-        Object.assign(e, partial, { lastUpdated: new Date().toISOString() });
+        Object.assign(e, partial);
         await rebuildMonthlyList(entityType, monthKey, list);
         return;
       }

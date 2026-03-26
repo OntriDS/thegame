@@ -15,7 +15,6 @@ import { formatMonthKey, calculateClosingDate, formatDisplayDate } from '@/lib/u
 import { stagePointsForPlayer, resolveToPlayerIdMaybeCharacter } from '../points-rewards-utils';
 import { isSoldStatus, isCollectedStatus } from '@/lib/utils/status-utils';
 import { buildArchiveCollectionIndexKey, buildArchiveMonthsKey } from '@/data-store/keys';
-  // Workflows and repositories are managed by datastore.ts and update-propagation-utils.ts
 
 const STATE_FIELDS = ['status', 'stock', 'quantitySold', 'isCollected'];
 
@@ -323,7 +322,6 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
             name: item.name,
             itemType: item.type,
             subItemType: item.subItemType || '',
-            soldQuantity: item.quantitySold || existingEntry.soldQuantity || 0,
           });
         } else {
           // No SOLD entry in this month yet — write one now so the item appears in the log
