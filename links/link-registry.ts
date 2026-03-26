@@ -51,7 +51,7 @@ export async function removeLink(linkId: string): Promise<void> {
 }
 
 export async function getAllLinks(): Promise<Link[]> {
-  const keys = await kvScan('links:link:');
+  const keys = await kvScan('thegame:links:link:');
   
   if (!keys.length) {
     return [];

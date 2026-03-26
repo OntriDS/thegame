@@ -27,6 +27,10 @@ export function buildIndexKey(entity: string): string {
   return `${NAMESPACE}index:${entity}`; // set of ids
 }
 
+export function buildEntityIndexKey(entity: string, field: string, value: string): string {
+  return `${NAMESPACE}index:${entity}:${field}:${value}`;
+}
+
 export function buildArchiveDataKey(entity: string, mmyy: string, id: string): string {
   const monthKey = normalizeMonthKey(mmyy);
   return `${NAMESPACE}archive:${entity}:${monthKey}:${id}`;
@@ -94,10 +98,6 @@ export function buildLogKey(entity: EntityType | string, yyyymm?: string): strin
     return `${NAMESPACE}logs:${entity}:${monthKey}`;
   }
   return `${NAMESPACE}logs:${entity}`;
-}
-
-export function buildLogActiveKey(entity: EntityType | string): string {
-  return buildLogKey(entity);
 }
 
 export function buildLogMonthKey(entity: EntityType | string, mmyy: string): string {

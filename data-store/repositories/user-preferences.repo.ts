@@ -1,7 +1,7 @@
 // data-store/repositories/user-preferences.repo.ts
 import { kvGet, kvSet } from '../kv';
 
-const PREFERENCES_KEY = 'preferences:user';
+const PREFERENCES_KEY = 'thegame:preferences:user';
 
 export async function getUserPreferences(): Promise<Record<string, any>> {
   const prefs = await kvGet<Record<string, any>>(PREFERENCES_KEY);

@@ -2,7 +2,7 @@
 // Reset Data Workflow for KV-only architecture
 
 import { kv, kvDelMany } from '@/data-store/kv';
-import { buildDataKey, buildIndexKey, buildLogKey, buildLinksIndexKey } from '@/data-store/keys';
+import { buildDataKey, buildIndexKey, buildLogKey, buildLinksIndexKey, buildLogMonthKey, buildLogMonthsIndexKey } from '@/data-store/keys';
 import { EntityType, SiteType, SiteStatus, PhysicalBusinessType, DigitalSiteType, SystemSiteType } from '@/types/enums';
 import { kvScan } from '@/data-store/kv';
 import { TransactionManager } from './transaction-manager';
@@ -548,19 +548,35 @@ export class ResetDataWorkflow {
    */
   private static async clearAllLogs(results: string[], errors: string[]): Promise<void> {
     try {
-      console.log('[ResetDataWorkflow] 📝 Clearing ENTITY logs only (preserving research logs)...');
+      console.log('[ResetDataWorkflow] 📝 Clearing ENTITY logs (Legacy & Partitioned)...');
 
       // ONLY clear entity logs, NOT research logs
       const entityLogTypes = [...RESETTABLE_ENTITY_TYPES, 'links'];
 
-      console.log('[ResetDataWorkflow] Entity logs to clear:', entityLogTypes);
-      console.log('[ResetDataWorkflow] ⚠️ Research logs (notes-log, dev-log) will NOT be cleared');
-
       for (const logType of entityLogTypes) {
         try {
-          const logKey = buildLogKey(logType);
-          console.log(`[ResetDataWorkflow] Clearing ${logKey}...`);
-          await kv.del(logKey);
+          if (logType === 'links') {
+            const logKey = buildLogKey('links');
+            await kv.del(logKey);
+          } else {
+            // 1. Clear Legacy Top-Level Key
+            const legacyKey = buildLogKey(logType);
+            await kv.del(legacyKey);
+
+            // 2. Clear Partitioned Monthly Logs
+            const { getEntityLogMonths } = await import('../entities-logging');
+            const months = await getEntityLogMonths(logType as EntityType);
+            
+            for (const monthKey of months) {
+              const monthLogKey = buildLogMonthKey(logType as EntityType, monthKey);
+              await kv.del(monthLogKey);
+            }
+
+            // 3. Clear Month Index
+            const monthIndexKey = buildLogMonthsIndexKey(logType as EntityType);
+            await kv.del(monthIndexKey);
+          }
+          
           results.push(`Cleared ${logType} logs`);
           console.log(`[ResetDataWorkflow] ✅ Cleared ${logType}`);
         } catch (error) {

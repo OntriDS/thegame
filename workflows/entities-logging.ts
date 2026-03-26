@@ -5,7 +5,7 @@
 // Edit/Delete: read-modify-write on monthly list (rare operations, ~50 entries)
 
 import { kvLPush, kvLRange, kvSAdd, kvSMembers, kvDel, kvLSet } from '@/data-store/kv';
-import { buildLogMonthKey, buildLogMonthsIndexKey } from '@/data-store/keys';
+import { buildLogMonthKey, buildLogMonthsIndexKey, buildLogKey } from '@/data-store/keys';
 import { EntityType, LogEventType } from '@/types/enums';
 import { kv } from '@/data-store/kv';
 import { v4 as uuid } from 'uuid';
@@ -21,7 +21,7 @@ function getCurrentMonthKey(): string {
   return `${mm}-${yy}`;
 }
 
-function getMonthKeyFromTimestamp(timestamp: string | Date): string {
+export function getMonthKeyFromTimestamp(timestamp: string | Date): string {
   const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
   if (isNaN(date.getTime())) return getCurrentMonthKey();
   const mm = String(date.getMonth() + 1).padStart(2, '0');
@@ -698,43 +698,3 @@ export async function removeLogEntriesAcrossMonths(
   return totalRemoved;
 }
 
-// ============================================================================
-// Legacy: Rotation (kept for backward compat but not commonly needed now)
-// ============================================================================
-
-export async function rotateEntityLogsToMonth(
-  entityType: EntityType,
-  mmyy: string
-): Promise<number> {
-  // With the new monthly key architecture, logs are already written to monthly keys.
-  // This function is kept for backward compatibility — it moves any entries from the
-  // legacy active key to the specified month key.
-  const legacyActiveKey = `logs:${entityType}`;
-  const { kvGet } = await import('@/data-store/kv');
-  const activeLogs = ((await kvGet<any[]>(legacyActiveKey)) || []).map(normalizeLogEntry);
-
-  if (activeLogs.length === 0) return 0;
-
-  // Group by month based on timestamps
-  const byMonth = new Map<string, any[]>();
-  for (const entry of activeLogs) {
-    const entryMonth = entry.timestamp ? getMonthKeyFromTimestamp(entry.timestamp) : mmyy;
-    if (!byMonth.has(entryMonth)) byMonth.set(entryMonth, []);
-    byMonth.get(entryMonth)!.push(entry);
-  }
-
-  let totalMoved = 0;
-  for (const [month, entries] of byMonth) {
-    const listKey = buildLogMonthKey(entityType, month);
-    const serialized = entries.map(e => JSON.stringify(e));
-    await kvLPush(listKey, ...serialized);
-    await kvSAdd(buildLogMonthsIndexKey(entityType), month);
-    totalMoved += entries.length;
-  }
-
-  // Clear legacy key
-  const { kvSet } = await import('@/data-store/kv');
-  await kvSet(legacyActiveKey, []);
-
-  return totalMoved;
-}

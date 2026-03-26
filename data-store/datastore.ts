@@ -80,7 +80,6 @@ import { processLinkEntity } from '@/links/links-workflows';
 import {
   appendEntityLog,
   getEntityLogs as workflowGetEntityLogs,
-  rotateEntityLogsToMonth as workflowRotateEntityLogsToMonth,
   getEntityLogMonths as workflowGetEntityLogMonths,
   removeLogEntriesAcrossMonths as workflowRemoveLogEntriesAcrossMonths
 } from '@/workflows/entities-logging';
@@ -1145,13 +1144,6 @@ export async function getEntityLogs(
   options?: { month?: string; start?: number; count?: number }
 ): Promise<any[]> {
   return await workflowGetEntityLogs(entityType, options);
-}
-
-export async function rotateEntityLogs(
-  entityType: EntityType,
-  mmyy: string
-): Promise<number> {
-  return await workflowRotateEntityLogsToMonth(entityType, mmyy);
 }
 
 export async function getEntityLogMonths(entityType: EntityType): Promise<string[]> {

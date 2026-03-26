@@ -158,7 +158,7 @@ export async function clearProcessingStack(): Promise<void> {
 export async function clearAllEffects(): Promise<void> {
   try {
     console.log('[clearAllEffects] Clearing all effects...');
-    const effectKeys = await kvScan('effects:');
+    const effectKeys = await kvScan('thegame:effects:');
     
     if (effectKeys.length > 0) {
       console.log(`[clearAllEffects] Found ${effectKeys.length} effects to clear`);

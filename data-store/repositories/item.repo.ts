@@ -1,6 +1,6 @@
 // data-store/repositories/item.repo.ts
 import { kvGet, kvMGet, kvSet, kvDel, kvSAdd, kvSRem, kvSMembers } from '../kv';
-import { buildDataKey, buildIndexKey, buildMonthIndexKey } from '../keys';
+import { buildDataKey, buildIndexKey, buildMonthIndexKey, buildEntityIndexKey } from '../keys';
 import { EntityType, ItemType, ItemStatus } from '@/types/enums';
 import type { Item } from '@/types/entities';
 import { formatMonthKey } from '@/lib/utils/date-utils';
@@ -33,7 +33,7 @@ export async function getItemById(id: string): Promise<Item | null> {
  * OPTIMIZED: Only loads items created by this task, not all items
  */
 export async function getItemsBySourceTaskId(sourceTaskId: string): Promise<Item[]> {
-  const indexKey = `index:${ENTITY}:sourceTaskId:${sourceTaskId}`;
+  const indexKey = buildEntityIndexKey(ENTITY, 'sourceTaskId', sourceTaskId);
   const ids = await kvSMembers(indexKey);
   if (ids.length === 0) return [];
 
@@ -47,7 +47,7 @@ export async function getItemsBySourceTaskId(sourceTaskId: string): Promise<Item
  * OPTIMIZED: Only loads items created by this record, not all items
  */
 export async function getItemsBySourceRecordId(sourceRecordId: string): Promise<Item[]> {
-  const indexKey = `index:${ENTITY}:sourceRecordId:${sourceRecordId}`;
+  const indexKey = buildEntityIndexKey(ENTITY, 'sourceRecordId', sourceRecordId);
   const ids = await kvSMembers(indexKey);
   if (ids.length === 0) return [];
 
@@ -66,7 +66,7 @@ export async function getItemsByType(itemTypes: ItemType | ItemType[]): Promise<
 
   // Get IDs from type index for each type
   for (const type of types) {
-    const typeIndexKey = `index:${ENTITY}:type:${type}`;
+    const typeIndexKey = buildEntityIndexKey(ENTITY, 'type', type);
     const ids = await kvSMembers(typeIndexKey);
     ids.forEach(id => allIds.add(id));
   }
@@ -117,12 +117,12 @@ export async function upsertItem(item: Item): Promise<Item> {
   }
 
   // Maintain type index
-  const typeIndexKey = `index:${ENTITY}:type:${toSave.type}`;
+  const typeIndexKey = buildEntityIndexKey(ENTITY, 'type', toSave.type);
   await kvSAdd(typeIndexKey, item.id);
 
   // Clean up old type index if type changed
   if (previousItem && previousItem.type !== toSave.type) {
-    const oldTypeIndexKey = `index:${ENTITY}:type:${previousItem.type}`;
+    const oldTypeIndexKey = buildEntityIndexKey(ENTITY, 'type', previousItem.type);
     await kvSRem(oldTypeIndexKey, item.id);
   }
 
@@ -143,25 +143,25 @@ export async function upsertItem(item: Item): Promise<Item> {
 
   // Maintain sourceTaskId index
   if (item.sourceTaskId) {
-    const sourceTaskIndexKey = `index:${ENTITY}:sourceTaskId:${item.sourceTaskId}`;
+    const sourceTaskIndexKey = buildEntityIndexKey(ENTITY, 'sourceTaskId', item.sourceTaskId);
     await kvSAdd(sourceTaskIndexKey, item.id);
   }
 
   // Clean up old sourceTaskId index if it changed or was removed
   if (previousItem?.sourceTaskId && previousItem.sourceTaskId !== item.sourceTaskId) {
-    const oldSourceTaskIndexKey = `index:${ENTITY}:sourceTaskId:${previousItem.sourceTaskId}`;
+    const oldSourceTaskIndexKey = buildEntityIndexKey(ENTITY, 'sourceTaskId', previousItem.sourceTaskId);
     await kvSRem(oldSourceTaskIndexKey, item.id);
   }
 
   // Maintain sourceRecordId index
   if (item.sourceRecordId) {
-    const sourceRecordIndexKey = `index:${ENTITY}:sourceRecordId:${item.sourceRecordId}`;
+    const sourceRecordIndexKey = buildEntityIndexKey(ENTITY, 'sourceRecordId', item.sourceRecordId);
     await kvSAdd(sourceRecordIndexKey, item.id);
   }
 
   // Clean up old sourceRecordId index if it changed or was removed
   if (previousItem?.sourceRecordId && previousItem.sourceRecordId !== item.sourceRecordId) {
-    const oldSourceRecordIndexKey = `index:${ENTITY}:sourceRecordId:${previousItem.sourceRecordId}`;
+    const oldSourceRecordIndexKey = buildEntityIndexKey(ENTITY, 'sourceRecordId', previousItem.sourceRecordId);
     await kvSRem(oldSourceRecordIndexKey, item.id);
   }
 
@@ -181,15 +181,15 @@ export async function deleteItem(id: string): Promise<void> {
       await kvSRem(buildMonthIndexKey(ENTITY, prevMonthKey), id);
     }
     // Clean up type index
-    const typeIndexKey = `index:${ENTITY}:type:${item.type}`;
+    const typeIndexKey = buildEntityIndexKey(ENTITY, 'type', item.type);
     await kvSRem(typeIndexKey, id);
 
     if (item.sourceTaskId) {
-      const sourceTaskIndexKey = `index:${ENTITY}:sourceTaskId:${item.sourceTaskId}`;
+      const sourceTaskIndexKey = buildEntityIndexKey(ENTITY, 'sourceTaskId', item.sourceTaskId);
       await kvSRem(sourceTaskIndexKey, id);
     }
     if (item.sourceRecordId) {
-      const sourceRecordIndexKey = `index:${ENTITY}:sourceRecordId:${item.sourceRecordId}`;
+      const sourceRecordIndexKey = buildEntityIndexKey(ENTITY, 'sourceRecordId', item.sourceRecordId);
       await kvSRem(sourceRecordIndexKey, id);
     }
   }

@@ -118,7 +118,7 @@ export class TransactionManager {
 
     // Capture links data
     try {
-      const linkKeys = await kvScan('links:link:');
+      const linkKeys = await kvScan('thegame:links:link:');
       
       if (linkKeys.length > 0) {
         const links: any[] = [];

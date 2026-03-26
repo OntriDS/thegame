@@ -2,7 +2,8 @@
 // Import Data Workflow for KV-only architecture
 
 import { kv, kvDelMany } from '@/data-store/kv';
-import { buildDataKey, buildIndexKey, buildLogKey } from '@/data-store/keys';
+import { buildDataKey, buildIndexKey, buildLogKey, buildLogMonthKey, buildLogMonthsIndexKey } from '@/data-store/keys';
+import { getMonthKeyFromTimestamp } from '../entities-logging';
 import { EntityType } from '@/types/enums';
 import {
   upsertItem,
@@ -503,42 +504,49 @@ export class ImportDataWorkflow {
 
           console.log(`[ImportDataWorkflow] 📝 Processing ${logEntries.length} ${logType} log entries...`);
 
-          // Clear existing logs for this type
-          const logKey = buildLogKey(logType);
-          await kv.del(logKey);
+          // 1. Clear Existing Logs (Legacy & Partitioned)
+          if (logType === 'links') {
+            await kv.del(buildLogKey('links'));
+          } else {
+            await kv.del(buildLogKey(logType)); // Legacy key
+            
+            const { getEntityLogMonths } = await import('../entities-logging');
+            const months = await getEntityLogMonths(logType as EntityType);
+            for (const m of months) {
+              await kv.del(buildLogMonthKey(logType as EntityType, m));
+            }
+            await kv.del(buildLogMonthsIndexKey(logType as EntityType));
+          }
 
-          // Batch import log entries in chunks (logs can be very large)
-          const BATCH_SIZE = 100;
-          let importedCount = 0;
-          const totalBatches = Math.ceil(logEntries.length / BATCH_SIZE);
+          // 2. Group by Month and Batch Import
+          if (logType === 'links') {
+            const logKey = buildLogKey('links');
+            for (const logEntry of logEntries) {
+              await kv.lpush(logKey, JSON.stringify(logEntry));
+            }
+          } else {
+            const byMonth = new Map<string, any[]>();
+            for (const entry of logEntries) {
+              const mkey = getMonthKeyFromTimestamp(entry.timestamp || entry.at || new Date());
+              if (!byMonth.has(mkey)) byMonth.set(mkey, []);
+              byMonth.get(mkey)!.push(entry);
+            }
 
-          for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
-            const startIndex = batchIndex * BATCH_SIZE;
-            const endIndex = Math.min(startIndex + BATCH_SIZE, logEntries.length);
-            const batch = logEntries.slice(startIndex, endIndex);
-
-            console.log(`[ImportDataWorkflow] 🔄 Processing logs batch ${batchIndex + 1}/${totalBatches} for ${logType} (${batch.length} entries)`);
-
-            try {
-              // For logs, we need to use individual lpush operations since Redis LPUSH doesn't support batch operations easily
-              // But we can still process them in reasonable chunks
-              for (const logEntry of batch) {
-                try {
-                  await kv.lpush(logKey, JSON.stringify(logEntry));
-                  importedCount++;
-                } catch (error) {
-                  console.warn(`[ImportDataWorkflow] ⚠️ Failed to import ${logType} log entry:`, error);
-                }
+            for (const [mkey, entries] of byMonth) {
+              const listKey = buildLogMonthKey(logType as EntityType, mkey);
+              const indexKey = buildLogMonthsIndexKey(logType as EntityType);
+              
+              const serialized = entries.map(e => JSON.stringify(e));
+              // Note: LPUSH preserves newest-first if we push in the right order, 
+              // but simple lpush loop is safest for now matching existing pattern.
+              for (const s of serialized) {
+                await kv.lpush(listKey, s);
               }
-
-              console.log(`[ImportDataWorkflow] ✅ Logs batch ${batchIndex + 1}/${totalBatches} completed for ${logType}`);
-            } catch (error) {
-              console.error(`[ImportDataWorkflow] ❌ Logs batch ${batchIndex + 1} failed for ${logType}:`, error);
-              // Continue with next batch instead of failing completely
+              await kv.sadd(indexKey, mkey);
             }
           }
 
-          results.push(`Imported ${importedCount} ${logType} log entries in ${totalBatches} batches`);
+          results.push(`Imported ${logEntries.length} ${logType} log entries`);
         } catch (error) {
           console.warn(`[ImportDataWorkflow] ⚠️ Failed to import ${logType} logs:`, error);
         }
