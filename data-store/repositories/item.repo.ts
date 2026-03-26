@@ -1,6 +1,6 @@
 // data-store/repositories/item.repo.ts
 import { kvGet, kvMGet, kvSet, kvDel, kvSAdd, kvSRem, kvSMembers } from '../kv';
-import { buildDataKey, buildIndexKey, buildMonthIndexKey, buildEntityIndexKey } from '../keys';
+import { buildDataKey, buildIndexKey, buildMonthIndexKey, buildEntityIndexKey, buildArchiveMonthsKey } from '../keys';
 import { EntityType, ItemType, ItemStatus } from '@/types/enums';
 import type { Item } from '@/types/entities';
 import { formatMonthKey } from '@/lib/utils/date-utils';
@@ -114,6 +114,8 @@ export async function upsertItem(item: Item): Promise<Item> {
   if (dateForIndex) {
     const currentMonthKey = formatMonthKey(dateForIndex);
     await kvSAdd(buildMonthIndexKey(ENTITY, currentMonthKey), item.id);
+    // Ensure this month appears in the global month selector (archive months set)
+    await kvSAdd(buildArchiveMonthsKey(), currentMonthKey);
   }
 
   // Maintain type index

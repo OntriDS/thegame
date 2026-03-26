@@ -132,7 +132,8 @@ export async function POST(req: NextRequest) {
       links: body.links || [],
       createdAt: body.createdAt ? new Date(body.createdAt) : new Date(),
       updatedAt: new Date(),
-      lastRestockDate: body.lastRestockDate ? new Date(body.lastRestockDate) : undefined
+      lastRestockDate: body.lastRestockDate ? new Date(body.lastRestockDate) : undefined,
+      soldAt: body.soldAt ? new Date(body.soldAt) : undefined,
     };
     const saved = await upsertItem(item);
     return NextResponse.json(saved);
