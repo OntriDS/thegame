@@ -100,7 +100,7 @@ async function checkSyncStatus(): Promise<{needsSync: string[], upToDate: string
       }
       
       // Get KV data (use correct key with data: prefix)
-      const kvData = await kvGet(`data:${logType}`);
+      const kvData = await kvGet(`thegame:data:${logType}`);
       
       // 1. Check if KV is empty
       if (!kvData || Object.keys(kvData).length === 0) {
@@ -238,7 +238,7 @@ async function syncIndividualLogType(
     }
     
     // Get KV data (use correct key with data: prefix)
-    const kvData = await kvGet(`data:${logType}`);
+    const kvData = await kvGet(`thegame:data:${logType}`);
     
     // Get file stats for timestamp comparison
     const fileStats = await getFileStats(logType);
@@ -254,7 +254,7 @@ async function syncIndividualLogType(
     if (syncDecision.action === 'synced') {
       // Use merged data if available (for merge strategy), otherwise use local data (for replace strategy)
       const dataToSync = syncDecision.mergedData || localData;
-      await kvSet(`data:${logType}`, dataToSync);
+      await kvSet(`thegame:data:${logType}`, dataToSync);
       results.synced.push(logType);
     } else if (syncDecision.action === 'skipped') {
       results.skipped.push(`${logType} (${syncDecision.reason})`);

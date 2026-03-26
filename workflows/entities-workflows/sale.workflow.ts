@@ -14,6 +14,7 @@ import { updateFinancialRecordsFromSale, updateItemsFromSale, updatePlayerPoints
 import { createCharacterFromSale } from '../character-creation-utils';
 import { upsertSale } from '@/data-store/datastore';
 import { formatMonthKey, calculateClosingDate } from '@/lib/utils/date-utils';
+import { buildArchiveCollectionIndexKey, buildArchiveMonthsKey } from '@/data-store/keys';
 
 const STATE_FIELDS = ['status', 'isNotPaid', 'isNotCharged', 'isCollected', 'postedAt', 'doneAt', 'cancelledAt'];
 
@@ -255,12 +256,12 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
     const allMonths = await getAvailableArchiveMonths();
     for (const m of allMonths) {
       if (m !== newMonth) {
-        await kvSRem(`index:sales:collected:${m}`, sale.id);
+        await kvSRem(buildArchiveCollectionIndexKey('sales', m), sale.id);
       }
     }
 
     if (newMonth) {
-      await kvSAdd(`index:sales:collected:${newMonth}`, sale.id);
+      await kvSAdd(buildArchiveCollectionIndexKey('sales', newMonth), sale.id);
       await kvSAdd(buildArchiveMonthsKey(), newMonth);
 
       // The sale record's existence in the index and its inherent dates are the single source of truth.
@@ -281,7 +282,7 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
 }
 
 async function processChargedSaleLines(sale: Sale): Promise<void> {
-  const linesProcessedKey = `sale:${sale.id}:linesProcessed`;
+  const linesProcessedKey = EffectKeys.sideEffect('sale', sale.id, 'linesProcessed');
   if (await hasEffect(linesProcessedKey)) {
     return;
   }

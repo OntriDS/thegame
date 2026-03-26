@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
             // Update the timestamp to now
             fileStatusData.lastUpdated = new Date().toISOString();
 
-            await kvSet('data:project-status', fileStatusData);
+            await kvSet('thegame:data:project-status', fileStatusData);
 
             return NextResponse.json({
                 success: true,

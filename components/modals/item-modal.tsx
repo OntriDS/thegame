@@ -773,7 +773,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         price,
         value: 0,
         restockable,
-        quantitySold: item?.quantitySold || quantitySold || 0,
+        quantitySold,
         year,
         imageUrl,
         stock: updatedStock,

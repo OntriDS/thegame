@@ -1363,7 +1363,7 @@ export async function getPlayerArchiveEventsByMonth(mmyy: string): Promise<Playe
 
 // PLAYER CONVERSION RATES
 export async function getPlayerConversionRates(): Promise<any> {
-  const rates = await kvGet('data:player-conversion-rates');
+  const rates = await kvGet('thegame:data:player-conversion-rates');
   return rates || {
     // Points conversion rates (in enum order: XP, RP, FP, HP)
     xpToJ$: 3,
@@ -1375,12 +1375,12 @@ export async function getPlayerConversionRates(): Promise<any> {
 }
 
 export async function savePlayerConversionRates(rates: any): Promise<void> {
-  await kvSet('data:player-conversion-rates', rates);
+  await kvSet('thegame:data:player-conversion-rates', rates);
 }
 
 // COMPANY ASSETS
 export async function getCompanyAssets(): Promise<any> {
-  const assets = await kvGet('data:company-assets');
+  const assets = await kvGet('thegame:data:company-assets');
   return assets || {
     cash: 0,
     bank: 0,
@@ -1403,12 +1403,12 @@ export async function getCompanyAssets(): Promise<any> {
 }
 
 export async function saveCompanyAssets(assets: any): Promise<void> {
-  await kvSet('data:company-assets', assets);
+  await kvSet('thegame:data:company-assets', assets);
 }
 
 // PERSONAL ASSETS
 export async function getPersonalAssets(): Promise<any> {
-  const assets = await kvGet('data:personal-assets');
+  const assets = await kvGet('thegame:data:personal-assets');
   return assets || {
     cash: 0,
     bank: 0,
@@ -1430,12 +1430,12 @@ export async function getPersonalAssets(): Promise<any> {
 }
 
 export async function savePersonalAssets(assets: any): Promise<void> {
-  await kvSet('data:personal-assets', assets);
+  await kvSet('thegame:data:personal-assets', assets);
 }
 
 // FINANCIAL CONVERSION RATES
 export async function getFinancialConversionRates(): Promise<any> {
-  const rates = await kvGet('data:financial-conversion-rates');
+  const rates = await kvGet('thegame:data:financial-conversion-rates');
   return rates || {
     // Points conversion rates (in enum order: XP, RP, FP, HP)
     xpToJ$: 3,
@@ -1451,5 +1451,5 @@ export async function getFinancialConversionRates(): Promise<any> {
 }
 
 export async function saveFinancialConversionRates(rates: any): Promise<void> {
-  await kvSet('data:financial-conversion-rates', rates);
+  await kvSet('thegame:data:financial-conversion-rates', rates);
 }

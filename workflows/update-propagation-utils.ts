@@ -4,6 +4,7 @@
 import type { Task, Item, Sale, FinancialRecord, Character, Player } from '@/types/entities';
 import { EntityType, FOUNDER_CHARACTER_ID, ItemStatus, TaskStatus } from '@/types/enums';
 import { hasEffect, markEffect } from '@/data-store/effects-registry';
+import { EffectKeys, buildArchiveCollectionIndexKey, buildArchiveMonthsKey } from '@/data-store/keys';
 import { getFinancialsBySourceTaskId, getFinancialsBySourceSaleId, upsertFinancial } from '@/data-store/datastore';
 import { getItemsBySourceTaskId, getItemsBySourceRecordId, getItemById, upsertItem, removeItem } from '@/data-store/datastore';
 import { getTaskById, upsertTask } from '@/data-store/datastore';
@@ -26,7 +27,7 @@ export async function updateFinancialRecordsFromTask(
     const relatedRecords = await getFinancialsBySourceTaskId(task.id);
 
     for (const record of relatedRecords) {
-      const updateKey = `updateFinancialFromTask:${task.id}:${record.id}:${task.updatedAt?.getTime()}`;
+      const updateKey = EffectKeys.sideEffect('task', task.id, `updateFinancial:${record.id}:${task.updatedAt?.getTime()}`);
 
       if (await hasEffect(updateKey)) {
         console.log(`[updateFinancialRecordsFromTask] ⏭️ Already updated record: ${record.id}`);
@@ -106,7 +107,7 @@ export async function updateTasksFromFinancialRecord(
     const relatedTasks = [task];
 
     for (const task of relatedTasks) {
-      const updateKey = `updateTaskFromFinancial:${record.id}:${task.id}:${record.updatedAt?.getTime()}`;
+      const updateKey = EffectKeys.sideEffect('financial', record.id, `updateTask:${task.id}:${record.updatedAt?.getTime()}`);
 
       if (await hasEffect(updateKey)) {
         console.log(`[updateTasksFromFinancialRecord] ⏭️ Already updated task: ${task.id}`);
@@ -162,7 +163,7 @@ export async function updateItemsCreatedByTask(
     const relatedItems = await getItemsBySourceTaskId(task.id);
 
     if (!task.isNewItem && previousTask.isNewItem && relatedItems.length > 0) {
-      const removalKey = `removeTaskCreatedItems:${task.id}:${task.updatedAt?.getTime()}`;
+      const removalKey = EffectKeys.sideEffect('task', task.id, `removeCreatedItems:${task.updatedAt?.getTime()}`);
       if (!(await hasEffect(removalKey))) {
         for (const item of relatedItems) {
           try {
@@ -178,7 +179,7 @@ export async function updateItemsCreatedByTask(
 
     if (task.isNewItem || previousTask.isNewItem) {
       for (const item of relatedItems) {
-        const updateKey = `updateItemFromTask:${task.id}:${item.id}:${task.updatedAt?.getTime()}`;
+        const updateKey = EffectKeys.sideEffect('task', task.id, `updateItem:${item.id}:${task.updatedAt?.getTime()}`);
 
         if (await hasEffect(updateKey)) {
           console.log(`[updateItemsCreatedByTask] ⏭️ Already updated item: ${item.id}`);
@@ -271,7 +272,7 @@ export async function updateItemsCreatedByTask(
       }
 
       const siteId = preferredSiteId || existingItem.stock?.[0]?.siteId || 'hq';
-      const updateKey = `updateExistingItemFromTask:${task.id}:${itemId}:${siteId}:${effectLabel}:${task.updatedAt?.getTime()}`;
+      const updateKey = EffectKeys.sideEffect('task', task.id, `updateExistingItem:${itemId}:${siteId}:${effectLabel}:${task.updatedAt?.getTime()}`);
 
       if (await hasEffect(updateKey)) {
         console.log(`[updateItemsCreatedByTask] ⏭️ Already adjusted existing item ${itemId} @ ${siteId}`);
@@ -358,7 +359,7 @@ export async function updateItemsCreatedByRecord(
     const relatedItems = await getItemsBySourceRecordId(record.id);
 
     for (const item of relatedItems) {
-      const updateKey = `updateItemFromRecord:${record.id}:${item.id}:${record.updatedAt?.getTime()}`;
+      const updateKey = EffectKeys.sideEffect('financial', record.id, `updateItem:${item.id}:${record.updatedAt?.getTime()}`);
 
       if (await hasEffect(updateKey)) {
         console.log(`[updateItemsCreatedByRecord] ⏭️ Already updated item: ${item.id}`);
@@ -445,7 +446,7 @@ export async function updateFinancialRecordsFromSale(
       if (sale.type === 'BOOTH') {
         await createFinancialRecordFromBoothSale(sale);
       } else if (sale.totals.totalRevenue > 0) {
-        const effectKey = `sale:${sale.id}:financialCreated`;
+        const effectKey = EffectKeys.sideEffect('sale', sale.id, 'financialCreated');
         if (!(await hasEffect(effectKey))) {
           await createFinancialRecordFromSale(sale);
           await markEffect(effectKey);
@@ -480,7 +481,7 @@ export async function updateFinancialRecordsFromSale(
     // If no records found, maybe we need to create one (Emissary Pattern)
     if (relatedRecords.length === 0 && sale.totals.totalRevenue > 0) {
       // Check effect key to be safe
-      const effectKey = `sale:${sale.id}:financialCreated`;
+      const effectKey = EffectKeys.sideEffect('sale', sale.id, 'financialCreated');
       if (!(await hasEffect(effectKey))) {
         await createFinancialRecordFromSale(sale);
         await markEffect(effectKey);
@@ -488,7 +489,7 @@ export async function updateFinancialRecordsFromSale(
     }
 
     for (const record of relatedRecords) {
-      const updateKey = `updateFinancialFromSale:${sale.id}:${record.id}:${sale.updatedAt?.getTime()}`;
+      const updateKey = EffectKeys.sideEffect('sale', sale.id, `updateFinancial:${record.id}:${sale.updatedAt?.getTime()}`);
 
       if (await hasEffect(updateKey)) {
         console.log(`[updateFinancialRecordsFromSale] ⏭️ Already updated record: ${record.id}`);
@@ -563,10 +564,9 @@ export async function updateItemsFromSale(
     // Process each sale line
     for (const line of sale.lines || []) {
       if (line.kind === 'item' && 'itemId' in line && line.itemId) {
-        // FIX: Use line.lineId (not line.itemId) so multiple lines for the same item
-        // each get their own idempotency key and Sold Item entity
-        const lineId = line.lineId || line.itemId; // Fallback for legacy lines without lineId
-        const updateKey = `updateItemFromSale:${sale.id}:${lineId}:${sale.updatedAt?.getTime()}`;
+        // Each line gets its own update key
+        const lineId = line.lineId || line.itemId;
+        const updateKey = EffectKeys.sideEffect('sale', sale.id, `updateItem:${lineId}:${sale.updatedAt?.getTime()}`);
 
         if (await hasEffect(updateKey)) {
           console.log(`[updateItemsFromSale] ⏭️ Already updated for line: ${lineId}`);
@@ -625,13 +625,11 @@ export async function updateItemsFromSale(
         await upsertItem(soldItemEntity, { skipWorkflowEffects: true });
         console.log(`[updateItemsFromSale] ✅ Created Sold Item Entity: ${soldItemEntity.id}`);
 
-        // Register in Monthly Archive Index so the Archive Vault can find it
         const { calculateClosingDate, formatMonthKey } = await import('@/lib/utils/date-utils');
         const { kvSAdd } = await import('@/data-store/kv');
-        const { buildArchiveMonthsKey } = await import('@/data-store/keys');
         const archiveMonth = calculateClosingDate(soldItemEntity.soldAt || new Date());
         const monthKey = formatMonthKey(archiveMonth);
-        await kvSAdd(`index:items:collected:${monthKey}`, soldItemEntity.id);
+        await kvSAdd(buildArchiveCollectionIndexKey('items', monthKey), soldItemEntity.id);
         await kvSAdd(buildArchiveMonthsKey(), monthKey);
 
         await markEffect(updateKey);
@@ -719,7 +717,7 @@ export async function updatePlayerPointsFromSource(
       return;
     }
 
-    const updateKey = `updatePlayerPoints:${sourceType}:${newSource.id}:${player.id}:${newSource.updatedAt?.getTime()}`;
+    const updateKey = EffectKeys.sideEffect(sourceType, newSource.id, `updatePlayerPoints:${player.id}:${newSource.updatedAt?.getTime()}`);
 
     if (await hasEffect(updateKey)) {
       console.log(`[updatePlayerPointsFromSource] ⏭️ Already updated player: ${player.id}`);

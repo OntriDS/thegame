@@ -10,10 +10,11 @@ import { EffectKeys } from '@/data-store/keys';
 import { getLinksFor, removeLink } from '@/links/link-registry';
 import { getCategoryForItemType } from '@/lib/utils/searchable-select-utils';
 import { createCharacterFromItem } from '../character-creation-utils';
-import { upsertItem } from '@/data-store/datastore';
+import { upsertItem, getAvailableArchiveMonths } from '@/data-store/datastore';
 import { formatMonthKey, calculateClosingDate } from '@/lib/utils/date-utils';
 import { stagePointsForPlayer } from '../points-rewards-utils';
 import { isSoldStatus, isCollectedStatus } from '@/lib/utils/status-utils';
+import { buildArchiveCollectionIndexKey, buildArchiveMonthsKey } from '@/data-store/keys';
 
 const STATE_FIELDS = ['status', 'stock', 'quantitySold', 'isCollected'];
 
@@ -30,7 +31,7 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
       name: item.name,
       itemType: item.type,
       subItemType: item.subItemType,
-      quantity: item.stock?.reduce((sum: number, stock: any) => sum + stock.quantity, 0) || 0
+      soldQuantity: item.stock?.reduce((sum: number, stock: any) => sum + stock.quantity, 0) || 0
     });
 
     await markEffect(effectKey);
@@ -65,105 +66,124 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
   }
 
   // Manual SOLD status change - detect when status changes to SOLD without quantitySold change (not via sale)
-  const statusChangedToSold =
-    !isSoldStatus(previousItem.status) &&
-    isSoldStatus(item.status); // No quantitySold change means manual status change
+  // ==========================================
+  // UNIFIED MANUAL SALE & RESTOCK WORKFLOW
+  // Triggered ONLY when status is explicitly set to SOLD in the modal
+  // ==========================================
+  const statusChangedToSold = !isSoldStatus(previousItem.status) && isSoldStatus(item.status);
+  const manualQuantitySoldDelta = (item.quantitySold || 0) - (previousItem.quantitySold || 0);
 
-  if (statusChangedToSold) {
-    const manualSoldEffectKey = EffectKeys.sideEffect('item', item.id, 'manualSold');
-    if (await hasEffect(manualSoldEffectKey)) {
-      // Already processed
-      return;
+  if (isSoldStatus(item.status) && (statusChangedToSold || manualQuantitySoldDelta > 0)) {
+    const manualSoldEffectKey = EffectKeys.sideEffect('item', item.id, `manualSold-${Date.now()}`);
+    if (await hasEffect(manualSoldEffectKey)) return;
+
+    const previousStockTotal = previousItem.stock?.reduce((sum, sp) => sum + sp.quantity, 0) || 0;
+    
+    // 1. Determine how many we are selling in this transaction
+    let quantityToSell = 0;
+    if (manualQuantitySoldDelta > 0) {
+      quantityToSell = manualQuantitySoldDelta; // User explicitly typed a new Sold Q (e.g. 16 out of 26)
+    } else {
+      quantityToSell = previousStockTotal; // User just flipped status to Sold, meaning "sell everything on shelf"
     }
 
-    // Calculate remaining stock to sell
-    const totalStock = item.stock?.reduce((sum, stockPoint) => sum + stockPoint.quantity, 0) || 0;
-    const remainingStock = totalStock - item.quantitySold;
-    const quantityToSell = remainingStock;
-
     if (quantityToSell <= 0) {
-
-      // CRITICAL FIX: Even if no stock to sell, ensure soldAt is set if missing
-      if (!item.soldAt) {
-        const fixedItem = {
-          ...item,
-          soldAt: item.updatedAt || new Date(),
-          updatedAt: new Date()
-        };
-        await upsertItem(fixedItem, { skipWorkflowEffects: true });
-      }
-
       await markEffect(manualSoldEffectKey);
       return;
     }
 
     const soldAt = item.soldAt || new Date();
     const archiveMonth = calculateClosingDate(soldAt);
-    const archiveIndexEffectKey = EffectKeys.sideEffect('item', item.id, `archiveIndex:${formatMonthKey(archiveMonth)}`);
+    const monthKey = formatMonthKey(archiveMonth);
+    const primarySite = item.stock?.[0]?.siteId || 'Home';
 
-    // Update item: deduct all remaining stock, update quantitySold, set soldAt
-    const updatedItem: Item = {
+    // 2. CREATE THE SOLD BATCH CLONE FOR THE ARCHIVE (Sold Items Tab)
+    const cloneId = `${item.id}-manualsold-${Date.now()}`;
+    const soldItemClone: Item = {
       ...item,
-      quantitySold: item.quantitySold + quantityToSell,
-      soldAt: soldAt,
-      stock: [], // All stock is sold
+      id: cloneId,
       status: ItemStatus.SOLD,
+      stock: [{ siteId: primarySite, quantity: 0 }],
+      quantitySold: quantityToSell,
+      soldAt: soldAt,
+      isCollected: true, 
+      sourceRecordId: 'manual', 
       updatedAt: new Date()
     };
+    
+    await upsertItem(soldItemClone, { skipWorkflowEffects: true });
+    
+    const { kvSAdd } = await import('@/data-store/kv');
+    await kvSAdd(buildArchiveCollectionIndexKey('items', monthKey), cloneId);
+    await kvSAdd(buildArchiveMonthsKey(), monthKey);
 
-    if (!(await hasEffect(archiveIndexEffectKey))) {
-      const monthKey = formatMonthKey(archiveMonth);
-      const { kvSAdd } = await import('@/data-store/kv');
-      const archiveIndexKey = `index:items:collected:${monthKey}`;
-      await kvSAdd(archiveIndexKey, item.id);
+    // 3. MANAGE THE BASE ITEM (Inventory Shell)
+    let updatedBaseItem: Item;
+    const targetQ = item.targetAmount || 0;
 
-      const { buildArchiveMonthsKey } = await import('@/data-store/keys');
-      await kvSAdd(buildArchiveMonthsKey(), monthKey);
-      await markEffect(archiveIndexEffectKey);
+    if (item.restockable && targetQ > 0) {
+      // CONSIGNMENT RESTOCK: Keep active, refill to Target Q, reset Sold Q
+      updatedBaseItem = {
+        ...item,
+        status: ItemStatus.FOR_SALE, // Revert from Sold back to active
+        quantitySold: 0, 
+        stock: [{ siteId: primarySite, quantity: targetQ }],
+        updatedAt: new Date()
+      };
+    } else {
+      // PARTIAL OR FULL SALE
+      const remainingStock = Math.max(0, previousStockTotal - quantityToSell);
+      if (remainingStock > 0) {
+        // Partial Sale: Leave remaining stock on shelf, revert status to active
+        updatedBaseItem = {
+          ...item,
+          status: ItemStatus.FOR_SALE,
+          quantitySold: (previousItem.quantitySold || 0) + quantityToSell,
+          stock: [{ siteId: primarySite, quantity: remainingStock }],
+          updatedAt: new Date()
+        };
+      } else {
+        // Full Depletion: Unique artwork or totally sold out
+        updatedBaseItem = {
+          ...item,
+          status: ItemStatus.SOLD,
+          quantitySold: (previousItem.quantitySold || 0) + quantityToSell,
+          stock: [], 
+          soldAt: soldAt,
+          updatedAt: new Date()
+        };
+        await kvSAdd(buildArchiveCollectionIndexKey('items', monthKey), item.id);
+      }
     }
 
-    // Save updated item (skip workflow to avoid recursion)
-    await upsertItem(updatedItem, { skipWorkflowEffects: true });
+    await upsertItem(updatedBaseItem, { skipWorkflowEffects: true });
 
-    // Log SOLD event
+    // 4. LOG EVENT & HANDLE POINTS
     await appendEntityLog(EntityType.ITEM, item.id, LogEventType.SOLD, {
       name: item.name,
       itemType: item.type,
       subItemType: item.subItemType,
-      quantity: quantityToSell
+      soldQuantity: quantityToSell
     });
+
+    if (item.rewards?.points) {
+      const playerId = item.ownerCharacterId || FOUNDER_CHARACTER_ID;
+      const { stagePointsForPlayer } = await import('../points-rewards-utils');
+      await stagePointsForPlayer(playerId, item.rewards.points, item.id, EntityType.ITEM);
+    }
+
+    // 5. LEAN SWEEPER (Since we return early, we must sweep manually here if needed)
+    const leanFieldsChanged = previousItem.name !== item.name || previousItem.type !== item.type || previousItem.subItemType !== item.subItemType;
+    if (leanFieldsChanged) {
+      await updateEntityLeanFields(EntityType.ITEM, item.id, {
+        name: item.name,
+        itemType: item.type,
+        subItemType: item.subItemType || '',
+      });
+    }
+
     await markEffect(manualSoldEffectKey);
-
-    // Points Staging - for manually sold items
-    if (item.rewards?.points) {
-      const pointsStagingKey = EffectKeys.sideEffect('item', item.id, 'pointsStaged');
-      if (!(await hasEffect(pointsStagingKey))) {
-        const playerId = item.ownerCharacterId || FOUNDER_CHARACTER_ID; // In V0.1 we use ownerCharacterId as placeholder for player
-        await stagePointsForPlayer(playerId, item.rewards.points, item.id, EntityType.ITEM);
-        await markEffect(pointsStagingKey);
-      }
-    }
-
-  }
-
-  // Quantity sold changes - SOLD event (via sale)
-  if (previousItem.quantitySold !== item.quantitySold && item.quantitySold > previousItem.quantitySold) {
-    await appendEntityLog(EntityType.ITEM, item.id, LogEventType.SOLD, {
-      name: item.name,
-      itemType: item.type,
-      subItemType: item.subItemType,
-      quantity: item.quantitySold - previousItem.quantitySold
-    });
-
-    // Points Staging - for sales-triggered quantity changes
-    if (item.rewards?.points) {
-      const pointsStagingKey = EffectKeys.sideEffect('item', item.id, 'pointsStaged');
-      if (!(await hasEffect(pointsStagingKey))) {
-        const playerId = item.ownerCharacterId || FOUNDER_CHARACTER_ID;
-        await stagePointsForPlayer(playerId, item.rewards.points, item.id, EntityType.ITEM);
-        await markEffect(pointsStagingKey);
-      }
-    }
+    return; // Halt generic workflow so it doesn't overwrite our logic
   }
 
   // Collection status - COLLECTED event
@@ -198,7 +218,7 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
       name: item.name,
       itemType: item.type,
       subItemType: item.subItemType,
-      quantity: 1
+      soldQuantity: item.quantitySold || 1
     });
 
     // Record Archive Index for COLLECTED case 
@@ -209,7 +229,7 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
     if (!(await hasEffect(archiveIndexEffectKey))) {
       const monthKey = formatMonthKey(archiveMonth);
       const { kvSAdd } = await import('@/data-store/kv');
-      const collectedIndexKey = `index:items:collected:${monthKey}`;
+      const collectedIndexKey = buildArchiveCollectionIndexKey('items', monthKey);
       await kvSAdd(collectedIndexKey, item.id);
 
       // The item's existence in the index and its inherent dates are the single source of truth.
@@ -218,14 +238,21 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
     }
   }
 
-  // Lean identity fields changed — cascade patch ALL log entries across ALL months and events
+  // ==========================================
+  // LEAN SWEEPER (Supports Clone Editing)
+  // ==========================================
   const leanFieldsChanged =
     previousItem.name !== item.name ||
     previousItem.type !== item.type ||
     previousItem.subItemType !== item.subItemType;
 
   if (leanFieldsChanged) {
-    await updateEntityLeanFields(EntityType.ITEM, item.id, {
+    // Map Clone IDs back to Base IDs to update the unified history log
+    const baseItemId = item.id.includes('-sold-') ? item.id.split('-sold-')[0] : 
+                       item.id.includes('-manualsold-') ? item.id.split('-manualsold-')[0] : 
+                       item.id;
+    
+    await updateEntityLeanFields(EntityType.ITEM, baseItemId, {
       name: item.name,
       itemType: item.type,
       subItemType: item.subItemType || '',
@@ -233,94 +260,37 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
   }
 
   // ==========================================
-  // REACTIVE ARCHIVE INDEXING (Date changes)
-  // Ensures entity is in the correct monthly index if its date changes
+  // DETERMINISTIC ARCHIVE INDEXING
+  // Safely synchronizes the item to the correct monthly index based on exact dates
   // ==========================================
   if (previousItem) {
-    // Only items that are SOLD or COLLECTED should be in an archive index
     const isArchivable = isSoldStatus(item.status) || isCollectedStatus(item.status) || !!item.isCollected;
 
     if (isArchivable) {
-      const wasArchivableBefore = isSoldStatus(previousItem.status) || isCollectedStatus(previousItem.status) || !!previousItem.isCollected;
+      let currentTargetDate = item.soldAt || item.collectedAt || item.createdAt || new Date();
+      const targetMonth = formatMonthKey(calculateClosingDate(currentTargetDate));
 
-      // Guard: only re-index if the relevant dates actually changed OR item newly became archivable.
-      // This prevents non-date saves (site, stock, price changes) from accidentally moving the archive bucket.
-      const soldAtChanged = (item.soldAt?.toString() ?? '') !== (previousItem.soldAt?.toString() ?? '');
-      const collectedAtChanged = (item.collectedAt?.toString() ?? '') !== (previousItem.collectedAt?.toString() ?? '');
-      const becameArchivable = isArchivable && !wasArchivableBefore;
+      const { kvSAdd, kvSRem } = await import('@/data-store/kv');
 
-      if (!soldAtChanged && !collectedAtChanged && !becameArchivable) {
-        // Nothing date-related changed — skip re-indexing entirely
-        return;
-      }
-
-      // For items, we look at soldAt first (most reliable), then collectedAt, then createdAt
-      let currentTargetDate: Date;
-      if (item.soldAt) {
-        currentTargetDate = new Date(item.soldAt);
-      } else if (item.collectedAt) {
-        currentTargetDate = new Date(item.collectedAt);
-      } else if (item.createdAt) {
-        currentTargetDate = new Date(item.createdAt);
-      } else {
-        currentTargetDate = new Date();
-      }
-
-      const currentTargetMonth = formatMonthKey(calculateClosingDate(currentTargetDate));
-
-      let prevTargetMonth: string | null = null;
-      if (wasArchivableBefore) {
-        let prevTargetDate: Date;
-        if (previousItem.soldAt) {
-          prevTargetDate = new Date(previousItem.soldAt);
-        } else if (previousItem.collectedAt) {
-          prevTargetDate = new Date(previousItem.collectedAt);
-        } else if (previousItem.createdAt) {
-          prevTargetDate = new Date(previousItem.createdAt);
-        } else {
-          prevTargetDate = new Date();
+      // Remove from all other months to ensure single source of truth
+      const allMonths = await getAvailableArchiveMonths();
+      for (const m of allMonths) {
+        if (m !== targetMonth) {
+          await kvSRem(buildArchiveCollectionIndexKey('items', m), item.id);
         }
-        prevTargetMonth = formatMonthKey(calculateClosingDate(prevTargetDate));
       }
 
-      // If the target month has changed, or it wasn't archivable before
-      if (currentTargetMonth !== prevTargetMonth) {
-        const { kvSAdd, kvSRem } = await import('@/data-store/kv');
-        const { buildArchiveMonthsKey } = await import('@/data-store/keys');
+      // Add to the correct designated month
+      await kvSAdd(buildArchiveCollectionIndexKey('items', targetMonth), item.id);
+      await kvSAdd(buildArchiveMonthsKey(), targetMonth);
 
-        // Remove from old index if it was there
-        if (prevTargetMonth) {
-          const oldIndexKey = `index:items:collected:${prevTargetMonth}`;
-          await kvSRem(oldIndexKey, item.id);
-        }
-
-        // Add to new index
-        const newIndexKey = `index:items:collected:${currentTargetMonth}`;
-        await kvSAdd(newIndexKey, item.id);
-
-        // Ensure month is registered in active months set
-        await kvSAdd(buildArchiveMonthsKey(), currentTargetMonth);
-
-      }
     } else {
-      // If it WAS archivable but now IS NOT, remove it from its old index
-      const wasArchivable = isSoldStatus(previousItem.status) || isCollectedStatus(previousItem.status) || !!previousItem.isCollected;
-      if (wasArchivable) {
-        let prevTargetDate: Date;
-        if (previousItem.collectedAt) {
-          prevTargetDate = new Date(previousItem.collectedAt);
-        } else if (previousItem.soldAt) {
-          prevTargetDate = new Date(previousItem.soldAt);
-        } else if (previousItem.createdAt) {
-          prevTargetDate = new Date(previousItem.createdAt);
-        } else {
-          prevTargetDate = new Date();
-        }
-        const prevTargetMonth = formatMonthKey(calculateClosingDate(prevTargetDate));
-
-        const { kvSRem } = await import('@/data-store/kv');
-        const oldIndexKey = `index:items:collected:${prevTargetMonth}`;
-        await kvSRem(oldIndexKey, item.id);
+      // Clean up indexes if item reverts to an active inventory state
+      const { kvSRem } = await import('@/data-store/kv');
+      const { buildArchiveCollectionIndexKey } = await import('@/data-store/keys');
+      const allMonths = await getAvailableArchiveMonths();
+      for (const m of allMonths) {
+        await kvSRem(buildArchiveCollectionIndexKey('items', m), item.id);
       }
     }
   }

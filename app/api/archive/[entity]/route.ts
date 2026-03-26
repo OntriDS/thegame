@@ -105,7 +105,8 @@ export async function POST(
 
     // Add to index instead of snapshotting
     const { kvSAdd } = await import('@/data-store/kv');
-    await kvSAdd(`index:items:collected:${monthKey}`, normalizedSnapshot.id);
+    const { buildArchiveCollectionIndexKey } = await import('@/data-store/keys');
+    await kvSAdd(buildArchiveCollectionIndexKey('items', monthKey), normalizedSnapshot.id);
 
     return NextResponse.json({ success: true });
   } catch (error) {

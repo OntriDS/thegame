@@ -8,6 +8,7 @@ import { upsertTask } from '@/data-store/datastore';
 import { makeLink } from '@/links/links-workflows';
 import { createLink } from '@/links/link-registry';
 import { hasEffect, markEffect } from '@/data-store/effects-registry';
+import { EffectKeys, buildArchiveCollectionIndexKey } from '@/data-store/keys';
 import { appendEntityLog } from './entities-logging';
 import { createFinancialRecordFromSale } from './financial-record-utils';
 import { ORDER_INCREMENT } from '@/lib/constants/app-constants';
@@ -66,7 +67,7 @@ export async function processItemSaleLine(line: ItemSaleLine, sale: Sale): Promi
     console.log(`[processItemSaleLine] Processing item sale: ${line.itemId}, quantity: ${line.quantity}`);
 
     // Idempotency check
-    const stockDecrementedKey = `sale:${sale.id}:stockDecremented:${line.lineId}`;
+    const stockDecrementedKey = EffectKeys.sideEffect('sale', sale.id, `stockDecremented:${line.lineId}`);
     const hasBeenDecremented = await hasEffect(stockDecrementedKey);
 
     if (hasBeenDecremented) {
@@ -187,7 +188,6 @@ export async function processItemSaleLine(line: ItemSaleLine, sale: Sale): Promi
 
     // Mark effect as complete
     await markEffect(stockDecrementedKey);
-    await markEffect(`sale:${sale.id}:${stockDecrementedKey}`);
 
     // Log the effect
     await appendEntityLog(EntityType.ITEM, line.itemId, LogEventType.SOLD, {
@@ -214,7 +214,7 @@ export async function processBundleSaleLine(line: BundleSaleLine, sale: Sale): P
     console.log(`[processBundleSaleLine] Processing bundle sale: ${line.itemType}, quantity: ${line.quantity} bundles, ${line.itemsPerBundle} items per bundle`);
 
     // Idempotency check
-    const bundleProcessedKey = `sale:${sale.id}:bundleProcessed:${line.lineId}`;
+    const bundleProcessedKey = EffectKeys.sideEffect('sale', sale.id, `bundleProcessed:${line.lineId}`);
     const hasBeenProcessed = await hasEffect(bundleProcessedKey);
 
     if (hasBeenProcessed) {
@@ -372,7 +372,7 @@ export async function processServiceLine(line: ServiceLine, sale: Sale): Promise
     console.log(`[processServiceLine] Processing service sale: ${line.description}`);
 
     // Idempotency check
-    const taskCreatedKey = `sale:${sale.id}:taskCreated:${line.lineId}`;
+    const taskCreatedKey = EffectKeys.sideEffect('sale', sale.id, `taskCreated:${line.lineId}`);
     const hasBeenCreated = await hasEffect(taskCreatedKey);
 
     if (hasBeenCreated || !line.createTask) {
@@ -443,7 +443,7 @@ export async function processServiceLine(line: ServiceLine, sale: Sale): Promise
     await createLink(link);
 
     // Mark effect as complete
-    await markEffect(`sale:${sale.id}:${taskCreatedKey}`);
+    await markEffect(taskCreatedKey);
 
     // Log the task creation
     await appendEntityLog(EntityType.TASK, serviceTask.id, LogEventType.CREATED, {
@@ -490,7 +490,7 @@ export async function ensureSoldItemEntities(sale: Sale): Promise<void> {
     // Process individual item lines
     for (const line of itemLines) {
       const lineId = line.lineId || line.itemId; // Fallback for legacy lines
-      const effectKey = `sale:${sale.id}:soldItemEntity:${lineId}`;
+      const effectKey = EffectKeys.sideEffect('sale', sale.id, `soldItemEntity:${lineId}`);
 
       if (await hasEffect(effectKey)) {
         console.log(`[ensureSoldItemEntities] ⏭️ Already exists for line: ${lineId}`);
@@ -501,6 +501,12 @@ export async function ensureSoldItemEntities(sale: Sale): Promise<void> {
       const item = await getItemById(line.itemId);
       if (!item) {
         console.warn(`[ensureSoldItemEntities] Item not found: ${line.itemId}, skipping`);
+        continue;
+      }
+
+      // Do not clone an item that is already a clone
+      if (item.id.includes('-sold-') || (item as any).isSoldItemEntity) {
+        console.warn(`[ensureSoldItemEntities] Blocked clone loop. Item ${item.id} is already a Sold Entity.`);
         continue;
       }
 
@@ -528,7 +534,7 @@ export async function ensureSoldItemEntities(sale: Sale): Promise<void> {
       // Register in Monthly Archive Index
       const archiveMonth = calculateClosingDate(soldItemEntity.soldAt || new Date());
       const monthKey = formatMonthKey(archiveMonth);
-      await kvSAdd(`index:items:collected:${monthKey}`, soldItemEntity.id);
+      await kvSAdd(buildArchiveCollectionIndexKey('items', monthKey), soldItemEntity.id);
       await kvSAdd(buildArchiveMonthsKey(), monthKey);
 
       // Create SALE_ITEM link for the sold item entity
@@ -553,7 +559,7 @@ export async function ensureSoldItemEntities(sale: Sale): Promise<void> {
     // Process bundle lines - create Sold Item entities for bundles too
     for (const line of bundleLines) {
       const lineId = line.lineId || line.itemId; // Fallback for legacy lines
-      const effectKey = `sale:${sale.id}:soldItemEntity:bundle:${lineId}`;
+      const effectKey = EffectKeys.sideEffect('sale', sale.id, `soldItemEntity:bundle:${lineId}`);
 
       if (await hasEffect(effectKey)) {
         console.log(`[ensureSoldItemEntities] ⏭️ Already exists for bundle line: ${lineId}`);
@@ -568,6 +574,12 @@ export async function ensureSoldItemEntities(sale: Sale): Promise<void> {
       const bundleItem = await getItemById(line.itemId);
       if (!bundleItem) {
         console.warn(`[ensureSoldItemEntities] Bundle item not found: ${line.itemId}, skipping`);
+        continue;
+      }
+
+      // Do not clone an item that is already a clone
+      if (bundleItem.id.includes('-sold-') || (bundleItem as any).isSoldItemEntity) {
+        console.warn(`[ensureSoldItemEntities] Blocked bundle clone loop. Item ${bundleItem.id} is already a Sold Entity.`);
         continue;
       }
 
@@ -595,7 +607,7 @@ export async function ensureSoldItemEntities(sale: Sale): Promise<void> {
       // Register in Monthly Archive Index
       const bundleArchiveMonth = calculateClosingDate(soldBundleItemEntity.soldAt as Date || new Date());
       const bundleMonthKey = formatMonthKey(bundleArchiveMonth);
-      await kvSAdd(`index:items:collected:${bundleMonthKey}`, soldBundleItemEntity.id);
+      await kvSAdd(buildArchiveCollectionIndexKey('items', bundleMonthKey), soldBundleItemEntity.id);
       await kvSAdd(buildArchiveMonthsKey(), bundleMonthKey);
 
       // Create SALE_ITEM link for the sold bundle entity

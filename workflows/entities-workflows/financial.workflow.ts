@@ -22,6 +22,7 @@ import {
 import { createCharacterFromFinancial } from '../character-creation-utils';
 import { upsertFinancial } from '@/data-store/datastore';
 import { formatMonthKey, calculateClosingDate } from '@/lib/utils/date-utils';
+import { buildArchiveCollectionIndexKey, buildArchiveMonthsKey } from '@/data-store/keys';
 import { recalculateCharacterWallet } from '../financial-record-utils';
 
 const STATE_FIELDS = ['isNotPaid', 'isNotCharged', 'isCollected'];
@@ -148,7 +149,7 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
       if (!(await hasEffect(archiveIndexEffectKey))) {
         const monthKey = formatMonthKey(snapshotMonthDate);
         const { kvSAdd } = await import('@/data-store/kv');
-        const archiveIndexKey = `index:financials:collected:${monthKey}`;
+        const archiveIndexKey = buildArchiveCollectionIndexKey('financials', monthKey);
         await kvSAdd(archiveIndexKey, financial.id);
 
         const { buildArchiveMonthsKey } = await import('@/data-store/keys');
@@ -233,7 +234,7 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
     if (!(await hasEffect(archiveIndexEffectKey))) {
       const monthKey = formatMonthKey(snapshotMonthDate);
       const { kvSAdd } = await import('@/data-store/kv');
-      const archiveIndexKey = `index:financials:collected:${monthKey}`;
+      const archiveIndexKey = buildArchiveCollectionIndexKey('financials', monthKey);
       await kvSAdd(archiveIndexKey, financial.id);
 
       const { buildArchiveMonthsKey } = await import('@/data-store/keys');
@@ -402,12 +403,12 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
       const allMonths = await getAvailableArchiveMonths();
       for (const m of allMonths) {
         if (m !== newMonth) {
-          await kvSRem(`index:financials:collected:${m}`, financial.id);
+          await kvSRem(buildArchiveCollectionIndexKey('financials', m), financial.id);
         }
       }
 
       if (newMonth) {
-        await kvSAdd(`index:financials:collected:${newMonth}`, financial.id);
+        await kvSAdd(buildArchiveCollectionIndexKey('financials', newMonth), financial.id);
         await kvSAdd(buildArchiveMonthsKey(), newMonth);
 
         // The financial record's existence in the index and its inherent dates are the single source of truth.
@@ -480,7 +481,7 @@ export async function removeRecordEffectsOnDelete(recordId: string): Promise<voi
         }
         const monthKey = formatMonthKey(snapshotDate);
         const { kvSRem } = await import('@/data-store/kv');
-        const archiveIndexKey = `index:financials:collected:${monthKey}`;
+        const archiveIndexKey = buildArchiveCollectionIndexKey('financials', monthKey);
         await kvSRem(archiveIndexKey, recordId);
         await clearEffect(EffectKeys.sideEffect('financial', recordId, `financialSnapshot:${monthKey}`));
       }

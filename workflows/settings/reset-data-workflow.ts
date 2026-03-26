@@ -21,21 +21,21 @@ const RESETTABLE_ENTITY_TYPES = [
 
 // System State keys that should be cleared on reset
 const SYSTEM_STATE_KEYS = [
-  'data:company-assets',
-  'data:personal-assets'
+  'thegame:data:company-assets',
+  'thegame:data:personal-assets'
 ];
 
 // Configuration keys that should be preserved
 const CONFIGURATION_KEYS = [
-  'data:financial-conversion-rates',
-  'data:player-conversion-rates'
+  'thegame:data:financial-conversion-rates',
+  'thegame:data:player-conversion-rates'
 ];
 
 // Research Data keys that should be preserved (NEVER cleared)
 const RESEARCH_DATA_KEYS = [
-  'data:project-status',
-  'data:notes-log',
-  'data:dev-log'
+  'thegame:data:project-status',
+  'thegame:data:notes-log',
+  'thegame:data:dev-log'
 ];
 
 export interface SettingsResult {
@@ -435,9 +435,9 @@ export class ResetDataWorkflow {
       // Only clear secondary indexes for entities that have them
       if (entityType === EntityType.ITEM) {
         // Clear item type indexes and ambassador indexes
-        const typeIndexKeys = await kvScan('index:item:type:');
-        const sourceTaskIndexKeys = await kvScan('index:item:sourceTaskId:');
-        const sourceRecordIndexKeys = await kvScan('index:item:sourceRecordId:');
+        const typeIndexKeys = await kvScan('thegame:index:item:type:');
+        const sourceTaskIndexKeys = await kvScan('thegame:index:item:sourceTaskId:');
+        const sourceRecordIndexKeys = await kvScan('thegame:index:item:sourceRecordId:');
 
         const allItemIndexKeys = [...typeIndexKeys, ...sourceTaskIndexKeys, ...sourceRecordIndexKeys];
 
@@ -459,7 +459,7 @@ export class ResetDataWorkflow {
         }
       } else if (entityType === EntityType.FINANCIAL) {
         // Clear financial sourceTaskId indexes
-        const sourceTaskIndexKeys = await kvScan('index:financial:sourceTaskId:');
+        const sourceTaskIndexKeys = await kvScan('thegame:index:financial:sourceTaskId:');
 
         if (sourceTaskIndexKeys.length > 0) {
           const BATCH_SIZE = 100;
@@ -493,7 +493,7 @@ export class ResetDataWorkflow {
       console.log('[ResetDataWorkflow] 🔗 Clearing all links...');
 
       // Get all link keys using kvScan (like getAllLinks does)
-      const linkKeys = await kvScan('links:link:');
+      const linkKeys = await kvScan('thegame:links:link:');
 
       if (linkKeys.length > 0) {
         console.log(`[ResetDataWorkflow] 📊 Found ${linkKeys.length} links to clear`);
@@ -516,7 +516,7 @@ export class ResetDataWorkflow {
         }
 
         // Clear all entity-specific link indexes in batches
-        const entityLinkKeys = await kvScan('index:links:by-entity:');
+        const entityLinkKeys = await kvScan('thegame:index:links:by-entity:');
         if (entityLinkKeys.length > 0) {
           console.log(`[ResetDataWorkflow] 📊 Found ${entityLinkKeys.length} entity link indexes to clear`);
 
@@ -572,8 +572,8 @@ export class ResetDataWorkflow {
 
       // Verify research logs still exist
       console.log('[ResetDataWorkflow] 🔍 Verifying research logs are preserved...');
-      const notesLog = await kv.get('data:notes-log');
-      const devLog = await kv.get('data:dev-log');
+      const notesLog = await kv.get('thegame:data:notes-log');
+      const devLog = await kv.get('thegame:data:dev-log');
       console.log('[ResetDataWorkflow] ✅ Research logs preserved:', {
         notesLog: notesLog ? 'EXISTS' : 'MISSING',
         devLog: devLog ? 'EXISTS' : 'MISSING'

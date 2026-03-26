@@ -116,7 +116,7 @@ export async function appendEntityLog(
       entry.name = details.name || 'Unknown';
       entry.itemType = details.itemType || 'Unknown';
       entry.subItemType = details.subItemType || 'Unknown';
-      entry.quantity = details.quantity ?? 1;
+      entry.soldQuantity = details.soldQuantity ?? details.quantity ?? 1;
       break;
 
     case EntityType.TASK:

@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
     // In production with KV, read from KV
     if (process.env.UPSTASH_REDIS_REST_URL) {
       const { kvGet } = await import('@/data-store/kv');
-      const notesData = await kvGet('data:notes-log');
+      const notesData = await kvGet('thegame:data:notes-log');
 
       if (notesData) {
         return NextResponse.json(notesData);
@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
       const { kvGet, kvSet } = await import('@/data-store/kv');
 
       // Get current notes data
-      const existingData = await kvGet('data:notes-log');
+      const existingData = await kvGet('thegame:data:notes-log');
       const currentData = existingData || { entries: [], lastUpdated: new Date().toISOString() };
 
       // Add new note to entries
@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
         lastUpdated: new Date().toISOString()
       };
 
-      await kvSet('data:notes-log', updatedData);
+      await kvSet('thegame:data:notes-log', updatedData);
       return NextResponse.json({ note: newNote });
     } else {
       // In development, write to filesystem
@@ -131,7 +131,7 @@ export async function PUT(req: NextRequest) {
       const { kvGet, kvSet } = await import('@/data-store/kv');
 
       // Get current notes data
-      const currentData = await kvGet('data:notes-log') || { entries: [], lastUpdated: new Date().toISOString() };
+      const currentData = await kvGet('thegame:data:notes-log') || { entries: [], lastUpdated: new Date().toISOString() };
 
       // Update existing note
       const updatedNote = {
@@ -150,7 +150,7 @@ export async function PUT(req: NextRequest) {
         lastUpdated: new Date().toISOString()
       };
 
-      await kvSet('data:notes-log', updatedData);
+      await kvSet('thegame:data:notes-log', updatedData);
       return NextResponse.json({ note: updatedNote });
     } else {
       // In development, write to filesystem
@@ -208,7 +208,7 @@ export async function DELETE(req: NextRequest) {
       const { kvGet, kvSet } = await import('@/data-store/kv');
 
       // Get current notes data
-      const currentData = await kvGet('data:notes-log') || { entries: [], lastUpdated: new Date().toISOString() };
+      const currentData = await kvGet('thegame:data:notes-log') || { entries: [], lastUpdated: new Date().toISOString() };
 
       // Remove note from entries
       const currentEntries = (currentData as any).entries || [];
@@ -220,7 +220,7 @@ export async function DELETE(req: NextRequest) {
         lastUpdated: new Date().toISOString()
       };
 
-      await kvSet('data:notes-log', updatedData);
+      await kvSet('thegame:data:notes-log', updatedData);
       return NextResponse.json({ success: true });
     } else {
       // In development, write to filesystem
