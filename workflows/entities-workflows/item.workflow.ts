@@ -4,7 +4,7 @@
 import { EntityType, LogEventType, FOUNDER_CHARACTER_ID } from '@/types/enums';
 import type { Item } from '@/types/entities';
 import { ItemStatus } from '@/types/enums';
-import { appendEntityLog, updateEntityLogField, removeLogEntriesAcrossMonths } from '../entities-logging';
+import { appendEntityLog, updateEntityLeanFields, removeLogEntriesAcrossMonths } from '../entities-logging';
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
 import { EffectKeys } from '@/data-store/keys';
 import { getLinksFor, removeLink } from '@/links/link-registry';
@@ -16,7 +16,6 @@ import { stagePointsForPlayer } from '../points-rewards-utils';
 import { isSoldStatus, isCollectedStatus } from '@/lib/utils/status-utils';
 
 const STATE_FIELDS = ['status', 'stock', 'quantitySold', 'isCollected'];
-const DESCRIPTIVE_FIELDS = ['name', 'description', 'price', 'unitCost', 'additionalCost', 'value'];
 
 export async function onItemUpsert(item: Item, previousItem?: Item): Promise<void> {
   // New item creation
@@ -30,17 +29,8 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
     await appendEntityLog(EntityType.ITEM, item.id, LogEventType.CREATED, {
       name: item.name,
       itemType: item.type,
-      station: item.station,
-      collection: item.collection,
-      status: item.status,
-      quantity: item.stock?.reduce((sum: number, stock: any) => sum + stock.quantity, 0) || 0,
-      unitCost: item.unitCost || 0,
-      totalCost: (item.stock?.reduce((sum: number, stock: any) => sum + stock.quantity, 0) || 0) * (item.unitCost || 0),
-      price: item.price || 0,
-      sourceType,
-      sourceId,
       subItemType: item.subItemType,
-      description: `Item created from ${sourceType}: ${item.type} (${item.stock?.reduce((sum: number, stock: any) => sum + stock.quantity, 0) || 0}x)`
+      quantity: item.stock?.reduce((sum: number, stock: any) => sum + stock.quantity, 0) || 0
     });
 
     await markEffect(effectKey);
@@ -68,15 +58,8 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
       await appendEntityLog(EntityType.ITEM, item.id, LogEventType.UPDATED, {
         name: item.name,
         itemType: item.type,
-        station: item.station,
         subItemType: item.subItemType,
-        collection: item.collection,
-        price: item.price,
-        unitCost: item.unitCost,
-        oldStatus: previousItem.status,
-        newStatus: item.status,
-        transition: `${previousItem.status} → ${item.status}`,
-        changedAt: new Date().toISOString()
+        quantity: 1
       });
     }
   }
@@ -92,8 +75,6 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
       // Already processed
       return;
     }
-
-    console.log(`[onItemUpsert] Processing manual SOLD status change for item: ${item.name}`);
 
     // Calculate remaining stock to sell
     const totalStock = item.stock?.reduce((sum, stockPoint) => sum + stockPoint.quantity, 0) || 0;
@@ -144,33 +125,13 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
     // Save updated item (skip workflow to avoid recursion)
     await upsertItem(updatedItem, { skipWorkflowEffects: true });
 
-
-
     // Log SOLD event
-    const soldLogDetails: Record<string, any> = {
+    await appendEntityLog(EntityType.ITEM, item.id, LogEventType.SOLD, {
       name: item.name,
       itemType: item.type,
-      collection: item.collection,
-      quantitySold: updatedItem.quantitySold,
-      oldQuantitySold: previousItem.quantitySold,
-      quantitySoldInThisTransaction: quantityToSell,
-      manualSale: true
-    };
-
-    if (item.station !== undefined) {
-      soldLogDetails.station = item.station;
-    }
-    if (item.subItemType !== undefined) {
-      soldLogDetails.subItemType = item.subItemType;
-    }
-    if (item.unitCost !== undefined) {
-      soldLogDetails.unitCost = item.unitCost;
-    }
-    if (item.price !== undefined) {
-      soldLogDetails.price = item.price;
-    }
-
-    await appendEntityLog(EntityType.ITEM, item.id, LogEventType.SOLD, soldLogDetails);
+      subItemType: item.subItemType,
+      quantity: quantityToSell
+    });
     await markEffect(manualSoldEffectKey);
 
     // Points Staging - for manually sold items
@@ -187,31 +148,12 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
 
   // Quantity sold changes - SOLD event (via sale)
   if (previousItem.quantitySold !== item.quantitySold && item.quantitySold > previousItem.quantitySold) {
-    const soldLogDetails: Record<string, any> = {
+    await appendEntityLog(EntityType.ITEM, item.id, LogEventType.SOLD, {
       name: item.name,
       itemType: item.type,
-      collection: item.collection,
-      quantitySold: item.quantitySold,
-      oldQuantitySold: previousItem.quantitySold
-    };
-
-    if (item.station !== undefined) {
-      soldLogDetails.station = item.station;
-    }
-    if (item.subItemType !== undefined) {
-      soldLogDetails.subItemType = item.subItemType;
-    }
-    if (item.unitCost !== undefined) {
-      soldLogDetails.unitCost = item.unitCost;
-    }
-    if (item.price !== undefined) {
-      soldLogDetails.price = item.price;
-    }
-    if (item.status !== undefined) {
-      soldLogDetails.status = item.status;
-    }
-
-    await appendEntityLog(EntityType.ITEM, item.id, LogEventType.SOLD, soldLogDetails);
+      subItemType: item.subItemType,
+      quantity: item.quantitySold - previousItem.quantitySold
+    });
 
     // Points Staging - for sales-triggered quantity changes
     if (item.rewards?.points) {
@@ -255,8 +197,8 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
     await appendEntityLog(EntityType.ITEM, item.id, LogEventType.COLLECTED, {
       name: item.name,
       itemType: item.type,
-      collection: item.collection,
-      collectedAt: collectedAt.toISOString()
+      subItemType: item.subItemType,
+      quantity: 1
     });
 
     // Record Archive Index for COLLECTED case 
@@ -276,11 +218,18 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
     }
   }
 
-  // Descriptive changes - update in-place
-  for (const field of DESCRIPTIVE_FIELDS) {
-    if ((previousItem as any)[field] !== (item as any)[field]) {
-      await updateEntityLogField(EntityType.ITEM, item.id, field, (previousItem as any)[field], (item as any)[field]);
-    }
+  // Lean identity fields changed — cascade patch ALL log entries across ALL months and events
+  const leanFieldsChanged =
+    previousItem.name !== item.name ||
+    previousItem.type !== item.type ||
+    previousItem.subItemType !== item.subItemType;
+
+  if (leanFieldsChanged) {
+    await updateEntityLeanFields(EntityType.ITEM, item.id, {
+      name: item.name,
+      itemType: item.type,
+      subItemType: item.subItemType || '',
+    });
   }
 
   // ==========================================
@@ -417,7 +366,6 @@ export async function removeItemEffectsOnDelete(itemId: string): Promise<void> {
  * Handles side effects when item is created directly (not from task/record)
  */
 export async function processItemCreationEffects(item: Item): Promise<void> {
-
 
   // Items created from Item Modal have NO financial effects
   // Items are just inventory/assets - financial effects come from Tasks/Records

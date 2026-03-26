@@ -239,15 +239,8 @@ export async function updateItemsCreatedByTask(
           await appendEntityLog(EntityType.ITEM, item.id, LogEventType.UPDATED, {
             name: updatedItem.name,
             itemType: updatedItem.type,
-            station: updatedItem.station,
             subItemType: updatedItem.subItemType,
-            collection: updatedItem.collection,
-            quantity: updatedItem.stock?.reduce((sum, s) => sum + s.quantity, 0) || 0,
-            unitCost: updatedItem.unitCost,
-            price: updatedItem.price,
-            sourceType: 'task',
-            sourceId: task.id,
-            description: `Updated from Task: ${task.name}`
+            quantity: updatedItem.stock?.reduce((sum, s) => sum + s.quantity, 0) || 0
           });
 
           await markEffect(updateKey);
@@ -420,15 +413,8 @@ export async function updateItemsCreatedByRecord(
         await appendEntityLog(EntityType.ITEM, item.id, LogEventType.UPDATED, {
           name: updatedItem.name,
           itemType: updatedItem.type,
-          station: updatedItem.station,
           subItemType: updatedItem.subItemType,
-          collection: updatedItem.collection,
-          quantity: updatedItem.stock?.reduce((sum, s) => sum + s.quantity, 0) || 0,
-          unitCost: updatedItem.unitCost,
-          price: updatedItem.price,
-          sourceType: 'record',
-          sourceId: record.id,
-          description: `Updated from Record: ${record.name}`
+          quantity: updatedItem.stock?.reduce((sum, s) => sum + s.quantity, 0) || 0
         });
 
         await markEffect(updateKey);
@@ -609,25 +595,12 @@ export async function updateItemsFromSale(
         console.log(`[updateItemsFromSale] ✅ Updated item: ${line.itemId}`);
 
         // Explicitly Log Detailed Sale Info to Item Log
-        const soldLogDetails = {
-          name: item.name, // Explicitly set Item Name to override potential fallbacks
+        await appendEntityLog(EntityType.ITEM, item.id, LogEventType.SOLD, {
+          name: item.name,
           itemType: item.type,
-          station: item.station,
           subItemType: item.subItemType,
-          collection: item.collection,
-          message: `Sold ${line.quantity}x in ${sale.counterpartyName || 'Booth Sale'} for $${line.unitPrice}`,
-          saleId: sale.id,
-          saleName: sale.name,
-          counterparty: sale.counterpartyName || 'Walk-in / Booth',
-          quantitySold: updatedItem.quantitySold,
-          quantityInOneSale: line.quantity,
-          unitPrice: line.unitPrice,
-          totalPrice: line.unitPrice * line.quantity,
-          soldAt: sale.saleDate || new Date(),
-          context: sale.type
-        };
-
-        await appendEntityLog(EntityType.ITEM, item.id, LogEventType.SOLD, soldLogDetails);
+          quantity: line.quantity
+        });
 
         // FIX: Use line.lineId for unique Sold Item ID (not sale.id.slice(-6))
         // This prevents collisions when the same item appears on multiple lines at different prices
@@ -765,16 +738,16 @@ export async function updatePlayerPointsFromSource(
       updatedPlayer = {
         ...player,
         points: {
-          xp: (player.points?.xp || 0) + pointsDelta.xp,
-          rp: (player.points?.rp || 0) + pointsDelta.rp,
-          fp: (player.points?.fp || 0) + pointsDelta.fp,
-          hp: (player.points?.hp || 0) + pointsDelta.hp
+          xp: Math.round((player.points?.xp || 0) + pointsDelta.xp),
+          rp: Math.round((player.points?.rp || 0) + pointsDelta.rp),
+          fp: Math.round((player.points?.fp || 0) + pointsDelta.fp),
+          hp: Math.round((player.points?.hp || 0) + pointsDelta.hp)
         },
         totalPoints: {
-          xp: (player.totalPoints?.xp || 0) + pointsDelta.xp,
-          rp: (player.totalPoints?.rp || 0) + pointsDelta.rp,
-          fp: (player.totalPoints?.fp || 0) + pointsDelta.fp,
-          hp: (player.totalPoints?.hp || 0) + pointsDelta.hp
+          xp: Math.round((player.totalPoints?.xp || 0) + pointsDelta.xp),
+          rp: Math.round((player.totalPoints?.rp || 0) + pointsDelta.rp),
+          fp: Math.round((player.totalPoints?.fp || 0) + pointsDelta.fp),
+          hp: Math.round((player.totalPoints?.hp || 0) + pointsDelta.hp)
         },
         updatedAt: new Date()
       };
@@ -784,10 +757,10 @@ export async function updatePlayerPointsFromSource(
       updatedPlayer = {
         ...player,
         pendingPoints: {
-          xp: (player.pendingPoints?.xp || 0) + pointsDelta.xp,
-          rp: (player.pendingPoints?.rp || 0) + pointsDelta.rp,
-          fp: (player.pendingPoints?.fp || 0) + pointsDelta.fp,
-          hp: (player.pendingPoints?.hp || 0) + pointsDelta.hp
+          xp: Math.round((player.pendingPoints?.xp || 0) + pointsDelta.xp),
+          rp: Math.round((player.pendingPoints?.rp || 0) + pointsDelta.rp),
+          fp: Math.round((player.pendingPoints?.fp || 0) + pointsDelta.fp),
+          hp: Math.round((player.pendingPoints?.hp || 0) + pointsDelta.hp)
         },
         updatedAt: new Date()
       };

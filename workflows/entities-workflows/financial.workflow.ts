@@ -4,7 +4,7 @@ import { isValid } from 'date-fns';
 
 import { EntityType, LogEventType, FinancialStatus, FOUNDER_CHARACTER_ID } from '@/types/enums';
 import type { FinancialRecord } from '@/types/entities';
-import { appendEntityLog, updateEntityLogField, removeLogEntriesAcrossMonths } from '../entities-logging';
+import { appendEntityLog, updateEntityLeanFields, removeLogEntriesAcrossMonths } from '../entities-logging';
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
 import { EffectKeys } from '@/data-store/keys';
 import { createLink, getLinksFor, removeLink } from '@/links/link-registry';
@@ -25,7 +25,6 @@ import { formatMonthKey, calculateClosingDate } from '@/lib/utils/date-utils';
 import { recalculateCharacterWallet } from '../financial-record-utils';
 
 const STATE_FIELDS = ['isNotPaid', 'isNotCharged', 'isCollected'];
-const DESCRIPTIVE_FIELDS = ['name', 'description', 'cost', 'revenue', 'jungleCoins', 'notes'];
 
 export async function onFinancialUpsert(financial: FinancialRecord, previousFinancial?: FinancialRecord): Promise<void> {
   // New financial record creation
@@ -285,6 +284,8 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
         name: financial.name,
         type: financial.type,
         station: financial.station,
+        cost: financial.cost,
+        revenue: financial.revenue,
         collectedAt: collectedAt.toISOString()
       });
 
@@ -302,7 +303,11 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
             hp: financial.rewards.points.hp || 0
           }, financial.id, EntityType.FINANCIAL);
           await appendEntityLog(EntityType.FINANCIAL, financial.id, LogEventType.UPDATED, {
-            detail: `Rewarded points for completed financial record`,
+            name: financial.name,
+            type: financial.type,
+            station: financial.station,
+            cost: financial.cost,
+            revenue: financial.revenue
           });
         }
       }
@@ -345,12 +350,23 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
 
   }
 
-  // Descriptive changes - update in-place
+  // Lean identity fields changed — cascade patch ALL log entries across ALL months and events
   if (previousFinancial) {
-    for (const field of DESCRIPTIVE_FIELDS) {
-      if ((previousFinancial as any)[field] !== (financial as any)[field]) {
-        await updateEntityLogField(EntityType.FINANCIAL, financial.id, field, (previousFinancial as any)[field], (financial as any)[field]);
-      }
+    const leanFieldsChanged =
+      previousFinancial.name !== financial.name ||
+      previousFinancial.type !== financial.type ||
+      previousFinancial.station !== financial.station ||
+      previousFinancial.cost !== financial.cost ||
+      previousFinancial.revenue !== financial.revenue;
+
+    if (leanFieldsChanged) {
+      await updateEntityLeanFields(EntityType.FINANCIAL, financial.id, {
+        name: financial.name || 'Unknown',
+        type: financial.type || 'Unknown',
+        station: financial.station || 'Unknown',
+        cost: financial.cost ?? 0,
+        revenue: financial.revenue ?? 0,
+      });
     }
   }
 

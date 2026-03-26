@@ -16,6 +16,7 @@ type KVClient = {
   smembers: (key: string) => Promise<string[]>;
   lpush: (key: string, ...values: string[]) => Promise<void>;
   lrange: (key: string, start: number, stop: number) => Promise<string[]>;
+  lset: (key: string, index: number, value: string) => Promise<void>;
   keys: (pattern: string) => Promise<string[]>;
   sunion: (...keys: string[]) => Promise<string[]>;
   hincrbyfloat: (key: string, field: string, increment: number) => Promise<number>;
@@ -121,8 +122,12 @@ export async function kvLPush(key: string, ...values: string[]): Promise<void> {
   if (values.length) await kv.lpush(key, ...(values as [string, ...string[]]));
 }
 
-export async function kvLRange(key: string, start: number, stop: number): Promise<string[]> {
+export async function kvLRange(key: string, start: number, stop: number) : Promise<string[]> {
   return (await kv.lrange(key, start, stop)) ?? [];
+}
+
+export async function kvLSet(key: string, index: number, value: string): Promise<void> {
+  await kv.lset(key, index, value);
 }
 
 

@@ -14,7 +14,6 @@ const CLEARABLE_LOG_ENTITY_TYPES = [
   EntityType.FINANCIAL,
   EntityType.CHARACTER,
   EntityType.PLAYER,
-  EntityType.ACCOUNT,
   EntityType.SITE
 ];
 
@@ -122,8 +121,22 @@ export class ClearLogsWorkflow {
       
       for (const logType of logTypes) {
         try {
-          const logKey = buildLogKey(logType);
-          await kv.del(logKey);
+          if (logType === 'links') {
+            // Links are not partitioned by month yet
+            const { buildLogKey } = await import('@/data-store/keys');
+            await kv.del(buildLogKey('links' as EntityType));
+          } else {
+            // Clear partitioned monthly logs
+            const { getEntityLogMonths } = await import('../entities-logging');
+            const { buildLogMonthKey, buildLogMonthsIndexKey } = await import('@/data-store/keys');
+            
+            const months = await getEntityLogMonths(logType as EntityType);
+            for (const monthKey of months) {
+              await kv.del(buildLogMonthKey(logType as EntityType, monthKey));
+            }
+            // Clear the month index itself
+            await kv.del(buildLogMonthsIndexKey(logType as EntityType));
+          }
           
           results.push(`Cleared ${logType} logs`);
           console.log(`[ClearLogsWorkflow] ✅ Cleared ${logType} logs`);

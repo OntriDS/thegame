@@ -3,13 +3,12 @@
 
 import { EntityType, LogEventType, SiteStatus } from '@/types/enums';
 import type { Site } from '@/types/entities';
-import { appendEntityLog, updateEntityLogField } from '../entities-logging';
+import { appendEntityLog, updateEntityLeanFields } from '../entities-logging';
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
 import { EffectKeys } from '@/data-store/keys';
 import { getLinksFor, removeLink } from '@/links/link-registry';
 
 const STATE_FIELDS = ['status'];
-const DESCRIPTIVE_FIELDS = ['name', 'description', 'metadata'];
 
 export async function onSiteUpsert(site: Site, previousSite?: Site): Promise<void> {
   // New site creation
@@ -63,10 +62,31 @@ export async function onSiteUpsert(site: Site, previousSite?: Site): Promise<voi
     }
   }
   
-  // Descriptive changes - update in-place
-  for (const field of DESCRIPTIVE_FIELDS) {
-    if ((previousSite as any)[field] !== (site as any)[field]) {
-      await updateEntityLogField(EntityType.SITE, site.id, field, (previousSite as any)[field], (site as any)[field]);
+  // Lean identity fields changed — cascade patch ALL log entries across ALL months and events
+  if (previousSite) {
+    const getLeanFields = (s: Site) => {
+      const meta = s.metadata as any || {};
+      return {
+        name: s.name || 'Unknown',
+        type: meta.type || 'Unknown',
+        businessType: meta.businessType || meta.digitalType || meta.systemType || 'Unknown',
+        url: (s as any).url || meta.url || '',
+        settlementId: meta.settlementId || null
+      };
+    };
+
+    const oldLean = getLeanFields(previousSite);
+    const newLean = getLeanFields(site);
+
+    const leanFieldsChanged =
+      oldLean.name !== newLean.name ||
+      oldLean.type !== newLean.type ||
+      oldLean.businessType !== newLean.businessType ||
+      oldLean.url !== newLean.url ||
+      oldLean.settlementId !== newLean.settlementId;
+
+    if (leanFieldsChanged) {
+      await updateEntityLeanFields(EntityType.SITE, site.id, newLean);
     }
   }
 }
@@ -77,16 +97,12 @@ export async function onSiteUpsert(site: Site, previousSite?: Site): Promise<voi
  */
 export async function removeSiteEffectsOnDelete(siteId: string): Promise<void> {
   try {
-    console.log(`[removeSiteEffectsOnDelete] Starting cleanup for site: ${siteId}`);
-    
     // 1. Remove all Links related to this site
     const siteLinks = await getLinksFor({ type: EntityType.SITE, id: siteId });
-    console.log(`[removeSiteEffectsOnDelete] Found ${siteLinks.length} links to remove`);
     
     for (const link of siteLinks) {
       try {
         await removeLink(link.id);
-        console.log(`[removeSiteEffectsOnDelete] ✅ Removed link: ${link.linkType}`);
       } catch (error) {
         console.error(`[removeSiteEffectsOnDelete] ❌ Failed to remove link ${link.id}:`, error);
       }
@@ -97,12 +113,7 @@ export async function removeSiteEffectsOnDelete(siteId: string): Promise<void> {
     await clearEffectsByPrefix(EntityType.SITE, siteId, '');
     
     // 3. Remove log entries from sites log
-    console.log(`[removeSiteEffectsOnDelete] Starting log entry removal for site: ${siteId}`);
-    
     // TODO: Implement server-side log removal or remove this call
-    console.log(`[removeSiteEffectsOnDelete] ⚠️ Log entry removal skipped - needs server-side implementation`);
-    
-    console.log(`[removeSiteEffectsOnDelete] ✅ Cleared effects, removed links, and removed log entries for site ${siteId}`);
   } catch (error) {
     console.error('Error removing site effects:', error);
   }

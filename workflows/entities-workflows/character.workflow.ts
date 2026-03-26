@@ -3,95 +3,59 @@
 
 import { EntityType, LogEventType } from '@/types/enums';
 import type { Character } from '@/types/entities';
-import { appendEntityLog, updateEntityLogField } from '../entities-logging';
+import { appendEntityLog, updateEntityLeanFields } from '../entities-logging';
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
 import { EffectKeys } from '@/data-store/keys';
 import { getLinksFor, removeLink } from '@/links/link-registry';
 import type { Task, FinancialRecord } from '@/types/entities';
 
 const STATE_FIELDS = ['roles', 'isActive'];
-const DESCRIPTIVE_FIELDS = ['name', 'description', 'contactEmail', 'contactPhone', 'commColor'];
 
 export async function onCharacterUpsert(character: Character, previousCharacter?: Character): Promise<void> {
-  console.log('🔥 [onCharacterUpsert] START', { 
-    id: character.id, 
-    name: character.name,
-    type: previousCharacter ? 'UPDATE' : 'CREATE'
-  });
-  
   // New character creation
   if (!previousCharacter) {
     const effectKey = EffectKeys.created('character', character.id);
-    const hasEffectResult = await hasEffect(effectKey);
     
-    console.log('🔥 [onCharacterUpsert] New character check', { effectKey, hasEffect: hasEffectResult });
+    if (await hasEffect(effectKey)) return;
     
-    if (hasEffectResult) {
-      console.log('🔥 [onCharacterUpsert] ⏭️ SKIPPED - effect already exists');
-      return;
-    }
-    
-    console.log('🔥 [onCharacterUpsert] Creating log entry...');
     await appendEntityLog(EntityType.CHARACTER, character.id, LogEventType.CREATED, { 
       name: character.name, 
       roles: character.roles
     });
     
     await markEffect(effectKey);
-    console.log('🔥 [onCharacterUpsert] ✅ Log entry created and effect marked');
     return;
   }
   
   // Role changes - ROLE_CHANGED event
   const rolesChanged = JSON.stringify(previousCharacter.roles) !== JSON.stringify(character.roles);
-  console.log('🔥 [onCharacterUpsert] Role change check', { 
-    rolesChanged,
-    oldRoles: previousCharacter.roles,
-    newRoles: character.roles
-  });
   
   if (rolesChanged) {
-    console.log('🔥 [onCharacterUpsert] Creating ROLE_CHANGED log entry...');
     await appendEntityLog(EntityType.CHARACTER, character.id, LogEventType.ROLE_CHANGED, {
       name: character.name,
       oldRoles: previousCharacter.roles,
       newRoles: character.roles
     });
-    console.log('🔥 [onCharacterUpsert] ✅ ROLE_CHANGED log entry created');
   }
   
   // General updates - UPDATED event
   const hasSignificantChanges = previousCharacter.isActive !== character.isActive;
-  console.log('🔥 [onCharacterUpsert] Significant change check', { 
-    hasSignificantChanges,
-    oldIsActive: previousCharacter.isActive,
-    newIsActive: character.isActive
-  });
   
   if (hasSignificantChanges) {
-    console.log('🔥 [onCharacterUpsert] Creating UPDATED log entry...');
     await appendEntityLog(EntityType.CHARACTER, character.id, LogEventType.UPDATED, {
       name: character.name,
       isActive: character.isActive
     });
-    console.log('🔥 [onCharacterUpsert] ✅ UPDATED log entry created');
   }
   
-  // Descriptive changes - update in-place
-  console.log('🔥 [onCharacterUpsert] Checking descriptive field changes...');
-  for (const field of DESCRIPTIVE_FIELDS) {
-    const oldValue = (previousCharacter as any)[field];
-    const newValue = (character as any)[field];
-    const fieldChanged = oldValue !== newValue;
-    
-    if (fieldChanged) {
-      console.log(`🔥 [onCharacterUpsert] Field '${field}' changed:`, { oldValue, newValue });
-      await updateEntityLogField(EntityType.CHARACTER, character.id, field, oldValue, newValue);
-      console.log(`🔥 [onCharacterUpsert] ✅ Field '${field}' updated in log`);
+  // Lean identity fields changed — cascade patch ALL log entries across ALL months and events
+  if (previousCharacter) {
+    if (previousCharacter.name !== character.name) {
+      await updateEntityLeanFields(EntityType.CHARACTER, character.id, {
+        name: character.name || 'Unknown'
+      });
     }
   }
-  
-  console.log('🔥 [onCharacterUpsert] ✅ COMPLETED');
 }
 
 /**
@@ -100,16 +64,12 @@ export async function onCharacterUpsert(character: Character, previousCharacter?
  */
 export async function removeCharacterEffectsOnDelete(characterId: string): Promise<void> {
   try {
-    console.log(`[removeCharacterEffectsOnDelete] Starting cleanup for character: ${characterId}`);
-    
     // 1. Remove all Links related to this character
     const characterLinks = await getLinksFor({ type: EntityType.CHARACTER, id: characterId });
-    console.log(`[removeCharacterEffectsOnDelete] Found ${characterLinks.length} links to remove`);
     
     for (const link of characterLinks) {
       try {
         await removeLink(link.id);
-        console.log(`[removeCharacterEffectsOnDelete] ✅ Removed link: ${link.linkType}`);
       } catch (error) {
         console.error(`[removeCharacterEffectsOnDelete] ❌ Failed to remove link ${link.id}:`, error);
       }
@@ -118,14 +78,6 @@ export async function removeCharacterEffectsOnDelete(characterId: string): Promi
     // 2. Clear all effects for this character
     await clearEffect(EffectKeys.created('character', characterId));
     await clearEffectsByPrefix(EntityType.CHARACTER, characterId, '');
-    
-    // 3. Remove log entries from character log
-    console.log(`[removeCharacterEffectsOnDelete] Starting log entry removal for character: ${characterId}`);
-    
-    // TODO: Implement server-side log removal or remove this call
-    console.log(`[removeCharacterEffectsOnDelete] ⚠️ Log entry removal skipped - needs server-side implementation`);
-    
-    console.log(`[removeCharacterEffectsOnDelete] ✅ Cleared effects, removed links, and removed log entries for character ${characterId}`);
   } catch (error) {
     console.error('Error removing character effects:', error);
   }

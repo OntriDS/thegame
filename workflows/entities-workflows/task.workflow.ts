@@ -3,7 +3,7 @@
 
 import { EntityType, LogEventType, TaskStatus, TaskType, FOUNDER_CHARACTER_ID } from '@/types/enums';
 import type { Task } from '@/types/entities';
-import { appendEntityLog, updateEntityLogField } from '../entities-logging';
+import { appendEntityLog, updateEntityLeanFields, removeLogEntriesAcrossMonths } from '../entities-logging';
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
 import { EffectKeys, buildArchiveCollectionIndexKey, buildArchiveMonthsKey } from '@/data-store/keys';
 import {
@@ -45,7 +45,6 @@ import {
 } from '@/lib/utils/recurrent-task-utils';
 
 const STATE_FIELDS = ['status', 'progress', 'doneAt', 'collectedAt', 'siteId', 'targetSiteId'];
-const DESCRIPTIVE_FIELDS = ['name', 'description', 'cost', 'revenue', 'rewards', 'priority'];
 
 const resolveTaskOutputSite = (task: Task): string | null => {
   if (task.targetSiteId && task.targetSiteId !== 'none') return task.targetSiteId;
@@ -311,12 +310,19 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
     }
   }
 
-  // Descriptive changes - update in-place (only when there is a previous task to compare)
+  // Lean identity fields changed — cascade patch ALL log entries across ALL months and events
   if (previousTask) {
-    for (const field of DESCRIPTIVE_FIELDS) {
-      if ((previousTask as any)[field] !== (task as any)[field]) {
-        await updateEntityLogField(EntityType.TASK, task.id, field, (previousTask as any)[field], (task as any)[field]);
-      }
+    const leanFieldsChanged =
+      previousTask.name !== task.name ||
+      previousTask.type !== task.type ||
+      previousTask.station !== task.station;
+
+    if (leanFieldsChanged) {
+      await updateEntityLeanFields(EntityType.TASK, task.id, {
+        name: task.name,
+        taskType: task.type || 'Unknown',
+        station: task.station || 'Unknown',
+      });
     }
   }
 
@@ -653,14 +659,12 @@ export async function uncompleteTask(taskId: string): Promise<void> {
       console.error(`[uncompleteTask] Failed to remove from archive index:`, err);
     }
 
-    // 4. Log UNCOMPLETED event
-    await appendEntityLog(EntityType.TASK, taskId, LogEventType.UNCOMPLETED, {
-      previousStatus: 'Done',
-      uncompletedAt: new Date().toISOString()
-    });
-    console.log(`[uncompleteTask] ✅ Logged UNCOMPLETED event`);
-
-    console.log(`[uncompleteTask] ✅ Successfully uncompleted task: ${task.name}`);
+    // 4. Remove DONE and COLLECTED logs (Idempotency)
+    // Instead of logging "UNCOMPLETED", we simply remove the entries that made it "complete"
+    const removedCount = await removeLogEntriesAcrossMonths(EntityType.TASK, entry => 
+      entry.entityId === taskId && 
+      (entry.event === LogEventType.DONE || entry.event === LogEventType.COLLECTED)
+    );
 
   } catch (error) {
     console.error(`[uncompleteTask] ❌ Failed to uncomplete task ${taskId}:`, error);
@@ -674,7 +678,6 @@ export async function uncompleteTask(taskId: string): Promise<void> {
  */
 async function cascadeCollectionToChildren(parentTask: Task, collectedAt: Date): Promise<void> {
   try {
-    console.log(`[cascadeCollectionToChildren] Starting collection cascade from parent: ${parentTask.name}`);
 
     // Import functions we need
     const { getAllTasks, upsertTask } = await import('@/data-store/datastore');
@@ -694,11 +697,9 @@ async function cascadeCollectionToChildren(parentTask: Task, collectedAt: Date):
     );
 
     if (childInstances.length === 0) {
-      console.log(`[cascadeCollectionToChildren] No collectable child instances found for parent: ${parentTask.name}`);
+
       return;
     }
-
-    console.log(`[cascadeCollectionToChildren] Found ${childInstances.length} child instances to collect`);
 
     // Collect each child instance
     for (const childInstance of childInstances) {
@@ -740,12 +741,8 @@ async function cascadeCollectionToChildren(parentTask: Task, collectedAt: Date):
         // Mark cascade effect to prevent duplicates
         await markEffect(childEffectKey);
         await markEffect(childPointsRewardedEffectKey); // Mark points as rewarded for the child
-
-        console.log(`[cascadeCollectionToChildren] ✅ Cascaded collection for child: ${childInstance.name}`);
       }
     }
-
-    console.log(`[cascadeCollectionToChildren] ✅ Collection cascade completed from parent: ${parentTask.name}`);
 
   } catch (error) {
     console.error(`[cascadeCollectionToChildren] ❌ Failed to cascade collection from parent ${parentTask.name}:`, error);

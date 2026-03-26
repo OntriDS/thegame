@@ -3,7 +3,7 @@
 
 import { EntityType, LogEventType, FOUNDER_CHARACTER_ID } from '@/types/enums';
 import type { Player } from '@/types/entities';
-import { appendEntityLog, updateEntityLogField, appendPlayerPointsChangedLog, upsertPlayerPointsChangedLog } from '../entities-logging';
+import { appendEntityLog, updateEntityLeanFields, appendPlayerPointsChangedLog, upsertPlayerPointsChangedLog } from '../entities-logging';
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
 import { EffectKeys } from '@/data-store/keys';
 import { getLinksFor, removeLink } from '@/links/link-registry';
@@ -12,7 +12,6 @@ import { appendPlayerPointsLog, appendPlayerPointsUpdateLog } from '../entities-
 import type { Task, FinancialRecord } from '@/types/entities';
 
 const STATE_FIELDS = ['level', 'totalPoints', 'points', 'isActive'];
-const DESCRIPTIVE_FIELDS = ['name', 'email'];
 
 export async function onPlayerUpsert(player: Player, previousPlayer?: Player): Promise<void> {
   
@@ -62,14 +61,12 @@ export async function onPlayerUpsert(player: Player, previousPlayer?: Player): P
     });
   }
   
-  // Descriptive changes - update in-place
-  for (const field of DESCRIPTIVE_FIELDS) {
-    const oldValue = (previousPlayer as any)[field];
-    const newValue = (player as any)[field];
-    const fieldChanged = oldValue !== newValue;
-    
-    if (fieldChanged) {
-      await updateEntityLogField(EntityType.PLAYER, player.id, field, oldValue, newValue);
+  // Lean identity fields changed — cascade patch ALL log entries across ALL months and events
+  if (previousPlayer) {
+    if (previousPlayer.name !== player.name) {
+      await updateEntityLeanFields(EntityType.PLAYER, player.id, {
+        name: player.name || 'Unknown'
+      });
     }
   }
 }
@@ -80,11 +77,11 @@ export async function onPlayerUpsert(player: Player, previousPlayer?: Player): P
  */
 export async function removePlayerEffectsOnDelete(playerId: string): Promise<void> {
   try {
-    console.log(`[removePlayerEffectsOnDelete] Starting cleanup for player: ${playerId}`);
+
     
     // 1. Remove all Links related to this player
     const playerLinks = await getLinksFor({ type: EntityType.PLAYER, id: playerId });
-    console.log(`[removePlayerEffectsOnDelete] Found ${playerLinks.length} links to remove`);
+
     
     for (const link of playerLinks) {
       try {
@@ -99,10 +96,10 @@ export async function removePlayerEffectsOnDelete(playerId: string): Promise<voi
     await clearEffectsByPrefix(EntityType.PLAYER, playerId, '');
     
     // 3. Remove log entries from player log
-    console.log(`[removePlayerEffectsOnDelete] Starting log entry removal for player: ${playerId}`);
+
     
     // TODO: Implement server-side log removal or remove this call
-    console.log(`[removePlayerEffectsOnDelete] ⚠️ Log entry removal skipped - needs server-side implementation`);
+
     
   } catch (error) {
     console.error('Error removing player effects:', error);
@@ -115,7 +112,7 @@ export async function removePlayerEffectsOnDelete(playerId: string): Promise<voi
  */
 export async function logPlayerEffect(task: Task): Promise<void> {
   try {
-    console.log(`[logPlayerEffect] Logging player effect for task: ${task.name} (${task.id})`);
+    // J$ no longer awarded as task rewards - only earned via Points Exchange
     
     // Only log if there are points to award
     const hasPoints = task.rewards?.points && (
@@ -126,7 +123,7 @@ export async function logPlayerEffect(task: Task): Promise<void> {
     );
     
     if (!hasPoints) {
-      console.log('[logPlayerEffect] No points to log, skipping');
+      return;
       return;
     }
     
@@ -156,7 +153,7 @@ export async function logPlayerEffect(task: Task): Promise<void> {
  */
 export async function logPlayerEffectFromRecord(record: FinancialRecord): Promise<void> {
   try {
-    console.log(`[logPlayerEffectFromRecord] Logging player effect for record: ${record.name} (${record.id})`);
+    // J$ no longer awarded as record rewards - only earned via Points Exchange
     
     // Only log if there are points to award
     const hasPoints = record.rewards?.points && (
@@ -167,7 +164,7 @@ export async function logPlayerEffectFromRecord(record: FinancialRecord): Promis
     );
     
     if (!hasPoints) {
-      console.log('[logPlayerEffectFromRecord] No points to log, skipping');
+      return;
       return;
     }
     
@@ -197,7 +194,7 @@ export async function logPlayerEffectFromRecord(record: FinancialRecord): Promis
  */
 export async function logPlayerUpdateFromTask(task: Task, oldTask: Task): Promise<void> {
   try {
-    console.log(`[logPlayerUpdateFromTask] Logging player update for task: ${task.name} (${task.id})`);
+    // J$ no longer awarded as task rewards - only earned via Points Exchange
     
     const oldRewards = oldTask.rewards?.points || { xp: 0, rp: 0, fp: 0, hp: 0 };
     const newRewards = task.rewards?.points || { xp: 0, rp: 0, fp: 0, hp: 0 };
@@ -206,7 +203,7 @@ export async function logPlayerUpdateFromTask(task: Task, oldTask: Task): Promis
     const rewardsChanged = JSON.stringify(oldRewards) !== JSON.stringify(newRewards);
     
     if (!rewardsChanged) {
-      console.log('[logPlayerUpdateFromTask] No reward changes to log, skipping');
+      return;
       return;
     }
     
@@ -241,7 +238,7 @@ export async function logPlayerUpdateFromTask(task: Task, oldTask: Task): Promis
  */
 export async function updatePlayerPointsFromTask(task: Task, oldTask: Task): Promise<void> {
   try {
-    console.log(`[updatePlayerPointsFromTask] Updating player points for task: ${task.name} (${task.id})`);
+    // Update player points from task rewards
     
     const oldRewards = oldTask.rewards?.points || { xp: 0, rp: 0, fp: 0, hp: 0 };
     const newRewards = task.rewards?.points || { xp: 0, rp: 0, fp: 0, hp: 0 };
@@ -258,7 +255,7 @@ export async function updatePlayerPointsFromTask(task: Task, oldTask: Task): Pro
     const hasChanges = delta.xp !== 0 || delta.rp !== 0 || delta.fp !== 0 || delta.hp !== 0;
     
     if (!hasChanges) {
-      console.log('[updatePlayerPointsFromTask] No point changes to apply, skipping');
+      return;
       return;
     }
     
@@ -267,7 +264,7 @@ export async function updatePlayerPointsFromTask(task: Task, oldTask: Task): Pro
     const mainPlayer = await getPlayerById(mainPlayerId);
     
     if (!mainPlayer) {
-      console.log('[updatePlayerPointsFromTask] Main player not found, skipping');
+      return;
       return;
     }
     
@@ -290,7 +287,7 @@ export async function updatePlayerPointsFromTask(task: Task, oldTask: Task): Pro
     };
     
     // Store the updated player
-    console.log(`[updatePlayerPointsFromTask] Applying point delta:`, delta);
+
     await upsertPlayer(updatedPlayer);
     
   } catch (error) {

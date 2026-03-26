@@ -60,16 +60,16 @@ export async function awardPointsToPlayer(
     const updatedPlayer: Player = {
       ...player,
       points: {
-        xp: (player.points?.xp || 0) + (points.xp || 0),
-        rp: (player.points?.rp || 0) + (points.rp || 0),
-        fp: (player.points?.fp || 0) + (points.fp || 0),
-        hp: (player.points?.hp || 0) + (points.hp || 0)
+        xp: Math.round((player.points?.xp || 0) + (points.xp || 0)),
+        rp: Math.round((player.points?.rp || 0) + (points.rp || 0)),
+        fp: Math.round((player.points?.fp || 0) + (points.fp || 0)),
+        hp: Math.round((player.points?.hp || 0) + (points.hp || 0))
       },
       totalPoints: {
-        xp: (player.totalPoints?.xp || 0) + (points.xp || 0),
-        rp: (player.totalPoints?.rp || 0) + (points.rp || 0),
-        fp: (player.totalPoints?.fp || 0) + (points.fp || 0),
-        hp: (player.totalPoints?.hp || 0) + (points.hp || 0)
+        xp: Math.round((player.totalPoints?.xp || 0) + (points.xp || 0)),
+        rp: Math.round((player.totalPoints?.rp || 0) + (points.rp || 0)),
+        fp: Math.round((player.totalPoints?.fp || 0) + (points.fp || 0)),
+        hp: Math.round((player.totalPoints?.hp || 0) + (points.hp || 0))
       },
       updatedAt: new Date()
     };
@@ -149,10 +149,10 @@ export async function stagePointsForPlayer(
     const updatedPlayer: Player = {
       ...player,
       pendingPoints: {
-        xp: (player.pendingPoints?.xp || 0) + (points.xp || 0),
-        rp: (player.pendingPoints?.rp || 0) + (points.rp || 0),
-        fp: (player.pendingPoints?.fp || 0) + (points.fp || 0),
-        hp: (player.pendingPoints?.hp || 0) + (points.hp || 0)
+        xp: Math.round((player.pendingPoints?.xp || 0) + (points.xp || 0)),
+        rp: Math.round((player.pendingPoints?.rp || 0) + (points.rp || 0)),
+        fp: Math.round((player.pendingPoints?.fp || 0) + (points.fp || 0)),
+        hp: Math.round((player.pendingPoints?.hp || 0) + (points.hp || 0))
       },
       updatedAt: new Date()
     };
@@ -234,16 +234,16 @@ export async function unrewardPointsForPlayer(
     const updatedPlayer: Player = {
       ...player,
       points: {
-        xp: Math.max(0, (player.points?.xp || 0) - (points.xp || 0)),
-        rp: Math.max(0, (player.points?.rp || 0) - (points.rp || 0)),
-        fp: Math.max(0, (player.points?.fp || 0) - (points.fp || 0)),
-        hp: Math.max(0, (player.points?.hp || 0) - (points.hp || 0))
+        xp: Math.max(0, Math.round((player.points?.xp || 0) - (points.xp || 0))),
+        rp: Math.max(0, Math.round((player.points?.rp || 0) - (points.rp || 0))),
+        fp: Math.max(0, Math.round((player.points?.fp || 0) - (points.fp || 0))),
+        hp: Math.max(0, Math.round((player.points?.hp || 0) - (points.hp || 0)))
       },
       pendingPoints: {
-        xp: (player.pendingPoints?.xp || 0) + (points.xp || 0),
-        rp: (player.pendingPoints?.rp || 0) + (points.rp || 0),
-        fp: (player.pendingPoints?.fp || 0) + (points.fp || 0),
-        hp: (player.pendingPoints?.hp || 0) + (points.hp || 0)
+        xp: Math.round((player.pendingPoints?.xp || 0) + (points.xp || 0)),
+        rp: Math.round((player.pendingPoints?.rp || 0) + (points.rp || 0)),
+        fp: Math.round((player.pendingPoints?.fp || 0) + (points.fp || 0)),
+        hp: Math.round((player.pendingPoints?.hp || 0) + (points.hp || 0))
       },
       // Note: totalPoints are NOT reduced (they track lifetime earnings)
       updatedAt: new Date()
@@ -297,16 +297,16 @@ export async function rewardPointsToPlayer(
         hp: Math.max(0, (player.pendingPoints?.hp || 0) - (points.hp || 0))
       },
       points: {
-        xp: (player.points?.xp || 0) + (points.xp || 0),
-        rp: (player.points?.rp || 0) + (points.rp || 0),
-        fp: (player.points?.fp || 0) + (points.fp || 0),
-        hp: (player.points?.hp || 0) + (points.hp || 0)
+        xp: Math.round((player.points?.xp || 0) + (points.xp || 0)),
+        rp: Math.round((player.points?.rp || 0) + (points.rp || 0)),
+        fp: Math.round((player.points?.fp || 0) + (points.fp || 0)),
+        hp: Math.round((player.points?.hp || 0) + (points.hp || 0))
       },
       totalPoints: {
-        xp: (player.totalPoints?.xp || 0) + (points.xp || 0),
-        rp: (player.totalPoints?.rp || 0) + (points.rp || 0),
-        fp: (player.totalPoints?.fp || 0) + (points.fp || 0),
-        hp: (player.totalPoints?.hp || 0) + (points.hp || 0)
+        xp: Math.round((player.totalPoints?.xp || 0) + (points.xp || 0)),
+        rp: Math.round((player.totalPoints?.rp || 0) + (points.rp || 0)),
+        fp: Math.round((player.totalPoints?.fp || 0) + (points.fp || 0)),
+        hp: Math.round((player.totalPoints?.hp || 0) + (points.hp || 0))
       },
       updatedAt: new Date()
     };

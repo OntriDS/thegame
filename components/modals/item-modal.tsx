@@ -89,7 +89,6 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
   const [quantitySold, setQuantitySold] = useState(0);
   const [site, setSite] = useState<string>('Home');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showStatusModal, setShowStatusModal] = useState(false);
   const [showMoreFields, setShowMoreFields] = useState(false);
   const [showLinksModal, setShowLinksModal] = useState(false);
   const [showDatesModal, setShowDatesModal] = useState(false);
@@ -114,11 +113,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
   const [selectedItemId, setSelectedItemId] = useState('');
   const [existingItems, setExistingItems] = useState<Item[]>([]);
   const [sites, setSites] = useState<Site[]>([]);
-  const [statusModalConfig, setStatusModalConfig] = useState<{
-    title: string;
-    message: string;
-    options: { label: string; action: () => void; variant?: 'default' | 'outline' }[];
-  } | null>(null);
+
 
   // File attachment states
   const [originalFiles, setOriginalFiles] = useState('');
@@ -208,21 +203,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
   const openQuickSellFlow = useCallback((targetItem: Item) => {
     const availableStock = (targetItem.stock || []).filter(point => point.quantity > 0);
     if (availableStock.length === 0) {
-      setStatusModalConfig({
-        title: 'No Stock Available',
-        message: 'This item has no available stock to sell. Please restock before marking it as Sold.',
-        options: [
-          {
-            label: 'Close',
-            action: () => {
-              setShowStatusModal(false);
-              setStatusModalConfig(null);
-            },
-            variant: 'outline'
-          }
-        ]
-      });
-      setShowStatusModal(true);
+      console.log('No stock available to sell');
       return;
     }
     const defaultSite = availableStock[0].siteId ?? '';
@@ -375,76 +356,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
     }
   }, []);
 
-  const applyStatusUpdate = useCallback(async (targetItem: Item, nextStatus: ItemStatus) => {
-    try {
-      const refreshed = await ClientAPI.getItemById(targetItem.id);
-      const base = refreshed || targetItem;
-      const updated: Item = {
-        ...base,
-        status: nextStatus,
-        updatedAt: new Date(),
-        createdAt: base.createdAt ? new Date(base.createdAt) : new Date(),
-        links: base.links || [],
-      };
-      await ClientAPI.upsertItem(updated);
-      setStatus(nextStatus);
-      dispatchEntityUpdated(entityTypeToKind(EntityType.ITEM));
-      onOpenChange(false);
-    } catch (error) {
-      console.error('Failed to update item status:', error);
-    } finally {
-      setShowStatusModal(false);
-      setStatusModalConfig(null);
-    }
-  }, [onOpenChange]);
 
-  const promptZeroStockPolicy = useCallback((snapshot: Item) => {
-    const effectiveRestockable =
-      typeof snapshot.restockable === 'boolean'
-        ? snapshot.restockable
-        : getDefaultRestockableForType(snapshot.type);
-
-    if (effectiveRestockable) {
-      setStatusModalConfig({
-        title: 'Stock Depleted',
-        message: `${snapshot.name} has no remaining stock. Set its status to "To Order" so you can restock it?`,
-        options: [
-          {
-            label: 'Set to To Order',
-            action: () => applyStatusUpdate(snapshot, ItemStatus.TO_ORDER),
-          },
-          {
-            label: 'Keep as Sold',
-            variant: 'outline',
-            action: () => {
-              setShowStatusModal(false);
-              setStatusModalConfig(null);
-            },
-          },
-        ],
-      });
-    } else {
-      setStatusModalConfig({
-        title: 'Unique Item Sold',
-        message: `${snapshot.name} is a one-off item. Remove it from active inventory?`,
-        options: [
-          {
-            label: 'Archive Item',
-            action: () => applyStatusUpdate(snapshot, ItemStatus.SOLD),
-          },
-          {
-            label: 'Keep Visible',
-            variant: 'outline',
-            action: () => {
-              setShowStatusModal(false);
-              setStatusModalConfig(null);
-            },
-          },
-        ],
-      });
-    }
-    setShowStatusModal(true);
-  }, [applyStatusUpdate]);
 
   const refreshItemAfterQuickSell = useCallback(async (itemId: string) => {
     try {
@@ -469,14 +381,12 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
             ? refreshed.restockable
             : getDefaultRestockableForType(refreshed.type)
         );
-        if ((refreshed.stock?.reduce((sum, stockPoint) => sum + stockPoint.quantity, 0) || 0) === 0) {
-          promptZeroStockPolicy(refreshed);
-        }
+
       }
     } catch (error) {
       console.error('Failed to refresh item after quick sell:', error);
     }
-  }, [promptZeroStockPolicy]);
+  }, []);
 
   const handleQuickSellConfirm = useCallback(async () => {
     if (!quickSellItem) return;
@@ -894,12 +804,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
       dispatchEntityUpdated(entityTypeToKind(EntityType.ITEM));
 
       // Links are loaded on-demand when user clicks "View Links" button
-      const remainingAfterSave = newItem.stock?.reduce((sum, stockPoint) => sum + stockPoint.quantity, 0) || 0;
-      if (remainingAfterSave === 0) {
-        promptZeroStockPolicy(newItem);
-      } else {
-        onOpenChange(false);
-      }
+      onOpenChange(false);
     } catch (error) {
       console.error('Save failed:', error);
       // Keep modal open on error
@@ -1295,29 +1200,6 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
           onOpenChange(false); // Close the modal after deleting
         }}
       />
-
-      {/* Status Modal */}
-      {showStatusModal && statusModalConfig && (
-        <div className={`fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 ${getZIndexClass('MODALS')}`}>
-          <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
-            <h3 className="text-lg font-semibold mb-2">{statusModalConfig.title}</h3>
-            <p className="text-sm mb-4">{statusModalConfig.message}</p>
-            <div className="flex justify-end gap-2">
-              {statusModalConfig.options.map((option, index) => (
-                <Button
-                  key={index}
-                  variant={option.variant}
-                  onClick={option.action}
-                >
-                  {option.label}
-                </Button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-
 
       {/* Quick Sell Modal */}
       <Dialog open={showQuickSellModal} onOpenChange={(open) => {

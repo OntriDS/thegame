@@ -2,9 +2,10 @@
 // Backfill Logs Workflow for KV-only architecture
 
 import { kv } from '@/data-store/kv';
-import { buildDataKey, buildIndexKey, buildLogKey } from '@/data-store/keys';
+import { buildDataKey, buildIndexKey } from '@/data-store/keys';
 import { EntityType } from '@/types/enums';
 import { TransactionManager } from './transaction-manager';
+import { appendEntityLog } from '../entities-logging';
 
 // Centralized list of entity types for backfill operations
 const BACKFILLABLE_ENTITY_TYPES = [
@@ -14,7 +15,6 @@ const BACKFILLABLE_ENTITY_TYPES = [
   EntityType.FINANCIAL,
   EntityType.CHARACTER,
   EntityType.PLAYER,
-  EntityType.ACCOUNT,
   EntityType.SITE
 ];
 
@@ -148,25 +148,6 @@ export class BackfillLogsWorkflow {
         return;
       }
       
-      // Clear existing logs for this entity type
-      const logKey = buildLogKey(entityType);
-      await kv.del(logKey);
-      
-      // Create initial log entry
-      const initialLogEntry = {
-        timestamp: new Date().toISOString(),
-        level: 'info',
-        message: `Backfilled logs for ${entityType}`,
-        entityType,
-        operation: 'backfill',
-        details: {
-          entityCount: entityIds.length,
-          backfilledAt: new Date().toISOString()
-        }
-      };
-      
-      await kv.lpush(logKey, JSON.stringify(initialLogEntry));
-      
       // For each entity, create a log entry
       let loggedEntities = 0;
       for (const entityId of entityIds) {
@@ -175,21 +156,16 @@ export class BackfillLogsWorkflow {
           const entityData = await kv.get(dataKey);
           
           if (entityData) {
-            const entity = JSON.parse(entityData as string);
-            const logEntry = {
-              timestamp: entity.createdAt || new Date().toISOString(),
-              level: 'info',
-              message: `${entityType} created`,
-              entityType,
-              entityId,
-              operation: 'created',
-              details: {
-                name: entity.name || 'Unknown',
-                status: entity.status || 'unknown'
-              }
-            };
+            const entity = typeof entityData === 'string' ? JSON.parse(entityData) : entityData;
             
-            await kv.lpush(logKey, JSON.stringify(logEntry));
+            // We use appendEntityLog so it automatically formats the lean schema 
+            // and places it in the correct current month partition.
+            await appendEntityLog(
+              entityType as EntityType, 
+              entityId, 
+              'CREATED' as any, 
+              entity
+            );
             loggedEntities++;
           }
         } catch (error) {

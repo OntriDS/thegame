@@ -4,7 +4,7 @@
 // Reads: LRANGE (paginated, scoped to one month)
 // Edit/Delete: read-modify-write on monthly list (rare operations, ~50 entries)
 
-import { kvLPush, kvLRange, kvSAdd, kvSMembers, kvDel } from '@/data-store/kv';
+import { kvLPush, kvLRange, kvSAdd, kvSMembers, kvDel, kvLSet } from '@/data-store/kv';
 import { buildLogMonthKey, buildLogMonthsIndexKey } from '@/data-store/keys';
 import { EntityType, LogEventType } from '@/types/enums';
 import { kv } from '@/data-store/kv';
@@ -93,13 +93,90 @@ export async function appendEntityLog(
   const monthKey = getCurrentMonthKey();
   const listKey = buildLogMonthKey(entityType, monthKey);
 
-  const entry = {
+  // 1. Construct the Strict Lean Payload based on EntityType
+  // CRITICAL: We NO LONGER spread the full object. We only keep prescribed fields.
+  let entry: any = {
     id: uuid(),
-    event,
     entityId,
-    ...details,
+    event,
     timestamp: new Date().toISOString()
   };
+
+  switch (entityType) {
+    case EntityType.FINANCIAL:
+    case EntityType.SALE:
+      entry.name = details.name || 'Unknown';
+      entry.type = details.type || 'Unknown';
+      entry.station = details.station || 'Unknown';
+      entry.cost = details.cost ?? 0;
+      entry.revenue = details.revenue ?? 0;
+      break;
+
+    case EntityType.ITEM:
+      entry.name = details.name || 'Unknown';
+      entry.itemType = details.itemType || 'Unknown';
+      entry.subItemType = details.subItemType || 'Unknown';
+      entry.quantity = details.quantity ?? 1;
+      break;
+
+    case EntityType.TASK:
+      entry.name = details.name || 'Unknown';
+      entry.taskType = details.taskType || details.type || 'Unknown';
+      entry.station = details.station || 'Unknown';
+      break;
+
+    case EntityType.SITE:
+      entry.name = details.name || 'Unknown';
+      entry.type = details.type || 'Unknown';
+      entry.businessType = details.businessType || details.digitalType || 'Unknown';
+      entry.url = details.url || '';
+      entry.settlementId = details.settlementId || null;
+      break;
+
+    case EntityType.CHARACTER:
+      entry.name = details.name || 'Unknown';
+      entry.roles = details.roles || [];
+      break;
+
+    default:
+      // Handles PLAYER or any other unknown entity gracefully
+      entry.name = details.name || 'Unknown';
+      entry.type = details.type || 'Unknown';
+      break;
+  }
+
+  // 2. Fetch the absolute last log entry to check for redundant loop-spam
+  const lastRaw = await kvLRange(listKey, 0, 0);
+  if (lastRaw.length > 0) {
+    try {
+      const lastEntry = parseEntry(lastRaw[0]);
+      if (lastEntry && lastEntry.entityId === entityId) {
+        const lastTimestamp = new Date(lastEntry.timestamp).getTime();
+        const currentTimestamp = new Date(entry.timestamp).getTime();
+        const timeDiffMs = currentTimestamp - lastTimestamp;
+
+        // FILTER: If the event type is the exact same as the last one, it's loop spam. Ignore it.
+        if (lastEntry.event === event) {
+          return;
+        }
+
+        // FILTER: Rapid Flip-Flop. If state changed, but it happened within 3 seconds of the last change,
+        // it's likely a UI glitch/rapid clicking. We overwrite the last kept log with this final state.
+        if (timeDiffMs < 1500) {
+          // Re-use the previous log's ID to preserve the 'time burst' identity
+          const flipFlopEntry = {
+            ...entry,
+            id: lastEntry.id
+          };
+          await kvLSet(listKey, 0, JSON.stringify(flipFlopEntry));
+          return;
+        }
+      }
+    } catch (err) {
+      console.warn('[appendEntityLog] Error checking last entry:', err);
+      // Continue to append if check fails
+    }
+  }
 
   // O(1) write — no read needed!
   await kvLPush(listKey, JSON.stringify(entry));
@@ -185,6 +262,38 @@ export async function updateCreatedEntryFields(
       Object.assign(createdEntry, partial, { lastUpdated: new Date().toISOString() });
       await rebuildMonthlyList(entityType, monthKey, list);
       return;
+    }
+  }
+}
+
+/**
+ * Patch lean identity fields (e.g. name, itemType, subItemType) on ALL log entries
+ * for a given entity across ALL months and ALL event types (CREATED, SOLD, MOVED, etc.).
+ *
+ * Use this when an entity's display-identity fields change and every historical
+ * log entry must reflect the updated values.
+ */
+export async function updateEntityLeanFields(
+  entityType: EntityType,
+  entityId: string,
+  partial: Record<string, any>
+): Promise<void> {
+  const months = await getEntityLogMonths(entityType);
+  const allMonths = [getCurrentMonthKey(), ...months.filter(m => m !== getCurrentMonthKey())];
+
+  for (const monthKey of allMonths) {
+    const list = await readMonthlyList(entityType, monthKey);
+    let changed = false;
+
+    for (const entry of list) {
+      if (entry.entityId === entityId) {
+        Object.assign(entry, partial, { lastUpdated: new Date().toISOString() });
+        changed = true;
+      }
+    }
+
+    if (changed) {
+      await rebuildMonthlyList(entityType, monthKey, list);
     }
   }
 }

@@ -1212,6 +1212,7 @@ export default function TaskModal({
                               [pointType.key.toLowerCase()]: value
                             }
                           })}
+                          allowDecimals={false}
                           min={0}
                           step={1}
                           className="h-8 text-sm"

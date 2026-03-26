@@ -193,14 +193,8 @@ export async function processItemSaleLine(line: ItemSaleLine, sale: Sale): Promi
     await appendEntityLog(EntityType.ITEM, line.itemId, LogEventType.SOLD, {
       name: item.name,
       itemType: item.type,
-      station: item.station,
       subItemType: item.subItemType,
-      collection: item.collection,
-      quantity: line.quantity,
-      unitPrice: line.unitPrice,
-      total: line.quantity * line.unitPrice,
-      saleId: sale.id,
-      soldAt: sale.saleDate.toISOString()
+      quantity: line.quantity
     });
 
     console.log(`[processItemSaleLine] ✅ Processed item sale: ${item.name} x${line.quantity}`);
@@ -260,13 +254,9 @@ export async function processBundleSaleLine(line: BundleSaleLine, sale: Sale): P
       // Log detailed sale event (Fixes missing data for bundles)
       await appendEntityLog(EntityType.ITEM, bundleItem.id, LogEventType.SOLD, {
         name: bundleItem.name,
-        quantity: line.quantity,
-        isBundle: true,
-        unitPrice: line.unitPrice,
-        total: line.quantity * line.unitPrice,
-        saleId: sale.id,
-        soldAt: sale.saleDate.toISOString(),
-        description: `Bundle Sold: ${line.quantity} units (Single Item Bundle)`
+        itemType: bundleItem.type,
+        subItemType: bundleItem.subItemType,
+        quantity: line.quantity
       });
 
       // Create SALE_ITEM link for the bundle
@@ -337,12 +327,9 @@ export async function processBundleSaleLine(line: BundleSaleLine, sale: Sale): P
         // Log detailed usage event for item consumed in bundle
         await appendEntityLog(EntityType.ITEM, item.id, LogEventType.SOLD, {
           name: item.name,
-          quantity: toDeduct,
-          isBundleComponent: true,
-          bundleType: line.itemType,
-          saleId: sale.id,
-          soldAt: sale.saleDate.toISOString(),
-          description: `Used in Bundle: ${toDeduct} units for ${line.itemType}`
+          itemType: item.type,
+          subItemType: item.subItemType,
+          quantity: toDeduct
         });
         processedItems.push({ item, quantity: toDeduct });
 

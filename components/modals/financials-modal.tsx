@@ -823,6 +823,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
                           id="reward-xp"
                           value={formData.points.xp}
                           onChange={(value) => setFormData({ ...formData, points: { ...formData.points, xp: value } })}
+                          allowDecimals={false}
                           min={0}
                           step={1}
                           className="h-8 text-sm"
@@ -834,6 +835,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
                           id="reward-rp"
                           value={formData.points.rp}
                           onChange={(value) => setFormData({ ...formData, points: { ...formData.points, rp: value } })}
+                          allowDecimals={false}
                           min={0}
                           step={1}
                           className="h-8 text-sm"
@@ -845,6 +847,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
                           id="reward-fp"
                           value={formData.points.fp}
                           onChange={(value) => setFormData({ ...formData, points: { ...formData.points, fp: value } })}
+                          allowDecimals={false}
                           min={0}
                           step={1}
                           className="h-8 text-sm"
@@ -856,6 +859,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
                           id="reward-hp"
                           value={formData.points.hp}
                           onChange={(value) => setFormData({ ...formData, points: { ...formData.points, hp: value } })}
+                          allowDecimals={false}
                           min={0}
                           step={1}
                           className="h-8 text-sm"

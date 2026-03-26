@@ -3,7 +3,7 @@
 
 import { EntityType, LogEventType, FOUNDER_CHARACTER_ID, SaleStatus, SaleType } from '@/types/enums';
 import type { Item, Sale } from '@/types/entities';
-import { appendEntityLog, updateEntityLogField, removeLogEntriesAcrossMonths } from '../entities-logging';
+import { appendEntityLog, updateEntityLeanFields, removeLogEntriesAcrossMonths } from '../entities-logging';
 import { hasEffect, markEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
 import { EffectKeys } from '@/data-store/keys';
 import { getLinksFor, removeLink } from '@/links/link-registry';
@@ -16,7 +16,25 @@ import { upsertSale } from '@/data-store/datastore';
 import { formatMonthKey, calculateClosingDate } from '@/lib/utils/date-utils';
 
 const STATE_FIELDS = ['status', 'isNotPaid', 'isNotCharged', 'isCollected', 'postedAt', 'doneAt', 'cancelledAt'];
-const DESCRIPTIVE_FIELDS = ['counterpartyName', 'totals'];
+
+/** Construct lean log details for Sale events (DRY) */
+function getSaleLogDetails(sale: Sale) {
+  const stationMap: Record<string, string> = {
+    [SaleType.DIRECT]: 'Direct-Sales',
+    [SaleType.BOOTH]: 'Booth-Sales',
+    [SaleType.NETWORK]: 'Network',
+    [SaleType.ONLINE]: 'Online-Sales',
+    [SaleType.NFT]: 'Web3-Gallery'
+  };
+
+  return {
+    name: sale.counterpartyName || 'Direct',
+    type: sale.type,
+    station: sale.salesChannel || stationMap[sale.type] || 'Direct-Sales',
+    cost: sale.totals.totalCost || 0,
+    revenue: sale.totals.totalRevenue
+  };
+}
 
 export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<void> {
   // New sale creation
@@ -24,19 +42,7 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
     const effectKey = EffectKeys.created('sale', sale.id);
     if (await hasEffect(effectKey)) return;
 
-    await appendEntityLog(EntityType.SALE, sale.id, LogEventType.CREATED, {
-      type: sale.type,
-      status: sale.status,
-      counterpartyName: sale.counterpartyName || 'Walk-in Customer',
-      totals: {
-        subtotal: sale.totals.subtotal,
-        discountTotal: sale.totals.discountTotal,
-        taxTotal: sale.totals.taxTotal,
-        totalRevenue: sale.totals.totalRevenue
-      },
-      isNotPaid: sale.isNotPaid,
-      isNotCharged: sale.isNotCharged
-    });
+    await appendEntityLog(EntityType.SALE, sale.id, LogEventType.CREATED, getSaleLogDetails(sale));
     await markEffect(effectKey);
 
     // Character creation from emissary fields - when newCustomerName is provided
@@ -76,18 +82,7 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
 
   if (previousSale.status !== sale.status) {
     if (sale.status === 'CANCELLED') {
-      await appendEntityLog(EntityType.SALE, sale.id, LogEventType.CANCELLED, {
-        type: sale.type,
-        status: sale.status,
-        counterpartyName: sale.counterpartyName || 'Walk-in Customer',
-        totals: {
-          subtotal: sale.totals.subtotal,
-          discountTotal: sale.totals.discountTotal,
-          taxTotal: sale.totals.taxTotal,
-          totalRevenue: sale.totals.totalRevenue
-        },
-        cancelledAt: sale.cancelledAt || new Date().toISOString()
-      });
+      await appendEntityLog(EntityType.SALE, sale.id, LogEventType.CANCELLED, getSaleLogDetails(sale));
       // Transitioned from PENDING to CHARGED (both paid and charged)
       const chargedAt = new Date().toISOString();
 
@@ -95,19 +90,8 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
       (sale as any).chargedAt = new Date(chargedAt);
 
       await appendEntityLog(EntityType.SALE, sale.id, LogEventType.DONE, {
-        type: sale.type,
-        status: sale.status,
-        counterpartyName: sale.counterpartyName || 'Walk-in Customer',
-        totals: {
-          subtotal: sale.totals.subtotal,
-          discountTotal: sale.totals.discountTotal,
-          taxTotal: sale.totals.taxTotal,
-          totalRevenue: sale.totals.totalRevenue
-        },
-        isNotPaid: sale.isNotPaid,
-        isNotCharged: sale.isNotCharged,
-        completedAt: chargedAt,
-        chargedAt
+        ...getSaleLogDetails(sale),
+        completedAt: chargedAt
       });
 
       // Points awarding - ONLY when sale transitions to CHARGED (both paid and charged)
@@ -127,20 +111,7 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
       await processChargedSaleLines(sale);
     } else if (!wasPending && nowPending) {
       // Reverted from DONE to PENDING (became unpaid or uncharged)
-      await appendEntityLog(EntityType.SALE, sale.id, LogEventType.PENDING, {
-        type: sale.type,
-        status: sale.status,
-        counterpartyName: sale.counterpartyName || 'Walk-in Customer',
-        totals: {
-          subtotal: sale.totals.subtotal,
-          discountTotal: sale.totals.discountTotal,
-          taxTotal: sale.totals.taxTotal,
-          totalRevenue: sale.totals.totalRevenue
-        },
-        isNotPaid: sale.isNotPaid,
-        isNotCharged: sale.isNotCharged,
-        pendingAt: new Date().toISOString()
-      });
+      await appendEntityLog(EntityType.SALE, sale.id, LogEventType.PENDING, getSaleLogDetails(sale));
     }
   }
 
@@ -189,14 +160,7 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
     }
 
     await appendEntityLog(EntityType.SALE, sale.id, LogEventType.COLLECTED, {
-      type: sale.type,
-      counterpartyName: sale.counterpartyName,
-      totals: {
-        subtotal: sale.totals.subtotal,
-        discountTotal: sale.totals.discountTotal,
-        taxTotal: sale.totals.taxTotal,
-        totalRevenue: sale.totals.totalRevenue
-      },
+      ...getSaleLogDetails(sale),
       collectedAt: collectedAt.toISOString()
     });
   }
@@ -247,12 +211,20 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
     }
   }
 
-  // Descriptive changes - update in-place
+  // Lean identity fields changed — cascade patch ALL log entries across ALL months and events
   if (previousSale) {
-    for (const field of DESCRIPTIVE_FIELDS) {
-      if ((previousSale as any)[field] !== (sale as any)[field]) {
-        await updateEntityLogField(EntityType.SALE, sale.id, field, (previousSale as any)[field], (sale as any)[field]);
-      }
+    const oldDetails = getSaleLogDetails(previousSale);
+    const newDetails = getSaleLogDetails(sale);
+
+    const leanFieldsChanged =
+      oldDetails.name !== newDetails.name ||
+      oldDetails.type !== newDetails.type ||
+      oldDetails.station !== newDetails.station ||
+      oldDetails.cost !== newDetails.cost ||
+      oldDetails.revenue !== newDetails.revenue;
+
+    if (leanFieldsChanged) {
+      await updateEntityLeanFields(EntityType.SALE, sale.id, newDetails);
     }
   }
 

@@ -27,10 +27,8 @@ export async function onBusinessUpsert(business: Business, previousBusiness?: Bu
                 business.linkedCharacterId,
                 LogEventType.BUSINESS_LINKED,
                 {
-                    businessId: business.id,
-                    businessName: business.name,
-                    businessType: business.type,
-                    linkedAt: new Date().toISOString()
+                    name: business.name || 'Unknown Business',
+                    roles: [] // Keep the strict schema happy
                 }
             );
         }

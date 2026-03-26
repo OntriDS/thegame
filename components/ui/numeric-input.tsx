@@ -10,6 +10,7 @@ interface NumericInputProps {
   min?: number;
   max?: number;
   step?: number | string;
+  allowDecimals?: boolean;
   placeholder?: string;
   className?: string;
   disabled?: boolean;
@@ -18,7 +19,20 @@ interface NumericInputProps {
 }
 
 // NumericInput allows free typing (including empty string) while keeping a numeric value in parent state.
-export function NumericInput({ id, value, onChange, min = 0, max, step = 1, placeholder, className, disabled, title, onBlur }: NumericInputProps) {
+export function NumericInput({ 
+  id, 
+  value, 
+  onChange, 
+  min = 0, 
+  max, 
+  step = 1, 
+  allowDecimals = true,
+  placeholder, 
+  className, 
+  disabled, 
+  title, 
+  onBlur 
+}: NumericInputProps) {
   const [raw, setRaw] = useState<string>(Number.isFinite(value) ? String(value) : '');
   const isEditingRef = useRef(false);
 
@@ -32,7 +46,7 @@ export function NumericInput({ id, value, onChange, min = 0, max, step = 1, plac
     <Input
       id={id}
       type="number"
-      inputMode="decimal"
+      inputMode={allowDecimals ? "decimal" : "numeric"}
       min={min}
       max={max}
       step={step}
@@ -44,6 +58,11 @@ export function NumericInput({ id, value, onChange, min = 0, max, step = 1, plac
         isEditingRef.current = false;
         const parsed = parseFloat(raw);
         let normalized = isNaN(parsed) || parsed < min ? min : parsed;
+        
+        if (!allowDecimals) {
+          normalized = Math.round(normalized);
+        }
+
         if (max !== undefined && normalized > max) {
           normalized = max;
         }
@@ -56,7 +75,8 @@ export function NumericInput({ id, value, onChange, min = 0, max, step = 1, plac
         setRaw(next);
         const parsed = parseFloat(next);
         if (!isNaN(parsed)) {
-          onChange(parsed);
+          const finalValue = allowDecimals ? parsed : Math.round(parsed);
+          onChange(finalValue);
         }
       }}
       placeholder={placeholder}

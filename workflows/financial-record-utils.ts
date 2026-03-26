@@ -264,15 +264,11 @@ export async function updateFinancialRecordFromTask(task: Task, previousTask: Ta
 
     // Log the update
     await appendEntityLog(EntityType.FINANCIAL, existingFinrec.id, LogEventType.UPDATED, {
-      name: task.name,
-      updatedFrom: EntityType.TASK,
-      changes: {
-        cost: { from: previousTask.cost || 0, to: task.cost || 0 },
-        revenue: { from: previousTask.revenue || 0, to: task.revenue || 0 },
-        isNotPaid: { from: previousTask.isNotPaid || false, to: task.isNotPaid || false },
-        isNotCharged: { from: previousTask.isNotCharged || false, to: task.isNotCharged || false }
-      },
-      updatedAt: new Date().toISOString()
+      name: `Update: ${task.name}`,
+      type: existingFinrec.type,
+      station: existingFinrec.station,
+      cost: task.cost || 0,
+      revenue: task.revenue || 0
     });
 
     console.log(`[updateFinancialRecordFromTask] ✅ Financial record updated successfully for task: ${task.name}`);

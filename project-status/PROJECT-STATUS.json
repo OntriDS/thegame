@@ -47,7 +47,8 @@
         "Fix the Month Selector to show all the months with data (Archive + Summary)",
         "Analyst Agent performing Data Integrity tasks, ai-chat reading markdown files",
         "Tasks Indexes created, Agents upgraded, Database purged ghost tasks and agents cards",
-        "Calendar submodal bugs fixes"
+        "Calendar submodal bugs fixes, Bloated Logs Indexes in Upstash",
+        "Logging workflows update and points decimals bugs"
       ]
     },
     "phase14.4": {
