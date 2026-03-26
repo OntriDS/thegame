@@ -263,8 +263,10 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
   }
 
   // ==========================================
-  // DETERMINISTIC ARCHIVE INDEXING
-  // Safely synchronizes the item to the correct monthly index based on exact dates
+  // DETERMINISTIC ARCHIVE INDEXING + LOG SYNC
+  // Safely synchronizes the item to the correct monthly index AND log based on exact dates.
+  // This handles re-saves from the Sold Items Tab (fixing name, soldAt, quantity, etc.)
+  // where no status change occurs so the SOLD event block above never fires.
   // ==========================================
   if (previousItem) {
     const isArchivable = isSoldStatus(item.status) || isCollectedStatus(item.status) || !!item.isCollected;
@@ -287,6 +289,37 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
       // Add to the correct designated month
       await kvSAdd(buildMonthIndexKey(EntityType.ITEM, targetMonth), item.id);
       await kvSAdd(buildArchiveMonthsKey(), targetMonth);
+
+      // ── Log Sync ──────────────────────────────────────────────────────────
+      // When a sold item is re-saved for data correction (no status change),
+      // no SOLD log event fires above. We must ensure a SOLD entry exists in
+      // the target month's log. If one already exists (by entityId), update its
+      // lean fields so the log reflects the corrected name/type/quantity.
+      if (isSoldStatus(item.status)) {
+        const { getEntityLogs } = await import('../entities-logging');
+        const monthEntries = await getEntityLogs(EntityType.ITEM, { month: targetMonth });
+        const existingEntry = monthEntries.find(
+          (e: any) => e.entityId === item.id && String(e.event ?? '').toLowerCase() === 'sold'
+        );
+
+        if (existingEntry) {
+          // Entry already exists — just patch the lean fields to reflect corrections
+          await updateEntityLeanFields(EntityType.ITEM, item.id, {
+            name: item.name,
+            itemType: item.type,
+            subItemType: item.subItemType || '',
+            soldQuantity: item.quantitySold || existingEntry.soldQuantity || 0,
+          });
+        } else {
+          // No SOLD entry in this month yet — write one now so the item appears in the log
+          await appendEntityLog(EntityType.ITEM, item.id, LogEventType.SOLD, {
+            name: item.name,
+            itemType: item.type,
+            subItemType: item.subItemType,
+            soldQuantity: item.quantitySold || 0,
+          }, currentTargetDate);
+        }
+      }
     } else {
       // Clean up indexes if item reverts to an active inventory state
       const { kvSRem } = await import('@/data-store/kv');
