@@ -49,7 +49,9 @@ export async function POST(req: NextRequest) {
       id: body.id || uuid(),
       links: body.links || [],
       createdAt: body.createdAt ? new Date(body.createdAt) : new Date(),
-      updatedAt: new Date()
+      updatedAt: new Date(),
+      collectedAt: body.collectedAt ? new Date(body.collectedAt) : undefined,
+      doneAt: body.doneAt ? new Date(body.doneAt) : undefined
     };
     const forceSave = req.nextUrl.searchParams.get('force') === 'true';
     const saved = await upsertFinancial(financial, { forceSave });

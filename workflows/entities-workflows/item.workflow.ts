@@ -10,11 +10,12 @@ import { EffectKeys } from '@/data-store/keys';
 import { getLinksFor, removeLink } from '@/links/link-registry';
 import { getCategoryForItemType } from '@/lib/utils/searchable-select-utils';
 import { createCharacterFromItem } from '../character-creation-utils';
-import { upsertItem, getAvailableArchiveMonths } from '@/data-store/datastore';
-import { formatMonthKey, calculateClosingDate } from '@/lib/utils/date-utils';
-import { stagePointsForPlayer } from '../points-rewards-utils';
+import { upsertItem, getAvailableArchiveMonths, getAllTasks, getTaskById, upsertTask, getPlayerById, upsertPlayer, getAllCharacters, upsertCharacter } from '@/data-store/datastore';
+import { formatMonthKey, calculateClosingDate, formatDisplayDate } from '@/lib/utils/date-utils';
+import { stagePointsForPlayer, resolveToPlayerIdMaybeCharacter } from '../points-rewards-utils';
 import { isSoldStatus, isCollectedStatus } from '@/lib/utils/status-utils';
 import { buildArchiveCollectionIndexKey, buildArchiveMonthsKey } from '@/data-store/keys';
+  // Workflows and repositories are managed by datastore.ts and update-propagation-utils.ts
 
 const STATE_FIELDS = ['status', 'stock', 'quantitySold', 'isCollected'];
 
@@ -122,8 +123,9 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
     // 3. MANAGE THE BASE ITEM (Inventory Shell)
     let updatedBaseItem: Item;
     const targetQ = item.targetAmount || 0;
+    const isActuallyRestocking = item.restockable && targetQ > 0;
 
-    if (item.restockable && targetQ > 0) {
+    if (isActuallyRestocking) {
       // CONSIGNMENT RESTOCK: Keep active, refill to Target Q, reset Sold Q
       updatedBaseItem = {
         ...item,
@@ -135,7 +137,7 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
     } else {
       // PARTIAL OR FULL SALE
       const remainingStock = Math.max(0, previousStockTotal - quantityToSell);
-      if (remainingStock > 0) {
+      if (remainingStock > 0 && item.restockable) {
         // Partial Sale: Leave remaining stock on shelf, revert status to active
         updatedBaseItem = {
           ...item,
@@ -145,12 +147,12 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
           updatedAt: new Date()
         };
       } else {
-        // Full Depletion: Unique artwork or totally sold out
+        // Full Depletion OR Unique Item: Stay as SOLD
         updatedBaseItem = {
           ...item,
           status: ItemStatus.SOLD,
           quantitySold: (previousItem.quantitySold || 0) + quantityToSell,
-          stock: [], 
+          stock: remainingStock > 0 ? [{ siteId: primarySite, quantity: remainingStock }] : [], 
           soldAt: soldAt,
           updatedAt: new Date()
         };
@@ -261,7 +263,18 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
       subItemType: item.subItemType || '',
     });
   }
-
+  // Propagate changes to Tasks, Financials, and Sales to prevent name reversion
+    const { 
+      updateTasksFromItem, 
+      updateFinancialRecordsFromItem,
+      updateSalesFromItem 
+    } = await import('../update-propagation-utils');
+    
+    await Promise.all([
+      updateTasksFromItem(item, previousItem),
+      updateFinancialRecordsFromItem(item, previousItem),
+      updateSalesFromItem(item, previousItem)
+    ]);
   // ==========================================
   // DETERMINISTIC ARCHIVE INDEXING + LOG SYNC
   // Safely synchronizes the item to the correct monthly index AND log based on exact dates.
@@ -272,7 +285,9 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
     const isArchivable = isSoldStatus(item.status) || isCollectedStatus(item.status) || !!item.isCollected;
 
     if (isArchivable) {
-      const currentTargetDate = item.soldAt || item.collectedAt || item.createdAt || new Date();
+      // Maintain month index (collectedAt → soldAt → createdAt)
+      // CRITICAL: Items must be indexed by their latest lifecycle date to appear in the correct "Collected/Sold" month tab
+      const currentTargetDate = item.collectedAt || item.soldAt || item.createdAt || new Date();
       const targetMonth = formatMonthKey(calculateClosingDate(currentTargetDate));
 
       const { kvSAdd, kvSRem } = await import('@/data-store/kv');

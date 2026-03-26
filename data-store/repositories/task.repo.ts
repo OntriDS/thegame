@@ -92,6 +92,26 @@ export async function upsertTask(task: Task): Promise<Task> {
     await kvSRem(activeKey, task.id);
   }
 
+  // Maintain month index (doneAt → collectedAt → createdAt)
+  const { formatMonthKey } = await import('@/lib/utils/date-utils');
+  const { buildMonthIndexKey } = await import('@/data-store/keys');
+  const date = task.doneAt || task.collectedAt || task.createdAt || new Date();
+  if (date) {
+    const monthKey = formatMonthKey(date);
+    await kvSAdd(buildMonthIndexKey(ENTITY, monthKey), task.id);
+  }
+
+  if (previous) {
+    const prevDate = (previous as any).doneAt || (previous as any).collectedAt || (previous as any).createdAt;
+    if (prevDate) {
+      const prevMonthKey = formatMonthKey(prevDate);
+      const currMonthKey = formatMonthKey(date);
+      if (prevMonthKey !== currMonthKey) {
+        await kvSRem(buildMonthIndexKey(ENTITY, prevMonthKey), task.id);
+      }
+    }
+  }
+
   return task;
 }
 

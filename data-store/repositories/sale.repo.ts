@@ -38,10 +38,13 @@ export async function upsertSale(sale: Sale): Promise<Sale> {
   await kvSAdd(indexKey, sale.id);
 
   // Maintain month index (chargedAt → collectedAt → saleDate → createdAt)
-  const date = (sale as any).chargedAt || (sale as any).collectedAt || (sale as any).saleDate || (sale as any).createdAt;
+  const date = (sale as any).collectedAt || (sale as any).chargedAt || (sale as any).saleDate || (sale as any).createdAt;
   if (date) {
     const monthKey = formatMonthKey(date);
     await kvSAdd(buildMonthIndexKey(ENTITY, monthKey), sale.id);
+
+    const { buildArchiveMonthsKey } = await import('../keys');
+    await kvSAdd(buildArchiveMonthsKey(), monthKey);
   }
 
   if (previous) {

@@ -206,10 +206,10 @@ export async function updateItemsCreatedByTask(
 
           const updatedItem = {
             ...item,
-            name: task.outputItemName || item.name,
-            unitCost: task.outputUnitCost || item.unitCost,
-            price: task.outputItemPrice || item.price,
-            station: task.station || item.station,
+            name: outputPropsChanged ? (task.outputItemName || item.name) : item.name,
+            unitCost: outputPropsChanged ? (task.outputUnitCost || item.unitCost) : item.unitCost,
+            price: outputPropsChanged ? (task.outputItemPrice || item.price) : item.price,
+            station: outputPropsChanged ? (task.station || item.station) : item.station,
             year,
             isCollected: !!task.isCollected,
             collectedAt: task.collectedAt,
@@ -380,10 +380,10 @@ export async function updateItemsCreatedByRecord(
       if (outputPropsChanged || statePropsChanged) {
         const updatedItem = {
           ...item,
-          name: record.outputItemName || item.name,
-          unitCost: record.outputUnitCost || item.unitCost,
-          price: record.outputItemPrice || item.price,
-          station: record.station || item.station,
+          name: outputPropsChanged ? (record.outputItemName || item.name) : item.name,
+          unitCost: outputPropsChanged ? (record.outputUnitCost || item.unitCost) : item.unitCost,
+          price: outputPropsChanged ? (record.outputItemPrice || item.price) : item.price,
+          station: outputPropsChanged ? (record.station || item.station) : item.station,
           year: record.year, // inherit year
           isCollected: !!record.isCollected,
           collectedAt: record.collectedAt,
@@ -632,7 +632,6 @@ export async function updateItemsFromSale(
         const monthKey = formatMonthKey(archiveMonth);
         await kvSAdd(buildArchiveCollectionIndexKey('items', monthKey), soldItemEntity.id);
         await kvSAdd(buildArchiveMonthsKey(), monthKey);
-
         await markEffect(updateKey);
       }
     }
@@ -833,4 +832,147 @@ export function hasRevenueChanged(newEntity: any, oldEntity: any): boolean {
 
 export function hasLinesChanged(newEntity: any, oldEntity: any): boolean {
   return JSON.stringify(newEntity.lines) !== JSON.stringify(oldEntity.lines);
+}
+export async function updateTasksFromItem(
+  item: Item,
+  previousItem?: Item
+): Promise<void> {
+  if (!previousItem) return;
+
+  // Detect if any shared metadata changed
+  const dataChanged = 
+    item.name !== previousItem.name ||
+    item.station !== previousItem.station ||
+    item.price !== previousItem.price ||
+    item.unitCost !== previousItem.unitCost;
+
+  if (!dataChanged) return;
+
+  try {
+    console.log(`[updateTasksFromItem] Item data changed for ${item.id}. Propagating to linked tasks.`);
+    
+    // Find all tasks that have this item as output
+    const { getAllTasks } = await import('@/data-store/datastore');
+    const allTasks = await getAllTasks();
+    const relatedTasks = allTasks.filter((t: Task) => t.outputItemId === item.id);
+
+    for (const task of relatedTasks) {
+      const needsUpdate = 
+        task.outputItemName !== item.name ||
+        task.station !== item.station ||
+        task.outputItemPrice !== item.price ||
+        task.outputUnitCost !== item.unitCost;
+
+      if (needsUpdate) {
+        const updatedTask = {
+          ...task,
+          outputItemName: item.name,
+          station: item.station || task.station,
+          outputItemPrice: item.price || task.outputItemPrice,
+          outputUnitCost: item.unitCost || task.outputUnitCost,
+          updatedAt: new Date()
+        };
+        const { upsertTask } = await import('@/data-store/datastore');
+        await upsertTask(updatedTask, { skipWorkflowEffects: true });
+        console.log(`[updateTasksFromItem] ✅ Synchronized task ${task.id} with latest item data.`);
+      }
+    }
+  } catch (error) {
+    console.error(`[updateTasksFromItem] Error syncing data from item to tasks:`, error);
+  }
+}
+
+// ============================================================================
+// ITEM → FINANCIAL RECORD PROPAGATION
+// ============================================================================
+
+export async function updateFinancialRecordsFromItem(
+  item: Item,
+  previousItem?: Item
+): Promise<void> {
+  if (!previousItem) return;
+
+  const dataChanged = 
+    item.name !== previousItem.name ||
+    item.station !== previousItem.station ||
+    item.price !== previousItem.price ||
+    item.unitCost !== previousItem.unitCost;
+
+  if (!dataChanged) return;
+
+  try {
+    console.log(`[updateFinancialRecordsFromItem] Item data changed for ${item.id}. Propagating to linked records.`);
+    
+    const { getAllFinancials, upsertFinancial } = await import('@/data-store/datastore');
+    const allRecords = await getAllFinancials();
+    const relatedRecords = allRecords.filter(r => r.outputItemId === item.id);
+
+    for (const record of relatedRecords) {
+      const needsUpdate = 
+        record.outputItemName !== item.name ||
+        record.station !== item.station ||
+        record.outputItemPrice !== item.price ||
+        record.outputUnitCost !== item.unitCost;
+
+      if (needsUpdate) {
+        const updatedRecord = {
+          ...record,
+          outputItemName: item.name,
+          station: item.station || record.station,
+          outputItemPrice: item.price || record.outputItemPrice,
+          outputUnitCost: item.unitCost || record.outputUnitCost,
+          updatedAt: new Date()
+        };
+        await upsertFinancial(updatedRecord, { skipWorkflowEffects: true });
+        console.log(`[updateFinancialRecordsFromItem] ✅ Synchronized financial record ${record.id} with latest item data.`);
+      }
+    }
+  } catch (error) {
+    console.error(`[updateFinancialRecordsFromItem] Error syncing data from item to financials:`, error);
+  }
+}
+
+// ============================================================================
+// ITEM → SALE PROPAGATION
+// ============================================================================
+
+export async function updateSalesFromItem(
+  item: Item,
+  previousItem?: Item
+): Promise<void> {
+  if (!previousItem || item.name === previousItem.name) return;
+
+  try {
+    console.log(`[updateSalesFromItem] Item name changed: ${previousItem.name} → ${item.name}. Updating sale lines.`);
+    
+    // Find all sales
+    const { getAllSales, upsertSale } = await import('@/data-store/datastore');
+    const allSales = await getAllSales();
+    
+    for (const sale of allSales) {
+      let saleChanged = false;
+      const updatedLines = sale.lines?.map(line => {
+        if (line.kind === 'item') {
+          const itemLine = line as any;
+          if (itemLine.itemId === item.id && itemLine.description !== item.name) {
+            saleChanged = true;
+            return { ...itemLine, description: item.name };
+          }
+        }
+        return line;
+      });
+
+      if (saleChanged) {
+        const updatedSale = {
+          ...sale,
+          lines: updatedLines,
+          updatedAt: new Date()
+        };
+        await upsertSale(updatedSale, { skipWorkflowEffects: true });
+        console.log(`[updateSalesFromItem] ✅ Updated sale ${sale.id} line with new item name: ${item.name}`);
+      }
+    }
+  } catch (error) {
+    console.error(`[updateSalesFromItem] Error updating sales:`, error);
+  }
 }

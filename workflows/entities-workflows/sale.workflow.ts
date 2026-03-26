@@ -264,7 +264,25 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
       await kvSAdd(buildArchiveCollectionIndexKey('sales', newMonth), sale.id);
       await kvSAdd(buildArchiveMonthsKey(), newMonth);
 
-      // The sale record's existence in the index and its inherent dates are the single source of truth.
+      // ── Log Sync ──────────────────────────────────────────────────────────
+      // When an archived sale is re-saved for data correction (no status change),
+      // no COLLECTED log event fires above. We must ensure the correct
+      // entry exists in the target month's log and carries updated fields.
+      const { getEntityLogs } = await import('../entities-logging');
+      const monthEntries = await getEntityLogs(EntityType.SALE, { month: newMonth });
+      const existingEntry = monthEntries.find(
+        (e: any) => e.entityId === sale.id && String(e.event ?? '').toLowerCase() === 'collected'
+      );
+
+      if (existingEntry) {
+        await updateEntityLeanFields(EntityType.SALE, sale.id, getSaleLogDetails(sale));
+      } else {
+        const collectedAt = sale.collectedAt || calculateClosingDate(sale.saleDate || new Date());
+        await appendEntityLog(EntityType.SALE, sale.id, LogEventType.COLLECTED, {
+          ...getSaleLogDetails(sale),
+          collectedAt: collectedAt.toISOString()
+        }, collectedAt);
+      }
     }
   }
 

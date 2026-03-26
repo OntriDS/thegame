@@ -413,7 +413,46 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
         await kvSAdd(buildArchiveCollectionIndexKey('financials', newMonth), financial.id);
         await kvSAdd(buildArchiveMonthsKey(), newMonth);
 
-        // The financial record's existence in the index and its inherent dates are the single source of truth.
+        // ── Log Sync ──────────────────────────────────────────────────────────
+        // When an archived record is re-saved for data correction (no status change),
+        // no DONE/COLLECTED log events fire above. We must ensure the correct
+        // entry exists in the target month's log and carries updated fields.
+        const { getEntityLogs } = await import('../entities-logging');
+        const monthEntries = await getEntityLogs(EntityType.FINANCIAL, { month: newMonth });
+        const targetEvent = financial.isCollected ? 'collected' : 'done';
+        const existingEntry = monthEntries.find(
+          (e: any) => e.entityId === financial.id && String(e.event ?? '').toLowerCase() === targetEvent
+        );
+
+        if (existingEntry) {
+          await updateEntityLeanFields(EntityType.FINANCIAL, financial.id, {
+            name: financial.name,
+            type: financial.type,
+            station: financial.station,
+            cost: financial.cost,
+            revenue: financial.revenue,
+          });
+        } else {
+          const logEvent = financial.isCollected ? LogEventType.COLLECTED : LogEventType.DONE;
+          const logPayload = financial.isCollected ? {
+            name: financial.name,
+            type: financial.type,
+            station: financial.station,
+            cost: financial.cost,
+            revenue: financial.revenue,
+            collectedAt: (financial.collectedAt || new Date()).toISOString()
+          } : {
+            name: financial.name,
+            type: financial.type,
+            station: financial.station,
+            cost: financial.cost,
+            revenue: financial.revenue,
+            isNotPaid: financial.isNotPaid,
+            isNotCharged: financial.isNotCharged,
+          };
+          const logDate = financial.isCollected ? (financial.collectedAt || new Date()) : getFinancialDate(financial);
+          await appendEntityLog(EntityType.FINANCIAL, financial.id, logEvent, logPayload, logDate);
+        }
       }
     }
   }

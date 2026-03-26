@@ -366,8 +366,46 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
     if (newMonth) {
       await kvSAdd(monthIndex(newMonth), task.id);
       await kvSAdd(buildArchiveMonthsKey(), newMonth);
+
+      // ── Log Sync ──────────────────────────────────────────────────────────
+      // When a completed task is re-saved for data correction (no status change),
+      // no DONE/COLLECTED log events fire above. We must ensure the correct
+      // entry exists in the target month's log and carries updated fields.
+      const { getEntityLogs } = await import('../entities-logging');
+      const monthEntries = await getEntityLogs(EntityType.TASK, { month: newMonth });
+      const targetEvent = task.status === TaskStatus.COLLECTED ? 'collected' : 'done';
+      const existingEntry = monthEntries.find(
+        (e: any) => e.entityId === task.id && String(e.event ?? '').toLowerCase() === targetEvent
+      );
+
+      if (existingEntry) {
+        await updateEntityLeanFields(EntityType.TASK, task.id, {
+          name: task.name,
+          taskType: task.type,
+          station: task.station,
+          priority: task.priority,
+        });
+      } else {
+        const logEvent = task.status === TaskStatus.COLLECTED ? LogEventType.COLLECTED : LogEventType.DONE;
+        const logPayload = task.status === TaskStatus.COLLECTED ? {
+          name: task.name,
+          taskType: task.type,
+          station: task.station,
+          priority: task.priority,
+          collectedAt: (task.collectedAt || new Date()).toISOString()
+        } : {
+          name: task.name,
+          taskType: task.type,
+          station: task.station,
+          priority: task.priority,
+          sourceSaleId: task.sourceSaleId,
+          dueDate: task.dueDate,
+          doneAt: task.doneAt,
+        };
+        await appendEntityLog(EntityType.TASK, task.id, logEvent, logPayload, (task.collectedAt || task.doneAt || task.createdAt || new Date()));
+      }
     }
-  } // The task's existence in the index and its inherent dates are the single source of truth.
+  } 
 }
 
 /**

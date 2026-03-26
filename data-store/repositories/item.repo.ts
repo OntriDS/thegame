@@ -167,7 +167,7 @@ export async function upsertItem(item: Item): Promise<Item> {
     await kvSRem(oldSourceRecordIndexKey, item.id);
   }
 
-  return item;
+  return toSave;
 }
 
 export async function deleteItem(id: string): Promise<void> {

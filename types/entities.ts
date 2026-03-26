@@ -410,6 +410,7 @@ export interface FinancialRecord extends BaseEntity {
 
   // Archive field
   isCollected: boolean;             // Financial record collected (monthly close)
+  doneAt?: Date;                    // When record was marked as DONE
   collectedAt?: Date;               // When record was collected
 }
 

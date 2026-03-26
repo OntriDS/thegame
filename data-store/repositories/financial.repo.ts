@@ -71,6 +71,9 @@ export async function upsertFinancial(financial: FinancialRecord): Promise<Finan
     const monthDate = new Date(financial.year, (financial.month || 1) - 1, 1);
     const currentMonthKey = formatMonthKey(monthDate);
     await kvSAdd(buildMonthIndexKey(ENTITY, currentMonthKey), financial.id);
+
+    const { buildArchiveMonthsKey } = await import('../keys');
+    await kvSAdd(buildArchiveMonthsKey(), currentMonthKey);
   }
 
   // Maintain sourceTaskId index
