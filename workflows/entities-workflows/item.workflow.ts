@@ -60,7 +60,7 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
         name: item.name,
         itemType: item.type,
         subItemType: item.subItemType,
-        quantity: 1
+        soldQuantity: 1
       }, item.updatedAt || new Date());
     }
   }

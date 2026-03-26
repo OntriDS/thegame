@@ -90,10 +90,7 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
       // Update the sale object with chargedAt
       (sale as any).chargedAt = new Date(chargedAt);
 
-      await appendEntityLog(EntityType.SALE, sale.id, LogEventType.DONE, {
-        ...getSaleLogDetails(sale),
-        completedAt: chargedAt
-      }, sale.saleDate || chargedAt);
+      await appendEntityLog(EntityType.SALE, sale.id, LogEventType.DONE, getSaleLogDetails(sale), sale.saleDate || chargedAt);
 
       // Points awarding - ONLY when sale transitions to CHARGED (both paid and charged)
       // Use sale.playerCharacterId directly as playerId (unified ID)
@@ -278,10 +275,7 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
         await updateEntityLeanFields(EntityType.SALE, sale.id, getSaleLogDetails(sale));
       } else {
         const collectedAt = sale.collectedAt || calculateClosingDate(sale.saleDate || new Date());
-        await appendEntityLog(EntityType.SALE, sale.id, LogEventType.COLLECTED, {
-          ...getSaleLogDetails(sale),
-          collectedAt: collectedAt.toISOString()
-        }, collectedAt);
+        await appendEntityLog(EntityType.SALE, sale.id, LogEventType.COLLECTED, getSaleLogDetails(sale), collectedAt);
       }
     }
   }

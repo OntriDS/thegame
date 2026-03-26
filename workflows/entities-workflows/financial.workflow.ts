@@ -40,9 +40,7 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
       type: financial.type,
       station: financial.station,
       cost: financial.cost,
-      revenue: financial.revenue,
-      isNotPaid: financial.isNotPaid,
-      isNotCharged: financial.isNotCharged
+      revenue: financial.revenue
     }, financial.createdAt || getFinancialDate(financial));
     await markEffect(effectKey);
 
@@ -211,10 +209,7 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
       type: financial.type,
       station: financial.station,
       cost: financial.cost,
-      revenue: financial.revenue,
-      isNotPaid: financial.isNotPaid,
-      isNotCharged: financial.isNotCharged,
-      pendingAt: new Date().toISOString()
+      revenue: financial.revenue
     }, getFinancialDate(financial));
 
     // NEW: Archive Index Tracking
@@ -253,10 +248,7 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
       type: financial.type,
       station: financial.station,
       cost: financial.cost,
-      revenue: financial.revenue,
-      isNotPaid: financial.isNotPaid,
-      isNotCharged: financial.isNotCharged,
-      pendingAt: new Date().toISOString()
+      revenue: financial.revenue
     }, getFinancialDate(financial));
   }
 
@@ -288,8 +280,7 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
         type: financial.type,
         station: financial.station,
         cost: financial.cost,
-        revenue: financial.revenue,
-        collectedAt: collectedAt.toISOString()
+        revenue: financial.revenue
       }, collectedAt);
 
       // Reward points if rewards exist AND they were staged (prevents double-counting legacy)
@@ -434,21 +425,12 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
           });
         } else {
           const logEvent = financial.isCollected ? LogEventType.COLLECTED : LogEventType.DONE;
-          const logPayload = financial.isCollected ? {
+          const logPayload = {
             name: financial.name,
             type: financial.type,
             station: financial.station,
             cost: financial.cost,
-            revenue: financial.revenue,
-            collectedAt: (financial.collectedAt || new Date()).toISOString()
-          } : {
-            name: financial.name,
-            type: financial.type,
-            station: financial.station,
-            cost: financial.cost,
-            revenue: financial.revenue,
-            isNotPaid: financial.isNotPaid,
-            isNotCharged: financial.isNotCharged,
+            revenue: financial.revenue
           };
           const logDate = financial.isCollected ? (financial.collectedAt || new Date()) : getFinancialDate(financial);
           await appendEntityLog(EntityType.FINANCIAL, financial.id, logEvent, logPayload, logDate);

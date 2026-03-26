@@ -45,7 +45,7 @@ interface FinancialsTabProps {
   isReloading: boolean;
 }
 
-export function FinancialsTab({ financialsLog, onReload, isReloading }: FinancialsTabProps) {
+export function FinancialsLogTab({ financialsLog, onReload, isReloading }: FinancialsTabProps) {
   const [activeSubTab, setActiveSubTab] = useState<string>('lifecycle-log');
   const [logOrder, setLogOrder] = useState<'newest' | 'oldest'>('newest');
   const [showLinksModal, setShowLinksModal] = useState(false);
@@ -220,31 +220,24 @@ export function FinancialsTab({ financialsLog, onReload, isReloading }: Financia
                               </span>
                             )}
 
-                            {/* Cost - ALWAYS show if there's any cost data */}
+                            {/* Cost */}
                             {cost !== 0 && (
-                              <span className={`font-medium ${FINANCIAL_COLORS.negative} min-w-0 flex-shrink-0`}>
+                              <span className={`font-medium text-red-600 dark:text-red-400 min-w-0 flex-shrink-0`}>
                                 Cost: ${cost.toLocaleString()}
                               </span>
                             )}
 
-                            {/* Revenue - ALWAYS show if there's any revenue data */}
+                            {/* Revenue */}
                             {revenue !== 0 && (
-                              <span className={`font-medium ${FINANCIAL_COLORS.positive} min-w-0 flex-shrink-0`}>
+                              <span className={`font-medium text-green-600 dark:text-green-400 min-w-0 flex-shrink-0`}>
                                 Rev: ${revenue.toLocaleString()}
                               </span>
                             )}
 
                             {/* Profit */}
-                            {displayProfit !== 0 && (
-                              <span className={`font-medium ${displayProfit < 0 ? FINANCIAL_COLORS.negative : displayProfit > 0 ? FINANCIAL_COLORS.positive : FINANCIAL_COLORS.neutral} min-w-0 flex-shrink-0`}>
-                                {displayProfit > 0 ? 'Profit' : 'Loss'}: ${displayProfit.toLocaleString()}
-                              </span>
-                            )}
-
-                            {/* Margin */}
-                            {displayMargin !== '0' && (
-                              <span className={`font-medium ${Number(displayMargin) < 0 ? FINANCIAL_COLORS.negative : Number(displayMargin) > 0 ? FINANCIAL_COLORS.positive : FINANCIAL_COLORS.neutral} min-w-0 flex-shrink-0`}>
-                                {displayMargin}%
+                            {profit !== 0 && (revenue !== 0 || cost !== 0) && (
+                              <span className={`font-medium ${profit < 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'} min-w-0 flex-shrink-0`}>
+                                {profit > 0 ? 'Profit' : 'Loss'}: ${profit.toLocaleString()}
                               </span>
                             )}
                           </div>

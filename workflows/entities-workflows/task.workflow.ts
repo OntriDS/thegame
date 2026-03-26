@@ -63,12 +63,7 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
       await appendEntityLog(EntityType.TASK, task.id, LogEventType.CREATED, {
         name: task.name,
         taskType: task.type,
-        station: task.station,
-        priority: task.priority,
-        sourceSaleId: task.sourceSaleId,
-        dueDate: task.dueDate,
-        frequencyConfig: task.frequencyConfig,
-        _logOrder: 0
+        station: task.station
       }, task.createdAt);
       await markEffect(effectKey);
     }
@@ -103,11 +98,9 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
         name: task.name,
         taskType: task.type,
         station: task.station,
-        priority: task.priority,
         oldStatus: previousTask!.status,
         newStatus: task.status,
-        transition: `${previousTask!.status} → ${task.status}`,
-        changedAt: new Date().toISOString()
+        transition: `${previousTask!.status} → ${task.status}`
       });
     }
 
@@ -127,13 +120,7 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
       await appendEntityLog(EntityType.TASK, task.id, LogEventType.DONE, {
         name: task.name,
         taskType: task.type,
-        station: task.station,
-        priority: task.priority,
-        sourceSaleId: task.sourceSaleId,
-        dueDate: task.dueDate,
-        frequencyConfig: task.frequencyConfig,
-        doneAt: task.doneAt,
-        _logOrder: 1
+        station: task.station
       }, task.doneAt);
     }
   }
@@ -159,9 +146,7 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
       await appendEntityLog(EntityType.TASK, task.id, LogEventType.COLLECTED, {
         name: task.name,
         taskType: task.type,
-        station: task.station,
-        priority: task.priority,
-        collectedAt: collectedAt.toISOString()
+        station: task.station
       }, collectedAt);
 
       // Reward points if rewards exist AND they were staged (prevents double-counting legacy tasks)
@@ -366,46 +351,8 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
     if (newMonth) {
       await kvSAdd(monthIndex(newMonth), task.id);
       await kvSAdd(buildArchiveMonthsKey(), newMonth);
-
-      // ── Log Sync ──────────────────────────────────────────────────────────
-      // When a completed task is re-saved for data correction (no status change),
-      // no DONE/COLLECTED log events fire above. We must ensure the correct
-      // entry exists in the target month's log and carries updated fields.
-      const { getEntityLogs } = await import('../entities-logging');
-      const monthEntries = await getEntityLogs(EntityType.TASK, { month: newMonth });
-      const targetEvent = task.status === TaskStatus.COLLECTED ? 'collected' : 'done';
-      const existingEntry = monthEntries.find(
-        (e: any) => e.entityId === task.id && String(e.event ?? '').toLowerCase() === targetEvent
-      );
-
-      if (existingEntry) {
-        await updateEntityLeanFields(EntityType.TASK, task.id, {
-          name: task.name,
-          taskType: task.type,
-          station: task.station,
-          priority: task.priority,
-        });
-      } else {
-        const logEvent = task.status === TaskStatus.COLLECTED ? LogEventType.COLLECTED : LogEventType.DONE;
-        const logPayload = task.status === TaskStatus.COLLECTED ? {
-          name: task.name,
-          taskType: task.type,
-          station: task.station,
-          priority: task.priority,
-          collectedAt: (task.collectedAt || new Date()).toISOString()
-        } : {
-          name: task.name,
-          taskType: task.type,
-          station: task.station,
-          priority: task.priority,
-          sourceSaleId: task.sourceSaleId,
-          dueDate: task.dueDate,
-          doneAt: task.doneAt,
-        };
-        await appendEntityLog(EntityType.TASK, task.id, logEvent, logPayload, (task.collectedAt || task.doneAt || task.createdAt || new Date()));
-      }
     }
-  } 
+  } // The task's existence in the index and its inherent dates are the single source of truth.
 }
 
 /**
@@ -699,8 +646,8 @@ export async function uncompleteTask(taskId: string): Promise<void> {
 
     // 4. Remove DONE and COLLECTED logs (Idempotency)
     // Instead of logging "UNCOMPLETED", we simply remove the entries that made it "complete"
-    const removedCount = await removeLogEntriesAcrossMonths(EntityType.TASK, entry => 
-      entry.entityId === taskId && 
+    const removedCount = await removeLogEntriesAcrossMonths(EntityType.TASK, entry =>
+      entry.entityId === taskId &&
       (entry.event === LogEventType.DONE || entry.event === LogEventType.COLLECTED)
     );
 

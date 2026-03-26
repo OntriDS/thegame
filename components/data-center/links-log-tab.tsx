@@ -15,7 +15,7 @@ interface LinksTabProps {
   isReloading: boolean;
 }
 
-export function LinksTab({ onReload, isReloading }: LinksTabProps) {
+export function LinksLogTab({ onReload, isReloading }: LinksTabProps) {
   const [links, setLinks] = useState<Link[]>([]);
   const [selectedLinkType, setSelectedLinkType] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState<number>(1);

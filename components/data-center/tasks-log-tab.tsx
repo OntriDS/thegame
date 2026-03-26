@@ -25,7 +25,7 @@ interface TasksLifecycleTabProps {
   isReloading: boolean;
 }
 
-export function TasksLifecycleTab({ tasksLog, onReload, isReloading }: TasksLifecycleTabProps) {
+export function TasksLogTab({ tasksLog, onReload, isReloading }: TasksLifecycleTabProps) {
   const { textColor, isDarkMode } = useThemeColors();
   const [activeSubTab, setActiveSubTab] = useState<string>('lifecycle-log');
   const [logOrder, setLogOrder] = useState<'newest' | 'oldest'>('newest');
@@ -296,20 +296,17 @@ export function TasksLifecycleTab({ tasksLog, onReload, isReloading }: TasksLife
                             {name}
                           </span>
                           
-                          {/* Type */}
-                          <span className="text-muted-foreground min-w-0 flex-shrink-0">
-                            {type}
-                          </span>
+                          {/* TaskType */}
+                          {type !== '—' && (
+                            <span className="text-muted-foreground min-w-0 flex-shrink-0">
+                              {type}
+                            </span>
+                          )}
                           
                           {/* Station */}
-                          <span className="text-muted-foreground min-w-0 flex-shrink-0">
-                            {station}
-                          </span>
-                          
-                          {/* Priority */}
-                          {priority !== '—' && (
+                          {station !== '—' && (
                             <span className="text-muted-foreground min-w-0 flex-shrink-0">
-                              {priority}
+                              {station}
                             </span>
                           )}
                           
@@ -317,27 +314,6 @@ export function TasksLifecycleTab({ tasksLog, onReload, isReloading }: TasksLife
                           {renameInfo && (
                             <span className="text-xs text-muted-foreground min-w-0 flex-shrink-0">
                               {renameInfo}
-                            </span>
-                          )}
-                          
-                          {/* Source */}
-                          {truncatedSourceName && (
-                            <span className="text-xs text-muted-foreground min-w-0 flex-shrink-0">
-                              source: {truncatedSourceName}
-                            </span>
-                          )}
-                          
-                          {/* Due Date */}
-                          {dueDate && (
-                            <span className="text-xs text-muted-foreground min-w-0 flex-shrink-0">
-                              due: {formatDisplayDate(dueDate)}
-                            </span>
-                          )}
-                          
-                          {/* Frequency */}
-                          {frequencyConfig && frequencyConfig.frequency && (
-                            <span className="text-xs text-muted-foreground min-w-0 flex-shrink-0">
-                              freq: {frequencyConfig.frequency}
                             </span>
                           )}
                         </div>

@@ -191,12 +191,9 @@ export function SalesLogTab({ salesLog, onReload, isReloading }: SalesLogTabProp
               const siteName: string = entry.siteName || entry.site || '';
               const customerName: string = entry.customerName || entry.customer || '';
 
-              // Financial information - extract from totals or direct values
-              const subtotal = entry.totals?.subtotal || entry.subtotal || 0;
-              const discountTotal = entry.totals?.discountTotal || entry.discountTotal || 0;
-              const taxTotal = entry.totals?.taxTotal || entry.taxTotal || 0;
-              const revenue = entry.totals?.totalRevenue || entry.revenue || entry.totalRevenue || 0;
-              const cost = entry.totals?.totalCost || entry.cost || 0;
+              // Financial information - extract from flat fields in lean log
+              const revenue = Number(entry.revenue ?? 0);
+              const cost = Number(entry.cost ?? 0);
               const profit = revenue - cost;
 
               // Helper function to get color for financial values
@@ -240,38 +237,24 @@ export function SalesLogTab({ salesLog, onReload, isReloading }: SalesLogTabProp
                         </span>
                       )}
                       
-                      {/* Category */}
-                      {category !== '—' && (
-                        <span className="text-muted-foreground min-w-0 flex-shrink-0">
-                          {category}
-                        </span>
-                      )}
-                      
                       {/* Revenue */}
-                      {revenue > 0 && (
+                      {revenue !== 0 && (
                         <span className="font-medium text-green-600 dark:text-green-400 min-w-0 flex-shrink-0">
                           Rev: ${revenue.toLocaleString()}
                         </span>
                       )}
                       
                       {/* Cost */}
-                      {cost > 0 && (
+                      {cost !== 0 && (
                         <span className="font-medium text-red-600 dark:text-red-400 min-w-0 flex-shrink-0">
                           Cost: ${cost.toLocaleString()}
                         </span>
                       )}
                       
                       {/* Profit */}
-                      {profit !== 0 && (
+                      {profit !== 0 && (revenue !== 0 || cost !== 0) && (
                         <span className={`font-medium ${getFinancialColor(profit)} min-w-0 flex-shrink-0`}>
                           {profit > 0 ? 'Profit' : 'Loss'}: ${profit.toLocaleString()}
-                        </span>
-                      )}
-                      
-                      {/* Margin */}
-                      {revenue > 0 && profit !== 0 && (
-                        <span className={`font-medium ${getFinancialColor(((profit / revenue) * 100))} min-w-0 flex-shrink-0`}>
-                          {((profit / revenue) * 100).toFixed(0)}%
                         </span>
                       )}
                     </div>

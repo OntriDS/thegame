@@ -26,7 +26,8 @@ interface ItemsLifecycleTabProps {
   isReloading: boolean;
 }
 
-export function ItemsLifecycleTab({ itemsLog, onReload, isReloading }: ItemsLifecycleTabProps) {
+export function ItemsLogTab({
+ itemsLog, onReload, isReloading }: ItemsLifecycleTabProps) {
   const { isDarkMode } = useThemeColors();
   const [activeSubTab, setActiveSubTab] = useState<string>('lifecycle-log');
   const [logOrder, setLogOrder] = useState<'newest' | 'oldest'>('newest');
@@ -343,50 +344,12 @@ export function ItemsLifecycleTab({ itemsLog, onReload, isReloading }: ItemsLife
                             </span>
                           )}
 
-                          {/* Quantity */}
-                          {/* Quantity - Show for Created AND Updated events */}
-                          {(eventKind === LogEventType.CREATED.toLowerCase() || eventKind === LogEventType.UPDATED.toLowerCase()) && quantity !== undefined && quantity > 0 && (
+                          {/* Quantity - Standardized for all Item events */}
+                          {entry.soldQuantity !== undefined && (
                             <span className="text-muted-foreground min-w-0 flex-shrink-0">
-                              Q: {quantity}
+                              Q: {entry.soldQuantity}
                             </span>
                           )}
-
-                          {(eventKind === LogEventType.CREATED.toLowerCase() || eventKind === LogEventType.UPDATED.toLowerCase()) && unitCost !== undefined && (
-                            <span className="text-muted-foreground min-w-0 flex-shrink-0">
-                              Cost: ${unitCost}
-                            </span>
-                          )}
-
-                          {(eventKind === LogEventType.CREATED.toLowerCase() || eventKind === LogEventType.UPDATED.toLowerCase()) && price !== undefined && (
-                            <span className="text-muted-foreground min-w-0 flex-shrink-0">
-                              ${price}
-                            </span>
-                          )}
-
-                          {eventKind === LogEventType.SOLD.toLowerCase() && (() => {
-                            const qtySold = typeof entry.quantitySold === 'number' ? entry.quantitySold : undefined;
-                            const oldQtySold = typeof entry.oldQuantitySold === 'number' ? entry.oldQuantitySold : undefined;
-                            const delta = qtySold !== undefined && oldQtySold !== undefined ? qtySold - oldQtySold : undefined;
-                            return (
-                              <>
-                                {delta !== undefined && (
-                                  <span className="text-muted-foreground min-w-0 flex-shrink-0">
-                                    Sold: +{delta} (total {qtySold})
-                                  </span>
-                                )}
-                                {unitCost !== undefined && (
-                                  <span className="text-muted-foreground min-w-0 flex-shrink-0">
-                                    Cost: ${unitCost}
-                                  </span>
-                                )}
-                                {price !== undefined && (
-                                  <span className="text-muted-foreground min-w-0 flex-shrink-0">
-                                    ${price}
-                                  </span>
-                                )}
-                              </>
-                            );
-                          })()}
 
                           {eventKind === LogEventType.UPDATED.toLowerCase() && entry.oldStatus && entry.newStatus && (
                             <span className="text-muted-foreground min-w-0 flex-shrink-0">

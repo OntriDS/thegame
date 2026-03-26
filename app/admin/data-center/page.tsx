@@ -13,14 +13,14 @@ import { useThemeColors } from '@/lib/hooks/use-theme-colors';
 import { formatDateDDMMYYYY } from '@/lib/constants/date-constants';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
 import { useEntityUpdates } from '@/lib/hooks/use-entity-updates';
-import { TasksLifecycleTab } from '@/components/data-center/tasks-lifecycle-tab';
-import { ItemsLifecycleTab } from '@/components/data-center/items-lifecycle-tab';
-import { FinancialsTab } from '@/components/data-center/financials-tab';
+import { TasksLogTab } from '@/components/data-center/tasks-log-tab';
+import { ItemsLogTab } from '@/components/data-center/items-log-tab';
+import { FinancialsLogTab } from '@/components/data-center/financials-log-tab';
 import { CharacterLogTab } from '@/components/data-center/character-log-tab';
 import { PlayerLogTab } from '@/components/data-center/player-log-tab';
 import { SalesLogTab } from '@/components/data-center/sales-log-tab';
 import { SitesLogTab } from '@/components/data-center/sites-log-tab';
-import { LinksTab } from '@/components/data-center/links-tab';
+import { LinksLogTab } from '@/components/data-center/links-log-tab';
 import { deduplicateTasksLog } from '@/lib/utils/logging-utils';
 import { sortMonthKeys, getCurrentMonthKey } from '@/lib/utils/date-utils';
 
@@ -221,7 +221,7 @@ export default function DataCenterPage() {
 
         {/* Tasks Lifecycle Tab */}
         <TabsContent value="tasks-lifecycle" className="space-y-4">
-          <TasksLifecycleTab
+          <TasksLogTab
             tasksLog={tasksLog}
             onReload={handleReloadLogs}
             isReloading={isReloading}
@@ -230,7 +230,7 @@ export default function DataCenterPage() {
 
         {/* Items Lifecycle Tab */}
         <TabsContent value="items-lifecycle" className="space-y-4">
-          <ItemsLifecycleTab
+          <ItemsLogTab
             itemsLog={itemsLog}
             onReload={handleReloadLogs}
             isReloading={isReloading}
@@ -239,7 +239,7 @@ export default function DataCenterPage() {
 
         {/* Financials Log Tab */}
         <TabsContent value="financials-history" className="space-y-4">
-          <FinancialsTab
+          <FinancialsLogTab
             financialsLog={financialsLog}
             onReload={handleReloadLogs}
             isReloading={isReloading}
@@ -284,7 +284,7 @@ export default function DataCenterPage() {
 
         {/* Links Tab - The Rosetta Stone */}
         <TabsContent value="links-debug" className="space-y-4">
-          <LinksTab
+          <LinksLogTab
             onReload={handleReloadLogs}
             isReloading={isReloading}
           />
