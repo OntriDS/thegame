@@ -304,7 +304,13 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
       // When an archived sale is re-saved for data correction (no status change),
       // no COLLECTED log event fires above. We must ensure the correct
       // entry exists in the target month's log and carries updated fields.
-      const { getEntityLogs } = await import('../entities-logging');
+      const { getEntityLogs, removeLogEntriesAcrossMonths } = await import('../entities-logging');
+      await removeLogEntriesAcrossMonths(
+        EntityType.SALE,
+        (entry: any) =>
+          entry.entityId === sale.id &&
+          String(entry.event ?? entry.status ?? '').toLowerCase() === 'collected'
+      );
       const monthEntries = await getEntityLogs(EntityType.SALE, { month: newMonth });
       const existingEntry = monthEntries.find(
         (e: any) => e.entityId === sale.id && String(e.event ?? '').toLowerCase() === 'collected'

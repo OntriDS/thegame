@@ -171,6 +171,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
 
   // Dates Submodal State
   const [showDatesModal, setShowDatesModal] = useState(false);
+  const [localDoneAt, setLocalDoneAt] = useState<Date | undefined>(record?.doneAt ? new Date(record.doneAt) : undefined);
   const [localCollectedAt, setLocalCollectedAt] = useState<Date | undefined>(record?.collectedAt ? new Date(record.collectedAt) : undefined);
 
   // Guard for one-time initialization of new records
@@ -296,6 +297,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
       // Initialize player character
       setPlayerCharacterId(record.playerCharacterId || FOUNDER_CHARACTER_ID);
       setSelectedItemId(record.outputItemId || '');
+      setLocalDoneAt(record.doneAt ? new Date(record.doneAt) : undefined);
       setLocalCollectedAt(record.collectedAt ? new Date(record.collectedAt) : undefined);
 
       // Initialize combined item type/subtype field
@@ -359,6 +361,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
       setSelectedItemId('');
       setOutputItemTypeSubType('none:');
       setOutputItemStatus(ItemStatus.FOR_SALE);
+      setLocalDoneAt(undefined);
       setLocalCollectedAt(undefined);
     }
   }, [record, getLastUsedStation, open, year, month]);
@@ -399,6 +402,9 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
   };
 
   const handleDatesUpdate = (newDates: { createdAt?: Date; doneAt?: Date; collectedAt?: Date }) => {
+    if (newDates.doneAt !== undefined) {
+      setLocalDoneAt(newDates.doneAt);
+    }
     if (newDates.collectedAt !== undefined) {
       setLocalCollectedAt(newDates.collectedAt);
     }
@@ -544,6 +550,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
       isNotCharged: formData.isNotCharged,
       status: formData.status,  // Include status field
       isCollected: formData.status === FinancialStatus.COLLECTED || record?.isCollected || false,
+      doneAt: localDoneAt,
       collectedAt: localCollectedAt,
       // Character points (only awarded if character has PLAYER role)
       rewards: {
@@ -1148,9 +1155,12 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
       <DatesSubmodal
         open={showDatesModal}
         onOpenChange={setShowDatesModal}
+        entityMode="financial"
         entityId={record?.id ? `data:financial:${record.id}` : undefined}
         createdAt={record?.createdAt}
+        doneAt={localDoneAt}
         collectedAt={localCollectedAt}
+        currentStatus={formData.status}
         onDatesChange={handleDatesUpdate}
       />
 

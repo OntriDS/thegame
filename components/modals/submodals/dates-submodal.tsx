@@ -63,11 +63,22 @@ export default function DatesSubmodal({
     const handleClearDoneAt = () => setLocalDoneAt(undefined);
     const handleClearCollectedAt = () => setLocalCollectedAt(undefined);
 
-    // Task mode: gate on status
+    // Task/Sale/Item mode: gate on status
+    const normalizedStatus = (currentStatus || '').toLowerCase();
     const isItem = entityMode === 'item';
-    const isSoldItem = isItem && (currentStatus?.toLowerCase().includes('sold') ?? false);
-    const isDoneAllowed = isItem ? isSoldItem : (currentStatus === 'Done' || currentStatus === 'Collected');
-    const isCollectedAllowed = !isItem && currentStatus === 'Collected';
+    const isSale = entityMode === 'sale';
+    const isFinancial = entityMode === 'financial';
+    const isTask = entityMode === 'task';
+    const isSoldItem = isItem && normalizedStatus.includes('sold');
+    const isDoneAllowed = isItem
+        ? isSoldItem
+        : isSale
+            ? (normalizedStatus === 'charged' || normalizedStatus === 'collected')
+            : isFinancial
+                ? (normalizedStatus === 'done' || normalizedStatus === 'charged')
+                : (normalizedStatus === 'done' || normalizedStatus === 'collected');
+    const showCollectedSection = isSale || isTask;
+    const isCollectedAllowed = showCollectedSection && normalizedStatus === 'collected';
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -121,18 +132,27 @@ export default function DatesSubmodal({
                             <p className="text-[10px] text-amber-600 dark:text-amber-500 font-medium">
                                 {isItem
                                     ? 'Set item status to Sold first to unlock this date.'
-                                    : 'Please set the task status to Done or Collected first to unlock this date.'
+                                    : isSale
+                                        ? 'Please set the sale status to Charged or Collected first to unlock this date.'
+                                        : isFinancial
+                                            ? 'Please set the financial status to Done (or Charged) first to unlock this date.'
+                                            : 'Please set the task status to Done or Collected first to unlock this date.'
                                 }
                             </p>
                         ) : (
                             <p className="text-[10px] text-muted-foreground">
-                                {isItem ? 'Date the item was sold (determines which month it appears in).' : 'When the action actually took place (affects monthly History).'}
+                                {isItem
+                                    ? 'Date the item was sold (determines which month it appears in).'
+                                    : isFinancial
+                                        ? 'When the record was completed (affects monthly History).'
+                                        : 'When the action actually took place (affects monthly History).'
+                                }
                             </p>
                         )}
                     </div>
 
                     {/* Collected At — tasks only */}
-                    {!isItem && (
+                    {showCollectedSection && (
                         <div className="space-y-2">
                             <div className="flex justify-between items-center">
                                 <Label className="text-xs font-semibold">Collected / Rewarded At</Label>
@@ -148,9 +168,16 @@ export default function DatesSubmodal({
                                 disabled={!isCollectedAllowed}
                             />
                             {!isCollectedAllowed ? (
-                                <p className="text-[10px] text-amber-600 dark:text-amber-500 font-medium">Please set the task status to Collected first to unlock this date.</p>
+                                <p className="text-[10px] text-amber-600 dark:text-amber-500 font-medium">
+                                    {isSale
+                                        ? 'Please set the sale status to Collected first to unlock this date.'
+                                        : 'Please set the task status to Collected first to unlock this date.'
+                                    }
+                                </p>
                             ) : (
-                                <p className="text-[10px] text-muted-foreground">When points were rewarded to the player.</p>
+                                <p className="text-[10px] text-muted-foreground">
+                                    {isSale ? 'When the sale was collected (used for monthly log placement).' : 'When points were rewarded to the player.'}
+                                </p>
                             )}
                         </div>
                     )}

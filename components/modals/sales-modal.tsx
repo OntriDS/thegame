@@ -2215,9 +2215,11 @@ export default function SalesModal({
         open={showDatesModal}
         onOpenChange={setShowDatesModal}
         entityId={sale?.id ? `data:sale:${sale.id}` : undefined}
+        entityMode="sale"
         createdAt={sale?.createdAt}
         doneAt={localDoneAt}
         collectedAt={localCollectedAt}
+        currentStatus={status}
         onDatesChange={handleDatesUpdate}
       />
 
