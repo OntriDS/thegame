@@ -2,12 +2,11 @@
 // Financial record creation and management utilities
 
 import type { Task, FinancialRecord, Sale, ItemSaleLine, Character, Contract, ServiceLine, BundleSaleLine } from '@/types/entities';
-import { LinkType, EntityType, LogEventType, BUSINESS_STRUCTURE, CharacterRole, SaleType, SaleStatus, ContractClauseType, ContractStatus } from '@/types/enums';
+import { LinkType, EntityType, LogEventType, BUSINESS_STRUCTURE, SaleType, SaleStatus, ContractClauseType, ContractStatus } from '@/types/enums';
 import { upsertFinancial, getAllFinancials, getFinancialsBySourceTaskId, removeFinancial, getItemById, getCharacterById, getFinancialConversionRates, getContractById, getFinancialsBySourceSaleId, upsertCharacter } from '@/data-store/datastore';
 import { makeLink } from '@/links/links-workflows';
 import { createLink, getLinksFor } from '@/links/link-registry';
 import { appendEntityLog } from './entities-logging';
-import { appendLinkLog } from '@/links/links-logging';
 import { getFinancialTypeForStation, getSalesChannelFromSaleType } from '@/lib/utils/business-structure-utils';
 import type { Station } from '@/types/type-aliases';
 
@@ -172,26 +171,13 @@ export async function createFinancialRecordFromTask(task: Task): Promise<Financi
     console.log(`[createFinancialRecordFromTask] Creating new financial record:`, newFinrec);
     const createdFinrec = await upsertFinancial(newFinrec, { forceSave: true });
 
-    // Create TASK_FINREC link with metadata
-    const linkMetadata = {
-      cost: task.cost || 0,
-      revenue: task.revenue || 0,
-      isNotPaid: task.isNotPaid || false,
-      isNotCharged: task.isNotCharged || false,
-      rewards: task.rewards,
-      netCashflow: newFinrec.netCashflow,
-      createdFrom: 'task'
-    };
-
     const link = makeLink(
       LinkType.TASK_FINREC,
       { type: EntityType.TASK, id: task.id },
-      { type: EntityType.FINANCIAL, id: createdFinrec.id },
-      linkMetadata
+      { type: EntityType.FINANCIAL, id: createdFinrec.id }
     );
 
-    const wasTaskFinrecCreated = await createLink(link);
-    if (wasTaskFinrecCreated) await appendLinkLog(link, 'created');
+    await createLink(link);
 
     console.log(`[createFinancialRecordFromTask] ✅ Financial record created and TASK_FINREC link established: ${createdFinrec.name}`);
 
@@ -396,24 +382,13 @@ export async function createFinancialRecordFromSale(sale: Sale): Promise<Financi
     console.log(`[createFinancialRecordFromSale] Creating financial record:`, newFinrec);
     const createdFinrec = await upsertFinancial(newFinrec, { forceSave: true });
 
-    // Create SALE_FINREC link
-    const linkMetadata = {
-      revenue: sale.totals.totalRevenue,
-      isNotPaid: sale.isNotPaid || false,
-      isNotCharged: sale.isNotCharged || false,
-      netCashflow: newFinrec.netCashflow,
-      createdFrom: 'sale'
-    };
-
     const link = makeLink(
       LinkType.SALE_FINREC,
       { type: EntityType.SALE, id: sale.id },
-      { type: EntityType.FINANCIAL, id: createdFinrec.id },
-      linkMetadata
+      { type: EntityType.FINANCIAL, id: createdFinrec.id }
     );
 
-    const wasSaleFinrecCreated = await createLink(link);
-    if (wasSaleFinrecCreated) await appendLinkLog(link, 'created');
+    await createLink(link);
 
     // Create FINREC_ITEM links for each sold item
     if (sale.lines && sale.lines.length > 0) {
@@ -426,17 +401,9 @@ export async function createFinancialRecordFromSale(sale: Sale): Promise<Financi
             const itemLink = makeLink(
               LinkType.FINREC_ITEM,
               { type: EntityType.FINANCIAL, id: createdFinrec.id },
-              { type: EntityType.ITEM, id: itemLine.itemId },
-              {
-                quantity: itemLine.quantity,
-                unitPrice: itemLine.unitPrice,
-                totalRevenue: itemLine.quantity * itemLine.unitPrice,
-                itemType: item.type,
-                createdFrom: 'sale'
-              }
+              { type: EntityType.ITEM, id: itemLine.itemId }
             );
-            const wasFinrecItemCreated = await createLink(itemLink);
-            if (wasFinrecItemCreated) await appendLinkLog(itemLink, 'created');
+            await createLink(itemLink);
             console.log(`[createFinancialRecordFromSale] ✅ Created FINREC_ITEM link for item ${item.name} (${itemLine.quantity} @ ${itemLine.unitPrice})`);
           }
         }
@@ -668,24 +635,18 @@ async function createBoothPayoutRecord(sale: Sale, associateNet: number, targetE
   const link = makeLink(
     LinkType.SALE_FINREC,
     { type: EntityType.SALE, id: sale.id },
-    { type: EntityType.FINANCIAL, id: createdPayout.id },
-    { type: 'payout', netCashflow: -associateNet }
+    { type: EntityType.FINANCIAL, id: createdPayout.id }
   );
-  const wasPayoutSaleFinrecCreated = await createLink(link);
-  if (wasPayoutSaleFinrecCreated) await appendLinkLog(link, 'created');
+  await createLink(link);
 
   // Link Payout to Associate (Character or Business) if present
   if (targetEntityId) {
-    // [FIX] Dynamically check if the ID belongs to a Business or Character (already resolved by caller usually, but validation here)
-    const linkRole = sale.partnerId ? CharacterRole.PARTNER : CharacterRole.ASSOCIATE;
     const charLink = makeLink(
       targetType === EntityType.BUSINESS ? LinkType.FINREC_BUSINESS : LinkType.FINREC_CHARACTER,
       { type: EntityType.FINANCIAL, id: createdPayout.id },
-      { type: targetType, id: targetEntityId },
-      { role: linkRole }
+      { type: targetType, id: targetEntityId }
     );
-    const wasPayoutCharacterCreated = await createLink(charLink);
-    if (wasPayoutCharacterCreated) await appendLinkLog(charLink, 'created');
+    await createLink(charLink);
   }
 }
 
@@ -743,6 +704,7 @@ export async function createFinancialRecordFromPointsExchange(
       netCashflow: 0, // No cashflow, just currency exchange
       jungleCoinsValue: j$Received * 10, // J$ value in USD (1 J$ = $10)
       isCollected: false,
+      exchangeType: 'POINTS_TO_J$',
       createdAt: new Date(),
       updatedAt: new Date(),
       links: []
@@ -752,24 +714,13 @@ export async function createFinancialRecordFromPointsExchange(
     console.log(`[createFinancialRecordFromPointsExchange] Creating financial record:`, newFinrec);
     const createdFinrec = await upsertFinancial(newFinrec);
 
-    // Create PLAYER_FINREC link (always create link to player)
-    const linkMetadata = {
-      pointsExchanged: pointsExchanged,
-      j$Received: j$Received,
-      exchangeType: 'POINTS_TO_J$',
-      playerCharacterId: playerCharacterId || null,
-      createdAt: new Date().toISOString()
-    };
-
     const link = makeLink(
       LinkType.PLAYER_FINREC,
       { type: EntityType.PLAYER, id: playerId },
-      { type: EntityType.FINANCIAL, id: createdFinrec.id },
-      linkMetadata
+      { type: EntityType.FINANCIAL, id: createdFinrec.id }
     );
 
-    const wasPlayerFinrecCreated = await createLink(link);
-    if (wasPlayerFinrecCreated) await appendLinkLog(link, 'created');
+    await createLink(link);
     console.log(`[createFinancialRecordFromPointsExchange] ✅ Created PLAYER_FINREC link for player ${playerId}`);
 
     console.log(`[createFinancialRecordFromPointsExchange] ✅ Financial record created for points exchange: ${createdFinrec.name}`);
@@ -861,6 +812,8 @@ export async function createFinancialRecordFromJ$CashOut(
       netCashflow: 0,
       jungleCoinsValue: j$Sold * 10, // J$ value in USD
       isCollected: false,
+      exchangeType,
+      exchangeCounterAmount: cashOutType === 'ZAPS' ? amountPaid : undefined,
       createdAt: new Date(),
       updatedAt: new Date(),
       links: []
@@ -884,6 +837,8 @@ export async function createFinancialRecordFromJ$CashOut(
       netCashflow: cashOutType === 'USD' ? -amountPaid : 0,
       jungleCoinsValue: j$Sold * 10,
       isCollected: false,
+      exchangeType,
+      exchangeCounterAmount: cashOutType === 'ZAPS' ? amountPaid : undefined,
       createdAt: new Date(),
       updatedAt: new Date(),
       links: []
@@ -895,50 +850,25 @@ export async function createFinancialRecordFromJ$CashOut(
 
     console.log(`[createFinancialRecordFromJ$CashOut] ✅ Financial records created: Personal=${personalFinrec.id}, Company=${companyFinrec.id}`);
 
-    // Create links
-    const pLinkMetadata = {
-      j$Sold: j$Sold,
-      amountPaid: amountPaid,
-      currency: cashOutType,
-      exchangeType: exchangeType,
-      playerCharacterId: playerCharacterId || null,
-      createdAt: new Date().toISOString()
-    };
-
     const pLink = makeLink(
       LinkType.PLAYER_FINREC,
       { type: EntityType.PLAYER, id: playerId },
-      { type: EntityType.FINANCIAL, id: personalFinrec.id },
-      pLinkMetadata
+      { type: EntityType.FINANCIAL, id: personalFinrec.id }
     );
-    const wasPersonalCashoutLinkCreated = await createLink(pLink);
-    if (wasPersonalCashoutLinkCreated) await appendLinkLog(pLink, 'created');
-
-    const cLinkMetadata = {
-      j$Bought: j$Sold,
-      amountPaid: amountPaid,
-      currency: cashOutType,
-      exchangeType: exchangeType,
-      playerCharacterId: playerCharacterId || null,
-      createdAt: new Date().toISOString()
-    };
+    await createLink(pLink);
 
     const cLink = makeLink(
       LinkType.PLAYER_FINREC,
       { type: EntityType.PLAYER, id: playerId },
-      { type: EntityType.FINANCIAL, id: companyFinrec.id },
-      cLinkMetadata
+      { type: EntityType.FINANCIAL, id: companyFinrec.id }
     );
-    const wasCompanyCashoutLinkCreated = await createLink(cLink);
-    if (wasCompanyCashoutLinkCreated) await appendLinkLog(cLink, 'created');
+    await createLink(cLink);
 
-    // Also link company record to Character if ID present (as FINREC_CHARACTER to show history on profile)
     if (playerCharacterId) {
       const charLink = makeLink(
         LinkType.FINREC_CHARACTER,
         { type: EntityType.FINANCIAL, id: companyFinrec.id },
-        { type: EntityType.CHARACTER, id: playerCharacterId },
-        { role: CharacterRole.PLAYER }
+        { type: EntityType.CHARACTER, id: playerCharacterId }
       );
       await createLink(charLink);
     }

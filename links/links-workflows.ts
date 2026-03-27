@@ -4,21 +4,19 @@
 import { EntityType, LinkType, LogEventType, TaskStatus } from '@/types/enums';
 import type { Task, Item, Sale, FinancialRecord, Character, Player, Site, Link } from '@/types/entities';
 import { createLink, removeLink, getLinksFor } from './link-registry';
-import { appendLinkLog } from './links-logging';
 import { getItemsBySourceTaskId, getItemsBySourceRecordId, getItemById } from '@/data-store/repositories/item.repo';
 import { getCharacterById, getBusinessById } from '@/data-store/repositories/character.repo';
 import { getTaskById } from '@/data-store/repositories/task.repo';
 import { v4 as uuid } from 'uuid';
 import { appendEntityLog } from '@/workflows/entities-logging';
 
-export function makeLink(linkType: LinkType, source: { type: EntityType; id: string }, target: { type: EntityType; id: string }, metadata?: Record<string, any>): Link {
+export function makeLink(linkType: LinkType, source: { type: EntityType; id: string }, target: { type: EntityType; id: string }): Link {
   return {
     id: uuid(),
     linkType,
     source,
     target,
     createdAt: new Date(),
-    metadata,
   };
 }
 
@@ -55,13 +53,11 @@ export async function processLinkEntity(entity: any, entityType: EntityType): Pr
 export async function processTaskEffects(task: Task): Promise<void> {
   if (task.siteId) {
     const l = makeLink(LinkType.TASK_SITE, { type: EntityType.TASK, id: task.id }, { type: EntityType.SITE, id: task.siteId });
-    const wasCreated = await createLink(l);
-    if (wasCreated) await appendLinkLog(l, 'created');
+    await createLink(l);
   }
   if (task.outputItemId) {
     const l = makeLink(LinkType.TASK_ITEM, { type: EntityType.TASK, id: task.id }, { type: EntityType.ITEM, id: task.outputItemId });
-    const wasCreated = await createLink(l);
-    if (wasCreated) await appendLinkLog(l, 'created');
+    await createLink(l);
   }
 
   // TASK_CHARACTER link (from customerCharacterId)
@@ -75,9 +71,6 @@ export async function processTaskEffects(task: Task): Promise<void> {
     const wasCreated = await createLink(l);
 
     if (wasCreated) {
-      await appendLinkLog(l, 'created');
-
-      // Get character name and roles for logging
       const character = await getCharacterById(task.customerCharacterId);
 
       // Log in character log (customer requested task)
@@ -102,16 +95,9 @@ export async function processTaskEffects(task: Task): Promise<void> {
       const l = makeLink(
         LinkType.TASK_ITEM,
         { type: EntityType.TASK, id: task.id },
-        { type: EntityType.ITEM, id: createdItem.id },
-        {
-          quantity: task.outputQuantity,
-          unitCost: task.outputUnitCost,
-          price: task.outputItemPrice,
-          itemType: task.outputItemType
-        }
+        { type: EntityType.ITEM, id: createdItem.id }
       );
-      const wasCreated = await createLink(l);
-      if (wasCreated) await appendLinkLog(l, 'created');
+      await createLink(l);
     }
   }
 
@@ -130,13 +116,11 @@ export async function processItemEffects(item: Item): Promise<void> {
     for (const oldLink of oldTaskLinks) {
       if (oldLink.target.id !== item.sourceTaskId) {
         await removeLink(oldLink.id);
-        await appendLinkLog(oldLink, 'removed');
       }
     }
 
     const l = makeLink(LinkType.ITEM_TASK, { type: EntityType.ITEM, id: item.id }, { type: EntityType.TASK, id: item.sourceTaskId });
-    const wasCreated = await createLink(l);
-    if (wasCreated) await appendLinkLog(l, 'created');
+    await createLink(l);
   }
 
   // ITEM_SITE links (for stock locations)
@@ -150,8 +134,7 @@ export async function processItemEffects(item: Item): Promise<void> {
   for (const s of item.stock || []) {
     if (s.siteId && s.siteId !== 'None') { // Skip invalid "None" site IDs
       const l = makeLink(LinkType.ITEM_SITE, { type: EntityType.ITEM, id: item.id }, { type: EntityType.SITE, id: s.siteId });
-      const wasCreated = await createLink(l);
-      if (wasCreated) await appendLinkLog(l, 'created');
+      await createLink(l);
     }
   }
 
@@ -165,9 +148,6 @@ export async function processItemEffects(item: Item): Promise<void> {
     const wasCreated = await createLink(l);
 
     if (wasCreated) {
-      await appendLinkLog(l, 'created');
-
-      // Get character name, roles and source task info for logging
       const character = await getCharacterById(item.ownerCharacterId);
       let sourceTaskName: string | undefined;
 
@@ -195,7 +175,6 @@ export async function processItemEffects(item: Item): Promise<void> {
     const oldCharacterLinks = existingLinks.filter(l => l.linkType === LinkType.ITEM_CHARACTER);
     for (const oldLink of oldCharacterLinks) {
       await removeLink(oldLink.id);
-      await appendLinkLog(oldLink, 'removed');
     }
   }
 
@@ -203,16 +182,25 @@ export async function processItemEffects(item: Item): Promise<void> {
 }
 
 export async function processSaleEffects(sale: Sale): Promise<void> {
-  // Get existing links for cleanup
   const existingLinks = await getLinksFor({ type: EntityType.SALE, id: sale.id });
+
+  const allowedSaleCharBusTargets = new Set(
+    [sale.customerId, sale.associateId, sale.partnerId].filter(Boolean) as string[]
+  );
+  for (const l of existingLinks) {
+    if (
+      (l.linkType === LinkType.SALE_CHARACTER || l.linkType === LinkType.SALE_BUSINESS) &&
+      !allowedSaleCharBusTargets.has(l.target.id)
+    ) {
+      await removeLink(l.id);
+    }
+  }
 
   if (sale.siteId) {
     const l = makeLink(LinkType.SALE_SITE, { type: EntityType.SALE, id: sale.id }, { type: EntityType.SITE, id: sale.siteId });
-    const wasCreated = await createLink(l);
-    if (wasCreated) await appendLinkLog(l, 'created');
+    await createLink(l);
   }
 
-  // SALE_CHARACTER link
   if (sale.customerId) {
     const l = makeLink(
       LinkType.SALE_CHARACTER,
@@ -222,12 +210,7 @@ export async function processSaleEffects(sale: Sale): Promise<void> {
     const wasCreated = await createLink(l);
 
     if (wasCreated) {
-      await appendLinkLog(l, 'created');
-
-      // Get character for roles
       const character = await getCharacterById(sale.customerId);
-
-      // Log in character log (customer purchased)
       await appendEntityLog(EntityType.CHARACTER, sale.customerId, LogEventType.PURCHASED, {
         name: character?.name || 'Unknown Character',
         roles: character?.roles || [],
@@ -239,170 +222,79 @@ export async function processSaleEffects(sale: Sale): Promise<void> {
     }
   }
 
-  // SALE_CHARACTER/BUSINESS link (Associate)
   if (sale.associateId) {
-    // 1. Cleanup existing Associate links to prevent duplicates (Idempotency)
-    const oldAssociateLinks = existingLinks.filter(l =>
-      (l.linkType === LinkType.SALE_CHARACTER || l.linkType === LinkType.SALE_BUSINESS) &&
-      l.metadata?.role === 'associate'
-    );
-
-    // Only remove if the target has changed
-    for (const oldLink of oldAssociateLinks) {
-      if (oldLink.target.id !== sale.associateId) {
-        await removeLink(oldLink.id);
-        await appendLinkLog(oldLink, 'removed');
+    let targetType: EntityType | null = null;
+    let linkType: LinkType | null = null;
+    const character = await getCharacterById(sale.associateId);
+    if (character) {
+      targetType = EntityType.CHARACTER;
+      linkType = LinkType.SALE_CHARACTER;
+    } else {
+      const business = await getBusinessById(sale.associateId);
+      if (business) {
+        targetType = EntityType.BUSINESS;
+        linkType = LinkType.SALE_BUSINESS;
       }
     }
-
-    // 2. Create new link if it doesn't exist
-    const alreadyExists = oldAssociateLinks.some(l => l.target.id === sale.associateId);
-    if (!alreadyExists) {
-      // Determine target type (Character or Business)
-      let targetType: EntityType | null = null;
-      let linkType: LinkType | null = null;
-      let targetName = 'Unknown';
-      let roles: string[] = [];
-
-      const character = await getCharacterById(sale.associateId);
-      if (character) {
-        targetType = EntityType.CHARACTER;
-        linkType = LinkType.SALE_CHARACTER;
-        targetName = character.name;
-        roles = character.roles || [];
-      } else {
-        const business = await getBusinessById(sale.associateId);
-        if (business) {
-          targetType = EntityType.BUSINESS;
-          linkType = LinkType.SALE_BUSINESS;
-          targetName = business.name;
-          roles = ['Business'];
-        }
-      }
-
-      if (targetType && linkType) {
-        const l = makeLink(
-          linkType,
-          { type: EntityType.SALE, id: sale.id },
-          { type: (targetType as any), id: sale.associateId },
-          { role: 'associate' }
-        );
-        const wasCreated = await createLink(l);
-
-        if (wasCreated) {
-          await appendLinkLog(l, 'created');
-        }
-      } else {
-        console.warn(`[processSaleEffects] Associate ID ${sale.associateId} not found as Character or Business. Skipping link creation.`);
-      }
-    }
-  } else {
-    // If field was cleared, remove the link
-    const oldAssociateLinks = existingLinks.filter(l =>
-      (l.linkType === LinkType.SALE_CHARACTER || l.linkType === LinkType.SALE_BUSINESS) &&
-      l.metadata?.role === 'associate'
-    );
-    for (const oldLink of oldAssociateLinks) {
-      await removeLink(oldLink.id);
-      await appendLinkLog(oldLink, 'removed');
+    if (targetType && linkType) {
+      const l = makeLink(
+        linkType,
+        { type: EntityType.SALE, id: sale.id },
+        { type: targetType, id: sale.associateId }
+      );
+      await createLink(l);
+    } else {
+      console.warn(
+        `[processSaleEffects] Associate ID ${sale.associateId} not found as Character or Business. Skipping link creation.`
+      );
     }
   }
 
-  // SALE_CHARACTER/BUSINESS link (Partner)
   if (sale.partnerId) {
-    // 1. Cleanup existing Partner links
-    const oldPartnerLinks = existingLinks.filter(l =>
-      (l.linkType === LinkType.SALE_CHARACTER || l.linkType === LinkType.SALE_BUSINESS) &&
-      l.metadata?.role === 'partner'
-    );
-
-    for (const oldLink of oldPartnerLinks) {
-      if (oldLink.target.id !== sale.partnerId) {
-        await removeLink(oldLink.id);
-        await appendLinkLog(oldLink, 'removed');
+    let targetType: EntityType | null = null;
+    let linkType: LinkType | null = null;
+    const character = await getCharacterById(sale.partnerId);
+    if (character) {
+      targetType = EntityType.CHARACTER;
+      linkType = LinkType.SALE_CHARACTER;
+    } else {
+      const business = await getBusinessById(sale.partnerId);
+      if (business) {
+        targetType = EntityType.BUSINESS;
+        linkType = LinkType.SALE_BUSINESS;
       }
     }
-
-    const alreadyExists = oldPartnerLinks.some(l => l.target.id === sale.partnerId);
-    if (!alreadyExists) {
-      // Determine target type (Character or Business)
-      let targetType: EntityType | null = null;
-      let linkType: LinkType | null = null;
-      let targetName = 'Unknown';
-      let roles: string[] = [];
-
-      const character = await getCharacterById(sale.partnerId);
-      if (character) {
-        targetType = EntityType.CHARACTER;
-        linkType = LinkType.SALE_CHARACTER;
-        targetName = character.name;
-        roles = character.roles || [];
-      } else {
-        const business = await getBusinessById(sale.partnerId);
-        if (business) {
-          targetType = EntityType.BUSINESS;
-          linkType = LinkType.SALE_BUSINESS;
-          targetName = business.name;
-          roles = ['Business'];
-        }
-      }
-
-      if (targetType && linkType) {
-        const l = makeLink(
-          linkType,
-          { type: EntityType.SALE, id: sale.id },
-          { type: (targetType as any), id: sale.partnerId },
-          { role: 'partner' }
-        );
-        const wasCreated = await createLink(l);
-
-        if (wasCreated) {
-          await appendLinkLog(l, 'created');
-        }
-      } else {
-        console.warn(`[processSaleEffects] Partner ID ${sale.partnerId} not found as Character or Business. Skipping link creation.`);
-      }
-    }
-  } else {
-    // If field was cleared, remove the link
-    const oldPartnerLinks = existingLinks.filter(l =>
-      (l.linkType === LinkType.SALE_CHARACTER || l.linkType === LinkType.SALE_BUSINESS) &&
-      l.metadata?.role === 'partner'
-    );
-    for (const oldLink of oldPartnerLinks) {
-      await removeLink(oldLink.id);
-      await appendLinkLog(oldLink, 'removed');
+    if (targetType && linkType) {
+      const l = makeLink(linkType, { type: EntityType.SALE, id: sale.id }, { type: targetType, id: sale.partnerId });
+      await createLink(l);
+    } else {
+      console.warn(
+        `[processSaleEffects] Partner ID ${sale.partnerId} not found as Character or Business. Skipping link creation.`
+      );
     }
   }
 
-  // SALE_ITEM links (from sale lines)
   if (sale.lines && sale.lines.length > 0) {
     for (const line of sale.lines) {
       if (line.kind === 'item' && line.itemId) {
         const l = makeLink(
           LinkType.SALE_ITEM,
           { type: EntityType.SALE, id: sale.id },
-          { type: EntityType.ITEM, id: line.itemId },
-          { quantity: line.quantity, unitPrice: line.unitPrice }
+          { type: EntityType.ITEM, id: line.itemId }
         );
-        const wasCreated = await createLink(l);
-        if (wasCreated) await appendLinkLog(l, 'created');
+        await createLink(l);
       }
     }
   }
 
-  // SALE_TASK link (if sale spawned from task)
   if (sale.sourceTaskId) {
     const l = makeLink(
       LinkType.SALE_TASK,
       { type: EntityType.SALE, id: sale.id },
       { type: EntityType.TASK, id: sale.sourceTaskId }
     );
-    const wasCreated = await createLink(l);
-    if (wasCreated) await appendLinkLog(l, 'created');
+    await createLink(l);
   }
-
-  // Note: SALE_PLAYER handled by points-rewards-utils.ts ✅
 }
 
 export async function processFinancialEffects(fin: FinancialRecord): Promise<void> {
@@ -411,8 +303,7 @@ export async function processFinancialEffects(fin: FinancialRecord): Promise<voi
 
   if (fin.siteId) {
     const l = makeLink(LinkType.FINREC_SITE, { type: EntityType.FINANCIAL, id: fin.id }, { type: EntityType.SITE, id: fin.siteId });
-    const wasCreated = await createLink(l);
-    if (wasCreated) await appendLinkLog(l, 'created');
+    await createLink(l);
   }
 
   // FINREC_CHARACTER link
@@ -425,9 +316,6 @@ export async function processFinancialEffects(fin: FinancialRecord): Promise<voi
     const wasCreated = await createLink(l);
 
     if (wasCreated) {
-      await appendLinkLog(l, 'created');
-
-      // Get character for roles
       const character = await getCharacterById(fin.customerCharacterId);
 
       // Log in character log (customer transacted)
@@ -449,7 +337,6 @@ export async function processFinancialEffects(fin: FinancialRecord): Promise<voi
     const existingItemLinks = existingLinks.filter(link => link.linkType === LinkType.FINREC_ITEM);
     for (const link of existingItemLinks) {
       await removeLink(link.id);
-      await appendLinkLog(link, 'removed');
     }
 
     let createdItem: Item | undefined;
@@ -467,16 +354,9 @@ export async function processFinancialEffects(fin: FinancialRecord): Promise<voi
       const l = makeLink(
         LinkType.FINREC_ITEM,
         { type: EntityType.FINANCIAL, id: fin.id },
-        { type: EntityType.ITEM, id: createdItem.id },
-        {
-          quantity: fin.outputQuantity,
-          unitCost: fin.outputUnitCost,
-          price: fin.outputItemPrice,
-          itemType: fin.outputItemType || createdItem.type
-        }
+        { type: EntityType.ITEM, id: createdItem.id }
       );
-      const wasCreated = await createLink(l);
-      if (wasCreated) await appendLinkLog(l, 'created');
+      await createLink(l);
     }
   }
 
@@ -492,8 +372,7 @@ export async function processCharacterEffects(character: Character): Promise<voi
       { type: EntityType.CHARACTER, id: character.id },
       { type: EntityType.PLAYER, id: character.playerId }
     );
-    const wasCreated = await createLink(link);
-    if (wasCreated) await appendLinkLog(link, 'created');
+    await createLink(link);
   }
 
   // CHARACTER_SITE link (if character has home site)
@@ -503,8 +382,7 @@ export async function processCharacterEffects(character: Character): Promise<voi
       { type: EntityType.CHARACTER, id: character.id },
       { type: EntityType.SITE, id: character.siteId }
     );
-    const wasCreated = await createLink(link);
-    if (wasCreated) await appendLinkLog(link, 'created');
+    await createLink(link);
   }
 }
 
@@ -517,8 +395,7 @@ export async function processPlayerEffects(player: Player): Promise<void> {
         { type: EntityType.PLAYER, id: player.id },
         { type: EntityType.CHARACTER, id: characterId }
       );
-      const wasCreated = await createLink(link);
-      if (wasCreated) await appendLinkLog(link, 'created');
+      await createLink(link);
     }
   }
 

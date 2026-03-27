@@ -56,9 +56,9 @@ export async function GET(
     const totalJ$ = personalRecords.reduce((sum, record) => sum + (record.jungleCoins || 0), 0);
     
     // Get exchange records (POINTS_TO_J$) for reference (only from personal records)
-    const exchangeRecords = personalRecords.filter(record => 
-      record.description?.includes('Points exchanged for J$') ||
-      finrecLinks.some(link => link.target.id === record.id && link.metadata?.exchangeType === 'POINTS_TO_J$')
+    const exchangeRecords = personalRecords.filter(record =>
+      record.exchangeType === 'POINTS_TO_J$' ||
+      record.description?.includes('Points exchanged for J$')
     );
     
     return NextResponse.json({

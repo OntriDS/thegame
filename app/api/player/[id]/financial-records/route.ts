@@ -47,16 +47,10 @@ export async function GET(
     const validRecords = financialRecords.filter((record): record is FinancialRecord => record !== null);
     const personalRecords = validRecords.filter(record => record.type === 'personal');
     
-    // Enrich records with exchangeType from link metadata
-    const enrichedRecords = personalRecords.map(record => {
-      const link = finrecLinks.find(l => l.target.id === record.id);
-      const exchangeType = link?.metadata?.exchangeType || null;
-      
-      return {
-        ...record,
-        exchangeType: exchangeType as 'POINTS_TO_J$' | 'J$_TO_USD' | 'J$_TO_ZAPS' | null
-      };
-    });
+    const enrichedRecords = personalRecords.map(record => ({
+      ...record,
+      exchangeType: (record.exchangeType ?? null) as 'POINTS_TO_J$' | 'J$_TO_USD' | 'J$_TO_ZAPS' | null
+    }));
     
     // Sort by date (newest first)
     enrichedRecords.sort((a, b) => {

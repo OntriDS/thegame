@@ -67,6 +67,11 @@ export function buildLinksIndexKey(entityType: string, id: string): string {
   return `${NAMESPACE}index:links:by-entity:${entityType}:${id}`; // set of link ids
 }
 
+/** Set of all live link ids (maintained by createLink/removeLink; backfilled on first getAllLinks if empty). */
+export function buildLinksGlobalIndexKey(): string {
+  return `${NAMESPACE}index:links:all`;
+}
+
 export function buildLinkKey(id: string): string {
   return `${NAMESPACE}links:link:${id}`;
 }

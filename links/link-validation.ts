@@ -29,8 +29,7 @@ export interface LinkValidationResult {
 export async function validateLink(
   linkType: LinkType,
   source: { type: EntityType; id: string },
-  target: { type: EntityType; id: string },
-  metadata?: Record<string, any>
+  target: { type: EntityType; id: string }
 ): Promise<LinkValidationResult> {
   const warnings: string[] = [];
 
@@ -78,7 +77,7 @@ export async function validateLink(
     }
 
     // 5. Business rules validation
-    const businessRulesResult = await validateBusinessRules(linkType, source, target, metadata);
+    const businessRulesResult = await validateBusinessRules(linkType, source, target);
     if (!businessRulesResult.isValid) {
       return {
         isValid: false,
@@ -348,8 +347,7 @@ async function checkReverseDuplicate(
 export async function validateBusinessRules(
   linkType: LinkType,
   source: { type: EntityType; id: string },
-  target: { type: EntityType; id: string },
-  metadata?: Record<string, any>
+  target: { type: EntityType; id: string }
 ): Promise<LinkValidationResult> {
   const warnings: string[] = [];
 
@@ -408,13 +406,34 @@ export async function validateBusinessRules(
         }
         break;
 
-      case 'SALE_CHARACTER':
-        // Validate that character is the customer
+      case 'SALE_CHARACTER': {
         const saleWithChar = await getSaleById(source.id);
-        if (saleWithChar && saleWithChar.customerId !== target.id) {
-          warnings.push(`Sale customerId (${saleWithChar.customerId}) does not match target character ID (${target.id})`);
+        if (saleWithChar) {
+          const ok =
+            saleWithChar.customerId === target.id ||
+            saleWithChar.associateId === target.id ||
+            saleWithChar.partnerId === target.id;
+          if (!ok) {
+            warnings.push(
+              `Sale ${source.id} character link target ${target.id} is not customer, associate, or partner on the sale`
+            );
+          }
         }
         break;
+      }
+
+      case 'SALE_BUSINESS': {
+        const saleWithBiz = await getSaleById(source.id);
+        if (saleWithBiz) {
+          const ok = saleWithBiz.associateId === target.id || saleWithBiz.partnerId === target.id;
+          if (!ok) {
+            warnings.push(
+              `Sale ${source.id} business link target ${target.id} is not associate or partner on the sale`
+            );
+          }
+        }
+        break;
+      }
 
       case 'ACCOUNT_PLAYER':
         // Validate that player belongs to the account

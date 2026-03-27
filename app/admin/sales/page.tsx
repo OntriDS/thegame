@@ -123,7 +123,10 @@ function SalesPageContent() {
       ]);
       setSales(salesData);
       setSites(sitesData);
-      setExchangeRates(ratesData);
+      const safeRates = ratesData && typeof ratesData.colonesToUsd === 'number'
+        ? { ...DEFAULT_CURRENCY_EXCHANGE_RATES, ...ratesData }
+        : DEFAULT_CURRENCY_EXCHANGE_RATES;
+      setExchangeRates(safeRates);
     } catch (error) {
       console.error('Failed to load sales history:', error);
     } finally {
@@ -176,7 +179,7 @@ function SalesPageContent() {
     let netProfit = 0;
 
     if (sale.type === SaleType.BOOTH) {
-      const exchangeRate = exchangeRates.colonesToUsd || 500;
+      const exchangeRate = exchangeRates?.colonesToUsd || DEFAULT_CURRENCY_EXCHANGE_RATES.colonesToUsd;
 
       // Check for advanced contract calculation first
       // myNet is stored in Colones (CRC)

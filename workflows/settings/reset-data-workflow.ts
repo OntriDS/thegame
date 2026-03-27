@@ -1,8 +1,8 @@
 // workflows/settings/reset-data-workflow.ts
 // Reset Data Workflow for KV-only architecture
 
-import { kv, kvDelMany } from '@/data-store/kv';
-import { buildDataKey, buildIndexKey, buildLogKey, buildLinksIndexKey, buildLogMonthKey, buildLogMonthsIndexKey } from '@/data-store/keys';
+import { kv, kvDel, kvDelMany } from '@/data-store/kv';
+import { buildDataKey, buildIndexKey, buildLogKey, buildLinksGlobalIndexKey, buildLinksIndexKey, buildLogMonthKey, buildLogMonthsIndexKey } from '@/data-store/keys';
 import { EntityType, SiteType, SiteStatus, PhysicalBusinessType, DigitalSiteType, SystemSiteType } from '@/types/enums';
 import { kvScan } from '@/data-store/kv';
 import { TransactionManager } from './transaction-manager';
@@ -530,6 +530,8 @@ export class ResetDataWorkflow {
             console.log(`[ResetDataWorkflow] ✅ Cleared entity link index batch ${indexBatch + 1}/${indexBatches}`);
           }
         }
+
+        await kvDel(buildLinksGlobalIndexKey());
 
         results.push(`Cleared ${linkKeys.length} links`);
         console.log(`[ResetDataWorkflow] ✅ Cleared ${linkKeys.length} links successfully`);

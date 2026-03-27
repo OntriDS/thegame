@@ -3,7 +3,6 @@
 
 import { makeLink } from '@/links/links-workflows';
 import { createLink } from '@/links/link-registry';
-import { appendLinkLog } from '@/links/links-logging';
 import { LinkType, EntityType } from '@/types/enums';
 
 /**
@@ -16,7 +15,7 @@ import { LinkType, EntityType } from '@/types/enums';
 export async function createSiteMovementLink(
   fromSiteId: string,
   toSiteId: string,
-  metadata: {
+  _movement: {
     itemId: string;
     quantity: number;
     movedAt: Date;
@@ -25,15 +24,8 @@ export async function createSiteMovementLink(
   const link = makeLink(
     LinkType.SITE_SITE,
     { type: EntityType.SITE, id: fromSiteId },
-    { type: EntityType.SITE, id: toSiteId },
-    {
-      reason: 'inventory_movement',
-      itemId: metadata.itemId,
-      quantity: metadata.quantity,
-      movedAt: metadata.movedAt
-    }
+    { type: EntityType.SITE, id: toSiteId }
   );
-  
-  const wasCreated = await createLink(link);
-  if (wasCreated) await appendLinkLog(link, 'created');
+
+  await createLink(link);
 }

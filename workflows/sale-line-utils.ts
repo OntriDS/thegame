@@ -170,20 +170,10 @@ export async function processItemSaleLine(line: ItemSaleLine, sale: Sale): Promi
     // Save the updated item (Skip generic workflow to avoid duplicate logs)
     await upsertItem(updatedItem, { skipWorkflowEffects: true });
 
-    // Create SALE_ITEM link
-    const linkMetadata = {
-      quantity: line.quantity,
-      unitPrice: line.unitPrice,
-      total: line.quantity * line.unitPrice,
-      soldAt: sale.saleDate.toISOString(),
-      siteId: sale.siteId
-    };
-
     const link = makeLink(
       LinkType.SALE_ITEM,
       { type: EntityType.SALE, id: sale.id },
-      { type: EntityType.ITEM, id: line.itemId },
-      linkMetadata
+      { type: EntityType.ITEM, id: line.itemId }
     );
     await createLink(link);
 
@@ -264,13 +254,7 @@ export async function processBundleSaleLine(line: BundleSaleLine, sale: Sale): P
       const bundleLink = makeLink(
         LinkType.SALE_ITEM,
         { type: EntityType.SALE, id: sale.id },
-        { type: EntityType.ITEM, id: bundleItem.id },
-        {
-          quantity: line.quantity,
-          unitPrice: line.unitPrice,
-          itemsPerBundle: line.itemsPerBundle,
-          totalItems: totalItemsNeeded
-        }
+        { type: EntityType.ITEM, id: bundleItem.id }
       );
       await createLink(bundleLink);
 
@@ -338,14 +322,7 @@ export async function processBundleSaleLine(line: BundleSaleLine, sale: Sale): P
         const itemLink = makeLink(
           LinkType.SALE_ITEM,
           { type: EntityType.SALE, id: sale.id },
-          { type: EntityType.ITEM, id: item.id },
-          {
-            quantity: toDeduct,
-            unitPrice: line.unitPrice / line.itemsPerBundle, // Price per individual item
-            bundleQuantity: line.quantity,
-            itemsPerBundle: line.itemsPerBundle,
-            fromBundle: true
-          }
+          { type: EntityType.ITEM, id: item.id }
         );
         await createLink(itemLink);
       }
@@ -426,20 +403,10 @@ export async function processServiceLine(line: ServiceLine, sale: Sale): Promise
     // Save the task
     await upsertTask(serviceTask);
 
-    // Create SALE_TASK link
-    const linkMetadata = {
-      serviceDescription: line.description,
-      revenue: line.revenue,
-      station: line.station,
-      taskType: line.taskType,
-      createdFrom: 'service_sale'
-    };
-
     const link = makeLink(
       LinkType.SALE_TASK,
       { type: EntityType.SALE, id: sale.id },
-      { type: EntityType.TASK, id: serviceTask.id },
-      linkMetadata
+      { type: EntityType.TASK, id: serviceTask.id }
     );
     await createLink(link);
 
@@ -542,14 +509,7 @@ export async function ensureSoldItemEntities(sale: Sale): Promise<void> {
       const soldItemLink = makeLink(
         LinkType.SALE_ITEM,
         { type: EntityType.SALE, id: sale.id },
-        { type: EntityType.ITEM, id: soldItemEntity.id },
-        {
-          quantity: line.quantity,
-          unitPrice: line.unitPrice,
-          total: (line.unitPrice || 0) * (line.quantity || 0),
-          soldAt: sale.saleDate ? new Date(sale.saleDate).toISOString() : new Date().toISOString(),
-          isSoldItemEntity: true
-        }
+        { type: EntityType.ITEM, id: soldItemEntity.id }
       );
       await createLink(soldItemLink);
 
@@ -615,16 +575,7 @@ export async function ensureSoldItemEntities(sale: Sale): Promise<void> {
       const soldBundleItemLink = makeLink(
         LinkType.SALE_ITEM,
         { type: EntityType.SALE, id: sale.id },
-        { type: EntityType.ITEM, id: soldBundleItemEntity.id },
-        {
-          quantity: line.quantity,
-          unitPrice: line.unitPrice,
-          total: (line.unitPrice || 0) * (line.quantity || 0),
-          itemsPerBundle: line.itemsPerBundle,
-          soldAt: sale.saleDate ? new Date(sale.saleDate).toISOString() : new Date().toISOString(),
-          isSoldItemEntity: true,
-          isBundle: true
-        }
+        { type: EntityType.ITEM, id: soldBundleItemEntity.id }
       );
       await createLink(soldBundleItemLink);
 

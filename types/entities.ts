@@ -87,7 +87,6 @@ export interface Link {
   target: { type: EntityType, id: string };  // target entity
   createdAt: Date;
   updatedAt?: Date;         // optional update timestamp
-  metadata?: Record<string, any>; // context-specific data
 }
 
 /** Gamification rewards - ONLY Points, J$ earned via Points Exchange */
@@ -407,6 +406,12 @@ export interface FinancialRecord extends BaseEntity {
 
   // Status field for Active/Archive lifecycle
   status?: FinancialStatus;         // PENDING | DONE | COLLECTED
+
+  /** Player↔finrec exchanges (source of truth — not duplicated on PLAYER_FINREC links) */
+  exchangeType?: 'POINTS_TO_J$' | 'J$_TO_USD' | 'J$_TO_ZAPS';
+
+  /** Counter-amount for exchange UIs (e.g. Zaps/sats when exchangeType is J$_TO_ZAPS) */
+  exchangeCounterAmount?: number;
 
   // Archive field
   isCollected: boolean;             // Financial record collected (monthly close)

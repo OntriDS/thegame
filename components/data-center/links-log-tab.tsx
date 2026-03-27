@@ -1,6 +1,6 @@
 'use client';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, Link as LinkIcon, ArrowRight, ArrowUpDown } from 'lucide-react';
@@ -148,10 +148,7 @@ export function LinksLogTab({ onReload, isReloading }: LinksTabProps) {
             <LinkIcon className="h-6 w-6" />
             Link graph
           </h2>
-          <p className="text-sm text-muted-foreground max-w-2xl">
-            Current relationship edges in the database ({links.length} total). This is not a historical log — use the
-            month-scoped entity tabs (Tasks, Items, …) for lifecycle history.
-          </p>
+          <p className="text-sm text-muted-foreground">{links.length} links</p>
         </div>
         <div className="flex items-center gap-2">
           <select
@@ -202,122 +199,49 @@ export function LinksLogTab({ onReload, isReloading }: LinksTabProps) {
       ) : (
         <>
           <div className="space-y-2">
-            {paginatedLinks.map((link) => (
-              <div
-                key={link.id}
-                className="border rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-              >
-                <div className="flex items-center justify-between">
-                  {/* Link Type Badge */}
-                  <Badge className={getLinkTypeColor(link.linkType)}>
-                    {link.linkType}
-                  </Badge>
+            {paginatedLinks.map((link) => {
+              const sourceKey = `${link.source.type}:${link.source.id}`;
+              const targetKey = `${link.target.type}:${link.target.id}`;
+              const sourceLabel = entityNames[sourceKey] || link.source.id;
+              const targetLabel = entityNames[targetKey] || link.target.id;
 
-                  {/* Source → Target */}
-                  <div className="flex items-center gap-2 flex-1 mx-4">
-                    <div className="text-sm bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
-                      {link.source.type === 'account'
-                        ? `account: ${link.metadata?.name || entityNames[`${link.source.type}:${link.source.id}`] || 'created'}`
-                        : `${link.source.type}: ${entityNames[`${link.source.type}:${link.source.id}`] || link.source.id}`
-                      }
+              return (
+                <div
+                  key={link.id}
+                  className="border rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors space-y-2 min-w-0"
+                >
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge className={getLinkTypeColor(link.linkType)}>{link.linkType}</Badge>
+                    {link.createdAt && (
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(link.createdAt).toLocaleString()}
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-[11px] font-mono text-muted-foreground break-all">
+                    <span className="font-sans text-muted-foreground mr-1">linkId</span>
+                    {link.id}
+                  </div>
+                  <div className="flex flex-col gap-2 min-w-0 sm:flex-row sm:items-start sm:gap-3">
+                    <div className="min-w-0 flex-1 space-y-0.5 rounded-md border border-border/60 bg-muted/20 p-2">
+                      <div className="text-[10px] font-semibold uppercase text-blue-600 dark:text-blue-400">
+                        {link.source.type}
+                      </div>
+                      <div className="text-xs text-muted-foreground break-words">{sourceLabel}</div>
+                      <div className="text-[11px] font-mono break-all text-foreground">{link.source.id}</div>
                     </div>
-                    <ArrowRight className="h-4 w-4 text-gray-400" />
-                    <div className="text-sm bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
-                      {link.target.type}: {entityNames[`${link.target.type}:${link.target.id}`] || link.target.id}
+                    <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0 hidden sm:block mt-6" />
+                    <div className="min-w-0 flex-1 space-y-0.5 rounded-md border border-border/60 bg-muted/20 p-2">
+                      <div className="text-[10px] font-semibold uppercase text-green-600 dark:text-green-400">
+                        {link.target.type}
+                      </div>
+                      <div className="text-xs text-muted-foreground break-words">{targetLabel}</div>
+                      <div className="text-[11px] font-mono break-all text-foreground">{link.target.id}</div>
                     </div>
                   </div>
-
-                  {/* Metadata - Smart Formatting */}
-                  {link.metadata && Object.keys(link.metadata).length > 0 && (
-                    <div className="text-xs text-gray-500">
-                      {(() => {
-                        // Format metadata smartly based on link type
-                        switch (link.linkType) {
-                          case 'TASK_PLAYER' as any:
-                          case 'FINREC_PLAYER' as any:
-                          case 'SALE_PLAYER' as any:
-                            // Show points breakdown
-                            const points = link.metadata.points;
-                            if (points) {
-                              return (
-                                <span>
-                                  {points.hp ? `HP:${points.hp} ` : ''}
-                                  {points.fp ? `FP:${points.fp} ` : ''}
-                                  {points.rp ? `RP:${points.rp} ` : ''}
-                                  {points.xp ? `XP:${points.xp}` : ''}
-                                </span>
-                              );
-                            }
-                            break;
-
-                          case 'TASK_FINREC':
-                          case 'FINREC_TASK':
-                            // Show cost/revenue and payment status
-                            return (
-                              <span>
-                                {link.metadata.cost > 0 && `-$${link.metadata.cost} `}
-                                {link.metadata.revenue > 0 && `+$${link.metadata.revenue} `}
-                                {link.metadata.isNotPaid && '⏳ Not Paid '}
-                                {link.metadata.isNotCharged && '⏳ Not Charged'}
-                              </span>
-                            );
-
-                          case 'TASK_ITEM':
-                          case 'FINREC_ITEM':
-                            // Show item type and quantity
-                            return (
-                              <span>
-                                {link.metadata.type || link.metadata.itemType}
-                                {link.metadata.quantity && ` (${link.metadata.quantity}x)`}
-                              </span>
-                            );
-
-                          case 'ITEM_TASK':
-                          case 'ITEM_FINREC':
-                            // Show source info
-                            return <span>Source: {link.metadata.createdBy || link.metadata.sourceType || 'task/financial'}</span>;
-
-                          case 'TASK_SITE':
-                          case 'FINREC_SITE':
-                          case 'SALE_SITE':
-                            // Site links - show if it's target
-                            return link.metadata.isTarget ? <span>Target Site</span> : <span>Work Site</span>;
-
-                          case 'ITEM_SITE':
-                            // Show quantity at site
-                            return <span>Quantity: {link.metadata.quantity || 0}</span>;
-
-                          case 'ACCOUNT_CHARACTER':
-                          case 'ACCOUNT_PLAYER':
-                            // Show account contact info (name, email, phone)
-                            const accountMeta = link.metadata || {};
-                            return (
-                              <span>
-                                {accountMeta.name || 'No name'}
-                                {accountMeta.email && ` • ${accountMeta.email}`}
-                                {accountMeta.phone && ` • ${accountMeta.phone}`}
-                              </span>
-                            );
-
-                          case 'CHARACTER_ACCOUNT':
-                          case 'PLAYER_ACCOUNT':
-                            // Show linked to account
-                            return <span>Linked to Account</span>;
-
-                          default:
-                            // Fallback: show all metadata
-                            return Object.entries(link.metadata).map(([key, value]) => (
-                              <span key={key} className="mr-2">
-                                {key}: {typeof value === 'object' ? JSON.stringify(value) : String(value)}
-                              </span>
-                            ));
-                        }
-                      })()}
-                    </div>
-                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Pagination */}

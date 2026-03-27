@@ -4,8 +4,6 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { requireAdminAuth } from '@/lib/api-auth';
 import { getAllFinancials } from '@/data-store/datastore';
-import { getLinksFor } from '@/links/link-registry';
-import { EntityType, LinkType } from '@/types/enums';
 
 // Force dynamic rendering - this route accesses cookies
 export const dynamic = 'force-dynamic';
@@ -35,40 +33,20 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // Get all PLAYER_FINREC links to find buyback records
-    // We need to check link metadata for exchangeType
-    const buybackRecords: Array<{
-      record: typeof companyRecords[0];
-      linkMetadata: any;
-    }> = [];
-
-    // For each company record, check if it has a PLAYER_FINREC link with buyback metadata
-    for (const record of companyRecords) {
-      const links = await getLinksFor({ type: EntityType.FINANCIAL, id: record.id });
-      const finrecLinks = links.filter(link =>
-        link.linkType === LinkType.PLAYER_FINREC &&
-        (link.metadata?.exchangeType === 'J$_TO_USD' || link.metadata?.exchangeType === 'J$_TO_ZAPS')
-      );
-
-      if (finrecLinks.length > 0) {
-        // This is a buyback record
-        buybackRecords.push({
-          record,
-          linkMetadata: finrecLinks[0].metadata
-        });
-      }
-    }
+    const buybackRecords = companyRecords.filter(
+      r => r.exchangeType === 'J$_TO_USD' || r.exchangeType === 'J$_TO_ZAPS'
+    );
 
     // Calculate totals
     let totalJ$BoughtBack = 0;
     let totalUSDCost = 0;
     let totalZapsCost = 0;
 
-    const buybacks = buybackRecords.map(({ record, linkMetadata }) => {
+    const buybacks = buybackRecords.map((record) => {
       const j$BoughtBack = record.jungleCoins || 0;
-      const cashOutType = linkMetadata?.exchangeType === 'J$_TO_ZAPS' ? 'ZAPS' : 'USD';
+      const cashOutType = record.exchangeType === 'J$_TO_ZAPS' ? 'ZAPS' : 'USD';
       const usdCost = cashOutType === 'USD' ? (record.cost || 0) : 0;
-      const zapsCost = cashOutType === 'ZAPS' ? (linkMetadata?.amountPaid || 0) : undefined;
+      const zapsCost = cashOutType === 'ZAPS' ? (record.exchangeCounterAmount ?? 0) : undefined;
 
       totalJ$BoughtBack += j$BoughtBack;
       totalUSDCost += usdCost;
@@ -85,7 +63,7 @@ export async function GET(req: NextRequest) {
         zapsCost,
         cashOutType: cashOutType as 'USD' | 'ZAPS',
         station: record.station as 'Team',
-        playerCharacterId: linkMetadata?.playerCharacterId || null
+        playerCharacterId: record.playerCharacterId || null
       };
     });
 

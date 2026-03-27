@@ -98,11 +98,7 @@ export function LinksSubModal({
       const maxDeltaMs = 36 * 60 * 60 * 1000; // 36h tolerance for timezone and backfills
 
       const getLinkTimestamp = (link: any): number | null => {
-        const candidate =
-          link?.metadata?.soldAt ||
-          link?.metadata?.movedAt ||
-          link?.metadata?.createdAt ||
-          link?.createdAt;
+        const candidate = link?.createdAt;
         if (!candidate) return null;
         const ms = new Date(candidate).getTime();
         return Number.isFinite(ms) ? ms : null;
@@ -199,9 +195,7 @@ export function LinksSubModal({
             </span>
           </DialogTitle>
           <DialogDescription>
-            {logEntry
-              ? `Links related to: ${resolveLogTitle()} — current state only; timeline is in entity logs.`
-              : 'Current relationships in the database (not a timeline — use entity logs for history).'}
+            {logEntry ? `Links related to: ${resolveLogTitle()}` : 'Relationships for this entity'}
           </DialogDescription>
         </DialogHeader>
         
@@ -314,7 +308,11 @@ function LinkCard({
   const relationship = getRelationshipInfo();
 
   return (
-    <div className="border rounded-lg p-3 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors overflow-hidden">
+    <div className="border rounded-lg p-3 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors overflow-hidden min-w-0">
+      <div className="text-[10px] font-mono text-muted-foreground break-all mb-2">
+        <span className="font-sans text-muted-foreground/80 mr-1">linkId</span>
+        {link.id}
+      </div>
       <div className="flex flex-wrap items-center gap-2 mb-2">
         <span className="text-xs font-mono bg-primary/10 text-primary px-2 py-1 rounded shrink-0">
           {link.linkType}

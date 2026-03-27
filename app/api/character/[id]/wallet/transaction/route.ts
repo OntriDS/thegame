@@ -3,8 +3,7 @@ import { getCharacterById } from '@/data-store/datastore';
 import { upsertFinancial, upsertCharacter } from '@/data-store/datastore';
 import { makeLink } from '@/links/links-workflows';
 import { createLink } from '@/links/link-registry';
-import { appendLinkLog } from '@/links/links-logging';
-import { EntityType, LinkType, Station, CharacterRole } from '@/types/enums';
+import { EntityType, LinkType, Station } from '@/types/enums';
 import { FinancialRecord } from '@/types/entities';
 
 // POST /api/character/[id]/wallet/transaction
@@ -109,16 +108,10 @@ export async function POST(
         const link = makeLink(
             LinkType.FINREC_CHARACTER,
             { type: EntityType.FINANCIAL, id: savedRecord.id },
-            { type: EntityType.CHARACTER, id: characterId },
-            {
-                role: CharacterRole.ASSOCIATE, // Or undefined?
-                amount: amount,
-                type: type
-            }
+            { type: EntityType.CHARACTER, id: characterId }
         );
 
-        const wasCreated = await createLink(link);
-        if (wasCreated) await appendLinkLog(link, 'created');
+        await createLink(link);
 
         return NextResponse.json({ success: true, record: savedRecord });
 

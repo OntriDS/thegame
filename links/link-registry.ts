@@ -5,12 +5,12 @@ import 'server-only';
 import { LinkType, EntityType } from '@/types/enums';
 import type { Link } from '@/types/entities';
 import { kvGet, kvSet, kvDel, kvSAdd, kvSRem, kvSMembers, kvScan } from '@/data-store/kv';
-import { buildLinkKey, buildLinksIndexKey } from '@/data-store/keys';
+import { buildLinkKey, buildLinksGlobalIndexKey, buildLinksIndexKey } from '@/data-store/keys';
 import { validateLink } from './link-validation';
 
 export async function createLink(link: Link, options?: { skipValidation?: boolean }): Promise<boolean> {
   if (!options?.skipValidation) {
-    const validation = await validateLink(link.linkType, link.source, link.target, link.metadata);
+    const validation = await validateLink(link.linkType, link.source, link.target);
     if (!validation.isValid) {
       console.error('🔥 [createLink] ❌ Validation failed:', validation.reason);
       throw new Error(`Link validation failed: ${validation.reason}`);
@@ -46,21 +46,26 @@ export async function removeLink(linkId: string): Promise<void> {
     // Remove from both source and target indexes
     await kvSRem(buildLinksIndexKey(existing.source.type, existing.source.id), linkId);
     await kvSRem(buildLinksIndexKey(existing.target.type, existing.target.id), linkId);
+    await kvSRem(buildLinksGlobalIndexKey(), linkId);
   }
   await kvDel(key);
 }
 
 export async function getAllLinks(): Promise<Link[]> {
-  const keys = await kvScan('thegame:links:link:');
-  
-  if (!keys.length) {
-    return [];
+  const globalKey = buildLinksGlobalIndexKey();
+  let ids = await kvSMembers(globalKey);
+  if (!ids.length) {
+    const keys = await kvScan('thegame:links:link:', 2000);
+    ids = keys.map((k: string) => String(k).replace('thegame:links:link:', ''));
+    if (ids.length) {
+      await Promise.all(ids.map((id) => kvSAdd(globalKey, id)));
+    }
   }
-  
-  const links = await Promise.all(keys.map((k: string) => kvGet<Link>(k)));
-  const filtered = links.filter(Boolean) as Link[];
-  
-  return filtered;
+  if (!ids.length) return [];
+
+  const linkKeys = ids.map(buildLinkKey);
+  const links = await Promise.all(linkKeys.map((k) => kvGet<Link>(k)));
+  return links.filter(Boolean) as Link[];
 }
 
 

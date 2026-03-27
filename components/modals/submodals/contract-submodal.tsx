@@ -267,7 +267,6 @@ export function ContractSubmodal({
                     source: { type: EntityType.CONTRACT, id: contract.id },
                     target: { type: EntityType.CHARACTER, id: targetCharacterId },
                     createdAt: new Date(),
-                    metadata: { role: selectedRole }
                 };
 
                 await ClientAPI.createLink(link);

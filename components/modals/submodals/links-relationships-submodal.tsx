@@ -293,15 +293,6 @@ function LinkCard({
           </div>
         </div>
 
-        {link.metadata && Object.keys(link.metadata).length > 0 && (
-          <div className="mt-3 pt-3 border-t">
-            <div className="text-xs text-muted-foreground font-medium mb-1">Metadata:</div>
-            <div className="text-xs font-mono bg-muted/50 p-2 rounded">
-              {JSON.stringify(link.metadata, null, 2)}
-            </div>
-          </div>
-        )}
-
         <div className="mt-2 text-xs text-muted-foreground">
           Created: {new Date(link.createdAt).toLocaleString()}
         </div>

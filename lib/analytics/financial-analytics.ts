@@ -1,12 +1,56 @@
 // lib/analytics/financial-analytics.ts
 // Link-powered multi-dimensional financial analytics utilities
 
-import type { FinancialRecord, Item, Sale } from '@/types/entities';
+import type { FinancialRecord, Item, ItemSaleLine, Sale } from '@/types/entities';
 import { LinkType, EntityType, ItemType } from '@/types/enums';
 import { getLinksFor } from '@/links/link-registry';
 import { getItemById, getAllItems } from '@/data-store/datastore';
 import { getSaleById, getAllSales } from '@/data-store/datastore';
 import type { Station } from '@/types/type-aliases';
+
+async function metricsForFinrecItemLink(
+  record: FinancialRecord,
+  itemId: string
+): Promise<{ quantity: number; unitPrice: number; revenue: number }> {
+  if (record.sourceSaleId) {
+    const sale = await getSaleById(record.sourceSaleId);
+    if (sale?.lines) {
+      const line = sale.lines.find(
+        (l): l is ItemSaleLine => l.kind === 'item' && 'itemId' in l && l.itemId === itemId
+      );
+      if (line) {
+        const q = line.quantity || 0;
+        const up = line.unitPrice || 0;
+        return { quantity: q, unitPrice: up, revenue: q * up };
+      }
+    }
+  }
+  if (record.outputItemId === itemId && record.outputQuantity) {
+    const q = record.outputQuantity;
+    const up =
+      record.outputItemPrice ?? (record.revenue > 0 && q ? record.revenue / q : 0);
+    return { quantity: q, unitPrice: up, revenue: q * up };
+  }
+  if (record.revenue > 0) {
+    return { quantity: 1, unitPrice: record.revenue, revenue: record.revenue };
+  }
+  return { quantity: 0, unitPrice: 0, revenue: 0 };
+}
+
+async function metricsForSaleItemLink(
+  saleId: string,
+  itemId: string
+): Promise<{ quantity: number; unitPrice: number; revenue: number }> {
+  const sale = await getSaleById(saleId);
+  if (!sale?.lines) return { quantity: 0, unitPrice: 0, revenue: 0 };
+  const line = sale.lines.find(
+    (l): l is ItemSaleLine => l.kind === 'item' && 'itemId' in l && l.itemId === itemId
+  );
+  if (!line) return { quantity: 0, unitPrice: 0, revenue: 0 };
+  const q = line.quantity || 0;
+  const up = line.unitPrice || 0;
+  return { quantity: q, unitPrice: up, revenue: q * up };
+}
 
 // ============================================================================
 // TYPES
@@ -86,10 +130,8 @@ export async function getProductPerformance(
       }
 
       const perf = productMap.get(productKey)!;
-      const linkMetadata = link.metadata || {};
-      const quantity = linkMetadata.quantity || 0;
-      const unitPrice = linkMetadata.unitPrice || 0;
-      const revenue = linkMetadata.totalRevenue || (quantity * unitPrice);
+      const { quantity, unitPrice, revenue: lineRevenue } = await metricsForFinrecItemLink(record, link.target.id);
+      const revenue = lineRevenue || (quantity * unitPrice);
 
       // Cost comes from the financial record (if it's a cost record)
       if (record.cost > 0) {
@@ -196,10 +238,7 @@ export async function getProductChannelMatrix(
         matrix[productKey][channelKey] = { revenue: 0, quantity: 0 };
       }
 
-      const linkMetadata = link.metadata || {};
-      const quantity = linkMetadata.quantity || 0;
-      const unitPrice = linkMetadata.unitPrice || 0;
-      const revenue = quantity * unitPrice;
+      const { quantity, unitPrice, revenue } = await metricsForSaleItemLink(sale.id, link.target.id);
 
       matrix[productKey][channelKey].revenue += revenue;
       matrix[productKey][channelKey].quantity += quantity;
@@ -318,10 +357,7 @@ export async function getRevenuesByProductStation(
         stationMap[productStation] = { revenue: 0, transactionCount: 0 };
       }
 
-      const linkMetadata = link.metadata || {};
-      const quantity = linkMetadata.quantity || 0;
-      const unitPrice = linkMetadata.unitPrice || 0;
-      const revenue = quantity * unitPrice;
+      const { quantity, unitPrice, revenue } = await metricsForSaleItemLink(sale.id, link.target.id);
 
       stationMap[productStation].revenue += revenue;
       stationMap[productStation].transactionCount += 1;

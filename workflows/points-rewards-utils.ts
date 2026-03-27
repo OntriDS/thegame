@@ -104,16 +104,10 @@ export async function awardPointsToPlayer(
         return;
     }
 
-    // Create link with points metadata (forward link: SOURCE → PLAYER)
     const link = makeLink(
       linkType,
       { type: sourceEntityType, id: sourceId },
-      { type: EntityType.PLAYER, id: resolvedPlayerId },
-      {
-        points: points,
-        sourceType: sourceType,
-        awardedAt: new Date().toISOString()
-      }
+      { type: EntityType.PLAYER, id: resolvedPlayerId }
     );
 
     await createLink(link);
@@ -332,12 +326,7 @@ export async function rewardPointsToPlayer(
     const link = makeLink(
       linkType,
       { type: resolvedSourceEntityType, id: sourceEntityId },
-      { type: EntityType.PLAYER, id: resolvedPlayerId },
-      {
-        points: points,
-        sourceType: resolvedSourceEntityType,
-        rewardedAt: new Date().toISOString()
-      }
+      { type: EntityType.PLAYER, id: resolvedPlayerId }
     );
 
     await createLink(link);
