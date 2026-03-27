@@ -1,0 +1,267 @@
+{
+  "summary": {
+    "generatedAt": "2026-03-27T14:46:27.455Z",
+    "logsLinksStringLength": 2,
+    "logsLinksParsedEvents": 0,
+    "linkObjectKeyCount": 644,
+    "orphanSample": {
+      "checked": 0,
+      "missingLinkObjects": 0
+    }
+  },
+  "itemAnalysis": {
+    "itemId": "ccf4fe85-b302-423f-8d86-ede95bcc6a3d",
+    "includePrefixMatches": true,
+    "counts": {
+      "totalLinksForItemAndClones": 26,
+      "saleItem": 14,
+      "finrecItem": 10,
+      "itemSite": 2
+    },
+    "duplicates": {
+      "saleItemSameSourceTarget": [],
+      "finrecItemSameSourceTarget": []
+    },
+    "finrecIdPatternCounts": {
+      "standardFinrecSaleId": 5,
+      "finrecWithTimestampSuffix": 5,
+      "other": 0
+    },
+    "finrecLineage": [
+      {
+        "finrecId": "finrec-8fd34d63-113e-4b2f-97c2-881523fca835",
+        "sourceSaleId": "8fd34d63-113e-4b2f-97c2-881523fca835",
+        "targetItemId": "ccf4fe85-b302-423f-8d86-ede95bcc6a3d",
+        "linkId": "18692b4b-4ec7-49bb-ad21-867783e941db"
+      },
+      {
+        "finrecId": "finrec-36c7672c-0777-445c-8952-7acc768b417d",
+        "sourceSaleId": "36c7672c-0777-445c-8952-7acc768b417d",
+        "targetItemId": "ccf4fe85-b302-423f-8d86-ede95bcc6a3d",
+        "linkId": "2db284ea-2c6c-499a-92b3-b49e24ee1673"
+      },
+      {
+        "finrecId": "finrec-0d33b359-8c76-4a9e-a24f-4f6f05a73bda",
+        "sourceSaleId": "0d33b359-8c76-4a9e-a24f-4f6f05a73bda",
+        "targetItemId": "ccf4fe85-b302-423f-8d86-ede95bcc6a3d",
+        "linkId": "4d485bbe-8608-4aed-9a69-c389780b8ba6"
+      },
+      {
+        "finrecId": "finrec-ed450815-a032-4c7e-a591-55a87d00168d-1768052813921",
+        "sourceSaleId": null,
+        "targetItemId": "ccf4fe85-b302-423f-8d86-ede95bcc6a3d",
+        "linkId": "6392312d-95e1-4575-a02e-21f21bc87bf8"
+      },
+      {
+        "finrecId": "finrec-b9512f81-e637-41c0-9ee8-f2ad613a40a2",
+        "sourceSaleId": "b9512f81-e637-41c0-9ee8-f2ad613a40a2",
+        "targetItemId": "ccf4fe85-b302-423f-8d86-ede95bcc6a3d",
+        "linkId": "68c98ff9-b6f3-4081-962b-44db72711da1"
+      },
+      {
+        "finrecId": "finrec-9e289781-26c5-48f5-8838-675dd9f6e4a9-1768662440497",
+        "sourceSaleId": "9e289781-26c5-48f5-8838-675dd9f6e4a9",
+        "targetItemId": "ccf4fe85-b302-423f-8d86-ede95bcc6a3d",
+        "linkId": "7a14a550-8045-467f-8034-914579e1ab81"
+      },
+      {
+        "finrecId": "finrec-6f87ef2f-2904-4162-b18f-73dfa92423cc",
+        "sourceSaleId": "6f87ef2f-2904-4162-b18f-73dfa92423cc",
+        "targetItemId": "ccf4fe85-b302-423f-8d86-ede95bcc6a3d",
+        "linkId": "b2af57b5-6854-45da-a512-b99681f370ef"
+      },
+      {
+        "finrecId": "finrec-a3a5ee99-ed68-433b-9c94-40711586ef98-1768010779122",
+        "sourceSaleId": "a3a5ee99-ed68-433b-9c94-40711586ef98",
+        "targetItemId": "ccf4fe85-b302-423f-8d86-ede95bcc6a3d",
+        "linkId": "b7cb8966-6676-4800-96f5-35167c03652f"
+      },
+      {
+        "finrecId": "finrec-08f46b85-ab33-436b-b79b-ac9127aa9531-1769223216756",
+        "sourceSaleId": "08f46b85-ab33-436b-b79b-ac9127aa9531",
+        "targetItemId": "ccf4fe85-b302-423f-8d86-ede95bcc6a3d",
+        "linkId": "c72aa593-4e73-4129-8171-d832888d51e5"
+      },
+      {
+        "finrecId": "finrec-42266e4b-316b-4bad-b4cc-d3e5b1e11f48-1769888353069",
+        "sourceSaleId": "42266e4b-316b-4bad-b4cc-d3e5b1e11f48",
+        "targetItemId": "ccf4fe85-b302-423f-8d86-ede95bcc6a3d",
+        "linkId": "c97cfcc0-331e-40a4-b5b7-2e29837e6fa8"
+      }
+    ],
+    "saleItemGroups": {
+      "8fd34d63-113e-4b2f-97c2-881523fca835 -> ccf4fe85-b302-423f-8d86-ede95bcc6a3d": [
+        {
+          "linkId": "2533675b-d86d-491a-99a9-ed0e26ce50b4",
+          "createdAt": "2026-03-14T01:22:19.643Z"
+        }
+      ],
+      "9e289781-26c5-48f5-8838-675dd9f6e4a9 -> ccf4fe85-b302-423f-8d86-ede95bcc6a3d": [
+        {
+          "linkId": "3341bc3d-ae63-443e-b2ff-6f9836ad36bc",
+          "createdAt": "2026-01-17T15:07:28.306Z"
+        }
+      ],
+      "8fd34d63-113e-4b2f-97c2-881523fca835 -> ccf4fe85-b302-423f-8d86-ede95bcc6a3d-sold-558158af-ca5b-4e0a-bd46-34e552173706": [
+        {
+          "linkId": "4b71eec5-2d77-4270-b526-419efa96c539",
+          "createdAt": "2026-03-18T15:51:33.464Z"
+        }
+      ],
+      "0d33b359-8c76-4a9e-a24f-4f6f05a73bda -> ccf4fe85-b302-423f-8d86-ede95bcc6a3d-sold-a0a51e5b-768a-4100-964f-5d7214a3d7ec": [
+        {
+          "linkId": "5399e67c-f0fe-4332-9a68-a14e9c51acc9",
+          "createdAt": "2026-03-08T02:03:25.107Z"
+        }
+      ],
+      "227a2e91-19fc-4a2b-94d0-c575668e72a3 -> ccf4fe85-b302-423f-8d86-ede95bcc6a3d": [
+        {
+          "linkId": "589e0e6c-5b73-4e57-b559-65cb188855a8",
+          "createdAt": "2026-03-07T23:08:49.548Z"
+        }
+      ],
+      "6f87ef2f-2904-4162-b18f-73dfa92423cc -> ccf4fe85-b302-423f-8d86-ede95bcc6a3d": [
+        {
+          "linkId": "65e80a84-5114-41f8-b408-a06ae3333e75",
+          "createdAt": "2026-02-21T21:42:38.508Z"
+        }
+      ],
+      "36c7672c-0777-445c-8952-7acc768b417d -> ccf4fe85-b302-423f-8d86-ede95bcc6a3d": [
+        {
+          "linkId": "67db5276-1d40-4736-9801-76c4eaeb5da2",
+          "createdAt": "2026-02-15T03:19:22.034Z"
+        }
+      ],
+      "42266e4b-316b-4bad-b4cc-d3e5b1e11f48 -> ccf4fe85-b302-423f-8d86-ede95bcc6a3d": [
+        {
+          "linkId": "9410c9ab-9465-414f-ae07-209d1b9fc3dc",
+          "createdAt": "2026-01-31T19:39:19.999Z"
+        }
+      ],
+      "a3a5ee99-ed68-433b-9c94-40711586ef98 -> ccf4fe85-b302-423f-8d86-ede95bcc6a3d": [
+        {
+          "linkId": "9960299f-ce20-4426-9395-e5ce3e8785ec",
+          "createdAt": "2026-01-10T02:06:30.919Z"
+        }
+      ],
+      "0d33b359-8c76-4a9e-a24f-4f6f05a73bda -> ccf4fe85-b302-423f-8d86-ede95bcc6a3d": [
+        {
+          "linkId": "b36a1dff-0253-40c4-8da0-26d64ac559ce",
+          "createdAt": "2026-03-07T02:36:39.347Z"
+        }
+      ],
+      "ed450815-a032-4c7e-a591-55a87d00168d -> ccf4fe85-b302-423f-8d86-ede95bcc6a3d": [
+        {
+          "linkId": "b7d1a157-acaa-43ee-baba-9b917c7e3519",
+          "createdAt": "2026-01-10T13:47:02.676Z"
+        }
+      ],
+      "b9512f81-e637-41c0-9ee8-f2ad613a40a2 -> ccf4fe85-b302-423f-8d86-ede95bcc6a3d": [
+        {
+          "linkId": "c056087d-f3a2-468b-b21f-860ddb66d24a",
+          "createdAt": "2026-02-28T22:46:27.468Z"
+        }
+      ],
+      "08f46b85-ab33-436b-b79b-ac9127aa9531 -> ccf4fe85-b302-423f-8d86-ede95bcc6a3d": [
+        {
+          "linkId": "eb96dca0-4df9-433b-9974-1d075daf4192",
+          "createdAt": "2026-01-24T02:53:45.854Z"
+        }
+      ],
+      "0d33b359-8c76-4a9e-a24f-4f6f05a73bda -> ccf4fe85-b302-423f-8d86-ede95bcc6a3d-sold-c25ac57f-cf09-4017-9905-d6bd6204efaa": [
+        {
+          "linkId": "ef866168-95f1-45ce-9b2c-3a6f98474fad",
+          "createdAt": "2026-03-08T02:03:26.674Z"
+        }
+      ]
+    },
+    "finrecGroups": {
+      "finrec-8fd34d63-113e-4b2f-97c2-881523fca835 -> ccf4fe85-b302-423f-8d86-ede95bcc6a3d": [
+        {
+          "linkId": "18692b4b-4ec7-49bb-ad21-867783e941db",
+          "createdAt": "2026-03-14T01:22:13.048Z"
+        }
+      ],
+      "finrec-36c7672c-0777-445c-8952-7acc768b417d -> ccf4fe85-b302-423f-8d86-ede95bcc6a3d": [
+        {
+          "linkId": "2db284ea-2c6c-499a-92b3-b49e24ee1673",
+          "createdAt": "2026-02-15T03:19:16.856Z"
+        }
+      ],
+      "finrec-0d33b359-8c76-4a9e-a24f-4f6f05a73bda -> ccf4fe85-b302-423f-8d86-ede95bcc6a3d": [
+        {
+          "linkId": "4d485bbe-8608-4aed-9a69-c389780b8ba6",
+          "createdAt": "2026-03-07T02:36:32.204Z"
+        }
+      ],
+      "finrec-ed450815-a032-4c7e-a591-55a87d00168d-1768052813921 -> ccf4fe85-b302-423f-8d86-ede95bcc6a3d": [
+        {
+          "linkId": "6392312d-95e1-4575-a02e-21f21bc87bf8",
+          "createdAt": "2026-01-10T13:46:56.539Z"
+        }
+      ],
+      "finrec-b9512f81-e637-41c0-9ee8-f2ad613a40a2 -> ccf4fe85-b302-423f-8d86-ede95bcc6a3d": [
+        {
+          "linkId": "68c98ff9-b6f3-4081-962b-44db72711da1",
+          "createdAt": "2026-02-28T22:46:17.996Z"
+        }
+      ],
+      "finrec-9e289781-26c5-48f5-8838-675dd9f6e4a9-1768662440497 -> ccf4fe85-b302-423f-8d86-ede95bcc6a3d": [
+        {
+          "linkId": "7a14a550-8045-467f-8034-914579e1ab81",
+          "createdAt": "2026-01-17T15:07:23.269Z"
+        }
+      ],
+      "finrec-6f87ef2f-2904-4162-b18f-73dfa92423cc -> ccf4fe85-b302-423f-8d86-ede95bcc6a3d": [
+        {
+          "linkId": "b2af57b5-6854-45da-a512-b99681f370ef",
+          "createdAt": "2026-02-21T21:42:24.506Z"
+        }
+      ],
+      "finrec-a3a5ee99-ed68-433b-9c94-40711586ef98-1768010779122 -> ccf4fe85-b302-423f-8d86-ede95bcc6a3d": [
+        {
+          "linkId": "b7cb8966-6676-4800-96f5-35167c03652f",
+          "createdAt": "2026-01-10T02:06:22.245Z"
+        }
+      ],
+      "finrec-08f46b85-ab33-436b-b79b-ac9127aa9531-1769223216756 -> ccf4fe85-b302-423f-8d86-ede95bcc6a3d": [
+        {
+          "linkId": "c72aa593-4e73-4129-8171-d832888d51e5",
+          "createdAt": "2026-01-24T02:53:39.399Z"
+        }
+      ],
+      "finrec-42266e4b-316b-4bad-b4cc-d3e5b1e11f48-1769888353069 -> ccf4fe85-b302-423f-8d86-ede95bcc6a3d": [
+        {
+          "linkId": "c97cfcc0-331e-40a4-b5b7-2e29837e6fa8",
+          "createdAt": "2026-01-31T19:39:15.875Z"
+        }
+      ]
+    },
+    "itemSiteLinks": [
+      {
+        "linkId": "6372440a-dc11-46fe-86ec-cbad0edd6c1f",
+        "source": {
+          "type": "item",
+          "id": "ccf4fe85-b302-423f-8d86-ede95bcc6a3d-sold-558158af-ca5b-4e0a-bd46-34e552173706"
+        },
+        "target": {
+          "type": "site",
+          "id": "site-eco-feria"
+        },
+        "createdAt": "2026-03-18T15:51:32.397Z"
+      },
+      {
+        "linkId": "7132f810-1aeb-48e1-a4b6-518fa7be216d",
+        "source": {
+          "type": "item",
+          "id": "ccf4fe85-b302-423f-8d86-ede95bcc6a3d"
+        },
+        "target": {
+          "type": "site",
+          "id": "hq"
+        },
+        "createdAt": "2026-03-14T01:22:18.691Z"
+      }
+    ]
+  }
+}

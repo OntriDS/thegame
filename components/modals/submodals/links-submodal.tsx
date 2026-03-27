@@ -36,14 +36,23 @@ export function LinksSubModal({
     if (event) return `${event.toUpperCase()}: ${name}`;
     return String(name);
   };
-  
-  // Debug logging removed
+
+  /** One row per link id — ITEM_SITE matched both legacy “buckets” and appeared twice. */
+  function dedupeLinksById(list: any[]): any[] {
+    const seen = new Set<string>();
+    return list.filter((link) => {
+      const id = link?.id;
+      if (typeof id !== 'string' || !id) return true;
+      if (seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    });
+  }
 
   // Get relevant links based on log entry context
   const getRelevantLinks = () => {
     if (!logEntry) {
-      // If no log entry context, show all links
-      return links;
+      return dedupeLinksById(links);
     }
 
     const description = logEntry.description || '';
@@ -110,17 +119,15 @@ export function LinksSubModal({
       }
     }
 
-    // For different log types, prioritize different link groups
+    let merged: any[];
     if (eventLabel.includes('created')) {
-      // For creation events, show structural links first (how entity is organized)
-      return [...linkGroups.structural, ...linkGroups.activity];
+      merged = [...linkGroups.structural, ...linkGroups.activity];
     } else if (eventLabel.includes('updated') || eventLabel.includes('points') || eventLabel.includes('completed') || eventLabel.includes('done')) {
-      // For update/completion events, show activity links first (what caused the change)
-      return [...linkGroups.activity, ...linkGroups.structural];
+      merged = [...linkGroups.activity, ...linkGroups.structural];
     } else {
-      // Default: show activity links first (most relevant for debugging)
-      return [...linkGroups.activity, ...linkGroups.structural];
+      merged = [...linkGroups.activity, ...linkGroups.structural];
     }
+    return dedupeLinksById(merged);
   };
 
   const relevantLinks = getRelevantLinks();
@@ -181,50 +188,6 @@ export function LinksSubModal({
     return `${id.substring(0, 4)}...${id.substring(id.length - 4)}`;
   };
 
-  // Helper function to get activity links description based on entity type
-  const getActivityLinksDescription = (entityType: string) => {
-    switch (entityType) {
-      case 'player':
-        return '(What affected this player)';
-      case 'character':
-        return '(What affected this character)';
-      case 'task':
-        return '(What this task connected to)';
-      case 'item':
-        return '(What this item connected to)';
-      case 'financial':
-        return '(What this financial connected to)';
-      case 'sale':
-        return '(What this sale connected to)';
-      case 'site':
-        return '(What this site connected to)';
-      default:
-        return '(Related activities)';
-    }
-  };
-
-  // Helper function to get structural links description based on entity type
-  const getStructuralLinksDescription = (entityType: string) => {
-    switch (entityType) {
-      case 'player':
-        return '(How player is organized)';
-      case 'character':
-        return '(How character is organized)';
-      case 'task':
-        return '(Task organization)';
-      case 'item':
-        return '(Item organization)';
-      case 'financial':
-        return '(Financial record organization)';
-      case 'sale':
-        return '(Sale organization)';
-      case 'site':
-        return '(Site organization)';
-      default:
-        return '(Entity organization)';
-    }
-  };
-
   // Helper function to get display name for entity
   const getDisplayName = (type: string, id: string, fallbackName?: string) => {
     const key = `${type}:${id}`;
@@ -251,58 +214,23 @@ export function LinksSubModal({
             </span>
           </DialogTitle>
           <DialogDescription>
-            {logEntry ? `Links related to: ${resolveLogTitle()}` : 'All entity relationships'}
+            {logEntry
+              ? `Links related to: ${resolveLogTitle()} — current state only; timeline is in entity logs.`
+              : 'Current relationships in the database (not a timeline — use entity logs for history).'}
           </DialogDescription>
         </DialogHeader>
         
         <div className="space-y-4 max-h-[60vh] overflow-y-auto">
           {relevantLinks.length > 0 ? (
             <div className="space-y-4">
-              {/* Group links by type for better organization */}
-              {(() => {
-                const activityLinks = relevantLinks.filter(link => 
-                  link.linkType.includes('TASK') || 
-                  link.linkType.includes('FINREC') || 
-                  link.linkType.includes('SALE') ||
-                  link.linkType.includes('ITEM')
-                );
-                const structuralLinks = relevantLinks.filter(link => 
-                  link.linkType.includes('ACCOUNT') || 
-                  link.linkType.includes('CHARACTER')
-                );
-
-                return (
-                  <div className="space-y-4">
-                    {/* Activity Links Section */}
-                    {activityLinks.length > 0 && (
-                      <div>
-                        <h4 className="text-sm font-medium text-muted-foreground mb-2">
-                          Activity Links {getActivityLinksDescription(entityType)}
-                        </h4>
-                        <div className="space-y-2">
-                          {activityLinks.map((link, index) => (
-                            <LinkCard key={`${link.id}-${index}`} link={link} getDisplayName={getDisplayName} />
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Structural Links Section */}
-                    {structuralLinks.length > 0 && (
-                      <div>
-                        <h4 className="text-sm font-medium text-muted-foreground mb-2">
-                          Structural Links {getStructuralLinksDescription(entityType)}
-                        </h4>
-                        <div className="space-y-2">
-                          {structuralLinks.map((link, index) => (
-                            <LinkCard key={`${link.id}-${index}`} link={link} getDisplayName={getDisplayName} />
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })()}
+              <div>
+                <h4 className="text-sm font-medium text-muted-foreground mb-2">Connections</h4>
+                <div className="space-y-2">
+                  {relevantLinks.map((link) => (
+                    <LinkCard key={link.id} link={link} getDisplayName={getDisplayName} />
+                  ))}
+                </div>
+              </div>
             </div>
           ) : (
             <div className="text-center py-8 text-muted-foreground">
