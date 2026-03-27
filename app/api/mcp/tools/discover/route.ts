@@ -223,7 +223,7 @@ const TOOLS = [
     id: 'thegame.sales.repairSummaries',
     name: 'Repair sales & dashboard summaries',
     description:
-      'Recompute monthly and all-time rolling counters in Redis (salesRevenue, salesVolume, itemsSold, financial revenue/cost, task counts) from the archive vault. Use after counter drift or bugs (e.g. inflated itemsSold from unstable sale lineIds). Heavy: scans archive months.',
+      'Recompute monthly and all-time rolling counters in Redis (salesRevenue, salesVolume, itemsSold, financial revenue/cost, task counts) from the archive vault. itemsSold is rebuilt from archived sale lines (item quantities + bundle quantity × itemsPerBundle), not Item.quantitySold sums. Use after KPI drift. Heavy: scans archive months.',
     systemId: 'thegame',
     parameters: {
       type: 'object',

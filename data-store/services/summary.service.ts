@@ -1,5 +1,5 @@
 // @/data-store/services/summary.service.ts
-import { FinancialRecord, Sale, Item, Task } from '@/types/entities';
+import { FinancialRecord, Sale, Item, Task, ItemSaleLine, BundleSaleLine } from '@/types/entities';
 import { FinancialStatus, SaleStatus, ItemStatus, TaskStatus } from '@/types/enums';
 import { SummaryRepository } from '../repositories/summary.repo';
 import { formatMonthKey } from '@/lib/utils/date-utils';
@@ -166,12 +166,34 @@ export class SummaryService {
   }
 
   /**
+   * Physical units implied by sale lines — matches "Physical items delivered" on the sales dashboard.
+   * Prefer this over summing Item.quantitySold on rebuild: bundles fan out to many item rows and
+   * items may no longer be flipped to SOLD status, which inflates or duplicates rolling totals.
+   */
+  private static sumPhysicalUnitsFromArchivedSales(sales: Sale[]): number {
+    let total = 0;
+    for (const sale of sales) {
+      for (const line of sale.lines || []) {
+        if (line.kind === 'item') {
+          total += Math.max(0, (line as ItemSaleLine).quantity || 0);
+        } else if (line.kind === 'bundle') {
+          const b = line as BundleSaleLine;
+          const q = Math.max(0, b.quantity || 0);
+          const per = Math.max(1, b.itemsPerBundle || 1);
+          total += q * per;
+        }
+      }
+    }
+    return total;
+  }
+
+  /**
    * REBUILDER: Retroactively populates the rolling counters by scanning all historical records.
    * This is a heavy operation and should be used sparingly.
    */
   static async rebuildAllSummaries(): Promise<{ success: boolean; count: number }> {
     // 1. Get all available months from the Archive Vault
-    const { getAvailableArchiveMonths, getArchivedTasksByMonth, getArchivedFinancialRecordsByMonth, getArchivedSalesByMonth, getArchivedItemsByMonth } = await import('@/data-store/datastore');
+    const { getAvailableArchiveMonths, getArchivedTasksByMonth, getArchivedFinancialRecordsByMonth, getArchivedSalesByMonth } = await import('@/data-store/datastore');
     const months = await getAvailableArchiveMonths();
     
     // 2. Clear All-Time summaries and monthly ones (Safety reset)
@@ -183,12 +205,10 @@ export class SummaryService {
     let totalUpdated = 0;
 
     for (const mmyy of months) {
-      // Fetch everything for the month
-      const [tasks, financials, sales, items] = await Promise.all([
+      const [tasks, financials, sales] = await Promise.all([
         getArchivedTasksByMonth(mmyy),
         getArchivedFinancialRecordsByMonth(mmyy),
         getArchivedSalesByMonth(mmyy),
-        getArchivedItemsByMonth(mmyy)
       ]);
 
       // Calculate totals for this month
@@ -198,7 +218,7 @@ export class SummaryService {
         costDelta: financials.reduce((sum, f) => sum + (f.cost || 0), 0),
         salesRevenueDelta: sales.reduce((sum, s) => sum + (s.totals.totalRevenue || 0), 0),
         salesVolumeDelta: sales.length,
-        itemsSoldDelta: items.reduce((sum, i) => sum + (i.quantitySold || 0), 0),
+        itemsSoldDelta: this.sumPhysicalUnitsFromArchivedSales(sales),
         taskCountDelta: tasks.length,
         jungleCoinsDelta: financials.reduce((sum, f) => sum + (f.jungleCoins || 0), 0),
       };
