@@ -20,13 +20,35 @@ export type PointsConversionRates = {
   j$ToUSD: number; // USD value of 1 J$
 };
 
-export const DEFAULT_POINTS_CONVERSION_RATES: PointsConversionRates = {
-  xpToJ$: 6, // 6 XP = 1 J$
-  rpToJ$: 12, // 12 RP = 1 J$
-  fpToJ$: 8, // 8 FP = 1 J$
-  hpToJ$: 10, // 10 HP = 1 J$
-  j$ToUSD: 10, // 1 J$ = $10 USD
-};
+/** Shape stored under `thegame:data:player-conversion-rates` (and mirrored in financial KV when saved there) — set only via the admin conversion modal → KV. */
+export type PlayerConversionRatesKv = PointsConversionRates &
+  Pick<CurrencyExchangeRates, 'colonesToUsd' | 'bitcoinToUsd'>;
+
+/**
+ * Blank form values only (nothing saved in KV yet). Not product defaults — users define rates in the conversion modal.
+ */
+export function createEmptyPlayerConversionRatesForm(): PlayerConversionRatesKv {
+  return {
+    xpToJ$: 0,
+    rpToJ$: 0,
+    fpToJ$: 0,
+    hpToJ$: 0,
+    j$ToUSD: 0,
+    colonesToUsd: 0,
+    bitcoinToUsd: 0,
+  };
+}
+
+export function hasConfiguredPlayerConversionRates(r: PlayerConversionRatesKv | null | undefined): boolean {
+  if (!r) return false;
+  return (
+    r.xpToJ$ > 0 &&
+    r.rpToJ$ > 0 &&
+    r.fpToJ$ > 0 &&
+    r.hpToJ$ > 0 &&
+    r.j$ToUSD > 0
+  );
+}
 
 export const FALLBACK_BITCOIN_PRICE = 100000; // Fallback price if API fails
 

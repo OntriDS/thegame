@@ -7,7 +7,6 @@ import { appendEntityLog, updateEntityLeanFields, removeLogEntriesAcrossMonths }
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
 import { EffectKeys, buildArchiveCollectionIndexKey, buildArchiveMonthsKey } from '@/data-store/keys';
 import {
-  getPlayerConversionRates,
   getTaskById,
   getPlayerById,
   getAllTasks,
@@ -21,8 +20,6 @@ import { createItemFromTask, removeItemsCreatedByTask } from '../item-creation-u
 import { awardPointsToPlayer, removePointsFromPlayer, stagePointsForPlayer, rewardPointsToPlayer, withdrawStagedPointsFromPlayer, unrewardPointsForPlayer } from '../points-rewards-utils';
 import { createFinancialRecordFromTask, updateFinancialRecordFromTask, removeFinancialRecordsCreatedByTask } from '../financial-record-utils';
 import { createCharacterFromTask } from '../character-creation-utils';
-import { DEFAULT_POINTS_CONVERSION_RATES } from '@/lib/constants/financial-constants';
-import type { PointsConversionRates } from '@/lib/constants/financial-constants';
 import { getCategoryForTaskType } from '@/lib/utils/searchable-select-utils';
 import { kvSRem } from '@/data-store/kv';
 
@@ -532,38 +529,6 @@ async function removePlayerPointsFromTask(task: Task): Promise<void> {
   } catch (error) {
     console.error(`[removePlayerPointsFromTask] ❌ FAILED to remove player points/J$ for task ${task.id}:`, error);
     throw error; // Re-throw to see the error in console
-  }
-}
-
-/**
- * Calculate maximum J$ value that could be obtained from given points
- * Uses current conversion rates to determine the J$ equivalent
- */
-function calculateJ$FromPoints(
-  points: { xp?: number; rp?: number; fp?: number; hp?: number },
-  rates: PointsConversionRates
-): number {
-  const xpJ$ = (points.xp || 0) / rates.xpToJ$;
-  const rpJ$ = (points.rp || 0) / rates.rpToJ$;
-  const fpJ$ = (points.fp || 0) / rates.fpToJ$;
-  const hpJ$ = (points.hp || 0) / rates.hpToJ$;
-
-  const totalJ$ = xpJ$ + rpJ$ + fpJ$ + hpJ$;
-
-  return totalJ$;
-}
-
-/**
- * Get current conversion rates, or use defaults if fetch fails
- * This ensures the function always has rates to work with
- */
-async function getConversionRatesOrDefault(): Promise<PointsConversionRates> {
-  try {
-    const rates = await getPlayerConversionRates();
-    return rates;
-  } catch (error) {
-    console.warn('[getConversionRatesOrDefault] Failed to get conversion rates, using defaults:', error);
-    return DEFAULT_POINTS_CONVERSION_RATES;
   }
 }
 

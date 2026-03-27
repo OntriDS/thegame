@@ -18,6 +18,7 @@ import { buildArchiveMonthsKey } from '@/data-store/keys';
 /**
  * Unified Collection Service
  * Handles bulk collection and points vesting for all entity types.
+ * Task/Sale rewards on COLLECTED are applied in entity workflows (staging + effect keys), not here.
  */
 export const CollectionService = {
     /**
@@ -38,17 +39,7 @@ export const CollectionService = {
             };
 
             await upsertTask(updatedTask);
-
-            // Vest Points
-            if (task.rewards?.points) {
-                const playerId = task.playerCharacterId || FOUNDER_CHARACTER_ID;
-                await rewardPointsToPlayer(playerId, {
-                    xp: task.rewards.points.xp || 0,
-                    rp: task.rewards.points.rp || 0,
-                    fp: task.rewards.points.fp || 0,
-                    hp: task.rewards.points.hp || 0
-                }, task.id, EntityType.TASK);
-            }
+            // Points: onTaskUpsert rewards when task.rewards + pointsStaged (see task.workflow.ts)
 
             count++;
         }
@@ -75,14 +66,7 @@ export const CollectionService = {
             };
 
             await upsertSale(updatedSale);
-
-            // Vest Points (Standardized 2-step)
-            // We calculate points from revenue because Sales don't have a 'rewards' field usually, 
-            // but they are calculated on the fly in the workflow.
-            const { calculatePointsFromRevenue } = await import('./points-rewards-utils');
-            const points = calculatePointsFromRevenue(sale.totals.totalRevenue);
-            const playerId = sale.playerCharacterId || FOUNDER_CHARACTER_ID;
-            await rewardPointsToPlayer(playerId, points, sale.id, EntityType.SALE);
+            // Points: onSaleUpsert rewards explicit sale.rewards.points when pointsStaged (see sale.workflow.ts)
 
             count++;
         }

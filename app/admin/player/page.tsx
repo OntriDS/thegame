@@ -12,6 +12,11 @@ import { PlayerModal } from '@/components/modals/player-modal';
 import ConversionRatesModal from '@/components/modals/submodals/conversion-rates-submodal';
 import { useKeyboardShortcuts } from '@/lib/hooks/use-keyboard-shortcuts';
 import { calculatePointsToJ$ } from '@/lib/utils/points-utils';
+import {
+  createEmptyPlayerConversionRatesForm,
+  hasConfiguredPlayerConversionRates,
+  type PlayerConversionRatesKv,
+} from '@/lib/constants/financial-constants';
 import { PlayerDeepLinkTrigger } from '@/components/admin/admin-deep-link-triggers';
 
 type PointMap = {
@@ -77,15 +82,7 @@ function calculateUnexchangedPoints(entries: any[], monthStart: Date): PointMap 
 function PlayerPageContent() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [playerLog, setPlayerLog] = useState<any[]>([]);
-  const [conversionRates, setConversionRates] = useState({
-    xpToJ$: 1,
-    rpToJ$: 1,
-    fpToJ$: 1,
-    hpToJ$: 1,
-    j$ToUSD: 10,
-    colonesToUsd: 500,
-    bitcoinToUsd: 100000,
-  });
+  const [conversionRates, setConversionRates] = useState<PlayerConversionRatesKv | null>(null);
   const [personalAssets, setPersonalAssets] = useState<any | null>(null);
   const [jungleCoinsBalance, setJungleCoinsBalance] = useState<number | undefined>(undefined);
   const [unexchangedPoints, setUnexchangedPoints] = useState<PointMap>(ZERO_POINTS);
@@ -164,15 +161,11 @@ function PlayerPageContent() {
 
       const entries = playerLogData?.entries ?? [];
       setPlayerLog(entries);
-      setConversionRates((prev) => ({
-        xpToJ$: Number(ratesData?.xpToJ$ ?? prev.xpToJ$ ?? 1),
-        rpToJ$: Number(ratesData?.rpToJ$ ?? prev.rpToJ$ ?? 1),
-        fpToJ$: Number(ratesData?.fpToJ$ ?? prev.fpToJ$ ?? 1),
-        hpToJ$: Number(ratesData?.hpToJ$ ?? prev.hpToJ$ ?? 1),
-        j$ToUSD: Number(ratesData?.j$ToUSD ?? prev.j$ToUSD ?? 10),
-        colonesToUsd: Number(ratesData?.colonesToUsd ?? prev.colonesToUsd ?? 500),
-        bitcoinToUsd: Number(ratesData?.bitcoinToUsd ?? prev.bitcoinToUsd ?? 100000),
-      }));
+      setConversionRates(
+        ratesData && typeof ratesData === 'object'
+          ? (ratesData as PlayerConversionRatesKv)
+          : null,
+      );
       setPlayers(playersData ?? []);
       setPersonalAssets(personalAssetsData ?? null);
 
@@ -225,9 +218,16 @@ function PlayerPageContent() {
   }, [loadData]);
 
   const preview = useMemo(
-    () => calculatePointsToJ$(unexchangedPoints, conversionRates),
+    () =>
+      calculatePointsToJ$(
+        unexchangedPoints,
+        conversionRates ?? createEmptyPlayerConversionRatesForm(),
+      ),
     [unexchangedPoints, conversionRates],
   );
+
+  const jUsd =
+    conversionRates?.j$ToUSD != null && conversionRates.j$ToUSD > 0 ? conversionRates.j$ToUSD : null;
 
   const jHoldings = jungleCoinsBalance ?? 0;
 
@@ -294,7 +294,7 @@ function PlayerPageContent() {
               <div className="text-xs font-medium text-muted-foreground mb-1">J$</div>
               <div className="text-xl font-bold text-primary">{jHoldings.toFixed(1)} J$</div>
               <div className="text-xs text-muted-foreground mt-1">
-                ${(jHoldings * conversionRates.j$ToUSD).toFixed(2)} USD
+                {jUsd != null ? `$${(jHoldings * jUsd).toFixed(2)} USD` : '—'}
               </div>
             </div>
             <div className="text-center p-3 bg-muted/30 rounded-lg border border-dashed opacity-60">
@@ -304,7 +304,9 @@ function PlayerPageContent() {
             </div>
             <div className="text-center p-3 bg-green-50 dark:bg-green-950/30 rounded-lg border-2 border-green-200 dark:border-green-800">
               <div className="text-xs font-medium text-muted-foreground mb-1">Total Value $</div>
-              <div className="text-xl font-bold text-green-600">${(jHoldings * conversionRates.j$ToUSD).toFixed(2)}</div>
+              <div className="text-xl font-bold text-green-600">
+                {jUsd != null ? `$${(jHoldings * jUsd).toFixed(2)}` : '—'}
+              </div>
               <div className="text-xs text-muted-foreground mt-1">Digital Assets</div>
             </div>
           </div>
@@ -327,7 +329,9 @@ function PlayerPageContent() {
                     {preview[item.key as keyof typeof preview].toFixed(2)} J$
                   </div>
                   <div className="text-sm text-muted-foreground mt-1">
-                    ${(preview[item.key as keyof typeof preview] * conversionRates.j$ToUSD).toFixed(2)} USD
+                    {jUsd != null
+                      ? `$${(preview[item.key as keyof typeof preview] * jUsd).toFixed(2)} USD`
+                      : '—'}
                   </div>
                 </div>
               ))}
@@ -337,13 +341,13 @@ function PlayerPageContent() {
                   {preview.totalPreview.toFixed(2)} J$
                 </div>
                 <div className="text-sm text-muted-foreground font-medium">
-                  ${(preview.totalPreview * conversionRates.j$ToUSD).toFixed(2)} USD
+                  {jUsd != null ? `$${(preview.totalPreview * jUsd).toFixed(2)} USD` : '—'}
                 </div>
               </div>
               <div className="p-3 bg-muted/10 rounded-lg text-center border border-muted">
                 <div className="text-xs text-muted-foreground mb-1">Unexchanged → USD</div>
                 <div className="text-lg font-semibold text-muted-foreground">
-                  ${(preview.totalPreview * conversionRates.j$ToUSD).toFixed(2)}
+                  {jUsd != null ? `$${(preview.totalPreview * jUsd).toFixed(2)}` : '—'}
                 </div>
                 <div className="text-xs text-muted-foreground mt-1">
                   {preview.totalPreview.toFixed(2)} J$ → $
@@ -360,30 +364,38 @@ function PlayerPageContent() {
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap items-center gap-6 text-sm">
-            <div className="flex items-center gap-1">
-              <span className="text-xs text-muted-foreground">XP:</span>
-              <span className="font-semibold">{conversionRates.xpToJ$}</span>
-              <span className="text-xs text-muted-foreground">= 1 J$</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="text-xs text-muted-foreground">RP:</span>
-              <span className="font-semibold">{conversionRates.rpToJ$}</span>
-              <span className="text-xs text-muted-foreground">= 1 J$</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="text-xs text-muted-foreground">FP:</span>
-              <span className="font-semibold">{conversionRates.fpToJ$}</span>
-              <span className="text-xs text-muted-foreground">= 1 J$</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="text-xs text-muted-foreground">HP:</span>
-              <span className="font-semibold">{conversionRates.hpToJ$}</span>
-              <span className="text-xs text-muted-foreground">= 1 J$</span>
-            </div>
-            <div className="flex items-center gap-2 border-l pl-6">
-              <span className="font-medium">J$ to USD:</span>
-              <span className="font-semibold">1 J$ = ${conversionRates.j$ToUSD}</span>
-            </div>
+            {!hasConfiguredPlayerConversionRates(conversionRates) ? (
+              <p className="text-sm text-muted-foreground">
+                No conversion rates in storage yet. Use <strong>Edit Rates</strong> to save values (same as the modal — they persist to the database).
+              </p>
+            ) : (
+              <>
+                <div className="flex items-center gap-1">
+                  <span className="text-xs text-muted-foreground">XP:</span>
+                  <span className="font-semibold">{conversionRates!.xpToJ$}</span>
+                  <span className="text-xs text-muted-foreground">= 1 J$</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="text-xs text-muted-foreground">RP:</span>
+                  <span className="font-semibold">{conversionRates!.rpToJ$}</span>
+                  <span className="text-xs text-muted-foreground">= 1 J$</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="text-xs text-muted-foreground">FP:</span>
+                  <span className="font-semibold">{conversionRates!.fpToJ$}</span>
+                  <span className="text-xs text-muted-foreground">= 1 J$</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="text-xs text-muted-foreground">HP:</span>
+                  <span className="font-semibold">{conversionRates!.hpToJ$}</span>
+                  <span className="text-xs text-muted-foreground">= 1 J$</span>
+                </div>
+                <div className="flex items-center gap-2 border-l pl-6">
+                  <span className="font-medium">J$ to USD:</span>
+                  <span className="font-semibold">1 J$ = ${conversionRates!.j$ToUSD}</span>
+                </div>
+              </>
+            )}
             <Button
               size="sm"
               variant="outline"
@@ -401,13 +413,7 @@ function PlayerPageContent() {
           isOpen={showConversionRatesModal}
           onClose={() => setShowConversionRatesModal(false)}
           initialRates={{
-            xpToJ$: conversionRates.xpToJ$,
-            rpToJ$: conversionRates.rpToJ$,
-            fpToJ$: conversionRates.fpToJ$,
-            hpToJ$: conversionRates.hpToJ$,
-            j$ToUSD: conversionRates.j$ToUSD,
-            colonesToUsd: conversionRates.colonesToUsd || 500,
-            bitcoinToUsd: conversionRates.bitcoinToUsd || 100000,
+            ...(conversionRates ?? createEmptyPlayerConversionRatesForm()),
           }}
           onSave={async (rates: any) => {
             try {

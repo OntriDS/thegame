@@ -9,6 +9,10 @@ import { User, Network, Coins, Target, TrendingUp, Flag } from 'lucide-react';
 import { Player, Character } from '@/types/entities';
 import { EntityType } from '@/types/enums';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
+import {
+  createEmptyPlayerConversionRatesForm,
+  type PointsConversionRates,
+} from '@/lib/constants/financial-constants';
 import { ClientAPI } from '@/lib/client-api';
 import { dispatchEntityUpdated, entityTypeToKind } from '@/lib/ui/ui-events';
 
@@ -52,12 +56,15 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
   // Financial data
   const [personalAssets, setPersonalAssets] = useState<any>(null);
   const [jungleCoinsBalance, setJungleCoinsBalance] = useState<number>(0);
-  const [conversionRates, setConversionRates] = useState({
-    xpToJ$: 1,
-    rpToJ$: 1,
-    fpToJ$: 1,
-    hpToJ$: 1,
-    j$ToUSD: 10,
+  const [conversionRates, setConversionRates] = useState<PointsConversionRates>(() => {
+    const d = createEmptyPlayerConversionRatesForm();
+    return {
+      xpToJ$: d.xpToJ$,
+      rpToJ$: d.rpToJ$,
+      fpToJ$: d.fpToJ$,
+      hpToJ$: d.hpToJ$,
+      j$ToUSD: d.j$ToUSD,
+    };
   });
 
   // Current month metrics (for State tab)
@@ -102,13 +109,7 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
               }),
               ClientAPI.getPlayerConversionRates().catch(error => {
                 console.error('Failed to load conversion rates:', error);
-                return {
-                  xpToJ$: 1,
-                  rpToJ$: 1,
-                  fpToJ$: 1,
-                  hpToJ$: 1,
-                  j$ToUSD: 10
-                };
+                return createEmptyPlayerConversionRatesForm();
               })
             ]);
 
@@ -116,12 +117,13 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
             setCharacters(playerCharacters);
             setPersonalAssets(assets);
             setJungleCoinsBalance(j$Balance);
+            const dr = createEmptyPlayerConversionRatesForm();
             setConversionRates({
-              xpToJ$: Number(ratesData?.xpToJ$ ?? 1),
-              rpToJ$: Number(ratesData?.rpToJ$ ?? 1),
-              fpToJ$: Number(ratesData?.fpToJ$ ?? 1),
-              hpToJ$: Number(ratesData?.hpToJ$ ?? 1),
-              j$ToUSD: Number(ratesData?.j$ToUSD ?? 10),
+              xpToJ$: Number(ratesData?.xpToJ$ ?? dr.xpToJ$),
+              rpToJ$: Number(ratesData?.rpToJ$ ?? dr.rpToJ$),
+              fpToJ$: Number(ratesData?.fpToJ$ ?? dr.fpToJ$),
+              hpToJ$: Number(ratesData?.hpToJ$ ?? dr.hpToJ$),
+              j$ToUSD: Number(ratesData?.j$ToUSD ?? dr.j$ToUSD),
             });
           }
         } catch (error) {

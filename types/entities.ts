@@ -628,6 +628,9 @@ export interface Sale extends BaseEntity {
   // Emissary Fields
   newCustomerName?: string;         // Name for new customer character creation
 
+  /** Gamification points for this sale (Emissaries UI). Staged when paid+charged; rewarded on COLLECTED — same pattern as tasks. */
+  rewards?: Rewards;
+
   // Financial DNA (Permanent Ambassadors / Temporary Snapshots)
   // These fields are "instructions" that get copied via RNA to create FinancialRecord entity
   // Sale is the transaction event, FinancialRecord is the accounting entry (source of truth)

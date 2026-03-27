@@ -11,7 +11,7 @@ import { appendLinkLog } from '@/links/links-logging';
 import { getFinancialTypeForStation, getSalesChannelFromSaleType } from '@/lib/utils/business-structure-utils';
 import type { Station } from '@/types/type-aliases';
 
-import { BITCOIN_SATOSHIS_PER_BTC } from '@/lib/constants/financial-constants';
+import { BITCOIN_SATOSHIS_PER_BTC, DEFAULT_CURRENCY_EXCHANGE_RATES } from '@/lib/constants/financial-constants';
 
 /**
  * Get the current J$ Balance for an entity (Character or Player)
@@ -514,7 +514,7 @@ export async function calculateAssociatePayout(sale: Sale): Promise<number> {
 
   // Calculate Associate Share (USD)
   const rates = await getFinancialConversionRates();
-  const rate = rates.colonesToUsd || 500;
+  const rate = rates?.colonesToUsd ?? DEFAULT_CURRENCY_EXCHANGE_RATES.colonesToUsd;
   const boothFeeUSD = boothFee / rate;
 
   const revenueMyItems_Assoc = myItemsTotal * (1 - shareOfMyItems_Me);

@@ -1331,39 +1331,30 @@ export async function getPlayerArchiveEventsByMonth(mmyy: string): Promise<Playe
     }
   });
 
-  if (sales.length > 0) {
-    const { calculatePointsFromRevenue } = await import('@/workflows/points-rewards-utils');
-    sales.forEach((sale) => {
-      if (sale.totals?.totalRevenue > 0) {
-        const points = calculatePointsFromRevenue(sale.totals.totalRevenue);
-        if (points.xp || points.fp || points.rp || points.hp) {
-          rows.push({
-            id: `sale:${sale.id}`,
-            sourceType: 'sale',
-            sourceId: sale.id,
-            description: sale.counterpartyName ?? 'Sale',
-            date: (sale.collectedAt ?? sale.saleDate ?? new Date()).toISOString(),
-            points,
-          });
-        }
-      }
-    });
-  }
+  sales.forEach((sale) => {
+    if (hasPoints(sale.rewards?.points)) {
+      rows.push({
+        id: `sale:${sale.id}`,
+        sourceType: 'sale',
+        sourceId: sale.id,
+        description: sale.counterpartyName ?? 'Sale',
+        date: (sale.collectedAt ?? sale.saleDate ?? new Date()).toISOString(),
+        points: {
+          hp: sale.rewards?.points?.hp ?? 0,
+          fp: sale.rewards?.points?.fp ?? 0,
+          rp: sale.rewards?.points?.rp ?? 0,
+          xp: sale.rewards?.points?.xp ?? 0,
+        },
+      });
+    }
+  });
 
   return rows;
 }
 
 // PLAYER CONVERSION RATES
 export async function getPlayerConversionRates(): Promise<any> {
-  const rates = await kvGet('thegame:data:player-conversion-rates');
-  return rates || {
-    // Points conversion rates (in enum order: XP, RP, FP, HP)
-    xpToJ$: 3,
-    rpToJ$: 12,
-    fpToJ$: 15,
-    hpToJ$: 10,
-    j$ToUSD: 10
-  };
+  return await kvGet('thegame:data:player-conversion-rates');
 }
 
 export async function savePlayerConversionRates(rates: any): Promise<void> {
@@ -1427,19 +1418,7 @@ export async function savePersonalAssets(assets: any): Promise<void> {
 
 // FINANCIAL CONVERSION RATES
 export async function getFinancialConversionRates(): Promise<any> {
-  const rates = await kvGet('thegame:data:financial-conversion-rates');
-  return rates || {
-    // Points conversion rates (in enum order: XP, RP, FP, HP)
-    xpToJ$: 3,
-    rpToJ$: 12,
-    fpToJ$: 15,
-    hpToJ$: 10,
-    // Currency exchange rates
-    j$ToUSD: 10,
-    colonesToUsd: 500,
-    bitcoinToUsd: 100000,
-    jungleCoinsToUsd: 0.1
-  };
+  return await kvGet('thegame:data:financial-conversion-rates');
 }
 
 export async function saveFinancialConversionRates(rates: any): Promise<void> {

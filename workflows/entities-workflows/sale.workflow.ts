@@ -8,15 +8,21 @@ import { hasEffect, markEffect, clearEffectsByPrefix } from '@/data-store/effect
 import { EffectKeys } from '@/data-store/keys';
 import { getLinksFor, removeLink } from '@/links/link-registry';
 import { getPlayerById, getSaleById, getItemById, getFinancialsBySourceSaleId, removeFinancial, upsertItem } from '@/data-store/datastore';
-import { stagePointsForPlayer, removePointsFromPlayer, calculatePointsFromRevenue } from '../points-rewards-utils';
+import { stagePointsForPlayer, removePointsFromPlayer, rewardPointsToPlayer } from '../points-rewards-utils';
 import { processSaleLines, ensureSoldItemEntities } from '../sale-line-utils';
-import { updateFinancialRecordsFromSale, updateItemsFromSale, updatePlayerPointsFromSource, hasRevenueChanged, hasLinesChanged } from '../update-propagation-utils';
+import { updateFinancialRecordsFromSale, updateItemsFromSale, hasRevenueChanged, hasLinesChanged } from '../update-propagation-utils';
 import { createCharacterFromSale } from '../character-creation-utils';
 import { upsertSale } from '@/data-store/datastore';
 import { formatMonthKey, calculateClosingDate } from '@/lib/utils/date-utils';
 import { buildArchiveCollectionIndexKey, buildArchiveMonthsKey } from '@/data-store/keys';
 
 const STATE_FIELDS = ['status', 'isNotPaid', 'isNotCharged', 'isCollected', 'postedAt', 'doneAt', 'cancelledAt'];
+
+function saleHasRewardPoints(sale: Sale): boolean {
+  const p = sale.rewards?.points;
+  if (!p) return false;
+  return (p.xp || 0) > 0 || (p.rp || 0) > 0 || (p.fp || 0) > 0 || (p.hp || 0) > 0;
+}
 
 /** Construct lean log details for Sale events (DRY) */
 function getSaleLogDetails(sale: Sale) {
@@ -69,9 +75,23 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
     await updateFinancialRecordsFromSale(sale, undefined);
 
     const isCharged =
-      sale.status === 'CHARGED' && !sale.isNotPaid && !sale.isNotCharged;
+      sale.status === SaleStatus.CHARGED && !sale.isNotPaid && !sale.isNotCharged;
     if (isCharged) {
       await processChargedSaleLines(sale);
+      if (saleHasRewardPoints(sale)) {
+        const stagingKey = EffectKeys.sideEffect('sale', sale.id, 'pointsStaged');
+        if (!(await hasEffect(stagingKey))) {
+          const playerId = sale.playerCharacterId || FOUNDER_CHARACTER_ID;
+          await stagePointsForPlayer(
+            playerId,
+            sale.rewards!.points,
+            sale.id,
+            EntityType.SALE,
+            sale.saleDate || sale.createdAt || new Date()
+          );
+          await markEffect(stagingKey);
+        }
+      }
     }
 
     return;
@@ -80,40 +100,53 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
   // Status changes - PENDING (not paid/not charged) vs DONE (paid and charged)
   const wasPending = previousSale!.isNotPaid || previousSale!.isNotCharged;
   const nowPending = sale.isNotPaid || sale.isNotCharged;
+  const becameFullyPaid = wasPending && !nowPending;
 
-  if (previousSale.status !== sale.status) {
-    if (sale.status === 'CANCELLED') {
-      await appendEntityLog(EntityType.SALE, sale.id, LogEventType.CANCELLED, getSaleLogDetails(sale), sale.cancelledAt || sale.saleDate || new Date());
-      // Transitioned from PENDING to CHARGED (both paid and charged)
-      const chargedAt = new Date().toISOString();
+  if (previousSale.status !== sale.status && sale.status === SaleStatus.CANCELLED) {
+    await appendEntityLog(
+      EntityType.SALE,
+      sale.id,
+      LogEventType.CANCELLED,
+      getSaleLogDetails(sale),
+      sale.cancelledAt || sale.saleDate || new Date()
+    );
+  } else if (sale.status !== SaleStatus.CANCELLED && (becameFullyPaid || (previousSale.status !== sale.status && sale.status === SaleStatus.CHARGED && !nowPending))) {
+    const chargedAt = sale.chargedAt ? new Date(sale.chargedAt) : new Date();
+    (sale as any).chargedAt = chargedAt;
 
-      // Update the sale object with chargedAt
-      (sale as any).chargedAt = new Date(chargedAt);
-
-      await appendEntityLog(EntityType.SALE, sale.id, LogEventType.DONE, getSaleLogDetails(sale), sale.saleDate || chargedAt);
-
-      // Points awarding - ONLY when sale transitions to CHARGED (both paid and charged)
-      // Use sale.playerCharacterId directly as playerId (unified ID)
-      if (sale.totals.totalRevenue > 0) {
-        // Use 'pointsStaged' key to distinguish from legacy 'pointsAwarded'
-        const pointsEffectKey = EffectKeys.sideEffect('sale', sale.id, 'pointsStaged');
-        if (!(await hasEffect(pointsEffectKey))) {
-          const points = calculatePointsFromRevenue(sale.totals.totalRevenue);
-          const playerId = sale.playerCharacterId || FOUNDER_CHARACTER_ID;
-          await stagePointsForPlayer(playerId, points, sale.id, EntityType.SALE, sale.saleDate || new Date());
-          await markEffect(pointsEffectKey);
-        }
-      }
-
-      // Process sale lines when sale transitions to CHARGED
-      await processChargedSaleLines(sale);
-    } else if (!wasPending && nowPending) {
-      // Reverted from DONE to PENDING (became unpaid or uncharged)
-      await appendEntityLog(EntityType.SALE, sale.id, LogEventType.PENDING, getSaleLogDetails(sale), sale.saleDate || new Date());
+    const doneLoggedKey = EffectKeys.sideEffect('sale', sale.id, 'saleDoneLogged');
+    if (!(await hasEffect(doneLoggedKey))) {
+      await appendEntityLog(
+        EntityType.SALE,
+        sale.id,
+        LogEventType.DONE,
+        getSaleLogDetails(sale),
+        sale.saleDate || chargedAt
+      );
+      await markEffect(doneLoggedKey);
     }
+
+    if (saleHasRewardPoints(sale)) {
+      const stagingKey = EffectKeys.sideEffect('sale', sale.id, 'pointsStaged');
+      if (!(await hasEffect(stagingKey))) {
+        const playerId = sale.playerCharacterId || FOUNDER_CHARACTER_ID;
+        await stagePointsForPlayer(
+          playerId,
+          sale.rewards!.points,
+          sale.id,
+          EntityType.SALE,
+          sale.saleDate || chargedAt
+        );
+        await markEffect(stagingKey);
+      }
+    }
+
+    await processChargedSaleLines(sale);
+  } else if (!wasPending && nowPending) {
+    await appendEntityLog(EntityType.SALE, sale.id, LogEventType.PENDING, getSaleLogDetails(sale), sale.saleDate || new Date());
   }
 
-  // Collection detection - Dual detection: status OR flag change to COLLECTED
+  // Collection detection - Dual detection: status OR flag change to COLLECTED (mirror task.workflow)
   const statusBecameCollected =
     sale.status === SaleStatus.COLLECTED &&
     (!previousSale || previousSale.status !== SaleStatus.COLLECTED);
@@ -122,9 +155,6 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
     !!sale.isCollected && (!previousSale || !previousSale.isCollected);
 
   if (statusBecameCollected || flagBecameCollected) {
-    // User requirement: collectedAt should be the last day of the sale's month
-    // Snap-to-Month Logic
-    // FIX: Prefer existing dates over "Now" to ensure historical accuracy (e.g. Jan sale collected in Feb)
     let defaultCollectedAt: Date;
 
     if (sale.saleDate) {
@@ -133,34 +163,46 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
       defaultCollectedAt = calculateClosingDate(sale.createdAt);
     } else {
       const now = new Date();
-      // Adjust to CR time (UTC-6) roughly for "Today" fallback
       const adjustedNow = new Date(now.getTime() - 6 * 60 * 60 * 1000);
       defaultCollectedAt = calculateClosingDate(adjustedNow);
     }
 
     const collectedAt = sale.collectedAt ?? defaultCollectedAt;
 
-    // Normalize both status and flag for consistency
-    const normalizedSale = {
-      ...sale,
-      status: SaleStatus.COLLECTED,
-      isCollected: true,
-      collectedAt
-    };
-
-    // Check if sale was never CHARGED but has item lines - process them now
-    const wasNeverCharged = previousSale?.status !== 'CHARGED' && sale.status !== 'CHARGED';
+    const wasNeverCharged = previousSale?.status !== SaleStatus.CHARGED && sale.status !== SaleStatus.CHARGED;
     const hasItems = sale.lines?.some(l => l.kind === 'item' || l.kind === 'bundle');
     if (wasNeverCharged && hasItems) {
-      // Sale going directly to COLLECTED with items - process them first
-      // This ensures items are marked SOLD even if sale skips CHARGED status
       await processChargedSaleLines(sale);
     }
 
-    await appendEntityLog(EntityType.SALE, sale.id, LogEventType.COLLECTED, {
-      ...getSaleLogDetails(sale),
-      collectedAt: collectedAt.toISOString()
-    }, collectedAt);
+    const pointsRewardedEffectKey = EffectKeys.sideEffect('sale', sale.id, 'pointsRewarded');
+
+    if (!(await hasEffect(pointsRewardedEffectKey))) {
+      await appendEntityLog(
+        EntityType.SALE,
+        sale.id,
+        LogEventType.COLLECTED,
+        {
+          ...getSaleLogDetails(sale),
+          collectedAt: collectedAt.toISOString()
+        },
+        collectedAt
+      );
+
+      const stagingEffectKey = EffectKeys.sideEffect('sale', sale.id, 'pointsStaged');
+      if (saleHasRewardPoints(sale) && (await hasEffect(stagingEffectKey))) {
+        const playerId = sale.playerCharacterId || FOUNDER_CHARACTER_ID;
+        await rewardPointsToPlayer(
+          playerId,
+          sale.rewards!.points,
+          sale.id,
+          EntityType.SALE,
+          collectedAt
+        );
+      }
+
+      await markEffect(pointsRewardedEffectKey);
+    }
   }
 
   // COMPREHENSIVE UPDATE PROPAGATION - when sale properties change
@@ -203,10 +245,7 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
       await updateItemsFromSale(sale, previousSale);
     }
 
-    // Propagate to Player (points delta from revenue)
-    if (hasRevenueChanged(sale, previousSale)) { // Player points ONLY care about Revenue
-      await updatePlayerPointsFromSource(EntityType.SALE, sale, previousSale);
-    }
+    // Sale player points: staged/rewarded only via explicit sale.rewards + effects (task parity). No revenue deltas.
   }
 
   // Lean identity fields changed — cascade patch ALL log entries across ALL months and events
@@ -355,7 +394,7 @@ export async function removeSaleEffectsOnDelete(saleId: string): Promise<void> {
 
     // Also check and remove from player log if this sale awarded points
     const sale = await getSaleById(saleId);
-    if (sale && sale.totals.totalRevenue > 0) {
+    if (sale && saleHasRewardPoints(sale)) {
       await removeLogEntriesAcrossMonths(EntityType.PLAYER, entry => entry.sourceId === saleId || entry.sourceSaleId === saleId);
     }
 
@@ -376,15 +415,12 @@ export async function removeSaleEffectsOnDelete(saleId: string): Promise<void> {
  */
 async function removePlayerPointsFromSale(saleId: string): Promise<void> {
   try {
-
-    // Get the sale to find what points were awarded
     const sale = await getSaleById(saleId);
 
-    if (!sale || sale.totals.totalRevenue <= 0) {
+    if (!sale || !saleHasRewardPoints(sale)) {
       return;
     }
 
-    // Get the player from the sale (same logic as creation)
     const playerId = sale.playerCharacterId || FOUNDER_CHARACTER_ID;
     const player = await getPlayerById(playerId);
 
@@ -392,20 +428,19 @@ async function removePlayerPointsFromSale(saleId: string): Promise<void> {
       return;
     }
 
-    // Calculate points to remove based on sale revenue (1 Point = $100)
-    const pointsToRemove = calculatePointsFromRevenue(sale.totals.totalRevenue);
+    const pointsToRemove = sale.rewards!.points;
 
-    // Check if any points were actually awarded
-    const hasPoints = (pointsToRemove.xp || 0) > 0 || (pointsToRemove.rp || 0) > 0 ||
-      (pointsToRemove.fp || 0) > 0 || (pointsToRemove.hp || 0) > 0;
+    const hasPoints =
+      (pointsToRemove.xp || 0) > 0 ||
+      (pointsToRemove.rp || 0) > 0 ||
+      (pointsToRemove.fp || 0) > 0 ||
+      (pointsToRemove.hp || 0) > 0;
 
     if (!hasPoints) {
       return;
     }
 
-    // Remove the points from the player
     await removePointsFromPlayer(playerId, pointsToRemove);
-
   } catch (error) {
     console.error(`[removePlayerPointsFromSale] ❌ Failed to remove player points for sale ${saleId}:`, error);
   }

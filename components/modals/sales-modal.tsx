@@ -288,6 +288,14 @@ export default function SalesModal({
       // Initialize player character
       setPlayerCharacterId(sale.playerCharacterId || FOUNDER_CHARACTER_ID);
 
+      const emissaryPts = sale.rewards?.points;
+      setPlayerPoints({
+        xp: emissaryPts?.xp ?? 0,
+        rp: emissaryPts?.rp ?? 0,
+        fp: emissaryPts?.fp ?? 0,
+        hp: emissaryPts?.hp ?? 0,
+      });
+
       // Reset init guard when editing
       didInitRef.current = false;
       // Sync Vault with existing sale ID
@@ -474,6 +482,7 @@ export default function SalesModal({
     setTaskPointsData({
       points: { xp: 0, rp: 0, fp: 0, hp: 0 },
     });
+    setPlayerPoints({ xp: 0, rp: 0, fp: 0, hp: 0 });
   };
 
   const handleSave = async (overrideSale?: Sale) => {
@@ -673,6 +682,12 @@ export default function SalesModal({
       }))
       : payments.length > 0 ? payments : undefined;
 
+    const hasEmissarySalePoints =
+      (playerPoints.xp || 0) > 0 ||
+      (playerPoints.rp || 0) > 0 ||
+      (playerPoints.fp || 0) > 0 ||
+      (playerPoints.hp || 0) > 0;
+
     const saleData: Sale = {
       id: draftId.current,
       name: (name?.trim() || `${type} @ ${siteId} ${saleDate.toISOString().slice(0, 10)}`),
@@ -685,6 +700,9 @@ export default function SalesModal({
       customerId: isNewCustomer ? null : customerId,  // Ambassador: Existing customer
       newCustomerName: isNewCustomer ? newCustomerName : undefined,  // EMISSARY: Name for new customer character creation
       playerCharacterId: playerCharacterId,
+      rewards: hasEmissarySalePoints
+        ? { points: { ...playerPoints } }
+        : undefined,
       salesChannel: salesChannel || getSalesChannelFromSaleType(type) || null,
       isNotPaid,
       isNotCharged,

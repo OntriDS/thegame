@@ -393,30 +393,6 @@ export async function removePointsFromPlayer(
 }
 
 /**
- * Calculates points from sale revenue (1 Point = $100)
- * @param revenue - Revenue amount in dollars
- * @returns Points to award (distributed across all types)
- */
-export function calculatePointsFromRevenue(revenue: number): Rewards['points'] {
-  const pointsAwarded = Math.floor(revenue / 100);
-
-  if (pointsAwarded <= 0) {
-    return { xp: 0, rp: 0, fp: 0, hp: 0 };
-  }
-
-  // Distribute points across all types equally
-  const pointsPerType = Math.floor(pointsAwarded / 4);
-  const remainder = pointsAwarded % 4;
-
-  return {
-    xp: pointsPerType + (remainder > 0 ? 1 : 0),
-    rp: pointsPerType + (remainder > 1 ? 1 : 0),
-    fp: pointsPerType + (remainder > 2 ? 1 : 0),
-    hp: pointsPerType
-  };
-}
-
-/**
  * Gets the main player ID (V0.1 constant)
  * TODO: V0.2 - Use character.playerId field
  */

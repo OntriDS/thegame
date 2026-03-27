@@ -48,7 +48,8 @@
         "Analyst Agent performing Data Integrity tasks, ai-chat reading markdown files",
         "Tasks Indexes created, Agents upgraded, Database purged ghost tasks and agents cards",
         "Calendar submodal bugs fixes, Bloated Logs Indexes in Upstash",
-        "Logging workflows update and points decimals bugs"
+        "Logging workflows update and points decimals bugs",
+        "Links System cleanup and Url links to its entities"
       ]
     },
     "phase14.4": {
@@ -137,7 +138,7 @@
     "dataCenter": {
       "status": "Done",
       "version": "v0.1",
-      "description": "Central repository for Logs, tracking Status changes"
+      "description": "Central repository for Logs and Links"
     },
     "archive": {
       "status": "Done",

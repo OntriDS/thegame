@@ -8,8 +8,8 @@ import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data
 import { EffectKeys } from '@/data-store/keys';
 import { getLinksFor, removeLink } from '@/links/link-registry';
 import { getPlayerById, upsertPlayer } from '@/data-store/datastore';
-import { appendPlayerPointsLog, appendPlayerPointsUpdateLog } from '../entities-logging';
-import type { Task, FinancialRecord } from '@/types/entities';
+import { appendPlayerPointsUpdateLog } from '../entities-logging';
+import type { Task } from '@/types/entities';
 
 const STATE_FIELDS = ['level', 'totalPoints', 'points', 'isActive'];
 
@@ -103,88 +103,6 @@ export async function removePlayerEffectsOnDelete(playerId: string): Promise<voi
     
   } catch (error) {
     console.error('Error removing player effects:', error);
-  }
-}
-
-/**
- * Log player effect from task completion
- * This logs the points awarded to the player from completing a task
- */
-export async function logPlayerEffect(task: Task): Promise<void> {
-  try {
-    // J$ no longer awarded as task rewards - only earned via Points Exchange
-    
-    // Only log if there are points to award
-    const hasPoints = task.rewards?.points && (
-      (task.rewards.points.xp || 0) > 0 ||
-      (task.rewards.points.rp || 0) > 0 ||
-      (task.rewards.points.fp || 0) > 0 ||
-      (task.rewards.points.hp || 0) > 0
-    );
-    
-    if (!hasPoints) {
-      return;
-      return;
-    }
-    
-    // Get main player ID (V0.1 constant)
-    const mainPlayerId = FOUNDER_CHARACTER_ID;
-    
-    await appendPlayerPointsLog(
-      mainPlayerId,
-      {
-        xp: task.rewards.points.xp || 0,
-        rp: task.rewards.points.rp || 0,
-        fp: task.rewards.points.fp || 0,
-        hp: task.rewards.points.hp || 0
-      },
-      task.id,
-      'task'
-    );
-    
-  } catch (error) {
-    console.error('Error logging player effect:', error);
-  }
-}
-
-/**
- * Log player effect from financial record
- * This logs the points awarded to the player from a financial record
- */
-export async function logPlayerEffectFromRecord(record: FinancialRecord): Promise<void> {
-  try {
-    // J$ no longer awarded as record rewards - only earned via Points Exchange
-    
-    // Only log if there are points to award
-    const hasPoints = record.rewards?.points && (
-      (record.rewards.points.xp || 0) > 0 ||
-      (record.rewards.points.rp || 0) > 0 ||
-      (record.rewards.points.fp || 0) > 0 ||
-      (record.rewards.points.hp || 0) > 0
-    );
-    
-    if (!hasPoints) {
-      return;
-      return;
-    }
-    
-    // Get main player ID (V0.1 constant)
-    const mainPlayerId = FOUNDER_CHARACTER_ID;
-    
-    await appendPlayerPointsLog(
-      mainPlayerId,
-      {
-        xp: record.rewards?.points?.xp || 0,
-        rp: record.rewards?.points?.rp || 0,
-        fp: record.rewards?.points?.fp || 0,
-        hp: record.rewards?.points?.hp || 0
-      },
-      record.id,
-      'financial'
-    );
-    
-  } catch (error) {
-    console.error('Error logging player effect from record:', error);
   }
 }
 

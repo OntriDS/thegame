@@ -7,7 +7,7 @@ import { NumericInput } from '@/components/ui/numeric-input';
 import { Label } from '@/components/ui/label';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
 import { getPointsConversionMetadata } from '@/lib/utils/points-utils';
-import { DEFAULT_CURRENCY_EXCHANGE_RATES } from '@/lib/constants/financial-constants';
+import { createEmptyPlayerConversionRatesForm } from '@/lib/constants/financial-constants';
 
 interface ConversionRatesModalProps {
   isOpen: boolean;
@@ -33,37 +33,52 @@ interface ConversionRatesModalProps {
 }
 
 export default function ConversionRatesModal({ isOpen, onClose, onSave, initialRates }: ConversionRatesModalProps) {
+  const empty = createEmptyPlayerConversionRatesForm();
   const [pointsRates, setPointsRates] = useState({
-    xpToJ$: initialRates?.xpToJ$ || 1,
-    rpToJ$: initialRates?.rpToJ$ || 1,
-    fpToJ$: initialRates?.fpToJ$ || 1,
-    hpToJ$: initialRates?.hpToJ$ || 1,
+    xpToJ$: initialRates?.xpToJ$ ?? empty.xpToJ$,
+    rpToJ$: initialRates?.rpToJ$ ?? empty.rpToJ$,
+    fpToJ$: initialRates?.fpToJ$ ?? empty.fpToJ$,
+    hpToJ$: initialRates?.hpToJ$ ?? empty.hpToJ$,
   });
   const [currencyRates, setCurrencyRates] = useState({
-    colonesToUsd: initialRates?.colonesToUsd || DEFAULT_CURRENCY_EXCHANGE_RATES.colonesToUsd,
-    bitcoinToUsd: initialRates?.bitcoinToUsd || DEFAULT_CURRENCY_EXCHANGE_RATES.bitcoinToUsd,
-    j$ToUSD: initialRates?.j$ToUSD || DEFAULT_CURRENCY_EXCHANGE_RATES.j$ToUSD,
+    colonesToUsd: initialRates?.colonesToUsd ?? empty.colonesToUsd,
+    bitcoinToUsd: initialRates?.bitcoinToUsd ?? empty.bitcoinToUsd,
+    j$ToUSD: initialRates?.j$ToUSD ?? empty.j$ToUSD,
   });
 
   // Update state when initialRates changes (e.g., when modal opens with new data)
   useEffect(() => {
     if (initialRates) {
+      const d = createEmptyPlayerConversionRatesForm();
       setPointsRates({
-        xpToJ$: initialRates.xpToJ$ || 1,
-        rpToJ$: initialRates.rpToJ$ || 1,
-        fpToJ$: initialRates.fpToJ$ || 1,
-        hpToJ$: initialRates.hpToJ$ || 1,
+        xpToJ$: initialRates.xpToJ$ ?? d.xpToJ$,
+        rpToJ$: initialRates.rpToJ$ ?? d.rpToJ$,
+        fpToJ$: initialRates.fpToJ$ ?? d.fpToJ$,
+        hpToJ$: initialRates.hpToJ$ ?? d.hpToJ$,
       });
       setCurrencyRates({
-        colonesToUsd: initialRates.colonesToUsd || DEFAULT_CURRENCY_EXCHANGE_RATES.colonesToUsd,
-        bitcoinToUsd: initialRates.bitcoinToUsd || DEFAULT_CURRENCY_EXCHANGE_RATES.bitcoinToUsd,
-        j$ToUSD: initialRates.j$ToUSD || DEFAULT_CURRENCY_EXCHANGE_RATES.j$ToUSD,
+        colonesToUsd: initialRates.colonesToUsd ?? d.colonesToUsd,
+        bitcoinToUsd: initialRates.bitcoinToUsd ?? d.bitcoinToUsd,
+        j$ToUSD: initialRates.j$ToUSD ?? d.j$ToUSD,
       });
     }
   }, [initialRates, isOpen]);
 
   const handleSave = () => {
-    onSave({ ...pointsRates, ...currencyRates });
+    const merged = { ...pointsRates, ...currencyRates };
+    if (
+      merged.xpToJ$ < 1 ||
+      merged.rpToJ$ < 1 ||
+      merged.fpToJ$ < 1 ||
+      merged.hpToJ$ < 1 ||
+      merged.j$ToUSD <= 0 ||
+      merged.colonesToUsd <= 0 ||
+      merged.bitcoinToUsd <= 0
+    ) {
+      window.alert('Set every rate to a positive value before saving (XP/RP/FP/HP need at least 1 point per J$).');
+      return;
+    }
+    onSave(merged);
   };
 
   if (!isOpen) return null;
@@ -84,7 +99,7 @@ export default function ConversionRatesModal({ isOpen, onClose, onSave, initialR
                   <NumericInput
                     value={pointsRates[key as keyof typeof pointsRates]}
                     onChange={(value) => setPointsRates({ ...pointsRates, [key]: Math.floor(value) || 0 })}
-                    min={1}
+                    min={0}
                     className="h-8"
                   />
                 </div>
@@ -96,9 +111,13 @@ export default function ConversionRatesModal({ isOpen, onClose, onSave, initialR
             <h4 className="font-medium text-sm text-muted-foreground">Currency Exchange Rates</h4>
             <div className="grid grid-cols-3 gap-4">
               {[
-                { key: 'colonesToUsd', label: '₡ to $', desc: 'Colones = $1' },
-                { key: 'bitcoinToUsd', label: '₿ to $', desc: 'Bitcoin price' },
-                { key: 'j$ToUSD', label: 'J$ to $', desc: '1 J$ = $10' }
+                { key: 'colonesToUsd', label: '₡ to $', desc: 'Colones per $1 USD' },
+                {
+                  key: 'bitcoinToUsd',
+                  label: '₿ fallback (USD/BTC)',
+                  desc: 'Used when live Bitcoin price cannot be loaded (e.g. API offline)',
+                },
+                { key: 'j$ToUSD', label: 'J$ to $', desc: 'USD value of 1 J$' },
               ].map(({ key, label, desc }) => (
                 <div key={key} className="space-y-1">
                   <label className="block text-sm font-medium">{label}</label>

@@ -72,7 +72,7 @@ import { useKeyboardShortcuts } from '@/lib/hooks/use-keyboard-shortcuts';
 import { Contract, Business, Character, Site } from '@/types/entities';
 import {
   DEFAULT_CURRENCY_EXCHANGE_RATES,
-  DEFAULT_POINTS_CONVERSION_RATES,
+  createEmptyPlayerConversionRatesForm,
   FALLBACK_BITCOIN_PRICE,
   BITCOIN_SATOSHIS_PER_BTC,
   REFRESH_DELAY_MS,
@@ -171,7 +171,7 @@ function FinancesPageContent() {
 
   // Currency conversion state
   const [exchangeRates, setExchangeRates] = useState<CurrencyExchangeRates>(DEFAULT_CURRENCY_EXCHANGE_RATES);
-  const [pointsConversionRates, setPointsConversionRates] = useState<PointsConversionRates>(DEFAULT_POINTS_CONVERSION_RATES);
+  const [pointsConversionRates, setPointsConversionRates] = useState<PointsConversionRates | null>(null);
   const [isFetchingBitcoin, setIsFetchingBitcoin] = useState(false);
 
   const [editingSection, setEditingSection] = useState<{
@@ -190,8 +190,17 @@ function FinancesPageContent() {
     const loadConversionRates = async () => {
       try {
         const rates = await ClientAPI.getFinancialConversionRates();
-        setPointsConversionRates(rates);
-        setExchangeRates(rates);
+        if (rates && typeof rates === 'object') {
+          setPointsConversionRates(rates);
+          setExchangeRates({
+            colonesToUsd: rates.colonesToUsd ?? DEFAULT_CURRENCY_EXCHANGE_RATES.colonesToUsd,
+            bitcoinToUsd: rates.bitcoinToUsd ?? DEFAULT_CURRENCY_EXCHANGE_RATES.bitcoinToUsd,
+            j$ToUSD: rates.j$ToUSD ?? DEFAULT_CURRENCY_EXCHANGE_RATES.j$ToUSD,
+          });
+        } else {
+          setPointsConversionRates(null);
+          setExchangeRates(DEFAULT_CURRENCY_EXCHANGE_RATES);
+        }
 
         // Fetch Bitcoin live price ONLY after DB fallback rates have been established
         // This prevents the DB load from overwriting the live price due to race conditions
@@ -1126,7 +1135,12 @@ function FinancesPageContent() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <span>Bitcoin:</span>
+                  <span
+                    className="cursor-help border-b border-dotted border-muted-foreground/50"
+                    title="Refresh loads a live BTC price when the API is available. This field is the stored value and fallback when the fetch fails (same as Player conversion modal)."
+                  >
+                    BTC/USD (fallback)
+                  </span>
                   <div className="flex items-center gap-1">
                     <span>$</span>
                     <NumericInput
@@ -1293,10 +1307,10 @@ function FinancesPageContent() {
           isOpen={showConversionRatesModal}
           onClose={() => setShowConversionRatesModal(false)}
           initialRates={{
-            ...pointsConversionRates,
+            ...(pointsConversionRates ?? createEmptyPlayerConversionRatesForm()),
             colonesToUsd: exchangeRates.colonesToUsd,
             bitcoinToUsd: exchangeRates.bitcoinToUsd,
-            j$ToUSD: exchangeRates.j$ToUSD
+            j$ToUSD: exchangeRates.j$ToUSD,
           }}
           onSave={(rates) => {
             ClientAPI.saveFinancialConversionRates(rates);

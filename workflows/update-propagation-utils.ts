@@ -642,11 +642,12 @@ export async function updateItemsFromSale(
 
 
 // ============================================================================
-// TASK/FINANCIAL/SALE → PLAYER PROPAGATION (Points Delta)
+// TASK/FINANCIAL → PLAYER PROPAGATION (Points Delta)
+// (Sale rewards: staged/collect in sale.workflow — explicit sale.rewards only.)
 // ============================================================================
 
 export async function updatePlayerPointsFromSource(
-  sourceType: EntityType.TASK | EntityType.FINANCIAL | EntityType.SALE,
+  sourceType: EntityType.TASK | EntityType.FINANCIAL,
   newSource: any,
   oldSource: any
 ): Promise<void> {
@@ -654,7 +655,6 @@ export async function updatePlayerPointsFromSource(
     console.log(`[updatePlayerPointsFromSource] Updating player points from ${sourceType}: ${newSource.name}`);
     // Guardrails: Only propagate points when the source is truly finalized
     // - Task: must be Done in both old and new versions
-    // - Sale: must be charged (paid and charged) in both old and new versions
     if (sourceType === EntityType.TASK) {
       const wasCompleted = oldSource?.status === TaskStatus.DONE && !!oldSource?.doneAt;
       const isCompleted = newSource?.status === TaskStatus.DONE && !!newSource?.doneAt;
@@ -664,42 +664,18 @@ export async function updatePlayerPointsFromSource(
       }
     }
 
-    if (sourceType === EntityType.SALE) {
-      const wasCharged = oldSource && !oldSource.isNotPaid && !oldSource.isNotCharged;
-      const isCharged = newSource && !newSource.isNotPaid && !newSource.isNotCharged;
-      if (!wasCharged || !isCharged) {
-        console.log('[updatePlayerPointsFromSource] Sale not charged in both versions, skipping delta');
-        return;
-      }
-    }
-
     // Calculate points delta
     let pointsDelta = { xp: 0, rp: 0, fp: 0, hp: 0 };
 
-    if (sourceType === EntityType.TASK || sourceType === EntityType.FINANCIAL) {
-      const newPoints = newSource.rewards?.points || { xp: 0, rp: 0, fp: 0, hp: 0 };
-      const oldPoints = oldSource.rewards?.points || { xp: 0, rp: 0, fp: 0, hp: 0 };
+    const newPoints = newSource.rewards?.points || { xp: 0, rp: 0, fp: 0, hp: 0 };
+    const oldPoints = oldSource.rewards?.points || { xp: 0, rp: 0, fp: 0, hp: 0 };
 
-      pointsDelta = {
-        xp: (newPoints.xp || 0) - (oldPoints.xp || 0),
-        rp: (newPoints.rp || 0) - (oldPoints.rp || 0),
-        fp: (newPoints.fp || 0) - (oldPoints.fp || 0),
-        hp: (newPoints.hp || 0) - (oldPoints.hp || 0)
-      };
-    } else if (sourceType === EntityType.SALE) {
-      // Calculate points from revenue (simplified)
-      const newRevenue = newSource.totals?.totalRevenue || 0;
-      const oldRevenue = oldSource.totals?.totalRevenue || 0;
-      const revenueDelta = newRevenue - oldRevenue;
-
-      // Convert revenue to points (simplified calculation)
-      pointsDelta = {
-        xp: Math.floor(revenueDelta * 0.1),
-        rp: Math.floor(revenueDelta * 0.05),
-        fp: Math.floor(revenueDelta * 0.03),
-        hp: Math.floor(revenueDelta * 0.02)
-      };
-    }
+    pointsDelta = {
+      xp: (newPoints.xp || 0) - (oldPoints.xp || 0),
+      rp: (newPoints.rp || 0) - (oldPoints.rp || 0),
+      fp: (newPoints.fp || 0) - (oldPoints.fp || 0),
+      hp: (newPoints.hp || 0) - (oldPoints.hp || 0)
+    };
 
     // Skip if no points change
     if (pointsDelta.xp === 0 && pointsDelta.rp === 0 && pointsDelta.fp === 0 && pointsDelta.hp === 0) {
