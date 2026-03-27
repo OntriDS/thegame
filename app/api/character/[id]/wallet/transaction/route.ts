@@ -117,8 +117,8 @@ export async function POST(
             }
         );
 
-        await createLink(link);
-        await appendLinkLog(link, 'created');
+        const wasCreated = await createLink(link);
+        if (wasCreated) await appendLinkLog(link, 'created');
 
         return NextResponse.json({ success: true, record: savedRecord });
 

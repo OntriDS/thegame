@@ -34,6 +34,6 @@ export async function createSiteMovementLink(
     }
   );
   
-  await createLink(link);
-  await appendLinkLog(link, 'created');
+  const wasCreated = await createLink(link);
+  if (wasCreated) await appendLinkLog(link, 'created');
 }

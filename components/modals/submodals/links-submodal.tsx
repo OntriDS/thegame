@@ -2,7 +2,6 @@
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { getZIndexClass } from '@/lib/utils/z-index-utils';
 import { EntityType } from '@/types/enums';
 import { useEffect, useState } from 'react';
 import { ClientAPI } from '@/lib/client-api';
@@ -28,6 +27,15 @@ export function LinksSubModal({
   logEntry
 }: LinksSubModalProps) {
   const [entityNames, setEntityNames] = useState<Record<string, string>>({});
+
+  const resolveLogTitle = () => {
+    if (!logEntry) return '';
+    if (logEntry.description) return String(logEntry.description);
+    const event = String(logEntry.event || '').toLowerCase();
+    const name = logEntry.name || logEntry.entityName || logEntry.entityId || entityName || 'entity';
+    if (event) return `${event.toUpperCase()}: ${name}`;
+    return String(name);
+  };
   
   // Debug logging removed
 
@@ -39,7 +47,9 @@ export function LinksSubModal({
     }
 
     const description = logEntry.description || '';
-    const timestamp = logEntry.timestamp;
+    const event = String(logEntry.event || '').toLowerCase();
+    const eventLabel = String(description || event).toLowerCase();
+    const timestamp = logEntry.timestamp || logEntry.soldAt || logEntry.collectedAt;
     const sourceId = (logEntry as any).sourceId as string | undefined;
 
     // For player logs, we want to show:
@@ -71,11 +81,40 @@ export function LinksSubModal({
       )
     };
 
+    // Optional narrowing for item SOLD/COLLECTED events:
+    // keep links whose effective timestamp is near the lifecycle event.
+    if (entityType === EntityType.ITEM && timestamp && (eventLabel.includes('sold') || eventLabel.includes('collected'))) {
+      const eventTime = new Date(timestamp).getTime();
+      const maxDeltaMs = 36 * 60 * 60 * 1000; // 36h tolerance for timezone and backfills
+
+      const getLinkTimestamp = (link: any): number | null => {
+        const candidate =
+          link?.metadata?.soldAt ||
+          link?.metadata?.movedAt ||
+          link?.metadata?.createdAt ||
+          link?.createdAt;
+        if (!candidate) return null;
+        const ms = new Date(candidate).getTime();
+        return Number.isFinite(ms) ? ms : null;
+      };
+
+      const narrowed = linkGroups.activity.filter(link => {
+        if (link.linkType !== 'SALE_ITEM' && link.linkType !== 'FINREC_ITEM') return true;
+        const ms = getLinkTimestamp(link);
+        if (ms === null) return true;
+        return Math.abs(ms - eventTime) <= maxDeltaMs;
+      });
+
+      if (narrowed.length > 0) {
+        linkGroups.activity = narrowed;
+      }
+    }
+
     // For different log types, prioritize different link groups
-    if (description.includes('created')) {
+    if (eventLabel.includes('created')) {
       // For creation events, show structural links first (how entity is organized)
       return [...linkGroups.structural, ...linkGroups.activity];
-    } else if (description.includes('updated') || description.includes('points') || description.includes('completed') || description.includes('done')) {
+    } else if (eventLabel.includes('updated') || eventLabel.includes('points') || eventLabel.includes('completed') || eventLabel.includes('done')) {
       // For update/completion events, show activity links first (what caused the change)
       return [...linkGroups.activity, ...linkGroups.structural];
     } else {
@@ -154,7 +193,7 @@ export function LinksSubModal({
       case 'item':
         return '(What this item connected to)';
       case 'financial':
-        return '(What this financial record connected to)';
+        return '(What this financial connected to)';
       case 'sale':
         return '(What this sale connected to)';
       case 'site':
@@ -212,7 +251,7 @@ export function LinksSubModal({
             </span>
           </DialogTitle>
           <DialogDescription>
-            {logEntry ? `Links related to: ${logEntry.description}` : 'All entity relationships'}
+            {logEntry ? `Links related to: ${resolveLogTitle()}` : 'All entity relationships'}
           </DialogDescription>
         </DialogHeader>
         

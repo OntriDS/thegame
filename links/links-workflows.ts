@@ -55,13 +55,13 @@ export async function processLinkEntity(entity: any, entityType: EntityType): Pr
 export async function processTaskEffects(task: Task): Promise<void> {
   if (task.siteId) {
     const l = makeLink(LinkType.TASK_SITE, { type: EntityType.TASK, id: task.id }, { type: EntityType.SITE, id: task.siteId });
-    await createLink(l);
-    await appendLinkLog(l, 'created');
+    const wasCreated = await createLink(l);
+    if (wasCreated) await appendLinkLog(l, 'created');
   }
   if (task.outputItemId) {
     const l = makeLink(LinkType.TASK_ITEM, { type: EntityType.TASK, id: task.id }, { type: EntityType.ITEM, id: task.outputItemId });
-    await createLink(l);
-    await appendLinkLog(l, 'created');
+    const wasCreated = await createLink(l);
+    if (wasCreated) await appendLinkLog(l, 'created');
   }
 
   // TASK_CHARACTER link (from customerCharacterId)
@@ -110,8 +110,8 @@ export async function processTaskEffects(task: Task): Promise<void> {
           itemType: task.outputItemType
         }
       );
-      await createLink(l);
-      await appendLinkLog(l, 'created');
+      const wasCreated = await createLink(l);
+      if (wasCreated) await appendLinkLog(l, 'created');
     }
   }
 
@@ -135,8 +135,8 @@ export async function processItemEffects(item: Item): Promise<void> {
     }
 
     const l = makeLink(LinkType.ITEM_TASK, { type: EntityType.ITEM, id: item.id }, { type: EntityType.TASK, id: item.sourceTaskId });
-    await createLink(l);
-    await appendLinkLog(l, 'created');
+    const wasCreated = await createLink(l);
+    if (wasCreated) await appendLinkLog(l, 'created');
   }
 
   // ITEM_SITE links (for stock locations)
@@ -150,8 +150,8 @@ export async function processItemEffects(item: Item): Promise<void> {
   for (const s of item.stock || []) {
     if (s.siteId && s.siteId !== 'None') { // Skip invalid "None" site IDs
       const l = makeLink(LinkType.ITEM_SITE, { type: EntityType.ITEM, id: item.id }, { type: EntityType.SITE, id: s.siteId });
-      await createLink(l);
-      await appendLinkLog(l, 'created');
+      const wasCreated = await createLink(l);
+      if (wasCreated) await appendLinkLog(l, 'created');
     }
   }
 
@@ -208,8 +208,8 @@ export async function processSaleEffects(sale: Sale): Promise<void> {
 
   if (sale.siteId) {
     const l = makeLink(LinkType.SALE_SITE, { type: EntityType.SALE, id: sale.id }, { type: EntityType.SITE, id: sale.siteId });
-    await createLink(l);
-    await appendLinkLog(l, 'created');
+    const wasCreated = await createLink(l);
+    if (wasCreated) await appendLinkLog(l, 'created');
   }
 
   // SALE_CHARACTER link
@@ -385,8 +385,8 @@ export async function processSaleEffects(sale: Sale): Promise<void> {
           { type: EntityType.ITEM, id: line.itemId },
           { quantity: line.quantity, unitPrice: line.unitPrice }
         );
-        await createLink(l);
-        await appendLinkLog(l, 'created');
+        const wasCreated = await createLink(l);
+        if (wasCreated) await appendLinkLog(l, 'created');
       }
     }
   }
@@ -398,8 +398,8 @@ export async function processSaleEffects(sale: Sale): Promise<void> {
       { type: EntityType.SALE, id: sale.id },
       { type: EntityType.TASK, id: sale.sourceTaskId }
     );
-    await createLink(l);
-    await appendLinkLog(l, 'created');
+    const wasCreated = await createLink(l);
+    if (wasCreated) await appendLinkLog(l, 'created');
   }
 
   // Note: SALE_PLAYER handled by points-rewards-utils.ts ✅
@@ -411,8 +411,8 @@ export async function processFinancialEffects(fin: FinancialRecord): Promise<voi
 
   if (fin.siteId) {
     const l = makeLink(LinkType.FINREC_SITE, { type: EntityType.FINANCIAL, id: fin.id }, { type: EntityType.SITE, id: fin.siteId });
-    await createLink(l);
-    await appendLinkLog(l, 'created');
+    const wasCreated = await createLink(l);
+    if (wasCreated) await appendLinkLog(l, 'created');
   }
 
   // FINREC_CHARACTER link
@@ -475,8 +475,8 @@ export async function processFinancialEffects(fin: FinancialRecord): Promise<voi
           itemType: fin.outputItemType || createdItem.type
         }
       );
-      await createLink(l);
-      await appendLinkLog(l, 'created');
+      const wasCreated = await createLink(l);
+      if (wasCreated) await appendLinkLog(l, 'created');
     }
   }
 
@@ -492,8 +492,8 @@ export async function processCharacterEffects(character: Character): Promise<voi
       { type: EntityType.CHARACTER, id: character.id },
       { type: EntityType.PLAYER, id: character.playerId }
     );
-    await createLink(link);
-    await appendLinkLog(link, 'created');
+    const wasCreated = await createLink(link);
+    if (wasCreated) await appendLinkLog(link, 'created');
   }
 
   // CHARACTER_SITE link (if character has home site)
@@ -503,8 +503,8 @@ export async function processCharacterEffects(character: Character): Promise<voi
       { type: EntityType.CHARACTER, id: character.id },
       { type: EntityType.SITE, id: character.siteId }
     );
-    await createLink(link);
-    await appendLinkLog(link, 'created');
+    const wasCreated = await createLink(link);
+    if (wasCreated) await appendLinkLog(link, 'created');
   }
 }
 
@@ -517,8 +517,8 @@ export async function processPlayerEffects(player: Player): Promise<void> {
         { type: EntityType.PLAYER, id: player.id },
         { type: EntityType.CHARACTER, id: characterId }
       );
-      await createLink(link);
-      await appendLinkLog(link, 'created');
+      const wasCreated = await createLink(link);
+      if (wasCreated) await appendLinkLog(link, 'created');
     }
   }
 

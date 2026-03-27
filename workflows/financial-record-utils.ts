@@ -190,8 +190,8 @@ export async function createFinancialRecordFromTask(task: Task): Promise<Financi
       linkMetadata
     );
 
-    await createLink(link);
-    await appendLinkLog(link, 'created');
+    const wasTaskFinrecCreated = await createLink(link);
+    if (wasTaskFinrecCreated) await appendLinkLog(link, 'created');
 
     console.log(`[createFinancialRecordFromTask] ✅ Financial record created and TASK_FINREC link established: ${createdFinrec.name}`);
 
@@ -412,8 +412,8 @@ export async function createFinancialRecordFromSale(sale: Sale): Promise<Financi
       linkMetadata
     );
 
-    await createLink(link);
-    await appendLinkLog(link, 'created');
+    const wasSaleFinrecCreated = await createLink(link);
+    if (wasSaleFinrecCreated) await appendLinkLog(link, 'created');
 
     // Create FINREC_ITEM links for each sold item
     if (sale.lines && sale.lines.length > 0) {
@@ -435,8 +435,8 @@ export async function createFinancialRecordFromSale(sale: Sale): Promise<Financi
                 createdFrom: 'sale'
               }
             );
-            await createLink(itemLink);
-            await appendLinkLog(itemLink, 'created');
+            const wasFinrecItemCreated = await createLink(itemLink);
+            if (wasFinrecItemCreated) await appendLinkLog(itemLink, 'created');
             console.log(`[createFinancialRecordFromSale] ✅ Created FINREC_ITEM link for item ${item.name} (${itemLine.quantity} @ ${itemLine.unitPrice})`);
           }
         }
@@ -671,8 +671,8 @@ async function createBoothPayoutRecord(sale: Sale, associateNet: number, targetE
     { type: EntityType.FINANCIAL, id: createdPayout.id },
     { type: 'payout', netCashflow: -associateNet }
   );
-  await createLink(link);
-  await appendLinkLog(link, 'created');
+  const wasPayoutSaleFinrecCreated = await createLink(link);
+  if (wasPayoutSaleFinrecCreated) await appendLinkLog(link, 'created');
 
   // Link Payout to Associate (Character or Business) if present
   if (targetEntityId) {
@@ -684,8 +684,8 @@ async function createBoothPayoutRecord(sale: Sale, associateNet: number, targetE
       { type: targetType, id: targetEntityId },
       { role: linkRole }
     );
-    await createLink(charLink);
-    await appendLinkLog(charLink, 'created');
+    const wasPayoutCharacterCreated = await createLink(charLink);
+    if (wasPayoutCharacterCreated) await appendLinkLog(charLink, 'created');
   }
 }
 
@@ -768,8 +768,8 @@ export async function createFinancialRecordFromPointsExchange(
       linkMetadata
     );
 
-    await createLink(link);
-    await appendLinkLog(link, 'created');
+    const wasPlayerFinrecCreated = await createLink(link);
+    if (wasPlayerFinrecCreated) await appendLinkLog(link, 'created');
     console.log(`[createFinancialRecordFromPointsExchange] ✅ Created PLAYER_FINREC link for player ${playerId}`);
 
     console.log(`[createFinancialRecordFromPointsExchange] ✅ Financial record created for points exchange: ${createdFinrec.name}`);
@@ -911,8 +911,8 @@ export async function createFinancialRecordFromJ$CashOut(
       { type: EntityType.FINANCIAL, id: personalFinrec.id },
       pLinkMetadata
     );
-    await createLink(pLink);
-    await appendLinkLog(pLink, 'created');
+    const wasPersonalCashoutLinkCreated = await createLink(pLink);
+    if (wasPersonalCashoutLinkCreated) await appendLinkLog(pLink, 'created');
 
     const cLinkMetadata = {
       j$Bought: j$Sold,
@@ -929,8 +929,8 @@ export async function createFinancialRecordFromJ$CashOut(
       { type: EntityType.FINANCIAL, id: companyFinrec.id },
       cLinkMetadata
     );
-    await createLink(cLink);
-    await appendLinkLog(cLink, 'created');
+    const wasCompanyCashoutLinkCreated = await createLink(cLink);
+    if (wasCompanyCashoutLinkCreated) await appendLinkLog(cLink, 'created');
 
     // Also link company record to Character if ID present (as FINREC_CHARACTER to show history on profile)
     if (playerCharacterId) {
