@@ -121,7 +121,7 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
         sale.id,
         LogEventType.DONE,
         getSaleLogDetails(sale),
-        sale.saleDate || chargedAt
+        sale.doneAt || chargedAt
       );
       await markEffect(doneLoggedKey);
     }
@@ -309,19 +309,18 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
         EntityType.SALE,
         (entry: any) =>
           entry.entityId === sale.id &&
-          String(entry.event ?? entry.status ?? '').toLowerCase() === 'collected'
+          (String(entry.event ?? entry.status ?? '').toLowerCase() === 'collected' || 
+           String(entry.event ?? entry.status ?? '').toLowerCase() === 'done')
       );
-      const monthEntries = await getEntityLogs(EntityType.SALE, { month: newMonth });
-      const existingEntry = monthEntries.find(
-        (e: any) => e.entityId === sale.id && String(e.event ?? '').toLowerCase() === 'collected'
-      );
-
-      if (existingEntry) {
-        await updateEntityLeanFields(EntityType.SALE, sale.id, getSaleLogDetails(sale));
-      } else {
-        const collectedAt = sale.collectedAt || calculateClosingDate(sale.saleDate || new Date());
-        await appendEntityLog(EntityType.SALE, sale.id, LogEventType.COLLECTED, getSaleLogDetails(sale), collectedAt);
+      
+      const collectedAt = sale.collectedAt || calculateClosingDate(sale.saleDate || new Date());
+      
+      // Also ensure the DONE log is placed in its correct month if it exists
+      if (sale.doneAt) {
+        await appendEntityLog(EntityType.SALE, sale.id, LogEventType.DONE, getSaleLogDetails(sale), sale.doneAt);
       }
+      
+      await appendEntityLog(EntityType.SALE, sale.id, LogEventType.COLLECTED, getSaleLogDetails(sale), collectedAt);
     }
   }
 
