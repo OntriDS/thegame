@@ -12,7 +12,7 @@ import NumericInput from '@/components/ui/numeric-input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Sale, SaleLine, Item, Discount, Site, Character, Task, ItemSaleLine, BundleSaleLine, Business, Contract } from '@/types/entities';
+import { Sale, SaleLine, Item, Discount, Site, Character, Task, ItemSaleLine, BundleSaleLine, ServiceLine, Business, Contract } from '@/types/entities';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
 import { SaleType, SaleStatus, PaymentMethod, Currency, ItemType, ItemStatus, TaskType, TaskPriority, Collection, STATION_CATEGORIES, CharacterRole, EntityType, FOUNDER_CHARACTER_ID } from '@/types/enums';
 import { getSubTypesForItemType } from '@/lib/utils/item-utils';
@@ -559,8 +559,9 @@ export default function SalesModal({
     if (whatKind === 'product' && oneItemMultiple === 'one' && selectedItemId) {
       const selectedItem = getSelectedItem();
       if (selectedItem) {
+        const existingItemLine = lines.find((l): l is ItemSaleLine => l.kind === 'item');
         effectiveLines = [{
-          lineId: uuid(),
+          lineId: (existingItemLine as ItemSaleLine | undefined)?.lineId || uuid(),
           kind: 'item',
           itemId: selectedItemId,
           quantity: selectedItemQuantity,
@@ -570,8 +571,9 @@ export default function SalesModal({
       }
     } else if (whatKind === 'product' && oneItemMultiple === 'multiple' && selectedItems.length > 0) {
       // Handle PRODUCT/MULTIPLE - create sale lines from items submodal
+      // Reuse stable line ids so ensureSoldItemEntities idempotency + itemsSold summary stay correct on re-save
       effectiveLines = selectedItems.map(item => ({
-        lineId: uuid(),
+        lineId: item.id || uuid(),
         kind: 'item',
         itemId: item.itemId,
         quantity: item.quantity,
@@ -581,8 +583,9 @@ export default function SalesModal({
       } as SaleLine));
     } else if (whatKind === 'service' && oneItemMultiple === 'one') {
       // Handle SERVICE/ONE - create service line from task fields
+      const existingServiceLine = lines.find((l): l is ServiceLine => l.kind === 'service') as ServiceLine | undefined;
       effectiveLines = [{
-        lineId: uuid(),
+        lineId: existingServiceLine?.lineId || uuid(),
         kind: 'service',
         station: taskStation,
         revenue: taskRevenue, // This is the SALE revenue for SALE_FINREC
@@ -614,18 +617,24 @@ export default function SalesModal({
 
     } else if (!manualLines && quickRows.length > 0) {
       // If user is using Quick Count (manualLines=false), materialize lines from quickRows
+      const existingBundleLines = lines.filter((l): l is BundleSaleLine => l.kind === 'bundle');
+      let bundleIdx = 0;
       effectiveLines = quickRows
         .filter(r => r.quantity > 0)
-        .map(r => ({
-          lineId: uuid(),
-          kind: 'bundle',
-          itemType: r.itemType,
-          siteId: siteId || '',
-          quantity: r.quantity,
-          unitPrice: r.unitPrice,
-          description: '',
-          itemsPerBundle: 100 // Default bundle size, should be configurable
-        }) as SaleLine);
+        .map(r => {
+          const existing = existingBundleLines[bundleIdx];
+          bundleIdx += 1;
+          return {
+            lineId: existing?.lineId || uuid(),
+            kind: 'bundle',
+            itemType: r.itemType,
+            siteId: siteId || '',
+            quantity: r.quantity,
+            unitPrice: r.unitPrice,
+            description: '',
+            itemsPerBundle: 100 // Default bundle size, should be configurable
+          } as SaleLine;
+        });
       setLines(effectiveLines);
     }
 

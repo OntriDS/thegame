@@ -25,6 +25,7 @@ import {
   auditCompletedTasksMissingFromCompletedIndex,
   auditTaskTimelineVsMonthIndex,
 } from '@/lib/integrity/task-timeline-audit';
+import { SummaryService } from '@/data-store/services/summary.service';
 
 const DEFAULT_LIST_LIMIT = 50;
 const MAX_LIST_LIMIT = 200;
@@ -265,6 +266,10 @@ export async function POST(req: NextRequest) {
       }
       case 'thegame.tasks.getGlobalTaskCounts': {
         const data = await getGlobalTaskCounts();
+        return NextResponse.json({ success: true, data });
+      }
+      case 'thegame.sales.repairSummaries': {
+        const data = await SummaryService.rebuildAllSummaries();
         return NextResponse.json({ success: true, data });
       }
       default:

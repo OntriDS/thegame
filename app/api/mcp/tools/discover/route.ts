@@ -219,6 +219,17 @@ const TOOLS = [
       properties: {},
     },
   },
+  {
+    id: 'thegame.sales.repairSummaries',
+    name: 'Repair sales & dashboard summaries',
+    description:
+      'Recompute monthly and all-time rolling counters in Redis (salesRevenue, salesVolume, itemsSold, financial revenue/cost, task counts) from the archive vault. Use after counter drift or bugs (e.g. inflated itemsSold from unstable sale lineIds). Heavy: scans archive months.',
+    systemId: 'thegame',
+    parameters: {
+      type: 'object',
+      properties: {},
+    },
+  },
 ];
 
 export async function GET(req: NextRequest) {
