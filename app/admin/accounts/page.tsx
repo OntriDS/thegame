@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,8 +10,9 @@ import AccountModal from '@/components/modals/account-modal';
 import type { Account } from '@/types/entities';
 import { User, Plus, Mail, Lock, Edit, Trash2, Shield } from 'lucide-react';
 import { CharacterRole } from '@/types/enums';
+import { AccountsDeepLinkTrigger } from '@/components/admin/admin-deep-link-triggers';
 
-export default function AccountsPage() {
+function AccountsPageContent() {
   const [showAccountModal, setShowAccountModal] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -51,6 +52,13 @@ export default function AccountsPage() {
     setSelectedAccount(account);
     setShowAccountModal(true);
   }, []);
+
+  const handleAccountDeepLink = useCallback(
+    (account: Account) => {
+      handleEditAccount(account);
+    },
+    [handleEditAccount],
+  );
 
   const handleDeleteAccount = useCallback(async (account: Account) => {
     try {
@@ -143,6 +151,7 @@ export default function AccountsPage() {
 
   return (
     <div className="min-h-screen bg-background p-6 space-y-8">
+      <AccountsDeepLinkTrigger onAccount={handleAccountDeepLink} />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-1xl font-black uppercase tracking-tightest leading-none text-white drop-shadow-sm">Accounts</h1>
@@ -310,5 +319,13 @@ export default function AccountsPage() {
         }}
       />
     </div>
+  );
+}
+
+export default function AccountsPage() {
+  return (
+    <Suspense fallback={<div className="container mx-auto px-6 py-8 text-sm text-muted-foreground">Loading accounts…</div>}>
+      <AccountsPageContent />
+    </Suspense>
   );
 }

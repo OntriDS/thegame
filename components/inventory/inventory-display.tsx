@@ -26,7 +26,34 @@ import { useKeyboardShortcuts } from '@/lib/hooks/use-keyboard-shortcuts';
 import { getAreaForStation } from '@/lib/utils/business-structure-utils';
 import { MonthSelector } from '@/components/ui/month-selector';
 import { Switch } from '@/components/ui/switch';
-import { getCurrentMonthKey, sortMonthKeys, formatDisplayDate } from '@/lib/utils/date-utils';
+import { formatMonthKey, getCurrentMonthKey, sortMonthKeys, formatDisplayDate } from '@/lib/utils/date-utils';
+
+function inventoryTabForItem(item: Item): InventoryTab {
+  if (item.status === ItemStatus.SOLD || item.status === ItemStatus.COLLECTED) {
+    return InventoryTab.SOLD_ITEMS;
+  }
+  switch (item.type) {
+    case ItemType.ARTWORK:
+      return InventoryTab.ARTWORKS;
+    case ItemType.STICKER:
+      return InventoryTab.STICKERS;
+    case ItemType.PRINT:
+      return InventoryTab.PRINTS;
+    case ItemType.MERCH:
+      return InventoryTab.MERCH;
+    case ItemType.BUNDLE:
+      return InventoryTab.BUNDLES;
+    case ItemType.CRAFT:
+      return InventoryTab.CRAFT;
+    case ItemType.MATERIAL:
+      return InventoryTab.MATERIALS;
+    case ItemType.EQUIPMENT:
+      return InventoryTab.EQUIPMENT;
+    case ItemType.DIGITAL:
+    default:
+      return InventoryTab.DIGITAL;
+  }
+}
 
 interface InventoryDisplayProps {
   sites: Site[];
@@ -36,6 +63,8 @@ interface InventoryDisplayProps {
   selectedMonthKey: string;
   availableMonths: string[];
   onMonthChange: (month: string) => void;
+  deepLinkItem?: Item | null;
+  onDeepLinkItemConsumed?: () => void;
 }
 
 export function InventoryDisplay({ 
@@ -45,7 +74,9 @@ export function InventoryDisplay({
   selectedStatus, 
   selectedMonthKey, 
   availableMonths, 
-  onMonthChange 
+  onMonthChange,
+  deepLinkItem,
+  onDeepLinkItemConsumed,
 }: InventoryDisplayProps) {
   const [items, setItems] = useState<Item[]>([]);
   const { getPreference, setPreference } = useUserPreferences();
@@ -182,6 +213,18 @@ export function InventoryDisplay({
   useEffect(() => {
     setIsHydrated(true);
   }, []);
+
+  useEffect(() => {
+    if (!deepLinkItem) return;
+    setActiveTab(inventoryTabForItem(deepLinkItem));
+    const anchor = deepLinkItem.updatedAt || deepLinkItem.createdAt;
+    if (anchor) {
+      onMonthChange(formatMonthKey(anchor));
+    }
+    setEditingItem(deepLinkItem);
+    setShowItemModal(true);
+    onDeepLinkItemConsumed?.();
+  }, [deepLinkItem, onMonthChange, onDeepLinkItemConsumed]);
 
 
   useEffect(() => {

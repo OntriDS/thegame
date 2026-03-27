@@ -6,6 +6,7 @@ import { EntityType } from '@/types/enums';
 import { useEffect, useState } from 'react';
 import { ClientAPI } from '@/lib/client-api';
 import { formatDisplayDate } from '@/lib/utils/date-utils';
+import { buildAdminEntityDeepLink } from '@/lib/utils/entity-admin-deep-links';
 
 interface LinksSubModalProps {
   open: boolean;
@@ -182,25 +183,9 @@ export function LinksSubModal({
     loadEntityNames();
   }, [open, links]);
 
-  // Helper function to format crypto-style ID (first 4 + last 4)
-  const formatCryptoId = (id: string) => {
-    if (id.length <= 8) return id;
-    return `${id.substring(0, 4)}...${id.substring(id.length - 4)}`;
-  };
-
-  // Helper function to get display name for entity
-  const getDisplayName = (type: string, id: string, fallbackName?: string) => {
+  const getFriendlyName = (type: string, id: string, names: Record<string, string>) => {
     const key = `${type}:${id}`;
-    const name = entityNames[key] || fallbackName || id;
-    
-    // Format: "Name (category, id)" or "Name - Type (id)"
-    if (type === EntityType.TASK) {
-      return `${name} (${formatCryptoId(id)})`;
-    } else if (type === EntityType.ITEM) {
-      return `${name} (${formatCryptoId(id)})`;
-    } else {
-      return `${name} (${formatCryptoId(id)})`;
-    }
+    return names[key] || id;
   };
 
   return (
@@ -220,14 +205,18 @@ export function LinksSubModal({
           </DialogDescription>
         </DialogHeader>
         
-        <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+        <div className="space-y-4 max-h-[60vh] overflow-y-auto overflow-x-hidden">
           {relevantLinks.length > 0 ? (
             <div className="space-y-4">
               <div>
                 <h4 className="text-sm font-medium text-muted-foreground mb-2">Connections</h4>
                 <div className="space-y-2">
                   {relevantLinks.map((link) => (
-                    <LinkCard key={link.id} link={link} getDisplayName={getDisplayName} />
+                    <LinkCard
+                      key={link.id}
+                      link={link}
+                      getFriendlyName={(type, id) => getFriendlyName(type, id, entityNames)}
+                    />
                   ))}
                 </div>
               </div>
@@ -257,8 +246,55 @@ export function LinksSubModal({
   );
 }
 
+function LinkEntityBlock({
+  accent,
+  entityType,
+  id,
+  friendlyName,
+}: {
+  accent: 'source' | 'target';
+  entityType: string;
+  id: string;
+  friendlyName: string;
+}) {
+  const href = buildAdminEntityDeepLink(entityType, id);
+  const labelColor =
+    accent === 'source'
+      ? 'text-blue-600 dark:text-blue-400'
+      : 'text-green-600 dark:text-green-400';
+
+  return (
+    <div className="min-w-0 flex-1 rounded-md border border-border/70 bg-background/40 p-2 space-y-1">
+      <div className="flex items-start justify-between gap-2">
+        <span className={`text-xs font-semibold uppercase tracking-wide ${labelColor}`}>
+          {entityType}:
+        </span>
+        {href ? (
+          <a
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs shrink-0 text-primary underline-offset-2 hover:underline"
+            title="Open in admin (new tab)"
+          >
+            Open
+          </a>
+        ) : null}
+      </div>
+      <p className="text-xs break-words leading-snug">{friendlyName}</p>
+      <p className="text-[10px] font-mono text-muted-foreground break-all leading-snug">{id}</p>
+    </div>
+  );
+}
+
 // LinkCard component for displaying individual links
-function LinkCard({ link, getDisplayName }: { link: any; getDisplayName: (type: string, id: string, fallbackName?: string) => string }) {
+function LinkCard({
+  link,
+  getFriendlyName,
+}: {
+  link: any;
+  getFriendlyName: (type: string, id: string) => string;
+}) {
   const isPlayerSource = link.source.type === 'player';
   const isPlayerTarget = link.target.type === 'player';
   
@@ -278,52 +314,29 @@ function LinkCard({ link, getDisplayName }: { link: any; getDisplayName: (type: 
   const relationship = getRelationshipInfo();
 
   return (
-    <div className="border rounded-lg p-3 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3 flex-1 min-w-0">
-          {/* Link Type Badge */}
-          <span className="text-xs font-mono bg-primary/10 text-primary px-2 py-1 rounded shrink-0">
-            {link.linkType}
-          </span>
-          
-          {/* Relationship Direction */}
-          <span className="text-sm text-muted-foreground shrink-0">
-            {relationship.direction === 'outgoing' ? '→' : 
-             relationship.direction === 'incoming' ? '←' : '↔'}
-          </span>
-          
-          {/* Source Entity */}
-          <div className="text-xs min-w-0 flex-1">
-            <span className="font-semibold text-blue-600 dark:text-blue-400">
-              {link.source.type.toUpperCase()}:
-            </span>
-            <span className="text-muted-foreground ml-1 truncate">
-              {getDisplayName(link.source.type, link.source.id)}
-            </span>
-          </div>
-          
-          {/* Target Entity */}
-          <div className="text-xs min-w-0 flex-1">
-            <span className="font-semibold text-green-600 dark:text-green-400">
-              {link.target.type.toUpperCase()}:
-            </span>
-            <span className="text-muted-foreground ml-1 truncate">
-              {getDisplayName(link.target.type, link.target.id)}
-            </span>
-          </div>
-        </div>
-        
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            console.log('Navigate to', link.target.type, link.target.id);
-            // TODO: Implement navigation to related entity
-          }}
-          className="h-6 text-xs shrink-0 ml-2"
-        >
-          View
-        </Button>
+    <div className="border rounded-lg p-3 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors overflow-hidden">
+      <div className="flex flex-wrap items-center gap-2 mb-2">
+        <span className="text-xs font-mono bg-primary/10 text-primary px-2 py-1 rounded shrink-0">
+          {link.linkType}
+        </span>
+        <span className="text-sm text-muted-foreground shrink-0" aria-hidden>
+          {relationship.direction === 'outgoing' ? '→' : relationship.direction === 'incoming' ? '←' : '↔'}
+        </span>
+      </div>
+
+      <div className="flex flex-col lg:flex-row gap-3 min-w-0">
+        <LinkEntityBlock
+          accent="source"
+          entityType={link.source.type}
+          id={link.source.id}
+          friendlyName={getFriendlyName(link.source.type, link.source.id)}
+        />
+        <LinkEntityBlock
+          accent="target"
+          entityType={link.target.type}
+          id={link.target.id}
+          friendlyName={getFriendlyName(link.target.type, link.target.id)}
+        />
       </div>
       
       {/* Relationship Type - Compact Footer */}

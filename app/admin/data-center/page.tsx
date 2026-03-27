@@ -3,7 +3,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { MonthSelector } from '@/components/ui/month-selector';
-import { Boxes, Link as LinkIcon, Users, UserCircle, History, Package, Loader2, FileText, Calendar, CheckCircle, TrendingUp, Zap, AlertTriangle, X, User, MapPin, ShoppingCart } from 'lucide-react';
+import { Boxes, Link as LinkIcon, Users, UserCircle, History, Package, Loader2, Calendar, CheckCircle, TrendingUp, Zap, AlertTriangle, X, User, MapPin, ShoppingCart } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -214,8 +214,8 @@ export default function DataCenterPage() {
             Sites
           </TabsTrigger>
           <TabsTrigger value="links-debug" className="flex items-center gap-2">
-            <FileText className="h-4 w-4" />
-            Links
+            <LinkIcon className="h-4 w-4" />
+            Link graph
           </TabsTrigger>
         </TabsList>
 
@@ -282,7 +282,7 @@ export default function DataCenterPage() {
           />
         </TabsContent>
 
-        {/* Links Tab - The Rosetta Stone */}
+        {/* Current link edges (KV graph), not monthly entity lifecycle logs */}
         <TabsContent value="links-debug" className="space-y-4">
           <LinksLogTab
             onReload={handleReloadLogs}

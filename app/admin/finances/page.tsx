@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -64,6 +64,8 @@ import { VALIDATION_CONSTANTS } from '@/lib/constants/financial-constants';
 import AssetsEditModal from '@/components/modals/submodals/assets-edit-submodal'
 import ConversionRatesModal from '@/components/modals/submodals/conversion-rates-submodal'
 import FinancialsModal from '@/components/modals/financials-modal'
+import { FinancesDeepLinkTrigger } from '@/components/admin/admin-deep-link-triggers';
+import { monthKeyFromYearMonth } from '@/lib/utils/entity-admin-deep-links';
 
 import { PartnershipsManager } from '@/components/finances/partnerships-manager';
 import { useKeyboardShortcuts } from '@/lib/hooks/use-keyboard-shortcuts';
@@ -123,7 +125,7 @@ function mergeInventoryTotalsIntoAssets(assets: any, inventoryTotals: InventoryB
   };
 }
 
-export default function FinancesPage() {
+function FinancesPageContent() {
   const { getPreference, setPreference, isLoading: preferencesLoading } = useUserPreferences();
   const [selectedMonthKey, setSelectedMonthKey] = useState(getCurrentMonthKey());
   const [availableMonths, setAvailableMonths] = useState<string[]>([]);
@@ -149,6 +151,15 @@ export default function FinancesPage() {
     onOpenFinancialModal: () => setShowFinancialsModal(true),
   });
   const [activeTab, setActiveTab] = useState('assets');
+  const [finDeepLinkRecord, setFinDeepLinkRecord] = useState<FinancialRecord | null>(null);
+
+  const handleFinancesDeepLink = useCallback((record: FinancialRecord) => {
+    setSelectedMonthKey(monthKeyFromYearMonth(record.year, record.month));
+    setActiveTab(record.type === 'company' ? 'company' : 'personal');
+    setFinDeepLinkRecord(record);
+  }, []);
+
+  const clearFinDeepLinkRecord = useCallback(() => setFinDeepLinkRecord(null), []);
 
   const [isHydrated, setIsHydrated] = useState(false);
 
@@ -622,6 +633,7 @@ export default function FinancesPage() {
 
   return (
     <div className="space-y-6">
+      <FinancesDeepLinkTrigger onFinancialRecord={handleFinancesDeepLink} />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Finances </h1>
@@ -1176,6 +1188,8 @@ export default function FinancesPage() {
               // This is handled by CompanyRecordsList component
             }}
             isLoading={isDetailLoading}
+            deepLinkRecord={finDeepLinkRecord?.type === 'company' ? finDeepLinkRecord : null}
+            onDeepLinkRecordConsumed={clearFinDeepLinkRecord}
           />
         </TabsContent>
 
@@ -1193,6 +1207,8 @@ export default function FinancesPage() {
               // This is handled by PersonalRecordsList component
             }}
             isLoading={isDetailLoading}
+            deepLinkRecord={finDeepLinkRecord?.type === 'personal' ? finDeepLinkRecord : null}
+            onDeepLinkRecordConsumed={clearFinDeepLinkRecord}
           />
         </TabsContent>
       </Tabs>
@@ -1318,6 +1334,14 @@ export default function FinancesPage() {
 
 
     </div>
+  );
+}
+
+export default function FinancesPage() {
+  return (
+    <Suspense fallback={<div className="container mx-auto px-6 py-8 text-sm text-muted-foreground">Loading finances…</div>}>
+      <FinancesPageContent />
+    </Suspense>
   );
 }
 

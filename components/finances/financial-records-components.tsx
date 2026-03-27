@@ -15,16 +15,26 @@ export function CompanyRecordsList({
   month,
   onRecordUpdated,
   onRecordEdit,
-  isLoading = false
+  isLoading = false,
+  deepLinkRecord,
+  onDeepLinkRecordConsumed,
 }: {
   year: number;
   month: number;
   onRecordUpdated: () => void;
   onRecordEdit: (record: FinancialRecord) => void;
   isLoading?: boolean;
+  deepLinkRecord?: FinancialRecord | null;
+  onDeepLinkRecordConsumed?: () => void;
 }) {
   const [records, setRecords] = useState<FinancialRecord[]>([]);
   const [recordToEdit, setRecordToEdit] = useState<FinancialRecord | null>(null);
+
+  useEffect(() => {
+    if (!deepLinkRecord || deepLinkRecord.type !== 'company') return;
+    setRecordToEdit(deepLinkRecord);
+    onDeepLinkRecordConsumed?.();
+  }, [deepLinkRecord, onDeepLinkRecordConsumed]);
 
   useEffect(() => {
     const loadRecords = async () => {
@@ -150,21 +160,30 @@ export function CompanyRecordsList({
           {recordToEdit && (
             <FinancialsModal
               record={recordToEdit}
-              year={year}
-              month={month}
+              year={recordToEdit.year ?? year}
+              month={recordToEdit.month ?? month}
               open={!!recordToEdit}
               onOpenChange={(open: boolean) => !open && setRecordToEdit(null)}
               onSave={async (record: FinancialRecord, force?: boolean) => {
                 // Allow error to bubble up
                 const finalRecord = await ClientAPI.upsertFinancialRecord(record, { force });
 
-                const companyRecords = await ClientAPI.getFinancialRecordsByMonth(year, month, 'company');
+                const companyRecords = await ClientAPI.getFinancialRecordsByMonth(
+                  finalRecord.year,
+                  finalRecord.month,
+                  'company'
+                );
                 setRecords(companyRecords);
                 onRecordUpdated();
                 setRecordToEdit(finalRecord);
               }}
               onDelete={async () => {
-                const companyRecords = await ClientAPI.getFinancialRecordsByMonth(year, month, 'company');
+                const r = recordToEdit;
+                const companyRecords = await ClientAPI.getFinancialRecordsByMonth(
+                  r.year,
+                  r.month,
+                  'company'
+                );
                 setRecords(companyRecords);
                 onRecordUpdated();
                 setRecordToEdit(null);
@@ -183,16 +202,26 @@ export function PersonalRecordsList({
   month,
   onRecordUpdated,
   onRecordEdit,
-  isLoading = false
+  isLoading = false,
+  deepLinkRecord,
+  onDeepLinkRecordConsumed,
 }: {
   year: number;
   month: number;
   onRecordUpdated: () => void;
   onRecordEdit: (record: FinancialRecord) => void;
   isLoading?: boolean;
+  deepLinkRecord?: FinancialRecord | null;
+  onDeepLinkRecordConsumed?: () => void;
 }) {
   const [records, setRecords] = useState<FinancialRecord[]>([]);
   const [recordToEdit, setRecordToEdit] = useState<FinancialRecord | null>(null);
+
+  useEffect(() => {
+    if (!deepLinkRecord || deepLinkRecord.type !== 'personal') return;
+    setRecordToEdit(deepLinkRecord);
+    onDeepLinkRecordConsumed?.();
+  }, [deepLinkRecord, onDeepLinkRecordConsumed]);
 
   useEffect(() => {
     const loadRecords = async () => {
@@ -347,21 +376,30 @@ This action cannot be undone.`);
           {recordToEdit && (
             <FinancialsModal
               record={recordToEdit}
-              year={year}
-              month={month}
+              year={recordToEdit.year ?? year}
+              month={recordToEdit.month ?? month}
               open={!!recordToEdit}
               onOpenChange={(open: boolean) => !open && setRecordToEdit(null)}
               onSave={async (record: FinancialRecord, force?: boolean) => {
                 // Allow error to bubble up
                 const finalRecord = await ClientAPI.upsertFinancialRecord(record, { force });
 
-                const personalRecords = await ClientAPI.getFinancialRecordsByMonth(year, month, 'personal');
+                const personalRecords = await ClientAPI.getFinancialRecordsByMonth(
+                  finalRecord.year,
+                  finalRecord.month,
+                  'personal'
+                );
                 setRecords(personalRecords);
                 onRecordUpdated();
                 setRecordToEdit(finalRecord);
               }}
               onDelete={async () => {
-                const personalRecords = await ClientAPI.getFinancialRecordsByMonth(year, month, 'personal');
+                const r = recordToEdit;
+                const personalRecords = await ClientAPI.getFinancialRecordsByMonth(
+                  r.year,
+                  r.month,
+                  'personal'
+                );
                 setRecords(personalRecords);
                 onRecordUpdated();
                 setRecordToEdit(null);

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -20,9 +20,10 @@ import { Switch } from "@/components/ui/switch";
 import { CurrencyExchangeRates, DEFAULT_CURRENCY_EXCHANGE_RATES } from "@/lib/constants/financial-constants";
 import { SummaryTotals } from "@/types/entities";
 import { formatCurrency } from "@/lib/utils/financial-utils";
-import { getCurrentMonthKey, sortMonthKeys } from "@/lib/utils/date-utils";
+import { formatMonthKey, getCurrentMonthKey, sortMonthKeys } from "@/lib/utils/date-utils";
+import { SalesDeepLinkTrigger } from '@/components/admin/admin-deep-link-triggers';
 
-export default function SalesPage() {
+function SalesPageContent() {
   const { activeBg } = useThemeColors();
   const [sales, setSales] = useState<Sale[]>([]);
   const [sites, setSites] = useState<any[]>([]);
@@ -39,6 +40,12 @@ export default function SalesPage() {
   const [availableMonths, setAvailableMonths] = useState<string[]>([]);
   const [showCollected, setShowCollected] = useState(false); // false=Active, true=Collected
   const [exchangeRates, setExchangeRates] = useState<CurrencyExchangeRates>(DEFAULT_CURRENCY_EXCHANGE_RATES);
+
+  const handleDeepLinkSale = useCallback((sale: Sale) => {
+    setSelectedMonthKey(formatMonthKey(sale.saleDate));
+    setEditingSale(sale);
+    setShowSalesModal(true);
+  }, []);
 
   // Load available months once
   useEffect(() => {
@@ -248,6 +255,7 @@ export default function SalesPage() {
 
   return (
     <div className="space-y-6">
+      <SalesDeepLinkTrigger onSale={handleDeepLinkSale} />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -470,4 +478,12 @@ export default function SalesPage() {
       />
     </div>
   );
-}
+}
+
+export default function SalesPage() {
+  return (
+    <Suspense fallback={<div className="container mx-auto px-6 py-8 text-sm text-muted-foreground">Loading sales…</div>}>
+      <SalesPageContent />
+    </Suspense>
+  );
+}

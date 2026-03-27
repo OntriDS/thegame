@@ -14,6 +14,7 @@ import { useKeyboardShortcuts } from '@/lib/hooks/use-keyboard-shortcuts';
 import { useEntityUpdates } from '@/lib/hooks/use-entity-updates';
 import { useShortcutScope } from '@/lib/shortcuts/keyboard-shortcuts-provider';
 import TaskModal from '@/components/modals/task-modal';
+import { ControlRoomDeepLinkTrigger } from '@/components/admin/admin-deep-link-triggers';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { ORDER_INCREMENT, SIDEBAR_MIN_WIDTH, SIDEBAR_MAX_WIDTH, SIDEBAR_DEFAULT_WIDTH } from '@/lib/constants/app-constants';
 import TaskTree from './task-tree';
@@ -643,7 +644,7 @@ export default function ControlRoom() {
       console.error('Failed to fetch fresh task data:', error);
       setTaskToEdit(task); // Fallback to provided task on error
     }
-  }
+  };
 
   const handleTaskUpdate = async (updatedTask: Task) => {
     try {
@@ -950,6 +951,14 @@ export default function ControlRoom() {
             </TabsContent>
           </Tabs>
         </div>
+
+      <ControlRoomDeepLinkTrigger
+        onTask={async (task) => {
+          if (task.type === TaskType.AUTOMATION) return;
+          setActiveSubTab('mission-tree');
+          await handleEditTask(task);
+        }}
+      />
 
       {/* Modal for Creating/Editing Tasks */}
       {taskToEdit && (

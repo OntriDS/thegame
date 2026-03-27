@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -9,7 +9,7 @@ import { useUserPreferences } from "@/lib/hooks/use-user-preferences";
 import { InventoryDisplay } from "@/components/inventory/inventory-display";
 import { ClientAPI } from "@/lib/client-api";
 import { ItemStatus } from "@/types/enums";
-import { Site } from "@/types/entities";
+import { Item, Site } from "@/types/entities";
 import { getZIndexClass } from "@/lib/utils/z-index-utils";
 import { CurrencyExchangeRates, DEFAULT_CURRENCY_EXCHANGE_RATES } from "@/lib/constants/financial-constants";
 import { Archive, Loader2 } from "lucide-react";
@@ -23,9 +23,9 @@ import {
 } from "@/components/ui/dialog";
 import { MonthSelector } from "@/components/ui/month-selector";
 import { getCurrentMonthKey, sortMonthKeys } from "@/lib/utils/date-utils";
-import { InventoryTab } from "@/types/enums";
+import { InventoriesDeepLinkTrigger } from '@/components/admin/admin-deep-link-triggers';
 
-export default function InventoriesPage() {
+function InventoriesPageContent() {
   const { activeBg } = useThemeColors();
   const { getPreference, setPreference, isLoading } = useUserPreferences();
   const [selectedSite, setSelectedSite] = useState<string | 'all'>('all');
@@ -33,6 +33,13 @@ export default function InventoriesPage() {
   const [sites, setSites] = useState<Site[]>([]);
   const [selectedMonthKey, setSelectedMonthKey] = useState(getCurrentMonthKey());
   const [availableMonths, setAvailableMonths] = useState<string[]>([]);
+  const [deepLinkItem, setDeepLinkItem] = useState<Item | null>(null);
+
+  const handleInventoryDeepLink = useCallback((item: Item) => {
+    setDeepLinkItem(item);
+  }, []);
+
+  const clearDeepLinkItem = useCallback(() => setDeepLinkItem(null), []);
 
   // Load sites and available months
   useEffect(() => {
@@ -68,6 +75,7 @@ export default function InventoriesPage() {
 
   return (
     <div className="space-y-6">
+      <InventoriesDeepLinkTrigger onItem={handleInventoryDeepLink} />
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Inventory Management</h1>
         <div className="flex items-center gap-4">
@@ -120,10 +128,20 @@ export default function InventoriesPage() {
         selectedMonthKey={selectedMonthKey}
         availableMonths={availableMonths}
         onMonthChange={setSelectedMonthKey}
+        deepLinkItem={deepLinkItem}
+        onDeepLinkItemConsumed={clearDeepLinkItem}
       />
 
 
     </div>
+  );
+}
+
+export default function InventoriesPage() {
+  return (
+    <Suspense fallback={<div className="container mx-auto px-6 py-8 text-sm text-muted-foreground">Loading inventory…</div>}>
+      <InventoriesPageContent />
+    </Suspense>
   );
 }
 

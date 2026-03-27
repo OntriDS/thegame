@@ -146,9 +146,12 @@ export function LinksLogTab({ onReload, isReloading }: LinksTabProps) {
         <div>
           <h2 className="text-2xl font-bold flex items-center gap-2">
             <LinkIcon className="h-6 w-6" />
-            Links
+            Link graph
           </h2>
-          <p className="text-gray-600">{links.length} total links</p>
+          <p className="text-sm text-muted-foreground max-w-2xl">
+            Current relationship edges in the database ({links.length} total). This is not a historical log — use the
+            month-scoped entity tabs (Tasks, Items, …) for lifecycle history.
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <select

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, Suspense } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ClientAPI } from '@/lib/client-api';
@@ -11,8 +11,9 @@ import type { Character } from '@/types/entities';
 import { CharacterRole, CHARACTER_ROLE_TYPES } from '@/types/enums';
 import { ROLE_COLORS } from '@/lib/constants/color-constants';
 import { Plus, User, Mail, Phone } from 'lucide-react';
+import { CharactersDeepLinkTrigger } from '@/components/admin/admin-deep-link-triggers';
 
-export default function CharactersPage() {
+function CharactersPageContent() {
   const [showCharacterModal, setShowCharacterModal] = useState(false);
   const [selectedCharacter, setSelectedCharacter] = useState<Character | null>(null);
   const [characters, setCharacters] = useState<Character[]>([]);
@@ -75,6 +76,13 @@ export default function CharactersPage() {
     setShowCharacterModal(true);
   }, []);
 
+  const handleCharacterDeepLink = useCallback(
+    (character: Character) => {
+      handleEditCharacter(character);
+    },
+    [handleEditCharacter],
+  );
+
   const existingRoles = useMemo(
     () => Array.from(new Set(characters.flatMap((char) => char.roles))),
     [characters],
@@ -104,6 +112,7 @@ export default function CharactersPage() {
 
   return (
     <div className="space-y-8">
+      <CharactersDeepLinkTrigger onCharacter={handleCharacterDeepLink} />
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="text-3xl font-bold">Characters</h1>
         <div className="flex items-center gap-2">
@@ -236,5 +245,13 @@ export default function CharactersPage() {
         onSave={handleCharacterSave}
       />
     </div>
+  );
+}
+
+export default function CharactersPage() {
+  return (
+    <Suspense fallback={<div className="container mx-auto px-6 py-8 text-sm text-muted-foreground">Loading characters…</div>}>
+      <CharactersPageContent />
+    </Suspense>
   );
 }

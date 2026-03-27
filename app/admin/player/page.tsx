@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, Suspense } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useEntityUpdates } from '@/lib/hooks/use-entity-updates';
@@ -12,6 +12,7 @@ import { PlayerModal } from '@/components/modals/player-modal';
 import ConversionRatesModal from '@/components/modals/submodals/conversion-rates-submodal';
 import { useKeyboardShortcuts } from '@/lib/hooks/use-keyboard-shortcuts';
 import { calculatePointsToJ$ } from '@/lib/utils/points-utils';
+import { PlayerDeepLinkTrigger } from '@/components/admin/admin-deep-link-triggers';
 
 type PointMap = {
   xp: number;
@@ -73,7 +74,7 @@ function calculateUnexchangedPoints(entries: any[], monthStart: Date): PointMap 
 }
 
 
-export default function PlayerPage() {
+function PlayerPageContent() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [playerLog, setPlayerLog] = useState<any[]>([]);
   const [conversionRates, setConversionRates] = useState({
@@ -112,6 +113,14 @@ export default function PlayerPage() {
       setShowPlayerModal(true);
     },
     [mainPlayer],
+  );
+
+  const handlePlayerDeepLink = useCallback(
+    (player: Player) => {
+      setSelectedPlayer(player);
+      setShowPlayerModal(true);
+    },
+    [],
   );
 
   useKeyboardShortcuts({
@@ -237,6 +246,7 @@ export default function PlayerPage() {
 
   return (
     <div className="space-y-8">
+      <PlayerDeepLinkTrigger onPlayer={handlePlayerDeepLink} />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Player</h1>
@@ -421,3 +431,10 @@ export default function PlayerPage() {
   );
 }
 
+export default function PlayerPage() {
+  return (
+    <Suspense fallback={<div className="container mx-auto px-6 py-8 text-sm text-muted-foreground">Loading player…</div>}>
+      <PlayerPageContent />
+    </Suspense>
+  );
+}

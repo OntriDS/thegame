@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback, Suspense } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -12,8 +12,9 @@ import { ClientAPI } from "@/lib/client-api";
 import { SiteModal } from "@/components/modals/site-modal";
 import type { Site } from "@/types/entities";
 import { SiteType, SiteStatus } from "@/types/enums";
+import { MapDeepLinkTrigger } from '@/components/admin/admin-deep-link-triggers';
 
-export default function MapPage() {
+function MapPageContent() {
   const [activeView, setActiveView] = useState('world-map');
   const [siteFilter, setSiteFilter] = useState<'all' | SiteType | 'inactive'>('all');
   const [sites, setSites] = useState<Site[]>([]);
@@ -90,6 +91,14 @@ export default function MapPage() {
     setSelectedSite(site);
     setShowSiteModal(true);
   };
+
+  const handleDeepLinkSite = useCallback((site: Site) => {
+    if (isNoneSite(site)) {
+      return;
+    }
+    setSelectedSite(site);
+    setShowSiteModal(true);
+  }, []);
 
   const getSiteTypeColor = (type: SiteType): string => {
     switch (type) {
@@ -190,6 +199,7 @@ export default function MapPage() {
 
   return (
     <div className="flex gap-6 h-[calc(100vh-8rem)]">
+      <MapDeepLinkTrigger onSite={handleDeepLinkSite} />
       {/* Sidebar Menu */}
       <div className="w-64 space-y-2">
         <Card className="h-full">
@@ -421,4 +431,12 @@ export default function MapPage() {
       />
     </div>
   );
-} 
+}
+
+export default function MapPage() {
+  return (
+    <Suspense fallback={<div className="container mx-auto px-6 py-8 text-sm text-muted-foreground">Loading map…</div>}>
+      <MapPageContent />
+    </Suspense>
+  );
+}
