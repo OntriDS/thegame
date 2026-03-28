@@ -717,11 +717,14 @@ export default function SalesModal({
       (playerPoints.fp || 0) > 0 ||
       (playerPoints.hp || 0) > 0;
 
+    const normalizedSaleDate = saleDate instanceof Date ? saleDate : new Date(saleDate as unknown as string);
+    const safeSaleDate = Number.isFinite(normalizedSaleDate.getTime()) ? normalizedSaleDate : new Date();
+
     const saleData: Sale = {
       id: draftId.current,
-      name: (name?.trim() || `${type} @ ${siteId} ${saleDate.toISOString().slice(0, 10)}`),
+      name: (name?.trim() || `${type} @ ${siteId} ${safeSaleDate.toISOString().slice(0, 10)}`),
       description: description.trim() || undefined,
-      saleDate,
+      saleDate: safeSaleDate,
       type,
       status,
       siteId,
@@ -968,7 +971,8 @@ export default function SalesModal({
     if (whatKind !== 'product' || oneItemMultiple !== 'one' || !sale) {
       return base;
     }
-    const singleItemLine = lines.find((l): l is ItemSaleLine => l.kind === 'item');
+    const sourceLines = lines.length > 0 ? lines : (sale.lines || []);
+    const singleItemLine = sourceLines.find((l): l is ItemSaleLine => l.kind === 'item');
     if (!singleItemLine?.itemId) {
       return base;
     }
