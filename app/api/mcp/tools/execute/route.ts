@@ -319,7 +319,7 @@ export async function POST(req: NextRequest) {
           }
           const ev = String(hit.entry.event ?? '').toUpperCase();
           let timestampIso: string | undefined;
-          if (ev === 'CHARGED') {
+          if (ev === 'CHARGED' || ev === 'DONE') {
             const d = sale.doneAt || (sale as { chargedAt?: Date }).chargedAt;
             timestampIso = d ? new Date(d).toISOString() : undefined;
           } else if (ev === 'COLLECTED') {

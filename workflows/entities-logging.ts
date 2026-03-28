@@ -711,6 +711,7 @@ export async function getSaleLogEntryById(
 
 const PATCHABLE_SALE_EVENTS = new Set([
   'CHARGED',
+  'DONE', // wrong label in some stored rows; patch only updates lean/timestamp (event unchanged)
   'COLLECTED',
   'CREATED',
   'PENDING',
