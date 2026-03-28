@@ -812,7 +812,7 @@ export async function patchLogEntryById(
 
   if (options.newEvent) entry.event = options.newEvent;
   if (options.timestampIso) entry.timestamp = options.timestampIso;
-  entry.lastUpdated = new Date().toISOString();
+  delete entry.lastUpdated;
 
   const list = await readMonthlyList(entityType, hit.monthKey);
   const idx = list.findIndex(e => e.id === options.logEntryId);

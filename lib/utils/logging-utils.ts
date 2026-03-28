@@ -289,8 +289,7 @@ export function buildLatestNameMap(entries: LogEntry[]): Record<string, string> 
     if (!entityId) continue;
     const name = extractEntryName(e);
     if (!name) continue;
-    // Prefer lastUpdated over timestamp for in-place edits (task renames, etc.)
-    const whenRaw = e.lastUpdated ?? e.timestamp ?? e.date;
+    const whenRaw = e.timestamp ?? e.date ?? e.lastUpdated;
     const when = whenRaw ? new Date(whenRaw).getTime() : 0;
     const prev = latestName[entityId];
     if (!prev || when >= prev.when) {
