@@ -79,6 +79,41 @@ export class SummaryRepository {
   }
 
   /**
+   * Updates ONLY the All-Time counters. Used for delta adjustments during index repairs.
+   */
+  static async updateAllTimeCounters(deltas: Partial<SummaryTotals>) {
+    const pipeline = kv.pipeline();
+    const {
+      revenue = 0,
+      costs = 0,
+      salesRevenue = 0,
+      salesVolume = 0,
+      itemsSold = 0,
+      taskCount = 0,
+      jungleCoins = 0,
+      inventoryValue = 0,
+      inventoryCost = 0,
+      inventoryJ$ = 0,
+    } = deltas;
+
+    const profit = revenue - costs;
+
+    if (revenue !== 0) pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'revenue', revenue);
+    if (costs !== 0) pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'costs', costs);
+    if (profit !== 0) pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'profit', profit);
+    if (salesRevenue !== 0) pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'salesRevenue', salesRevenue);
+    if (salesVolume !== 0) pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'salesVolume', salesVolume);
+    if (itemsSold !== 0) pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'itemsSold', itemsSold);
+    if (taskCount !== 0) pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'taskCount', taskCount);
+    if (jungleCoins !== 0) pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'jungleCoins', jungleCoins);
+    if (inventoryValue !== 0) pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'inventoryValue', inventoryValue);
+    if (inventoryCost !== 0) pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'inventoryCost', inventoryCost);
+    if (inventoryJ$ !== 0) pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'inventoryJ$', inventoryJ$);
+
+    await pipeline.exec();
+  }
+
+  /**
    * Resets a specific summary key (monthly or all-time)
    */
   static async resetSummary(monthYear?: string) {

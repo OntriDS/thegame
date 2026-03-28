@@ -1,5 +1,5 @@
 // @/data-store/services/summary.service.ts
-import { FinancialRecord, Sale, Item, Task, ItemSaleLine, BundleSaleLine } from '@/types/entities';
+import { FinancialRecord, Sale, Item, Task, ItemSaleLine, BundleSaleLine, SummaryTotals } from '@/types/entities';
 import { FinancialStatus, SaleStatus, ItemStatus, TaskStatus } from '@/types/enums';
 import { SummaryRepository } from '../repositories/summary.repo';
 import { formatMonthKey } from '@/lib/utils/date-utils';
@@ -188,46 +188,68 @@ export class SummaryService {
   }
 
   /**
-   * REBUILDER: Retroactively populates the rolling counters by scanning all historical records.
-   * This is a heavy operation and should be used sparingly.
+   * REBUILDER: Retroactively populates the rolling counters for a specific month or all time.
    */
   static async rebuildAllSummaries(): Promise<{ success: boolean; count: number }> {
-    // 1. Get all available months from the Archive Vault
-    const { getAvailableArchiveMonths, getArchivedTasksByMonth, getArchivedFinancialRecordsByMonth, getArchivedSalesByMonth } = await import('@/data-store/datastore');
+    const { getAvailableArchiveMonths } = await import('@/data-store/datastore');
     const months = await getAvailableArchiveMonths();
-    
-    // 2. Clear All-Time summaries and monthly ones (Safety reset)
-    await SummaryRepository.resetSummary(); // Clear all-time
-    for (const mmyy of months) {
-      await SummaryRepository.resetSummary(mmyy);
-    }
+
+    // 1. Reset All-Time summary (Total starting from scratch)
+    await SummaryRepository.resetSummary(); 
     
     let totalUpdated = 0;
-
     for (const mmyy of months) {
-      const [tasks, financials, sales] = await Promise.all([
-        getArchivedTasksByMonth(mmyy),
-        getArchivedFinancialRecordsByMonth(mmyy),
-        getArchivedSalesByMonth(mmyy),
-      ]);
-
-      // Calculate totals for this month
-      const totals = {
-        monthYear: mmyy,
-        revenueDelta: financials.reduce((sum, f) => sum + (f.revenue || 0), 0),
-        costDelta: financials.reduce((sum, f) => sum + (f.cost || 0), 0),
-        salesRevenueDelta: sales.reduce((sum, s) => sum + (s.totals.totalRevenue || 0), 0),
-        salesVolumeDelta: sales.length,
-        itemsSoldDelta: this.sumPhysicalUnitsFromArchivedSales(sales),
-        taskCountDelta: tasks.length,
-        jungleCoinsDelta: financials.reduce((sum, f) => sum + (f.jungleCoins || 0), 0),
-      };
-
-      // Push to Redis (Hash keys)
-      await SummaryRepository.updateCounters(totals);
+      await this.rebuildSummaryForMonth(mmyy, true); // true = skip all-time adjustment since we reset main key
       totalUpdated++;
     }
 
     return { success: true, count: totalUpdated };
+  }
+
+  /**
+   * Rebuilds a specific month and adapts the All-Time counters correctly.
+   */
+  static async rebuildSummaryForMonth(monthKey: string, isBulkRebuild: boolean = false): Promise<void> {
+    const { getArchivedTasksByMonth, getArchivedFinancialRecordsByMonth, getArchivedSalesByMonth } = await import('@/data-store/datastore');
+
+    // 1. If not bulk, we need to subtract current monthly values from All-Time first
+    if (!isBulkRebuild) {
+      const currentMonth = await SummaryRepository.getSummary(monthKey);
+      const subtractions: Partial<SummaryTotals> = {
+        revenue: -currentMonth.revenue,
+        costs: -currentMonth.costs,
+        salesRevenue: -currentMonth.salesRevenue,
+        salesVolume: -currentMonth.salesVolume,
+        itemsSold: -currentMonth.itemsSold,
+        taskCount: -currentMonth.taskCount,
+        jungleCoins: -currentMonth.jungleCoins,
+      };
+      await SummaryRepository.updateAllTimeCounters(subtractions);
+    }
+
+    // 2. Clear this month's key
+    await SummaryRepository.resetSummary(monthKey);
+
+    // 3. Scan Archive Vault for this month only
+    const [tasks, financials, sales] = await Promise.all([
+      getArchivedTasksByMonth(monthKey),
+      getArchivedFinancialRecordsByMonth(monthKey),
+      getArchivedSalesByMonth(monthKey),
+    ]);
+
+    // 4. Calculate totals for this month
+    const totals = {
+      monthYear: monthKey,
+      revenueDelta: financials.reduce((sum, f) => sum + (f.revenue || 0), 0),
+      costDelta: financials.reduce((sum, f) => sum + (f.cost || 0), 0),
+      salesRevenueDelta: sales.reduce((sum, s) => sum + (s.totals.totalRevenue || 0), 0),
+      salesVolumeDelta: sales.length,
+      itemsSoldDelta: this.sumPhysicalUnitsFromArchivedSales(sales),
+      taskCountDelta: tasks.length,
+      jungleCoinsDelta: financials.reduce((sum, f) => sum + (f.jungleCoins || 0), 0),
+    };
+
+    // 5. Push to Redis (Updates Monthly Hash and INCREMENTS All-Time)
+    await SummaryRepository.updateCounters(totals);
   }
 }

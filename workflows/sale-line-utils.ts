@@ -500,6 +500,24 @@ export async function ensureSoldItemEntities(sale: Sale): Promise<void> {
         // Persist the Sold Item entity (skip workflows to avoid duplicate logs)
         await upsertItem(soldItemEntity, { skipWorkflowEffects: true });
 
+        // IMPORTANT: Prevent double-counting in summaries.
+        // If the original item already registered this sale (via processItemSaleLine), 
+        // we must decrement it from the original item since it's now tracked by the clone.
+        const stockEffectKey = EffectKeys.sideEffect('sale', sale.id, `stockDecremented:${lineId}`);
+        if (await hasEffect(stockEffectKey)) {
+          const updatedOriginal = {
+            ...item,
+            quantitySold: Math.max(0, item.quantitySold - (line.quantity || 0)),
+            updatedAt: new Date()
+          };
+          // If it was SOLD but now has 0 quantitySold, revert to FOR_SALE
+          if (updatedOriginal.quantitySold === 0 && (item.status === ItemStatus.SOLD || (item.status as string) === 'ItemStatus.SOLD')) {
+            updatedOriginal.status = ItemStatus.FOR_SALE;
+          }
+          await upsertItem(updatedOriginal, { skipWorkflowEffects: true });
+          console.log(`[ensureSoldItemEntities] Double-count prevention: Decremented ${line.quantity} from original ${item.id}`);
+        }
+
         // Register in Monthly Archive Index
         const archiveMonth = calculateClosingDate(soldItemEntity.soldAt || new Date());
         const monthKey = formatMonthKey(archiveMonth);
@@ -564,6 +582,21 @@ export async function ensureSoldItemEntities(sale: Sale): Promise<void> {
 
             // Persist the Sold Bundle Item entity
             await upsertItem(soldBundleItemEntity, { skipWorkflowEffects: true });
+
+            // Prevent double-counting for bundle items
+            const bundleEffectKey = EffectKeys.sideEffect('sale', sale.id, `bundleProcessed:${lineId}`);
+            if (await hasEffect(bundleEffectKey)) {
+                const updatedBundle = {
+                    ...bundleItem,
+                    quantitySold: Math.max(0, (bundleItem.quantitySold || 0) - (line.quantity || 0)),
+                    updatedAt: new Date()
+                };
+                if (updatedBundle.quantitySold === 0 && (bundleItem.status === ItemStatus.SOLD || (bundleItem.status as string) === 'ItemStatus.SOLD')) {
+                    updatedBundle.status = ItemStatus.FOR_SALE;
+                }
+                await upsertItem(updatedBundle, { skipWorkflowEffects: true });
+                console.log(`[ensureSoldItemEntities] Double-count prevention: Decremented ${line.quantity} from original bundle ${bundleItem.id}`);
+            }
 
             // Register in Monthly Archive Index
             const bundleArchiveMonth = calculateClosingDate(soldBundleItemEntity.soldAt as Date || new Date());
