@@ -590,6 +590,25 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
         };
         await upsertFinancial(updatedIncome, { forceSave: true });
         console.log(`[createFinancialRecordFromBoothSale] ✅ Updated Gross Income Record: ${incomeRecord.id}`);
+
+        const saleLinks = await getLinksFor({ type: EntityType.SALE, id: sale.id });
+        const hasIncomeFinrecLink = saleLinks.some(
+          (link) =>
+            link.linkType === LinkType.SALE_FINREC &&
+            link.target.type === EntityType.FINANCIAL &&
+            link.target.id === incomeRecord.id
+        );
+        if (!hasIncomeFinrecLink) {
+          const saleFinrecLink = makeLink(
+            LinkType.SALE_FINREC,
+            { type: EntityType.SALE, id: sale.id },
+            { type: EntityType.FINANCIAL, id: incomeRecord.id }
+          );
+          await createLink(saleFinrecLink);
+          console.log(
+            `[createFinancialRecordFromBoothSale] ✅ Restored SALE_FINREC sale → ${incomeRecord.id}`
+          );
+        }
       }
 
       // 2. Update/Manage Payout Record

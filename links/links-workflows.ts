@@ -205,28 +205,20 @@ export async function processSaleEffects(sale: Sale): Promise<void> {
     }
   }
 
-  // Keep canonical SALE_FINREC targets only (main finrec + optional booth payout); remove legacy duplicates
-  const allowedSaleFinrecTargetIds = new Set<string>([`finrec-${sale.id}`]);
-  if (sale.type === SaleType.BOOTH) {
-    allowedSaleFinrecTargetIds.add(`finrec-payout-${sale.id}`);
-  }
-  const mainFinrecForSale = await getFinancialById(`finrec-${sale.id}`);
+  // SALE_FINREC: identify by target financial id + sourceSaleId
+  // Remove only when the financial is missing or explicitly tied to a different sale.
+  // Do not delete financial rows here (dedupe/migration belongs elsewhere).
   for (const l of existingLinks) {
     if (l.linkType !== LinkType.SALE_FINREC || l.target.type !== EntityType.FINANCIAL) {
       continue;
     }
-    const targetId = l.target.id;
-    if (allowedSaleFinrecTargetIds.has(targetId)) {
+    const fin = await getFinancialById(l.target.id);
+    if (!fin) {
+      await removeLink(l.id);
       continue;
     }
-    const fin = await getFinancialById(targetId);
-    if (fin?.sourceSaleId !== sale.id) {
-      continue;
-    }
-    await removeLink(l.id);
-    if (mainFinrecForSale) {
-      const { removeFinancial } = await import('@/data-store/datastore');
-      await removeFinancial(targetId);
+    if (fin.sourceSaleId != null && fin.sourceSaleId !== sale.id) {
+      await removeLink(l.id);
     }
   }
 
