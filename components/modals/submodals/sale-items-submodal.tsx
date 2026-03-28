@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import NumericInput from '@/components/ui/numeric-input';
 import { Item, Site } from '@/types/entities';
-import { createItemOptions, createItemOptionsForSite } from '@/lib/utils/searchable-select-utils';
+import { createItemOptions, createItemOptionsForSite, getCategoryForItemType } from '@/lib/utils/searchable-select-utils';
 import { ClientAPI } from '@/lib/client-api';
 import { Trash2, Plus } from 'lucide-react';
 import { v4 as uuid } from 'uuid';
@@ -172,14 +172,51 @@ export default function SaleItemsSubModal({
     );
   }, [selectedSiteId, open]);
 
-  // Optimize: Calculate options once, as they are the same for all rows based on selectedSiteId
+  const lineItemCoveredByOptions = (
+    opts: Array<{ value: string }>,
+    itemId: string
+  ): boolean => {
+    if (!itemId) return true;
+    return opts.some(
+      (o) => o.value === itemId || o.value.startsWith(`${itemId}:`)
+    );
+  };
+
+  // Base options from inventory + pinned "This sale" rows (sold clones / composite mismatches)
   const rowOptions = React.useMemo(() => {
-    if (selectedSiteId) {
-      return createItemOptionsForSite(items, selectedSiteId, false, sites);
-    } else {
-      return createItemOptions(items, false, false, sites);
+    const base = selectedSiteId
+      ? createItemOptionsForSite(items, selectedSiteId, false, sites)
+      : createItemOptions(items, false, false, sites);
+
+    const pinnedByValue = new Map<
+      string,
+      { value: string; label: string; group: string; category: string }
+    >();
+
+    for (const line of lines) {
+      if (!line.itemId || lineItemCoveredByOptions(base, line.itemId)) continue;
+
+      const resolved = items.find((i) => i.id === line.itemId);
+      const fromDesc = line.itemName?.replace(/^Sale of\s+/i, '').trim();
+      const label =
+        resolved?.name || fromDesc || line.itemName || line.itemId;
+      const category = getCategoryForItemType(
+        resolved?.type ?? ItemType.ARTWORK
+      );
+      const value = `${line.itemId}:${line.siteId || 'none'}`;
+      if (!pinnedByValue.has(value)) {
+        pinnedByValue.set(value, {
+          value,
+          label,
+          group: 'This sale',
+          category,
+        });
+      }
     }
-  }, [items, selectedSiteId, sites]);
+
+    const pinned = [...pinnedByValue.values()];
+    return [...pinned, ...base];
+  }, [items, selectedSiteId, sites, lines]);
 
   const handleItemSelect = (lineId: string, rawValue: string) => {
     const [itemId, specificSiteId] = rawValue.split(':');

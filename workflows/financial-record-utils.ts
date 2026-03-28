@@ -302,6 +302,69 @@ export async function removeFinancialRecordsCreatedByTask(taskId: string): Promi
   }
 }
 
+function coerceSaleFinrecDate(
+  sale: Sale,
+  fallback: Date
+): Date {
+  const raw = sale.collectedAt || sale.doneAt || sale.saleDate || fallback;
+  const d = raw instanceof Date ? raw : new Date(raw as string);
+  return Number.isFinite(d.getTime()) ? d : fallback;
+}
+
+/** Shared sale → finrec identity (name, station, period) for create + booth update paths */
+async function resolveSaleDerivedFinrecFields(
+  sale: Sale
+): Promise<{
+  dateToUse: Date;
+  salesChannel: Station;
+  station: Station;
+  displayName: string;
+  year: number;
+  month: number;
+  financialType: 'company' | 'personal';
+  description: string;
+}> {
+  const currentDate = new Date();
+  const dateToUse = coerceSaleFinrecDate(sale, currentDate);
+  const salesChannel =
+    sale.salesChannel ||
+    getSalesChannelFromSaleType(sale.type) ||
+    ('Direct-Sales' as Station);
+  const station = salesChannel;
+
+  let displayName = sale.counterpartyName;
+
+  if (!displayName) {
+    if (sale.type === SaleType.BOOTH) {
+      if (sale.siteId) {
+        try {
+          const { getSiteById } = await import('@/data-store/datastore');
+          const site = await getSiteById(sale.siteId);
+          displayName = site?.name || 'Booth Sale';
+        } catch (e) {
+          console.warn('Failed to fetch site for naming', e);
+          displayName = 'Booth Sale';
+        }
+      } else {
+        displayName = 'Booth Sale';
+      }
+    } else {
+      displayName = 'Walk-in Customer';
+    }
+  }
+
+  return {
+    dateToUse,
+    salesChannel,
+    station,
+    displayName,
+    year: dateToUse.getFullYear(),
+    month: dateToUse.getMonth() + 1,
+    financialType: getFinancialTypeForStation(station),
+    description: `Financial record from sale: ${displayName}`,
+  };
+}
+
 /**
  * Create a financial record from a sale (when sale has revenue)
  * This implements the emissary pattern: Sale DNA → FinancialRecord entity
@@ -322,47 +385,20 @@ export async function createFinancialRecordFromSale(sale: Sale): Promise<Financi
     console.log(`[createFinancialRecordFromSale] Creating new financial record (Effect Registry confirmed no existing record)`);
 
     const currentDate = new Date();
-    const dateToUse = sale.collectedAt || sale.doneAt || sale.saleDate || currentDate;
-    // Determine sales channel from Sale entity or derive from SaleType
-    const salesChannel = sale.salesChannel || getSalesChannelFromSaleType(sale.type) || ('Direct-Sales' as Station);
-    // Use salesChannel as station for sales-derived financial records
-    const station = salesChannel;
-
-    // Naming Logic: Use counterparty name or descriptive fallback based on type
-    let displayName = sale.counterpartyName;
-
-    if (!displayName) {
-      if (sale.type === SaleType.BOOTH) {
-        if (sale.siteId) {
-          try {
-            // Try to fetch site name for Booth-Sales without a specific counterparty (Event Name)
-            const { getSiteById } = await import('@/data-store/datastore');
-            const site = await getSiteById(sale.siteId);
-            displayName = site?.name || 'Booth Sale';
-          } catch (e) {
-            console.warn('Failed to fetch site for naming', e);
-            displayName = 'Booth Sale';
-          }
-        } else {
-          displayName = 'Booth Sale';
-        }
-      } else {
-        displayName = 'Walk-in Customer';
-      }
-    }
+    const derived = await resolveSaleDerivedFinrecFields(sale);
 
     const newFinrec: FinancialRecord = {
       id: `finrec-${sale.id}`,
-      name: `Sale: ${displayName}`,
-      description: `Financial record from sale: ${displayName}`,
-      year: dateToUse.getFullYear(),
-      month: dateToUse.getMonth() + 1,
-      station: station,
-      type: getFinancialTypeForStation(station),
+      name: `Sale: ${derived.displayName}`,
+      description: derived.description,
+      year: derived.year,
+      month: derived.month,
+      station: derived.station,
+      type: derived.financialType,
       siteId: sale.siteId,
       targetSiteId: undefined,
       sourceSaleId: sale.id, // AMBASSADOR field - points back to Sale
-      salesChannel: salesChannel, // Persist sales channel explicitly
+      salesChannel: derived.salesChannel, // Persist sales channel explicitly
       cost: 0, // Sales typically don't have costs
       revenue: sale.totals.totalRevenue,
       jungleCoins: 0, // J$ no longer awarded as sale rewards
@@ -526,15 +562,30 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
       // === UPDATE PATH ===
       console.log(`[createFinancialRecordFromBoothSale] Updating ${existingRecords.length} existing records for Booth Sale ${sale.id}`);
 
-      // 1. Update Gross Income Record
-      const incomeRecord = existingRecords.find(r => r.revenue > 0 && r.cost === 0);
+      const derived = await resolveSaleDerivedFinrecFields(sale);
+
+      // 1. Update Gross Income Record (prefer canonical id when multiple income-like rows exist)
+      const incomeRecord =
+        existingRecords.find(
+          (r) => r.id === `finrec-${sale.id}` && r.revenue > 0 && r.cost === 0
+        ) ?? existingRecords.find((r) => r.revenue > 0 && r.cost === 0);
       if (incomeRecord) {
         const updatedIncome = {
           ...incomeRecord,
+          name: `Sale: ${derived.displayName}`,
+          description: derived.description,
+          station: derived.station,
+          salesChannel: derived.salesChannel,
+          type: derived.financialType,
+          siteId: sale.siteId,
+          year: derived.year,
+          month: derived.month,
+          isCollected: !!sale.isCollected,
+          collectedAt: sale.collectedAt,
           revenue: sale.totals.totalRevenue,
           netCashflow: sale.totals.totalRevenue,
           isNotPaid: sale.isNotPaid || false,
-          isNotCharged: sale.status !== 'CHARGED',
+          isNotCharged: sale.isNotCharged || false,
           updatedAt: new Date()
         };
         await upsertFinancial(updatedIncome, { forceSave: true });

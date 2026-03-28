@@ -314,13 +314,28 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
 
   // COMPREHENSIVE UPDATE PROPAGATION - when sale properties change
   if (previousSale) {
-    // Check if relevant financial drivers changed (Revenue, Fee, Associate, etc)
+    const saleFinrecTimeKey = (v: unknown): string => {
+      if (v == null || v === '') return '';
+      const t = v instanceof Date ? v.getTime() : new Date(v as string).getTime();
+      return Number.isFinite(t) ? String(t) : '';
+    };
+
+    // Check if relevant financial drivers changed (Revenue, Fee, Associate, identity, period, etc)
     const hasFinancialDriversChanged =
       hasRevenueChanged(sale, previousSale) ||
       sale.boothFee !== previousSale.boothFee ||
       sale.associateId !== previousSale.associateId ||
       sale.partnerId !== previousSale.partnerId ||
-      sale.customerId !== previousSale.customerId;
+      sale.customerId !== previousSale.customerId ||
+      sale.name !== previousSale.name ||
+      sale.siteId !== previousSale.siteId ||
+      sale.salesChannel !== previousSale.salesChannel ||
+      saleFinrecTimeKey(sale.doneAt) !== saleFinrecTimeKey(previousSale.doneAt) ||
+      saleFinrecTimeKey(sale.saleDate) !== saleFinrecTimeKey(previousSale.saleDate) ||
+      saleFinrecTimeKey(sale.collectedAt) !== saleFinrecTimeKey(previousSale.collectedAt) ||
+      !!sale.isCollected !== !!previousSale.isCollected ||
+      !!sale.isNotPaid !== !!previousSale.isNotPaid ||
+      !!sale.isNotCharged !== !!previousSale.isNotCharged;
 
     // Propagate to Financial Records
     if (hasFinancialDriversChanged) {

@@ -1326,7 +1326,9 @@ export default function BoothSalesView({
                             return {
                                 id: il.lineId,
                                 itemId: il.itemId,
-                                itemName: item ? item.name : 'Unknown Item',
+                                itemName: item
+                                    ? item.name
+                                    : il.description?.trim() || 'Unknown Item',
                                 quantity: il.quantity,
                                 unitPrice: il.unitPrice || 0,
                                 total: (il.quantity || 0) * (il.unitPrice || 0),
