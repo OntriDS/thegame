@@ -86,6 +86,7 @@ export function InventoryDisplay({
   const [activeTab, setActiveTab] = useState<InventoryTab>(InventoryTab.DIGITAL);
   const [showItemModal, setShowItemModal] = useState(false);
   const [editingItem, setEditingItem] = useState<Item | undefined>(undefined);
+  const [targetSiteId, setTargetSiteId] = useState<string | undefined>(undefined);
   const [defaultItemType, setDefaultItemType] = useState<ItemType>(ItemType.STICKER);
 
   // Keyboard shortcuts for modal navigation (uses global scope, no need for custom scope)
@@ -381,8 +382,9 @@ export function InventoryDisplay({
     setShowItemModal(true);
   };
 
-  const handleEditItem = (item: Item) => {
+  const handleEditItem = (item: Item, siteId?: string) => {
     setEditingItem(item);
+    setTargetSiteId(siteId);
     setDefaultItemType(item.type);
     setShowItemModal(true);
   };
@@ -415,8 +417,9 @@ export function InventoryDisplay({
     setShowItemModal(true);
   };
 
-  const handleEditBundle = (bundle: Item) => {
+  const handleEditBundle = (bundle: Item, siteId?: string) => {
     setEditingItem(bundle);
+    setTargetSiteId(siteId);
     setDefaultItemType(bundle.type);
     setShowItemModal(true);
   };
@@ -1108,7 +1111,7 @@ export function InventoryDisplay({
                               size="sm"
                               variant="ghost"
                               className="h-6 w-6 p-0"
-                              onClick={() => handleEditItem(sticker)}
+                              onClick={() => handleEditItem(sticker, stickersViewBy === 'location' ? groupKey : undefined)}
                             >
                             </Button>
                           </div>
@@ -1338,7 +1341,7 @@ export function InventoryDisplay({
                           </div>
 
                           <div className="flex gap-1">
-                            <Button size="sm" variant="ghost" className="h-7 text-xs px-2" onClick={(e) => { e.stopPropagation(); handleEditBundle(bundle); }}>
+                            <Button size="sm" variant="ghost" className="h-7 text-xs px-2" onClick={(e) => { e.stopPropagation(); handleEditBundle(bundle, location); }}>
                               Edit
                             </Button>
                           </div>
@@ -1618,7 +1621,7 @@ export function InventoryDisplay({
                           <div className="text-sm font-bold">{artwork.stock?.reduce((s, stock) => s + stock.quantity, 0) || 0}</div>
                           <div className="text-sm">{formatCurrency(artwork.price)}</div>
                         </div>
-                        <Button size="sm" variant="ghost" className="w-full h-8 text-xs" onClick={(e) => { e.stopPropagation(); handleEditItem(artwork); }}>Edit</Button>
+                        <Button size="sm" variant="ghost" className="w-full h-8 text-xs" onClick={(e) => { e.stopPropagation(); handleEditItem(artwork, artworksViewBy === 'location' ? groupKey : undefined); }}>Edit</Button>
                       </div>
                     </div>
                   ))}
@@ -1693,7 +1696,7 @@ export function InventoryDisplay({
                       <div className="font-bold">{formatCurrency(item.price)}</div>
                       <div className="text-xs text-muted-foreground">price</div>
                     </div>
-                    <Button size="sm" variant="ghost" onClick={() => handleEditItem(item)}>Edit</Button>
+                    <Button size="sm" variant="ghost" onClick={() => handleEditItem(item, merchViewBy === 'location' ? groupKey : undefined)}>Edit</Button>
                   </div>
                 </div>
               ))}
@@ -1833,7 +1836,7 @@ export function InventoryDisplay({
                       <div className="font-bold">{formatCurrency(print.price)}</div>
                       <div className="text-xs text-muted-foreground">price</div>
                     </div>
-                    <Button size="sm" variant="ghost" onClick={() => handleEditItem(print)}>Edit</Button>
+                    <Button size="sm" variant="ghost" onClick={() => handleEditItem(print, printsViewBy === 'location' ? groupKey : undefined)}>Edit</Button>
                   </div>
                 </div>
               ))}
@@ -1847,25 +1850,78 @@ export function InventoryDisplay({
   const renderMaterialsTab = () => {
     const materialItems = getFilteredItems(ItemType.MATERIAL);
 
+    // Group materials by their location
+    // Since one material can be at multiple sites, we flatten the stock points
+    const groupedMaterials = materialItems.reduce((acc, item) => {
+      if (item.stock.length === 0) {
+        if (!acc['No Location']) acc['No Location'] = [];
+        acc['No Location'].push(item);
+      } else {
+        item.stock.forEach(sp => {
+          if (!acc[sp.siteId]) acc[sp.siteId] = [];
+          acc[sp.siteId].push(item);
+        });
+      }
+      return acc;
+    }, {} as Record<string, Item[]>);
+
+    // Sort items within each group
+    Object.keys(groupedMaterials).forEach(key => {
+      groupedMaterials[key] = sortItems(groupedMaterials[key]);
+    });
+
     return (
       <div className="space-y-4">
         {renderTabHeader(getTabDisplayName(ItemType.MATERIAL), ItemType.MATERIAL)}
 
-        <div className="grid gap-3 md:grid-cols-4 lg:grid-cols-6">
-          {materialItems.map(item => (
-            <div key={item.id} className="bg-card border rounded p-3 hover:bg-accent/50 cursor-pointer" onClick={() => handleEditItem(item)}>
-              <div className="text-center space-y-2">
-                <div className="w-12 h-12 mx-auto bg-gradient-to-br from-yellow-400 to-yellow-600 rounded flex items-center justify-center text-white text-xs">
-                  <Package2 className="w-6 h-6" />
+        <div className="space-y-6">
+          {Object.entries(groupedMaterials).map(([location, items]) => (
+            <div key={location} className="border rounded-lg">
+              <div className="bg-muted/50 px-3 py-2 border-b">
+                <h4 className="font-medium text-sm">
+                  <MapPin className="w-4 h-4 inline mr-1" />
+                  {location}
+                </h4>
+              </div>
+              <div className="p-3">
+                <div className="grid gap-3 md:grid-cols-4 lg:grid-cols-6">
+                  {items.map(item => (
+                    <div
+                      key={`${item.id}-${location}`}
+                      className="bg-card border rounded p-3 hover:bg-accent/50 cursor-pointer transition-colors"
+                      onClick={() => handleEditItem(item, location === 'No Location' ? undefined : location)}
+                    >
+                      <div className="text-center space-y-2">
+                        <div className="w-12 h-12 mx-auto bg-gradient-to-br from-yellow-400 to-yellow-600 rounded flex items-center justify-center text-white text-xs">
+                          <Package2 className="w-6 h-6" />
+                        </div>
+                        <div className="text-xs font-medium truncate" title={item.name}>{item.name}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {getAreaForStation(item.station) || 'N/A'} - {item.station}
+                        </div>
+                        <div className="text-xs text-muted-foreground">{item.year}</div>
+                        <div className="text-sm font-bold">
+                          {location === 'No Location'
+                            ? (item.stock?.reduce((s, stock) => s + stock.quantity, 0) || 0)
+                            : (item.stock?.find(s => s.siteId === location)?.quantity || 0)
+                          }
+                        </div>
+                        <div className="text-xs text-muted-foreground">{formatCurrency(item.unitCost)}</div>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-6 text-xs w-full mt-1"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditItem(item, location === 'No Location' ? undefined : location);
+                          }}
+                        >
+                          Edit
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <div className="text-xs font-medium truncate">{item.name}</div>
-                <div className="text-xs text-muted-foreground">
-                  {getAreaForStation(item.station) || 'N/A'} - {item.station}
-                </div>
-                <div className="text-xs text-muted-foreground">{item.year}</div>
-                <div className="text-sm font-bold">{item.stock?.reduce((s, stock) => s + stock.quantity, 0) || 0}</div>
-                <div className="text-xs text-muted-foreground">{formatCurrency(item.unitCost)}</div>
-                <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={(e) => { e.stopPropagation(); handleEditItem(item); }}>Edit</Button>
               </div>
             </div>
           ))}
@@ -2080,8 +2136,12 @@ export function InventoryDisplay({
         item={editingItem}
         defaultItemType={defaultItemType}
         open={showItemModal}
-        onOpenChange={setShowItemModal}
+        onOpenChange={(v) => {
+          setShowItemModal(v);
+          if (!v) setTargetSiteId(undefined);
+        }}
         onSave={handleSaveItem}
+        initialSiteId={targetSiteId}
       />
 
 

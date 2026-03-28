@@ -40,7 +40,7 @@
       "status": "In Progress",
       "description": "",
       "deliverables": [
-        "Network Sales in Sales Modal",
+        "Network Sales in Sales Modal, Booth Sales Footer Fixes, Sales Summaries bugs",
         "Basic Badges and Achievements systems improved",
         "Personas to Characters Rollback, so Personas is a feature of Characters",
         "Refactor the Authentication System with the IAM Service",
@@ -48,7 +48,7 @@
         "Analyst Agent performing Data Integrity tasks, ai-chat reading markdown files",
         "Tasks Indexes created, Agents upgraded, Database purged ghost tasks and agents cards",
         "Calendar submodal bugs fixes, Bloated Logs Indexes in Upstash",
-        "Logging workflows update and points decimals bugs",
+        "Logging workflows update and points decimals bugs, Full Logs and Entities Data Cleanup",
         "Links System cleanup and Url links to its entities"
       ]
     },

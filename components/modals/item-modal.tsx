@@ -39,6 +39,7 @@ interface ItemModalProps {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   onSave: (item: Item) => Promise<void>;
+  initialSiteId?: string;
 }
 
 const getDefaultRestockableForType = (itemType: ItemType): boolean => {
@@ -51,13 +52,13 @@ const getDefaultRestockableForType = (itemType: ItemType): boolean => {
   }
 };
 
-export default function ItemModal({ item, defaultItemType, open, onOpenChange, onSave }: ItemModalProps) {
+export default function ItemModal({ item, defaultItemType, open, onOpenChange, onSave, initialSiteId }: ItemModalProps) {
   const { getPreference, setPreference } = useUserPreferences();
 
   // Memoized to prevent dependency changes on every render
   const getLastUsedStation = useCallback((): Station => {
     const saved = getPreference('item-modal-last-station');
-    return (saved as Station) || ('Strategy' as Station);
+    return (saved as Station) || ('Inventory' as Station);
   }, [getPreference]);
 
   // Helper function to get the correct value format for SearchableSelect
@@ -87,7 +88,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
   const [size, setSize] = useState('');
   const [targetAmount, setTargetAmount] = useState('');
   const [quantitySold, setQuantitySold] = useState(0);
-  const [site, setSite] = useState<string>('Home');
+  const [site, setSite] = useState<string>('');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showMoreFields, setShowMoreFields] = useState(false);
   const [showLinksModal, setShowLinksModal] = useState(false);
@@ -190,7 +191,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
           setHeight(formData.height || '');
           setSize(formData.size || '');
           setTargetAmount(formData.targetAmount || '');
-          setSite(formData.site || 'Home');
+          setSite(formData.site || '');
           setOriginalFiles(formData.originalFiles || '');
           setAccessoryFiles(formData.accessoryFiles || '');
         } catch (error) {
@@ -519,11 +520,21 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
       setSubItemType(itemSubType);
       setItemTypeSubType(`${itemType}:${itemSubType}`);
 
-      const itemStation = item.station || 'Strategy';
+      const itemStation = item.station || '';
       setStation(itemStation);
       setCollection(item.collection || Collection.NO_COLLECTION);
       setStatus(item.status || ItemStatus.FOR_SALE);
-      setQuantity(item.stock?.reduce((s, stock) => s + stock.quantity, 0) || 0);
+      const itemSiteId = initialSiteId || item.stock?.[0]?.siteId || '';
+      setSite(itemSiteId);
+
+      // Populate quantity based on specific site if provided, otherwise show total
+      if (initialSiteId) {
+        const specificStock = item.stock?.find(s => s.siteId === initialSiteId);
+        setQuantity(specificStock?.quantity || 0);
+      } else {
+        setQuantity(item.stock?.reduce((s, stock) => s + stock.quantity, 0) || 0);
+      }
+
       setUnitCost(item.unitCost || 0);
       setPrice(item.price || 0);
       setRestockable(
@@ -538,8 +549,6 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
       setSize(item.size || '');
       setTargetAmount(item.targetAmount?.toString() || '');
       setQuantitySold(item.quantitySold || 0);
-      const itemSiteId = item.stock?.[0]?.siteId || 'Home';
-      setSite(itemSiteId);
 
       // Parse file attachments for display
       const formatFileReferences = (files?: FileReference[]): string => {
@@ -633,9 +642,17 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         setSubItemType(selectedItem.subItemType || '');
         setCollection(selectedItem.collection || Collection.NO_COLLECTION);
         setStatus(selectedItem.status || ItemStatus.FOR_SALE);
-        // Calculate total quantity from stock points
-        const totalQuantity = selectedItem.stock?.reduce((sum, stockPoint) => sum + stockPoint.quantity, 0) || 0;
-        setQuantity(totalQuantity);
+        // Calculate quantity: use site-specific if initialSiteId is set, otherwise total
+        if (initialSiteId) {
+          const specificStock = selectedItem.stock?.find(s => s.siteId === initialSiteId);
+          setQuantity(specificStock?.quantity || 0);
+          setSite(initialSiteId);
+        } else {
+          const totalQuantity = selectedItem.stock?.reduce((sum, stockPoint) => sum + stockPoint.quantity, 0) || 0;
+          setQuantity(totalQuantity);
+          setSite(selectedItem.stock?.[0]?.siteId || '');
+        }
+
         setUnitCost(selectedItem.unitCost || 0);
         setPrice(selectedItem.price || 0);
         setRestockable(
@@ -651,8 +668,6 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         setSize(selectedItem.size || '');
         setTargetAmount(selectedItem.targetAmount?.toString() || '');
         setQuantitySold(selectedItem.quantitySold || 0);
-        // Get first stock point site or default
-        setSite(selectedItem.stock?.[0]?.siteId || 'Home');
         setLocalSoldAt(selectedItem.soldAt ? new Date(selectedItem.soldAt) : undefined);
         setLocalCollectedAt(selectedItem.collectedAt ? new Date(selectedItem.collectedAt) : undefined);
         // Handle file references
