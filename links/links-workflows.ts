@@ -277,6 +277,14 @@ export async function processSaleEffects(sale: Sale): Promise<void> {
   if (sale.lines && sale.lines.length > 0) {
     for (const line of sale.lines) {
       if (line.kind === 'item' && line.itemId) {
+        const item = await getItemById(line.itemId);
+        if (!item) {
+          console.warn(
+            `[processSaleEffects] SALE_ITEM skipped — item not found: ${line.itemId} (sale ${sale.id}). ` +
+              `Repair data or recreate sold row; save will not fail.`
+          );
+          continue;
+        }
         const l = makeLink(
           LinkType.SALE_ITEM,
           { type: EntityType.SALE, id: sale.id },

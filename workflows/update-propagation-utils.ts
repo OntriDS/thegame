@@ -2,17 +2,15 @@
 // Comprehensive update propagation across ALL entity relationships
 
 import type { Task, Item, Sale, FinancialRecord, Character, Player } from '@/types/entities';
-import { EntityType, FOUNDER_CHARACTER_ID, ItemStatus, TaskStatus } from '@/types/enums';
+import { EntityType, FOUNDER_CHARACTER_ID, TaskStatus } from '@/types/enums';
 import { hasEffect, markEffect } from '@/data-store/effects-registry';
-import { EffectKeys, buildArchiveCollectionIndexKey, buildArchiveMonthsKey } from '@/data-store/keys';
+import { EffectKeys } from '@/data-store/keys';
 import { getFinancialsBySourceTaskId, getFinancialsBySourceSaleId, upsertFinancial } from '@/data-store/datastore';
 import { getItemsBySourceTaskId, getItemsBySourceRecordId, getItemById, upsertItem, removeItem } from '@/data-store/datastore';
 import { getTaskById, upsertTask } from '@/data-store/datastore';
 import { getPlayerById, upsertPlayer } from '@/data-store/datastore';
 import { getAllCharacters, upsertCharacter } from '@/data-store/datastore';
 import { resolveToPlayerIdMaybeCharacter } from './points-rewards-utils';
-import { formatDisplayDate } from '@/lib/utils/date-utils';
-
 // ============================================================================
 // TASK → FINANCIAL RECORD PROPAGATION
 // ============================================================================
@@ -547,8 +545,6 @@ export async function updateItemsFromSale(
 ): Promise<void> {
   try {
     console.log(`[updateItemsFromSale] Updating items for sale: ${sale.name}`);
-    const { appendEntityLog } = await import('./entities-logging');
-    const { LogEventType } = await import('@/types/enums');
 
     // Check if sale lines changed (skip if previousSale exists and lines are identical)
     if (previousSale) {
@@ -562,76 +558,37 @@ export async function updateItemsFromSale(
       }
     }
 
-    // Process each sale line
+    // Sold-item clones + archive/month indexes + extra SOLD logs: ensureSoldItemEntities (sale.workflow).
+    // Here we only sync numeric/price fields on the line's item when lines change vs previous sale.
     for (const line of sale.lines || []) {
       if (line.kind === 'item' && 'itemId' in line && line.itemId) {
-        // Each line gets its own update key
         const lineId = line.lineId || line.itemId;
-        const updateKey = EffectKeys.sideEffect('sale', sale.id, `updateItem:${lineId}:${sale.updatedAt?.getTime()}`);
+        const lineSig = `${line.itemId}:${line.quantity ?? 0}:${line.unitPrice ?? 0}`;
+        const updateKey = EffectKeys.sideEffect('sale', sale.id, `updateItem:${lineId}:${lineSig}`);
 
         if (await hasEffect(updateKey)) {
           console.log(`[updateItemsFromSale] ⏭️ Already updated for line: ${lineId}`);
           continue;
         }
 
-        // Get the item
         const item = await getItemById(line.itemId);
         if (!item) {
           console.warn(`[updateItemsFromSale] Item not found: ${line.itemId}`);
           continue;
         }
 
-        // Update quantity sold and set soldAt date if this is the first sale
         const updatedItem = {
           ...item,
           quantitySold: (item.quantitySold || 0) + (line.quantity || 0),
-          soldAt: item.soldAt || (sale.doneAt || sale.saleDate || new Date()), // Set soldAt on first sale
-          value: line.unitPrice * line.quantity, // Update actual sale value
-          price: line.unitPrice, // Update unit price
+          soldAt: item.soldAt || (sale.doneAt || sale.saleDate || new Date()),
+          value: line.unitPrice * line.quantity,
+          price: line.unitPrice,
           updatedAt: new Date()
         };
 
-        // Save updated item with skipWorkflowEffects: true to prevent generic "Sold" log
         await upsertItem(updatedItem, { skipWorkflowEffects: true });
         console.log(`[updateItemsFromSale] ✅ Updated item: ${line.itemId}`);
 
-        // Explicitly Log Detailed Sale Info to Item Log
-        await appendEntityLog(EntityType.ITEM, item.id, LogEventType.SOLD, {
-          name: item.name,
-          itemType: item.type,
-          subItemType: item.subItemType,
-          quantity: line.quantity
-        }, sale.saleDate || sale.doneAt || new Date());
-
-        // FIX: Use line.lineId for unique Sold Item ID (not sale.id.slice(-6))
-        // This prevents collisions when the same item appears on multiple lines at different prices
-        const soldItemEntity: Item = {
-          ...item,
-          id: `${item.id}-sold-${lineId}`, // Unique per sale line
-          name: item.name,
-          status: ItemStatus.SOLD,
-          isCollected: sale.isCollected || false,
-          stock: [{ siteId: sale.siteId || item.stock?.[0]?.siteId || 'Home', quantity: 0 }], // Sale site, qty 0 (historical)
-          quantitySold: line.quantity || 0, // Represents quantity in this specific sale
-          soldAt: sale.saleDate || new Date(),
-          price: line.unitPrice,
-          value: line.unitPrice * line.quantity,
-          sourceRecordId: sale.id, // Link back to sale
-          ownerCharacterId: sale.customerId || item.ownerCharacterId || null, // Customer from sale
-          updatedAt: new Date(),
-          description: `Sold in sale ${sale.counterpartyName || 'Sale'} (${formatDisplayDate(sale.saleDate || new Date())})`
-        };
-
-        // Save Sold Item entity so "Sold Items Tab" and Archive find it
-        await upsertItem(soldItemEntity, { skipWorkflowEffects: true });
-        console.log(`[updateItemsFromSale] ✅ Created Sold Item Entity: ${soldItemEntity.id}`);
-
-        const { calculateClosingDate, formatMonthKey } = await import('@/lib/utils/date-utils');
-        const { kvSAdd } = await import('@/data-store/kv');
-        const archiveMonth = calculateClosingDate(soldItemEntity.soldAt || new Date());
-        const monthKey = formatMonthKey(archiveMonth);
-        await kvSAdd(buildArchiveCollectionIndexKey('items', monthKey), soldItemEntity.id);
-        await kvSAdd(buildArchiveMonthsKey(), monthKey);
         await markEffect(updateKey);
       }
     }

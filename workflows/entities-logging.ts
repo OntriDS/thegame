@@ -78,7 +78,10 @@ async function readMonthlyList(entityType: EntityType, monthKey: string): Promis
   return raw.map(parseEntry).map(normalizeLogEntry);
 }
 
-/** Rebuild a monthly list (DEL + RPUSH). Used for rare edit/delete ops. */
+/**
+ * Rebuild a monthly list (DEL + LPUSH). Used for rare edit/delete ops.
+ * If `entries` is empty, the month key is removed — restore from KV backup if that was unintended.
+ */
 async function rebuildMonthlyList(entityType: EntityType, monthKey: string, entries: any[]): Promise<void> {
   const listKey = buildLogMonthKey(entityType, monthKey);
   await kvDel(listKey);

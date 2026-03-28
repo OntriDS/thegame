@@ -437,7 +437,6 @@ export async function processServiceLine(line: ServiceLine, sale: Sale): Promise
  * This is the single function that guarantees items appear in Sold Items tab + Archive.
  */
 export async function ensureSoldItemEntities(sale: Sale): Promise<void> {
-  try {
     const itemLines = (sale.lines || []).filter(
       (l): l is ItemSaleLine => l.kind === 'item' && 'itemId' in l && !!l.itemId
     );
@@ -522,6 +521,7 @@ export async function ensureSoldItemEntities(sale: Sale): Promise<void> {
         const archiveMonth = calculateClosingDate(soldItemEntity.soldAt || new Date());
         const monthKey = formatMonthKey(archiveMonth);
         await kvSAdd(buildMonthIndexKey(EntityType.ITEM, monthKey), soldItemEntity.id);
+        await kvSAdd(buildArchiveCollectionIndexKey('items', monthKey), soldItemEntity.id);
         await kvSAdd(buildArchiveMonthsKey(), monthKey);
 
         // Create SALE_ITEM link for the sold item entity
@@ -602,6 +602,7 @@ export async function ensureSoldItemEntities(sale: Sale): Promise<void> {
             const bundleArchiveMonth = calculateClosingDate(soldBundleItemEntity.soldAt as Date || new Date());
             const bundleMonthKey = formatMonthKey(bundleArchiveMonth);
             await kvSAdd(buildMonthIndexKey(EntityType.ITEM, bundleMonthKey), soldBundleItemEntity.id);
+            await kvSAdd(buildArchiveCollectionIndexKey('items', bundleMonthKey), soldBundleItemEntity.id);
             await kvSAdd(buildArchiveMonthsKey(), bundleMonthKey);
 
             // Create SALE_ITEM link for the sold bundle entity
@@ -627,7 +628,4 @@ export async function ensureSoldItemEntities(sale: Sale): Promise<void> {
       const { upsertSale } = await import('@/data-store/datastore');
       await upsertSale({ ...sale, lines: newLines }, { skipWorkflowEffects: true, skipLinkEffects: true });
     }
-  } catch (error) {
-    console.error(`[ensureSoldItemEntities] ❌ Error:`, error);
-  }
 }
