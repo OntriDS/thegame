@@ -1,7 +1,7 @@
 // workflows/entities-workflows/sale.workflow.ts
 // Sale-specific workflow with CHARGED, CANCELLED, COLLECTED events
 
-import { EntityType, LogEventType, FOUNDER_CHARACTER_ID, SaleStatus, SaleType } from '@/types/enums';
+import { EntityType, LogEventType, FOUNDER_CHARACTER_ID, SaleStatus, SaleType, ItemStatus } from '@/types/enums';
 import type { Item, Sale } from '@/types/entities';
 import { appendEntityLog, updateEntityLeanFields, removeLogEntriesAcrossMonths } from '../entities-logging';
 import { hasEffect, markEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
@@ -618,10 +618,10 @@ async function revertSaleInventory(saleId: string): Promise<void> {
         ...item,
         stock: updatedStock,
         quantitySold: newQuantitySold,
-        // If it was marked sold but now isn't, maybe clear soldAt?
-        // But soldAt tracks "first sale". We might want to keep it or clear it.
-        // Safer to clear if quantitySold goes back to 0.
+        // If it was marked sold but now isn't, clear soldAt
         soldAt: newQuantitySold === 0 ? undefined : item.soldAt,
+        // When reversing a clone item, it must go back to active inventory if fully unsold
+        status: newQuantitySold === 0 ? ItemStatus.FOR_SALE : item.status,
         updatedAt: new Date()
       };
 

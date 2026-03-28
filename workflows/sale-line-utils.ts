@@ -451,136 +451,148 @@ export async function ensureSoldItemEntities(sale: Sale): Promise<void> {
     console.log(`[ensureSoldItemEntities] Ensuring ${itemLines.length} item + ${bundleLines.length} bundle sold item entities for sale: ${sale.id}`);
 
     // Import utility functions once for both loops
-    const { calculateClosingDate, formatMonthKey } = await import('@/lib/utils/date-utils');
+    const { calculateClosingDate, formatMonthKey, formatDisplayDate } = await import('@/lib/utils/date-utils');
     const { kvSAdd } = await import('@/data-store/kv');
-    const { buildArchiveMonthsKey } = await import('@/data-store/keys');
+    const { buildArchiveMonthsKey, buildMonthIndexKey } = await import('@/data-store/keys');
+
+    let changedLines = false;
+    const newLines = [...(sale.lines || [])];
 
     // Process individual item lines
-    for (const line of itemLines) {
-      const lineId = line.lineId || line.itemId; // Fallback for legacy lines
-      const effectKey = EffectKeys.sideEffect('sale', sale.id, `soldItemEntity:${lineId}`);
+    for (let i = 0; i < newLines.length; i++) {
+      const line = newLines[i];
+      if (line.kind !== 'item' || !line.itemId) continue;
 
-      if (await hasEffect(effectKey)) {
-        console.log(`[ensureSoldItemEntities] ⏭️ Already exists for line: ${lineId}`);
-        continue;
-      }
-
-      // Get the source item to inherit properties
-      const item = await getItemById(line.itemId);
-      if (!item) {
-        console.warn(`[ensureSoldItemEntities] Item not found: ${line.itemId}, skipping`);
-        continue;
-      }
+      const lineId = line.lineId || line.itemId; 
+      const originalItemId = line.itemId;
 
       // Do not clone an item that is already a clone
-      if (item.id.includes('-sold-') || (item as any).isSoldItemEntity) {
-        console.warn(`[ensureSoldItemEntities] Blocked clone loop. Item ${item.id} is already a Sold Entity.`);
-        continue;
+      if (originalItemId.includes('-sold-')) continue;
+
+      const cloneId = `${originalItemId}-sold-${lineId}`;
+      const effectKey = EffectKeys.sideEffect('sale', sale.id, `soldItemEntity:${lineId}`);
+
+      if (!(await hasEffect(effectKey))) {
+        const item = await getItemById(originalItemId);
+        if (!item) {
+          console.warn(`[ensureSoldItemEntities] Item not found: ${originalItemId}, skipping`);
+          continue;
+        }
+
+        // Create the Sold Item entity
+        const soldItemEntity: Item = {
+          ...item,
+          id: cloneId, // Unique per sale line
+          name: item.name,
+          status: ItemStatus.SOLD,
+          isCollected: sale.isCollected || false,
+          stock: [{ siteId: sale.siteId || item.stock?.[0]?.siteId || 'Home', quantity: 0 }], // Sale site, qty 0 (historical)
+          quantitySold: line.quantity || 0,
+          soldAt: sale.saleDate || new Date(),
+          price: line.unitPrice,
+          value: (line.unitPrice || 0) * (line.quantity || 0),
+          sourceRecordId: sale.id, // Link back to sale
+          ownerCharacterId: sale.customerId || item.ownerCharacterId || null, // Customer from sale
+          updatedAt: new Date(),
+          description: `Sold in ${sale.counterpartyName || 'Sale'} (${formatDisplayDate(sale.saleDate || new Date())})`
+        };
+
+        // Persist the Sold Item entity (skip workflows to avoid duplicate logs)
+        await upsertItem(soldItemEntity, { skipWorkflowEffects: true });
+
+        // Register in Monthly Archive Index
+        const archiveMonth = calculateClosingDate(soldItemEntity.soldAt || new Date());
+        const monthKey = formatMonthKey(archiveMonth);
+        await kvSAdd(buildMonthIndexKey(EntityType.ITEM, monthKey), soldItemEntity.id);
+        await kvSAdd(buildArchiveMonthsKey(), monthKey);
+
+        // Create SALE_ITEM link for the sold item entity
+        const soldItemLink = makeLink(
+          LinkType.SALE_ITEM,
+          { type: EntityType.SALE, id: sale.id },
+          { type: EntityType.ITEM, id: soldItemEntity.id }
+        );
+        await createLink(soldItemLink);
+
+        await markEffect(effectKey);
+        console.log(`[ensureSoldItemEntities] ✅ Created: ${soldItemEntity.id} (${item.name} x${line.quantity} @ $${line.unitPrice}) → ${monthKey}`);
       }
 
-      // Create the Sold Item entity
-      const soldItemEntity: Item = {
-        ...item,
-        id: `${item.id}-sold-${lineId}`, // Unique per sale line
-        name: item.name,
-        status: ItemStatus.SOLD,
-        isCollected: sale.isCollected || false,
-        stock: [{ siteId: sale.siteId || item.stock?.[0]?.siteId || 'Home', quantity: 0 }], // Sale site, qty 0 (historical)
-        quantitySold: line.quantity || 0,
-        soldAt: sale.saleDate || new Date(),
-        price: line.unitPrice,
-        value: (line.unitPrice || 0) * (line.quantity || 0),
-        sourceRecordId: sale.id, // Link back to sale
-        ownerCharacterId: sale.customerId || item.ownerCharacterId || null, // Customer from sale
-        updatedAt: new Date(),
-        description: `Sold in ${sale.counterpartyName || 'Sale'} (${formatDisplayDate(sale.saleDate || new Date())})`
-      };
-
-      // Persist the Sold Item entity (skip workflows to avoid duplicate logs)
-      await upsertItem(soldItemEntity, { skipWorkflowEffects: true });
-
-      // Register in Monthly Archive Index
-      const archiveMonth = calculateClosingDate(soldItemEntity.soldAt || new Date());
-      const monthKey = formatMonthKey(archiveMonth);
-      await kvSAdd(buildMonthIndexKey(EntityType.ITEM, monthKey), soldItemEntity.id);
-      await kvSAdd(buildArchiveMonthsKey(), monthKey);
-
-      // Create SALE_ITEM link for the sold item entity
-      const soldItemLink = makeLink(
-        LinkType.SALE_ITEM,
-        { type: EntityType.SALE, id: sale.id },
-        { type: EntityType.ITEM, id: soldItemEntity.id }
-      );
-      await createLink(soldItemLink);
-
-      await markEffect(effectKey);
-      console.log(`[ensureSoldItemEntities] ✅ Created: ${soldItemEntity.id} (${item.name} x${line.quantity} @ $${line.unitPrice}) → ${monthKey}`);
+      // Update the line to point to the clone ID (unconditionally to allow migration of old sales)
+      newLines[i] = { ...line, itemId: cloneId };
+      changedLines = true;
     }
 
     // Process bundle lines - create Sold Item entities for bundles too
-    for (const line of bundleLines) {
-      const lineId = line.lineId || line.itemId; // Fallback for legacy lines
-      const effectKey = EffectKeys.sideEffect('sale', sale.id, `soldItemEntity:bundle:${lineId}`);
+    for (let i = 0; i < newLines.length; i++) {
+        const line = newLines[i];
+        if (line.kind !== 'bundle' || !line.itemId) continue;
 
-      if (await hasEffect(effectKey)) {
-        console.log(`[ensureSoldItemEntities] ⏭️ Already exists for bundle line: ${lineId}`);
-        continue;
-      }
+        const lineId = line.lineId || line.itemId;
+        const originalItemId = line.itemId;
+        
+        // Do not clone an item that is already a clone
+        if (originalItemId.includes('-sold-')) continue;
+        
+        const cloneId = `${originalItemId}-sold-bundle-${lineId}`;
+        const effectKey = EffectKeys.sideEffect('sale', sale.id, `soldItemEntity:bundle:${lineId}`);
 
-      // Get the source bundle item to inherit properties
-      if (!line.itemId) {
-        console.warn(`[ensureSoldItemEntities] Bundle line has no itemId, skipping`);
-        continue;
-      }
-      const bundleItem = await getItemById(line.itemId);
-      if (!bundleItem) {
-        console.warn(`[ensureSoldItemEntities] Bundle item not found: ${line.itemId}, skipping`);
-        continue;
-      }
+        if (!(await hasEffect(effectKey))) {
+            const bundleItem = await getItemById(originalItemId);
+            if (!bundleItem) {
+                console.warn(`[ensureSoldItemEntities] Bundle item not found: ${originalItemId}, skipping`);
+                continue;
+            }
 
-      // Do not clone an item that is already a clone
-      if (bundleItem.id.includes('-sold-') || (bundleItem as any).isSoldItemEntity) {
-        console.warn(`[ensureSoldItemEntities] Blocked bundle clone loop. Item ${bundleItem.id} is already a Sold Entity.`);
-        continue;
-      }
+            // Create Sold Item entity for the bundle
+            const soldBundleItemEntity: Item = {
+                ...bundleItem,
+                id: cloneId, // Unique per sale line
+                name: bundleItem.name,
+                status: ItemStatus.SOLD,
+                isCollected: sale.isCollected || false,
+                stock: [{ siteId: sale.siteId || bundleItem.stock?.[0]?.siteId || 'Home', quantity: 0 }], // Sale site, qty 0 (historical)
+                quantitySold: line.quantity || 0,
+                soldAt: sale.saleDate || new Date(),
+                price: line.unitPrice,
+                value: (line.unitPrice || 0) * (line.quantity || 0),
+                sourceRecordId: sale.id, // Link back to sale
+                ownerCharacterId: sale.customerId || bundleItem.ownerCharacterId || null, // Customer from sale
+                updatedAt: new Date(),
+                description: `Bundle Sold in ${sale.counterpartyName || 'Sale'} (${formatDisplayDate(sale.saleDate || new Date())}) - ${line.quantity} bundles`
+            };
 
-      // Create Sold Item entity for the bundle
-      const soldBundleItemEntity: Item = {
-        ...bundleItem,
-        id: `${bundleItem.id}-sold-bundle-${lineId}`, // Unique per sale line
-        name: bundleItem.name,
-        status: ItemStatus.SOLD,
-        isCollected: sale.isCollected || false,
-        stock: [{ siteId: sale.siteId || bundleItem.stock?.[0]?.siteId || 'Home', quantity: 0 }], // Sale site, qty 0 (historical)
-        quantitySold: line.quantity || 0,
-        soldAt: sale.saleDate || new Date(),
-        price: line.unitPrice,
-        value: (line.unitPrice || 0) * (line.quantity || 0),
-        sourceRecordId: sale.id, // Link back to sale
-        ownerCharacterId: sale.customerId || bundleItem.ownerCharacterId || null, // Customer from sale
-        updatedAt: new Date(),
-        description: `Bundle Sold in ${sale.counterpartyName || 'Sale'} (${formatDisplayDate(sale.saleDate || new Date())}) - ${line.quantity} bundles`
-      };
+            // Persist the Sold Bundle Item entity
+            await upsertItem(soldBundleItemEntity, { skipWorkflowEffects: true });
 
-      // Persist the Sold Bundle Item entity
-      await upsertItem(soldBundleItemEntity, { skipWorkflowEffects: true });
+            // Register in Monthly Archive Index
+            const bundleArchiveMonth = calculateClosingDate(soldBundleItemEntity.soldAt as Date || new Date());
+            const bundleMonthKey = formatMonthKey(bundleArchiveMonth);
+            await kvSAdd(buildMonthIndexKey(EntityType.ITEM, bundleMonthKey), soldBundleItemEntity.id);
+            await kvSAdd(buildArchiveMonthsKey(), bundleMonthKey);
 
-      // Register in Monthly Archive Index
-      const bundleArchiveMonth = calculateClosingDate(soldBundleItemEntity.soldAt as Date || new Date());
-      const bundleMonthKey = formatMonthKey(bundleArchiveMonth);
-      await kvSAdd(buildMonthIndexKey(EntityType.ITEM, bundleMonthKey), soldBundleItemEntity.id);
-      await kvSAdd(buildArchiveMonthsKey(), bundleMonthKey);
+            // Create SALE_ITEM link for the sold bundle entity
+            const soldBundleItemLink = makeLink(
+                LinkType.SALE_ITEM,
+                { type: EntityType.SALE, id: sale.id },
+                { type: EntityType.ITEM, id: soldBundleItemEntity.id }
+            );
+            await createLink(soldBundleItemLink);
 
-      // Create SALE_ITEM link for the sold bundle entity
-      const soldBundleItemLink = makeLink(
-        LinkType.SALE_ITEM,
-        { type: EntityType.SALE, id: sale.id },
-        { type: EntityType.ITEM, id: soldBundleItemEntity.id }
-      );
-      await createLink(soldBundleItemLink);
+            await markEffect(effectKey);
+            console.log(`[ensureSoldItemEntities] ✅ Created bundle: ${soldBundleItemEntity.id} (${bundleItem.name} x${line.quantity} bundles @ $${line.unitPrice}) → ${bundleMonthKey}`);
+        }
 
-      await markEffect(effectKey);
-      console.log(`[ensureSoldItemEntities] ✅ Created bundle: ${soldBundleItemEntity.id} (${bundleItem.name} x${line.quantity} bundles @ $${line.unitPrice}) → ${bundleMonthKey}`);
+        // Update the line to point to the clone ID (unconditionally)
+        newLines[i] = { ...line, itemId: cloneId };
+        changedLines = true;
+    }
+
+    // Persist the sale with updated line itemIds pointing exactly to the clones
+    if (changedLines) {
+      console.log(`[ensureSoldItemEntities] Updating sale ${sale.id} to explicitly point to sold item entities.`);
+      const { upsertSale } = await import('@/data-store/datastore');
+      await upsertSale({ ...sale, lines: newLines }, { skipWorkflowEffects: true, skipLinkEffects: true });
     }
   } catch (error) {
     console.error(`[ensureSoldItemEntities] ❌ Error:`, error);

@@ -1951,9 +1951,8 @@ export default function SalesModal({
           </div>
         )}
 
-        {type !== SaleType.BOOTH && (
-          <DialogFooter className="flex items-center justify-between flex-wrap gap-4 py-4 border-t px-6">
-            <div className="flex items-center gap-2 flex-wrap">
+        <DialogFooter className="flex items-center justify-between flex-nowrap overflow-x-auto gap-4 py-4 border-t px-6">
+            <div className="flex items-center gap-2 flex-nowrap shrink-0">
               {sale && (
                 <Button
                   variant="outline"
@@ -2054,7 +2053,7 @@ export default function SalesModal({
 
                   setStatus(newStatus);
                 }}>
-                  <SelectTrigger className="h-8 text-sm w-[160px]">
+                  <SelectTrigger className="h-8 text-sm w-auto min-w-[110px]">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -2071,10 +2070,13 @@ export default function SalesModal({
                 </Button>
               </div>
 
-              {/* Booth-Sales Lozenge - Footer Placement */}
+              {type === SaleType.BOOTH && (
+                <Badge variant="outline" className="h-6 bg-indigo-500/10 text-indigo-500 border-indigo-500/20 text-[10px] font-bold uppercase tracking-wider">
+                  Booth
+                </Badge>
+              )}
             </div>
           </DialogFooter>
-        )}
 
         {/* Delete Modal */}
         {showDeleteModal && (
