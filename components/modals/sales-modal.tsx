@@ -158,6 +158,8 @@ export default function SalesModal({
 
   // Guard for one-time initialization of new sales
   const didInitRef = useRef(false);
+  /** After archive modal confirms COLLECTED, allow Save while `sale` prop is still CHARGED until parent refetches */
+  const collectedArchiveAcknowledgedForSaleIdRef = useRef<string | null>(null);
 
   // Duplicate Prevention
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
@@ -299,6 +301,7 @@ export default function SalesModal({
 
       // Reset init guard when editing
       didInitRef.current = false;
+      collectedArchiveAcknowledgedForSaleIdRef.current = null;
       // Sync Vault with existing sale ID
       draftId.current = sale.id;
     } else {
@@ -310,6 +313,7 @@ export default function SalesModal({
       didInitRef.current = true;
       // Generate new ID for new sale session
       draftId.current = uuid();
+      collectedArchiveAcknowledgedForSaleIdRef.current = null;
       setLocalDoneAt(undefined);
       setLocalCollectedAt(undefined);
     }
@@ -381,6 +385,15 @@ export default function SalesModal({
 
     didInitRef.current = true;
   }, [sale, items]);
+
+  // If the single item line has an id but selection was cleared, restore from the line
+  useEffect(() => {
+    if (!sale) return;
+    if (whatKind !== 'product' || oneItemMultiple !== 'one') return;
+    const itemLine = lines.find((l): l is ItemSaleLine => l.kind === 'item');
+    if (!itemLine?.itemId || selectedItemId) return;
+    setSelectedItemId(itemLine.itemId);
+  }, [sale?.id, whatKind, oneItemMultiple, lines, selectedItemId]);
 
   // Load preferences after hydration to prevent SSR mismatches
   useEffect(() => {
@@ -505,9 +518,12 @@ export default function SalesModal({
       return;
     }
 
-    // Check if status is being changed to COLLECTED - show confirmation modal
     const isBecomingCollected = status === SaleStatus.COLLECTED && sale?.status !== SaleStatus.COLLECTED;
-    if (isBecomingCollected) {
+    if (
+      isBecomingCollected &&
+      sale?.id &&
+      collectedArchiveAcknowledgedForSaleIdRef.current !== sale.id
+    ) {
       setShowArchiveCollectionModal(true);
       return;
     }
@@ -948,7 +964,22 @@ export default function SalesModal({
   };
 
   const getItemOptions = () => {
-    return createItemOptions(items, true, false, sites);
+    const base = createItemOptions(items, true, false, sites);
+    if (whatKind !== 'product' || oneItemMultiple !== 'one' || !sale) {
+      return base;
+    }
+    const singleItemLine = lines.find((l): l is ItemSaleLine => l.kind === 'item');
+    if (!singleItemLine?.itemId) {
+      return base;
+    }
+    const pinnedId = singleItemLine.itemId;
+    if (base.some(o => o.value === pinnedId)) {
+      return base;
+    }
+    const fromItems = items.find(i => i.id === pinnedId);
+    const fromDesc = singleItemLine.description?.replace(/^Sale of\s+/i, '').trim();
+    const label = fromItems?.name || fromDesc || pinnedId;
+    return [{ value: pinnedId, label, group: 'This sale' }, ...base];
   };
 
   const getSelectedItem = () => {
@@ -2037,11 +2068,18 @@ export default function SalesModal({
                 <Select value={status} onValueChange={(value) => {
                   const newStatus = value as SaleStatus;
 
+                  if (newStatus !== SaleStatus.COLLECTED) {
+                    collectedArchiveAcknowledgedForSaleIdRef.current = null;
+                  }
+
                   // Show confirmation for COLLECTED status
                   if (newStatus === SaleStatus.COLLECTED && status !== SaleStatus.COLLECTED) {
                     setPendingStatusChange({
                       status: newStatus,
                       onConfirm: () => {
+                        if (sale?.id) {
+                          collectedArchiveAcknowledgedForSaleIdRef.current = sale.id;
+                        }
                         setStatus(newStatus);
                         setShowArchiveCollectionModal(false);
                         setPendingStatusChange(null);

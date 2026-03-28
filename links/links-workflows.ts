@@ -1,10 +1,11 @@
 // links/links-workflows.ts
 // Universal entry point for creating links from entities (property inspection)
 
-import { EntityType, LinkType, LogEventType, TaskStatus } from '@/types/enums';
+import { EntityType, LinkType, LogEventType, TaskStatus, SaleType } from '@/types/enums';
 import type { Task, Item, Sale, FinancialRecord, Character, Player, Site, Link } from '@/types/entities';
 import { createLink, removeLink, getLinksFor } from './link-registry';
 import { getItemsBySourceTaskId, getItemsBySourceRecordId, getItemById } from '@/data-store/repositories/item.repo';
+import { getFinancialById } from '@/data-store/repositories/financial.repo';
 import { getCharacterById, getBusinessById } from '@/data-store/repositories/character.repo';
 import { getTaskById } from '@/data-store/repositories/task.repo';
 import { v4 as uuid } from 'uuid';
@@ -201,6 +202,31 @@ export async function processSaleEffects(sale: Sale): Promise<void> {
       !allowedSaleItemIds.has(l.target.id)
     ) {
       await removeLink(l.id);
+    }
+  }
+
+  // Keep canonical SALE_FINREC targets only (main finrec + optional booth payout); remove legacy duplicates
+  const allowedSaleFinrecTargetIds = new Set<string>([`finrec-${sale.id}`]);
+  if (sale.type === SaleType.BOOTH) {
+    allowedSaleFinrecTargetIds.add(`finrec-payout-${sale.id}`);
+  }
+  const mainFinrecForSale = await getFinancialById(`finrec-${sale.id}`);
+  for (const l of existingLinks) {
+    if (l.linkType !== LinkType.SALE_FINREC || l.target.type !== EntityType.FINANCIAL) {
+      continue;
+    }
+    const targetId = l.target.id;
+    if (allowedSaleFinrecTargetIds.has(targetId)) {
+      continue;
+    }
+    const fin = await getFinancialById(targetId);
+    if (fin?.sourceSaleId !== sale.id) {
+      continue;
+    }
+    await removeLink(l.id);
+    if (mainFinrecForSale) {
+      const { removeFinancial } = await import('@/data-store/datastore');
+      await removeFinancial(targetId);
     }
   }
 
