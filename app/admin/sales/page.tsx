@@ -274,14 +274,6 @@ function SalesPageContent() {
             onChange={setSelectedMonthKey}
           />
 
-          <div className="flex items-center gap-2 border rounded-md px-3 py-1.5">
-            <Switch
-              checked={showCollected}
-              onCheckedChange={setShowCollected}
-            />
-            <span className="text-sm text-muted-foreground">Show Collected</span>
-          </div>
-
           <Button className="flex items-center gap-2" onClick={handleNewSale}>
             <Plus className="h-4 w-4" />
             New Sale
