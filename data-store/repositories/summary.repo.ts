@@ -75,7 +75,12 @@ export class SummaryRepository {
     if (inventoryJ$Delta !== 0) pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'inventoryJ$', inventoryJ$Delta);
 
     // Execute all commands atomically in a single network round-trip
-    await pipeline.exec();
+    const commands = (pipeline as any).length ?? (pipeline as any).commands?.length ?? 0;
+    if (commands > 0) {
+      await pipeline.exec();
+    } else {
+      console.warn(`[SummaryRepository] updateCounters: Skipping empty pipeline for ${monthYear}`);
+    }
   }
 
   /**
@@ -110,7 +115,12 @@ export class SummaryRepository {
     if (inventoryCost !== 0) pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'inventoryCost', inventoryCost);
     if (inventoryJ$ !== 0) pipeline.hincrbyfloat(this.ALL_TIME_KEY, 'inventoryJ$', inventoryJ$);
 
-    await pipeline.exec();
+    const commands = (pipeline as any).length ?? (pipeline as any).commands?.length ?? 0;
+    if (commands > 0) {
+      await pipeline.exec();
+    } else {
+      console.warn(`[SummaryRepository] updateAllTimeCounters: Skipping empty pipeline`);
+    }
   }
 
   /**

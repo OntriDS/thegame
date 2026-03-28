@@ -188,19 +188,42 @@ export class SummaryService {
   }
 
   /**
-   * REBUILDER: Retroactively populates the rolling counters for a specific month or all time.
+   * Complete rebuild of all monthly summaries and the all-time summary.
+   * Scans the Archive Vault for all items, tasks, and financials.
    */
   static async rebuildAllSummaries(): Promise<{ success: boolean; count: number }> {
     const { getAvailableArchiveMonths } = await import('@/data-store/datastore');
-    const months = await getAvailableArchiveMonths();
-
-    // 1. Reset All-Time summary (Total starting from scratch)
-    await SummaryRepository.resetSummary(); 
+    const { formatMonthKey } = await import('@/lib/utils/date-utils');
+    const { kvDel, kvSAdd } = await import('@/data-store/kv');
+    const { buildSummaryMonthsKey } = await import('@/data-store/keys');
     
+    // 1. Reset Global All-Time summary
+    await SummaryRepository.resetSummary();
+
+    // 2. Identify all months that have ever been touched (polluted index)
+    const rawMonths = await getAvailableArchiveMonths();
+    
+    // 3. Normalize and deduplicate (e.g., "12-2024" and "12-24" both become "12-24")
+    const uniqueMonths = Array.from(new Set(rawMonths.map(m => formatMonthKey(m))));
+    
+    console.log(`[SummaryService] Rebuilding ${uniqueMonths.length} unique months (from ${rawMonths.length} raw index entries)`);
+
+    // 4. Sanitize the months index set in Redis
+    await kvDel(buildSummaryMonthsKey());
+    // Small loop is safe here, usually < 24-48 months for a healthy system
+    for (const m of uniqueMonths) {
+      await kvSAdd(buildSummaryMonthsKey(), m);
+    }
+
+    // 5. Rebuild each month one by one (this will also increment the new All-Time summary)
     let totalUpdated = 0;
-    for (const mmyy of months) {
-      await this.rebuildSummaryForMonth(mmyy, true); // true = skip all-time adjustment since we reset main key
-      totalUpdated++;
+    for (const mmyy of uniqueMonths) {
+      try {
+        await this.rebuildSummaryForMonth(mmyy, true); // true = bulk mode (don't adjust All-Time, just let it increment)
+        totalUpdated++;
+      } catch (err) {
+        console.error(`[SummaryService] Failed to rebuild month ${mmyy}:`, err);
+      }
     }
 
     return { success: true, count: totalUpdated };
@@ -211,10 +234,15 @@ export class SummaryService {
    */
   static async rebuildSummaryForMonth(monthKey: string, isBulkRebuild: boolean = false): Promise<void> {
     const { getArchivedTasksByMonth, getArchivedFinancialRecordsByMonth, getArchivedSalesByMonth } = await import('@/data-store/datastore');
+    const { formatMonthKey } = await import('@/lib/utils/date-utils');
+
+    // Normalize monthKey (handles MM-YYYY -> MM-YY conversion)
+    const normalizedMonthKey = formatMonthKey(monthKey);
+    console.log(`[SummaryService] Rebuilding summary for: ${normalizedMonthKey} (Original: ${monthKey})`);
 
     // 1. If not bulk, we need to subtract current monthly values from All-Time first
     if (!isBulkRebuild) {
-      const currentMonth = await SummaryRepository.getSummary(monthKey);
+      const currentMonth = await SummaryRepository.getSummary(normalizedMonthKey);
       const subtractions: Partial<SummaryTotals> = {
         revenue: -currentMonth.revenue,
         costs: -currentMonth.costs,
@@ -228,18 +256,20 @@ export class SummaryService {
     }
 
     // 2. Clear this month's key
-    await SummaryRepository.resetSummary(monthKey);
+    await SummaryRepository.resetSummary(normalizedMonthKey);
 
     // 3. Scan Archive Vault for this month only
     const [tasks, financials, sales] = await Promise.all([
-      getArchivedTasksByMonth(monthKey),
-      getArchivedFinancialRecordsByMonth(monthKey),
-      getArchivedSalesByMonth(monthKey),
+      getArchivedTasksByMonth(normalizedMonthKey),
+      getArchivedFinancialRecordsByMonth(normalizedMonthKey),
+      getArchivedSalesByMonth(normalizedMonthKey),
     ]);
+
+    console.log(`[SummaryService] Archive stats for ${normalizedMonthKey}: Sales: ${sales.length}, Financials: ${financials.length}, Tasks: ${tasks.length}`);
 
     // 4. Calculate totals for this month
     const totals = {
-      monthYear: monthKey,
+      monthYear: normalizedMonthKey,
       revenueDelta: financials.reduce((sum, f) => sum + (f.revenue || 0), 0),
       costDelta: financials.reduce((sum, f) => sum + (f.cost || 0), 0),
       salesRevenueDelta: sales.reduce((sum, s) => sum + (s.totals.totalRevenue || 0), 0),
