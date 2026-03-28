@@ -476,6 +476,7 @@ export async function POST(req: NextRequest) {
         if (!data.success) {
           return NextResponse.json({ success: false, error: data.error }, { status: 400 });
         }
+        
         const entityTypeLabel =
           entityType === EntityType.SALE
             ? 'sale'
@@ -486,6 +487,17 @@ export async function POST(req: NextRequest) {
                 : entityType === EntityType.FINANCIAL
                   ? 'financial'
                   : String(entityType);
+
+        if (data.noop) {
+          return NextResponse.json({ 
+            success: true, 
+            data: { 
+              entityType: entityTypeLabel, 
+              message: `Idempotent Success: The ${entityTypeLabel} log is already in the correct state. No changes were needed.` 
+            } 
+          });
+        }
+        
         return NextResponse.json({ success: true, data: { ...data, entityType: entityTypeLabel } });
       }
       case 'thegame.logs.ensureCollected': {
@@ -504,6 +516,17 @@ export async function POST(req: NextRequest) {
           return NextResponse.json({ success: false, error: data.error }, { status: 400 });
         }
         const entityTypeLabel = entityType === EntityType.SALE ? 'sale' : 'task';
+        
+        if (data.noop) {
+          return NextResponse.json({ 
+            success: true, 
+            data: { 
+              entityType: entityTypeLabel, 
+              message: `Idempotent Success: The ${entityTypeLabel} collected log is already present and correct. No changes were needed.` 
+            } 
+          });
+        }
+        
         return NextResponse.json({ success: true, data: { ...data, entityType: entityTypeLabel } });
       }
       default:
