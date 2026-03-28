@@ -129,12 +129,17 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
     !!task.isCollected && (!previousTask || !previousTask.isCollected);
 
   if (statusBecameCollected || flagBecameCollected) {
-    let collectedAt = task.collectedAt;
-    if (!collectedAt) {
-      collectedAt = new Date();
-      // Ensure the collectedAt timestamp is saved if it was missing
-      await upsertTask({ ...task, isCollected: true, collectedAt, status: TaskStatus.COLLECTED }, { skipWorkflowEffects: true });
+    let collectedAtRaw = task.collectedAt;
+    if (collectedAtRaw) {
+      const collectedAtCandidate = collectedAtRaw instanceof Date ? collectedAtRaw : new Date(collectedAtRaw);
+      collectedAtRaw = Number.isFinite(collectedAtCandidate.getTime()) ? collectedAtCandidate : undefined;
     }
+    if (!collectedAtRaw) {
+      collectedAtRaw = new Date();
+      // Ensure the collectedAt timestamp is saved if it was missing
+      await upsertTask({ ...task, isCollected: true, collectedAt: collectedAtRaw, status: TaskStatus.COLLECTED }, { skipWorkflowEffects: true });
+    }
+    const collectedAt = collectedAtRaw;
 
     const pointsRewardedEffectKey = EffectKeys.sideEffect('task', task.id, 'pointsRewarded');
 

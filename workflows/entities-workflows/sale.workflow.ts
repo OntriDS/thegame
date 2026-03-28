@@ -269,7 +269,11 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
       defaultCollectedAt = calculateClosingDate(adjustedNow);
     }
 
-    const collectedAt = sale.collectedAt ?? defaultCollectedAt;
+    const collectedAtRaw = sale.collectedAt ?? defaultCollectedAt;
+    const collectedAtCandidate = collectedAtRaw instanceof Date ? collectedAtRaw : new Date(collectedAtRaw);
+    const collectedAt = Number.isFinite(collectedAtCandidate.getTime())
+      ? collectedAtCandidate
+      : defaultCollectedAt;
 
     const wasNeverCharged = previousSale?.status !== SaleStatus.CHARGED && sale.status !== SaleStatus.CHARGED;
     const hasItems = sale.lines?.some(l => l.kind === 'item' || l.kind === 'bundle');

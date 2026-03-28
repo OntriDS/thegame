@@ -967,7 +967,7 @@ export default function SalesModal({
   };
 
   const getItemOptions = () => {
-    const base = createItemOptions(items, true, false, sites);
+    const base = createItemOptions(getAvailableItems(), true, false, sites);
     if (whatKind !== 'product' || oneItemMultiple !== 'one' || !sale) {
       return base;
     }
