@@ -378,13 +378,13 @@ export interface FinancialRecord extends BaseEntity {
   isNotPaid?: boolean;              // Cost not paid yet - EXCLUDES from totals until paid
   isNotCharged?: boolean;           // Revenue not received yet - EXCLUDES from totals until received
 
-  // Character/Player rewards
+  /** @deprecated Points vest on source Task/Sale when collected — not on FinancialRecord */
   rewards?: {
     points?: {
-      hp?: number;          // Health Points
-      fp?: number;          // Family Points
-      rp?: number;          // Research Points
-      xp?: number;          // Experience Points
+      hp?: number;
+      fp?: number;
+      rp?: number;
+      xp?: number;
     };
   };
 
@@ -404,8 +404,8 @@ export interface FinancialRecord extends BaseEntity {
   netCashflow: number;              // revenue - cost
   jungleCoinsValue: number;         // jungleCoins * 10 (for display)
 
-  // Status field for Active/Archive lifecycle
-  status?: FinancialStatus;         // PENDING | DONE | COLLECTED
+  // PENDING = unpaid/unreceived; DONE = accounting row finalized (no COLLECTED on finrecs)
+  status?: FinancialStatus;
 
   /** Player↔finrec exchanges (source of truth — not duplicated on PLAYER_FINREC links) */
   exchangeType?: 'POINTS_TO_J$' | 'J$_TO_USD' | 'J$_TO_ZAPS';
@@ -413,10 +413,11 @@ export interface FinancialRecord extends BaseEntity {
   /** Counter-amount for exchange UIs (e.g. Zaps/sats when exchangeType is J$_TO_ZAPS) */
   exchangeCounterAmount?: number;
 
-  // Archive field
-  isCollected: boolean;             // Financial record collected (monthly close)
-  doneAt?: Date;                    // When record was marked as DONE
-  collectedAt?: Date;               // When record was collected
+  /** @deprecated Collection / points reward live on Task & Sale only */
+  isCollected?: boolean;
+  doneAt?: Date;
+  /** @deprecated Use source task/sale collectedAt for player rewards */
+  collectedAt?: Date;
 }
 
 /** Company financial summary for a month */

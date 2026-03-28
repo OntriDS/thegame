@@ -7,13 +7,40 @@ import {
   ClearCacheWorkflow,
   BackfillLogsWorkflow,
   ExportDataWorkflow,
-  ImportDataWorkflow
+  ImportDataWorkflow,
+  MigrateFinancialLogsWorkflow,
+  MigrateFinancialSuiteWorkflow
 } from '@/workflows/settings';
 
 // Force dynamic rendering since this route accesses request cookies for auth
 export const dynamic = 'force-dynamic';
 // Increased timeout for data-intensive operations like import/reset
 export const maxDuration = 300; // 5 minutes
+
+/** Dry-run preview for admin: same suite as POST `migrate-financial-suite` with dryRun true. */
+export async function GET(request: NextRequest) {
+  if (!(await requireAdminAuth(request))) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const { searchParams } = new URL(request.url);
+  if (searchParams.get('preview') !== 'migrate-financial-suite') {
+    return NextResponse.json(
+      { error: 'Use ?preview=migrate-financial-suite' },
+      { status: 400 }
+    );
+  }
+
+  const result = await MigrateFinancialSuiteWorkflow.execute({ dryRun: true });
+  return NextResponse.json(
+    {
+      success: result.success,
+      message: result.message,
+      data: result.data,
+    },
+    { status: result.success ? 200 : 500 }
+  );
+}
 
 export async function POST(request: NextRequest) {
   if (!(await requireAdminAuth(request))) {
@@ -76,6 +103,34 @@ export async function POST(request: NextRequest) {
           message: result.message,
           data: result.data
         }, { status: result.success ? 200 : 500 });
+      }
+
+      case 'migrate-financial-logs-created-to-done': {
+        const result = await MigrateFinancialLogsWorkflow.execute({
+          dryRun: parameters?.dryRun === true
+        });
+        return NextResponse.json(
+          {
+            success: result.success,
+            message: result.message,
+            data: result.data
+          },
+          { status: result.success ? 200 : 500 }
+        );
+      }
+
+      case 'migrate-financial-suite': {
+        const result = await MigrateFinancialSuiteWorkflow.execute({
+          dryRun: parameters?.dryRun === true,
+        });
+        return NextResponse.json(
+          {
+            success: result.success,
+            message: result.message,
+            data: result.data,
+          },
+          { status: result.success ? 200 : 500 }
+        );
       }
 
       default:

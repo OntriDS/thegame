@@ -16,11 +16,11 @@ export class SummaryService {
     let revenueDelta = 0;
     let costDelta = 0;
 
-    const isActive = (status?: string) => 
-      status === FinancialStatus.DONE || status === FinancialStatus.COLLECTED;
+    const isSummaryActive = (r: FinancialRecord) =>
+      !r.isNotPaid && !r.isNotCharged && r.status !== FinancialStatus.PENDING;
 
-    const wasActive = oldRecord ? isActive(oldRecord.status) : false;
-    const isNowActive = isActive(newRecord.status);
+    const wasActive = oldRecord ? isSummaryActive(oldRecord) : false;
+    const isNowActive = isSummaryActive(newRecord);
 
     if (!wasActive && isNowActive) {
       revenueDelta = newRecord.revenue || 0;
@@ -274,10 +274,8 @@ export class SummaryService {
       t.status === TaskStatus.COLLECTED ||
       t.isCollected
     );
-    const countableFinancials = financials.filter(f =>
-      f.status === FinancialStatus.DONE ||
-      f.status === FinancialStatus.COLLECTED ||
-      f.isCollected
+    const countableFinancials = financials.filter(
+      (f) => !f.isNotPaid && !f.isNotCharged && f.status !== FinancialStatus.PENDING
     );
 
     console.log(`[SummaryService] Live index stats for ${normalizedMonthKey}: Sales: ${countableSales.length}, Financials: ${countableFinancials.length}, Tasks: ${countableTasks.length}`);

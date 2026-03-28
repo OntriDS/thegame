@@ -904,3 +904,177 @@ export async function removeLogEntriesAcrossMonths(
   return totalRemoved;
 }
 
+// ============================================================================
+// One-off migration: FINANCIAL logs used CREATED; product model is DONE-first.
+// ============================================================================
+
+function normalizeFinLifecycleEvent(event: unknown): string {
+  return String(event ?? '')
+    .replace(/^LogEventType\./i, '')
+    .toUpperCase();
+}
+
+/**
+ * Rewrite legacy FINANCIAL lifecycle rows: CREATED → DONE, or drop CREATED when DONE/COLLECTED already exists.
+ * Safe to run multiple times. Newest-first list order: keeps one DONE per financial, drops older duplicate CREATEDs.
+ *
+ * Does not touch `doneAt` on FinancialRecord entities — only log rows. Run after backups in production.
+ */
+export async function migrateFinancialLogsCreatedToDone(options?: {
+  dryRun?: boolean;
+}): Promise<{
+  dryRun: boolean;
+  monthsScanned: number;
+  monthsModified: number;
+  createdRewrittenToDone: number;
+  createdRemovedAsDuplicate: number;
+}> {
+  const dryRun = options?.dryRun ?? false;
+  const months = await getEntityLogMonths(EntityType.FINANCIAL);
+  const hasDoneLike = new Set<string>();
+
+  for (const monthKey of months) {
+    const list = await readMonthlyList(EntityType.FINANCIAL, monthKey);
+    for (const entry of list) {
+      const ev = normalizeFinLifecycleEvent(entry?.event);
+      if ((ev === 'DONE' || ev === 'COLLECTED') && entry?.entityId) {
+        hasDoneLike.add(entry.entityId);
+      }
+    }
+  }
+
+  let createdRewrittenToDone = 0;
+  let createdRemovedAsDuplicate = 0;
+  let monthsModified = 0;
+
+  for (const monthKey of months) {
+    const list = await readMonthlyList(EntityType.FINANCIAL, monthKey);
+    const next: any[] = [];
+    let changed = false;
+
+    for (const entry of list) {
+      const ev = normalizeFinLifecycleEvent(entry?.event);
+      const entityId = entry?.entityId as string | undefined;
+
+      if (ev !== 'CREATED' || !entityId) {
+        next.push(entry);
+        continue;
+      }
+
+      if (hasDoneLike.has(entityId)) {
+        createdRemovedAsDuplicate += 1;
+        changed = true;
+        continue;
+      }
+
+      hasDoneLike.add(entityId);
+      if (!dryRun) {
+        next.push({
+          ...entry,
+          event: LogEventType.DONE
+        });
+      } else {
+        next.push(entry);
+      }
+      createdRewrittenToDone += 1;
+      changed = true;
+    }
+
+    if (!dryRun && changed) {
+      await rebuildMonthlyList(EntityType.FINANCIAL, monthKey, next);
+      monthsModified += 1;
+    } else if (dryRun && changed) {
+      monthsModified += 1;
+    }
+  }
+
+  return {
+    dryRun,
+    monthsScanned: months.length,
+    monthsModified,
+    createdRewrittenToDone,
+    createdRemovedAsDuplicate
+  };
+}
+
+/**
+ * Drop FINANCIAL log rows whose event is COLLECTED when a DONE already exists for that entity,
+ * or rewrite COLLECTED → DONE otherwise (finrecs no longer use a collected milestone).
+ */
+export async function migrateFinancialLogsCollectedToDone(options?: {
+  dryRun?: boolean;
+}): Promise<{
+  dryRun: boolean;
+  monthsScanned: number;
+  monthsModified: number;
+  collectedRemovedAsDuplicate: number;
+  collectedRewrittenToDone: number;
+}> {
+  const dryRun = options?.dryRun ?? false;
+  const months = await getEntityLogMonths(EntityType.FINANCIAL);
+  const hasDone = new Set<string>();
+
+  for (const monthKey of months) {
+    const list = await readMonthlyList(EntityType.FINANCIAL, monthKey);
+    for (const entry of list) {
+      const ev = normalizeFinLifecycleEvent(entry?.event);
+      if (ev === 'DONE' && entry?.entityId) {
+        hasDone.add(entry.entityId as string);
+      }
+    }
+  }
+
+  let collectedRemovedAsDuplicate = 0;
+  let collectedRewrittenToDone = 0;
+  let monthsModified = 0;
+
+  for (const monthKey of months) {
+    const list = await readMonthlyList(EntityType.FINANCIAL, monthKey);
+    const next: any[] = [];
+    let changed = false;
+
+    for (const entry of list) {
+      const ev = normalizeFinLifecycleEvent(entry?.event);
+      const entityId = entry?.entityId as string | undefined;
+
+      if (ev !== 'COLLECTED' || !entityId) {
+        next.push(entry);
+        continue;
+      }
+
+      if (hasDone.has(entityId)) {
+        collectedRemovedAsDuplicate += 1;
+        changed = true;
+        continue;
+      }
+
+      hasDone.add(entityId);
+      if (!dryRun) {
+        next.push({
+          ...entry,
+          event: LogEventType.DONE
+        });
+      } else {
+        next.push(entry);
+      }
+      collectedRewrittenToDone += 1;
+      changed = true;
+    }
+
+    if (!dryRun && changed) {
+      await rebuildMonthlyList(EntityType.FINANCIAL, monthKey, next);
+      monthsModified += 1;
+    } else if (dryRun && changed) {
+      monthsModified += 1;
+    }
+  }
+
+  return {
+    dryRun,
+    monthsScanned: months.length,
+    monthsModified,
+    collectedRemovedAsDuplicate,
+    collectedRewrittenToDone
+  };
+}
+

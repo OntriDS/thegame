@@ -144,9 +144,6 @@ export const SITE_CATEGORIES = {
   ]
 } as const;
 
-// Settlement enum removed - now using dynamic Settlement entities
-
-
 // ============================================================================
 // TASK ENUMS
 // ============================================================================
@@ -203,7 +200,7 @@ export enum TaskPriority {
 }
 
 // ============================================================================
-// FINANCIAL & POINTS ENUMS
+// FINANCIAL ENUMS
 // ============================================================================
 
 /** Status of Records (completed tasks) */
@@ -213,27 +210,25 @@ export enum FinancialStatus {
   COLLECTED = 'Collected', // When archived for reporting
 }
 
-/** Status of Dev Sprints/Phases */
-export enum DevSprintStatus {
-  NOT_STARTED = 'Not Started',
-  IN_PROGRESS = 'In Progress',
-  DONE = 'Done',
-}
-
-// New Points System Enums
-export enum PointType {
-  XP = 'XP',     // Experience Points
-  RP = 'RP',    // Research Points
-  FP = 'FP',    // Family Points 
-  HP = 'HP',    // Health Points
-}
-
 /** In-game currency system */
 export enum Currency {
   USD = 'USD',              // US Dollars - primary business currency for inventories, payments, etc.
   JUNGLE_COINS = 'J$',               // Jungle Coins - reward tokens that convert to USD (like Zelda gems)
   BTC = 'BTC',              // Bitcoin - cryptocurrency asset
   CRC = 'CRC',              // Costa Rica Colon - local currency
+}
+
+
+// ============================================================================
+//  POINTS ENUMS
+// ============================================================================
+
+/** Points System Enums */
+export enum PointType {
+  XP = 'XP',     // Experience Points
+  RP = 'RP',    // Research Points
+  FP = 'FP',    // Family Points 
+  HP = 'HP',    // Health Points
 }
 
 // ============================================================================
@@ -397,9 +392,6 @@ export enum EquipmentSubType {
   VEHICLE = "Vehicle",
 }
 
-
-
-
 // ============================================================================
 // SALES ENUMS
 // ============================================================================
@@ -412,7 +404,6 @@ export enum SaleType {
   ONLINE = 'ONLINE',
   NFT = 'NFT',
 }
-
 
 /** Sales transaction status */
 export enum SaleStatus {
@@ -783,6 +774,13 @@ export enum NotebookType {
   STRATEGY = 'strategy',
   IDEAS = 'ideas',
   GENERAL = 'general'
+}
+
+/** Status of Dev Sprints/Phases */
+export enum DevSprintStatus {
+  NOT_STARTED = 'Not Started',
+  IN_PROGRESS = 'In Progress',
+  DONE = 'Done',
 }
 
 // ============================================================================

@@ -2,14 +2,12 @@
 import {
     getTasksForMonth,
     getSalesForMonth,
-    getFinancialsForMonth,
     getItemsForMonth,
     upsertTask,
     upsertSale,
-    upsertFinancial,
     upsertItem
 } from '@/data-store/datastore';
-import { TaskStatus, SaleStatus, FinancialStatus, ItemStatus, EntityType, FOUNDER_CHARACTER_ID } from '@/types/enums';
+import { TaskStatus, SaleStatus, ItemStatus, EntityType, FOUNDER_CHARACTER_ID } from '@/types/enums';
 import { rewardPointsToPlayer } from './points-rewards-utils';
 import { calculateClosingDate, formatMonthKey } from '@/lib/utils/date-utils';
 import { kvSAdd } from '@/data-store/kv';
@@ -72,43 +70,6 @@ export const CollectionService = {
         }
 
         await this.updateArchiveIndex(EntityType.SALE, month, year);
-        return { collectedCount: count };
-    },
-
-    /**
-     * Collect all DONE financials for a given month
-     */
-    async collectFinancials(month: number, year: number) {
-        const financials = await getFinancialsForMonth(year, month);
-        const toCollect = financials.filter(f => f.status === FinancialStatus.DONE && !f.isCollected);
-
-        let count = 0;
-        for (const financial of toCollect) {
-            const updatedFinancial = {
-                ...financial,
-                status: FinancialStatus.COLLECTED,
-                isCollected: true,
-                collectedAt: calculateClosingDate(new Date(year, month - 1, 15)), // Mid-month fallback
-                updatedAt: new Date()
-            };
-
-            await upsertFinancial(updatedFinancial);
-
-            // Vest Points
-            if (financial.rewards?.points) {
-                const playerId = financial.playerCharacterId || FOUNDER_CHARACTER_ID;
-                await rewardPointsToPlayer(playerId, {
-                    xp: financial.rewards.points.xp || 0,
-                    rp: financial.rewards.points.rp || 0,
-                    fp: financial.rewards.points.fp || 0,
-                    hp: financial.rewards.points.hp || 0
-                }, financial.id, EntityType.FINANCIAL);
-            }
-
-            count++;
-        }
-
-        await this.updateArchiveIndex(EntityType.FINANCIAL, month, year);
         return { collectedCount: count };
     },
 

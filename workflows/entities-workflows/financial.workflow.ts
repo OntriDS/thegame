@@ -1,8 +1,8 @@
 // workflows/entities-workflows/financial.workflow.ts
-// Financial-specific workflow with CHARGED, COLLECTED events
+// Financial-specific workflow: PENDING vs DONE (paid+charged); no COLLECTED / finrec points
 import { isValid } from 'date-fns';
 
-import { EntityType, LogEventType, FinancialStatus, FOUNDER_CHARACTER_ID } from '@/types/enums';
+import { EntityType, LogEventType, FOUNDER_CHARACTER_ID } from '@/types/enums';
 import type { FinancialRecord } from '@/types/entities';
 import { appendEntityLog, updateEntityLeanFields, removeLogEntriesAcrossMonths } from '../entities-logging';
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
@@ -10,14 +10,12 @@ import { EffectKeys } from '@/data-store/keys';
 import { createLink, getLinksFor, removeLink } from '@/links/link-registry';
 import { getPlayerById, getFinancialById } from '@/data-store/datastore';
 import { createItemFromRecord, removeItemsCreatedByRecord } from '../item-creation-utils';
-import { awardPointsToPlayer, removePointsFromPlayer, resolveToPlayerIdMaybeCharacter, stagePointsForPlayer, rewardPointsToPlayer, withdrawStagedPointsFromPlayer, unrewardPointsForPlayer } from '../points-rewards-utils';
+import { removePointsFromPlayer } from '../points-rewards-utils';
 import {
   updateTasksFromFinancialRecord,
   updateItemsCreatedByRecord,
-  updatePlayerPointsFromSource,
   hasFinancialPropsChanged,
   hasOutputPropsChanged,
-  hasRewardsChanged
 } from '../update-propagation-utils';
 import { createCharacterFromFinancial } from '../character-creation-utils';
 import { upsertFinancial } from '@/data-store/datastore';
@@ -26,24 +24,25 @@ import { buildArchiveCollectionIndexKey, buildArchiveMonthsKey } from '@/data-st
 import { recalculateCharacterWallet } from '../financial-record-utils';
 import { entityHasLogEvent } from '@/lib/utils/entity-log-scan';
 
-const STATE_FIELDS = ['isNotPaid', 'isNotCharged', 'isCollected'];
+const STATE_FIELDS = ['isNotPaid', 'isNotCharged'];
 
 const getFinancialDate = (f: FinancialRecord) => new Date(f.year, f.month - 1, 1);
+
+/** Timestamp for DONE lifecycle log (sale/task emissaries usually create already-done rows). */
+function getFinancialDoneTimestamp(f: FinancialRecord): Date {
+  const raw = f.doneAt || f.createdAt;
+  if (raw) {
+    const d = raw instanceof Date ? raw : new Date(raw);
+    if (Number.isFinite(d.getTime())) return d;
+  }
+  return getFinancialDate(f);
+}
 
 export async function onFinancialUpsert(financial: FinancialRecord, previousFinancial?: FinancialRecord): Promise<void> {
   // New financial record creation
   if (!previousFinancial) {
     const effectKey = EffectKeys.created('financial', financial.id);
     if (await hasEffect(effectKey)) return;
-
-    await appendEntityLog(EntityType.FINANCIAL, financial.id, LogEventType.CREATED, {
-      name: financial.name,
-      type: financial.type,
-      station: financial.station,
-      cost: financial.cost,
-      revenue: financial.revenue
-    }, financial.createdAt || getFinancialDate(financial));
-    await markEffect(effectKey);
 
     // Character creation from emissary fields - when newCustomerName is provided
     // This MUST run first because it updates the financial record
@@ -75,33 +74,6 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
               await markEffect(itemEffectKey);
             }
           }
-        })()
-      );
-    }
-
-    // Points awarding - on record creation with rewards
-    // Use financial.playerCharacterId directly as playerId (unified ID)
-    if (financial.rewards?.points) {
-      sideEffects.push(
-        (async () => {
-          (async () => {
-            const stagingKey = EffectKeys.sideEffect('financial', financial.id, 'pointsStaged');
-            const legacyKey = EffectKeys.sideEffect('financial', financial.id, 'pointsAwarded');
-
-            if (!(await hasEffect(stagingKey)) && !(await hasEffect(legacyKey))) {
-              const playerId = financial.playerCharacterId || FOUNDER_CHARACTER_ID;
-              const points = financial.rewards?.points;
-              if (points) {
-                await stagePointsForPlayer(playerId, {
-                  xp: points.xp || 0,
-                  rp: points.rp || 0,
-                  fp: points.fp || 0,
-                  hp: points.hp || 0
-                }, financial.id, EntityType.FINANCIAL, getFinancialDate(financial));
-                await markEffect(stagingKey);
-              }
-            }
-          })()
         })()
       );
     }
@@ -159,43 +131,28 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
 
         await markEffect(archiveIndexEffectKey);
       }
-    }
 
-    // Vest points if created as COLLECTED
-    if (financial.isCollected) {
-      const collectedAt = financial.collectedAt ?? new Date();
-
-      // Ensure financial record has proper collection fields
-      const normalizedFinancial: FinancialRecord = {
-        ...financial,
-        isCollected: true,
-        collectedAt
-      };
-
-      if (!financial.collectedAt) {
-        await upsertFinancial(normalizedFinancial, { skipWorkflowEffects: true, skipLinkEffects: true });
-      }
-
-      const pointsRewardedEffectKey = EffectKeys.sideEffect('financial', financial.id, 'pointsRewarded');
-      if (!(await hasEffect(pointsRewardedEffectKey))) {
-        // Reward points if rewards exist AND they were staged (prevents double-counting legacy)
-        const stagingEffectKey = EffectKeys.sideEffect('financial', financial.id, 'pointsStaged');
-        const pointsRewardedEffectKey = EffectKeys.sideEffect('financial', financial.id, 'pointsRewarded');
-
-        if (normalizedFinancial.rewards?.points && await hasEffect(stagingEffectKey)) {
-          const playerId = normalizedFinancial.playerCharacterId || FOUNDER_CHARACTER_ID;
-          await rewardPointsToPlayer(playerId, {
-            xp: normalizedFinancial.rewards.points.xp || 0,
-            rp: normalizedFinancial.rewards.points.rp || 0,
-            fp: normalizedFinancial.rewards.points.fp || 0,
-            hp: normalizedFinancial.rewards.points.hp || 0
-          }, normalizedFinancial.id, EntityType.FINANCIAL, collectedAt);
-        }
-
-        await markEffect(pointsRewardedEffectKey); // Mark the rewarded effect, even if no points were rewarded (e.g., no rewards or not staged)
+      // First lifecycle log is DONE.
+      const doneLoggedKey = EffectKeys.sideEffect('financial', financial.id, 'doneLogged');
+      if (!(await hasEffect(doneLoggedKey))) {
+        await appendEntityLog(
+          EntityType.FINANCIAL,
+          financial.id,
+          LogEventType.DONE,
+          {
+            name: financial.name,
+            type: financial.type,
+            station: financial.station,
+            cost: financial.cost,
+            revenue: financial.revenue
+          },
+          getFinancialDoneTimestamp(financial)
+        );
+        await markEffect(doneLoggedKey);
       }
     }
 
+    await markEffect(effectKey);
     return;
   }
 
@@ -205,13 +162,17 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
 
   if (wasPending && !nowPending) {
     // Transitioned from PENDING to DONE (both paid and charged)
-    await appendEntityLog(EntityType.FINANCIAL, financial.id, LogEventType.DONE, {
-      name: financial.name,
-      type: financial.type,
-      station: financial.station,
-      cost: financial.cost,
-      revenue: financial.revenue
-    }, getFinancialDate(financial));
+    const doneLoggedKey = EffectKeys.sideEffect('financial', financial.id, 'doneLogged');
+    if (!(await hasEffect(doneLoggedKey))) {
+      await appendEntityLog(EntityType.FINANCIAL, financial.id, LogEventType.DONE, {
+        name: financial.name,
+        type: financial.type,
+        station: financial.station,
+        cost: financial.cost,
+        revenue: financial.revenue
+      }, getFinancialDoneTimestamp(financial));
+      await markEffect(doneLoggedKey);
+    }
 
     // NEW: Archive Index Tracking
     let snapshotMonthDate: Date;
@@ -253,64 +214,6 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
     }, getFinancialDate(financial));
   }
 
-  // Collection detection - Dual detection: status OR flag change to COLLECTED
-  const statusBecameCollected =
-    financial.status === FinancialStatus.COLLECTED &&
-    (!previousFinancial || previousFinancial.status !== FinancialStatus.COLLECTED);
-  const flagBecameCollected =
-    !!financial.isCollected && (!previousFinancial || !previousFinancial.isCollected);
-
-  if (statusBecameCollected || flagBecameCollected) {
-    // User requirement: collectedAt is when points are actually claimed (often NOW)
-    let collectedAt = financial.collectedAt;
-    if (!collectedAt) {
-      collectedAt = new Date();
-      // Ensure financial record has proper collection fields saved
-      await upsertFinancial({
-        ...financial,
-        isCollected: true,
-        collectedAt
-      }, { skipWorkflowEffects: true, skipLinkEffects: true });
-    }
-
-    const pointsRewardedEffectKey = EffectKeys.sideEffect('financial', financial.id, 'pointsRewarded');
-
-    if (!(await hasEffect(pointsRewardedEffectKey))) {
-      await appendEntityLog(EntityType.FINANCIAL, financial.id, LogEventType.COLLECTED, {
-        name: financial.name,
-        type: financial.type,
-        station: financial.station,
-        cost: financial.cost,
-        revenue: financial.revenue
-      }, collectedAt);
-
-      // Reward points if rewards exist AND they were staged (prevents double-counting legacy)
-      const stagingEffectKey = EffectKeys.sideEffect('financial', financial.id, 'pointsStaged');
-      const pointsRewardedEffectKey = EffectKeys.sideEffect('financial', financial.id, 'pointsRewarded');
-
-      if (financial.rewards?.points && await hasEffect(stagingEffectKey)) {
-        const playerId = await resolveToPlayerIdMaybeCharacter(financial.playerCharacterId);
-        if (playerId) {
-          await rewardPointsToPlayer(playerId, {
-            xp: financial.rewards.points.xp || 0,
-            rp: financial.rewards.points.rp || 0,
-            fp: financial.rewards.points.fp || 0,
-            hp: financial.rewards.points.hp || 0
-          }, financial.id, EntityType.FINANCIAL, collectedAt);
-          await appendEntityLog(EntityType.FINANCIAL, financial.id, LogEventType.UPDATED, {
-            name: financial.name,
-            type: financial.type,
-            station: financial.station,
-            cost: financial.cost,
-            revenue: financial.revenue
-          });
-        }
-      }
-
-      await markEffect(pointsRewardedEffectKey);
-    }
-  }
-
   // COMPREHENSIVE UPDATE PROPAGATION - when financial record properties change
   if (previousFinancial) {
     // Propagate to Tasks
@@ -322,12 +225,6 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
     if (hasOutputPropsChanged(financial, previousFinancial)) {
       await updateItemsCreatedByRecord(financial, previousFinancial);
     }
-
-    // Propagate to Player (points delta)
-    if (hasRewardsChanged(financial, previousFinancial)) {
-      await updatePlayerPointsFromSource(EntityType.FINANCIAL, financial, previousFinancial);
-    }
-
 
     // Propagate J$ changes to Character Wallet Cache
     if (financial.jungleCoins !== previousFinancial.jungleCoins) {
@@ -371,8 +268,8 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
   // We sweep all available months to completely eradicate Snapshot-era ghost duplicates.
   // ---------------------------------------------------------------------------
   if (previousFinancial) {
-    const isNowArchived = financial.status === FinancialStatus.COLLECTED || financial.isCollected || (!financial.isNotPaid && !financial.isNotCharged);
-    const wasArchived = previousFinancial.status === FinancialStatus.COLLECTED || previousFinancial.isCollected || (!previousFinancial.isNotPaid && !previousFinancial.isNotCharged);
+    const isNowArchived = !financial.isNotPaid && !financial.isNotCharged;
+    const wasArchived = !previousFinancial.isNotPaid && !previousFinancial.isNotCharged;
 
     const getArchiveMonth = (f: FinancialRecord) => {
       let snapshotDate = new Date(); // fallback
@@ -406,14 +303,10 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
         await kvSAdd(buildArchiveMonthsKey(), newMonth);
 
         // ── Log Sync ──────────────────────────────────────────────────────────
-        // When an archived record is re-saved for data correction (no status change),
-        // no DONE/COLLECTED log events fire above. We must ensure the correct
-        // entry exists in the target month's log and carries updated fields.
         const { getEntityLogs } = await import('../entities-logging');
         const monthEntries = await getEntityLogs(EntityType.FINANCIAL, { month: newMonth });
-        const targetEvent = financial.isCollected ? 'collected' : 'done';
         const existingEntry = monthEntries.find(
-          (e: any) => e.entityId === financial.id && String(e.event ?? '').toLowerCase() === targetEvent
+          (e: any) => e.entityId === financial.id && String(e.event ?? '').toLowerCase() === 'done'
         );
 
         if (existingEntry) {
@@ -425,7 +318,6 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
             revenue: financial.revenue,
           });
         } else {
-          const logEvent = financial.isCollected ? LogEventType.COLLECTED : LogEventType.DONE;
           const logPayload = {
             name: financial.name,
             type: financial.type,
@@ -433,8 +325,13 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
             cost: financial.cost,
             revenue: financial.revenue
           };
-          const logDate = financial.isCollected ? (financial.collectedAt || new Date()) : getFinancialDate(financial);
-          await appendEntityLog(EntityType.FINANCIAL, financial.id, logEvent, logPayload, logDate);
+          await appendEntityLog(
+            EntityType.FINANCIAL,
+            financial.id,
+            LogEventType.DONE,
+            logPayload,
+            getFinancialDoneTimestamp(financial)
+          );
         }
       }
     }
@@ -473,7 +370,7 @@ export async function ensureFinancialDoneLog(financialId: string): Promise<{
       cost: financial.cost,
       revenue: financial.revenue,
     },
-    getFinancialDate(financial)
+    getFinancialDoneTimestamp(financial)
   );
   return { success: true };
 }

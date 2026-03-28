@@ -7,6 +7,8 @@ export { ClearCacheWorkflow } from './clear-cache-workflow';
 export { BackfillLogsWorkflow } from './backfill-logs-workflow';
 export { ExportDataWorkflow } from './export-data-workflow';
 export { ImportDataWorkflow } from './import-data-workflow';
+export { MigrateFinancialLogsWorkflow } from './migrate-financial-logs-workflow';
+export { MigrateFinancialSuiteWorkflow } from './migrate-financial-suite-workflow';
 
 // Common types
 export type { SettingsResult } from './reset-data-workflow';

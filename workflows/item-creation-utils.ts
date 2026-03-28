@@ -211,8 +211,8 @@ export async function createItemFromRecord(record: FinancialRecord): Promise<Ite
       quantitySold: 0,
       sourceRecordId: record.id, // Link item back to the record that created it
       ownerCharacterId: resolvedOwnerCharacterId,
-      isCollected: !!record.isCollected,
-      collectedAt: record.collectedAt,
+      isCollected: false,
+      collectedAt: undefined,
       year: record.year, // Use record's year
       createdAt: new Date(),
       updatedAt: new Date(),

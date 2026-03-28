@@ -21,7 +21,7 @@ import {
   buildArchiveCollectionIndexKey
 } from '@/data-store/keys';
 import { getLinksFor } from '@/links/link-registry';
-import { EntityType, SaleStatus, FinancialStatus } from '@/types/enums';
+import { EntityType, SaleStatus } from '@/types/enums';
 import type { Sale, FinancialRecord } from '@/types/entities';
 import { INTEGRITY_ISSUES_CAP, type IntegrityAuditResult, type IntegrityIssue } from './types';
 
@@ -216,16 +216,6 @@ export async function auditStatusConsistency(month: number, year: number): Promi
     if (!fin) {
       pushIssue(issues, total, 'FIN_INDEX_ORPHAN', `Financial id in month index but no record: ${id}`, EntityType.FINANCIAL, id);
       continue;
-    }
-    if (fin.status === FinancialStatus.COLLECTED && !fin.isCollected) {
-      pushIssue(
-        issues,
-        total,
-        'FIN_COLLECTED_FLAG',
-        `Financial ${id} status COLLECTED but isCollected is false`,
-        EntityType.FINANCIAL,
-        id
-      );
     }
   }
 

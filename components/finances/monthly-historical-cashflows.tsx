@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ClientAPI } from '@/lib/client-api';
 import { FinancialRecord } from '@/types/entities';
@@ -10,8 +9,7 @@ import { FinancialStatus } from '@/types/enums';
 import { aggregateRecordsByStation, calculateTotals } from '@/lib/utils/financial-utils';
 import { formatCurrency } from '@/lib/utils/financial-utils';
 import { getCurrentMonth, getMonthName, MONTHS } from '@/lib/constants/date-constants';
-import { TrendingUp, TrendingDown, Calendar, Archive, ShoppingCart, Loader2 } from 'lucide-react';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { TrendingUp, TrendingDown, Calendar } from 'lucide-react';
 
 interface MonthlyCashflowData {
   year: number;
@@ -40,9 +38,6 @@ export function MonthlyHistoricalCashflows({ className, year, month }: MonthlyHi
   const [selectedMonth, setSelectedMonth] = useState(month || getCurrentMonth());
   const [allFinancials, setAllFinancials] = useState<FinancialRecord[]>([]);
   const [loading, setLoading] = useState(false);
-  const [showCollectConfirm, setShowCollectConfirm] = useState(false);
-  const [isCollecting, setIsCollecting] = useState(false);
-
   // Sync state with props when they change
   useEffect(() => {
     if (year !== undefined) setSelectedYear(year);
@@ -156,16 +151,6 @@ export function MonthlyHistoricalCashflows({ className, year, month }: MonthlyHi
             Monthly Historical Cashflows
           </div>
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 gap-2 border-orange-500/50 text-orange-600 hover:text-orange-700 hover:bg-orange-50"
-              onClick={() => setShowCollectConfirm(true)}
-            >
-              <Archive className="w-3.5 h-3.5" />
-              Claim Points & Settle
-            </Button>
-
             <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(parseInt(value))}>
               <SelectTrigger className="w-24 h-8">
                 <SelectValue />
@@ -320,57 +305,6 @@ export function MonthlyHistoricalCashflows({ className, year, month }: MonthlyHi
         )}
       </CardContent>
 
-      <Dialog open={showCollectConfirm} onOpenChange={setShowCollectConfirm}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Claim Points & Settle Month</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to settle ALL Done financials for <strong>{getMonthName(selectedMonth)} {selectedYear}</strong>?
-              <br /><br />
-              This will vest points for all players involved and mark the records as Collected. The records were already snapshotted to the archive when they were marked Done.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCollectConfirm(false)} disabled={isCollecting}>
-              Cancel
-            </Button>
-            <Button
-              onClick={async () => {
-                setIsCollecting(true);
-                try {
-                  const res = await fetch('/api/financials/collect-all', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ month: selectedMonth, year: selectedYear })
-                  });
-
-                  const data = await res.json();
-
-                  if (res.ok) {
-                    setShowCollectConfirm(false);
-                    // Use a simple toast or alert - simpler for now as we don't have Toast context handy in this file context check
-                    // But we can fallback to window.alert or just refresh
-                    // alert(`Successfully settled ${data.collected} financial records!`);
-                    // Reload financials
-                    const financials = await ClientAPI.getFinancialRecords();
-                    setAllFinancials(financials);
-                  } else {
-                    alert(`Error: ${data.error || 'Failed to collect financials'}`);
-                  }
-                } catch (e: any) {
-                  alert('Failed to collect financials: ' + e.message);
-                } finally {
-                  setIsCollecting(false);
-                }
-              }}
-              disabled={isCollecting}
-            >
-              {isCollecting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Confirm Collection
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </Card>
   );
 }

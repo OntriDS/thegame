@@ -19,10 +19,8 @@ export async function POST(request: NextRequest) {
 
         const results: any = {};
 
-        // Execute all 4 collection processes sequentially
         results.tasks = await CollectionService.collectTasks(month, year);
         results.sales = await CollectionService.collectSales(month, year);
-        results.financials = await CollectionService.collectFinancials(month, year);
         results.inventory = await CollectionService.collectInventory(month, year);
 
         return NextResponse.json({

@@ -348,20 +348,6 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
                 onClick={async () => {
                   try {
                     const now = new Date();
-                    const res = await ClientAPI.collectFinancials(now.getMonth() + 1, now.getFullYear());
-                    alert(`Financials Collection Complete! Processed ${(res as any).collected || 0} records.`);
-                  } catch (error: any) { alert(error.message); }
-                }}
-              >
-                Financials Only
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-xs"
-                onClick={async () => {
-                  try {
-                    const now = new Date();
                     const res = await ClientAPI.collectInventory(now.getMonth() + 1, now.getFullYear());
                     alert(`Inventory Collection Complete! Processed ${(res as any).collected || 0} records.`);
                   } catch (error: any) { alert(error.message); }

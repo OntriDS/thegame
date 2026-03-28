@@ -20,15 +20,13 @@ export async function GET(request: NextRequest) {
         const isLastDayOfMonth = tomorrow.getDate() === 1;
 
 
-        // --- JOB: Automated Monthly Rewards Collection (All 4 Entities) ---
+        // --- JOB: Automated monthly collection (tasks, sales, inventory). Finrecs archive on DONE, not COLLECTED. ---
         if (isLastDayOfMonth) {
             const targetMonth = now.getMonth() + 1; // 1-12
             const targetYear = now.getFullYear();
 
-            // Run all 4 collection processes sequentially to fit Hobby plan limits
             results.tasks = await CollectionService.collectTasks(targetMonth, targetYear);
             results.sales = await CollectionService.collectSales(targetMonth, targetYear);
-            results.financials = await CollectionService.collectFinancials(targetMonth, targetYear);
             results.inventory = await CollectionService.collectInventory(targetMonth, targetYear);
         }
 

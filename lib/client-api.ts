@@ -1211,16 +1211,6 @@ export const ClientAPI = {
     return await res.json();
   },
 
-  collectFinancials: async (month: number, year: number): Promise<{ success: boolean; collected: number }> => {
-    const res = await fetch('/api/financials/collect-all', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ month, year })
-    });
-    if (!res.ok) throw new Error('Failed to collect financials');
-    return await res.json();
-  },
-
   collectInventory: async (month: number, year: number): Promise<{ success: boolean; collected: number }> => {
     const res = await fetch('/api/inventory/collect-all', {
       method: 'POST',

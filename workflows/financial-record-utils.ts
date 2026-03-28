@@ -157,11 +157,11 @@ export async function createFinancialRecordFromTask(task: Task): Promise<Financi
       isNotCharged: task.isNotCharged, // Copy payment status from Task
       outputItemId: task.isNewItem ? null : (task.outputItemId || null),
       isNewItem: task.isNewItem,
-      rewards: undefined, // ← FIXED: Don't copy rewards when created from task
+      rewards: undefined,
       netCashflow: (task.revenue || 0) - (task.cost || 0),
       jungleCoinsValue: 0, // J$ no longer awarded as task rewards
-      isCollected: !!task.isCollected,
-      collectedAt: task.collectedAt,
+      isCollected: false,
+      collectedAt: undefined,
       createdAt: currentDate,
       updatedAt: currentDate,
       links: []
@@ -239,7 +239,7 @@ export async function updateFinancialRecordFromTask(task: Task, previousTask: Ta
       isNotCharged: task.isNotCharged,
       outputItemId: task.isNewItem ? null : (task.outputItemId || null),
       isNewItem: task.isNewItem,
-      rewards: task.rewards,
+      rewards: undefined,
       netCashflow: (task.revenue || 0) - (task.cost || 0),
       updatedAt: new Date()
     };
@@ -404,11 +404,11 @@ export async function createFinancialRecordFromSale(sale: Sale): Promise<Financi
       jungleCoins: 0, // J$ no longer awarded as sale rewards
       isNotPaid: sale.isNotPaid || false,
       isNotCharged: sale.isNotCharged || false,
-      rewards: { points: { xp: 0, rp: 0, fp: 0, hp: 0 } }, // Points handled separately
+      rewards: undefined,
       netCashflow: sale.totals.totalRevenue,
       jungleCoinsValue: 0,
-      isCollected: !!sale.isCollected,
-      collectedAt: sale.collectedAt,
+      isCollected: false,
+      collectedAt: undefined,
       createdAt: currentDate,
       updatedAt: currentDate,
       links: []
@@ -580,8 +580,6 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
           siteId: sale.siteId,
           year: derived.year,
           month: derived.month,
-          isCollected: !!sale.isCollected,
-          collectedAt: sale.collectedAt,
           revenue: sale.totals.totalRevenue,
           netCashflow: sale.totals.totalRevenue,
           isNotPaid: sale.isNotPaid || false,
@@ -763,14 +761,7 @@ export async function createFinancialRecordFromPointsExchange(
       jungleCoins: j$Received, // J$ received from exchange
       isNotPaid: false,
       isNotCharged: false,
-      rewards: {
-        points: {
-          xp: -pointsExchanged.xp, // Negative points (spent)
-          rp: -pointsExchanged.rp,
-          fp: -pointsExchanged.fp,
-          hp: -pointsExchanged.hp
-        }
-      },
+      rewards: undefined,
       netCashflow: 0, // No cashflow, just currency exchange
       jungleCoinsValue: j$Received * 10, // J$ value in USD (1 J$ = $10)
       isCollected: false,

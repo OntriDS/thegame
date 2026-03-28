@@ -43,7 +43,6 @@ import { formatMonthYear } from '@/lib/utils/date-utils';
 import { ItemStatus } from '@/types/enums';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
 import { VALIDATION_CONSTANTS } from '@/lib/constants/financial-constants';
-import ArchiveCollectionConfirmationModal from './submodals/archive-collection-confirmation-submodal';
 import ConfirmationModal from './submodals/confirmation-submodal';
 import { MonthYearSelector } from '@/components/ui/month-year-selector';
 
@@ -128,8 +127,6 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
     customerCharacterId: null as string | null,
     isNewCustomer: true,
     newCustomerName: '',
-    points: { xp: 0, rp: 0, fp: 0, hp: 0 },
-    pointsStrings: { xp: '0', rp: '0', fp: '0', hp: '0' },
     outputItemType: '' as ItemType | '',
     outputQuantity: 1,
     outputQuantityString: '1',
@@ -161,18 +158,9 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
   const [playerCharacterId, setPlayerCharacterId] = useState<string | null>(null);
   const [showPlayerCharacterSelector, setShowPlayerCharacterSelector] = useState(false);
 
-  // Archive Collection Confirmation Modal state
-  const [showArchiveCollectionModal, setShowArchiveCollectionModal] = useState(false);
-  const [pendingStatusChange, setPendingStatusChange] = useState<{
-    status: FinancialStatus;
-    onConfirm: () => void;
-    onCancel: () => void;
-  } | null>(null);
-
   // Dates Submodal State
   const [showDatesModal, setShowDatesModal] = useState(false);
   const [localDoneAt, setLocalDoneAt] = useState<Date | undefined>(record?.doneAt ? new Date(record.doneAt) : undefined);
-  const [localCollectedAt, setLocalCollectedAt] = useState<Date | undefined>(record?.collectedAt ? new Date(record.collectedAt) : undefined);
 
   // Guard for one-time initialization of new records
   const didInitRef = useRef(false);
@@ -259,24 +247,15 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
         jungleCoinsString: (record.jungleCoins || 0).toString(),
         isNotPaid: record.isNotPaid || false,
         isNotCharged: record.isNotCharged || false,
-        status: record.status || FinancialStatus.DONE,  // Load existing status or default
+        status:
+          record.status === FinancialStatus.COLLECTED
+            ? FinancialStatus.DONE
+            : record.status || FinancialStatus.DONE,
         site: record.siteId || '',
         targetSite: record.targetSiteId || '',
         customerCharacterId: record.customerCharacterId || null,
         isNewCustomer: !record.customerCharacterId, // Toggle based on whether customer exists
         newCustomerName: '',
-        points: {
-          hp: record.rewards?.points?.hp || 0,
-          fp: record.rewards?.points?.fp || 0,
-          rp: record.rewards?.points?.rp || 0,
-          xp: record.rewards?.points?.xp || 0
-        },
-        pointsStrings: {
-          hp: (record.rewards?.points?.hp || 0).toString(),
-          fp: (record.rewards?.points?.fp || 0).toString(),
-          rp: (record.rewards?.points?.rp || 0).toString(),
-          xp: (record.rewards?.points?.xp || 0).toString()
-        },
         outputItemType: (record.outputItemType as ItemType) || '',
         outputQuantity: record.outputQuantity ?? 1,
         outputQuantityString: (record.outputQuantity ?? 1).toString(),
@@ -298,7 +277,6 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
       setPlayerCharacterId(record.playerCharacterId || FOUNDER_CHARACTER_ID);
       setSelectedItemId(record.outputItemId || '');
       setLocalDoneAt(record.doneAt ? new Date(record.doneAt) : undefined);
-      setLocalCollectedAt(record.collectedAt ? new Date(record.collectedAt) : undefined);
 
       // Initialize combined item type/subtype field
       if (record.outputItemType && record.outputItemSubType) {
@@ -339,8 +317,6 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
         customerCharacterId: null,
         isNewCustomer: true,
         newCustomerName: '',
-        points: { xp: 0, rp: 0, fp: 0, hp: 0 },
-        pointsStrings: { xp: '0', rp: '0', fp: '0', hp: '0' },
         outputItemType: '',
         outputQuantity: 1,
         outputQuantityString: '1',
@@ -362,7 +338,6 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
       setOutputItemTypeSubType('none:');
       setOutputItemStatus(ItemStatus.FOR_SALE);
       setLocalDoneAt(undefined);
-      setLocalCollectedAt(undefined);
     }
   }, [record, getLastUsedStation, open, year, month]);
 
@@ -384,8 +359,10 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
         ...prev,
         status: FinancialStatus.PENDING
       }));
-    } else if (formData.status === FinancialStatus.PENDING) {
-      // Only auto-set to DONE if currently PENDING and both flags are false
+    } else if (
+      formData.status === FinancialStatus.PENDING ||
+      formData.status === FinancialStatus.COLLECTED
+    ) {
       setFormData(prev => ({
         ...prev,
         status: FinancialStatus.DONE
@@ -404,9 +381,6 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
   const handleDatesUpdate = (newDates: { createdAt?: Date; doneAt?: Date; collectedAt?: Date }) => {
     if (newDates.doneAt !== undefined) {
       setLocalDoneAt(newDates.doneAt);
-    }
-    if (newDates.collectedAt !== undefined) {
-      setLocalCollectedAt(newDates.collectedAt);
     }
   };
 
@@ -548,19 +522,14 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
       jungleCoins: formData.jungleCoins,
       isNotPaid: formData.isNotPaid,
       isNotCharged: formData.isNotCharged,
-      status: formData.status,  // Include status field
-      isCollected: formData.status === FinancialStatus.COLLECTED || record?.isCollected || false,
+      status:
+        formData.status === FinancialStatus.COLLECTED
+          ? FinancialStatus.DONE
+          : formData.status,
+      isCollected: false,
       doneAt: localDoneAt,
-      collectedAt: localCollectedAt,
-      // Character points (only awarded if character has PLAYER role)
-      rewards: {
-        points: {
-          hp: formData.points.hp,
-          fp: formData.points.fp,
-          rp: formData.points.rp,
-          xp: formData.points.xp
-        }
-      },
+      collectedAt: undefined,
+      rewards: undefined,
       // Item output fields
       outputItemType: formData.outputItemType || undefined,
       outputQuantity: formData.outputQuantity || undefined,
@@ -820,61 +789,6 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
                     )}
                   </div>
 
-                  {/* Points Rewards - Above Item Creation */}
-                  <div className="space-y-2">
-                    <Label className="text-xs">Point Rewards</Label>
-                    <div className="grid grid-cols-4 gap-2">
-                      <div>
-                        <Label htmlFor="reward-xp" className="text-xs">XP</Label>
-                        <NumericInput
-                          id="reward-xp"
-                          value={formData.points.xp}
-                          onChange={(value) => setFormData({ ...formData, points: { ...formData.points, xp: value } })}
-                          allowDecimals={false}
-                          min={0}
-                          step={1}
-                          className="h-8 text-sm"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="reward-rp" className="text-xs">RP</Label>
-                        <NumericInput
-                          id="reward-rp"
-                          value={formData.points.rp}
-                          onChange={(value) => setFormData({ ...formData, points: { ...formData.points, rp: value } })}
-                          allowDecimals={false}
-                          min={0}
-                          step={1}
-                          className="h-8 text-sm"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="reward-fp" className="text-xs">FP</Label>
-                        <NumericInput
-                          id="reward-fp"
-                          value={formData.points.fp}
-                          onChange={(value) => setFormData({ ...formData, points: { ...formData.points, fp: value } })}
-                          allowDecimals={false}
-                          min={0}
-                          step={1}
-                          className="h-8 text-sm"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="reward-hp" className="text-xs">HP</Label>
-                        <NumericInput
-                          id="reward-hp"
-                          value={formData.points.hp}
-                          onChange={(value) => setFormData({ ...formData, points: { ...formData.points, hp: value } })}
-                          allowDecimals={false}
-                          min={0}
-                          step={1}
-                          className="h-8 text-sm"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
                   <div className="space-y-2">
                     <Label htmlFor="output-item-type-subtype" className="text-xs">Item Type & SubType</Label>
                     <SearchableSelect
@@ -1064,28 +978,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
                 <Select
                   value={formData.status}
                   onValueChange={(value) => {
-                    const newStatus = value as FinancialStatus;
-
-                    // Show confirmation for COLLECTED status
-                    if (newStatus === FinancialStatus.COLLECTED && formData.status !== FinancialStatus.COLLECTED) {
-                      setPendingStatusChange({
-                        status: newStatus,
-                        onConfirm: () => {
-                          setFormData(prev => ({ ...prev, status: newStatus }));
-                          setShowArchiveCollectionModal(false);
-                          setPendingStatusChange(null);
-                        },
-                        onCancel: () => {
-                          // Keep original status
-                          setShowArchiveCollectionModal(false);
-                          setPendingStatusChange(null);
-                        }
-                      });
-                      setShowArchiveCollectionModal(true);
-                      return;
-                    }
-
-                    setFormData(prev => ({ ...prev, status: newStatus }));
+                    setFormData(prev => ({ ...prev, status: value as FinancialStatus }));
                   }}
                 >
                   <SelectTrigger className="h-8 w-28 text-xs">
@@ -1094,7 +987,6 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
                   <SelectContent>
                     <SelectItem value={FinancialStatus.PENDING}>PENDING</SelectItem>
                     <SelectItem value={FinancialStatus.DONE}>DONE</SelectItem>
-                    <SelectItem value={FinancialStatus.COLLECTED}>COLLECTED</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -1159,29 +1051,11 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
         entityId={record?.id ? `data:financial:${record.id}` : undefined}
         createdAt={record?.createdAt}
         doneAt={localDoneAt}
-        collectedAt={localCollectedAt}
+        collectedAt={undefined}
         currentStatus={formData.status}
         onDatesChange={handleDatesUpdate}
       />
 
-      {/* Archive Collection Confirmation Modal */}
-      {pendingStatusChange && (
-        <ArchiveCollectionConfirmationModal
-          open={showArchiveCollectionModal}
-          onOpenChange={setShowArchiveCollectionModal}
-          entityType="financial"
-          entityName={formData.name}
-          pointsValue={{
-            xp: Math.floor((formData.revenue || 0) / 100),
-            rp: Math.floor((formData.revenue || 0) / 200),
-            fp: Math.floor((formData.revenue || 0) / 150),
-            hp: Math.floor((formData.revenue || 0) / 300)
-          }}
-          totalRevenue={formData.revenue || 0}
-          onConfirm={pendingStatusChange.onConfirm}
-          onCancel={pendingStatusChange.onCancel}
-        />
-      )}
       <ConfirmationModal
         open={showDuplicateModal}
         onOpenChange={setShowDuplicateModal}

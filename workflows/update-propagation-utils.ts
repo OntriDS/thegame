@@ -63,8 +63,6 @@ export async function updateFinancialRecordsFromTask(
           station: task.station,
           year,
           month,
-          isCollected: !!task.isCollected,
-          collectedAt: task.collectedAt,
           updatedAt: new Date()
         };
 
@@ -383,8 +381,6 @@ export async function updateItemsCreatedByRecord(
           price: outputPropsChanged ? (record.outputItemPrice || item.price) : item.price,
           station: outputPropsChanged ? (record.station || item.station) : item.station,
           year: record.year, // inherit year
-          isCollected: !!record.isCollected,
-          collectedAt: record.collectedAt,
           updatedAt: new Date()
         };
 
@@ -519,8 +515,6 @@ export async function updateFinancialRecordsFromSale(
           isNotCharged: sale.status !== 'CHARGED',
           year,
           month,
-          isCollected: !!sale.isCollected,
-          collectedAt: sale.collectedAt,
           updatedAt: new Date()
         };
 
