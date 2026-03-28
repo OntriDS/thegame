@@ -852,6 +852,64 @@ export async function getSalesForMonth(year: number, month: number): Promise<Sal
   return reviveDates(sales);
 }
 
+/**
+ * Fetch sales strictly from the month index (no archive union).
+ * Intended for summary rebuilds that mirror the live month index.
+ */
+export async function getSalesFromMonthIndex(mmyy: string): Promise<Sale[]> {
+  const activeIndexKey = buildMonthIndexKey(EntityType.SALE, mmyy);
+  const ids = await kvSMembers(activeIndexKey);
+
+  if (!ids || ids.length === 0) return [];
+
+  const recordKeys = ids.map(id => buildDataKey(EntityType.SALE, id));
+  const chunks = chunkArray(recordKeys, 500);
+  const sales: Sale[] = [];
+
+  for (const chunk of chunks) {
+    const chunkResults = await kvMGet<Sale>(chunk);
+    sales.push(...chunkResults.filter((s): s is Sale => s !== null));
+  }
+
+  return reviveDates(sales);
+}
+
+export async function getTasksFromMonthIndex(mmyy: string): Promise<Task[]> {
+  const activeIndexKey = buildMonthIndexKey(EntityType.TASK, mmyy);
+  const ids = await kvSMembers(activeIndexKey);
+
+  if (!ids || ids.length === 0) return [];
+
+  const recordKeys = ids.map(id => buildDataKey(EntityType.TASK, id));
+  const chunks = chunkArray(recordKeys, 500);
+  const tasks: Task[] = [];
+
+  for (const chunk of chunks) {
+    const chunkResults = await kvMGet<Task>(chunk);
+    tasks.push(...chunkResults.filter((t): t is Task => t !== null));
+  }
+
+  return reviveDates(tasks);
+}
+
+export async function getFinancialsFromMonthIndex(mmyy: string): Promise<FinancialRecord[]> {
+  const activeIndexKey = buildMonthIndexKey(EntityType.FINANCIAL, mmyy);
+  const ids = await kvSMembers(activeIndexKey);
+
+  if (!ids || ids.length === 0) return [];
+
+  const recordKeys = ids.map(id => buildDataKey(EntityType.FINANCIAL, id));
+  const chunks = chunkArray(recordKeys, 500);
+  const financials: FinancialRecord[] = [];
+
+  for (const chunk of chunks) {
+    const chunkResults = await kvMGet<FinancialRecord>(chunk);
+    financials.push(...chunkResults.filter((f): f is FinancialRecord => f !== null));
+  }
+
+  return reviveDates(financials);
+}
+
 export async function getSaleById(id: string): Promise<Sale | null> {
   return await repoGetSaleById(id);
 }

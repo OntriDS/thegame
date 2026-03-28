@@ -151,7 +151,6 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
     const effectKey = EffectKeys.created('sale', sale.id);
     if (await hasEffect(effectKey)) return;
 
-    await appendEntityLog(EntityType.SALE, sale.id, LogEventType.CREATED, getSaleLogDetails(sale), sale.saleDate || sale.createdAt);
     await markEffect(effectKey);
 
     // Character creation from emissary fields - when newCustomerName is provided

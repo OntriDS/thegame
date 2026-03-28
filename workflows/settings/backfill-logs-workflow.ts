@@ -160,12 +160,14 @@ export class BackfillLogsWorkflow {
             
             // We use appendEntityLog so it automatically formats the lean schema 
             // and places it in the correct current month partition.
-            await appendEntityLog(
-              entityType as EntityType, 
-              entityId, 
-              'CREATED' as any, 
-              entity
-            );
+            if (entityType !== EntityType.SALE) {
+              await appendEntityLog(
+                entityType as EntityType, 
+                entityId, 
+                'CREATED' as any, 
+                entity
+              );
+            }
             loggedEntities++;
           }
         } catch (error) {

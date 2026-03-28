@@ -170,7 +170,7 @@ export class SummaryService {
    * Prefer this over summing Item.quantitySold on rebuild: bundles fan out to many item rows and
    * items may no longer be flipped to SOLD status, which inflates or duplicates rolling totals.
    */
-  private static sumPhysicalUnitsFromArchivedSales(sales: Sale[]): number {
+  private static sumPhysicalUnitsFromSales(sales: Sale[]): number {
     let total = 0;
     for (const sale of sales) {
       for (const line of sale.lines || []) {
@@ -189,10 +189,9 @@ export class SummaryService {
 
   /**
    * Complete rebuild of all monthly summaries and the all-time summary.
-   * Scans the Archive Vault for all items, tasks, and financials.
+   * Uses live month indexes (tasks, financials, sales). itemsSold is derived from sales lines.
    */
   static async rebuildAllSummaries(): Promise<{ success: boolean; count: number }> {
-    const { getAvailableArchiveMonths } = await import('@/data-store/datastore');
     const { formatMonthKey } = await import('@/lib/utils/date-utils');
     const { kvDel, kvSAdd } = await import('@/data-store/kv');
     const { buildSummaryMonthsKey } = await import('@/data-store/keys');
@@ -200,8 +199,8 @@ export class SummaryService {
     // 1. Reset Global All-Time summary
     await SummaryRepository.resetSummary();
 
-    // 2. Identify all months that have ever been touched (polluted index)
-    const rawMonths = await getAvailableArchiveMonths();
+    // 2. Identify all months that exist in live month indexes
+    const rawMonths = await this.getMonthKeysFromLiveIndexes();
     
     // 3. Normalize and deduplicate (e.g., "12-2024" and "12-24" both become "12-24")
     const uniqueMonths = Array.from(new Set(rawMonths.map(m => formatMonthKey(m))));
@@ -233,7 +232,7 @@ export class SummaryService {
    * Rebuilds a specific month and adapts the All-Time counters correctly.
    */
   static async rebuildSummaryForMonth(monthKey: string, isBulkRebuild: boolean = false): Promise<void> {
-    const { getArchivedTasksByMonth, getArchivedFinancialRecordsByMonth, getArchivedSalesByMonth } = await import('@/data-store/datastore');
+    const { getTasksFromMonthIndex, getFinancialsFromMonthIndex, getSalesFromMonthIndex } = await import('@/data-store/datastore');
     const { formatMonthKey } = await import('@/lib/utils/date-utils');
 
     // Normalize monthKey (handles MM-YYYY -> MM-YY conversion)
@@ -258,28 +257,65 @@ export class SummaryService {
     // 2. Clear this month's key
     await SummaryRepository.resetSummary(normalizedMonthKey);
 
-    // 3. Scan Archive Vault for this month only
+    // 3. Scan live month indexes
     const [tasks, financials, sales] = await Promise.all([
-      getArchivedTasksByMonth(normalizedMonthKey),
-      getArchivedFinancialRecordsByMonth(normalizedMonthKey),
-      getArchivedSalesByMonth(normalizedMonthKey),
+      getTasksFromMonthIndex(normalizedMonthKey),
+      getFinancialsFromMonthIndex(normalizedMonthKey),
+      getSalesFromMonthIndex(normalizedMonthKey),
     ]);
 
-    console.log(`[SummaryService] Archive stats for ${normalizedMonthKey}: Sales: ${sales.length}, Financials: ${financials.length}, Tasks: ${tasks.length}`);
+    const countableSales = sales.filter(s =>
+      s.status === SaleStatus.CHARGED ||
+      s.status === SaleStatus.COLLECTED ||
+      s.isCollected
+    );
+    const countableTasks = tasks.filter(t =>
+      t.status === TaskStatus.DONE ||
+      t.status === TaskStatus.COLLECTED ||
+      t.isCollected
+    );
+    const countableFinancials = financials.filter(f =>
+      f.status === FinancialStatus.DONE ||
+      f.status === FinancialStatus.COLLECTED ||
+      f.isCollected
+    );
+
+    console.log(`[SummaryService] Live index stats for ${normalizedMonthKey}: Sales: ${countableSales.length}, Financials: ${countableFinancials.length}, Tasks: ${countableTasks.length}`);
 
     // 4. Calculate totals for this month
     const totals = {
       monthYear: normalizedMonthKey,
-      revenueDelta: financials.reduce((sum, f) => sum + (f.revenue || 0), 0),
-      costDelta: financials.reduce((sum, f) => sum + (f.cost || 0), 0),
-      salesRevenueDelta: sales.reduce((sum, s) => sum + (s.totals.totalRevenue || 0), 0),
-      salesVolumeDelta: sales.length,
-      itemsSoldDelta: this.sumPhysicalUnitsFromArchivedSales(sales),
-      taskCountDelta: tasks.length,
-      jungleCoinsDelta: financials.reduce((sum, f) => sum + (f.jungleCoins || 0), 0),
+      revenueDelta: countableFinancials.reduce((sum, f) => sum + (f.revenue || 0), 0),
+      costDelta: countableFinancials.reduce((sum, f) => sum + (f.cost || 0), 0),
+      salesRevenueDelta: countableSales.reduce((sum, s) => sum + (s.totals.totalRevenue || 0), 0),
+      salesVolumeDelta: countableSales.length,
+      itemsSoldDelta: this.sumPhysicalUnitsFromSales(countableSales),
+      taskCountDelta: countableTasks.length,
+      jungleCoinsDelta: countableFinancials.reduce((sum, f) => sum + (f.jungleCoins || 0), 0),
     };
 
     // 5. Push to Redis (Updates Monthly Hash and INCREMENTS All-Time)
     await SummaryRepository.updateCounters(totals);
+  }
+
+  private static async getMonthKeysFromLiveIndexes(): Promise<string[]> {
+    const { kvScan } = await import('@/data-store/kv');
+    const prefixes = [
+      'thegame:index:sale:by-month:',
+      'thegame:index:task:by-month:',
+      'thegame:index:financial:by-month:',
+      'thegame:index:item:by-month:',
+    ];
+
+    const keys = (await Promise.all(prefixes.map(prefix => kvScan(prefix)))).flat();
+    const months = new Set<string>();
+
+    for (const key of keys) {
+      const parts = key.split(':');
+      const monthKey = parts[parts.length - 1];
+      if (monthKey) months.add(monthKey);
+    }
+
+    return [...months];
   }
 }
