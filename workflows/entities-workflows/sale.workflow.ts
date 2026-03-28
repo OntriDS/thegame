@@ -3,7 +3,12 @@
 
 import { EntityType, LogEventType, FOUNDER_CHARACTER_ID, SaleStatus, SaleType, ItemStatus } from '@/types/enums';
 import type { Item, Sale } from '@/types/entities';
-import { appendEntityLog, updateEntityLeanFields, removeLogEntriesAcrossMonths } from '../entities-logging';
+import {
+  appendEntityLog,
+  ensureItemSoldLogsFromSale,
+  updateEntityLeanFields,
+  removeLogEntriesAcrossMonths
+} from '../entities-logging';
 import { hasEffect, markEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
 import { EffectKeys } from '@/data-store/keys';
 import { getLinksFor, removeLink } from '@/links/link-registry';
@@ -440,6 +445,7 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
   const hasItemLines = sale.lines?.some(l => l.kind === 'item' || l.kind === 'bundle');
   if (isSaleCharged && hasItemLines) {
     await ensureSoldItemEntities(sale);
+    await ensureItemSoldLogsFromSale(sale);
   }
 
   if (previousSale) {

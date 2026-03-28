@@ -6,7 +6,8 @@
 
 import { kvLPush, kvLRange, kvSAdd, kvSMembers, kvDel, kvLSet } from '@/data-store/kv';
 import { buildLogMonthKey, buildLogMonthsIndexKey, buildLogKey } from '@/data-store/keys';
-import { EntityType, LogEventType } from '@/types/enums';
+import type { Sale } from '@/types/entities';
+import { EntityType, LogEventType, SaleStatus } from '@/types/enums';
 import { kv } from '@/data-store/kv';
 import { v4 as uuid } from 'uuid';
 
@@ -216,6 +217,53 @@ export async function getEntityLogs(
 
   const raw = await kvLRange(listKey, start, stop);
   return raw.map(parseEntry).map(normalizeLogEntry);
+}
+
+/**
+ * If the item lifecycle log month bucket lost SOLD rows (e.g. manual cleanup / empty rebuild),
+ * re-append one SOLD row per product line. For a charged sale, `line.itemId` is the **sold item**
+ * record (the row shown in Sold Items), not live inventory — we backfill logs for that entity id.
+ * Idempotent: skips entityIds that already have any SOLD entry in that month.
+ */
+export async function ensureItemSoldLogsFromSale(sale: Sale): Promise<void> {
+  if (sale.isNotPaid || sale.isNotCharged || sale.status === SaleStatus.CANCELLED) return;
+
+  const ts = sale.saleDate || sale.doneAt || new Date();
+  const monthKey = getMonthKeyFromTimestamp(ts);
+
+  const list = await readMonthlyList(EntityType.ITEM, monthKey);
+  const hasSoldFor = (itemId: string) =>
+    list.some(
+      e =>
+        e.entityId === itemId && String(e.event ?? '').toLowerCase() === 'sold'
+    );
+
+  const { getItemById } = await import('@/data-store/datastore');
+
+  for (const line of sale.lines || []) {
+    if (line.kind !== 'item' || !('itemId' in line) || !line.itemId) continue;
+
+    const itemId = line.itemId as string;
+    if (hasSoldFor(itemId)) continue;
+
+    const item = await getItemById(itemId);
+    if (!item) continue;
+
+    await appendEntityLog(
+      EntityType.ITEM,
+      item.id,
+      LogEventType.SOLD,
+      {
+        name: item.name,
+        itemType: item.type,
+        subItemType: item.subItemType,
+        quantity: (line as { quantity?: number }).quantity
+      },
+      ts
+    );
+
+    list.unshift({ entityId: item.id, event: LogEventType.SOLD });
+  }
 }
 
 // ============================================================================
