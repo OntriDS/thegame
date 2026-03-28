@@ -102,7 +102,11 @@ export async function POST(request: NextRequest) {
       ? await SessionManager.getSessionMessages(currentSessionId)
       : [];
 
-    const conversationMessages = rawHistory
+    // History pruning: Default to empty history (only send the current message) to save tokens.
+    // In the future, we can add a flag to include more context.
+    const historySlice = body.includeHistory ? rawHistory.slice(-10) : [];
+
+    const conversationMessages = historySlice
       .filter((m: { role: string }) => m.role === 'user' || m.role === 'assistant')
       .map((m: { role: string; content?: string }) => ({
         role: m.role,
