@@ -709,19 +709,6 @@ export async function getSaleLogEntryById(
   return getLogEntryById(EntityType.SALE, logEntryId);
 }
 
-const PATCHABLE_SALE_EVENTS = new Set([
-  'CHARGED',
-  'DONE', // wrong label in some stored rows; patch only updates lean/timestamp (event unchanged)
-  'COLLECTED',
-  'CREATED',
-  'PENDING',
-  'CANCELLED',
-  'UPDATED',
-]);
-const PATCHABLE_TASK_EVENTS = new Set(['DONE', 'COLLECTED', 'CREATED', 'PENDING', 'CANCELLED', 'UPDATED', 'MOVED']);
-const PATCHABLE_ITEM_EVENTS = new Set(['SOLD', 'CREATED', 'UPDATED', 'PENDING', 'CANCELLED', 'COLLECTED', 'MOVED']);
-const PATCHABLE_FINANCIAL_EVENTS = new Set(['DONE', 'COLLECTED', 'CREATED', 'PENDING', 'CANCELLED', 'UPDATED']);
-
 export type SaleLogLeanPatch = {
   name: string;
   type: string;
@@ -760,6 +747,7 @@ export async function patchLogEntryById(
   options: {
     logEntryId: string;
     entityId?: string;
+    newEvent?: string;
     timestampIso?: string;
     saleLean?: SaleLogLeanPatch;
     taskLean?: TaskLogLeanPatch;
@@ -784,9 +772,6 @@ export async function patchLogEntryById(
     if (!options.saleLean) {
       throw new Error('saleLean is required when entityType is sale');
     }
-    if (!PATCHABLE_SALE_EVENTS.has(ev)) {
-      throw new Error(`Refusing to patch unsupported sale log event: ${entry.event}`);
-    }
     const lean = options.saleLean;
     entry.name = lean.name;
     entry.type = lean.type;
@@ -798,9 +783,6 @@ export async function patchLogEntryById(
     if (!options.taskLean) {
       throw new Error('taskLean is required when entityType is task');
     }
-    if (!PATCHABLE_TASK_EVENTS.has(ev)) {
-      throw new Error(`Refusing to patch unsupported task log event: ${entry.event}`);
-    }
     const lean = options.taskLean;
     entry.name = lean.name;
     entry.taskType = lean.taskType;
@@ -808,9 +790,6 @@ export async function patchLogEntryById(
   } else if (entityType === EntityType.ITEM) {
     if (!options.itemLean) {
       throw new Error('itemLean is required when entityType is item');
-    }
-    if (!PATCHABLE_ITEM_EVENTS.has(ev)) {
-      throw new Error(`Refusing to patch unsupported item log event: ${entry.event}`);
     }
     const lean = options.itemLean;
     entry.name = lean.name;
@@ -820,9 +799,6 @@ export async function patchLogEntryById(
   } else if (entityType === EntityType.FINANCIAL) {
     if (!options.financialLean) {
       throw new Error('financialLean is required when entityType is financial');
-    }
-    if (!PATCHABLE_FINANCIAL_EVENTS.has(ev)) {
-      throw new Error(`Refusing to patch unsupported financial log event: ${entry.event}`);
     }
     const lean = options.financialLean;
     entry.name = lean.name;
@@ -834,6 +810,7 @@ export async function patchLogEntryById(
     throw new Error(`patchLogEntryById not supported for entityType: ${entityType}`);
   }
 
+  if (options.newEvent) entry.event = options.newEvent;
   if (options.timestampIso) entry.timestamp = options.timestampIso;
   entry.lastUpdated = new Date().toISOString();
 

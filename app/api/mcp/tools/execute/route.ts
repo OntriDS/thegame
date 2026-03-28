@@ -290,6 +290,7 @@ export async function POST(req: NextRequest) {
           return NextResponse.json({ success: false, error: 'logEntryId is required' }, { status: 400 });
         }
         const entityIdParam = parameters.entityId ? String(parameters.entityId).trim() : undefined;
+        const newEvent = parameters.newEvent ? String(parameters.newEvent).trim() : undefined;
 
         const { getLogEntryById, patchLogEntryById } = await import('@/workflows/entities-logging');
         const hit = await getLogEntryById(entityType, logEntryId);
@@ -317,12 +318,12 @@ export async function POST(req: NextRequest) {
               { status: 404 }
             );
           }
-          const ev = String(hit.entry.event ?? '').toUpperCase();
+          const targetEvent = String(newEvent || hit.entry.event || '').toUpperCase();
           let timestampIso: string | undefined;
-          if (ev === 'CHARGED' || ev === 'DONE') {
+          if (targetEvent === 'CHARGED' || targetEvent === 'DONE') {
             const d = sale.doneAt || (sale as { chargedAt?: Date }).chargedAt;
             timestampIso = d ? new Date(d).toISOString() : undefined;
-          } else if (ev === 'COLLECTED') {
+          } else if (targetEvent === 'COLLECTED') {
             const raw =
               sale.collectedAt ||
               calculateClosingDate(sale.saleDate ? new Date(sale.saleDate) : new Date());
@@ -331,12 +332,13 @@ export async function POST(req: NextRequest) {
           const patchResult = await patchLogEntryById(EntityType.SALE, {
             logEntryId,
             entityId: entityIdParam,
+            newEvent,
             saleLean: getSaleLogDetails(sale),
             timestampIso,
           });
           return NextResponse.json({
             success: true,
-            data: { ...patchResult, entityId: sale.id, event: hit.entry.event, entityType: 'sale' },
+            data: { ...patchResult, entityId: sale.id, event: newEvent || hit.entry.event, entityType: 'sale' },
           });
         }
 
@@ -349,23 +351,24 @@ export async function POST(req: NextRequest) {
               { status: 404 }
             );
           }
-          const ev = String(hit.entry.event ?? '').toUpperCase();
+          const targetEvent = String(newEvent || hit.entry.event || '').toUpperCase();
           let timestampIso: string | undefined;
-          if (ev === 'DONE' && task.doneAt) {
+          if (targetEvent === 'DONE' && task.doneAt) {
             timestampIso = new Date(task.doneAt).toISOString();
-          } else if (ev === 'COLLECTED') {
+          } else if (targetEvent === 'COLLECTED') {
             const raw = task.collectedAt || task.doneAt || new Date();
             timestampIso = new Date(raw).toISOString();
           }
           const patchResult = await patchLogEntryById(EntityType.TASK, {
             logEntryId,
             entityId: entityIdParam,
+            newEvent,
             taskLean: { name: task.name, taskType: task.type, station: task.station },
             timestampIso,
           });
           return NextResponse.json({
             success: true,
-            data: { ...patchResult, entityId: task.id, event: hit.entry.event, entityType: 'task' },
+            data: { ...patchResult, entityId: task.id, event: newEvent || hit.entry.event, entityType: 'task' },
           });
         }
 
@@ -378,18 +381,19 @@ export async function POST(req: NextRequest) {
               { status: 404 }
             );
           }
-          const ev = String(hit.entry.event ?? '').toUpperCase();
+          const targetEvent = String(newEvent || hit.entry.event || '').toUpperCase();
           let timestampIso: string | undefined;
-          if (ev === 'SOLD') {
+          if (targetEvent === 'SOLD') {
             const raw = item.soldAt || item.collectedAt || item.createdAt;
             timestampIso = raw ? new Date(raw).toISOString() : undefined;
-          } else if (ev === 'COLLECTED') {
+          } else if (targetEvent === 'COLLECTED') {
             const raw = item.collectedAt || item.soldAt || item.createdAt;
             timestampIso = raw ? new Date(raw).toISOString() : undefined;
           }
           const patchResult = await patchLogEntryById(EntityType.ITEM, {
             logEntryId,
             entityId: entityIdParam,
+            newEvent,
             itemLean: {
               name: item.name,
               itemType: item.type,
@@ -400,7 +404,7 @@ export async function POST(req: NextRequest) {
           });
           return NextResponse.json({
             success: true,
-            data: { ...patchResult, entityId: item.id, event: hit.entry.event, entityType: 'item' },
+            data: { ...patchResult, entityId: item.id, event: newEvent || hit.entry.event, entityType: 'item' },
           });
         }
 
@@ -414,23 +418,24 @@ export async function POST(req: NextRequest) {
             );
           }
           const refMonth = new Date(financial.year, financial.month - 1, 1);
-          const ev = String(hit.entry.event ?? '').toUpperCase();
+          const targetEvent = String(newEvent || hit.entry.event || '').toUpperCase();
           let timestampIso: string | undefined;
           if (
-            ev === 'DONE' ||
-            ev === 'PENDING' ||
-            ev === 'CREATED' ||
-            ev === 'UPDATED' ||
-            ev === 'CANCELLED'
+            targetEvent === 'DONE' ||
+            targetEvent === 'PENDING' ||
+            targetEvent === 'CREATED' ||
+            targetEvent === 'UPDATED' ||
+            targetEvent === 'CANCELLED'
           ) {
             timestampIso = refMonth.toISOString();
-          } else if (ev === 'COLLECTED') {
+          } else if (targetEvent === 'COLLECTED') {
             const raw = financial.collectedAt || refMonth;
             timestampIso = new Date(raw).toISOString();
           }
           const patchResult = await patchLogEntryById(EntityType.FINANCIAL, {
             logEntryId,
             entityId: entityIdParam,
+            newEvent,
             financialLean: {
               name: financial.name,
               type: financial.type,
@@ -445,7 +450,7 @@ export async function POST(req: NextRequest) {
             data: {
               ...patchResult,
               entityId: financial.id,
-              event: hit.entry.event,
+              event: newEvent || hit.entry.event,
               entityType: 'financial',
             },
           });

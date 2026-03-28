@@ -242,6 +242,7 @@ const TOOLS = [
         entityType: { type: 'string', description: 'sale | task | item | financial' },
         logEntryId: { type: 'string', description: 'UUID of the log entry row' },
         entityId: { type: 'string', description: 'Optional; must match entry.entityId if provided' },
+        newEvent: { type: 'string', description: 'Optional; rename the event (e.g. fix DONE to CHARGED for sales)' },
       },
       required: ['entityType', 'logEntryId'],
     },
