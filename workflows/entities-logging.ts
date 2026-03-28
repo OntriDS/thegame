@@ -36,6 +36,15 @@ function normalizeLogEntry(entry: any): any {
   return { ...entry, id: uuid() };
 }
 
+/** Sale CHARGED ↔ COLLECTED are distinct milestones; do not merge rapid flip-flop into one row. */
+function isSaleChargedCollectedProgression(entityType: EntityType, lastEntry: any, newEvent: LogEventType): boolean {
+  if (entityType !== EntityType.SALE || !lastEntry) return false;
+  const a = String(lastEntry.event ?? '').toUpperCase();
+  const b = String(newEvent).toUpperCase();
+  const saleMilestone = (x: string) => x === 'CHARGED' || x === 'COLLECTED';
+  return saleMilestone(a) && saleMilestone(b) && a !== b;
+}
+
 function sortMonthsDesc(months: string[]): string[] {
   return [...months].sort((a, b) => {
     const [amStr, ayStr] = a.split('-');
@@ -111,6 +120,9 @@ export async function appendEntityLog(
       entry.station = details.station || 'Unknown';
       entry.cost = details.cost ?? 0;
       entry.revenue = details.revenue ?? 0;
+      if (entityType === EntityType.SALE) {
+        entry.siteId = details.siteId ?? '';
+      }
       break;
 
     case EntityType.ITEM:
@@ -161,9 +173,10 @@ export async function appendEntityLog(
           return;
         }
 
-        // FILTER: Rapid Flip-Flop. If state changed, but it happened within 3 seconds of the last change,
+        // FILTER: Rapid Flip-Flop. If state changed, but it happened within ~1.5s of the last change,
         // it's likely a UI glitch/rapid clicking. We overwrite the last kept log with this final state.
-        if (timeDiffMs < 1500) {
+        // Never collapse SALE charged milestone ↔ COLLECTED into one row.
+        if (timeDiffMs < 1500 && !isSaleChargedCollectedProgression(entityType, lastEntry, event)) {
           // Re-use the previous log's ID to preserve the 'time burst' identity
           const flipFlopEntry = {
             ...entry,
@@ -670,6 +683,167 @@ export async function getEntityLogMonths(entityType: EntityType): Promise<string
   const monthsIndexKey = buildLogMonthsIndexKey(entityType);
   const months = await kvSMembers(monthsIndexKey);
   return sortMonthsDesc(months);
+}
+
+/**
+ * Locate a single log row by id (search current month first, then index months).
+ */
+export async function getLogEntryById(
+  entityType: EntityType,
+  logEntryId: string
+): Promise<{ entry: any; monthKey: string } | null> {
+  const months = await getEntityLogMonths(entityType);
+  const searchOrder = [getCurrentMonthKey(), ...months.filter(m => m !== getCurrentMonthKey())];
+  for (const monthKey of searchOrder) {
+    const list = await readMonthlyList(entityType, monthKey);
+    const entry = list.find(e => e.id === logEntryId);
+    if (entry) return { entry, monthKey };
+  }
+  return null;
+}
+
+/** @deprecated Prefer getLogEntryById(EntityType.SALE, id) */
+export async function getSaleLogEntryById(
+  logEntryId: string
+): Promise<{ entry: any; monthKey: string } | null> {
+  return getLogEntryById(EntityType.SALE, logEntryId);
+}
+
+const PATCHABLE_SALE_EVENTS = new Set([
+  'CHARGED',
+  'COLLECTED',
+  'CREATED',
+  'PENDING',
+  'CANCELLED',
+  'UPDATED',
+]);
+const PATCHABLE_TASK_EVENTS = new Set(['DONE', 'COLLECTED', 'CREATED', 'PENDING', 'CANCELLED', 'UPDATED', 'MOVED']);
+const PATCHABLE_ITEM_EVENTS = new Set(['SOLD', 'CREATED', 'UPDATED', 'PENDING', 'CANCELLED', 'COLLECTED', 'MOVED']);
+const PATCHABLE_FINANCIAL_EVENTS = new Set(['DONE', 'COLLECTED', 'CREATED', 'PENDING', 'CANCELLED', 'UPDATED']);
+
+export type SaleLogLeanPatch = {
+  name: string;
+  type: string;
+  station: string;
+  cost: number;
+  revenue: number;
+  siteId?: string;
+};
+
+export type TaskLogLeanPatch = {
+  name: string;
+  taskType: string;
+  station: string;
+};
+
+export type ItemLogLeanPatch = {
+  name: string;
+  itemType: string;
+  subItemType: string;
+  soldQuantity: number;
+};
+
+export type FinancialLogLeanPatch = {
+  name: string;
+  type: string;
+  station: string;
+  cost: number;
+  revenue: number;
+};
+
+/**
+ * Precision repair: update one log row by id (preserves id, entityId, event).
+ */
+export async function patchLogEntryById(
+  entityType: EntityType,
+  options: {
+    logEntryId: string;
+    entityId?: string;
+    timestampIso?: string;
+    saleLean?: SaleLogLeanPatch;
+    taskLean?: TaskLogLeanPatch;
+    itemLean?: ItemLogLeanPatch;
+    financialLean?: FinancialLogLeanPatch;
+  }
+): Promise<{ monthKey: string }> {
+  const hit = await getLogEntryById(entityType, options.logEntryId);
+  if (!hit) {
+    throw new Error(`Log entry not found: ${options.logEntryId}`);
+  }
+  const { entry } = hit;
+  if (options.entityId && entry.entityId !== options.entityId) {
+    throw new Error(
+      `logEntryId ${options.logEntryId} belongs to entity ${entry.entityId}, not ${options.entityId}`
+    );
+  }
+
+  const ev = String(entry.event ?? '').toUpperCase();
+
+  if (entityType === EntityType.SALE) {
+    if (!options.saleLean) {
+      throw new Error('saleLean is required when entityType is sale');
+    }
+    if (!PATCHABLE_SALE_EVENTS.has(ev)) {
+      throw new Error(`Refusing to patch unsupported sale log event: ${entry.event}`);
+    }
+    const lean = options.saleLean;
+    entry.name = lean.name;
+    entry.type = lean.type;
+    entry.station = lean.station;
+    entry.cost = lean.cost;
+    entry.revenue = lean.revenue;
+    if (lean.siteId !== undefined) entry.siteId = lean.siteId;
+  } else if (entityType === EntityType.TASK) {
+    if (!options.taskLean) {
+      throw new Error('taskLean is required when entityType is task');
+    }
+    if (!PATCHABLE_TASK_EVENTS.has(ev)) {
+      throw new Error(`Refusing to patch unsupported task log event: ${entry.event}`);
+    }
+    const lean = options.taskLean;
+    entry.name = lean.name;
+    entry.taskType = lean.taskType;
+    entry.station = lean.station;
+  } else if (entityType === EntityType.ITEM) {
+    if (!options.itemLean) {
+      throw new Error('itemLean is required when entityType is item');
+    }
+    if (!PATCHABLE_ITEM_EVENTS.has(ev)) {
+      throw new Error(`Refusing to patch unsupported item log event: ${entry.event}`);
+    }
+    const lean = options.itemLean;
+    entry.name = lean.name;
+    entry.itemType = lean.itemType;
+    entry.subItemType = lean.subItemType;
+    entry.soldQuantity = lean.soldQuantity;
+  } else if (entityType === EntityType.FINANCIAL) {
+    if (!options.financialLean) {
+      throw new Error('financialLean is required when entityType is financial');
+    }
+    if (!PATCHABLE_FINANCIAL_EVENTS.has(ev)) {
+      throw new Error(`Refusing to patch unsupported financial log event: ${entry.event}`);
+    }
+    const lean = options.financialLean;
+    entry.name = lean.name;
+    entry.type = lean.type;
+    entry.station = lean.station;
+    entry.cost = lean.cost;
+    entry.revenue = lean.revenue;
+  } else {
+    throw new Error(`patchLogEntryById not supported for entityType: ${entityType}`);
+  }
+
+  if (options.timestampIso) entry.timestamp = options.timestampIso;
+  entry.lastUpdated = new Date().toISOString();
+
+  const list = await readMonthlyList(entityType, hit.monthKey);
+  const idx = list.findIndex(e => e.id === options.logEntryId);
+  if (idx === -1) {
+    throw new Error(`Log entry disappeared during patch: ${options.logEntryId}`);
+  }
+  list[idx] = entry;
+  await rebuildMonthlyList(entityType, hit.monthKey, list);
+  return { monthKey: hit.monthKey };
 }
 
 // ============================================================================

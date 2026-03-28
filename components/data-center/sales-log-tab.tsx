@@ -66,8 +66,8 @@ export function SalesLogTab({ salesLog, onReload, isReloading }: SalesLogTabProp
     }
   };
 
-  const getSaleStatusBadgeColor = (status: string) => {
-    const normalized = status.toLowerCase();
+  const getLifecycleBadgeColor = (eventOrStatus: string) => {
+    const normalized = eventOrStatus.toLowerCase();
     switch (normalized) {
       case 'pending':
         return 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900 dark:text-yellow-200 dark:border-yellow-700';
@@ -75,6 +75,14 @@ export function SalesLogTab({ salesLog, onReload, isReloading }: SalesLogTabProp
         return 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900 dark:text-green-200 dark:border-green-700';
       case 'cancelled':
         return 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900 dark:text-red-200 dark:border-red-700';
+      case 'created':
+        return 'bg-slate-100 text-slate-800 border-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-600';
+      case 'done':
+        return 'bg-emerald-100 text-emerald-900 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-200 dark:border-emerald-800';
+      case 'collected':
+        return 'bg-teal-100 text-teal-900 border-teal-200 dark:bg-teal-950 dark:text-teal-200 dark:border-teal-800';
+      case 'updated':
+        return 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900 dark:text-blue-200 dark:border-blue-700';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-900 dark:text-gray-200 dark:border-gray-700';
     }
@@ -180,8 +188,8 @@ export function SalesLogTab({ salesLog, onReload, isReloading }: SalesLogTabProp
                 );
               }
               
-              // Extract data from the rich logging structure
-              const status: string = entry.status || 'Unknown';
+              // Lean logs use `event` (e.g. CREATED, CHARGED, COLLECTED); some rows may use `status`
+              const lifecycleLabel: string = entry.event || entry.status || 'Unknown';
               // Use displayName from normalization, fallback to entry data
               const name: string = entry.displayName || entry.name || entry.saleName || entry.message || '—';
               const type: string = entry.type || entry.saleType || '—';
@@ -213,9 +221,9 @@ export function SalesLogTab({ salesLog, onReload, isReloading }: SalesLogTabProp
                   {/* Main Info Row - Matches Tasks/Items/Financials pattern */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3 text-sm">
-                      {/* Status Badge */}
-                      <div className={`inline-flex items-center rounded-full border px-2 py-1 text-xs font-semibold transition-colors ${getSaleStatusBadgeColor(status)}`}>
-                        {status}
+                      {/* Lifecycle event badge */}
+                      <div className={`inline-flex items-center rounded-full border px-2 py-1 text-xs font-semibold transition-colors ${getLifecycleBadgeColor(lifecycleLabel)}`}>
+                        {lifecycleLabel}
                       </div>
                       
                       {/* Name */}

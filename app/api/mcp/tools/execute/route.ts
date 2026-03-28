@@ -26,6 +26,7 @@ import {
   auditTaskTimelineVsMonthIndex,
 } from '@/lib/integrity/task-timeline-audit';
 import { SummaryService } from '@/data-store/services/summary.service';
+import { EntityType } from '@/types/enums';
 
 const DEFAULT_LIST_LIMIT = 50;
 const MAX_LIST_LIMIT = 200;
@@ -271,6 +272,234 @@ export async function POST(req: NextRequest) {
       case 'thegame.sales.repairSummaries': {
         const data = await SummaryService.rebuildAllSummaries();
         return NextResponse.json({ success: true, data });
+      }
+      case 'thegame.logs.patchEntry': {
+        const { parseEntityTypeParameter } = await import('@/lib/mcp/parse-entity-type-param');
+        const entityType = parseEntityTypeParameter(parameters.entityType);
+        if (!entityType) {
+          return NextResponse.json(
+            {
+              success: false,
+              error: 'entityType is required (sale | task | item | financial)',
+            },
+            { status: 400 }
+          );
+        }
+        const logEntryId = String(parameters.logEntryId ?? '').trim();
+        if (!logEntryId) {
+          return NextResponse.json({ success: false, error: 'logEntryId is required' }, { status: 400 });
+        }
+        const entityIdParam = parameters.entityId ? String(parameters.entityId).trim() : undefined;
+
+        const { getLogEntryById, patchLogEntryById } = await import('@/workflows/entities-logging');
+        const hit = await getLogEntryById(entityType, logEntryId);
+        if (!hit) {
+          return NextResponse.json(
+            { success: false, error: `Log entry not found: ${logEntryId}` },
+            { status: 404 }
+          );
+        }
+        if (entityIdParam && hit.entry.entityId !== entityIdParam) {
+          return NextResponse.json(
+            { success: false, error: 'entityId does not match this log entry' },
+            { status: 400 }
+          );
+        }
+
+        if (entityType === EntityType.SALE) {
+          const { getSaleById } = await import('@/data-store/datastore');
+          const { getSaleLogDetails } = await import('@/lib/utils/sale-log-details');
+          const { calculateClosingDate } = await import('@/lib/utils/date-utils');
+          const sale = await getSaleById(hit.entry.entityId);
+          if (!sale) {
+            return NextResponse.json(
+              { success: false, error: 'Sale not found for log entry' },
+              { status: 404 }
+            );
+          }
+          const ev = String(hit.entry.event ?? '').toUpperCase();
+          let timestampIso: string | undefined;
+          if (ev === 'CHARGED') {
+            const d = sale.doneAt || (sale as { chargedAt?: Date }).chargedAt;
+            timestampIso = d ? new Date(d).toISOString() : undefined;
+          } else if (ev === 'COLLECTED') {
+            const raw =
+              sale.collectedAt ||
+              calculateClosingDate(sale.saleDate ? new Date(sale.saleDate) : new Date());
+            timestampIso = raw ? new Date(raw).toISOString() : undefined;
+          }
+          const patchResult = await patchLogEntryById(EntityType.SALE, {
+            logEntryId,
+            entityId: entityIdParam,
+            saleLean: getSaleLogDetails(sale),
+            timestampIso,
+          });
+          return NextResponse.json({
+            success: true,
+            data: { ...patchResult, entityId: sale.id, event: hit.entry.event, entityType: 'sale' },
+          });
+        }
+
+        if (entityType === EntityType.TASK) {
+          const { getTaskById } = await import('@/data-store/datastore');
+          const task = await getTaskById(hit.entry.entityId);
+          if (!task) {
+            return NextResponse.json(
+              { success: false, error: 'Task not found for log entry' },
+              { status: 404 }
+            );
+          }
+          const ev = String(hit.entry.event ?? '').toUpperCase();
+          let timestampIso: string | undefined;
+          if (ev === 'DONE' && task.doneAt) {
+            timestampIso = new Date(task.doneAt).toISOString();
+          } else if (ev === 'COLLECTED') {
+            const raw = task.collectedAt || task.doneAt || new Date();
+            timestampIso = new Date(raw).toISOString();
+          }
+          const patchResult = await patchLogEntryById(EntityType.TASK, {
+            logEntryId,
+            entityId: entityIdParam,
+            taskLean: { name: task.name, taskType: task.type, station: task.station },
+            timestampIso,
+          });
+          return NextResponse.json({
+            success: true,
+            data: { ...patchResult, entityId: task.id, event: hit.entry.event, entityType: 'task' },
+          });
+        }
+
+        if (entityType === EntityType.ITEM) {
+          const { getItemById } = await import('@/data-store/datastore');
+          const item = await getItemById(hit.entry.entityId);
+          if (!item) {
+            return NextResponse.json(
+              { success: false, error: 'Item not found for log entry' },
+              { status: 404 }
+            );
+          }
+          const ev = String(hit.entry.event ?? '').toUpperCase();
+          let timestampIso: string | undefined;
+          if (ev === 'SOLD') {
+            const raw = item.soldAt || item.collectedAt || item.createdAt;
+            timestampIso = raw ? new Date(raw).toISOString() : undefined;
+          } else if (ev === 'COLLECTED') {
+            const raw = item.collectedAt || item.soldAt || item.createdAt;
+            timestampIso = raw ? new Date(raw).toISOString() : undefined;
+          }
+          const patchResult = await patchLogEntryById(EntityType.ITEM, {
+            logEntryId,
+            entityId: entityIdParam,
+            itemLean: {
+              name: item.name,
+              itemType: item.type,
+              subItemType: item.subItemType || '',
+              soldQuantity: item.quantitySold || 0,
+            },
+            timestampIso,
+          });
+          return NextResponse.json({
+            success: true,
+            data: { ...patchResult, entityId: item.id, event: hit.entry.event, entityType: 'item' },
+          });
+        }
+
+        if (entityType === EntityType.FINANCIAL) {
+          const { getFinancialById } = await import('@/data-store/datastore');
+          const financial = await getFinancialById(hit.entry.entityId);
+          if (!financial) {
+            return NextResponse.json(
+              { success: false, error: 'Financial not found for log entry' },
+              { status: 404 }
+            );
+          }
+          const refMonth = new Date(financial.year, financial.month - 1, 1);
+          const ev = String(hit.entry.event ?? '').toUpperCase();
+          let timestampIso: string | undefined;
+          if (
+            ev === 'DONE' ||
+            ev === 'PENDING' ||
+            ev === 'CREATED' ||
+            ev === 'UPDATED' ||
+            ev === 'CANCELLED'
+          ) {
+            timestampIso = refMonth.toISOString();
+          } else if (ev === 'COLLECTED') {
+            const raw = financial.collectedAt || refMonth;
+            timestampIso = new Date(raw).toISOString();
+          }
+          const patchResult = await patchLogEntryById(EntityType.FINANCIAL, {
+            logEntryId,
+            entityId: entityIdParam,
+            financialLean: {
+              name: financial.name,
+              type: financial.type,
+              station: financial.station,
+              cost: financial.cost,
+              revenue: financial.revenue,
+            },
+            timestampIso,
+          });
+          return NextResponse.json({
+            success: true,
+            data: {
+              ...patchResult,
+              entityId: financial.id,
+              event: hit.entry.event,
+              entityType: 'financial',
+            },
+          });
+        }
+
+        return NextResponse.json(
+          { success: false, error: `patchEntry not supported for entityType: ${entityType}` },
+          { status: 400 }
+        );
+      }
+      case 'thegame.logs.ensureDone': {
+        const { parseEntityTypeParameter } = await import('@/lib/mcp/parse-entity-type-param');
+        const { ensureDoneLog } = await import('@/workflows/ensure-entity-logs');
+        const entityType = parseEntityTypeParameter(parameters.entityType);
+        const entityId = String(parameters.entityId ?? '').trim();
+        if (!entityType || !entityId) {
+          return NextResponse.json(
+            { success: false, error: 'entityType and entityId are required' },
+            { status: 400 }
+          );
+        }
+        const data = await ensureDoneLog(entityType, entityId);
+        if (!data.success) {
+          return NextResponse.json({ success: false, error: data.error }, { status: 400 });
+        }
+        const entityTypeLabel =
+          entityType === EntityType.SALE
+            ? 'sale'
+            : entityType === EntityType.TASK
+              ? 'task'
+              : entityType === EntityType.ITEM
+                ? 'item'
+                : entityType === EntityType.FINANCIAL
+                  ? 'financial'
+                  : String(entityType);
+        return NextResponse.json({ success: true, data: { ...data, entityType: entityTypeLabel } });
+      }
+      case 'thegame.logs.ensureCollected': {
+        const { parseEntityTypeParameter } = await import('@/lib/mcp/parse-entity-type-param');
+        const { ensureCollectedLog } = await import('@/workflows/ensure-entity-logs');
+        const entityType = parseEntityTypeParameter(parameters.entityType);
+        const entityId = String(parameters.entityId ?? '').trim();
+        if (!entityType || !entityId) {
+          return NextResponse.json(
+            { success: false, error: 'entityType and entityId are required' },
+            { status: 400 }
+          );
+        }
+        const data = await ensureCollectedLog(entityType, entityId);
+        if (!data.success) {
+          return NextResponse.json({ success: false, error: data.error }, { status: 400 });
+        }
+        const entityTypeLabel = entityType === EntityType.SALE ? 'sale' : 'task';
+        return NextResponse.json({ success: true, data: { ...data, entityType: entityTypeLabel } });
       }
       default:
         return NextResponse.json({ success: false, error: `Unknown tool: ${toolId}` }, { status: 404 });

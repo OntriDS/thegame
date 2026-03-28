@@ -710,17 +710,20 @@ export enum ContractClauseType {
 
 /** Log Event Types - Lifecycle events for entity logging */
 export enum LogEventType {
-  // Universal lifecycle events (all entities)
+  // Universal events (all entities)
   CREATED = 'CREATED',
   UPDATED = 'UPDATED',
-  PENDING = 'PENDING',
   DONE = 'DONE',
   COLLECTED = 'COLLECTED',
-  MOVED = 'MOVED',
   CANCELLED = 'CANCELLED',
+
+  // Sale-specific events
+  CHARGED = 'CHARGED',
+  PENDING = 'PENDING',
 
   // Item-specific events
   SOLD = 'SOLD',
+  MOVED = 'MOVED',
 
   // Player-specific events
   LEVEL_UP = 'LEVEL_UP',

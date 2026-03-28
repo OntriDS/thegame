@@ -230,6 +230,52 @@ const TOOLS = [
       properties: {},
     },
   },
+  {
+    id: 'thegame.logs.patchEntry',
+    name: 'Patch one entity log row',
+    description:
+      'Targeted: entityType (sale | task | item | financial), logEntryId from Data Center log JSON, optional entityId to validate. Refreshes lean fields and timestamps from current entity. No bulk repair.',
+    systemId: 'thegame',
+    parameters: {
+      type: 'object',
+      properties: {
+        entityType: { type: 'string', description: 'sale | task | item | financial' },
+        logEntryId: { type: 'string', description: 'UUID of the log entry row' },
+        entityId: { type: 'string', description: 'Optional; must match entry.entityId if provided' },
+      },
+      required: ['entityType', 'logEntryId'],
+    },
+  },
+  {
+    id: 'thegame.logs.ensureDone',
+    name: 'Ensure primary lifecycle log for one entity',
+    description:
+      'Targeted: entityType and entityId. Idempotent. sale→CHARGED, task→DONE, item→SOLD, financial→DONE (when paid+charged). Wire id: thegame.logs.ensureDone.',
+    systemId: 'thegame',
+    parameters: {
+      type: 'object',
+      properties: {
+        entityType: { type: 'string', description: 'sale | task | item | financial' },
+        entityId: { type: 'string', description: 'entity id for that type' },
+      },
+      required: ['entityType', 'entityId'],
+    },
+  },
+  {
+    id: 'thegame.logs.ensureCollected',
+    name: 'Ensure COLLECTED log for one entity',
+    description:
+      'Targeted: entityType (sale or task only) and entityId. Appends COLLECTED if implied and missing. Idempotent.',
+    systemId: 'thegame',
+    parameters: {
+      type: 'object',
+      properties: {
+        entityType: { type: 'string', description: 'sale | task' },
+        entityId: { type: 'string', description: 'sale id or task id' },
+      },
+      required: ['entityType', 'entityId'],
+    },
+  },
 ];
 
 export async function GET(req: NextRequest) {

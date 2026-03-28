@@ -10,7 +10,19 @@ import { EffectKeys } from '@/data-store/keys';
 import { getLinksFor, removeLink } from '@/links/link-registry';
 import { getCategoryForItemType } from '@/lib/utils/searchable-select-utils';
 import { createCharacterFromItem } from '../character-creation-utils';
-import { upsertItem, getAvailableArchiveMonths, getAllTasks, getTaskById, upsertTask, getPlayerById, upsertPlayer, getAllCharacters, upsertCharacter } from '@/data-store/datastore';
+import {
+  upsertItem,
+  getItemById,
+  getAvailableArchiveMonths,
+  getAllTasks,
+  getTaskById,
+  upsertTask,
+  getPlayerById,
+  upsertPlayer,
+  getAllCharacters,
+  upsertCharacter,
+} from '@/data-store/datastore';
+import { entityHasLogEvent } from '@/lib/utils/entity-log-scan';
 import { formatMonthKey, calculateClosingDate, formatDisplayDate } from '@/lib/utils/date-utils';
 import { stagePointsForPlayer, resolveToPlayerIdMaybeCharacter } from '../points-rewards-utils';
 import { isSoldStatus, isCollectedStatus } from '@/lib/utils/status-utils';
@@ -343,6 +355,38 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
       }
     }
   }
+}
+
+/** Precision repair: append SOLD log when sold/collected state implies it but the row is missing. */
+export async function ensureItemSoldLog(itemId: string): Promise<{
+  success: boolean;
+  noop?: boolean;
+  error?: string;
+}> {
+  const item = await getItemById(itemId);
+  if (!item) return { success: false, error: `Item not found: ${itemId}` };
+  const impliesSold =
+    isSoldStatus(item.status) || isCollectedStatus(item.status) || !!item.isCollected;
+  if (!impliesSold) {
+    return { success: false, error: 'Item is not sold or collected; SOLD log not implied.' };
+  }
+  if (await entityHasLogEvent(EntityType.ITEM, itemId, 'sold')) {
+    return { success: true, noop: true };
+  }
+  const ts = item.soldAt || item.collectedAt || item.createdAt || new Date();
+  await appendEntityLog(
+    EntityType.ITEM,
+    item.id,
+    LogEventType.SOLD,
+    {
+      name: item.name,
+      itemType: item.type,
+      subItemType: item.subItemType || '',
+      soldQuantity: item.quantitySold || 0,
+    },
+    ts
+  );
+  return { success: true };
 }
 
 /**

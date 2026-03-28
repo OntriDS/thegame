@@ -24,6 +24,7 @@ import { upsertFinancial } from '@/data-store/datastore';
 import { formatMonthKey, calculateClosingDate } from '@/lib/utils/date-utils';
 import { buildArchiveCollectionIndexKey, buildArchiveMonthsKey } from '@/data-store/keys';
 import { recalculateCharacterWallet } from '../financial-record-utils';
+import { entityHasLogEvent } from '@/lib/utils/entity-log-scan';
 
 const STATE_FIELDS = ['isNotPaid', 'isNotCharged', 'isCollected'];
 
@@ -438,6 +439,43 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
       }
     }
   }
+}
+
+/**
+ * Precision repair: append FINANCIAL DONE when paid+charged but the row is missing.
+ * (Analyst `ensure_done_log` maps here for entityType=financial.)
+ */
+export async function ensureFinancialDoneLog(financialId: string): Promise<{
+  success: boolean;
+  noop?: boolean;
+  error?: string;
+}> {
+  const financial = await getFinancialById(financialId);
+  if (!financial) return { success: false, error: `Financial not found: ${financialId}` };
+  const pending = financial.isNotPaid || financial.isNotCharged;
+  if (pending) {
+    return {
+      success: false,
+      error: 'Financial is still pending (not paid or not charged); DONE log not implied.',
+    };
+  }
+  if (await entityHasLogEvent(EntityType.FINANCIAL, financialId, 'done')) {
+    return { success: true, noop: true };
+  }
+  await appendEntityLog(
+    EntityType.FINANCIAL,
+    financial.id,
+    LogEventType.DONE,
+    {
+      name: financial.name,
+      type: financial.type,
+      station: financial.station,
+      cost: financial.cost,
+      revenue: financial.revenue,
+    },
+    getFinancialDate(financial)
+  );
+  return { success: true };
 }
 
 /**

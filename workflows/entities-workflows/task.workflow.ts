@@ -699,3 +699,82 @@ async function cascadeCollectionToChildren(parentTask: Task, collectedAt: Date):
     // Don't throw error - parent collection should still succeed even if cascade fails
   }
 }
+
+async function taskHasLifecycleEvent(taskId: string, eventLower: string): Promise<boolean> {
+  const { getEntityLogMonths, getEntityLogs } = await import('../entities-logging');
+  const months = await getEntityLogMonths(EntityType.TASK);
+  const mmYyNow = (() => {
+    const n = new Date();
+    return `${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getFullYear()).slice(-2)}`;
+  })();
+  const monthSet = new Set<string>([mmYyNow, ...months]);
+  for (const m of monthSet) {
+    const logs = await getEntityLogs(EntityType.TASK, { month: m });
+    if (logs.some((e: any) => e.entityId === taskId && String(e.event ?? e.status ?? '').toLowerCase() === eventLower)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/** Precision repair: append TASK DONE log when missing (task must be Done or Collected with doneAt). */
+export async function ensureTaskDoneLog(taskId: string): Promise<{
+  success: boolean;
+  noop?: boolean;
+  error?: string;
+}> {
+  const task = await getTaskById(taskId);
+  if (!task) return { success: false, error: `Task not found: ${taskId}` };
+  const isDoneLike = task.status === TaskStatus.DONE || task.status === TaskStatus.COLLECTED;
+  if (!isDoneLike) {
+    return { success: false, error: 'Task is not Done or Collected.' };
+  }
+  if (!task.doneAt) {
+    return { success: false, error: 'Task has no doneAt; set completion date first.' };
+  }
+  if (await taskHasLifecycleEvent(taskId, 'done')) {
+    return { success: true, noop: true };
+  }
+  await appendEntityLog(
+    EntityType.TASK,
+    task.id,
+    LogEventType.DONE,
+    {
+      name: task.name,
+      taskType: task.type,
+      station: task.station,
+    },
+    task.doneAt
+  );
+  return { success: true };
+}
+
+/** Precision repair: append TASK COLLECTED log when missing. */
+export async function ensureTaskCollectedLog(taskId: string): Promise<{
+  success: boolean;
+  noop?: boolean;
+  error?: string;
+}> {
+  const task = await getTaskById(taskId);
+  if (!task) return { success: false, error: `Task not found: ${taskId}` };
+  const isCollected = task.status === TaskStatus.COLLECTED || task.isCollected;
+  if (!isCollected) {
+    return { success: false, error: 'Task is not in collected state (status/isCollected).' };
+  }
+  if (await taskHasLifecycleEvent(taskId, 'collected')) {
+    return { success: true, noop: true };
+  }
+  const collectedAt = task.collectedAt ? new Date(task.collectedAt) : new Date();
+  await appendEntityLog(
+    EntityType.TASK,
+    task.id,
+    LogEventType.COLLECTED,
+    {
+      name: task.name,
+      taskType: task.type,
+      station: task.station,
+    },
+    collectedAt
+  );
+  return { success: true };
+}
