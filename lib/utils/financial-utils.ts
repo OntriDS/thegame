@@ -21,10 +21,33 @@ export function formatCurrency(amount: number, currency: string = "USD"): string
 // lib/utils/financial-utils.ts
 // Consolidated financial utilities following DRY principles
 
-import { FinancialRecord } from '@/types/entities';
+import type { FinancialRecord, Sale } from '@/types/entities';
 import type { Station } from '@/types/type-aliases';
 import { BITCOIN_SATOSHIS_PER_BTC } from '@/lib/constants/financial-constants';
 import { FinancialStatus } from '@/types/enums';
+
+/** Round currency amounts to 2 decimal places (avoids float noise, e.g. 9.799999999). */
+export function roundCurrency2(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.round(value * 100) / 100;
+}
+
+/** Normalize persisted sale `totals` (subtotal, discounts, tax, revenue, optional cost). */
+export function roundSaleTotals(sale: Sale): Sale {
+  if (!sale.totals) return sale;
+  const t = sale.totals;
+  const next: Sale['totals'] = {
+    ...t,
+    subtotal: roundCurrency2(Number(t.subtotal) || 0),
+    discountTotal: roundCurrency2(Number(t.discountTotal) || 0),
+    taxTotal: roundCurrency2(Number(t.taxTotal) || 0),
+    totalRevenue: roundCurrency2(Number(t.totalRevenue) || 0),
+  };
+  if (t.totalCost !== undefined && t.totalCost !== null) {
+    next.totalCost = roundCurrency2(Number(t.totalCost));
+  }
+  return { ...sale, totals: next };
+}
 
 // ============================================================================
 // SHARED TYPES

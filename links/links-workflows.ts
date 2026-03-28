@@ -184,6 +184,26 @@ export async function processItemEffects(item: Item): Promise<void> {
 export async function processSaleEffects(sale: Sale): Promise<void> {
   const existingLinks = await getLinksFor({ type: EntityType.SALE, id: sale.id });
 
+  const allowedSaleItemIds = new Set<string>();
+  for (const line of sale.lines || []) {
+    if (line.kind === 'item' && line.itemId) {
+      allowedSaleItemIds.add(line.itemId);
+    }
+    if (line.kind === 'bundle' && 'itemId' in line && line.itemId) {
+      allowedSaleItemIds.add(line.itemId as string);
+    }
+  }
+
+  for (const l of existingLinks) {
+    if (
+      l.linkType === LinkType.SALE_ITEM &&
+      l.target.type === EntityType.ITEM &&
+      !allowedSaleItemIds.has(l.target.id)
+    ) {
+      await removeLink(l.id);
+    }
+  }
+
   const allowedSaleCharBusTargets = new Set(
     [sale.customerId, sale.associateId, sale.partnerId].filter(Boolean) as string[]
   );

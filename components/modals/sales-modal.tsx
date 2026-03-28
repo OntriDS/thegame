@@ -21,6 +21,7 @@ import { CurrencyExchangeRates } from '@/lib/constants/financial-constants';
 import { createSiteOptionsWithCategories } from '@/lib/utils/site-options-utils';
 import { createCharacterOptions, createStationCategoryOptions, createTaskParentOptions, createItemTypeSubTypeOptions, getItemTypeFromCombined, createItemOptions, getCategoryFromCombined, getStationFromCombined } from '@/lib/utils/searchable-select-utils';
 import { getAreaForStation, getSalesChannelFromSaleType } from '@/lib/utils/business-structure-utils';
+import { roundCurrency2 } from '@/lib/utils/financial-utils';
 import { ClientAPI } from '@/lib/client-api';
 import { dispatchEntityUpdated, entityTypeToKind } from '@/lib/ui/ui-events';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
@@ -676,7 +677,10 @@ export default function SalesModal({
 
     const totalDiscount = discountAmount + lineDiscountTotal;
     const taxTotal = lines.reduce((total, line) => total + (line.taxAmount || 0), 0);
-    const totalRevenue = subtotal - totalDiscount + taxTotal;
+    const subtotalR = roundCurrency2(subtotal);
+    const totalDiscountR = roundCurrency2(totalDiscount);
+    const taxTotalR = roundCurrency2(taxTotal);
+    const totalRevenue = roundCurrency2(subtotalR - totalDiscountR + taxTotalR);
 
     // Convert recordedPayments (SalePaymentLine[]) to Payment[] format
     const effectivePayments = recordedPayments.length > 0
@@ -719,9 +723,9 @@ export default function SalesModal({
       lines: effectiveLines,
       payments: effectivePayments,
       totals: {
-        subtotal,
-        discountTotal: totalDiscount,
-        taxTotal,
+        subtotal: subtotalR,
+        discountTotal: totalDiscountR,
+        taxTotal: taxTotalR,
         totalRevenue,
       },
       postedAt: sale?.postedAt,

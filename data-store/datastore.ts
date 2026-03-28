@@ -2,6 +2,7 @@
 // Orchestration layer: repositories → workflows → links → logging
 
 import type { Task, Item, FinancialRecord, Sale, Character, Player, Site, Settlement, Account, Business, Contract } from '@/types/entities';
+import { roundSaleTotals } from '@/lib/utils/financial-utils';
 import type { TaskSnapshot, ItemSnapshot, SaleSnapshot, FinancialSnapshot } from '@/types/archive';
 import { EntityType, ItemType, TaskPriority, TaskStatus, FinancialStatus, TaskType, SaleStatus, ItemStatus } from '@/types/enums';
 import {
@@ -797,7 +798,8 @@ export async function upsertSale(sale: Sale, options?: { skipWorkflowEffects?: b
     }
   }
 
-  const saved = await repoUpsertSale(sale);
+  const saleToPersist = roundSaleTotals(sale);
+  const saved = await repoUpsertSale(saleToPersist);
 
   // Phase 2: Rolling Summary Update
   await SummaryService.updateSalesCounters(saved, previous || undefined);
