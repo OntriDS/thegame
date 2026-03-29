@@ -540,7 +540,7 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
     // Calculate associate net using shared helper
     const associateNet = await calculateAssociatePayout(sale);
 
-    const targetEntityId = sale.associateId || sale.partnerId || sale.customerId;
+    let targetEntityId = sale.associateId || sale.partnerId || sale.customerId;
     let targetEntityName = 'Associate';
     let targetType = EntityType.CHARACTER;
 
@@ -548,8 +548,13 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
       const { getBusinessById } = await import('@/data-store/repositories/character.repo');
       const business = await getBusinessById(targetEntityId);
       if (business) {
-        targetType = EntityType.BUSINESS;
+        // Business is a persona layer on Character — resolve to the linked character for the finrec link
         targetEntityName = business.name;
+        if (business.linkedCharacterId) {
+          // Use the linked character's ID for the FINREC_CHARACTER link (not the business ID)
+          targetEntityId = business.linkedCharacterId;
+        }
+        // targetType stays CHARACTER
       } else {
         const character = await getCharacterById(targetEntityId);
         if (character) {
@@ -707,12 +712,12 @@ async function createBoothPayoutRecord(sale: Sale, associateNet: number, targetE
   );
   await createLink(link);
 
-  // Link Payout to Associate (Character or Business) if present
+  // Link Payout to Associate's Character (always FINREC_CHARACTER — Business is resolved to linkedCharacterId upstream)
   if (targetEntityId) {
     const charLink = makeLink(
-      targetType === EntityType.BUSINESS ? LinkType.FINREC_BUSINESS : LinkType.FINREC_CHARACTER,
+      LinkType.FINREC_CHARACTER,
       { type: EntityType.FINANCIAL, id: createdPayout.id },
-      { type: targetType, id: targetEntityId }
+      { type: EntityType.CHARACTER, id: targetEntityId }
     );
     await createLink(charLink);
   }

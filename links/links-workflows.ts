@@ -185,6 +185,17 @@ export async function processItemEffects(item: Item): Promise<void> {
 export async function processSaleEffects(sale: Sale): Promise<void> {
   const existingLinks = await getLinksFor({ type: EntityType.SALE, id: sale.id });
 
+  // Helper: resolve an ID to a Character ID.
+  // If the ID is a Business, follow Business.linkedCharacterId.
+  const resolveToCharacterId = async (id: string): Promise<string | null> => {
+    const character = await getCharacterById(id);
+    if (character) return id;
+    const business = await getBusinessById(id);
+    if (business?.linkedCharacterId) return business.linkedCharacterId;
+    return null;
+  };
+
+  // --- SALE_ITEM cleanup ---
   const allowedSaleItemIds = new Set<string>();
   for (const line of sale.lines || []) {
     if (line.kind === 'item' && line.itemId) {
@@ -194,7 +205,6 @@ export async function processSaleEffects(sale: Sale): Promise<void> {
       allowedSaleItemIds.add(line.itemId as string);
     }
   }
-
   for (const l of existingLinks) {
     if (
       l.linkType === LinkType.SALE_ITEM &&
@@ -205,40 +215,49 @@ export async function processSaleEffects(sale: Sale): Promise<void> {
     }
   }
 
-  // SALE_FINREC: identify by target financial id + sourceSaleId
-  // Remove only when the financial is missing or explicitly tied to a different sale.
-  // Do not delete financial rows here (dedupe/migration belongs elsewhere).
+  // --- SALE_FINREC cleanup ---
   for (const l of existingLinks) {
-    if (l.linkType !== LinkType.SALE_FINREC || l.target.type !== EntityType.FINANCIAL) {
-      continue;
-    }
+    if (l.linkType !== LinkType.SALE_FINREC || l.target.type !== EntityType.FINANCIAL) continue;
     const fin = await getFinancialById(l.target.id);
-    if (!fin) {
-      await removeLink(l.id);
-      continue;
-    }
+    if (!fin) { await removeLink(l.id); continue; }
     if (fin.sourceSaleId != null && fin.sourceSaleId !== sale.id) {
       await removeLink(l.id);
     }
   }
 
-  const allowedSaleCharBusTargets = new Set(
-    [sale.customerId, sale.associateId, sale.partnerId].filter(Boolean) as string[]
-  );
+  // --- SALE_BUSINESS legacy cleanup (always purge — migrated to SALE_CHARACTER) ---
   for (const l of existingLinks) {
-    if (
-      (l.linkType === LinkType.SALE_CHARACTER || l.linkType === LinkType.SALE_BUSINESS) &&
-      !allowedSaleCharBusTargets.has(l.target.id)
-    ) {
+    if (l.linkType === LinkType.SALE_BUSINESS) {
       await removeLink(l.id);
     }
   }
 
+  // --- SALE_CHARACTER cleanup ---
+  // Build the full set of allowed character target IDs,
+  // resolving any business IDs to their linkedCharacterId.
+  const allowedCharacterIds = new Set<string>();
+  if (sale.customerId) allowedCharacterIds.add(sale.customerId);
+  if (sale.associateId) {
+    const charId = await resolveToCharacterId(sale.associateId);
+    if (charId) allowedCharacterIds.add(charId);
+  }
+  if (sale.partnerId) {
+    const charId = await resolveToCharacterId(sale.partnerId);
+    if (charId) allowedCharacterIds.add(charId);
+  }
+  for (const l of existingLinks) {
+    if (l.linkType === LinkType.SALE_CHARACTER && !allowedCharacterIds.has(l.target.id)) {
+      await removeLink(l.id);
+    }
+  }
+
+  // --- SALE_SITE ---
   if (sale.siteId) {
     const l = makeLink(LinkType.SALE_SITE, { type: EntityType.SALE, id: sale.id }, { type: EntityType.SITE, id: sale.siteId });
     await createLink(l);
   }
 
+  // --- SALE_CHARACTER for customerId ---
   if (sale.customerId) {
     const l = makeLink(
       LinkType.SALE_CHARACTER,
@@ -246,7 +265,6 @@ export async function processSaleEffects(sale: Sale): Promise<void> {
       { type: EntityType.CHARACTER, id: sale.customerId }
     );
     const wasCreated = await createLink(l);
-
     if (wasCreated) {
       const character = await getCharacterById(sale.customerId);
       await appendEntityLog(EntityType.CHARACTER, sale.customerId, LogEventType.PURCHASED, {
@@ -260,58 +278,41 @@ export async function processSaleEffects(sale: Sale): Promise<void> {
     }
   }
 
+  // --- SALE_CHARACTER for associateId (resolves Business → linkedCharacterId) ---
   if (sale.associateId) {
-    let targetType: EntityType | null = null;
-    let linkType: LinkType | null = null;
-    const character = await getCharacterById(sale.associateId);
-    if (character) {
-      targetType = EntityType.CHARACTER;
-      linkType = LinkType.SALE_CHARACTER;
-    } else {
-      const business = await getBusinessById(sale.associateId);
-      if (business) {
-        targetType = EntityType.BUSINESS;
-        linkType = LinkType.SALE_BUSINESS;
-      }
-    }
-    if (targetType && linkType) {
+    const charId = await resolveToCharacterId(sale.associateId);
+    if (charId) {
       const l = makeLink(
-        linkType,
+        LinkType.SALE_CHARACTER,
         { type: EntityType.SALE, id: sale.id },
-        { type: targetType, id: sale.associateId }
+        { type: EntityType.CHARACTER, id: charId }
       );
       await createLink(l);
     } else {
       console.warn(
-        `[processSaleEffects] Associate ID ${sale.associateId} not found as Character or Business. Skipping link creation.`
+        `[processSaleEffects] Associate ID ${sale.associateId} not found as Character or Business with linkedCharacterId. Skipping link.`
       );
     }
   }
 
+  // --- SALE_CHARACTER for partnerId (resolves Business → linkedCharacterId) ---
   if (sale.partnerId) {
-    let targetType: EntityType | null = null;
-    let linkType: LinkType | null = null;
-    const character = await getCharacterById(sale.partnerId);
-    if (character) {
-      targetType = EntityType.CHARACTER;
-      linkType = LinkType.SALE_CHARACTER;
-    } else {
-      const business = await getBusinessById(sale.partnerId);
-      if (business) {
-        targetType = EntityType.BUSINESS;
-        linkType = LinkType.SALE_BUSINESS;
-      }
-    }
-    if (targetType && linkType) {
-      const l = makeLink(linkType, { type: EntityType.SALE, id: sale.id }, { type: targetType, id: sale.partnerId });
+    const charId = await resolveToCharacterId(sale.partnerId);
+    if (charId) {
+      const l = makeLink(
+        LinkType.SALE_CHARACTER,
+        { type: EntityType.SALE, id: sale.id },
+        { type: EntityType.CHARACTER, id: charId }
+      );
       await createLink(l);
     } else {
       console.warn(
-        `[processSaleEffects] Partner ID ${sale.partnerId} not found as Character or Business. Skipping link creation.`
+        `[processSaleEffects] Partner ID ${sale.partnerId} not found as Character or Business with linkedCharacterId. Skipping link.`
       );
     }
   }
 
+  // --- SALE_ITEM for lines ---
   if (sale.lines && sale.lines.length > 0) {
     for (const line of sale.lines) {
       if (line.kind === 'item' && line.itemId) {
@@ -333,6 +334,7 @@ export async function processSaleEffects(sale: Sale): Promise<void> {
     }
   }
 
+  // --- SALE_TASK ---
   if (sale.sourceTaskId) {
     const l = makeLink(
       LinkType.SALE_TASK,
