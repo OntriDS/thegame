@@ -618,8 +618,19 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
     await upsertFinancial(incomeData, { forceSave: true });
     console.log(`[createFinancialRecordFromBoothSale] ✅ Synced Record 1 (${incomeRecordId}): Net=${incomeData.netCashflow}`);
 
-    // Ensure Link
-    if (!incomeRecord) {
+    // Lifecycle Log
+    await appendEntityLog(EntityType.FINANCIAL, incomeRecordId, incomeRecord ? LogEventType.UPDATED : LogEventType.CREATED, {
+      name: incomeData.name,
+      station: incomeData.station,
+      type: incomeData.type,
+      revenue: incomeData.revenue,
+      cost: incomeData.cost
+    }, split.date);
+
+    // Verify/Create SALE_FINREC Link
+    const saleLinks = await getLinksFor({ type: EntityType.SALE, id: sale.id });
+    const hasIncomeLink = saleLinks.some(l => l.linkType === LinkType.SALE_FINREC && l.target.id === incomeRecordId);
+    if (!hasIncomeLink) {
       const link = makeLink(LinkType.SALE_FINREC, { type: EntityType.SALE, id: sale.id }, { type: EntityType.FINANCIAL, id: incomeRecordId });
       await createLink(link);
     }
@@ -658,12 +669,27 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
       await upsertFinancial(payoutData, { forceSave: true });
       console.log(`[createFinancialRecordFromBoothSale] ✅ Synced Record 2 (${payoutRecordId}): Net=${payoutData.netCashflow}`);
 
-      // Ensure Links
-      if (!payoutRecord) {
+      // Lifecycle Log
+      await appendEntityLog(EntityType.FINANCIAL, payoutRecordId, payoutRecord ? LogEventType.UPDATED : LogEventType.CREATED, {
+        name: payoutData.name,
+        station: payoutData.station,
+        type: payoutData.type,
+        revenue: payoutData.revenue,
+        cost: payoutData.cost
+      }, split.date);
+
+      // Verify/Create SALE_FINREC Link
+      const hasPayoutSaleLink = saleLinks.some(l => l.linkType === LinkType.SALE_FINREC && l.target.id === payoutRecordId);
+      if (!hasPayoutSaleLink) {
         const saleLink = makeLink(LinkType.SALE_FINREC, { type: EntityType.SALE, id: sale.id }, { type: EntityType.FINANCIAL, id: payoutRecordId });
         await createLink(saleLink);
+      }
 
-        if (split.targetEntityId) {
+      // Verify/Create FINREC_CHARACTER Link
+      if (split.targetEntityId) {
+        const finrecLinks = await getLinksFor({ type: EntityType.FINANCIAL, id: payoutRecordId });
+        const hasCharLink = finrecLinks.some(l => l.linkType === LinkType.FINREC_CHARACTER && l.target.id === split.targetEntityId);
+        if (!hasCharLink) {
           const charLink = makeLink(LinkType.FINREC_CHARACTER, { type: EntityType.FINANCIAL, id: payoutRecordId }, { type: EntityType.CHARACTER, id: split.targetEntityId });
           await createLink(charLink);
         }
@@ -679,6 +705,15 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
         updatedAt: new Date() 
       };
       await upsertFinancial(zeroedPayout as FinancialRecord);
+      
+      // Log the zeroing
+      await appendEntityLog(EntityType.FINANCIAL, payoutRecordId, LogEventType.UPDATED, {
+        name: zeroedPayout.name,
+        station: zeroedPayout.station,
+        type: zeroedPayout.type,
+        revenue: 0,
+        cost: 0
+      }, split.date);
     }
 
   } catch (error) {
