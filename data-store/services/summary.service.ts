@@ -1,5 +1,5 @@
 // @/data-store/services/summary.service.ts
-import { FinancialRecord, Sale, Item, Task, ItemSaleLine, BundleSaleLine, SummaryTotals } from '@/types/entities';
+import { FinancialRecord, Sale, Item, Task, ItemSaleLine, SummaryTotals } from '@/types/entities';
 import { FinancialStatus, SaleStatus, ItemStatus, TaskStatus } from '@/types/enums';
 import { SummaryRepository } from '../repositories/summary.repo';
 import { formatMonthKey } from '@/lib/utils/date-utils';
@@ -166,8 +166,7 @@ export class SummaryService {
 
   /**
    * Physical units implied by sale lines — matches "Physical items delivered" on the sales dashboard.
-   * Prefer this over summing Item.quantitySold on rebuild: bundles fan out to many item rows and
-   * items may no longer be flipped to SOLD status, which inflates or duplicates rolling totals.
+   * Prefer this over summing Item.quantitySold on rebuild: items may no longer be flipped to SOLD status.
    */
   private static sumPhysicalUnitsFromSales(sales: Sale[]): number {
     let total = 0;
@@ -175,11 +174,6 @@ export class SummaryService {
       for (const line of sale.lines || []) {
         if (line.kind === 'item') {
           total += Math.max(0, (line as ItemSaleLine).quantity || 0);
-        } else if (line.kind === 'bundle') {
-          const b = line as BundleSaleLine;
-          const q = Math.max(0, b.quantity || 0);
-          const per = Math.max(1, b.itemsPerBundle || 1);
-          total += q * per;
         }
       }
     }

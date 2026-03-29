@@ -12,7 +12,8 @@ import NumericInput from '@/components/ui/numeric-input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Sale, SaleLine, Item, Discount, Site, Character, Task, ItemSaleLine, BundleSaleLine, ServiceLine, Business, Contract } from '@/types/entities';
+import { Sale, SaleLine, Item, Discount, Site, Character, Task, ItemSaleLine, ServiceLine, Business, Contract } from '@/types/entities';
+import { normalizeSaleLines } from '@/lib/utils/sale-lines-normalize';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
 import { SaleType, SaleStatus, PaymentMethod, Currency, ItemType, ItemStatus, TaskType, TaskPriority, Collection, STATION_CATEGORIES, CharacterRole, EntityType, FOUNDER_CHARACTER_ID } from '@/types/enums';
 import { getSubTypesForItemType } from '@/lib/utils/item-utils';
@@ -41,21 +42,9 @@ import ArchiveCollectionConfirmationModal from './submodals/archive-collection-c
 import BoothSalesView, { type BoothSalesViewHandle } from './submodals/booth-sales-view';
 import DatesSubmodal from './submodals/dates-submodal';
 
-/** Some persisted sales lines have itemId + quantity but omit kind: 'item'. */
+/** Product lines only (legacy bundle rows normalized to item). */
 function collectItemSaleLines(saleLines: SaleLine[]): ItemSaleLine[] {
-  const out: ItemSaleLine[] = [];
-  for (const line of saleLines) {
-    if (line.kind === 'item') {
-      out.push(line);
-      continue;
-    }
-    if (line.kind === 'service' || line.kind === 'bundle') continue;
-    const itemId = (line as Partial<ItemSaleLine>).itemId;
-    if (typeof itemId === 'string' && itemId.length > 0) {
-      out.push(line as ItemSaleLine);
-    }
-  }
-  return out;
+  return normalizeSaleLines(saleLines).filter((l): l is ItemSaleLine => l.kind === 'item');
 }
 
 interface SalesModalProps {
@@ -218,8 +207,8 @@ export default function SalesModal({
     }
   };
 
-  // Quick Count rows (template-first capture)
-  type QuickRow = { id: string; itemType: ItemType; quantity: number; unitPrice: number };
+  // Quick Count rows (template-first capture) — materialized as kind: item (concrete itemId)
+  type QuickRow = { id: string; itemType: ItemType; itemId?: string; quantity: number; unitPrice: number };
   const [quickRows, setQuickRows] = useState<QuickRow[]>([]);
 
   // UI state
@@ -377,9 +366,6 @@ export default function SalesModal({
 
     const saleLines = sale.lines ?? [];
     const itemLines = collectItemSaleLines(saleLines);
-    const bundleLines = saleLines.filter(
-      (line): line is BundleSaleLine => line.kind === 'bundle'
-    );
     const hasServiceLines = saleLines.some(line => line.kind === 'service');
 
     const getItemName = (line: ItemSaleLine) => {
@@ -400,7 +386,7 @@ export default function SalesModal({
       return;
     }
 
-    if (itemLines.length === 1 && bundleLines.length === 0) {
+    if (itemLines.length === 1) {
       const [line] = itemLines;
       setWhatKind('product');
       setOneItemMultiple('one');
@@ -424,10 +410,6 @@ export default function SalesModal({
       }));
       setSelectedItems(mappedItems);
       setSelectedItemId('');
-    } else if (bundleLines.length > 0) {
-      setWhatKind('product');
-      setOneItemMultiple('multiple');
-      setManualLines(true);
     } else {
       setSelectedItems([]);
     }
@@ -609,7 +591,7 @@ export default function SalesModal({
     setIsSaving(true);
 
     // Validation: Sales must have either product (item) OR service (task)
-    const hasProductLines = lines.some(line => line.kind === 'item' || line.kind === 'bundle');
+    const hasProductLines = lines.some(line => line.kind === 'item');
     const hasServiceLines = lines.some(line => line.kind === 'service');
     const hasServiceFieldInput =
       whatKind === 'service' &&
@@ -698,25 +680,38 @@ export default function SalesModal({
       } as any];
 
     } else if (!manualLines && quickRows.length > 0) {
-      // If user is using Quick Count (manualLines=false), materialize lines from quickRows
-      const existingBundleLines = lines.filter((l): l is BundleSaleLine => l.kind === 'bundle');
-      let bundleIdx = 0;
-      effectiveLines = quickRows
-        .filter(r => r.quantity > 0)
-        .map(r => {
-          const existing = existingBundleLines[bundleIdx];
-          bundleIdx += 1;
-          return {
-            lineId: existing?.lineId || uuid(),
-            kind: 'bundle',
-            itemType: r.itemType,
-            siteId: siteId || '',
-            quantity: r.quantity,
-            unitPrice: r.unitPrice,
-            description: '',
-            itemsPerBundle: 100 // Default bundle size, should be configurable
-          } as SaleLine;
-        });
+      const existingItemLines = lines.filter((l): l is ItemSaleLine => l.kind === 'item');
+      let idx = 0;
+      const built: SaleLine[] = [];
+      for (const r of quickRows.filter(row => row.quantity > 0)) {
+        let resolvedId = r.itemId?.trim();
+        if (!resolvedId) {
+          const match = items.find(
+            i =>
+              i.type === r.itemType &&
+              i.stock?.some(s => (!siteId || s.siteId === siteId) && s.quantity > 0)
+          );
+          resolvedId = match?.id;
+        }
+        if (!resolvedId) {
+          showValidationError(
+            'Quick Count: no inventory row found for a row (check site and item type), or use Manual Lines to pick items.',
+            true
+          );
+          return;
+        }
+        const existing = existingItemLines[idx++];
+        built.push({
+          lineId: existing?.lineId || r.id || uuid(),
+          kind: 'item',
+          itemId: resolvedId,
+          quantity: r.quantity,
+          unitPrice: r.unitPrice,
+          description: '',
+          taxAmount: 0,
+        } as SaleLine);
+      }
+      effectiveLines = built;
       setLines(effectiveLines);
     }
 
@@ -727,7 +722,7 @@ export default function SalesModal({
 
     // Calculate totals
     const subtotal = effectiveLines.reduce((total, line) => {
-      if (line.kind === 'item' || line.kind === 'bundle') {
+      if (line.kind === 'item') {
         return total + (line.quantity * line.unitPrice);
       } else if (line.kind === 'service') {
         return total + line.revenue;
@@ -851,19 +846,17 @@ export default function SalesModal({
   };
 
   // Validation: Check if sale can have the specified line type
-  const canAddLineType = (lineKind: 'item' | 'bundle' | 'service') => {
-    if (lines.length === 0) return true; // First line can be anything
+  const canAddLineType = (lineKind: 'item' | 'service') => {
+    if (lines.length === 0) return true;
 
     const existingKinds = new Set(lines.map(line => line.kind));
 
-    // If it's a product line (item/bundle), check if there are no service lines
-    if (lineKind === 'item' || lineKind === 'bundle') {
+    if (lineKind === 'item') {
       return !existingKinds.has('service');
     }
 
-    // If it's a service line, check if there are no product lines
     if (lineKind === 'service') {
-      return !existingKinds.has('item') && !existingKinds.has('bundle');
+      return !existingKinds.has('item');
     }
 
     return true;
@@ -889,7 +882,7 @@ export default function SalesModal({
 
   // Quick Count helpers
   const addQuickRow = () => {
-    setQuickRows(prev => ([...prev, { id: uuid(), itemType: ItemType.BUNDLE, quantity: 1, unitPrice: 0 }]));
+    setQuickRows(prev => ([...prev, { id: uuid(), itemType: ItemType.BUNDLE, itemId: '', quantity: 1, unitPrice: 0 }]));
   };
   const updateQuickRow = (id: string, patch: Partial<QuickRow>) => {
     setQuickRows(prev => prev.map(r => r.id === id ? { ...r, ...patch } : r));
@@ -907,18 +900,31 @@ export default function SalesModal({
   };
 
   const applyQuickRowsToLines = () => {
-    const materialized: SaleLine[] = quickRows
-      .filter(r => r.quantity > 0)
-      .map(r => ({
-        lineId: uuid(),
-        kind: 'bundle',
-        itemType: r.itemType,
-        siteId: siteId || '',
+    const materialized: SaleLine[] = [];
+    for (const r of quickRows.filter(row => row.quantity > 0)) {
+      let resolvedId = r.itemId?.trim();
+      if (!resolvedId) {
+        const match = items.find(
+          i =>
+            i.type === r.itemType &&
+            i.stock?.some(s => (!siteId || s.siteId === siteId) && s.quantity > 0)
+        );
+        resolvedId = match?.id;
+      }
+      if (!resolvedId) {
+        showValidationError('Quick Count: could not resolve an inventory item for every row (set site or pick types with stock).');
+        return;
+      }
+      materialized.push({
+        lineId: r.id || uuid(),
+        kind: 'item',
+        itemId: resolvedId,
         quantity: r.quantity,
         unitPrice: r.unitPrice,
         description: '',
-        itemsPerBundle: 100 // Default bundle size, should be configurable
-      }) as SaleLine);
+        taxAmount: 0,
+      } as SaleLine);
+    }
     setLines(materialized);
   };
 
@@ -940,26 +946,6 @@ export default function SalesModal({
     const method = getDefaultMethodForType(type);
     const currency = method === PaymentMethod.FIAT_CRC || method === PaymentMethod.SINPE ? Currency.CRC : Currency.USD;
     setPayments([{ method: method as string, amount: total, currency: currency as string, receivedAt: new Date() }]);
-  };
-
-  const addBundleLine = () => {
-    if (!canAddLineType('bundle')) {
-      showValidationError('Cannot mix product and service lines in the same sale. Please clear existing lines first.');
-      return;
-    }
-
-    const newLine: SaleLine = {
-      lineId: uuid(),
-      kind: 'bundle',
-      itemType: ItemType.BUNDLE,
-      siteId: siteId || '',
-      quantity: 1,
-      unitPrice: 0,
-      description: '',
-      taxAmount: 0,
-      itemsPerBundle: 100, // Default bundle size, should be configurable
-    };
-    setLines([...lines, newLine]);
   };
 
   const addServiceLine = () => {
@@ -1250,7 +1236,7 @@ export default function SalesModal({
                           return;
                         }
 
-                        if (newKind === 'service' && (existingKinds.has('item') || existingKinds.has('bundle'))) {
+                        if (newKind === 'service' && existingKinds.has('item')) {
                           showValidationError('Cannot switch to Service mode. This sale already has product lines. Please clear all lines first.');
                           return;
                         }

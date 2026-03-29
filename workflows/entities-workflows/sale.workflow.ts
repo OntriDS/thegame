@@ -1,8 +1,8 @@
 // workflows/entities-workflows/sale.workflow.ts
 // Sale-specific workflow with CHARGED, CANCELLED, COLLECTED events
 
-import { EntityType, LogEventType, FOUNDER_CHARACTER_ID, SaleStatus, SaleType, ItemStatus } from '@/types/enums';
-import type { Item, Sale } from '@/types/entities';
+import { EntityType, LogEventType, FOUNDER_CHARACTER_ID, SaleStatus, SaleType } from '@/types/enums';
+import type { Sale } from '@/types/entities';
 import {
   appendEntityLog,
   ensureItemSoldLogsFromSale,
@@ -13,12 +13,20 @@ import { ensureFinancialDoneLog } from './financial.workflow';
 import { hasEffect, markEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
 import { EffectKeys } from '@/data-store/keys';
 import { getLinksFor, removeLink } from '@/links/link-registry';
-import { getPlayerById, getSaleById, getItemById, getFinancialsBySourceSaleId, removeFinancial, upsertItem } from '@/data-store/datastore';
+import {
+  getPlayerById,
+  getSaleById,
+  getItemById,
+  getItemsBySourceRecordId,
+  getFinancialsBySourceSaleId,
+  removeFinancial,
+  removeItem,
+  upsertSale,
+} from '@/data-store/datastore';
 import { stagePointsForPlayer, removePointsFromPlayer, rewardPointsToPlayer } from '../points-rewards-utils';
 import { processSaleLines, ensureSoldItemEntities } from '../sale-line-utils';
 import { updateFinancialRecordsFromSale, updateItemsFromSale, hasRevenueChanged, hasLinesChanged } from '../update-propagation-utils';
 import { createCharacterFromSale } from '../character-creation-utils';
-import { upsertSale } from '@/data-store/datastore';
 import { formatMonthKey, calculateClosingDate } from '@/lib/utils/date-utils';
 import { buildArchiveCollectionIndexKey, buildArchiveMonthsKey } from '@/data-store/keys';
 import { getSaleLogDetails } from '@/lib/utils/sale-log-details';
@@ -474,10 +482,12 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
   // The function has its own idempotency per lineId, so calling it repeatedly is safe.
   // =========================================================================
   const isSaleCharged = !sale.isNotPaid && !sale.isNotCharged;
-  const hasItemLines = sale.lines?.some(l => l.kind === 'item' || l.kind === 'bundle');
+  const hasItemLines = sale.lines?.some(l => l.kind === 'item');
   if (isSaleCharged && hasItemLines) {
     await ensureSoldItemEntities(sale);
-    await ensureItemSoldLogsFromSale(sale);
+    // Lines may now point at sold-item rows in KV; use reloaded sale so SOLD logs attach to those ids, not the first-persist snapshot.
+    const saleForItemLogs = await getSaleById(sale.id);
+    await ensureItemSoldLogsFromSale(saleForItemLogs ?? sale);
   }
 
   if (previousSale) {
@@ -498,15 +508,18 @@ async function processChargedSaleLines(sale: Sale): Promise<void> {
 /**
  * Remove sale effects when sale is deleted
  * Sales can have entries in multiple logs: sales, financials, character, items
+ *
+ * @param saleSnapshot — When the sale row is already gone from KV, pass the last loaded snapshot so sold-item rows and line ids can still be resolved.
  */
-export async function removeSaleEffectsOnDelete(saleId: string): Promise<void> {
+export async function removeSaleEffectsOnDelete(saleId: string, saleSnapshot?: Sale | null): Promise<void> {
   try {
+    const sale = saleSnapshot ?? (await getSaleById(saleId));
 
-    // 0. Revert Inventory (Restore Stock)
-    await revertSaleInventory(saleId);
+    // 0. Remove sold-item entity rows for this sale (do not touch live inventory SKUs)
+    await removeSoldItemRowsForDeletedSale(saleId, sale ?? null);
 
     // 1. Remove player points that were awarded by this sale (if points were badly given)
-    await removePlayerPointsFromSale(saleId);
+    await removePlayerPointsFromSale(saleId, sale ?? undefined);
 
     // 2. Remove all Links related to this sale
     const saleLinks = await getLinksFor({ type: EntityType.SALE, id: saleId });
@@ -550,7 +563,6 @@ export async function removeSaleEffectsOnDelete(saleId: string): Promise<void> {
     await removeLogEntriesAcrossMonths(EntityType.SALE, entry => entry.entityId === saleId);
 
     // Also check and remove from player log if this sale awarded points
-    const sale = await getSaleById(saleId);
     if (sale && saleHasRewardPoints(sale)) {
       await removeLogEntriesAcrossMonths(EntityType.PLAYER, entry => entry.sourceId === saleId || entry.sourceSaleId === saleId);
     }
@@ -570,22 +582,22 @@ export async function removeSaleEffectsOnDelete(saleId: string): Promise<void> {
  * Remove player points that were awarded by a specific sale
  * This is used when rolling back a sale that incorrectly awarded points
  */
-async function removePlayerPointsFromSale(saleId: string): Promise<void> {
+async function removePlayerPointsFromSale(saleId: string, sale?: Sale | null): Promise<void> {
   try {
-    const sale = await getSaleById(saleId);
+    const resolved = sale ?? (await getSaleById(saleId));
 
-    if (!sale || !saleHasRewardPoints(sale)) {
+    if (!resolved || !saleHasRewardPoints(resolved)) {
       return;
     }
 
-    const playerId = sale.playerCharacterId || FOUNDER_CHARACTER_ID;
+    const playerId = resolved.playerCharacterId || FOUNDER_CHARACTER_ID;
     const player = await getPlayerById(playerId);
 
     if (!player) {
       return;
     }
 
-    const pointsToRemove = sale.rewards!.points;
+    const pointsToRemove = resolved.rewards!.points;
 
     const hasPoints =
       (pointsToRemove.xp || 0) > 0 ||
@@ -604,68 +616,39 @@ async function removePlayerPointsFromSale(saleId: string): Promise<void> {
 }
 
 /**
- * Revert inventory changes from a sale
- * - Restores stock to the original item
- * - Resets soldAt if no stock remains sold
+ * Delete per-sale sold-item rows (KV clones). Live inventory rows are not adjusted here — stock was already reduced on charge.
  */
-async function revertSaleInventory(saleId: string): Promise<void> {
+async function removeSoldItemRowsForDeletedSale(saleId: string, sale: Sale | null): Promise<void> {
   try {
-    const sale = await getSaleById(saleId);
-    if (!sale || !sale.lines) return;
+    const cloneIds = new Set<string>();
 
-    for (const line of sale.lines) {
-      if (line.kind !== 'item' && line.kind !== 'bundle') continue;
-
-      const itemId = (line as any).itemId;
-      const quantityToRestore = (line as any).quantity || 0;
-
-      if (!itemId || quantityToRestore <= 0) continue;
-
-      const item = await getItemById(itemId);
-      if (!item) {
-        console.warn(`[revertSaleInventory] Item ${itemId} not found, cannot restore stock.`);
-        continue;
+    const fromSource = await getItemsBySourceRecordId(saleId);
+    for (const it of fromSource) {
+      if (it.sourceRecordId === saleId) {
+        cloneIds.add(it.id);
       }
+    }
 
-
-      // 1. Restore Stock Point
-      // We look for a stock point matching the sale's site, or default to the first one available
-      const targetSiteId = sale.siteId || item.stock?.[0]?.siteId || 'default';
-
-      let updatedStock = item.stock ? [...item.stock] : [];
-      const stockPointIndex = updatedStock.findIndex(sp => sp.siteId === targetSiteId);
-
-      if (stockPointIndex >= 0) {
-        updatedStock[stockPointIndex] = {
-          ...updatedStock[stockPointIndex],
-          quantity: updatedStock[stockPointIndex].quantity + quantityToRestore
-        };
-      } else {
-        // Create new stock point if it doesn't exist (e.g. if it was fully consumed and removed, though usually we keep at 0)
-        updatedStock.push({
-          siteId: targetSiteId,
-          quantity: quantityToRestore
-        });
+    if (sale?.lines) {
+      for (const line of sale.lines) {
+        if (line.kind !== 'item') continue;
+        const itemId = 'itemId' in line ? line.itemId : undefined;
+        if (itemId && String(itemId).includes('-sold-')) {
+          cloneIds.add(String(itemId));
+        }
       }
+    }
 
-      // 2. Update Quantity Sold
-      const newQuantitySold = Math.max(0, (item.quantitySold || 0) - quantityToRestore);
-
-      // 3. Reset Lifecycle fields if "unsold"
-      const updatedItem = {
-        ...item,
-        stock: updatedStock,
-        quantitySold: newQuantitySold,
-        // If it was marked sold but now isn't, clear soldAt
-        soldAt: newQuantitySold === 0 ? undefined : item.soldAt,
-        // When reversing a clone item, it must go back to active inventory if fully unsold
-        status: newQuantitySold === 0 ? ItemStatus.FOR_SALE : item.status,
-        updatedAt: new Date()
-      };
-
-      await upsertItem(updatedItem);
+    for (const itemId of cloneIds) {
+      try {
+        const existing = await getItemById(itemId);
+        if (!existing) continue;
+        await removeItem(itemId);
+      } catch (error) {
+        console.error(`[removeSoldItemRowsForDeletedSale] ❌ Failed to remove sold row ${itemId}:`, error);
+      }
     }
   } catch (error) {
-    console.error(`[revertSaleInventory] ❌ Failed to revert inventory for sale ${saleId}:`, error);
+    console.error(`[removeSoldItemRowsForDeletedSale] ❌ Failed for sale ${saleId}:`, error);
   }
 }

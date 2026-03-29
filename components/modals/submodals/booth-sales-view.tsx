@@ -31,7 +31,7 @@ import {
     SaleStatus,
     CharacterRole
 } from '@/types/enums';
-import { Sale, SaleLine, Item, Site, Character, ServiceLine, ItemSaleLine, BundleSaleLine, Business, Contract } from '@/types/entities';
+import { Sale, SaleLine, Item, Site, Character, ServiceLine, ItemSaleLine, Business, Contract } from '@/types/entities';
 import { v4 as uuid } from 'uuid';
 import { createSiteOptionsWithCategories } from '@/lib/utils/site-options-utils';
 import { formatDisplayDate } from '@/lib/utils/date-utils';
@@ -333,9 +333,10 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(fun
     }, [selectedAssociateId, selectedFounderBusinessId, contracts, sale, businesses]);
     // ============================================================================
 
-    const myItems = useMemo(() =>
-        lines.filter(l => (l.kind === 'item' || l.kind === 'bundle')) as (ItemSaleLine | BundleSaleLine)[],
-        [lines]);
+    const myItems = useMemo(
+        () => lines.filter((l): l is ItemSaleLine => l.kind === 'item'),
+        [lines]
+    );
 
     // Unified logic to find the single active contract
     const activeContract = useMemo(() => {
@@ -443,70 +444,41 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(fun
         const associateRows: Record<string, SettlementRow> = {};
 
         // Process Real Lines (Akiles Inventory)
-        lines.filter(l => l.kind === 'item' || l.kind === 'bundle').forEach(line => {
+        lines.filter((l): l is ItemSaleLine => l.kind === 'item').forEach(line => {
+            const itemLine = line;
 
             let total = 0;
             let category = 'Other';
 
-            if (line.kind === 'item') {
-                const itemLine = line as ItemSaleLine;
+            const metaUSD = itemLine.metadata?.totalUSD ?? 0;
+            const metaCRC = itemLine.metadata?.totalCRC ?? 0;
 
-                // Use metadata partial totals if available, otherwise fallback to total (USD)
-                const metaUSD = itemLine.metadata?.totalUSD ?? 0;
-                const metaCRC = itemLine.metadata?.totalCRC ?? 0;
+            if (metaUSD > 0 || metaCRC > 0) {
+                total = (itemLine.quantity || 0) * (itemLine.unitPrice || 0);
+            } else {
+                total = (itemLine.quantity || 0) * (itemLine.unitPrice || 0);
+            }
 
-                // If we have specific metadata (new system), use it.
-                // Otherwise fallback to legacy behavior (quantity * unitPrice = USD).
-                if (metaUSD > 0 || metaCRC > 0) {
-                    // Check if this line is purely derived from expressions
-                    total = (itemLine.quantity || 0) * (itemLine.unitPrice || 0);
-                    // But for the matrix, we want the split.
-                } else {
-                    total = (itemLine.quantity || 0) * (itemLine.unitPrice || 0);
-                }
+            const item = items.find(i => i.id === itemLine.itemId);
+            if (item) {
+                category = item.subItemType ? `${item.type}: ${item.subItemType}` : item.type;
+            }
 
-                const item = items.find(i => i.id === itemLine.itemId);
-                if (item) {
-                    category = item.subItemType ? `${item.type}: ${item.subItemType}` : item.type;
-                }
-
-                if (!akilesRows[category]) {
-                    akilesRows[category] = {
-                        id: category,
-                        label: category,
-                        isAssociate: false,
-                        totalColones: metaCRC,
-                        totalDollars: (metaUSD > 0 || metaCRC > 0) ? metaUSD : total,
-                        totalBitcoin: 0,
-                        totalCard: 0,
-                        commissionAmount: 0,
-                        ownerAmount: 0
-                    };
-                } else {
-                    akilesRows[category].totalDollars += ((metaUSD > 0 || metaCRC > 0) ? metaUSD : total);
-                    akilesRows[category].totalColones += metaCRC;
-                }
-            } else if (line.kind === 'bundle') {
-                const bundleLine = line as BundleSaleLine;
-                total = (bundleLine.quantity || 0) * (bundleLine.unitPrice || 0);
-                category = bundleLine.subItemType ? `Bundle: ${bundleLine.subItemType}` : 'Bundle';
-
-                // Bundle logic remains simple (USD) for now unless extended
-                if (!akilesRows[category]) {
-                    akilesRows[category] = {
-                        id: category,
-                        label: category,
-                        isAssociate: false,
-                        totalColones: 0,
-                        totalDollars: total,
-                        totalBitcoin: 0,
-                        totalCard: 0,
-                        commissionAmount: 0,
-                        ownerAmount: 0
-                    };
-                } else {
-                    akilesRows[category].totalDollars += total;
-                }
+            if (!akilesRows[category]) {
+                akilesRows[category] = {
+                    id: category,
+                    label: category,
+                    isAssociate: false,
+                    totalColones: metaCRC,
+                    totalDollars: (metaUSD > 0 || metaCRC > 0) ? metaUSD : total,
+                    totalBitcoin: 0,
+                    totalCard: 0,
+                    commissionAmount: 0,
+                    ownerAmount: 0
+                };
+            } else {
+                akilesRows[category].totalDollars += ((metaUSD > 0 || metaCRC > 0) ? metaUSD : total);
+                akilesRows[category].totalColones += metaCRC;
             }
         });
 
@@ -1331,7 +1303,7 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(fun
                         } as ItemSaleLine));
 
                         // Replace ALL item lines with the new selection (since modal manages the full list)
-                        // Keep non-item lines (like bundles if any, though we filtered them before? No, bundles are separate)
+                        // Keep non-product lines (e.g. service)
                         // The logic here replaces the previous "add to list" logic.
                         // User Edit Flow: "Open modal -> See current items -> Edit/Add/Remove -> Save -> Replace list".
 

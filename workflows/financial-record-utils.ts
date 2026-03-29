@@ -1,7 +1,7 @@
 // workflows/financial-record-utils.ts
 // Financial record creation and management utilities
 
-import type { Task, FinancialRecord, Sale, ItemSaleLine, Character, Contract, ServiceLine, BundleSaleLine } from '@/types/entities';
+import type { Task, FinancialRecord, Sale, ItemSaleLine, Character, Contract, ServiceLine } from '@/types/entities';
 import { LinkType, EntityType, LogEventType, BUSINESS_STRUCTURE, SaleType, SaleStatus, ContractClauseType, ContractStatus, FinancialStatus } from '@/types/enums';
 import { upsertFinancial, getAllFinancials, getFinancialsBySourceTaskId, removeFinancial, getItemById, getCharacterById, getFinancialConversionRates, getContractById, getFinancialsBySourceSaleId, upsertCharacter } from '@/data-store/datastore';
 import { makeLink } from '@/links/links-workflows';
@@ -293,6 +293,7 @@ export async function removeFinancialRecordsCreatedByTask(taskId: string): Promi
   }
 }
 
+/** Sale-sourced finrec period: doneAt (charged), then saleDate, then createdAt — not collectedAt. */
 function coerceSaleFinrecDate(
   sale: Sale,
   fallback: Date
@@ -359,7 +360,6 @@ export async function calculateBoothFinancials(sale: Sale): Promise<BoothFinanci
       
       let lineTotal = 0;
       if (line.kind === 'item') lineTotal = ((line as ItemSaleLine).unitPrice || 0) * ((line as ItemSaleLine).quantity || 0);
-      else if (line.kind === 'bundle') lineTotal = ((line as BundleSaleLine).unitPrice || 0) * ((line as BundleSaleLine).quantity || 0);
       else if (line.kind === 'service') lineTotal = (line as ServiceLine).revenue || 0;
 
       if (isAssociateItem) assocItemsTotal += lineTotal;

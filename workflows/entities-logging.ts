@@ -8,6 +8,7 @@ import { kvLPush, kvLRange, kvSAdd, kvSMembers, kvDel, kvLSet } from '@/data-sto
 import { buildLogMonthKey, buildLogMonthsIndexKey, buildLogKey } from '@/data-store/keys';
 import type { Sale } from '@/types/entities';
 import { EntityType, LogEventType, SaleStatus } from '@/types/enums';
+import { saleReferenceDateForItemSoldAndLog } from '@/lib/utils/date-utils';
 import { kv } from '@/data-store/kv';
 import { v4 as uuid } from 'uuid';
 
@@ -221,14 +222,14 @@ export async function getEntityLogs(
 
 /**
  * If the item lifecycle log month bucket lost SOLD rows (e.g. manual cleanup / empty rebuild),
- * re-append one SOLD row per product line. For a charged sale, `line.itemId` is the **sold item**
- * record (the row shown in Sold Items), not live inventory — we backfill logs for that entity id.
+ * re-append one SOLD row per product line. Call with a sale whose `lines` already match storage
+ * (after `ensureSoldItemEntities`), so `line.itemId` is the **sold-item row** (Sold Items tab), not live inventory.
  * Idempotent: skips entityIds that already have any SOLD entry in that month.
  */
 export async function ensureItemSoldLogsFromSale(sale: Sale): Promise<void> {
   if (sale.isNotPaid || sale.isNotCharged || sale.status === SaleStatus.CANCELLED) return;
 
-  const ts = sale.saleDate || sale.doneAt || new Date();
+  const ts = saleReferenceDateForItemSoldAndLog(sale);
   const monthKey = getMonthKeyFromTimestamp(ts);
 
   const list = await readMonthlyList(EntityType.ITEM, monthKey);

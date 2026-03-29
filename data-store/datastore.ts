@@ -3,6 +3,7 @@
 
 import type { Task, Item, FinancialRecord, Sale, Character, Player, Site, Settlement, Account, Business, Contract } from '@/types/entities';
 import { roundSaleTotals } from '@/lib/utils/financial-utils';
+import { normalizeSale } from '@/lib/utils/sale-lines-normalize';
 import type { TaskSnapshot, ItemSnapshot, SaleSnapshot, FinancialSnapshot } from '@/types/archive';
 import { EntityType, ItemType, TaskPriority, TaskStatus, FinancialStatus, TaskType, SaleStatus, ItemStatus } from '@/types/enums';
 import {
@@ -796,27 +797,36 @@ export async function upsertSale(sale: Sale, options?: { skipWorkflowEffects?: b
     }
   }
 
-  const saleToPersist = roundSaleTotals(sale);
+  const saleToPersist = roundSaleTotals(normalizeSale(sale));
   const saved = await repoUpsertSale(saleToPersist);
 
   // Phase 2: Rolling Summary Update
   await SummaryService.updateSalesCounters(saved, previous || undefined);
 
+  /** After onSaleUpsert, ensureSoldItemEntities may persist updated line itemIds (sold clones). Link sync must use that state, not the in-memory first write. */
+  let resultForLinks: Sale = saved;
+
   if (!options?.skipWorkflowEffects) {
     const { onSaleUpsert } = await import('@/workflows/entities-workflows/sale.workflow');
     await onSaleUpsert(saved, previous || undefined);
+
+    const latestRaw = await repoGetSaleById(sale.id);
+    if (latestRaw) {
+      const [revived] = reviveDates([latestRaw]);
+      resultForLinks = normalizeSale(revived);
+    }
   }
 
   if (!options?.skipLinkEffects) {
-    await processLinkEntity(saved, EntityType.SALE);
+    await processLinkEntity(resultForLinks, EntityType.SALE);
   }
 
-  return saved;
+  return resultForLinks;
 }
 
 export async function getAllSales(): Promise<Sale[]> {
   const sales = await repoGetAllSales();
-  return sales.filter(sale => !sale.isCollected);
+  return sales.filter(sale => !sale.isCollected).map(s => normalizeSale(s));
 }
 
 // Phase 5: Unified & Optimized Sales fetching (Active + Archive)
@@ -847,7 +857,7 @@ export async function getSalesForMonth(year: number, month: number): Promise<Sal
   // The Vault specifically filters for CHARGED/COLLECTED.
   // I will leave filtering to the consumer if they want specific statuses, 
   // but for the "Sales Archive" tab, we should probably follow the existing logic.
-  return reviveDates(sales);
+  return reviveDates(sales).map(s => normalizeSale(s));
 }
 
 /**
@@ -869,7 +879,7 @@ export async function getSalesFromMonthIndex(mmyy: string): Promise<Sale[]> {
     sales.push(...chunkResults.filter((s): s is Sale => s !== null));
   }
 
-  return reviveDates(sales);
+  return reviveDates(sales).map(s => normalizeSale(s));
 }
 
 export async function getTasksFromMonthIndex(mmyy: string): Promise<Task[]> {
@@ -909,19 +919,23 @@ export async function getFinancialsFromMonthIndex(mmyy: string): Promise<Financi
 }
 
 export async function getSaleById(id: string): Promise<Sale | null> {
-  return await repoGetSaleById(id);
+  const raw = await repoGetSaleById(id);
+  if (!raw) return null;
+  const [revived] = reviveDates([raw]);
+  return normalizeSale(revived);
 }
 
 export async function removeSale(id: string): Promise<void> {
   const existing = await repoGetSaleById(id);
+  if (existing) {
+    const [revived] = reviveDates([existing]);
+    const saleForCleanup = normalizeSale(revived);
+    const { removeSaleEffectsOnDelete } = await import('@/workflows/entities-workflows/sale.workflow');
+    await removeSaleEffectsOnDelete(id, saleForCleanup);
+  }
   await repoDeleteSale(id);
   if (existing) {
-    // Phase 2: Rolling Summary Update
     await SummaryService.handleSaleDeletion(existing);
-
-    // Call sale deletion workflow for cleanup
-    const { removeSaleEffectsOnDelete } = await import('@/workflows/entities-workflows/sale.workflow');
-    await removeSaleEffectsOnDelete(id);
   }
 }
 

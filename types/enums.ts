@@ -243,10 +243,8 @@ export enum ItemType {
   STICKER = 'Sticker',
   MERCH = 'Merch',
   CRAFT = 'Craft',
-
-  // BUNDLE_ITEM - Business Logic Items that are Packs of the same Type of Item
-  BUNDLE = 'Bundle',            // Pack of Items (Stickers or Prints)
-
+  // BUNDLE_ITEM - Business Logic Items that are Packs of the same Type of Item.
+  BUNDLE = 'Bundle',            // Pack of Stickers or Prints
   // RESOURCE_ITEM - Materials and Equipment for production
   MATERIAL = 'Material',
   EQUIPMENT = 'Equipment',

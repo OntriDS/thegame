@@ -549,31 +549,19 @@ export interface Payment {
 /** Base for sale lines */
 export interface SaleLineBase {
   lineId: string;
-  kind: 'item' | 'bundle' | 'service';
+  kind: 'item' | 'service';
   description?: string;
   taxAmount?: number;
   discount?: Discount;     // line-level discount
   metadata?: Record<string, any>; // component-specific details like math expressions
 }
 
-/** Precise item sale: reference exact inventory item */
+/** Product line: one inventory row (any ItemType, including ItemType.BUNDLE) */
 export interface ItemSaleLine extends SaleLineBase {
   kind: 'item';
   itemId: string;          // concrete item
   quantity: number;
   unitPrice: number;
-}
-
-/** Bundle sale: consume by item type (business-logic items) */
-export interface BundleSaleLine extends SaleLineBase {
-  kind: 'bundle';
-  itemType: ItemType;      // e.g., BUNDLE
-  itemId?: string;         // optional: specific item ID if selling from existing item
-  subItemType?: SubItemType;
-  siteId: string;          // where inventory is consumed
-  quantity: number;        // quantity of bundles sold
-  unitPrice: number;       // price per bundle
-  itemsPerBundle: number;  // how many individual items per bundle
 }
 
 /** Service sale: optional Task creation */
@@ -615,7 +603,7 @@ export interface ServiceLine extends SaleLineBase {
   outputItemStatus?: ItemStatus;
 }
 
-export type SaleLine = ItemSaleLine | BundleSaleLine | ServiceLine;
+export type SaleLine = ItemSaleLine | ServiceLine;
 
 /** Main Sale entity */
 export interface Sale extends BaseEntity {

@@ -219,7 +219,7 @@ function SalesPageContent() {
   const calculateTotalItems = () => {
     return filteredSales.reduce((total, sale) => {
       return total + sale.lines.reduce((lineTotal, line) => {
-        if (line.kind === 'item' || line.kind === 'bundle') {
+        if (line.kind === 'item') {
           return lineTotal + line.quantity;
         }
         return lineTotal;

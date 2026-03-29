@@ -2,6 +2,7 @@
 // Centralized date formatting utilities using app constants
 import { format, parseISO, isValid } from 'date-fns';
 import type { Task, Sale, FinancialRecord, Item } from '@/types/entities';
+import { SaleStatus } from '@/types/enums';
 import {
   DATE_FORMAT_DISPLAY,
   DATE_FORMAT_INPUT,
@@ -229,6 +230,33 @@ export function calculateClosingDate(referenceDate: Date | string): Date {
   endOfMonth.setHours(12, 0, 0, 0);
 
   return endOfMonth;
+}
+
+/**
+ * Business timestamp for sold-item rows and item SOLD logs from a sale.
+ * - Collected sale: prefer collectedAt (month close / books).
+ * - Otherwise (charged): doneAt, then saleDate, then now.
+ */
+export function saleReferenceDateForItemSoldAndLog(
+  sale: Pick<Sale, 'status' | 'isCollected' | 'collectedAt' | 'doneAt' | 'saleDate'>
+): Date {
+  const isCollected = sale.status === SaleStatus.COLLECTED || !!sale.isCollected;
+
+  const toValid = (v: unknown): Date | null => {
+    if (v == null || v === '') return null;
+    const d = v instanceof Date ? v : new Date(v as string);
+    return Number.isFinite(d.getTime()) ? d : null;
+  };
+
+  if (isCollected) {
+    const c = toValid(sale.collectedAt);
+    if (c) return c;
+  }
+  const done = toValid(sale.doneAt);
+  if (done) return done;
+  const sd = toValid(sale.saleDate);
+  if (sd) return sd;
+  return new Date();
 }
 
 // ============================================================================

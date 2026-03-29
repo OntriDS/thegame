@@ -201,9 +201,6 @@ export async function processSaleEffects(sale: Sale): Promise<void> {
     if (line.kind === 'item' && line.itemId) {
       allowedSaleItemIds.add(line.itemId);
     }
-    if (line.kind === 'bundle' && 'itemId' in line && line.itemId) {
-      allowedSaleItemIds.add(line.itemId as string);
-    }
   }
   for (const l of existingLinks) {
     if (
