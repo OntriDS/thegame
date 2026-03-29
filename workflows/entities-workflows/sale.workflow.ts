@@ -361,9 +361,9 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
               totalCost: totalCalculatedCost
             }
           };
-          // Skip workflow interactions to prevent infinite loops, but allow simple persistence
+          // Update sale with cost - allow workflow to run normally
           const { upsertSale } = await import('@/data-store/datastore');
-          await upsertSale(updatedSaleWithCost, { skipWorkflowEffects: true, skipLinkEffects: true });
+          await upsertSale(updatedSaleWithCost);
         }
       }
     }
