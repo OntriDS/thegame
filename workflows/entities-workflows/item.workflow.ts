@@ -1,7 +1,7 @@
 // workflows/entities-workflows/item.workflow.ts
-// Item-specific workflow with MOVED, SOLD, COLLECTED events
+// Item-specific workflow: SOLD drives archive; points only on tasks/sales
 
-import { EntityType, LogEventType, FOUNDER_CHARACTER_ID } from '@/types/enums';
+import { EntityType, LogEventType } from '@/types/enums';
 import type { Item } from '@/types/entities';
 import { ItemStatus } from '@/types/enums';
 import { appendEntityLog, updateEntityLeanFields, removeLogEntriesAcrossMonths } from '../entities-logging';
@@ -24,11 +24,10 @@ import {
 } from '@/data-store/datastore';
 import { entityHasLogEvent } from '@/lib/utils/entity-log-scan';
 import { formatMonthKey, calculateClosingDate, formatDisplayDate } from '@/lib/utils/date-utils';
-import { stagePointsForPlayer, resolveToPlayerIdMaybeCharacter } from '../points-rewards-utils';
-import { isSoldStatus, isCollectedStatus } from '@/lib/utils/status-utils';
+import { isSoldStatus } from '@/lib/utils/status-utils';
 import { buildArchiveCollectionIndexKey, buildArchiveMonthsKey } from '@/data-store/keys';
 
-const STATE_FIELDS = ['status', 'stock', 'quantitySold', 'isCollected'];
+const STATE_FIELDS = ['status', 'stock', 'quantitySold'];
 
 export async function onItemUpsert(item: Item, previousItem?: Item): Promise<void> {
   // New item creation
@@ -65,9 +64,9 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
     return;
   }
 
-  // Status changes - UPDATED event (for non-Sold/Collected statuses)
+  // Status changes - UPDATED event (when not sold)
   if (previousItem.status !== item.status) {
-    if (!isSoldStatus(item.status) && !isCollectedStatus(item.status)) {
+    if (!isSoldStatus(item.status)) {
       await appendEntityLog(EntityType.ITEM, item.id, LogEventType.UPDATED, {
         name: item.name,
         itemType: item.type,
@@ -118,7 +117,7 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
       stock: [{ siteId: primarySite, quantity: 0 }],
       quantitySold: quantityToSell,
       soldAt: soldAt,
-      isCollected: true, 
+      isCollected: false,
       sourceRecordId: 'manual', 
       updatedAt: new Date()
     };
@@ -183,12 +182,6 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
       soldQuantity: quantityToSell
     }, item.soldAt || soldAt);
 
-    if (item.rewards?.points) {
-      const playerId = item.ownerCharacterId || FOUNDER_CHARACTER_ID;
-      const { stagePointsForPlayer } = await import('../points-rewards-utils');
-      await stagePointsForPlayer(playerId, item.rewards.points, item.id, EntityType.ITEM);
-    }
-
     // 5. LEAN SWEEPER (Since we return early, we must sweep manually here if needed)
     const leanFieldsChanged = previousItem.name !== item.name || previousItem.type !== item.type || previousItem.subItemType !== item.subItemType;
     if (leanFieldsChanged) {
@@ -201,57 +194,6 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
 
     await markEffect(manualSoldEffectKey);
     return; // Halt generic workflow so it doesn't overwrite our logic
-  }
-
-  // Collection status - COLLECTED event
-  // Dual detection: status OR flag change to COLLECTED
-  const statusBecameCollected =
-    isCollectedStatus(item.status) &&
-    (!previousItem || !isCollectedStatus(previousItem.status));
-
-  const flagBecameCollected =
-    !!item.isCollected && (!previousItem || !previousItem.isCollected);
-
-  if (statusBecameCollected || flagBecameCollected) {
-    // Snap-to-Month Logic
-    // For items without a sale, we use the soldAt date (if set) or current date as reference
-    // FIX: Prefer existing dates over "Now" to ensure historical accuracy (e.g. Jan item collected in Feb)
-    let defaultCollectedAt: Date;
-
-    if (item.soldAt) {
-      defaultCollectedAt = calculateClosingDate(item.soldAt);
-    } else if (item.createdAt) {
-      defaultCollectedAt = calculateClosingDate(item.createdAt);
-    } else {
-      const now = new Date();
-      // Adjust to CR time (UTC-6) roughly for "Today" fallback
-      const adjustedNow = new Date(now.getTime() - 6 * 60 * 60 * 1000);
-      defaultCollectedAt = calculateClosingDate(adjustedNow);
-    }
-
-    const collectedAt = item.collectedAt ?? defaultCollectedAt;
-
-    await appendEntityLog(EntityType.ITEM, item.id, LogEventType.COLLECTED, {
-      name: item.name,
-      itemType: item.type,
-      subItemType: item.subItemType,
-      soldQuantity: item.quantitySold || 1
-    }, collectedAt);
-
-    // Record Archive Index for COLLECTED case 
-    // Usually items reach Archive on SOLD. But if they jump straight to COLLECTED, capture that.
-    const archiveMonth = calculateClosingDate(collectedAt);
-    const archiveIndexEffectKey = EffectKeys.sideEffect('item', item.id, `archiveIndex:${formatMonthKey(archiveMonth)}`);
-
-    if (!(await hasEffect(archiveIndexEffectKey))) {
-      const monthKey = formatMonthKey(archiveMonth);
-      const { kvSAdd } = await import('@/data-store/kv');
-      const { buildMonthIndexKey } = await import('@/data-store/keys');
-      const itemsMonthKey = buildMonthIndexKey(EntityType.ITEM, monthKey);
-      await kvSAdd(itemsMonthKey, item.id);
-
-      await markEffect(archiveIndexEffectKey);
-    }
   }
 
   // ==========================================
@@ -293,12 +235,11 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
   // where no status change occurs so the SOLD event block above never fires.
   // ==========================================
   if (previousItem) {
-    const isArchivable = isSoldStatus(item.status) || isCollectedStatus(item.status) || !!item.isCollected;
+    const isArchivable = isSoldStatus(item.status);
 
     if (isArchivable) {
-      // Maintain month index (collectedAt → soldAt → createdAt)
-      // CRITICAL: Items must be indexed by their latest lifecycle date to appear in the correct "Collected/Sold" month tab
-      const currentTargetDate = item.collectedAt || item.soldAt || item.createdAt || new Date();
+      // Maintain month index (soldAt → createdAt)
+      const currentTargetDate = item.soldAt || item.createdAt || new Date();
       const targetMonth = formatMonthKey(calculateClosingDate(currentTargetDate));
 
       const { kvSAdd, kvSRem } = await import('@/data-store/kv');
@@ -365,15 +306,14 @@ export async function ensureItemSoldLog(itemId: string): Promise<{
 }> {
   const item = await getItemById(itemId);
   if (!item) return { success: false, error: `Item not found: ${itemId}` };
-  const impliesSold =
-    isSoldStatus(item.status) || isCollectedStatus(item.status) || !!item.isCollected;
+  const impliesSold = isSoldStatus(item.status);
   if (!impliesSold) {
-    return { success: false, error: 'Item is not sold or collected; SOLD log not implied.' };
+    return { success: false, error: 'Item is not sold; SOLD log not implied.' };
   }
   if (await entityHasLogEvent(EntityType.ITEM, itemId, 'sold')) {
     return { success: true, noop: true };
   }
-  const ts = item.soldAt || item.collectedAt || item.createdAt || new Date();
+  const ts = item.soldAt || item.createdAt || new Date();
   await appendEntityLog(
     EntityType.ITEM,
     item.id,

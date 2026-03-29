@@ -19,7 +19,6 @@ export const taskStatusKeyMap: Record<TaskStatus, string> = {
 export const financialStatusKeyMap: Record<FinancialStatus, string> = {
   [FinancialStatus.PENDING]: 'pending',
   [FinancialStatus.DONE]: 'done',
-  [FinancialStatus.COLLECTED]: 'collected',
 };
 
 
@@ -42,7 +41,6 @@ export const itemStatusKeyMap: Record<ItemStatus, string> = {
   [ItemStatus.OBSOLETE]: 'obsolete',
   [ItemStatus.DAMAGED]: 'damaged',
   [ItemStatus.IDLE]: 'idle',
-  [ItemStatus.COLLECTED]: 'collected',
   [ItemStatus.CONSIGNMENT]: 'consignment',
 };
 
@@ -97,5 +95,5 @@ export const isSoldStatus = (status: any): boolean => {
 export const isCollectedStatus = (status: any): boolean => {
   if (!status) return false;
   const s = status.toString().toLowerCase();
-  return s === 'collected' || s === 'itemstatus.collected' || status === TaskStatus.COLLECTED || status === ItemStatus.COLLECTED;
+  return s === 'collected' || s === 'itemstatus.collected' || status === TaskStatus.COLLECTED;
 };

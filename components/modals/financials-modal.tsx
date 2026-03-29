@@ -248,7 +248,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
         isNotPaid: record.isNotPaid || false,
         isNotCharged: record.isNotCharged || false,
         status:
-          record.status === FinancialStatus.COLLECTED
+          String(record.status) === 'Collected'
             ? FinancialStatus.DONE
             : record.status || FinancialStatus.DONE,
         site: record.siteId || '',
@@ -361,7 +361,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
       }));
     } else if (
       formData.status === FinancialStatus.PENDING ||
-      formData.status === FinancialStatus.COLLECTED
+      String(formData.status) === 'Collected'
     ) {
       setFormData(prev => ({
         ...prev,
@@ -523,7 +523,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
       isNotPaid: formData.isNotPaid,
       isNotCharged: formData.isNotCharged,
       status:
-        formData.status === FinancialStatus.COLLECTED
+        String(formData.status) === 'Collected'
           ? FinancialStatus.DONE
           : formData.status,
       isCollected: false,

@@ -83,14 +83,13 @@ export class SummaryService {
     const monthYear = formatMonthKey(new Date(date));
     let itemsSoldDelta = 0;
 
-    const isSold = (status?: string, isCollected?: boolean) => 
-      (status as string || '').toUpperCase() === 'SOLD' || 
-      (status as string || '').toUpperCase() === 'ITEMSTATUS.SOLD' || 
-      status === ItemStatus.COLLECTED || 
-      !!isCollected;
+    const isSold = (status?: string) => {
+      const u = (status as string || '').toUpperCase();
+      return u === 'SOLD' || u === 'ITEMSTATUS.SOLD' || u === 'COLLECTED' || u === 'ITEMSTATUS.COLLECTED';
+    };
 
-    const wasSold = oldItem ? isSold(oldItem.status, oldItem.isCollected) : false;
-    const isNowSold = isSold(newItem.status, newItem.isCollected);
+    const wasSold = oldItem ? isSold(oldItem.status) : false;
+    const isNowSold = isSold(newItem.status);
 
     if (!wasSold && isNowSold) {
       itemsSoldDelta = newItem.quantitySold || 0;

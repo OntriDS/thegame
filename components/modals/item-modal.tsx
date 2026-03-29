@@ -328,7 +328,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
       status: ItemStatus.SOLD,
       createdAt: soldAt,
       updatedAt: soldAt,
-      isCollected: true,
+      isCollected: false,
       restockable: targetItem.restockable,
       links: [],
       metadata: {
@@ -803,7 +803,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         updatedAt: new Date(),
         soldAt: localSoldAt ?? item?.soldAt,
         collectedAt: localCollectedAt,
-        isCollected: (item || existingItems.find(i => i.id === selectedItemId))?.isCollected || false,        // Preserve collection status
+        isCollected: false,
         links: (item || existingItems.find(i => i.id === selectedItemId))?.links || [],  // Preserve links for Rosetta Stone
       };
 

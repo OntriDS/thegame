@@ -285,14 +285,22 @@ export function getEntityYear(entity: Task | Sale | FinancialRecord | Item): num
 
 /**
  * Determine if an entity should be considered archived relative to a given (month, year).
- * Archived when entity.isCollected is true AND (entity's month/year != provided month/year).
+ * Tasks/sales/financials: historically keyed on isCollected. Items: sold state + month drift.
  */
 export function isEntityArchived(
   entity: Task | Sale | FinancialRecord | Item,
   currentMonth: number,
   currentYear: number
 ): boolean {
-  if (!(entity as any).isCollected) return false;
+  const e = entity as any;
+  if (Array.isArray(e.stock) && e.type && !e.totals) {
+    const st = String(e.status ?? '').toLowerCase();
+    if (!st.includes('sold') && st !== 'collected') return false;
+    const m = getEntityMonth(entity);
+    const y = getEntityYear(entity);
+    return m !== currentMonth || y !== currentYear;
+  }
+  if (!e.isCollected) return false;
   const m = getEntityMonth(entity);
   const y = getEntityYear(entity);
   return m !== currentMonth || y !== currentYear;

@@ -98,8 +98,8 @@ export async function createItemFromTask(task: Task): Promise<Item | null> {
       quantitySold: 0,
       sourceTaskId: task.id, // Link item back to the task that created it
       ownerCharacterId: task.customerCharacterId || null, // Emissary: Pass customer as item owner
-      isCollected: !!task.isCollected,
-      collectedAt: task.collectedAt,
+      isCollected: false,
+      collectedAt: undefined,
       year: (task.collectedAt || task.doneAt || new Date()).getFullYear(), // Use task's date
       createdAt: new Date(),
       updatedAt: new Date(),

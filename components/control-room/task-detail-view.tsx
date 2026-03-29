@@ -341,20 +341,6 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
               >
                 Sales Only
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-xs"
-                onClick={async () => {
-                  try {
-                    const now = new Date();
-                    const res = await ClientAPI.collectInventory(now.getMonth() + 1, now.getFullYear());
-                    alert(`Inventory Collection Complete! Processed ${(res as any).collected || 0} records.`);
-                  } catch (error: any) { alert(error.message); }
-                }}
-              >
-                Inventory Only
-              </Button>
             </div>
           </div>
         </div>

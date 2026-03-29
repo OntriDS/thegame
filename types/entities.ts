@@ -246,9 +246,10 @@ export interface Item extends BaseEntity {
   // Sale tracking
   soldAt?: Date;                   // When item was sold
 
-  // Archive field
-  isCollected: boolean;            // Item collected (monthly close)
-  collectedAt?: Date;              // When item was collected (monthly close)
+  /** @deprecated Items archive when sold — not via monthly collection */
+  isCollected?: boolean;
+  /** @deprecated */
+  collectedAt?: Date;
 
   // Rewards (DNA for RNA)
   rewards?: Rewards;               // Standard rewards (XP, RP, FP, HP)

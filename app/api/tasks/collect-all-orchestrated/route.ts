@@ -21,11 +21,10 @@ export async function POST(request: NextRequest) {
 
         results.tasks = await CollectionService.collectTasks(month, year);
         results.sales = await CollectionService.collectSales(month, year);
-        results.inventory = await CollectionService.collectInventory(month, year);
 
         return NextResponse.json({
             success: true,
-            message: 'All rewards collected successfully.',
+            message: 'Tasks and sales collection completed.',
             results
         });
 

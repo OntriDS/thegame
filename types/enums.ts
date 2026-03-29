@@ -207,7 +207,6 @@ export enum TaskPriority {
 export enum FinancialStatus {
   PENDING = 'PENDING',  // When isNotPaid or isNotCharged - excluded from cashflow
   DONE = 'Done',        // When paid/charged and processed
-  COLLECTED = 'Collected', // When archived for reporting
 }
 
 /** In-game currency system */
@@ -294,7 +293,6 @@ export enum ItemStatus {
   OBSOLETE = 'Obsolete',
   DAMAGED = 'Damaged',
   IDLE = 'Idle',
-  COLLECTED = 'Collected',
 }
 
 /** Creative collections */

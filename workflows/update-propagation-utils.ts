@@ -207,8 +207,6 @@ export async function updateItemsCreatedByTask(
             price: outputPropsChanged ? (task.outputItemPrice || item.price) : item.price,
             station: outputPropsChanged ? (task.station || item.station) : item.station,
             year,
-            isCollected: !!task.isCollected,
-            collectedAt: task.collectedAt,
             updatedAt: new Date()
           };
 

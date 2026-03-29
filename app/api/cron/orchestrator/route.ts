@@ -20,14 +20,13 @@ export async function GET(request: NextRequest) {
         const isLastDayOfMonth = tomorrow.getDate() === 1;
 
 
-        // --- JOB: Automated monthly collection (tasks, sales, inventory). Finrecs archive on DONE, not COLLECTED. ---
+        // --- JOB: Automated monthly collection (tasks + sales). Items archive on SOLD only. ---
         if (isLastDayOfMonth) {
             const targetMonth = now.getMonth() + 1; // 1-12
             const targetYear = now.getFullYear();
 
             results.tasks = await CollectionService.collectTasks(targetMonth, targetYear);
             results.sales = await CollectionService.collectSales(targetMonth, targetYear);
-            results.inventory = await CollectionService.collectInventory(targetMonth, targetYear);
         }
 
         // --- JOB: Pixelbrain Autonomous Pulse (Piggyback Strategy) ---

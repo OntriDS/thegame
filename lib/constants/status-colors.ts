@@ -21,12 +21,12 @@ export const DEV_SPRINT_STATUS_COLORS = {
 
 /** Financial Status Colors - Light & Dark Mode */
 export const FINANCIAL_STATUS_COLORS = {
+  [FinancialStatus.PENDING]: {
+    light: 'bg-orange-100 text-orange-800',
+    dark: 'bg-orange-900 text-orange-200'
+  },
   [FinancialStatus.DONE]: {
     light: 'bg-green-100 text-green-800',
     dark: 'bg-green-900 text-green-200'
-  },
-  [FinancialStatus.COLLECTED]: {
-    light: 'bg-yellow-100 text-yellow-800',
-    dark: 'bg-yellow-900 text-yellow-200'
   },
 } as const;

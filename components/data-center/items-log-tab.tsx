@@ -136,7 +136,7 @@ export function ItemsLogTab({
       'obsolete': ItemStatus.OBSOLETE,
       'damaged': ItemStatus.DAMAGED,
       'idle': ItemStatus.IDLE,
-      'collected': ItemStatus.COLLECTED,
+      'collected': ItemStatus.SOLD,
       'consignment': ItemStatus.CONSIGNMENT,
     };
 
@@ -237,7 +237,7 @@ export function ItemsLogTab({
                       case LogEventType.SOLD.toLowerCase():
                         return getItemStatusBadgeColor(ItemStatus.SOLD);
                       case LogEventType.COLLECTED.toLowerCase():
-                        return getItemStatusBadgeColor(ItemStatus.COLLECTED);
+                        return getItemStatusBadgeColor(ItemStatus.SOLD);
                       default:
                         return 'border-muted text-muted-foreground';
                     }

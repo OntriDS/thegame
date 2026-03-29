@@ -707,68 +707,6 @@ export async function getActiveFinancials(): Promise<FinancialRecord[]> {
   );
 }
 
-export type MigrateFinancialRecordsNormalizeResult = {
-  dryRun: boolean;
-  scanned: number;
-  updated: number;
-  clearedRewards: number;
-  clearedCollectedFields: number;
-  statusCollectedToDone: number;
-};
-
-/**
- * Strip finrec points/rewards, clear collected fields, map status COLLECTED → DONE.
- * Use skipWorkflowEffects so DONE logs are not re-emitted (logs fixed by separate migrations).
- */
-export async function migrateFinancialRecordsNormalize(options?: {
-  dryRun?: boolean;
-}): Promise<MigrateFinancialRecordsNormalizeResult> {
-  const dryRun = options?.dryRun ?? false;
-  const all = await repoGetAllFinancials();
-  let updated = 0;
-  let clearedRewards = 0;
-  let clearedCollectedFields = 0;
-  let statusCollectedToDone = 0;
-
-  for (const f of all) {
-    let touch = false;
-    const next: FinancialRecord = { ...f };
-
-    if (f.rewards != null) {
-      clearedRewards += 1;
-      delete (next as { rewards?: unknown }).rewards;
-      touch = true;
-    }
-    if (f.isCollected || f.collectedAt) {
-      clearedCollectedFields += 1;
-      next.isCollected = false;
-      next.collectedAt = undefined;
-      touch = true;
-    }
-    if (f.status === FinancialStatus.COLLECTED) {
-      statusCollectedToDone += 1;
-      next.status = FinancialStatus.DONE;
-      touch = true;
-    }
-
-    if (touch) {
-      updated += 1;
-      if (!dryRun) {
-        await upsertFinancial(next, { skipWorkflowEffects: true, skipLinkEffects: true });
-      }
-    }
-  }
-
-  return {
-    dryRun,
-    scanned: all.length,
-    updated,
-    clearedRewards,
-    clearedCollectedFields,
-    statusCollectedToDone,
-  };
-}
-
 // Helper to chunk arrays for Redis MGET (prevents payload size errors)
 const chunkArray = <T>(arr: T[], size: number): T[][] =>
   arr.length ? [arr.slice(0, size), ...chunkArray(arr.slice(size), size)] : [];

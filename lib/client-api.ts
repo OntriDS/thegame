@@ -1211,16 +1211,6 @@ export const ClientAPI = {
     return await res.json();
   },
 
-  collectInventory: async (month: number, year: number): Promise<{ success: boolean; collected: number }> => {
-    const res = await fetch('/api/inventory/collect-all', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ month, year })
-    });
-    if (!res.ok) throw new Error('Failed to collect inventory');
-    return await res.json();
-  },
-
   collectAllEntities: async (month: number, year: number): Promise<{ success: boolean; results: any }> => {
     const res = await fetch('/api/tasks/collect-all-orchestrated', {
       method: 'POST',

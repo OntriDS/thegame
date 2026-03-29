@@ -88,7 +88,7 @@ export interface FinancialSnapshot extends BaseSnapshot {
     amount: number;
     type: 'income' | 'expense';
     company: string;
-    status: FinancialStatus.COLLECTED; // Always COLLECTED in snapshot
+    status: FinancialStatus.DONE;
     collectedAt: Date;
     collectedByCharacterId?: string;
     isNotCharged?: boolean;

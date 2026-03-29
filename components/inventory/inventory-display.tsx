@@ -29,7 +29,7 @@ import { Switch } from '@/components/ui/switch';
 import { formatMonthKey, getCurrentMonthKey, sortMonthKeys, formatDisplayDate } from '@/lib/utils/date-utils';
 
 function inventoryTabForItem(item: Item): InventoryTab {
-  if (item.status === ItemStatus.SOLD || item.status === ItemStatus.COLLECTED) {
+  if (isSoldStatus(item.status) || String(item.status).toLowerCase() === 'collected') {
     return InventoryTab.SOLD_ITEMS;
   }
   switch (item.type) {
@@ -1110,9 +1110,10 @@ export function InventoryDisplay({
                             <Button
                               size="sm"
                               variant="ghost"
-                              className="h-6 w-6 p-0"
+                              className="h-6 px-2 text-xs"
                               onClick={() => handleEditItem(sticker, stickersViewBy === 'location' ? groupKey : undefined)}
                             >
+                              Edit
                             </Button>
                           </div>
                         </div>
