@@ -1330,6 +1330,8 @@ export default function SalesModal({
             setLines={setLines}
             siteId={siteId}
             setSiteId={setSiteId}
+            doneAt={localDoneAt}
+            collectedAt={localCollectedAt}
             onSave={handleSave}
             onCancel={() => onOpenChange(false)}
             isSaving={isSaving}

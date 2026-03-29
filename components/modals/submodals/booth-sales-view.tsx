@@ -59,6 +59,10 @@ export interface BoothSalesViewProps {
     siteId: string;
     setSiteId: (id: string) => void;
 
+    // Lifecycle Dates
+    doneAt?: Date;
+    collectedAt?: Date;
+
     // Actions
     onSave: (sale?: Sale) => void;
     onCancel: () => void;
@@ -121,6 +125,8 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(fun
     setLines,
     siteId,
     setSiteId,
+    doneAt,
+    collectedAt,
     onSave,
     onCancel,
     isSaving,
@@ -740,6 +746,8 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(fun
             createdAt: sale?.createdAt || new Date(),
             updatedAt: new Date(),
             isCollected: sale?.isCollected || false,
+            doneAt: doneAt,
+            collectedAt: collectedAt,
         };
 
         // 5. Pass to Parent
