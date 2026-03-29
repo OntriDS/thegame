@@ -1335,18 +1335,22 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(fun
                         lines.filter(l => l.kind === 'item').map(l => {
                             const il = l as ItemSaleLine;
                             const item = items.find(i => i.id === il.itemId);
+                            const soldLabel =
+                                il.description?.trim() ||
+                                item?.name ||
+                                'Unknown Item';
                             return {
-                                id: il.lineId,
+                                id: il.lineId || uuid(),
                                 itemId: il.itemId,
-                                itemName: item
-                                    ? item.name
-                                    : il.description?.trim() || 'Unknown Item',
+                                itemName: soldLabel,
                                 quantity: il.quantity,
                                 unitPrice: il.unitPrice || 0,
                                 total: (il.quantity || 0) * (il.unitPrice || 0),
                                 siteId: siteId,
-                                usdExpression: l.metadata?.usdExpression,
-                                crcExpression: l.metadata?.crcExpression
+                                usdExpression: il.metadata?.usdExpression,
+                                crcExpression: il.metadata?.crcExpression,
+                                totalUSD: il.metadata?.totalUSD,
+                                totalCRC: il.metadata?.totalCRC
                             };
                         })
                     }

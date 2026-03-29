@@ -19,7 +19,7 @@ import { getSubTypesForItemType } from '@/lib/utils/item-utils';
 import type { Station } from '@/types/type-aliases';
 import { CurrencyExchangeRates } from '@/lib/constants/financial-constants';
 import { createSiteOptionsWithCategories } from '@/lib/utils/site-options-utils';
-import { createCharacterOptions, createStationCategoryOptions, createTaskParentOptions, createItemTypeSubTypeOptions, getItemTypeFromCombined, createItemOptions, getCategoryFromCombined, getStationFromCombined } from '@/lib/utils/searchable-select-utils';
+import { createCharacterOptions, createStationCategoryOptions, createTaskParentOptions, createItemTypeSubTypeOptions, getItemTypeFromCombined, createItemOptions, getCategoryFromCombined, getStationFromCombined, getCategoryForItemType } from '@/lib/utils/searchable-select-utils';
 import { getAreaForStation, getSalesChannelFromSaleType } from '@/lib/utils/business-structure-utils';
 import { roundCurrency2 } from '@/lib/utils/financial-utils';
 import { ClientAPI } from '@/lib/client-api';
@@ -40,6 +40,23 @@ import ConfirmationModal from './submodals/confirmation-submodal';
 import ArchiveCollectionConfirmationModal from './submodals/archive-collection-confirmation-submodal';
 import BoothSalesView, { type BoothSalesViewHandle } from './submodals/booth-sales-view';
 import DatesSubmodal from './submodals/dates-submodal';
+
+/** Some persisted sales lines have itemId + quantity but omit kind: 'item'. */
+function collectItemSaleLines(saleLines: SaleLine[]): ItemSaleLine[] {
+  const out: ItemSaleLine[] = [];
+  for (const line of saleLines) {
+    if (line.kind === 'item') {
+      out.push(line);
+      continue;
+    }
+    if (line.kind === 'service' || line.kind === 'bundle') continue;
+    const itemId = (line as Partial<ItemSaleLine>).itemId;
+    if (typeof itemId === 'string' && itemId.length > 0) {
+      out.push(line as ItemSaleLine);
+    }
+  }
+  return out;
+}
 
 interface SalesModalProps {
   sale?: Sale | null;
@@ -359,9 +376,7 @@ export default function SalesModal({
     }
 
     const saleLines = sale.lines ?? [];
-    const itemLines = saleLines.filter(
-      (line): line is ItemSaleLine => line.kind === 'item'
-    );
+    const itemLines = collectItemSaleLines(saleLines);
     const bundleLines = saleLines.filter(
       (line): line is BundleSaleLine => line.kind === 'bundle'
     );
@@ -425,9 +440,12 @@ export default function SalesModal({
     if (!sale) return;
     if (sale.type === SaleType.BOOTH) return;
     if (whatKind !== 'product' || oneItemMultiple !== 'one') return;
-    const itemLine = lines.find((l): l is ItemSaleLine => l.kind === 'item');
+    const itemLines = collectItemSaleLines(lines);
+    const itemLine = itemLines.length === 1 ? itemLines[0] : undefined;
     if (!itemLine?.itemId || selectedItemId) return;
     setSelectedItemId(itemLine.itemId);
+    setSelectedItemQuantity(itemLine.quantity ?? 1);
+    setSelectedItemPrice(itemLine.unitPrice ?? 0);
   }, [sale?.id, whatKind, oneItemMultiple, lines, selectedItemId]);
 
   // Load preferences after hydration to prevent SSR mismatches
@@ -1005,32 +1023,56 @@ export default function SalesModal({
     setPayments(newPayments);
   };
 
-  const getAvailableItems = () => {
-    return items.filter(item => item.status === ItemStatus.FOR_SALE);
-  };
-
   const getCharacterOptions = () => {
     return createCharacterOptions(characters);
   };
 
   const getItemOptions = () => {
-    const base = createItemOptions(getAvailableItems(), true, false, sites);
+    const forSale = items.filter((item) => item.status === ItemStatus.FOR_SALE);
     if (whatKind !== 'product' || oneItemMultiple !== 'one' || !sale) {
-      return base;
+      return createItemOptions(forSale, true, false, sites);
     }
     const sourceLines = lines.length > 0 ? lines : (sale.lines || []);
-    const singleItemLine = sourceLines.find((l): l is ItemSaleLine => l.kind === 'item');
+    const itemLines = collectItemSaleLines(sourceLines);
+    const singleItemLine =
+      itemLines.length === 1
+        ? itemLines[0]
+        : itemLines.find((l) => l.itemId === selectedItemId);
+
     if (!singleItemLine?.itemId) {
-      return base;
+      return createItemOptions(forSale, true, false, sites);
     }
+
     const pinnedId = singleItemLine.itemId;
-    if (base.some(o => o.value === pinnedId)) {
-      return base;
-    }
-    const fromItems = items.find(i => i.id === pinnedId);
+    const fromItems = items.find((i) => i.id === pinnedId);
     const fromDesc = singleItemLine.description?.replace(/^Sale of\s+/i, '').trim();
-    const label = fromItems?.name || fromDesc || pinnedId;
-    return [{ value: pinnedId, label, group: 'This sale' }, ...base];
+    const soldLabel = fromDesc || fromItems?.name || pinnedId;
+    const category = getCategoryForItemType(fromItems?.type ?? ItemType.ARTWORK);
+
+    const pool = forSale.some((i) => i.id === pinnedId)
+      ? forSale
+      : [...forSale, ...items.filter((i) => i.id === pinnedId)];
+
+    const base = createItemOptions(pool, true, false, sites);
+    const rest = base.filter((o) => o.value !== pinnedId);
+    return [
+      { value: pinnedId, label: soldLabel, group: 'Sold items', category },
+      ...rest,
+    ];
+  };
+
+  const getDirectSaleItemInitialLabel = (): string => {
+    if (whatKind !== 'product' || oneItemMultiple !== 'one' || !sale) return '';
+    const sourceLines = lines.length > 0 ? lines : (sale.lines || []);
+    const itemLines = collectItemSaleLines(sourceLines);
+    const line = itemLines.length === 1 ? itemLines[0] : itemLines.find((l) => l.itemId === selectedItemId);
+    if (!line?.itemId) return '';
+    const ent = items.find((i) => i.id === line.itemId);
+    return (
+      line.description?.replace(/^Sale of\s+/i, '').trim() ||
+      ent?.name ||
+      line.itemId
+    );
   };
 
   const getSelectedItem = () => {
@@ -1394,6 +1436,7 @@ export default function SalesModal({
                         options={getItemOptions()}
                         autoGroupByCategory={true}
                         placeholder="Select item..."
+                        initialLabel={getDirectSaleItemInitialLabel()}
                         className="h-8 text-sm"
                       />
                     </div>

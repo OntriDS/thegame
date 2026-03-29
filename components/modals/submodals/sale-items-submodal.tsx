@@ -93,7 +93,8 @@ export default function SaleItemsSubModal({
   const loadData = async () => {
     try {
       const [itemsData, sitesData] = await Promise.all([
-        ClientAPI.getItems(),
+        // Match SalesModal: include all statuses so historic / non–for-sale items resolve like the sale record
+        ClientAPI.getItems(undefined, undefined, undefined, 'all'),
         ClientAPI.getSites()
       ]);
       setItems(itemsData);
@@ -172,50 +173,46 @@ export default function SaleItemsSubModal({
     );
   }, [selectedSiteId, open]);
 
-  const lineItemCoveredByOptions = (
-    opts: Array<{ value: string }>,
-    itemId: string
-  ): boolean => {
-    if (!itemId) return true;
-    return opts.some(
-      (o) => o.value === itemId || o.value.startsWith(`${itemId}:`)
-    );
-  };
-
-  // Base options from inventory + pinned "This sale" rows (sold clones / composite mismatches)
+  // Sold lines first (same value as inventory options so the select resolves to the sold label),
+  // then inventory with those values removed so the dropdown is not duplicated.
   const rowOptions = React.useMemo(() => {
     const base = selectedSiteId
       ? createItemOptionsForSite(items, selectedSiteId, false, sites)
       : createItemOptions(items, false, false, sites);
 
-    const pinnedByValue = new Map<
+    const soldByValue = new Map<
       string,
       { value: string; label: string; group: string; category: string }
     >();
 
     for (const line of lines) {
-      if (!line.itemId || lineItemCoveredByOptions(base, line.itemId)) continue;
-
+      if (!line.itemId) continue;
+      const value = `${line.itemId}:${line.siteId || 'none'}`;
       const resolved = items.find((i) => i.id === line.itemId);
-      const fromDesc = line.itemName?.replace(/^Sale of\s+/i, '').trim();
+      const fromName = line.itemName?.replace(/^Sale of\s+/i, '').trim();
       const label =
-        resolved?.name || fromDesc || line.itemName || line.itemId;
+        fromName ||
+        resolved?.name ||
+        line.itemName ||
+        line.itemId;
       const category = getCategoryForItemType(
         resolved?.type ?? ItemType.ARTWORK
       );
-      const value = `${line.itemId}:${line.siteId || 'none'}`;
-      if (!pinnedByValue.has(value)) {
-        pinnedByValue.set(value, {
+      if (!soldByValue.has(value)) {
+        soldByValue.set(value, {
           value,
           label,
-          group: 'This sale',
+          group: 'Sold items',
           category,
         });
       }
     }
 
-    const pinned = [...pinnedByValue.values()];
-    return [...pinned, ...base];
+    const sold = [...soldByValue.values()];
+    const soldValues = new Set(sold.map((o) => o.value));
+    const rest = base.filter((o) => !soldValues.has(o.value));
+
+    return [...sold, ...rest];
   }, [items, selectedSiteId, sites, lines]);
 
   const handleItemSelect = (lineId: string, rawValue: string) => {
