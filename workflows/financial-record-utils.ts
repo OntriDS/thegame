@@ -502,7 +502,7 @@ export async function calculateAssociatePayout(sale: Sale): Promise<number> {
   // Sum Items (USD)
   if (sale.lines) {
     sale.lines.forEach(line => {
-      // Is it an Associate Item? (Ref BoothSalesView logic)
+      // Associate-side lines within a booth sale (service lines on booth channel)
       const isAssociateItem = line.kind === 'service' && (line as ServiceLine).station === 'Booth-Sales';
 
       let lineTotal = 0;

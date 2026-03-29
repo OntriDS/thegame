@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, forwardRef, useImperativeHandle } from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
@@ -77,6 +77,11 @@ export interface BoothSalesViewProps {
     exchangeRate?: number;
 }
 
+/** Parent DialogFooter calls this so booth saves use fullSale (metadata, payments, associate context). */
+export type BoothSalesViewHandle = {
+    submitBoothSave: () => void;
+};
+
 interface AssociateQuickEntry {
     id: string;
     description: string;
@@ -103,7 +108,7 @@ type SettlementRow = {
 // Component Booth-Sales
 // ============================================================================
 
-export default function BoothSalesView({
+const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(function BoothSalesView({
     sites,
     characters,
     items,
@@ -127,7 +132,7 @@ export default function BoothSalesView({
     setIsNotCharged,
     onDelete,
     exchangeRate = 500 // Deep fallback if network fails
-}: BoothSalesViewProps) {
+}, ref) {
 
     // 1. Local State
     // ============================================================================
@@ -741,6 +746,13 @@ export default function BoothSalesView({
         onSave(fullSale);
     };
 
+    const handleBoothSaveRef = useRef(handleSave);
+    handleBoothSaveRef.current = handleSave;
+    useImperativeHandle(ref, () => ({
+        submitBoothSave: () => {
+            handleBoothSaveRef.current();
+        },
+    }), []);
 
     // 4. Render
     // ============================================================================
@@ -1346,4 +1358,6 @@ export default function BoothSalesView({
             </div>
         </div>
     );
-}
+});
+
+export default BoothSalesView;

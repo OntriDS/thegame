@@ -38,7 +38,7 @@ import ItemEmissarySubModal, { ItemCreationData } from './submodals/item-emissar
 import PointsEmissarySubModal, { PointsData } from './submodals/points-emissary-submodal';
 import ConfirmationModal from './submodals/confirmation-submodal';
 import ArchiveCollectionConfirmationModal from './submodals/archive-collection-confirmation-submodal';
-import BoothSalesView from './submodals/booth-sales-view';
+import BoothSalesView, { type BoothSalesViewHandle } from './submodals/booth-sales-view';
 import DatesSubmodal from './submodals/dates-submodal';
 
 interface SalesModalProps {
@@ -160,6 +160,7 @@ export default function SalesModal({
   const didInitRef = useRef(false);
   /** After archive modal confirms COLLECTED, allow Save while `sale` prop is still CHARGED until parent refetches */
   const collectedArchiveAcknowledgedForSaleIdRef = useRef<string | null>(null);
+  const boothSaveRef = useRef<BoothSalesViewHandle | null>(null);
 
   // Duplicate Prevention
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
@@ -237,6 +238,9 @@ export default function SalesModal({
   // Initialize form when sale changes
   useEffect(() => {
     if (sale) {
+      setRecordedPayments([]);
+      setSelectedItemId('');
+      setSelectedItems([]);
       setName(sale.name);
       setDescription(sale.description || '');
       setSaleDate(new Date(sale.saleDate));
@@ -258,33 +262,58 @@ export default function SalesModal({
       setSalesChannel(sale.salesChannel || getSalesChannelFromSaleType(sale.type) || null);
       setQuickRows([]);
 
-      // Determine if sale is product or service based on lines
-      const hasServiceLines = sale.lines?.some(line => line.kind === 'service');
-      setWhatKind(hasServiceLines ? 'service' : 'product');
+      if (sale.type === SaleType.BOOTH) {
+        setWhatKind('product');
+        setSelectedTaskId('');
+        setTaskName('');
+        setTaskType(TaskType.ASSIGNMENT);
+        setTaskParentId('');
+        setTaskCost(0);
+        setTaskRevenue(0);
+        setTaskDueDate(undefined);
+        setTaskTargetSiteId('');
+        setTaskStation('SALES' as Station);
+        setManualLines(false);
+        setTaskItemData({
+          outputItemType: '',
+          outputItemSubType: '',
+          outputItemQuantity: 1,
+          outputItemName: '',
+          outputUnitCost: 0,
+          outputItemCollection: '',
+          outputItemPrice: 0,
+          targetSite: '',
+          outputItemStatus: ItemStatus.FOR_SALE,
+          existingItemId: null,
+          isNewItem: true,
+        });
+        setTaskPointsData({
+          points: { xp: 0, rp: 0, fp: 0, hp: 0 },
+        });
+      } else {
+        const hasServiceLines = sale.lines?.some(line => line.kind === 'service');
+        setWhatKind(hasServiceLines ? 'service' : 'product');
 
-      // Initialize mini-submodal data from service lines
-      if (hasServiceLines && sale.lines) {
-        const serviceLine = sale.lines.find(line => line.kind === 'service');
-        if (serviceLine) {
-          // Initialize task item data from service line
-          setTaskItemData({
-            outputItemType: serviceLine.outputItemType || '',
-            outputItemSubType: serviceLine.outputItemSubType || '',
-            outputItemQuantity: serviceLine.outputItemQuantity || 1,
-            outputItemName: serviceLine.outputItemName || '',
-            outputUnitCost: serviceLine.outputUnitCost || 0,
-            outputItemCollection: serviceLine.outputItemCollection || '',
-            outputItemPrice: serviceLine.outputItemPrice || 0,
-            targetSite: serviceLine.taskTargetSiteId || '',
-            outputItemStatus: serviceLine.isSold ? ItemStatus.SOLD : ItemStatus.FOR_SALE,
-            existingItemId: serviceLine.outputItemId || null,
-            isNewItem: serviceLine.isNewItem ?? !serviceLine.outputItemId,
-          });
-
-          // Initialize task points data from service line
-          setTaskPointsData({
-            points: serviceLine.taskRewards || { xp: 0, rp: 0, fp: 0, hp: 0 },
-          });
+        if (hasServiceLines && sale.lines) {
+          const serviceLine = sale.lines.find(line => line.kind === 'service');
+          if (serviceLine) {
+            setTaskItemData({
+              outputItemType: serviceLine.outputItemType || '',
+              outputItemSubType: serviceLine.outputItemSubType || '',
+              outputItemQuantity: serviceLine.outputItemQuantity || 1,
+              outputItemName: serviceLine.outputItemName || '',
+              outputUnitCost: serviceLine.outputUnitCost || 0,
+              outputItemCollection: serviceLine.outputItemCollection || '',
+              outputItemPrice: serviceLine.outputItemPrice || 0,
+              targetSite: serviceLine.taskTargetSiteId || '',
+              outputItemStatus: serviceLine.isSold ? ItemStatus.SOLD : ItemStatus.FOR_SALE,
+              existingItemId: serviceLine.outputItemId || null,
+              isNewItem: serviceLine.isNewItem ?? !serviceLine.outputItemId,
+            });
+            setTaskPointsData({
+              points: serviceLine.taskRewards || { xp: 0, rp: 0, fp: 0, hp: 0 },
+            });
+          }
         }
       }
 
@@ -321,6 +350,11 @@ export default function SalesModal({
 
   useEffect(() => {
     if (!sale || didInitRef.current) {
+      return;
+    }
+
+    if (sale.type === SaleType.BOOTH) {
+      didInitRef.current = true;
       return;
     }
 
@@ -389,6 +423,7 @@ export default function SalesModal({
   // If the single item line has an id but selection was cleared, restore from the line
   useEffect(() => {
     if (!sale) return;
+    if (sale.type === SaleType.BOOTH) return;
     if (whatKind !== 'product' || oneItemMultiple !== 'one') return;
     const itemLine = lines.find((l): l is ItemSaleLine => l.kind === 'item');
     if (!itemLine?.itemId || selectedItemId) return;
@@ -497,6 +532,20 @@ export default function SalesModal({
       points: { xp: 0, rp: 0, fp: 0, hp: 0 },
     });
     setPlayerPoints({ xp: 0, rp: 0, fp: 0, hp: 0 });
+    setSelectedItemId('');
+    setSelectedItems([]);
+    setRecordedPayments([]);
+    setManualLines(false);
+    setQuickRows([]);
+    setSelectedTaskId('');
+    setTaskName('');
+    setTaskType(TaskType.ASSIGNMENT);
+    setTaskParentId('');
+    setTaskCost(0);
+    setTaskRevenue(0);
+    setTaskDueDate(undefined);
+    setTaskTargetSiteId('');
+    setTaskStation('SALES' as Station);
   };
 
   const handleSave = async (overrideSale?: Sale) => {
@@ -528,6 +577,17 @@ export default function SalesModal({
       return;
     }
 
+    // Booth sales are built inside BoothSalesView (metadata, payments, associate context).
+    // The footer "Update Sale" must not run direct-sale validation (booth lines mix service + items).
+    if (type === SaleType.BOOTH) {
+      if (boothSaveRef.current) {
+        boothSaveRef.current.submitBoothSave();
+      } else {
+        showValidationError('Booth save is not ready. Close and reopen the sale.', true);
+      }
+      return;
+    }
+
     setIsSaving(true);
 
     // Validation: Sales must have either product (item) OR service (task)
@@ -555,19 +615,6 @@ export default function SalesModal({
 
     if (!hasAnyProductSelection && !hasServiceSelection) {
       showValidationError('Please add at least one product (item) or service (task) to the sale.', true);
-      return;
-    }
-
-
-    // Validate: Check for conflicting data (product fields filled while service lines exist, or vice versa)
-
-    if (hasServiceSelection && (hasProductFields || hasSelectedItems)) {
-      showValidationError('Conflicting data detected! You have service lines but also product fields filled. Please clear one before saving.', true);
-      return;
-    }
-
-    if (hasAnyProductSelection && whatKind === 'service' && !hasServiceSelection) {
-      showValidationError('Conflicting data detected! You have product lines but are in Service mode. Please clear the product lines or switch to Product mode.', true);
       return;
     }
 
@@ -1227,6 +1274,8 @@ export default function SalesModal({
         {/* Content Area - Fixed Height with Internal Scroll */}
         {type === SaleType.BOOTH ? (
           <BoothSalesView
+            key={sale?.id ?? 'new-booth'}
+            ref={boothSaveRef}
             sale={sale || undefined}
             sites={sites}
             characters={characters}
