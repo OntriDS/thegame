@@ -2,7 +2,7 @@
 // Financial record creation and management utilities
 
 import type { Task, FinancialRecord, Sale, ItemSaleLine, Character, Contract, ServiceLine, BundleSaleLine } from '@/types/entities';
-import { LinkType, EntityType, LogEventType, BUSINESS_STRUCTURE, SaleType, SaleStatus, ContractClauseType, ContractStatus } from '@/types/enums';
+import { LinkType, EntityType, LogEventType, BUSINESS_STRUCTURE, SaleType, SaleStatus, ContractClauseType, ContractStatus, FinancialStatus } from '@/types/enums';
 import { upsertFinancial, getAllFinancials, getFinancialsBySourceTaskId, removeFinancial, getItemById, getCharacterById, getFinancialConversionRates, getContractById, getFinancialsBySourceSaleId, upsertCharacter } from '@/data-store/datastore';
 import { makeLink } from '@/links/links-workflows';
 import { createLink, getLinksFor } from '@/links/link-registry';
@@ -306,9 +306,105 @@ function coerceSaleFinrecDate(
   sale: Sale,
   fallback: Date
 ): Date {
-  const raw = sale.collectedAt || sale.doneAt || sale.saleDate || fallback;
-  const d = raw instanceof Date ? raw : new Date(raw as string);
-  return Number.isFinite(d.getTime()) ? d : fallback;
+  try {
+    const raw = sale.doneAt || sale.saleDate || sale.createdAt || fallback;
+    const d = raw instanceof Date ? raw : new Date(raw as string);
+    return Number.isFinite(d.getTime()) ? d : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+export interface BoothFinancialSplit {
+  myGross: number;        // Total of Akiles items
+  myBoothCost: number;     // Akiles share of booth (e.g. $20)
+  myCommFromAssoc: number; // Akiles commission on Associate items (e.g. $2)
+  assocCommFromMe: number; // Associate commission on Akiles items (e.g. $28)
+  date: Date;
+  targetEntityId?: string | null;
+  targetEntityName: string;
+}
+
+/**
+ * NEW: Calculate components for Performance Ledger split (Option C)
+ */
+export async function calculateBoothFinancials(sale: Sale): Promise<BoothFinancialSplit> {
+  const boothFee = sale.boothFee ?? sale.metadata?.boothSaleContext?.boothCost ?? 0;
+  const rates = await getFinancialConversionRates();
+  const rate = rates?.colonesToUsd ?? DEFAULT_CURRENCY_EXCHANGE_RATES.colonesToUsd;
+  const boothFeeUSD = boothFee / rate;
+
+  const dateToUse = coerceSaleFinrecDate(sale, new Date());
+
+  // Default shares
+  let shareOfMyItems_Me = 1.0;
+  let shareOfAssocItems_Me = 0.0; // My commission on their items
+  let shareOfExpenses_Me = 1.0;
+
+  // Fetch Contract Clauses
+  const contractId = sale.metadata?.boothSaleContext?.contractId;
+  if (contractId) {
+    const contract = await getContractById(contractId);
+    if (contract && contract.status === ContractStatus.ACTIVE && Array.isArray(contract.clauses)) {
+      const commClause = contract.clauses.find(c => c.type === ContractClauseType.SALES_COMMISSION);
+      if (commClause) shareOfMyItems_Me = commClause.companyShare;
+
+      const serviceClause = contract.clauses.find(c => c.type === ContractClauseType.SALES_SERVICE);
+      if (serviceClause) shareOfAssocItems_Me = serviceClause.companyShare;
+
+      const expenseClause = contract.clauses.find(c => c.type === ContractClauseType.EXPENSE_SHARING);
+      if (expenseClause) shareOfExpenses_Me = expenseClause.companyShare;
+    }
+  }
+
+  let myItemsTotal = 0;
+  let assocItemsTotal = 0;
+
+  if (sale.lines) {
+    sale.lines.forEach(line => {
+      // Determine if it's an Associate line (service in booth channel OR explicit associateId in metadata)
+      const lineAssocId = (line.metadata as any)?.associateId;
+      const isAssociateItem = !!(lineAssocId && lineAssocId !== 'akiles' && lineAssocId !== sale.playerCharacterId);
+      
+      let lineTotal = 0;
+      if (line.kind === 'item') lineTotal = ((line as ItemSaleLine).unitPrice || 0) * ((line as ItemSaleLine).quantity || 0);
+      else if (line.kind === 'bundle') lineTotal = ((line as BundleSaleLine).unitPrice || 0) * ((line as BundleSaleLine).quantity || 0);
+      else if (line.kind === 'service') lineTotal = (line as ServiceLine).revenue || 0;
+
+      if (isAssociateItem) assocItemsTotal += lineTotal;
+      else myItemsTotal += lineTotal;
+    });
+  }
+
+  // Final Split Components
+  const myBoothCost = boothFeeUSD * shareOfExpenses_Me;
+  const myCommFromAssoc = assocItemsTotal * shareOfAssocItems_Me;
+  const assocCommFromMe = myItemsTotal * (1 - shareOfMyItems_Me);
+
+  // Target Entity Resolution
+  let targetEntityId = sale.associateId || sale.partnerId || sale.customerId;
+  let targetEntityName = 'Associate';
+  if (targetEntityId) {
+    const { getBusinessById } = await import('@/data-store/repositories/character.repo');
+    const business = await getBusinessById(targetEntityId);
+    if (business) {
+      targetEntityName = business.name;
+      if (business.linkedCharacterId) targetEntityId = business.linkedCharacterId;
+    } else {
+      const character = await getCharacterById(targetEntityId);
+      if (character) targetEntityName = character.name;
+    }
+  }
+
+  return {
+    myGross: myItemsTotal,
+    myBoothCost,
+    myCommFromAssoc,
+    assocCommFromMe,
+    date: dateToUse,
+    targetEntityId,
+    targetEntityName
+  };
 }
 
 /** Shared sale → finrec identity (name, station, period) for create + booth update paths */
@@ -457,279 +553,138 @@ export async function createFinancialRecordFromSale(sale: Sale): Promise<Financi
 }
 
 /**
- * Create split financial records for Booth-Sales
- * - Record 1: Gross Income (Total Sales)
- * - Record 2: Associate Payout (Expense)
- * IDEMPOTENT: Updates existing records if they exist.
- */
-/**
- * Calculate the associate's share of a sale
+ * Calculate the associate's share of a sale (Legacy wrapper for compatibility)
  */
 export async function calculateAssociatePayout(sale: Sale): Promise<number> {
-  const boothFee = sale.boothFee ?? sale.metadata?.boothSaleContext?.boothCost ?? 0;
-
-  // Determine Target Entity ID
-  const targetEntityId = sale.associateId || sale.partnerId || sale.customerId;
-  if (!targetEntityId) return 0;
-
-  // CALCULATION LOGIC (SERVER SIDE)
-  // Categorize Lines to calculate split
-  let myItemsTotal = 0;
-  let assocItemsTotal = 0;
-  let shareOfMyItems_Me = 1.0;
-  let shareOfAssocItems_Me = 0.0; // My commission on their items
-  let shareOfExpenses_Me = 1.0; // I pay 100% of booth fee by default
-
-  // Determine Contract ID
-  const contractId = sale.metadata?.boothSaleContext?.contractId;
-  let contract: Contract | null = null;
-  if (contractId) {
-    contract = await getContractById(contractId);
-  }
-
-  if (contract && contract.status === ContractStatus.ACTIVE && Array.isArray(contract.clauses)) {
-    // Apply Clauses
-    const commClause = contract.clauses.find(c => c.type === ContractClauseType.SALES_COMMISSION);
-    if (commClause) shareOfMyItems_Me = commClause.companyShare;
-
-    const serviceClause = contract.clauses.find(c => c.type === ContractClauseType.SALES_SERVICE);
-    if (serviceClause) shareOfAssocItems_Me = serviceClause.companyShare;
-
-    const expenseClause = contract.clauses.find(c => c.type === ContractClauseType.EXPENSE_SHARING);
-    if (expenseClause) shareOfExpenses_Me = expenseClause.companyShare;
-  }
-
-  // Sum Items (USD)
-  if (sale.lines) {
-    sale.lines.forEach(line => {
-      // Associate-side lines within a booth sale (service lines on booth channel)
-      const isAssociateItem = line.kind === 'service' && (line as ServiceLine).station === 'Booth-Sales';
-
-      let lineTotal = 0;
-      if (line.kind === 'item') lineTotal = ((line as ItemSaleLine).unitPrice || 0) * ((line as ItemSaleLine).quantity || 0);
-      else if (line.kind === 'bundle') lineTotal = ((line as BundleSaleLine).unitPrice || 0) * ((line as BundleSaleLine).quantity || 0);
-      else if (line.kind === 'service') lineTotal = (line as ServiceLine).revenue || 0;
-
-      if (isAssociateItem) assocItemsTotal += lineTotal;
-      else myItemsTotal += lineTotal;
-    });
-  }
-
-  // Calculate Associate Share (USD)
-  const rates = await getFinancialConversionRates();
-  const rate = rates?.colonesToUsd ?? DEFAULT_CURRENCY_EXCHANGE_RATES.colonesToUsd;
-  const boothFeeUSD = boothFee / rate;
-
-  const revenueMyItems_Assoc = myItemsTotal * (1 - shareOfMyItems_Me);
-  const revenueAssocItems_Assoc = assocItemsTotal * (1 - shareOfAssocItems_Me);
-  const cost_Assoc = boothFeeUSD * (1 - shareOfExpenses_Me);
-
-  const associateNet = revenueMyItems_Assoc + revenueAssocItems_Assoc - cost_Assoc;
-  console.log(`[calculateAssociatePayout] Calculated Split (USD): MyItems=${myItemsTotal} AssocItems=${assocItemsTotal} => AssociateNet=${associateNet}`);
-
-  return associateNet;
+  const split = await calculateBoothFinancials(sale);
+  
+  // Total Revenue contained in the Sale object
+  const totalRevenue = sale.totals.totalRevenue || 0;
+  // Assoc Gross = What she actually sold (cash Akiles is holding)
+  const assocGross = totalRevenue - split.myGross;
+  
+  // Total Payout = (Assoc Income from Me) - (My Income from Her) + (Her Gross Sales we are holding)
+  // Example: $28 - $2 + $8 = $34.
+  const payout = split.assocCommFromMe - split.myCommFromAssoc + assocGross;
+  return payout;
 }
 
+/**
+ * Create/Update split financial records for Booth-Sales (Option C)
+ * Separates your core performance from the partnership contract impact.
+ */
 export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<void> {
   try {
-    console.log(`[createFinancialRecordFromBoothSale] Processing financial records for Booth Sale: ${sale.counterpartyName}`);
+    console.log(`[createFinancialRecordFromBoothSale] Processing Option C financials for Booth Sale: ${sale.id}`);
+    const { formatDisplayDate } = await import('@/lib/utils/date-utils');
 
-    // [IDEMPOTENCY CHECK] Check for existing records first
+    // 1. Calculate Comprehensive Split via Contract Clauses
+    const split = await calculateBoothFinancials(sale);
+    const dateStr = formatDisplayDate(split.date);
+    const derived = await resolveSaleDerivedFinrecFields(sale);
+
+    // [IDEMPOTENCY CHECK] Load existing records linked to this sale
     const existingRecords = await getFinancialsBySourceSaleId(sale.id);
 
-    // Calculate associate net using shared helper
-    const associateNet = await calculateAssociatePayout(sale);
+    // =========================================================================
+    // RECORD 1: Akiles Core Business Performance
+    // =========================================================================
+    const incomeRecordId = `finrec-${sale.id}`;
+    const incomeRecord = existingRecords.find(r => r.id === incomeRecordId) || 
+                         existingRecords.find(r => r.id.startsWith('finrec-') && !r.id.includes('payout'));
 
-    let targetEntityId = sale.associateId || sale.partnerId || sale.customerId;
-    let targetEntityName = 'Associate';
-    let targetType = EntityType.CHARACTER;
+    const incomeData: FinancialRecord = {
+      ...(incomeRecord || {}),
+      id: incomeRecordId,
+      name: `Booth Sale ${dateStr}`,
+      description: `Performance Ledger: My items and booth cost share`,
+      year: split.date.getFullYear(),
+      month: split.date.getMonth() + 1,
+      station: derived.station,
+      type: derived.financialType,
+      siteId: sale.siteId,
+      sourceSaleId: sale.id,
+      salesChannel: derived.salesChannel,
+      revenue: split.myGross,
+      cost: split.myBoothCost,
+      netCashflow: split.myGross - split.myBoothCost,
+      isNotPaid: sale.isNotPaid || false,
+      isNotCharged: sale.isNotCharged || false,
+      updatedAt: new Date(),
+      createdAt: incomeRecord?.createdAt || new Date(),
+      links: incomeRecord?.links || []
+    } as FinancialRecord;
 
-    if (targetEntityId) {
-      const { getBusinessById } = await import('@/data-store/repositories/character.repo');
-      const business = await getBusinessById(targetEntityId);
-      if (business) {
-        // Business is a persona layer on Character — resolve to the linked character for the finrec link
-        targetEntityName = business.name;
-        if (business.linkedCharacterId) {
-          // Use the linked character's ID for the FINREC_CHARACTER link (not the business ID)
-          targetEntityId = business.linkedCharacterId;
-        }
-        // targetType stays CHARACTER
-      } else {
-        const character = await getCharacterById(targetEntityId);
-        if (character) {
-          targetEntityName = character.name;
-        }
-      }
+    await upsertFinancial(incomeData, { forceSave: true });
+    console.log(`[createFinancialRecordFromBoothSale] ✅ Synced Record 1 (${incomeRecordId}): Net=${incomeData.netCashflow}`);
+
+    // Ensure Link
+    if (!incomeRecord) {
+      const link = makeLink(LinkType.SALE_FINREC, { type: EntityType.SALE, id: sale.id }, { type: EntityType.FINANCIAL, id: incomeRecordId });
+      await createLink(link);
     }
 
-    if (existingRecords.length > 0) {
-      // === UPDATE PATH ===
-      console.log(`[createFinancialRecordFromBoothSale] Updating ${existingRecords.length} existing records for Booth Sale ${sale.id}`);
+    // =========================================================================
+    // RECORD 2: Contract Impact (Associate Impact)
+    // =========================================================================
+    const hasContractImpact = split.myCommFromAssoc > 0 || split.assocCommFromMe > 0;
+    const payoutRecordId = `finrec-payout-${sale.id}`;
+    const payoutRecord = existingRecords.find(r => r.id === payoutRecordId) || 
+                         existingRecords.find(r => r.id.includes('payout'));
 
-      const derived = await resolveSaleDerivedFinrecFields(sale);
+    if (hasContractImpact) {
+      const payoutData: FinancialRecord = {
+        ...(payoutRecord || {}),
+        id: payoutRecordId,
+        name: `Booth Sale ${dateStr} • Associate`,
+        description: `Impact Ledger: Commission split with associate`,
+        year: split.date.getFullYear(),
+        month: split.date.getMonth() + 1,
+        station: 'Booth-Sales' as Station,
+        type: 'company',
+        siteId: sale.siteId,
+        sourceSaleId: sale.id,
+        salesChannel: 'Booth-Sales' as Station,
+        revenue: split.myCommFromAssoc,
+        cost: split.assocCommFromMe,
+        netCashflow: split.myCommFromAssoc - split.assocCommFromMe,
+        isNotPaid: sale.status !== SaleStatus.CHARGED,
+        isNotCharged: false,
+        updatedAt: new Date(),
+        createdAt: payoutRecord?.createdAt || new Date(),
+        links: payoutRecord?.links || []
+      } as FinancialRecord;
 
-      // 1. Update Gross Income Record (prefer canonical id when multiple income-like rows exist)
-      const incomeRecord =
-        existingRecords.find(
-          (r) => r.id === `finrec-${sale.id}` && r.revenue > 0 && r.cost === 0
-        ) ?? existingRecords.find((r) => r.revenue > 0 && r.cost === 0);
-      if (incomeRecord) {
-        const updatedIncome = {
-          ...incomeRecord,
-          name: `Sale: ${derived.displayName}`,
-          description: derived.description,
-          station: derived.station,
-          salesChannel: derived.salesChannel,
-          type: derived.financialType,
-          siteId: sale.siteId,
-          year: derived.year,
-          month: derived.month,
-          revenue: sale.totals.totalRevenue,
-          netCashflow: sale.totals.totalRevenue,
-          isNotPaid: sale.isNotPaid || false,
-          isNotCharged: sale.isNotCharged || false,
-          updatedAt: new Date()
-        };
-        await upsertFinancial(updatedIncome, { forceSave: true });
-        console.log(`[createFinancialRecordFromBoothSale] ✅ Updated Gross Income Record: ${incomeRecord.id}`);
+      await upsertFinancial(payoutData, { forceSave: true });
+      console.log(`[createFinancialRecordFromBoothSale] ✅ Synced Record 2 (${payoutRecordId}): Net=${payoutData.netCashflow}`);
 
-        const saleLinks = await getLinksFor({ type: EntityType.SALE, id: sale.id });
-        const hasIncomeFinrecLink = saleLinks.some(
-          (link) =>
-            link.linkType === LinkType.SALE_FINREC &&
-            link.target.type === EntityType.FINANCIAL &&
-            link.target.id === incomeRecord.id
-        );
-        if (!hasIncomeFinrecLink) {
-          const saleFinrecLink = makeLink(
-            LinkType.SALE_FINREC,
-            { type: EntityType.SALE, id: sale.id },
-            { type: EntityType.FINANCIAL, id: incomeRecord.id }
-          );
-          await createLink(saleFinrecLink);
-          console.log(
-            `[createFinancialRecordFromBoothSale] ✅ Restored SALE_FINREC sale → ${incomeRecord.id}`
-          );
+      // Ensure Links
+      if (!payoutRecord) {
+        const saleLink = makeLink(LinkType.SALE_FINREC, { type: EntityType.SALE, id: sale.id }, { type: EntityType.FINANCIAL, id: payoutRecordId });
+        await createLink(saleLink);
+
+        if (split.targetEntityId) {
+          const charLink = makeLink(LinkType.FINREC_CHARACTER, { type: EntityType.FINANCIAL, id: payoutRecordId }, { type: EntityType.CHARACTER, id: split.targetEntityId });
+          await createLink(charLink);
         }
       }
-
-      // 2. Update/Manage Payout Record
-      const payoutRecord = existingRecords.find(r => r.type === 'company' && r.revenue === 0 && r.cost > 0);
-
-      if (associateNet > 0) {
-        if (payoutRecord) {
-          // Update existing payout
-          const updatedPayout = {
-            ...payoutRecord,
-            cost: associateNet,
-            netCashflow: -associateNet,
-            name: `Payout: ${targetEntityName}`,
-            isNotPaid: sale.status !== SaleStatus.CHARGED,
-            updatedAt: new Date()
-          };
-          await upsertFinancial(updatedPayout, { forceSave: true });
-          console.log(`[createFinancialRecordFromBoothSale] ✅ Updated Payout Record: ${payoutRecord.id}`);
-        } else {
-          // Create new payout logic if it was missing but now needed
-          await createBoothPayoutRecord(sale, associateNet, targetEntityName, targetEntityId, targetType);
-        }
-      } else if (payoutRecord) {
-        // If payout is no longer needed (associateNet <= 0), zero it out
-        const updatedPayout = {
-          ...payoutRecord,
-          cost: 0,
-          netCashflow: 0,
-          description: `Payout adjustment: Associate share is 0`,
-          updatedAt: new Date()
-        };
-        await upsertFinancial(updatedPayout);
-        console.log(`[createFinancialRecordFromBoothSale] ✅ Zeroed Payout Record as Associate Share is 0`);
-      }
-
-      return; // EXIT UPDATE PATH
-    }
-
-    // === CREATE PATH ===
-    console.log(`[createFinancialRecordFromBoothSale] Creating FRESH split financial records for Booth Sale`);
-
-    // 1. Create Gross Income Record (Standard)
-    const incomeRecord = await createFinancialRecordFromSale(sale);
-    if (!incomeRecord) return;
-
-    // 2. Create Payout Expense Record (If Associate owed money)
-    if (associateNet > 0) {
-      await createBoothPayoutRecord(sale, associateNet, targetEntityName, targetEntityId, targetType);
+    } else if (payoutRecord) {
+      // If was there but no longer has impact, zero it
+      const zeroedPayout = { 
+        ...payoutRecord, 
+        revenue: 0, 
+        cost: 0, 
+        netCashflow: 0, 
+        description: 'No contract impact for this revision', 
+        updatedAt: new Date() 
+      };
+      await upsertFinancial(zeroedPayout as FinancialRecord);
     }
 
   } catch (error) {
     console.error(`[createFinancialRecordFromBoothSale] ❌ Failed to create booth records:`, error);
     throw error;
   }
-}
-
-// Helper to create the payout record to avoid code duplication
-async function createBoothPayoutRecord(sale: Sale, associateNet: number, targetEntityName: string, targetEntityId: string | null | undefined, targetType: EntityType) {
-  console.log(`[createBoothPayoutRecord] Creating Associate Payout Record: ${associateNet}`);
-  const currentDate = new Date();
-  // Payout Status Logic: Matches Sale Status
-  const isPayoutPaid = sale.status === SaleStatus.CHARGED;
-
-  const payoutFinrec: FinancialRecord = {
-    id: `finrec-payout-${sale.id}`,
-    name: `Payout: ${targetEntityName}`,
-    description: `Associate payout for ${targetEntityName} (Split Share)`,
-    year: currentDate.getFullYear(),
-    month: currentDate.getMonth() + 1,
-    station: 'Booth-Sales' as Station,
-    type: 'company', // Expense
-    siteId: sale.siteId,
-    sourceSaleId: sale.id,
-    salesChannel: 'Booth-Sales' as Station,
-
-    cost: associateNet,
-    revenue: 0,
-    jungleCoins: 0,
-
-    isNotPaid: !isPayoutPaid,
-    isNotCharged: false, // Default
-
-    netCashflow: -associateNet, // Expense
-    jungleCoinsValue: 0,
-    isCollected: false,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    links: []
-  };
-
-  const createdPayout = await upsertFinancial(payoutFinrec, { forceSave: true });
-
-  // Link Payout to Sale
-  const link = makeLink(
-    LinkType.SALE_FINREC,
-    { type: EntityType.SALE, id: sale.id },
-    { type: EntityType.FINANCIAL, id: createdPayout.id }
-  );
-  await createLink(link);
-
-  // Link Payout to Associate's Character (always FINREC_CHARACTER — Business is resolved to linkedCharacterId upstream)
-  if (targetEntityId) {
-    const charLink = makeLink(
-      LinkType.FINREC_CHARACTER,
-      { type: EntityType.FINANCIAL, id: createdPayout.id },
-      { type: EntityType.CHARACTER, id: targetEntityId }
-    );
-    await createLink(charLink);
-  }
-}
-
-/**
- * Enhanced financial record creation - pure business logic, no link creation
- */
-export async function processFinancialRecordCreationWithLinks(record: FinancialRecord): Promise<FinancialRecord> {
-  console.log(`[processFinancialRecordCreationWithLinks] Processing financial record creation: ${record.name} (${record.id})`);
-
-  return record;
 }
 
 /**
@@ -767,17 +722,15 @@ export async function createFinancialRecordFromPointsExchange(
       isNotPaid: false,
       isNotCharged: false,
       rewards: undefined,
-      netCashflow: 0, // No cashflow, just currency exchange
       jungleCoinsValue: j$Received * 10, // J$ value in USD (1 J$ = $10)
-      isCollected: false,
-      exchangeType: 'POINTS_TO_J$',
+      netCashflow: 0, // No cashflow, just currency exchange
+      status: FinancialStatus.DONE,
       createdAt: new Date(),
       updatedAt: new Date(),
       links: []
-    };
+    } as FinancialRecord;
 
     // Store the financial record
-    console.log(`[createFinancialRecordFromPointsExchange] Creating financial record:`, newFinrec);
     const createdFinrec = await upsertFinancial(newFinrec);
 
     const link = makeLink(
@@ -787,12 +740,7 @@ export async function createFinancialRecordFromPointsExchange(
     );
 
     await createLink(link);
-    console.log(`[createFinancialRecordFromPointsExchange] ✅ Created PLAYER_FINREC link for player ${playerId}`);
-
-    console.log(`[createFinancialRecordFromPointsExchange] ✅ Financial record created for points exchange: ${createdFinrec.name}`);
-
     return createdFinrec;
-
   } catch (error) {
     console.error(`[createFinancialRecordFromPointsExchange] ❌ Failed to create financial record for points exchange:`, error);
     throw error;

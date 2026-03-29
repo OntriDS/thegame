@@ -344,19 +344,22 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
       // [FIX] Update Sale Cost with Payout Amount (for Booth-Sales)
       // This ensures "Sale Log" shows correct Profit (Revenue - Cost)
       if (sale.type === SaleType.BOOTH) {
-        const { calculateAssociatePayout } = await import('@/workflows/financial-record-utils');
+        const { calculateBoothFinancials, calculateAssociatePayout } = await import('@/workflows/financial-record-utils');
+        const split = await calculateBoothFinancials(sale);
         const payout = await calculateAssociatePayout(sale);
+        const totalCalculatedCost = split.myBoothCost + payout;
 
-        // If calculated payout differs from current cost, update it
-        if (payout >= 0 && Math.abs((sale.totals.totalCost || 0) - payout) > 0.01) {
+        // If calculated cost differs from current cost, update it
+        if (totalCalculatedCost >= 0 && Math.abs((sale.totals.totalCost || 0) - totalCalculatedCost) > 0.01) {
           const updatedSaleWithCost = {
             ...sale,
             totals: {
               ...sale.totals,
-              totalCost: payout
+              totalCost: totalCalculatedCost
             }
           };
           // Skip workflow interactions to prevent infinite loops, but allow simple persistence
+          const { upsertSale } = await import('@/data-store/datastore');
           await upsertSale(updatedSaleWithCost, { skipWorkflowEffects: true, skipLinkEffects: true });
         }
       }

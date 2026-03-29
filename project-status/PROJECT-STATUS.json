@@ -48,16 +48,18 @@
         "Analyst Agent performing Data Integrity tasks, ai-chat reading markdown files",
         "Tasks Indexes created, Agents upgraded, Database purged ghost tasks and agents cards",
         "Calendar submodal bugs fixes, Bloated Logs Indexes in Upstash",
-        "Logging workflows update and points decimals bugs, Full Logs and Entities Data Cleanup",
-        "Links System cleanup and Url links to its entities"
+        "Logging workflows update and points decimals bugs"
       ]
     },
     "phase14.4": {
       "phaseName": "Clean Code and Documentation",
-      "status": "Not Started",
+      "status": "In Progress",
       "description": "",
       "deliverables": [
-        "Clean ad Update All the Spread Documentation"
+        "Clean and Update All the TheGame Documentation, Create Pixelbrain Documentation",
+        "Full Logs and Entities Data Cleanup; Tasks and Sales Modals self healing Financials",
+        "Links System cleanup plus Url links to its entities",
+        "Booth Sales Financials: Performance Ledger"
       ]
     }
   },
