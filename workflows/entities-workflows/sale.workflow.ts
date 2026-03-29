@@ -242,22 +242,20 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
       await markEffect(chargedLoggedKey);
     }
 
-    // Process charged state impacts (stock, points staging)
+    // Process charged state impacts (stock, optional emissary points — helpers no-op if no rewards)
     await processChargedSaleLines(sale);
 
-    if (saleHasRewardPoints(sale)) {
-      const stagingKey = EffectKeys.sideEffect('sale', sale.id, 'pointsStaged');
-      if (!(await hasEffect(stagingKey))) {
-        const playerId = sale.playerCharacterId || FOUNDER_CHARACTER_ID;
-        await stagePointsForPlayer(
-          playerId,
-          sale.rewards!.points,
-          sale.id,
-          EntityType.SALE,
-          sale.saleDate || logTimestamp
-        );
-        await markEffect(stagingKey);
-      }
+    const chargedStagingKey = EffectKeys.sideEffect('sale', sale.id, 'pointsStaged');
+    if (!(await hasEffect(chargedStagingKey))) {
+      const playerId = sale.playerCharacterId || FOUNDER_CHARACTER_ID;
+      const staged = await stagePointsForPlayer(
+        playerId,
+        sale.rewards?.points,
+        sale.id,
+        EntityType.SALE,
+        sale.saleDate || logTimestamp
+      );
+      if (staged) await markEffect(chargedStagingKey);
     }
   }
 
@@ -293,16 +291,28 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
       await markEffect(saleCollectedLoggedKey);
     }
 
-    // Final rewards
+    // Optional emissary points on collect (COLLECTED log/effects above always run; points helpers no-op if none)
     const pointsRewardedEffectKey = EffectKeys.sideEffect('sale', sale.id, 'pointsRewarded');
     if (!(await hasEffect(pointsRewardedEffectKey))) {
-      const stagingEffectKey = EffectKeys.sideEffect('sale', sale.id, 'pointsStaged');
-      if (!(await hasEffect(stagingEffectKey))) {
-        const playerId = sale.playerCharacterId || FOUNDER_CHARACTER_ID;
-        await stagePointsForPlayer(playerId, sale.rewards!.points, sale.id, EntityType.SALE, sale.saleDate || collectedAt);
-        await markEffect(stagingEffectKey);
+      const playerId = sale.playerCharacterId || FOUNDER_CHARACTER_ID;
+      const collectedStagingKey = EffectKeys.sideEffect('sale', sale.id, 'pointsStaged');
+      if (!(await hasEffect(collectedStagingKey))) {
+        const staged = await stagePointsForPlayer(
+          playerId,
+          sale.rewards?.points,
+          sale.id,
+          EntityType.SALE,
+          sale.saleDate || collectedAt
+        );
+        if (staged) await markEffect(collectedStagingKey);
       }
-      await rewardPointsToPlayer(sale.playerCharacterId || FOUNDER_CHARACTER_ID, sale.rewards!.points, sale.id, EntityType.SALE, collectedAt);
+      await rewardPointsToPlayer(
+        playerId,
+        sale.rewards?.points,
+        sale.id,
+        EntityType.SALE,
+        collectedAt
+      );
       await markEffect(pointsRewardedEffectKey);
     }
   }

@@ -35,12 +35,14 @@ export async function resolveToPlayerIdMaybeCharacter(candidateId?: string | nul
  */
 export async function awardPointsToPlayer(
   playerId: string,
-  points: Rewards['points'],
+  points: Rewards['points'] | undefined | null,
   sourceId: string,
   sourceType: string,
   customTimestamp?: string | Date
 ): Promise<void> {
   try {
+    if (!points) return;
+
     const resolvedPlayerId = await resolveToPlayerIdMaybeCharacter(playerId);
 
     // Get the player
@@ -121,25 +123,28 @@ export async function awardPointsToPlayer(
 /**
  * Stages points for a player (Pending state)
  * Used when a task is Done or Sale is Charged, but not yet Collected
+ * @returns true if pending points were actually updated (for effect-registry idempotency)
  */
 export async function stagePointsForPlayer(
   playerId: string,
-  points: Rewards['points'],
+  points: Rewards['points'] | undefined | null,
   sourceId: string,
   sourceType: string,
   customTimestamp?: string | Date
-): Promise<void> {
+): Promise<boolean> {
   try {
+    if (!points) return false;
+
     const resolvedPlayerId = await resolveToPlayerIdMaybeCharacter(playerId);
 
     const player = await getPlayerById(resolvedPlayerId);
-    if (!player) return;
+    if (!player) return false;
 
     // Check if any points to stage
     const hasPoints = (points.xp || 0) > 0 || (points.rp || 0) > 0 ||
       (points.fp || 0) > 0 || (points.hp || 0) > 0;
 
-    if (!hasPoints) return;
+    if (!hasPoints) return false;
 
     // Add to pendingPoints
     const updatedPlayer: Player = {
@@ -154,8 +159,7 @@ export async function stagePointsForPlayer(
     };
 
     await upsertPlayer(updatedPlayer);
-
-
+    return true;
   } catch (error) {
     console.error(`[stagePointsForPlayer] ❌ Failed to stage points:`, error);
     throw error;
@@ -168,11 +172,13 @@ export async function stagePointsForPlayer(
  */
 export async function withdrawStagedPointsFromPlayer(
   characterId: string,
-  points: Rewards['points'],
+  points: Rewards['points'] | undefined | null,
   sourceEntityId: string,
   sourceEntityType: string
 ): Promise<void> {
   try {
+    if (!points) return;
+
     const resolvedPlayerId = await resolveToPlayerIdMaybeCharacter(characterId);
 
     const player = await getPlayerById(resolvedPlayerId);
@@ -210,11 +216,13 @@ export async function withdrawStagedPointsFromPlayer(
  */
 export async function unrewardPointsForPlayer(
   characterId: string,
-  points: Rewards['points'],
+  points: Rewards['points'] | undefined | null,
   sourceEntityId: string,
   sourceEntityType: string
 ): Promise<void> {
   try {
+    if (!points) return;
+
     const resolvedPlayerId = await resolveToPlayerIdMaybeCharacter(characterId);
 
     const player = await getPlayerById(resolvedPlayerId);
@@ -266,12 +274,14 @@ export async function unrewardPointsForPlayer(
  */
 export async function rewardPointsToPlayer(
   characterId: string,
-  points: Rewards['points'],
+  points: Rewards['points'] | undefined | null,
   sourceEntityId: string,
   sourceEntityType: string,
   customTimestamp?: string | Date
 ): Promise<void> {
   try {
+    if (!points) return;
+
     const resolvedPlayerId = await resolveToPlayerIdMaybeCharacter(characterId);
 
     const player = await getPlayerById(resolvedPlayerId);
@@ -346,9 +356,11 @@ export async function rewardPointsToPlayer(
  */
 export async function removePointsFromPlayer(
   playerId: string,
-  points: Rewards['points']
+  points: Rewards['points'] | undefined | null
 ): Promise<void> {
   try {
+    if (!points) return;
+
     // Get the player
     const player = await getPlayerById(playerId);
     if (!player) return;

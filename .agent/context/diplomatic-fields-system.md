@@ -124,6 +124,7 @@ outputItemType: ItemType, outputQuantity: number, outputItemName: string
 year: number, month: number, cost: number, revenue: number, jungleCoins: number
 
 // 🏛️ AMBASSADOR FIELDS - Permanently borrowed, always present
+// (No rewards.points here — financial records do not award player points; tasks/sales own emissary points.)
 siteId: string, targetSiteId: string
 
 // 📡 EMISSARY FIELDS - Conditionally borrowed, can be hidden

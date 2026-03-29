@@ -406,7 +406,7 @@ export async function processFinancialEffects(fin: FinancialRecord): Promise<voi
   }
 
   // Note: FINREC_TASK handled by financial-record-utils.ts ✅
-  // Note: FINREC_PLAYER handled by points-rewards-utils.ts ✅
+  // FINREC_PLAYER: only created by shared points helpers if something awards with sourceType `financial` — `onFinancialUpsert` does not award points.
 }
 
 export async function processCharacterEffects(character: Character): Promise<void> {

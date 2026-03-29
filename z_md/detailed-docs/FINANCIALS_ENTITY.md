@@ -71,6 +71,12 @@ Full circular economy
 
 ## 🏗️ Financial Record Entity Architecture
 
+### **Player points (policy)**
+
+**Financial records do not award player points.** Lifecycle is **pending vs done** (paid/charged): `onFinancialUpsert` logs `DONE`, may create items from emissary fields, updates J$ wallet cache when applicable — it does **not** call `rewardPointsToPlayer` / `stagePointsForPlayer` / `awardPointsToPlayer`. Gamification points come from **tasks** (and optionally **sales**), not from standalone financial rows. The modal saves with `rewards` cleared; optional `rewards` on the type is legacy/schema compatibility only.
+
+---
+
 ### **Base Structure (Extends BaseEntity)**
 
 ```typescript
@@ -104,13 +110,13 @@ export interface FinancialRecord extends BaseEntity {
   
   notes?: string;                  // optional notes for the month
   
-  // Player Points (like Tasks)
+  // Optional legacy field — not used by financial workflow for points (see policy above)
   rewards?: {
     points?: {
-      hp?: number;                 // Health Points
-      fp?: number;                 // Family Points
-      rp?: number;                 // Research Points
-      xp?: number;                 // Experience Points
+      hp?: number;
+      fp?: number;
+      rp?: number;
+      xp?: number;
     };
   };
   
@@ -274,11 +280,7 @@ Points (HP, FP, RP, XP)
    - Records financial impact
    - Tracks cash flow
 
-3. **Player Points** (if rewards configured)
-   - Awards points to Character (only if role includes PLAYER)
-   - Links Record to Character via `FINREC_CHARACTER` link
-
-4. **Item Creation** (if output configured)
+3. **Item Creation** (if output configured)
    - Creates Item entity if `outputItemType` is set
    - Links Record to Item via `FINREC_ITEM` link
    - Updates inventory
@@ -307,10 +309,12 @@ Financial Records are organized by **Year** and **Month**:
 
 ### **Link Types for Financial Records**
 
-- **`FINREC_ITEM`**: Financial Record created Item
-- **`FINREC_SALE`**: Financial Record linked to Sale
-- **`FINREC_CHARACTER`**: Financial Record earned Character points
-- **`FINREC_TASK`**: Financial Record linked to Task
+- **`FINREC_ITEM`**: Financial record → item created from emissary output fields
+- **`FINREC_SALE`**: Financial record ↔ sale (e.g. sale-sourced finrec)
+- **`FINREC_SITE`**: Financial record ↔ site
+- **`FINREC_TASK`**: Financial record ↔ task
+- **`FINREC_CHARACTER`**: Financial record ↔ character (customer / counterparty relationship — **not** “points earned from finrec”)
+- **`FINREC_PLAYER`**: May exist in older data if something used shared points helpers with `sourceType: financial`; **new finrec workflow does not create this for points.**
 
 ### **Example Link Creation**
 
@@ -330,14 +334,13 @@ Link {
   }
 }
 
-// When financial record awards points to character
+// When financial record is tied to a character (customer, etc.) — not points
 Link {
   linkType: 'FINREC_CHARACTER',
   source: { type: 'financial', id: recordId },
-  target: { type: 'player', id: characterId },
+  target: { type: 'character', id: characterId },
   createdAt: new Date(),
   metadata: {
-    points: record.rewards.points,
     station: record.station,
     category: record.category,
     month: record.month,
@@ -475,8 +478,8 @@ interface DigitalAssetsSummary {
 - **Classification**: Station and category selection
 - **Financial Data**: Cost, revenue, jungle coins input
 - **Item Output**: Optional item creation configuration
-- **Player Points**: Optional points rewards
 - **Notes**: Additional context and details
+- **No player points**: Financial modal does not configure HP/FP/RP/XP rewards (see policy above)
 
 ### **Financial Dashboard Features**
 
@@ -499,10 +502,7 @@ interface DigitalAssetsSummary {
 
 ### **Financial Record → Character Flow**
 
-1. Financial Record created with `rewards.points`
-2. Character points updated (if role includes PLAYER)
-3. `FINREC_CHARACTER` link established
-4. Player log updated
+1. Financial record may link to a **character** (customer, etc.) via `FINREC_CHARACTER` for relationship / wallet flows — **not** for awarding HP/FP/RP/XP from the finrec itself.
 
 ### **Financial Record → Sale Flow**
 
@@ -541,19 +541,13 @@ interface BudgetCategory {
 ### **Workflow Integration**
 
 ```typescript
-// Financial record creation triggers
+// Financial record creation triggers (conceptual — see `onFinancialUpsert` in code)
+// Financial workflow: item creation from emissary fields, DONE log, archive index, J$ wallet — no player point awards.
 export async function processRecordCreationEffects(record: FinancialRecord): Promise<FinancialRecord> {
-  // 1. Create item if configured
   if (record.outputItemType) {
     await createItemFromRecord(record);
   }
-  
-  // 2. Award player points
-  await logPlayerEffectFromRecord(record);
-  
-  // 3. Log financial effect
   await logFinancialRecordCreation(record);
-  
   return record;
 }
 ```

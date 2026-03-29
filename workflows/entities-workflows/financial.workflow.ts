@@ -69,7 +69,7 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
       }
     }
 
-    // PARALLEL SIDE EFFECTS - item creation and points awarding can run concurrently
+    // PARALLEL SIDE EFFECTS — item creation and wallet recalculation only (financial records do not award player points)
     // Run these independent side effects in parallel for 60-70% performance improvement
     const sideEffects: Promise<void>[] = [];
 

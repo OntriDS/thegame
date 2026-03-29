@@ -87,8 +87,7 @@ export const FINREC_FIELDS_CONFIG: DiplomaticFieldsConfig = {
   
   ambassadorFields: [
     { name: 'siteId', fieldType: 'ambassador', belongsTo: 'financial' as EntityType, sourceEntity: 'site' as EntityType, displayInModal: true, displayInParentUI: true, createsLink: true, linkType: 'FINREC_SITE', userConfigurable: false },
-    { name: 'targetSiteId', fieldType: 'ambassador', belongsTo: 'financial' as EntityType, sourceEntity: 'site' as EntityType, displayInModal: true, displayInParentUI: true, createsLink: true, linkType: 'FINREC_SITE', userConfigurable: false },
-    { name: 'rewards.points', fieldType: 'ambassador', belongsTo: 'financial' as EntityType, sourceEntity: 'player' as EntityType, displayInModal: true, displayInParentUI: true, createsLink: true, linkType: 'FINREC_PLAYER', userConfigurable: false }
+    { name: 'targetSiteId', fieldType: 'ambassador', belongsTo: 'financial' as EntityType, sourceEntity: 'site' as EntityType, displayInModal: true, displayInParentUI: true, createsLink: true, linkType: 'FINREC_SITE', userConfigurable: false }
   ],
   
   emissaryFields: [

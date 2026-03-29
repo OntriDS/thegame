@@ -128,17 +128,6 @@ export function CompanyRecordsList({
                           </span>
                         </>
                       )}
-                      {record.rewards?.points && (record.rewards.points.hp || record.rewards.points.fp || record.rewards.points.rp || record.rewards.points.xp) && (
-                        <>
-                          <span className="text-muted-foreground">•</span>
-                          <span className="text-xs">
-                            {record.rewards.points.hp ? `HP:${record.rewards.points.hp} ` : ''}
-                            {record.rewards.points.fp ? `FP:${record.rewards.points.fp} ` : ''}
-                            {record.rewards.points.rp ? `RP:${record.rewards.points.rp} ` : ''}
-                            {record.rewards.points.xp ? `XP:${record.rewards.points.xp}` : ''}
-                          </span>
-                        </>
-                      )}
                       {record.jungleCoins > 0 && (
                         <>
                           <span className="text-muted-foreground">•</span>
@@ -341,17 +330,6 @@ This action cannot be undone.`);
                           <span className="text-xs">
                             {record.outputItemName}
                             {record.outputQuantity && record.outputQuantity > 1 && ` (${record.outputQuantity}x)`}
-                          </span>
-                        </>
-                      )}
-                      {record.rewards?.points && (record.rewards.points.hp || record.rewards.points.fp || record.rewards.points.rp || record.rewards.points.xp) && (
-                        <>
-                          <span className="text-muted-foreground">•</span>
-                          <span className="text-xs">
-                            {record.rewards.points.hp ? `HP:${record.rewards.points.hp} ` : ''}
-                            {record.rewards.points.fp ? `FP:${record.rewards.points.fp} ` : ''}
-                            {record.rewards.points.rp ? `RP:${record.rewards.points.rp} ` : ''}
-                            {record.rewards.points.xp ? `XP:${record.rewards.points.xp}` : ''}
                           </span>
                         </>
                       )}

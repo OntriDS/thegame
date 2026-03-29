@@ -598,7 +598,7 @@ export enum LinkType {
   FINREC_TASK = 'FINREC_TASK',    // Financial Record tracks Task
   FINREC_ITEM = 'FINREC_ITEM',    // Financial Record tracks Item
   FINREC_SALE = 'FINREC_SALE',    // Financial Record linked to Sale
-  FINREC_PLAYER = 'FINREC_PLAYER',  // Financial Record earned Player points (only for PLAYERS)
+  FINREC_PLAYER = 'FINREC_PLAYER',  // Financial → Player (legacy / generic points link type; finrec workflow does not award points)
   FINREC_CHARACTER = 'FINREC_CHARACTER', // Financial Record assigned to Character (customer, team member, etc.)
   FINREC_BUSINESS = 'FINREC_BUSINESS', // Financial Record assigned to Business
   FINREC_SITE = 'FINREC_SITE',      // Financial Record is related to a Site
