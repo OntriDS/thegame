@@ -26,7 +26,17 @@ import { entityHasLogEvent } from '@/lib/utils/entity-log-scan';
 
 const STATE_FIELDS = ['isNotPaid', 'isNotCharged'];
 
-const getFinancialDate = (f: FinancialRecord) => new Date(f.year, f.month - 1, 1);
+const getFinancialDate = (f: FinancialRecord, fallback?: Date) => {
+  // Use financial record's own date, fallback to provided date (e.g. from sale)
+  // NEVER use current date as fallback - this causes logs in wrong month
+  if (f.doneAt || f.createdAt) {
+    const raw = f.doneAt || f.createdAt;
+    const d = raw instanceof Date ? raw : new Date(raw as string);
+    if (Number.isFinite(d.getTime())) return d;
+  }
+  // Safe fallback: use provided date or createdAt, never current date
+  return fallback || f.createdAt || new Date(2025, 1, 1); // Safe historical fallback
+};
 
 /** Timestamp for DONE lifecycle log (sale/task emissaries usually create already-done rows). */
 function getFinancialDoneTimestamp(f: FinancialRecord): Date {
@@ -112,9 +122,9 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
       } else if (financial.createdAt) {
         snapshotMonthDate = calculateClosingDate(financial.createdAt);
       } else {
-        const now = new Date();
-        const adjustedNow = new Date(now.getTime() - 6 * 60 * 60 * 1000);
-        snapshotMonthDate = calculateClosingDate(adjustedNow);
+        // Safe historical fallback: use Jan 1st of record year, never current date
+        const safeHistoricalDate = new Date(financial.year, 0, 1);
+        snapshotMonthDate = calculateClosingDate(safeHistoricalDate);
       }
 
       const archiveIndexEffectKey = EffectKeys.sideEffect('financial', financial.id, `archiveIndex:${formatMonthKey(snapshotMonthDate)}`);
@@ -183,9 +193,9 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
     } else if (financial.createdAt) {
       snapshotMonthDate = calculateClosingDate(financial.createdAt);
     } else {
-      const now = new Date();
-      const adjustedNow = new Date(now.getTime() - 6 * 60 * 60 * 1000);
-      snapshotMonthDate = calculateClosingDate(adjustedNow);
+      // Safe historical fallback: use Jan 1st of record year, never current date
+      const safeHistoricalDate = new Date(financial.year, 0, 1);
+      snapshotMonthDate = calculateClosingDate(safeHistoricalDate);
     }
 
     const archiveIndexEffectKey = EffectKeys.sideEffect('financial', financial.id, `archiveIndex:${formatMonthKey(snapshotMonthDate)}`);
@@ -272,7 +282,7 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
     const wasArchived = !previousFinancial.isNotPaid && !previousFinancial.isNotCharged;
 
     const getArchiveMonth = (f: FinancialRecord) => {
-      let snapshotDate = new Date(); // fallback
+      let snapshotDate = f.createdAt || new Date(f.year, 0, 1); // Use createdAt or safe historical fallback
       const referenceDate = new Date(f.year, f.month - 1, 1);
       if (isValid(referenceDate)) {
         snapshotDate = calculateClosingDate(referenceDate);
@@ -430,7 +440,7 @@ export async function removeRecordEffectsOnDelete(recordId: string): Promise<voi
     try {
       const record = await getFinancialById(recordId);
       if (record) {
-        let snapshotDate = new Date(); // fallback
+        let snapshotDate = record.createdAt || new Date(record.year, 0, 1); // Use createdAt or safe historical fallback
         const referenceDate = new Date(record.year, record.month - 1, 1);
         if (isValid(referenceDate)) {
           snapshotDate = calculateClosingDate(referenceDate);
