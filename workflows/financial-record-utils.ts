@@ -248,15 +248,6 @@ export async function updateFinancialRecordFromTask(task: Task, previousTask: Ta
     console.log(`[updateFinancialRecordFromTask] Updating financial record:`, updatedFinrec);
     await upsertFinancial(updatedFinrec);
 
-    // Log the update
-    await appendEntityLog(EntityType.FINANCIAL, existingFinrec.id, LogEventType.UPDATED, {
-      name: `Update: ${task.name}`,
-      type: existingFinrec.type,
-      station: existingFinrec.station,
-      cost: task.cost || 0,
-      revenue: task.revenue || 0
-    }, task.updatedAt || new Date());
-
     console.log(`[updateFinancialRecordFromTask] ✅ Financial record updated successfully for task: ${task.name}`);
 
   } catch (error) {
@@ -608,6 +599,7 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
       revenue: split.myGross,
       cost: split.myBoothCost,
       netCashflow: split.myGross - split.myBoothCost,
+      status: (!sale.isNotPaid && !sale.isNotCharged) ? FinancialStatus.DONE : FinancialStatus.PENDING,
       isNotPaid: sale.isNotPaid || false,
       isNotCharged: sale.isNotCharged || false,
       updatedAt: new Date(),
@@ -617,15 +609,6 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
 
     await upsertFinancial(incomeData, { forceSave: true });
     console.log(`[createFinancialRecordFromBoothSale] ✅ Synced Record 1 (${incomeRecordId}): Net=${incomeData.netCashflow}`);
-
-    // Lifecycle Log
-    await appendEntityLog(EntityType.FINANCIAL, incomeRecordId, incomeRecord ? LogEventType.UPDATED : LogEventType.CREATED, {
-      name: incomeData.name,
-      station: incomeData.station,
-      type: incomeData.type,
-      revenue: incomeData.revenue,
-      cost: incomeData.cost
-    }, split.date);
 
     // Verify/Create SALE_FINREC Link
     const saleLinks = await getLinksFor({ type: EntityType.SALE, id: sale.id });
@@ -659,6 +642,7 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
         revenue: split.myCommFromAssoc,
         cost: split.assocCommFromMe,
         netCashflow: split.myCommFromAssoc - split.assocCommFromMe,
+        status: (sale.status !== SaleStatus.PENDING) ? FinancialStatus.DONE : FinancialStatus.PENDING,
         isNotPaid: sale.status !== SaleStatus.CHARGED,
         isNotCharged: false,
         updatedAt: new Date(),
@@ -668,15 +652,6 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
 
       await upsertFinancial(payoutData, { forceSave: true });
       console.log(`[createFinancialRecordFromBoothSale] ✅ Synced Record 2 (${payoutRecordId}): Net=${payoutData.netCashflow}`);
-
-      // Lifecycle Log
-      await appendEntityLog(EntityType.FINANCIAL, payoutRecordId, payoutRecord ? LogEventType.UPDATED : LogEventType.CREATED, {
-        name: payoutData.name,
-        station: payoutData.station,
-        type: payoutData.type,
-        revenue: payoutData.revenue,
-        cost: payoutData.cost
-      }, split.date);
 
       // Verify/Create SALE_FINREC Link
       const hasPayoutSaleLink = saleLinks.some(l => l.linkType === LinkType.SALE_FINREC && l.target.id === payoutRecordId);
@@ -702,18 +677,10 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
         cost: 0, 
         netCashflow: 0, 
         description: 'No contract impact for this revision', 
+        status: FinancialStatus.DONE,
         updatedAt: new Date() 
       };
       await upsertFinancial(zeroedPayout as FinancialRecord);
-      
-      // Log the zeroing
-      await appendEntityLog(EntityType.FINANCIAL, payoutRecordId, LogEventType.UPDATED, {
-        name: zeroedPayout.name,
-        station: zeroedPayout.station,
-        type: zeroedPayout.type,
-        revenue: 0,
-        cost: 0
-      }, split.date);
     }
 
   } catch (error) {

@@ -175,10 +175,32 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
     // Logic is now centralized in updateFinancialRecordsFromSale (handling new sales when previousSale is undefined)
     await updateFinancialRecordsFromSale(sale, undefined);
 
-    const isCharged =
-      sale.status === SaleStatus.CHARGED && !sale.isNotPaid && !sale.isNotCharged;
+    // [HEALING] Milestone Detection - Unified for Creation and Update
+    // Handles cases where a sale is already CHARGED or COLLECTED when first encountered (resaved)
+    const nowPending = sale.isNotPaid || sale.isNotCharged;
+    const isCharged = sale.status !== SaleStatus.CANCELLED && (sale.status === SaleStatus.CHARGED || sale.status === SaleStatus.COLLECTED) && !nowPending;
+    const isCollected = sale.status === SaleStatus.COLLECTED || !!sale.isCollected;
+
+    // 1. Log CHARGED milestone (if applicable and not already logged)
     if (isCharged) {
+      const chargedAt = sale.chargedAt ? new Date(sale.chargedAt) : new Date();
+      if (!(sale as any).chargedAt) (sale as any).chargedAt = chargedAt;
+
+      const chargedLoggedKey = EffectKeys.sideEffect('sale', sale.id, 'saleDoneLogged');
+      if (!(await hasEffect(chargedLoggedKey))) {
+        await appendEntityLog(
+          EntityType.SALE,
+          sale.id,
+          LogEventType.CHARGED,
+          getSaleLogDetails(sale),
+          sale.doneAt || chargedAt
+        );
+        await markEffect(chargedLoggedKey);
+      }
+
+      // Process charged state impacts (stock, points staging)
       await processChargedSaleLines(sale);
+
       if (saleHasRewardPoints(sale)) {
         const stagingKey = EffectKeys.sideEffect('sale', sale.id, 'pointsStaged');
         if (!(await hasEffect(stagingKey))) {
@@ -188,21 +210,63 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
             sale.rewards!.points,
             sale.id,
             EntityType.SALE,
-            sale.saleDate || sale.createdAt || new Date()
+            sale.saleDate || chargedAt
           );
           await markEffect(stagingKey);
         }
       }
     }
 
-    return;
+    // 2. Log COLLECTED milestone (if applicable and not already logged)
+    if (isCollected) {
+      let defaultCollectedAt: Date;
+      if (sale.saleDate) {
+        defaultCollectedAt = calculateClosingDate(sale.saleDate);
+      } else if (sale.createdAt) {
+        defaultCollectedAt = calculateClosingDate(sale.createdAt);
+      } else {
+        const now = new Date();
+        const adjustedNow = new Date(now.getTime() - 6 * 60 * 60 * 1000);
+        defaultCollectedAt = calculateClosingDate(adjustedNow);
+      }
+
+      const collectedAtRaw = sale.collectedAt ?? defaultCollectedAt;
+      const collectedAtCandidate = collectedAtRaw instanceof Date ? collectedAtRaw : new Date(collectedAtRaw);
+      const collectedAt = Number.isFinite(collectedAtCandidate.getTime()) ? collectedAtCandidate : defaultCollectedAt;
+
+      const saleCollectedLoggedKey = EffectKeys.sideEffect('sale', sale.id, 'saleCollectedLogged');
+      if (!(await hasEffect(saleCollectedLoggedKey))) {
+        await appendEntityLog(
+          EntityType.SALE,
+          sale.id,
+          LogEventType.COLLECTED,
+          {
+            ...getSaleLogDetails(sale),
+            collectedAt: collectedAt.toISOString()
+          },
+          collectedAt
+        );
+        await markEffect(saleCollectedLoggedKey);
+      }
+
+      // Final rewards
+      const pointsRewardedEffectKey = EffectKeys.sideEffect('sale', sale.id, 'pointsRewarded');
+      if (!(await hasEffect(pointsRewardedEffectKey))) {
+        const stagingEffectKey = EffectKeys.sideEffect('sale', sale.id, 'pointsStaged');
+        if (!(await hasEffect(stagingEffectKey))) {
+          const playerId = sale.playerCharacterId || FOUNDER_CHARACTER_ID;
+          await stagePointsForPlayer(playerId, sale.rewards!.points, sale.id, EntityType.SALE, sale.saleDate || collectedAt);
+          await markEffect(stagingEffectKey);
+        }
+        await rewardPointsToPlayer(sale.playerCharacterId || FOUNDER_CHARACTER_ID, sale.rewards!.points, sale.id, EntityType.SALE, collectedAt);
+        await markEffect(pointsRewardedEffectKey);
+      }
+    }
+
+    if (!previousSale) return;
   }
 
-  // Status changes - PENDING (not paid/not charged) vs CHARGED (paid and charged)
-  const wasPending = previousSale!.isNotPaid || previousSale!.isNotCharged;
-  const nowPending = sale.isNotPaid || sale.isNotCharged;
-  const becameFullyPaid = wasPending && !nowPending;
-
+  // CANCELLED status change (only for existing sales)
   if (previousSale.status !== sale.status && sale.status === SaleStatus.CANCELLED) {
     await appendEntityLog(
       EntityType.SALE,
@@ -211,105 +275,9 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
       getSaleLogDetails(sale),
       sale.cancelledAt || sale.saleDate || new Date()
     );
-  } else if (sale.status !== SaleStatus.CANCELLED && (becameFullyPaid || (previousSale.status !== sale.status && sale.status === SaleStatus.CHARGED && !nowPending))) {
-    const chargedAt = sale.chargedAt ? new Date(sale.chargedAt) : new Date();
-    (sale as any).chargedAt = chargedAt;
-
-    const chargedLoggedKey = EffectKeys.sideEffect('sale', sale.id, 'saleDoneLogged');
-    if (!(await hasEffect(chargedLoggedKey))) {
-      await appendEntityLog(
-        EntityType.SALE,
-        sale.id,
-        LogEventType.CHARGED,
-        getSaleLogDetails(sale),
-        sale.doneAt || chargedAt
-      );
-      await markEffect(chargedLoggedKey);
-    }
-
-    if (saleHasRewardPoints(sale)) {
-      const stagingKey = EffectKeys.sideEffect('sale', sale.id, 'pointsStaged');
-      if (!(await hasEffect(stagingKey))) {
-        const playerId = sale.playerCharacterId || FOUNDER_CHARACTER_ID;
-        await stagePointsForPlayer(
-          playerId,
-          sale.rewards!.points,
-          sale.id,
-          EntityType.SALE,
-          sale.saleDate || chargedAt
-        );
-        await markEffect(stagingKey);
-      }
-    }
-
-    await processChargedSaleLines(sale);
-  } else if (!wasPending && nowPending) {
+  } else if (!previousSale.isNotPaid && !previousSale.isNotCharged && (sale.isNotPaid || sale.isNotCharged)) {
+    // Reverted to Pending
     await appendEntityLog(EntityType.SALE, sale.id, LogEventType.PENDING, getSaleLogDetails(sale), sale.saleDate || new Date());
-  }
-
-  // Collection detection - Dual detection: status OR flag change to COLLECTED (mirror task.workflow)
-  const statusBecameCollected =
-    sale.status === SaleStatus.COLLECTED &&
-    (!previousSale || previousSale.status !== SaleStatus.COLLECTED);
-
-  const flagBecameCollected =
-    !!sale.isCollected && (!previousSale || !previousSale.isCollected);
-
-  if (statusBecameCollected || flagBecameCollected) {
-    let defaultCollectedAt: Date;
-
-    if (sale.saleDate) {
-      defaultCollectedAt = calculateClosingDate(sale.saleDate);
-    } else if (sale.createdAt) {
-      defaultCollectedAt = calculateClosingDate(sale.createdAt);
-    } else {
-      const now = new Date();
-      const adjustedNow = new Date(now.getTime() - 6 * 60 * 60 * 1000);
-      defaultCollectedAt = calculateClosingDate(adjustedNow);
-    }
-
-    const collectedAtRaw = sale.collectedAt ?? defaultCollectedAt;
-    const collectedAtCandidate = collectedAtRaw instanceof Date ? collectedAtRaw : new Date(collectedAtRaw);
-    const collectedAt = Number.isFinite(collectedAtCandidate.getTime())
-      ? collectedAtCandidate
-      : defaultCollectedAt;
-
-    const wasNeverCharged = previousSale?.status !== SaleStatus.CHARGED && sale.status !== SaleStatus.CHARGED;
-    const hasItems = sale.lines?.some(l => l.kind === 'item' || l.kind === 'bundle');
-    if (wasNeverCharged && hasItems) {
-      await processChargedSaleLines(sale);
-    }
-
-    const saleCollectedLoggedKey = EffectKeys.sideEffect('sale', sale.id, 'saleCollectedLogged');
-    if (!(await hasEffect(saleCollectedLoggedKey))) {
-      await appendEntityLog(
-        EntityType.SALE,
-        sale.id,
-        LogEventType.COLLECTED,
-        {
-          ...getSaleLogDetails(sale),
-          collectedAt: collectedAt.toISOString()
-        },
-        collectedAt
-      );
-      await markEffect(saleCollectedLoggedKey);
-    }
-
-    const pointsRewardedEffectKey = EffectKeys.sideEffect('sale', sale.id, 'pointsRewarded');
-    if (!(await hasEffect(pointsRewardedEffectKey))) {
-      const stagingEffectKey = EffectKeys.sideEffect('sale', sale.id, 'pointsStaged');
-      if (saleHasRewardPoints(sale) && (await hasEffect(stagingEffectKey))) {
-        const playerId = sale.playerCharacterId || FOUNDER_CHARACTER_ID;
-        await rewardPointsToPlayer(
-          playerId,
-          sale.rewards!.points,
-          sale.id,
-          EntityType.SALE,
-          collectedAt
-        );
-      }
-      await markEffect(pointsRewardedEffectKey);
-    }
   }
 
   // COMPREHENSIVE UPDATE PROPAGATION - when sale properties change
