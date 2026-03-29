@@ -177,6 +177,29 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
   // Logic is centralized in updateFinancialRecordsFromSale (handles discovery/re-creation)
   await updateFinancialRecordsFromSale(sale, previousSale);
 
+  // 1.5 BOOTH COST CALCULATION (Must happen BEFORE log creation)
+  // For booth sales, calculate cost before creating logs to ensure logs include correct profit
+  if (sale.type === SaleType.BOOTH) {
+    const { calculateBoothFinancials, calculateAssociatePayout } = await import('@/workflows/financial-record-utils');
+    const split = await calculateBoothFinancials(sale);
+    const payout = await calculateAssociatePayout(sale);
+    const totalCalculatedCost = split.myBoothCost + payout;
+
+    // If calculated cost differs from current cost, update it before log creation
+    if (totalCalculatedCost >= 0 && Math.abs((sale.totals.totalCost || 0) - totalCalculatedCost) > 0.01) {
+      sale = {
+        ...sale,
+        totals: {
+          ...sale.totals,
+          totalCost: totalCalculatedCost
+        }
+      };
+      // Skip workflow interactions to prevent infinite loops, but allow simple persistence
+      const { upsertSale } = await import('@/data-store/datastore');
+      await upsertSale(sale, { skipWorkflowEffects: true, skipLinkEffects: true });
+    }
+  }
+
   // 2. MILESTONE LOGGING (CHARGED & COLLECTED)
   const nowPending = sale.isNotPaid || sale.isNotCharged;
   const isCharged = sale.status !== SaleStatus.CANCELLED && (sale.status === SaleStatus.CHARGED || sale.status === SaleStatus.COLLECTED) && !nowPending;
@@ -412,16 +435,24 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
         sale.status !== SaleStatus.CANCELLED && !sale.isNotPaid && !sale.isNotCharged;
       if (chargedOk) {
         const ts = sale.doneAt || (sale as { chargedAt?: Date }).chargedAt || sale.saleDate || new Date();
-        await appendEntityLog(
-          EntityType.SALE,
-          sale.id,
-          LogEventType.CHARGED,
-          getSaleLogDetails(sale),
-          ts
-        );
+        const chargedLoggedKey = EffectKeys.sideEffect('sale', sale.id, 'saleDoneLogged');
+        if (!(await hasEffect(chargedLoggedKey))) {
+          await appendEntityLog(
+            EntityType.SALE,
+            sale.id,
+            LogEventType.CHARGED,
+            getSaleLogDetails(sale),
+            ts
+          );
+          await markEffect(chargedLoggedKey);
+        }
       }
 
-      await appendEntityLog(EntityType.SALE, sale.id, LogEventType.COLLECTED, getSaleLogDetails(sale), collectedAt);
+      const saleCollectedLoggedKey = EffectKeys.sideEffect('sale', sale.id, 'saleCollectedLogged');
+      if (!(await hasEffect(saleCollectedLoggedKey))) {
+        await appendEntityLog(EntityType.SALE, sale.id, LogEventType.COLLECTED, getSaleLogDetails(sale), collectedAt);
+        await markEffect(saleCollectedLoggedKey);
+      }
     }
   }
 
