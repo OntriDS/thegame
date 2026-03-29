@@ -9,6 +9,7 @@ import {
   updateEntityLeanFields,
   removeLogEntriesAcrossMonths
 } from '../entities-logging';
+import { ensureFinancialDoneLog } from './financial.workflow';
 import { hasEffect, markEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
 import { EffectKeys } from '@/data-store/keys';
 import { getLinksFor, removeLink } from '@/links/link-registry';
@@ -176,6 +177,16 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
   // 1. FINANCIAL RECORD SYNC
   // Logic is centralized in updateFinancialRecordsFromSale (handles discovery/re-creation)
   await updateFinancialRecordsFromSale(sale, previousSale);
+
+  // 1.1 ENSURE FINANCIAL LOGS FOR DONE RECORDS
+  // Financial records that are DONE but missing their logs need to be healed
+  const relatedFinancials = await getFinancialsBySourceSaleId(sale.id);
+  for (const financial of relatedFinancials) {
+    const isDone = !financial.isNotPaid && !financial.isNotCharged;
+    if (isDone) {
+      await ensureFinancialDoneLog(financial.id);
+    }
+  }
 
   // 1.5 BOOTH COST CALCULATION (Must happen BEFORE log creation)
   // For booth sales, calculate cost before creating logs to ensure logs include correct profit
