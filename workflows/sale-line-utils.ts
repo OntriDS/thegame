@@ -11,7 +11,6 @@ import { hasEffect, markEffect } from '@/data-store/effects-registry';
 import { EffectKeys, buildArchiveCollectionIndexKey, buildArchiveMonthsKey, buildMonthIndexKey } from '@/data-store/keys';
 import { calculateClosingDate, formatMonthKey, formatDisplayDate, saleReferenceDateForItemSoldAndLog } from '@/lib/utils/date-utils';
 import { appendEntityLog } from './entities-logging';
-import { createFinancialRecordFromSale } from './financial-record-utils';
 import { ORDER_INCREMENT } from '@/lib/constants/app-constants';
 
 /**
@@ -38,16 +37,8 @@ export async function processSaleLines(sale: Sale): Promise<void> {
       }
     }
 
-    // Create financial record from sale if it has revenue
-    if (sale.totals.totalRevenue > 0) {
-      if (sale.type === 'BOOTH') {
-        // Dynamic import to avoid circular dependency
-        const { createFinancialRecordFromBoothSale } = await import('./financial-record-utils');
-        await createFinancialRecordFromBoothSale(sale);
-      } else {
-        await createFinancialRecordFromSale(sale);
-      }
-    }
+    // Financial records from sales are created/updated only in onSaleUpsert → updateFinancialRecordsFromSale
+    // (creating them here duplicated finrecs on every charged resave).
 
     console.log(`[processSaleLines] ✅ Processed all lines for sale: ${sale.counterpartyName}`);
 

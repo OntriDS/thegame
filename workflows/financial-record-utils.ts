@@ -3,7 +3,19 @@
 
 import type { Task, FinancialRecord, Sale, ItemSaleLine, Character, Contract, ServiceLine } from '@/types/entities';
 import { LinkType, EntityType, LogEventType, BUSINESS_STRUCTURE, SaleType, SaleStatus, ContractClauseType, ContractStatus, FinancialStatus } from '@/types/enums';
-import { upsertFinancial, getAllFinancials, getFinancialsBySourceTaskId, removeFinancial, getItemById, getCharacterById, getFinancialConversionRates, getContractById, getFinancialsBySourceSaleId, upsertCharacter } from '@/data-store/datastore';
+import {
+  upsertFinancial,
+  getAllFinancials,
+  getFinancialsBySourceTaskId,
+  removeFinancial,
+  getItemById,
+  getCharacterById,
+  getFinancialConversionRates,
+  getContractById,
+  getFinancialsBySourceSaleId,
+  upsertCharacter,
+  getSiteById,
+} from '@/data-store/datastore';
 import { makeLink } from '@/links/links-workflows';
 import { createLink, getLinksFor } from '@/links/link-registry';
 import { appendEntityLog } from './entities-logging';
@@ -11,6 +23,7 @@ import { getFinancialTypeForStation, getSalesChannelFromSaleType } from '@/lib/u
 import type { Station } from '@/types/type-aliases';
 
 import { BITCOIN_SATOSHIS_PER_BTC, DEFAULT_CURRENCY_EXCHANGE_RATES } from '@/lib/constants/financial-constants';
+import { formatDisplayDate, parseFlexibleDate } from '@/lib/utils/date-utils';
 
 /**
  * Get the current J$ Balance for an entity (Character or Player)
@@ -293,18 +306,80 @@ export async function removeFinancialRecordsCreatedByTask(taskId: string): Promi
   }
 }
 
-/** Sale-sourced finrec period: doneAt (charged), then saleDate, then createdAt — not collectedAt. */
+/** Sale-sourced finrec period: doneAt, then saleDate, then createdAt — not collectedAt. */
 function coerceSaleFinrecDate(
   sale: Sale,
   fallback: Date
 ): Date {
   try {
     const raw = sale.doneAt || sale.saleDate || sale.createdAt || fallback;
-    const d = raw instanceof Date ? raw : new Date(raw as string);
+    const d = raw instanceof Date ? raw : parseFlexibleDate(raw as string);
     return Number.isFinite(d.getTime()) ? d : fallback;
   } catch {
     return fallback;
   }
+}
+
+function saleTypeToFinrecTitlePrefix(type: SaleType | string | undefined): string {
+  switch (type) {
+    case SaleType.DIRECT:
+    case 'DIRECT':
+      return 'Direct Sale';
+    case SaleType.BOOTH:
+    case 'BOOTH':
+      return 'Booth Sale';
+    case SaleType.NETWORK:
+    case 'NETWORK':
+      return 'Network Sale';
+    case SaleType.ONLINE:
+    case 'ONLINE':
+      return 'Online Sale';
+    case SaleType.NFT:
+    case 'NFT':
+      return 'NFT Sale';
+    default:
+      return 'Sale';
+  }
+}
+
+/** Customer / site strings for finrec titles only. Use "" when missing — no placeholders. */
+async function resolveSaleCustomerAndSiteLabels(sale: Sale): Promise<{ customerLabel: string; siteLabel: string }> {
+  let customerLabel = (sale.counterpartyName && String(sale.counterpartyName).trim()) || '';
+  if (!customerLabel && sale.customerId) {
+    const ch = await getCharacterById(sale.customerId);
+    customerLabel = (ch?.name && String(ch.name).trim()) || '';
+  }
+
+  let siteLabel = '';
+  if (sale.siteId) {
+    try {
+      const site = await getSiteById(sale.siteId);
+      siteLabel = (site?.name && String(site.name).trim()) || '';
+    } catch (e) {
+      console.warn('[resolveSaleCustomerAndSiteLabels] site lookup failed', e);
+    }
+  }
+
+  return { customerLabel, siteLabel };
+}
+
+/**
+ * "{Type} Sale" + optional customer + optional site + date (DD-MM-YY…).
+ * Blank customer/site are omitted (no "Unknown", "—", or sale-type fallbacks).
+ */
+function composeSaleSourcedFinrecName(
+  sale: Sale,
+  customerLabel: string,
+  siteLabel: string,
+  dateLabel: string
+): string {
+  const parts: string[] = [saleTypeToFinrecTitlePrefix(sale.type)];
+  const c = customerLabel.trim();
+  const s = siteLabel.trim();
+  if (c) parts.push(c);
+  if (s) parts.push(s);
+  parts.push(dateLabel);
+  return parts.join(' ');
 }
 
 export interface BoothFinancialSplit {
@@ -405,11 +480,14 @@ async function resolveSaleDerivedFinrecFields(
   dateToUse: Date;
   salesChannel: Station;
   station: Station;
-  displayName: string;
   year: number;
   month: number;
   financialType: 'company' | 'personal';
   description: string;
+  customerLabel: string;
+  siteLabel: string;
+  /** e.g. Direct Sale 01-01-26 | Booth Sale Eco-Feria 01-01-26 | Network Sale Alvaro 01-01-26 */
+  finrecName: string;
 }> {
   const currentDate = new Date();
   const dateToUse = coerceSaleFinrecDate(sale, currentDate);
@@ -419,64 +497,122 @@ async function resolveSaleDerivedFinrecFields(
     ('Direct-Sales' as Station);
   const station = salesChannel;
 
-  let displayName = sale.counterpartyName;
-
-  if (!displayName) {
-    if (sale.type === SaleType.BOOTH) {
-      if (sale.siteId) {
-        try {
-          const { getSiteById } = await import('@/data-store/datastore');
-          const site = await getSiteById(sale.siteId);
-          displayName = site?.name || 'Booth Sale';
-        } catch (e) {
-          console.warn('Failed to fetch site for naming', e);
-          displayName = 'Booth Sale';
-        }
-      } else {
-        displayName = 'Booth Sale';
-      }
-    } else {
-      displayName = 'Walk-in Customer';
-    }
-  }
+  const { customerLabel, siteLabel } = await resolveSaleCustomerAndSiteLabels(sale);
+  const dateLabel = formatDisplayDate(dateToUse);
+  const finrecName = composeSaleSourcedFinrecName(sale, customerLabel, siteLabel, dateLabel);
 
   return {
     dateToUse,
     salesChannel,
     station,
-    displayName,
     year: dateToUse.getFullYear(),
     month: dateToUse.getMonth() + 1,
     financialType: getFinancialTypeForStation(station),
-    description: `Financial record from sale: ${displayName}`,
+    description: `Sale-sourced financial · ${sale.id}`,
+    customerLabel,
+    siteLabel,
+    finrecName,
   };
 }
 
+async function upsertPrimarySaleFinrecFromSale(
+  sale: Sale,
+  existing: FinancialRecord,
+  derived: Awaited<ReturnType<typeof resolveSaleDerivedFinrecFields>>
+): Promise<FinancialRecord> {
+  const now = new Date();
+  const next: FinancialRecord = {
+    ...existing,
+    name: derived.finrecName,
+    description: derived.description,
+    year: derived.year,
+    month: derived.month,
+    station: derived.station,
+    type: derived.financialType,
+    siteId: sale.siteId ?? existing.siteId,
+    targetSiteId: existing.targetSiteId,
+    sourceSaleId: sale.id,
+    salesChannel: derived.salesChannel,
+    cost: 0,
+    revenue: sale.totals.totalRevenue,
+    jungleCoins: existing.jungleCoins ?? 0,
+    isNotPaid: !!sale.isNotPaid,
+    isNotCharged: !!sale.isNotCharged,
+    rewards: undefined,
+    netCashflow: sale.totals.totalRevenue,
+    jungleCoinsValue: existing.jungleCoinsValue ?? 0,
+    isCollected: existing.isCollected,
+    collectedAt: existing.collectedAt,
+    updatedAt: now,
+  };
+
+  const saved = await upsertFinancial(next, { forceSave: true });
+
+  const saleLinks = await getLinksFor({ type: EntityType.SALE, id: sale.id });
+  const hasSaleFinrec = saleLinks.some(
+    l =>
+      l.linkType === LinkType.SALE_FINREC &&
+      l.target.type === EntityType.FINANCIAL &&
+      l.target.id === saved.id
+  );
+  if (!hasSaleFinrec) {
+    await createLink(
+      makeLink(
+        LinkType.SALE_FINREC,
+        { type: EntityType.SALE, id: sale.id },
+        { type: EntityType.FINANCIAL, id: saved.id }
+      )
+    );
+  }
+
+  return saved;
+}
+
 /**
- * Create a financial record from a sale (when sale has revenue)
- * This implements the emissary pattern: Sale DNA → FinancialRecord entity
- * IDEMPOTENT: Relies on Effects Registry to prevent duplicate creation
+ * Create or update the single primary financial record for a non-booth sale (revenue > 0).
+ * Idempotent by sourceSaleId: never creates a second row; dedupes legacy duplicates (keeps oldest).
  */
 export async function createFinancialRecordFromSale(sale: Sale): Promise<FinancialRecord | null> {
   try {
-    console.log(`[createFinancialRecordFromSale] Creating financial record from sale: ${sale.counterpartyName}`);
-
-    // Check if sale has revenue
     if (sale.totals.totalRevenue <= 0) {
-      console.log(`[createFinancialRecordFromSale] Sale ${sale.id} has no revenue, skipping financial record creation`);
+      console.log(`[createFinancialRecordFromSale] Sale ${sale.id} has no revenue, skipping`);
       return null;
     }
 
-    // OPTIMIZED: No need to check for existing records - Effects Registry already did!
-    // The workflow only calls this when hasEffect('sale:{id}:financialCreated') === false
-    console.log(`[createFinancialRecordFromSale] Creating new financial record (Effect Registry confirmed no existing record)`);
+    const derived = await resolveSaleDerivedFinrecFields(sale);
+    const allForSale = await getFinancialsBySourceSaleId(sale.id);
+    const nonPayout = allForSale.filter(r => !r.id.includes('payout'));
+
+    if (nonPayout.length > 1) {
+      const sorted = [...nonPayout].sort(
+        (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      );
+      const keeper = sorted[0]!;
+      for (let i = 1; i < sorted.length; i++) {
+        const dup = sorted[i]!;
+        try {
+          await removeFinancial(dup.id);
+          console.log(`[createFinancialRecordFromSale] Removed duplicate finrec ${dup.id} for sale ${sale.id}`);
+        } catch (e) {
+          console.error(`[createFinancialRecordFromSale] Failed to remove duplicate ${dup.id}:`, e);
+        }
+      }
+      const saved = await upsertPrimarySaleFinrecFromSale(sale, keeper, derived);
+      console.log(`[createFinancialRecordFromSale] ✅ Deduped and updated finrec: ${saved.name}`);
+      return saved;
+    }
+
+    if (nonPayout.length === 1) {
+      const saved = await upsertPrimarySaleFinrecFromSale(sale, nonPayout[0]!, derived);
+      console.log(`[createFinancialRecordFromSale] ✅ Updated existing finrec: ${saved.name}`);
+      return saved;
+    }
 
     const currentDate = new Date();
-    const derived = await resolveSaleDerivedFinrecFields(sale);
-
+    const canonicalId = `finrec-${sale.id}`;
     const newFinrec: FinancialRecord = {
-      id: `finrec-${sale.id}`,
-      name: `Sale: ${derived.displayName}`,
+      id: canonicalId,
+      name: derived.finrecName,
       description: derived.description,
       year: derived.year,
       month: derived.month,
@@ -484,13 +620,13 @@ export async function createFinancialRecordFromSale(sale: Sale): Promise<Financi
       type: derived.financialType,
       siteId: sale.siteId,
       targetSiteId: undefined,
-      sourceSaleId: sale.id, // AMBASSADOR field - points back to Sale
-      salesChannel: derived.salesChannel, // Persist sales channel explicitly
-      cost: 0, // Sales typically don't have costs
+      sourceSaleId: sale.id,
+      salesChannel: derived.salesChannel,
+      cost: 0,
       revenue: sale.totals.totalRevenue,
-      jungleCoins: 0, // J$ no longer awarded as sale rewards
-      isNotPaid: sale.isNotPaid || false,
-      isNotCharged: sale.isNotCharged || false,
+      jungleCoins: 0,
+      isNotPaid: !!sale.isNotPaid,
+      isNotCharged: !!sale.isNotCharged,
       rewards: undefined,
       netCashflow: sale.totals.totalRevenue,
       jungleCoinsValue: 0,
@@ -498,47 +634,45 @@ export async function createFinancialRecordFromSale(sale: Sale): Promise<Financi
       collectedAt: undefined,
       createdAt: currentDate,
       updatedAt: currentDate,
-      links: []
+      links: [],
     };
 
-    // Store the financial record
-    console.log(`[createFinancialRecordFromSale] Creating financial record:`, newFinrec);
+    console.log(`[createFinancialRecordFromSale] Creating finrec:`, newFinrec);
     const createdFinrec = await upsertFinancial(newFinrec, { forceSave: true });
 
-    const link = makeLink(
-      LinkType.SALE_FINREC,
-      { type: EntityType.SALE, id: sale.id },
-      { type: EntityType.FINANCIAL, id: createdFinrec.id }
+    await createLink(
+      makeLink(
+        LinkType.SALE_FINREC,
+        { type: EntityType.SALE, id: sale.id },
+        { type: EntityType.FINANCIAL, id: createdFinrec.id }
+      )
     );
 
-    await createLink(link);
-
-    // Create FINREC_ITEM links for each sold item
     if (sale.lines && sale.lines.length > 0) {
       for (const line of sale.lines) {
         if (line.kind === 'item' && 'itemId' in line && line.itemId) {
           const itemLine = line as ItemSaleLine;
           const item = await getItemById(itemLine.itemId);
-
           if (item) {
-            const itemLink = makeLink(
-              LinkType.FINREC_ITEM,
-              { type: EntityType.FINANCIAL, id: createdFinrec.id },
-              { type: EntityType.ITEM, id: itemLine.itemId }
+            await createLink(
+              makeLink(
+                LinkType.FINREC_ITEM,
+                { type: EntityType.FINANCIAL, id: createdFinrec.id },
+                { type: EntityType.ITEM, id: itemLine.itemId }
+              )
             );
-            await createLink(itemLink);
-            console.log(`[createFinancialRecordFromSale] ✅ Created FINREC_ITEM link for item ${item.name} (${itemLine.quantity} @ ${itemLine.unitPrice})`);
+            console.log(
+              `[createFinancialRecordFromSale] ✅ FINREC_ITEM link: ${item.name} (${itemLine.quantity} @ ${itemLine.unitPrice})`
+            );
           }
         }
       }
     }
 
-    console.log(`[createFinancialRecordFromSale] ✅ Financial record created and SALE_FINREC link established: ${createdFinrec.name}`);
-
+    console.log(`[createFinancialRecordFromSale] ✅ Created finrec and SALE_FINREC: ${createdFinrec.name}`);
     return createdFinrec;
-
   } catch (error) {
-    console.error(`[createFinancialRecordFromSale] ❌ Failed to create financial record from sale ${sale.id}:`, error);
+    console.error(`[createFinancialRecordFromSale] ❌ Failed for sale ${sale.id}:`, error);
     throw error;
   }
 }
@@ -567,12 +701,12 @@ export async function calculateAssociatePayout(sale: Sale): Promise<number> {
 export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<void> {
   try {
     console.log(`[createFinancialRecordFromBoothSale] Processing Option C financials for Booth Sale: ${sale.id}`);
-    const { formatDisplayDate } = await import('@/lib/utils/date-utils');
 
     // 1. Calculate Comprehensive Split via Contract Clauses
     const split = await calculateBoothFinancials(sale);
     const dateStr = formatDisplayDate(split.date);
     const derived = await resolveSaleDerivedFinrecFields(sale);
+    const boothTitleBase = composeSaleSourcedFinrecName(sale, derived.customerLabel, derived.siteLabel, dateStr);
 
     // [IDEMPOTENCY CHECK] Load existing records linked to this sale
     const existingRecords = await getFinancialsBySourceSaleId(sale.id);
@@ -587,7 +721,7 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
     const incomeData: FinancialRecord = {
       ...(incomeRecord || {}),
       id: incomeRecordId,
-      name: `Booth Sale ${dateStr}`,
+      name: boothTitleBase,
       description: `Performance Ledger: My items and booth cost share`,
       year: split.date.getFullYear(),
       month: split.date.getMonth() + 1,
@@ -630,7 +764,7 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
       const payoutData: FinancialRecord = {
         ...(payoutRecord || {}),
         id: payoutRecordId,
-        name: `Booth Sale ${dateStr} • Associate`,
+        name: `${boothTitleBase} • Associate`,
         description: `Impact Ledger: Commission split with associate`,
         year: split.date.getFullYear(),
         month: split.date.getMonth() + 1,

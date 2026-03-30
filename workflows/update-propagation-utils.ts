@@ -467,59 +467,13 @@ export async function updateFinancialRecordsFromSale(
       return;
     }
 
-    // STANDARD LOGIC (Non-Booth-Sales)
-    // Find financial records created from this sale
-    const relatedRecords = await getFinancialsBySourceSaleId(sale.id);
-
-    // If no records found, maybe we need to create one (Emissary Pattern)
-    if (relatedRecords.length === 0 && sale.totals.totalRevenue > 0) {
-      // Check effect key to be safe
+    // STANDARD LOGIC (Non-Booth-Sales): createFinancialRecordFromSale is the single writer
+    // (upsert, correct name/month from sale, dedupe legacy duplicates — do not also create from processSaleLines).
+    if (sale.totals.totalRevenue > 0) {
+      await createFinancialRecordFromSale(sale);
       const effectKey = EffectKeys.sideEffect('sale', sale.id, 'financialCreated');
       if (!(await hasEffect(effectKey))) {
-        await createFinancialRecordFromSale(sale);
         await markEffect(effectKey);
-      }
-    }
-
-    for (const record of relatedRecords) {
-      const updateKey = EffectKeys.sideEffect('sale', sale.id, `updateFinancial:${record.id}:${sale.updatedAt?.getTime()}`);
-
-      if (await hasEffect(updateKey)) {
-        console.log(`[updateFinancialRecordsFromSale] ⏭️ Already updated record: ${record.id}`);
-        continue;
-      }
-
-      // Check if revenue properties changed
-      const revenuePropsChanged =
-        sale.totals?.totalRevenue !== previousSale.totals?.totalRevenue ||
-        sale.isNotPaid !== previousSale.isNotPaid ||
-        sale.status !== previousSale.status;
-
-      const statePropsChanged = hasStatePropsChanged(sale, previousSale);
-
-      if (revenuePropsChanged || statePropsChanged) {
-        let year = record.year;
-        let month = record.month;
-        if (statePropsChanged) {
-          const dateToUse = sale.collectedAt || sale.doneAt || sale.saleDate;
-          year = dateToUse.getFullYear();
-          month = dateToUse.getMonth() + 1;
-        }
-
-        const updatedRecord = {
-          ...record,
-          revenue: sale.totals?.totalRevenue || 0,
-          isNotPaid: sale.isNotPaid,
-          isNotCharged: sale.status !== 'CHARGED',
-          year,
-          month,
-          updatedAt: new Date()
-        };
-
-        await upsertFinancial(updatedRecord);
-        await markEffect(updateKey);
-
-        console.log(`[updateFinancialRecordsFromSale] ✅ Updated financial record: ${record.id}`);
       }
     }
   } catch (error) {
