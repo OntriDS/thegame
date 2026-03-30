@@ -20,7 +20,7 @@ import { getSubTypesForItemType } from '@/lib/utils/item-utils';
 import type { Station } from '@/types/type-aliases';
 import { CurrencyExchangeRates } from '@/lib/constants/financial-constants';
 import { createSiteOptionsWithCategories } from '@/lib/utils/site-options-utils';
-import { createCharacterOptions, createStationCategoryOptions, createTaskParentOptions, createItemTypeSubTypeOptions, getItemTypeFromCombined, createDistinctItemOptions, getCategoryFromCombined, getStationFromCombined, getCategoryForItemType } from '@/lib/utils/searchable-select-utils';
+import { createCharacterOptions, createStationCategoryOptions, createTaskParentOptions, createItemTypeSubTypeOptions, getItemTypeFromCombined, getCategoryFromCombined, getStationFromCombined } from '@/lib/utils/searchable-select-utils';
 import { getAreaForStation, getSalesChannelFromSaleType } from '@/lib/utils/business-structure-utils';
 import { roundCurrency2 } from '@/lib/utils/financial-utils';
 import { ClientAPI } from '@/lib/client-api';
@@ -77,25 +77,6 @@ function resolveItemFromLineItemIdOnly(
   return { resolvedId: lid, isKnown: false };
 }
 
-/**
- * DIRECT + exactly one item line only. If `line.itemId` is dead and there is exactly one SALE_ITEM
- * target that resolves in `items`, treat it as that line’s item (unambiguous). If 0 or 2+ such
- * targets, do not guess — show unknown / leave line as-is.
- */
-function resolveSingleDirectLineItem(
-  lineItemId: string | undefined,
-  items: Item[],
-  linkTargets: string[]
-): { resolvedId: string; isKnown: boolean } {
-  const base = resolveItemFromLineItemIdOnly(lineItemId, items);
-  if (base.isKnown) return base;
-  const resolvedFromLinks = linkTargets.filter((t) => items.some((i) => i.id === t));
-  if (resolvedFromLinks.length === 1) {
-    return { resolvedId: resolvedFromLinks[0], isKnown: true };
-  }
-  return base;
-}
-
 interface SalesModalProps {
   sale?: Sale | null;
   open: boolean;
@@ -135,13 +116,9 @@ export default function SalesModal({
   const [lines, setLines] = useState<SaleLine[]>([]);
   const [payments, setPayments] = useState<any[]>([]);
 
-  // Diplomatic Fields State for PRODUCT/ONE
   const [customerId, setCustomerId] = useState<string | null>('');
   const [isNewCustomer, setIsNewCustomer] = useState(true);
   const [newCustomerName, setNewCustomerName] = useState('');
-  const [selectedItemId, setSelectedItemId] = useState<string>('');
-  const [selectedItemQuantity, setSelectedItemQuantity] = useState<number>(1);
-  const [selectedItemPrice, setSelectedItemPrice] = useState<number>(0);
   const [playerPoints, setPlayerPoints] = useState({ xp: 0, rp: 0, fp: 0, hp: 0 });
   const [cost, setCost] = useState<number>(0);
   const [revenue, setRevenue] = useState<number>(0);
@@ -177,7 +154,6 @@ export default function SalesModal({
   const [selectedItems, setSelectedItems] = useState<SaleItemLine[]>([]);
   const [recordedPayments, setRecordedPayments] = useState<SalePaymentLine[]>([]);
   const [taskDueDate, setTaskDueDate] = useState<Date | undefined>(undefined);
-  const [oneItemMultiple, setOneItemMultiple] = useState<'one' | 'multiple'>('one');
   const [taskStation, setTaskStation] = useState<Station>('SALES' as Station);
   const [salesChannel, setSalesChannel] = useState<Station | null>(null);
   const [showValidationModal, setShowValidationModal] = useState(false);
@@ -301,7 +277,7 @@ export default function SalesModal({
 
   useLayoutEffect(() => {
     if (!open || !sale?.id || sale.type === SaleType.BOOTH) return;
-    if (whatKind !== 'product' || oneItemMultiple !== 'one') return;
+    if (whatKind !== 'product') return;
     if (!saleItemLinkTargets.length || !items.length) return;
 
     const itemLines = collectItemSaleLines(lines);
@@ -322,7 +298,14 @@ export default function SalesModal({
       next[idx] = { ...cur, itemId: fromLink, description: `Sale of ${nm}` };
       return next;
     });
-    setSelectedItemId(fromLink);
+    setSelectedItems((prev) => {
+      if (prev.length !== 1) return prev;
+      const row = prev[0];
+      if (row.itemId === fromLink) return prev;
+      const qty = row.quantity || 0;
+      const unit = row.unitPrice || 0;
+      return [{ ...row, itemId: fromLink, itemName: nm, total: qty * unit }];
+    });
   }, [
     open,
     sale?.id,
@@ -330,7 +313,6 @@ export default function SalesModal({
     saleItemLinkTargets,
     items,
     whatKind,
-    oneItemMultiple,
     lines,
   ]);
 
@@ -348,7 +330,6 @@ export default function SalesModal({
     if (sale) {
       setSaleItemLinkTargets([]);
       setRecordedPayments([]);
-      setSelectedItemId('');
       setSelectedItems([]);
       setName(sale.name);
       setDescription(sale.description || '');
@@ -481,7 +462,6 @@ export default function SalesModal({
 
     if (hasServiceLines) {
       setWhatKind('service');
-      setOneItemMultiple('one');
       didInitRef.current = true;
       return;
     }
@@ -489,15 +469,20 @@ export default function SalesModal({
     if (itemLines.length === 1) {
       const [line] = itemLines;
       setWhatKind('product');
-      setOneItemMultiple('one');
-      setSelectedItemId(line.itemId);
-      setSelectedItemQuantity(line.quantity || 1);
-      setSelectedItemPrice(line.unitPrice || 0);
-      setSelectedItems([]);
       setManualLines(false);
+      setSelectedItems([
+        {
+          id: line.lineId?.trim() || `${sale.id}-row-0`,
+          itemId: line.itemId,
+          itemName: getItemName(line),
+          siteId: sale.siteId || '',
+          quantity: line.quantity || 0,
+          unitPrice: line.unitPrice || 0,
+          total: (line.quantity || 0) * (line.unitPrice || 0),
+        },
+      ]);
     } else if (itemLines.length > 0) {
       setWhatKind('product');
-      setOneItemMultiple('multiple');
       setManualLines(false);
       const mappedItems = itemLines.map((line, idx) => ({
         id: line.lineId?.trim() || `${sale.id}-row-${idx}`,
@@ -509,7 +494,6 @@ export default function SalesModal({
         total: (line.quantity || 0) * (line.unitPrice || 0),
       }));
       setSelectedItems(mappedItems);
-      setSelectedItemId('');
     } else {
       setSelectedItems([]);
     }
@@ -518,7 +502,7 @@ export default function SalesModal({
   }, [sale, items]);
 
   useEffect(() => {
-    if (!sale || whatKind !== 'product' || oneItemMultiple !== 'multiple') return;
+    if (!sale || whatKind !== 'product') return;
     setSelectedItems((prev) =>
       prev.map((row) => {
         const { isKnown, resolvedId } = resolveItemFromLineItemIdOnly(row.itemId, items);
@@ -529,20 +513,7 @@ export default function SalesModal({
         return { ...row, itemName: name };
       })
     );
-  }, [sale?.id, items, whatKind, oneItemMultiple]);
-
-  // If the single item line has an id but selection was cleared, restore from the line
-  useEffect(() => {
-    if (!sale) return;
-    if (sale.type === SaleType.BOOTH) return;
-    if (whatKind !== 'product' || oneItemMultiple !== 'one') return;
-    const itemLines = collectItemSaleLines(lines);
-    const itemLine = itemLines.length === 1 ? itemLines[0] : undefined;
-    if (!itemLine?.itemId || selectedItemId) return;
-    setSelectedItemId(itemLine.itemId);
-    setSelectedItemQuantity(itemLine.quantity ?? 1);
-    setSelectedItemPrice(itemLine.unitPrice ?? 0);
-  }, [sale?.id, whatKind, oneItemMultiple, lines, selectedItemId]);
+  }, [sale?.id, items, whatKind]);
 
   // Load preferences after hydration to prevent SSR mismatches
   useEffect(() => {
@@ -646,7 +617,6 @@ export default function SalesModal({
       points: { xp: 0, rp: 0, fp: 0, hp: 0 },
     });
     setPlayerPoints({ xp: 0, rp: 0, fp: 0, hp: 0 });
-    setSelectedItemId('');
     setSelectedItems([]);
     setRecordedPayments([]);
     setManualLines(false);
@@ -709,7 +679,6 @@ export default function SalesModal({
     const hasServiceLines = lines.some(line => line.kind === 'service');
     const hasServiceFieldInput =
       whatKind === 'service' &&
-      oneItemMultiple === 'one' &&
       !manualLines &&
       (
         Boolean(selectedTaskId) ||
@@ -723,7 +692,7 @@ export default function SalesModal({
           : false)
       );
     const hasServiceSelection = hasServiceLines || hasServiceFieldInput;
-    const hasProductFields = Boolean(selectedItemId) || quickRows.some(r => r.quantity > 0);
+    const hasProductFields = quickRows.some(r => r.quantity > 0);
     const hasSelectedItems = selectedItems.length > 0;
     const hasAnyProductSelection = hasProductLines || hasProductFields || hasSelectedItems;
 
@@ -732,25 +701,8 @@ export default function SalesModal({
       return;
     }
 
-    // Handle PRODUCT/ONE - create sale line from selected item
     let effectiveLines: SaleLine[] = lines;
-    if (whatKind === 'product' && oneItemMultiple === 'one' && selectedItemId) {
-      const selectedItem = getSelectedItem();
-      const existingItemLine = lines.find((l): l is ItemSaleLine => l.kind === 'item');
-      const description =
-        selectedItem != null
-          ? `Sale of ${selectedItem.name}`
-          : (existingItemLine as ItemSaleLine | undefined)?.description?.trim() || 'Sale line';
-      effectiveLines = [{
-        lineId: (existingItemLine as ItemSaleLine | undefined)?.lineId || uuid(),
-        kind: 'item',
-        itemId: selectedItemId,
-        quantity: selectedItemQuantity,
-        unitPrice: selectedItemPrice,
-        description,
-      } as SaleLine];
-    } else if (whatKind === 'product' && oneItemMultiple === 'multiple' && selectedItems.length > 0) {
-      // Handle PRODUCT/MULTIPLE - create sale lines from items submodal
+    if (whatKind === 'product' && selectedItems.length > 0) {
       // Reuse stable line ids so ensureSoldItemEntities idempotency + itemsSold summary stay correct on re-save
       effectiveLines = selectedItems.map(item => ({
         lineId: item.id || uuid(),
@@ -761,7 +713,7 @@ export default function SalesModal({
         description: `Sale of ${item.itemName}`,
         taxAmount: 0,
       } as SaleLine));
-    } else if (whatKind === 'service' && oneItemMultiple === 'one') {
+    } else if (whatKind === 'service') {
       // Handle SERVICE/ONE - create service line from task fields
       const existingServiceLine = lines.find((l): l is ServiceLine => l.kind === 'service') as ServiceLine | undefined;
       effectiveLines = [{
@@ -1136,71 +1088,6 @@ export default function SalesModal({
     return createCharacterOptions(characters);
   };
 
-  const getItemOptions = () => {
-    const forSale = items.filter((item) => item.status === ItemStatus.FOR_SALE);
-    if (whatKind !== 'product' || oneItemMultiple !== 'one' || !sale) {
-      return createDistinctItemOptions(forSale, true, sites, true);
-    }
-    const sourceLines = lines.length > 0 ? lines : (sale.lines || []);
-    const itemLines = collectItemSaleLines(sourceLines);
-    const singleItemLine =
-      itemLines.length === 1
-        ? itemLines[0]
-        : itemLines.find((l) => l.itemId === selectedItemId);
-
-    if (!singleItemLine?.itemId) {
-      return createDistinctItemOptions(forSale, true, sites, true);
-    }
-
-    const rawLineId = singleItemLine.itemId;
-    const { resolvedId, isKnown } = resolveSingleDirectLineItem(rawLineId, items, saleItemLinkTargets);
-    const displayEntity = isKnown ? items.find((i) => i.id === resolvedId) : undefined;
-    const soldLabel = displayEntity?.name ?? UNKNOWN_SALE_ITEM_LABEL;
-    const syntheticValue = isKnown ? resolvedId : rawLineId;
-    const category = getCategoryForItemType(displayEntity?.type ?? ItemType.ARTWORK);
-
-    const pool = forSale.some((i) => i.id === resolvedId)
-      ? forSale
-      : [...forSale, ...(displayEntity ? [displayEntity] : [])];
-
-    const base = createDistinctItemOptions(pool, true, sites, true);
-    const rest = base.filter((o) => o.value !== syntheticValue);
-    return [
-      {
-        value: syntheticValue,
-        label: soldLabel,
-        group: isKnown ? 'Sold items' : 'Unknown item',
-        category,
-      },
-      ...rest,
-    ];
-  };
-
-  const getDirectSaleItemInitialLabel = (): string => {
-    if (whatKind !== 'product' || oneItemMultiple !== 'one' || !sale) return '';
-    const sourceLines = lines.length > 0 ? lines : (sale.lines || []);
-    const itemLines = collectItemSaleLines(sourceLines);
-    const line = itemLines.length === 1 ? itemLines[0] : itemLines.find((l) => l.itemId === selectedItemId);
-    if (!line?.itemId) return '';
-    const { isKnown, resolvedId } = resolveSingleDirectLineItem(line.itemId, items, saleItemLinkTargets);
-    if (!isKnown) return UNKNOWN_SALE_ITEM_LABEL;
-    return items.find((i) => i.id === resolvedId)?.name ?? UNKNOWN_SALE_ITEM_LABEL;
-  };
-
-  const getDirectProductSingleItemSelectValue = (): string => {
-    if (whatKind !== 'product' || oneItemMultiple !== 'one') return selectedItemId;
-    const sourceLines = lines.length > 0 ? lines : (sale?.lines || []);
-    const itemLines = collectItemSaleLines(sourceLines);
-    if (itemLines.length !== 1) return selectedItemId;
-    const raw = itemLines[0].itemId;
-    const { resolvedId, isKnown } = resolveSingleDirectLineItem(raw, items, saleItemLinkTargets);
-    return isKnown ? resolvedId : raw;
-  };
-
-  const getSelectedItem = () => {
-    return items.find(item => item.id === selectedItemId);
-  };
-
   const getTaskOptions = () => {
     return tasks
       .filter(task => task.id !== selectedTaskId)
@@ -1224,57 +1111,6 @@ export default function SalesModal({
     ];
   };
 
-  // Auto-calculate revenue when item is selected
-  const handleItemSelection = (itemId: string) => {
-    setSelectedItemId(itemId);
-    if (whatKind === 'product' && oneItemMultiple === 'one') {
-      setLines((prev) => {
-        const idx = prev.findIndex((l) => l.kind === 'item');
-        if (idx < 0) {
-          if (!itemId) return prev;
-          return [
-            ...prev,
-            {
-              lineId: uuid(),
-              kind: 'item',
-              itemId,
-              quantity: 1,
-              unitPrice: items.find((i) => i.id === itemId)?.price ?? 0,
-              description: items.find((i) => i.id === itemId)
-                ? `Sale of ${items.find((i) => i.id === itemId)!.name}`
-                : 'Sale line',
-              taxAmount: 0,
-            } as SaleLine,
-          ];
-        }
-        const ex = prev[idx] as ItemSaleLine;
-        const sel = items.find((i) => i.id === itemId);
-        return prev.map((l, i) =>
-          i === idx
-            ? ({
-                ...ex,
-                itemId: itemId || ex.itemId,
-                description: sel ? `Sale of ${sel.name}` : ex.description,
-              } as SaleLine)
-            : l
-        );
-      });
-    }
-    if (itemId) {
-      const selectedItem = items.find(item => item.id === itemId);
-      if (selectedItem) {
-        setSelectedItemQuantity(1); // Reset to 1 when new item selected
-        setSelectedItemPrice(selectedItem.price);
-        setRevenue(selectedItem.price);
-      }
-    } else {
-      setSelectedItemQuantity(1);
-      setSelectedItemPrice(0);
-      setRevenue(0);
-    }
-  };
-
-
   // Other Methods handlers
   const handleGiftApplied = (amount: number) => {
     // Create a gift payment
@@ -1292,14 +1128,7 @@ export default function SalesModal({
 
     // Reduce revenue by gift amount
     if (whatKind === 'product') {
-      if (oneItemMultiple === 'one') {
-        // Adjust selected item price
-        setSelectedItemPrice(Math.max(0, selectedItemPrice - amount));
-      } else {
-        // For multiple items, this would need more complex logic
-        // For now, just reduce the total revenue
-        setRevenue(Math.max(0, revenue - amount));
-      }
+      setRevenue(Math.max(0, revenue - amount));
     } else {
       // Service: reduce revenue
       setRevenue(Math.max(0, revenue - amount));
@@ -1352,124 +1181,101 @@ export default function SalesModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent zIndexLayer={'MODALS'} className="w-full max-w-7xl h-[90vh]">
-        <DialogHeader>
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex-1">
-              <DialogTitle>{sale ? 'Edit Sale' : 'New Sale'}</DialogTitle>
-              {/* Metadata below title */}
-              <div className="flex items-center gap-4 text-xs text-muted-foreground pt-1">
-                <span>Type: <span className="font-medium text-foreground">{String(type)}</span></span>
-                <span>Area: <span className="font-medium text-foreground">SALES</span></span>
-                <div className="flex items-center gap-1">
-                  <span>Station:</span>
-                  <SearchableSelect
-                    value={salesChannel ? getStationValue(salesChannel) : ''}
-                    onValueChange={(value) => {
-                      const station = getStationFromCombined(value);
-                      setSalesChannel(station as Station);
-                    }}
-                    placeholder="Station"
-                    options={createStationCategoryOptions()}
-                    autoGroupByCategory={true}
-                    getCategoryForValue={(value) => getCategoryFromCombined(value)}
-                    className="w-32 h-6 text-xs"
-                    persistentCollapsible={true}
-                    instanceId="sales-modal-header-station"
-                  />
-                </div>
-              </div>
-
+      <DialogContent zIndexLayer={'MODALS'} className="flex h-[90vh] w-full max-w-7xl flex-col gap-0 overflow-hidden p-0">
+        <DialogHeader className="shrink-0 space-y-0 border-b px-6 pb-4 pt-6 text-left">
+          <DialogTitle className="text-xl font-semibold tracking-tight">
+            {sale ? 'Edit Sale' : 'New Sale'}
+          </DialogTitle>
+          <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-muted-foreground">
+            <span>Type: <span className="font-medium text-foreground">{String(type)}</span></span>
+            <span>Area: <span className="font-medium text-foreground">SALES</span></span>
+            <div className="flex min-w-0 flex-1 items-center gap-2 sm:flex-none sm:basis-auto">
+              <span className="shrink-0">Station:</span>
+              <SearchableSelect
+                value={salesChannel ? getStationValue(salesChannel) : ''}
+                onValueChange={(value) => {
+                  const station = getStationFromCombined(value);
+                  setSalesChannel(station as Station);
+                }}
+                placeholder="Station"
+                options={createStationCategoryOptions()}
+                autoGroupByCategory={true}
+                getCategoryForValue={(value) => getCategoryFromCombined(value)}
+                className="min-w-[220px] max-w-[min(100%,320px)] h-8 text-xs"
+                persistentCollapsible={true}
+                instanceId="sales-modal-header-station"
+              />
             </div>
-
           </div>
-          {/* Sale SubType Selector - Always Visible */}
-          <div className="px-1 border-b pb-1 mt-4">
-            <div className="flex items-center gap-2">
+          <div className="mt-5 grid grid-cols-1 items-center gap-3 sm:grid-cols-[1fr_auto_1fr]">
+            <div className="hidden sm:block" aria-hidden />
+            <div className="flex justify-center">
               {type !== SaleType.BOOTH && (
-                <>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      if (sale?.id) return; // Don't allow changes for existing sales
+                <Button
+                  size="lg"
+                  variant="outline"
+                  onClick={() => {
+                    if (sale?.id) return;
 
-                      const newKind = whatKind === 'product' ? 'service' : 'product';
+                    const newKind = whatKind === 'product' ? 'service' : 'product';
 
-                      // Check if we can switch to the new kind
-                      if (lines.length > 0) {
-                        const existingKinds = new Set(lines.map(line => line.kind));
+                    if (lines.length > 0) {
+                      const existingKinds = new Set(lines.map(line => line.kind));
 
-                        if (newKind === 'product' && existingKinds.has('service')) {
-                          showValidationError('Cannot switch to Product mode. This sale already has service lines. Please clear all lines first.');
-                          return;
-                        }
-
-                        if (newKind === 'service' && existingKinds.has('item')) {
-                          showValidationError('Cannot switch to Service mode. This sale already has product lines. Please clear all lines first.');
-                          return;
-                        }
+                      if (newKind === 'product' && existingKinds.has('service')) {
+                        showValidationError('Cannot switch to Product mode. This sale already has service lines. Please clear all lines first.');
+                        return;
                       }
 
-                      setWhatKind(newKind);
-                    }}
-                    className={`min-w-[110px] ${sale?.id ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    disabled={!!sale?.id}
-                    title={sale?.id ? 'Product/Service type cannot be changed after creation' : 'Toggle between Product and Service'}
-                  >
-                    {whatKind === 'product' ? 'Product' : 'Service'}
-                  </Button>
-                  {whatKind === 'product' && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setOneItemMultiple(prev => prev === 'one' ? 'multiple' : 'one')}
-                      className="min-w-[120px]"
-                      title="Toggle between one item or multiple items"
-                    >
-                      {oneItemMultiple === 'one' ? 'One' : 'Multiple'}
-                    </Button>
-                  )}
-                </>
+                      if (newKind === 'service' && existingKinds.has('item')) {
+                        showValidationError('Cannot switch to Service mode. This sale already has product lines. Please clear all lines first.');
+                        return;
+                      }
+                    }
+
+                    setWhatKind(newKind);
+                  }}
+                  className={`min-w-[140px] px-8 ${sale?.id ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  disabled={!!sale?.id}
+                  title={sale?.id ? 'Product/Service type cannot be changed after creation' : 'Toggle between Product and Service'}
+                >
+                  {whatKind === 'product' ? 'Product' : 'Service'}
+                </Button>
               )}
+            </div>
+            <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-end">
+              {Object.values(SaleType).map(t => {
+                const isExistingSale = sale?.id;
+                const isProductToMultiple = type === SaleType.DIRECT && t === SaleType.NETWORK;
+                const isDisabled = isExistingSale && !isProductToMultiple;
 
-              {/* Sale Type Selectors - ONE ROW */}
-              <div className="ml-auto flex items-center gap-2">
-                {Object.values(SaleType).map(t => {
-                  // Disable type changes for existing sales (except product->multiple)
-                  const isExistingSale = sale?.id;
-                  const isProductToMultiple = type === SaleType.DIRECT && t === SaleType.NETWORK;
-                  const isDisabled = isExistingSale && !isProductToMultiple;
-
-                  return (
-                    <Button
-                      key={t}
-                      variant={t === type ? 'default' : 'outline'}
-                      size="sm"
-                      disabled={!!isDisabled}
-                      onClick={() => {
-                        if (isDisabled) return;
-                        setType(t as SaleType);
-                        // Auto-set salesChannel based on Sale Type
-                        const channel = getSalesChannelFromSaleType(t);
-                        if (channel) {
-                          setSalesChannel(channel);
-                        }
-                      }}
-                      className={`h-8 text-xs px-2 ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-                      title={isDisabled ? 'Sale type cannot be changed after creation' : ''}
-                    >
-                      {t === SaleType.BOOTH ? 'BOOTH' : t}
-                    </Button>
-                  );
-                })}
-              </div>
+                return (
+                  <Button
+                    key={t}
+                    variant={t === type ? 'default' : 'outline'}
+                    size="sm"
+                    disabled={!!isDisabled}
+                    onClick={() => {
+                      if (isDisabled) return;
+                      setType(t as SaleType);
+                      const channel = getSalesChannelFromSaleType(t);
+                      if (channel) {
+                        setSalesChannel(channel);
+                      }
+                    }}
+                    className={`h-8 text-xs px-2 ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    title={isDisabled ? 'Sale type cannot be changed after creation' : ''}
+                  >
+                    {t === SaleType.BOOTH ? 'BOOTH' : t}
+                  </Button>
+                );
+              })}
             </div>
           </div>
         </DialogHeader>
 
-        {/* Content Area - Fixed Height with Internal Scroll */}
         {type === SaleType.BOOTH ? (
+          <div className="flex min-h-0 flex-1 flex-col border-b">
           <BoothSalesView
             key={sale?.id ?? 'new-booth'}
             ref={boothSaveRef}
@@ -1502,8 +1308,10 @@ export default function SalesModal({
             onDelete={sale?.id ? (() => setShowDeleteModal(true)) : undefined}
             exchangeRate={exchangeRates?.colonesToUsd}
           />
+          </div>
         ) : (
-          <div className="px-6 overflow-y-auto space-y-4" style={{ maxHeight: 'calc(90vh - 280px)' }}>
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden border-b border-border/80">
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-4">
             {/* Row 1: Date and Total Amount */}
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-2">
@@ -1519,195 +1327,15 @@ export default function SalesModal({
                 <span className="text-sm text-muted-foreground">Total Amount:</span>
                 <div className="min-w-[120px] text-lg font-bold text-foreground">
                   ${whatKind === 'product'
-                    ? (oneItemMultiple === 'one'
-                      ? ((selectedItemQuantity * selectedItemPrice) - cost - (overallDiscount.amount || 0)).toFixed(2)
-                      : (selectedItems.reduce((sum, item) => sum + item.total, 0) - cost - (overallDiscount.amount || 0)).toFixed(2)
-                    )
+                    ? (selectedItems.reduce((sum, item) => sum + item.total, 0) - cost - (overallDiscount.amount || 0)).toFixed(2)
                     : (revenue - cost - (overallDiscount.amount || 0)).toFixed(2)
                   }
                 </div>
               </div>
             </div>
 
-            {/* Diplomatic Fields Layout - Only for PRODUCT/ONE */}
-            {whatKind === 'product' && oneItemMultiple === 'one' && (
-              <>
-                {/* Column Headers */}
-
-
-                <div className={`grid gap-4 ${emissaryColumnExpanded ? 'grid-cols-4' : 'grid-cols-3'}`}>
-                  {/* Column 1: Ambassadors - Site & Customer */}
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="site" className="text-xs">Site</Label>
-                      <SearchableSelect
-                        value={siteId}
-                        onValueChange={setSiteId}
-                        options={createSiteOptionsWithCategories(sites)}
-                        autoGroupByCategory={true}
-                        placeholder="Select site..."
-                        className="h-8 text-sm"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label htmlFor="customer" className="text-xs">Customer</Label>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setIsNewCustomer(!isNewCustomer)}
-                          className="h-6 text-xs px-2"
-                        >
-                          {isNewCustomer ? 'Existing' : 'New'}
-                        </Button>
-                      </div>
-                      {isNewCustomer ? (
-                        <Input
-                          id="customer"
-                          value={newCustomerName}
-                          onChange={(e) => setNewCustomerName(e.target.value)}
-                          placeholder="New customer name"
-                          className="h-8 text-sm"
-                        />
-                      ) : (
-                        <SearchableSelect
-                          value={customerId || ''}
-                          onValueChange={setCustomerId}
-                          options={createCharacterOptions(characters)}
-                          autoGroupByCategory={true}
-                          placeholder="Select customer"
-                          className="h-8 text-sm"
-                        />
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Column 2: Ambassadors - Item */}
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="item" className="text-xs">Item</Label>
-                      <SearchableSelect
-                        value={getDirectProductSingleItemSelectValue()}
-                        onValueChange={handleItemSelection}
-                        options={getItemOptions()}
-                        autoGroupByCategory={true}
-                        placeholder="Select item..."
-                        initialLabel={getDirectSaleItemInitialLabel()}
-                        className="h-8 text-sm"
-                      />
-                    </div>
-
-                    {/* Show item fields when item is selected */}
-                    {selectedItemId && (
-                      <>
-                        <div className="space-y-2">
-                          <Label htmlFor="itemQuantity" className="text-xs">Quantity</Label>
-                          <NumericInput
-                            id="itemQuantity"
-                            value={selectedItemQuantity}
-                            onChange={(value) => setSelectedItemQuantity(value)}
-                            min={1}
-                            step={1}
-                            className="h-8 text-sm"
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="itemPrice" className="text-xs">Price</Label>
-                          <NumericInput
-                            id="itemPrice"
-                            value={selectedItemPrice}
-                            onChange={(value) => {
-                              setSelectedItemPrice(value);
-                              setRevenue(value);
-                            }}
-                            min={0}
-                            step={1}
-                            placeholder="0.00"
-                            className="h-8 text-sm"
-                          />
-                        </div>
-                      </>
-                    )}
-                  </div>
-
-                  {/* Column 3: Financial Ambassador Fields (like TaskModal) */}
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label className="text-xs">Cost & Revenue</Label>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="space-y-2">
-                          <Label htmlFor="cost" className="text-xs">Cost</Label>
-                          <NumericInput
-                            id="cost"
-                            value={cost}
-                            onChange={setCost}
-                            min={0}
-                            step={1}
-                            placeholder="0.00"
-                            className="h-8 text-sm"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="revenue" className="text-xs">Revenue</Label>
-                          <div className="h-8 text-sm bg-muted px-3 py-2 rounded-md border flex items-center">
-                            {(selectedItemQuantity * selectedItemPrice) % 1 === 0
-                              ? (selectedItemQuantity * selectedItemPrice).toString()
-                              : (selectedItemQuantity * selectedItemPrice).toFixed(1)
-                            }
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label className="text-xs">Payment Status</Label>
-                      <div className="grid grid-cols-2 gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setIsNotPaid(!isNotPaid)}
-                          className={`h-8 text-xs ${isNotPaid ? 'border-orange-500 text-orange-600' : ''}`}
-                        >
-                          {isNotPaid ? "⚠ Not Paid" : "✓ Paid"}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            const newIsNotCharged = !isNotCharged;
-                            setIsNotCharged(newIsNotCharged);
-                            updateSaleStatus(newIsNotCharged);
-                          }}
-                          className={`h-8 text-xs ${isNotCharged ? 'border-orange-500 text-orange-600' : ''}`}
-                        >
-                          {isNotCharged ? "⚠ Not Charged" : "✓ Charged"}
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Column 4: Emissaries - Player Points (only when expanded) */}
-                  {emissaryColumnExpanded && (
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label className="text-xs">Point Rewards</Label>
-                        <div className="grid grid-cols-4 gap-2">
-                          <div><Label htmlFor="reward-xp" className="text-xs">XP</Label><NumericInput id="reward-xp" value={playerPoints.xp} onChange={(value) => setPlayerPoints({ ...playerPoints, xp: value })} min={0} step={1} className="h-8 text-sm" /></div>
-                          <div><Label htmlFor="reward-rp" className="text-xs">RP</Label><NumericInput id="reward-rp" value={playerPoints.rp} onChange={(value) => setPlayerPoints({ ...playerPoints, rp: value })} min={0} step={1} className="h-8 text-sm" /></div>
-                          <div><Label htmlFor="reward-fp" className="text-xs">FP</Label><NumericInput id="reward-fp" value={playerPoints.fp} onChange={(value) => setPlayerPoints({ ...playerPoints, fp: value })} min={0} step={1} className="h-8 text-sm" /></div>
-                          <div><Label htmlFor="reward-hp" className="text-xs">HP</Label><NumericInput id="reward-hp" value={playerPoints.hp} onChange={(value) => setPlayerPoints({ ...playerPoints, hp: value })} min={0} step={1} className="h-8 text-sm" /></div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
-
-            {/* Diplomatic Fields Layout - Only for PRODUCT/MULTIPLE */}
-            {whatKind === 'product' && oneItemMultiple === 'multiple' && (
+            {/* Diplomatic Fields Layout — product: items via submodal only */}
+            {whatKind === 'product' && (
               <>
                 {/* Column Headers */}
                 <div className={`grid gap-4 ${emissaryColumnExpanded ? 'grid-cols-4' : 'grid-cols-3'} mb-2`}>
@@ -1765,9 +1393,18 @@ export default function SalesModal({
                         />
                       )}
                     </div>
+
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={toggleAdvanced}
+                      className={`h-8 w-full text-xs ${showAdvanced ? 'bg-transparent text-white' : 'bg-muted text-muted-foreground'}`}
+                    >
+                      Advanced
+                    </Button>
                   </div>
 
-                  {/* Column 2: Items Array */}
+                  {/* Column 2: Items — submodal only */}
                   <div className="space-y-4">
                     <div className="space-y-2">
                       <Label className="text-xs">Selected Items</Label>
@@ -1775,43 +1412,12 @@ export default function SalesModal({
                         variant="outline"
                         size="sm"
                         onClick={() => setShowItemsSubModal(true)}
-                        className="w-full h-10 text-xs"
+                        className="h-12 w-full text-xs"
                       >
-                        <ListPlus className="w-4 h-4 mr-2" />
+                        <ListPlus className="mr-2 h-4 w-4" />
                         {selectedItems.length > 0 ? `Edit Items (${selectedItems.length})` : 'Add Items'}
                       </Button>
                     </div>
-
-                    {/* Display selected items summary */}
-                    {selectedItems.length > 0 && (
-                      <div className="space-y-2">
-                        <div className="max-h-32 overflow-y-auto space-y-1 p-2 bg-muted/30 rounded-md border">
-                          {selectedItems.map((item) => (
-                            <div key={item.id} className="text-xs flex justify-between items-center">
-                              <span className="truncate flex-1">{item.itemName}</span>
-                              <span className="text-muted-foreground ml-2">Ã—{item.quantity}</span>
-                              <span className="font-medium ml-2">${item.total.toFixed(2)}</span>
-                            </div>
-                          ))}
-                        </div>
-
-                        {/* Calculation Fields */}
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="space-y-2">
-                            <Label className="text-xs">Total Qty</Label>
-                            <div className="h-8 text-sm bg-muted px-3 py-2 rounded-md border flex items-center font-medium">
-                              {selectedItems.reduce((sum, item) => sum + item.quantity, 0)}
-                            </div>
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-xs">Total Price</Label>
-                            <div className="h-8 text-sm bg-muted px-3 py-2 rounded-md border flex items-center font-medium">
-                              ${selectedItems.reduce((sum, item) => sum + item.total, 0).toFixed(2)}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
                   </div>
 
                   {/* Column 3: Financial Ambassador Fields */}
@@ -1888,11 +1494,62 @@ export default function SalesModal({
                     </div>
                   )}
                 </div>
+
+                {showAdvanced && (
+                  <div className="mt-4 space-y-4">
+                    <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Native</div>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="description" className="text-xs">Description</Label>
+                        <Textarea
+                          id="description"
+                          value={description}
+                          onChange={(e) => setDescription(e.target.value)}
+                          placeholder="Additional sale details..."
+                          className="h-16 resize-none text-sm"
+                          rows={3}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="discountAmount" className="text-xs">Discount Amount</Label>
+                        <NumericInput
+                          id="discountAmount"
+                          value={overallDiscount.amount || 0}
+                          onChange={(value) => setOverallDiscount({
+                            ...overallDiscount,
+                            amount: value > 0 ? value : undefined,
+                            percent: value > 0 ? undefined : overallDiscount.percent
+                          })}
+                          min={0}
+                          step={1}
+                          placeholder="0.00"
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="discountPercent" className="text-xs">Discount Percent (%)</Label>
+                        <NumericInput
+                          id="discountPercent"
+                          value={overallDiscount.percent || 0}
+                          onChange={(value) => setOverallDiscount({
+                            ...overallDiscount,
+                            percent: value > 0 && value <= 100 ? value : undefined,
+                            amount: value > 0 ? undefined : overallDiscount.amount
+                          })}
+                          min={0}
+                          step={1}
+                          placeholder="0"
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
               </>
             )}
 
-            {/* Diplomatic Fields Layout - Only for SERVICE/ONE */}
-            {whatKind === 'service' && oneItemMultiple === 'one' && (
+            {/* Diplomatic Fields Layout — service */}
+            {whatKind === 'service' && (
               <>
                 {/* Column Headers */}
                 <div className={`grid gap-4 ${emissaryColumnExpanded ? 'grid-cols-4' : 'grid-cols-3'} mb-2`}>
@@ -2115,62 +1772,8 @@ export default function SalesModal({
               </>
             )}
 
-            {/* MULTIPLE MODE Layout (for both PRODUCT and SERVICE) */}
-            {!(whatKind === 'product' && oneItemMultiple === 'one') && !(whatKind === 'service' && oneItemMultiple === 'one') && (
-              <>
-                {/* Row 2: Where (Target Site, Station, Station) - Site is in diplomatic fields */}
-                <div className="grid grid-cols-4 gap-4">
-                  {whatKind === 'service' && (
-                    <div className="space-y-2">
-                      <Label htmlFor="targetSite">Target Site (Task Site)</Label>
-                      <SearchableSelect
-                        value={taskTargetSiteId}
-                        onValueChange={setTaskTargetSiteId}
-                        options={createSiteOptionsWithCategories(sites)}
-                        autoGroupByCategory={true}
-                        placeholder="Select target site"
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                  )}
-                  {whatKind === 'service' && (
-                    <div className="space-y-2">
-                      <Label htmlFor="taskStation">Station</Label>
-                      <SearchableSelect
-                        value={getStationValue(taskStation)}
-                        onValueChange={(value) => {
-                          const station = getStationFromCombined(value);
-                          setTaskStation(station as Station);
-                        }}
-                        placeholder="Select station..."
-                        options={createStationCategoryOptions()}
-                        autoGroupByCategory={true}
-                        getCategoryForValue={(value) => getCategoryFromCombined(value)}
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                  )}
-                </div>
-
-                {/* Row 3: How Much - Client is in diplomatic fields */}
-                <div className="grid grid-cols-4 gap-4">
-                  {whatKind === 'service' && (
-                    <div className="space-y-2">
-                      <Label htmlFor="taskCost">Cost</Label>
-                      <NumericInput id="taskCost" value={taskCost} onChange={setTaskCost} placeholder="0.00" />
-                    </div>
-                  )}
-                  {whatKind === 'service' && (
-                    <div className="space-y-2">
-                      <Label htmlFor="taskRevenue">Revenue</Label>
-                      <NumericInput id="taskRevenue" value={taskRevenue} onChange={setTaskRevenue} placeholder="0.00" />
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
-
-            {/* Advanced Section - Always visible after diplomatic fields */}
+            {/* Advanced — service sales only (product uses control in first column) */}
+            {whatKind === 'service' && (
             <div className="mt-4">
               <Button
                 size="sm"
@@ -2236,10 +1839,12 @@ export default function SalesModal({
                 </div>
               )}
             </div>
+            )}
+          </div>
           </div>
         )}
 
-        <DialogFooter className="flex items-center justify-between flex-nowrap overflow-x-auto gap-4 py-4 border-t px-6">
+        <DialogFooter className="mt-auto flex shrink-0 items-center justify-between gap-4 overflow-x-auto border-t bg-background px-6 py-4 flex-nowrap">
             <div className="flex items-center gap-2 flex-nowrap shrink-0">
               {sale && (
                 <Button
@@ -2423,10 +2028,7 @@ export default function SalesModal({
           onExchangeApplied={handleExchangeApplied}
           onOtherMethodApplied={handleOtherMethodApplied}
           totalDue={whatKind === 'product'
-            ? (oneItemMultiple === 'one'
-              ? (selectedItemQuantity * selectedItemPrice)
-              : selectedItems.reduce((sum, item) => sum + item.total, 0)
-            )
+            ? selectedItems.reduce((sum, item) => sum + item.total, 0)
             : revenue
           }
         />
