@@ -20,7 +20,7 @@ import { getSubTypesForItemType } from '@/lib/utils/item-utils';
 import type { Station } from '@/types/type-aliases';
 import { CurrencyExchangeRates } from '@/lib/constants/financial-constants';
 import { createSiteOptionsWithCategories } from '@/lib/utils/site-options-utils';
-import { createCharacterOptions, createStationCategoryOptions, createTaskParentOptions, createItemTypeSubTypeOptions, getItemTypeFromCombined, createDistinctItemOptions, getCategoryFromCombined, getStationFromCombined, getCategoryForItemType } from '@/lib/utils/searchable-select-utils';
+import { createCharacterOptions, createStationCategoryOptions, createTaskParentOptions, createItemTypeSubTypeOptions, getItemTypeFromCombined, createDistinctItemOptions, filterItemsForSaleLinePick, getCategoryFromCombined, getStationFromCombined, getCategoryForItemType } from '@/lib/utils/searchable-select-utils';
 import { getAreaForStation, getSalesChannelFromSaleType } from '@/lib/utils/business-structure-utils';
 import { roundCurrency2 } from '@/lib/utils/financial-utils';
 import { ClientAPI } from '@/lib/client-api';
@@ -1137,9 +1137,11 @@ export default function SalesModal({
   };
 
   const getItemOptions = () => {
-    const forSale = items.filter((item) => item.status === ItemStatus.FOR_SALE);
+    const pickable = filterItemsForSaleLinePick(items);
+    const forSale = pickable.filter((item) => item.status === ItemStatus.FOR_SALE);
+    const salePickFlags = { omitEmptyStock: true } as const;
     if (whatKind !== 'product' || oneItemMultiple !== 'one' || !sale) {
-      return createDistinctItemOptions(forSale, true, sites);
+      return createDistinctItemOptions(forSale, true, sites, salePickFlags);
     }
     const sourceLines = lines.length > 0 ? lines : (sale.lines || []);
     const itemLines = collectItemSaleLines(sourceLines);
@@ -1149,7 +1151,7 @@ export default function SalesModal({
         : itemLines.find((l) => l.itemId === selectedItemId);
 
     if (!singleItemLine?.itemId) {
-      return createDistinctItemOptions(forSale, true, sites);
+      return createDistinctItemOptions(forSale, true, sites, salePickFlags);
     }
 
     const rawLineId = singleItemLine.itemId;
@@ -1163,7 +1165,7 @@ export default function SalesModal({
       ? forSale
       : [...forSale, ...(displayEntity ? [displayEntity] : [])];
 
-    const base = createDistinctItemOptions(pool, true, sites);
+    const base = createDistinctItemOptions(pool, true, sites, salePickFlags);
     const rest = base.filter((o) => o.value !== syntheticValue);
     return [
       {

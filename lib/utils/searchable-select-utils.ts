@@ -23,7 +23,8 @@ import {
     CraftSubType,
     BundleSubType,
     MaterialSubType,
-    EquipmentSubType
+    EquipmentSubType,
+    ItemStatus
 } from '@/types/enums';
 import { SubItemType } from '@/types/type-aliases';
 
@@ -115,6 +116,31 @@ function itemIdSuffix(id: string): string {
     return s.length > 8 ? s.slice(-8) : s;
 }
 
+const EXCLUDED_SALE_PICK_STATUSES = new Set<ItemStatus>([
+    ItemStatus.SOLD,
+    ItemStatus.GIFTED,
+    ItemStatus.OBSOLETE,
+    ItemStatus.DAMAGED,
+]);
+
+/**
+ * Inventory rows eligible for picking on a sale line (excludes sold clones and dead statuses).
+ * Full `getItems(..., 'all')` is still needed elsewhere to resolve labels for existing lines.
+ */
+export function filterItemsForSaleLinePick(items: Item[]): Item[] {
+    return items.filter((item) => {
+        const id = String(item.id || '');
+        if (id.includes('-sold-') || id.includes('-manualsold-')) return false;
+        if (EXCLUDED_SALE_PICK_STATUSES.has(item.status as ItemStatus)) return false;
+        return true;
+    });
+}
+
+export type DistinctItemOptionsFlags = {
+    /** Skip items with no stock array / rows — avoids “(no stock row)” / zero-qty ghost clutter in sale pickers */
+    omitEmptyStock?: boolean;
+};
+
 /**
  * One option per Item entity (no aggregation by name/type).
  * Use for sales and anywhere the exact inventory row must stay stable across saves.
@@ -122,11 +148,15 @@ function itemIdSuffix(id: string): string {
 export function createDistinctItemOptions(
     items: Item[],
     includeNone = false,
-    sites: Site[] = []
+    sites: Site[] = [],
+    flags?: DistinctItemOptionsFlags
 ): Array<{ value: string; label: string; group: string; category: string }> {
     const options: Array<{ value: string; label: string; group: string; category: string }> = [];
 
     for (const item of items) {
+        if (flags?.omitEmptyStock && (!item.stock || item.stock.length === 0)) {
+            continue;
+        }
         const category = getCategoryForItemType(item.type);
         const qty = item.stock?.reduce((sum, s) => sum + s.quantity, 0) || 0;
         const siteHint =
@@ -164,7 +194,8 @@ export function createDistinctItemOptionsForSite(
     items: Item[],
     selectedSiteId: string | null | undefined,
     includeNone = false,
-    sites: Site[] = []
+    sites: Site[] = [],
+    flags?: DistinctItemOptionsFlags
 ): Array<{ value: string; label: string; group: string; category: string }> {
     const siteMap = new Map(sites.map(s => [s.id, s.name]));
     const getSiteName = (id: string) => siteMap.get(id) || 'Unknown Site';
@@ -178,12 +209,14 @@ export function createDistinctItemOptionsForSite(
         const stock = item.stock || [];
 
         if (stock.length === 0) {
-            options.push({
-                value: `${item.id}:none`,
-                label: `${item.name} · …${tail} (no stock row)`,
-                group,
-                category,
-            });
+            if (!flags?.omitEmptyStock) {
+                options.push({
+                    value: `${item.id}:none`,
+                    label: `${item.name} · …${tail} (no stock row)`,
+                    group,
+                    category,
+                });
+            }
             continue;
         }
 
