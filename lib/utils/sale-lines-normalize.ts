@@ -1,5 +1,6 @@
 // Legacy: kind 'bundle' + itemId → kind 'item'. ItemType.BUNDLE stays on Item only.
 
+import { getSalesChannelFromSaleType } from '@/lib/utils/business-structure-utils';
 import type { ItemSaleLine, Sale, SaleLine, ServiceLine } from '@/types/entities';
 
 function isRecord(v: unknown): v is Record<string, unknown> {
@@ -68,7 +69,18 @@ export function normalizeSaleLines(lines: SaleLine[] | undefined | null): SaleLi
   return out;
 }
 
-export function normalizeSale<T extends Pick<Sale, 'lines'>>(sale: T): T {
-  if (!sale?.lines?.length) return sale;
-  return { ...sale, lines: normalizeSaleLines(sale.lines as SaleLine[]) } as T;
+export function normalizeSale<T extends Pick<Sale, 'lines' | 'type' | 'salesChannel'>>(sale: T): T {
+  let next = sale as T;
+  if (sale?.lines?.length) {
+    next = { ...next, lines: normalizeSaleLines(sale.lines as SaleLine[]) } as T;
+  }
+  const s = next as Pick<Sale, 'type' | 'salesChannel'>;
+  const ch = s.salesChannel;
+  if ((ch == null || String(ch).trim() === '') && s.type) {
+    const inferred = getSalesChannelFromSaleType(String(s.type));
+    if (inferred) {
+      next = { ...(next as object), salesChannel: inferred } as T;
+    }
+  }
+  return next;
 }

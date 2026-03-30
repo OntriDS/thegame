@@ -491,9 +491,11 @@ async function resolveSaleDerivedFinrecFields(
 }> {
   const currentDate = new Date();
   const dateToUse = coerceSaleFinrecDate(sale, currentDate);
+  const hasChannel =
+    sale.salesChannel != null && String(sale.salesChannel).trim() !== '';
   const salesChannel =
-    sale.salesChannel ||
-    getSalesChannelFromSaleType(sale.type) ||
+    (hasChannel ? sale.salesChannel : null) ||
+    getSalesChannelFromSaleType(String(sale.type)) ||
     ('Direct-Sales' as Station);
   const station = salesChannel;
 

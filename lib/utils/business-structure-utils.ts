@@ -64,16 +64,17 @@ export function getFinancialTypeForStation(station: Station): 'company' | 'perso
  * Returns the appropriate SALES station based on sale type
  */
 export function getSalesChannelFromSaleType(saleType: string): Station | null {
-  const salesStations = BUSINESS_STRUCTURE.SALES;
+  const key = String(saleType ?? '')
+    .trim()
+    .toUpperCase();
 
-  // Map SaleType enum values to station names
   const typeToChannel: Record<string, Station> = {
-    'DIRECT': 'Direct-Sales' as Station,
-    'BOOTH': 'Booth-Sales' as Station,
-    'NETWORK': 'Network' as Station, // Bundle or Consignment sales (not done yet)
-    'ONLINE': 'Online-Sales' as Station,
-    'NFT': 'Online-Sales' as Station,
+    DIRECT: 'Direct-Sales' as Station,
+    BOOTH: 'Booth-Sales' as Station,
+    NETWORK: 'Network' as Station,
+    ONLINE: 'Online-Sales' as Station,
+    NFT: 'Online-Sales' as Station,
   };
 
-  return typeToChannel[saleType] || null;
+  return typeToChannel[key] ?? null;
 }
