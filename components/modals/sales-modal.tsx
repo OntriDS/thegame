@@ -20,7 +20,7 @@ import { getSubTypesForItemType } from '@/lib/utils/item-utils';
 import type { Station } from '@/types/type-aliases';
 import { CurrencyExchangeRates } from '@/lib/constants/financial-constants';
 import { createSiteOptionsWithCategories } from '@/lib/utils/site-options-utils';
-import { createCharacterOptions, createStationCategoryOptions, createTaskParentOptions, createItemTypeSubTypeOptions, getItemTypeFromCombined, createDistinctItemOptions, filterItemsForSaleLinePick, getCategoryFromCombined, getStationFromCombined, getCategoryForItemType } from '@/lib/utils/searchable-select-utils';
+import { createCharacterOptions, createStationCategoryOptions, createTaskParentOptions, createItemTypeSubTypeOptions, getItemTypeFromCombined, createDistinctItemOptions, getCategoryFromCombined, getStationFromCombined, getCategoryForItemType } from '@/lib/utils/searchable-select-utils';
 import { getAreaForStation, getSalesChannelFromSaleType } from '@/lib/utils/business-structure-utils';
 import { roundCurrency2 } from '@/lib/utils/financial-utils';
 import { ClientAPI } from '@/lib/client-api';
@@ -1137,8 +1137,7 @@ export default function SalesModal({
   };
 
   const getItemOptions = () => {
-    const pickable = filterItemsForSaleLinePick(items);
-    const forSale = pickable.filter((item) => item.status === ItemStatus.FOR_SALE);
+    const forSale = items.filter((item) => item.status === ItemStatus.FOR_SALE);
     if (whatKind !== 'product' || oneItemMultiple !== 'one' || !sale) {
       return createDistinctItemOptions(forSale, true, sites);
     }

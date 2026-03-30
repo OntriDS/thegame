@@ -10,7 +10,6 @@ import { Item, Site } from '@/types/entities';
 import {
   createDistinctItemOptions,
   createDistinctItemOptionsForSite,
-  filterItemsForSaleLinePick,
   getCategoryForItemType,
 } from '@/lib/utils/searchable-select-utils';
 import { ClientAPI } from '@/lib/client-api';
@@ -188,10 +187,9 @@ export default function SaleItemsSubModal({
   // Sold lines first (same value as inventory options so the select resolves to the sold label),
   // then inventory with those values removed so the dropdown is not duplicated.
   const rowOptions = React.useMemo(() => {
-    const pickPool = filterItemsForSaleLinePick(items);
     const base = selectedSiteId
-      ? createDistinctItemOptionsForSite(pickPool, selectedSiteId, false, sites)
-      : createDistinctItemOptions(pickPool, false, sites);
+      ? createDistinctItemOptionsForSite(items, selectedSiteId, false, sites)
+      : createDistinctItemOptions(items, false, sites);
 
     const soldByValue = new Map<
       string,
