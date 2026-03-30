@@ -23,7 +23,8 @@ import {
     CraftSubType,
     BundleSubType,
     MaterialSubType,
-    EquipmentSubType
+    EquipmentSubType,
+    ItemStatus
 } from '@/types/enums';
 import { SubItemType } from '@/types/type-aliases';
 
@@ -115,18 +116,47 @@ function itemIdSuffix(id: string): string {
     return s.length > 8 ? s.slice(-8) : s;
 }
 
+function isSoldCloneItemId(id: string): boolean {
+    const s = String(id || '');
+    return s.includes('-sold-') || s.includes('-manualsold-');
+}
+
+function totalStockQuantity(item: Item): number {
+    return item.stock?.reduce((sum, s) => sum + (Number(s.quantity) || 0), 0) ?? 0;
+}
+
+/** Sale picker: `[HQ: 12, Eco Feria: 3]` — only sites with qty > 0 */
+function formatSalePickerStockBracket(item: Item, sites: Site[]): string {
+    if (!item.stock?.length) return '';
+    const parts = item.stock
+        .filter((s) => (Number(s.quantity) || 0) > 0)
+        .map((s) => {
+            const sn = sites.find((x) => x.id === s.siteId)?.name || s.siteId;
+            return `${sn}: ${s.quantity}`;
+        });
+    return parts.length ? `[${parts.join(', ')}]` : '';
+}
+
 /**
  * One option per Item entity (no aggregation by name/type).
  * Use for sales and anywhere the exact inventory row must stay stable across saves.
+ *
+ * `forSaleLinePicker`: sale UI only — hide sold clones and zero-qty rows; label is `Name [Site: qty, …]` (no id tail, no extra `(total)`).
  */
 export function createDistinctItemOptions(
     items: Item[],
     includeNone = false,
-    sites: Site[] = []
+    sites: Site[] = [],
+    forSaleLinePicker = false
 ): Array<{ value: string; label: string; group: string; category: string }> {
     const options: Array<{ value: string; label: string; group: string; category: string }> = [];
 
     for (const item of items) {
+        if (forSaleLinePicker) {
+            if (isSoldCloneItemId(item.id) || item.status === ItemStatus.SOLD) continue;
+            if (totalStockQuantity(item) <= 0) continue;
+        }
+
         const category = getCategoryForItemType(item.type);
         const qty = item.stock?.reduce((sum, s) => sum + s.quantity, 0) || 0;
         const siteHint =
@@ -137,11 +167,19 @@ export function createDistinctItemOptions(
                   }).join(', ')
                 : '';
         const tail = itemIdSuffix(item.id);
+
+        const label = forSaleLinePicker
+            ? (() => {
+                  const bracket = formatSalePickerStockBracket(item, sites);
+                  return bracket ? `${item.name} ${bracket}` : item.name;
+              })()
+            : siteHint
+              ? `${item.name} · …${tail} (${qty}) [${siteHint}]`
+              : `${item.name} · …${tail} (${qty})`;
+
         options.push({
             value: item.id,
-            label: siteHint
-                ? `${item.name} · …${tail} (${qty}) [${siteHint}]`
-                : `${item.name} · …${tail} (${qty})`,
+            label,
             group: item.type,
             category,
         });
@@ -159,12 +197,15 @@ export function createDistinctItemOptions(
 /**
  * One option per item × stock site row (no aggregation by model).
  * When selectedSiteId is set, only stock rows at that site are listed (plus items with no stock rows).
+ *
+ * `forSaleLinePicker`: sale UI — no sold clones, no zero-qty rows, no `(no stock row)`; label `Name [SiteName: qty]`.
  */
 export function createDistinctItemOptionsForSite(
     items: Item[],
     selectedSiteId: string | null | undefined,
     includeNone = false,
-    sites: Site[] = []
+    sites: Site[] = [],
+    forSaleLinePicker = false
 ): Array<{ value: string; label: string; group: string; category: string }> {
     const siteMap = new Map(sites.map(s => [s.id, s.name]));
     const getSiteName = (id: string) => siteMap.get(id) || 'Unknown Site';
@@ -172,12 +213,17 @@ export function createDistinctItemOptionsForSite(
     const options: Array<{ value: string; label: string; group: string; category: string }> = [];
 
     for (const item of items) {
+        if (forSaleLinePicker && (isSoldCloneItemId(item.id) || item.status === ItemStatus.SOLD)) {
+            continue;
+        }
+
         const category = getCategoryForItemType(item.type);
         const group = item.type;
         const tail = itemIdSuffix(item.id);
         const stock = item.stock || [];
 
         if (stock.length === 0) {
+            if (forSaleLinePicker) continue;
             options.push({
                 value: `${item.id}:none`,
                 label: `${item.name} · …${tail} (no stock row)`,
@@ -193,10 +239,16 @@ export function createDistinctItemOptionsForSite(
         }
 
         for (const sp of rows) {
+            if (forSaleLinePicker && (Number(sp.quantity) || 0) <= 0) continue;
+
             const siteName = getSiteName(sp.siteId);
+            const label = forSaleLinePicker
+                ? `${item.name} [${siteName}: ${sp.quantity}]`
+                : `${item.name} · …${tail} · ${siteName}: ${sp.quantity}`;
+
             options.push({
                 value: `${item.id}:${sp.siteId}`,
-                label: `${item.name} · …${tail} · ${siteName}: ${sp.quantity}`,
+                label,
                 group,
                 category,
             });

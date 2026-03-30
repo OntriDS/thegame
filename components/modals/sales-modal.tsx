@@ -1139,7 +1139,7 @@ export default function SalesModal({
   const getItemOptions = () => {
     const forSale = items.filter((item) => item.status === ItemStatus.FOR_SALE);
     if (whatKind !== 'product' || oneItemMultiple !== 'one' || !sale) {
-      return createDistinctItemOptions(forSale, true, sites);
+      return createDistinctItemOptions(forSale, true, sites, true);
     }
     const sourceLines = lines.length > 0 ? lines : (sale.lines || []);
     const itemLines = collectItemSaleLines(sourceLines);
@@ -1149,7 +1149,7 @@ export default function SalesModal({
         : itemLines.find((l) => l.itemId === selectedItemId);
 
     if (!singleItemLine?.itemId) {
-      return createDistinctItemOptions(forSale, true, sites);
+      return createDistinctItemOptions(forSale, true, sites, true);
     }
 
     const rawLineId = singleItemLine.itemId;
@@ -1163,7 +1163,7 @@ export default function SalesModal({
       ? forSale
       : [...forSale, ...(displayEntity ? [displayEntity] : [])];
 
-    const base = createDistinctItemOptions(pool, true, sites);
+    const base = createDistinctItemOptions(pool, true, sites, true);
     const rest = base.filter((o) => o.value !== syntheticValue);
     return [
       {

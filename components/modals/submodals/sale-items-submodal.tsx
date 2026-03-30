@@ -188,8 +188,8 @@ export default function SaleItemsSubModal({
   // then inventory with those values removed so the dropdown is not duplicated.
   const rowOptions = React.useMemo(() => {
     const base = selectedSiteId
-      ? createDistinctItemOptionsForSite(items, selectedSiteId, false, sites)
-      : createDistinctItemOptions(items, false, sites);
+      ? createDistinctItemOptionsForSite(items, selectedSiteId, false, sites, true)
+      : createDistinctItemOptions(items, false, sites, true);
 
     const soldByValue = new Map<
       string,
