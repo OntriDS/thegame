@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { DatePicker } from '@/components/ui/date-picker';
 import NumericInput from '@/components/ui/numeric-input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogClose, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Sale, SaleLine, Item, Discount, Site, Character, Task, ItemSaleLine, ServiceLine, Business, Contract } from '@/types/entities';
@@ -29,7 +29,7 @@ import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
 import PlayerCharacterSelectorModal from './submodals/player-character-selector-submodal';
 // Side effects handled by parent component via API calls
 import { v4 as uuid } from 'uuid';
-import { Plus, Trash2, Package, DollarSign, Network, ListPlus, Wallet, Gift, User, Store, CalendarIcon } from 'lucide-react';
+import { Plus, Trash2, Package, DollarSign, Network, ListPlus, Wallet, Gift, User, Store, CalendarIcon, X } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import DeleteModal from './submodals/delete-submodal';
 import LinksRelationshipsModal from './submodals/links-relationships-submodal';
@@ -1181,16 +1181,22 @@ export default function SalesModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent zIndexLayer={'MODALS'} className="flex h-[90vh] w-full max-w-7xl flex-col gap-0 overflow-hidden p-0">
-        <DialogHeader className="shrink-0 space-y-0 border-b px-6 pb-4 pt-6 text-left">
-          <DialogTitle className="text-xl font-semibold tracking-tight">
-            {sale ? 'Edit Sale' : 'New Sale'}
-          </DialogTitle>
-          <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-muted-foreground">
-            <span>Type: <span className="font-medium text-foreground">{String(type)}</span></span>
-            <span>Area: <span className="font-medium text-foreground">SALES</span></span>
-            <div className="flex min-w-0 flex-1 items-center gap-2 sm:flex-none sm:basis-auto">
-              <span className="shrink-0">Station:</span>
+      <DialogContent
+        zIndexLayer={'MODALS'}
+        hideClose
+        className="flex h-[90vh] w-full max-w-7xl flex-col gap-0 overflow-hidden p-0"
+      >
+        <DialogHeader className="shrink-0 space-y-0 border-b px-6 py-4 text-left">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+            <DialogTitle className="m-0 shrink-0 text-xl font-semibold tracking-tight">
+              {sale ? 'Edit Sale' : 'New Sale'}
+            </DialogTitle>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+              <span>Type: <span className="font-medium text-foreground">{String(type)}</span></span>
+              <span>Area: <span className="font-medium text-foreground">SALES</span></span>
+            </div>
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              <span className="shrink-0 text-xs text-muted-foreground">Station:</span>
               <SearchableSelect
                 value={salesChannel ? getStationValue(salesChannel) : ''}
                 onValueChange={(value) => {
@@ -1201,18 +1207,13 @@ export default function SalesModal({
                 options={createStationCategoryOptions()}
                 autoGroupByCategory={true}
                 getCategoryForValue={(value) => getCategoryFromCombined(value)}
-                className="min-w-[220px] max-w-[min(100%,320px)] h-8 text-xs"
+                className="h-8 w-[160px] max-w-[200px] shrink-0 text-xs"
                 persistentCollapsible={true}
                 instanceId="sales-modal-header-station"
               />
-            </div>
-          </div>
-          <div className="mt-5 grid grid-cols-1 items-center gap-3 sm:grid-cols-[1fr_auto_1fr]">
-            <div className="hidden sm:block" aria-hidden />
-            <div className="flex justify-center">
               {type !== SaleType.BOOTH && (
                 <Button
-                  size="lg"
+                  size="sm"
                   variant="outline"
                   onClick={() => {
                     if (sale?.id) return;
@@ -1235,7 +1236,7 @@ export default function SalesModal({
 
                     setWhatKind(newKind);
                   }}
-                  className={`min-w-[140px] px-8 ${sale?.id ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  className={`h-8 shrink-0 px-3 text-xs ${sale?.id ? 'opacity-50 cursor-not-allowed' : ''}`}
                   disabled={!!sale?.id}
                   title={sale?.id ? 'Product/Service type cannot be changed after creation' : 'Toggle between Product and Service'}
                 >
@@ -1243,7 +1244,7 @@ export default function SalesModal({
                 </Button>
               )}
             </div>
-            <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-end">
+            <div className="ml-auto flex flex-wrap items-center justify-end gap-1.5">
               {Object.values(SaleType).map(t => {
                 const isExistingSale = sale?.id;
                 const isProductToMultiple = type === SaleType.DIRECT && t === SaleType.NETWORK;
@@ -1263,13 +1264,20 @@ export default function SalesModal({
                         setSalesChannel(channel);
                       }
                     }}
-                    className={`h-8 text-xs px-2 ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    className={`h-8 px-2 text-xs ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
                     title={isDisabled ? 'Sale type cannot be changed after creation' : ''}
                   >
                     {t === SaleType.BOOTH ? 'BOOTH' : t}
                   </Button>
                 );
               })}
+              <DialogClose
+                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground"
+                type="button"
+              >
+                <X className="h-4 w-4" />
+                <span className="sr-only">Close</span>
+              </DialogClose>
             </div>
           </div>
         </DialogHeader>
