@@ -4,7 +4,13 @@ import { isValid } from 'date-fns';
 
 import { EntityType, LogEventType, FOUNDER_CHARACTER_ID } from '@/types/enums';
 import type { FinancialRecord } from '@/types/entities';
-import { appendEntityLog, updateEntityLeanFields, removeLogEntriesAcrossMonths } from '../entities-logging';
+import {
+  appendEntityLog,
+  updateEntityLeanFields,
+  removeLogEntriesAcrossMonths,
+  getEntityLogs,
+  getMonthKeyFromTimestamp,
+} from '../entities-logging';
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
 import { EffectKeys } from '@/data-store/keys';
 import { createLink, getLinksFor, removeLink } from '@/links/link-registry';
@@ -22,30 +28,33 @@ import { upsertFinancial } from '@/data-store/datastore';
 import { formatMonthKey, calculateClosingDate } from '@/lib/utils/date-utils';
 import { buildArchiveCollectionIndexKey, buildArchiveMonthsKey } from '@/data-store/keys';
 import { recalculateCharacterWallet } from '../financial-record-utils';
-import { entityHasLogEvent } from '@/lib/utils/entity-log-scan';
-
 const STATE_FIELDS = ['isNotPaid', 'isNotCharged'];
 
-const getFinancialDate = (f: FinancialRecord, fallback?: Date) => {
-  // Use financial record's own date, fallback to provided date (e.g. from sale)
-  // NEVER use current date as fallback - this causes logs in wrong month
-  if (f.doneAt || f.createdAt) {
-    const raw = f.doneAt || f.createdAt;
-    const d = raw instanceof Date ? raw : new Date(raw as string);
+/**
+ * Anchor date for financial logs / archive: doneAt, else closing date of year/month (not last-save createdAt),
+ * else createdAt, else fallback.
+ */
+function getFinancialLogAnchorDate(f: FinancialRecord, fallback?: Date): Date {
+  if (f.doneAt) {
+    const d = f.doneAt instanceof Date ? f.doneAt : new Date(f.doneAt as string);
     if (Number.isFinite(d.getTime())) return d;
   }
-  // Safe fallback: use provided date or createdAt, never current date
-  return fallback || f.createdAt || new Date(2025, 1, 1); // Safe historical fallback
-};
+  if (typeof f.year === 'number' && typeof f.month === 'number' && f.month >= 1 && f.month <= 12) {
+    const ref = new Date(f.year, f.month - 1, 1);
+    if (isValid(ref)) return calculateClosingDate(ref);
+  }
+  if (f.createdAt) {
+    const d = f.createdAt instanceof Date ? f.createdAt : new Date(f.createdAt as string);
+    if (Number.isFinite(d.getTime())) return d;
+  }
+  return fallback ?? new Date(2025, 1, 1);
+}
 
-/** Timestamp for DONE lifecycle log (sale/task emissaries usually create already-done rows). */
+const getFinancialDate = (f: FinancialRecord, fallback?: Date) => getFinancialLogAnchorDate(f, fallback);
+
+/** Timestamp for DONE / PENDING financial logs (month bucket follows this). */
 function getFinancialDoneTimestamp(f: FinancialRecord): Date {
-  const raw = f.doneAt || f.createdAt;
-  if (raw) {
-    const d = raw instanceof Date ? raw : new Date(raw);
-    if (Number.isFinite(d.getTime())) return d;
-  }
-  return getFinancialDate(f);
+  return getFinancialLogAnchorDate(f);
 }
 
 export async function onFinancialUpsert(financial: FinancialRecord, previousFinancial?: FinancialRecord): Promise<void> {
@@ -355,6 +364,7 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
 export async function ensureFinancialDoneLog(financialId: string): Promise<{
   success: boolean;
   noop?: boolean;
+  repaired?: boolean;
   error?: string;
 }> {
   const financial = await getFinancialById(financialId);
@@ -366,9 +376,26 @@ export async function ensureFinancialDoneLog(financialId: string): Promise<{
       error: 'Financial is still pending (not paid or not charged); DONE log not implied.',
     };
   }
-  if (await entityHasLogEvent(EntityType.FINANCIAL, financialId, 'done')) {
+
+  const ts = getFinancialDoneTimestamp(financial);
+  const targetMonth = getMonthKeyFromTimestamp(ts);
+
+  const logsInTarget = await getEntityLogs(EntityType.FINANCIAL, { month: targetMonth });
+  const hasDoneInTarget = logsInTarget.some(
+    (e: { entityId?: string; event?: string }) =>
+      e.entityId === financialId && String(e.event ?? '').toLowerCase() === 'done'
+  );
+
+  if (hasDoneInTarget) {
     return { success: true, noop: true };
   }
+
+  await removeLogEntriesAcrossMonths(
+    EntityType.FINANCIAL,
+    entry =>
+      entry.entityId === financialId && String(entry.event ?? '').toLowerCase() === 'done'
+  );
+
   await appendEntityLog(
     EntityType.FINANCIAL,
     financial.id,
@@ -380,9 +407,9 @@ export async function ensureFinancialDoneLog(financialId: string): Promise<{
       cost: financial.cost,
       revenue: financial.revenue,
     },
-    getFinancialDoneTimestamp(financial)
+    ts
   );
-  return { success: true };
+  return { success: true, repaired: true };
 }
 
 /**

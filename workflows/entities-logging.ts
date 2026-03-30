@@ -889,9 +889,10 @@ export async function removeLogEntriesAcrossMonths(
   filterFn: (entry: any) => boolean
 ): Promise<number> {
   const months = await getEntityLogMonths(entityType);
+  const allMonthKeys = [...new Set([getCurrentMonthKey(), ...months])];
   let totalRemoved = 0;
 
-  for (const monthKey of months) {
+  for (const monthKey of allMonthKeys) {
     const list = await readMonthlyList(entityType, monthKey);
     const filtered = list.filter(entry => !filterFn(entry));
     const removed = list.length - filtered.length;
