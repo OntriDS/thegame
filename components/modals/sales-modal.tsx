@@ -20,7 +20,7 @@ import { getSubTypesForItemType } from '@/lib/utils/item-utils';
 import type { Station } from '@/types/type-aliases';
 import { CurrencyExchangeRates } from '@/lib/constants/financial-constants';
 import { createSiteOptionsWithCategories } from '@/lib/utils/site-options-utils';
-import { createCharacterOptions, createStationCategoryOptions, createTaskParentOptions, createItemTypeSubTypeOptions, getItemTypeFromCombined, createItemOptions, getCategoryFromCombined, getStationFromCombined, getCategoryForItemType } from '@/lib/utils/searchable-select-utils';
+import { createCharacterOptions, createStationCategoryOptions, createTaskParentOptions, createItemTypeSubTypeOptions, getItemTypeFromCombined, createDistinctItemOptions, getCategoryFromCombined, getStationFromCombined, getCategoryForItemType } from '@/lib/utils/searchable-select-utils';
 import { getAreaForStation, getSalesChannelFromSaleType } from '@/lib/utils/business-structure-utils';
 import { roundCurrency2 } from '@/lib/utils/financial-utils';
 import { ClientAPI } from '@/lib/client-api';
@@ -399,8 +399,8 @@ export default function SalesModal({
       setWhatKind('product');
       setOneItemMultiple('multiple');
       setManualLines(false);
-      const mappedItems = itemLines.map(line => ({
-        id: line.lineId || line.itemId,
+      const mappedItems = itemLines.map((line, idx) => ({
+        id: line.lineId?.trim() || `${sale.id}-row-${idx}`,
         itemId: line.itemId,
         itemName: getItemName(line),
         siteId: sale.siteId || '',
@@ -686,12 +686,19 @@ export default function SalesModal({
       for (const r of quickRows.filter(row => row.quantity > 0)) {
         let resolvedId = r.itemId?.trim();
         if (!resolvedId) {
-          const match = items.find(
+          const matches = items.filter(
             i =>
               i.type === r.itemType &&
               i.stock?.some(s => (!siteId || s.siteId === siteId) && s.quantity > 0)
           );
-          resolvedId = match?.id;
+          if (matches.length > 1) {
+            showValidationError(
+              'Quick Count: several inventory rows match this type at this site — use Manual Lines to pick the exact item.',
+              true
+            );
+            return;
+          }
+          resolvedId = matches[0]?.id;
         }
         if (!resolvedId) {
           showValidationError(
@@ -1016,7 +1023,7 @@ export default function SalesModal({
   const getItemOptions = () => {
     const forSale = items.filter((item) => item.status === ItemStatus.FOR_SALE);
     if (whatKind !== 'product' || oneItemMultiple !== 'one' || !sale) {
-      return createItemOptions(forSale, true, false, sites);
+      return createDistinctItemOptions(forSale, true, sites);
     }
     const sourceLines = lines.length > 0 ? lines : (sale.lines || []);
     const itemLines = collectItemSaleLines(sourceLines);
@@ -1026,7 +1033,7 @@ export default function SalesModal({
         : itemLines.find((l) => l.itemId === selectedItemId);
 
     if (!singleItemLine?.itemId) {
-      return createItemOptions(forSale, true, false, sites);
+      return createDistinctItemOptions(forSale, true, sites);
     }
 
     const pinnedId = singleItemLine.itemId;
@@ -1039,7 +1046,7 @@ export default function SalesModal({
       ? forSale
       : [...forSale, ...items.filter((i) => i.id === pinnedId)];
 
-    const base = createItemOptions(pool, true, false, sites);
+    const base = createDistinctItemOptions(pool, true, sites);
     const rest = base.filter((o) => o.value !== pinnedId);
     return [
       { value: pinnedId, label: soldLabel, group: 'Sold items', category },

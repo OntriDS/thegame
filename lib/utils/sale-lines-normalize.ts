@@ -1,5 +1,6 @@
 // Legacy: kind 'bundle' + itemId → kind 'item'. ItemType.BUNDLE stays on Item only.
 
+import { v4 as uuid } from 'uuid';
 import { getSalesChannelFromSaleType } from '@/lib/utils/business-structure-utils';
 import type { ItemSaleLine, Sale, SaleLine, ServiceLine } from '@/types/entities';
 
@@ -67,6 +68,25 @@ export function normalizeSaleLines(lines: SaleLine[] | undefined | null): SaleLi
     if (n) out.push(n);
   }
   return out;
+}
+
+/** Persist stable UUID lineIds so sold-clone keys and multi-line same-SKU sales never collide. */
+export function ensureItemSaleLineIds(sale: Sale): Sale {
+  const lines = sale.lines;
+  if (!lines?.length) return sale;
+
+  let changed = false;
+  const next: SaleLine[] = lines.map(line => {
+    if (line.kind !== 'item' || !('itemId' in line)) return line;
+    const il = line as ItemSaleLine;
+    if (!il.itemId?.trim()) return line;
+    const lid = il.lineId;
+    if (lid != null && String(lid).trim() !== '') return line;
+    changed = true;
+    return { ...il, lineId: uuid() };
+  });
+
+  return changed ? { ...sale, lines: next } : sale;
 }
 
 export function normalizeSale<T extends Pick<Sale, 'lines' | 'type' | 'salesChannel'>>(sale: T): T {

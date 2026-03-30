@@ -7,7 +7,11 @@ import { Button } from '@/components/ui/button';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import NumericInput from '@/components/ui/numeric-input';
 import { Item, Site } from '@/types/entities';
-import { createItemOptions, createItemOptionsForSite, getCategoryForItemType } from '@/lib/utils/searchable-select-utils';
+import {
+  createDistinctItemOptions,
+  createDistinctItemOptionsForSite,
+  getCategoryForItemType,
+} from '@/lib/utils/searchable-select-utils';
 import { ClientAPI } from '@/lib/client-api';
 import { Trash2, Plus } from 'lucide-react';
 import { v4 as uuid } from 'uuid';
@@ -177,8 +181,8 @@ export default function SaleItemsSubModal({
   // then inventory with those values removed so the dropdown is not duplicated.
   const rowOptions = React.useMemo(() => {
     const base = selectedSiteId
-      ? createItemOptionsForSite(items, selectedSiteId, false, sites)
-      : createItemOptions(items, false, false, sites);
+      ? createDistinctItemOptionsForSite(items, selectedSiteId, false, sites)
+      : createDistinctItemOptions(items, false, sites);
 
     const soldByValue = new Map<
       string,
@@ -333,8 +337,9 @@ export default function SaleItemsSubModal({
       // 3. Update local state
       setItems(prev => [...prev, newItem]);
 
-      // 4. Select it for the line
-      handleItemSelect(lineId, newItem.id);
+      // 4. Select it for the line (composite value when using site-scoped options)
+      const sitePart = selectedSiteId || 'none';
+      handleItemSelect(lineId, `${newItem.id}:${sitePart}`);
 
     } catch (error) {
       console.error('Failed to create new item:', error);
@@ -404,13 +409,14 @@ export default function SaleItemsSubModal({
               }
 
               if (!matchedOption) {
-                // 3. Try exact match with simple Item ID (for when not using site-split, e.g. createItemOptions)
+                // 3. Plain item id (distinct options without site suffix)
                 matchedOption = rowOptions.find(o => o.value === line.itemId);
               }
 
               if (!matchedOption) {
-                // 4. Fallback: Find ANY option for this item (e.g. if site moved or first load)
-                matchedOption = rowOptions.find(o => o.value.startsWith(`${line.itemId}:`));
+                // 4. Only accept a prefix match when exactly one site row exists (avoids wrong row)
+                const byPrefix = rowOptions.filter(o => o.value.startsWith(`${line.itemId}:`));
+                matchedOption = byPrefix.length === 1 ? byPrefix[0] : undefined;
               }
 
               const matchedValue = matchedOption ? matchedOption.value : line.itemId;

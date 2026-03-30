@@ -3,7 +3,7 @@
 
 import type { Task, Item, FinancialRecord, Sale, Character, Player, Site, Settlement, Account, Business, Contract } from '@/types/entities';
 import { roundSaleTotals } from '@/lib/utils/financial-utils';
-import { normalizeSale } from '@/lib/utils/sale-lines-normalize';
+import { ensureItemSaleLineIds, normalizeSale } from '@/lib/utils/sale-lines-normalize';
 import type { TaskSnapshot, ItemSnapshot, SaleSnapshot, FinancialSnapshot } from '@/types/archive';
 import { EntityType, ItemType, TaskPriority, TaskStatus, FinancialStatus, TaskType, SaleStatus, ItemStatus } from '@/types/enums';
 import {
@@ -797,7 +797,7 @@ export async function upsertSale(sale: Sale, options?: { skipWorkflowEffects?: b
     }
   }
 
-  const saleToPersist = roundSaleTotals(normalizeSale(sale));
+  const saleToPersist = roundSaleTotals(ensureItemSaleLineIds(normalizeSale(sale)));
   const saved = await repoUpsertSale(saleToPersist);
 
   // Phase 2: Rolling Summary Update

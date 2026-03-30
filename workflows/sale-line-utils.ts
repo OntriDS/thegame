@@ -7,7 +7,7 @@ import { getItemById, upsertItem } from '@/data-store/datastore';
 import { upsertTask } from '@/data-store/datastore';
 import { makeLink } from '@/links/links-workflows';
 import { createLink } from '@/links/link-registry';
-import { hasEffect, markEffect } from '@/data-store/effects-registry';
+import { clearEffect, hasEffect, markEffect } from '@/data-store/effects-registry';
 import { EffectKeys, buildArchiveCollectionIndexKey, buildArchiveMonthsKey, buildMonthIndexKey } from '@/data-store/keys';
 import { calculateClosingDate, formatMonthKey, formatDisplayDate, saleReferenceDateForItemSoldAndLog } from '@/lib/utils/date-utils';
 import { appendEntityLog } from './entities-logging';
@@ -261,11 +261,24 @@ export async function processServiceLine(line: ServiceLine, sale: Sale): Promise
   }
 }
 
+async function ensureSaleItemLink(saleId: string, soldItemId: string): Promise<void> {
+  const soldItemLink = makeLink(
+    LinkType.SALE_ITEM,
+    { type: EntityType.SALE, id: saleId },
+    { type: EntityType.ITEM, id: soldItemId }
+  );
+  await createLink(soldItemLink);
+}
+
 /**
  * Ensure Sold Item entities exist for all item lines in a sale.
  * This runs INDEPENDENTLY of stock processing or line-change detection.
  * Each line gets its own idempotency key so it's safe to call on every save.
  * This is the single function that guarantees items appear in Sold Items tab + Archive.
+ *
+ * Heals: deleted KV clone while effect flag still set (recreates row + SALE_ITEM);
+ * ghost composite line.itemId (strips to inventory base then materializes);
+ * line left on inventory id after clone delete (clears stale effect, recreates clone).
  */
 export async function ensureSoldItemEntities(sale: Sale): Promise<void> {
     const itemLines = (sale.lines || []).filter(
@@ -285,25 +298,69 @@ export async function ensureSoldItemEntities(sale: Sale): Promise<void> {
 
     for (let i = 0; i < newLines.length; i++) {
       const line = newLines[i];
-      if (line.kind !== 'item' || !line.itemId) continue;
+      if (line.kind !== 'item' || !line.itemId?.trim()) continue;
 
-      const lineId = line.lineId || line.itemId;
-      const originalItemId = line.itemId;
+      const lineId = (line as ItemSaleLine).lineId?.trim() || line.itemId;
+      let working = newLines[i] as ItemSaleLine;
 
-      if (originalItemId.includes('-sold-')) continue;
+      const rowAtLineId = await getItemById(working.itemId);
+      if (
+        rowAtLineId &&
+        rowAtLineId.status === ItemStatus.SOLD &&
+        rowAtLineId.sourceRecordId === sale.id
+      ) {
+        await ensureSaleItemLink(sale.id, working.itemId);
+        continue;
+      }
 
-      const primaryCloneId = `${originalItemId}-sold-${lineId}`;
-      const legacyCloneId = `${originalItemId}-sold-bundle-${lineId}`;
+      let inventoryBaseId = working.itemId;
+      if (working.itemId.includes('-sold-')) {
+        const suf = `-sold-${lineId}`;
+        const bundleSuf = `-sold-bundle-${lineId}`;
+        let stripped: string | null = null;
+        if (working.itemId.endsWith(suf)) {
+          stripped = working.itemId.slice(0, -suf.length);
+        } else if (working.itemId.endsWith(bundleSuf)) {
+          stripped = working.itemId.slice(0, -bundleSuf.length);
+        }
+        if (stripped) {
+          inventoryBaseId = stripped;
+          working = { ...working, itemId: stripped };
+          newLines[i] = working;
+          changedLines = true;
+        } else {
+          console.warn(
+            `[ensureSoldItemEntities] Cannot strip inventory base from ${working.itemId} (lineId=${lineId}, sale ${sale.id})`
+          );
+          continue;
+        }
+      }
+
+      const primaryCloneId = `${inventoryBaseId}-sold-${lineId}`;
+      const legacyCloneId = `${inventoryBaseId}-sold-bundle-${lineId}`;
       const effectKey = EffectKeys.sideEffect('sale', sale.id, `soldItemEntity:${lineId}`);
       const legacyBundleEffectKey = EffectKeys.sideEffect('sale', sale.id, `soldItemEntity:bundle:${lineId}`);
 
-      const hasPrimaryEffect = await hasEffect(effectKey);
-      const hasLegacyEffect = await hasEffect(legacyBundleEffectKey);
+      let hasPrimaryEffect = await hasEffect(effectKey);
+      let hasLegacyEffect = await hasEffect(legacyBundleEffectKey);
+
+      let primaryRow = await getItemById(primaryCloneId);
+      let legacyRow = await getItemById(legacyCloneId);
+
+      if ((hasPrimaryEffect || hasLegacyEffect) && !primaryRow && !legacyRow) {
+        await clearEffect(effectKey);
+        await clearEffect(legacyBundleEffectKey);
+        hasPrimaryEffect = false;
+        hasLegacyEffect = false;
+        console.warn(
+          `[ensureSoldItemEntities] Stale sold-item effect cleared (clone missing KV). Recreating for line ${lineId}, sale ${sale.id}`
+        );
+      }
 
       if (!hasPrimaryEffect && !hasLegacyEffect) {
-        const item = await getItemById(originalItemId);
+        const item = await getItemById(inventoryBaseId);
         if (!item) {
-          console.warn(`[ensureSoldItemEntities] Item not found: ${originalItemId}, skipping`);
+          console.warn(`[ensureSoldItemEntities] Inventory item not found: ${inventoryBaseId}, skipping`);
           continue;
         }
 
@@ -315,10 +372,10 @@ export async function ensureSoldItemEntities(sale: Sale): Promise<void> {
           status: ItemStatus.SOLD,
           isCollected: sale.isCollected || false,
           stock: [{ siteId: sale.siteId || item.stock?.[0]?.siteId || '', quantity: 0 }],
-          quantitySold: line.quantity || 0,
+          quantitySold: working.quantity || 0,
           soldAt: refDate,
-          price: line.unitPrice,
-          value: (line.unitPrice || 0) * (line.quantity || 0),
+          price: working.unitPrice,
+          value: (working.unitPrice || 0) * (working.quantity || 0),
           sourceRecordId: sale.id,
           ownerCharacterId: sale.customerId || item.ownerCharacterId || null,
           updatedAt: new Date(),
@@ -333,24 +390,32 @@ export async function ensureSoldItemEntities(sale: Sale): Promise<void> {
         await kvSAdd(buildArchiveCollectionIndexKey('items', monthKey), soldItemEntity.id);
         await kvSAdd(buildArchiveMonthsKey(), monthKey);
 
-        const soldItemLink = makeLink(
-          LinkType.SALE_ITEM,
-          { type: EntityType.SALE, id: sale.id },
-          { type: EntityType.ITEM, id: soldItemEntity.id }
-        );
-        await createLink(soldItemLink);
+        await ensureSaleItemLink(sale.id, soldItemEntity.id);
 
         await markEffect(effectKey);
-        console.log(`[ensureSoldItemEntities] ✅ Created: ${soldItemEntity.id} (${item.name} x${line.quantity} @ $${line.unitPrice}) → ${monthKey}`);
-      } else if (!hasPrimaryEffect && hasLegacyEffect && (await getItemById(legacyCloneId))) {
+        console.log(
+          `[ensureSoldItemEntities] ✅ Created: ${soldItemEntity.id} (${item.name} x${working.quantity} @ $${working.unitPrice}) → ${monthKey}`
+        );
+      } else if (!hasPrimaryEffect && hasLegacyEffect && legacyRow) {
         await markEffect(effectKey);
       }
 
-      const primaryRow = await getItemById(primaryCloneId);
-      const legacyRow = await getItemById(legacyCloneId);
-      const resolvedCloneId = primaryRow ? primaryCloneId : legacyRow ? legacyCloneId : primaryCloneId;
-      newLines[i] = { ...(line as ItemSaleLine), itemId: resolvedCloneId };
-      changedLines = true;
+      primaryRow = await getItemById(primaryCloneId);
+      legacyRow = await getItemById(legacyCloneId);
+      const resolvedCloneId = primaryRow ? primaryCloneId : legacyRow ? legacyCloneId : null;
+
+      if (!resolvedCloneId) {
+        console.warn(
+          `[ensureSoldItemEntities] No sold row after ensure (line ${lineId}, sale ${sale.id}, base ${inventoryBaseId})`
+        );
+        continue;
+      }
+
+      if (working.itemId !== resolvedCloneId) {
+        newLines[i] = { ...working, itemId: resolvedCloneId };
+        changedLines = true;
+      }
+      await ensureSaleItemLink(sale.id, resolvedCloneId);
     }
 
     if (changedLines) {

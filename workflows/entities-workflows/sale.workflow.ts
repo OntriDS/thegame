@@ -486,14 +486,13 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
   }
 
   // =========================================================================
-  // ENSURE SOLD ITEM ENTITIES (Unconditional, Idempotent)
-  // This runs on EVERY upsert - both new and resaved sales.
-  // It creates Sold Item entities so they appear in Sold Items tab + Archive.
-  // The function has its own idempotency per lineId, so calling it repeatedly is safe.
+  // ENSURE SOLD ITEM ENTITIES (same bar as "charged" pipeline above)
+  // Runs when sale is CHARGED or COLLECTED, not CANCELLED, and flags are not pending
+  // (!isNotPaid && !isNotCharged). Reuses `isCharged` so this never drifts from
+  // processChargedSaleLines / milestone logging.
   // =========================================================================
-  const isSaleCharged = !sale.isNotPaid && !sale.isNotCharged;
   const hasItemLines = sale.lines?.some(l => l.kind === 'item');
-  if (isSaleCharged && hasItemLines) {
+  if (isCharged && hasItemLines) {
     await ensureSoldItemEntities(sale);
     // Lines may now point at sold-item rows in KV; use reloaded sale so SOLD logs attach to those ids, not the first-persist snapshot.
     const saleForItemLogs = await getSaleById(sale.id);

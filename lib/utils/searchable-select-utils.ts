@@ -110,6 +110,108 @@ export function createItemOptions(
     return options;
 }
 
+function itemIdSuffix(id: string): string {
+    const s = String(id || '');
+    return s.length > 8 ? s.slice(-8) : s;
+}
+
+/**
+ * One option per Item entity (no aggregation by name/type).
+ * Use for sales and anywhere the exact inventory row must stay stable across saves.
+ */
+export function createDistinctItemOptions(
+    items: Item[],
+    includeNone = false,
+    sites: Site[] = []
+): Array<{ value: string; label: string; group: string; category: string }> {
+    const options: Array<{ value: string; label: string; group: string; category: string }> = [];
+
+    for (const item of items) {
+        const category = getCategoryForItemType(item.type);
+        const qty = item.stock?.reduce((sum, s) => sum + s.quantity, 0) || 0;
+        const siteHint =
+            sites.length > 0 && item.stock?.length
+                ? item.stock.map(s => {
+                      const sn = sites.find(x => x.id === s.siteId)?.name || s.siteId;
+                      return `${sn}:${s.quantity}`;
+                  }).join(', ')
+                : '';
+        const tail = itemIdSuffix(item.id);
+        options.push({
+            value: item.id,
+            label: siteHint
+                ? `${item.name} · …${tail} (${qty}) [${siteHint}]`
+                : `${item.name} · …${tail} (${qty})`,
+            group: item.type,
+            category,
+        });
+    }
+
+    options.sort((a, b) => a.label.localeCompare(b.label));
+
+    if (includeNone) {
+        options.unshift({ value: 'none', label: 'None', group: 'Other', category: 'Other' });
+    }
+
+    return options;
+}
+
+/**
+ * One option per item × stock site row (no aggregation by model).
+ * When selectedSiteId is set, only stock rows at that site are listed (plus items with no stock rows).
+ */
+export function createDistinctItemOptionsForSite(
+    items: Item[],
+    selectedSiteId: string | null | undefined,
+    includeNone = false,
+    sites: Site[] = []
+): Array<{ value: string; label: string; group: string; category: string }> {
+    const siteMap = new Map(sites.map(s => [s.id, s.name]));
+    const getSiteName = (id: string) => siteMap.get(id) || 'Unknown Site';
+
+    const options: Array<{ value: string; label: string; group: string; category: string }> = [];
+
+    for (const item of items) {
+        const category = getCategoryForItemType(item.type);
+        const group = item.type;
+        const tail = itemIdSuffix(item.id);
+        const stock = item.stock || [];
+
+        if (stock.length === 0) {
+            options.push({
+                value: `${item.id}:none`,
+                label: `${item.name} · …${tail} (no stock row)`,
+                group,
+                category,
+            });
+            continue;
+        }
+
+        const rows = selectedSiteId ? stock.filter(sp => sp.siteId === selectedSiteId) : stock;
+        if (selectedSiteId && rows.length === 0) {
+            continue;
+        }
+
+        for (const sp of rows) {
+            const siteName = getSiteName(sp.siteId);
+            options.push({
+                value: `${item.id}:${sp.siteId}`,
+                label: `${item.name} · …${tail} · ${siteName}: ${sp.quantity}`,
+                group,
+                category,
+            });
+        }
+    }
+
+    options.sort((a, b) => a.label.localeCompare(b.label));
+
+    if (includeNone) {
+        options.unshift({ value: 'none', label: 'None', group: 'Other', category: 'Other' });
+    }
+
+    return options;
+}
+
 /**
  * Enhanced item options with SITE SPLIT LOGIC
  * Returns composite value: "itemId:siteId"
