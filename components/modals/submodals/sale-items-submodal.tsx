@@ -374,28 +374,28 @@ export default function SaleItemsSubModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent zIndexLayer={'SUB_MODALS'} className="w-full max-w-5xl max-h-[85vh]">
-        <DialogHeader>
+      <DialogContent zIndexLayer={'SUB_MODALS'} className="flex h-[min(90vh,900px)] w-full max-w-7xl flex-col gap-0 overflow-hidden p-6">
+        <DialogHeader className="shrink-0">
           <DialogTitle>Select Sale Items</DialogTitle>
           <DialogDescription>
             Search and select items to add to the sale.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 overflow-y-auto max-h-[60vh] px-1">
-          {/* Items Table */}
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-1 py-2">
+          {/* Items Table — Item column uses half the row; matches parent sale modal width (max-w-7xl) */}
           <div className="space-y-2">
-            <div className="grid grid-cols-12 gap-2 text-xs font-semibold text-muted-foreground px-2">
-              <div className="col-span-3">Item</div>
+            <div className="grid grid-cols-12 gap-2 px-2 text-xs font-semibold text-muted-foreground">
+              <div className="col-span-6">Item</div>
               <div className="col-span-1">Price ($)</div>
-              <div className="col-span-2">Calc ($)</div>
+              <div className="col-span-1">Calc ($)</div>
               <div className="col-span-2 flex flex-col justify-center">
                 <span>Calc (₡)</span>
-                <span className="text-[9px] text-muted-foreground font-normal">Rate: {exchangeRate}</span>
+                <span className="text-[9px] font-normal text-muted-foreground">Rate: {exchangeRate}</span>
               </div>
               <div className="col-span-1">Qty</div>
-              <div className="col-span-2">Total ($)</div>
-              <div className="col-span-1"></div>
+              <div className="col-span-1">Total ($)</div>
+              <div className="col-span-1" />
             </div>
 
             {lines.map((line, index) => {
@@ -424,9 +424,9 @@ export default function SaleItemsSubModal({
               const matchedValue = matchedOption ? matchedOption.value : line.itemId;
 
               return (
-                <div key={line.id} className="grid grid-cols-12 gap-2 items-end">
+                <div key={line.id} className="grid grid-cols-12 items-end gap-2">
                   {/* Item Selector */}
-                  <div className="col-span-3">
+                  <div className="col-span-6 min-w-0">
                     <SearchableSelect
                       value={matchedValue}
                       onValueChange={(value) => handleItemSelect(line.id, value)}
@@ -434,7 +434,8 @@ export default function SaleItemsSubModal({
                       autoGroupByCategory={true}
                       placeholder="Item..."
                       initialLabel={line.itemName}
-                      className="h-8 text-sm"
+                      className="h-8 min-h-8 text-sm"
+                      popoverWiden
                       onCreate={(query) => handleCreateItem(line.id, query)}
                     />
                   </div>
@@ -452,7 +453,7 @@ export default function SaleItemsSubModal({
                   </div>
 
                   {/* USD Calculator Input */}
-                  <div className="col-span-2">
+                  <div className="col-span-1">
                     <input
                       type="text"
                       value={line.usdExpression || ''}
@@ -486,8 +487,8 @@ export default function SaleItemsSubModal({
                   </div>
 
                   {/* Total Line Price */}
-                  <div className="col-span-2">
-                    <div className="h-8 text-sm bg-muted px-3 py-2 rounded-md border flex items-center font-mono">
+                  <div className="col-span-1 min-w-0">
+                    <div className="flex h-8 items-center rounded-md border bg-muted px-2 py-1 font-mono text-xs">
                       ${line.total.toFixed(2)}
                     </div>
                   </div>
@@ -532,7 +533,7 @@ export default function SaleItemsSubModal({
           </div>
         </div>
 
-        <DialogFooter className="flex items-center justify-between">
+        <DialogFooter className="mt-auto shrink-0 flex items-center justify-between border-t pt-4">
           <div className="text-xs text-muted-foreground">
             {lines.filter(l => l.itemId).length} item(s) selected
           </div>

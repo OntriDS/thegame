@@ -40,6 +40,8 @@ interface SearchableSelectProps {
   instanceId?: string; // Unique ID for persistent state
   onCreate?: (value: string) => void; // Optional callback to create a new item
   initialLabel?: string; // Label to display if value is set but not found in options
+  /** Options panel wider than the trigger — use for long labels (e.g. sale item picker). */
+  popoverWiden?: boolean;
 }
 
 export function SearchableSelect({
@@ -55,6 +57,7 @@ export function SearchableSelect({
   instanceId,
   onCreate,
   initialLabel,
+  popoverWiden = false,
 }: SearchableSelectProps): JSX.Element {
   const { getPreference, setPreference } = useUserPreferences();
   const [open, setOpen] = React.useState(false);
@@ -208,20 +211,29 @@ export function SearchableSelect({
       </PopoverTrigger>
       <PopoverPrimitive.Portal>
         <PopoverContent
-          className={`w-full max-w-[var(--radix-popover-trigger-width)] max-h-[300px] p-0 ${getZIndexClass('SUPRA_FIELDS')} pointer-events-auto`}
+          className={cn(
+            'max-h-[min(50vh,420px)] p-0 pointer-events-auto',
+            getZIndexClass('SUPRA_FIELDS'),
+            popoverWiden
+              ? 'min-w-[var(--radix-popover-trigger-width)] w-[min(94vw,80rem)] max-w-[min(94vw,80rem)]'
+              : 'w-full max-w-[var(--radix-popover-trigger-width)]'
+          )}
           align="start"
           side="bottom"
           avoidCollisions={true}
           collisionPadding={8}
         >
-          <Command className="max-h-[300px]" shouldFilter={false}>
+          <Command className="max-h-[min(50vh,420px)]" shouldFilter={false}>
             <CommandInput
               placeholder={`Search ${placeholder.toLowerCase()}...`}
               value={searchQuery}
               onValueChange={setSearchQuery}
             />
             <CommandList
-              className="max-h-[200px] overflow-y-auto scrollbar-thin"
+              className={cn(
+                'overflow-y-auto scrollbar-thin',
+                popoverWiden ? 'max-h-[min(42vh,340px)]' : 'max-h-[200px]'
+              )}
               onWheel={(e) => {
                 e.stopPropagation();
               }}
@@ -288,7 +300,8 @@ export function SearchableSelect({
                                   setOpen(false);
                                 }}
                                 className={cn(
-                                  "cursor-pointer hover:bg-accent hover:text-accent-foreground",
+                                  'cursor-pointer hover:bg-accent hover:text-accent-foreground',
+                                  popoverWiden && 'whitespace-normal break-words py-2 leading-snug text-sm',
                                   value === option.value
                                     ? "bg-primary/10 text-primary border-l-2 border-primary"
                                     : "data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground"
