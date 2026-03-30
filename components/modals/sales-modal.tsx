@@ -1139,9 +1139,8 @@ export default function SalesModal({
   const getItemOptions = () => {
     const pickable = filterItemsForSaleLinePick(items);
     const forSale = pickable.filter((item) => item.status === ItemStatus.FOR_SALE);
-    const salePickFlags = { omitEmptyStock: true } as const;
     if (whatKind !== 'product' || oneItemMultiple !== 'one' || !sale) {
-      return createDistinctItemOptions(forSale, true, sites, salePickFlags);
+      return createDistinctItemOptions(forSale, true, sites);
     }
     const sourceLines = lines.length > 0 ? lines : (sale.lines || []);
     const itemLines = collectItemSaleLines(sourceLines);
@@ -1151,7 +1150,7 @@ export default function SalesModal({
         : itemLines.find((l) => l.itemId === selectedItemId);
 
     if (!singleItemLine?.itemId) {
-      return createDistinctItemOptions(forSale, true, sites, salePickFlags);
+      return createDistinctItemOptions(forSale, true, sites);
     }
 
     const rawLineId = singleItemLine.itemId;
@@ -1165,7 +1164,7 @@ export default function SalesModal({
       ? forSale
       : [...forSale, ...(displayEntity ? [displayEntity] : [])];
 
-    const base = createDistinctItemOptions(pool, true, sites, salePickFlags);
+    const base = createDistinctItemOptions(pool, true, sites);
     const rest = base.filter((o) => o.value !== syntheticValue);
     return [
       {

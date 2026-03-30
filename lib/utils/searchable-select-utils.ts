@@ -137,7 +137,10 @@ export function filterItemsForSaleLinePick(items: Item[]): Item[] {
 }
 
 export type DistinctItemOptionsFlags = {
-    /** Skip items with no stock array / rows — avoids “(no stock row)” / zero-qty ghost clutter in sale pickers */
+    /**
+     * Skip items with no `stock` rows. Do not use for sale-line pickers: many valid items have
+     * empty `stock` while quantity lives on the item (e.g. aggregates) or is site-scoped elsewhere.
+     */
     omitEmptyStock?: boolean;
 };
 
