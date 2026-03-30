@@ -261,6 +261,15 @@ export async function processServiceLine(line: ServiceLine, sale: Sale): Promise
   }
 }
 
+function stripToInventoryBaseForLine(itemId: string, lineId: string): string {
+  if (!itemId.includes('-sold-')) return itemId;
+  const suf = `-sold-${lineId}`;
+  if (itemId.endsWith(suf)) return itemId.slice(0, -suf.length);
+  const bundleSuf = `-sold-bundle-${lineId}`;
+  if (itemId.endsWith(bundleSuf)) return itemId.slice(0, -bundleSuf.length);
+  return itemId;
+}
+
 async function ensureSaleItemLink(saleId: string, soldItemId: string): Promise<void> {
   const soldItemLink = makeLink(
     LinkType.SALE_ITEM,
@@ -280,7 +289,7 @@ async function ensureSaleItemLink(saleId: string, soldItemId: string): Promise<v
  * ghost composite line.itemId (strips to inventory base then materializes);
  * line left on inventory id after clone delete (clears stale effect, recreates clone).
  */
-export async function ensureSoldItemEntities(sale: Sale): Promise<void> {
+export async function ensureSoldItemEntities(sale: Sale, previousSale?: Sale): Promise<void> {
     const itemLines = (sale.lines || []).filter(
       (l): l is ItemSaleLine => l.kind === 'item' && 'itemId' in l && !!l.itemId
     );
@@ -340,6 +349,25 @@ export async function ensureSoldItemEntities(sale: Sale): Promise<void> {
       const legacyCloneId = `${inventoryBaseId}-sold-bundle-${lineId}`;
       const effectKey = EffectKeys.sideEffect('sale', sale.id, `soldItemEntity:${lineId}`);
       const legacyBundleEffectKey = EffectKeys.sideEffect('sale', sale.id, `soldItemEntity:bundle:${lineId}`);
+
+      if (previousSale?.lines?.length) {
+        const prevLine = previousSale.lines.find(
+          (l): l is ItemSaleLine =>
+            l.kind === 'item' &&
+            !!l.itemId?.trim() &&
+            (l.lineId?.trim() || l.itemId) === lineId
+        );
+        if (prevLine?.itemId) {
+          const prevBase = stripToInventoryBaseForLine(prevLine.itemId, lineId);
+          if (prevBase !== inventoryBaseId) {
+            await clearEffect(effectKey);
+            await clearEffect(legacyBundleEffectKey);
+            console.warn(
+              `[ensureSoldItemEntities] Inventory base changed for line ${lineId} (${prevBase} → ${inventoryBaseId}); cleared sold-item effects for sale ${sale.id}`
+            );
+          }
+        }
+      }
 
       let hasPrimaryEffect = await hasEffect(effectKey);
       let hasLegacyEffect = await hasEffect(legacyBundleEffectKey);

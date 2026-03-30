@@ -18,6 +18,13 @@ import { v4 as uuid } from 'uuid';
 import { ItemType, ItemStatus, Collection } from '@/types/enums';
 
 // Default values for quick-created items
+/** Disambiguate same display name across rows: identity is always `itemId` on the sale line. */
+function soldRowPinLabel(resolved: Item | undefined, itemId: string, qty: number): string {
+  const tail = itemId.length > 8 ? itemId.slice(-8) : itemId;
+  const base = resolved?.name ?? 'Unknown item';
+  return `${base} · …${tail} · qty ${qty}`;
+}
+
 const ITEM_DEFAULTS = {
   type: ItemType.ARTWORK, // Defaulting to Artwork for creative context
   status: ItemStatus.FOR_SALE,
@@ -193,12 +200,7 @@ export default function SaleItemsSubModal({
       if (!line.itemId) continue;
       const value = `${line.itemId}:${line.siteId || 'none'}`;
       const resolved = items.find((i) => i.id === line.itemId);
-      const fromName = line.itemName?.replace(/^Sale of\s+/i, '').trim();
-      const label =
-        fromName ||
-        resolved?.name ||
-        line.itemName ||
-        line.itemId;
+      const label = soldRowPinLabel(resolved, line.itemId, line.quantity || 0);
       const category = getCategoryForItemType(
         resolved?.type ?? ItemType.ARTWORK
       );

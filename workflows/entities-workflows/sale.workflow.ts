@@ -493,7 +493,7 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
   // =========================================================================
   const hasItemLines = sale.lines?.some(l => l.kind === 'item');
   if (isCharged && hasItemLines) {
-    await ensureSoldItemEntities(sale);
+    await ensureSoldItemEntities(sale, previousSale);
     // Lines may now point at sold-item rows in KV; use reloaded sale so SOLD logs attach to those ids, not the first-persist snapshot.
     const saleForItemLogs = await getSaleById(sale.id);
     await ensureItemSoldLogsFromSale(saleForItemLogs ?? sale);

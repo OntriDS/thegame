@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useLayoutEffect, useState, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,7 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { Sale, SaleLine, Item, Discount, Site, Character, Task, ItemSaleLine, ServiceLine, Business, Contract } from '@/types/entities';
 import { normalizeSaleLines } from '@/lib/utils/sale-lines-normalize';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
-import { SaleType, SaleStatus, PaymentMethod, Currency, ItemType, ItemStatus, TaskType, TaskPriority, Collection, STATION_CATEGORIES, CharacterRole, EntityType, FOUNDER_CHARACTER_ID } from '@/types/enums';
+import { SaleType, SaleStatus, PaymentMethod, Currency, ItemType, ItemStatus, TaskType, TaskPriority, Collection, STATION_CATEGORIES, CharacterRole, EntityType, LinkType, FOUNDER_CHARACTER_ID } from '@/types/enums';
 import { getSubTypesForItemType } from '@/lib/utils/item-utils';
 import type { Station } from '@/types/type-aliases';
 import { CurrencyExchangeRates } from '@/lib/constants/financial-constants';
@@ -45,6 +45,55 @@ import DatesSubmodal from './submodals/dates-submodal';
 /** Product lines only (legacy bundle rows normalized to item). */
 function collectItemSaleLines(saleLines: SaleLine[]): ItemSaleLine[] {
   return normalizeSaleLines(saleLines).filter((l): l is ItemSaleLine => l.kind === 'item');
+}
+
+const UNKNOWN_SALE_ITEM_LABEL = 'Unknown item';
+
+function extractSaleItemTargetIds(links: unknown[]): string[] {
+  if (!Array.isArray(links)) return [];
+  const out: string[] = [];
+  for (const raw of links) {
+    const l = raw as { linkType?: string; target?: { type?: string; id?: string } };
+    if (l?.linkType !== LinkType.SALE_ITEM) continue;
+    const id = l.target?.id;
+    if (typeof id !== 'string' || !id.trim()) continue;
+    if (String(l.target?.type).toLowerCase() !== EntityType.ITEM) continue;
+    out.push(id);
+  }
+  return out;
+}
+
+/**
+ * Truth for multi-line / booth / submodal rows: each `SaleLine.itemId` maps to at most one Item row.
+ * We do NOT scan SALE_ITEM links here — several links cannot be matched to rows without extra metadata.
+ */
+function resolveItemFromLineItemIdOnly(
+  lineItemId: string | undefined,
+  items: Item[]
+): { resolvedId: string; isKnown: boolean } {
+  const lid = lineItemId?.trim() ?? '';
+  if (!lid) return { resolvedId: '', isKnown: false };
+  if (items.some((i) => i.id === lid)) return { resolvedId: lid, isKnown: true };
+  return { resolvedId: lid, isKnown: false };
+}
+
+/**
+ * DIRECT + exactly one item line only. If `line.itemId` is dead and there is exactly one SALE_ITEM
+ * target that resolves in `items`, treat it as that line’s item (unambiguous). If 0 or 2+ such
+ * targets, do not guess — show unknown / leave line as-is.
+ */
+function resolveSingleDirectLineItem(
+  lineItemId: string | undefined,
+  items: Item[],
+  linkTargets: string[]
+): { resolvedId: string; isKnown: boolean } {
+  const base = resolveItemFromLineItemIdOnly(lineItemId, items);
+  if (base.isKnown) return base;
+  const resolvedFromLinks = linkTargets.filter((t) => items.some((i) => i.id === t));
+  if (resolvedFromLinks.length === 1) {
+    return { resolvedId: resolvedFromLinks[0], isKnown: true };
+  }
+  return base;
 }
 
 interface SalesModalProps {
@@ -213,6 +262,8 @@ export default function SalesModal({
 
   // UI state
   const [items, setItems] = useState<Item[]>([]);
+  /** SALE_ITEM targets from API — used to repoint dead line.itemId when the row still exists in KV */
+  const [saleItemLinkTargets, setSaleItemLinkTargets] = useState<string[]>([]);
   const [sites, setSites] = useState<Site[]>([]);
   const [characters, setCharacters] = useState<Character[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -233,6 +284,57 @@ export default function SalesModal({
   }, [open]);
 
   useEffect(() => {
+    if (!open || !sale?.id || sale.type === SaleType.BOOTH) {
+      setSaleItemLinkTargets([]);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const links = await ClientAPI.getLinksFor({ type: EntityType.SALE, id: sale.id });
+      if (cancelled) return;
+      setSaleItemLinkTargets(extractSaleItemTargetIds(links));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, sale?.id, sale?.type]);
+
+  useLayoutEffect(() => {
+    if (!open || !sale?.id || sale.type === SaleType.BOOTH) return;
+    if (whatKind !== 'product' || oneItemMultiple !== 'one') return;
+    if (!saleItemLinkTargets.length || !items.length) return;
+
+    const itemLines = collectItemSaleLines(lines);
+    if (itemLines.length !== 1) return;
+    const isl = itemLines[0];
+    if (items.some((i) => i.id === isl.itemId)) return;
+    const resolvedFromLinks = saleItemLinkTargets.filter((t) => items.some((i) => i.id === t));
+    if (resolvedFromLinks.length !== 1) return;
+    const fromLink = resolvedFromLinks[0];
+
+    const nm = items.find((i) => i.id === fromLink)?.name ?? 'item';
+    setLines((prev) => {
+      const idx = prev.findIndex((l) => l.kind === 'item');
+      if (idx < 0) return prev;
+      const cur = prev[idx] as ItemSaleLine;
+      if (items.some((i) => i.id === cur.itemId)) return prev;
+      const next = [...prev];
+      next[idx] = { ...cur, itemId: fromLink, description: `Sale of ${nm}` };
+      return next;
+    });
+    setSelectedItemId(fromLink);
+  }, [
+    open,
+    sale?.id,
+    sale?.type,
+    saleItemLinkTargets,
+    items,
+    whatKind,
+    oneItemMultiple,
+    lines,
+  ]);
+
+  useEffect(() => {
     setSelectedItems((prev) =>
       prev.map((item) => ({
         ...item,
@@ -244,6 +346,7 @@ export default function SalesModal({
   // Initialize form when sale changes
   useEffect(() => {
     if (sale) {
+      setSaleItemLinkTargets([]);
       setRecordedPayments([]);
       setSelectedItemId('');
       setSelectedItems([]);
@@ -369,14 +472,11 @@ export default function SalesModal({
     const hasServiceLines = saleLines.some(line => line.kind === 'service');
 
     const getItemName = (line: ItemSaleLine) => {
-      const itemEntity = items.find(item => item.id === line.itemId);
-      if (itemEntity?.name) {
-        return itemEntity.name;
+      const { isKnown, resolvedId } = resolveItemFromLineItemIdOnly(line.itemId, items);
+      if (isKnown) {
+        return items.find((item) => item.id === resolvedId)?.name ?? UNKNOWN_SALE_ITEM_LABEL;
       }
-      if (line.description) {
-        return line.description.replace(/^Sale of\s+/i, '').trim();
-      }
-      return line.itemId;
+      return UNKNOWN_SALE_ITEM_LABEL;
     };
 
     if (hasServiceLines) {
@@ -416,6 +516,20 @@ export default function SalesModal({
 
     didInitRef.current = true;
   }, [sale, items]);
+
+  useEffect(() => {
+    if (!sale || whatKind !== 'product' || oneItemMultiple !== 'multiple') return;
+    setSelectedItems((prev) =>
+      prev.map((row) => {
+        const { isKnown, resolvedId } = resolveItemFromLineItemIdOnly(row.itemId, items);
+        const name = isKnown
+          ? items.find((i) => i.id === resolvedId)?.name ?? UNKNOWN_SALE_ITEM_LABEL
+          : UNKNOWN_SALE_ITEM_LABEL;
+        if (row.itemName === name) return row;
+        return { ...row, itemName: name };
+      })
+    );
+  }, [sale?.id, items, whatKind, oneItemMultiple]);
 
   // If the single item line has an id but selection was cleared, restore from the line
   useEffect(() => {
@@ -622,17 +736,19 @@ export default function SalesModal({
     let effectiveLines: SaleLine[] = lines;
     if (whatKind === 'product' && oneItemMultiple === 'one' && selectedItemId) {
       const selectedItem = getSelectedItem();
-      if (selectedItem) {
-        const existingItemLine = lines.find((l): l is ItemSaleLine => l.kind === 'item');
-        effectiveLines = [{
-          lineId: (existingItemLine as ItemSaleLine | undefined)?.lineId || uuid(),
-          kind: 'item',
-          itemId: selectedItemId,
-          quantity: selectedItemQuantity,
-          unitPrice: selectedItemPrice,
-          description: `Sale of ${selectedItem.name}`
-        } as SaleLine];
-      }
+      const existingItemLine = lines.find((l): l is ItemSaleLine => l.kind === 'item');
+      const description =
+        selectedItem != null
+          ? `Sale of ${selectedItem.name}`
+          : (existingItemLine as ItemSaleLine | undefined)?.description?.trim() || 'Sale line';
+      effectiveLines = [{
+        lineId: (existingItemLine as ItemSaleLine | undefined)?.lineId || uuid(),
+        kind: 'item',
+        itemId: selectedItemId,
+        quantity: selectedItemQuantity,
+        unitPrice: selectedItemPrice,
+        description,
+      } as SaleLine];
     } else if (whatKind === 'product' && oneItemMultiple === 'multiple' && selectedItems.length > 0) {
       // Handle PRODUCT/MULTIPLE - create sale lines from items submodal
       // Reuse stable line ids so ensureSoldItemEntities idempotency + itemsSold summary stay correct on re-save
@@ -1036,20 +1152,26 @@ export default function SalesModal({
       return createDistinctItemOptions(forSale, true, sites);
     }
 
-    const pinnedId = singleItemLine.itemId;
-    const fromItems = items.find((i) => i.id === pinnedId);
-    const fromDesc = singleItemLine.description?.replace(/^Sale of\s+/i, '').trim();
-    const soldLabel = fromDesc || fromItems?.name || pinnedId;
-    const category = getCategoryForItemType(fromItems?.type ?? ItemType.ARTWORK);
+    const rawLineId = singleItemLine.itemId;
+    const { resolvedId, isKnown } = resolveSingleDirectLineItem(rawLineId, items, saleItemLinkTargets);
+    const displayEntity = isKnown ? items.find((i) => i.id === resolvedId) : undefined;
+    const soldLabel = displayEntity?.name ?? UNKNOWN_SALE_ITEM_LABEL;
+    const syntheticValue = isKnown ? resolvedId : rawLineId;
+    const category = getCategoryForItemType(displayEntity?.type ?? ItemType.ARTWORK);
 
-    const pool = forSale.some((i) => i.id === pinnedId)
+    const pool = forSale.some((i) => i.id === resolvedId)
       ? forSale
-      : [...forSale, ...items.filter((i) => i.id === pinnedId)];
+      : [...forSale, ...(displayEntity ? [displayEntity] : [])];
 
     const base = createDistinctItemOptions(pool, true, sites);
-    const rest = base.filter((o) => o.value !== pinnedId);
+    const rest = base.filter((o) => o.value !== syntheticValue);
     return [
-      { value: pinnedId, label: soldLabel, group: 'Sold items', category },
+      {
+        value: syntheticValue,
+        label: soldLabel,
+        group: isKnown ? 'Sold items' : 'Unknown item',
+        category,
+      },
       ...rest,
     ];
   };
@@ -1060,12 +1182,19 @@ export default function SalesModal({
     const itemLines = collectItemSaleLines(sourceLines);
     const line = itemLines.length === 1 ? itemLines[0] : itemLines.find((l) => l.itemId === selectedItemId);
     if (!line?.itemId) return '';
-    const ent = items.find((i) => i.id === line.itemId);
-    return (
-      line.description?.replace(/^Sale of\s+/i, '').trim() ||
-      ent?.name ||
-      line.itemId
-    );
+    const { isKnown, resolvedId } = resolveSingleDirectLineItem(line.itemId, items, saleItemLinkTargets);
+    if (!isKnown) return UNKNOWN_SALE_ITEM_LABEL;
+    return items.find((i) => i.id === resolvedId)?.name ?? UNKNOWN_SALE_ITEM_LABEL;
+  };
+
+  const getDirectProductSingleItemSelectValue = (): string => {
+    if (whatKind !== 'product' || oneItemMultiple !== 'one') return selectedItemId;
+    const sourceLines = lines.length > 0 ? lines : (sale?.lines || []);
+    const itemLines = collectItemSaleLines(sourceLines);
+    if (itemLines.length !== 1) return selectedItemId;
+    const raw = itemLines[0].itemId;
+    const { resolvedId, isKnown } = resolveSingleDirectLineItem(raw, items, saleItemLinkTargets);
+    return isKnown ? resolvedId : raw;
   };
 
   const getSelectedItem = () => {
@@ -1098,6 +1227,39 @@ export default function SalesModal({
   // Auto-calculate revenue when item is selected
   const handleItemSelection = (itemId: string) => {
     setSelectedItemId(itemId);
+    if (whatKind === 'product' && oneItemMultiple === 'one') {
+      setLines((prev) => {
+        const idx = prev.findIndex((l) => l.kind === 'item');
+        if (idx < 0) {
+          if (!itemId) return prev;
+          return [
+            ...prev,
+            {
+              lineId: uuid(),
+              kind: 'item',
+              itemId,
+              quantity: 1,
+              unitPrice: items.find((i) => i.id === itemId)?.price ?? 0,
+              description: items.find((i) => i.id === itemId)
+                ? `Sale of ${items.find((i) => i.id === itemId)!.name}`
+                : 'Sale line',
+              taxAmount: 0,
+            } as SaleLine,
+          ];
+        }
+        const ex = prev[idx] as ItemSaleLine;
+        const sel = items.find((i) => i.id === itemId);
+        return prev.map((l, i) =>
+          i === idx
+            ? ({
+                ...ex,
+                itemId: itemId || ex.itemId,
+                description: sel ? `Sale of ${sel.name}` : ex.description,
+              } as SaleLine)
+            : l
+        );
+      });
+    }
     if (itemId) {
       const selectedItem = items.find(item => item.id === itemId);
       if (selectedItem) {
@@ -1426,7 +1588,7 @@ export default function SalesModal({
                     <div className="space-y-2">
                       <Label htmlFor="item" className="text-xs">Item</Label>
                       <SearchableSelect
-                        value={selectedItemId}
+                        value={getDirectProductSingleItemSelectValue()}
                         onValueChange={handleItemSelection}
                         options={getItemOptions()}
                         autoGroupByCategory={true}
