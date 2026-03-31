@@ -9,20 +9,17 @@ import NumericInput from '@/components/ui/numeric-input';
 import { Item, Site } from '@/types/entities';
 import {
   createDistinctItemOptions,
-  createDistinctItemOptionsForSite,
-  getCategoryForItemType,
 } from '@/lib/utils/searchable-select-utils';
 import { ClientAPI } from '@/lib/client-api';
 import { Trash2, Plus } from 'lucide-react';
 import { v4 as uuid } from 'uuid';
-import { ItemType, ItemStatus, Collection } from '@/types/enums';
+import { ItemType, ItemStatus } from '@/types/enums';
 
 // Default values for quick-created items
-/** Disambiguate same display name across rows: identity is always `itemId` on the sale line. */
-function soldRowPinLabel(resolved: Item | undefined, itemId: string, qty: number): string {
-  const tail = itemId.length > 8 ? itemId.slice(-8) : itemId;
-  const base = resolved?.name ?? 'Unknown item';
-  return `${base} · …${tail} · qty ${qty}`;
+/** Sold rows show clean display name; id is rendered in a dedicated row below. */
+function soldRowLabel(resolved: Item | undefined, lineName?: string): string {
+  const base = lineName?.trim() || resolved?.name || 'Unknown item';
+  return base;
 }
 
 const ITEM_DEFAULTS = {
@@ -184,42 +181,33 @@ export default function SaleItemsSubModal({
     );
   }, [selectedSiteId, open]);
 
-  // Sold lines first (same value as inventory options so the select resolves to the sold label),
-  // then inventory with those values removed so the dropdown is not duplicated.
+  const isSoldItemId = (id: string): boolean => {
+    return id.includes('-sold-') || id.includes('-manualsold-');
+  };
+
+  const isSoldLine = (line: SaleItemLine): boolean => {
+    if (!line.itemId) return false;
+    if (isSoldItemId(line.itemId)) return true;
+    const resolved = items.find((i) => i.id === line.itemId);
+    if (!resolved) return false;
+    return resolved.status === ItemStatus.SOLD;
+  };
+
+  const soldLines = React.useMemo(
+    () => lines.filter((line) => isSoldLine(line)),
+    [lines, items]
+  );
+
+  const editableLines = React.useMemo(
+    () => lines.filter((line) => !isSoldLine(line)),
+    [lines, items]
+  );
+
+  // Inventory-only options for new selections (no sold items mixed in).
   const rowOptions = React.useMemo(() => {
-    const base = selectedSiteId
-      ? createDistinctItemOptionsForSite(items, selectedSiteId, false, sites, true)
-      : createDistinctItemOptions(items, false, sites, true);
-
-    const soldByValue = new Map<
-      string,
-      { value: string; label: string; group: string; category: string }
-    >();
-
-    for (const line of lines) {
-      if (!line.itemId) continue;
-      const value = `${line.itemId}:${line.siteId || 'none'}`;
-      const resolved = items.find((i) => i.id === line.itemId);
-      const label = soldRowPinLabel(resolved, line.itemId, line.quantity || 0);
-      const category = getCategoryForItemType(
-        resolved?.type ?? ItemType.ARTWORK
-      );
-      if (!soldByValue.has(value)) {
-        soldByValue.set(value, {
-          value,
-          label,
-          group: 'Sold items',
-          category,
-        });
-      }
-    }
-
-    const sold = [...soldByValue.values()];
-    const soldValues = new Set(sold.map((o) => o.value));
-    const rest = base.filter((o) => !soldValues.has(o.value));
-
-    return [...sold, ...rest];
-  }, [items, selectedSiteId, sites, lines]);
+    // Keep one consistent picker mode (normal inventory list with stock brackets).
+    return createDistinctItemOptions(items, false, sites, true);
+  }, [items, sites]);
 
   const handleItemSelect = (lineId: string, rawValue: string) => {
     const [itemId, specificSiteId] = rawValue.split(':');
@@ -369,8 +357,13 @@ export default function SaleItemsSubModal({
     }
   };
 
-  const totalQuantity = lines.reduce((sum, line) => sum + (line.quantity || 0), 0);
-  const totalPrice = lines.reduce((sum, line) => sum + (line.total || 0), 0);
+  /** Lines that actually participate in the sale (excludes blank “add” row with no item). */
+  const quantifiedLines = React.useMemo(
+    () => lines.filter((line) => line.itemId && (line.quantity || 0) > 0),
+    [lines]
+  );
+  const totalQuantity = quantifiedLines.reduce((sum, line) => sum + (line.quantity || 0), 0);
+  const totalPrice = quantifiedLines.reduce((sum, line) => sum + (line.total || 0), 0);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -389,7 +382,7 @@ export default function SaleItemsSubModal({
               <div className="col-span-6">Item</div>
               <div className="col-span-1">Price ($)</div>
               <div className="col-span-1">Calc ($)</div>
-              <div className="col-span-2 flex flex-col justify-center">
+              <div className="col-span-1 flex flex-col justify-center">
                 <span>Calc (₡)</span>
                 <span className="text-[9px] font-normal text-muted-foreground">Rate: {exchangeRate}</span>
               </div>
@@ -398,7 +391,7 @@ export default function SaleItemsSubModal({
               <div className="col-span-1" />
             </div>
 
-            {lines.map((line, index) => {
+            {editableLines.map((line) => {
               // Robust matching logic for composite values (ItemId:SiteId)
               const primaryComposite = `${line.itemId}:${line.siteId || 'none'}`;
 
@@ -464,7 +457,7 @@ export default function SaleItemsSubModal({
                   </div>
 
                   {/* CRC Calculator Input */}
-                  <div className="col-span-2">
+                  <div className="col-span-1">
                     <input
                       type="text"
                       value={line.crcExpression || ''}
@@ -518,6 +511,73 @@ export default function SaleItemsSubModal({
               <Plus className="w-4 h-4 mr-1" />
               Add Item Row
             </Button>
+
+            {soldLines.length > 0 && (
+              <div className="mt-4 border-t border-border/70 pt-3">
+                <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Sold items
+                </div>
+                <div className="grid grid-cols-12 gap-2 px-2 text-xs font-semibold text-muted-foreground">
+                  <div className="col-span-6">Item</div>
+                  <div className="col-span-2">Price ($)</div>
+                  <div className="col-span-1">Qty Sold</div>
+                  <div className="col-span-2">Total ($)</div>
+                  <div className="col-span-1" />
+                </div>
+                <div className="space-y-2">
+                  {soldLines.map((line) => {
+                    const resolved = items.find((i) => i.id === line.itemId);
+                    const displayTotal =
+                      Number.isFinite(line.total) && line.total !== 0
+                        ? line.total
+                        : (line.unitPrice || 0) * (line.quantity || 0);
+                    return (
+                      <div key={`sold-${line.id}`} className="grid grid-cols-12 gap-2">
+                        <div className="col-span-6 min-w-0 space-y-1">
+                          <div
+                            className="flex h-8 items-center rounded-md border bg-muted/40 px-2 py-1 text-xs text-foreground"
+                            title={line.itemId}
+                          >
+                            <span className="min-w-0 truncate">
+                              {soldRowLabel(resolved, line.itemName)}
+                            </span>
+                          </div>
+                          <div className="break-all font-mono text-[10px] leading-snug text-muted-foreground">
+                            {line.itemId}
+                          </div>
+                        </div>
+                        <div className="col-span-2">
+                          <div className="flex h-8 items-center rounded-md border bg-muted px-2 py-1 font-mono text-xs">
+                            ${(line.unitPrice || 0).toFixed(2)}
+                          </div>
+                        </div>
+                        <div className="col-span-1">
+                          <div className="flex h-8 items-center rounded-md border bg-muted px-2 py-1 font-mono text-xs">
+                            {line.quantity || 0}
+                          </div>
+                        </div>
+                        <div className="col-span-2 min-w-0">
+                          <div className="flex h-8 items-center rounded-md border bg-muted px-2 py-1 font-mono text-xs">
+                            ${displayTotal.toFixed(2)}
+                          </div>
+                        </div>
+                        <div className="col-span-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRemoveLine(line.id)}
+                            className="h-8 w-8 p-0 text-red-400 hover:text-red-500 hover:bg-red-50"
+                            disabled={lines.length === 1}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Totals Summary */}

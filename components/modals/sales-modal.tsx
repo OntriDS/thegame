@@ -20,7 +20,7 @@ import { getSubTypesForItemType } from '@/lib/utils/item-utils';
 import type { Station } from '@/types/type-aliases';
 import { CurrencyExchangeRates } from '@/lib/constants/financial-constants';
 import { createSiteOptionsWithCategories } from '@/lib/utils/site-options-utils';
-import { createCharacterOptions, createStationCategoryOptions, createTaskParentOptions, createItemTypeSubTypeOptions, getItemTypeFromCombined, getCategoryFromCombined, getStationFromCombined } from '@/lib/utils/searchable-select-utils';
+import { createStationCategoryOptions, createTaskParentOptions, createItemTypeSubTypeOptions, getItemTypeFromCombined, getCategoryFromCombined, getStationFromCombined } from '@/lib/utils/searchable-select-utils';
 import { getAreaForStation, getSalesChannelFromSaleType } from '@/lib/utils/business-structure-utils';
 import { roundCurrency2 } from '@/lib/utils/financial-utils';
 import { ClientAPI } from '@/lib/client-api';
@@ -48,6 +48,17 @@ function collectItemSaleLines(saleLines: SaleLine[]): ItemSaleLine[] {
 }
 
 const UNKNOWN_SALE_ITEM_LABEL = 'Unknown item';
+
+/** Read-only summary: type/subtype from catalog for `itemId`. */
+function formatItemTypeSubtypeLabel(itemId: string, catalog: Item[]): string {
+  const it = catalog.find((i) => i.id === itemId);
+  if (!it) return '—';
+  const sub =
+    it.subItemType != null && String(it.subItemType).trim() !== ''
+      ? String(it.subItemType)
+      : '';
+  return sub ? `${it.type} / ${sub}` : String(it.type);
+}
 
 function extractSaleItemTargetIds(links: unknown[]): string[] {
   if (!Array.isArray(links)) return [];
@@ -324,6 +335,12 @@ export default function SalesModal({
       }))
     );
   }, [siteId]);
+
+  useEffect(() => {
+    if (whatKind !== 'product') return;
+    const productRevenue = selectedItems.reduce((sum, item) => sum + (item.total || 0), 0);
+    setRevenue(productRevenue);
+  }, [selectedItems, whatKind]);
 
   // Initialize form when sale changes
   useEffect(() => {
@@ -1084,10 +1101,6 @@ export default function SalesModal({
     setPayments(newPayments);
   };
 
-  const getCharacterOptions = () => {
-    return createCharacterOptions(characters);
-  };
-
   const getTaskOptions = () => {
     return tasks
       .filter(task => task.id !== selectedTaskId)
@@ -1178,6 +1191,14 @@ export default function SalesModal({
     setRecordedPayments([...recordedPayments, otherPayment]);
   };
 
+  const selectedItemsSubtotal = selectedItems.reduce((sum, item) => sum + (item.total || 0), 0);
+  // SearchableSelect buckets by `group` when `getCategoryForValue` is not passed (see searchable-select.tsx).
+  // Role = group header; label is name only (no redundant roles in the label text).
+  const customerOptions = characters.map((char) => ({
+    value: char.id,
+    label: char.name,
+    group: char.roles && char.roles.length > 0 ? char.roles[0] : 'Other',
+  }));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -1320,8 +1341,8 @@ export default function SalesModal({
         ) : (
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden border-b border-border/80">
           <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-4">
-            {/* Row 1: Date and Total Amount */}
-            <div className="flex items-center justify-between gap-4">
+            {/* Row 1: Date */}
+            <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
                 <span className="text-sm text-muted-foreground">Date:</span>
                 <div className="min-w-[220px]">
@@ -1329,15 +1350,6 @@ export default function SalesModal({
                     value={saleDate}
                     onChange={(date) => setSaleDate(date || new Date())}
                   />
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">Total Amount:</span>
-                <div className="min-w-[120px] text-lg font-bold text-foreground">
-                  ${whatKind === 'product'
-                    ? (selectedItems.reduce((sum, item) => sum + item.total, 0) - cost - (overallDiscount.amount || 0)).toFixed(2)
-                    : (revenue - cost - (overallDiscount.amount || 0)).toFixed(2)
-                  }
                 </div>
               </div>
             </div>
@@ -1394,7 +1406,7 @@ export default function SalesModal({
                         <SearchableSelect
                           value={customerId || ''}
                           onValueChange={setCustomerId}
-                          options={createCharacterOptions(characters)}
+                          options={customerOptions}
                           autoGroupByCategory={true}
                           placeholder="Select customer"
                           className="h-8 text-sm"
@@ -1426,6 +1438,47 @@ export default function SalesModal({
                         {selectedItems.length > 0 ? `Edit Items (${selectedItems.length})` : 'Add Items'}
                       </Button>
                     </div>
+                    {selectedItems.length > 0 && (
+                      <div className="rounded-md border bg-muted/20 p-2">
+                        <div
+                          className="grid gap-x-2 gap-y-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground"
+                          style={{
+                            gridTemplateColumns: 'minmax(0,1.1fr) minmax(0,1fr) auto auto auto',
+                          }}
+                        >
+                          <div className="truncate">Item</div>
+                          <div className="truncate">Type / Subtype</div>
+                          <div className="text-right">Qty Sold</div>
+                          <div className="text-right">Price</div>
+                          <div className="text-right">Total</div>
+                        </div>
+                        <div className="mt-1 space-y-0.5 border-t border-border/60 pt-1">
+                          {selectedItems.map((row) => (
+                            <div
+                              key={row.id}
+                              className="grid gap-x-2 gap-y-0 text-[11px] text-foreground"
+                              style={{
+                                gridTemplateColumns: 'minmax(0,1.1fr) minmax(0,1fr) auto auto auto',
+                              }}
+                            >
+                              <span className="min-w-0 truncate" title={row.itemName}>
+                                {row.itemName || UNKNOWN_SALE_ITEM_LABEL}
+                              </span>
+                              <span className="min-w-0 truncate text-muted-foreground" title={formatItemTypeSubtypeLabel(row.itemId, items)}>
+                                {formatItemTypeSubtypeLabel(row.itemId, items)}
+                              </span>
+                              <span className="text-right tabular-nums">{row.quantity ?? 0}</span>
+                              <span className="text-right tabular-nums">${(row.unitPrice || 0).toFixed(2)}</span>
+                              <span className="text-right font-medium tabular-nums">${(row.total || 0).toFixed(2)}</span>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="mt-2 flex items-center justify-end gap-2 border-t border-border/60 pt-2">
+                          <span className="text-muted-foreground">Grand Total</span>
+                          <span className="text-xl font-bold tabular-nums text-foreground">${selectedItemsSubtotal.toFixed(2)}</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Column 3: Financial Ambassador Fields */}
@@ -1608,7 +1661,7 @@ export default function SalesModal({
                         <SearchableSelect
                           value={customerId || ''}
                           onValueChange={setCustomerId}
-                          options={createCharacterOptions(characters)}
+                          options={customerOptions}
                           autoGroupByCategory={true}
                           placeholder="Select customer"
                           className="h-8 text-sm"

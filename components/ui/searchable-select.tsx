@@ -89,20 +89,6 @@ export function SearchableSelect({
       groups[group].push({ value: option.value, label: option.label });
     });
 
-    // Automatically add "None" option at the bottom if:
-    // 1. No options exist, OR
-    // 2. No explicit "None" option exists (value is empty string or 'none')
-    const hasNoneOption = options.some(option =>
-      option.value === '' || option.value === 'none' || option.value === 'none:'
-    );
-
-    if (options.length === 0 || !hasNoneOption) {
-      if (!groups['None']) {
-        groups['None'] = [];
-      }
-      groups['None'].push({ value: '', label: 'None' });
-    }
-
     // Filter groups and options based on search query
     if (query) {
       const filteredGroups: Record<string, Array<{ value: string; label: string }>> = {};
@@ -215,7 +201,7 @@ export function SearchableSelect({
             'max-h-[min(50vh,420px)] p-0 pointer-events-auto',
             getZIndexClass('SUPRA_FIELDS'),
             popoverWiden
-              ? 'min-w-[var(--radix-popover-trigger-width)] w-[min(94vw,80rem)] max-w-[min(94vw,80rem)]'
+              ? 'min-w-[var(--radix-popover-trigger-width)] w-[min(90vw,72rem)] max-w-[min(90vw,72rem)]'
               : 'w-full max-w-[var(--radix-popover-trigger-width)]'
           )}
           align="start"
@@ -260,14 +246,7 @@ export function SearchableSelect({
                   )}
                 </div>
               ) : (
-                Object.entries(groupedOptions)
-                  .sort(([a], [b]) => {
-                    // Always put "None" group at the bottom
-                    if (a === 'None') return 1;
-                    if (b === 'None') return -1;
-                    return 0; // Maintain original order for other groups
-                  })
-                  .map(([groupName, groupOptions]) => {
+                Object.entries(groupedOptions).map(([groupName, groupOptions]) => {
                     const isCollapsed = collapsedGroups.has(groupName);
 
                     return (

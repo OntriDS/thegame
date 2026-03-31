@@ -116,20 +116,10 @@ function itemIdSuffix(id: string): string {
     return s.length > 8 ? s.slice(-8) : s;
 }
 
-function isSoldCloneItemId(id: string): boolean {
-    const s = String(id || '');
-    return s.includes('-sold-') || s.includes('-manualsold-');
-}
-
-function totalStockQuantity(item: Item): number {
-    return item.stock?.reduce((sum, s) => sum + (Number(s.quantity) || 0), 0) ?? 0;
-}
-
-/** Sale picker: `[HQ: 12, Eco Feria: 3]` — only sites with qty > 0 */
+/** Sale picker: `[HQ: 12, Eco Feria: 3]`. */
 function formatSalePickerStockBracket(item: Item, sites: Site[]): string {
     if (!item.stock?.length) return '';
     const parts = item.stock
-        .filter((s) => (Number(s.quantity) || 0) > 0)
         .map((s) => {
             const sn = sites.find((x) => x.id === s.siteId)?.name || s.siteId;
             return `${sn}: ${s.quantity}`;
@@ -141,7 +131,8 @@ function formatSalePickerStockBracket(item: Item, sites: Site[]): string {
  * One option per Item entity (no aggregation by name/type).
  * Use for sales and anywhere the exact inventory row must stay stable across saves.
  *
- * `forSaleLinePicker`: sale UI only — hide sold clones and zero-qty rows; label is `Name [Site: qty, …]` (no id tail, no extra `(total)`).
+ * `forSaleLinePicker`: sale UI only — inventory options restricted to `For Sale` status (excluding `Sold`).
+ * Label is `Name [Site: qty, …]` (no id tail, no extra `(total)`).
  */
 export function createDistinctItemOptions(
     items: Item[],
@@ -153,8 +144,8 @@ export function createDistinctItemOptions(
 
     for (const item of items) {
         if (forSaleLinePicker) {
-            if (isSoldCloneItemId(item.id) || item.status === ItemStatus.SOLD) continue;
-            if (totalStockQuantity(item) <= 0) continue;
+            if (item.status === ItemStatus.SOLD) continue;
+            if (item.status !== ItemStatus.FOR_SALE) continue;
         }
 
         const category = getCategoryForItemType(item.type);
@@ -183,76 +174,6 @@ export function createDistinctItemOptions(
             group: item.type,
             category,
         });
-    }
-
-    options.sort((a, b) => a.label.localeCompare(b.label));
-
-    if (includeNone) {
-        options.unshift({ value: 'none', label: 'None', group: 'Other', category: 'Other' });
-    }
-
-    return options;
-}
-
-/**
- * One option per item × stock site row (no aggregation by model).
- * When selectedSiteId is set, only stock rows at that site are listed (plus items with no stock rows).
- *
- * `forSaleLinePicker`: sale UI — no sold clones, no zero-qty rows, no `(no stock row)`; label `Name [SiteName: qty]`.
- */
-export function createDistinctItemOptionsForSite(
-    items: Item[],
-    selectedSiteId: string | null | undefined,
-    includeNone = false,
-    sites: Site[] = [],
-    forSaleLinePicker = false
-): Array<{ value: string; label: string; group: string; category: string }> {
-    const siteMap = new Map(sites.map(s => [s.id, s.name]));
-    const getSiteName = (id: string) => siteMap.get(id) || 'Unknown Site';
-
-    const options: Array<{ value: string; label: string; group: string; category: string }> = [];
-
-    for (const item of items) {
-        if (forSaleLinePicker && (isSoldCloneItemId(item.id) || item.status === ItemStatus.SOLD)) {
-            continue;
-        }
-
-        const category = getCategoryForItemType(item.type);
-        const group = item.type;
-        const tail = itemIdSuffix(item.id);
-        const stock = item.stock || [];
-
-        if (stock.length === 0) {
-            if (forSaleLinePicker) continue;
-            options.push({
-                value: `${item.id}:none`,
-                label: `${item.name} · …${tail} (no stock row)`,
-                group,
-                category,
-            });
-            continue;
-        }
-
-        const rows = selectedSiteId ? stock.filter(sp => sp.siteId === selectedSiteId) : stock;
-        if (selectedSiteId && rows.length === 0) {
-            continue;
-        }
-
-        for (const sp of rows) {
-            if (forSaleLinePicker && (Number(sp.quantity) || 0) <= 0) continue;
-
-            const siteName = getSiteName(sp.siteId);
-            const label = forSaleLinePicker
-                ? `${item.name} [${siteName}: ${sp.quantity}]`
-                : `${item.name} · …${tail} · ${siteName}: ${sp.quantity}`;
-
-            options.push({
-                value: `${item.id}:${sp.siteId}`,
-                label,
-                group,
-                category,
-            });
-        }
     }
 
     options.sort((a, b) => a.label.localeCompare(b.label));
