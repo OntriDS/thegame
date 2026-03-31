@@ -106,6 +106,12 @@ export function LinksSubModal({
 
       const narrowed = linkGroups.activity.filter(link => {
         if (link.linkType !== 'SALE_ITEM' && link.linkType !== 'FINREC_ITEM') return true;
+        // Log timestamp follows sale date; SALE_ITEM / FINREC_ITEM are often created or healed weeks later.
+        // Always keep those edges when this modal is scoped to the item they attach to.
+        const tiesToThisItem =
+          (link.source?.type === EntityType.ITEM && link.source?.id === entityId) ||
+          (link.target?.type === EntityType.ITEM && link.target?.id === entityId);
+        if (tiesToThisItem) return true;
         const ms = getLinkTimestamp(link);
         if (ms === null) return true;
         return Math.abs(ms - eventTime) <= maxDeltaMs;

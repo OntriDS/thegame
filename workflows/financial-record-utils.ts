@@ -523,6 +523,8 @@ async function upsertPrimarySaleFinrecFromSale(
   derived: Awaited<ReturnType<typeof resolveSaleDerivedFinrecFields>>
 ): Promise<FinancialRecord> {
   const now = new Date();
+  const totalRevenue = Number(sale.totals?.totalRevenue ?? 0) || 0;
+  const totalCost = Number(sale.totals?.totalCost ?? 0) || 0;
   const next: FinancialRecord = {
     ...existing,
     name: derived.finrecName,
@@ -535,13 +537,13 @@ async function upsertPrimarySaleFinrecFromSale(
     targetSiteId: existing.targetSiteId,
     sourceSaleId: sale.id,
     salesChannel: derived.salesChannel,
-    cost: 0,
-    revenue: sale.totals.totalRevenue,
+    cost: totalCost,
+    revenue: totalRevenue,
     jungleCoins: existing.jungleCoins ?? 0,
     isNotPaid: !!sale.isNotPaid,
     isNotCharged: !!sale.isNotCharged,
     rewards: undefined,
-    netCashflow: sale.totals.totalRevenue,
+    netCashflow: totalRevenue - totalCost,
     jungleCoinsValue: existing.jungleCoinsValue ?? 0,
     isCollected: existing.isCollected,
     collectedAt: existing.collectedAt,
@@ -680,6 +682,8 @@ export async function createFinancialRecordFromSale(sale: Sale): Promise<Financi
 
     const currentDate = new Date();
     const canonicalId = `finrec-${sale.id}`;
+    const initialRevenue = Number(sale.totals?.totalRevenue ?? 0) || 0;
+    const initialCost = Number(sale.totals?.totalCost ?? 0) || 0;
     const newFinrec: FinancialRecord = {
       id: canonicalId,
       name: derived.finrecName,
@@ -692,13 +696,13 @@ export async function createFinancialRecordFromSale(sale: Sale): Promise<Financi
       targetSiteId: undefined,
       sourceSaleId: sale.id,
       salesChannel: derived.salesChannel,
-      cost: 0,
-      revenue: sale.totals.totalRevenue,
+      cost: initialCost,
+      revenue: initialRevenue,
       jungleCoins: 0,
       isNotPaid: !!sale.isNotPaid,
       isNotCharged: !!sale.isNotCharged,
       rewards: undefined,
-      netCashflow: sale.totals.totalRevenue,
+      netCashflow: initialRevenue - initialCost,
       jungleCoinsValue: 0,
       isCollected: false,
       collectedAt: undefined,
