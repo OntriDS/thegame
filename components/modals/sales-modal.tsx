@@ -339,7 +339,7 @@ export default function SalesModal({
   useEffect(() => {
     if (whatKind !== 'product') return;
     const productRevenue = selectedItems.reduce((sum, item) => sum + (item.total || 0), 0);
-    setRevenue(productRevenue);
+    setRevenue(roundCurrency2(productRevenue));
   }, [selectedItems, whatKind]);
 
   // Initialize form when sale changes
@@ -1141,10 +1141,10 @@ export default function SalesModal({
 
     // Reduce revenue by gift amount
     if (whatKind === 'product') {
-      setRevenue(Math.max(0, revenue - amount));
+      setRevenue(roundCurrency2(Math.max(0, revenue - amount)));
     } else {
       // Service: reduce revenue
-      setRevenue(Math.max(0, revenue - amount));
+      setRevenue(roundCurrency2(Math.max(0, revenue - amount)));
     }
 
     // Set category to Other-Sales
@@ -1192,6 +1192,8 @@ export default function SalesModal({
   };
 
   const selectedItemsSubtotal = selectedItems.reduce((sum, item) => sum + (item.total || 0), 0);
+  const handleCostChange = (value: number) => setCost(roundCurrency2(value));
+  const handleRevenueChange = (value: number) => setRevenue(roundCurrency2(value));
   // SearchableSelect buckets by `group` when `getCategoryForValue` is not passed (see searchable-select.tsx).
   // Role = group header; label is name only (no redundant roles in the label text).
   const customerOptions = characters.map((char) => ({
@@ -1491,7 +1493,7 @@ export default function SalesModal({
                           <NumericInput
                             id="cost"
                             value={cost}
-                            onChange={setCost}
+                            onChange={handleCostChange}
                             min={0}
                             step={1}
                             placeholder="0.00"
@@ -1503,7 +1505,7 @@ export default function SalesModal({
                           <NumericInput
                             id="revenue"
                             value={revenue}
-                            onChange={setRevenue}
+                            onChange={handleRevenueChange}
                             min={0}
                             step={1}
                             placeholder="0.00"
@@ -1763,7 +1765,7 @@ export default function SalesModal({
                           <NumericInput
                             id="cost"
                             value={cost}
-                            onChange={setCost}
+                            onChange={handleCostChange}
                             min={0}
                             step={1}
                             placeholder="0.00"
@@ -1775,7 +1777,7 @@ export default function SalesModal({
                           <NumericInput
                             id="revenue"
                             value={revenue}
-                            onChange={setRevenue}
+                            onChange={handleRevenueChange}
                             min={0}
                             step={1}
                             placeholder="0.00"
