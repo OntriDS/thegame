@@ -570,6 +570,12 @@ async function upsertPrimarySaleFinrecFromSale(
   return saved;
 }
 
+/**
+ * Sync FINREC_ITEM targets from sale line `itemId`s.
+ * Must run against a Sale whose item lines already point at **sold clone** rows when those exist
+ * (`ensureSoldItemEntities` persists that in KV). Early in `onSaleUpsert`, lines still reference
+ * inventory SKUs — `resyncFinrecItemLinksAfterSoldItemClones` runs after clones to correct links.
+ */
 async function syncFinrecItemLinks(finrecId: string, sale: Sale): Promise<void> {
   const desiredItemIds = new Set<string>(
     (sale.lines || [])
@@ -603,6 +609,30 @@ async function syncFinrecItemLinks(finrecId: string, sale: Sale): Promise<void> 
         )
       );
     }
+  }
+}
+
+/**
+ * Re-run FINREC_ITEM sync using the sale row **after** `ensureSoldItemEntities` (clone ids on lines).
+ * Sale-sourced primary finrecs are those linked via SALE_FINREC whose id is not a payout ledger.
+ */
+export async function resyncFinrecItemLinksAfterSoldItemClones(sale: Sale): Promise<void> {
+  const hasItemLines = (sale.lines || []).some(
+    (l): l is ItemSaleLine => l.kind === 'item' && 'itemId' in l && !!l.itemId?.trim()
+  );
+  if (!hasItemLines) return;
+
+  const saleLinks = await getLinksFor({ type: EntityType.SALE, id: sale.id });
+  const finrecTargets = saleLinks.filter(
+    (l) =>
+      l.linkType === LinkType.SALE_FINREC &&
+      l.target.type === EntityType.FINANCIAL &&
+      typeof l.target.id === 'string' &&
+      !l.target.id.includes('payout')
+  );
+
+  for (const l of finrecTargets) {
+    await syncFinrecItemLinks(l.target.id, sale);
   }
 }
 

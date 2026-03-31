@@ -25,6 +25,7 @@ import {
 } from '@/data-store/datastore';
 import { stagePointsForPlayer, removePointsFromPlayer, rewardPointsToPlayer } from '../points-rewards-utils';
 import { processSaleLines, ensureSoldItemEntities } from '../sale-line-utils';
+import { resyncFinrecItemLinksAfterSoldItemClones } from '../financial-record-utils';
 import { updateFinancialRecordsFromSale, updateItemsFromSale, hasRevenueChanged, hasLinesChanged } from '../update-propagation-utils';
 import { createCharacterFromSale } from '../character-creation-utils';
 import { formatMonthKey, calculateClosingDate } from '@/lib/utils/date-utils';
@@ -498,7 +499,10 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
     await ensureSoldItemEntities(sale, previousSale);
     // Lines may now point at sold-item rows in KV; use reloaded sale so SOLD logs attach to those ids, not the first-persist snapshot.
     const saleForItemLogs = await getSaleById(sale.id);
-    await ensureItemSoldLogsFromSale(saleForItemLogs ?? sale);
+    const saleAfterClones = saleForItemLogs ?? sale;
+    // FINREC_ITEM was synced earlier in this same upsert from inventory line ids; align to sold clones.
+    await resyncFinrecItemLinksAfterSoldItemClones(saleAfterClones);
+    await ensureItemSoldLogsFromSale(saleAfterClones);
   }
 
   if (previousSale) {
