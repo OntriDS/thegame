@@ -725,10 +725,7 @@ export default function SalesModal({
     const hasSelectedItems = selectedItems.length > 0;
     const hasAnyProductSelection = hasProductLines || hasProductFields || hasSelectedItems;
 
-    if (!hasAnyProductSelection && !hasServiceSelection) {
-      showValidationError('Please add at least one product (item) or service (task) to the sale.', true);
-      return;
-    }
+    // Allow saving with no items/services for cleanup/testing flows.
 
     let effectiveLines: SaleLine[] = lines;
     if (whatKind === 'product' && selectedItems.length > 0) {
