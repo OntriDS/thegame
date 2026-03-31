@@ -88,6 +88,18 @@ function resolveItemFromLineItemIdOnly(
   return { resolvedId: lid, isKnown: false };
 }
 
+function buildItemLinesFromSelection(items: SaleItemLine[]): SaleLine[] {
+  return items.map(item => ({
+    lineId: item.id || uuid(),
+    kind: 'item',
+    itemId: item.itemId,
+    quantity: item.quantity,
+    unitPrice: item.unitPrice,
+    description: `Sale of ${item.itemName}`,
+    taxAmount: 0,
+  } as SaleLine));
+}
+
 interface SalesModalProps {
   sale?: Sale | null;
   open: boolean;
@@ -2075,7 +2087,12 @@ export default function SalesModal({
         <SaleItemsSubModal
           open={showItemsSubModal}
           onOpenChange={setShowItemsSubModal}
-          onSave={setSelectedItems}
+          onSave={(items) => {
+            setSelectedItems(items);
+            if (whatKind === 'product' && !manualLines) {
+              setLines(items.length > 0 ? buildItemLinesFromSelection(items) : []);
+            }
+          }}
           initialItems={selectedItems}
           defaultSiteId={siteId}
         />
