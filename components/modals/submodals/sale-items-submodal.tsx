@@ -493,7 +493,6 @@ export default function SaleItemsSubModal({
                       size="sm"
                       onClick={() => handleRemoveLine(line.id)}
                       className="h-8 w-8 p-0 text-red-400 hover:text-red-500 hover:bg-red-50"
-                      disabled={lines.length === 1}
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
@@ -567,7 +566,6 @@ export default function SaleItemsSubModal({
                             size="sm"
                             onClick={() => handleRemoveLine(line.id)}
                             className="h-8 w-8 p-0 text-red-400 hover:text-red-500 hover:bg-red-50"
-                            disabled={lines.length === 1}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
