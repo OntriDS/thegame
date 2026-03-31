@@ -341,8 +341,10 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
       return Number.isFinite(t) ? String(t) : '';
     };
 
+    const linesChanged = hasLinesChanged(sale, previousSale);
     // Check if relevant financial drivers changed (Revenue, Fee, Associate, identity, period, etc)
     const hasFinancialDriversChanged =
+      linesChanged ||
       hasRevenueChanged(sale, previousSale) ||
       sale.boothFee !== previousSale.boothFee ||
       sale.associateId !== previousSale.associateId ||
@@ -387,7 +389,7 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
     }
 
     // Propagate to Items (stock updates)
-    if (hasLinesChanged(sale, previousSale)) {
+    if (linesChanged) {
       await updateItemsFromSale(sale, previousSale);
     }
 

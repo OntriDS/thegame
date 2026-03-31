@@ -3,9 +3,9 @@
 
 import type { Task, Item, Sale, FinancialRecord, Character, Player } from '@/types/entities';
 import { EntityType, FOUNDER_CHARACTER_ID, TaskStatus } from '@/types/enums';
-import { hasEffect, markEffect } from '@/data-store/effects-registry';
+import { clearEffect, hasEffect, markEffect } from '@/data-store/effects-registry';
 import { EffectKeys } from '@/data-store/keys';
-import { getFinancialsBySourceTaskId, getFinancialsBySourceSaleId, upsertFinancial } from '@/data-store/datastore';
+import { getFinancialsBySourceTaskId, getFinancialsBySourceSaleId, upsertFinancial, removeFinancial } from '@/data-store/datastore';
 import { getItemsBySourceTaskId, getItemsBySourceRecordId, getItemById, upsertItem, removeItem } from '@/data-store/datastore';
 import { getTaskById, upsertTask } from '@/data-store/datastore';
 import { getPlayerById, upsertPlayer } from '@/data-store/datastore';
@@ -469,7 +469,7 @@ export async function updateFinancialRecordsFromSale(
 
     // STANDARD LOGIC (Non-Booth-Sales): createFinancialRecordFromSale is the single writer
     // (upsert, correct name/month from sale, dedupe legacy duplicates — do not also create from processSaleLines).
-    if (sale.totals.totalRevenue > 0) {
+  if (sale.totals.totalRevenue > 0) {
       await createFinancialRecordFromSale(sale);
       const effectKey = EffectKeys.sideEffect('sale', sale.id, 'financialCreated');
       if (!(await hasEffect(effectKey))) {

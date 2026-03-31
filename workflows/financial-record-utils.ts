@@ -17,7 +17,7 @@ import {
   getSiteById,
 } from '@/data-store/datastore';
 import { makeLink } from '@/links/links-workflows';
-import { createLink, getLinksFor } from '@/links/link-registry';
+import { createLink, getLinksFor, removeLink } from '@/links/link-registry';
 import { appendEntityLog } from './entities-logging';
 import { getFinancialTypeForStation, getSalesChannelFromSaleType } from '@/lib/utils/business-structure-utils';
 import type { Station } from '@/types/type-aliases';
@@ -570,6 +570,42 @@ async function upsertPrimarySaleFinrecFromSale(
   return saved;
 }
 
+async function syncFinrecItemLinks(finrecId: string, sale: Sale): Promise<void> {
+  const desiredItemIds = new Set<string>(
+    (sale.lines || [])
+      .filter((line): line is ItemSaleLine => line.kind === 'item' && 'itemId' in line && !!line.itemId)
+      .map((line) => line.itemId)
+  );
+
+  const links = await getLinksFor({ type: EntityType.FINANCIAL, id: finrecId });
+  const finrecItemLinks = links.filter(
+    (l) =>
+      l.linkType === LinkType.FINREC_ITEM &&
+      l.source.type === EntityType.FINANCIAL &&
+      l.source.id === finrecId &&
+      l.target.type === EntityType.ITEM
+  );
+  const existingItemIds = new Set(finrecItemLinks.map((l) => l.target.id));
+
+  for (const link of finrecItemLinks) {
+    if (!desiredItemIds.has(link.target.id)) {
+      await removeLink(link.id);
+    }
+  }
+
+  for (const itemId of desiredItemIds) {
+    if (!existingItemIds.has(itemId)) {
+      await createLink(
+        makeLink(
+          LinkType.FINREC_ITEM,
+          { type: EntityType.FINANCIAL, id: finrecId },
+          { type: EntityType.ITEM, id: itemId }
+        )
+      );
+    }
+  }
+}
+
 /**
  * Create or update the single primary financial record for a non-booth sale (revenue > 0).
  * Idempotent by sourceSaleId: never creates a second row; dedupes legacy duplicates (keeps oldest).
@@ -600,12 +636,14 @@ export async function createFinancialRecordFromSale(sale: Sale): Promise<Financi
         }
       }
       const saved = await upsertPrimarySaleFinrecFromSale(sale, keeper, derived);
+      await syncFinrecItemLinks(saved.id, sale);
       console.log(`[createFinancialRecordFromSale] ✅ Deduped and updated finrec: ${saved.name}`);
       return saved;
     }
 
     if (nonPayout.length === 1) {
       const saved = await upsertPrimarySaleFinrecFromSale(sale, nonPayout[0]!, derived);
+      await syncFinrecItemLinks(saved.id, sale);
       console.log(`[createFinancialRecordFromSale] ✅ Updated existing finrec: ${saved.name}`);
       return saved;
     }
@@ -650,26 +688,7 @@ export async function createFinancialRecordFromSale(sale: Sale): Promise<Financi
       )
     );
 
-    if (sale.lines && sale.lines.length > 0) {
-      for (const line of sale.lines) {
-        if (line.kind === 'item' && 'itemId' in line && line.itemId) {
-          const itemLine = line as ItemSaleLine;
-          const item = await getItemById(itemLine.itemId);
-          if (item) {
-            await createLink(
-              makeLink(
-                LinkType.FINREC_ITEM,
-                { type: EntityType.FINANCIAL, id: createdFinrec.id },
-                { type: EntityType.ITEM, id: itemLine.itemId }
-              )
-            );
-            console.log(
-              `[createFinancialRecordFromSale] ✅ FINREC_ITEM link: ${item.name} (${itemLine.quantity} @ ${itemLine.unitPrice})`
-            );
-          }
-        }
-      }
-    }
+    await syncFinrecItemLinks(createdFinrec.id, sale);
 
     console.log(`[createFinancialRecordFromSale] ✅ Created finrec and SALE_FINREC: ${createdFinrec.name}`);
     return createdFinrec;
