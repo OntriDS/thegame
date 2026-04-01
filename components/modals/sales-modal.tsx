@@ -373,6 +373,8 @@ export default function SalesModal({
       setIsNotPaid(sale.isNotPaid || false);
       setIsNotCharged(sale.isNotCharged || false);
       setIsCollected(sale.isCollected || false);
+      setCost(roundCurrency2(sale.totals?.totalCost ?? 0));
+      setRevenue(roundCurrency2(sale.totals?.totalRevenue ?? 0));
       setLocalDoneAt(sale.doneAt ? new Date(sale.doneAt) : undefined);
       setLocalCollectedAt(sale.collectedAt ? new Date(sale.collectedAt) : undefined);
       setOverallDiscount(sale.overallDiscount || {});
@@ -858,6 +860,7 @@ export default function SalesModal({
     const totalDiscountR = roundCurrency2(totalDiscount);
     const taxTotalR = roundCurrency2(taxTotal);
     const totalRevenue = roundCurrency2(subtotalR - totalDiscountR + taxTotalR);
+    const totalCost = roundCurrency2(cost);
 
     // Convert recordedPayments (SalePaymentLine[]) to Payment[] format
     const effectivePayments = recordedPayments.length > 0
@@ -907,6 +910,7 @@ export default function SalesModal({
         discountTotal: totalDiscountR,
         taxTotal: taxTotalR,
         totalRevenue,
+        totalCost,
       },
       postedAt: sale?.postedAt,
       doneAt: localDoneAt,

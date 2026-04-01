@@ -26,7 +26,7 @@ import {
 import { stagePointsForPlayer, removePointsFromPlayer, rewardPointsToPlayer } from '../points-rewards-utils';
 import { processSaleLines, ensureSoldItemEntities } from '../sale-line-utils';
 import { resyncFinrecItemLinksAfterSoldItemClones } from '../financial-record-utils';
-import { updateFinancialRecordsFromSale, updateItemsFromSale, hasRevenueChanged, hasLinesChanged } from '../update-propagation-utils';
+import { updateFinancialRecordsFromSale, updateItemsFromSale, hasRevenueChanged, hasCostChanged, hasLinesChanged } from '../update-propagation-utils';
 import { createCharacterFromSale } from '../character-creation-utils';
 import { formatMonthKey, calculateClosingDate } from '@/lib/utils/date-utils';
 import { buildArchiveCollectionIndexKey, buildArchiveMonthsKey } from '@/data-store/keys';
@@ -347,6 +347,7 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
     const hasFinancialDriversChanged =
       linesChanged ||
       hasRevenueChanged(sale, previousSale) ||
+      hasCostChanged(sale, previousSale) ||
       sale.boothFee !== previousSale.boothFee ||
       sale.associateId !== previousSale.associateId ||
       sale.partnerId !== previousSale.partnerId ||

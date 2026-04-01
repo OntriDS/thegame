@@ -709,6 +709,10 @@ export function hasRevenueChanged(newEntity: any, oldEntity: any): boolean {
   return (newEntity.totals?.totalRevenue || 0) !== (oldEntity.totals?.totalRevenue || 0);
 }
 
+export function hasCostChanged(newEntity: any, oldEntity: any): boolean {
+  return (newEntity.totals?.totalCost || 0) !== (oldEntity.totals?.totalCost || 0);
+}
+
 export function hasLinesChanged(newEntity: any, oldEntity: any): boolean {
   return JSON.stringify(newEntity.lines) !== JSON.stringify(oldEntity.lines);
 }
