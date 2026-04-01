@@ -75,16 +75,19 @@ export interface BaseEntity {
   description?: string;
   createdAt: Date;
   updatedAt: Date;
-  links: Link[];            // The Rosetta Stone - Relationship tracking
+  links: Link[];            // optional embedded mirror; source of truth is the link registry
   metadata?: EntityMetadataPayloads; // Strictly-typed Extension Dictionary
 }
 
-/** Link Entity - The Rosetta Stone of Relationships */
+/**
+ * Links system (Rosetta Stone pattern) link row: a **link** between two entities (Oxford: a relationship between two things,
+ * Stored in the link registry; `source` and `target` are the two ends.
+ */
 export interface Link {
-  id: string;               // unique link identifier
-  linkType: LinkType;       // what kind of relationship
-  source: { type: EntityType, id: string };  // source entity
-  target: { type: EntityType, id: string };  // target entity
+  id: string;               // unique link id
+  linkType: LinkType;       // which kind of link (SALE_ITEM, FINREC_SITE, …)
+  source: { type: EntityType, id: string };  // one end of the link
+  target: { type: EntityType, id: string };  // other end of the link
   createdAt: Date;
   updatedAt?: Date;         // optional update timestamp
 }

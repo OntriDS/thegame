@@ -31,10 +31,10 @@ const diagrams: DiagramInfo[] = [
     height: 800
   },
   {
-    id: 'rosetta-stone-architecture',
+    id: 'links-system-architecture',
     name: 'TheGame Rosetta Stone System Architecture',
     fileName: 'TheGame-RossettaStone-System-Architecture.png',
-    description: 'Detailed technical architecture of TheGame system, illustrating the Rosetta Stone pattern, entity relationships, and system components.',
+    description: 'Rosetta Stone (Links system): architecture — a link is a relationship between two entities (Oxford “link”).',
     category: 'architecture',
     width: 1200,
     height: 800

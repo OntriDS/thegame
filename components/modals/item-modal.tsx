@@ -804,7 +804,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         soldAt: localSoldAt ?? item?.soldAt,
         collectedAt: localCollectedAt,
         isCollected: false,
-        links: (item || existingItems.find(i => i.id === selectedItemId))?.links || [],  // Preserve links for Rosetta Stone
+        links: (item || existingItems.find(i => i.id === selectedItemId))?.links || [],  // preserve embedded mirror
       };
 
       // Clear saved form data when item is successfully saved (only for truly new items)

@@ -920,7 +920,7 @@ export default function SalesModal({
       updatedAt: new Date(),
       isCollected: status === SaleStatus.COLLECTED || isCollected,
       collectedAt: localCollectedAt,
-      links: sale?.links || [],  // NEW: Initialize links for Rosetta Stone
+      links: sale?.links || [],  // embedded mirror; registry is source of truth
     };
 
     try {

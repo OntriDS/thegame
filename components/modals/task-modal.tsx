@@ -545,7 +545,7 @@ export default function TaskModal({
       isRecurrentGroup,
       isTemplate,
       outputItemId: isNewItem ? null : (selectedItemId || task?.outputItemId || null),
-      links: task?.links || [],  // Initialize links for Rosetta Stone
+      links: task?.links || [],  // embedded mirror; registry is source of truth
     };
   };
 

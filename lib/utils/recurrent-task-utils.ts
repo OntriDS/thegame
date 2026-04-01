@@ -53,7 +53,7 @@ export function createRecurrentGroup(
     createdAt: new Date(),
     updatedAt: new Date(),
     isCollected: false,
-    links: [] // ✅ Initialize links array (The Rosetta Stone)
+    links: [] // initialize links array
   };
 }
 
@@ -87,7 +87,7 @@ export function createRecurrentTemplate(
     createdAt: new Date(),
     updatedAt: new Date(),
     isCollected: false,
-    links: [] // ✅ Initialize links array (The Rosetta Stone)
+    links: [] // initialize links array
   };
 }
 
@@ -114,7 +114,7 @@ export function spawnRecurrentInstance(
     createdAt: new Date(),
     updatedAt: new Date(),
     order: instanceOrder,
-    links: [] // ✅ Initialize links array (The Rosetta Stone) - new instance gets fresh links
+    links: [] // new instance gets fresh links[]
   };
 }
 

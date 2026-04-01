@@ -210,7 +210,7 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
       createdAt: new Date(),
       updatedAt: new Date(),
       isCollected: false,
-      links: [] // ✅ Initialize links array (The Rosetta Stone)
+      links: [] // initialize links array
     };
     setPrefillTemplateTask(prefill);
     setShowTemplateModal(true);
@@ -250,7 +250,7 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
       createdAt: new Date(),
       updatedAt: new Date(),
       isCollected: false,
-      links: [] // ✅ Initialize links array (The Rosetta Stone)
+      links: [] // initialize links array
     };
     setPrefillMissionTreeTask(prefill);
     setShowMissionTreeModal(true);

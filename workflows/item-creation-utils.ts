@@ -103,7 +103,7 @@ export async function createItemFromTask(task: Task): Promise<Item | null> {
       year: (task.collectedAt || task.doneAt || new Date()).getFullYear(), // Use task's date
       createdAt: new Date(),
       updatedAt: new Date(),
-      links: [],  // Initialize links array (The Rosetta Stone)
+      links: [],  // initialize links array (registry creates real links)
       stock: [
         {
           siteId: (task.targetSiteId && task.targetSiteId !== 'none' ? task.targetSiteId : null) ||
@@ -216,7 +216,7 @@ export async function createItemFromRecord(record: FinancialRecord): Promise<Ite
       year: record.year, // Use record's year
       createdAt: new Date(),
       updatedAt: new Date(),
-      links: [],  // Initialize links array (The Rosetta Stone)
+      links: [],  // initialize links array (registry creates real links)
       stock: [
         {
           siteId: resolvedSiteId, // Default to None (no site) when not provided

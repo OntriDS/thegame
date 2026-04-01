@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -10,8 +10,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Link as LinkIcon, ArrowRight, Network, Trash2 } from 'lucide-react';
 import { Link } from '@/types/entities';
 import { EntityType, LinkType } from '@/types/enums';
-import { getZIndexClass } from '@/lib/utils/z-index-utils';
 import { ClientAPI } from '@/lib/client-api';
+import { getZIndexClass } from '@/lib/utils/z-index-utils';
 
 interface LinksRelationshipsModalProps {
   entity: { type: EntityType; id: string; name?: string };
@@ -144,23 +144,29 @@ export default function LinksRelationshipsModal({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent zIndexLayer="SUB_MODALS" className="max-w-4xl max-h-[80vh]">
+      <DialogContent
+        zIndexLayer="SUB_MODALS"
+        className={`max-w-4xl max-h-[80vh] ${getZIndexClass('SUB_MODALS')}`}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Network className="w-5 h-5" />
-            Relationships for {entity.name || `${entity.type}:${entity.id.slice(0, 8)}`}
+            Links — {entity.name || `${entity.type}:${entity.id.slice(0, 8)}`}
           </DialogTitle>
+          <DialogDescription>
+            Links connect this entity to others. Tabs group links by the type of entity on the other end.
+          </DialogDescription>
         </DialogHeader>
 
         {loading ? (
           <div className="flex items-center justify-center py-8">
-            <div className="text-muted-foreground">Loading relationships...</div>
+            <div className="text-muted-foreground">Loading links…</div>
           </div>
         ) : totalLinks === 0 ? (
           <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
             <Network className="w-12 h-12 mb-4 opacity-20" />
-            <p>No relationships found</p>
-            <p className="text-sm">Links will appear here when entities are connected</p>
+            <p>No links for this entity yet</p>
+            <p className="text-sm">Workflows create links when they connect this row to other entities (e.g. a sale to its items).</p>
           </div>
         ) : (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">

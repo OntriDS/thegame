@@ -1,5 +1,5 @@
 // lib/game-mechanics/directional-workflow.ts
-// Directional Workflow Engine for The Rosetta Stone
+// Directional workflow engine for the Links system (Rosetta Stone pattern)
 
 import { Link } from '../../types/entities';
 import { LinkType, EntityType, SaleStatus } from '../../types/enums';

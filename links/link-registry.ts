@@ -1,5 +1,5 @@
 // links/link-registry.ts
-// The Rosetta Stone storage and query layer (KV only)
+// Links system (Rosetta Stone pattern) — persist and query links (KV). Each link connects exactly two entities.
 import 'server-only';
 
 import { LinkType, EntityType } from '@/types/enums';

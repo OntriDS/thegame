@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { ClientAPI } from '@/lib/client-api';
 import { formatDisplayDate } from '@/lib/utils/date-utils';
 import { buildAdminEntityDeepLink } from '@/lib/utils/entity-admin-deep-links';
+import { getZIndexClass } from '@/lib/utils/z-index-utils';
 
 interface LinksSubModalProps {
   open: boolean;
@@ -15,7 +16,8 @@ interface LinksSubModalProps {
   entityId: string;
   entityName: string;
   links: any[];
-  logEntry?: any; // Optional log entry context for filtering
+  /** Optional: which lifecycle log row opened the modal (subtitle only; list is always full `links[]`). */
+  logEntry?: any;
 }
 
 export function LinksSubModal({ 
@@ -38,7 +40,7 @@ export function LinksSubModal({
     return String(name);
   };
 
-  /** One row per link id — ITEM_SITE matched both legacy “buckets” and appeared twice. */
+  /** One row per link id — avoids duplicate cards for the same link. */
   function dedupeLinksById(list: any[]): any[] {
     const seen = new Set<string>();
     return list.filter((link) => {
@@ -50,90 +52,7 @@ export function LinksSubModal({
     });
   }
 
-  // Get relevant links based on log entry context
-  const getRelevantLinks = () => {
-    if (!logEntry) {
-      return dedupeLinksById(links);
-    }
-
-    const description = logEntry.description || '';
-    const event = String(logEntry.event || '').toLowerCase();
-    const eventLabel = String(description || event).toLowerCase();
-    const timestamp = logEntry.timestamp || logEntry.soldAt || logEntry.collectedAt;
-    const sourceId = (logEntry as any).sourceId as string | undefined;
-
-    // For player logs, we want to show:
-    // 1. What created this link (source entity)
-    // 2. What this link connects to (target entity)
-    // 3. The relationship type (PLAYER_WHAT or WHAT_PLAYER)
-    
-    // Group links by relationship type and show the most relevant ones
-    const linkGroups = {
-      // Activity-based links (dynamic relationships from actions/events)
-      activity: links
-        .filter(link => 
-          link.linkType.includes('TASK') || 
-          link.linkType.includes('FINREC') || 
-          link.linkType.includes('SALE') ||
-          link.linkType.includes('ITEM')
-        )
-        // If the log entry has a sourceId (e.g., WIN_POINTS from task/record/sale),
-        // prioritize showing only the links that match that specific source
-        .filter(link => {
-          if (!sourceId) return true;
-          return link.source?.id === sourceId || link.target?.id === sourceId;
-        }),
-      // Structural links (static organizational relationships)
-      structural: links.filter(link => 
-        link.linkType.includes('ACCOUNT') || 
-        link.linkType.includes('CHARACTER') ||
-        link.linkType.includes('SITE')
-      )
-    };
-
-    // Optional narrowing for item SOLD/COLLECTED events:
-    // keep links whose effective timestamp is near the lifecycle event.
-    if (entityType === EntityType.ITEM && timestamp && (eventLabel.includes('sold') || eventLabel.includes('collected'))) {
-      const eventTime = new Date(timestamp).getTime();
-      const maxDeltaMs = 36 * 60 * 60 * 1000; // 36h tolerance for timezone and backfills
-
-      const getLinkTimestamp = (link: any): number | null => {
-        const candidate = link?.createdAt;
-        if (!candidate) return null;
-        const ms = new Date(candidate).getTime();
-        return Number.isFinite(ms) ? ms : null;
-      };
-
-      const narrowed = linkGroups.activity.filter(link => {
-        if (link.linkType !== 'SALE_ITEM' && link.linkType !== 'FINREC_ITEM') return true;
-        // Log timestamp follows sale date; SALE_ITEM / FINREC_ITEM are often created or healed weeks later.
-        // Always keep those edges when this modal is scoped to the item they attach to.
-        const tiesToThisItem =
-          (link.source?.type === EntityType.ITEM && link.source?.id === entityId) ||
-          (link.target?.type === EntityType.ITEM && link.target?.id === entityId);
-        if (tiesToThisItem) return true;
-        const ms = getLinkTimestamp(link);
-        if (ms === null) return true;
-        return Math.abs(ms - eventTime) <= maxDeltaMs;
-      });
-
-      if (narrowed.length > 0) {
-        linkGroups.activity = narrowed;
-      }
-    }
-
-    let merged: any[];
-    if (eventLabel.includes('created')) {
-      merged = [...linkGroups.structural, ...linkGroups.activity];
-    } else if (eventLabel.includes('updated') || eventLabel.includes('points') || eventLabel.includes('completed') || eventLabel.includes('done')) {
-      merged = [...linkGroups.activity, ...linkGroups.structural];
-    } else {
-      merged = [...linkGroups.activity, ...linkGroups.structural];
-    }
-    return dedupeLinksById(merged);
-  };
-
-  const relevantLinks = getRelevantLinks();
+  const displayLinks = dedupeLinksById(links);
 
   // Debug logging removed
 
@@ -192,26 +111,35 @@ export function LinksSubModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent zIndexLayer={'SUB_MODALS'} className="max-w-6xl max-h-[90vh]">
+      <DialogContent
+        zIndexLayer={'SUB_MODALS'}
+        className={`max-w-6xl max-h-[90vh] ${getZIndexClass('SUB_MODALS')}`}
+      >
         <DialogHeader>
           <DialogTitle className="text-xl flex items-center gap-2">
-            <span>Entity Relationships</span>
+            <span>Links</span>
             <span className="text-sm text-muted-foreground font-normal">
-              ({relevantLinks.length} links)
+              ({displayLinks.length} links)
             </span>
           </DialogTitle>
           <DialogDescription>
-            {logEntry ? `Links related to: ${resolveLogTitle()}` : 'Relationships for this entity'}
+            Each row is one link: a connection between this entity and another. For a chronological history, use this
+            entity&apos;s lifecycle log.
+            {logEntry ? (
+              <span className="block mt-1 text-muted-foreground">
+                Opened from log: {resolveLogTitle()}
+              </span>
+            ) : null}
           </DialogDescription>
         </DialogHeader>
         
         <div className="space-y-4 max-h-[60vh] overflow-y-auto overflow-x-hidden">
-          {relevantLinks.length > 0 ? (
+          {displayLinks.length > 0 ? (
             <div className="space-y-4">
               <div>
-                <h4 className="text-sm font-medium text-muted-foreground mb-2">Connections</h4>
+                <h4 className="text-sm font-medium text-muted-foreground mb-2">Links</h4>
                 <div className="space-y-2">
-                  {relevantLinks.map((link) => (
+                  {displayLinks.map((link) => (
                     <LinkCard
                       key={link.id}
                       link={link}
@@ -223,14 +151,9 @@ export function LinksSubModal({
             </div>
           ) : (
             <div className="text-center py-8 text-muted-foreground">
-              <p className="text-sm">
-                {logEntry ? 'No relevant links for this event' : 'No Links found'}
-              </p>
+              <p className="text-sm">No links for this entity yet</p>
               <p className="text-xs mt-1">
-                {logEntry 
-                  ? 'This event may not have created specific entity relationships'
-                  : `Links are created automatically when you save this ${entityType}`
-                }
+                Saving a {entityType} or related workflows creates links (e.g. sale → item, sale → financial).
               </p>
             </div>
           )}
@@ -343,10 +266,10 @@ function LinkCard({
         />
       </div>
       
-      {/* Relationship Type - Compact Footer */}
+      {/* Arrow / endpoint pattern (link type is in the badge above) */}
       <div className="mt-2 text-xs text-muted-foreground flex items-center justify-between">
         <span className="truncate">
-          <span className="font-medium">Relationship:</span> {relationship.type}
+          <span className="font-medium">Direction:</span> {relationship.type}
         </span>
         {link.createdAt && (
           <span className="text-xs text-muted-foreground shrink-0 ml-2">

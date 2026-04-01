@@ -39,7 +39,7 @@ const diagrams: Diagram[] = [
         name: 'System Architecture',
         icon: <Cpu className="h-5 w-5" />,
         imagePath: '/diagrams/TheGame-RossettaStone-System-Architecture.png',
-        description: 'Detailed technical architecture and entity relationships.'
+        description: 'Rosetta Stone (Links system): entities and how they connect via links.'
     },
     // Placeholders for future diagrams based on common icons
     {

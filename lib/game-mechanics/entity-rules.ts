@@ -1,11 +1,10 @@
-// lib/core/entity-rules.ts
-// The Core Game Mechanics - Entity Rules Engine
-// This is the heart of The Rosetta Stone system
+// lib/game-mechanics/entity-rules.ts
+// Core entity rules — includes the Links system (Rosetta Stone pattern) rules.
 
 import { Link } from '../../types/entities';
 import { LinkType, EntityType } from '../../types/enums';
 
-/** Link Registry Interface - The Rosetta Stone of Relationships */
+/** Links system (Rosetta Stone pattern) link registry contract (create / query / remove links). */
 export interface LinkRegistry {
   createLink(link: Link): Promise<void>;
   getLinksFor(entity: {type: EntityType, id: string}): Promise<Link[]>;
@@ -15,7 +14,7 @@ export interface LinkRegistry {
   getRelationshipGraph(entityId: string, entityType?: EntityType): Promise<RelationshipGraph>;
 }
 
-/** Relationship Graph for visualization */
+/** Links attached to one entity (incoming/outgoing), for inspection or UI. */
 export interface RelationshipGraph {
   entityId: string;
   entityType: EntityType;

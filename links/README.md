@@ -1,18 +1,15 @@
 # Links System - Canonical Patterns
 
-## Link Creation Pattern
+## Link creation
 
-**ALWAYS use this pattern for creating links:**
+Use the link registry only (Rosetta Stone). Do **not** write duplicate rows to any separate “link log” lists.
 
 ```typescript
-const link = makeLink(linkType, source, target, metadata);
+const link = makeLink(linkType, source, target);
 await createLink(link);
-await appendLinkLog(link, 'created');
 ```
 
-## Entity Processing Flow
-
-**Standard flow for all entities:**
+## Entity processing flow
 
 ```
 DataStore.upsertX → onXUpsert → processLinkEntity(saved, EntityType.X)
@@ -30,6 +27,6 @@ All links are validated via `validateLink()` before creation in `link-registry.t
 
 ## Notes
 
-- Links are created by `processLinkEntity()` - the universal entry point
+- Links are created by `processLinkEntity()` — the universal entry point
 - Business logic utils should be pure and not create links directly
-- All link creation follows the makeLink + createLink + appendLinkLog pattern
+- Historical monthly KV lists under `thegame:logs:links:*` are obsolete; if any remain in Redis, delete them during DB cleanup (they are not read by the app anymore)

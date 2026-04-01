@@ -543,7 +543,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
       isSold: outputItemStatus === ItemStatus.SOLD,
       netCashflow: formData.revenue - formData.cost,
       jungleCoinsValue: formData.jungleCoins * J$_TO_USD_RATE,
-      links: record?.links || [],  // Initialize links for Rosetta Stone
+      links: record?.links || [],  // embedded mirror; registry is source of truth
     };
 
     // Save user preferences

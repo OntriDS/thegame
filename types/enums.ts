@@ -567,7 +567,7 @@ export enum CommColor {
 // LINK & ENTITY ENUMS
 // ============================================================================
 
-/** Link Types - The Rosetta Stone Communication Pattern */
+/** Link types (Rosetta Stone / Links system) — each value names one kind of link between two entities. */
 export enum LinkType {
   // TASK relationships
   TASK_ITEM = 'TASK_ITEM',      // Task created Item
@@ -641,7 +641,7 @@ export enum LinkType {
 export enum EntityType {
   // ULTRA ENTITIES - System Foundation
   ACCOUNT = 'account',       // Accounts entity for authentication login and are character and player linked
-  LINK = 'link',          // Links entity for tracking relationships between entities
+  LINK = 'link',          // link rows that connect other entities
 
   // CORE ENTITIES - Business Logic
   TASK = 'task',            // Tasks Missions, Milestones, Goals, Assignments, and Recurrents Tree

@@ -2,7 +2,7 @@
  * IAM Service
  * Manages Accounts (identity/credentials) and authentication.
  * Characters are NOT stored in IAM — they live in the Game Data-Store.
- * ACCOUNT_CHARACTER + CHARACTER_PLAYER / PLAYER_CHARACTER Rosetta links bridge identity.
+ * ACCOUNT_CHARACTER + CHARACTER_PLAYER / PLAYER_CHARACTER links bridge identity.
  * Players live only in the Game Data-Store (`thegame:data:player:*`), not `iam:player:*`.
  */
 

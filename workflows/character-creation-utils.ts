@@ -51,7 +51,7 @@ export async function createCharacterFromEntity(
       isActive: true,
       createdAt: new Date(),
       updatedAt: new Date(),
-      links: []  // Initialize links array (The Rosetta Stone)
+      links: []  // initialize links array
     };
     
     // Store the character in DataStore

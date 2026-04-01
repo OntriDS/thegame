@@ -1,5 +1,5 @@
 // links/link-validation.ts
-// Link Validation System for The Rosetta Stone
+// Links system (Rosetta Stone pattern) — validation for allowed source/target pairs per LinkType
 // Migrated from lib/game-mechanics/workflow-integration.ts
 
 import { LinkType, EntityType } from '@/types/enums';

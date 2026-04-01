@@ -263,7 +263,7 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
         createdAt: new Date(),
         updatedAt: new Date(),
         isCollected: false,
-        links: [] // ✅ Initialize links array (The Rosetta Stone)
+        links: [] // initialize links array
       };
     }));
 

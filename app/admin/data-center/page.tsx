@@ -20,7 +20,7 @@ import { CharacterLogTab } from '@/components/data-center/character-log-tab';
 import { PlayerLogTab } from '@/components/data-center/player-log-tab';
 import { SalesLogTab } from '@/components/data-center/sales-log-tab';
 import { SitesLogTab } from '@/components/data-center/sites-log-tab';
-import { LinksLogTab } from '@/components/data-center/links-log-tab';
+import { LinksTab } from '@/components/data-center/links-tab';
 import { deduplicateTasksLog } from '@/lib/utils/logging-utils';
 import { sortMonthKeys, getCurrentMonthKey } from '@/lib/utils/date-utils';
 
@@ -215,7 +215,7 @@ export default function DataCenterPage() {
           </TabsTrigger>
           <TabsTrigger value="links-debug" className="flex items-center gap-2">
             <LinkIcon className="h-4 w-4" />
-            Link graph
+            Links Graph
           </TabsTrigger>
         </TabsList>
 
@@ -282,9 +282,9 @@ export default function DataCenterPage() {
           />
         </TabsContent>
 
-        {/* Current link edges (KV graph), not monthly entity lifecycle logs */}
+        {/* All links in the link registry (KV), not entity lifecycle logs */}
         <TabsContent value="links-debug" className="space-y-4">
-          <LinksLogTab
+          <LinksTab
             onReload={handleReloadLogs}
             isReloading={isReloading}
           />

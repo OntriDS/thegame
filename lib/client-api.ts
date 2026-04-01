@@ -426,28 +426,6 @@ export const ClientAPI = {
     return await res.json();
   },
 
-  getLinkLogs: async (params?: { month?: string; start?: number; count?: number }): Promise<any[]> => {
-    const query = new URLSearchParams({ includeLogs: '1' });
-    if (params?.month) query.set('month', params.month);
-    if (typeof params?.start === 'number') query.set('start', String(params.start));
-    if (typeof params?.count === 'number') query.set('count', String(params.count));
-    const res = await fetch(`/api/links?${query.toString()}`);
-    if (!res.ok) {
-      console.error('Failed to fetch link logs');
-      return [];
-    }
-    return await res.json();
-  },
-
-  getLinkLogMonths: async (): Promise<string[]> => {
-    const res = await fetch('/api/links?includeLogMonths=1');
-    if (!res.ok) {
-      console.error('Failed to fetch link log months');
-      return [];
-    }
-    return await res.json();
-  },
-
   createLink: async (link: any): Promise<{ success: boolean }> => {
     const res = await fetch('/api/links', {
       method: 'POST',
