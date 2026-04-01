@@ -201,11 +201,14 @@ function SalesPageContent() {
         netProfit = grossRevenue - cost;
       }
     } else {
+      const hasExplicitCost = typeof sale.totals?.totalCost === 'number';
+      const explicitCost = Number(sale.totals?.totalCost ?? 0) || 0;
+
       // General service costs
       const serviceLineCosts = sale.lines
         .filter(l => l.kind === 'service' && (l as any).taskCost)
         .reduce((sum, l) => sum + ((l as any).taskCost || 0), 0);
-      cost = serviceLineCosts;
+      cost = hasExplicitCost ? explicitCost : serviceLineCosts;
       netProfit = grossRevenue - cost;
     }
 

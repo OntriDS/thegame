@@ -1286,9 +1286,8 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(fun
                     onSave={(selectedItems) => {
                         // Convert SaleItemLine from submodal to ItemSaleLine for our lines
                         const newLines: SaleLine[] = selectedItems.map(saleItem => ({
-                            lineId: uuid(), // Generate new ID or keep existing? Submodal generates new IDs, we accept them.
-                            // Actually, submodal returns SaleItemLine with an ID, but we usually regen on save or we can reuse.
-                            // Let's create new ItemSaleLines.
+                            // Preserve existing line ids to keep stock/clone effects idempotent.
+                            lineId: saleItem.id || uuid(),
                             kind: 'item',
                             itemId: saleItem.itemId,
                             unitPrice: saleItem.unitPrice,

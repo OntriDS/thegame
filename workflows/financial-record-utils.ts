@@ -831,9 +831,9 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
         revenue: split.myCommFromAssoc,
         cost: split.assocCommFromMe,
         netCashflow: split.myCommFromAssoc - split.assocCommFromMe,
-        status: (sale.status !== SaleStatus.PENDING) ? FinancialStatus.DONE : FinancialStatus.PENDING,
-        isNotPaid: sale.status !== SaleStatus.CHARGED,
-        isNotCharged: false,
+        status: (!sale.isNotPaid && !sale.isNotCharged || sale.isCollected) ? FinancialStatus.DONE : FinancialStatus.PENDING,
+        isNotPaid: sale.isNotPaid || false,
+        isNotCharged: sale.isNotCharged || false,
         updatedAt: new Date(),
         createdAt: payoutRecord?.createdAt || new Date(),
         links: payoutRecord?.links || []
