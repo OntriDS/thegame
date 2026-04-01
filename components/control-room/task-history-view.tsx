@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { MonthSelector } from '@/components/ui/month-selector';
 import { getCurrentMonthKey, sortMonthKeys } from '@/lib/utils/date-utils';
 import { format } from 'date-fns';
-import { Loader2, Calendar, ChevronRight, FolderOpen } from 'lucide-react';
+import { Loader2, Calendar, ChevronRight, FolderOpen, ArrowUpDown } from 'lucide-react';
 import { reviveDates } from '@/lib/utils/date-utils';
 import { TASK_TYPE_ICONS } from '@/lib/constants/app-constants';
 import { TaskType, TaskStatus } from '@/types/enums';
@@ -100,8 +100,62 @@ function TaskHistoryDoneCollectedLine({ task }: { task: Task | EnrichedTask }) {
     );
 }
 
+// Sort orphan tasks by the selected criteria
+const sortOrphanTasks = (tasks: EnrichedTask[], sortOption: TaskHistorySort): EnrichedTask[] => {
+    const sortedTasks = [...tasks];
+    if (sortOption === 'done-date') {
+        return sortedTasks.sort((a, b) => {
+            const dateA = new Date(a.doneAt || 0).getTime();
+            const dateB = new Date(b.doneAt || 0).getTime();
+            return dateB - dateA; // Newest first
+        });
+    } else {
+        // name-asc
+        return sortedTasks.sort((a, b) => {
+            const nameA = (a as any)?.name?.toString()?.toLowerCase() || '';
+            const nameB = (b as any)?.name?.toString()?.toLowerCase() || '';
+            return nameA.localeCompare(nameB);
+        });
+    }
+};
+
+// Sort parent groups and child tasks within each group
+const sortGroupedTasks = (groupedTasks: Map<string, EnrichedTask[]>, sortOption: TaskHistorySort): Array<[string, EnrichedTask[]]> => {
+    const entries = Array.from(groupedTasks.entries());
+
+    if (sortOption === 'done-date') {
+        // Sort by parent done date (use first child's done date as proxy for parent)
+        return entries.sort(([parentNameA, childTasksA], [parentNameB, childTasksB]) => {
+            const doneDateA = childTasksA.length > 0 ? new Date(childTasksA[0].doneAt || 0).getTime() : 0;
+            const doneDateB = childTasksB.length > 0 ? new Date(childTasksB[0].doneAt || 0).getTime() : 0;
+            return doneDateB - doneDateA; // Newest parent first
+        }).map(([parentName, childTasks]) => {
+            // Sort child tasks within each parent group by done date
+            const sortedChildren = [...childTasks].sort((a, b) => {
+                const doneDateA = new Date(a.doneAt || 0).getTime();
+                const doneDateB = new Date(b.doneAt || 0).getTime();
+                return doneDateB - doneDateA; // Newest first
+            });
+            return [parentName, sortedChildren];
+        });
+    } else {
+        // name-asc: Sort by parent name, then by child names within each group
+        return entries.sort(([parentNameA], [parentNameB]) => {
+            return parentNameA.localeCompare(parentNameB);
+        }).map(([parentName, childTasks]) => {
+            // Sort child tasks within each parent group by name
+            const sortedChildren = [...childTasks].sort((a, b) => {
+                const nameA = (a as any)?.name?.toString()?.toLowerCase() || '';
+                const nameB = (b as any)?.name?.toString()?.toLowerCase() || '';
+                return nameA.localeCompare(nameB);
+            });
+            return [parentName, sortedChildren];
+        });
+    }
+};
+
 // Render tasks with hierarchy and parent trails
-function renderTaskHierarchy(tasks: EnrichedTask[], onSelectTask?: (task: Task) => void): JSX.Element {
+function renderTaskHierarchy(tasks: EnrichedTask[], onSelectTask?: (task: Task) => void, sortOption: TaskHistorySort): JSX.Element {
     // Group tasks by immediate parent
     const groupedTasks = new Map<string, EnrichedTask[]>();
     const orphanTasks: EnrichedTask[] = [];
@@ -122,6 +176,10 @@ function renderTaskHierarchy(tasks: EnrichedTask[], onSelectTask?: (task: Task) 
         }
     });
 
+    // Apply sorting to both orphan tasks and grouped tasks
+    const sortedOrphanTasks = sortOrphanTasks(orphanTasks, sortOption);
+    const sortedGroupedTasks = sortGroupedTasks(groupedTasks, sortOption);
+
     return (
         <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-2">
             {groupedTasks.size === 0 && orphanTasks.length === 0 ? (
@@ -131,7 +189,7 @@ function renderTaskHierarchy(tasks: EnrichedTask[], onSelectTask?: (task: Task) 
             ) : (
                 <>
                     {/* Orphaned tasks at top level */}
-                    {orphanTasks.map((task) => {
+                    {sortedOrphanTasks.map((task) => {
                         const Icon = TASK_TYPE_ICONS[task.type as TaskType] || TASK_TYPE_ICONS[TaskType.ASSIGNMENT];
                         return (
                             <Card
@@ -156,7 +214,7 @@ function renderTaskHierarchy(tasks: EnrichedTask[], onSelectTask?: (task: Task) 
                     })}
 
                     {/* Grouped tasks with parent headers */}
-                    {Array.from(groupedTasks.entries()).map(([parentName, childTasks]) => {
+                    {sortedGroupedTasks.map(([parentName, childTasks]) => {
                         return (
                             <div key={parentName} className="space-y-2 mb-4">
                                 {/* True Parent Header */}
@@ -213,12 +271,15 @@ interface AvailableMonth {
     };
 }
 
+export type TaskHistorySort = 'done-date' | 'name-asc';
+
 export default function TaskHistoryView({ onSelectTask, refreshKey = 0 }: TaskHistoryViewProps) {
     const [availableMonths, setAvailableMonths] = useState<string[]>([]);
     const [selectedMonthKey, setSelectedMonthKey] = useState(getCurrentMonthKey());
     const [tasks, setTasks] = useState<Task[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [isLoadingMonths, setIsLoadingMonths] = useState(true);
+    const [sortOption, setSortOption] = useState<TaskHistorySort>('done-date');
     // Load available months
     useEffect(() => {
         const loadMonths = async () => {
@@ -304,12 +365,27 @@ export default function TaskHistoryView({ onSelectTask, refreshKey = 0 }: TaskHi
                             </div>
                         </div>
                     )}
-                    
-                    <MonthSelector
-                        selectedMonth={selectedMonthKey}
-                        availableMonths={availableMonths}
-                        onChange={setSelectedMonthKey}
-                    />
+
+                    <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1 text-xs">
+                            <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+                            <Select value={sortOption} onValueChange={(value: TaskHistorySort) => setSortOption(value)}>
+                                <SelectTrigger className="w-36 h-8">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="done-date">Done Date</SelectItem>
+                                    <SelectItem value="name-asc">Name A-Z</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <MonthSelector
+                            selectedMonth={selectedMonthKey}
+                            availableMonths={availableMonths}
+                            onChange={setSelectedMonthKey}
+                        />
+                    </div>
                 </div>
             </div>
 
@@ -320,7 +396,7 @@ export default function TaskHistoryView({ onSelectTask, refreshKey = 0 }: TaskHi
                         <p className="text-sm text-muted-foreground animate-pulse">Rebuilding hierarchy...</p>
                     </div>
                 ) : (
-                    renderTaskHierarchy(tasks, onSelectTask)
+                    renderTaskHierarchy(tasks, onSelectTask, sortOption)
                 )}
             </div>
         </div>

@@ -4,10 +4,88 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useEntityUpdates } from '@/lib/hooks/use-entity-updates';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ClientAPI } from '@/lib/client-api';
 import { FinancialRecord } from '@/types/entities';
 import { formatMonthYear, reviveDates } from '@/lib/utils/date-utils';
 import FinancialsModal from '@/components/modals/financials-modal';
+import { ArrowUpDown } from 'lucide-react';
+
+export type FinancialSortOption =
+  | 'date-newest'
+  | 'date-oldest'
+  | 'name-asc'
+  | 'name-desc'
+  | 'station-asc'
+  | 'station-desc'
+  | 'profit-high'
+  | 'profit-low';
+
+// Sort financial records by selected criteria
+const sortFinancialRecords = (records: FinancialRecord[], sortOption: FinancialSortOption): FinancialRecord[] => {
+  const sortedRecords = [...records];
+
+  switch (sortOption) {
+    case 'date-newest':
+      return sortedRecords.sort((a, b) => {
+        const dateA = new Date(a.createdAt).getTime();
+        const dateB = new Date(b.createdAt).getTime();
+        return dateB - dateA;
+      });
+
+    case 'date-oldest':
+      return sortedRecords.sort((a, b) => {
+        const dateA = new Date(a.createdAt).getTime();
+        const dateB = new Date(b.createdAt).getTime();
+        return dateA - dateB;
+      });
+
+    case 'name-asc':
+      return sortedRecords.sort((a, b) => {
+        const nameA = (a.name || '').toLowerCase();
+        const nameB = (b.name || '').toLowerCase();
+        return nameA.localeCompare(nameB);
+      });
+
+    case 'name-desc':
+      return sortedRecords.sort((a, b) => {
+        const nameA = (a.name || '').toLowerCase();
+        const nameB = (b.name || '').toLowerCase();
+        return nameB.localeCompare(nameA);
+      });
+
+    case 'station-asc':
+      return sortedRecords.sort((a, b) => {
+        const stationA = (a.station || '').toLowerCase();
+        const stationB = (b.station || '').toLowerCase();
+        return stationA.localeCompare(stationB);
+      });
+
+    case 'station-desc':
+      return sortedRecords.sort((a, b) => {
+        const stationA = (a.station || '').toLowerCase();
+        const stationB = (b.station || '').toLowerCase();
+        return stationB.localeCompare(stationA);
+      });
+
+    case 'profit-high':
+      return sortedRecords.sort((a, b) => {
+        const profitA = (a.revenue || 0) - (a.cost || 0);
+        const profitB = (b.revenue || 0) - (b.cost || 0);
+        return profitB - profitA;
+      });
+
+    case 'profit-low':
+      return sortedRecords.sort((a, b) => {
+        const profitA = (a.revenue || 0) - (a.cost || 0);
+        const profitB = (b.revenue || 0) - (b.cost || 0);
+        return profitA - profitB;
+      });
+
+    default:
+      return sortedRecords;
+  }
+};
 
 // Company Records List Component
 export function CompanyRecordsList({
@@ -29,6 +107,7 @@ export function CompanyRecordsList({
 }) {
   const [records, setRecords] = useState<FinancialRecord[]>([]);
   const [recordToEdit, setRecordToEdit] = useState<FinancialRecord | null>(null);
+  const [sortOption, setSortOption] = useState<FinancialSortOption>('date-newest');
 
   useEffect(() => {
     if (!deepLinkRecord || deepLinkRecord.type !== 'company') return;
@@ -45,12 +124,12 @@ export function CompanyRecordsList({
       } else {
         companyRecords = await ClientAPI.getFinancialRecordsByMonth(year, month, 'company');
       }
-      // Sort by creation date descending (newest first)
-      companyRecords.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      setRecords(companyRecords);
+      // Apply sorting
+      const sortedRecords = sortFinancialRecords(companyRecords, sortOption);
+      setRecords(sortedRecords);
     };
     loadRecords();
-  }, [year, month]);
+  }, [year, month, sortOption]);
 
   // Listen for financial record updates to refresh the list
   useEntityUpdates('financial', () => {
@@ -62,8 +141,9 @@ export function CompanyRecordsList({
       } else {
         companyRecords = await ClientAPI.getFinancialRecordsByMonth(year, month, 'company');
       }
-      companyRecords.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      setRecords(companyRecords);
+      // Apply sorting
+      const sortedRecords = sortFinancialRecords(companyRecords, sortOption);
+      setRecords(sortedRecords);
     };
     loadRecords();
   });
@@ -79,7 +159,30 @@ export function CompanyRecordsList({
           <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
           <p className="text-xs text-muted-foreground">Loading company records...</p>
         </div>
-      ) : records.length === 0 ? (
+      ) : (
+        <>
+          <div className="flex items-center gap-2 mb-4">
+            <div className="flex items-center gap-2 text-xs">
+              <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+              <Select value={sortOption} onValueChange={(value: FinancialSortOption) => setSortOption(value)}>
+                <SelectTrigger className="w-48 h-8">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="date-newest">Date: Newest First</SelectItem>
+                  <SelectItem value="date-oldest">Date: Oldest First</SelectItem>
+                  <SelectItem value="name-asc">Name: A-Z</SelectItem>
+                  <SelectItem value="name-desc">Name: Z-A</SelectItem>
+                  <SelectItem value="station-asc">Station: A-Z</SelectItem>
+                  <SelectItem value="station-desc">Station: Z-A</SelectItem>
+                  <SelectItem value="profit-high">Profit: Highest First</SelectItem>
+                  <SelectItem value="profit-low">Profit: Lowest First</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {records.length === 0 ? (
         <Card>
           <CardContent className="text-center py-8">
             <p className="text-muted-foreground">
@@ -169,7 +272,9 @@ export function CompanyRecordsList({
                   finalRecord.month,
                   'company'
                 );
-                setRecords(companyRecords);
+                // Apply sorting
+                const sortedRecords = sortFinancialRecords(companyRecords, sortOption);
+                setRecords(sortedRecords);
                 onRecordUpdated();
                 setRecordToEdit(finalRecord);
               }}
@@ -180,19 +285,19 @@ export function CompanyRecordsList({
                   r.month,
                   'company'
                 );
-                setRecords(companyRecords);
+                // Apply sorting
+                const sortedRecords = sortFinancialRecords(companyRecords, sortOption);
+                setRecords(sortedRecords);
                 onRecordUpdated();
                 setRecordToEdit(null);
               }}
             />
-          )}
-        </div>
-      )}
+      </>
     </>
   );
 }
 
-// Personal Records List Component  
+// Personal Records List Component
 export function PersonalRecordsList({
   year,
   month,
@@ -212,6 +317,7 @@ export function PersonalRecordsList({
 }) {
   const [records, setRecords] = useState<FinancialRecord[]>([]);
   const [recordToEdit, setRecordToEdit] = useState<FinancialRecord | null>(null);
+  const [sortOption, setSortOption] = useState<FinancialSortOption>('date-newest');
 
   useEffect(() => {
     if (!deepLinkRecord || deepLinkRecord.type !== 'personal') return;
@@ -228,10 +334,12 @@ export function PersonalRecordsList({
       } else {
         personalRecords = await ClientAPI.getFinancialRecordsByMonth(year, month, 'personal');
       }
-      setRecords(personalRecords);
+      // Apply sorting
+      const sortedRecords = sortFinancialRecords(personalRecords, sortOption);
+      setRecords(sortedRecords);
     };
     loadRecords();
-  }, [year, month]);
+  }, [year, month, sortOption]);
 
   // 🚨 FIX: Listen for financial record updates to refresh the list
   useEntityUpdates('financial', () => {
@@ -243,7 +351,9 @@ export function PersonalRecordsList({
       } else {
         personalRecords = await ClientAPI.getFinancialRecordsByMonth(year, month, 'personal');
       }
-      setRecords(personalRecords);
+      // Apply sorting
+      const sortedRecords = sortFinancialRecords(personalRecords, sortOption);
+      setRecords(sortedRecords);
     };
     loadRecords();
   });
@@ -291,7 +401,30 @@ This action cannot be undone.`);
           <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
           <p className="text-xs text-muted-foreground">Loading personal records...</p>
         </div>
-      ) : records.length === 0 ? (
+      ) : (
+        <>
+          <div className="flex items-center gap-2 mb-4">
+            <div className="flex items-center gap-2 text-xs">
+              <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+              <Select value={sortOption} onValueChange={(value: FinancialSortOption) => setSortOption(value)}>
+                <SelectTrigger className="w-48 h-8">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="date-newest">Date: Newest First</SelectItem>
+                  <SelectItem value="date-oldest">Date: Oldest First</SelectItem>
+                  <SelectItem value="name-asc">Name: A-Z</SelectItem>
+                  <SelectItem value="name-desc">Name: Z-A</SelectItem>
+                  <SelectItem value="station-asc">Station: A-Z</SelectItem>
+                  <SelectItem value="station-desc">Station: Z-A</SelectItem>
+                  <SelectItem value="profit-high">Profit: Highest First</SelectItem>
+                  <SelectItem value="profit-low">Profit: Lowest First</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {records.length === 0 ? (
         <Card>
           <CardContent className="text-center py-8">
             <p className="text-muted-foreground">
@@ -381,7 +514,9 @@ This action cannot be undone.`);
                   finalRecord.month,
                   'personal'
                 );
-                setRecords(personalRecords);
+                // Apply sorting
+                const sortedRecords = sortFinancialRecords(personalRecords, sortOption);
+                setRecords(sortedRecords);
                 onRecordUpdated();
                 setRecordToEdit(finalRecord);
               }}
@@ -392,14 +527,14 @@ This action cannot be undone.`);
                   r.month,
                   'personal'
                 );
-                setRecords(personalRecords);
+                // Apply sorting
+                const sortedRecords = sortFinancialRecords(personalRecords, sortOption);
+                setRecords(sortedRecords);
                 onRecordUpdated();
                 setRecordToEdit(null);
               }}
             />
-          )}
-        </div>
-      )}
+      </>
     </>
   );
 }
