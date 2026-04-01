@@ -3,7 +3,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ArrowUpDown, RefreshCw, Link as LinkIcon, User } from 'lucide-react';
+import { RefreshCw, Link as LinkIcon, User } from 'lucide-react';
 import { useState } from 'react';
 import { processLogData } from '@/lib/utils/logging-utils';
 import { LinksSubModal } from '@/components/modals/submodals/links-submodal';
@@ -12,6 +12,7 @@ import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
 import { LogViewFilter } from '@/components/log-management/log-view-filter';
 import { useLogViewFilter } from '@/lib/hooks/use-log-view-filter';
 import { LogManagementActions } from '@/components/log-management/log-management-actions';
+import { LogSortDropdown, LogSortOption, sortLogEntries } from '@/components/data-center/log-sort-dropdown';
 
 interface CharacterLogTabProps {
   characterLog: any;
@@ -31,7 +32,7 @@ interface CharacterLogTabProps {
  * Characters do NOT have points - those belong to Players!
  */
 export function CharacterLogTab({ characterLog, onReload, isReloading }: CharacterLogTabProps) {
-  const [logOrder, setLogOrder] = useState<'newest' | 'oldest'>('newest');
+  const [logOrder, setLogOrder] = useState<LogSortOption>('date-newest');
   const [showLinksModal, setShowLinksModal] = useState(false);
   const [selectedCharacterId, setSelectedCharacterId] = useState<string>('');
   const [characterLinks, setCharacterLinks] = useState<any[]>([]);
@@ -39,10 +40,13 @@ export function CharacterLogTab({ characterLog, onReload, isReloading }: Charact
   const { getPreference } = useUserPreferences();
   const { filter, setFilter, getVisibleEntries } = useLogViewFilter({ entityType: EntityType.CHARACTER });
 
-  const processedCharacterLog = processLogData(characterLog, logOrder);
+  const processedCharacterLog = processLogData(characterLog, 'newest');
+
+  // Apply sorting to entries
+  const sortedEntries = sortLogEntries(processedCharacterLog.entries || [], logOrder);
 
   // Apply view filter to entries
-  const visibleEntries = getVisibleEntries(processedCharacterLog.entries || []);
+  const visibleEntries = getVisibleEntries(sortedEntries);
 
   // Check if log management is enabled
   const logManagementEnabled = getPreference('log-management-enabled', false);
@@ -58,14 +62,7 @@ export function CharacterLogTab({ characterLog, onReload, isReloading }: Charact
         </div>
         <div className="flex items-center gap-2">
           {logManagementEnabled && <LogViewFilter value={filter} onChange={setFilter} />}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setLogOrder(logOrder === 'newest' ? 'oldest' : 'newest')}
-          >
-            <ArrowUpDown className="h-4 w-4 mr-2" />
-            {logOrder === 'oldest' ? 'Oldest First' : 'Newest First'}
-          </Button>
+          <LogSortDropdown value={logOrder} onChange={setLogOrder} />
           <Button
             variant="outline"
             size="sm"

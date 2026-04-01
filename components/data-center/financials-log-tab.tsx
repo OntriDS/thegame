@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowUpDown, RefreshCw, TrendingUp, TrendingDown, Link as LinkIcon } from 'lucide-react';
+import { RefreshCw, TrendingUp, TrendingDown, Link as LinkIcon } from 'lucide-react';
 import { useState } from 'react';
 import { processLogData } from '@/lib/utils/logging-utils';
 import { FINANCIAL_ENTRY_ICONS, LOG_DISPLAY_ICONS, FINANCIAL_ABBREVIATIONS } from '@/lib/constants/icon-maps';
@@ -15,6 +15,7 @@ import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
 import { LogViewFilter } from '@/components/log-management/log-view-filter';
 import { useLogViewFilter } from '@/lib/hooks/use-log-view-filter';
 import { LogManagementActions } from '@/components/log-management/log-management-actions';
+import { LogSortDropdown, LogSortOption, sortLogEntries } from '@/components/data-center/log-sort-dropdown';
 
 interface FinancialLogEntry {
   id?: string;
@@ -47,7 +48,7 @@ interface FinancialsTabProps {
 
 export function FinancialsLogTab({ financialsLog, onReload, isReloading }: FinancialsTabProps) {
   const [activeSubTab, setActiveSubTab] = useState<string>('lifecycle-log');
-  const [logOrder, setLogOrder] = useState<'newest' | 'oldest'>('newest');
+  const [logOrder, setLogOrder] = useState<LogSortOption>('date-newest');
   const [showLinksModal, setShowLinksModal] = useState(false);
   const [selectedFinancialId, setSelectedFinancialId] = useState<string>('');
   const [financialLinks, setFinancialLinks] = useState<any[]>([]);
@@ -55,11 +56,14 @@ export function FinancialsLogTab({ financialsLog, onReload, isReloading }: Finan
   const { getPreference } = useUserPreferences();
   const { filter, setFilter, getVisibleEntries } = useLogViewFilter({ entityType: EntityType.FINANCIAL });
 
-  // Process financials log data
-  const processedFinancialsLog = processLogData(financialsLog, logOrder);
+  // Process financials log data (basic processing, not sorting)
+  const processedFinancialsLog = processLogData(financialsLog, 'newest');
+
+  // Apply sorting to entries
+  const sortedEntries = sortLogEntries(processedFinancialsLog.entries || [], logOrder);
 
   // Apply view filter to entries
-  const visibleEntries = getVisibleEntries(processedFinancialsLog.entries || []);
+  const visibleEntries = getVisibleEntries(sortedEntries);
 
   // CHECK: Honest Verification - Reverted complex merging.
   // The Financial Log should show the ledger reality (Income + Expense records).
@@ -99,14 +103,7 @@ export function FinancialsLogTab({ financialsLog, onReload, isReloading }: Finan
               </div>
               <div className="flex items-center gap-2">
                 {logManagementEnabled && <LogViewFilter value={filter} onChange={setFilter} />}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setLogOrder(logOrder === 'newest' ? 'oldest' : 'newest')}
-                >
-                  <ArrowUpDown className="h-4 w-4 mr-2" />
-                  {logOrder === 'oldest' ? 'Oldest First' : 'Newest First'}
-                </Button>
+                <LogSortDropdown value={logOrder} onChange={setLogOrder} />
                 <Button
                   variant="outline"
                   size="sm"

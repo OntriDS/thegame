@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowUpDown, RefreshCw, Link } from 'lucide-react';
+import { RefreshCw, Link } from 'lucide-react';
 import { LinksSubModal } from '@/components/modals/submodals/links-submodal';
 import { useState, useEffect } from 'react';
 import { processLogData } from '@/lib/utils/logging-utils';
@@ -19,6 +19,7 @@ import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
 import { LogViewFilter } from '@/components/log-management/log-view-filter';
 import { useLogViewFilter } from '@/lib/hooks/use-log-view-filter';
 import { LogManagementActions } from '@/components/log-management/log-management-actions';
+import { LogSortDropdown, LogSortOption, sortLogEntries } from '@/components/data-center/log-sort-dropdown';
 
 interface ItemsLifecycleTabProps {
   itemsLog: any;
@@ -30,7 +31,7 @@ export function ItemsLogTab({
  itemsLog, onReload, isReloading }: ItemsLifecycleTabProps) {
   const { isDarkMode } = useThemeColors();
   const [activeSubTab, setActiveSubTab] = useState<string>('lifecycle-log');
-  const [logOrder, setLogOrder] = useState<'newest' | 'oldest'>('newest');
+  const [logOrder, setLogOrder] = useState<LogSortOption>('date-newest');
   const [showLinksModal, setShowLinksModal] = useState(false);
   const [selectedItemId, setSelectedItemId] = useState<string>('');
   const [itemLinks, setItemLinks] = useState<any[]>([]);
@@ -39,11 +40,14 @@ export function ItemsLogTab({
   const { getPreference } = useUserPreferences();
   const { filter, setFilter, getVisibleEntries } = useLogViewFilter({ entityType: EntityType.ITEM });
 
-  // Process items log data
-  const processedItemsLog = processLogData(itemsLog, logOrder);
+  // Process items log data (basic processing, not sorting)
+  const processedItemsLog = processLogData(itemsLog, 'newest');
+
+  // Apply sorting to entries
+  const sortedEntries = sortLogEntries(processedItemsLog.entries || [], logOrder);
 
   // Apply view filter to entries
-  const visibleEntries = getVisibleEntries(processedItemsLog.entries || []);
+  const visibleEntries = getVisibleEntries(sortedEntries);
 
   // Fetch source names for entries that need them
   useEffect(() => {
@@ -177,14 +181,7 @@ export function ItemsLogTab({
             </div>
             <div className="flex items-center gap-2">
               {logManagementEnabled && <LogViewFilter value={filter} onChange={setFilter} />}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setLogOrder(logOrder === 'newest' ? 'oldest' : 'newest')}
-              >
-                <ArrowUpDown className="h-4 w-4 mr-2" />
-                {logOrder === 'oldest' ? 'Oldest First' : 'Newest First'}
-              </Button>
+              <LogSortDropdown value={logOrder} onChange={setLogOrder} />
               <Button
                 variant="outline"
                 size="sm"

@@ -34,7 +34,6 @@ export default function DataCenterPage() {
   const [financialsLog, setFinancialsLog] = useState<any>(null);
   const [itemsLog, setItemsLog] = useState<any>(null);
   const [tasksLog, setTasksLog] = useState<any>(null);
-  const [logOrder, setLogOrder] = useState<'newest' | 'oldest'>('newest');
   const [isReloading, setIsReloading] = useState(false);
 
   // Month selector state — shared across all tabs

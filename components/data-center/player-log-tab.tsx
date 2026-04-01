@@ -3,7 +3,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, Gamepad, ArrowUpDown, Link as LinkIcon, User } from 'lucide-react';
+import { RefreshCw, Gamepad, Link as LinkIcon, User } from 'lucide-react';
 import { LinksSubModal } from '@/components/modals/submodals/links-submodal';
 import { useState, useEffect } from 'react';
 import { formatDisplayDate } from '@/lib/utils/date-utils';
@@ -17,6 +17,7 @@ import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
 import { LogViewFilter } from '@/components/log-management/log-view-filter';
 import { useLogViewFilter } from '@/lib/hooks/use-log-view-filter';
 import { LogManagementActions } from '@/components/log-management/log-management-actions';
+import { LogSortDropdown, LogSortOption, sortLogEntries } from '@/components/data-center/log-sort-dropdown';
 
 interface PlayerLogTabProps {
   playerLog: any;
@@ -36,7 +37,7 @@ interface PlayerLogTabProps {
  * This tab shows the audit trail of player progression and achievements
  */
 export function PlayerLogTab({ playerLog, onReload, isReloading }: PlayerLogTabProps) {
-  const [logOrder, setLogOrder] = useState<'newest' | 'oldest'>('newest');
+  const [logOrder, setLogOrder] = useState<LogSortOption>('date-newest');
   const [showLinksModal, setShowLinksModal] = useState(false);
   const [selectedPlayerId, setSelectedPlayerId] = useState<string>('');
   const [playerLinks, setPlayerLinks] = useState<any[]>([]);
@@ -46,8 +47,11 @@ export function PlayerLogTab({ playerLog, onReload, isReloading }: PlayerLogTabP
   const { filter, setFilter, getVisibleEntries } = useLogViewFilter({ entityType: EntityType.PLAYER });
 
   // Process player log data using normalized approach
-  const processedPlayerLog = processLogData(playerLog, logOrder);
-  const sortedEntries = processedPlayerLog.entries || [];
+  const processedPlayerLog = processLogData(playerLog, 'newest');
+  const baseEntries = processedPlayerLog.entries || [];
+
+  // Apply sorting to entries
+  const sortedEntries = sortLogEntries(baseEntries, logOrder);
   
   // Apply view filter to entries
   const visibleEntries = getVisibleEntries(sortedEntries);
@@ -153,14 +157,7 @@ export function PlayerLogTab({ playerLog, onReload, isReloading }: PlayerLogTabP
         </div>
         <div className="flex items-center gap-2">
           {logManagementEnabled && <LogViewFilter value={filter} onChange={setFilter} />}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setLogOrder(logOrder === 'newest' ? 'oldest' : 'newest')}
-          >
-            <ArrowUpDown className="h-4 w-4 mr-2" />
-            {logOrder === 'oldest' ? 'Oldest First' : 'Newest First'}
-          </Button>
+          <LogSortDropdown value={logOrder} onChange={setLogOrder} />
           <Button
             variant="outline"
             size="sm"

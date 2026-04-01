@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { RefreshCw, ShoppingCart, DollarSign, Calendar, Link as LinkIcon, ArrowUpDown, Package } from 'lucide-react';
+import { RefreshCw, ShoppingCart, DollarSign, Calendar, Link as LinkIcon, Package } from 'lucide-react';
 import { formatDisplayDate } from '@/lib/utils/date-utils';
 import { EntityType } from '@/types/enums';
 import { LinksSubModal } from '@/components/modals/submodals/links-submodal';
@@ -16,6 +16,7 @@ import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
 import { LogViewFilter } from '@/components/log-management/log-view-filter';
 import { useLogViewFilter } from '@/lib/hooks/use-log-view-filter';
 import { LogManagementActions } from '@/components/log-management/log-management-actions';
+import { LogSortDropdown, LogSortOption, sortLogEntries } from '@/components/data-center/log-sort-dropdown';
 
 interface SalesLogTabProps {
   salesLog: any;
@@ -37,7 +38,7 @@ interface SalesLogTabProps {
  */
 export function SalesLogTab({ salesLog, onReload, isReloading }: SalesLogTabProps) {
   const [activeSubTab, setActiveSubTab] = useState<string>('lifecycle-log');
-  const [logOrder, setLogOrder] = useState<'newest' | 'oldest'>('newest');
+  const [logOrder, setLogOrder] = useState<LogSortOption>('date-newest');
   const [showLinksModal, setShowLinksModal] = useState(false);
   const [selectedSaleId, setSelectedSaleId] = useState<string>('');
   const [saleLinks, setSaleLinks] = useState<any[]>([]);
@@ -45,12 +46,15 @@ export function SalesLogTab({ salesLog, onReload, isReloading }: SalesLogTabProp
   const { getPreference } = useUserPreferences();
   const { filter, setFilter, getVisibleEntries } = useLogViewFilter({ entityType: EntityType.SALE });
 
-  // Process sales log data
-  const processedSalesLog = processLogData(salesLog, logOrder);
-  const entries = processedSalesLog?.entries || [];
-  
+  // Process sales log data (basic processing, not sorting)
+  const processedSalesLog = processLogData(salesLog, 'newest');
+  const baseEntries = processedSalesLog?.entries || [];
+
+  // Apply sorting to entries
+  const sortedEntries = sortLogEntries(baseEntries, logOrder);
+
   // Apply view filter to entries
-  const visibleEntries = getVisibleEntries(entries);
+  const visibleEntries = getVisibleEntries(sortedEntries);
 
   // Helper functions
   const getSaleTypeIcon = (saleType: string | undefined) => {
@@ -125,18 +129,10 @@ export function SalesLogTab({ salesLog, onReload, isReloading }: SalesLogTabProp
         </div>
         <div className="flex items-center gap-2">
           {logManagementEnabled && <LogViewFilter value={filter} onChange={setFilter} />}
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => setLogOrder(logOrder === 'newest' ? 'oldest' : 'newest')}
-            className="flex items-center gap-2"
-          >
-            <ArrowUpDown className="h-4 w-4" />
-            {logOrder === 'oldest' ? 'Oldest First' : 'Newest First'}
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <LogSortDropdown value={logOrder} onChange={setLogOrder} />
+          <Button
+            variant="outline"
+            size="sm"
             onClick={onReload}
             disabled={isReloading}
             className="flex items-center gap-2"

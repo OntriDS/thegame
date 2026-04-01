@@ -3,7 +3,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ArrowUpDown, RefreshCw, Link, MapPin, Cloud, Home, Sparkles } from 'lucide-react';
+import { RefreshCw, Link, MapPin, Cloud, Home, Sparkles } from 'lucide-react';
 import { useState } from 'react';
 import { processLogData } from '@/lib/utils/logging-utils';
 import { SiteStatus, SiteType, EntityType } from '@/types/enums';
@@ -14,6 +14,7 @@ import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
 import { LogViewFilter } from '@/components/log-management/log-view-filter';
 import { useLogViewFilter } from '@/lib/hooks/use-log-view-filter';
 import { LogManagementActions } from '@/components/log-management/log-management-actions';
+import { LogSortDropdown, LogSortOption, sortLogEntries } from '@/components/data-center/log-sort-dropdown';
 
 interface SitesLogTabProps {
   sitesLog: any;
@@ -23,7 +24,7 @@ interface SitesLogTabProps {
 
 export function SitesLogTab({ sitesLog, onReload, isReloading }: SitesLogTabProps) {
   const { isDarkMode } = useThemeColors();
-  const [logOrder, setLogOrder] = useState<'newest' | 'oldest'>('newest');
+  const [logOrder, setLogOrder] = useState<LogSortOption>('date-newest');
   const [showLinksModal, setShowLinksModal] = useState(false);
   const [selectedSiteId, setSelectedSiteId] = useState<string>('');
   const [siteLinks, setSiteLinks] = useState<any[]>([]);
@@ -31,11 +32,14 @@ export function SitesLogTab({ sitesLog, onReload, isReloading }: SitesLogTabProp
   const { getPreference } = useUserPreferences();
   const { filter, setFilter, getVisibleEntries } = useLogViewFilter({ entityType: EntityType.SITE });
 
-  // Process sites log data
-  const processedSitesLog = processLogData(sitesLog, logOrder);
-  
+  // Process sites log data (basic processing, not sorting)
+  const processedSitesLog = processLogData(sitesLog, 'newest');
+
+  // Apply sorting to entries
+  const sortedEntries = sortLogEntries(processedSitesLog.entries || [], logOrder);
+
   // Apply view filter to entries
-  const visibleEntries = getVisibleEntries(processedSitesLog.entries || []);
+  const visibleEntries = getVisibleEntries(sortedEntries);
 
   const getSiteStatusBadgeColor = (status: string) => {
     const siteStatus = Object.values(SiteStatus).find(ss => ss === status);
@@ -77,14 +81,7 @@ export function SitesLogTab({ sitesLog, onReload, isReloading }: SitesLogTabProp
         </div>
         <div className="flex items-center gap-2">
           {logManagementEnabled && <LogViewFilter value={filter} onChange={setFilter} />}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setLogOrder(logOrder === 'newest' ? 'oldest' : 'newest')}
-          >
-            <ArrowUpDown className="h-4 w-4 mr-2" />
-            {logOrder === 'oldest' ? 'Oldest First' : 'Newest First'}
-          </Button>
+          <LogSortDropdown value={logOrder} onChange={setLogOrder} />
           <Button
             variant="outline"
             size="sm"

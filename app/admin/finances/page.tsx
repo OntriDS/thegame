@@ -30,12 +30,11 @@ import {
   Item,
   SummaryTotals,
 } from '@/types/entities';
-import { Plus, DollarSign, TrendingUp, TrendingDown, Building2, User, Archive, Loader2, Calendar } from 'lucide-react';
+import { Plus, DollarSign, TrendingUp, TrendingDown, Building2, User, Archive, Loader2 } from 'lucide-react';
 import { MONTHS, getYearRange, getMonthName, getCurrentMonth } from '@/lib/constants/date-constants';
 import { BUSINESS_STRUCTURE, ItemType, FOUNDER_CHARACTER_ID } from '@/types/enums';
 import { getCompanyAreas, getPersonalAreas, isCompanyStation, getAreaForStation } from '@/lib/utils/business-structure-utils';
 import { CompanyRecordsList, PersonalRecordsList } from '@/components/finances/financial-records-components';
-import { MonthlyHistoricalCashflows } from '@/components/finances/monthly-historical-cashflows';
 import { MonthSelector } from '@/components/ui/month-selector';
 import { formatMonthKey, getCurrentMonthKey, sortMonthKeys, formatDisplayDate } from '@/lib/utils/date-utils';
 import { Switch } from '@/components/ui/switch';
@@ -755,12 +754,6 @@ function FinancesPageContent() {
               </CardContent>
             </Card>
           </div>
-
-          {/* Monthly Historical Cashflows */}
-          <MonthlyHistoricalCashflows 
-            year={2000 + parseInt(selectedMonthKey.split('-')[1], 10)} 
-            month={parseInt(selectedMonthKey.split('-')[0], 10)} 
-          />
 
           {/* Company Assets */}
           <Card>

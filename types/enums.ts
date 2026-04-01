@@ -224,7 +224,7 @@ export enum Currency {
 
 /** Points System Enums */
 export enum PointType {
-  XP = 'XP',     // Experience Points
+  XP = 'XP',   // Experience Points
   RP = 'RP',    // Research Points
   FP = 'FP',    // Family Points 
   HP = 'HP',    // Health Points
