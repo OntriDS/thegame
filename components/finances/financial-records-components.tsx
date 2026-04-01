@@ -95,6 +95,9 @@ export function CompanyRecordsList({
             // Payment status indicators
             const isWaiting = record.isNotPaid || record.isNotCharged;
             const waitingText = record.isNotPaid ? '⏳ Not Paid' : record.isNotCharged ? '⏳ Not Charged' : '';
+            const cost = record.cost || 0;
+            const revenue = record.revenue || 0;
+            const profit = revenue - cost;
 
             return (
               <Card key={record.id} className={isWaiting ? "border-orange-500/50 bg-orange-500/5" : ""}>
@@ -106,12 +109,16 @@ export function CompanyRecordsList({
                       <span className="text-muted-foreground">•</span>
                       <span className="text-muted-foreground text-xs">{record.station}</span>
                       <span className="text-muted-foreground">•</span>
-                      <span className={record.cost > 0 ? "text-muted-foreground font-medium" : "text-muted-foreground"}>
-                        {record.cost > 0 ? `-$${record.cost}` : '$0'}
+                      <span className="text-muted-foreground font-medium">
+                        {`Cost: $${cost}`}
                       </span>
                       <span className="text-muted-foreground">•</span>
-                      <span className={record.revenue > 0 ? "text-foreground font-medium" : "text-muted-foreground"}>
-                        {record.revenue > 0 ? `+$${record.revenue}` : '$0'}
+                      <span className={revenue > 0 ? "text-foreground font-medium" : "text-muted-foreground"}>
+                        {`Rev: $${revenue}`}
+                      </span>
+                      <span className="text-muted-foreground">•</span>
+                      <span className={profit >= 0 ? "text-emerald-500 font-medium" : "text-red-500 font-medium"}>
+                        {`Profit: $${profit}`}
                       </span>
                       {isWaiting && (
                         <>
@@ -300,6 +307,9 @@ This action cannot be undone.`);
             // Payment status indicators
             const isWaiting = record.isNotPaid || record.isNotCharged;
             const waitingText = record.isNotPaid ? '⏳ Not Paid' : record.isNotCharged ? '⏳ Not Charged' : '';
+            const cost = record.cost || 0;
+            const revenue = record.revenue || 0;
+            const profit = revenue - cost;
 
             return (
               <Card key={record.id} className={isWaiting ? "border-orange-500/50 bg-orange-500/5" : ""}>
@@ -311,12 +321,16 @@ This action cannot be undone.`);
                       <span className="text-muted-foreground">•</span>
                       <span className="text-muted-foreground text-xs">{record.station}</span>
                       <span className="text-muted-foreground">•</span>
-                      <span className={record.cost > 0 ? "text-muted-foreground font-medium" : "text-muted-foreground"}>
-                        {record.cost > 0 ? `-$${record.cost}` : '$0'}
+                      <span className="text-muted-foreground font-medium">
+                        {`Cost: $${cost}`}
                       </span>
                       <span className="text-muted-foreground">•</span>
-                      <span className={record.revenue > 0 ? "text-foreground font-medium" : "text-muted-foreground"}>
-                        {record.revenue > 0 ? `+$${record.revenue}` : '$0'}
+                      <span className={revenue > 0 ? "text-foreground font-medium" : "text-muted-foreground"}>
+                        {`Rev: $${revenue}`}
+                      </span>
+                      <span className="text-muted-foreground">•</span>
+                      <span className={profit >= 0 ? "text-emerald-500 font-medium" : "text-red-500 font-medium"}>
+                        {`Profit: $${profit}`}
                       </span>
                       {isWaiting && (
                         <>
