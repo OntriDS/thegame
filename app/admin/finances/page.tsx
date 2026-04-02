@@ -1183,9 +1183,6 @@ function FinancesPageContent() {
 
         {/* Company Tab - Records Only */}
         <TabsContent value="company" className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold">Company Financial Records</h2>
-          </div>
           <CompanyRecordsList
             key={`company-${recordsRefreshKey}`}
             year={currentYearNum}
@@ -1202,9 +1199,6 @@ function FinancesPageContent() {
 
         {/* Personal Tab - Records Only */}
         <TabsContent value="personal" className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold">Personal Financial Records</h2>
-          </div>
           <PersonalRecordsList
             key={`personal-${recordsRefreshKey}`}
             year={currentYearNum}

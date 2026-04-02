@@ -155,6 +155,39 @@ export function CompanyRecordsList({
 
   return (
     <>
+      <div className="flex items-center justify-between gap-3 mb-4">
+        <h2 className="text-xl font-semibold">Company Financial Records</h2>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 text-xs">
+            <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+            <Select value={sortOption} onValueChange={(value: FinancialSortOption) => setSortOption(value)}>
+              <SelectTrigger className="w-48 h-8">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="date-newest">Date: Newest First</SelectItem>
+                <SelectItem value="date-oldest">Date: Oldest First</SelectItem>
+                <SelectItem value="name-asc">Name: A-Z</SelectItem>
+                <SelectItem value="name-desc">Name: Z-A</SelectItem>
+                <SelectItem value="station-asc">Station: A-Z</SelectItem>
+                <SelectItem value="station-desc">Station: Z-A</SelectItem>
+                <SelectItem value="profit-high">Profit: Highest First</SelectItem>
+                <SelectItem value="profit-low">Profit: Lowest First</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={loadCompanyRecords}
+            disabled={isReloading}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isReloading ? 'animate-spin' : ''}`} />
+            Reload
+          </Button>
+        </div>
+      </div>
+
       {isLoading ? (
         <div className="flex flex-col items-center justify-center p-8 space-y-4">
           <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
@@ -162,36 +195,6 @@ export function CompanyRecordsList({
         </div>
       ) : (
         <>
-          <div className="mb-4 flex items-center justify-end gap-2">
-            <div className="flex items-center gap-2 text-xs">
-              <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
-              <Select value={sortOption} onValueChange={(value: FinancialSortOption) => setSortOption(value)}>
-                <SelectTrigger className="w-48 h-8">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="date-newest">Date: Newest First</SelectItem>
-                  <SelectItem value="date-oldest">Date: Oldest First</SelectItem>
-                  <SelectItem value="name-asc">Name: A-Z</SelectItem>
-                  <SelectItem value="name-desc">Name: Z-A</SelectItem>
-                  <SelectItem value="station-asc">Station: A-Z</SelectItem>
-                  <SelectItem value="station-desc">Station: Z-A</SelectItem>
-                  <SelectItem value="profit-high">Profit: Highest First</SelectItem>
-                  <SelectItem value="profit-low">Profit: Lowest First</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={loadCompanyRecords}
-              disabled={isReloading}
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${isReloading ? 'animate-spin' : ''}`} />
-              Reload
-            </Button>
-          </div>
-
           {records.length === 0 ? (
             <Card>
               <CardContent className="text-center py-8">
@@ -205,7 +208,6 @@ export function CompanyRecordsList({
           ) : (
             <div className="space-y-2">
               {records.map(record => {
-                // Payment status indicators
                 const isWaiting = record.isNotPaid || record.isNotCharged;
                 const waitingText = record.isNotPaid ? '⏳ Not Paid' : record.isNotCharged ? '⏳ Not Charged' : '';
                 const cost = record.cost || 0;
@@ -216,7 +218,6 @@ export function CompanyRecordsList({
                   <Card key={record.id} className={isWaiting ? "border-orange-500/50 bg-orange-500/5" : ""}>
                     <CardContent className="p-3">
                       <div className="flex items-center justify-between gap-3">
-                        {/* Single row - compact display */}
                         <div className="flex items-center gap-2 text-sm flex-1 min-w-0">
                           <span className="font-medium truncate">{record.name}</span>
                           <span className="text-muted-foreground">•</span>
@@ -255,8 +256,6 @@ export function CompanyRecordsList({
                             </>
                           )}
                         </div>
-
-                        {/* Edit button */}
                         <Button size="sm" variant="outline" onClick={() => handleEdit(record)}>
                           Edit
                         </Button>
@@ -285,7 +284,6 @@ export function CompanyRecordsList({
                 } else {
                   companyRecords = await ClientAPI.getFinancialRecordsByMonth(finalRecord.year, finalRecord.month, 'company');
                 }
-                // Apply sorting
                 const sortedRecords = sortFinancialRecords(companyRecords, sortOption);
                 setRecords(sortedRecords);
                 onRecordUpdated();
@@ -379,6 +377,39 @@ export function PersonalRecordsList({
 
   return (
     <>
+      <div className="flex items-center justify-between gap-3 mb-4">
+        <h2 className="text-xl font-semibold">Personal Financial Records</h2>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 text-xs">
+            <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+            <Select value={sortOption} onValueChange={(value: FinancialSortOption) => setSortOption(value)}>
+              <SelectTrigger className="w-48 h-8">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="date-newest">Date: Newest First</SelectItem>
+                <SelectItem value="date-oldest">Date: Oldest First</SelectItem>
+                <SelectItem value="name-asc">Name: A-Z</SelectItem>
+                <SelectItem value="name-desc">Name: Z-A</SelectItem>
+                <SelectItem value="station-asc">Station: A-Z</SelectItem>
+                <SelectItem value="station-desc">Station: Z-A</SelectItem>
+                <SelectItem value="profit-high">Profit: Highest First</SelectItem>
+                <SelectItem value="profit-low">Profit: Lowest First</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={loadPersonalRecords}
+            disabled={isReloading}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isReloading ? 'animate-spin' : ''}`} />
+            Reload
+          </Button>
+        </div>
+      </div>
+
       {isLoading ? (
         <div className="flex flex-col items-center justify-center p-8 space-y-4">
           <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
@@ -386,36 +417,6 @@ export function PersonalRecordsList({
         </div>
       ) : (
         <>
-          <div className="mb-4 flex items-center justify-end gap-2">
-            <div className="flex items-center gap-2 text-xs">
-              <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
-              <Select value={sortOption} onValueChange={(value: FinancialSortOption) => setSortOption(value)}>
-                <SelectTrigger className="w-48 h-8">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="date-newest">Date: Newest First</SelectItem>
-                  <SelectItem value="date-oldest">Date: Oldest First</SelectItem>
-                  <SelectItem value="name-asc">Name: A-Z</SelectItem>
-                  <SelectItem value="name-desc">Name: Z-A</SelectItem>
-                  <SelectItem value="station-asc">Station: A-Z</SelectItem>
-                  <SelectItem value="station-desc">Station: Z-A</SelectItem>
-                  <SelectItem value="profit-high">Profit: Highest First</SelectItem>
-                  <SelectItem value="profit-low">Profit: Lowest First</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={loadPersonalRecords}
-              disabled={isReloading}
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${isReloading ? 'animate-spin' : ''}`} />
-              Reload
-            </Button>
-          </div>
-
           {records.length === 0 ? (
             <Card>
               <CardContent className="text-center py-8">
@@ -429,7 +430,6 @@ export function PersonalRecordsList({
           ) : (
             <div className="space-y-2">
               {records.map(record => {
-                // Payment status indicators
                 const isWaiting = record.isNotPaid || record.isNotCharged;
                 const waitingText = record.isNotPaid ? '⏳ Not Paid' : record.isNotCharged ? '⏳ Not Charged' : '';
                 const cost = record.cost || 0;
@@ -440,7 +440,6 @@ export function PersonalRecordsList({
                   <Card key={record.id} className={isWaiting ? "border-orange-500/50 bg-orange-500/5" : ""}>
                     <CardContent className="p-3">
                       <div className="flex items-center justify-between gap-3">
-                        {/* Single row - compact display */}
                         <div className="flex items-center gap-2 text-sm flex-1 min-w-0">
                           <span className="font-medium truncate">{record.name}</span>
                           <span className="text-muted-foreground">•</span>
@@ -479,8 +478,6 @@ export function PersonalRecordsList({
                             </>
                           )}
                         </div>
-
-                        {/* Edit button */}
                         <Button size="sm" variant="outline" onClick={() => handleEdit(record)}>
                           Edit
                         </Button>
@@ -509,7 +506,6 @@ export function PersonalRecordsList({
                 } else {
                   personalRecords = await ClientAPI.getFinancialRecordsByMonth(finalRecord.year, finalRecord.month, 'personal');
                 }
-                // Apply sorting
                 const sortedRecords = sortFinancialRecords(personalRecords, sortOption);
                 setRecords(sortedRecords);
                 onRecordUpdated();

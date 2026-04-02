@@ -48,7 +48,7 @@
         "Analyst Agent performing Data Integrity tasks, ai-chat reading markdown files",
         "Tasks Indexes created, Agents upgraded, Database purged ghost tasks and agents cards",
         "Calendar submodal bugs fixes, Bloated Logs Indexes in Upstash",
-        "Logging workflows update and points decimals bugs"
+        "Logging workflows update and points decimals bugs, Sorting in Items Sold, Financials and Logs"
       ]
     },
     "phase14.4": {
