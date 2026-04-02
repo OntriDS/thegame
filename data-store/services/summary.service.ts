@@ -1,8 +1,13 @@
 // @/data-store/services/summary.service.ts
 import { FinancialRecord, Sale, Item, Task, ItemSaleLine, SummaryTotals } from '@/types/entities';
-import { FinancialStatus, SaleStatus, ItemStatus, TaskStatus } from '@/types/enums';
+import { SaleStatus, ItemStatus, TaskStatus } from '@/types/enums';
 import { SummaryRepository } from '../repositories/summary.repo';
 import { formatMonthKey } from '@/lib/utils/date-utils';
+import {
+  cashflowCountableCost,
+  cashflowCountableJungleCoins,
+  cashflowCountableRevenue,
+} from '@/lib/utils/financial-utils';
 
 export class SummaryService {
   /**
@@ -13,28 +18,20 @@ export class SummaryService {
     oldRecord?: FinancialRecord
   ): Promise<void> {
     const monthYear = formatMonthKey(new Date(newRecord.year, newRecord.month - 1, 1));
-    let revenueDelta = 0;
-    let costDelta = 0;
 
-    const isSummaryActive = (r: FinancialRecord) =>
-      !r.isNotPaid && !r.isNotCharged && r.status !== FinancialStatus.PENDING;
+    const oldRev = oldRecord ? cashflowCountableRevenue(oldRecord) : 0;
+    const newRev = cashflowCountableRevenue(newRecord);
+    const oldCost = oldRecord ? cashflowCountableCost(oldRecord) : 0;
+    const newCost = cashflowCountableCost(newRecord);
+    const oldJ = oldRecord ? cashflowCountableJungleCoins(oldRecord) : 0;
+    const newJ = cashflowCountableJungleCoins(newRecord);
 
-    const wasActive = oldRecord ? isSummaryActive(oldRecord) : false;
-    const isNowActive = isSummaryActive(newRecord);
+    const revenueDelta = newRev - oldRev;
+    const costDelta = newCost - oldCost;
+    const jungleCoinsDelta = newJ - oldJ;
 
-    if (!wasActive && isNowActive) {
-      revenueDelta = newRecord.revenue || 0;
-      costDelta = newRecord.cost || 0;
-    } else if (wasActive && !isNowActive) {
-      revenueDelta = -(oldRecord?.revenue || 0);
-      costDelta = -(oldRecord?.cost || 0);
-    } else if (wasActive && isNowActive) {
-      revenueDelta = (newRecord.revenue || 0) - (oldRecord?.revenue || 0);
-      costDelta = (newRecord.cost || 0) - (oldRecord?.cost || 0);
-    }
-
-    if (revenueDelta !== 0 || costDelta !== 0) {
-      await SummaryRepository.updateCounters({ monthYear, revenueDelta, costDelta });
+    if (revenueDelta !== 0 || costDelta !== 0 || jungleCoinsDelta !== 0) {
+      await SummaryRepository.updateCounters({ monthYear, revenueDelta, costDelta, jungleCoinsDelta });
     }
   }
 
@@ -134,8 +131,9 @@ export class SummaryService {
     const monthYear = formatMonthKey(new Date(record.year, record.month - 1, 1));
     await SummaryRepository.updateCounters({
       monthYear,
-      revenueDelta: -(record.revenue || 0),
-      costDelta: -(record.cost || 0)
+      revenueDelta: -cashflowCountableRevenue(record),
+      costDelta: -cashflowCountableCost(record),
+      jungleCoinsDelta: -cashflowCountableJungleCoins(record),
     });
   }
 
@@ -267,22 +265,25 @@ export class SummaryService {
       t.status === TaskStatus.COLLECTED ||
       t.isCollected
     );
-    const countableFinancials = financials.filter(
-      (f) => !f.isNotPaid && !f.isNotCharged && f.status !== FinancialStatus.PENDING
+    const withCashflow = financials.filter(
+      (f) =>
+        cashflowCountableRevenue(f) !== 0 ||
+        cashflowCountableCost(f) !== 0 ||
+        cashflowCountableJungleCoins(f) !== 0
     );
 
-    console.log(`[SummaryService] Live index stats for ${normalizedMonthKey}: Sales: ${countableSales.length}, Financials: ${countableFinancials.length}, Tasks: ${countableTasks.length}`);
+    console.log(`[SummaryService] Live index stats for ${normalizedMonthKey}: Sales: ${countableSales.length}, Financials (cashflow-contributing): ${withCashflow.length}, Tasks: ${countableTasks.length}`);
 
     // 4. Calculate totals for this month
     const totals = {
       monthYear: normalizedMonthKey,
-      revenueDelta: countableFinancials.reduce((sum, f) => sum + (f.revenue || 0), 0),
-      costDelta: countableFinancials.reduce((sum, f) => sum + (f.cost || 0), 0),
+      revenueDelta: financials.reduce((sum, f) => sum + cashflowCountableRevenue(f), 0),
+      costDelta: financials.reduce((sum, f) => sum + cashflowCountableCost(f), 0),
       salesRevenueDelta: countableSales.reduce((sum, s) => sum + (s.totals.totalRevenue || 0), 0),
       salesVolumeDelta: countableSales.length,
       itemsSoldDelta: this.sumPhysicalUnitsFromSales(countableSales),
       taskCountDelta: countableTasks.length,
-      jungleCoinsDelta: countableFinancials.reduce((sum, f) => sum + (f.jungleCoins || 0), 0),
+      jungleCoinsDelta: financials.reduce((sum, f) => sum + cashflowCountableJungleCoins(f), 0),
     };
 
     // 5. Push to Redis (Updates Monthly Hash and INCREMENTS All-Time)

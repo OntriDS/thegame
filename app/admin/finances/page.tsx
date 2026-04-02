@@ -28,7 +28,6 @@ import {
   CompanyMonthlySummary,
   PersonalMonthlySummary,
   Item,
-  SummaryTotals,
 } from '@/types/entities';
 import { Plus, DollarSign, TrendingUp, TrendingDown, Building2, User, Archive, Loader2 } from 'lucide-react';
 import { MONTHS, getYearRange, getMonthName, getCurrentMonth } from '@/lib/constants/date-constants';
@@ -128,14 +127,12 @@ function FinancesPageContent() {
   const { getPreference, setPreference, isLoading: preferencesLoading } = useUserPreferences();
   const [selectedMonthKey, setSelectedMonthKey] = useState(getCurrentMonthKey());
   const [availableMonths, setAvailableMonths] = useState<string[]>([]);
-  const [atomicSummary, setAtomicSummary] = useState<SummaryTotals | null>(null);
   const [companySummary, setCompanySummary] = useState<CompanyMonthlySummary | null>(null);
   const [personalSummary, setPersonalSummary] = useState<PersonalMonthlySummary | null>(null);
   const [aggregatedFinancialData, setAggregatedFinancialData] = useState<any>(null);
   const [aggregatedCategoryData, setAggregatedCategoryData] = useState<any>(null);
   const [recordsRefreshKey, setRecordsRefreshKey] = useState(0);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [isAtomicLoading, setIsAtomicLoading] = useState(false);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
   const [showConversionRatesModal, setShowConversionRatesModal] = useState(false);
   const [showFinancialsModal, setShowFinancialsModal] = useState(false);
@@ -248,13 +245,7 @@ function FinancesPageContent() {
     const monthNum = parseInt(mm, 10);
     const yearNum = 2000 + parseInt(yy, 10);
 
-    // 1. Fetch Atomic Summary (INSTANT & NON-BLOCKING)
-    setIsAtomicLoading(true);
-    ClientAPI.getSummary(selectedMonthKey)
-      .then(setAtomicSummary)
-      .finally(() => setIsAtomicLoading(false));
-
-    // 2. Fetch Full Detailed Summary (O(N) - BACKGROUND)
+    // Financial summaries (company + personal cashflow) from month records — matches Company/Personal tabs
     setIsDetailLoading(true);
     try {
         const data = await ClientAPI.getFinancialSummary(
@@ -688,46 +679,44 @@ function FinancesPageContent() {
         <TabsContent value="assets" className="space-y-4">
           {/* Concise Cashflow Summary at Top */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Company Cashflow Summary */}
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium flex items-center gap-2">
                   <Building2 className="h-4 w-4" />
-                  Company Cashflow
+                  Monthly Company Cashflow
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Revenue</span>
-                  <span className="font-medium text-green-600">{formatCurrency(atomicSummary?.revenue || 0)}</span>
+                  <span className="font-medium text-green-600">{formatCurrency(companySummary?.totalRevenue || 0)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>Cost</span>
-                  <span className="font-medium text-red-600">{formatCurrency(atomicSummary?.costs || 0)}</span>
+                  <span className="font-medium text-red-600">{formatCurrency(companySummary?.totalCost || 0)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>Net</span>
-                  <span className={`font-bold ${(atomicSummary?.profit || 0) === 0 ? 'text-muted-foreground' :
-                    (atomicSummary?.profit || 0) > 0 ? 'text-green-600' : 'text-red-600'
+                  <span className={`font-bold ${(companySummary?.netCashflow || 0) === 0 ? 'text-muted-foreground' :
+                    (companySummary?.netCashflow || 0) > 0 ? 'text-green-600' : 'text-red-600'
                     }`}>
-                    {formatCurrency(atomicSummary?.profit || 0)}
+                    {formatCurrency(companySummary?.netCashflow || 0)}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>J$ Paid</span>
                   <span className="font-medium">
-                    {atomicSummary?.jungleCoins || 0} J$ ({formatCurrency((atomicSummary?.jungleCoins || 0) * (exchangeRates.j$ToUSD || 0.40))})
+                    {companySummary?.totalJungleCoins || 0} J$ ({formatCurrency((companySummary?.totalJungleCoins || 0) * (exchangeRates.j$ToUSD || 0.40))})
                   </span>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Personal Cashflow Summary */}
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium flex items-center gap-2">
                   <User className="h-4 w-4" />
-                  Personal Cashflow
+                  Monthly Personal Cashflow
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">

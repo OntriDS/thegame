@@ -105,6 +105,33 @@ export interface OtherAssets {
 // ============================================================================
 
 /**
+ * Revenue counts toward monthly cashflow only when the row is charged (not awaiting charge) and not PENDING.
+ */
+export function cashflowCountableRevenue(record: FinancialRecord): number {
+  if (record.status === FinancialStatus.PENDING) return 0;
+  if (record.isNotCharged) return 0;
+  return Number(record.revenue) || 0;
+}
+
+/**
+ * Cost counts toward monthly cashflow only when the row is paid (not awaiting payment) and not PENDING.
+ */
+export function cashflowCountableCost(record: FinancialRecord): number {
+  if (record.status === FinancialStatus.PENDING) return 0;
+  if (record.isNotPaid) return 0;
+  return Number(record.cost) || 0;
+}
+
+/**
+ * J$ in summaries: only fully settled rows (paid and charged, not PENDING).
+ */
+export function cashflowCountableJungleCoins(record: FinancialRecord): number {
+  if (record.status === FinancialStatus.PENDING) return 0;
+  if (record.isNotPaid || record.isNotCharged) return 0;
+  return Number(record.jungleCoins) || 0;
+}
+
+/**
  * Aggregate financial records by station
  * @param records - Financial records to aggregate
  * @param stations - List of stations to include in breakdown
@@ -125,19 +152,17 @@ export function aggregateRecordsByStation(
     };
   });
 
-  // Aggregate records by station, excluding PENDING records
   records.forEach(record => {
-    // CRITICAL: Exclude PENDING records from cashflow calculations
-    if (record.status === FinancialStatus.PENDING) {
-      return; // Skip PENDING records
-    }
+    if (!breakdown[record.station]) return;
 
-    if (breakdown[record.station]) {
-      breakdown[record.station].revenue += record.revenue;
-      breakdown[record.station].cost += record.cost;
-      breakdown[record.station].net += (record.revenue - record.cost);
-      breakdown[record.station].jungleCoins += record.jungleCoins;
-    }
+    const rev = cashflowCountableRevenue(record);
+    const cost = cashflowCountableCost(record);
+    const j$ = cashflowCountableJungleCoins(record);
+
+    breakdown[record.station].revenue += rev;
+    breakdown[record.station].cost += cost;
+    breakdown[record.station].net += rev - cost;
+    breakdown[record.station].jungleCoins += j$;
   });
 
   return breakdown;
