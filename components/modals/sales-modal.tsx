@@ -20,6 +20,7 @@ import { getSubTypesForItemType } from '@/lib/utils/item-utils';
 import type { Station } from '@/types/type-aliases';
 import { CurrencyExchangeRates } from '@/lib/constants/financial-constants';
 import { createSiteOptionsWithCategories } from '@/lib/utils/site-options-utils';
+import { buildAutoSaleName } from '@/lib/utils/sale-auto-name-utils';
 import { createStationCategoryOptions, createTaskParentOptions, createItemTypeSubTypeOptions, getItemTypeFromCombined, getCategoryFromCombined, getStationFromCombined } from '@/lib/utils/searchable-select-utils';
 import { getAreaForStation, getSalesChannelFromSaleType } from '@/lib/utils/business-structure-utils';
 import { roundCurrency2 } from '@/lib/utils/financial-utils';
@@ -29,7 +30,7 @@ import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
 import PlayerCharacterSelectorModal from './submodals/player-character-selector-submodal';
 // Side effects handled by parent component via API calls
 import { v4 as uuid } from 'uuid';
-import { Plus, Trash2, Package, DollarSign, Network, ListPlus, Wallet, Gift, User, Store, CalendarIcon, X } from 'lucide-react';
+import { Plus, Trash2, Package, DollarSign, Network, ListPlus, Wallet, Gift, User, Store, CalendarIcon, X, Pencil } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import DeleteModal from './submodals/delete-submodal';
 import LinksRelationshipsModal from './submodals/links-relationships-submodal';
@@ -182,6 +183,9 @@ export default function SalesModal({
   const [showValidationModal, setShowValidationModal] = useState(false);
   const [validationMessage, setValidationMessage] = useState('');
   const [showClearLinesModal, setShowClearLinesModal] = useState(false);
+  const [showNameSubModal, setShowNameSubModal] = useState(false);
+  const [nameDraft, setNameDraft] = useState('');
+  const [isNameCustom, setIsNameCustom] = useState(false);
 
   // Mini-submodal states for Task data
   const [showTaskItemSubModal, setShowTaskItemSubModal] = useState(false);
@@ -269,6 +273,12 @@ export default function SalesModal({
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+
+  const getDefaultSaleName = useCallback(
+    (nextType: SaleType, nextSiteId: string, nextDate: Date) =>
+      buildAutoSaleName(nextType, nextSiteId, nextDate, sites),
+    [sites]
+  );
 
   // Load data on mount
   useEffect(() => {
@@ -360,9 +370,12 @@ export default function SalesModal({
       setSaleItemLinkTargets([]);
       setRecordedPayments([]);
       setSelectedItems([]);
+      const saleDateFromRecord = new Date(sale.saleDate);
+      const defaultName = buildAutoSaleName(sale.type, sale.siteId, saleDateFromRecord, sites);
       setName(sale.name);
+      setIsNameCustom(Boolean(sale.name?.trim()) && sale.name.trim() !== defaultName);
       setDescription(sale.description || '');
-      setSaleDate(new Date(sale.saleDate));
+      setSaleDate(saleDateFromRecord);
       setType(sale.type);
       setStatus(sale.status);
       setSiteId(sale.siteId);
@@ -661,7 +674,23 @@ export default function SalesModal({
     setTaskDueDate(undefined);
     setTaskTargetSiteId('');
     setTaskStation('SALES' as Station);
+    setIsNameCustom(false);
   };
+
+  useEffect(() => {
+    if (!open || isNameCustom) return;
+    if (siteId == null) return;
+
+    const safeSaleDate = saleDate instanceof Date && Number.isFinite(saleDate.getTime()) ? saleDate : new Date();
+    setName(getDefaultSaleName(type, siteId, safeSaleDate));
+  }, [type, siteId, saleDate, isNameCustom, open, getDefaultSaleName]);
+
+  useEffect(() => {
+    if (!open || !sale?.id) return;
+    const saleDateFromRecord = new Date(sale.saleDate);
+    const defaultName = buildAutoSaleName(sale.type, sale.siteId, saleDateFromRecord, sites);
+    setIsNameCustom(Boolean(sale.name?.trim()) && sale.name.trim() !== defaultName);
+  }, [open, sale?.id, sale?.name, sale?.type, sale?.siteId, sale?.saleDate, sites]);
 
   const handleSave = async (overrideSale?: Sale) => {
     if (isSaving) return;
@@ -886,7 +915,7 @@ export default function SalesModal({
 
     const saleData: Sale = {
       id: draftId.current,
-      name: (name?.trim() || `${type} @ ${siteId} ${safeSaleDate.toISOString().slice(0, 10)}`),
+      name: (name?.trim() || buildAutoSaleName(type, siteId, safeSaleDate, sites)),
       description: description.trim() || undefined,
       saleDate: safeSaleDate,
       type,
@@ -1281,10 +1310,24 @@ export default function SalesModal({
               )}
             </div>
             <div className="ml-auto flex flex-wrap items-center justify-end gap-1.5">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setNameDraft(name);
+                  setShowNameSubModal(true);
+                }}
+                className="h-8 px-2 text-xs"
+              >
+                <Pencil className="h-3 w-3 mr-1" />
+                Name
+              </Button>
               {Object.values(SaleType).map(t => {
                 const isExistingSale = sale?.id;
-                const isProductToMultiple = type === SaleType.DIRECT && t === SaleType.NETWORK;
-                const isDisabled = isExistingSale && !isProductToMultiple;
+                const isBidirectionalDirectNetwork =
+                  (type === SaleType.DIRECT && t === SaleType.NETWORK) ||
+                  (type === SaleType.NETWORK && t === SaleType.DIRECT);
+                const isDisabled = isExistingSale && !isBidirectionalDirectNetwork;
 
                 return (
                   <Button
@@ -1294,7 +1337,12 @@ export default function SalesModal({
                     disabled={!!isDisabled}
                     onClick={() => {
                       if (isDisabled) return;
-                      setType(t as SaleType);
+                      const nextType = t as SaleType;
+                      setType(nextType);
+                      if (!isNameCustom) {
+                        const safeSaleDate = saleDate instanceof Date && Number.isFinite(saleDate.getTime()) ? saleDate : new Date();
+                        setName(getDefaultSaleName(nextType, siteId, safeSaleDate));
+                      }
                       const channel = getSalesChannelFromSaleType(t);
                       if (channel) {
                         setSalesChannel(channel);
@@ -2133,6 +2181,47 @@ export default function SalesModal({
         />
 
       </DialogContent>
+
+      {/* Name SubModal */}
+      <Dialog open={showNameSubModal} onOpenChange={setShowNameSubModal}>
+        <DialogContent zIndexLayer={'MODALS'} className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Rename Sale</DialogTitle>
+            <DialogDescription>Set a custom sale name for this record.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="sale-name-draft" className="text-xs">Sale Name</Label>
+            <Input
+              id="sale-name-draft"
+              value={nameDraft}
+              onChange={(event) => setNameDraft(event.target.value)}
+              placeholder="Sale name"
+              className="h-8 text-sm"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowNameSubModal(false)} className="h-8 text-xs">
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                const normalized = nameDraft.trim();
+                if (!normalized) {
+                  return;
+                }
+                const defaultName = buildAutoSaleName(type, siteId, saleDate, sites);
+                setName(normalized);
+                setIsNameCustom(normalized !== defaultName);
+                setShowNameSubModal(false);
+              }}
+              className="h-8 text-xs"
+              disabled={!nameDraft.trim()}
+            >
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Validation Modal */}
       <Dialog open={showValidationModal} onOpenChange={setShowValidationModal}>

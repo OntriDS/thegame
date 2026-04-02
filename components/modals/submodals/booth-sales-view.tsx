@@ -35,6 +35,7 @@ import { Sale, SaleLine, Item, Site, Character, ServiceLine, ItemSaleLine, Busin
 import { v4 as uuid } from 'uuid';
 import { createSiteOptionsWithCategories } from '@/lib/utils/site-options-utils';
 import { formatDisplayDate } from '@/lib/utils/date-utils';
+import { buildAutoSaleName } from '@/lib/utils/sale-auto-name-utils';
 import SaleItemsSubModal from './sale-items-submodal';
 import ConfirmationModal from './confirmation-submodal';
 
@@ -670,7 +671,7 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(fun
         // 4. Construct FULL Valid Sale Object
         // Using CHARGED as the standard 'Completed' status for sales
         const saleId = sale?.id || uuid(); // Preserve ID if exists
-        const saleName = `Booth Sale ${formatDisplayDate(saleDate)}`;
+        const saleName = buildAutoSaleName(SaleType.BOOTH, siteId, saleDate, sites);
 
         const fullSale: Sale = {
             id: saleId,
