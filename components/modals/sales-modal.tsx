@@ -544,7 +544,7 @@ export default function SalesModal({
         return { ...row, itemName: name };
       })
     );
-  }, [sale?.id, items, whatKind]);
+  }, [sale, items, whatKind]);
 
   // Load preferences after hydration to prevent SSR mismatches
   useEffect(() => {

@@ -573,7 +573,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
       setLocalCollectedAt(undefined);
       // Other fields remain as-is or are loaded from persisted draft via loadFormDataFromStorage
     }
-  }, [item, defaultItemType, getLastUsedStation]);
+  }, [item, defaultItemType, getLastUsedStation, initialSiteId]);
 
   // Effect to handle auto-select of subtype when modal opens for new items
   useEffect(() => {

@@ -195,12 +195,12 @@ export default function SaleItemsSubModal({
 
   const soldLines = React.useMemo(
     () => lines.filter((line) => isSoldLine(line)),
-    [lines, items]
+    [lines, isSoldLine, items]
   );
 
   const editableLines = React.useMemo(
     () => lines.filter((line) => !isSoldLine(line)),
-    [lines, items]
+    [lines, isSoldLine, items]
   );
 
   // Inventory-only options for new selections (no sold items mixed in).

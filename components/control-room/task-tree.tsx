@@ -106,6 +106,8 @@ export default function TaskTree({
   expanded,
   onToggle,
   onNewTask,
+  selectedNode,
+  onSelectNode,
   stationFilters,
   onStationFilterChange,
   typeFilter,
@@ -113,7 +115,6 @@ export default function TaskTree({
   activeSubTab,
   onChangeOrder,
   onMove,
-  ...props
 }: TaskTreeProps) {
   const typeOptions: TaskType[] =
     activeSubTab === 'recurrent-tasks'
@@ -265,11 +266,11 @@ export default function TaskTree({
     (nodes: any[]) => {
       const first = nodes[0];
       const data = first?.data as TreeNode | undefined;
-      if (data && props.onSelectNode) {
-        props.onSelectNode(data);
+      if (data && onSelectNode) {
+        onSelectNode(data);
       }
     },
-    [props.onSelectNode]
+    [onSelectNode]
   );
 
   const TaskTreeNode: React.FC<NodeRendererProps<TreeNode>> = ({ node, style, dragHandle, preview }) => {
@@ -537,7 +538,7 @@ export default function TaskTree({
             indent={24}
             idAccessor={(node: TreeNode) => node.task.id}
             childrenAccessor={(node: TreeNode) => node.children}
-            selection={props.selectedNode?.task.id}
+            selection={selectedNode?.task.id}
             onSelect={handleSelectFromTree}
             onMove={onMove}
             onToggle={onToggle}

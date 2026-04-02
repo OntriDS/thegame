@@ -155,7 +155,11 @@ const sortGroupedTasks = (groupedTasks: Map<string, EnrichedTask[]>, sortOption:
 };
 
 // Render tasks with hierarchy and parent trails
-function renderTaskHierarchy(tasks: EnrichedTask[], onSelectTask?: (task: Task) => void, sortOption: TaskHistorySort): JSX.Element {
+function renderTaskHierarchy(
+  tasks: EnrichedTask[],
+  onSelectTask: ((task: Task) => void) | undefined,
+  sortOption: TaskHistorySort
+): JSX.Element {
     // Group tasks by immediate parent
     const groupedTasks = new Map<string, EnrichedTask[]>();
     const orphanTasks: EnrichedTask[] = [];
