@@ -172,6 +172,9 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
     }
 
     await markEffect(effectKey);
+    if (!(financial.isNotPaid || financial.isNotCharged)) {
+      await ensureFinancialDoneLog(financial.id);
+    }
     return;
   }
 
@@ -354,6 +357,11 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
         }
       }
     }
+  }
+
+  // Heal missing DONE log after edits (manual log delete, or lean-field patch found no row).
+  if (!(financial.isNotPaid || financial.isNotCharged)) {
+    await ensureFinancialDoneLog(financial.id);
   }
 }
 
