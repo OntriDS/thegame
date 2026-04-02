@@ -5,6 +5,8 @@ import { IAM_ACCOUNTS_INDEX } from '@/lib/keys';
 import { getAllCharacters } from '@/data-store/repositories/character.repo';
 import { getAllPlayers } from '@/data-store/repositories/player.repo';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * IAM System Console Data API (Admin Only)
  * Provides a snapshot of the Digital Universe Identity Layer.

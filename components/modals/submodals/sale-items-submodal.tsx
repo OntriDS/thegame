@@ -181,26 +181,26 @@ export default function SaleItemsSubModal({
     );
   }, [selectedSiteId, open]);
 
-  const isSoldItemId = (id: string): boolean => {
+  const isSoldItemId = React.useCallback((id: string): boolean => {
     return id.includes('-sold-') || id.includes('-manualsold-');
-  };
+  }, []);
 
-  const isSoldLine = (line: SaleItemLine): boolean => {
+  const isSoldLine = React.useCallback((line: SaleItemLine): boolean => {
     if (!line.itemId) return false;
     if (isSoldItemId(line.itemId)) return true;
     const resolved = items.find((i) => i.id === line.itemId);
     if (!resolved) return false;
     return resolved.status === ItemStatus.SOLD;
-  };
+  }, [items, isSoldItemId]);
 
   const soldLines = React.useMemo(
     () => lines.filter((line) => isSoldLine(line)),
-    [lines, isSoldLine, items]
+    [lines, isSoldLine]
   );
 
   const editableLines = React.useMemo(
     () => lines.filter((line) => !isSoldLine(line)),
-    [lines, isSoldLine, items]
+    [lines, isSoldLine]
   );
 
   // Inventory-only options for new selections (no sold items mixed in).

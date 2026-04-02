@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { iamService } from '@/lib/iam-service';
 import { AuthCheckResponse } from '@/types/auth-types';
 
+export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {

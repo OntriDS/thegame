@@ -5,6 +5,8 @@ import { getCompanyAreas } from '@/lib/utils/business-structure-utils';
 import { BUSINESS_STRUCTURE } from '@/types/enums';
 import { CompanyMonthlySummary, PersonalMonthlySummary } from '@/types/entities';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url);
