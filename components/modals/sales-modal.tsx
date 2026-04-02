@@ -227,6 +227,9 @@ export default function SalesModal({
   // Identity Vault: Persist ID across renders to prevent duplicate creation on multiple saves
   const draftId = useRef(sale?.id || uuid());
 
+  /** Ensures siteId from the record is committed before passive effects (fixes auto-name overwriting with stale siteId). */
+  const saleSiteHydrationKeyRef = useRef<string | null>(null);
+
   const toggleAdvanced = () => {
     const newValue = !showAdvanced;
     setShowAdvanced(newValue);
@@ -279,6 +282,20 @@ export default function SalesModal({
       buildAutoSaleName(nextType, nextSiteId, nextDate, sites),
     [sites]
   );
+
+  useLayoutEffect(() => {
+    if (!open) {
+      saleSiteHydrationKeyRef.current = null;
+      return;
+    }
+    if (!sale?.id) return;
+
+    const key = `${sale.id}:${sale.siteId ?? ''}`;
+    if (saleSiteHydrationKeyRef.current === key) return;
+
+    saleSiteHydrationKeyRef.current = key;
+    setSiteId(sale.siteId ?? '');
+  }, [open, sale?.id, sale?.siteId]);
 
   // Load data on mount
   useEffect(() => {
@@ -378,7 +395,7 @@ export default function SalesModal({
       setSaleDate(saleDateFromRecord);
       setType(sale.type);
       setStatus(sale.status);
-      setSiteId(sale.siteId);
+      setSiteId(sale.siteId ?? '');
       setCounterpartyName(sale.counterpartyName || '');
       setCustomerId(sale.customerId || '');
       setIsNewCustomer(!sale.customerId); // Toggle to "Existing" if customer exists
@@ -1276,6 +1293,22 @@ export default function SalesModal({
                 persistentCollapsible={true}
                 instanceId="sales-modal-header-station"
               />
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  const safeSaleDate =
+                    saleDate instanceof Date && Number.isFinite(saleDate.getTime()) ? saleDate : new Date();
+                  setNameDraft(
+                    isNameCustom ? name : buildAutoSaleName(type, siteId, safeSaleDate, sites)
+                  );
+                  setShowNameSubModal(true);
+                }}
+                className="h-8 shrink-0 px-2 text-xs"
+              >
+                <Pencil className="h-3 w-3 mr-1" />
+                Name
+              </Button>
               {type !== SaleType.BOOTH && (
                 <Button
                   size="sm"
@@ -1310,18 +1343,6 @@ export default function SalesModal({
               )}
             </div>
             <div className="ml-auto flex flex-wrap items-center justify-end gap-1.5">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  setNameDraft(name);
-                  setShowNameSubModal(true);
-                }}
-                className="h-8 px-2 text-xs"
-              >
-                <Pencil className="h-3 w-3 mr-1" />
-                Name
-              </Button>
               {Object.values(SaleType).map(t => {
                 const isExistingSale = sale?.id;
                 const isBidirectionalDirectNetwork =

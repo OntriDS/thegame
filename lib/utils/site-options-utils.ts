@@ -69,7 +69,11 @@ export const createSiteOptionsWithCategories = (sites: Site[]): Array<{ value: s
  * @returns The site name, or siteId if not found
  */
 export const getSiteNameFromId = (siteId: string, sites: Site[]): string => {
-  const site = sites.find(s => s.id === siteId);
+  const key = siteId?.trim() ?? '';
+  if (!key) return '';
+  const site = sites.find(
+    s => s.id === key || String(s.name ?? '').trim().toLowerCase() === key.toLowerCase()
+  );
   return site ? site.name : siteId;
 };
 
