@@ -230,6 +230,9 @@ export default function SalesModal({
   /** Ensures siteId from the record is committed before passive effects (fixes auto-name overwriting with stale siteId). */
   const saleSiteHydrationKeyRef = useRef<string | null>(null);
 
+  /** Auto-name effect must not run in the same flush as sale hydration — it reads stale type/siteId and overwrites `sale.name`. */
+  const suppressAutoNameAfterSaleHydrationRef = useRef(false);
+
   const toggleAdvanced = () => {
     const newValue = !showAdvanced;
     setShowAdvanced(newValue);
@@ -399,6 +402,7 @@ export default function SalesModal({
   // Initialize form when sale changes
   useEffect(() => {
     if (sale) {
+      suppressAutoNameAfterSaleHydrationRef.current = true;
       setSaleItemLinkTargets([]);
       setRecordedPayments([]);
       setSelectedItems([]);
@@ -507,6 +511,7 @@ export default function SalesModal({
       // Sync Vault with existing sale ID
       draftId.current = sale.id;
     } else {
+      suppressAutoNameAfterSaleHydrationRef.current = false;
       // New sale - always reset form when sale is null/undefined
       resetForm();
       // Initialize player character for new sale
@@ -717,6 +722,10 @@ export default function SalesModal({
   };
 
   useEffect(() => {
+    if (suppressAutoNameAfterSaleHydrationRef.current) {
+      suppressAutoNameAfterSaleHydrationRef.current = false;
+      return;
+    }
     if (!open || isNameCustom) return;
     if (siteId == null) return;
 
@@ -1322,9 +1331,16 @@ export default function SalesModal({
                 size="sm"
                 variant="outline"
                 onClick={() => {
-                  setNameDraft(
-                    isNameCustom ? name : buildAutoSaleName(type, siteId, getTimelineDateForAutoName(), sites)
-                  );
+                  const liveCanonical = buildAutoSaleName(type, siteId, getTimelineDateForAutoName(), sites);
+                  const serverTrim = sale?.name?.trim() ?? '';
+                  const nameTrim = name.trim();
+                  const formSyncedToServer = !sale?.id || nameTrim === serverTrim;
+                  const useStoredCustom =
+                    isNameCustom &&
+                    formSyncedToServer &&
+                    !!serverTrim &&
+                    serverTrim !== liveCanonical;
+                  setNameDraft(useStoredCustom ? serverTrim : liveCanonical);
                   setShowNameSubModal(true);
                 }}
                 className="h-8 shrink-0 px-2 text-xs"
