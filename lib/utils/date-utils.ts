@@ -1,6 +1,6 @@
 // lib/utils/date-utils.ts
 // Centralized date formatting utilities using app constants
-import { format, parseISO, isValid } from 'date-fns';
+import { format, parseISO, isValid, parse } from 'date-fns';
 import type { Task, Sale, FinancialRecord, Item } from '@/types/entities';
 import { SaleStatus } from '@/types/enums';
 import {
@@ -23,25 +23,18 @@ export function parseFlexibleDate(date: Date | string | null | undefined): Date 
   // 1. Try ISO (YYYY-MM-DD...)
   const iso = parseISO(date);
   if (isValid(iso)) return iso;
-  
-  try {
-    const { parse } = require('date-fns');
-    
-    // 2. Try DD-MM-YYYY (App Display Format)
-    const display = parse(date, DATE_FORMAT_DISPLAY, new Date());
-    if (isValid(display)) return display;
-    
-    // 3. Try YYYY-MM-DD (HTML Input Format)
-    const input = parse(date, DATE_FORMAT_INPUT, new Date());
-    if (isValid(input)) return input;
-    
-    // 4. Try DD/MM/YY (App Short Format)
-    const short = parse(date, DATE_FORMAT_SHORT, new Date());
-    if (isValid(short)) return short;
 
-  } catch (e) {
-    // Fallback to native Date
-  }
+  // 2. Try DD-MM-YYYY (App Display Format)
+  const display = parse(date, DATE_FORMAT_DISPLAY, new Date());
+  if (isValid(display)) return display;
+  
+  // 3. Try YYYY-MM-DD (HTML Input Format)
+  const input = parse(date, DATE_FORMAT_INPUT, new Date());
+  if (isValid(input)) return input;
+  
+  // 4. Try DD/MM/YY (App Short Format)
+  const short = parse(date, DATE_FORMAT_SHORT, new Date());
+  if (isValid(short)) return short;
   
   const native = new Date(date);
   return isValid(native) ? native : new Date();
