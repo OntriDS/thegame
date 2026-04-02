@@ -150,6 +150,7 @@ export function CompanyRecordsList({
 
   const handleEdit = (record: FinancialRecord) => {
     setRecordToEdit(record);
+    onRecordEdit(record);
   };
 
   return (
@@ -183,78 +184,80 @@ export function CompanyRecordsList({
           </div>
 
           {records.length === 0 ? (
-        <Card>
-          <CardContent className="text-center py-8">
-            <p className="text-muted-foreground">
-              {year === 0 || month === 0
-                ? 'No company records'
-                : `No company records for ${formatMonthYear(new Date(year, month - 1))}`}
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-2">
-          {records.map(record => {
-            // Payment status indicators
-            const isWaiting = record.isNotPaid || record.isNotCharged;
-            const waitingText = record.isNotPaid ? '⏳ Not Paid' : record.isNotCharged ? '⏳ Not Charged' : '';
-            const cost = record.cost || 0;
-            const revenue = record.revenue || 0;
-            const profit = revenue - cost;
+            <Card>
+              <CardContent className="text-center py-8">
+                <p className="text-muted-foreground">
+                  {year === 0 || month === 0
+                    ? 'No company records'
+                    : `No company records for ${formatMonthYear(new Date(year, month - 1))}`}
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-2">
+              {records.map(record => {
+                // Payment status indicators
+                const isWaiting = record.isNotPaid || record.isNotCharged;
+                const waitingText = record.isNotPaid ? '⏳ Not Paid' : record.isNotCharged ? '⏳ Not Charged' : '';
+                const cost = record.cost || 0;
+                const revenue = record.revenue || 0;
+                const profit = revenue - cost;
 
-            return (
-              <Card key={record.id} className={isWaiting ? "border-orange-500/50 bg-orange-500/5" : ""}>
-                <CardContent className="p-3">
-                  <div className="flex items-center justify-between gap-3">
-                    {/* Single row - compact display */}
-                    <div className="flex items-center gap-2 text-sm flex-1 min-w-0">
-                      <span className="font-medium truncate">{record.name}</span>
-                      <span className="text-muted-foreground">•</span>
-                      <span className="text-muted-foreground text-xs">{record.station}</span>
-                      <span className="text-muted-foreground">•</span>
-                      <span className="text-muted-foreground font-medium">
-                        {`Cost: $${cost}`}
-                      </span>
-                      <span className="text-muted-foreground">•</span>
-                      <span className={revenue > 0 ? "text-foreground font-medium" : "text-muted-foreground"}>
-                        {`Rev: $${revenue}`}
-                      </span>
-                      <span className="text-muted-foreground">•</span>
-                      <span className={profit >= 0 ? "text-emerald-500 font-medium" : "text-red-500 font-medium"}>
-                        {`Profit: $${profit}`}
-                      </span>
-                      {isWaiting && (
-                        <>
+                return (
+                  <Card key={record.id} className={isWaiting ? "border-orange-500/50 bg-orange-500/5" : ""}>
+                    <CardContent className="p-3">
+                      <div className="flex items-center justify-between gap-3">
+                        {/* Single row - compact display */}
+                        <div className="flex items-center gap-2 text-sm flex-1 min-w-0">
+                          <span className="font-medium truncate">{record.name}</span>
                           <span className="text-muted-foreground">•</span>
-                          <span className="text-orange-600 text-xs font-medium">{waitingText}</span>
-                        </>
-                      )}
-                      {record.outputItemName && (
-                        <>
+                          <span className="text-muted-foreground text-xs">{record.station}</span>
                           <span className="text-muted-foreground">•</span>
-                          <span className="text-xs">
-                            {record.outputItemName}
-                            {record.outputQuantity && record.outputQuantity > 1 && ` (${record.outputQuantity}x)`}
+                          <span className="text-muted-foreground font-medium">
+                            {`Cost: $${cost}`}
                           </span>
-                        </>
-                      )}
-                      {record.jungleCoins > 0 && (
-                        <>
                           <span className="text-muted-foreground">•</span>
-                          <span className="text-blue-600 text-xs">J$: {record.jungleCoins}</span>
-                        </>
-                      )}
-                    </div>
+                          <span className={revenue > 0 ? "text-foreground font-medium" : "text-muted-foreground"}>
+                            {`Rev: $${revenue}`}
+                          </span>
+                          <span className="text-muted-foreground">•</span>
+                          <span className={profit >= 0 ? "text-emerald-500 font-medium" : "text-red-500 font-medium"}>
+                            {`Profit: $${profit}`}
+                          </span>
+                          {isWaiting && (
+                            <>
+                              <span className="text-muted-foreground">•</span>
+                              <span className="text-orange-600 text-xs font-medium">{waitingText}</span>
+                            </>
+                          )}
+                          {record.outputItemName && (
+                            <>
+                              <span className="text-muted-foreground">•</span>
+                              <span className="text-xs">
+                                {record.outputItemName}
+                                {record.outputQuantity && record.outputQuantity > 1 && ` (${record.outputQuantity}x)`}
+                              </span>
+                            </>
+                          )}
+                          {record.jungleCoins > 0 && (
+                            <>
+                              <span className="text-muted-foreground">•</span>
+                              <span className="text-blue-600 text-xs">J$: {record.jungleCoins}</span>
+                            </>
+                          )}
+                        </div>
 
-                    {/* Edit button */}
-                    <Button size="sm" variant="outline" onClick={() => handleEdit(record)}>
-                      Edit
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+                        {/* Edit button */}
+                        <Button size="sm" variant="outline" onClick={() => handleEdit(record)}>
+                          Edit
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
 
           {recordToEdit && (
             <FinancialsModal
@@ -264,35 +267,34 @@ export function CompanyRecordsList({
               open={!!recordToEdit}
               onOpenChange={(open: boolean) => !open && setRecordToEdit(null)}
               onSave={async (record: FinancialRecord, force?: boolean) => {
-                // Allow error to bubble up
                 const finalRecord = await ClientAPI.upsertFinancialRecord(record, { force });
+                let companyRecords: FinancialRecord[];
 
-                const companyRecords = await ClientAPI.getFinancialRecordsByMonth(
-                  finalRecord.year,
-                  finalRecord.month,
-                  'company'
-                );
-                // Apply sorting
-                const sortedRecords = sortFinancialRecords(companyRecords, sortOption);
-                setRecords(sortedRecords);
-                onRecordUpdated();
-                setRecordToEdit(finalRecord);
-              }}
-              onDelete={async () => {
-                const r = recordToEdit;
-                const companyRecords = await ClientAPI.getFinancialRecordsByMonth(
-                  r.year,
-                  r.month,
-                  'company'
-                );
+                if (year === 0 || month === 0) {
+                  const allRecords = await ClientAPI.getFinancialRecords();
+                  companyRecords = allRecords.filter(r => r.type === 'company');
+                } else {
+                  companyRecords = await ClientAPI.getFinancialRecordsByMonth(finalRecord.year, finalRecord.month, 'company');
+                }
                 // Apply sorting
                 const sortedRecords = sortFinancialRecords(companyRecords, sortOption);
                 setRecords(sortedRecords);
                 onRecordUpdated();
                 setRecordToEdit(null);
               }}
+              onDelete={async () => {
+                if (!recordToEdit) return;
+
+                await ClientAPI.deleteFinancialRecord(recordToEdit.id);
+                const refreshedRecords = records.filter(r => r.id !== recordToEdit.id);
+                setRecords(refreshedRecords);
+                onRecordUpdated();
+                setRecordToEdit(null);
+              }}
             />
-      </>
+          )}
+        </>
+      )}
     </>
   );
 }
@@ -363,35 +365,7 @@ export function PersonalRecordsList({
 
   const handleEdit = (record: FinancialRecord) => {
     setRecordToEdit(record);
-  };
-
-  const handleDelete = async (record: FinancialRecord) => {
-    const confirmed = confirm(`⚠️ PERMANENT DELETION
-
-Are you sure you want to delete this record?
-
-${record.name}
-${record.station} • ${record.description}
-
-This action cannot be undone.`);
-
-    if (confirmed) {
-      try {
-        // Delete from DataStore (log cleanup handled by removeRecordEffectsOnDelete workflow)
-        await ClientAPI.deleteFinancialRecord(record.id);
-
-        // Update local state immediately
-        const updatedRecords = records.filter(r => r.id !== record.id);
-        setRecords(updatedRecords);
-
-        // Trigger parent refresh
-        onRecordUpdated();
-
-      } catch (error) {
-        console.error('Error deleting record:', error);
-        alert('Error deleting record. Please try again.');
-      }
-    }
+    onRecordEdit(record);
   };
 
   return (
@@ -425,78 +399,80 @@ This action cannot be undone.`);
           </div>
 
           {records.length === 0 ? (
-        <Card>
-          <CardContent className="text-center py-8">
-            <p className="text-muted-foreground">
-              {year === 0 || month === 0
-                ? 'No personal records'
-                : `No personal records for ${formatMonthYear(new Date(year, month - 1))}`}
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-2">
-          {records.map(record => {
-            // Payment status indicators
-            const isWaiting = record.isNotPaid || record.isNotCharged;
-            const waitingText = record.isNotPaid ? '⏳ Not Paid' : record.isNotCharged ? '⏳ Not Charged' : '';
-            const cost = record.cost || 0;
-            const revenue = record.revenue || 0;
-            const profit = revenue - cost;
+            <Card>
+              <CardContent className="text-center py-8">
+                <p className="text-muted-foreground">
+                  {year === 0 || month === 0
+                    ? 'No personal records'
+                    : `No personal records for ${formatMonthYear(new Date(year, month - 1))}`}
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-2">
+              {records.map(record => {
+                // Payment status indicators
+                const isWaiting = record.isNotPaid || record.isNotCharged;
+                const waitingText = record.isNotPaid ? '⏳ Not Paid' : record.isNotCharged ? '⏳ Not Charged' : '';
+                const cost = record.cost || 0;
+                const revenue = record.revenue || 0;
+                const profit = revenue - cost;
 
-            return (
-              <Card key={record.id} className={isWaiting ? "border-orange-500/50 bg-orange-500/5" : ""}>
-                <CardContent className="p-3">
-                  <div className="flex items-center justify-between gap-3">
-                    {/* Single row - compact display */}
-                    <div className="flex items-center gap-2 text-sm flex-1 min-w-0">
-                      <span className="font-medium truncate">{record.name}</span>
-                      <span className="text-muted-foreground">•</span>
-                      <span className="text-muted-foreground text-xs">{record.station}</span>
-                      <span className="text-muted-foreground">•</span>
-                      <span className="text-muted-foreground font-medium">
-                        {`Cost: $${cost}`}
-                      </span>
-                      <span className="text-muted-foreground">•</span>
-                      <span className={revenue > 0 ? "text-foreground font-medium" : "text-muted-foreground"}>
-                        {`Rev: $${revenue}`}
-                      </span>
-                      <span className="text-muted-foreground">•</span>
-                      <span className={profit >= 0 ? "text-emerald-500 font-medium" : "text-red-500 font-medium"}>
-                        {`Profit: $${profit}`}
-                      </span>
-                      {isWaiting && (
-                        <>
+                return (
+                  <Card key={record.id} className={isWaiting ? "border-orange-500/50 bg-orange-500/5" : ""}>
+                    <CardContent className="p-3">
+                      <div className="flex items-center justify-between gap-3">
+                        {/* Single row - compact display */}
+                        <div className="flex items-center gap-2 text-sm flex-1 min-w-0">
+                          <span className="font-medium truncate">{record.name}</span>
                           <span className="text-muted-foreground">•</span>
-                          <span className="text-orange-600 text-xs font-medium">{waitingText}</span>
-                        </>
-                      )}
-                      {record.outputItemName && (
-                        <>
+                          <span className="text-muted-foreground text-xs">{record.station}</span>
                           <span className="text-muted-foreground">•</span>
-                          <span className="text-xs">
-                            {record.outputItemName}
-                            {record.outputQuantity && record.outputQuantity > 1 && ` (${record.outputQuantity}x)`}
+                          <span className="text-muted-foreground font-medium">
+                            {`Cost: $${cost}`}
                           </span>
-                        </>
-                      )}
-                      {record.jungleCoins > 0 && (
-                        <>
                           <span className="text-muted-foreground">•</span>
-                          <span className="text-blue-600 text-xs">J$: {record.jungleCoins}</span>
-                        </>
-                      )}
-                    </div>
+                          <span className={revenue > 0 ? "text-foreground font-medium" : "text-muted-foreground"}>
+                            {`Rev: $${revenue}`}
+                          </span>
+                          <span className="text-muted-foreground">•</span>
+                          <span className={profit >= 0 ? "text-emerald-500 font-medium" : "text-red-500 font-medium"}>
+                            {`Profit: $${profit}`}
+                          </span>
+                          {isWaiting && (
+                            <>
+                              <span className="text-muted-foreground">•</span>
+                              <span className="text-orange-600 text-xs font-medium">{waitingText}</span>
+                            </>
+                          )}
+                          {record.outputItemName && (
+                            <>
+                              <span className="text-muted-foreground">•</span>
+                              <span className="text-xs">
+                                {record.outputItemName}
+                                {record.outputQuantity && record.outputQuantity > 1 && ` (${record.outputQuantity}x)`}
+                              </span>
+                            </>
+                          )}
+                          {record.jungleCoins > 0 && (
+                            <>
+                              <span className="text-muted-foreground">•</span>
+                              <span className="text-blue-600 text-xs">J$: {record.jungleCoins}</span>
+                            </>
+                          )}
+                        </div>
 
-                    {/* Edit button */}
-                    <Button size="sm" variant="outline" onClick={() => handleEdit(record)}>
-                      Edit
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+                        {/* Edit button */}
+                        <Button size="sm" variant="outline" onClick={() => handleEdit(record)}>
+                          Edit
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
 
           {recordToEdit && (
             <FinancialsModal
@@ -506,35 +482,34 @@ This action cannot be undone.`);
               open={!!recordToEdit}
               onOpenChange={(open: boolean) => !open && setRecordToEdit(null)}
               onSave={async (record: FinancialRecord, force?: boolean) => {
-                // Allow error to bubble up
                 const finalRecord = await ClientAPI.upsertFinancialRecord(record, { force });
+                let personalRecords: FinancialRecord[];
 
-                const personalRecords = await ClientAPI.getFinancialRecordsByMonth(
-                  finalRecord.year,
-                  finalRecord.month,
-                  'personal'
-                );
-                // Apply sorting
-                const sortedRecords = sortFinancialRecords(personalRecords, sortOption);
-                setRecords(sortedRecords);
-                onRecordUpdated();
-                setRecordToEdit(finalRecord);
-              }}
-              onDelete={async () => {
-                const r = recordToEdit;
-                const personalRecords = await ClientAPI.getFinancialRecordsByMonth(
-                  r.year,
-                  r.month,
-                  'personal'
-                );
+                if (year === 0 || month === 0) {
+                  const allRecords = await ClientAPI.getFinancialRecords();
+                  personalRecords = allRecords.filter(r => r.type === 'personal');
+                } else {
+                  personalRecords = await ClientAPI.getFinancialRecordsByMonth(finalRecord.year, finalRecord.month, 'personal');
+                }
                 // Apply sorting
                 const sortedRecords = sortFinancialRecords(personalRecords, sortOption);
                 setRecords(sortedRecords);
                 onRecordUpdated();
                 setRecordToEdit(null);
               }}
+              onDelete={async () => {
+                if (!recordToEdit) return;
+
+                await ClientAPI.deleteFinancialRecord(recordToEdit.id);
+                const refreshedRecords = records.filter(r => r.id !== recordToEdit.id);
+                setRecords(refreshedRecords);
+                onRecordUpdated();
+                setRecordToEdit(null);
+              }}
             />
-      </>
+          )}
+        </>
+      )}
     </>
   );
 }
