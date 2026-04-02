@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ClientAPI } from '@/lib/client-api';
 import { Item } from '@/types/entities';
 import { useEntityUpdates } from '@/lib/hooks/use-entity-updates';
-import { ItemType, ItemCategory, ItemStatus, InventoryTab } from '@/types/enums';
+import { ItemType, ItemCategory, ItemStatus, InventoryTab, Collection } from '@/types/enums';
 import { isSoldStatus } from '@/lib/utils/status-utils';
 import { getItemCategory } from '@/lib/utils/item-utils';
 import ItemModal from '@/components/modals/item-modal';

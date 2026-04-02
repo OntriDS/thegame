@@ -160,7 +160,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
     if (!keepInInventoryAfterSold && restockToTarget) {
       setRestockToTarget(false);
     }
-  }, [keepInInventoryAfterSold]);
+  }, [keepInInventoryAfterSold, restockToTarget]);
 
   // Validation: Auto-disable restockToTarget if targetAmount is not set or <= 0
   useEffect(() => {
