@@ -613,6 +613,10 @@ export async function getItemById(id: string): Promise<Item | null> {
   return await repoGetItemById(id);
 }
 
+export async function deleteItem(id: string): Promise<void> {
+  return await repoDeleteItem(id);
+}
+
 // OPTIMIZED: Indexed queries - only load items created by specific tasks/records
 export async function getItemsBySourceTaskId(taskId: string): Promise<Item[]> {
   return await repoGetItemsBySourceTaskId(taskId);

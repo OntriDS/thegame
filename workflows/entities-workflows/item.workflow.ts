@@ -8,6 +8,7 @@ import { appendEntityLog, updateEntityLeanFields, removeLogEntriesAcrossMonths }
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
 import { EffectKeys } from '@/data-store/keys';
 import { getLinksFor, removeLink } from '@/links/link-registry';
+import { deleteItem } from '@/data-store/datastore';
 import { getCategoryForItemType } from '@/lib/utils/searchable-select-utils';
 import { createCharacterFromItem } from '../character-creation-utils';
 import {
@@ -132,47 +133,42 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
 
     // 3. MANAGE THE BASE ITEM (Inventory Shell)
     let updatedBaseItem: Item;
-    const targetQ = item.targetAmount || 0;
-    const isActuallyRestocking = item.restockable && targetQ > 0;
+    const remainingStock = Math.max(0, previousStockTotal - quantityToSell);
 
-    if (isActuallyRestocking) {
-      // CONSIGNMENT RESTOCK: Keep active, refill to Target Q, reset Sold Q
+    // Support both new field and migration from old restockable field
+    const shouldKeepInInventory = item.keepInInventoryAfterSold ?? item.restockable ?? false;
+
+    // Handle restockToTarget logic (consignment behavior)
+    const shouldRestockToTarget = item.restockToTarget ?? false;
+    const targetAmount = item.targetAmount || 0;
+
+    if (shouldRestockToTarget && targetAmount > 0) {
+      // Restock to target quantity (consignment behavior)
       updatedBaseItem = {
         ...item,
-        status: ItemStatus.FOR_SALE, // Revert from Sold back to active
-        quantitySold: 0, 
-        stock: [{ siteId: primarySite, quantity: targetQ }],
+        status: ItemStatus.FOR_SALE,
+        quantitySold: 0, // Always 0 for inventory items
+        stock: [{ siteId: primarySite, quantity: targetAmount }],
         updatedAt: new Date()
       };
+      await upsertItem(updatedBaseItem, { skipWorkflowEffects: true });
+      console.log(`[markItemAsSold] 🔄 Restocked ${item.name} to target quantity ${targetAmount}`);
+    } else if (shouldKeepInInventory || remainingStock > 0) {
+      // Keep item in inventory - either because toggle is ON or there's still stock
+      updatedBaseItem = {
+        ...item,
+        status: ItemStatus.FOR_SALE, // Keep item active
+        quantitySold: 0, // Always 0 for inventory items
+        stock: [{ siteId: primarySite, quantity: remainingStock }],
+        updatedAt: new Date()
+      };
+      await upsertItem(updatedBaseItem, { skipWorkflowEffects: true });
     } else {
-      // PARTIAL OR FULL SALE
-      const remainingStock = Math.max(0, previousStockTotal - quantityToSell);
-      if (remainingStock > 0 && item.restockable) {
-        // Partial Sale: Leave remaining stock on shelf, revert status to active
-        updatedBaseItem = {
-          ...item,
-          status: ItemStatus.FOR_SALE,
-          quantitySold: (previousItem.quantitySold || 0) + quantityToSell,
-          stock: [{ siteId: primarySite, quantity: remainingStock }],
-          updatedAt: new Date()
-        };
-      } else {
-        // Full Depletion OR Unique Item: Stay as SOLD
-        updatedBaseItem = {
-          ...item,
-          status: ItemStatus.SOLD,
-          quantitySold: (previousItem.quantitySold || 0) + quantityToSell,
-          stock: remainingStock > 0 ? [{ siteId: primarySite, quantity: remainingStock }] : [], 
-          soldAt: soldAt,
-          updatedAt: new Date()
-        };
-        // THEGAME MARCH FIX: Use standard monthly index
-        const { buildMonthIndexKey } = await import('@/data-store/keys');
-        await kvSAdd(buildMonthIndexKey(EntityType.ITEM, monthKey), item.id);
-      }
+      // Not keeping in inventory AND no stock remaining - delete the item
+      await deleteItem(item.id);
+      console.log(`[markItemAsSold] 🗑️ Deleted inventory item ${item.id} (${item.name}) - quantity reached 0`);
+      // No need to save updatedBaseItem
     }
-
-    await upsertItem(updatedBaseItem, { skipWorkflowEffects: true });
 
     // 4. LOG EVENT & HANDLE POINTS
     await appendEntityLog(EntityType.ITEM, item.id, LogEventType.SOLD, {

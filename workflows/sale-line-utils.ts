@@ -3,7 +3,7 @@
 
 import type { Sale, Item, ItemSaleLine, ServiceLine, Task } from '@/types/entities';
 import { LinkType, EntityType, LogEventType, ItemStatus } from '@/types/enums';
-import { getItemById, upsertItem } from '@/data-store/datastore';
+import { getItemById, upsertItem, deleteItem } from '@/data-store/datastore';
 import { upsertTask } from '@/data-store/datastore';
 import { makeLink } from '@/links/links-workflows';
 import { createLink } from '@/links/link-registry';
@@ -77,12 +77,15 @@ export async function processItemSaleLine(line: ItemSaleLine, sale: Sale): Promi
     const currentStock = item.stock.reduce((sum, stockPoint) => sum + stockPoint.quantity, 0);
     const requiredTotal = line.quantity;
 
-    // [AUTO-ADJUST] If insufficient stock, we "find" the items to allow the sale
+    // [OVERSELL WARNING] If insufficient stock, warn user but allow sale to proceed
+    // User confirmation should happen in UI layer (Sales Modal) before calling this workflow
     if (requiredTotal > currentStock) {
       const shortage = requiredTotal - currentStock;
-      console.warn(`[processItemSaleLine] ⚠️ Auto-adjusting stock for ${item.name}. Required: ${requiredTotal}, Available: ${currentStock}, Adding: ${shortage}`);
+      console.warn(`[processItemSaleLine] ⚠️ Overselling item ${item.name}. Required: ${requiredTotal}, Available: ${currentStock}, Shortage: ${shortage}`);
+      console.warn(`[processItemSaleLine] ⚠️ This should have been validated in UI layer with user confirmation`);
 
-      // Add shortage to the sale site (or first available site)
+      // For now, we'll auto-adjust stock to allow the sale to proceed
+      // TODO: UI validation should handle this with user confirmation
       const targetSiteId = sale.siteId || (item.stock[0]?.siteId) || 'default';
 
       let siteStockPoint = item.stock.find(sp => sp.siteId === targetSiteId);
@@ -102,7 +105,7 @@ export async function processItemSaleLine(line: ItemSaleLine, sale: Sale): Promi
     }
 
     // Live inventory: only adjust site stock — do not bump quantitySold or soldAt (sold row holds that).
-    const updatedItem = {
+    let updatedItem = {
       ...item,
       updatedAt: new Date(),
       stock: item.stock ? item.stock.map(stockPoint => ({ ...stockPoint })) : []
@@ -141,17 +144,44 @@ export async function processItemSaleLine(line: ItemSaleLine, sale: Sale): Promi
     // Remove empty stock points
     updatedItem.stock = updatedItem.stock.filter(stockPoint => stockPoint.quantity > 0);
 
-    // Mark item as SOLD if all stock is sold
-    // [CHANGE] User requested items NOT be marked SOLD/Deleted even if stock is 0.
-    // They should remain visible (likely ACTIVE) to be restocked.
-    /*
-    if (totalRemainingQuantity <= 0) {
-      updatedItem.status = ItemStatus.SOLD;
-    }
-    */
+    // Calculate remaining stock after sale
+    const remainingStock = updatedItem.stock.reduce((sum, stockPoint) => sum + stockPoint.quantity, 0);
 
-    // Save the updated item (Skip generic workflow to avoid duplicate logs)
-    await upsertItem(updatedItem, { skipWorkflowEffects: true });
+    // Handle keepInInventoryAfterSold logic
+    // Support both new field and migration from old restockable field
+    const shouldKeepInInventory = item.keepInInventoryAfterSold ?? item.restockable ?? false;
+
+    // Handle restockToTarget logic (mainly for Network Sales)
+    const shouldRestockToTarget = item.restockToTarget ?? false;
+    const targetAmount = item.targetAmount || 0;
+
+    if (shouldRestockToTarget && targetAmount > 0) {
+      // Restock to target quantity (consignment behavior)
+      updatedItem = {
+        ...updatedItem,
+        status: ItemStatus.FOR_SALE,
+        quantitySold: 0, // Always 0 for inventory items
+        stock: [{ siteId: sale.siteId || updatedItem.stock[0]?.siteId || '', quantity: targetAmount }],
+        updatedAt: new Date()
+      };
+      await upsertItem(updatedItem, { skipWorkflowEffects: true });
+      console.log(`[processItemSaleLine] 🔄 Restocked ${item.name} to target quantity ${targetAmount}`);
+    } else if (shouldKeepInInventory || remainingStock > 0) {
+      // Keep item in inventory - either because toggle is ON or there's still stock
+      updatedItem = {
+        ...updatedItem,
+        status: ItemStatus.FOR_SALE, // Keep item active
+        quantitySold: 0, // Always 0 for inventory items
+        updatedAt: new Date()
+      };
+
+      // Save the updated item (Skip generic workflow to avoid duplicate logs)
+      await upsertItem(updatedItem, { skipWorkflowEffects: true });
+    } else {
+      // Not keeping in inventory AND no stock remaining - delete the item
+      await deleteItem(item.id);
+      console.log(`[processItemSaleLine] 🗑️ Deleted inventory item ${item.id} (${item.name}) - quantity reached 0`);
+    }
 
     const link = makeLink(
       LinkType.SALE_ITEM,

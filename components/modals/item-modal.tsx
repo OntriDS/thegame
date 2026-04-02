@@ -42,16 +42,6 @@ interface ItemModalProps {
   initialSiteId?: string;
 }
 
-const getDefaultRestockableForType = (itemType: ItemType): boolean => {
-  switch (itemType) {
-    case ItemType.ARTWORK:
-    case ItemType.DIGITAL:
-      return false;
-    default:
-      return true;
-  }
-};
-
 export default function ItemModal({ item, defaultItemType, open, onOpenChange, onSave, initialSiteId }: ItemModalProps) {
   const { getPreference, setPreference } = useUserPreferences();
 
@@ -80,7 +70,8 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
   const [quantity, setQuantity] = useState(0);
   const [unitCost, setUnitCost] = useState(0);
   const [price, setPrice] = useState(0);
-  const [restockable, setRestockable] = useState<boolean>(false);
+  const [keepInInventoryAfterSold, setKeepInInventoryAfterSold] = useState<boolean>(false);
+  const [restockToTarget, setRestockToTarget] = useState<boolean>(false);
   const [year, setYear] = useState(new Date().getFullYear());
   const [imageUrl, setImageUrl] = useState('');
   const [width, setWidth] = useState('');
@@ -148,7 +139,8 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         quantity,
         unitCost,
         price,
-        restockable,
+        keepInInventoryAfterSold,
+        restockToTarget,
         year,
         imageUrl,
         width,
@@ -161,7 +153,22 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
       };
       setPreference('item-modal-form-data', JSON.stringify(formData));
     }
-  }, [item, name, description, type, station, subItemType, collection, status, quantity, unitCost, price, restockable, year, imageUrl, width, height, size, targetAmount, site, originalFiles, accessoryFiles, setPreference]);
+  }, [item, name, description, type, station, subItemType, collection, status, quantity, unitCost, price, keepInInventoryAfterSold, restockToTarget, year, imageUrl, width, height, size, targetAmount, site, originalFiles, accessoryFiles, setPreference]);
+
+  // Validation: Auto-disable restockToTarget if keepInInventoryAfterSold is false
+  useEffect(() => {
+    if (!keepInInventoryAfterSold && restockToTarget) {
+      setRestockToTarget(false);
+    }
+  }, [keepInInventoryAfterSold]);
+
+  // Validation: Auto-disable restockToTarget if targetAmount is not set or <= 0
+  useEffect(() => {
+    const targetAmountNum = parseFloat(targetAmount);
+    if ((!targetAmount || isNaN(targetAmountNum) || targetAmountNum <= 0) && restockToTarget) {
+      setRestockToTarget(false);
+    }
+  }, [targetAmount]);
 
   // Load form data from preferences when modal opens
   const loadFormDataFromStorage = useCallback(() => {
@@ -180,10 +187,17 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
           setQuantity(formData.quantity || 0);
           setUnitCost(formData.unitCost || 0);
           setPrice(formData.price || 0);
-          setRestockable(
-            typeof formData.restockable === 'boolean'
-              ? formData.restockable
-              : getDefaultRestockableForType(formData.type || defaultItemType || ItemType.STICKER)
+          setKeepInInventoryAfterSold(
+            typeof formData.keepInInventoryAfterSold === 'boolean'
+              ? formData.keepInInventoryAfterSold
+              : typeof formData.restockable === 'boolean'
+                ? formData.restockable // Migrate old restockable value
+                : false // Default to false for all item types
+          );
+          setRestockToTarget(
+            typeof formData.restockToTarget === 'boolean'
+              ? formData.restockToTarget
+              : false // Default to false
           );
           setYear(formData.year || new Date().getFullYear());
           setImageUrl(formData.imageUrl || '');
@@ -329,7 +343,8 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
       createdAt: soldAt,
       updatedAt: soldAt,
       isCollected: false,
-      restockable: targetItem.restockable,
+      keepInInventoryAfterSold: targetItem.keepInInventoryAfterSold ?? targetItem.restockable ?? false,
+      restockToTarget: targetItem.restockToTarget ?? false,
       links: [],
       metadata: {
         source: 'item-modal',
@@ -377,10 +392,17 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         setPrice(refreshed.price || 0);
         setUnitCost(refreshed.unitCost || 0);
         setCollection(refreshed.collection || Collection.NO_COLLECTION);
-        setRestockable(
-          typeof refreshed.restockable === 'boolean'
-            ? refreshed.restockable
-            : getDefaultRestockableForType(refreshed.type)
+        setKeepInInventoryAfterSold(
+          typeof refreshed.keepInInventoryAfterSold === 'boolean'
+            ? refreshed.keepInInventoryAfterSold
+            : typeof refreshed.restockable === 'boolean'
+              ? refreshed.restockable // Migrate old restockable value to keepInInventoryAfterSold
+              : false // Default to false
+        );
+        setRestockToTarget(
+          typeof refreshed.restockToTarget === 'boolean'
+            ? refreshed.restockToTarget
+            : false // Default to false
         );
 
       }
@@ -480,7 +502,8 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
     setSubItemType(newSubType || '');
 
     if (!item && !selectedItemId) {
-      setRestockable(getDefaultRestockableForType(newItemType));
+      setKeepInInventoryAfterSold(false); // Default to false for all item types
+      setRestockToTarget(false); // Default to false for all item types
     }
 
     // Save to user preferences
@@ -537,10 +560,17 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
 
       setUnitCost(item.unitCost || 0);
       setPrice(item.price || 0);
-      setRestockable(
-        typeof item.restockable === 'boolean'
-          ? item.restockable
-          : getDefaultRestockableForType(itemType)
+      setKeepInInventoryAfterSold(
+        typeof item.keepInInventoryAfterSold === 'boolean'
+          ? item.keepInInventoryAfterSold
+          : typeof item.restockable === 'boolean'
+            ? item.restockable // Migrate old restockable value to keepInInventoryAfterSold
+            : false // Default to false
+      );
+      setRestockToTarget(
+        typeof item.restockToTarget === 'boolean'
+          ? item.restockToTarget
+          : false // Default to false
       );
       setYear(item.year || new Date().getFullYear());
       setImageUrl(item.imageUrl || '');
@@ -655,10 +685,17 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
 
         setUnitCost(selectedItem.unitCost || 0);
         setPrice(selectedItem.price || 0);
-        setRestockable(
-          typeof selectedItem.restockable === 'boolean'
-            ? selectedItem.restockable
-            : getDefaultRestockableForType(selectedItem.type)
+        setKeepInInventoryAfterSold(
+          typeof selectedItem.keepInInventoryAfterSold === 'boolean'
+            ? selectedItem.keepInInventoryAfterSold
+            : typeof selectedItem.restockable === 'boolean'
+              ? selectedItem.restockable // Migrate old restockable value to keepInInventoryAfterSold
+              : false // Default to false
+        );
+        setRestockToTarget(
+          typeof selectedItem.restockToTarget === 'boolean'
+            ? selectedItem.restockToTarget
+            : false // Default to false
         );
         setYear(selectedItem.year || new Date().getFullYear());
         setImageUrl(selectedItem.imageUrl || '');
@@ -787,7 +824,8 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         additionalCost: 0,
         price,
         value: 0,
-        restockable,
+        keepInInventoryAfterSold,
+        restockToTarget,
         quantitySold,
         year,
         imageUrl,
@@ -1003,12 +1041,30 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
 
               <div className="flex items-center gap-3 pt-1">
                 <Switch
-                  id="restockable"
-                  checked={restockable}
-                  onCheckedChange={(checked) => setRestockable(checked)}
+                  id="keepInInventoryAfterSold"
+                  checked={keepInInventoryAfterSold}
+                  onCheckedChange={(checked) => setKeepInInventoryAfterSold(checked)}
                 />
-                <Label htmlFor="restockable" className="text-xs">
-                  Restock automatically when sold
+                <Label htmlFor="keepInInventoryAfterSold" className="text-xs">
+                  Keep Item in Inventory after Sold?
+                </Label>
+              </div>
+
+              <div className="flex items-center gap-3 pt-1">
+                <Switch
+                  id="restockToTarget"
+                  checked={restockToTarget}
+                  onCheckedChange={(checked) => setRestockToTarget(checked)}
+                  disabled={!keepInInventoryAfterSold || !targetAmount || parseFloat(targetAmount) <= 0}
+                />
+                <Label htmlFor="restockToTarget" className="text-xs">
+                  Restock to Target Quantity?
+                  {(!keepInInventoryAfterSold || !targetAmount || parseFloat(targetAmount) <= 0) && (
+                    <span className="text-muted-foreground ml-2">
+                      {(!keepInInventoryAfterSold) && "(requires Keep in Inventory)"}
+                      {(!targetAmount || parseFloat(targetAmount) <= 0) && "(requires Target Amount > 0)"}
+                    </span>
+                  )}
                 </Label>
               </div>
             </div>

@@ -216,7 +216,11 @@ export interface Item extends BaseEntity {
   additionalCost: number;       // additional selling costs (commission, booth rental, etc.)
   price: number;                // target selling price
   value: number;                // actual sale price (0 if not sold)
-  restockable?: boolean;        // whether item should be reordered when depleted (defaults by ItemType)
+
+  /** @deprecated Use keepInInventoryAfterSold instead - controls whether item stays in inventory after sale */
+  restockable?: boolean;
+  keepInInventoryAfterSold?: boolean;  // whether item should remain in inventory after being sold (new replacement for restockable)
+  restockToTarget?: boolean;  // whether item should restock to target quantity on Network Sales (mainly for consignment)
 
   // Inventory tracking - UNIFIED STOCK SYSTEM
   // totalQuantity = sum of all stock.quantity (computed property)
