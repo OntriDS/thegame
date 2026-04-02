@@ -16,7 +16,7 @@ import { getItemCategory } from '@/lib/utils/item-utils';
 import ItemModal from '@/components/modals/item-modal';
 import BulkEditModal from '@/components/modals/submodals/bulk-edit-submodal';
 import InlineEditor from '@/components/control-room/inline-editor';
-import { MapPin, Pencil, Package, Settings, Package2, ChevronDown, ChevronRight, AlertTriangle } from 'lucide-react';
+import { MapPin, Pencil, Package, Settings, Package2, ChevronDown, ChevronRight, AlertTriangle, RefreshCw } from 'lucide-react';
 import { ITEM_TYPE_ICONS } from '@/lib/constants/icon-maps';
 import { Site } from '@/types/entities';
 import { DEFAULT_YELLOW_THRESHOLD } from '@/lib/constants/app-constants';
@@ -1430,12 +1430,23 @@ export function InventoryDisplay({
       <div className="space-y-4">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold">Sold Items</h3>
-          <MonthSelector
-            selectedMonth={selectedMonthKey}
-            availableMonths={availableMonths}
-            onChange={onMonthChange}
-            className="ml-auto"
-          />
+          <div className="flex items-center gap-2 ml-auto">
+            <MonthSelector
+              selectedMonth={selectedMonthKey}
+              availableMonths={availableMonths}
+              onChange={onMonthChange}
+            />
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                void loadItems();
+              }}
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Reload
+            </Button>
+          </div>
         </div>
 
 

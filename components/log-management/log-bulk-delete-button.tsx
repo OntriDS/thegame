@@ -6,6 +6,7 @@ import { Trash2 } from 'lucide-react';
 import { EntityType } from '@/types/enums';
 import { FounderOnlyWrapper } from '@/components/common/founder-only-wrapper';
 import type { LogViewFilterValue } from '@/components/log-management/log-view-filter';
+import ConfirmationModal from '../modals/submodals/confirmation-submodal';
 
 interface LogBulkDeleteButtonProps {
   entityType: EntityType;
@@ -25,14 +26,12 @@ export function LogBulkDeleteButton({
   logManagementEnabled
 }: LogBulkDeleteButtonProps) {
   const [isDeletingAll, setIsDeletingAll] = useState(false);
+  const [showConfirmDeleteAll, setShowConfirmDeleteAll] = useState(false);
 
   const deletedEntries = visibleEntries.filter((entry) => entry?.isDeleted && entry?.id);
 
   const handleDeleteAll = async () => {
     if (deletedEntries.length === 0) return;
-    if (!confirm(`Delete ${deletedEntries.length} deleted ${deletedEntries.length === 1 ? 'entry' : 'entries'} permanently? This cannot be undone.`)) {
-      return;
-    }
 
     try {
       setIsDeletingAll(true);
@@ -80,12 +79,23 @@ export function LogBulkDeleteButton({
       <Button
         variant="destructive"
         size="sm"
-        onClick={handleDeleteAll}
+        onClick={() => setShowConfirmDeleteAll(true)}
         disabled={isReloading || isDeletingAll}
       >
         <Trash2 className={`h-4 w-4 mr-2 ${isDeletingAll ? 'animate-pulse' : ''}`} />
         {isDeletingAll ? 'Deleting...' : `Delete All (${deletedEntries.length})`}
       </Button>
+      <ConfirmationModal
+        open={showConfirmDeleteAll}
+        onOpenChange={(open) => !open && setShowConfirmDeleteAll(false)}
+        title="Permanently Delete All Log Entries"
+        description={`Are you sure you want to permanently delete ${deletedEntries.length} log entries in the Deleted view? This action cannot be undone and will remove them from the system.`}
+        confirmText="Permanently Delete"
+        cancelText="Cancel"
+        variant="destructive"
+        onConfirm={handleDeleteAll}
+        isLoading={isDeletingAll}
+      />
     </FounderOnlyWrapper>
   );
 }

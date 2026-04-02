@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useEntityUpdates } from '@/lib/hooks/use-entity-updates';
 import { Button } from '@/components/ui/button';
@@ -9,7 +9,7 @@ import { ClientAPI } from '@/lib/client-api';
 import { FinancialRecord } from '@/types/entities';
 import { formatMonthYear, reviveDates } from '@/lib/utils/date-utils';
 import FinancialsModal from '@/components/modals/financials-modal';
-import { ArrowUpDown } from 'lucide-react';
+import { ArrowUpDown, RefreshCw } from 'lucide-react';
 
 export type FinancialSortOption =
   | 'date-newest'
@@ -108,6 +108,27 @@ export function CompanyRecordsList({
   const [records, setRecords] = useState<FinancialRecord[]>([]);
   const [recordToEdit, setRecordToEdit] = useState<FinancialRecord | null>(null);
   const [sortOption, setSortOption] = useState<FinancialSortOption>('date-newest');
+  const [isReloading, setIsReloading] = useState(false);
+
+  const loadCompanyRecords = useCallback(async () => {
+    try {
+      setIsReloading(true);
+      let companyRecords: FinancialRecord[];
+      if (year === 0 || month === 0) {
+        const allRecords = await ClientAPI.getFinancialRecords();
+        companyRecords = allRecords.filter(r => r.type === 'company');
+      } else {
+        companyRecords = await ClientAPI.getFinancialRecordsByMonth(year, month, 'company');
+      }
+      // Apply sorting
+      const sortedRecords = sortFinancialRecords(companyRecords, sortOption);
+      setRecords(sortedRecords);
+    } catch (error) {
+      console.error('Failed to load company financial records:', error);
+    } finally {
+      setIsReloading(false);
+    }
+  }, [year, month, sortOption]);
 
   useEffect(() => {
     if (!deepLinkRecord || deepLinkRecord.type !== 'company') return;
@@ -116,34 +137,13 @@ export function CompanyRecordsList({
   }, [deepLinkRecord, onDeepLinkRecordConsumed]);
 
   useEffect(() => {
-    const loadRecords = async () => {
-      let companyRecords: FinancialRecord[];
-      if (year === 0 || month === 0) {
-        const allRecords = await ClientAPI.getFinancialRecords();
-        companyRecords = allRecords.filter(r => r.type === 'company');
-      } else {
-        companyRecords = await ClientAPI.getFinancialRecordsByMonth(year, month, 'company');
-      }
-      // Apply sorting
-      const sortedRecords = sortFinancialRecords(companyRecords, sortOption);
-      setRecords(sortedRecords);
-    };
-    loadRecords();
-  }, [year, month, sortOption]);
+    loadCompanyRecords();
+  }, [loadCompanyRecords]);
 
   // Listen for financial record updates to refresh the list
   useEntityUpdates('financial', () => {
     const loadRecords = async () => {
-      let companyRecords: FinancialRecord[];
-      if (year === 0 || month === 0) {
-        const allRecords = await ClientAPI.getFinancialRecords();
-        companyRecords = allRecords.filter(r => r.type === 'company');
-      } else {
-        companyRecords = await ClientAPI.getFinancialRecordsByMonth(year, month, 'company');
-      }
-      // Apply sorting
-      const sortedRecords = sortFinancialRecords(companyRecords, sortOption);
-      setRecords(sortedRecords);
+      await loadCompanyRecords();
     };
     loadRecords();
   });
@@ -162,7 +162,7 @@ export function CompanyRecordsList({
         </div>
       ) : (
         <>
-          <div className="flex items-center gap-2 mb-4">
+          <div className="mb-4 flex items-center justify-end gap-2">
             <div className="flex items-center gap-2 text-xs">
               <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
               <Select value={sortOption} onValueChange={(value: FinancialSortOption) => setSortOption(value)}>
@@ -181,6 +181,15 @@ export function CompanyRecordsList({
                 </SelectContent>
               </Select>
             </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={loadCompanyRecords}
+              disabled={isReloading}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${isReloading ? 'animate-spin' : ''}`} />
+              Reload
+            </Button>
           </div>
 
           {records.length === 0 ? (
@@ -320,6 +329,27 @@ export function PersonalRecordsList({
   const [records, setRecords] = useState<FinancialRecord[]>([]);
   const [recordToEdit, setRecordToEdit] = useState<FinancialRecord | null>(null);
   const [sortOption, setSortOption] = useState<FinancialSortOption>('date-newest');
+  const [isReloading, setIsReloading] = useState(false);
+
+  const loadPersonalRecords = useCallback(async () => {
+    try {
+      setIsReloading(true);
+      let personalRecords: FinancialRecord[];
+      if (year === 0 || month === 0) {
+        const allRecords = await ClientAPI.getFinancialRecords();
+        personalRecords = allRecords.filter(r => r.type === 'personal');
+      } else {
+        personalRecords = await ClientAPI.getFinancialRecordsByMonth(year, month, 'personal');
+      }
+      // Apply sorting
+      const sortedRecords = sortFinancialRecords(personalRecords, sortOption);
+      setRecords(sortedRecords);
+    } catch (error) {
+      console.error('Failed to load personal financial records:', error);
+    } finally {
+      setIsReloading(false);
+    }
+  }, [year, month, sortOption]);
 
   useEffect(() => {
     if (!deepLinkRecord || deepLinkRecord.type !== 'personal') return;
@@ -328,34 +358,13 @@ export function PersonalRecordsList({
   }, [deepLinkRecord, onDeepLinkRecordConsumed]);
 
   useEffect(() => {
-    const loadRecords = async () => {
-      let personalRecords: FinancialRecord[];
-      if (year === 0 || month === 0) {
-        const allRecords = await ClientAPI.getFinancialRecords();
-        personalRecords = allRecords.filter(r => r.type === 'personal');
-      } else {
-        personalRecords = await ClientAPI.getFinancialRecordsByMonth(year, month, 'personal');
-      }
-      // Apply sorting
-      const sortedRecords = sortFinancialRecords(personalRecords, sortOption);
-      setRecords(sortedRecords);
-    };
-    loadRecords();
-  }, [year, month, sortOption]);
+    loadPersonalRecords();
+  }, [loadPersonalRecords]);
 
   // 🚨 FIX: Listen for financial record updates to refresh the list
   useEntityUpdates('financial', () => {
     const loadRecords = async () => {
-      let personalRecords: FinancialRecord[];
-      if (year === 0 || month === 0) {
-        const allRecords = await ClientAPI.getFinancialRecords();
-        personalRecords = allRecords.filter(r => r.type === 'personal');
-      } else {
-        personalRecords = await ClientAPI.getFinancialRecordsByMonth(year, month, 'personal');
-      }
-      // Apply sorting
-      const sortedRecords = sortFinancialRecords(personalRecords, sortOption);
-      setRecords(sortedRecords);
+      await loadPersonalRecords();
     };
     loadRecords();
   });
@@ -377,7 +386,7 @@ export function PersonalRecordsList({
         </div>
       ) : (
         <>
-          <div className="flex items-center gap-2 mb-4">
+          <div className="mb-4 flex items-center justify-end gap-2">
             <div className="flex items-center gap-2 text-xs">
               <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
               <Select value={sortOption} onValueChange={(value: FinancialSortOption) => setSortOption(value)}>
@@ -396,6 +405,15 @@ export function PersonalRecordsList({
                 </SelectContent>
               </Select>
             </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={loadPersonalRecords}
+              disabled={isReloading}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${isReloading ? 'animate-spin' : ''}`} />
+              Reload
+            </Button>
           </div>
 
           {records.length === 0 ? (
