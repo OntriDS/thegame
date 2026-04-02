@@ -14,6 +14,7 @@ import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
 import { LogViewFilter } from '@/components/log-management/log-view-filter';
 import { useLogViewFilter } from '@/lib/hooks/use-log-view-filter';
 import { LogManagementActions } from '@/components/log-management/log-management-actions';
+import { LogBulkDeleteButton } from '@/components/log-management/log-bulk-delete-button';
 import { LogSortDropdown, LogSortOption, sortLogEntries } from '@/components/data-center/log-sort-dropdown';
 
 interface SitesLogTabProps {
@@ -91,6 +92,14 @@ export function SitesLogTab({ sitesLog, onReload, isReloading }: SitesLogTabProp
             <RefreshCw className={`h-4 w-4 mr-2 ${isReloading ? 'animate-spin' : ''}`} />
             Reload
           </Button>
+              <LogBulkDeleteButton
+                entityType={EntityType.SITE}
+                filter={filter}
+                visibleEntries={visibleEntries}
+                onReload={onReload}
+                isReloading={isReloading}
+                logManagementEnabled={logManagementEnabled}
+              />
         </div>
       </CardHeader>
             <CardContent>
