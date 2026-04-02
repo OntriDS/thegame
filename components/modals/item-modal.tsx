@@ -1420,18 +1420,20 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         />
       )}
 
-      {/* Dates & Timeline Submodal */}
-      <DatesSubmodal
-        open={showDatesModal}
-        onOpenChange={setShowDatesModal}
-        entityMode="item"
-        entityId={currentEditingItem?.id ? `data:item:${currentEditingItem.id}` : undefined}
-        createdAt={currentEditingItem?.createdAt ? new Date(currentEditingItem.createdAt) : undefined}
-        doneAt={localSoldAt}
-        collectedAt={localCollectedAt}
-        currentStatus={status}
-        onDatesChange={handleDatesUpdate}
-      />
+      {/* Dates & Timeline Submodal - Only for SOLD items, not inventory items */}
+      {(localSoldAt || status === ItemStatus.SOLD) && (
+        <DatesSubmodal
+          open={showDatesModal}
+          onOpenChange={setShowDatesModal}
+          entityMode="item"
+          entityId={currentEditingItem?.id ? `data:item:${currentEditingItem.id}` : undefined}
+          createdAt={currentEditingItem?.createdAt ? new Date(currentEditingItem.createdAt) : undefined}
+          doneAt={localSoldAt}
+          collectedAt={localCollectedAt}
+          currentStatus={status}
+          onDatesChange={handleDatesUpdate}
+        />
+      )}
     </>
   );
 }

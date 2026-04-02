@@ -543,7 +543,7 @@ export function InventoryDisplay({
         });
       } else { // collection
         stickerItems.forEach(item => {
-          allKeys.add(item.collection || 'Uncategorized');
+          allKeys.add(item.collection || Collection.NO_COLLECTION);
         });
       }
     }

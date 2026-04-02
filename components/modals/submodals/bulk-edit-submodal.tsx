@@ -11,7 +11,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ItemType, ItemStatus, Collection, EntityType } from '@/types/enums';
 import { getSubTypesForItemType } from '@/lib/utils/item-utils';
-import type { SubItemType } from '@/types/type-aliases';
+import { getCategoryForItemType, createStationCategoryOptions, getStationFromCombined, getCategoryFromCombined, createItemTypeSubTypeOptions, getItemTypeFromCombined, getSubTypeFromCombined } from '@/lib/utils/searchable-select-utils';
+import type { SubItemType, Station } from '@/types/type-aliases';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 // Side effects handled by parent component via API calls
 import { Item } from '@/types/entities';
 import { PRICE_STEP, DEFAULT_MIN_VALUE, MODAL_MAX_HEIGHT, MODAL_MAX_WIDTH } from '@/lib/constants/app-constants';
@@ -50,6 +52,7 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
     { value: 'collection', label: 'Collection' },
     { value: 'subItemType', label: 'Sub Type' },
     { value: 'size', label: 'Size' },
+    { value: 'station', label: 'Station' },
     { value: EntityType.SITE, label: 'Site' }
   ];
 
@@ -104,6 +107,11 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
           newValue = value as ItemStatus;
         } else if (field === 'collection') {
           newValue = value === 'none' ? undefined : value as Collection;
+        } else if (field === 'station') {
+          // Handle station change
+          newValue = value as Station;
+          const updatedItem = { ...item, station: newValue };
+          await ClientAPI.upsertItem(updatedItem);
         } else if (field === EntityType.SITE) {
           // Handle site change using the unified stock system
           const currentQuantity = ClientAPI.getItemTotalQuantity(item.id, items);
@@ -168,6 +176,17 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
             value={value}
             onChange={(e) => setValue(e.target.value)}
             placeholder="Enter sub type"
+          />
+        );
+
+      case 'station':
+        return (
+          <SearchableSelect
+            value={value}
+            onValueChange={setValue}
+            placeholder="Select station"
+            options={createStationCategoryOptions()}
+            getCategoryForValue={(station) => getCategoryForItemType(itemType)}
           />
         );
 
