@@ -16,7 +16,7 @@ import { getItemCategory } from '@/lib/utils/item-utils';
 import ItemModal from '@/components/modals/item-modal';
 import BulkEditModal from '@/components/modals/submodals/bulk-edit-submodal';
 import InlineEditor from '@/components/control-room/inline-editor';
-import { MapPin, Pencil, Package, Settings, Package2, ChevronDown, ChevronRight, AlertTriangle, RefreshCw } from 'lucide-react';
+import { MapPin, Pencil, Package, Settings, Package2, ChevronDown, ChevronRight, AlertTriangle, RefreshCw, ArrowUpDown } from 'lucide-react';
 import { ITEM_TYPE_ICONS } from '@/lib/constants/icon-maps';
 import { Site } from '@/types/entities';
 import { DEFAULT_YELLOW_THRESHOLD } from '@/lib/constants/app-constants';
@@ -130,6 +130,10 @@ export function InventoryDisplay({
 
   // Column selection state for location modal
   const [selectedColumns, setSelectedColumns] = useState<Set<string>>(new Set(['own', 'consignment']));
+  
+  // Sold Items Sort state
+  const [soldItemsSortOption, setSoldItemsSortOption] = useState<'date-desc' | 'date-asc' | 'price-desc' | 'price-asc' | 'name-asc' | 'name-desc' | 'type-asc' | 'site-asc'>('date-desc');
+
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
 
   // Helper to get ItemType from InventoryTab
@@ -332,6 +336,12 @@ export function InventoryDisplay({
       } catch {
         // Keep default Set
       }
+    }
+
+    // Load Sold Items sort preference
+    const savedSoldItemsSort = getPreference('inventory-sold-items-sort');
+    if (savedSoldItemsSort) {
+      setSoldItemsSortOption(savedSoldItemsSort as any);
     }
 
     // Mark preferences as loaded to enable saving
@@ -1426,11 +1436,66 @@ export function InventoryDisplay({
   // Sold Items Tab - Lifecycle Management
   const renderSoldItemsTab = () => {
     // API now handles filtering by month directly, so we use items as-is
+    const sortedSoldItems = [...items].sort((a, b) => {
+      switch (soldItemsSortOption) {
+        case 'date-desc':
+          return new Date(b.soldAt || 0).getTime() - new Date(a.soldAt || 0).getTime();
+        case 'date-asc':
+          return new Date(a.soldAt || 0).getTime() - new Date(b.soldAt || 0).getTime();
+        case 'price-desc':
+          const valB = b.value || (b.price * (b.quantitySold || 0));
+          const valA = a.value || (a.price * (a.quantitySold || 0));
+          return valB - valA;
+        case 'price-asc':
+          const valB2 = b.value || (b.price * (b.quantitySold || 0));
+          const valA2 = a.value || (a.price * (a.quantitySold || 0));
+          return valA2 - valB2;
+        case 'name-asc':
+          return a.name.localeCompare(b.name);
+        case 'name-desc':
+          return b.name.localeCompare(a.name);
+        case 'type-asc':
+          return (a.type || '').localeCompare(b.type || '');
+        case 'site-asc':
+          const siteA = a.stock?.[0]?.siteId || '';
+          const siteB = b.stock?.[0]?.siteId || '';
+          return siteA.localeCompare(siteB);
+        default:
+          return 0;
+      }
+    });
+
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold">Sold Items</h3>
           <div className="flex items-center gap-2 ml-auto">
+            {/* Sorting Dropdown - Matching TaskHistoryView pattern */}
+            <div className="flex items-center gap-1 text-xs mr-2 border rounded-md px-2 py-0.5 bg-muted/40">
+              <ArrowUpDown className="h-3 w-3 text-muted-foreground mr-1" />
+              <Select 
+                value={soldItemsSortOption} 
+                onValueChange={(val) => {
+                  setSoldItemsSortOption(val as any);
+                  setPreference('inventory-sold-items-sort', val);
+                }}
+              >
+                <SelectTrigger className="w-32 h-7 bg-transparent border-none text-[11px] font-medium shadow-none hover:bg-muted/60 transition-colors py-0">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="date-desc">Newest First</SelectItem>
+                  <SelectItem value="date-asc">Oldest First</SelectItem>
+                  <SelectItem value="price-desc">Price: High to Low</SelectItem>
+                  <SelectItem value="price-asc">Price: Low to High</SelectItem>
+                  <SelectItem value="name-asc">Name A-Z</SelectItem>
+                  <SelectItem value="name-desc">Name Z-A</SelectItem>
+                  <SelectItem value="type-asc">Item Type</SelectItem>
+                  <SelectItem value="site-asc">Site</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             <MonthSelector
               selectedMonth={selectedMonthKey}
               availableMonths={availableMonths}
@@ -1452,7 +1517,7 @@ export function InventoryDisplay({
 
 
         <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-          {isHydrated && items.map(item => {
+          {isHydrated && sortedSoldItems.map(item => {
             const siteName = item.stock?.[0]?.siteId || '';
             const qty = item.quantitySold || 0;
             const unitPrice = item.price || 0;
