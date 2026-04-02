@@ -23,7 +23,8 @@ import { getFinancialTypeForStation, getSalesChannelFromSaleType } from '@/lib/u
 import type { Station } from '@/types/type-aliases';
 
 import { BITCOIN_SATOSHIS_PER_BTC, DEFAULT_CURRENCY_EXCHANGE_RATES } from '@/lib/constants/financial-constants';
-import { formatDisplayDate, parseFlexibleDate } from '@/lib/utils/date-utils';
+import { parseFlexibleDate } from '@/lib/utils/date-utils';
+import { buildFinrecTitleFromSaleParts } from '@/lib/utils/sale-auto-name-utils';
 
 /**
  * Get the current J$ Balance for an entity (Character or Player)
@@ -320,28 +321,6 @@ function coerceSaleFinrecDate(
   }
 }
 
-function saleTypeToFinrecTitlePrefix(type: SaleType | string | undefined): string {
-  switch (type) {
-    case SaleType.DIRECT:
-    case 'DIRECT':
-      return 'Direct Sale';
-    case SaleType.BOOTH:
-    case 'BOOTH':
-      return 'Booth Sale';
-    case SaleType.NETWORK:
-    case 'NETWORK':
-      return 'Network Sale';
-    case SaleType.ONLINE:
-    case 'ONLINE':
-      return 'Online Sale';
-    case SaleType.NFT:
-    case 'NFT':
-      return 'NFT Sale';
-    default:
-      return 'Sale';
-  }
-}
-
 /** Customer / site strings for finrec titles only. Use "" when missing — no placeholders. */
 async function resolveSaleCustomerAndSiteLabels(sale: Sale): Promise<{ customerLabel: string; siteLabel: string }> {
   let customerLabel = (sale.counterpartyName && String(sale.counterpartyName).trim()) || '';
@@ -354,9 +333,13 @@ async function resolveSaleCustomerAndSiteLabels(sale: Sale): Promise<{ customerL
   if (sale.siteId) {
     try {
       const site = await getSiteById(sale.siteId);
-      siteLabel = (site?.name && String(site.name).trim()) || '';
+      siteLabel =
+        (site?.name && String(site.name).trim()) ||
+        String(sale.siteId).trim() ||
+        '';
     } catch (e) {
       console.warn('[resolveSaleCustomerAndSiteLabels] site lookup failed', e);
+      siteLabel = String(sale.siteId).trim() || '';
     }
   }
 
@@ -364,22 +347,11 @@ async function resolveSaleCustomerAndSiteLabels(sale: Sale): Promise<{ customerL
 }
 
 /**
- * "{Type} Sale" + optional customer + optional site + date (DD-MM-YY…).
- * Blank customer/site are omitted (no "Unknown", "—", or sale-type fallbacks).
+ * Sale-sourced finrec title: same bullet pattern as sale auto names (`Direct Sale • Site • DD-MM-YY`).
+ * Customer is not included. Idempotent for a given sale type, resolved site label, and date.
  */
-function composeSaleSourcedFinrecName(
-  sale: Sale,
-  customerLabel: string,
-  siteLabel: string,
-  dateLabel: string
-): string {
-  const parts: string[] = [saleTypeToFinrecTitlePrefix(sale.type)];
-  const c = customerLabel.trim();
-  const s = siteLabel.trim();
-  if (c) parts.push(c);
-  if (s) parts.push(s);
-  parts.push(dateLabel);
-  return parts.join(' ');
+function composeSaleSourcedFinrecName(sale: Sale, siteLabel: string, dateToUse: Date): string {
+  return buildFinrecTitleFromSaleParts(sale.type, siteLabel, dateToUse);
 }
 
 export interface BoothFinancialSplit {
@@ -486,7 +458,7 @@ async function resolveSaleDerivedFinrecFields(
   description: string;
   customerLabel: string;
   siteLabel: string;
-  /** e.g. Direct Sale 01-01-26 | Booth Sale Eco-Feria 01-01-26 | Network Sale Alvaro 01-01-26 */
+  /** e.g. Direct Sale • Jungle Matt • 10-11-25 (matches sale list; no customer in title). */
   finrecName: string;
 }> {
   const currentDate = new Date();
@@ -500,8 +472,7 @@ async function resolveSaleDerivedFinrecFields(
   const station = salesChannel;
 
   const { customerLabel, siteLabel } = await resolveSaleCustomerAndSiteLabels(sale);
-  const dateLabel = formatDisplayDate(dateToUse);
-  const finrecName = composeSaleSourcedFinrecName(sale, customerLabel, siteLabel, dateLabel);
+  const finrecName = composeSaleSourcedFinrecName(sale, siteLabel, dateToUse);
 
   return {
     dateToUse,
@@ -759,9 +730,8 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
 
     // 1. Calculate Comprehensive Split via Contract Clauses
     const split = await calculateBoothFinancials(sale);
-    const dateStr = formatDisplayDate(split.date);
     const derived = await resolveSaleDerivedFinrecFields(sale);
-    const boothTitleBase = composeSaleSourcedFinrecName(sale, derived.customerLabel, derived.siteLabel, dateStr);
+    const boothTitleBase = composeSaleSourcedFinrecName(sale, derived.siteLabel, split.date);
 
     // [IDEMPOTENCY CHECK] Load existing records linked to this sale
     const existingRecords = await getFinancialsBySourceSaleId(sale.id);

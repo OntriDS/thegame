@@ -19,7 +19,8 @@ import {
   Calendar,
   Network,
   CalendarIcon,
-  User
+  User,
+  Pencil,
 } from 'lucide-react';
 import PlayerCharacterSelectorModal from './submodals/player-character-selector-submodal';
 import { FinancialRecord, Item, Site } from '@/types/entities';
@@ -171,6 +172,8 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   const [duplicateErrorMessage, setDuplicateErrorMessage] = useState('');
   const [pendingDuplicateRecord, setPendingDuplicateRecord] = useState<FinancialRecord | null>(null);
+  const [showNameSubModal, setShowNameSubModal] = useState(false);
+  const [nameDraft, setNameDraft] = useState('');
 
   // Emissary column expansion state with persistence
   const [emissaryColumnExpanded, setEmissaryColumnExpanded] = useState(false);
@@ -596,14 +599,29 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
                 Financial Type: <span className="text-foreground">{isCompany ? 'Company' : 'Personal'}</span> |
                 Station: <span className="text-foreground">{formData.station}</span>
               </div>
-              <div className="mt-2">
-                <div className="text-xs text-muted-foreground mb-1">Record Date</div>
-                <MonthYearSelector
-                  currentYear={formData.year}
-                  currentMonth={formData.month}
-                  onYearChange={(y) => setFormData(prev => ({ ...prev, year: y }))}
-                  onMonthChange={(m) => setFormData(prev => ({ ...prev, month: m }))}
-                />
+              <div className="mt-2 flex flex-wrap items-end gap-3">
+                <div>
+                  <div className="text-xs text-muted-foreground mb-1">Record Date</div>
+                  <MonthYearSelector
+                    currentYear={formData.year}
+                    currentMonth={formData.month}
+                    onYearChange={(y) => setFormData(prev => ({ ...prev, year: y }))}
+                    onMonthChange={(m) => setFormData(prev => ({ ...prev, month: m }))}
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs"
+                  onClick={() => {
+                    setNameDraft(formData.name);
+                    setShowNameSubModal(true);
+                  }}
+                >
+                  <Pencil className="h-3 w-3 mr-1" />
+                  Name
+                </Button>
               </div>
             </div>
           </DialogHeader>
@@ -1007,6 +1025,43 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
                 {isSaving ? 'Saving...' : (record ? 'Update' : 'Create')} Financial Record
               </Button>
             </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Rename (same field as Name below; quick edit from header) */}
+      <Dialog open={showNameSubModal} onOpenChange={setShowNameSubModal}>
+        <DialogContent zIndexLayer={'MODALS'} className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Rename financial record</DialogTitle>
+            <DialogDescription>Set the display name for this record.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="fin-name-draft" className="text-xs">Name</Label>
+            <Input
+              id="fin-name-draft"
+              value={nameDraft}
+              onChange={(e) => setNameDraft(e.target.value)}
+              placeholder="Record name"
+              className="h-8 text-sm"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowNameSubModal(false)} className="h-8 text-xs">
+              Cancel
+            </Button>
+            <Button
+              className="h-8 text-xs"
+              disabled={!nameDraft.trim()}
+              onClick={() => {
+                const next = nameDraft.trim();
+                if (!next) return;
+                setFormData((prev) => ({ ...prev, name: next }));
+                setShowNameSubModal(false);
+              }}
+            >
+              Save
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
