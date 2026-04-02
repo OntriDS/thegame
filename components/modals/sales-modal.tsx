@@ -20,7 +20,7 @@ import { getSubTypesForItemType } from '@/lib/utils/item-utils';
 import type { Station } from '@/types/type-aliases';
 import { CurrencyExchangeRates } from '@/lib/constants/financial-constants';
 import { createSiteOptionsWithCategories } from '@/lib/utils/site-options-utils';
-import { buildAutoSaleName } from '@/lib/utils/sale-auto-name-utils';
+import { buildAutoSaleName, resolveCanonicalSaleTimelineDate } from '@/lib/utils/sale-auto-name-utils';
 import { createStationCategoryOptions, createTaskParentOptions, createItemTypeSubTypeOptions, getItemTypeFromCombined, getCategoryFromCombined, getStationFromCombined } from '@/lib/utils/searchable-select-utils';
 import { getAreaForStation, getSalesChannelFromSaleType } from '@/lib/utils/business-structure-utils';
 import { roundCurrency2 } from '@/lib/utils/financial-utils';
@@ -283,6 +283,21 @@ export default function SalesModal({
     [sites]
   );
 
+  /** doneAt → saleDate → createdAt (draft: form `saleDate` / now) — matches finrec + timeline. */
+  const getTimelineDateForAutoName = useCallback((): Date => {
+    const fallback =
+      saleDate instanceof Date && Number.isFinite(saleDate.getTime()) ? saleDate : new Date();
+    if (!sale?.id) return fallback;
+    return resolveCanonicalSaleTimelineDate(
+      {
+        doneAt: localDoneAt ?? sale.doneAt,
+        saleDate,
+        createdAt: sale.createdAt,
+      },
+      fallback
+    );
+  }, [sale?.id, sale?.doneAt, sale?.createdAt, saleDate, localDoneAt]);
+
   useLayoutEffect(() => {
     if (!open) {
       saleSiteHydrationKeyRef.current = null;
@@ -387,12 +402,19 @@ export default function SalesModal({
       setSaleItemLinkTargets([]);
       setRecordedPayments([]);
       setSelectedItems([]);
-      const saleDateFromRecord = new Date(sale.saleDate);
-      const defaultName = buildAutoSaleName(sale.type, sale.siteId, saleDateFromRecord, sites);
+      const timelineAt = resolveCanonicalSaleTimelineDate(
+        {
+          doneAt: sale.doneAt,
+          saleDate: sale.saleDate,
+          createdAt: sale.createdAt,
+        },
+        new Date()
+      );
+      const defaultName = buildAutoSaleName(sale.type, sale.siteId, timelineAt, sites);
       setName(sale.name);
       setIsNameCustom(Boolean(sale.name?.trim()) && sale.name.trim() !== defaultName);
       setDescription(sale.description || '');
-      setSaleDate(saleDateFromRecord);
+      setSaleDate(timelineAt);
       setType(sale.type);
       setStatus(sale.status);
       setSiteId(sale.siteId ?? '');
@@ -698,16 +720,19 @@ export default function SalesModal({
     if (!open || isNameCustom) return;
     if (siteId == null) return;
 
-    const safeSaleDate = saleDate instanceof Date && Number.isFinite(saleDate.getTime()) ? saleDate : new Date();
-    setName(getDefaultSaleName(type, siteId, safeSaleDate));
-  }, [type, siteId, saleDate, isNameCustom, open, getDefaultSaleName]);
+    const at = getTimelineDateForAutoName();
+    setName(getDefaultSaleName(type, siteId, at));
+  }, [type, siteId, isNameCustom, open, getDefaultSaleName, getTimelineDateForAutoName]);
 
   useEffect(() => {
     if (!open || !sale?.id) return;
-    const saleDateFromRecord = new Date(sale.saleDate);
-    const defaultName = buildAutoSaleName(sale.type, sale.siteId, saleDateFromRecord, sites);
+    const at = resolveCanonicalSaleTimelineDate(
+      { doneAt: sale.doneAt, saleDate: sale.saleDate, createdAt: sale.createdAt },
+      new Date()
+    );
+    const defaultName = buildAutoSaleName(sale.type, sale.siteId, at, sites);
     setIsNameCustom(Boolean(sale.name?.trim()) && sale.name.trim() !== defaultName);
-  }, [open, sale?.id, sale?.name, sale?.type, sale?.siteId, sale?.saleDate, sites]);
+  }, [open, sale?.id, sale?.name, sale?.type, sale?.siteId, sale?.saleDate, sale?.doneAt, sale?.createdAt, sites]);
 
   const handleSave = async (overrideSale?: Sale) => {
     if (isSaving) return;
@@ -932,7 +957,7 @@ export default function SalesModal({
 
     const saleData: Sale = {
       id: draftId.current,
-      name: (name?.trim() || buildAutoSaleName(type, siteId, safeSaleDate, sites)),
+      name: (name?.trim() || buildAutoSaleName(type, siteId, getTimelineDateForAutoName(), sites)),
       description: description.trim() || undefined,
       saleDate: safeSaleDate,
       type,
@@ -1297,10 +1322,8 @@ export default function SalesModal({
                 size="sm"
                 variant="outline"
                 onClick={() => {
-                  const safeSaleDate =
-                    saleDate instanceof Date && Number.isFinite(saleDate.getTime()) ? saleDate : new Date();
                   setNameDraft(
-                    isNameCustom ? name : buildAutoSaleName(type, siteId, safeSaleDate, sites)
+                    isNameCustom ? name : buildAutoSaleName(type, siteId, getTimelineDateForAutoName(), sites)
                   );
                   setShowNameSubModal(true);
                 }}
@@ -1361,8 +1384,7 @@ export default function SalesModal({
                       const nextType = t as SaleType;
                       setType(nextType);
                       if (!isNameCustom) {
-                        const safeSaleDate = saleDate instanceof Date && Number.isFinite(saleDate.getTime()) ? saleDate : new Date();
-                        setName(getDefaultSaleName(nextType, siteId, safeSaleDate));
+                        setName(getDefaultSaleName(nextType, siteId, getTimelineDateForAutoName()));
                       }
                       const channel = getSalesChannelFromSaleType(t);
                       if (channel) {
@@ -2230,7 +2252,7 @@ export default function SalesModal({
                 if (!normalized) {
                   return;
                 }
-                const defaultName = buildAutoSaleName(type, siteId, saleDate, sites);
+                const defaultName = buildAutoSaleName(type, siteId, getTimelineDateForAutoName(), sites);
                 setName(normalized);
                 setIsNameCustom(normalized !== defaultName);
                 setShowNameSubModal(false);

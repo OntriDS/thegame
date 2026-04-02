@@ -1,8 +1,40 @@
 import { SaleType } from '@/types/enums';
 import type { Site } from '@/types/entities';
 import { getSiteNameFromId } from '@/lib/utils/site-options-utils';
+import { parseFlexibleDate } from '@/lib/utils/date-utils';
 
 const TITLE_SEP = ' • ';
+
+export type SaleTimelineFields = {
+  doneAt?: Date | string | null;
+  saleDate?: Date | string | null;
+  createdAt?: Date | string | null;
+};
+
+function timelinePartToDate(raw: unknown): Date | null {
+  if (raw === null || raw === undefined || raw === '') return null;
+  if (raw instanceof Date) {
+    return Number.isFinite(raw.getTime()) ? raw : null;
+  }
+  const d = parseFlexibleDate(raw as string);
+  return Number.isFinite(d.getTime()) ? d : null;
+}
+
+/**
+ * Single timeline for titles & finrec period: **doneAt → saleDate → createdAt → fallback**.
+ * Fallback should be a sane draft default (e.g. `new Date()`) only when all are missing.
+ */
+export function resolveCanonicalSaleTimelineDate(
+  input: SaleTimelineFields | null | undefined,
+  fallback: Date
+): Date {
+  if (!input) return fallback;
+  for (const key of ['doneAt', 'saleDate', 'createdAt'] as const) {
+    const d = timelinePartToDate(input[key]);
+    if (d) return d;
+  }
+  return fallback;
+}
 
 /** Local calendar date as DD-MM-YY (hyphens). */
 export function formatSaleAutoDateDDMMYY(date: Date): string {

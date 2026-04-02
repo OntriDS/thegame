@@ -23,8 +23,7 @@ import { getFinancialTypeForStation, getSalesChannelFromSaleType } from '@/lib/u
 import type { Station } from '@/types/type-aliases';
 
 import { BITCOIN_SATOSHIS_PER_BTC, DEFAULT_CURRENCY_EXCHANGE_RATES } from '@/lib/constants/financial-constants';
-import { parseFlexibleDate } from '@/lib/utils/date-utils';
-import { buildFinrecTitleFromSaleParts } from '@/lib/utils/sale-auto-name-utils';
+import { buildFinrecTitleFromSaleParts, resolveCanonicalSaleTimelineDate } from '@/lib/utils/sale-auto-name-utils';
 
 /**
  * Get the current J$ Balance for an entity (Character or Player)
@@ -307,18 +306,16 @@ export async function removeFinancialRecordsCreatedByTask(taskId: string): Promi
   }
 }
 
-/** Sale-sourced finrec period: doneAt, then saleDate, then createdAt — not collectedAt. */
-function coerceSaleFinrecDate(
-  sale: Sale,
-  fallback: Date
-): Date {
-  try {
-    const raw = sale.doneAt || sale.saleDate || sale.createdAt || fallback;
-    const d = raw instanceof Date ? raw : parseFlexibleDate(raw as string);
-    return Number.isFinite(d.getTime()) ? d : fallback;
-  } catch {
-    return fallback;
-  }
+/** Sale-sourced finrec period: same chain as sale titles (doneAt → saleDate → createdAt). */
+function coerceSaleFinrecDate(sale: Sale, fallback: Date): Date {
+  return resolveCanonicalSaleTimelineDate(
+    {
+      doneAt: sale.doneAt,
+      saleDate: sale.saleDate,
+      createdAt: sale.createdAt,
+    },
+    fallback
+  );
 }
 
 /** Customer / site strings for finrec titles only. Use "" when missing — no placeholders. */
