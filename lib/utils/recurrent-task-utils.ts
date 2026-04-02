@@ -3,13 +3,14 @@
 
 import { Task } from '@/types/entities';
 import { TaskType, RecurrentFrequency, TaskStatus, EntityType, LogEventType } from '@/types/enums';
-import { getAllTasks, upsertTask, removeTask as deleteTask, getTasksByParentId, getTaskById } from '@/data-store/datastore';
+import { getAllTasks, upsertTask, getTasksByParentId, getTaskById } from '@/data-store/datastore';
 import { hasEffect, markEffect } from '@/data-store/effects-registry';
 import { appendEntityLog } from '@/workflows/entities-logging';
 import { FrequencyConfig } from '@/components/ui/frequency-calendar';
 import { v4 as uuid } from 'uuid';
 import { formatDisplayDate } from '@/lib/utils/date-utils';
 import { ORDER_INCREMENT } from '@/lib/constants/app-constants';
+import { isTaskHistoryTerminal } from '@/lib/utils/task-active-utils';
 import { addDays, addWeeks, addMonths } from 'date-fns';
 
 export interface RecurrentTaskConfig {
@@ -349,49 +350,107 @@ export async function handleTemplateInstanceCreation(template: Task): Promise<Ta
   return uniqueNewInstancesWithOrder;
 }
 
-/**
- * Deletes a recurrent group and all its child templates, instances, and nested groups.
- */
-export async function deleteGroupCascade(groupId: string): Promise<number> {
-  const toDelete = new Set<string>([groupId]);
-
-  // Recursive function to collect all descendants
-  const collectDescendants = async (id: string) => {
-    const children = await getTasksByParentId(id);
-    
-    for (const child of children) {
-      if (toDelete.has(child.id)) continue;
-      
-      toDelete.add(child.id);
-      
-      // If it's a group or template, it might have its own children/instances
-      if (child.type === TaskType.RECURRENT_GROUP || child.type === TaskType.RECURRENT_TEMPLATE) {
-        await collectDescendants(child.id);
-      }
+/** All tasks whose parent chain starts under `rootParentId` (direct and nested children). */
+export async function getDescendantTasks(rootParentId: string): Promise<Task[]> {
+  const out: Task[] = [];
+  const walk = async (parentId: string) => {
+    const children = await getTasksByParentId(parentId);
+    for (const c of children) {
+      out.push(c);
+      await walk(c.id);
     }
   };
+  await walk(rootParentId);
+  return out;
+}
 
-  // Start recursive collection from the root group
-  await collectDescendants(groupId);
-
-  // Delete all collected tasks in parallel
-  await Promise.all(
-    Array.from(toDelete).map(taskId => deleteTask(taskId))
-  );
-
-  return toDelete.size;
+/** Delete children before parents when removing an active subtree (only tasks in `active`). */
+export function orderTasksForDeletion(active: Task[]): Task[] {
+  const remaining = new Set(active.map((t) => t.id));
+  const byId = new Map(active.map((t) => [t.id, t] as const));
+  const order: Task[] = [];
+  while (remaining.size > 0) {
+    let picked: string | null = null;
+    for (const id of remaining) {
+      const hasChildStillInSet = [...remaining].some(
+        (cid) => cid !== id && byId.get(cid)?.parentId === id
+      );
+      if (!hasChildStillInSet) {
+        picked = id;
+        break;
+      }
+    }
+    if (!picked) {
+      console.warn('[orderTasksForDeletion] Could not find leaf; breaking potential cycle');
+      picked = [...remaining][0];
+    }
+    remaining.delete(picked);
+    order.push(byId.get(picked)!);
+  }
+  return order;
 }
 
 /**
- * Deletes a template and all its direct instances.
+ * Before removing **any** parent task from storage (mission node, recurrent group, template, etc.):
+ * - Done / Collected / isCollected descendants are never deleted; `parentId` is cleared (orphans for reparenting).
+ * - If `cascadeDeleteActiveChildren` is false, all other descendants are orphaned the same way.
+ * - If true, active descendants are removed via `removeTask` (deepest first); history-terminal rows are only orphaned.
+ */
+export async function prepareTaskSubtreeBeforeParentRemoval(
+  root: Task,
+  opts: { cascadeDeleteActiveChildren: boolean }
+): Promise<void> {
+  const descendants = await getDescendantTasks(root.id);
+  if (descendants.length === 0) return;
+  const terminal = descendants.filter(isTaskHistoryTerminal);
+  const active = descendants.filter((t) => !isTaskHistoryTerminal(t));
+
+  for (const t of terminal) {
+    const fresh = await getTaskById(t.id);
+    if (!fresh || fresh.parentId == null) continue;
+    await upsertTask({ ...fresh, parentId: null }, { skipWorkflowEffects: true });
+  }
+
+  if (!opts.cascadeDeleteActiveChildren) {
+    for (const t of active) {
+      const fresh = await getTaskById(t.id);
+      if (!fresh || fresh.parentId == null) continue;
+      await upsertTask({ ...fresh, parentId: null }, { skipWorkflowEffects: true });
+    }
+    return;
+  }
+
+  const { removeTask } = await import('@/data-store/datastore');
+  const ordered = orderTasksForDeletion(active);
+  for (const t of ordered) {
+    const still = await getTaskById(t.id);
+    if (!still) continue;
+    await removeTask(still.id, { cascadeDeleteActiveChildren: true });
+  }
+}
+
+/** @deprecated Use `prepareTaskSubtreeBeforeParentRemoval` */
+export const applyRecurrentStructureBeforeRemoval = prepareTaskSubtreeBeforeParentRemoval;
+
+/**
+ * @deprecated Legacy aggressive cascade; prefer `removeTask` with `cascadeDeleteActiveChildren`.
+ * Orphans history-terminal rows, then deletes active subtree (same as cascade=true).
+ */
+export async function deleteGroupCascade(groupId: string): Promise<number> {
+  const root = await getTaskById(groupId);
+  if (!root) return 0;
+  await prepareTaskSubtreeBeforeParentRemoval(root, { cascadeDeleteActiveChildren: true });
+  return 1;
+}
+
+/**
+ * @deprecated Legacy aggressive cascade; prefer `removeTask` with `cascadeDeleteActiveChildren`.
  */
 export async function deleteTemplateCascade(templateId: string): Promise<number> {
-  const children = await getTasksByParentId(templateId);
-  const instances = children.filter(t => t.type === TaskType.RECURRENT_INSTANCE);
-  
-  const toDelete = [templateId, ...instances.map(i => i.id)];
-  await Promise.all(toDelete.map(taskId => deleteTask(taskId)));
-  return toDelete.length;
+  const root = await getTaskById(templateId);
+  if (!root) return 0;
+  await prepareTaskSubtreeBeforeParentRemoval(root, { cascadeDeleteActiveChildren: true });
+  return 1;
 }
 
 /**

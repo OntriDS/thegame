@@ -34,8 +34,6 @@ import {
 } from '../update-propagation-utils';
 import {
   handleTemplateInstanceCreation,
-  deleteTemplateCascade,
-  deleteGroupCascade,
   cascadeStatusToInstances,
   uncascadeStatusFromInstances,
   getUndoneInstancesCount
@@ -366,71 +364,7 @@ export async function removeTaskLogEntriesOnDelete(task: Task): Promise<void> {
     // Import the cross-month cleanup helper
     const { removeLogEntriesAcrossMonths } = await import('../entities-logging');
 
-    // Handle recurrent template cascade deletion
-    if (task.type === TaskType.RECURRENT_TEMPLATE || task.type === TaskType.RECURRENT_GROUP) {
-      // Get all tasks that will be deleted (template/group + instances + child templates)
-      const tasks = await getAllTasks();
-      let toDelete: Task[] = [];
-
-      if (task.type === TaskType.RECURRENT_TEMPLATE) {
-        toDelete = tasks.filter(t =>
-          t.id === task.id ||
-          (t.parentId === task.id && t.type === TaskType.RECURRENT_INSTANCE)
-        );
-      } else if (task.type === TaskType.RECURRENT_GROUP) {
-        toDelete = [task];
-        const collectDescendants = (parentId: string) => {
-          const childGroups = tasks.filter((t: Task) =>
-            t.parentId === parentId && t.type === TaskType.RECURRENT_GROUP
-          );
-          const childTemplates = tasks.filter((t: Task) =>
-            t.parentId === parentId && t.type === TaskType.RECURRENT_TEMPLATE
-          );
-          childGroups.forEach(g => {
-            toDelete.push(g);
-            collectDescendants(g.id);
-          });
-          childTemplates.forEach(t => {
-            toDelete.push(t);
-            const templateInstances = tasks.filter((i: Task) =>
-              i.parentId === t.id && i.type === TaskType.RECURRENT_INSTANCE
-            );
-            toDelete.push(...templateInstances);
-          });
-        };
-        collectDescendants(task.id);
-      }
-
-      // Delete all tasks first
-      const deletedCount = task.type === TaskType.RECURRENT_TEMPLATE
-        ? await deleteTemplateCascade(task.id)
-        : await deleteGroupCascade(task.id);
-
-      const taskIds = new Set(toDelete.map(t => t.id));
-
-      // Remove from tasks log across all months
-      await removeLogEntriesAcrossMonths(EntityType.TASK, entry => taskIds.has(entry.entityId));
-
-      // Clean up other logs for all deleted tasks
-      for (const deletedTask of toDelete) {
-        if (deletedTask.rewards?.points) {
-          await removeLogEntriesAcrossMonths(EntityType.PLAYER, entry =>
-            entry.sourceId === deletedTask.id || entry.sourceTaskId === deletedTask.id
-          );
-        }
-        await removeLogEntriesAcrossMonths(EntityType.ITEM, entry =>
-          entry.sourceTaskId === deletedTask.id
-        );
-        await removeLogEntriesAcrossMonths(EntityType.FINANCIAL, entry =>
-          entry.sourceTaskId === deletedTask.id
-        );
-        await removeLogEntriesAcrossMonths(EntityType.CHARACTER, entry =>
-          entry.taskId === deletedTask.id || entry.sourceTaskId === deletedTask.id
-        );
-      }
-
-      return;
-    }
+    // Any parent task subtree is handled in removeTask (orphan done/collected + active, or cascade-delete active only) before this runs.
 
     // 1. Remove items created by this task
     await removeItemsCreatedByTask(task.id);

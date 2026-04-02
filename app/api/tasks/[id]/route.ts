@@ -15,7 +15,8 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   if (!(await requireAdminAuth(req))) return new NextResponse('Unauthorized', { status: 401 });
-  await removeTask(params.id);
+  const cascade = req.nextUrl.searchParams.get('cascadeActiveChildren') === '1';
+  await removeTask(params.id, { cascadeDeleteActiveChildren: cascade });
   return new NextResponse(null, { status: 204 });
 }
 

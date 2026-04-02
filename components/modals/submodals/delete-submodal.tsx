@@ -60,8 +60,12 @@ export default function DeleteModal({
 }: DeleteModalProps) {
   const [deleteConfirmed, setDeleteConfirmed] = useState(false);
   const [deleteRelatedItems, setDeleteRelatedItems] = useState(true);
+  /** When true, hard-delete active subtasks under this parent; default is orphan only. */
+  const [cascadeDeleteChildTasks, setCascadeDeleteChildTasks] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [relatedItems, setRelatedItems] = useState<Item[]>([]);
+  /** Task ids (among `entities`) that have at least one descendant in the tree */
+  const [taskIdsWithDescendants, setTaskIdsWithDescendants] = useState<Set<string>>(new Set());
 
   // Check for related items when modal opens
   useEffect(() => {
@@ -84,9 +88,36 @@ export default function DeleteModal({
         setRelatedItems(allRelatedItems);
         setDeleteRelatedItems(false); // Reset checkbox when modal opens
       }
+      if (open) {
+        setCascadeDeleteChildTasks(false);
+      }
     };
     
     checkRelatedItems();
+  }, [open, entityType, entities]);
+
+  useEffect(() => {
+    if (!open || entityType !== EntityType.TASK) {
+      setTaskIdsWithDescendants(new Set());
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const next = new Set<string>();
+      for (const t of entities as Task[]) {
+        try {
+          const info = await ClientAPI.getTaskDescendantInfo(t.id);
+          if (cancelled) return;
+          if (info?.hasDescendants) next.add(t.id);
+        } catch {
+          /* ignore */
+        }
+      }
+      if (!cancelled) setTaskIdsWithDescendants(next);
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [open, entityType, entities]);
 
   const handleDelete = async () => {
@@ -119,8 +150,10 @@ export default function DeleteModal({
             }
           }
           
-          // Delete the task with side effects (log cleanup handled by DataStore)
-          await ClientAPI.deleteTask(task.id);
+          await ClientAPI.deleteTask(task.id, {
+            cascadeDeleteActiveChildren:
+              cascadeDeleteChildTasks && taskIdsWithDescendants.has(task.id),
+          });
         }
       } else if (entityType === EntityType.FINANCIAL) {
         // Special handling for record deletion - check for created items
@@ -315,6 +348,24 @@ export default function DeleteModal({
           </div>
           
           {/* Show related items checkbox for tasks and records with related items */}
+          {entityType === EntityType.TASK && taskIdsWithDescendants.size > 0 && (
+            <div className="border-t pt-3 space-y-2">
+              <p className="text-sm text-muted-foreground">
+                This task is a parent: done and collected subtasks are never deleted—they stay in History with no parent until you reparent them. Active subtasks are un-parented unless you opt in below.
+              </p>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="cascade-child-tasks"
+                  checked={cascadeDeleteChildTasks}
+                  onCheckedChange={(checked) => setCascadeDeleteChildTasks(checked as boolean)}
+                />
+                <Label htmlFor="cascade-child-tasks" className="text-sm">
+                  Also permanently delete active subtasks (entire nested tree under this parent)
+                </Label>
+              </div>
+            </div>
+          )}
+
           {ENTITY_TYPES_WITH_RELATED_ITEMS.includes(entityType) && relatedItems.length > 0 && (
             <div className="border-t pt-3">
               <div className="text-sm text-muted-foreground mb-2">

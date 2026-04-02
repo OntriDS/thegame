@@ -488,17 +488,33 @@ export async function getTaskById(id: string): Promise<Task | null> {
   return await repoGetTaskById(id);
 }
 
-export async function removeTask(id: string): Promise<void> {
-  const existing = await repoGetTaskById(id);
-  await repoDeleteTask(id);
-  if (existing) {
-    // Phase 2: Rolling Summary Update
-    await SummaryService.handleTaskDeletion(existing);
+export type RemoveTaskOptions = {
+  /**
+   * When deleting a task that has **any** subtasks (any parent type), also hard-delete active descendants.
+   * Default false: orphan all children (done/collected and active) and never delete history-terminal rows.
+   */
+  cascadeDeleteActiveChildren?: boolean;
+};
 
-    // Call task deletion workflow for cleanup - pass the task object since it's already deleted from DB
-    const { removeTaskLogEntriesOnDelete } = await import('@/workflows/entities-workflows/task.workflow');
-    await removeTaskLogEntriesOnDelete(existing);
-  }
+export async function removeTask(id: string, options?: RemoveTaskOptions): Promise<void> {
+  const existing = await repoGetTaskById(id);
+  if (!existing) return;
+
+  const cascade = options?.cascadeDeleteActiveChildren === true;
+
+  const { prepareTaskSubtreeBeforeParentRemoval } = await import('@/lib/utils/recurrent-task-utils');
+  await prepareTaskSubtreeBeforeParentRemoval(existing, { cascadeDeleteActiveChildren: cascade });
+
+  const stillThere = await repoGetTaskById(id);
+  if (!stillThere) return;
+
+  await repoDeleteTask(id);
+
+  // Phase 2: Rolling Summary Update
+  await SummaryService.handleTaskDeletion(existing);
+
+  const { removeTaskLogEntriesOnDelete } = await import('@/workflows/entities-workflows/task.workflow');
+  await removeTaskLogEntriesOnDelete(existing);
 }
 
 // ITEMS

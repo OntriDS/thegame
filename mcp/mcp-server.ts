@@ -221,16 +221,23 @@ export class MCPServer {
 
     this.registerTool({
       name: 'delete_task',
-      description: 'Delete a task',
+      description:
+        'Delete a task. If the task has subtasks, default is to orphan all descendants (never delete done/collected); set cascadeActiveChildren to also hard-delete active descendants.',
       inputSchema: {
         type: 'object',
         properties: {
-          id: { type: 'string', description: 'Task ID' }
+          id: { type: 'string', description: 'Task ID' },
+          cascadeActiveChildren: {
+            type: 'boolean',
+            description: 'If true and task is a recurrence group/template, permanently delete active subtree',
+          },
         },
         required: ['id']
       },
       handler: async (args) => {
-        await DataStore.removeTask(args.id);
+        await DataStore.removeTask(args.id, {
+          cascadeDeleteActiveChildren: args.cascadeActiveChildren === true,
+        });
         return { success: true, message: `Task ${args.id} deleted` };
       }
     });

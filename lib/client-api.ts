@@ -49,6 +49,14 @@ export const ClientAPI = {
     return await res.json();
   },
 
+  getTaskDescendantInfo: async (
+    id: string
+  ): Promise<{ hasDescendants: boolean; descendantCount: number }> => {
+    const res = await fetch(`/api/tasks/${id}/descendants`);
+    if (!res.ok) return { hasDescendants: false, descendantCount: 0 };
+    return await res.json();
+  },
+
   upsertTask: async (task: Task): Promise<Task> => {
     const res = await fetch('/api/tasks', {
       method: 'POST',
@@ -59,8 +67,13 @@ export const ClientAPI = {
     return await res.json();
   },
 
-  deleteTask: async (id: string): Promise<void> => {
-    const res = await fetch(`/api/tasks/${id}`, { method: 'DELETE' });
+  deleteTask: async (
+    id: string,
+    options?: { cascadeDeleteActiveChildren?: boolean }
+  ): Promise<void> => {
+    const q =
+      options?.cascadeDeleteActiveChildren === true ? '?cascadeActiveChildren=1' : '';
+    const res = await fetch(`/api/tasks/${id}${q}`, { method: 'DELETE' });
     if (!res.ok) throw new Error('Failed to delete task');
   },
 

@@ -9,6 +9,7 @@ import {
   updateEntityLeanFields,
   removeLogEntriesAcrossMonths,
   getEntityLogs,
+  getEntityLogMonths,
   getMonthKeyFromTimestamp,
 } from '../entities-logging';
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
@@ -172,9 +173,8 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
     }
 
     await markEffect(effectKey);
-    if (!(financial.isNotPaid || financial.isNotCharged)) {
-      await ensureFinancialDoneLog(financial.id);
-    }
+    // DONE log is already written above when !isPending (effect-gated). Do not call ensureFinancialDoneLog here —
+    // it could append a second DONE if month resolution or list order differed from the guard in appendEntityLog.
     return;
   }
 
@@ -388,14 +388,16 @@ export async function ensureFinancialDoneLog(financialId: string): Promise<{
   const ts = getFinancialDoneTimestamp(financial);
   const targetMonth = getMonthKeyFromTimestamp(ts);
 
-  const logsInTarget = await getEntityLogs(EntityType.FINANCIAL, { month: targetMonth });
-  const hasDoneInTarget = logsInTarget.some(
-    (e: { entityId?: string; event?: string }) =>
-      e.entityId === financialId && String(e.event ?? '').toLowerCase() === 'done'
-  );
-
-  if (hasDoneInTarget) {
-    return { success: true, noop: true };
+  const monthIndex = new Set<string>([targetMonth, ...(await getEntityLogMonths(EntityType.FINANCIAL))]);
+  for (const m of monthIndex) {
+    const logsInMonth = await getEntityLogs(EntityType.FINANCIAL, { month: m });
+    const hasDone = logsInMonth.some(
+      (e: { entityId?: string; event?: string }) =>
+        e.entityId === financialId && String(e.event ?? '').toLowerCase() === 'done'
+    );
+    if (hasDone) {
+      return { success: true, noop: true };
+    }
   }
 
   await removeLogEntriesAcrossMonths(

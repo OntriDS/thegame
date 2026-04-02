@@ -163,7 +163,21 @@ export async function appendEntityLog(
       break;
   }
 
-  // 2. Fetch the absolute last log entry to check for redundant loop-spam
+  // 2. Same entity + same event already in this month → skip (head entry may be another entity; old logic only checked index 0)
+  const DEDUPE_SCAN = 400;
+  try {
+    const headChunk = await kvLRange(listKey, 0, DEDUPE_SCAN - 1);
+    for (const raw of headChunk) {
+      const e = parseEntry(raw);
+      if (e?.entityId === entityId && e.event === event) {
+        return;
+      }
+    }
+  } catch (err) {
+    console.warn('[appendEntityLog] Error scanning for duplicate event:', err);
+  }
+
+  // 3. Fetch the absolute last log entry to check for rapid flip-flop (same entity, different event)
   const lastRaw = await kvLRange(listKey, 0, 0);
   if (lastRaw.length > 0) {
     try {
@@ -172,11 +186,6 @@ export async function appendEntityLog(
         const lastTimestamp = new Date(lastEntry.timestamp).getTime();
         const currentTimestamp = new Date(entry.timestamp).getTime();
         const timeDiffMs = currentTimestamp - lastTimestamp;
-
-        // FILTER: If the event type is the exact same as the last one, it's loop spam. Ignore it.
-        if (lastEntry.event === event) {
-          return;
-        }
 
         // FILTER: Rapid Flip-Flop. If state changed, but it happened within ~1.5s of the last change,
         // it's likely a UI glitch/rapid clicking. We overwrite the last kept log with this final state.

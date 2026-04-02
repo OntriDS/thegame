@@ -21,7 +21,7 @@ import { PlayerLogTab } from '@/components/data-center/player-log-tab';
 import { SalesLogTab } from '@/components/data-center/sales-log-tab';
 import { SitesLogTab } from '@/components/data-center/sites-log-tab';
 import { LinksTab } from '@/components/data-center/links-tab';
-import { deduplicateTasksLog } from '@/lib/utils/logging-utils';
+import { deduplicateTasksLog, deduplicateFinancialsLog } from '@/lib/utils/logging-utils';
 import { sortMonthKeys, getCurrentMonthKey } from '@/lib/utils/date-utils';
 
 export default function DataCenterPage() {
@@ -41,7 +41,7 @@ export default function DataCenterPage() {
   const [availableMonths, setAvailableMonths] = useState<string[]>([getCurrentMonthKey()]);
 
   // Generic log loading function — month-aware
-  const loadLog = useCallback(async (logType: string, setter: (data: any) => void, isTasksLog = false, month?: string) => {
+  const loadLog = useCallback(async (logType: string, setter: (data: any) => void, dedupe: 'tasks' | 'financials' | false = false, month?: string) => {
     try {
       const monthParam = month || selectedMonth;
       const response = await fetch(`/api/${logType}-log?month=${monthParam}`);
@@ -51,8 +51,10 @@ export default function DataCenterPage() {
         if (data.months && Array.isArray(data.months) && data.months.length > 0) {
           setAvailableMonths(prev => sortMonthKeys(Array.from(new Set([...prev, ...data.months]))));
         }
-        if (isTasksLog) {
+        if (dedupe === 'tasks') {
           setter(deduplicateTasksLog(data));
+        } else if (dedupe === 'financials') {
+          setter(deduplicateFinancialsLog(data));
         } else {
           setter(data);
         }
@@ -98,15 +100,15 @@ export default function DataCenterPage() {
     loadLog(EntityType.PLAYER, setPlayerLog, false, selectedMonth);
     loadLog('sales', setSalesLog, false, selectedMonth);
     loadLog('sites', setSitesLog, false, selectedMonth);
-    loadLog('financials', setFinancialsLog, false, selectedMonth);
+    loadLog('financials', setFinancialsLog, 'financials', selectedMonth);
     loadLog('items', setItemsLog, false, selectedMonth);
-    loadLog('tasks', setTasksLog, true, selectedMonth);
+    loadLog('tasks', setTasksLog, 'tasks', selectedMonth);
   }, [selectedMonth, loadLog]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Listen for entity updates to refresh relevant log (stays on currently selected month)
-  useEntityUpdates('financial', () => loadLog('financials', setFinancialsLog, false, selectedMonth));
+  useEntityUpdates('financial', () => loadLog('financials', setFinancialsLog, 'financials', selectedMonth));
   useEntityUpdates('item', () => loadLog('items', setItemsLog, false, selectedMonth));
-  useEntityUpdates('task', () => loadLog('tasks', setTasksLog, true, selectedMonth));
+  useEntityUpdates('task', () => loadLog('tasks', setTasksLog, 'tasks', selectedMonth));
 
   // Reload all logs (keeps same month)
   const handleReloadLogs = async () => {
@@ -145,7 +147,7 @@ export default function DataCenterPage() {
       }
       if (financialsResponse.ok) {
         const data = await financialsResponse.json();
-        setFinancialsLog(data);
+        setFinancialsLog(deduplicateFinancialsLog(data));
         if (data.months) setAvailableMonths(prev => sortMonthKeys(Array.from(new Set([...prev, ...data.months]))));
       }
       if (itemsResponse.ok) {
