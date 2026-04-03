@@ -1,47 +1,67 @@
+// Task modal — same role as sales-modal.tsx: Dialog shell, data load, route to workflow content.
+// Header / Footer chrome lives in this file; body is task-modal-*-content.tsx (dynamic import avoids circular deps).
+
 'use client';
 
-import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import NumericInput from '@/components/ui/numeric-input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import SimpleTimePicker from '@/components/ui/simple-time-picker';
-import { SearchableSelect } from '@/components/ui/searchable-select';
-import { ItemNameField } from '@/components/ui/item-name-field';
-import { DatePicker } from '@/components/ui/date-picker';
-import { FrequencyCalendar, FrequencyConfig } from '@/components/ui/frequency-calendar';
-import { SmartSchedulerSubmodal } from './submodals/smart-scheduler-submodal';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Checkbox } from '@/components/ui/checkbox';
-import DeleteModal from './submodals/delete-submodal';
-import LinksRelationshipsModal from './submodals/links-relationships-submodal';
-import DatesSubmodal from './submodals/dates-submodal';
+import React, { useEffect, useState, type ComponentPropsWithoutRef } from 'react';
+import dynamic from 'next/dynamic';
+import { Dialog, DialogContent, DialogClose, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { cn } from '@/lib/utils';
+import { X } from 'lucide-react';
 import { Task, Item, Site } from '@/types/entities';
-import { getZIndexClass } from '@/lib/utils/z-index-utils';
-import { getPointsMetadata } from '@/lib/utils/points-utils';
-import { TaskType, TaskStatus, TaskPriority, STATION_CATEGORIES, ItemType, RecurrentFrequency, Collection, ItemStatus, CharacterRole, FOUNDER_CHARACTER_ID, EntityType } from '@/types/enums';
-import { getSubTypesForItemType } from '@/lib/utils/item-utils';
-import { getCategoryForItemType, getCategoryForTaskType, createStationCategoryOptions, getStationFromCombined, getCategoryFromCombined, createTaskParentOptions, createItemTypeSubTypeOptions, getItemTypeFromCombined, getSubTypeFromCombined, createCharacterOptions } from '@/lib/utils/searchable-select-utils';
-import { getAreaForStation } from '@/lib/utils/business-structure-utils';
-import { createSiteOptionsWithCategories, getSiteNameFromId } from '@/lib/utils/site-options-utils';
-import type { Station, SubItemType } from '@/types/type-aliases';
-import { v4 as uuid } from 'uuid';
-import { ORDER_INCREMENT, PROGRESS_MAX, PROGRESS_STEP, PRICE_STEP } from '@/lib/constants/app-constants';
-import { computeNextSiblingOrder } from '@/lib/utils/task-order-utils';
-import { Network, User, Calendar as CalendarIcon, Repeat } from 'lucide-react';
-import { getEmissaryFields } from '@/types/diplomatic-fields';
-import CascadeStatusConfirmationModal from './submodals/cascade-status-confirmation-submodal';
-import ArchiveCollectionConfirmationModal from './submodals/archive-collection-confirmation-submodal';
-import ConfirmationModal from './submodals/confirmation-submodal';
+import { TaskType } from '@/types/enums';
 import { ClientAPI } from '@/lib/client-api';
-import CharacterSelectorSubmodal from './submodals/character-selector-submodal';
-import PlayerCharacterSelectorModal from './submodals/player-character-selector-submodal';
-import { dispatchEntityUpdated, entityTypeToKind } from '@/lib/ui/ui-events';
-import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
-import { format, addHours } from 'date-fns';
+
+export type TaskModalContentKind = 'Mission' | 'Recurrent' | 'Automation';
+
+export function TaskModalHeader({
+  title,
+  contentKind,
+}: {
+  title: string;
+  contentKind: TaskModalContentKind;
+}) {
+  return (
+    <DialogHeader className="shrink-0 space-y-0 border-b px-6 py-4 text-left">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <DialogTitle className="m-0 shrink-0 text-xl font-semibold tracking-tight">{title}</DialogTitle>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+          <span>
+            Content: <span className="font-medium text-foreground">{contentKind}</span>
+          </span>
+        </div>
+        <div className="ml-auto flex shrink-0 items-center">
+          <DialogClose
+            className="inline-flex h-8 w-8 items-center justify-center rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+            type="button"
+          >
+            <X className="h-4 w-4" />
+            <span className="sr-only">Close</span>
+          </DialogClose>
+        </div>
+      </div>
+    </DialogHeader>
+  );
+}
+
+export function TaskModalFooter({
+  className,
+  ...props
+}: ComponentPropsWithoutRef<typeof DialogFooter>) {
+  return (
+    <DialogFooter
+      className={cn(
+        'mt-auto flex w-full shrink-0 flex-row flex-wrap items-center justify-between gap-4 overflow-x-auto border-t bg-background px-6 py-4',
+        className
+      )}
+      {...props}
+    />
+  );
+}
+
+const MissionTreeModalContent = dynamic(() => import('./task-modal-missions-content'), { ssr: false });
+const RecurrentTreeModalContent = dynamic(() => import('./task-modal-recurrents-content'), { ssr: false });
+const AutomationTaskModalContent = dynamic(() => import('./task-modal-automation-content'), { ssr: false });
 
 interface TaskModalProps {
   task?: Task | null;
@@ -49,28 +69,19 @@ interface TaskModalProps {
   onOpenChange: (open: boolean) => void;
   onSave: (task: Task) => Promise<void>;
   onComplete?: () => void;
-  isRecurrentModal?: boolean;
-  /** When set, new tasks / reparented tasks get max(sibling order)+ORDER_INCREMENT instead of Date.now(). */
   allTasksForOrder?: Task[];
+  isRecurrentModal?: boolean;
 }
 
+const RECURRENT_TYPES: TaskType[] = [
+  TaskType.RECURRENT_GROUP,
+  TaskType.RECURRENT_TEMPLATE,
+  TaskType.RECURRENT_INSTANCE,
+];
 
-// TaskModal: UI-only form for task data collection and validation
-// Side effects and persistence handled by parent component
-//
-// DIPLOMATIC FIELDS PATTERN:
-// - NATIVE fields: Always displayed (name, status, priority, etc.)
-// - AMBASSADOR fields: Always displayed (cost, revenue, siteId, etc.)
-// - EMISSARY fields: Collapsible via vertical toggle button
-//   - showEmissaryFields=true: Show toggle button, user can expand/collapse (default)
-//   - showEmissaryFields=false: Hide toggle button completely (for future contexts)
-//   - User can toggle Item Creation fields on/off as needed
-//
-// Why collapsible Emissaries?
-// - Emissary fields are CONDITIONALLY PRESENT (only when creating items)
-// - Most tasks don't create items, so default collapsed = cleaner UI
-// - Advanced users can expand when needed
-// - Default behavior: Show toggle button in all contexts (Control Room, etc.)
+function isRecurrentTaskType(t: TaskType): boolean {
+  return RECURRENT_TYPES.includes(t);
+}
 
 export default function TaskModal({
   task,
@@ -78,1616 +89,99 @@ export default function TaskModal({
   onOpenChange,
   onSave,
   onComplete,
-  isRecurrentModal = false,
   allTasksForOrder,
+  isRecurrentModal = false,
 }: TaskModalProps) {
-  const { getPreference, setPreference } = useUserPreferences();
-
-  // Collapsible Emissary Column state - persisted in preferences
-  const [emissaryColumnExpanded, setEmissaryColumnExpanded] = useState(false); // Default to false
-
-  const toggleEmissaryColumn = () => {
-    const newValue = !emissaryColumnExpanded;
-    setEmissaryColumnExpanded(newValue);
-    setPreference('task-modal-emissary-expanded', String(newValue));
-  };
-
-  const getLastUsedStation = useCallback((): Station => {
-    const saved = getPreference('task-modal-last-station');
-    return (saved as Station) || ('Strategy' as Station);
-  }, [getPreference]);
-
-  const getLastUsedType = useCallback((): TaskType => {
-    if (isRecurrentModal) {
-      const saved = getPreference('task-modal-last-recurrent-type');
-      return (saved as TaskType) || TaskType.RECURRENT_GROUP;
-    }
-    const saved = getPreference('task-modal-last-type');
-    return (saved as TaskType) || TaskType.MISSION;
-  }, [isRecurrentModal, getPreference]);
-
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [status, setStatus] = useState<TaskStatus>(TaskStatus.CREATED);
-  const [priority, setPriority] = useState<TaskPriority>(TaskPriority.NORMAL);
-  const [type, setType] = useState<TaskType>(getLastUsedType());
-  const [station, setStation] = useState<Station>('Strategy' as Station);
-  const getInitialStationCategory = (): string => {
-    const lastStation = getLastUsedStation();
-    const area = getAreaForStation(lastStation);
-    return `${lastStation}:${area || 'ADMIN'}`;
-  };
-  const [stationCategory, setStationCategory] = useState<string>(getInitialStationCategory());
-  const [progress, setProgress] = useState(0);
-  const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
-  const [localDoneAt, setLocalDoneAt] = useState<Date | undefined>(task?.doneAt ? new Date(task.doneAt) : undefined);
-  const [localCollectedAt, setLocalCollectedAt] = useState<Date | undefined>(task?.collectedAt ? new Date(task.collectedAt) : undefined);
-  const [scheduledStartDate, setScheduledStartDate] = useState<Date | undefined>(undefined);
-  const [scheduledStartTime, setScheduledStartTime] = useState<string>('');
-  const [scheduledEndDate, setScheduledEndDate] = useState<Date | undefined>(undefined);
-  const [scheduledEndTime, setScheduledEndTime] = useState<string>('');
-  const [frequencyConfig, setFrequencyConfig] = useState<FrequencyConfig | undefined>(
-    task?.frequencyConfig || (isRecurrentModal ? {
-      type: RecurrentFrequency.ONCE,
-      interval: 1,
-      repeatMode: 'periodically',
-    } : undefined)
-  );
-  const [cost, setCost] = useState(0);
-  const [costString, setCostString] = useState('0');
-  const [revenue, setRevenue] = useState(0);
-  const [revenueString, setRevenueString] = useState('0');
-  const [isNotPaid, setIsNotPaid] = useState(false);
-  const [isNotCharged, setIsNotCharged] = useState(false);
-  const [isRecurrentGroup, setIsRecurrentGroup] = useState(false);
-  const [isTemplate, setIsTemplate] = useState(false);
-  const [isCollected, setIsCollected] = useState(false);
-
-  // Cascade confirmation modal state
-  const [showCascadeModal, setShowCascadeModal] = useState(false);
-  const [cascadeData, setCascadeData] = useState<{
-    newStatus: TaskStatus;
-    oldStatus: TaskStatus;
-    affectedCount: number;
-    isReversal: boolean;
-  } | null>(null);
-
-  // Dates Submodal State
-  const [showDatesModal, setShowDatesModal] = useState(false);
-
-  // Archive collection confirmation modal state (for status selector only)
-  const [formData, setFormData] = useState({
-    site: 'none' as string,
-    targetSite: 'none' as string,
-  });
-
-  const [outputItemType, setOutputItemType] = useState<ItemType | ''>('');
-  const [outputItemSubType, setOutputItemSubType] = useState<SubItemType | ''>('');
-  const [outputItemTypeSubType, setOutputItemTypeSubType] = useState<string>('none:');
-  const [outputQuantity, setOutputQuantity] = useState(1);
-  const [outputQuantityString, setOutputQuantityString] = useState('1');
-  const [outputUnitCost, setOutputUnitCost] = useState(0);
-  const [outputUnitCostString, setOutputUnitCostString] = useState('0');
-  const [outputItemName, setOutputItemName] = useState('');
-  const [isNewItem, setIsNewItem] = useState(false);
-  const [selectedItemId, setSelectedItemId] = useState('');
-  const [outputItemPrice, setOutputItemPrice] = useState(0);
-  const [outputItemPriceString, setOutputItemPriceString] = useState('0');
-  const [isSold, setIsSold] = useState(false);
-  const [outputItemStatus, setOutputItemStatus] = useState<ItemStatus>(ItemStatus.FOR_SALE);
-  const [rewards, setRewards] = useState({ points: { xp: 0, rp: 0, fp: 0, hp: 0 } });
-  const [rewardsStrings, setRewardsStrings] = useState({
-    points: { xp: '0', rp: '0', fp: '0', hp: '0' }
-  });
-  const [parentId, setParentId] = useState<string | null>(null);
-  const [customerCharacterId, setCustomerCharacterId] = useState<string | null>(null);
-  const [customerCharacterName, setCustomerCharacterName] = useState<string>('');
-  const [isNewCustomer, setIsNewCustomer] = useState(true);
-  const [newCustomerName, setNewCustomerName] = useState('');
-  const [playerCharacterId, setPlayerCharacterId] = useState<string | null>(FOUNDER_CHARACTER_ID);
-  const [showCharacterSelector, setShowCharacterSelector] = useState(false);
-  const [showPlayerCharacterSelector, setShowPlayerCharacterSelector] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showRelationshipsModal, setShowRelationshipsModal] = useState(false);
-  const [showScheduler, setShowScheduler] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [showValidationModal, setShowValidationModal] = useState(false);
-  const [validationMessage, setValidationMessage] = useState('');
-
-  // Archive Collection Confirmation Modal state (for status change)
-  const [showArchiveCollectionModal, setShowArchiveCollectionModal] = useState(false);
-  const [pendingStatusChange, setPendingStatusChange] = useState<{
-    status: TaskStatus;
-    onConfirm: () => void;
-    onCancel: () => void;
-  } | null>(null);
-
-  const [showNotDoneConfirmation, setShowNotDoneConfirmation] = useState(false);
-  const [pendingNotDoneStatus, setPendingNotDoneStatus] = useState<TaskStatus | null>(null);
-
-  // UI data loading for form functionality
-  const [items, setItems] = useState<Item[]>([]);
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [characters, setCharacters] = useState<any[]>([]);
-  const [sites, setSites] = useState<Site[]>([]);
-  const [dataLoaded, setDataLoaded] = useState(false);
-
-  const hasInitializedRef = useRef(false);
-  const initializedTaskIdRef = useRef<string | null>(null);
-
-  // Identity Vault: Persist ID across renders
-  const draftId = useRef(task?.id || uuid());
-
-  // Load UI data for form dropdowns
-  useEffect(() => {
-    const loadUIData = async () => {
-      try {
-        const [itemsData, tasksData, charactersData, sitesData] = await Promise.all([
-          ClientAPI.getItems(),
-          ClientAPI.getTasks(),
-          ClientAPI.getCharacters(),
-          ClientAPI.getSites()
-        ]);
-        setItems(itemsData);
-        setTasks(tasksData);
-        setCharacters(charactersData);
-        setSites(sitesData);
-        setDataLoaded(true);
-      } catch (error) {
-        console.error('Failed to load task modal UI data:', error);
-      }
-    };
-    loadUIData();
-  }, []);
-
-  // Load preferences after hydration to prevent SSR mismatches
-  useEffect(() => {
-    const savedEmissary = getPreference('task-modal-emissary-expanded');
-    if (savedEmissary === 'true') {
-      setEmissaryColumnExpanded(true);
-    } else if (savedEmissary === 'false') {
-      setEmissaryColumnExpanded(false);
-    }
-    // If savedEmissary is null, keep default (false)
-
-    // Initialize station from preferences (fixes persistence issue)
-  }, [getPreference]);
-  const computeStationCategoryValue = useCallback((stationValue: Station | null): string => {
-    if (!stationValue) {
-      return 'none:';
-    }
-    const area = getAreaForStation(stationValue);
-    return `${stationValue}:${area || 'ADMIN'}`;
-  }, []);
-
-  const initializeFromTask = useCallback((existingTask: Task) => {
-    // Sync Vault with existing record ID
-    draftId.current = existingTask.id;
-    setName(existingTask.name);
-    setDescription(existingTask.description || '');
-    setStatus(existingTask.status);
-    setPriority(existingTask.priority);
-    setType(existingTask.type);
-    setStation(existingTask.station);
-    setStationCategory(computeStationCategoryValue(existingTask.station));
-    setProgress(existingTask.progress);
-    setDueDate(existingTask.dueDate ? new Date(existingTask.dueDate) : undefined);
-    setLocalDoneAt(existingTask.doneAt ? new Date(existingTask.doneAt) : undefined);
-    setLocalCollectedAt(existingTask.collectedAt ? new Date(existingTask.collectedAt) : undefined);
-
-    if (existingTask.scheduledStart) {
-      const start = new Date(existingTask.scheduledStart);
-      setScheduledStartDate(start);
-      setScheduledStartTime(format(start, 'HH:mm'));
-    } else {
-      setScheduledStartDate(undefined);
-      setScheduledStartTime('');
-    }
-
-    if (existingTask.scheduledEnd) {
-      const end = new Date(existingTask.scheduledEnd);
-      setScheduledEndDate(end);
-      setScheduledEndTime(format(end, 'HH:mm'));
-    } else {
-      setScheduledEndDate(undefined);
-      setScheduledEndTime('');
-    }
-
-    setFrequencyConfig(existingTask.frequencyConfig || undefined);
-    setCost(existingTask.cost);
-    setCostString(existingTask.cost.toString());
-    setRevenue(existingTask.revenue);
-    setRevenueString(existingTask.revenue.toString());
-    setIsNotPaid(existingTask.isNotPaid || false);
-    setIsNotCharged(existingTask.isNotCharged || false);
-    setIsRecurrentGroup(existingTask.isRecurrentGroup || false);
-    setIsTemplate(existingTask.isTemplate || false);
-    setIsCollected(existingTask.isCollected || false);
-    setFormData({
-      site: existingTask.siteId || 'none',
-      targetSite: existingTask.targetSiteId || 'none',
-    });
-    const taskItemType = (existingTask.outputItemType as ItemType) || '';
-    const taskSubType = existingTask.outputItemSubType || '';
-    setOutputItemType(taskItemType);
-    setOutputItemSubType(taskSubType);
-    setOutputItemTypeSubType(taskItemType ? `${taskItemType}:${taskSubType}` : 'none:');
-    setOutputQuantity(existingTask.outputQuantity || 1);
-    setOutputQuantityString((existingTask.outputQuantity || 1).toString());
-    setOutputUnitCost(existingTask.outputUnitCost || 0);
-    setOutputUnitCostString((existingTask.outputUnitCost || 0).toString());
-    setOutputItemName(existingTask.outputItemName || '');
-    setOutputItemPrice(existingTask.outputItemPrice || 0);
-    setOutputItemPriceString((existingTask.outputItemPrice || 0).toString());
-    setIsNewItem(existingTask.isNewItem || false);
-    setIsSold(existingTask.isSold || false);
-    setOutputItemStatus(existingTask.outputItemStatus || ItemStatus.FOR_SALE);
-    setSelectedItemId(existingTask.outputItemId || '');
-    setCustomerCharacterId(existingTask.customerCharacterId || null);
-    const isUsingExistingCustomer = Boolean(existingTask.customerCharacterId);
-    setIsNewCustomer(!isUsingExistingCustomer);
-    setNewCustomerName(existingTask.newCustomerName || '');
-    setPlayerCharacterId(existingTask.playerCharacterId || FOUNDER_CHARACTER_ID);
-    setRewards({
-      points: {
-        xp: existingTask.rewards?.points?.xp || 0,
-        rp: existingTask.rewards?.points?.rp || 0,
-        fp: existingTask.rewards?.points?.fp || 0,
-        hp: existingTask.rewards?.points?.hp || 0,
-      },
-    });
-    setRewardsStrings({
-      points: {
-        xp: (existingTask.rewards?.points?.xp || 0).toString(),
-        rp: (existingTask.rewards?.points?.rp || 0).toString(),
-        fp: (existingTask.rewards?.points?.fp || 0).toString(),
-        hp: (existingTask.rewards?.points?.hp || 0).toString(),
-      },
-    });
-    setParentId(existingTask.parentId || null);
-  }, [computeStationCategoryValue]);
-
-  const initializeForNewTask = useCallback(() => {
-    // Generate new ID for new task session
-    draftId.current = uuid();
-    setName('');
-    setDescription('');
-    setStatus(TaskStatus.CREATED);
-    setPriority(TaskPriority.NORMAL);
-    const defaultType = getLastUsedType();
-    setType(defaultType);
-    const lastStation = getLastUsedStation();
-    setStation(lastStation);
-    setStationCategory(computeStationCategoryValue(lastStation));
-    setProgress(0);
-    setDueDate(undefined);
-    setLocalDoneAt(undefined);
-    setLocalCollectedAt(undefined);
-    setScheduledStartDate(undefined);
-    setScheduledStartTime('');
-    setScheduledEndDate(undefined);
-    setScheduledEndTime('');
-    setFrequencyConfig(isRecurrentModal ? {
-      type: RecurrentFrequency.ONCE,
-      interval: 1,
-      repeatMode: 'periodically',
-    } : undefined);
-    setCost(0);
-    setCostString('0');
-    setRevenue(0);
-    setRevenueString('0');
-    setIsNotPaid(false);
-    setIsNotCharged(false);
-    setIsRecurrentGroup(false);
-    setIsTemplate(false);
-    setFormData({ site: 'none', targetSite: 'none' });
-    setOutputItemType('');
-    setOutputItemSubType('');
-    setOutputItemTypeSubType('none:');
-    setOutputQuantity(1);
-    setOutputQuantityString('1');
-    setOutputUnitCost(0);
-    setOutputUnitCostString('0');
-    setOutputItemName('');
-    setOutputItemPrice(0);
-    setOutputItemPriceString('0');
-    setIsNewItem(false);
-    setIsSold(false);
-    setOutputItemStatus(ItemStatus.FOR_SALE);
-    setSelectedItemId('');
-    setCustomerCharacterId(null);
-    setIsNewCustomer(true);
-    setNewCustomerName('');
-    setPlayerCharacterId(null);
-    setRewards({ points: { xp: 0, rp: 0, fp: 0, hp: 0 } });
-    setRewardsStrings({ points: { xp: '0', rp: '0', fp: '0', hp: '0' } });
-    setParentId(null);
-  }, [computeStationCategoryValue, getLastUsedStation, getLastUsedType, isRecurrentModal]);
+  const [allTasks, setAllTasks] = useState<Task[]>([]);
+  const [allItems, setAllItems] = useState<Item[]>([]);
+  const [allSites, setAllSites] = useState<Site[]>([]);
+  const [allCharacters, setAllCharacters] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (!open) {
-      hasInitializedRef.current = false;
-      initializedTaskIdRef.current = null;
-      return;
+    if (open) {
+      void loadData();
     }
+  }, [open]);
 
-    const currentTaskId = task?.id || null;
-    const alreadyInitialized = hasInitializedRef.current && initializedTaskIdRef.current === currentTaskId;
-    if (alreadyInitialized) {
-      return;
-    }
-
-    if (task && task.id) {
-      initializeFromTask(task);
-    } else {
-      initializeForNewTask();
-    }
-
-    hasInitializedRef.current = true;
-    initializedTaskIdRef.current = currentTaskId;
-  }, [open, task, initializeForNewTask, initializeFromTask]);
-
-  // Load customer character name when customerCharacterId changes
-  useEffect(() => {
-    const loadCustomerCharacter = async () => {
-      if (customerCharacterId) {
-        try {
-          const characters = await ClientAPI.getCharacters();
-          const customer = characters.find(c => c.id === customerCharacterId);
-          setCustomerCharacterName(customer?.name || 'Unknown');
-        } catch (error) {
-          console.error('Failed to load customer character:', error);
-          setCustomerCharacterName('Unknown');
-        }
-      } else {
-        setCustomerCharacterName('');
-      }
-    };
-    loadCustomerCharacter();
-  }, [customerCharacterId]);
-
-  // Handle setting customer character
-  const handleSetCustomer = (characterId: string | null) => {
-    setCustomerCharacterId(characterId);
-  };
-
-  const getCharacterOptions = () => {
-    return createCharacterOptions(characters);
-  };
-
-  // Helper function to build task from form state - eliminates duplication
-  const buildTaskFromForm = (statusOverride?: TaskStatus): Task => {
-    const finalPlayerCharacterId = playerCharacterId || FOUNDER_CHARACTER_ID;
-    const finalStatus = statusOverride !== undefined ? statusOverride : status;
-
-    let finalScheduledStart: Date | undefined = undefined;
-    if (scheduledStartDate && scheduledStartTime) {
-      const [hours, minutes] = scheduledStartTime.split(':').map(Number);
-      finalScheduledStart = new Date(scheduledStartDate);
-      finalScheduledStart.setHours(hours, minutes);
-    }
-
-    let finalScheduledEnd: Date | undefined = undefined;
-    if (scheduledEndDate && scheduledEndTime) {
-      const [hours, minutes] = scheduledEndTime.split(':').map(Number);
-      finalScheduledEnd = new Date(scheduledEndDate);
-      finalScheduledEnd.setHours(hours, minutes);
-    }
-
-    /** Drag-drop uses 1000-steps and fractional midpoints; Date.now() defaults were ~1e12+ and broke sibling sort. */
-    const TIMESTAMP_LIKE_ORDER_THRESHOLD = 1_000_000_000_000;
-
-    const resolveOrder = (): number => {
-      const editingExisting = !!task?.id;
-      const parentUnchanged =
-        editingExisting && (parentId ?? null) === (task?.parentId ?? null);
-      if (editingExisting && parentUnchanged && task!.order != null && !Number.isNaN(Number(task!.order))) {
-        const o = Number(task!.order);
-        if (o < TIMESTAMP_LIKE_ORDER_THRESHOLD) {
-          return o;
-        }
-      }
-      if (allTasksForOrder && allTasksForOrder.length > 0) {
-        return computeNextSiblingOrder(allTasksForOrder, parentId, draftId.current);
-      }
-      if (editingExisting && task!.order != null && !Number.isNaN(Number(task!.order))) {
-        return Number(task!.order);
-      }
-      return ORDER_INCREMENT;
-    };
-
-    return {
-      id: draftId.current,
-      name,
-      description,
-      status: finalStatus,
-      priority,
-      type,
-      station,
-      progress,
-      dueDate,
-      doneAt: localDoneAt,
-      collectedAt: localCollectedAt,
-      scheduledStart: finalScheduledStart,
-      scheduledEnd: finalScheduledEnd,
-      frequencyConfig: (type === TaskType.RECURRENT_GROUP || type === TaskType.RECURRENT_TEMPLATE) ? frequencyConfig : undefined,
-      cost,
-      revenue,
-      isNotPaid,
-      isNotCharged,
-      siteId: formData.site && formData.site !== 'none' ? formData.site : null,
-      targetSiteId: formData.targetSite && formData.targetSite !== 'none' ? formData.targetSite : null,
-      outputItemType: (outputItemType || undefined) as ItemType | undefined,
-      outputItemSubType: (outputItemSubType || undefined) as SubItemType | undefined,
-      outputQuantity,
-      outputUnitCost,
-      outputItemName: outputItemName || undefined,
-      outputItemPrice,
-      isNewItem,
-      isSold,
-      outputItemStatus,
-      customerCharacterId: isNewCustomer ? null : customerCharacterId,  // Ambassador: Existing customer
-      newCustomerName: isNewCustomer ? newCustomerName : undefined,  // EMISSARY: Name for new customer character creation
-      playerCharacterId: finalPlayerCharacterId,  // AMBASSADOR: Player character who owns this task
-      rewards: {
-        points: {
-          xp: rewards.points.xp,
-          rp: rewards.points.rp,
-          fp: rewards.points.fp,
-          hp: rewards.points.hp,
-        },
-      },
-      createdAt: task?.createdAt || new Date(),
-      updatedAt: new Date(),
-      isCollected: status === TaskStatus.COLLECTED || isCollected,
-      order: resolveOrder(),
-      parentId,
-      isRecurrentGroup,
-      isTemplate,
-      outputItemId: isNewItem ? null : (selectedItemId || task?.outputItemId || null),
-      links: task?.links || [],  // embedded mirror; registry is source of truth
-    };
-  };
-
-  const handleSave = async () => {
-    if (isSaving) return;
-    setIsSaving(true);
-
-    // Validation for Recurrent Template
-    if (type === TaskType.RECURRENT_TEMPLATE) {
-      const freq = frequencyConfig;
-
-      // Allow ONCE frequency without any restrictions (it's just one instance, no infinite loop risk)
-      if (freq?.type === RecurrentFrequency.ONCE) {
-        // ONCE is always allowed - no validation needed
-      } else {
-        // For other frequencies, check if there's a stop condition
-        const hasStopCondition = freq?.stopsAfter &&
-          (freq.stopsAfter.type === 'times' || freq.stopsAfter.type === 'date');
-
-        // Only require dueDate if there's no stop condition (infinite loop risk)
-        if (!hasStopCondition && !dueDate) {
-          setValidationMessage('Recurrent Templates require a Due Date to set the safety limit for instance creation when "Stops After" is set to "Never".');
-          setShowValidationModal(true);
-          setIsSaving(false);
-          return;
-        }
-
-        // Validate frequency is set (but ONCE is already handled above)
-        const isUnsetFrequency = !freq ||
-          (freq.type === RecurrentFrequency.CUSTOM && (!freq.customDays || freq.customDays.length === 0));
-        if (isUnsetFrequency) {
-          setValidationMessage('Please select a Frequency for this template (e.g., Once, Daily, Weekly, Monthly, or fill Custom days).');
-          setShowValidationModal(true);
-          setIsSaving(false);
-          return;
-        }
-      }
-    }
-
-
-    // Build task entity from form data
-    const newTask = buildTaskFromForm();
-
-    // Check for cascade status change for Recurrent Templates
-    if (type === TaskType.RECURRENT_TEMPLATE && task && task.status !== status) {
-      try {
-        const affectedCount = await ClientAPI.getUndoneInstancesCount(task.id, status);
-
-        if (affectedCount > 0) {
-          const isReversal = task.status === TaskStatus.DONE && status !== TaskStatus.DONE;
-
-          setCascadeData({
-            newStatus: status,
-            oldStatus: task.status,
-            affectedCount,
-            isReversal
-          });
-          setShowCascadeModal(true);
-          setIsSaving(false);
-          return;
-        }
-      } catch (error) {
-        console.error('Failed to check cascade status:', error);
-        // Continue with save if cascade check fails
-      }
-    }
-
-    // Save user preferences
-    setPreference('task-modal-last-station', newTask.station as any);
-
+  const loadData = async () => {
+    setIsLoading(true);
     try {
-      // Emit pure task entity - Links System handles all relationships automatically
-      await onSave(newTask);
-
-      // Dispatch UI update events AFTER successful save
-      dispatchEntityUpdated(entityTypeToKind(EntityType.TASK));
-
-      onOpenChange(false);
+      const [tasks, items, sites, characters] = await Promise.all([
+        ClientAPI.getAllTasks(),
+        ClientAPI.getItems(),
+        ClientAPI.getSites(),
+        ClientAPI.getCharacters(),
+      ]);
+      setAllTasks(tasks);
+      setAllItems(items);
+      setAllSites(sites);
+      setAllCharacters(characters);
     } catch (error) {
-      console.error('Save failed:', error);
-      // Keep modal open on error
+      console.error('[TaskModal] Error loading data:', error);
     } finally {
-      setIsSaving(false);
+      setIsLoading(false);
     }
   };
 
-  // Cascade confirmation handlers
-  const handleCascadeConfirm = async () => {
-    if (!cascadeData || !task) return;
-
-    try {
-      // Build task with status override - workflow will handle cascading automatically
-      const newTask = buildTaskFromForm(cascadeData.newStatus);
-
-      // Workflow will automatically cascade the status change
-      await onSave(newTask);
-      dispatchEntityUpdated('task');
-      onOpenChange(false);
-    } catch (error) {
-      console.error('Cascade save failed:', error);
-    } finally {
-      setShowCascadeModal(false);
-      setCascadeData(null);
-      setIsSaving(false);
-    }
+  const handleSave = async (saved: Task) => {
+    await onSave(saved);
   };
 
-  const handleCascadeCancel = async () => {
-    // Save the template without cascading (use _skipCascade metadata)
-    setShowCascadeModal(false);
-
-    if (!cascadeData || !task) {
-      setCascadeData(null);
-      handleSave();
-      return;
-    }
-
-    try {
-      // Build task with status override and skip cascade flag
-      const newTask = {
-        ...buildTaskFromForm(cascadeData.newStatus),
-        _skipCascade: true, // Tell workflow to skip cascading
-      } as Task & { _skipCascade?: boolean };
-
-      await onSave(newTask as Task);
-      dispatchEntityUpdated('task');
-      onOpenChange(false);
-    } catch (error) {
-      console.error('Save failed:', error);
-    } finally {
-      setCascadeData(null);
-      setIsSaving(false);
-    }
+  const handleDeleteComplete = () => {
+    onComplete?.();
   };
 
-  const handleDatesUpdate = (newDates: { createdAt?: Date; doneAt?: Date; collectedAt?: Date }) => {
-    // Unconditionally update because 'undefined' means the user explicitly cleared it
-    setLocalDoneAt(newDates.doneAt);
-    setLocalCollectedAt(newDates.collectedAt);
-  };
+  const showAutomation = Boolean(task?.type === TaskType.AUTOMATION);
+  const showRecurrent = showAutomation ? false : task ? isRecurrentTaskType(task.type) : Boolean(isRecurrentModal);
 
-  const handleStationChange = (newStation: Station) => {
-    setStation(newStation);
-    setPreference('task-modal-last-station', newStation);
-  };
+  const contentKind: TaskModalContentKind = showAutomation ? 'Automation' : showRecurrent ? 'Recurrent' : 'Mission';
 
-  // Helper function to get the correct value format for SearchableSelect
-  const getStationValue = (station: Station): string => {
-    const area = getAreaForStation(station);
-    return `${area}:${station}`;
-  };
-
-  const handleStationCategoryChange = (newStationCategory: string) => {
-    const newStation = getStationFromCombined(newStationCategory) as Station;
-
-    setStationCategory(newStationCategory);
-    setStation(newStation);
-    setPreference('task-modal-last-station', newStation);
-  };
-
-  const handleTypeChange = (newType: string) => {
-    const casted = newType as TaskType;
-    setType(casted);
-    const key = isRecurrentModal ? 'task-modal-last-recurrent-type' : 'task-modal-last-type';
-    setPreference(key, casted);
-  };
-
-  const handleItemTypeChange = (newItemType: ItemType | '') => {
-    setOutputItemType(newItemType);
-  };
-
-  const handleOutputItemTypeSubTypeChange = (newItemTypeSubType: string) => {
-    if (newItemTypeSubType === 'none:') {
-      setOutputItemTypeSubType('none:');
-      setOutputItemType('');
-      setOutputItemSubType('');
-    } else {
-      const newItemType = getItemTypeFromCombined(newItemTypeSubType) as ItemType;
-      const newSubType = getSubTypeFromCombined(newItemTypeSubType) as SubItemType;
-
-      setOutputItemTypeSubType(newItemTypeSubType);
-      setOutputItemType(newItemType);
-      setOutputItemSubType(newSubType || '');
-    }
-  };
-
-  const handleNewItemChange = (checked: boolean) => {
-    setIsNewItem(checked);
-    if (checked) {
-      setSelectedItemId('');
-      setOutputItemName('');
-    } else {
-      setOutputItemName('');
-    }
-  };
-
-  // Handle item selection from SearchableSelect
-  const handleItemSelect = (itemId: string) => {
-    setSelectedItemId(itemId);
-    if (itemId) {
-      const selectedItem = items.find(item => item.id === itemId);
-      if (selectedItem) {
-        setIsNewItem(false);
-        setOutputItemName(selectedItem.name);
-        setOutputItemType(selectedItem.type);
-        setOutputItemSubType(''); // Items don't have subType property
-        setOutputUnitCost(selectedItem.unitCost);
-        setOutputItemPrice(selectedItem.price);
-      }
-    } else {
-      setOutputItemName('');
-    }
-  };
-
-  // Helper function to format number with smart decimal display
-  const formatSmartDecimal = (num: number): string => {
-    const rounded = Math.round(num * 10) / 10; // Round to 1 decimal place
-    return rounded % 1 === 0 ? rounded.toString() : rounded.toFixed(1);
-  };
-
-  // Auto-calculate unit cost and price from total cost/revenue and quantity
-  const handleAutoCalculateUnitCost = () => {
-    if (outputQuantity > 0) {
-      // Calculate unit cost if cost is available
-      if (cost > 0) {
-        const calculatedUnitCost = cost / outputQuantity;
-        setOutputUnitCost(calculatedUnitCost);
-        setOutputUnitCostString(formatSmartDecimal(calculatedUnitCost));
-      }
-
-      // Calculate price if revenue is available (check both revenue state and revenueString)
-      const currentRevenue = revenue || parseFloat(revenueString) || 0;
-      if (currentRevenue > 0) {
-        const calculatedPrice = currentRevenue / outputQuantity;
-        setOutputItemPrice(calculatedPrice);
-        setOutputItemPriceString(formatSmartDecimal(calculatedPrice));
-      }
-    }
-  };
-
-  // Handle checkbox changes and log financial effects when unchecked
-  const handleNotPaidChange = async (checked: boolean) => {
-    setIsNotPaid(checked);
-
-    // If checking (marking as not paid) and task is COLLECTED, change to DONE
-    if (checked && status === TaskStatus.COLLECTED) {
-      setStatus(TaskStatus.DONE);
-    }
-
-    // NOTE: Financial logging will be handled when user saves the modal
-    // Removed inline financial logging to follow clean pattern
-  };
-
-  const handleNotChargedChange = async (checked: boolean) => {
-    setIsNotCharged(checked);
-
-    // If checking (marking as not charged) and task is COLLECTED, change to DONE
-    if (checked && status === TaskStatus.COLLECTED) {
-      setStatus(TaskStatus.DONE);
-    }
-
-    // NOTE: Financial logging will be handled when user saves the modal
-    // Removed inline financial logging to follow clean pattern
-  };
-
-
-  // NOTE: Financial logging removed from modal
-  // Now handled by completion workflow to follow clean pattern
-  const logFinancialEffectForTask = async (task: Task, type: 'cost' | 'revenue') => {
-    // Function stub - financial logging now handled by completion workflow
-    return;
-  };
-
-  const handleDescriptionInput = (e: React.FormEvent<HTMLTextAreaElement>) => {
-    const target = e.currentTarget;
-    target.style.height = 'auto';
-    target.style.height = `${Math.min(target.scrollHeight, 160)}px`;
-  };
-
-  // Number field handlers for zero deletion/replacement
-  const handleNumberFieldChange = (value: string, setString: (value: string) => void, setNumber: (value: number) => void, min: number = 0) => {
-    setString(value);
-    // Only update number if it's a valid number
-    const numValue = parseFloat(value);
-    if (!isNaN(numValue) && numValue >= min) {
-      setNumber(numValue);
-    }
-  };
-
-  const handleNumberFieldBlur = (value: string, setString: (value: string) => void, setNumber: (value: number) => void, min: number = 0) => {
-    const numValue = parseFloat(value);
-    if (isNaN(numValue) || numValue < min) {
-      // Reset to minimum value if invalid
-      setString(min.toString());
-      setNumber(min);
-    } else {
-      // Ensure string matches the valid number
-      setString(numValue.toString());
-      setNumber(numValue);
-    }
-  };
-
-  // Specialized handlers for rewards
-  const handleRewardChange = (field: 'xp' | 'rp' | 'fp' | 'hp', value: string) => {
-    const numValue = parseFloat(value);
-    if (!isNaN(numValue) && numValue >= 0) {
-      setRewards({
-        ...rewards,
-        points: { ...rewards.points, [field]: numValue }
-      });
-      setRewardsStrings({
-        ...rewardsStrings,
-        points: { ...rewardsStrings.points, [field]: value }
-      });
-    } else {
-      // Update string only, don't update number until blur
-      setRewardsStrings({
-        ...rewardsStrings,
-        points: { ...rewardsStrings.points, [field]: value }
-      });
-    }
-  };
-
-  const handleRewardBlur = (field: 'xp' | 'rp' | 'fp' | 'hp', value: string) => {
-    const numValue = parseFloat(value);
-    if (isNaN(numValue) || numValue < 0) {
-      // Reset to 0 if invalid
-      setRewards({
-        ...rewards,
-        points: { ...rewards.points, [field]: 0 }
-      });
-      setRewardsStrings({
-        ...rewardsStrings,
-        points: { ...rewardsStrings.points, [field]: '0' }
-      });
-    } else {
-      // Ensure string matches the valid number
-      setRewardsStrings({
-        ...rewardsStrings,
-        points: { ...rewardsStrings.points, [field]: numValue.toString() }
-      });
-    }
-  };
-
-  // Handle opening the scheduler - auto-fill with current date/time if not set
-  const handleOpenScheduler = () => {
-    // Only auto-fill if schedule is not already set
-    if (!scheduledStartDate) {
-      const now = new Date();
-      const defaultDurationHours = 1; // Default to 1 hour duration
-      const start = new Date(now);
-      const end = addHours(start, defaultDurationHours);
-
-      setScheduledStartDate(start);
-      setScheduledStartTime(format(start, 'HH:mm'));
-      setScheduledEndDate(end);
-      setScheduledEndTime(format(end, 'HH:mm'));
-    }
-
-    setShowScheduler(true);
-  };
-
+  const modalTitle = task ? 'Edit Task' : showRecurrent ? 'Create New Recurrent Task' : 'Create New Task';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent zIndexLayer={'MODALS'} className="w-full max-w-7xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{task ? 'Edit Task' : (isRecurrentModal ? 'Create New Recurrent Task' : 'Create New Task')}</DialogTitle>
-          <DialogDescription>
-            {task ? 'Modify the task details below' : (isRecurrentModal ? 'Set up a new recurring task pattern' : 'Fill in the task information to create a new task')}
-          </DialogDescription>
-        </DialogHeader>
-
-        {/* Content */}
-        <div className="px-6">
-          <div className="flex gap-4">
-            {/* Main columns container */}
-            <div className={`flex-1 grid gap-4 ${emissaryColumnExpanded ? 'grid-cols-4' : 'grid-cols-3'}`}>
-              {/* Column 1: NATIVE (Basic Info) */}
-              <div className="space-y-3">
-                {/* <h3 className="text-sm font-semibold text-muted-foreground border-b pb-1">🧬 NATIVE</h3>*/}
-                <div className="space-y-2">
-                  <Label htmlFor="task-name" className="text-xs">Name *</Label>
-                  <Input
-                    id="task-name"
-                    value={name}
-                    onChange={(e) => setName(e.currentTarget.value)}
-                    placeholder="Enter task name..."
-                    className="h-8 text-sm"
-                    autoFocus
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="task-description" className="text-xs">Description</Label>
-                  <Textarea
-                    id="task-description"
-                    placeholder="Describe the task objectives..."
-                    value={description}
-                    onChange={(e) => setDescription(e.currentTarget.value)}
-                    className="h-16 text-sm resize-none"
-                    onInput={handleDescriptionInput}
-                  />
-                </div>
-
-                {/* Schedule Fields */}
-                <div className="space-y-2 border-t pt-2 mt-2">
-                  <Label className="text-xs font-semibold">Schedule</Label>
-                  <Button
-                    variant="outline"
-                    className={`w-full justify-start text-left font-normal h-auto py-2 px-3 ${!dueDate && !scheduledStartDate ? "text-muted-foreground" : ""}`}
-                    onClick={handleOpenScheduler}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
-                    <div className="flex flex-col items-start gap-0.5 overflow-hidden">
-                      <span className="text-sm truncate w-full">
-                        {(() => {
-                          if (!dueDate && !scheduledStartDate) return 'Set Schedule';
-                          const dateStr = scheduledStartDate
-                            ? format(scheduledStartDate, 'MMM d')
-                            : (dueDate ? format(dueDate, 'MMM d') : '');
-                          const timeStr = scheduledStartDate
-                            ? `${format(scheduledStartDate, 'h:mm a')} - ${scheduledEndDate ? format(scheduledEndDate, 'h:mm a') : '...'}`
-                            : '';
-                          const freqStr = frequencyConfig ? ' (Repeat)' : '';
-                          return `${dateStr} ${timeStr}${freqStr}`;
-                        })()}
-                      </span>
-                      {frequencyConfig && (
-                        <span className="text-[10px] text-muted-foreground flex items-center">
-                          <Repeat className="w-3 h-3 mr-1" />
-                          Recurring
-                        </span>
-                      )}
-                    </div>
-                  </Button>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="task-priority" className="text-xs">Priority</Label>
-                    <Select value={String(priority)} onValueChange={(val) => setPriority(val as TaskPriority)}>
-                      <SelectTrigger className="h-8 text-sm">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.values(TaskPriority).map((taskPriority) => (
-                          <SelectItem key={taskPriority} value={String(taskPriority)}>
-                            {String(taskPriority)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="task-progress" className="text-xs">Progress: {progress}%</Label>
-                    <input
-                      id="task-progress"
-                      type="range"
-                      min="0"
-                      max={PROGRESS_MAX}
-                      step={PROGRESS_STEP}
-                      value={progress}
-                      onChange={(e) => {
-                        const newProgress = Number(e.currentTarget.value);
-                        setProgress(newProgress);
-
-                        // Progress-to-status mechanic
-                        if (newProgress === 0) {
-                          setStatus(TaskStatus.CREATED);
-                        } else if (newProgress === 25 || newProgress === 50) {
-                          setStatus(TaskStatus.IN_PROGRESS);
-                        } else if (newProgress === 75) {
-                          setStatus(TaskStatus.FINISHING);
-                        } else if (newProgress === 100) {
-                          setStatus(TaskStatus.DONE);
-                        }
-                      }}
-                      className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Column 2: NATIVE (Structure) */}
-              <div className="space-y-3">
-                {/* <h3 className="text-sm font-semibold text-muted-foreground border-b pb-1">🧬 NATIVE</h3>*/}
-
-                <div className="space-y-2">
-                  <Label htmlFor="task-station-category" className="text-xs">Station</Label>
-                  <SearchableSelect
-                    value={getStationValue(station)}
-                    onValueChange={handleStationCategoryChange}
-                    options={createStationCategoryOptions()}
-                    autoGroupByCategory={true}
-                    getCategoryForValue={(value) => getCategoryFromCombined(value)}
-                    placeholder="Select station..."
-                    className="h-8 text-sm"
-                    persistentCollapsible={true}
-                    instanceId="task-modal-station-category"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="task-type" className="text-xs">Type</Label>
-                  <Select value={String(type)} onValueChange={handleTypeChange}>
-                    <SelectTrigger className="h-8 text-sm">
-                      <SelectValue placeholder="Select task type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.values(TaskType)
-                        .filter((taskType) => {
-                          const isRecurrent = (
-                            isRecurrentModal ||
-                            type === TaskType.RECURRENT_GROUP ||
-                            type === TaskType.RECURRENT_TEMPLATE ||
-                            type === TaskType.RECURRENT_INSTANCE
-                          );
-                          if (isRecurrent) {
-                            return taskType === TaskType.RECURRENT_GROUP ||
-                              taskType === TaskType.RECURRENT_TEMPLATE ||
-                              taskType === TaskType.RECURRENT_INSTANCE;
-                          } else {
-                            return taskType === TaskType.MISSION_GROUP ||
-                              taskType === TaskType.MISSION ||
-                              taskType === TaskType.MILESTONE ||
-                              taskType === TaskType.GOAL ||
-                              taskType === TaskType.ASSIGNMENT;
-                          }
-                        })
-                        .map((taskType) => (
-                          <SelectItem key={taskType} value={String(taskType)}>
-                            {String(taskType)}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="parent-task" className="text-xs">Parent</Label>
-                  {dataLoaded ? (
-                    <SearchableSelect
-                      value={parentId || ''}
-                      onValueChange={(val) => setParentId(val || null)}
-                      placeholder="No Parent"
-                      options={createTaskParentOptions(
-                        tasks,
-                        task?.id,
-                        (
-                          isRecurrentModal ||
-                          type === TaskType.RECURRENT_GROUP ||
-                          type === TaskType.RECURRENT_TEMPLATE ||
-                          type === TaskType.RECURRENT_INSTANCE
-                        ),
-                        type
-                      )}
-                      autoGroupByCategory={true}
-                      className="h-8 text-sm"
-                      persistentCollapsible={true}
-                      instanceId="task-modal-parent-task"
-                    />
-                  ) : (
-                    <div className="h-8 text-sm text-muted-foreground flex items-center px-3 py-2 border rounded-md">
-                      Loading tasks...
-                    </div>
-                  )}
-                </div>
-
-                {/* Frequency moved to SmartScheduler */}
-              </div>
-
-              {/* Column 3: AMBASSADORS */}
-              <div className="space-y-3">
-                {/* <h3 className="text-sm font-semibold text-muted-foreground border-b pb-1">🏛️ AMBASSADORS</h3>*/}
-                <div className="space-y-2">
-                  <Label htmlFor="site" className="text-xs">Site</Label>
-                  <SearchableSelect
-                    value={formData.site}
-                    onValueChange={(v) => setFormData({ ...formData, site: v })}
-                    placeholder="Select site..."
-                    options={createSiteOptionsWithCategories(sites)}
-                    autoGroupByCategory={true}
-                    className="h-8 text-sm"
-                    persistentCollapsible={true}
-                    instanceId="task-modal-site"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="task-cost" className="text-xs">Cost ($)</Label>
-                    <NumericInput
-                      id="task-cost"
-                      value={cost}
-                      onChange={setCost}
-                      min={0}
-                      step={PRICE_STEP}
-                      className="h-8 text-sm"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="task-revenue" className="text-xs">Revenue ($)</Label>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className="relative">
-                            <NumericInput
-                              id="task-revenue"
-                              value={revenue}
-                              onChange={setRevenue}
-                              min={0}
-                              step={PRICE_STEP}
-                              className="h-8 text-sm"
-                              disabled={!!task?.sourceSaleId}
-                            />
-                          </div>
-                        </TooltipTrigger>
-                        {task?.sourceSaleId && (
-                          <TooltipContent>
-                            <p>Revenue is managed by the source Sale - cannot edit here</p>
-                          </TooltipContent>
-                        )}
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleNotPaidChange(!isNotPaid)}
-                    className={`h-8 text-xs ${isNotPaid ? 'border-orange-500 text-orange-600 hover:bg-orange-50' : ''}`}
-                  >
-                    {isNotPaid ? "⚠ Not Paid" : "✓ Paid"}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleNotChargedChange(!isNotCharged)}
-                    className={`h-8 text-xs ${isNotCharged ? 'border-orange-500 text-orange-600 hover:bg-orange-50' : ''}`}
-                  >
-                    {isNotCharged ? "⚠ Not Charged" : "✓ Charged"}
-                  </Button>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-xs">Point Rewards</Label>
-                  <div className="grid grid-cols-4 gap-2">
-                    {getPointsMetadata().map((pointType) => (
-                      <div key={pointType.key}>
-                        <Label htmlFor={`reward-${pointType.key.toLowerCase()}`} className="text-xs">{pointType.label}</Label>
-                        <NumericInput
-                          id={`reward-${pointType.key.toLowerCase()}`}
-                          value={rewards.points[pointType.key.toLowerCase() as keyof typeof rewards.points]}
-                          onChange={(value) => setRewards({
-                            ...rewards,
-                            points: {
-                              ...rewards.points,
-                              [pointType.key.toLowerCase()]: value
-                            }
-                          })}
-                          allowDecimals={false}
-                          min={0}
-                          step={1}
-                          className="h-8 text-sm"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Column 4: EMISSARIES (Collapsible) */}
-              {emissaryColumnExpanded && (
-                <div className="space-y-3">
-                  {/* <h3 className="text-sm font-semibold text-muted-foreground border-b pb-1">📡 EMISSARIES</h3>*/}
-
-                  {/* Customer Character - Emissary field for service tasks */}
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="customer-character" className="text-xs">Customer</Label>
-                      {!task?.sourceSaleId && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setIsNewCustomer(!isNewCustomer)}
-                          className="h-6 text-xs px-2"
-                        >
-                          {isNewCustomer ? 'Existing' : 'New'}
-                        </Button>
-                      )}
-                    </div>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div>
-                            {task?.sourceSaleId ? (
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                className="w-full h-8 text-xs justify-start"
-                                disabled={true}
-                              >
-                                <User className="h-3 w-3 mr-2" />
-                                {customerCharacterId ? customerCharacterName : 'Customer from Sale'}
-                              </Button>
-                            ) : isNewCustomer ? (
-                              <Input
-                                id="customer-character"
-                                value={newCustomerName}
-                                onChange={(e) => setNewCustomerName(e.target.value)}
-                                placeholder="New customer name"
-                                className="h-8 text-sm"
-                              />
-                            ) : (
-                              <SearchableSelect
-                                value={customerCharacterId || ''}
-                                onValueChange={(value) => setCustomerCharacterId(value || null)}
-                                options={getCharacterOptions()}
-                                placeholder="Select customer"
-                                autoGroupByCategory={true}
-                                className="h-8 text-sm"
-                              />
-                            )}
-                          </div>
-                        </TooltipTrigger>
-                        {task?.sourceSaleId && (
-                          <TooltipContent>
-                            <p>Customer is managed by the source Sale - cannot edit here</p>
-                          </TooltipContent>
-                        )}
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="output-item-type-subtype" className="text-xs">Item Type & SubType</Label>
-                    <SearchableSelect
-                      value={outputItemTypeSubType}
-                      onValueChange={handleOutputItemTypeSubTypeChange}
-                      placeholder="No Item Output"
-                      options={[
-                        { value: 'none:', label: 'No Item Output', category: 'None' },
-                        ...createItemTypeSubTypeOptions()
-                      ]}
-                      className="h-8 text-sm"
-                      autoGroupByCategory={true}
-                      getCategoryForValue={(value) => {
-                        if (value === 'none:') return 'None';
-                        return getItemTypeFromCombined(value);
-                      }}
-                    />
-                  </div>
-
-                  {!!outputItemType && (
-                    <>
-                      {/* Row 1: Quantity, Unit Cost, Price, Auto */}
-                      <div className="grid grid-cols-4 gap-2">
-                        <div className="space-y-2">
-                          <Label htmlFor="output-quantity" className="text-xs">Quantity</Label>
-                          <NumericInput
-                            id="output-quantity"
-                            value={outputQuantity}
-                            onChange={setOutputQuantity}
-                            min={1}
-                            step={1}
-                            className="h-8 text-sm"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="output-unit-cost" className="text-xs">U Cost $</Label>
-                          <NumericInput
-                            id="output-unit-cost"
-                            value={outputUnitCost}
-                            onChange={setOutputUnitCost}
-                            min={0}
-                            step={PRICE_STEP}
-                            className="h-8 text-sm"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="output-item-price" className="text-xs">Price $</Label>
-                          <NumericInput
-                            id="output-item-price"
-                            value={outputItemPrice}
-                            onChange={setOutputItemPrice}
-                            min={0}
-                            step={PRICE_STEP}
-                            className="h-8 text-sm"
-                          />
-                        </div>
-                        <div className="flex justify-center items-end">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={handleAutoCalculateUnitCost}
-                            className="h-8 px-4 text-xs"
-                            title="Auto-calculate Unit Cost from Cost/Quantity and Price from Revenue/Quantity"
-                          >
-                            Auto
-                          </Button>
-                        </div>
-                      </div>
-
-                      {/* Row 2: Target Site, Item Status */}
-                      <div className="grid grid-cols-2 gap-2">
-                        <SearchableSelect
-                          value={formData.targetSite}
-                          onValueChange={(v) => setFormData({ ...formData, targetSite: v })}
-                          placeholder="Target Site"
-                          options={createSiteOptionsWithCategories(sites)}
-                          autoGroupByCategory={true}
-                          className="h-8 text-sm"
-                          persistentCollapsible={true}
-                          instanceId="task-modal-target-site"
-                        />
-                        <Select
-                          value={outputItemStatus}
-                          onValueChange={(value) => setOutputItemStatus(value as ItemStatus)}
-                        >
-                          <SelectTrigger className="h-8 text-sm">
-                            <SelectValue placeholder="Status" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {Object.values(ItemStatus).map((status) => (
-                              <SelectItem key={status} value={status}>
-                                {status}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="space-y-2">
-                        <ItemNameField
-                          value={outputItemName}
-                          onChange={setOutputItemName}
-                          placeholder="Item name"
-                          items={items}
-                          selectedItemId={selectedItemId}
-                          onItemSelect={handleItemSelect}
-                          isNewItem={isNewItem}
-                          onNewItemToggle={setIsNewItem}
-                          label="Item Name"
-                          sites={sites}
-                        />
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* ------------------------------------------- */}
-        {/* MODAL BOTTOM BAR */}
-        {/* ------------------------------------------- */}
-        <DialogFooter className="flex items-center justify-between w-full pt-4 border-t px-6 pb-6">
-          <div className="flex items-center gap-2 flex-wrap">
-            {task && (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setShowDeleteModal(true)}
-                className="h-8 text-xs text-destructive hover:bg-destructive/10 border-destructive/20 mr-4"
-              >
-                Delete
-              </Button>
-            )}
-
-            {task && (
-              <>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setShowDatesModal(true)}
-                  className="h-8 text-xs bg-secondary/50"
-                >
-                  <CalendarIcon className="w-3 h-3 mr-2" />
-                  Timeline
-                </Button>
-
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setShowRelationshipsModal(true)}
-                  className="h-8 text-xs bg-secondary/50"
-                >
-                  <Network className="w-3 h-3 mr-2" />
-                  Links
-                </Button>
-              </>
-            )}
-
-            <Button
-              variant="outline"
-              onClick={() => setShowPlayerCharacterSelector(true)}
-              className="h-8 text-xs"
-            >
-              <User className="w-3 h-3 mr-1" />
-              Player
-            </Button>
-            <Button
-              variant="outline"
-              onClick={toggleEmissaryColumn}
-              className={`h-8 text-xs ${emissaryColumnExpanded ? 'bg-transparent text-white' : 'bg-muted text-muted-foreground'}`}
-            >
-              Emissaries
-            </Button>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Label htmlFor="task-status-footer" className="text-xs text-muted-foreground">Status:</Label>
-            <Select value={String(status)} onValueChange={(val) => {
-              const newStatus = val as TaskStatus;
-
-              // Intercept COLLECTED if the task is not yet DONE
-              if (newStatus === TaskStatus.COLLECTED && status !== TaskStatus.DONE && status !== TaskStatus.COLLECTED) {
-                setPendingNotDoneStatus(newStatus);
-                setShowNotDoneConfirmation(true);
-                return;
-              }
-
-              // Show confirmation for COLLECTED status
-              if (newStatus === TaskStatus.COLLECTED && status === TaskStatus.DONE) {
-                const originalStatus = status;
-
-                setPendingStatusChange({
-                  status: newStatus,
-                  onConfirm: () => {
-                    setStatus(newStatus);
-                    setProgress(100);
-                    setShowArchiveCollectionModal(false);
-                    setPendingStatusChange(null);
-                  },
-                  onCancel: () => {
-                    // Keep original status
-                    setShowArchiveCollectionModal(false);
-                    setPendingStatusChange(null);
-                  }
-                });
-                setShowArchiveCollectionModal(true);
-                return;
-              }
-
-              setStatus(newStatus);
-
-              // Status-to-progress mechanic
-              if (newStatus === TaskStatus.CREATED || newStatus === TaskStatus.ON_HOLD) {
-                setProgress(0);
-              } else if (newStatus === TaskStatus.IN_PROGRESS) {
-                setProgress(25);
-              } else if (newStatus === TaskStatus.FINISHING) {
-                setProgress(75);
-              } else if (newStatus === TaskStatus.DONE) {
-                setProgress(100);
-              }
-            }}>
-              <SelectTrigger id="task-status-footer" className="h-8 w-36 text-sm">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.values(TaskStatus)
-                  .filter((taskStatus) => {
-                    if (taskStatus === TaskStatus.COLLECTED && (isNotPaid || isNotCharged)) {
-                      return false;
-                    }
-                    return true;
-                  })
-                  .map((taskStatus) => (
-                    <SelectItem key={taskStatus} value={String(taskStatus)}>
-                      {String(taskStatus).replace('_', ' ')}
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)} className="h-8 text-xs" disabled={isSaving}>
-              Cancel
-            </Button>
-            <Button onClick={handleSave} className="h-8 text-xs" disabled={!name.trim() || isSaving}>
-              {isSaving ? 'Saving...' : (task ? 'Update' : 'Create')} Task
-            </Button>
-          </div>
-        </DialogFooter>
+      <DialogContent
+        zIndexLayer="MODALS"
+        hideClose
+        className="flex h-[90vh] w-full max-w-7xl flex-col gap-0 overflow-hidden p-0"
+      >
+        {showAutomation ? (
+          <AutomationTaskModalContent onOpenChange={onOpenChange} modalTitle={modalTitle} />
+        ) : showRecurrent ? (
+          <RecurrentTreeModalContent
+            task={task}
+            open={open}
+            allTasks={allTasks}
+            allItems={allItems}
+            allSites={allSites}
+            allCharacters={allCharacters}
+            allTasksForOrder={allTasksForOrder}
+            onSave={handleSave}
+            onOpenChange={onOpenChange}
+            onDeleteComplete={handleDeleteComplete}
+            modalTitle={modalTitle}
+            contentKind={contentKind}
+            isLoading={isLoading}
+          />
+        ) : (
+          <MissionTreeModalContent
+            task={task}
+            open={open}
+            allTasks={allTasks}
+            allItems={allItems}
+            allSites={allSites}
+            allCharacters={allCharacters}
+            allTasksForOrder={allTasksForOrder}
+            onSave={handleSave}
+            onOpenChange={onOpenChange}
+            onDeleteComplete={handleDeleteComplete}
+            modalTitle={modalTitle}
+            contentKind={contentKind}
+            isLoading={isLoading}
+          />
+        )}
       </DialogContent>
-
-      <DeleteModal
-        open={showDeleteModal}
-        onOpenChange={setShowDeleteModal}
-        entityType={EntityType.TASK}
-        entities={task ? [task] : []}
-        onComplete={() => {
-          setShowDeleteModal(false);
-          onOpenChange(false);
-          onComplete?.();
-        }}
-      />
-
-      {/* Validation Modal */}
-      <Dialog open={showValidationModal} onOpenChange={setShowValidationModal}>
-        <DialogContent zIndexLayer={'MODALS'}>
-          <DialogHeader>
-            <DialogTitle>Missing Required Information</DialogTitle>
-            <DialogDescription>
-              {validationMessage}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowValidationModal(false)}
-              className="h-8 text-xs"
-            >
-              Okay
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Dates Submodal */}
-      <DatesSubmodal
-        open={showDatesModal}
-        onOpenChange={setShowDatesModal}
-        entityId={task?.id ? `data:task:${task.id}` : undefined}
-        createdAt={task?.createdAt}
-        doneAt={localDoneAt}
-        collectedAt={localCollectedAt}
-        currentStatus={status}
-        onDatesChange={handleDatesUpdate}
-      />
-
-      {/* Links Relationships Modal */}
-      {task && (
-        <LinksRelationshipsModal
-          entity={{ type: EntityType.TASK, id: task.id, name: task.name }}
-          open={showRelationshipsModal}
-          onClose={() => setShowRelationshipsModal(false)}
-        />
-      )}
-
-      {/* Character Selector Submodal */}
-      <CharacterSelectorSubmodal
-        open={showCharacterSelector}
-        onOpenChange={setShowCharacterSelector}
-        onSelect={handleSetCustomer}
-        currentOwnerId={customerCharacterId}
-      />
-
-      {/* Player Character Selector Modal */}
-      <PlayerCharacterSelectorModal
-        open={showPlayerCharacterSelector}
-        onOpenChange={setShowPlayerCharacterSelector}
-        onSelect={setPlayerCharacterId}
-        currentPlayerCharacterId={playerCharacterId}
-      />
-
-      {/* Cascade Status Confirmation Modal */}
-      {cascadeData && (
-        <CascadeStatusConfirmationModal
-          open={showCascadeModal}
-          onOpenChange={setShowCascadeModal}
-          templateName={name}
-          newStatus={cascadeData.newStatus}
-          oldStatus={cascadeData.oldStatus}
-          affectedInstancesCount={cascadeData.affectedCount}
-          onConfirm={handleCascadeConfirm}
-          onCancel={handleCascadeCancel}
-          isReversal={cascadeData.isReversal}
-        />
-      )}
-
-      {/* Archive Collection Confirmation Modal */}
-      {pendingStatusChange && (
-        <ArchiveCollectionConfirmationModal
-          open={showArchiveCollectionModal}
-          onOpenChange={setShowArchiveCollectionModal}
-          entityType="task"
-          entityName={name}
-          pointsValue={rewards.points}
-          totalRevenue={revenue}
-          onConfirm={pendingStatusChange.onConfirm}
-          onCancel={pendingStatusChange.onCancel}
-        />
-      )}
-
-      {/* Not Done Confirmation Modal */}
-      <ConfirmationModal
-        open={showNotDoneConfirmation}
-        onOpenChange={setShowNotDoneConfirmation}
-        title="Task Not Done"
-        description="To collect a task you must set it Done first. Do you want to do both?"
-        confirmText="Yes, Done & Collect"
-        onConfirm={() => {
-          if (pendingNotDoneStatus) {
-            setStatus(pendingNotDoneStatus);
-            setProgress(100);
-          }
-          setShowNotDoneConfirmation(false);
-          setPendingNotDoneStatus(null);
-        }}
-        onCancel={() => {
-          setShowNotDoneConfirmation(false);
-          setPendingNotDoneStatus(null);
-        }}
-      />
-
-      {/* Smart Scheduler Submodal */}
-      <SmartSchedulerSubmodal
-        open={showScheduler}
-        onOpenChange={setShowScheduler}
-        value={{
-          dueDate,
-          scheduledStart: scheduledStartDate,
-          scheduledEnd: scheduledEndDate,
-          frequencyConfig: (type === TaskType.RECURRENT_GROUP || type === TaskType.RECURRENT_TEMPLATE) ? frequencyConfig : undefined
-        }}
-        onChange={(val) => {
-          setDueDate(val.dueDate);
-          setScheduledStartDate(val.scheduledStart);
-          setScheduledStartTime(val.scheduledStart ? format(val.scheduledStart, 'HH:mm') : '');
-          setScheduledEndDate(val.scheduledEnd);
-          setScheduledEndTime(val.scheduledEnd ? format(val.scheduledEnd, 'HH:mm') : '');
-          if (val.frequencyConfig) {
-            setFrequencyConfig(val.frequencyConfig);
-          } else {
-            setFrequencyConfig(undefined);
-          }
-        }}
-        isRecurrent={type === TaskType.RECURRENT_GROUP || type === TaskType.RECURRENT_TEMPLATE}
-      />
-
     </Dialog>
   );
 }

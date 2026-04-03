@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Edit, BarChart, Target, Award, CheckSquare, Flag, ChevronsRight, Users, Copy, Check, ChevronDown, Tag, Play } from 'lucide-react';
-import TaskModal from '@/components/modals/task-modal-integrated';
+import TaskModal from '@/components/modals/task-modal';
 import { useState, useRef, useEffect } from 'react';
 import { ClientAPI } from '@/lib/client-api';
 import { ORDER_INCREMENT } from '@/lib/constants/app-constants';
@@ -216,6 +216,19 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
     setShowTemplateModal(true);
   };
 
+  const handleSpawnNext = async () => {
+    if (!node) return;
+    try {
+      const response = await fetch(`/api/tasks/${node.task.id}/spawn-next`, { method: 'POST' });
+      if (!response.ok) {
+        throw new Error('Failed to spawn instance');
+      }
+      onTaskUpdate?.();
+    } catch (err) {
+      console.error('Error spawning next instance:', err);
+    }
+  };
+
   // Open Mission Tree Modal with appropriate type and parent
   const handleOpenMissionTreeTask = (taskType: TaskType) => {
     if (!node) return;
@@ -395,6 +408,11 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
             )}
           </div>
           <div className="flex gap-2">
+            {(task.type === TaskType.RECURRENT_TEMPLATE || task.type === TaskType.RECURRENT_GROUP) && (
+              <Button variant="outline" size="sm" onClick={handleSpawnNext}>
+                Spawn
+              </Button>
+            )}
             {task.type === TaskType.RECURRENT_GROUP && (
               <Button
                 variant="outline"

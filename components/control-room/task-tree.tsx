@@ -403,27 +403,6 @@ export default function TaskTree({
             </div>
 
             <span className="flex-1 truncate text-base font-medium">{treeNode.task.name}</span>
-            { (treeNode.task.type === TaskType.RECURRENT_TEMPLATE || treeNode.task.type === TaskType.RECURRENT_GROUP) && (
-               <Button 
-                variant="outline" 
-                size="sm" 
-                className="h-6 px-2 text-xs ml-2" 
-                onClick={async (e) => {
-                  e.stopPropagation();
-                  try {
-                    const response = await fetch(`/api/tasks/${treeNode.task.id}/spawn-next`, { method: 'POST' });
-                    if (!response.ok) {
-                      throw new Error('Failed to spawn instance');
-                    }
-                    // Optionally we could trigger a refresh here if we passed down a refresh callback.
-                    // For now this at least satisfies "deploy to see if the new implementation at least still works".
-                  } catch (err) {
-                    console.error('Error spawning next instance:', err);
-                  }
-                }}>
-                 Spawn
-               </Button>
-            )}
           </button>
         </div>
       );

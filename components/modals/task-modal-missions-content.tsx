@@ -1,10 +1,8 @@
-// components/modals/mission-tree-modal-content.tsx
-// Mission Tree Modal Content Component - Specialized form for Mission Tasks
-// Implements Shell/Core pattern - Core content for TaskModalShell
+// components/modals/task-modal-missions-content.tsx — Mission workflow body (chrome from task-modal.tsx)
 
 'use client';
 
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,29 +16,40 @@ import { SmartSchedulerSubmodal } from './submodals/smart-scheduler-submodal';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Task, Item, Site } from '@/types/entities';
 import { getPointsMetadata } from '@/lib/utils/points-utils';
-import { TaskType, TaskStatus, TaskPriority, ItemType, ItemStatus, FOUNDER_CHARACTER_ID } from '@/types/enums';
-import { createStationCategoryOptions, getStationFromCombined, createTaskParentOptions, createItemTypeSubTypeOptions, getItemTypeFromCombined, getSubTypeFromCombined, createCharacterOptions } from '@/lib/utils/searchable-select-utils';
+import { TaskType, TaskStatus, TaskPriority, ItemType, ItemStatus, FOUNDER_CHARACTER_ID, EntityType } from '@/types/enums';
+import { getStationFromCombined, createTaskParentOptions, createItemTypeSubTypeOptions, getItemTypeFromCombined, getSubTypeFromCombined, createCharacterOptions, createStationCategoryOptions, getCategoryFromCombined } from '@/lib/utils/searchable-select-utils';
 import { createSiteOptionsWithCategories } from '@/lib/utils/site-options-utils';
 import { getAreaForStation } from '@/lib/utils/business-structure-utils';
 import type { Station, SubItemType } from '@/types/type-aliases';
 import { v4 as uuid } from 'uuid';
 import { ORDER_INCREMENT } from '@/lib/constants/app-constants';
 import { computeNextSiblingOrder } from '@/lib/utils/task-order-utils';
-import { Calendar as CalendarIcon } from 'lucide-react';
+import { Calendar as CalendarIcon, Network, User } from 'lucide-react';
 import CharacterSelectorSubmodal from './submodals/character-selector-submodal';
 import PlayerCharacterSelectorModal from './submodals/player-character-selector-submodal';
+import DeleteModal from './submodals/delete-submodal';
+import LinksRelationshipsModal from './submodals/links-relationships-submodal';
+import DatesSubmodal from './submodals/dates-submodal';
+import ArchiveCollectionConfirmationModal from './submodals/archive-collection-confirmation-submodal';
+import ConfirmationModal from './submodals/confirmation-submodal';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
 import { format } from 'date-fns';
+import { TaskModalHeader, TaskModalFooter, type TaskModalContentKind } from './task-modal';
+import { dispatchEntityUpdated, entityTypeToKind } from '@/lib/ui/ui-events';
 
 interface MissionTreeModalContentProps {
   task?: Task | null;
+  open: boolean;
   allTasks?: Task[];
   allItems?: Item[];
   allSites?: Site[];
   allCharacters?: any[];
   allTasksForOrder?: Task[];
   onSave: (task: Task) => Promise<void>;
-  onCancel: () => void;
+  onOpenChange: (open: boolean) => void;
+  onDeleteComplete?: () => void;
+  modalTitle: string;
+  contentKind: TaskModalContentKind;
   isLoading?: boolean;
 }
 
@@ -62,13 +71,17 @@ interface MissionTreeModalContentProps {
  */
 export default function MissionTreeModalContent({
   task,
+  open,
   allTasks = [],
   allItems = [],
   allSites = [],
   allCharacters = [],
   allTasksForOrder,
   onSave,
-  onCancel,
+  onOpenChange,
+  onDeleteComplete,
+  modalTitle,
+  contentKind,
   isLoading = false,
 }: MissionTreeModalContentProps) {
   const { getPreference, setPreference } = useUserPreferences();
@@ -131,9 +144,22 @@ export default function MissionTreeModalContent({
   const [showScheduler, setShowScheduler] = useState(false);
   const [showValidationModal, setShowValidationModal] = useState(false);
   const [validationMessage, setValidationMessage] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showDatesModal, setShowDatesModal] = useState(false);
+  const [showRelationshipsModal, setShowRelationshipsModal] = useState(false);
+  const [showArchiveCollectionModal, setShowArchiveCollectionModal] = useState(false);
+  const [pendingStatusChange, setPendingStatusChange] = useState<{
+    status: TaskStatus;
+    onConfirm: () => void;
+    onCancel: () => void;
+  } | null>(null);
+  const [showNotDoneConfirmation, setShowNotDoneConfirmation] = useState(false);
+  const [pendingNotDoneStatus, setPendingNotDoneStatus] = useState<TaskStatus | null>(null);
 
-  // Utility functions
-  const draftId = useRef(uuid());
+  const hasInitializedRef = useRef(false);
+  const initializedTaskIdRef = useRef<string | null>(null);
+  const draftId = useRef(task?.id || uuid());
 
   const getInitialStationCategory = (): string => {
     const lastStation = getPreference('task-modal-last-station');
@@ -157,6 +183,175 @@ export default function MissionTreeModalContent({
     const saved = getPreference('task-modal-last-type');
     return (saved as TaskType) || TaskType.MISSION;
   }, [getPreference]);
+
+  const computeStationCategoryValue = useCallback((stationValue: Station | null): string => {
+    if (!stationValue) return 'none:';
+    const area = getAreaForStation(stationValue);
+    return `${stationValue}:${area || 'ADMIN'}`;
+  }, []);
+
+  const initializeFromTask = useCallback(
+    (existingTask: Task) => {
+      draftId.current = existingTask.id;
+      setName(existingTask.name);
+      setDescription(existingTask.description || '');
+      setStatus(existingTask.status);
+      setPriority(existingTask.priority);
+      setType(existingTask.type);
+      setStation(existingTask.station);
+      setStationCategory(computeStationCategoryValue(existingTask.station));
+      setProgress(existingTask.progress);
+      setDueDate(existingTask.dueDate ? new Date(existingTask.dueDate) : undefined);
+      setLocalDoneAt(existingTask.doneAt ? new Date(existingTask.doneAt) : undefined);
+      setLocalCollectedAt(existingTask.collectedAt ? new Date(existingTask.collectedAt) : undefined);
+
+      if (existingTask.scheduledStart) {
+        const start = new Date(existingTask.scheduledStart);
+        setScheduledStartDate(start);
+        setScheduledStartTime(format(start, 'HH:mm'));
+      } else {
+        setScheduledStartDate(undefined);
+        setScheduledStartTime('');
+      }
+      if (existingTask.scheduledEnd) {
+        const end = new Date(existingTask.scheduledEnd);
+        setScheduledEndDate(end);
+        setScheduledEndTime(format(end, 'HH:mm'));
+      } else {
+        setScheduledEndDate(undefined);
+        setScheduledEndTime('');
+      }
+
+      setCost(existingTask.cost ?? 0);
+      setCostString(String(existingTask.cost ?? 0));
+      setRevenue(existingTask.revenue ?? 0);
+      setRevenueString(String(existingTask.revenue ?? 0));
+      setIsNotPaid(existingTask.isNotPaid || false);
+      setIsNotCharged(existingTask.isNotCharged || false);
+      setIsCollected(existingTask.isCollected || false);
+      setFormData({
+        site: existingTask.siteId || 'none',
+        targetSite: existingTask.targetSiteId || 'none',
+      });
+      const taskItemType = (existingTask.outputItemType as ItemType) || '';
+      const taskSubType = existingTask.outputItemSubType || '';
+      setOutputItemType(taskItemType);
+      setOutputItemSubType(taskSubType);
+      setOutputItemTypeSubType(taskItemType ? `${taskItemType}:${taskSubType}` : 'none:');
+      setOutputQuantity(existingTask.outputQuantity || 1);
+      setOutputQuantityString(String(existingTask.outputQuantity || 1));
+      setOutputUnitCost(existingTask.outputUnitCost || 0);
+      setOutputUnitCostString(String(existingTask.outputUnitCost || 0));
+      setOutputItemName(existingTask.outputItemName || '');
+      setOutputItemPrice(existingTask.outputItemPrice || 0);
+      setOutputItemPriceString(String(existingTask.outputItemPrice || 0));
+      setIsNewItem(existingTask.isNewItem || false);
+      setIsSold(existingTask.isSold || false);
+      setOutputItemStatus(existingTask.outputItemStatus || ItemStatus.FOR_SALE);
+      setSelectedItemId(existingTask.outputItemId || '');
+      setCustomerCharacterId(existingTask.customerCharacterId || null);
+      setPlayerCharacterId(existingTask.playerCharacterId || FOUNDER_CHARACTER_ID);
+      setRewards({
+        points: {
+          xp: existingTask.rewards?.points?.xp || 0,
+          rp: existingTask.rewards?.points?.rp || 0,
+          fp: existingTask.rewards?.points?.fp || 0,
+          hp: existingTask.rewards?.points?.hp || 0,
+        },
+      });
+      setRewardsStrings({
+        points: {
+          xp: String(existingTask.rewards?.points?.xp || 0),
+          rp: String(existingTask.rewards?.points?.rp || 0),
+          fp: String(existingTask.rewards?.points?.fp || 0),
+          hp: String(existingTask.rewards?.points?.hp || 0),
+        },
+      });
+      setParentId(existingTask.parentId || null);
+    },
+    [computeStationCategoryValue]
+  );
+
+  const initializeForNewTask = useCallback(() => {
+    draftId.current = uuid();
+    setName('');
+    setDescription('');
+    setStatus(TaskStatus.CREATED);
+    setPriority(TaskPriority.NORMAL);
+    setType(getLastUsedType());
+    const lastStation = getLastUsedStation();
+    setStation(lastStation);
+    setStationCategory(computeStationCategoryValue(lastStation));
+    setProgress(0);
+    setDueDate(undefined);
+    setLocalDoneAt(undefined);
+    setLocalCollectedAt(undefined);
+    setScheduledStartDate(undefined);
+    setScheduledStartTime('');
+    setScheduledEndDate(undefined);
+    setScheduledEndTime('');
+    setCost(0);
+    setCostString('0');
+    setRevenue(0);
+    setRevenueString('0');
+    setIsNotPaid(false);
+    setIsNotCharged(false);
+    setIsCollected(false);
+    setFormData({ site: 'none', targetSite: 'none' });
+    setOutputItemType('');
+    setOutputItemSubType('');
+    setOutputItemTypeSubType('none:');
+    setOutputQuantity(1);
+    setOutputQuantityString('1');
+    setOutputUnitCost(0);
+    setOutputUnitCostString('0');
+    setOutputItemName('');
+    setOutputItemPrice(0);
+    setOutputItemPriceString('0');
+    setIsNewItem(false);
+    setIsSold(false);
+    setOutputItemStatus(ItemStatus.FOR_SALE);
+    setSelectedItemId('');
+    setCustomerCharacterId(null);
+    setCustomerCharacterName('');
+    setPlayerCharacterId(FOUNDER_CHARACTER_ID);
+    setRewards({ points: { xp: 0, rp: 0, fp: 0, hp: 0 } });
+    setRewardsStrings({ points: { xp: '0', rp: '0', fp: '0', hp: '0' } });
+    setParentId(null);
+  }, [computeStationCategoryValue, getLastUsedStation, getLastUsedType]);
+
+  useEffect(() => {
+    if (!open) {
+      hasInitializedRef.current = false;
+      initializedTaskIdRef.current = null;
+      return;
+    }
+    const currentTaskId = task?.id || null;
+    const alreadyInitialized = hasInitializedRef.current && initializedTaskIdRef.current === currentTaskId;
+    if (alreadyInitialized) return;
+    if (task?.id) {
+      initializeFromTask(task);
+    } else {
+      initializeForNewTask();
+    }
+    hasInitializedRef.current = true;
+    initializedTaskIdRef.current = currentTaskId;
+  }, [open, task, initializeForNewTask, initializeFromTask]);
+
+  useEffect(() => {
+    const savedEmissary = getPreference('task-modal-emissary-expanded');
+    if (savedEmissary === 'true') setEmissaryColumnExpanded(true);
+    else if (savedEmissary === 'false') setEmissaryColumnExpanded(false);
+  }, [open, getPreference]);
+
+  useEffect(() => {
+    if (customerCharacterId) {
+      const c = allCharacters.find((x) => x.id === customerCharacterId);
+      setCustomerCharacterName(c?.name || '');
+    } else {
+      setCustomerCharacterName('');
+    }
+  }, [customerCharacterId, allCharacters]);
 
   // Helper function to build task from form state
   const buildTaskFromForm = () => {
@@ -209,7 +404,7 @@ export default function MissionTreeModalContent({
     };
 
     return {
-      id: editingExisting ? task!.id : uuid(),
+      id: draftId.current,
       name: name.trim(),
       description: description.trim(),
       status: determineFinalStatus(),
@@ -241,23 +436,38 @@ export default function MissionTreeModalContent({
       playerCharacterId,
       order: determineOrder(),
       isCollected,
+      isNewItem,
+      isSold,
       outputItemId: isNewItem ? null : (selectedItemId || task?.outputItemId || null),
       links: task?.links || [],
+      createdAt: task?.createdAt || new Date(),
+      updatedAt: new Date(),
     } as Task;
   };
 
   const handleSave = async () => {
-    if (isLoading) return;
-
-    // Basic validation
+    if (isLoading || isSaving) return;
     if (!name.trim()) {
       setValidationMessage('Task name is required');
       setShowValidationModal(true);
       return;
     }
+    setIsSaving(true);
+    try {
+      const newTask = buildTaskFromForm();
+      await onSave(newTask);
+      dispatchEntityUpdated(entityTypeToKind(EntityType.TASK));
+      onOpenChange(false);
+    } catch (error) {
+      console.error('[MissionTaskModal] Save failed:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
-    const newTask = buildTaskFromForm();
-    await onSave(newTask);
+  const handleDatesUpdate = (newDates: { createdAt?: Date; doneAt?: Date; collectedAt?: Date }) => {
+    setLocalDoneAt(newDates.doneAt);
+    setLocalCollectedAt(newDates.collectedAt);
   };
 
   const handleTypeChange = (newType: string) => {
@@ -361,18 +571,12 @@ export default function MissionTreeModalContent({
     return createCharacterOptions(allCharacters);
   };
 
-  const handleStatusChange = (newStatus: string) => {
-    const casted = newStatus as TaskStatus;
-    setStatus(casted);
-    if (casted === TaskStatus.DONE && progress < 100) {
-      setProgress(100);
-    }
-  };
-
   // Render the form
   return (
     <>
-      <div className="px-6">
+      <TaskModalHeader title={modalTitle} contentKind={contentKind} />
+
+      <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
         <div className="flex gap-4">
           {/* Main columns container */}
           <div className={`flex-1 grid gap-4 ${emissaryColumnExpanded ? 'grid-cols-4' : 'grid-cols-3'}`}>
@@ -443,22 +647,6 @@ export default function MissionTreeModalContent({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="task-status" className="text-xs">Status</Label>
-                <Select value={String(status)} onValueChange={handleStatusChange}>
-                  <SelectTrigger className="h-8 text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.values(TaskStatus).map((s) => (
-                      <SelectItem key={s} value={String(s)}>
-                        {s}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
                 <Label htmlFor="task-progress" className="text-xs">Progress</Label>
                 <div className="flex items-center gap-2">
                   <NumericInput
@@ -483,17 +671,17 @@ export default function MissionTreeModalContent({
             {/* Column 2: AMBASSADOR (Core Details) */}
             <div className="space-y-3">
               <div className="space-y-2">
-                <Label htmlFor="task-station" className="text-xs">Station</Label>
+                <Label className="text-xs">Station</Label>
                 <SearchableSelect
                   value={stationCategory}
                   onValueChange={handleStationCategoryChange}
-                  placeholder="Select station"
                   options={createStationCategoryOptions()}
                   autoGroupByCategory={true}
-                  getCategoryForValue={(value) => {
-                    if (value === 'none:') return 'None';
-                    return getStationFromCombined(value) || 'None';
-                  }}
+                  getCategoryForValue={(value) => getCategoryFromCombined(value)}
+                  placeholder="Select station..."
+                  className="h-8 text-sm"
+                  persistentCollapsible={true}
+                  instanceId="mission-task-modal-station-body"
                 />
               </div>
 
@@ -822,6 +1010,199 @@ export default function MissionTreeModalContent({
         </div>
       </div>
 
+      <TaskModalFooter>
+        <div className="flex flex-wrap items-center gap-2">
+          {task && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowDeleteModal(true)}
+              className="h-8 text-xs text-destructive hover:bg-destructive/10 border-destructive/20 mr-4"
+            >
+              Delete
+            </Button>
+          )}
+          {task && (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowDatesModal(true)}
+                className="h-8 text-xs bg-secondary/50"
+              >
+                <CalendarIcon className="w-3 h-3 mr-2" />
+                Timeline
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowRelationshipsModal(true)}
+                className="h-8 text-xs bg-secondary/50"
+              >
+                <Network className="w-3 h-3 mr-2" />
+                Links
+              </Button>
+            </>
+          )}
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setShowPlayerCharacterSelector(true)}
+            className="h-8 text-xs"
+          >
+            <User className="w-3 h-3 mr-1" />
+            Player
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={toggleEmissaryColumn}
+            className={`h-8 text-xs ${emissaryColumnExpanded ? 'bg-transparent text-white' : 'bg-muted text-muted-foreground'}`}
+          >
+            Emissaries
+          </Button>
+        </div>
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Label htmlFor="task-status-footer" className="text-xs text-muted-foreground">
+              Status:
+            </Label>
+            <Select
+              value={String(status)}
+              onValueChange={(val) => {
+                const newStatus = val as TaskStatus;
+                if (newStatus === TaskStatus.COLLECTED && status !== TaskStatus.DONE && status !== TaskStatus.COLLECTED) {
+                  setPendingNotDoneStatus(newStatus);
+                  setShowNotDoneConfirmation(true);
+                  return;
+                }
+                if (newStatus === TaskStatus.COLLECTED && status === TaskStatus.DONE) {
+                  setPendingStatusChange({
+                    status: newStatus,
+                    onConfirm: () => {
+                      setStatus(newStatus);
+                      setProgress(100);
+                      setShowArchiveCollectionModal(false);
+                      setPendingStatusChange(null);
+                    },
+                    onCancel: () => {
+                      setShowArchiveCollectionModal(false);
+                      setPendingStatusChange(null);
+                    },
+                  });
+                  setShowArchiveCollectionModal(true);
+                  return;
+                }
+                setStatus(newStatus);
+                if (newStatus === TaskStatus.CREATED || newStatus === TaskStatus.ON_HOLD) {
+                  setProgress(0);
+                } else if (newStatus === TaskStatus.IN_PROGRESS) {
+                  setProgress(25);
+                } else if (newStatus === TaskStatus.FINISHING) {
+                  setProgress(75);
+                } else if (newStatus === TaskStatus.DONE) {
+                  setProgress(100);
+                }
+              }}
+            >
+              <SelectTrigger id="task-status-footer" className="h-8 w-36 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.values(TaskStatus)
+                  .filter((taskStatus) => {
+                    if (taskStatus === TaskStatus.COLLECTED && (isNotPaid || isNotCharged)) return false;
+                    return true;
+                  })
+                  .map((taskStatus) => (
+                    <SelectItem key={taskStatus} value={String(taskStatus)}>
+                      {String(taskStatus).replace('_', ' ')}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              className="h-8 text-xs"
+              disabled={isSaving}
+            >
+              Cancel
+            </Button>
+            <Button type="button" onClick={handleSave} className="h-8 text-xs" disabled={!name.trim() || isSaving}>
+              {isSaving ? 'Saving...' : task ? 'Update' : 'Create'} Task
+            </Button>
+          </div>
+        </div>
+      </TaskModalFooter>
+
+      <DeleteModal
+        open={showDeleteModal}
+        onOpenChange={setShowDeleteModal}
+        entityType={EntityType.TASK}
+        entities={task ? [task] : []}
+        onComplete={() => {
+          setShowDeleteModal(false);
+          onOpenChange(false);
+          onDeleteComplete?.();
+        }}
+      />
+
+      <DatesSubmodal
+        open={showDatesModal}
+        onOpenChange={setShowDatesModal}
+        entityId={task?.id ? `data:task:${task.id}` : undefined}
+        createdAt={task?.createdAt}
+        doneAt={localDoneAt}
+        collectedAt={localCollectedAt}
+        currentStatus={status}
+        onDatesChange={handleDatesUpdate}
+      />
+
+      {task && (
+        <LinksRelationshipsModal
+          entity={{ type: EntityType.TASK, id: task.id, name: task.name }}
+          open={showRelationshipsModal}
+          onClose={() => setShowRelationshipsModal(false)}
+        />
+      )}
+
+      {pendingStatusChange && (
+        <ArchiveCollectionConfirmationModal
+          open={showArchiveCollectionModal}
+          onOpenChange={setShowArchiveCollectionModal}
+          entityType="task"
+          entityName={name}
+          pointsValue={rewards.points}
+          totalRevenue={revenue}
+          onConfirm={pendingStatusChange.onConfirm}
+          onCancel={pendingStatusChange.onCancel}
+        />
+      )}
+
+      <ConfirmationModal
+        open={showNotDoneConfirmation}
+        onOpenChange={setShowNotDoneConfirmation}
+        title="Task Not Done"
+        description="To collect a task you must set it Done first. Do you want to do both?"
+        confirmText="Yes, Done & Collect"
+        onConfirm={() => {
+          if (pendingNotDoneStatus) {
+            setStatus(pendingNotDoneStatus);
+            setProgress(100);
+          }
+          setShowNotDoneConfirmation(false);
+          setPendingNotDoneStatus(null);
+        }}
+        onCancel={() => {
+          setShowNotDoneConfirmation(false);
+          setPendingNotDoneStatus(null);
+        }}
+      />
+
       {/* Smart Scheduler Submodal */}
       <SmartSchedulerSubmodal
         open={showScheduler}
@@ -859,7 +1240,7 @@ export default function MissionTreeModalContent({
 
       {/* Validation Modal */}
       <Dialog open={showValidationModal} onOpenChange={setShowValidationModal}>
-        <DialogContent>
+        <DialogContent zIndexLayer="MODALS">
           <DialogHeader>
             <DialogTitle>Missing Required Information</DialogTitle>
             <DialogDescription>
@@ -876,10 +1257,6 @@ export default function MissionTreeModalContent({
 }
 
 // Helper functions
-function getCategoryForStationType(value: string): string {
-  return getStationFromCombined(value) || 'None';
-}
-
 function getCategoryForSiteId(value: string, sites: Site[]): string {
   const site = sites.find(s => s.id === value);
   if (!site) return 'None';
