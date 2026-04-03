@@ -10,8 +10,7 @@ import { TaskType, TaskStatus, FOUNDER_CHARACTER_ID } from '@/types/enums';
 import { TaskModalShell } from './task-modal-shell';
 import MissionTreeModalContent from './mission-tree-modal-content';
 import RecurrentTreeModalContent from './recurrent-tree-modal-content';
-import { getAllTasks, getAllItems, getAllSites, getTasksByParentId, getAllCharacters } from '@/data-store/datastore';
-import { getZIndexClass } from '@/lib/utils/z-index-utils';
+import { ClientAPI } from '@/lib/client-api';
 
 interface TaskModalProps {
   task?: Task | null;
@@ -62,10 +61,10 @@ export default function TaskModal({
     setIsLoading(true);
     try {
       const [tasks, items, sites, characters] = await Promise.all([
-        getAllTasks(),
-        getAllItems(),
-        getAllSites(),
-        getAllCharacters(),
+        ClientAPI.getAllTasks(),
+        ClientAPI.getItems(),
+        ClientAPI.getSites(),
+        ClientAPI.getCharacters(),
       ]);
       setAllTasks(tasks);
       setAllItems(items);

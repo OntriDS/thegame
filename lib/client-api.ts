@@ -43,6 +43,13 @@ export const ClientAPI = {
     return await res.json();
   },
 
+  /** All tasks (including recurrent/collected); use for modals and admin tools that need the full set. */
+  getAllTasks: async (): Promise<Task[]> => {
+    const res = await fetch('/api/tasks/all');
+    if (!res.ok) throw new Error('Failed to fetch all tasks');
+    return await res.json();
+  },
+
   getTaskById: async (id: string): Promise<Task | null> => {
     const res = await fetch(`/api/tasks/${id}`);
     if (!res.ok) return null;
