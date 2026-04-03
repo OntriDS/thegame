@@ -429,30 +429,6 @@ export async function prepareTaskSubtreeBeforeParentRemoval(
   }
 }
 
-/** @deprecated Use `prepareTaskSubtreeBeforeParentRemoval` */
-export const applyRecurrentStructureBeforeRemoval = prepareTaskSubtreeBeforeParentRemoval;
-
-/**
- * @deprecated Legacy aggressive cascade; prefer `removeTask` with `cascadeDeleteActiveChildren`.
- * Orphans history-terminal rows, then deletes active subtree (same as cascade=true).
- */
-export async function deleteGroupCascade(groupId: string): Promise<number> {
-  const root = await getTaskById(groupId);
-  if (!root) return 0;
-  await prepareTaskSubtreeBeforeParentRemoval(root, { cascadeDeleteActiveChildren: true });
-  return 1;
-}
-
-/**
- * @deprecated Legacy aggressive cascade; prefer `removeTask` with `cascadeDeleteActiveChildren`.
- */
-export async function deleteTemplateCascade(templateId: string): Promise<number> {
-  const root = await getTaskById(templateId);
-  if (!root) return 0;
-  await prepareTaskSubtreeBeforeParentRemoval(root, { cascadeDeleteActiveChildren: true });
-  return 1;
-}
-
 /**
  * Cascades status change from template to its instances
  */

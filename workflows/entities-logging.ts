@@ -31,6 +31,68 @@ export function getMonthKeyFromTimestamp(timestamp: string | Date): string {
   return `${mm}-${yy}`;
 }
 
+/** Sort key for log rows (newest-first lists). */
+function logEntryTimestampMs(entry: any): number {
+  const ts = entry?.timestamp;
+  if (ts == null || ts === '') return 0;
+  if (typeof ts === 'number' && Number.isFinite(ts)) return ts;
+  const d = new Date(ts);
+  if (!isNaN(d.getTime())) return d.getTime();
+  const m = String(ts).match(/^(\d{2})-(\d{2})-(\d{4})/);
+  if (m) {
+    const t = new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]), 12, 0, 0, 0);
+    return isNaN(t.getTime()) ? 0 : t.getTime();
+  }
+  return 0;
+}
+
+/** Normalize user/API timestamp input to ISO for storage. */
+function coerceLogEditTimestamp(value: string): string {
+  const s = String(value).trim();
+  if (!s) throw new Error('Timestamp cannot be empty');
+  const d = new Date(s);
+  if (isNaN(d.getTime())) throw new Error(`Invalid timestamp: ${s}`);
+  return d.toISOString();
+}
+
+/**
+ * Write entry to the monthly list that matches `entry.timestamp` (move across months if needed).
+ */
+async function relocateLogEntryToCorrectMonth(
+  entityType: EntityType,
+  sourceMonthKey: string,
+  entryId: string,
+  updatedEntry: any
+): Promise<{ monthKey: string }> {
+  const targetMonthKey = getMonthKeyFromTimestamp(updatedEntry.timestamp);
+  const sourceList = await readMonthlyList(entityType, sourceMonthKey);
+  const idx = sourceList.findIndex(e => e.id === entryId);
+  if (idx === -1) {
+    throw new Error(`Log entry ${entryId} not found in month ${sourceMonthKey}`);
+  }
+
+  if (targetMonthKey === sourceMonthKey) {
+    sourceList[idx] = updatedEntry;
+    await rebuildMonthlyList(entityType, sourceMonthKey, sourceList);
+    return { monthKey: sourceMonthKey };
+  }
+
+  sourceList.splice(idx, 1);
+  await rebuildMonthlyList(entityType, sourceMonthKey, sourceList);
+
+  const targetList = await readMonthlyList(entityType, targetMonthKey);
+  const existingIdx = targetList.findIndex(e => e.id === entryId);
+  if (existingIdx >= 0) {
+    targetList[existingIdx] = updatedEntry;
+  } else {
+    targetList.push(updatedEntry);
+  }
+  targetList.sort((a, b) => logEntryTimestampMs(b) - logEntryTimestampMs(a));
+  await rebuildMonthlyList(entityType, targetMonthKey, targetList);
+  await kvSAdd(buildLogMonthsIndexKey(entityType), targetMonthKey);
+  return { monthKey: targetMonthKey };
+}
+
 function normalizeLogEntry(entry: any): any {
   if (entry?.id) {
     return entry;
@@ -697,16 +759,25 @@ export async function editLogEntry(
         throw new Error(`Cannot edit deleted log entry ${entryId}`);
       }
 
+      const { timestamp: rawTimestamp, ...restUpdates } = updates;
       const changes: Array<{ field: string; oldValue: any; newValue: any }> = [];
 
-      for (const [field, newValue] of Object.entries(updates)) {
-        if (['id', 'entityId', 'timestamp', 'event'].includes(field)) {
+      for (const [field, newValue] of Object.entries(restUpdates)) {
+        if (['id', 'entityId', 'event'].includes(field)) {
           continue;
         }
         const oldValue = entry[field];
         if (oldValue !== newValue) {
           changes.push({ field, oldValue, newValue });
           entry[field] = newValue;
+        }
+      }
+
+      if (rawTimestamp !== undefined) {
+        const coerced = coerceLogEditTimestamp(String(rawTimestamp));
+        if (entry.timestamp !== coerced) {
+          changes.push({ field: 'timestamp', oldValue: entry.timestamp, newValue: coerced });
+          entry.timestamp = coerced;
         }
       }
 
@@ -725,7 +796,7 @@ export async function editLogEntry(
         reason
       });
 
-      await rebuildMonthlyList(entityType, monthKey, list);
+      await relocateLogEntryToCorrectMonth(entityType, monthKey, entryId, entry);
       return;
     }
   }
@@ -875,14 +946,7 @@ export async function patchLogEntryById(
   if (options.timestampIso) entry.timestamp = options.timestampIso;
   delete entry.lastUpdated;
 
-  const list = await readMonthlyList(entityType, hit.monthKey);
-  const idx = list.findIndex(e => e.id === options.logEntryId);
-  if (idx === -1) {
-    throw new Error(`Log entry disappeared during patch: ${options.logEntryId}`);
-  }
-  list[idx] = entry;
-  await rebuildMonthlyList(entityType, hit.monthKey, list);
-  return { monthKey: hit.monthKey };
+  return relocateLogEntryToCorrectMonth(entityType, hit.monthKey, options.logEntryId, entry);
 }
 
 // ============================================================================

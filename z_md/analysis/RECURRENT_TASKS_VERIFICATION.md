@@ -90,7 +90,7 @@ export interface RecurrentTaskConfig {
 }
 ```
 
-Key functions include `createRecurrentParent`, `createRecurrentTemplate`, `spawnRecurrentInstance`, `calculateNextDueDates`, `spawnInstancesForTemplate`, `handleTemplateInstanceCreation`, and `deleteTemplateCascade`.
+Key functions include `createRecurrentParent`, `createRecurrentTemplate`, `spawnRecurrentInstance`, `calculateNextDueDates`, `spawnInstancesForTemplate`, `handleTemplateInstanceCreation`, and `prepareTaskSubtreeBeforeParentRemoval` (invoked from `removeTask` when deleting any parent task).
 
 Search confirms no references outside this file:
 
@@ -201,9 +201,9 @@ Non-Functional Requirements
 - Error logging with correlation IDs for sync runs.
 
 7) Deletion and lifecycle
-- On template delete: implement cascade using `deleteTemplateCascade(templateId)`; prompt UI confirmation with counts.
+- On any parent task delete: `removeTask` calls `prepareTaskSubtreeBeforeParentRemoval` (orphan done/collected; optional `cascadeDeleteActiveChildren`); UI prompts via delete modal.
 - On parent archive/collect: call `archiveCompletedInstances(parentId)`; mark `isCollected` and `status: Archived`.
-- Ensure `removeTask` path handles template cascade and cleanup of effects/links/logs.
+- Ensure `removeTask` path cleans up effects/links/logs per deleted row.
 
 8) Concurrency, races, and idempotency
 - Always check existing instances by `(parentId=template.id, dueDate)` before creating.
@@ -281,7 +281,7 @@ Recurrent tasks are partially built (types, UI separation, modal affordances) bu
 ### What Was Fixed
 - ✅ Wired `handleTemplateInstanceCreation` to task workflow
 - ✅ Wired `archiveCompletedInstances` for parent collection  
-- ✅ Wired `deleteTemplateCascade` for template deletion
+- ✅ Parent deletes use `removeTask` → `prepareTaskSubtreeBeforeParentRemoval`
 - ✅ All functionality integrated and ready for testing
 
 ### Implementation Details
@@ -302,10 +302,9 @@ Recurrent tasks are partially built (types, UI separation, modal affordances) bu
    - Triggers when `RECURRENT_PARENT` status changes to Collected/Archived
    - Calls `archiveCompletedInstances` to archive done instances
 
-4. **Cascade Delete** (Lines 204-209):
-   - Detects `RECURRENT_TEMPLATE` deletion
-   - Calls `deleteTemplateCascade` to remove all instances
-   - Skips normal deletion flow for templates
+4. **Parent / subtree delete**:
+   - `datastore.removeTask` runs `prepareTaskSubtreeBeforeParentRemoval` when the task has descendants
+   - Default: orphan children; opt-in cascade deletes active subtree only (never done/collected)
 
 ### Architecture Alignment
 - ✅ Follows ENUMS → ENTITIES → WORKFLOWS → DATA-STORE pattern
