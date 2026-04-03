@@ -332,6 +332,10 @@ export interface Task extends BaseEntity {
   doneAt?: Date;                    // When task was marked DONE
   collectedAt?: Date;               // When task was collected (monthly close)
 
+  // Recurrent Task Fields (JIT Model)
+  lastSpawnedDate?: Date;           // Track where recurrence cycle stands for JIT spawning
+  originTemplateId?: string | null;   // For orphaned instances - soft link to template that spawned them
+
   // Financial DNA (Permanent Ambassadors / Temporary Snapshots)
   // These fields are "instructions" that get copied via RNA to create FinancialRecord entity
   // They live here for UI/planning, but FinancialRecord is the source of truth for accounting

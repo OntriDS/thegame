@@ -13,7 +13,7 @@ import { useThemeColors } from '@/lib/hooks/use-theme-colors';
 import { useKeyboardShortcuts } from '@/lib/hooks/use-keyboard-shortcuts';
 import { useEntityUpdates } from '@/lib/hooks/use-entity-updates';
 import { useShortcutScope } from '@/lib/shortcuts/keyboard-shortcuts-provider';
-import TaskModal from '@/components/modals/task-modal';
+import TaskModal from '@/components/modals/task-modal-integrated';
 import { ControlRoomDeepLinkTrigger } from '@/components/admin/admin-deep-link-triggers';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { ORDER_INCREMENT, SIDEBAR_MIN_WIDTH, SIDEBAR_MAX_WIDTH, SIDEBAR_DEFAULT_WIDTH } from '@/lib/constants/app-constants';

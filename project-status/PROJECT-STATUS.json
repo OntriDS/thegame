@@ -48,7 +48,8 @@
         "Analyst Agent performing Data Integrity tasks, ai-chat reading markdown files",
         "Tasks Indexes created, Agents upgraded, Database purged ghost tasks and agents cards",
         "Calendar submodal bugs fixes, Bloated Logs Indexes in Upstash",
-        "Logging workflows update and points decimals bugs, Sorting in Items Sold, Financials and Logs"
+        "Logging workflows update and points decimals bugs, Sorting in Items Sold, Financials and Logs",
+        "Refactor Recurrent Templates and fix Task Schedule inside Task Modal"
       ]
     },
     "phase14.4": {
@@ -70,11 +71,12 @@
       "description": "",
       "deliverables": [
       "System: Player-One Bootstrap process",
-      " Cahracters: Improve Ledger Wallet",
+      "Characters: Improve Ledger Wallet",
       "Player: Player Progression and Points Balance (machinations)",
       "Research: Machinations Display of Player Data",
       "Pixelbrain: Debuger Agent + Local Automation Tasks",
-      "Genesis flow for brand new app, with proper frontend setup wizard"
+      "Genesis flow for brand new app, with proper frontend setup wizard",
+      "Timezone (UTC) & Date Global Formatting in Settings"
     ]
     },
     "phaseX.2": {
