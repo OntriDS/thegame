@@ -13,19 +13,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { ItemNameField } from '@/components/ui/item-name-field';
 import { SmartSchedulerSubmodal } from './submodals/smart-scheduler-submodal';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Task, Item, Site } from '@/types/entities';
 import { getPointsMetadata } from '@/lib/utils/points-utils';
 import { TaskType, TaskStatus, TaskPriority, ItemType, ItemStatus, FOUNDER_CHARACTER_ID, EntityType } from '@/types/enums';
 import { getStationFromCombined, createTaskParentOptions, createItemTypeSubTypeOptions, getItemTypeFromCombined, getSubTypeFromCombined, createCharacterOptions, createStationCategoryOptions, getCategoryFromCombined } from '@/lib/utils/searchable-select-utils';
 import { createSiteOptionsWithCategories } from '@/lib/utils/site-options-utils';
-import { getAreaForStation } from '@/lib/utils/business-structure-utils';
+import { getStationSelectValue } from '@/lib/utils/business-structure-utils';
 import type { Station, SubItemType } from '@/types/type-aliases';
 import { v4 as uuid } from 'uuid';
-import { ORDER_INCREMENT } from '@/lib/constants/app-constants';
+import { ORDER_INCREMENT, PROGRESS_MAX, PROGRESS_STEP, PRICE_STEP } from '@/lib/constants/app-constants';
 import { computeNextSiblingOrder } from '@/lib/utils/task-order-utils';
 import { Calendar as CalendarIcon, Network, User } from 'lucide-react';
-import CharacterSelectorSubmodal from './submodals/character-selector-submodal';
 import PlayerCharacterSelectorModal from './submodals/player-character-selector-submodal';
 import DeleteModal from './submodals/delete-submodal';
 import LinksRelationshipsModal from './submodals/links-relationships-submodal';
@@ -98,9 +97,7 @@ export default function MissionTreeModalContent({
   const [scheduledEndDate, setScheduledEndDate] = useState<Date | undefined>(undefined);
   const [scheduledEndTime, setScheduledEndTime] = useState<string>('');
   const [cost, setCost] = useState(0);
-  const [costString, setCostString] = useState('0');
   const [revenue, setRevenue] = useState(0);
-  const [revenueString, setRevenueString] = useState('0');
   const [isNotPaid, setIsNotPaid] = useState(false);
   const [isNotCharged, setIsNotCharged] = useState(false);
   const [isCollected, setIsCollected] = useState(false);
@@ -125,14 +122,12 @@ export default function MissionTreeModalContent({
   const [isSold, setIsSold] = useState(false);
   const [outputItemStatus, setOutputItemStatus] = useState<ItemStatus>(ItemStatus.FOR_SALE);
   const [rewards, setRewards] = useState({ points: { xp: 0, rp: 0, fp: 0, hp: 0 } });
-  const [rewardsStrings, setRewardsStrings] = useState({
-    points: { xp: '0', rp: '0', fp: '0', hp: '0' }
-  });
   const [parentId, setParentId] = useState<string | null>(null);
   const [customerCharacterId, setCustomerCharacterId] = useState<string | null>(null);
   const [customerCharacterName, setCustomerCharacterName] = useState<string>('');
+  const [isNewCustomer, setIsNewCustomer] = useState(true);
+  const [newCustomerName, setNewCustomerName] = useState('');
   const [playerCharacterId, setPlayerCharacterId] = useState<string | null>(FOUNDER_CHARACTER_ID);
-  const [showCharacterSelector, setShowCharacterSelector] = useState(false);
   const [showPlayerCharacterSelector, setShowPlayerCharacterSelector] = useState(false);
   const [showScheduler, setShowScheduler] = useState(false);
   const [showValidationModal, setShowValidationModal] = useState(false);
@@ -154,13 +149,6 @@ export default function MissionTreeModalContent({
   const initializedTaskIdRef = useRef<string | null>(null);
   const draftId = useRef(task?.id || uuid());
 
-  const getInitialStationCategory = (): string => {
-    const lastStation = getPreference('task-modal-last-station');
-    const area = getAreaForStation(lastStation);
-    return `${lastStation}:${area || 'ADMIN'}`;
-  };
-  const [stationCategory, setStationCategory] = useState<string>(getInitialStationCategory());
-
   const getLastUsedStation = useCallback((): Station => {
     const saved = getPreference('task-modal-last-station');
     return (saved as Station) || ('Strategy' as Station);
@@ -170,12 +158,6 @@ export default function MissionTreeModalContent({
     const saved = getPreference('task-modal-last-type');
     return (saved as TaskType) || TaskType.MISSION;
   }, [getPreference]);
-
-  const computeStationCategoryValue = useCallback((stationValue: Station | null): string => {
-    if (!stationValue) return 'none:';
-    const area = getAreaForStation(stationValue);
-    return `${stationValue}:${area || 'ADMIN'}`;
-  }, []);
 
   const initializeFromTask = useCallback(
     (existingTask: Task) => {
@@ -190,7 +172,6 @@ export default function MissionTreeModalContent({
           ? existingTask.station
           : (((getPreference('task-modal-last-station') as Station) || 'Strategy') as Station);
       setStation(rawStation);
-      setStationCategory(computeStationCategoryValue(rawStation));
       setProgress(existingTask.progress);
       setDueDate(existingTask.dueDate ? new Date(existingTask.dueDate) : undefined);
       setLocalDoneAt(existingTask.doneAt ? new Date(existingTask.doneAt) : undefined);
@@ -214,9 +195,7 @@ export default function MissionTreeModalContent({
       }
 
       setCost(existingTask.cost ?? 0);
-      setCostString(String(existingTask.cost ?? 0));
       setRevenue(existingTask.revenue ?? 0);
-      setRevenueString(String(existingTask.revenue ?? 0));
       setIsNotPaid(existingTask.isNotPaid || false);
       setIsNotCharged(existingTask.isNotCharged || false);
       setIsCollected(existingTask.isCollected || false);
@@ -241,6 +220,8 @@ export default function MissionTreeModalContent({
       setOutputItemStatus(existingTask.outputItemStatus || ItemStatus.FOR_SALE);
       setSelectedItemId(existingTask.outputItemId || '');
       setCustomerCharacterId(existingTask.customerCharacterId || null);
+      setIsNewCustomer(!Boolean(existingTask.customerCharacterId));
+      setNewCustomerName(existingTask.newCustomerName || '');
       setPlayerCharacterId(existingTask.playerCharacterId || FOUNDER_CHARACTER_ID);
       setRewards({
         points: {
@@ -250,17 +231,9 @@ export default function MissionTreeModalContent({
           hp: existingTask.rewards?.points?.hp || 0,
         },
       });
-      setRewardsStrings({
-        points: {
-          xp: String(existingTask.rewards?.points?.xp || 0),
-          rp: String(existingTask.rewards?.points?.rp || 0),
-          fp: String(existingTask.rewards?.points?.fp || 0),
-          hp: String(existingTask.rewards?.points?.hp || 0),
-        },
-      });
       setParentId(existingTask.parentId || null);
     },
-    [computeStationCategoryValue, getPreference]
+    [getPreference]
   );
 
   const initializeForNewTask = useCallback(() => {
@@ -272,7 +245,6 @@ export default function MissionTreeModalContent({
     setType(getLastUsedType());
     const lastStation = getLastUsedStation();
     setStation(lastStation);
-    setStationCategory(computeStationCategoryValue(lastStation));
     setProgress(0);
     setDueDate(undefined);
     setLocalDoneAt(undefined);
@@ -282,9 +254,7 @@ export default function MissionTreeModalContent({
     setScheduledEndDate(undefined);
     setScheduledEndTime('');
     setCost(0);
-    setCostString('0');
     setRevenue(0);
-    setRevenueString('0');
     setIsNotPaid(false);
     setIsNotCharged(false);
     setIsCollected(false);
@@ -305,11 +275,12 @@ export default function MissionTreeModalContent({
     setSelectedItemId('');
     setCustomerCharacterId(null);
     setCustomerCharacterName('');
+    setIsNewCustomer(true);
+    setNewCustomerName('');
     setPlayerCharacterId(FOUNDER_CHARACTER_ID);
     setRewards({ points: { xp: 0, rp: 0, fp: 0, hp: 0 } });
-    setRewardsStrings({ points: { xp: '0', rp: '0', fp: '0', hp: '0' } });
     setParentId(null);
-  }, [computeStationCategoryValue, getLastUsedStation, getLastUsedType]);
+  }, [getLastUsedStation, getLastUsedType]);
 
   useEffect(() => {
     if (!open) {
@@ -419,7 +390,8 @@ export default function MissionTreeModalContent({
       outputItemName: outputItemName.trim(),
       rewards,
       parentId,
-      customerCharacterId,
+      customerCharacterId: isNewCustomer ? null : customerCharacterId,
+      newCustomerName: isNewCustomer ? newCustomerName.trim() || undefined : undefined,
       playerCharacterId,
       order: determineOrder(),
       isCollected,
@@ -465,7 +437,6 @@ export default function MissionTreeModalContent({
   };
 
   const handleStationCategoryChange = (value: string) => {
-    setStationCategory(value);
     const newStation = getStationFromCombined(value) as Station;
     setStation(newStation);
     setPreference('task-modal-last-station', newStation);
@@ -484,6 +455,23 @@ export default function MissionTreeModalContent({
     }
   };
 
+  const handleOutputItemTypeSubTypeChange = (value: string) => {
+    if (value === 'none:') {
+      setOutputItemTypeSubType('none:');
+      setOutputItemType('');
+      setOutputItemSubType('');
+      return;
+    }
+    setOutputItemTypeSubType(value);
+    const newItemType = getItemTypeFromCombined(value) as ItemType;
+    const newSubType = getSubTypeFromCombined(value) as SubItemType;
+    setOutputItemType(newItemType);
+    setOutputItemSubType(newSubType);
+    if (!outputItemName) {
+      setOutputItemName(`${newItemType} ${newSubType}`);
+    }
+  };
+
   const handleNotPaidChange = (newValue: boolean) => {
     setIsNotPaid(newValue);
     if (newValue) {
@@ -498,60 +486,11 @@ export default function MissionTreeModalContent({
     }
   };
 
-  const handleCustomerCharacterSelect = (characterId: string | null) => {
-    setCustomerCharacterId(characterId);
-    // Find character name from allCharacters
-    if (characterId) {
-      const character = allCharacters.find(c => c.id === characterId);
-      setCustomerCharacterName(character?.name || '');
-    } else {
-      setCustomerCharacterName('');
-    }
-    setShowCharacterSelector(false);
-  };
-
   const handlePlayerCharacterSelect = (characterId: string | null) => {
     if (characterId) {
       setPlayerCharacterId(characterId);
     }
     setShowPlayerCharacterSelector(false);
-  };
-
-  const handleOutputItemTypeSubTypeChange = (value: string) => {
-    setOutputItemTypeSubType(value);
-    const newItemType = getItemTypeFromCombined(value) as ItemType;
-    const newSubType = getSubTypeFromCombined(value) as SubItemType;
-    setOutputItemType(newItemType);
-    setOutputItemSubType(newSubType);
-
-    // Set default item name based on type/subtype if not already set
-    if (!outputItemName) {
-      const defaultName = `${newItemType} ${newSubType}`;
-      setOutputItemName(defaultName);
-    }
-  };
-
-  const formatSmartDecimal = (num: number): string => {
-    const rounded = Math.round(num * 10) / 10;
-    return rounded % 1 === 0 ? rounded.toString() : rounded.toFixed(1);
-  };
-
-  const handleRewardChange = (type: 'xp' | 'rp' | 'fp' | 'hp', value: string) => {
-    const numValue = parseFloat(value) || 0;
-    setRewardsStrings(prev => ({
-      ...prev,
-      points: {
-        ...prev.points,
-        [type]: value
-      }
-    }));
-    setRewards(prev => ({
-      ...prev,
-      points: {
-        ...prev.points,
-        [type]: numValue
-      }
-    }));
   };
 
   const getCharacterOptions = () => {
@@ -564,9 +503,9 @@ export default function MissionTreeModalContent({
       <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
         <div className="flex gap-4">
           {/* Main columns container */}
-          <div className="flex-1 grid grid-cols-3 gap-4">
+          <div className="flex-1 grid grid-cols-4 gap-4">
 
-            {/* Column 1: NATIVE (Basic Info) */}
+            {/* Column 1: Name, Description, Schedule, Priority + Progress */}
             <div className="space-y-3">
               <div className="space-y-2">
                 <Label htmlFor="task-name" className="text-xs">Name *</Label>
@@ -590,124 +529,12 @@ export default function MissionTreeModalContent({
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="task-type" className="text-xs">Type</Label>
-                <Select value={String(type)} onValueChange={handleTypeChange}>
-                  <SelectTrigger className="h-8 text-sm">
-                    <SelectValue placeholder="Select task type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.values(TaskType)
-                      .filter((taskType) => {
-                        // Only mission types allowed
-                        return taskType === TaskType.MISSION_GROUP ||
-                          taskType === TaskType.MISSION ||
-                          taskType === TaskType.MILESTONE ||
-                          taskType === TaskType.GOAL ||
-                          taskType === TaskType.ASSIGNMENT;
-                      })
-                      .map((taskType) => (
-                        <SelectItem key={taskType} value={String(taskType)}>
-                          {taskType}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="task-priority" className="text-xs">Priority</Label>
-                <Select value={String(priority)} onValueChange={(val) => setPriority(val as TaskPriority)}>
-                  <SelectTrigger className="h-8 text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.values(TaskPriority).map((p) => (
-                      <SelectItem key={p} value={String(p)}>
-                        {p}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="task-progress" className="text-xs">Progress</Label>
-                <div className="flex items-center gap-2">
-                  <NumericInput
-                    id="task-progress"
-                    value={progress}
-                    onChange={(val) => {
-                      const newProgress = Math.min(Math.max(val, 0), 100);
-                      setProgress(newProgress);
-                      if (newProgress === 100 && status !== TaskStatus.DONE && status !== TaskStatus.COLLECTED) {
-                        setStatus(TaskStatus.DONE);
-                      }
-                    }}
-                    min={0}
-                    max={100}
-                    className="h-8 text-sm flex-1"
-                  />
-                  <span className="text-xs text-muted-foreground">%</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Column 2: AMBASSADOR (Core Details) */}
-            <div className="space-y-3">
-              <div className="space-y-2">
-                <Label className="text-xs">Station</Label>
-                <SearchableSelect
-                  value={stationCategory}
-                  onValueChange={handleStationCategoryChange}
-                  options={createStationCategoryOptions()}
-                  autoGroupByCategory={true}
-                  getCategoryForValue={(value) => getCategoryFromCombined(value)}
-                  placeholder="Select station..."
-                  className="h-8 text-sm"
-                  persistentCollapsible={true}
-                  instanceId="mission-task-modal-station-body"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="task-parent" className="text-xs">Parent Task</Label>
-                <SearchableSelect
-                  value={parentId || ''}
-                  onValueChange={(val) => setParentId(val || null)}
-                  placeholder="No Parent"
-                  options={createTaskParentOptions(allTasks, task?.id, false, type)}
-                  autoGroupByCategory={true}
-                  className="h-8 text-sm"
-                  persistentCollapsible={true}
-                  instanceId="mission-task-form-parent"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="task-site" className="text-xs">Site</Label>
-                <SearchableSelect
-                  value={formData.site}
-                  onValueChange={(v) => setFormData({ ...formData, site: v })}
-                  placeholder="No Site"
-                  options={createSiteOptionsWithCategories(allSites)}
-                  autoGroupByCategory={true}
-                  getCategoryForValue={(value) => {
-                    if (value === 'none:') return 'None';
-                    return getCategoryForSiteId(value, allSites);
-                  }}
-                  className="h-8 text-sm"
-                  persistentCollapsible={true}
-                  instanceId="mission-task-form-site"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-xs">Schedule</Label>
+              <div className="space-y-2 border-t pt-2 mt-2">
+                <Label className="text-xs font-semibold">Schedule</Label>
                 <Button
                   type="button"
                   variant="outline"
-                  className={`w-full justify-start text-left font-normal h-auto py-2 px-3 ${!dueDate && !scheduledStartDate ? "text-muted-foreground" : ""}`}
+                  className={`w-full justify-start text-left font-normal h-auto py-2 px-3 ${!dueDate && !scheduledStartDate ? 'text-muted-foreground' : ''}`}
                   onClick={handleOpenScheduler}
                 >
                   <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
@@ -730,32 +557,162 @@ export default function MissionTreeModalContent({
 
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-2">
+                  <Label htmlFor="task-priority" className="text-xs">Priority</Label>
+                  <Select value={String(priority)} onValueChange={(val) => setPriority(val as TaskPriority)}>
+                    <SelectTrigger className="h-8 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.values(TaskPriority).map((p) => (
+                        <SelectItem key={p} value={String(p)}>
+                          {p}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="task-progress" className="text-xs">Progress: {progress}%</Label>
+                  <input
+                    id="task-progress"
+                    type="range"
+                    min={0}
+                    max={PROGRESS_MAX}
+                    step={PROGRESS_STEP}
+                    value={progress}
+                    onChange={(e) => {
+                      const newProgress = Number(e.currentTarget.value);
+                      setProgress(newProgress);
+                      if (newProgress === 0) {
+                        setStatus(TaskStatus.CREATED);
+                      } else if (newProgress === 25 || newProgress === 50) {
+                        setStatus(TaskStatus.IN_PROGRESS);
+                      } else if (newProgress === 75) {
+                        setStatus(TaskStatus.FINISHING);
+                      } else if (newProgress === 100) {
+                        setStatus(TaskStatus.DONE);
+                      }
+                    }}
+                    className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Column 2: Station, Type, Parent */}
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <Label className="text-xs">Station</Label>
+                <SearchableSelect
+                  value={getStationSelectValue(station)}
+                  onValueChange={handleStationCategoryChange}
+                  options={createStationCategoryOptions()}
+                  autoGroupByCategory={true}
+                  getCategoryForValue={(value) => getCategoryFromCombined(value)}
+                  placeholder="Select station..."
+                  className="h-8 text-sm"
+                  persistentCollapsible={true}
+                  instanceId="mission-task-modal-station-body"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="task-type" className="text-xs">Type</Label>
+                <Select value={String(type)} onValueChange={handleTypeChange}>
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue placeholder="Select task type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.values(TaskType)
+                      .filter(
+                        (taskType) =>
+                          taskType === TaskType.MISSION_GROUP ||
+                          taskType === TaskType.MISSION ||
+                          taskType === TaskType.MILESTONE ||
+                          taskType === TaskType.GOAL ||
+                          taskType === TaskType.ASSIGNMENT
+                      )
+                      .map((taskType) => (
+                        <SelectItem key={taskType} value={String(taskType)}>
+                          {taskType}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="task-parent" className="text-xs">Parent Task</Label>
+                <SearchableSelect
+                  value={parentId || ''}
+                  onValueChange={(val) => setParentId(val || null)}
+                  placeholder="No Parent"
+                  options={createTaskParentOptions(allTasks, task?.id, false, type)}
+                  autoGroupByCategory={true}
+                  className="h-8 text-sm"
+                  persistentCollapsible={true}
+                  instanceId="mission-task-form-parent"
+                />
+              </div>
+            </div>
+
+            {/* Column 3: Site, financials, Paid/Charged, points */}
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <Label htmlFor="task-site" className="text-xs">Site</Label>
+                <SearchableSelect
+                  value={formData.site}
+                  onValueChange={(v) => setFormData({ ...formData, site: v })}
+                  placeholder="No Site"
+                  options={createSiteOptionsWithCategories(allSites)}
+                  autoGroupByCategory={true}
+                  getCategoryForValue={(value) => {
+                    if (value === 'none:') return 'None';
+                    return getCategoryForSiteId(value, allSites);
+                  }}
+                  className="h-8 text-sm"
+                  persistentCollapsible={true}
+                  instanceId="mission-task-form-site"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-2">
                   <Label htmlFor="task-cost" className="text-xs">Cost ($)</Label>
                   <NumericInput
                     id="task-cost"
                     value={cost}
-                    onChange={(val) => {
-                      setCost(val);
-                      setCostString(val.toString());
-                    }}
+                    onChange={setCost}
                     min={0}
-                    step={0.01}
+                    step={PRICE_STEP}
                     className="h-8 text-sm"
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="task-revenue" className="text-xs">Revenue ($)</Label>
-                  <NumericInput
-                    id="task-revenue"
-                    value={revenue}
-                    onChange={(val) => {
-                      setRevenue(val);
-                      setRevenueString(val.toString());
-                    }}
-                    min={0}
-                    step={0.01}
-                    className="h-8 text-sm"
-                  />
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="relative">
+                          <NumericInput
+                            id="task-revenue"
+                            value={revenue}
+                            onChange={setRevenue}
+                            min={0}
+                            step={PRICE_STEP}
+                            className="h-8 text-sm"
+                            disabled={!!task?.sourceSaleId}
+                          />
+                        </div>
+                      </TooltipTrigger>
+                      {task?.sourceSaleId && (
+                        <TooltipContent>
+                          <p>Revenue is managed by the source Sale - cannot edit here</p>
+                        </TooltipContent>
+                      )}
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
               </div>
 
@@ -765,107 +722,133 @@ export default function MissionTreeModalContent({
                   variant="outline"
                   size="sm"
                   onClick={() => handleNotPaidChange(!isNotPaid)}
-                  className={`h-8 text-xs ${isNotPaid ? 'bg-destructive/10' : ''}`}
+                  className={`h-8 text-xs ${isNotPaid ? 'border-orange-500 text-orange-600 hover:bg-orange-50' : ''}`}
                 >
-                  <Checkbox
-                    checked={isNotPaid}
-                    onChange={() => handleNotPaidChange(!isNotPaid)}
-                    className="mr-2"
-                  />
-                  Not Paid
+                  {isNotPaid ? '⚠ Not Paid' : '✓ Paid'}
                 </Button>
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
                   onClick={() => handleNotChargedChange(!isNotCharged)}
-                  className={`h-8 text-xs ${isNotCharged ? 'bg-destructive/10' : ''}`}
+                  className={`h-8 text-xs ${isNotCharged ? 'border-orange-500 text-orange-600 hover:bg-orange-50' : ''}`}
                 >
-                  <Checkbox
-                    checked={isNotCharged}
-                    onChange={() => handleNotChargedChange(!isNotCharged)}
-                    className="mr-2"
-                  />
-                  Not Charged
+                  {isNotCharged ? '⚠ Not Charged' : '✓ Charged'}
                 </Button>
               </div>
 
               <div className="space-y-2">
                 <Label className="text-xs">Point Rewards</Label>
                 <div className="grid grid-cols-4 gap-2">
-                  {getPointsMetadata().map((pointType) => (
-                    <div key={pointType.key}>
-                      <Label htmlFor={`reward-${pointType.key.toLowerCase()}`} className="text-xs">{pointType.label}</Label>
-                      <NumericInput
-                        id={`reward-${pointType.key.toLowerCase()}`}
-                        value={rewards.points[pointType.key.toLowerCase() as keyof typeof rewards.points]}
-                        onChange={(val) => handleRewardChange(pointType.key.toLowerCase() as keyof typeof rewards.points, val.toString())}
-                        min={0}
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                  ))}
+                  {getPointsMetadata().map((pointType) => {
+                    const k = pointType.key.toLowerCase() as 'xp' | 'rp' | 'fp' | 'hp';
+                    return (
+                      <div key={pointType.key}>
+                        <Label htmlFor={`reward-${k}`} className="text-xs">{pointType.label}</Label>
+                        <NumericInput
+                          id={`reward-${k}`}
+                          value={rewards.points[k]}
+                          onChange={(value) =>
+                            setRewards({
+                              ...rewards,
+                              points: { ...rewards.points, [k]: value },
+                            })
+                          }
+                          allowDecimals={false}
+                          min={0}
+                          step={1}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>
 
-            {/* Column 3: EMISSARY (Optional) */}
+            {/* Column 4: Customer, item output */}
             <div className="space-y-3">
-
-              {/* Customer Character - Emissary field for service tasks */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="customer-character" className="text-xs">Customer</Label>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-6 text-xs"
-                    onClick={() => setShowCharacterSelector(true)}
-                  >
-                    {customerCharacterId ? 'Change' : 'Select'}
-                  </Button>
+                  {!task?.sourceSaleId && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setIsNewCustomer(!isNewCustomer)}
+                      className="h-6 text-xs px-2"
+                    >
+                      {isNewCustomer ? 'Existing' : 'New'}
+                    </Button>
+                  )}
                 </div>
-                <div className="text-xs text-muted-foreground">
-                  {customerCharacterName || 'No customer selected'}
-                </div>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div>
+                        {task?.sourceSaleId ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="w-full h-8 text-xs justify-start"
+                            disabled
+                          >
+                            <User className="h-3 w-3 mr-2" />
+                            {customerCharacterId ? customerCharacterName : 'Customer from Sale'}
+                          </Button>
+                        ) : isNewCustomer ? (
+                          <Input
+                            id="customer-character"
+                            value={newCustomerName}
+                            onChange={(e) => setNewCustomerName(e.target.value)}
+                            placeholder="New customer name"
+                            className="h-8 text-sm"
+                          />
+                        ) : (
+                          <SearchableSelect
+                            value={customerCharacterId || ''}
+                            onValueChange={(value) => setCustomerCharacterId(value || null)}
+                            options={getCharacterOptions()}
+                            placeholder="Select customer"
+                            autoGroupByCategory={true}
+                            className="h-8 text-sm"
+                            instanceId="mission-task-customer"
+                          />
+                        )}
+                      </div>
+                    </TooltipTrigger>
+                    {task?.sourceSaleId && (
+                      <TooltipContent>
+                        <p>Customer is managed by the source Sale - cannot edit here</p>
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+                </TooltipProvider>
               </div>
 
-              {/* Item Creation Toggle */}
               <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label className="text-xs">Creates Item?</Label>
-                  <Checkbox
-                    checked={!!outputItemType}
-                    onCheckedChange={(checked) => {
-                      if (!checked) {
-                        setOutputItemType('');
-                        setOutputItemSubType('');
-                        setOutputItemTypeSubType('none:');
-                      }
-                    }}
-                  />
-                </div>
+                <Label htmlFor="output-item-type-subtype" className="text-xs">Item Type & SubType</Label>
+                <SearchableSelect
+                  value={outputItemTypeSubType}
+                  onValueChange={handleOutputItemTypeSubTypeChange}
+                  placeholder="No Item Output"
+                  options={[
+                    { value: 'none:', label: 'No Item Output', category: 'None' },
+                    ...createItemTypeSubTypeOptions(),
+                  ]}
+                  className="h-8 text-sm"
+                  autoGroupByCategory={true}
+                  getCategoryForValue={(value) => {
+                    if (value === 'none:') return 'None';
+                    return getItemTypeFromCombined(value);
+                  }}
+                  instanceId="mission-task-output-item-type"
+                />
               </div>
 
               {!!outputItemType && (
                 <>
-                  {/* Item Type/Subtype */}
-                  <div className="space-y-2">
-                    <Label htmlFor="output-item-type" className="text-xs">Item Type</Label>
-                    <SearchableSelect
-                      value={outputItemTypeSubType}
-                      onValueChange={handleOutputItemTypeSubTypeChange}
-                      placeholder="Select item type"
-                      options={createItemTypeSubTypeOptions()}
-                      autoGroupByCategory={true}
-                      getCategoryForValue={(value) => {
-                        if (value === 'none:') return 'None';
-                        return getItemTypeFromCombined(value);
-                      }}
-                    />
-                  </div>
-
-                  {/* Row 1: Quantity, Unit Cost, Price, Auto */}
                   <div className="grid grid-cols-4 gap-2">
                     <div className="space-y-2">
                       <Label htmlFor="output-quantity" className="text-xs">Quantity</Label>
@@ -890,7 +873,7 @@ export default function MissionTreeModalContent({
                           setOutputUnitCostString(val.toString());
                         }}
                         min={0}
-                        step={0.01}
+                        step={PRICE_STEP}
                         className="h-8 text-sm"
                       />
                     </div>
@@ -904,7 +887,7 @@ export default function MissionTreeModalContent({
                           setOutputItemPriceString(val.toString());
                         }}
                         min={0}
-                        step={0.01}
+                        step={PRICE_STEP}
                         className="h-8 text-sm"
                       />
                     </div>
@@ -921,7 +904,6 @@ export default function MissionTreeModalContent({
                     </div>
                   </div>
 
-                  {/* Row 2: Target Site, Item Status */}
                   <div className="grid grid-cols-2 gap-2">
                     <SearchableSelect
                       value={formData.targetSite}
@@ -951,7 +933,6 @@ export default function MissionTreeModalContent({
                     </Select>
                   </div>
 
-                  {/* Item Name */}
                   <div className="space-y-2">
                     <Label htmlFor="output-item-name" className="text-xs">Item Name</Label>
                     <ItemNameField
@@ -1170,14 +1151,6 @@ export default function MissionTreeModalContent({
           setScheduledEndTime(val.scheduledEnd ? format(val.scheduledEnd, 'HH:mm') : '');
         }}
         isRecurrent={false}
-      />
-
-      {/* Character Selector Submodal */}
-      <CharacterSelectorSubmodal
-        open={showCharacterSelector}
-        onOpenChange={setShowCharacterSelector}
-        onSelect={handleCustomerCharacterSelect}
-        currentOwnerId={customerCharacterId}
       />
 
       {/* Player Character Selector Modal */}

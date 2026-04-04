@@ -141,6 +141,9 @@ export default function TaskModal({
     }
   }, [open]);
 
+  /**
+   * One batch per modal open (4 HTTP routes). Server-side task load is index + mget, not per-row commands.
+   */
   const loadData = async () => {
     setIsLoading(true);
     try {

@@ -39,6 +39,13 @@ export function getAreaForStation(station: Station): Area | null {
   return null;
 }
 
+/** Combined value for SearchableSelect station options (`createStationCategoryOptions`: `Area:Station`). */
+export function getStationSelectValue(station: Station | null | undefined): string {
+  if (station == null || String(station).trim() === '') return 'none:';
+  const area = getAreaForStation(station);
+  return `${area || 'ADMIN'}:${station}`;
+}
+
 // Check if a station belongs to company areas
 export function isCompanyStation(station: Station): boolean {
   const companyStations = getCompanyAreas().flatMap(area => BUSINESS_STRUCTURE[area]);

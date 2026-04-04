@@ -14,7 +14,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { ItemNameField } from '@/components/ui/item-name-field';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Task, Item, Site } from '@/types/entities';
 import { getPointsMetadata } from '@/lib/utils/points-utils';
@@ -27,9 +26,10 @@ import {
   createItemTypeSubTypeOptions,
   getItemTypeFromCombined,
   getSubTypeFromCombined,
+  createCharacterOptions,
 } from '@/lib/utils/searchable-select-utils';
 import { createSiteOptionsWithCategories } from '@/lib/utils/site-options-utils';
-import { getAreaForStation } from '@/lib/utils/business-structure-utils';
+import { getStationSelectValue } from '@/lib/utils/business-structure-utils';
 import type { Station, SubItemType } from '@/types/type-aliases';
 import { v4 as uuid } from 'uuid';
 import { ORDER_INCREMENT, PROGRESS_MAX, PROGRESS_STEP, PRICE_STEP } from '@/lib/constants/app-constants';
@@ -45,7 +45,6 @@ import DatesSubmodal from './submodals/dates-submodal';
 import ArchiveCollectionConfirmationModal from './submodals/archive-collection-confirmation-submodal';
 import ConfirmationModal from './submodals/confirmation-submodal';
 import CascadeStatusConfirmationModal from './submodals/cascade-status-confirmation-submodal';
-import CharacterSelectorSubmodal from './submodals/character-selector-submodal';
 import PlayerCharacterSelectorModal from './submodals/player-character-selector-submodal';
 import { TaskModalFooter } from './task-modal';
 import { ClientAPI } from '@/lib/client-api';
@@ -124,8 +123,9 @@ export default function RecurrentTreeModalContent({
   const [parentId, setParentId] = useState<string | null>(null);
   const [customerCharacterId, setCustomerCharacterId] = useState<string | null>(null);
   const [customerCharacterName, setCustomerCharacterName] = useState<string>('');
+  const [isNewCustomer, setIsNewCustomer] = useState(true);
+  const [newCustomerName, setNewCustomerName] = useState('');
   const [playerCharacterId, setPlayerCharacterId] = useState<string | null>(FOUNDER_CHARACTER_ID);
-  const [showCharacterSelector, setShowCharacterSelector] = useState(false);
   const [showScheduler, setShowScheduler] = useState(false);
   const [showValidationModal, setShowValidationModal] = useState(false);
   const [validationMessage, setValidationMessage] = useState('');
@@ -154,13 +154,6 @@ export default function RecurrentTreeModalContent({
   const initializedTaskIdRef = useRef<string | null>(null);
   const draftId = useRef(task?.id || uuid());
 
-  const getInitialStationCategory = (): string => {
-    const lastStation = getPreference('task-modal-last-station');
-    const area = getAreaForStation(lastStation);
-    return `${lastStation}:${area || 'ADMIN'}`;
-  };
-  const [stationCategory, setStationCategory] = useState<string>(getInitialStationCategory());
-
   const getLastUsedStation = useCallback((): Station => {
     const saved = getPreference('task-modal-last-station');
     return (saved as Station) || ('Strategy' as Station);
@@ -170,12 +163,6 @@ export default function RecurrentTreeModalContent({
     const saved = getPreference('task-modal-last-recurrent-type');
     return (saved as TaskType) || TaskType.RECURRENT_TEMPLATE;
   }, [getPreference]);
-
-  const computeStationCategoryValue = useCallback((stationValue: Station | null): string => {
-    if (!stationValue) return 'none:';
-    const area = getAreaForStation(stationValue);
-    return `${stationValue}:${area || 'ADMIN'}`;
-  }, []);
 
   const initializeFromTask = useCallback(
     (existingTask: Task) => {
@@ -190,7 +177,6 @@ export default function RecurrentTreeModalContent({
           ? existingTask.station
           : (((getPreference('task-modal-last-station') as Station) || 'Strategy') as Station);
       setStation(rawStation);
-      setStationCategory(computeStationCategoryValue(rawStation));
       setProgress(existingTask.progress);
       setDueDate(existingTask.dueDate ? new Date(existingTask.dueDate) : undefined);
       setLocalDoneAt(existingTask.doneAt ? new Date(existingTask.doneAt) : undefined);
@@ -234,6 +220,8 @@ export default function RecurrentTreeModalContent({
       setOutputItemStatus(existingTask.outputItemStatus || ItemStatus.FOR_SALE);
       setSelectedItemId(existingTask.outputItemId || '');
       setCustomerCharacterId(existingTask.customerCharacterId || null);
+      setIsNewCustomer(!Boolean(existingTask.customerCharacterId));
+      setNewCustomerName(existingTask.newCustomerName || '');
       setPlayerCharacterId(existingTask.playerCharacterId || FOUNDER_CHARACTER_ID);
       setRewards({
         points: {
@@ -252,7 +240,7 @@ export default function RecurrentTreeModalContent({
       );
       setParentId(existingTask.parentId || null);
     },
-    [computeStationCategoryValue, getPreference]
+    [getPreference]
   );
 
   const initializeForNewTask = useCallback(() => {
@@ -264,7 +252,6 @@ export default function RecurrentTreeModalContent({
     setType(getLastUsedType());
     const lastStation = getLastUsedStation();
     setStation(lastStation);
-    setStationCategory(computeStationCategoryValue(lastStation));
     setProgress(0);
     setDueDate(undefined);
     setLocalDoneAt(undefined);
@@ -292,6 +279,8 @@ export default function RecurrentTreeModalContent({
     setSelectedItemId('');
     setCustomerCharacterId(null);
     setCustomerCharacterName('');
+    setIsNewCustomer(true);
+    setNewCustomerName('');
     setPlayerCharacterId(FOUNDER_CHARACTER_ID);
     setRewards({ points: { xp: 0, rp: 0, fp: 0, hp: 0 } });
     setFrequencyConfig({
@@ -300,7 +289,7 @@ export default function RecurrentTreeModalContent({
       repeatMode: 'periodically',
     });
     setParentId(null);
-  }, [computeStationCategoryValue, getLastUsedStation, getLastUsedType]);
+  }, [getLastUsedStation, getLastUsedType]);
 
   useEffect(() => {
     if (!open) {
@@ -401,7 +390,8 @@ export default function RecurrentTreeModalContent({
       outputItemName: outputItemName.trim(),
       rewards,
       parentId,
-      customerCharacterId,
+      customerCharacterId: isNewCustomer ? null : customerCharacterId,
+      newCustomerName: isNewCustomer ? newCustomerName.trim() || undefined : undefined,
       playerCharacterId,
       order: determineOrder(),
       isCollected,
@@ -529,17 +519,6 @@ export default function RecurrentTreeModalContent({
     setShowPlayerCharacterSelector(false);
   };
 
-  const handleCustomerCharacterSelect = (characterId: string | null) => {
-    setCustomerCharacterId(characterId);
-    if (characterId) {
-      const character = allCharacters.find((c) => c.id === characterId);
-      setCustomerCharacterName(character?.name || '');
-    } else {
-      setCustomerCharacterName('');
-    }
-    setShowCharacterSelector(false);
-  };
-
   const handleNotPaidChange = (newValue: boolean) => {
     setIsNotPaid(newValue);
   };
@@ -556,6 +535,12 @@ export default function RecurrentTreeModalContent({
   };
 
   const handleOutputItemTypeSubTypeChange = (value: string) => {
+    if (value === 'none:') {
+      setOutputItemTypeSubType('none:');
+      setOutputItemType('');
+      setOutputItemSubType('');
+      return;
+    }
     setOutputItemTypeSubType(value);
     const newItemType = getItemTypeFromCombined(value) as ItemType;
     const newSubType = getSubTypeFromCombined(value) as SubItemType;
@@ -566,13 +551,7 @@ export default function RecurrentTreeModalContent({
     }
   };
 
-  const handleRewardChange = (type: 'xp' | 'rp' | 'fp' | 'hp', value: string) => {
-    const numValue = parseFloat(value) || 0;
-    setRewards((prev) => ({
-      ...prev,
-      points: { ...prev.points, [type]: numValue },
-    }));
-  };
+  const getCharacterOptions = () => createCharacterOptions(allCharacters);
 
   const handleTypeChange = (newType: string) => {
     const casted = newType as TaskType;
@@ -582,7 +561,6 @@ export default function RecurrentTreeModalContent({
   };
 
   const handleStationCategoryChange = (value: string) => {
-    setStationCategory(value);
     const newStation = getStationFromCombined(value) as Station;
     setStation(newStation);
     setPreference('task-modal-last-station', newStation);
@@ -704,7 +682,7 @@ export default function RecurrentTreeModalContent({
               <div className="space-y-2">
                 <Label className="text-xs">Station</Label>
                 <SearchableSelect
-                  value={stationCategory}
+                  value={getStationSelectValue(station)}
                   onValueChange={handleStationCategoryChange}
                   options={createStationCategoryOptions()}
                   autoGroupByCategory={true}
@@ -782,7 +760,7 @@ export default function RecurrentTreeModalContent({
                     value={cost}
                     onChange={(val) => setCost(val)}
                     min={0}
-                    step={0.01}
+                    step={PRICE_STEP}
                     className="h-8 text-sm"
                   />
                 </div>
@@ -819,50 +797,48 @@ export default function RecurrentTreeModalContent({
                   variant="outline"
                   size="sm"
                   onClick={() => handleNotPaidChange(!isNotPaid)}
-                  className={`h-8 text-xs ${isNotPaid ? 'bg-destructive/10' : ''}`}
+                  className={`h-8 text-xs ${isNotPaid ? 'border-orange-500 text-orange-600 hover:bg-orange-50' : ''}`}
                 >
-                  <Checkbox
-                    checked={isNotPaid}
-                    onCheckedChange={(c) => setIsNotPaid(!!c)}
-                    className="mr-2"
-                  />
-                  Not Paid
+                  {isNotPaid ? '⚠ Not Paid' : '✓ Paid'}
                 </Button>
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
                   onClick={() => handleNotChargedChange(!isNotCharged)}
-                  className={`h-8 text-xs ${isNotCharged ? 'bg-destructive/10' : ''}`}
+                  className={`h-8 text-xs ${isNotCharged ? 'border-orange-500 text-orange-600 hover:bg-orange-50' : ''}`}
                 >
-                  <Checkbox
-                    checked={isNotCharged}
-                    onCheckedChange={(c) => setIsNotCharged(!!c)}
-                    className="mr-2"
-                  />
-                  Not Charged
+                  {isNotCharged ? '⚠ Not Charged' : '✓ Charged'}
                 </Button>
               </div>
 
               <div className="space-y-2">
                 <Label className="text-xs">Point Rewards</Label>
                 <div className="grid grid-cols-4 gap-2">
-                  {getPointsMetadata().map((pointType) => (
-                    <div key={pointType.key}>
-                      <Label htmlFor={`recurrent-reward-${pointType.key.toLowerCase()}`} className="text-xs">
-                        {pointType.label}
-                      </Label>
-                      <NumericInput
-                        id={`recurrent-reward-${pointType.key.toLowerCase()}`}
-                        value={rewards.points[pointType.key.toLowerCase() as keyof typeof rewards.points]}
-                        onChange={(val) =>
-                          handleRewardChange(pointType.key.toLowerCase() as 'xp' | 'rp' | 'fp' | 'hp', val.toString())
-                        }
-                        min={0}
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                  ))}
+                  {getPointsMetadata().map((pointType) => {
+                    const k = pointType.key.toLowerCase() as 'xp' | 'rp' | 'fp' | 'hp';
+                    return (
+                      <div key={pointType.key}>
+                        <Label htmlFor={`recurrent-reward-${k}`} className="text-xs">
+                          {pointType.label}
+                        </Label>
+                        <NumericInput
+                          id={`recurrent-reward-${k}`}
+                          value={rewards.points[k]}
+                          onChange={(value) =>
+                            setRewards({
+                              ...rewards,
+                              points: { ...rewards.points, [k]: value },
+                            })
+                          }
+                          allowDecimals={false}
+                          min={0}
+                          step={1}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -870,54 +846,85 @@ export default function RecurrentTreeModalContent({
             <div className="space-y-3">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <Label className="text-xs">Customer</Label>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-6 text-xs"
-                      onClick={() => setShowCharacterSelector(true)}
-                    >
-                      {customerCharacterId ? 'Change' : 'Select'}
-                    </Button>
+                    <Label htmlFor="recurrent-customer-character" className="text-xs">Customer</Label>
+                    {!task?.sourceSaleId && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setIsNewCustomer(!isNewCustomer)}
+                        className="h-6 text-xs px-2"
+                      >
+                        {isNewCustomer ? 'Existing' : 'New'}
+                      </Button>
+                    )}
                   </div>
-                  <div className="text-xs text-muted-foreground">
-                    {customerCharacterName || 'No customer selected'}
-                  </div>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div>
+                          {task?.sourceSaleId ? (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="w-full h-8 text-xs justify-start"
+                              disabled
+                            >
+                              <User className="h-3 w-3 mr-2" />
+                              {customerCharacterId ? customerCharacterName : 'Customer from Sale'}
+                            </Button>
+                          ) : isNewCustomer ? (
+                            <Input
+                              id="recurrent-customer-character"
+                              value={newCustomerName}
+                              onChange={(e) => setNewCustomerName(e.target.value)}
+                              placeholder="New customer name"
+                              className="h-8 text-sm"
+                            />
+                          ) : (
+                            <SearchableSelect
+                              value={customerCharacterId || ''}
+                              onValueChange={(value) => setCustomerCharacterId(value || null)}
+                              options={getCharacterOptions()}
+                              placeholder="Select customer"
+                              autoGroupByCategory={true}
+                              className="h-8 text-sm"
+                              instanceId="recurrent-task-customer"
+                            />
+                          )}
+                        </div>
+                      </TooltipTrigger>
+                      {task?.sourceSaleId && (
+                        <TooltipContent>
+                          <p>Customer is managed by the source Sale - cannot edit here</p>
+                        </TooltipContent>
+                      )}
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
 
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-xs">Creates Item?</Label>
-                    <Checkbox
-                      checked={!!outputItemType}
-                      onCheckedChange={(checked) => {
-                        if (!checked) {
-                          setOutputItemType('');
-                          setOutputItemSubType('');
-                          setOutputItemTypeSubType('none:');
-                        }
-                      }}
-                    />
-                  </div>
+                  <Label htmlFor="recurrent-output-item-type-subtype" className="text-xs">Item Type & SubType</Label>
+                  <SearchableSelect
+                    value={outputItemTypeSubType}
+                    onValueChange={handleOutputItemTypeSubTypeChange}
+                    placeholder="No Item Output"
+                    options={[
+                      { value: 'none:', label: 'No Item Output', category: 'None' },
+                      ...createItemTypeSubTypeOptions(),
+                    ]}
+                    className="h-8 text-sm"
+                    autoGroupByCategory={true}
+                    getCategoryForValue={(value) => {
+                      if (value === 'none:') return 'None';
+                      return getItemTypeFromCombined(value);
+                    }}
+                    instanceId="recurrent-task-output-item-type"
+                  />
                 </div>
 
                 {!!outputItemType && (
                   <>
-                    <div className="space-y-2">
-                      <Label htmlFor="recurrent-output-item-type" className="text-xs">Item Type</Label>
-                      <SearchableSelect
-                        value={outputItemTypeSubType}
-                        onValueChange={handleOutputItemTypeSubTypeChange}
-                        placeholder="Select item type"
-                        options={createItemTypeSubTypeOptions()}
-                        autoGroupByCategory={true}
-                        getCategoryForValue={(value) => {
-                          if (value === 'none:') return 'None';
-                          return getItemTypeFromCombined(value);
-                        }}
-                      />
-                    </div>
-
                     <div className="grid grid-cols-4 gap-2">
                       <div className="space-y-2">
                         <Label htmlFor="recurrent-output-quantity" className="text-xs">Quantity</Label>
@@ -936,7 +943,7 @@ export default function RecurrentTreeModalContent({
                           value={outputUnitCost}
                           onChange={(val) => setOutputUnitCost(val)}
                           min={0}
-                          step={0.01}
+                          step={PRICE_STEP}
                           className="h-8 text-sm"
                         />
                       </div>
@@ -947,7 +954,7 @@ export default function RecurrentTreeModalContent({
                           value={outputItemPrice}
                           onChange={(val) => setOutputItemPrice(val)}
                           min={0}
-                          step={0.01}
+                          step={PRICE_STEP}
                           className="h-8 text-sm"
                         />
                       </div>
@@ -1207,13 +1214,6 @@ export default function RecurrentTreeModalContent({
           isReversal={cascadeData.isReversal}
         />
       )}
-
-      <CharacterSelectorSubmodal
-        open={showCharacterSelector}
-        onOpenChange={setShowCharacterSelector}
-        onSelect={handleCustomerCharacterSelect}
-        currentOwnerId={customerCharacterId}
-      />
 
       <PlayerCharacterSelectorModal
         open={showPlayerCharacterSelector}
