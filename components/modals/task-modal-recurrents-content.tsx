@@ -47,7 +47,7 @@ import ConfirmationModal from './submodals/confirmation-submodal';
 import CascadeStatusConfirmationModal from './submodals/cascade-status-confirmation-submodal';
 import CharacterSelectorSubmodal from './submodals/character-selector-submodal';
 import PlayerCharacterSelectorModal from './submodals/player-character-selector-submodal';
-import { TaskModalHeader, TaskModalFooter, type TaskModalContentKind } from './task-modal';
+import { TaskModalFooter } from './task-modal';
 import { ClientAPI } from '@/lib/client-api';
 import { dispatchEntityUpdated, entityTypeToKind } from '@/lib/ui/ui-events';
 
@@ -62,8 +62,6 @@ interface RecurrentTreeModalContentProps {
   onSave: (task: Task) => Promise<void>;
   onOpenChange: (open: boolean) => void;
   onDeleteComplete?: () => void;
-  modalTitle: string;
-  contentKind: TaskModalContentKind;
   isLoading?: boolean;
 }
 
@@ -79,8 +77,6 @@ export default function RecurrentTreeModalContent({
   onSave,
   onOpenChange,
   onDeleteComplete,
-  modalTitle,
-  contentKind,
   isLoading = false,
 }: RecurrentTreeModalContentProps) {
   void _allItems;
@@ -138,7 +134,6 @@ export default function RecurrentTreeModalContent({
   const [showDatesModal, setShowDatesModal] = useState(false);
   const [showRelationshipsModal, setShowRelationshipsModal] = useState(false);
   const [showPlayerCharacterSelector, setShowPlayerCharacterSelector] = useState(false);
-  const [emissaryColumnExpanded, setEmissaryColumnExpanded] = useState(false);
   const [showArchiveCollectionModal, setShowArchiveCollectionModal] = useState(false);
   const [pendingStatusChange, setPendingStatusChange] = useState<{
     status: TaskStatus;
@@ -176,12 +171,6 @@ export default function RecurrentTreeModalContent({
     return (saved as TaskType) || TaskType.RECURRENT_TEMPLATE;
   }, [getPreference]);
 
-  const toggleEmissaryColumn = () => {
-    const newValue = !emissaryColumnExpanded;
-    setEmissaryColumnExpanded(newValue);
-    setPreference('task-modal-emissary-expanded', String(newValue));
-  };
-
   const computeStationCategoryValue = useCallback((stationValue: Station | null): string => {
     if (!stationValue) return 'none:';
     const area = getAreaForStation(stationValue);
@@ -196,8 +185,12 @@ export default function RecurrentTreeModalContent({
       setStatus(existingTask.status);
       setPriority(existingTask.priority);
       setType(existingTask.type);
-      setStation(existingTask.station);
-      setStationCategory(computeStationCategoryValue(existingTask.station));
+      const rawStation =
+        existingTask.station != null && String(existingTask.station).trim() !== ''
+          ? existingTask.station
+          : (((getPreference('task-modal-last-station') as Station) || 'Strategy') as Station);
+      setStation(rawStation);
+      setStationCategory(computeStationCategoryValue(rawStation));
       setProgress(existingTask.progress);
       setDueDate(existingTask.dueDate ? new Date(existingTask.dueDate) : undefined);
       setLocalDoneAt(existingTask.doneAt ? new Date(existingTask.doneAt) : undefined);
@@ -259,7 +252,7 @@ export default function RecurrentTreeModalContent({
       );
       setParentId(existingTask.parentId || null);
     },
-    [computeStationCategoryValue]
+    [computeStationCategoryValue, getPreference]
   );
 
   const initializeForNewTask = useCallback(() => {
@@ -315,8 +308,10 @@ export default function RecurrentTreeModalContent({
       initializedTaskIdRef.current = null;
       return;
     }
-    const currentTaskId = task?.id || null;
-    const alreadyInitialized = hasInitializedRef.current && initializedTaskIdRef.current === currentTaskId;
+    const hydrateKey = task?.id
+      ? `${task.id}\u0001${String((task as Task).station ?? '')}\u0001${(task as Task).updatedAt instanceof Date ? (task as Task).updatedAt!.toISOString() : String((task as Task).updatedAt ?? '')}`
+      : 'new';
+    const alreadyInitialized = hasInitializedRef.current && initializedTaskIdRef.current === hydrateKey;
     if (alreadyInitialized) return;
     if (task?.id) {
       initializeFromTask(task);
@@ -324,14 +319,8 @@ export default function RecurrentTreeModalContent({
       initializeForNewTask();
     }
     hasInitializedRef.current = true;
-    initializedTaskIdRef.current = currentTaskId;
+    initializedTaskIdRef.current = hydrateKey;
   }, [open, task, initializeForNewTask, initializeFromTask]);
-
-  useEffect(() => {
-    const savedEmissary = getPreference('task-modal-emissary-expanded');
-    if (savedEmissary === 'true') setEmissaryColumnExpanded(true);
-    else if (savedEmissary === 'false') setEmissaryColumnExpanded(false);
-  }, [open, getPreference]);
 
   useEffect(() => {
     if (customerCharacterId) {
@@ -605,11 +594,9 @@ export default function RecurrentTreeModalContent({
 
   return (
     <>
-      <TaskModalHeader title={modalTitle} contentKind={contentKind} />
-
       <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
         <div className="flex gap-4">
-          <div className={`flex-1 grid gap-4 ${emissaryColumnExpanded ? 'grid-cols-4' : 'grid-cols-3'}`}>
+          <div className="flex-1 grid grid-cols-4 gap-4">
             {/* Column 1: basics + schedule (legacy task-modal col1) */}
             <div className="space-y-3">
               <div className="space-y-2">
@@ -880,8 +867,7 @@ export default function RecurrentTreeModalContent({
               </div>
             </div>
 
-            {emissaryColumnExpanded && (
-              <div className="space-y-3">
+            <div className="space-y-3">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <Label className="text-xs">Customer</Label>
@@ -896,23 +882,6 @@ export default function RecurrentTreeModalContent({
                   </div>
                   <div className="text-xs text-muted-foreground">
                     {customerCharacterName || 'No customer selected'}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-xs">Player Character</Label>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-6 text-xs"
-                      onClick={() => setShowPlayerCharacterSelector(true)}
-                    >
-                      Change
-                    </Button>
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {allCharacters.find((c) => c.id === playerCharacterId)?.name || 'No player character'}
                   </div>
                 </div>
 
@@ -1035,8 +1004,7 @@ export default function RecurrentTreeModalContent({
                     </div>
                   </>
                 )}
-              </div>
-            )}
+            </div>
           </div>
         </div>
       </div>
@@ -1083,14 +1051,6 @@ export default function RecurrentTreeModalContent({
           >
             <User className="w-3 h-3 mr-1" />
             Player
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={toggleEmissaryColumn}
-            className={`h-8 text-xs ${emissaryColumnExpanded ? 'bg-transparent text-white' : 'bg-muted text-muted-foreground'}`}
-          >
-            Emissaries
           </Button>
         </div>
         <div className="flex flex-wrap items-center gap-4">
@@ -1164,7 +1124,7 @@ export default function RecurrentTreeModalContent({
               Cancel
             </Button>
             <Button type="button" onClick={handleSave} className="h-8 text-xs" disabled={!name.trim() || isSaving}>
-              {isSaving ? 'Saving...' : task ? 'Update' : 'Create'} Task
+              {isSaving ? 'Saving...' : 'Save'}
             </Button>
           </div>
         </div>

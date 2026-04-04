@@ -34,7 +34,7 @@ import ArchiveCollectionConfirmationModal from './submodals/archive-collection-c
 import ConfirmationModal from './submodals/confirmation-submodal';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
 import { format } from 'date-fns';
-import { TaskModalHeader, TaskModalFooter, type TaskModalContentKind } from './task-modal';
+import { TaskModalFooter } from './task-modal';
 import { dispatchEntityUpdated, entityTypeToKind } from '@/lib/ui/ui-events';
 
 interface MissionTreeModalContentProps {
@@ -48,8 +48,6 @@ interface MissionTreeModalContentProps {
   onSave: (task: Task) => Promise<void>;
   onOpenChange: (open: boolean) => void;
   onDeleteComplete?: () => void;
-  modalTitle: string;
-  contentKind: TaskModalContentKind;
   isLoading?: boolean;
 }
 
@@ -80,8 +78,6 @@ export default function MissionTreeModalContent({
   onSave,
   onOpenChange,
   onDeleteComplete,
-  modalTitle,
-  contentKind,
   isLoading = false,
 }: MissionTreeModalContentProps) {
   const { getPreference, setPreference } = useUserPreferences();
@@ -108,9 +104,6 @@ export default function MissionTreeModalContent({
   const [isNotPaid, setIsNotPaid] = useState(false);
   const [isNotCharged, setIsNotCharged] = useState(false);
   const [isCollected, setIsCollected] = useState(false);
-
-  // Collapsible Emissary Column state - persisted in preferences
-  const [emissaryColumnExpanded, setEmissaryColumnExpanded] = useState(false);
 
   // Emissary fields
   const [formData, setFormData] = useState({
@@ -168,12 +161,6 @@ export default function MissionTreeModalContent({
   };
   const [stationCategory, setStationCategory] = useState<string>(getInitialStationCategory());
 
-  const toggleEmissaryColumn = () => {
-    const newValue = !emissaryColumnExpanded;
-    setEmissaryColumnExpanded(newValue);
-    setPreference('task-modal-emissary-expanded', String(newValue));
-  };
-
   const getLastUsedStation = useCallback((): Station => {
     const saved = getPreference('task-modal-last-station');
     return (saved as Station) || ('Strategy' as Station);
@@ -198,8 +185,12 @@ export default function MissionTreeModalContent({
       setStatus(existingTask.status);
       setPriority(existingTask.priority);
       setType(existingTask.type);
-      setStation(existingTask.station);
-      setStationCategory(computeStationCategoryValue(existingTask.station));
+      const rawStation =
+        existingTask.station != null && String(existingTask.station).trim() !== ''
+          ? existingTask.station
+          : (((getPreference('task-modal-last-station') as Station) || 'Strategy') as Station);
+      setStation(rawStation);
+      setStationCategory(computeStationCategoryValue(rawStation));
       setProgress(existingTask.progress);
       setDueDate(existingTask.dueDate ? new Date(existingTask.dueDate) : undefined);
       setLocalDoneAt(existingTask.doneAt ? new Date(existingTask.doneAt) : undefined);
@@ -269,7 +260,7 @@ export default function MissionTreeModalContent({
       });
       setParentId(existingTask.parentId || null);
     },
-    [computeStationCategoryValue]
+    [computeStationCategoryValue, getPreference]
   );
 
   const initializeForNewTask = useCallback(() => {
@@ -326,8 +317,10 @@ export default function MissionTreeModalContent({
       initializedTaskIdRef.current = null;
       return;
     }
-    const currentTaskId = task?.id || null;
-    const alreadyInitialized = hasInitializedRef.current && initializedTaskIdRef.current === currentTaskId;
+    const hydrateKey = task?.id
+      ? `${task.id}\u0001${String((task as Task).station ?? '')}\u0001${(task as Task).updatedAt instanceof Date ? (task as Task).updatedAt!.toISOString() : String((task as Task).updatedAt ?? '')}`
+      : 'new';
+    const alreadyInitialized = hasInitializedRef.current && initializedTaskIdRef.current === hydrateKey;
     if (alreadyInitialized) return;
     if (task?.id) {
       initializeFromTask(task);
@@ -335,14 +328,8 @@ export default function MissionTreeModalContent({
       initializeForNewTask();
     }
     hasInitializedRef.current = true;
-    initializedTaskIdRef.current = currentTaskId;
+    initializedTaskIdRef.current = hydrateKey;
   }, [open, task, initializeForNewTask, initializeFromTask]);
-
-  useEffect(() => {
-    const savedEmissary = getPreference('task-modal-emissary-expanded');
-    if (savedEmissary === 'true') setEmissaryColumnExpanded(true);
-    else if (savedEmissary === 'false') setEmissaryColumnExpanded(false);
-  }, [open, getPreference]);
 
   useEffect(() => {
     if (customerCharacterId) {
@@ -574,12 +561,10 @@ export default function MissionTreeModalContent({
   // Render the form
   return (
     <>
-      <TaskModalHeader title={modalTitle} contentKind={contentKind} />
-
       <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
         <div className="flex gap-4">
           {/* Main columns container */}
-          <div className={`flex-1 grid gap-4 ${emissaryColumnExpanded ? 'grid-cols-4' : 'grid-cols-3'}`}>
+          <div className="flex-1 grid grid-cols-3 gap-4">
 
             {/* Column 1: NATIVE (Basic Info) */}
             <div className="space-y-3">
@@ -845,24 +830,6 @@ export default function MissionTreeModalContent({
                 </div>
               </div>
 
-              {/* Player Character */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="player-character" className="text-xs">Player Character</Label>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-6 text-xs"
-                    onClick={() => setShowPlayerCharacterSelector(true)}
-                  >
-                    Change
-                  </Button>
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  {allCharacters.find(c => c.id === playerCharacterId)?.name || 'No player character'}
-                </div>
-              </div>
-
               {/* Item Creation Toggle */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -997,15 +964,6 @@ export default function MissionTreeModalContent({
                 </>
               )}
             </div>
-
-            {/* Column 4: Expanded Emissary Content */}
-            {emissaryColumnExpanded && (
-              <div className="space-y-3">
-                <div className="text-xs text-muted-foreground">
-                  Additional emissary fields placeholder
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>
@@ -1052,14 +1010,6 @@ export default function MissionTreeModalContent({
           >
             <User className="w-3 h-3 mr-1" />
             Player
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={toggleEmissaryColumn}
-            className={`h-8 text-xs ${emissaryColumnExpanded ? 'bg-transparent text-white' : 'bg-muted text-muted-foreground'}`}
-          >
-            Emissaries
           </Button>
         </div>
         <div className="flex flex-wrap items-center gap-4">
@@ -1133,7 +1083,7 @@ export default function MissionTreeModalContent({
               Cancel
             </Button>
             <Button type="button" onClick={handleSave} className="h-8 text-xs" disabled={!name.trim() || isSaving}>
-              {isSaving ? 'Saving...' : task ? 'Update' : 'Create'} Task
+              {isSaving ? 'Saving...' : 'Save'}
             </Button>
           </div>
         </div>

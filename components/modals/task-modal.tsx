@@ -6,6 +6,7 @@
 import React, { useEffect, useState, type ComponentPropsWithoutRef } from 'react';
 import dynamic from 'next/dynamic';
 import { Dialog, DialogContent, DialogClose, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { X } from 'lucide-react';
 import { Task, Item, Site } from '@/types/entities';
@@ -14,25 +15,55 @@ import { ClientAPI } from '@/lib/client-api';
 
 export type TaskModalContentKind = 'Mission' | 'Recurrent' | 'Automation';
 
+const WORKFLOW_KINDS: TaskModalContentKind[] = ['Mission', 'Recurrent', 'Automation'];
+
+/** Sales-modal-style workflow strip (Mission | Recurrent | Automation) + close. */
 export function TaskModalHeader({
   title,
-  contentKind,
+  selectedKind,
+  kindLocked,
+  onSelectKind,
 }: {
   title: string;
-  contentKind: TaskModalContentKind;
+  selectedKind: TaskModalContentKind;
+  /** Existing task: show selection only (no switching workflow here). */
+  kindLocked: boolean;
+  onSelectKind?: (kind: TaskModalContentKind) => void;
 }) {
   return (
     <DialogHeader className="shrink-0 space-y-0 border-b px-6 py-4 text-left">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-        <DialogTitle className="m-0 shrink-0 text-xl font-semibold tracking-tight">{title}</DialogTitle>
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-          <span>
-            Content: <span className="font-medium text-foreground">{contentKind}</span>
-          </span>
-        </div>
-        <div className="ml-auto flex shrink-0 items-center">
+        <DialogTitle className="m-0 min-w-0 shrink text-xl font-semibold tracking-tight">{title}</DialogTitle>
+        <div className="ml-auto flex flex-wrap items-center justify-end gap-1.5">
+          {WORKFLOW_KINDS.map((kind) => {
+            const isSelected = kind === selectedKind;
+            const disabled = kindLocked && !isSelected;
+            return (
+              <Button
+                key={kind}
+                type="button"
+                variant={isSelected ? 'default' : 'outline'}
+                size="sm"
+                disabled={disabled}
+                title={
+                  kindLocked
+                    ? isSelected
+                      ? 'Workflow for this task'
+                      : 'Cannot switch workflow for an existing task'
+                    : `Create as ${kind}`
+                }
+                className={cn('h-8 px-2 text-xs', disabled && 'cursor-not-allowed opacity-50')}
+                onClick={() => {
+                  if (kindLocked) return;
+                  onSelectKind?.(kind);
+                }}
+              >
+                {kind}
+              </Button>
+            );
+          })}
           <DialogClose
-            className="inline-flex h-8 w-8 items-center justify-center rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
             type="button"
           >
             <X className="h-4 w-4" />
@@ -97,6 +128,12 @@ export default function TaskModal({
   const [allSites, setAllSites] = useState<Site[]>([]);
   const [allCharacters, setAllCharacters] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  /** New-task only: override Mission | Recurrent | Automation (null = use isRecurrentModal default). */
+  const [createKindChoice, setCreateKindChoice] = useState<TaskModalContentKind | null>(null);
+
+  useEffect(() => {
+    if (!open) setCreateKindChoice(null);
+  }, [open]);
 
   useEffect(() => {
     if (open) {
@@ -132,12 +169,27 @@ export default function TaskModal({
     onComplete?.();
   };
 
-  const showAutomation = Boolean(task?.type === TaskType.AUTOMATION);
-  const showRecurrent = showAutomation ? false : task ? isRecurrentTaskType(task.type) : Boolean(isRecurrentModal);
+  const contentKind: TaskModalContentKind = (() => {
+    if (task) {
+      if (task.type === TaskType.AUTOMATION) return 'Automation';
+      if (isRecurrentTaskType(task.type)) return 'Recurrent';
+      return 'Mission';
+    }
+    if (createKindChoice === 'Automation') return 'Automation';
+    if (createKindChoice === 'Recurrent' || (createKindChoice === null && isRecurrentModal)) return 'Recurrent';
+    return 'Mission';
+  })();
 
-  const contentKind: TaskModalContentKind = showAutomation ? 'Automation' : showRecurrent ? 'Recurrent' : 'Mission';
+  const showAutomation = contentKind === 'Automation';
+  const showRecurrent = contentKind === 'Recurrent';
 
-  const modalTitle = task ? 'Edit Task' : showRecurrent ? 'Create New Recurrent Task' : 'Create New Task';
+  const modalTitle = task
+    ? 'Edit Task'
+    : showAutomation
+      ? 'New automation task'
+      : showRecurrent
+        ? 'Create New Recurrent Task'
+        : 'Create New Task';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -146,8 +198,14 @@ export default function TaskModal({
         hideClose
         className="flex h-[90vh] w-full max-w-7xl flex-col gap-0 overflow-hidden p-0"
       >
+        <TaskModalHeader
+          title={modalTitle}
+          selectedKind={contentKind}
+          kindLocked={!!task}
+          onSelectKind={task ? undefined : setCreateKindChoice}
+        />
         {showAutomation ? (
-          <AutomationTaskModalContent onOpenChange={onOpenChange} modalTitle={modalTitle} />
+          <AutomationTaskModalContent onOpenChange={onOpenChange} />
         ) : showRecurrent ? (
           <RecurrentTreeModalContent
             task={task}
@@ -160,8 +218,6 @@ export default function TaskModal({
             onSave={handleSave}
             onOpenChange={onOpenChange}
             onDeleteComplete={handleDeleteComplete}
-            modalTitle={modalTitle}
-            contentKind={contentKind}
             isLoading={isLoading}
           />
         ) : (
@@ -176,8 +232,6 @@ export default function TaskModal({
             onSave={handleSave}
             onOpenChange={onOpenChange}
             onDeleteComplete={handleDeleteComplete}
-            modalTitle={modalTitle}
-            contentKind={contentKind}
             isLoading={isLoading}
           />
         )}

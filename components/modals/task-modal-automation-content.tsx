@@ -1,22 +1,17 @@
-// Automation tasks — Content placeholder (Header/Footer shared with Mission/Recurrent)
+// Automation tasks — Content placeholder (header rendered by task-modal.tsx)
 
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { TaskModalHeader, TaskModalFooter } from './task-modal';
+import { TaskModalFooter } from './task-modal';
 
 interface AutomationTaskModalContentProps {
   onOpenChange: (open: boolean) => void;
-  modalTitle: string;
 }
 
-export default function AutomationTaskModalContent({
-  onOpenChange,
-  modalTitle,
-}: AutomationTaskModalContentProps) {
+export default function AutomationTaskModalContent({ onOpenChange }: AutomationTaskModalContentProps) {
   return (
     <>
-      <TaskModalHeader title={modalTitle} contentKind="Automation" />
       <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8 text-sm text-muted-foreground">
         Automation task editing is not available yet. Full workflows and fields will be added here; for now you can
         review tasks from the Automation tree.
