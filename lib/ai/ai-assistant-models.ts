@@ -8,6 +8,7 @@
  */
 
 export const AI_ASSISTANT_MODEL_CATEGORY_ORDER = [
+  'OpenRouter',
   'Gemini',
   'Groq Reasoners',
   'Groq Specialists',
@@ -16,6 +17,11 @@ export const AI_ASSISTANT_MODEL_CATEGORY_ORDER = [
 ] as const;
 
 export const AI_ASSISTANT_MODELS = [
+  { id: 'qwen/qwen3.6-plus:free', displayName: 'Qwen 3.6 Plus (Free)', category: 'OpenRouter' },
+  { id: 'nvidia/nemotron-3-super-120b-a12b:free', displayName: 'NVIDIA Nemotron 120B (Free)', category: 'OpenRouter' },
+  { id: 'cognitivecomputations/dolphin-mistral-24b-venice-edition:free', displayName: 'Dolphin Mistral 24B (Free)', category: 'OpenRouter' },
+  { id: 'minimax/minimax-m2.5:free', displayName: 'MiniMax M2.5 (Free)', category: 'OpenRouter' },
+  { id: 'stepfun/step-3.5-flash:free', displayName: 'Step 3.5 Flash (Free)', category: 'OpenRouter' },
   { id: 'gemini-2.0-flash', displayName: 'Gemini 2.0 Flash', category: 'Gemini' },
   { id: 'gemini-2.5-flash', displayName: 'Gemini 2.5 Flash', category: 'Gemini' },
   { id: 'gemini-2.5-pro', displayName: 'Gemini 2.5 Pro', category: 'Gemini' },
@@ -35,7 +41,7 @@ export type AiAssistantModelId = (typeof AI_ASSISTANT_MODELS)[number]['id'];
 const ID_SET = new Set<string>(AI_ASSISTANT_MODELS.map((m) => m.id));
 
 /** Default when the client omits `model` or sends an empty string. */
-export const DEFAULT_AI_ASSISTANT_MODEL: AiAssistantModelId = 'openai/gpt-oss-120b';
+export const DEFAULT_AI_ASSISTANT_MODEL: AiAssistantModelId = 'qwen/qwen3.6-plus:free';
 
 export function isAiAssistantModelId(value: string): value is AiAssistantModelId {
   return ID_SET.has(value);

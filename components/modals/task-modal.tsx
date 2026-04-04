@@ -94,6 +94,14 @@ const MissionTreeModalContent = dynamic(() => import('./task-modal-missions-cont
 const RecurrentTreeModalContent = dynamic(() => import('./task-modal-recurrents-content'), { ssr: false });
 const AutomationTaskModalContent = dynamic(() => import('./task-modal-automation-content'), { ssr: false });
 
+/** Skip individual ClientAPI fetches when the parent already loaded the same datasets (e.g. full `allTasks` must match `getAllTasks()` scope for parent pickers). */
+export type TaskModalPrefetchedData = Partial<{
+  allTasks: Task[];
+  items: Item[];
+  sites: Site[];
+  characters: any[];
+}>;
+
 interface TaskModalProps {
   task?: Task | null;
   open: boolean;
@@ -102,6 +110,7 @@ interface TaskModalProps {
   onComplete?: () => void;
   allTasksForOrder?: Task[];
   isRecurrentModal?: boolean;
+  prefetchedData?: TaskModalPrefetchedData;
 }
 
 const RECURRENT_TYPES: TaskType[] = [
@@ -122,6 +131,7 @@ export default function TaskModal({
   onComplete,
   allTasksForOrder,
   isRecurrentModal = false,
+  prefetchedData,
 }: TaskModalProps) {
   const [allTasks, setAllTasks] = useState<Task[]>([]);
   const [allItems, setAllItems] = useState<Item[]>([]);
@@ -142,16 +152,17 @@ export default function TaskModal({
   }, [open]);
 
   /**
-   * One batch per modal open (4 HTTP routes). Server-side task load is index + mget, not per-row commands.
+   * One batch per modal open unless `prefetchedData` supplies lists (fewer HTTP routes).
    */
   const loadData = async () => {
     setIsLoading(true);
+    const p = prefetchedData;
     try {
       const [tasks, items, sites, characters] = await Promise.all([
-        ClientAPI.getAllTasks(),
-        ClientAPI.getItems(),
-        ClientAPI.getSites(),
-        ClientAPI.getCharacters(),
+        p?.allTasks !== undefined ? Promise.resolve(p.allTasks) : ClientAPI.getAllTasks(),
+        p?.items !== undefined ? Promise.resolve(p.items) : ClientAPI.getItems(),
+        p?.sites !== undefined ? Promise.resolve(p.sites) : ClientAPI.getSites(),
+        p?.characters !== undefined ? Promise.resolve(p.characters) : ClientAPI.getCharacters(),
       ]);
       setAllTasks(tasks);
       setAllItems(items);

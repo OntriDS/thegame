@@ -181,32 +181,17 @@ export default function ControlRoom() {
     }
   }, [getPreference]);
 
-  // Function to load all tasks for calendar view (unfiltered)
-  const loadAllTasks = useCallback(async (): Promise<Task[]> => {
-    try {
-      const tasks = reviveDates<Task[]>(await ClientAPI.getTasks());
-      return tasks;
-    } catch (error) {
-      console.error('Failed to load all tasks:', error);
-      return [];
-    }
-  }, []);
-
-  // Load all tasks for calendar view
-  useEffect(() => {
-    loadAllTasks().then(setAllTasks);
-  }, [loadAllTasks, refreshKey]);
-
   useEffect(() => {
     if (activeSubTab === 'automation-tree') {
       setTypeFilter('all');
     }
   }, [activeSubTab]);
 
-  // Data loading
+  /** Single GET /api/tasks per run: updates `allTasks` (calendar, weekly, gantt) and filtered `tree`. */
   const loadTasks = useCallback(async (): Promise<TreeNode[]> => {
     try {
       let tasks = reviveDates<Task[]>(await ClientAPI.getTasks());
+      setAllTasks(tasks);
 
       // Apply tab-based filtering
       if (activeSubTab === 'gantt-chart') {
@@ -278,8 +263,8 @@ export default function ControlRoom() {
   }, [stationFilters, typeFilter, activeSubTab]);
 
   useEffect(() => {
-    loadTasks();
-  }, [loadTasks]);
+    void loadTasks();
+  }, [loadTasks, refreshKey]);
 
   // Helper function to check if a task type can be parent of another (Mission tree)
   const canBeParentMission = (parentType: TaskType, childType: TaskType): boolean => {
@@ -582,31 +567,18 @@ export default function ControlRoom() {
     setActiveSubTab(allowedTabs.includes(savedSubTab as ControlRoomTab) ? savedSubTab as ControlRoomTab : 'mission-tree');
   }, [getPreference]);
 
-  // Update selectedNode when selection or global task refresh changes (deps avoid infinite loops with setSelectedNode)
+  // After a single shared fetch updates `allTasks`, refresh selected row without a second GET
   const selectedTaskId = selectedNode?.task.id;
   useEffect(() => {
-    if (!selectedTaskId) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const tasks = reviveDates<Task[]>(await ClientAPI.getTasks());
-        const updatedTask = tasks.find(t => t.id === selectedTaskId);
-        if (!updatedTask) return;
-
-        // Only update when task actually changed (compare updatedAt timestamp or shallow props)
-        const prevUpdatedAt = selectedNodeRef.current?.task.updatedAt?.toString();
-        const nextUpdatedAt = updatedTask.updatedAt?.toString();
-        const hasMeaningfulChange = prevUpdatedAt !== nextUpdatedAt;
-
-        if (hasMeaningfulChange && !cancelled && selectedNodeRef.current) {
-          setSelectedNode({ ...selectedNodeRef.current, task: updatedTask });
-        }
-      } catch (error) {
-        console.error('Failed to update selected node:', error);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [selectedTaskId, refreshKey]);
+    if (!selectedTaskId || !selectedNodeRef.current) return;
+    if (selectedNodeRef.current.task.id !== selectedTaskId) return;
+    const updatedTask = allTasks.find(t => t.id === selectedTaskId);
+    if (!updatedTask) return;
+    const prevUpdatedAt = selectedNodeRef.current.task.updatedAt?.toString();
+    const nextUpdatedAt = updatedTask.updatedAt?.toString();
+    if (prevUpdatedAt === nextUpdatedAt) return;
+    setSelectedNode({ ...selectedNodeRef.current, task: updatedTask });
+  }, [allTasks, selectedTaskId]);
 
   // Listen for task updates to refresh the tree
   useEntityUpdates('task', () => setRefreshKey(prev => prev + 1));
@@ -658,8 +630,7 @@ export default function ControlRoom() {
       setRefreshKey(prev => prev + 1);
     } catch (error) {
       console.error('Failed to update task:', error);
-      // Revert on failure (reload all)
-      loadAllTasks().then(setAllTasks);
+      void loadTasks();
     }
   };
 
@@ -985,11 +956,7 @@ export default function ControlRoom() {
               // Update taskToEdit with fresh data BEFORE modal closes (fixes stale UI issue)
               setTaskToEdit(finalTask);
 
-              // Reload tasks immediately after save to reflect changes in ALL views
               await loadTasks();
-              // Reload allTasks for Weekly Schedule, Calendar, and Gantt Chart
-              const freshTasks = await loadAllTasks();
-              setAllTasks(freshTasks);
 
               // If editing a selected task, update the selected node
               if (selectedNode && selectedNode.task.id === finalTask.id) {

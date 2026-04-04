@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { MonthSelector } from '@/components/ui/month-selector';
 import { Boxes, Link as LinkIcon, Users, UserCircle, History, Package, Loader2, Calendar, CheckCircle, TrendingUp, Zap, AlertTriangle, X, User, MapPin, ShoppingCart } from 'lucide-react';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { calculateTaskProfit, calculateTaskProfitPercentage } from '@/lib/utils/business-utils';
@@ -23,6 +23,8 @@ import { SitesLogTab } from '@/components/data-center/sites-log-tab';
 import { LinksTab } from '@/components/data-center/links-tab';
 import { deduplicateTasksLog, deduplicateFinancialsLog } from '@/lib/utils/logging-utils';
 import { sortMonthKeys, getCurrentMonthKey } from '@/lib/utils/date-utils';
+
+const ENTITY_LOG_RELOAD_DEBOUNCE_MS = 400;
 
 export default function DataCenterPage() {
   const { textColor } = useThemeColors();
@@ -63,6 +65,25 @@ export default function DataCenterPage() {
       // Failed to load log
     }
   }, [selectedMonth]);
+
+  const entityLogDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const scheduleEntityLogReload = useCallback(() => {
+    if (entityLogDebounceRef.current) clearTimeout(entityLogDebounceRef.current);
+    entityLogDebounceRef.current = setTimeout(() => {
+      entityLogDebounceRef.current = null;
+      const month = selectedMonth;
+      void loadLog('financials', setFinancialsLog, 'financials', month);
+      void loadLog('items', setItemsLog, false, month);
+      void loadLog('tasks', setTasksLog, 'tasks', month);
+    }, ENTITY_LOG_RELOAD_DEBOUNCE_MS);
+  }, [selectedMonth, loadLog]);
+
+  useEffect(() => {
+    return () => {
+      if (entityLogDebounceRef.current) clearTimeout(entityLogDebounceRef.current);
+    };
+  }, []);
 
   // Main tab state
   const [activeMainTab, setActiveMainTab] = useState<string>('tasks-lifecycle');
@@ -105,10 +126,10 @@ export default function DataCenterPage() {
     loadLog('tasks', setTasksLog, 'tasks', selectedMonth);
   }, [selectedMonth, loadLog]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Listen for entity updates to refresh relevant log (stays on currently selected month)
-  useEntityUpdates('financial', () => loadLog('financials', setFinancialsLog, 'financials', selectedMonth));
-  useEntityUpdates('item', () => loadLog('items', setItemsLog, false, selectedMonth));
-  useEntityUpdates('task', () => loadLog('tasks', setTasksLog, 'tasks', selectedMonth));
+  // Coalesce burst saves into one LRANGE round-trip per debounce window
+  useEntityUpdates('financial', scheduleEntityLogReload);
+  useEntityUpdates('item', scheduleEntityLogReload);
+  useEntityUpdates('task', scheduleEntityLogReload);
 
   // Reload all logs (keeps same month)
   const handleReloadLogs = async () => {

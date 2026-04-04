@@ -341,7 +341,16 @@ export default function RecurrentTreeModalContent({
       finalScheduledEnd = endDateTime;
     }
 
+    const TIMESTAMP_LIKE_ORDER_THRESHOLD = 1_000_000_000_000;
     const determineOrder = (): number => {
+      const parentUnchanged =
+        editingExisting && (parentId ?? null) === (task?.parentId ?? null);
+      if (editingExisting && parentUnchanged && task!.order != null && !Number.isNaN(Number(task!.order))) {
+        const o = Number(task!.order);
+        if (o < TIMESTAMP_LIKE_ORDER_THRESHOLD) {
+          return o;
+        }
+      }
       if (allTasksForOrder && allTasksForOrder.length > 0) {
         return computeNextSiblingOrder(allTasksForOrder, parentId, draftId.current);
       }
@@ -360,6 +369,7 @@ export default function RecurrentTreeModalContent({
     };
 
     const finalStatus = statusOverride !== undefined ? statusOverride : determineFinalStatus();
+    const finalPlayerCharacterId = playerCharacterId || FOUNDER_CHARACTER_ID;
 
     return {
       id: draftId.current,
@@ -387,18 +397,28 @@ export default function RecurrentTreeModalContent({
       outputUnitCost,
       outputItemPrice,
       outputItemStatus,
-      outputItemName: outputItemName.trim(),
-      rewards,
+      outputItemName: outputItemName.trim() || undefined,
+      rewards: {
+        points: {
+          xp: rewards.points.xp,
+          rp: rewards.points.rp,
+          fp: rewards.points.fp,
+          hp: rewards.points.hp,
+        },
+      },
       parentId,
       customerCharacterId: isNewCustomer ? null : customerCharacterId,
       newCustomerName: isNewCustomer ? newCustomerName.trim() || undefined : undefined,
-      playerCharacterId,
+      playerCharacterId: finalPlayerCharacterId,
       order: determineOrder(),
-      isCollected,
+      isCollected: status === TaskStatus.COLLECTED || isCollected,
       isNewItem,
       isSold,
       outputItemId: isNewItem ? null : (selectedItemId || task?.outputItemId || null),
       frequencyConfig: (type === TaskType.RECURRENT_GROUP || type === TaskType.RECURRENT_TEMPLATE) ? frequencyConfig : undefined,
+      isRecurrentGroup: task?.isRecurrentGroup ?? false,
+      isTemplate: task?.isTemplate ?? false,
+      sourceSaleId: task?.sourceSaleId ?? undefined,
       links: task?.links || [],
       createdAt: task?.createdAt || new Date(),
       updatedAt: new Date(),

@@ -333,8 +333,17 @@ export default function MissionTreeModalContent({
       finalScheduledEnd = endDateTime;
     }
 
-    // Determine order
+    /** Same as reference modal: keep stable order when parent unchanged; avoid Date.now()-like order values. */
+    const TIMESTAMP_LIKE_ORDER_THRESHOLD = 1_000_000_000_000;
     const determineOrder = (): number => {
+      const parentUnchanged =
+        editingExisting && (parentId ?? null) === (task?.parentId ?? null);
+      if (editingExisting && parentUnchanged && task!.order != null && !Number.isNaN(Number(task!.order))) {
+        const o = Number(task!.order);
+        if (o < TIMESTAMP_LIKE_ORDER_THRESHOLD) {
+          return o;
+        }
+      }
       if (allTasksForOrder && allTasksForOrder.length > 0) {
         return computeNextSiblingOrder(allTasksForOrder, parentId, draftId.current);
       }
@@ -360,6 +369,8 @@ export default function MissionTreeModalContent({
       }
       return status;
     };
+
+    const finalPlayerCharacterId = playerCharacterId || FOUNDER_CHARACTER_ID;
 
     return {
       id: draftId.current,
@@ -387,17 +398,27 @@ export default function MissionTreeModalContent({
       outputUnitCost,
       outputItemPrice,
       outputItemStatus,
-      outputItemName: outputItemName.trim(),
-      rewards,
+      outputItemName: outputItemName.trim() || undefined,
+      rewards: {
+        points: {
+          xp: rewards.points.xp,
+          rp: rewards.points.rp,
+          fp: rewards.points.fp,
+          hp: rewards.points.hp,
+        },
+      },
       parentId,
       customerCharacterId: isNewCustomer ? null : customerCharacterId,
       newCustomerName: isNewCustomer ? newCustomerName.trim() || undefined : undefined,
-      playerCharacterId,
+      playerCharacterId: finalPlayerCharacterId,
       order: determineOrder(),
-      isCollected,
+      isCollected: status === TaskStatus.COLLECTED || isCollected,
       isNewItem,
       isSold,
       outputItemId: isNewItem ? null : (selectedItemId || task?.outputItemId || null),
+      isRecurrentGroup: task?.isRecurrentGroup ?? false,
+      isTemplate: task?.isTemplate ?? false,
+      sourceSaleId: task?.sourceSaleId ?? undefined,
       links: task?.links || [],
       createdAt: task?.createdAt || new Date(),
       updatedAt: new Date(),
