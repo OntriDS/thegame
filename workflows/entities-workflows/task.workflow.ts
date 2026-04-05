@@ -33,7 +33,6 @@ import {
   hasRewardsChanged
 } from '../update-propagation-utils';
 import {
-  handleTemplateInstanceCreation,
   cascadeStatusToInstances,
   uncascadeStatusFromInstances,
   getUndoneInstancesCount
@@ -61,15 +60,6 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
         station: task.station
       }, task.createdAt);
       await markEffect(effectKey);
-    }
-
-    // Recurrent Template instance spawning - when template is created
-    if (task.type === TaskType.RECURRENT_TEMPLATE) {
-      const instancesEffectKey = EffectKeys.sideEffect('task', task.id, 'instancesGenerated');
-      if (!(await hasEffect(instancesEffectKey))) {
-        const instances = await handleTemplateInstanceCreation(task);
-        await markEffect(instancesEffectKey);
-      }
     }
 
     // Return early ONLY if CREATED was already logged AND task is NOT Done
@@ -256,19 +246,8 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
       await updatePlayerPointsFromSource(EntityType.TASK, task, previousTask);
     }
 
-    // Recurrent Template instance spawning - when template frequency or due date changes
+    // Recurrent Template status changes (no auto instance creation here; JIT spawn-only model)
     if (task.type === TaskType.RECURRENT_TEMPLATE) {
-      const frequencyChanged = JSON.stringify(previousTask.frequencyConfig) !== JSON.stringify(task.frequencyConfig);
-      const dueDateChanged = previousTask.dueDate?.getTime() !== task.dueDate?.getTime();
-
-      if (frequencyChanged || dueDateChanged) {
-        const instancesEffectKey = EffectKeys.sideEffect('task', task.id, 'instancesGenerated');
-        if (!(await hasEffect(instancesEffectKey))) {
-          const instances = await handleTemplateInstanceCreation(task);
-          await markEffect(instancesEffectKey);
-        }
-      }
-
       // Handle status changes for Recurrent Templates
       const statusChanged = previousTask.status !== task.status;
 

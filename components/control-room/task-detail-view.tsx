@@ -281,6 +281,10 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
 
   const { task, children } = node;
 
+  const hasTemplateChild =
+    task.type === TaskType.RECURRENT_GROUP &&
+    children.some(child => child.task.type === TaskType.RECURRENT_TEMPLATE);
+
   if (task.type === TaskType.AUTOMATION) {
     return (
       <div className="h-full overflow-y-auto p-4 sm:p-6 flex flex-col items-center justify-center text-center">
@@ -408,16 +412,17 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
             )}
           </div>
           <div className="flex gap-2">
-            {(task.type === TaskType.RECURRENT_TEMPLATE || task.type === TaskType.RECURRENT_GROUP) && (
+            {task.type === TaskType.RECURRENT_TEMPLATE && (
               <Button variant="outline" size="sm" onClick={handleSpawnNext}>
                 Spawn
               </Button>
             )}
             {task.type === TaskType.RECURRENT_GROUP && (
               <Button
-                variant="outline"
+                variant={hasTemplateChild ? 'default' : 'outline'}
                 size="sm"
                 onClick={handleOpenTemplateFromParent}
+                className={hasTemplateChild ? 'border-primary bg-primary/10' : undefined}
               >
                 Template
               </Button>
