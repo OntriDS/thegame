@@ -164,7 +164,7 @@ export function FrequencyCalendar({
         </PopoverTrigger>
         <PopoverPrimitive.Portal>
           <PopoverContent
-            className={`w-80 p-3 ${popoverZIndex || getInteractiveInnerModalZIndex()}`}
+            className={`w-80 p-3 ${popoverZIndex || getInteractiveSubModalZIndex()}`}
             align="start"
             side="bottom"
             avoidCollisions={true}
@@ -222,7 +222,7 @@ export function FrequencyCalendar({
                     </PopoverTrigger>
                     <PopoverPrimitive.Portal>
                       <PopoverContent
-                        className={`p-0 ${getInteractiveSubModalZIndex()}`}
+                        className={`p-0 ${getDropdownZIndex()}`}
                         align="start"
                         side="bottom"
                         avoidCollisions={true}
