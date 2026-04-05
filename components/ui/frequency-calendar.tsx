@@ -186,7 +186,7 @@ export function FrequencyCalendar({
                   <SelectTrigger className="h-8 text-sm">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className={getInteractiveSubModalZIndex()}>
+                  <SelectContent>
                     <SelectItem value={String(RecurrentFrequency.ONCE)}>Once</SelectItem>
                     <SelectItem value={String(RecurrentFrequency.DAILY)}>Daily</SelectItem>
                     <SelectItem value={String(RecurrentFrequency.WEEKLY)}>Weekly</SelectItem>
@@ -304,7 +304,7 @@ export function FrequencyCalendar({
                       <SelectTrigger className="h-8 text-sm">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className={getInteractiveSubModalZIndex()}>
+                      <SelectContent>
                         <SelectItem value="periodically">Periodically</SelectItem>
                         <SelectItem value="after_done">After Done</SelectItem>
                       </SelectContent>
@@ -341,7 +341,7 @@ export function FrequencyCalendar({
                       <SelectTrigger className="h-8 text-sm">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className={getInteractiveSubModalZIndex()}>
+                      <SelectContent>
                         <SelectItem value="never">Never</SelectItem>
                         <SelectItem value="times">After X times</SelectItem>
                         <SelectItem value="date">Until date</SelectItem>
