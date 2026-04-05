@@ -225,30 +225,32 @@ export function SmartSchedulerSubmodal({
                         />
                     </div>
 
-                    {/* 4. Recurrence Toggle */}
-                    <div className="space-y-3 pt-2 border-t">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-2">
-                                <Repeat className="w-4 h-4 text-muted-foreground" />
-                                <Label htmlFor="recurrence-mode" className="text-sm font-medium">Repeat Task</Label>
-                            </div>
-                            <Switch
-                                id="recurrence-mode"
-                                checked={showFrequency}
-                                onCheckedChange={toggleFrequency}
-                            />
-                        </div>
-
-                        {showFrequency && (
-                            <div className="pl-6 border-l-2 ml-2">
-                                <FrequencyCalendar
-                                    value={value.frequencyConfig}
-                                    onChange={(cfg) => onChange({ ...value, frequencyConfig: cfg })}
-                                    allowAlways={isRecurrent}
+                    {/* 4. Recurrence Toggle – only for recurrent task types */}
+                    {isRecurrent && (
+                        <div className="space-y-3 pt-2 border-t">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-2">
+                                    <Repeat className="w-4 h-4 text-muted-foreground" />
+                                    <Label htmlFor="recurrence-mode" className="text-sm font-medium">Repeat Task</Label>
+                                </div>
+                                <Switch
+                                    id="recurrence-mode"
+                                    checked={showFrequency}
+                                    onCheckedChange={toggleFrequency}
                                 />
                             </div>
-                        )}
-                    </div>
+
+                            {showFrequency && (
+                                <div className="pl-6 border-l-2 ml-2">
+                                    <FrequencyCalendar
+                                        value={value.frequencyConfig}
+                                        onChange={(cfg) => onChange({ ...value, frequencyConfig: cfg })}
+                                        allowAlways={isRecurrent}
+                                    />
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
 
                 <DialogFooter className="flex justify-between sm:justify-between items-center w-full">

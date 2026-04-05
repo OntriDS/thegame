@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { ChevronLeft, ChevronRight, Plus, Star, Zap, Brain, TrendingUp, Heart, Clock } from 'lucide-react';
 import { BUSINESS_STRUCTURE } from '@/types/enums';
 import { AREA_COLORS, getStationColorClasses, TASK_STATUS_BADGE_COLORS, getStationColor, SOLID_COLOR_CLASSES } from '@/lib/constants/color-constants';
+import { getOccurrencesForRange, TaskOccurrence } from '@/lib/utils/recurrent-visualization-utils';
 
 interface WeeklyScheduleProps {
     tasks: Task[];
@@ -54,14 +55,16 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask, onTaskUpd
         });
     }, [startHour]);
 
-    // Filter tasks for this week and with schedule data
-    const weeklyTasks = useMemo(() => {
-        return tasks.filter(task => {
-            if (!task.scheduledStart || !task.scheduledEnd) return false;
-            const taskDate = new Date(task.scheduledStart);
-            return weekDays.some(day => isSameDay(day, taskDate));
+    // Virtual occurrences for this week (includes recurrence)
+    const weeklyOccurrences = useMemo(() => {
+        const rangeEnd = new Date(addDays(weekStart, 6));
+        rangeEnd.setHours(23, 59, 59, 999);
+        const occurrences: TaskOccurrence[] = [];
+        tasks.forEach(task => {
+            occurrences.push(...getOccurrencesForRange(task, weekStart, rangeEnd));
         });
-    }, [tasks, weekDays]);
+        return occurrences;
+    }, [tasks, weekStart]);
 
     // Helper to get task card color based on Station -> Area mapping
     const getTaskColorClass = (task: Task) => {
@@ -203,19 +206,19 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask, onTaskUpd
         };
     }, [draggingId, cellHeight, onTaskUpdate, dragState]); // Added dragState to dep array to satisfy linter, though refs are better for perf.
 
-    const handleDragStart = (e: React.PointerEvent, task: Task, type: 'move' | 'resize-top' | 'resize-bottom') => {
+    const handleDragStart = (e: React.PointerEvent, occurrence: TaskOccurrence, type: 'move' | 'resize-top' | 'resize-bottom') => {
         if (!onTaskUpdate) return;
 
         e.preventDefault();
         e.stopPropagation();
 
         // Capture initial state
-        setDraggingId(task.id);
+        setDraggingId(occurrence.occurrenceKey);
         setDragState({
             type,
-            task: { ...task },
-            originalStart: new Date(task.scheduledStart!),
-            originalEnd: new Date(task.scheduledEnd!),
+            task: { ...occurrence.task },
+            originalStart: new Date(occurrence.start),
+            originalEnd: new Date(occurrence.end),
             startY: e.clientY,
             startX: e.clientX,
             currentY: e.clientY,
@@ -228,19 +231,15 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask, onTaskUpd
         // If it's a move, we might need a reference to the container to calculate day changes
     };
 
-    const getTaskStyle = (task: Task) => {
-        // Use dragged state if this is the dragged task
-        const isDragging = draggingId === task.id;
-        const currentTask = (isDragging && dragState) ? dragState.task : task;
-
-        if (!currentTask.scheduledStart || !currentTask.scheduledEnd) return {};
-
-        const start = new Date(currentTask.scheduledStart);
-        const end = new Date(currentTask.scheduledEnd);
+    const getTaskStyle = (occurrence: TaskOccurrence) => {
+        // Use dragged state if this is the dragged occurrence
+        const isDragging = draggingId === occurrence.occurrenceKey;
+        const currentStart = (isDragging && dragState) ? new Date(dragState.task.scheduledStart!) : new Date(occurrence.start);
+        const currentEnd = (isDragging && dragState) ? new Date(dragState.task.scheduledEnd!) : new Date(occurrence.end);
 
         // Calculate position relative to startHour
-        let startHourVal = getHours(start);
-        const startMin = start.getMinutes();
+        let startHourVal = getHours(currentStart);
+        const startMin = currentStart.getMinutes();
 
         // Adjust for rotation
         let adjustedStartHour = startHourVal - startHour;
@@ -249,7 +248,7 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask, onTaskUpd
         // Handle overflow to next day (simplified visual) - if adjusted hour is massive
 
         const top = (adjustedStartHour * 60 + startMin) * (cellHeight / 60);
-        const durationMinutes = differenceInMinutes(end, start);
+        const durationMinutes = differenceInMinutes(currentEnd, currentStart);
         const height = durationMinutes * (cellHeight / 60);
 
         return {
@@ -271,28 +270,28 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask, onTaskUpd
 
     // Calculate segments for the work bar
     const getDayWorkSegments = (day: Date) => {
-        const dayTasks = weeklyTasks.filter(task => isSameDay(new Date(task.scheduledStart!), day));
+        const dayTasks = weeklyOccurrences.filter(occ => isSameDay(new Date(occ.start), day));
 
         const colorData: Record<string, { minutes: number, stations: Set<string> }> = {};
 
-        dayTasks.forEach(task => {
+        dayTasks.forEach(occ => {
             let area: keyof typeof AREA_COLORS | undefined;
             for (const [key, stations] of Object.entries(BUSINESS_STRUCTURE)) {
-                if ((stations as readonly string[]).includes(task.station)) {
+                if ((stations as readonly string[]).includes(occ.task.station)) {
                     area = key as keyof typeof AREA_COLORS;
                     break;
                 }
             }
 
-            const colorName = getStationColor(task.station, area);
-            const duration = differenceInMinutes(new Date(task.scheduledEnd!), new Date(task.scheduledStart!));
+            const colorName = getStationColor(occ.task.station, area);
+            const duration = differenceInMinutes(new Date(occ.end), new Date(occ.start));
 
             if (!colorData[colorName]) {
                 colorData[colorName] = { minutes: 0, stations: new Set() };
             }
 
             colorData[colorName].minutes += Math.max(0, duration);
-            colorData[colorName].stations.add(task.station);
+            colorData[colorName].stations.add(occ.task.station);
         });
 
         const totalMinutes = MAX_WORK_HOURS * 60;
@@ -450,30 +449,30 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask, onTaskUpd
 
                                             {/* Tasks */}
                                             <div className="relative h-full w-full">
-                                                {weeklyTasks
-                                                    .filter(task => isSameDay(new Date(task.scheduledStart!), day))
-                                                    .map(task => {
-                                                        const colorClass = getTaskColorClass(task);
-                                                        const parentName = getParentTaskName(task);
-                                                        const pointTypes = getPointTypes(task);
+                                                {weeklyOccurrences
+                                                    .filter(occ => isSameDay(new Date(occ.start), day))
+                                                    .map(occ => {
+                                                        const colorClass = getTaskColorClass(occ.task);
+                                                        const parentName = getParentTaskName(occ.task);
+                                                        const pointTypes = getPointTypes(occ.task);
                                                         const isVeryCompact = cellHeight < 35;
                                                         const isCompact = cellHeight < 55;
                                                         const isDetailed = cellHeight >= 70;
 
                                                         return (
                                                             <div
-                                                                key={task.id}
+                                                                key={occ.occurrenceKey}
                                                                 className={cn(
                                                                     "absolute left-1 right-1 rounded-md border text-sm shadow-sm hover:shadow-md transition-shadow overflow-visible group hover:z-50",
                                                                     colorClass
                                                                 )}
-                                                                style={getTaskStyle(task)}
-                                                                onPointerDown={(e) => handleDragStart(e, task, 'move')}
+                                                                style={getTaskStyle(occ)}
+                                                                onPointerDown={(e) => handleDragStart(e, occ, 'move')}
                                                             >
                                                                 {/* Resize Handle Top */}
                                                                 <div
                                                                     className="absolute top-0 left-0 right-0 h-2 cursor-ns-resize z-20 hover:bg-white/30"
-                                                                    onPointerDown={(e) => handleDragStart(e, task, 'resize-top')}
+                                                                    onPointerDown={(e) => handleDragStart(e, occ, 'resize-top')}
                                                                 />
 
                                                                 {/* Task Content */}
@@ -481,7 +480,7 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask, onTaskUpd
                                                                     className="p-2.5 h-full overflow-hidden"
                                                                     onClick={(e) => {
                                                                         e.stopPropagation(); // Prevent drag start from clicking
-                                                                        onEditTask(task);
+                                                                        onEditTask(occ.task);
                                                                     }}
                                                                 >
                                                                     {/* Header Row: Station | Time | Points */}
@@ -489,15 +488,15 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask, onTaskUpd
                                                                         {/* Station Badge */}
                                                                         <span className={cn(
                                                                             "font-bold text-[0.7rem] uppercase tracking-wider truncate px-2 py-0.5 rounded",
-                                                                            getStatusBadgeColor(task.status)
+                                                                            getStatusBadgeColor(occ.task.status)
                                                                         )}>
-                                                                            {task.station}
+                                                                            {occ.task.station}
                                                                         </span>
 
                                                                         {/* Time - Always visible in center */}
                                                                         <span className="text-[0.7rem] text-muted-foreground/80 whitespace-nowrap">
-                                                                            {format(new Date(draggingId === task.id && dragState ? dragState.task.scheduledStart! : task.scheduledStart!), 'HH:mm')} -
-                                                                            {format(new Date(draggingId === task.id && dragState ? dragState.task.scheduledEnd! : task.scheduledEnd!), 'HH:mm')}
+                                                                            {format(new Date(draggingId === occ.occurrenceKey && dragState ? dragState.task.scheduledStart! : occ.start), 'HH:mm')} -
+                                                                            {format(new Date(draggingId === occ.occurrenceKey && dragState ? dragState.task.scheduledEnd! : occ.end), 'HH:mm')}
                                                                         </span>
 
                                                                         {/* Points - Always visible */}
@@ -529,14 +528,14 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask, onTaskUpd
                                                                         "font-semibold truncate transition-colors leading-snug pointer-events-none",
                                                                         isVeryCompact ? "line-clamp-1 text-xs" : isCompact ? "line-clamp-1 text-base" : "line-clamp-2 text-base"
                                                                     )}>
-                                                                        {task.name}
+                                                                        {occ.task.name}
                                                                     </p>
                                                                 </div>
 
                                                                 {/* Resize Handle Bottom */}
                                                                 <div
                                                                     className="absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize z-20 hover:bg-white/30"
-                                                                    onPointerDown={(e) => handleDragStart(e, task, 'resize-bottom')}
+                                                                    onPointerDown={(e) => handleDragStart(e, occ, 'resize-bottom')}
                                                                 />
                                                             </div>
                                                         );

@@ -415,7 +415,11 @@ export default function RecurrentTreeModalContent({
       isNewItem,
       isSold,
       outputItemId: isNewItem ? null : (selectedItemId || task?.outputItemId || null),
-      frequencyConfig: (type === TaskType.RECURRENT_GROUP || type === TaskType.RECURRENT_TEMPLATE) ? frequencyConfig : undefined,
+      frequencyConfig: (
+        type === TaskType.RECURRENT_GROUP ||
+        type === TaskType.RECURRENT_TEMPLATE ||
+        type === TaskType.RECURRENT_INSTANCE
+      ) ? frequencyConfig : undefined,
       isRecurrentGroup: task ? (task.isRecurrentGroup ?? (type === TaskType.RECURRENT_GROUP)) : (type === TaskType.RECURRENT_GROUP),
       isTemplate: task ? (task.isTemplate ?? (type === TaskType.RECURRENT_TEMPLATE)) : (type === TaskType.RECURRENT_TEMPLATE),
       sourceSaleId: task?.sourceSaleId ?? undefined,
@@ -1250,7 +1254,9 @@ export default function RecurrentTreeModalContent({
           scheduledStart: scheduledStartDate,
           scheduledEnd: scheduledEndDate,
           frequencyConfig:
-            type === TaskType.RECURRENT_GROUP || type === TaskType.RECURRENT_TEMPLATE
+            type === TaskType.RECURRENT_GROUP ||
+            type === TaskType.RECURRENT_TEMPLATE ||
+            type === TaskType.RECURRENT_INSTANCE
               ? frequencyConfig
               : undefined,
         }}
@@ -1270,11 +1276,19 @@ export default function RecurrentTreeModalContent({
             setScheduledEndDate(undefined);
             setScheduledEndTime('');
           }
-          if (type === TaskType.RECURRENT_GROUP || type === TaskType.RECURRENT_TEMPLATE) {
+          if (
+            type === TaskType.RECURRENT_GROUP ||
+            type === TaskType.RECURRENT_TEMPLATE ||
+            type === TaskType.RECURRENT_INSTANCE
+          ) {
             setFrequencyConfig(val.frequencyConfig);
           }
         }}
-        isRecurrent={type === TaskType.RECURRENT_GROUP || type === TaskType.RECURRENT_TEMPLATE}
+        isRecurrent={
+          type === TaskType.RECURRENT_GROUP ||
+          type === TaskType.RECURRENT_TEMPLATE ||
+          type === TaskType.RECURRENT_INSTANCE
+        }
       />
 
       {/* Validation Modal */}

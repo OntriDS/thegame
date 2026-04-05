@@ -145,7 +145,38 @@ export async function spawnNextRecurrentInstance(
     return null;
   }
 
-  // 8. Spawn the instance
+  // 8. Derive scheduled times aligned to nextDate
+  const templateStart = template.scheduledStart ? new Date(template.scheduledStart) : null;
+  const templateEnd = template.scheduledEnd ? new Date(template.scheduledEnd) : null;
+  let scheduledStart: Date | undefined;
+  let scheduledEnd: Date | undefined;
+
+  if (templateStart) {
+    scheduledStart = new Date(nextDate);
+    scheduledStart.setHours(
+      templateStart.getHours(),
+      templateStart.getMinutes(),
+      templateStart.getSeconds(),
+      0
+    );
+    const durationMs =
+      templateEnd && templateStart
+        ? templateEnd.getTime() - templateStart.getTime()
+        : null;
+    if (durationMs && durationMs > 0) {
+      scheduledEnd = new Date(scheduledStart.getTime() + durationMs);
+    }
+  } else if (templateEnd) {
+    scheduledEnd = new Date(nextDate);
+    scheduledEnd.setHours(
+      templateEnd.getHours(),
+      templateEnd.getMinutes(),
+      templateEnd.getSeconds(),
+      0
+    );
+  }
+
+  // 9. Spawn the instance
   const formattedDate = formatDisplayDate(nextDate);
   const separator = ' \u2022 ';
   const instanceOrder = nextDate.getTime();
@@ -155,6 +186,8 @@ export async function spawnNextRecurrentInstance(
     name: `${template.name}${separator}${formattedDate}`,
     type: TaskType.RECURRENT_INSTANCE,
     dueDate: nextDate,
+    scheduledStart,
+    scheduledEnd,
     parentId: template.id, // Instance points to its template
     isRecurrentGroup: false,
     isTemplate: false,
@@ -251,8 +284,9 @@ export async function canSpawnMoreInstances(template: Task): Promise<boolean> {
 }
 
 // ============================================================================
-// Legacy functions maintained for backward compatibility
-// These are DEPRECATED for new JIT model but kept during transition
+// Legacy bulk recurrence helpers (kept for potential future use)
+// NOTE: These are not used by the current JIT spawn path and should not be
+// called from new code without a clear migration strategy.
 // ============================================================================
 
 export interface RecurrentTaskConfig {

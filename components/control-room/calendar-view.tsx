@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useThemeColors } from '@/lib/hooks/use-theme-colors';
+import { getOccurrencesForRange, TaskOccurrence } from '@/lib/utils/recurrent-visualization-utils';
 
 interface CalendarViewProps {
     tasks: Task[];
@@ -41,13 +42,16 @@ export default function CalendarView({ tasks, onNewTask, onEditTask }: CalendarV
         return { days, monthStart: start };
     }, [currentDate]);
 
-    // Filter tasks for the visible range
-    const visibleTasks = useMemo(() => {
-        return tasks.filter(task => task.scheduledStart);
-    }, [tasks]);
+    const visibleOccurrences = useMemo(() => {
+        const occurrences: TaskOccurrence[] = [];
+        tasks.forEach(task => {
+            occurrences.push(...getOccurrencesForRange(task, days[0], days[days.length - 1]));
+        });
+        return occurrences;
+    }, [tasks, days]);
 
     const getTasksForDay = (day: Date) => {
-        return visibleTasks.filter(task => isSameDay(new Date(task.scheduledStart!), day));
+        return visibleOccurrences.filter(occ => isSameDay(new Date(occ.start), day));
     };
 
     const handlePrevMonth = () => setCurrentDate(subMonths(currentDate, 1));
@@ -126,17 +130,17 @@ export default function CalendarView({ tasks, onNewTask, onEditTask }: CalendarV
                                 </div>
 
                                 <div className="flex-1 flex flex-col gap-1 overflow-y-auto min-h-0">
-                                    {dayTasks.map(task => (
+                                    {dayTasks.map(occ => (
                                         <div
-                                            key={task.id}
+                                            key={occ.occurrenceKey}
                                             className="group relative flex items-center gap-1 rounded px-1.5 py-1 text-[10px] font-medium border bg-card hover:border-primary/50 hover:shadow-sm cursor-pointer transition-all truncate"
                                             onClick={(e) => {
                                                 e.stopPropagation();
-                                                onEditTask(task);
+                                                onEditTask(occ.task);
                                             }}
                                         >
                                             <div className="h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
-                                            <span className="truncate">{task.name}</span>
+                                            <span className="truncate">{occ.task.name}</span>
                                         </div>
                                     ))}
                                 </div>

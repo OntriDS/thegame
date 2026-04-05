@@ -3,7 +3,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getTaskById, upsertTask } from '@/data-store/datastore';
-import { spawnNextRecurrentInstance, updateTemplateLastSpawnedDate } from '@/lib/utils/recurrent-task-utils';
+import { spawnNextRecurrentInstance, updateTemplateLastSpawnedDate, canSpawnMoreInstances } from '@/lib/utils/recurrent-task-utils';
 import { appendEntityLog } from '@/workflows/entities-logging';
 import { EntityType, LogEventType, TaskType } from '@/types/enums';
 
@@ -27,6 +27,8 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   const templateId = params.id;
+  const { searchParams } = new URL(req.url);
+  const isPreview = searchParams.get('preview') === '1';
 
   try {
     // 1. Validate template exists and is correct type
@@ -48,33 +50,53 @@ export async function POST(
     // 2. Validate template has frequency configuration
     if (!template.frequencyConfig) {
       return NextResponse.json(
-        { error: 'Template has no frequency configuration' },
+        { error: 'Template has no repeat configuration. Open the template, enable \"Repeat Task\" and set a frequency first.' },
         { status: 400 }
       );
     }
 
-    // 3. Spawn next instance
+    // 3. Check whether template is still allowed to spawn
+    const canSpawn = await canSpawnMoreInstances(template);
+    if (!canSpawn) {
+      return NextResponse.json(
+        { error: 'Template cannot spawn more instances (stop condition or safety limit reached).' },
+        { status: 400 }
+      );
+    }
+
+    // 4. Spawn next instance (in-memory)
     const instance = await spawnNextRecurrentInstance(template);
 
     if (!instance) {
       return NextResponse.json(
-        { error: 'Could not spawn instance - limit reached or invalid date' },
+        { error: 'Could not find a valid next occurrence based on this frequency (all dates used or beyond safety limit).' },
         { status: 400 }
       );
     }
 
-    // 4. Update template's lastSpawnedDate
+    // If this is just a preview, return the calculated date without side effects
+    if (isPreview) {
+      return NextResponse.json({
+        success: true,
+        nextDate: instance.dueDate
+      });
+    }
+
+    // 5. Persist instance
+    const savedInstance = await upsertTask(instance);
+
+    // 6. Update template's lastSpawnedDate
     await updateTemplateLastSpawnedDate(templateId, (instance.dueDate as Date) || new Date());
 
-    // 5. Log instance creation
+    // 7. Log instance creation
     await appendEntityLog(
       EntityType.TASK,
-      instance.id,
+      savedInstance.id,
       LogEventType.CREATED,
       {
-        name: instance.name,
-        taskType: instance.type,
-        station: instance.station,
+        name: savedInstance.name,
+        taskType: savedInstance.type,
+        station: savedInstance.station,
         templateId: templateId,
         spawnedAt: new Date().toISOString()
       }
@@ -82,7 +104,7 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
-      instance
+      instance: savedInstance
     });
 
   } catch (error: any) {

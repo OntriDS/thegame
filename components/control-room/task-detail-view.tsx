@@ -20,6 +20,7 @@ import { ClientAPI } from '@/lib/client-api';
 import { ORDER_INCREMENT } from '@/lib/constants/app-constants';
 import { computeNextSiblingOrder } from '@/lib/utils/task-order-utils';
 import { useThemeColors } from '@/lib/hooks/use-theme-colors';
+import ConfirmationModal from '@/components/modals/submodals/confirmation-submodal';
 
 interface TaskDetailViewProps {
   node: TreeNode | null;
@@ -59,6 +60,10 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
   const [prefillTemplateTask, setPrefillTemplateTask] = useState<Task | null>(null);
   const [showMissionTreeModal, setShowMissionTreeModal] = useState(false);
   const [prefillMissionTreeTask, setPrefillMissionTreeTask] = useState<Task | null>(null);
+  const [spawnErrorMessage, setSpawnErrorMessage] = useState<string | null>(null);
+  const [isSpawnErrorOpen, setIsSpawnErrorOpen] = useState(false);
+  const [nextSpawnDate, setNextSpawnDate] = useState<Date | null>(null);
+  const [isNextSpawnLoading, setIsNextSpawnLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // No initialization needed for ClientAPI
@@ -73,6 +78,32 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
   // Reset description expansion when task changes
   useEffect(() => {
     setIsDescriptionExpanded(false);
+  }, [node]);
+
+  // Load next spawn preview for recurrent templates
+  useEffect(() => {
+    const loadNextSpawn = async () => {
+      if (!node || node.task.type !== TaskType.RECURRENT_TEMPLATE || !node.task.frequencyConfig) {
+        setNextSpawnDate(null);
+        return;
+      }
+      try {
+        setIsNextSpawnLoading(true);
+        const resp = await fetch(`/api/tasks/${node.task.id}/spawn-next?preview=1`, { method: 'POST' });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || !data?.success) {
+          setNextSpawnDate(null);
+          return;
+        }
+        setNextSpawnDate(data.nextDate ? new Date(data.nextDate) : null);
+      } catch (err) {
+        console.error('Failed to preview next spawn date:', err);
+        setNextSpawnDate(null);
+      } finally {
+        setIsNextSpawnLoading(false);
+      }
+    };
+    void loadNextSpawn();
   }, [node]);
 
   // Focus input when editing starts
@@ -220,12 +251,18 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
     if (!node) return;
     try {
       const response = await fetch(`/api/tasks/${node.task.id}/spawn-next`, { method: 'POST' });
-      if (!response.ok) {
-        throw new Error('Failed to spawn instance');
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || (data && data.success === false)) {
+        const message = data?.error || 'Failed to spawn instance.';
+        setSpawnErrorMessage(message);
+        setIsSpawnErrorOpen(true);
+        return;
       }
       onTaskUpdate?.();
     } catch (err) {
       console.error('Error spawning next instance:', err);
+      setSpawnErrorMessage('Unexpected error while spawning the next instance.');
+      setIsSpawnErrorOpen(true);
     }
   };
 
@@ -413,9 +450,18 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
           </div>
           <div className="flex gap-2">
             {task.type === TaskType.RECURRENT_TEMPLATE && (
-              <Button variant="outline" size="sm" onClick={handleSpawnNext}>
-                Spawn
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={handleSpawnNext}>
+                  Spawn
+                </Button>
+                <span className="text-[10px] text-muted-foreground">
+                  {isNextSpawnLoading
+                    ? 'Calculating next spawn...'
+                    : nextSpawnDate
+                      ? `Next: ${nextSpawnDate.toLocaleDateString()}`
+                      : 'No next date (check repeat settings)'}
+                </span>
+              </div>
             )}
             {task.type === TaskType.RECURRENT_GROUP && (
               <Button
@@ -755,6 +801,21 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
             await ClientAPI.upsertTask(newTask);
             setShowMissionTreeModal(false);
             onTaskUpdate?.();
+          }}
+        />
+      )}
+
+      {spawnErrorMessage && (
+        <ConfirmationModal
+          open={isSpawnErrorOpen}
+          onOpenChange={setIsSpawnErrorOpen}
+          title="Spawn failed"
+          description={spawnErrorMessage}
+          confirmText="OK"
+          cancelText="Close"
+          variant="default"
+          onConfirm={async () => {
+            setIsSpawnErrorOpen(false);
           }}
         />
       )}
