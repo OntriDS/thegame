@@ -21,6 +21,7 @@ import { ORDER_INCREMENT } from '@/lib/constants/app-constants';
 import { computeNextSiblingOrder } from '@/lib/utils/task-order-utils';
 import { useThemeColors } from '@/lib/hooks/use-theme-colors';
 import ConfirmationModal from '@/components/modals/submodals/confirmation-submodal';
+import { formatDisplayDate } from '@/lib/utils/date-utils';
 
 interface TaskDetailViewProps {
   node: TreeNode | null;
@@ -458,7 +459,7 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
                   {isNextSpawnLoading
                     ? 'Calculating next spawn...'
                     : nextSpawnDate
-                      ? `Next: ${nextSpawnDate.toLocaleDateString()}`
+                      ? `Next: ${formatDisplayDate(nextSpawnDate)}`
                       : 'No next date (check repeat settings)'}
                 </span>
               </div>

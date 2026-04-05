@@ -107,7 +107,7 @@ export async function spawnNextRecurrentInstance(
           : customDatesUTC[0];
 
         if (nextCustom) {
-          nextDate = fromRecurrentUTC(nextCustom);
+          nextDate = nextCustom;
         } else {
           console.warn('[spawnNextRecurrentInstance] No next custom date found');
           return null;
@@ -132,6 +132,9 @@ export async function spawnNextRecurrentInstance(
   if (forceDate) {
     nextDate = toRecurrentUTC(forceDate);
   }
+
+  // Convert the calculated UTC midnight date back to Local Midnight date for storage/display
+  nextDate = fromRecurrentUTC(nextDate);
 
   // 6. Check safety limit (template's dueDate)
   const safetyLimit = template.dueDate ? fromRecurrentUTC(template.dueDate) : null;

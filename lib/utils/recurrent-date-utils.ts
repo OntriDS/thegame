@@ -12,9 +12,7 @@
  * @returns Date set to UTC midnight (00:00:00)
  */
 export function toRecurrentUTC(date: Date): Date {
-  const utcDate = new Date(date);
-  utcDate.setUTCHours(0, 0, 0, 0);
-  return utcDate;
+  return new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
 }
 
 /**
@@ -26,7 +24,7 @@ export function toRecurrentUTC(date: Date): Date {
  * @returns Date in local timezone for display
  */
 export function fromRecurrentUTC(utcDate: Date): Date {
-  return new Date(utcDate);
+  return new Date(utcDate.getUTCFullYear(), utcDate.getUTCMonth(), utcDate.getUTCDate());
 }
 
 /**
