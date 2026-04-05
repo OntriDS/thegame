@@ -14,7 +14,7 @@ import { Label } from '@/components/ui/label';
 import { DateInput } from '@/components/ui/date-input';
 import { RecurrentFrequency } from '@/types/enums';
 import { formatDisplayDate, formatInputDate } from '@/lib/utils/date-utils';
-import { getInteractiveInnerModalZIndex, getInteractiveSubModalZIndex } from '@/lib/utils/z-index-utils';
+import { getInteractiveInnerModalZIndex, getInteractiveSubModalZIndex, getDropdownZIndex } from '@/lib/utils/z-index-utils';
 
 export interface FrequencyConfig {
   type: RecurrentFrequency;
@@ -186,7 +186,7 @@ export function FrequencyCalendar({
                   <SelectTrigger className="h-8 text-sm">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className={getDropdownZIndex()}>
                     <SelectItem value={String(RecurrentFrequency.ONCE)}>Once</SelectItem>
                     <SelectItem value={String(RecurrentFrequency.DAILY)}>Daily</SelectItem>
                     <SelectItem value={String(RecurrentFrequency.WEEKLY)}>Weekly</SelectItem>
@@ -304,7 +304,7 @@ export function FrequencyCalendar({
                       <SelectTrigger className="h-8 text-sm">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className={getDropdownZIndex()}>
                         <SelectItem value="periodically">Periodically</SelectItem>
                         <SelectItem value="after_done">After Done</SelectItem>
                       </SelectContent>
@@ -341,7 +341,7 @@ export function FrequencyCalendar({
                       <SelectTrigger className="h-8 text-sm">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className={getDropdownZIndex()}>
                         <SelectItem value="never">Never</SelectItem>
                         <SelectItem value="times">After X times</SelectItem>
                         <SelectItem value="date">Until date</SelectItem>
