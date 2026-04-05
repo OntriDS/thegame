@@ -41,6 +41,7 @@ export const DATE_FORMAT_LONG = 'dd MMMM yy'; // Long format: 25 December 24
 export const DATE_FORMAT_SHORT = 'dd/MM/yy'; // Short format: 25/12/24
 export const DATE_FORMAT_MONTH_YEAR = 'MMMM yy'; // Month year: December 24
 export const DATE_FORMAT_MONTH_KEY = 'MM-yy'; // Archive key format: 12-24
+export const DATE_FORMAT_DAY_MONTH = 'dd-MM'; // Day-month format: 25-12 (for recurrent instance names)
 
 // Currency and financial constants
 export const J$_TO_USD_RATE = 10; // 1 Jungle Dollar = $10 USD
