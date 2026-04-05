@@ -92,9 +92,20 @@ export async function spawnNextRecurrentInstance(
 
     case RecurrentFrequency.CUSTOM:
       if (config.customDays && config.customDays.length > 0) {
-        // Find next custom day after reference date
-        const customDatesUTC = config.customDays.map((d: Date) => toRecurrentUTC(d));
-        const nextCustom = customDatesUTC.find((d: Date) => isNextOccurrence(d, referenceDate));
+        // Normalize to Date objects and sort chronologically
+        const normalizedCustomDays = config.customDays
+          .map((d: any) => d instanceof Date ? d : new Date(d))
+          .filter((d: Date) => !isNaN(d.getTime()));
+
+        const customDatesUTC = normalizedCustomDays.map((d: Date) => toRecurrentUTC(d));
+        customDatesUTC.sort((a: Date, b: Date) => a.getTime() - b.getTime());
+
+        // Focus: If no lastSpawnedDate exists, start with the first custom date.
+        // Otherwise, find the next custom date strictly after the referenceDate.
+        const nextCustom = template.lastSpawnedDate
+          ? customDatesUTC.find((d: Date) => isNextOccurrence(d, referenceDate))
+          : customDatesUTC[0];
+
         if (nextCustom) {
           nextDate = fromRecurrentUTC(nextCustom);
         } else {
@@ -426,6 +437,7 @@ export function calculateNextDueDates(
       }
       return day;
     }).filter((day: any) => day instanceof Date && !isNaN(day.getTime())) as Date[];
+    normalizedCustomDays.sort((a, b) => a.getTime() - b.getTime());
   }
 
   // Use starting day from customDays if available, otherwise use startDate
