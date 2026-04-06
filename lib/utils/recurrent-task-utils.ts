@@ -253,7 +253,7 @@ export async function updateTemplateLastSpawnedDate(
 
   const updatedTemplate: Task = {
     ...template,
-    lastSpawnedDate: spawnDate,
+    lastSpawnedDate: toRecurrentUTC(spawnDate), // Convert to UTC midnight for storage
     updatedAt: new Date()
   };
 

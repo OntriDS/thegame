@@ -15,6 +15,7 @@ import { DateInput } from '@/components/ui/date-input';
 import { RecurrentFrequency } from '@/types/enums';
 import { formatDisplayDate, formatInputDate } from '@/lib/utils/date-utils';
 import { getInteractiveInnerModalZIndex, getInteractiveSubModalZIndex, getDropdownZIndex } from '@/lib/utils/z-index-utils';
+import { fromRecurrentUTC } from '@/lib/utils/recurrent-date-utils';
 
 export interface FrequencyConfig {
   type: RecurrentFrequency;
@@ -74,28 +75,30 @@ export function FrequencyCalendar({
 
   React.useEffect(() => {
     if (value) {
-      // Convert customDays strings to Date objects if needed (from JSON serialization)
+      // Convert UTC midnight dates back to local for display
       const normalizedConfig = { ...value };
       if (normalizedConfig.customDays && Array.isArray(normalizedConfig.customDays)) {
         normalizedConfig.customDays = normalizedConfig.customDays.map((day: any) => {
           if (day instanceof Date) {
-            return day;
+            return fromRecurrentUTC(day); // Convert UTC midnight to local
           }
           if (typeof day === 'string') {
             const date = new Date(day);
-            return isNaN(date.getTime()) ? null : date;
+            return isNaN(date.getTime()) ? null : fromRecurrentUTC(date);
           }
           return day;
         }).filter((day: any) => day instanceof Date && !isNaN(day.getTime())) as Date[];
       }
 
-      // Also normalize stopsAfter.value if it's a date string
+      // Also normalize stopsAfter.value to local if it's a date
       if (normalizedConfig.stopsAfter?.type === 'date' && normalizedConfig.stopsAfter.value) {
         if (typeof normalizedConfig.stopsAfter.value === 'string') {
           const date = new Date(normalizedConfig.stopsAfter.value);
           if (!isNaN(date.getTime())) {
-            normalizedConfig.stopsAfter.value = date;
+            normalizedConfig.stopsAfter.value = fromRecurrentUTC(date); // Convert UTC midnight to local
           }
+        } else if (normalizedConfig.stopsAfter.value instanceof Date) {
+          normalizedConfig.stopsAfter.value = fromRecurrentUTC(normalizedConfig.stopsAfter.value); // Convert UTC midnight to local
         }
       }
 

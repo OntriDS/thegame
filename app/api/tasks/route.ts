@@ -5,6 +5,7 @@ import type { Task } from '@/types/entities';
 import { TaskType, TaskStatus, TaskPriority } from '@/types/enums';
 import { getAllTasks, getActiveTasks, upsertTask, getTasksForMonth } from '@/data-store/datastore';
 import { requireAdminAuth } from '@/lib/api-auth';
+import { toRecurrentUTC } from '@/lib/utils/recurrent-date-utils';
 
 // Force dynamic rendering - this route accesses cookies
 export const dynamic = 'force-dynamic';
@@ -55,31 +56,35 @@ export async function POST(req: NextRequest) {
   try {
     const body = (await req.json()) as Task;
 
-    // Normalize frequencyConfig.customDays from strings to Date objects (JSON deserialization)
+    // Normalize frequencyConfig.customDays from strings to UTC midnight Date objects
     let normalizedFrequencyConfig = body.frequencyConfig;
     if (normalizedFrequencyConfig?.customDays && Array.isArray(normalizedFrequencyConfig.customDays)) {
       normalizedFrequencyConfig = {
         ...normalizedFrequencyConfig,
         customDays: normalizedFrequencyConfig.customDays.map((day: any) => {
           if (day instanceof Date) {
-            return day;
+            return toRecurrentUTC(day); // Convert to UTC midnight
           }
           if (typeof day === 'string') {
             const date = new Date(day);
-            return isNaN(date.getTime()) ? null : date;
+            if (!isNaN(date.getTime())) {
+              return toRecurrentUTC(date); // Convert to UTC midnight
+            }
+            return null;
           }
           return day;
         }).filter((day: any) => day instanceof Date && !isNaN(day.getTime())) as Date[]
       };
     }
 
-    // Normalize stopsAfter.value if it's a date string
+    // Normalize stopsAfter.value to UTC midnight if it's a date
     if (normalizedFrequencyConfig?.stopsAfter?.type === 'date' && normalizedFrequencyConfig.stopsAfter.value) {
-      if (typeof normalizedFrequencyConfig.stopsAfter.value === 'string') {
-        const date = new Date(normalizedFrequencyConfig.stopsAfter.value);
-        if (!isNaN(date.getTime())) {
-          normalizedFrequencyConfig.stopsAfter.value = date;
-        }
+      const dateValue = typeof normalizedFrequencyConfig.stopsAfter.value === 'string'
+        ? new Date(normalizedFrequencyConfig.stopsAfter.value)
+        : normalizedFrequencyConfig.stopsAfter.value;
+
+      if (dateValue && !isNaN(dateValue.getTime())) {
+        normalizedFrequencyConfig.stopsAfter.value = toRecurrentUTC(dateValue); // Convert to UTC midnight
       }
     }
 
@@ -99,7 +104,8 @@ export async function POST(req: NextRequest) {
       links: body.links || [],
       createdAt: body.createdAt ? new Date(body.createdAt) : new Date(),
       updatedAt: new Date(),
-      dueDate: body.dueDate ? new Date(body.dueDate) : undefined,
+      // Standardize to UTC midnight for all dates
+      dueDate: body.dueDate ? toRecurrentUTC(new Date(body.dueDate)) : undefined,
       doneAt: body.doneAt ? new Date(body.doneAt) : (body.status === TaskStatus.DONE ? new Date() : undefined),
       collectedAt: body.collectedAt ? new Date(body.collectedAt) : undefined,
       frequencyConfig: normalizedFrequencyConfig

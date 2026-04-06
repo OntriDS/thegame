@@ -18,10 +18,11 @@ import TaskModal from '@/components/modals/task-modal';
 import { useState, useRef, useEffect } from 'react';
 import { ClientAPI } from '@/lib/client-api';
 import { ORDER_INCREMENT } from '@/lib/constants/app-constants';
+import { formatDisplayDate } from '@/lib/utils/date-utils';
+import { fromRecurrentUTC } from '@/lib/utils/recurrent-date-utils';
 import { computeNextSiblingOrder } from '@/lib/utils/task-order-utils';
 import { useThemeColors } from '@/lib/hooks/use-theme-colors';
 import ConfirmationModal from '@/components/modals/submodals/confirmation-submodal';
-import { formatDisplayDate } from '@/lib/utils/date-utils';
 
 interface TaskDetailViewProps {
   node: TreeNode | null;
@@ -101,7 +102,8 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
           }
           return;
         }
-        setNextSpawnDate(data.nextDate ? new Date(data.nextDate) : null);
+        // Convert UTC midnight date to local for display
+        setNextSpawnDate(data.nextDate ? fromRecurrentUTC(new Date(data.nextDate)) : null);
       } catch (err) {
         console.error('Failed to preview next spawn date:', err);
         setNextSpawnDate(null);

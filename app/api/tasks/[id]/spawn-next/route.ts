@@ -6,6 +6,7 @@ import { getTaskById, upsertTask } from '@/data-store/datastore';
 import { spawnNextRecurrentInstance, updateTemplateLastSpawnedDate, canSpawnMoreInstances } from '@/lib/utils/recurrent-task-utils';
 import { appendEntityLog } from '@/workflows/entities-logging';
 import { EntityType, LogEventType, TaskType } from '@/types/enums';
+import { toRecurrentUTC, fromRecurrentUTC } from '@/lib/utils/recurrent-date-utils';
 
 /**
  * POST /api/tasks/[id]/spawn-next
@@ -78,11 +79,11 @@ export async function POST(
     if (isPreview) {
       return NextResponse.json({
         success: true,
-        nextDate: instance.dueDate
+        nextDate: (instance.dueDate as Date).toISOString()
       });
     }
 
-    // 5. Persist instance
+    // 5. Persist instance (the API will convert to UTC midnight)
     const savedInstance = await upsertTask(instance);
 
     // 6. Update template's lastSpawnedDate
