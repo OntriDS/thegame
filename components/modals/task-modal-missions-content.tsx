@@ -35,6 +35,7 @@ import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
 import { format } from 'date-fns';
 import { TaskModalFooter } from './task-modal';
 import { dispatchEntityUpdated, entityTypeToKind } from '@/lib/ui/ui-events';
+import { fromRecurrentUTC } from '@/lib/utils/recurrent-date-utils';
 
 interface MissionTreeModalContentProps {
   task?: Task | null;
@@ -173,7 +174,7 @@ export default function MissionTreeModalContent({
           : (((getPreference('task-modal-last-station') as Station) || 'Strategy') as Station);
       setStation(rawStation);
       setProgress(existingTask.progress);
-      setDueDate(existingTask.dueDate ? new Date(existingTask.dueDate) : undefined);
+      setDueDate(existingTask.dueDate ? fromRecurrentUTC(existingTask.dueDate) : undefined);
       setLocalDoneAt(existingTask.doneAt ? new Date(existingTask.doneAt) : undefined);
       setLocalCollectedAt(existingTask.collectedAt ? new Date(existingTask.collectedAt) : undefined);
 

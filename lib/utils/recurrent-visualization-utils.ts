@@ -2,6 +2,7 @@ import { addDays, addWeeks, addMonths } from 'date-fns';
 import { Task } from '@/types/entities';
 import { RecurrentFrequency, TaskType } from '@/types/enums';
 import { FrequencyConfig } from '@/components/ui/frequency-calendar';
+import { fromRecurrentUTC, toRecurrentUTC, addDaysUTC, addWeeksUTC, addMonthsUTC } from './recurrent-date-utils';
 
 export interface TaskOccurrence {
   task: Task;
@@ -13,12 +14,12 @@ export interface TaskOccurrence {
 function normalizeDate(value?: Date | string | null): Date | null {
   if (!value) return null;
   const d = value instanceof Date ? value : new Date(value);
-  return Number.isNaN(d.getTime()) ? null : d;
+  return Number.isNaN(d.getTime()) ? null : fromRecurrentUTC(d);
 }
 
 function getBaseStart(task: Task): Date | null {
-  const scheduledStart = normalizeDate(task.scheduledStart as any);
-  return scheduledStart;
+  const scheduledStart = task.scheduledStart ? fromRecurrentUTC(new Date(task.scheduledStart)) : null;
+  return scheduledStart || (task.dueDate ? fromRecurrentUTC(new Date(task.dueDate)) : null);
 }
 
 function getDurationMs(task: Task): number {
@@ -33,10 +34,10 @@ function getDurationMs(task: Task): number {
 
 function getStopDate(task: Task, config?: FrequencyConfig): Date | null {
   if (config?.stopsAfter?.type === 'date' && config.stopsAfter.value) {
-    return normalizeDate(config.stopsAfter.value as any);
+    return fromRecurrentUTC(new Date(config.stopsAfter.value));
   }
-  const dueDate = normalizeDate(task.dueDate as any);
-  return dueDate || null;
+  const dueDate = task.dueDate ? fromRecurrentUTC(new Date(task.dueDate)) : null;
+  return dueDate;
 }
 
 function applyDayOfMonth(date: Date, dayOfMonth?: number): Date {
@@ -54,7 +55,7 @@ function isWithinRange(date: Date, rangeStart: Date, rangeEnd: Date): boolean {
 function normalizeCustomDays(customDays?: Date[]): Date[] {
   if (!customDays || customDays.length === 0) return [];
   return customDays
-    .map(d => normalizeDate(d as any))
+    .map(d => d instanceof Date ? fromRecurrentUTC(d) : fromRecurrentUTC(new Date(d)))
     .filter((d): d is Date => !!d)
     .sort((a, b) => a.getTime() - b.getTime());
 }
@@ -104,7 +105,10 @@ export function getOccurrencesForRange(task: Task, rangeStart: Date, rangeEnd: D
     let count = 0;
     for (const day of customDays) {
       const start = new Date(day);
-      start.setHours(baseStart.getHours(), baseStart.getMinutes(), baseStart.getSeconds(), 0);
+      if (task.scheduledStart) {
+        const scheduledStartLocal = fromRecurrentUTC(new Date(task.scheduledStart));
+        start.setHours(scheduledStartLocal.getHours(), scheduledStartLocal.getMinutes(), scheduledStartLocal.getSeconds(), 0);
+      }
       if (start.getTime() < baseStart.getTime()) continue;
       count += 1;
       if (maxOccurrences && count > maxOccurrences) break;
@@ -122,19 +126,19 @@ export function getOccurrencesForRange(task: Task, rangeStart: Date, rangeEnd: D
 
     if (type === RecurrentFrequency.ONCE) break;
     if (type === RecurrentFrequency.DAILY) {
-      current = addDays(current, interval);
+      current = fromRecurrentUTC(addDaysUTC(toRecurrentUTC(current), interval));
       continue;
     }
     if (type === RecurrentFrequency.WEEKLY) {
-      current = addWeeks(current, interval);
+      current = fromRecurrentUTC(addWeeksUTC(toRecurrentUTC(current), interval));
       continue;
     }
     if (type === RecurrentFrequency.MONTHLY) {
-      current = applyDayOfMonth(addMonths(current, interval), frequency.dayOfMonth);
+      current = applyDayOfMonth(fromRecurrentUTC(addMonthsUTC(toRecurrentUTC(current), interval)), frequency.dayOfMonth);
       continue;
     }
     if (type === RecurrentFrequency.ALWAYS) {
-      current = addDays(current, interval);
+      current = fromRecurrentUTC(addDaysUTC(toRecurrentUTC(current), interval));
       continue;
     }
 
