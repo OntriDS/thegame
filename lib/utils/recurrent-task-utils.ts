@@ -136,25 +136,44 @@ export async function spawnNextRecurrentInstance(
   // Convert the calculated UTC midnight date back to Local Midnight date for storage/display
   nextDate = fromRecurrentUTC(nextDate);
 
-  // 6. Check safety limit (template's dueDate)
-  const safetyLimit = template.dueDate ? fromRecurrentUTC(template.dueDate) : null;
+  // 6. Check safety limit
+  // For CUSTOM frequencies, the array itself acts as the limit unless stopsAfter.date is defined.
+  // We ignore template.dueDate for CUSTOM because the UI often sets it to the start date, inadvertently acting as a block.
+  let safetyLimit: Date | null = null;
+  if (config.type === RecurrentFrequency.CUSTOM) {
+    if (config.stopsAfter && config.stopsAfter.type === 'date' && config.stopsAfter.value) {
+      safetyLimit = fromRecurrentUTC(
+        config.stopsAfter.value instanceof Date 
+          ? config.stopsAfter.value 
+          : new Date(config.stopsAfter.value)
+      );
+    }
+  } else {
+    safetyLimit = template.dueDate ? fromRecurrentUTC(template.dueDate) : null;
+  }
+
   if (safetyLimit && !isWithinSafetyLimit(nextDate, safetyLimit)) {
     console.warn('[spawnNextRecurrentInstance] Next occurrence exceeds safety limit:', nextDate);
     return null;
   }
 
   // 7. Check for existing instance with same due date (idempotency)
+  // Instead of timezone-sensitive epochs, we use absolute string dates YYYY-MM-DD for comparison.
   const existingInstances = await getTasksByParentId(template.id);
-  const existingDueDates = new Set(
-    existingInstances
+  const existingDueDatesArray = existingInstances
       .filter(t => t.type === TaskType.RECURRENT_INSTANCE)
       .map(t => t.dueDate)
-      .filter(d => d !== undefined)
-      .map(d => fromRecurrentUTC(d).getTime())
+      .filter(d => d !== undefined);
+      
+  const existingDueDates = new Set(
+    existingDueDatesArray.map(d => {
+      const dateObj = d instanceof Date ? d : new Date(d as string);
+      return `${dateObj.getFullYear()}-${dateObj.getMonth()}-${dateObj.getDate()}`;
+    })
   );
 
-  const nextDateUTC = toRecurrentUTC(nextDate);
-  if (existingDueDates.has(nextDateUTC.getTime())) {
+  const nextDateKey = `${nextDate.getFullYear()}-${nextDate.getMonth()}-${nextDate.getDate()}`;
+  if (existingDueDates.has(nextDateKey)) {
     console.warn('[spawnNextRecurrentInstance] Instance already exists for date:', nextDate);
     return null;
   }
@@ -276,14 +295,63 @@ export async function canSpawnMoreInstances(template: Task): Promise<boolean> {
     return false;
   }
 
+  const config = template.frequencyConfig;
+
+  // For CUSTOM, check if we've exhausted all dates
+  if (config.type === RecurrentFrequency.CUSTOM) {
+    // Also check stopsAfter times
+    if (config.stopsAfter && config.stopsAfter.type === 'times') {
+      const existingCount = (await getTasksByParentId(template.id)).filter(t => t.type === TaskType.RECURRENT_INSTANCE).length;
+      if (existingCount >= (config.stopsAfter.value as number)) {
+        return false;
+      }
+    }
+
+    if (!config.customDays || config.customDays.length === 0) {
+      return false;
+    }
+    
+    // Sort and normalize dates just like spawn logic
+    const normalizedCustomDays = config.customDays
+      .map((d: any) => d instanceof Date ? d : new Date(d))
+      .filter((d: Date) => !isNaN(d.getTime()));
+    const customDatesUTC = normalizedCustomDays.map((d: Date) => toRecurrentUTC(d));
+    customDatesUTC.sort((a: Date, b: Date) => a.getTime() - b.getTime());
+
+    const referenceDate = template.lastSpawnedDate 
+      ? fromRecurrentUTC(template.lastSpawnedDate) 
+      : fromRecurrentUTC(template.dueDate || new Date());
+      
+    // If lastSpawnedDate exists, find next. If not, pick first.
+    const nextCustom = template.lastSpawnedDate
+      ? customDatesUTC.find((d: Date) => isNextOccurrence(d, referenceDate))
+      : customDatesUTC[0];
+
+    // If there's no custom date left strictly after referenceDate, we cannot spawn.
+    if (!nextCustom) {
+      return false;
+    }
+
+    // Check custom stopsAfter date limit
+    if (config.stopsAfter && config.stopsAfter.type === 'date' && config.stopsAfter.value) {
+      const limit = fromRecurrentUTC(
+        config.stopsAfter.value instanceof Date 
+          ? config.stopsAfter.value 
+          : new Date(config.stopsAfter.value)
+      );
+      const candidateLocal = fromRecurrentUTC(nextCustom);
+      if (candidateLocal.getTime() > limit.getTime()) {
+        return false;
+      }
+    }
+
+    return true; // Valid custom date exists and is within limits
+  }
+
+  // STANDARD safety limit for all other frequencies (DAILY, WEEKLY, MONTHLY)
   const safetyLimit = template.dueDate ? fromRecurrentUTC(template.dueDate) : null;
   if (!safetyLimit) {
-    // No safety limit means can spawn indefinitely (if ALWAYS or CUSTOM with no end)
-    const config = template.frequencyConfig;
     if (config.type === RecurrentFrequency.ALWAYS) {
-      return true;
-    }
-    if (config.type === RecurrentFrequency.CUSTOM && (!config.stopsAfter || config.stopsAfter.type === 'never')) {
       return true;
     }
     // All other types have safety limits, so check lastSpawnedDate

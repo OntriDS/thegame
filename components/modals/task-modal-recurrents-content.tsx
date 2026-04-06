@@ -1104,12 +1104,8 @@ export default function RecurrentTreeModalContent({
                     onConfirm: () => {
                       setStatus(newStatus);
                       setProgress(100);
-                      setShowArchiveCollectionModal(false);
-                      setPendingStatusChange(null);
                     },
                     onCancel: () => {
-                      setShowArchiveCollectionModal(false);
-                      setPendingStatusChange(null);
                     },
                   });
                   setShowArchiveCollectionModal(true);

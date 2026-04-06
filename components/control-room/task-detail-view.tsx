@@ -93,7 +93,12 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
         const resp = await fetch(`/api/tasks/${node.task.id}/spawn-next?preview=1`, { method: 'POST' });
         const data = await resp.json().catch(() => ({}));
         if (!resp.ok || !data?.success) {
-          setNextSpawnDate(null);
+          if (data.error) {
+            console.error('Spawn Next Error:', data.error);
+            setNextSpawnDate(null);
+          } else {
+            setNextSpawnDate(null);
+          }
           return;
         }
         setNextSpawnDate(data.nextDate ? new Date(data.nextDate) : null);

@@ -11,8 +11,9 @@
  * @param date - The local date to convert
  * @returns Date set to UTC midnight (00:00:00)
  */
-export function toRecurrentUTC(date: Date): Date {
-  return new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+export function toRecurrentUTC(date: Date | string): Date {
+  const localDate = date instanceof Date ? date : new Date(date);
+  return new Date(Date.UTC(localDate.getFullYear(), localDate.getMonth(), localDate.getDate()));
 }
 
 /**
@@ -23,8 +24,9 @@ export function toRecurrentUTC(date: Date): Date {
  * @param utcDate - The UTC midnight date from storage
  * @returns Date in local timezone for display
  */
-export function fromRecurrentUTC(utcDate: Date): Date {
-  return new Date(utcDate.getUTCFullYear(), utcDate.getUTCMonth(), utcDate.getUTCDate());
+export function fromRecurrentUTC(utcDate: Date | string): Date {
+  const dateObj = utcDate instanceof Date ? utcDate : new Date(utcDate);
+  return new Date(dateObj.getUTCFullYear(), dateObj.getUTCMonth(), dateObj.getUTCDate());
 }
 
 /**
