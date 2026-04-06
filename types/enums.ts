@@ -8,7 +8,7 @@
 /** Business Structure - Single source of truth for sections and stations */
 export const BUSINESS_STRUCTURE = {
   ADMIN: ['Strategy', 'Finances', 'Team', 'Inventory', 'Materials', 'Equipment', 'Transport', 'Rents', 'Partnerships', 'Projects'],
-  RESEARCH: ['Classes', 'Studies', 'Reviews', 'Library', 'Innovation'],
+  RESEARCH: ['Library', 'Studies', 'Processes', 'Reviews', 'Ebooks', 'Innovation', 'Classes'],
   DEV: ['Systems-Dev', 'Websites'],
   ARTDESIGN: ['Paint', 'Digital-Art', 'Design', 'Modeling', 'Game-Design', 'Animation', 'Portfolio'],
   MAKERSPACE: ['Assemblage', 'Craft'],

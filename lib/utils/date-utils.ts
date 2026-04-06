@@ -9,6 +9,7 @@ import {
   DATE_FORMAT_LONG,
   DATE_FORMAT_SHORT,
   DATE_FORMAT_DAY_MONTH,
+  DATE_FORMAT_DAY_MONTH_YEAR,
   DATE_FORMAT_MONTH_YEAR,
   DATE_FORMAT_MONTH_KEY
 } from '@/lib/constants/app-constants';
@@ -72,6 +73,24 @@ export function formatDayMonth(date: Date | string | null | undefined): string {
     if (!isValid(dateObj)) return '';
 
     return format(dateObj, DATE_FORMAT_DAY_MONTH);
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * Format a date using day-month-year format (DD-MM-YY) - for recurrent instance names
+ * @param date - Date object or date string
+ * @returns Formatted date string in DD-MM-YY format or empty string if invalid
+ */
+export function formatDayMonthYear(date: Date | string | null | undefined): string {
+  if (!date) return '';
+
+  try {
+    const dateObj = parseFlexibleDate(date);
+    if (!isValid(dateObj)) return '';
+
+    return format(dateObj, DATE_FORMAT_DAY_MONTH_YEAR);
   } catch {
     return '';
   }

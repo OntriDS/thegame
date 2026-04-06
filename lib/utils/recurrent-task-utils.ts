@@ -8,7 +8,7 @@ import { hasEffect, markEffect } from '@/data-store/effects-registry';
 import { appendEntityLog } from '@/workflows/entities-logging';
 import { FrequencyConfig } from '@/components/ui/frequency-calendar';
 import { v4 as uuid } from 'uuid';
-import { formatDayMonth } from '@/lib/utils/date-utils';
+import { formatDayMonth, formatDayMonthYear } from '@/lib/utils/date-utils';
 import { ORDER_INCREMENT } from '@/lib/constants/app-constants';
 import { isTaskHistoryTerminal } from '@/lib/utils/task-active-utils';
 import {
@@ -210,7 +210,7 @@ export async function spawnNextRecurrentInstance(
   }
 
   // 9. Spawn the instance
-  const formattedDate = formatDayMonth(nextDate);
+  const formattedDate = formatDayMonthYear(nextDate);
   const separator = ' \u2022 ';
   const instanceOrder = nextDate.getTime();
   const instance: Task = {
@@ -457,7 +457,7 @@ export function spawnRecurrentInstance(
   template: Task,
   dueDate: Date
 ): Task {
-  const formattedDate = formatDayMonth(dueDate);
+  const formattedDate = formatDayMonthYear(dueDate);
   const separator = ' \u2022 ';
   const instanceOrder = dueDate.getTime();
   return {
