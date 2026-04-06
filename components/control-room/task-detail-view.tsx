@@ -66,6 +66,7 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
   const [isSpawnErrorOpen, setIsSpawnErrorOpen] = useState(false);
   const [nextSpawnDate, setNextSpawnDate] = useState<Date | null>(null);
   const [isNextSpawnLoading, setIsNextSpawnLoading] = useState(false);
+  const [isDuplicating, setIsDuplicating] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // No initialization needed for ClientAPI
@@ -190,29 +191,39 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
   const handleDuplicateTask = async () => {
     if (!node) return;
 
-    const newId = crypto.randomUUID();
-    const duplicatedTask: Task = {
-      ...node.task,
-      id: newId,
-      name: node.task.name,
-      status: TaskStatus.CREATED,
-      progress: 0,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      parentId: node.task.parentId || null,
-      order:
-        allTasks.length > 0
-          ? computeNextSiblingOrder(allTasks, node.task.parentId ?? null, newId)
-          : (Number(node.task.order) || 0) + ORDER_INCREMENT,
-    };
+    setIsDuplicating(true);
 
-    // Save the task first - logging is handled server-side automatically
-    await ClientAPI.upsertTask(duplicatedTask);
+    try {
+      const newId = crypto.randomUUID();
+      const duplicatedTask: Task = {
+        ...node.task,
+        id: newId,
+        name: node.task.name,
+        status: TaskStatus.CREATED,
+        progress: 0,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        parentId: node.task.parentId || null,
+        order:
+          allTasks.length > 0
+            ? computeNextSiblingOrder(allTasks, node.task.parentId ?? null, newId)
+            : (Number(node.task.order) || 0) + ORDER_INCREMENT,
+      };
 
-    setShowDuplicateSuccess(true);
-    setTimeout(() => setShowDuplicateSuccess(false), 2000);
-    onTaskUpdate?.();
-    setShowDuplicateModal(false);
+      // Save the task first - logging is handled server-side automatically
+      // Skip duplicate check since this is an intentional duplicate operation
+      await ClientAPI.upsertTask(duplicatedTask, { skipDuplicateCheck: true });
+
+      setShowDuplicateSuccess(true);
+      setTimeout(() => setShowDuplicateSuccess(false), 2000);
+      onTaskUpdate?.();
+      setShowDuplicateModal(false);
+    } catch (error) {
+      console.error('Failed to duplicate task:', error);
+      // You could show an error message here if needed
+    } finally {
+      setIsDuplicating(false);
+    }
   };
 
   // Open Template Modal prefilled from Recurrent Parent
@@ -769,12 +780,21 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDuplicateModal(false)}>
+            <Button variant="outline" onClick={() => setShowDuplicateModal(false)} disabled={isDuplicating}>
               Cancel
             </Button>
-            <Button onClick={handleDuplicateTask}>
-              <Copy className="h-4 w-4 mr-2" />
-              Duplicate Task
+            <Button onClick={handleDuplicateTask} disabled={isDuplicating}>
+              {isDuplicating ? (
+                <>
+                  <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                  Duplicating...
+                </>
+              ) : (
+                <>
+                  <Copy className="h-4 w-4 mr-2" />
+                  Duplicate Task
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

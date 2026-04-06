@@ -64,11 +64,11 @@ export const ClientAPI = {
     return await res.json();
   },
 
-  upsertTask: async (task: Task): Promise<Task> => {
+  upsertTask: async (task: Task, options?: { skipDuplicateCheck?: boolean }): Promise<Task> => {
     const res = await fetch('/api/tasks', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(task)
+      body: JSON.stringify({ ...task, skipDuplicateCheck: options?.skipDuplicateCheck })
     });
     if (!res.ok) throw new Error('Failed to save task');
     return await res.json();

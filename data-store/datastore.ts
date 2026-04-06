@@ -102,7 +102,7 @@ import { isTaskActive, isTaskCompleted } from '@/lib/utils/task-active-utils';
 import type { PlayerArchiveRow } from '@/types/archive';
 
 // TASKS
-export async function upsertTask(task: Task, options?: { skipWorkflowEffects?: boolean; skipLinkEffects?: boolean }): Promise<Task> {
+export async function upsertTask(task: Task, options?: { skipWorkflowEffects?: boolean; skipLinkEffects?: boolean; skipDuplicateCheck?: boolean }): Promise<Task> {
   // Explicitly block self-referential parent assignment (circular reference)
   if (task.parentId && task.parentId === task.id) {
     console.warn(`[Datastore] Prevented Task ${task.id} from becoming its own parent.`);
@@ -116,10 +116,11 @@ export async function upsertTask(task: Task, options?: { skipWorkflowEffects?: b
       : task;
   const saved = await repoUpsertTask(normalizedTask);
 
-  // Identity Shield: Time-Window Deduplication (2 minutes)
+  // Identity Shield: Time-Window Deduplication (30 seconds)
   // Only apply to NEW tasks (no previous record found) to allow updates
-  if (!previous) {
-    const DUPLICATION_WINDOW_MS = 2 * 60 * 1000; // 2 minutes
+  // Skip if explicitly requested (e.g., intentional duplicate via Duplicate button)
+  if (!previous && !options?.skipDuplicateCheck) {
+    const DUPLICATION_WINDOW_MS = 30 * 1000; // 30 seconds
     const now = new Date();
 
     // Fetch recent tasks (could be optimized with a time-based index, but filtering getAllTasks is acceptable for now given volume)

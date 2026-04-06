@@ -54,10 +54,12 @@ export async function POST(req: NextRequest) {
   if (!(await requireAdminAuth(req))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   try {
-    const body = (await req.json()) as Task;
+    const body = await req.json();
+    const { skipDuplicateCheck, ...taskData } = body;
+    const taskBody = taskData as Task;
 
     // Normalize frequencyConfig.customDays from strings to UTC midnight Date objects
-    let normalizedFrequencyConfig = body.frequencyConfig;
+    let normalizedFrequencyConfig = taskBody.frequencyConfig;
     if (normalizedFrequencyConfig?.customDays && Array.isArray(normalizedFrequencyConfig.customDays)) {
       normalizedFrequencyConfig = {
         ...normalizedFrequencyConfig,
@@ -88,8 +90,8 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const id = body.id || uuid();
-    let parentId = body.parentId;
+    const id = taskBody.id || uuid();
+    let parentId = taskBody.parentId;
 
     // Explicitly block self-referential parent assignment (circular reference)
     if (parentId === id) {
@@ -98,19 +100,19 @@ export async function POST(req: NextRequest) {
     }
 
     const task = {
-      ...body,
+      ...taskBody,
       id,
       parentId,
-      links: body.links || [],
-      createdAt: body.createdAt ? new Date(body.createdAt) : new Date(),
+      links: taskBody.links || [],
+      createdAt: taskBody.createdAt ? new Date(taskBody.createdAt) : new Date(),
       updatedAt: new Date(),
       // Standardize to UTC midnight for all dates
-      dueDate: body.dueDate ? toRecurrentUTC(new Date(body.dueDate)) : undefined,
-      doneAt: body.doneAt ? new Date(body.doneAt) : (body.status === TaskStatus.DONE ? new Date() : undefined),
-      collectedAt: body.collectedAt ? new Date(body.collectedAt) : undefined,
+      dueDate: taskBody.dueDate ? toRecurrentUTC(new Date(taskBody.dueDate)) : undefined,
+      doneAt: taskBody.doneAt ? new Date(taskBody.doneAt) : (taskBody.status === TaskStatus.DONE ? new Date() : undefined),
+      collectedAt: taskBody.collectedAt ? new Date(taskBody.collectedAt) : undefined,
       frequencyConfig: normalizedFrequencyConfig
     };
-    const saved = await upsertTask(task);
+    const saved = await upsertTask(task, { skipDuplicateCheck });
     return NextResponse.json(saved);
   } catch (error) {
     console.error('[API] Error saving task:', error);
