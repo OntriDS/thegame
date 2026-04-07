@@ -158,7 +158,7 @@ export async function spawnNextRecurrentInstance(
   }
 
   // 7. Check for existing instance with same due date (idempotency)
-  // Instead of timezone-sensitive epochs, we use absolute string dates YYYY-MM-DD for comparison.
+  // Instead of failing if it exists, we will fast-forward until we find an unspawned date or hit the safety limit!
   const existingInstances = await getTasksByParentId(template.id);
   const existingDueDatesArray = existingInstances
       .filter(t => t.type === TaskType.RECURRENT_INSTANCE)
@@ -172,9 +172,48 @@ export async function spawnNextRecurrentInstance(
     })
   );
 
-  const nextDateKey = `${nextDate.getFullYear()}-${nextDate.getMonth()}-${nextDate.getDate()}`;
+  let nextDateKey = `${nextDate.getFullYear()}-${nextDate.getMonth()}-${nextDate.getDate()}`;
+  let maxNextAttempts = 50; // Prevent infinite loops
+  
+  while (existingDueDates.has(nextDateKey) && maxNextAttempts > 0) {
+    maxNextAttempts--;
+    
+    // Fast forward to the next date based on frequency
+    if (config.type === RecurrentFrequency.DAILY) {
+      nextDate = addDaysUTC(toRecurrentUTC(nextDate), config.interval);
+    } else if (config.type === RecurrentFrequency.WEEKLY) {
+      nextDate = addWeeksUTC(toRecurrentUTC(nextDate), config.interval);
+    } else if (config.type === RecurrentFrequency.MONTHLY) {
+      nextDate = addMonthsUTC(toRecurrentUTC(nextDate), config.interval);
+    } else if (config.type === RecurrentFrequency.CUSTOM) {
+      // Find the next custom date after the current nextDate
+      const nextCustom = (config.customDays || [])
+        .map((d: any) => toRecurrentUTC(d instanceof Date ? d : new Date(d)))
+        .filter((d: Date) => !isNaN(d.getTime()))
+        .sort((a: Date, b: Date) => a.getTime() - b.getTime())
+        .find((d: Date) => isNextOccurrence(d, toRecurrentUTC(nextDate)));
+        
+      if (!nextCustom) {
+         console.warn('[spawnNextRecurrentInstance] No next custom date available during fast-forward');
+         return null;
+      }
+      nextDate = nextCustom;
+    } else if (config.type === RecurrentFrequency.ALWAYS) {
+      nextDate = addDaysUTC(toRecurrentUTC(nextDate), config.interval);
+    }
+
+    nextDate = fromRecurrentUTC(nextDate); // Back to local midnight
+    
+    if (safetyLimit && !isWithinSafetyLimit(nextDate, safetyLimit)) {
+      console.warn('[spawnNextRecurrentInstance] Next occurrence exceeds safety limit during fast-forward:', nextDate);
+      return null;
+    }
+    
+    nextDateKey = `${nextDate.getFullYear()}-${nextDate.getMonth()}-${nextDate.getDate()}`;
+  }
+
   if (existingDueDates.has(nextDateKey)) {
-    console.warn('[spawnNextRecurrentInstance] Instance already exists for date:', nextDate);
+    console.warn('[spawnNextRecurrentInstance] Exhausted fast-forward attempts. Could not find a free instance slot for:', nextDate);
     return null;
   }
 
