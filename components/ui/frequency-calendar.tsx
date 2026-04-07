@@ -142,11 +142,13 @@ export function FrequencyCalendar({
       return `After ${config.stopsAfter.value} times`;
     }
     // Ensure value is a Date object before formatting
+    if (!config.stopsAfter.value) return 'Never';
     const dateValue = config.stopsAfter.value instanceof Date
       ? config.stopsAfter.value
       : typeof config.stopsAfter.value === 'string'
         ? new Date(config.stopsAfter.value)
-        : new Date();
+        : null;
+    if (!dateValue || isNaN(dateValue.getTime())) return 'Never';
     return `Until ${formatDisplayDate(dateValue)}`;
   };
 
@@ -335,7 +337,7 @@ export function FrequencyCalendar({
                           handleConfigChange({
                             stopsAfter: {
                               type: val as 'times' | 'date',
-                              value: val === 'times' ? 10 : new Date(),
+                              value: val === 'times' ? 10 : undefined,
                             },
                           });
                         }
@@ -385,13 +387,13 @@ export function FrequencyCalendar({
                           ? config.stopsAfter.value
                           : typeof config.stopsAfter.value === 'string'
                             ? new Date(config.stopsAfter.value)
-                            : new Date()
+                            : undefined
                       }
                       onChange={(date) =>
                         handleConfigChange({
                           stopsAfter: {
                             type: 'date',
-                            value: date || new Date(),
+                            value: date,
                           },
                         })
                       }
