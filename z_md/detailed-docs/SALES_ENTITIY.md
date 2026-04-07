@@ -20,7 +20,7 @@
 
 ## Overview
 
-Sales is a first-class entity that records business transactions across multiple contexts: feria, direct, consignment, bundle sales, online, NFT, gifts, and exchanges. It integrates with the unified entities architecture and “Best of Both Worlds” logging: append-only logs with an effects registry for idempotency.
+Sales is a first-class entity that records business transactions across multiple contexts: feria, direct, consignment, bundle sales, online, gifts, and exchanges. It integrates with the unified entities architecture and “Best of Both Worlds” logging: append-only logs with an effects registry for idempotency.
 
 New in this version:
 - Sales Log: Dedicated append-only log for Sales lifecycle.

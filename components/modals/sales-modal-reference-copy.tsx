@@ -1116,8 +1116,7 @@ export default function SalesModal({
   // Money-First helpers
   const getDefaultMethodForType = (t: SaleType): PaymentMethod => {
     switch (t) {
-      case SaleType.ONLINE: return PaymentMethod.PAYPAL;
-      case SaleType.NFT: return PaymentMethod.BTC;
+      case SaleType.ONLINE: return PaymentMethod.CARD;
       case SaleType.NETWORK: return PaymentMethod.SINPE;
       case SaleType.DIRECT: return PaymentMethod.FIAT_USD;
       default: return PaymentMethod.FIAT_USD;

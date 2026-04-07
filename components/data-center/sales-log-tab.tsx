@@ -66,7 +66,6 @@ export function SalesLogTab({ salesLog, onReload, isReloading }: SalesLogTabProp
       case SaleType.BOOTH: return <Calendar className="h-4 w-4 text-muted-foreground" />;
       case SaleType.NETWORK: return <ShoppingCart className="h-4 w-4 text-muted-foreground" />;
       case SaleType.ONLINE: return <DollarSign className="h-4 w-4 text-muted-foreground" />;
-      case SaleType.NFT: return <DollarSign className="h-4 w-4 text-muted-foreground" />;
       default: return <ShoppingCart className="h-4 w-4 text-muted-foreground" />;
     }
   };

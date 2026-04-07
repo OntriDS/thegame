@@ -8,7 +8,6 @@ export function getSaleLogDetails(sale: Sale) {
     [SaleType.BOOTH]: 'Booth-Sales',
     [SaleType.NETWORK]: 'Network',
     [SaleType.ONLINE]: 'Online-Sales',
-    [SaleType.NFT]: 'Web3-Gallery',
   };
 
   return {

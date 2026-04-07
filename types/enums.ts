@@ -9,10 +9,10 @@
 export const BUSINESS_STRUCTURE = {
   ADMIN: ['Strategy', 'Finances', 'Team', 'Inventory', 'Transport', 'Rents', 'Partnerships', 'Projects', 'Items'],
   RESEARCH: ['Library', 'Studies', 'Processes', 'Reviews', 'Ebooks', 'Innovation', 'Classes'],
-  DEV: ['Systems-Dev', 'Websites'],
-  ARTDESIGN: ['Paint', 'Digital-Art', 'Design', 'Modeling', 'Game-Design', 'Animation', 'Portfolio'],
-  MAKERSPACE: ['Assemblage', 'Craft'],
-  SALES: ['Direct-Sales', 'Booth-Sales', 'Network', 'Marketing', 'Online-Sales', 'Gallery-Store', 'Bookings', 'Dispatches', 'Websites', 'Web3-Gallery', 'Other-Sales'],
+  DEV: ['Systems-Dev'],
+  ARTDESIGN: ['Paint', 'Digital-Art', 'Design', 'Animation'],
+  MAKERSPACE: ['Craft'],
+  SALES: ['Direct-Sales', 'Booth-Sales', 'Network', 'Marketing', 'Online-Sales', 'Portfolio', 'Dispatches', 'Gallery-Store', 'Bookings'],
   PERSONAL: ['Family', 'Food', 'Health', 'Earnings', 'Transport-P', 'Rent-P', 'Other-P']
 } as const;
 
@@ -398,7 +398,6 @@ export enum SaleType {
   BOOTH = 'BOOTH',
   NETWORK = 'NETWORK',
   ONLINE = 'ONLINE',
-  NFT = 'NFT',
 }
 
 /** Sales transaction status */

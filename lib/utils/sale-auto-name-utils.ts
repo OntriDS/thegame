@@ -55,8 +55,6 @@ export function getSaleTypeLabelForAutoName(type: SaleType): string {
       return 'Network Sale';
     case SaleType.ONLINE:
       return 'Online Sale';
-    case SaleType.NFT:
-      return 'NFT Sale';
     default:
       return 'Sale';
   }
@@ -72,7 +70,6 @@ export function coerceSaleTypeForAutoName(input: SaleType | string | undefined |
     BOOTH: SaleType.BOOTH,
     NETWORK: SaleType.NETWORK,
     ONLINE: SaleType.ONLINE,
-    NFT: SaleType.NFT,
   };
   return map[u] ?? SaleType.DIRECT;
 }
