@@ -731,6 +731,7 @@ export default function SalesModal({
 
     const at = getTimelineDateForAutoName();
     setName(getDefaultSaleName(type, siteId, at));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [type, siteId, isNameCustom, open, getDefaultSaleName, getTimelineDateForAutoName]);
 
   useEffect(() => {

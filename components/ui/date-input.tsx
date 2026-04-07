@@ -38,9 +38,10 @@ export function DateInput({
     const newValue = e.target.value;
     setInputValue(newValue);
 
+    // Don't trigger onChange during typing - only validate and show errors
+    // Only call onChange when we have a complete, valid date
     if (!newValue) {
       setIsValid(true);
-      onChange?.(undefined);
       return;
     }
 
@@ -67,6 +68,11 @@ export function DateInput({
   };
 
   const handleBlur = () => {
+    if (!inputValue) {
+      // User intentionally cleared the field
+      onChange?.(undefined);
+      return;
+    }
     if (!isValid && inputValue) {
       // Reset to last valid value on blur if invalid
       if (value) {
