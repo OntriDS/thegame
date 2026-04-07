@@ -45,13 +45,18 @@ export function DateInput({
       return;
     }
 
-    // Parse DD-MM-YYYY format
-    const dateMatch = newValue.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+    // Parse DD-MM-YY or DD-MM-YYYY format
+    const dateMatch = newValue.match(/^(\d{1,2})-(\d{1,2})-(\d{2}|\d{4})$/);
     if (dateMatch) {
       const [, day, month, year] = dateMatch;
       const dayNum = parseInt(day, 10);
       const monthNum = parseInt(month, 10);
-      const yearNum = parseInt(year, 10);
+      let yearNum = parseInt(year, 10);
+      
+      // Handle 2-digit year (assume 2000s)
+      if (year.length === 2) {
+        yearNum += 2000;
+      }
 
       // Validate date
       if (dayNum >= 1 && dayNum <= 31 && monthNum >= 1 && monthNum <= 12 && yearNum >= 1900) {
