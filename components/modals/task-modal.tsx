@@ -149,6 +149,7 @@ export default function TaskModal({
     if (open) {
       void loadData();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   /**

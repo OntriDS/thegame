@@ -25,7 +25,7 @@ export interface FrequencyConfig {
   customDays?: Date[];
   stopsAfter?: {
     type: 'times' | 'date';
-    value: number | Date;
+    value: number | Date | undefined;
   };
   repeatMode: 'after_done' | 'periodically';
 }
