@@ -524,7 +524,7 @@ export default function SalesModal({
       setLocalDoneAt(undefined);
       setLocalCollectedAt(undefined);
     }
-  }, [sale]);
+  }, [sale, sites]);
 
   useEffect(() => {
     if (!sale || didInitRef.current) {

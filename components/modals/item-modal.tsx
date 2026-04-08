@@ -162,13 +162,12 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
     }
   }, [keepInInventoryAfterSold, restockToTarget]);
 
-  // Validation: Auto-disable restockToTarget if targetAmount is not set or <= 0
   useEffect(() => {
     const targetAmountNum = parseFloat(targetAmount);
     if ((!targetAmount || isNaN(targetAmountNum) || targetAmountNum <= 0) && restockToTarget) {
       setRestockToTarget(false);
     }
-  }, [targetAmount]);
+  }, [targetAmount, restockToTarget]);
 
   // Load form data from preferences when modal opens
   const loadFormDataFromStorage = useCallback(() => {
