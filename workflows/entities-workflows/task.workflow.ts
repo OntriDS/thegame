@@ -50,6 +50,31 @@ const resolveTaskOutputSite = (task: Task): string | null => {
   return null;
 };
 
+/**
+ * Get a safe task name for logging - prevents "Unknown" entries
+ * Returns the task name if valid, or a fallback based on task type
+ */
+const getSafeTaskNameForLogging = (task: Task): string => {
+  if (task.name && task.name.trim()) {
+    return task.name.trim();
+  }
+
+  // Fallback based on task type to provide meaningful context
+  const fallbacks: Record<string, string> = {
+    'Mission': 'Untitled Mission',
+    'Goal': 'Untitled Goal',
+    'Assignment': 'Untitled Assignment',
+    'Milestone': 'Untitled Milestone',
+    'Mission Group': 'Mission Group',
+    'Recurrent Template': 'Untitled Recurrent Template',
+    'Recurrent Instance': 'Untitled Task Instance',
+    'Recurrent Group': 'Recurrent Group',
+    'Automation': 'Untitled Automation Task'
+  };
+
+  return fallbacks[task.type] || 'Untitled Task';
+};
+
 export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<void> {
   // New task creation
   if (!previousTask) {
@@ -59,7 +84,7 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
     if (!alreadyLoggedCreated) {
       // Minimal, event-specific payload for CREATED
       await appendEntityLog(EntityType.TASK, task.id, LogEventType.CREATED, {
-        name: task.name,
+        name: getSafeTaskNameForLogging(task),
         taskType: task.type,
         station: task.station
       }, task.createdAt);
@@ -84,7 +109,7 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
     if (!skipUpdatedForStatuses.includes(task.status)) {
       // Log status change with transition context (using UPDATED event)
       await appendEntityLog(EntityType.TASK, task.id, LogEventType.UPDATED, {
-        name: task.name,
+        name: getSafeTaskNameForLogging(task),
         taskType: task.type,
         station: task.station,
         oldStatus: previousTask!.status,
@@ -107,7 +132,7 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
     const shouldLogDone = !previousTask || !previousTask.doneAt;
     if (shouldLogDone) {
       await appendEntityLog(EntityType.TASK, task.id, LogEventType.DONE, {
-        name: task.name,
+        name: getSafeTaskNameForLogging(task),
         taskType: task.type,
         station: task.station
       }, task.doneAt);
@@ -138,7 +163,7 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
     if (!(await hasEffect(pointsRewardedEffectKey))) {
       // Log COLLECTED event (Points Claimed)
       await appendEntityLog(EntityType.TASK, task.id, LogEventType.COLLECTED, {
-        name: task.name,
+        name: getSafeTaskNameForLogging(task),
         taskType: task.type,
         station: task.station
       }, collectedAt);

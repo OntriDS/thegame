@@ -4,8 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTaskById, upsertTask } from '@/data-store/datastore';
 import { spawnNextRecurrentInstance, updateTemplateLastSpawnedDate, canSpawnMoreInstances } from '@/lib/utils/recurrent-task-utils';
-import { appendEntityLog } from '@/workflows/entities-logging';
-import { EntityType, LogEventType, TaskType } from '@/types/enums';
+import { EntityType, TaskType } from '@/types/enums';
 import { toRecurrentUTC, fromRecurrentUTC } from '@/lib/utils/recurrent-date-utils';
 
 /**
@@ -81,24 +80,11 @@ export async function POST(
     }
 
     // 5. Persist instance (the API will convert to UTC midnight)
+    // Note: The onTaskUpsert workflow will handle logging of CREATED event to avoid duplicates
     const savedInstance = await upsertTask(instance);
 
     // 6. Update template's lastSpawnedDate
     await updateTemplateLastSpawnedDate(templateId, (instance.dueDate as Date) || new Date());
-
-    // 7. Log instance creation
-    await appendEntityLog(
-      EntityType.TASK,
-      savedInstance.id,
-      LogEventType.CREATED,
-      {
-        name: savedInstance.name,
-        taskType: savedInstance.type,
-        station: savedInstance.station,
-        templateId: templateId,
-        spawnedAt: new Date().toISOString()
-      }
-    );
 
     return NextResponse.json({
       success: true,

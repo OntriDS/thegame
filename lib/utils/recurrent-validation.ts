@@ -69,6 +69,15 @@ export async function validateSpawnOperation(template: Task): Promise<Validation
     };
   }
 
+  // 1.5. Check template name
+  if (!template.name || !template.name.trim()) {
+    return {
+      isValid: false,
+      errorCode: 'NO_NAME' as SpawnErrorCode,
+      errorMessage: 'Template must have a name to spawn instances'
+    };
+  }
+
   // 2. Check frequency configuration
   if (!template.frequencyConfig) {
     return {
