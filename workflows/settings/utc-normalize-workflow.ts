@@ -57,7 +57,7 @@ export class UTCNormalizeWorkflow {
         
         if (normalized.changed) {
           results.fixed++;
-          await upsertTask(normalized.data, { skipWorkflowEffects: true, skipDuplicateCheck: true });
+          await upsertTask(normalized.data, { skipWorkflowEffects: true, skipDuplicateCheck: true, skipLinkEffects: true });
           
           // Re-index monthly bucket if needed
           const newMonth = normalized.data.collectedAt || normalized.data.doneAt || normalized.data.createdAt;
@@ -80,7 +80,7 @@ export class UTCNormalizeWorkflow {
         ]);
         if (normalized.changed) {
           results.fixed++;
-          await upsertItem(normalized.data, { skipWorkflowEffects: true });
+          await upsertItem(normalized.data, { skipWorkflowEffects: true, skipLinkEffects: true });
           
           // Re-index monthly bucket if needed (Items are indexed by createdAt or soldAt)
           const originalMonthKey = item.soldAt ? this.getMonthKey(item.soldAt) : this.getMonthKey(item.createdAt);
@@ -106,7 +106,7 @@ export class UTCNormalizeWorkflow {
         
         if (normalized.changed) {
           results.fixed++;
-          await upsertSale(normalized.data, { skipWorkflowEffects: true });
+          await upsertSale(normalized.data, { skipWorkflowEffects: true, skipLinkEffects: true });
           
           const newMonthKey = normalized.data.saleDate ? this.getMonthKey(normalized.data.saleDate) : null;
           if (newMonthKey && originalMonthKey && newMonthKey !== originalMonthKey) {
@@ -126,7 +126,7 @@ export class UTCNormalizeWorkflow {
         ]);
         if (normalized.changed) {
           results.fixed++;
-          await upsertFinancial(normalized.data, { skipWorkflowEffects: true });
+          await upsertFinancial(normalized.data, { skipWorkflowEffects: true, skipLinkEffects: true });
           
           // Financials are usually indexed by their 'month' and 'year' fields, 
           // but we also have monthly sets.
@@ -148,7 +148,7 @@ export class UTCNormalizeWorkflow {
         const normalized = this.normalizeEntityDates(char, ['createdAt', 'updatedAt', 'lastActiveAt']);
         if (normalized.changed) {
           results.fixed++;
-          await upsertCharacter(normalized.data);
+          await upsertCharacter(normalized.data, { skipWorkflowEffects: true, skipLinkEffects: true });
         }
       }
 
@@ -160,7 +160,7 @@ export class UTCNormalizeWorkflow {
         const normalized = this.normalizeEntityDates(player, ['createdAt', 'updatedAt', 'lastActiveAt']);
         if (normalized.changed) {
           results.fixed++;
-          await upsertPlayer(normalized.data);
+          await upsertPlayer(normalized.data, { skipWorkflowEffects: true, skipLinkEffects: true });
         }
       }
 
@@ -172,7 +172,7 @@ export class UTCNormalizeWorkflow {
         const normalized = this.normalizeEntityDates(site, ['createdAt', 'updatedAt']);
         if (normalized.changed) {
           results.fixed++;
-          await upsertSite(normalized.data);
+          await upsertSite(normalized.data, { skipWorkflowEffects: true });
         }
       }
 
