@@ -80,7 +80,7 @@ export async function ensureSaleLifecycleLogsForState(sale: Sale): Promise<void>
       LogEventType.COLLECTED,
       {
         ...getSaleLogDetails(sale),
-        collectedAt: collectedAttoUTCISOString(,
+        collectedAt: toUTCISOString(collectedAt),
       },
       collectedAt
     );
@@ -147,7 +147,7 @@ export async function ensureSaleCollectedLog(saleId: string): Promise<{
     LogEventType.COLLECTED,
     {
       ...getSaleLogDetails(sale),
-      collectedAt: collectedAttoUTCISOString(,
+      collectedAt: toUTCISOString(collectedAt),
     },
     collectedAt
   );
@@ -270,6 +270,7 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
     } else if (sale.createdAt) {
       defaultCollectedAt = endOfMonthUTC(sale.createdAt);
     } else {
+      defaultCollectedAt = endOfMonthUTC(getUTCNow());
     }
 
     const collectedAtRaw = sale.collectedAt ?? defaultCollectedAt;
@@ -284,7 +285,7 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
         LogEventType.COLLECTED,
         {
           ...getSaleLogDetails(sale),
-          collectedAt: collectedAttoUTCISOString(
+          collectedAt: toUTCISOString(collectedAt)
         },
         collectedAt
       );
