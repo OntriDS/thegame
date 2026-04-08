@@ -248,9 +248,9 @@ export default function DataCenterPage() {
             )}
           </div>
         )}
-        </div>
+      </Tabs>
 
-        <TabsList className="grid w-full grid-cols-8">
+      <TabsList className="grid w-full grid-cols-8">
           <TabsTrigger value="tasks-lifecycle" className="flex items-center gap-2">
             <CheckCircle className="h-4 w-4" />
             Tasks
