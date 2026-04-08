@@ -7,7 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import * as PopoverPrimitive from '@radix-ui/react-popover';
-import { formatDisplayDate } from '@/lib/utils/date-utils';
+// UTC STANDARDIZATION: Using new UTC utilities
+import { formatForDisplay } from '@/lib/utils/date-display-utils';
+import { startOfDayUTC } from '@/lib/utils/utc-utils';
 import { getInteractiveZIndex } from '@/lib/utils/z-index-utils';
 
 interface DatePickerProps {
@@ -28,7 +30,9 @@ export function DatePicker({
   const [open, setOpen] = React.useState(false);
 
   const handleDateSelect = (date: Date | undefined) => {
-    onChange?.(date);
+    // Convert selected date to UTC midnight for consistency
+    const utcDate = date ? startOfDayUTC(date) : undefined;
+    onChange?.(utcDate);
     setOpen(false); // Close the popover when date is selected
   };
 
@@ -45,7 +49,7 @@ export function DatePicker({
           )}
         >
           <CalendarIcon className="mr-2 h-4 w-4" />
-          {value ? formatDisplayDate(value) : <span>{placeholder}</span>}
+          {value ? formatForDisplay(value) : <span>{placeholder}</span>}
         </Button>
       </PopoverTrigger>
       <PopoverPrimitive.Portal>

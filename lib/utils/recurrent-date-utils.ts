@@ -1,4 +1,24 @@
 // lib/utils/recurrent-date-utils.ts
+/**
+ * @DEPRECATED - Use utc-utils.ts, date-parsers.ts, and date-display-utils.ts instead
+ *
+ * This file is maintained for backward compatibility only.
+ * All new code should use the new UTC utilities.
+ *
+ * Migration guide:
+ * - toRecurrentUTC() → startOfDayUTC(parseDateToUTC(date)) from utc-utils.ts + date-parsers.ts
+ * - fromRecurrentUTC() → No longer needed, use UTC dates directly
+ * - addDaysUTC() → addDaysUTC() from utc-utils.ts (same function)
+ * - addWeeksUTC() → addWeeksUTC() from utc-utils.ts (same function)
+ * - addMonthsUTC() → addMonthsUTC() from utc-utils.ts (same function)
+ * - isSameRecurrentDate() → isSameDayUTC() from utc-utils.ts
+ * - isNextOccurrence() → isAfterUTC() from utc-utils.ts
+ * - isWithinSafetyLimit() → !isAfterUTC(candidate, safetyLimit) from utc-utils.ts
+ *
+ * @see utc-utils.ts for core UTC operations
+ * @see date-parsers.ts for input parsing
+ * @see date-display-utils.ts for output formatting
+ */
 // Isolated timezone handling for Recurrent Tasks (JIT Model)
 // Strict scope: ONLY affects Recurrent Templates and their spawned Instances
 // Mission Tasks, Historical Logs, and existing scheduling remain untouched

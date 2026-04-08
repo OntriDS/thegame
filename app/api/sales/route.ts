@@ -4,6 +4,9 @@ import { v4 as uuid } from 'uuid';
 import type { Sale } from '@/types/entities';
 import { getAllSales, upsertSale, getSalesForMonth } from '@/data-store/datastore';
 import { requireAdminAuth } from '@/lib/api-auth';
+// UTC STANDARDIZATION: Using new UTC utilities
+import { getUTCNow, startOfDayUTC } from '@/lib/utils/utc-utils';
+import { parseDateToUTC } from '@/lib/utils/date-parsers';
 
 // Force dynamic rendering - this route accesses cookies
 export const dynamic = 'force-dynamic';
@@ -35,10 +38,9 @@ export async function GET(req: NextRequest) {
     if (month && year) {
       data = await getSalesForMonth(year, month);
     } else {
-      const now = new Date();
-      // Adjust for UTC rollover (User is UTC-6)
-      const adjustedNow = new Date(now.getTime() - 6 * 60 * 60 * 1000);
-      data = await getSalesForMonth(adjustedNow.getFullYear(), adjustedNow.getMonth() + 1);
+      // Use UTC now for default query
+      const now = getUTCNow();
+      data = await getSalesForMonth(now.getUTCFullYear(), now.getUTCMonth() + 1);
     }
     return NextResponse.json(data);
   } catch (error) {
@@ -55,12 +57,12 @@ export async function POST(req: NextRequest) {
       ...body,
       id: body.id || uuid(),
       links: body.links || [],
-      createdAt: body.createdAt ? new Date(body.createdAt) : new Date(),
-      updatedAt: new Date(),
-      saleDate: body.saleDate ? new Date(body.saleDate) : new Date(),
-      postedAt: body.postedAt ? new Date(body.postedAt) : undefined,
-      doneAt: body.doneAt ? new Date(body.doneAt) : undefined,
-      cancelledAt: body.cancelledAt ? new Date(body.cancelledAt) : undefined
+      createdAt: body.createdAt ? parseDateToUTC(body.createdAt) : getUTCNow(),
+      updatedAt: getUTCNow(),
+      saleDate: body.saleDate ? startOfDayUTC(parseDateToUTC(body.saleDate)) : startOfDayUTC(getUTCNow()),
+      postedAt: body.postedAt ? parseDateToUTC(body.postedAt) : undefined,
+      doneAt: body.doneAt ? parseDateToUTC(body.doneAt) : undefined,
+      cancelledAt: body.cancelledAt ? parseDateToUTC(body.cancelledAt) : undefined
     };
     const forceSave = req.nextUrl.searchParams.get('force') === 'true';
     const saved = await upsertSale(sale, { forceSave });

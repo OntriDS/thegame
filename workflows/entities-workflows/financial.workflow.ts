@@ -26,7 +26,8 @@ import {
 } from '../update-propagation-utils';
 import { createCharacterFromFinancial } from '../character-creation-utils';
 import { upsertFinancial } from '@/data-store/datastore';
-import { formatMonthKey, calculateClosingDate } from '@/lib/utils/date-utils';
+import { formatMonthKey } from '@/lib/utils/date-display-utils';
+import { getUTCNow, endOfMonthUTC } from '@/lib/utils/utc-utils';
 import { buildArchiveCollectionIndexKey, buildArchiveMonthsKey } from '@/data-store/keys';
 import { recalculateCharacterWallet } from '../financial-record-utils';
 const STATE_FIELDS = ['isNotPaid', 'isNotCharged'];
@@ -41,14 +42,14 @@ function getFinancialLogAnchorDate(f: FinancialRecord, fallback?: Date): Date {
     if (Number.isFinite(d.getTime())) return d;
   }
   if (typeof f.year === 'number' && typeof f.month === 'number' && f.month >= 1 && f.month <= 12) {
-    const ref = new Date(f.year, f.month - 1, 1);
-    if (isValid(ref)) return calculateClosingDate(ref);
+    const ref = new Date(Date.UTC(f.year, f.month - 1, 1));
+    if (isValid(ref)) return endOfMonthUTC(ref);
   }
   if (f.createdAt) {
     const d = f.createdAt instanceof Date ? f.createdAt : new Date(f.createdAt as string);
     if (Number.isFinite(d.getTime())) return d;
   }
-  return fallback ?? new Date(2025, 1, 1);
+  return fallback ?? new Date(Date.UTC(2025, 1, 1));
 }
 
 const getFinancialDate = (f: FinancialRecord, fallback?: Date) => getFinancialLogAnchorDate(f, fallback);
@@ -126,15 +127,15 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
     // Snapshot if created as DONE (not pending)
     if (!isPending) {
       let snapshotMonthDate: Date;
-      const referenceDate = new Date(financial.year, financial.month - 1, 1);
+      const referenceDate = new Date(Date.UTC(financial.year, financial.month - 1, 1));
       if (isValid(referenceDate)) {
-        snapshotMonthDate = calculateClosingDate(referenceDate);
+        snapshotMonthDate = endOfMonthUTC(referenceDate);
       } else if (financial.createdAt) {
-        snapshotMonthDate = calculateClosingDate(financial.createdAt);
+        snapshotMonthDate = endOfMonthUTC(financial.createdAt instanceof Date ? financial.createdAt : new Date(financial.createdAt as string));
       } else {
         // Safe historical fallback: use Jan 1st of record year, never current date
-        const safeHistoricalDate = new Date(financial.year, 0, 1);
-        snapshotMonthDate = calculateClosingDate(safeHistoricalDate);
+        const safeHistoricalDate = new Date(Date.UTC(financial.year, 0, 1));
+        snapshotMonthDate = endOfMonthUTC(safeHistoricalDate);
       }
 
       const archiveIndexEffectKey = EffectKeys.sideEffect('financial', financial.id, `archiveIndex:${formatMonthKey(snapshotMonthDate)}`);
@@ -198,16 +199,16 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
 
     // NEW: Archive Index Tracking
     let snapshotMonthDate: Date;
-    const referenceDate = new Date(financial.year, financial.month - 1, 1);
+    const referenceDate = new Date(Date.UTC(financial.year, financial.month - 1, 1));
 
     if (isValid(referenceDate)) {
-      snapshotMonthDate = calculateClosingDate(referenceDate);
+      snapshotMonthDate = endOfMonthUTC(referenceDate);
     } else if (financial.createdAt) {
-      snapshotMonthDate = calculateClosingDate(financial.createdAt);
+      snapshotMonthDate = endOfMonthUTC(financial.createdAt instanceof Date ? financial.createdAt : new Date(financial.createdAt as string));
     } else {
       // Safe historical fallback: use Jan 1st of record year, never current date
-      const safeHistoricalDate = new Date(financial.year, 0, 1);
-      snapshotMonthDate = calculateClosingDate(safeHistoricalDate);
+      const safeHistoricalDate = new Date(Date.UTC(financial.year, 0, 1));
+      snapshotMonthDate = endOfMonthUTC(safeHistoricalDate);
     }
 
     const archiveIndexEffectKey = EffectKeys.sideEffect('financial', financial.id, `archiveIndex:${formatMonthKey(snapshotMonthDate)}`);
@@ -294,12 +295,12 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
     const wasArchived = !previousFinancial.isNotPaid && !previousFinancial.isNotCharged;
 
     const getArchiveMonth = (f: FinancialRecord) => {
-      let snapshotDate = f.createdAt || new Date(f.year, 0, 1); // Use createdAt or safe historical fallback
-      const referenceDate = new Date(f.year, f.month - 1, 1);
+      let snapshotDate: Date = f.createdAt instanceof Date ? f.createdAt : (f.createdAt ? new Date(f.createdAt as string) : new Date(Date.UTC(f.year, 0, 1)));
+      const referenceDate = new Date(Date.UTC(f.year, f.month - 1, 1));
       if (isValid(referenceDate)) {
-        snapshotDate = calculateClosingDate(referenceDate);
+        snapshotDate = endOfMonthUTC(referenceDate);
       } else if (f.createdAt) {
-        snapshotDate = calculateClosingDate(f.createdAt);
+        snapshotDate = endOfMonthUTC(f.createdAt instanceof Date ? f.createdAt : new Date(f.createdAt as string));
       }
       return formatMonthKey(snapshotDate);
     };
@@ -477,12 +478,12 @@ export async function removeRecordEffectsOnDelete(recordId: string): Promise<voi
     try {
       const record = await getFinancialById(recordId);
       if (record) {
-        let snapshotDate = record.createdAt || new Date(record.year, 0, 1); // Use createdAt or safe historical fallback
-        const referenceDate = new Date(record.year, record.month - 1, 1);
+        let snapshotDate: Date = record.createdAt instanceof Date ? record.createdAt : (record.createdAt ? new Date(record.createdAt as string) : new Date(Date.UTC(record.year, 0, 1)));
+        const referenceDate = new Date(Date.UTC(record.year, record.month - 1, 1));
         if (isValid(referenceDate)) {
-          snapshotDate = calculateClosingDate(referenceDate);
+          snapshotDate = endOfMonthUTC(referenceDate);
         } else if (record.createdAt) {
-          snapshotDate = calculateClosingDate(record.createdAt);
+          snapshotDate = endOfMonthUTC(record.createdAt instanceof Date ? record.createdAt : new Date(record.createdAt as string));
         }
         const monthKey = formatMonthKey(snapshotDate);
         const { kvSRem } = await import('@/data-store/kv');

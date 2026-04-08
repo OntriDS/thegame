@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { RefreshCw, Gamepad, Link as LinkIcon, User } from 'lucide-react';
 import { LinksSubModal } from '@/components/modals/submodals/links-submodal';
 import { useState, useEffect } from 'react';
-import { formatDisplayDate } from '@/lib/utils/date-utils';
+// UTC STANDARDIZATION: Using new UTC utilities
+import { formatForDisplay } from '@/lib/utils/date-display-utils';
 import { EntityType, LogEventType } from '@/types/enums';
 import { getPointsMetadata } from '@/lib/utils/points-utils';
 import { ClientAPI } from '@/lib/client-api';
@@ -197,7 +198,7 @@ export function PlayerLogTab({ playerLog, onReload, isReloading }: PlayerLogTabP
                 const count = entry.count || 0;
                 const source = entry.source || 'unknown';
                 const mode = entry.importMode || entry.exportFormat || '';
-                const date = entry.timestamp ? formatDisplayDate(new Date(entry.timestamp)) : 'No date';
+                const date = entry.timestamp ? formatForDisplay(new Date(entry.timestamp)) : 'No date';
                 
                 return (
                   <div key={entry.id || index} className="flex items-center justify-between p-3 border rounded-lg bg-muted/30">
@@ -274,7 +275,7 @@ export function PlayerLogTab({ playerLog, onReload, isReloading }: PlayerLogTabP
                     )}
                     
                     <span className="text-xs text-muted-foreground ml-auto shrink-0">
-                      {entry.timestamp ? formatDisplayDate(new Date(entry.timestamp)) : 'No date'}
+                      {entry.timestamp ? formatForDisplay(new Date(entry.timestamp)) : 'No date'}
                     </span>
                   </div>
                   

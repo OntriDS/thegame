@@ -9,7 +9,8 @@ import { LinksSubModal } from '@/components/modals/submodals/links-submodal';
 import { useState, useEffect } from 'react';
 import { TaskStatus, TaskType, EntityType, LogEventType } from '@/types/enums';
 import { TASK_STATUS_COLORS } from '@/lib/constants/color-constants';
-import { formatDisplayDate } from '@/lib/utils/date-utils';
+// UTC STANDARDIZATION: Using new UTC utilities
+import { formatForDisplay } from '@/lib/utils/date-display-utils';
 import { calculateTaskProfitPercentage } from '@/lib/utils/business-utils';
 import { useThemeColors } from '@/lib/hooks/use-theme-colors';
 import { processLogData } from '@/lib/utils/logging-utils';

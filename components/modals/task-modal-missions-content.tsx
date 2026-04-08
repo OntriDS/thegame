@@ -32,10 +32,12 @@ import DatesSubmodal from './submodals/dates-submodal';
 import ArchiveCollectionConfirmationModal from './submodals/archive-collection-confirmation-submodal';
 import ConfirmationModal from './submodals/confirmation-submodal';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
-import { format } from 'date-fns';
+// UTC STANDARDIZATION: Using new UTC utilities
+import { format } from 'date-fns'; // Keeping for time formatting (HH:mm)
+import { formatForDisplay, formatDayMonth } from '@/lib/utils/date-display-utils';
+import { getUTCNow } from '@/lib/utils/utc-utils';
 import { TaskModalFooter } from './task-modal';
 import { dispatchEntityUpdated, entityTypeToKind } from '@/lib/ui/ui-events';
-import { fromRecurrentUTC } from '@/lib/utils/recurrent-date-utils';
 
 interface MissionTreeModalContentProps {
   task?: Task | null;
@@ -174,7 +176,8 @@ export default function MissionTreeModalContent({
           : (((getPreference('task-modal-last-station') as Station) || 'Strategy') as Station);
       setStation(rawStation);
       setProgress(existingTask.progress);
-      setDueDate(existingTask.dueDate ? fromRecurrentUTC(existingTask.dueDate) : undefined);
+      // Dates are now stored as UTC, use directly
+      setDueDate(existingTask.dueDate ? new Date(existingTask.dueDate) : undefined);
       setLocalDoneAt(existingTask.doneAt ? new Date(existingTask.doneAt) : undefined);
       setLocalCollectedAt(existingTask.collectedAt ? new Date(existingTask.collectedAt) : undefined);
 
@@ -316,21 +319,37 @@ export default function MissionTreeModalContent({
   const buildTaskFromForm = () => {
     const editingExisting = !!task;
 
-    // Scheduled start/end logic
+    // Scheduled start/end logic - create UTC dates from local date + time
     let finalScheduledStart: Date | undefined = undefined;
     let finalScheduledEnd: Date | undefined = undefined;
 
     if (scheduledStartDate && scheduledStartTime) {
       const [hours, minutes] = scheduledStartTime.split(':').map(Number);
-      const startDateTime = new Date(scheduledStartDate);
-      startDateTime.setHours(hours, minutes, 0, 0);
+      // Create UTC date from the local date components
+      const startDateTime = new Date(Date.UTC(
+        scheduledStartDate.getFullYear(),
+        scheduledStartDate.getMonth(),
+        scheduledStartDate.getDate(),
+        hours,
+        minutes,
+        0,
+        0
+      ));
       finalScheduledStart = startDateTime;
     }
 
     if (scheduledEndDate && scheduledEndTime) {
       const [hours, minutes] = scheduledEndTime.split(':').map(Number);
-      const endDateTime = new Date(scheduledEndDate);
-      endDateTime.setHours(hours, minutes, 0, 0);
+      // Create UTC date from the local date components
+      const endDateTime = new Date(Date.UTC(
+        scheduledEndDate.getFullYear(),
+        scheduledEndDate.getMonth(),
+        scheduledEndDate.getDate(),
+        hours,
+        minutes,
+        0,
+        0
+      ));
       finalScheduledEnd = endDateTime;
     }
 
@@ -421,8 +440,8 @@ export default function MissionTreeModalContent({
       isTemplate: task?.isTemplate ?? false,
       sourceSaleId: task?.sourceSaleId ?? undefined,
       links: task?.links || [],
-      createdAt: task?.createdAt || new Date(),
-      updatedAt: new Date(),
+      createdAt: task?.createdAt || getUTCNow(),
+      updatedAt: getUTCNow(),
     } as Task;
   };
 

@@ -60,7 +60,8 @@
         "Clean and Update All the TheGame Documentation, Create Pixelbrain Documentation",
         "Full Logs and Entities Data Cleanup; Tasks and Sales Modals self healing Financials",
         "Links System cleanup plus Url links to its entities",
-        "Booth Sales Financials: Performance Ledger"
+        "Booth Sales Financials: Performance Ledger",
+        "UTC Standardization, UI dates translations, central UTC utility"
       ]
     }
   },

@@ -2,7 +2,10 @@
 
 import * as React from 'react';
 import { Input } from '@/components/ui/input';
-import { formatDisplayDate, parseInputDate } from '@/lib/utils/date-utils';
+// UTC STANDARDIZATION: Using new UTC utilities
+import { formatForDisplay } from '@/lib/utils/date-display-utils';
+import { parseDisplayDateToUTC } from '@/lib/utils/date-parsers';
+import { startOfDayUTC } from '@/lib/utils/utc-utils';
 import { cn } from '@/lib/utils';
 
 interface DateInputProps {
@@ -26,7 +29,7 @@ export function DateInput({
   // Update input value when value prop changes
   React.useEffect(() => {
     if (value) {
-      setInputValue(formatDisplayDate(value));
+      setInputValue(formatForDisplay(value));
       setIsValid(true);
     } else {
       setInputValue('');
@@ -58,12 +61,18 @@ export function DateInput({
         yearNum += 2000;
       }
 
-      // Validate date
+      // Validate date and create UTC date
       if (dayNum >= 1 && dayNum <= 31 && monthNum >= 1 && monthNum <= 12 && yearNum >= 1900) {
-        const date = new Date(yearNum, monthNum - 1, dayNum);
-        if (date.getDate() === dayNum && date.getMonth() === monthNum - 1 && date.getFullYear() === yearNum) {
+        // Create UTC date at midnight
+        const utcDate = startOfDayUTC(new Date(Date.UTC(yearNum, monthNum - 1, dayNum)));
+        // Validate the date is correct (handles edge cases like Feb 31)
+        if (
+          utcDate.getUTCDate() === dayNum &&
+          utcDate.getUTCMonth() === monthNum - 1 &&
+          utcDate.getUTCFullYear() === yearNum
+        ) {
           setIsValid(true);
-          onChange?.(date);
+          onChange?.(utcDate);
           return;
         }
       }
@@ -81,7 +90,7 @@ export function DateInput({
     if (!isValid && inputValue) {
       // Reset to last valid value on blur if invalid
       if (value) {
-        setInputValue(formatDisplayDate(value));
+        setInputValue(formatForDisplay(value));
         setIsValid(true);
       } else {
         setInputValue('');

@@ -10,6 +10,8 @@ import { getLinksFor, removeLink } from '@/links/link-registry';
 import { getPlayerById, upsertPlayer } from '@/data-store/datastore';
 import { appendPlayerPointsUpdateLog } from '../entities-logging';
 import type { Task } from '@/types/entities';
+// UTC STANDARDIZATION: Using new UTC utilities
+import { getUTCNow, toUTCISOString } from '@/lib/utils/utc-utils';
 
 const STATE_FIELDS = ['level', 'totalPoints', 'points', 'isActive'];
 
@@ -201,7 +203,7 @@ export async function updatePlayerPointsFromTask(task: Task, oldTask: Task): Pro
         fp: Math.max(0, (mainPlayer.totalPoints?.fp || 0) + delta.fp),
         hp: Math.max(0, (mainPlayer.totalPoints?.hp || 0) + delta.hp)
       },
-      updatedAt: new Date()
+      updatedAt: getUTCNow()
     };
     
     // Store the updated player

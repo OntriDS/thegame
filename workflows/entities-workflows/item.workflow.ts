@@ -24,8 +24,9 @@ import {
   upsertCharacter,
 } from '@/data-store/datastore';
 import { entityHasLogEvent } from '@/lib/utils/entity-log-scan';
-import { formatMonthKey, calculateClosingDate, formatDisplayDate } from '@/lib/utils/date-utils';
+import { formatMonthKey, formatForDisplay } from '@/lib/utils/date-display-utils';
 import { isSoldStatus } from '@/lib/utils/status-utils';
+import { getUTCNow, endOfMonthUTC } from '@/lib/utils/utc-utils';
 import { buildArchiveCollectionIndexKey, buildArchiveMonthsKey } from '@/data-store/keys';
 
 const STATE_FIELDS = ['status', 'stock', 'quantitySold'];
@@ -73,7 +74,7 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
         itemType: item.type,
         subItemType: item.subItemType,
         soldQuantity: 1
-      }, item.updatedAt || new Date());
+      }, item.updatedAt || getUTCNow());
     }
   }
 
@@ -104,8 +105,8 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
       return;
     }
 
-    const soldAt = item.soldAt || new Date();
-    const archiveMonth = calculateClosingDate(soldAt);
+    const soldAt = item.soldAt || getUTCNow();
+    const archiveMonth = endOfMonthUTC(soldAt);
     const monthKey = formatMonthKey(archiveMonth);
     const primarySite = item.stock?.[0]?.siteId || 'Home';
 
@@ -120,7 +121,7 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
       soldAt: soldAt,
       isCollected: false,
       sourceRecordId: 'manual', 
-      updatedAt: new Date()
+      updatedAt: getUTCNow()
     };
     
     await upsertItem(soldItemClone, { skipWorkflowEffects: true });
@@ -149,7 +150,7 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
         status: ItemStatus.FOR_SALE,
         quantitySold: 0, // Always 0 for inventory items
         stock: [{ siteId: primarySite, quantity: targetAmount }],
-        updatedAt: new Date()
+        updatedAt: getUTCNow()
       };
       await upsertItem(updatedBaseItem, { skipWorkflowEffects: true });
       console.log(`[markItemAsSold] 🔄 Restocked ${item.name} to target quantity ${targetAmount}`);
@@ -160,7 +161,7 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
         status: ItemStatus.FOR_SALE, // Keep item active
         quantitySold: 0, // Always 0 for inventory items
         stock: [{ siteId: primarySite, quantity: remainingStock }],
-        updatedAt: new Date()
+        updatedAt: getUTCNow()
       };
       await upsertItem(updatedBaseItem, { skipWorkflowEffects: true });
     } else {
@@ -235,8 +236,8 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
 
     if (isArchivable) {
       // Maintain month index (soldAt → createdAt)
-      const currentTargetDate = item.soldAt || item.createdAt || new Date();
-      const targetMonth = formatMonthKey(calculateClosingDate(currentTargetDate));
+      const currentTargetDate = item.soldAt || item.createdAt || getUTCNow();
+      const targetMonth = formatMonthKey(endOfMonthUTC(currentTargetDate));
 
       const { kvSAdd, kvSRem } = await import('@/data-store/kv');
       const { buildMonthIndexKey } = await import('@/data-store/keys');
@@ -309,7 +310,7 @@ export async function ensureItemSoldLog(itemId: string): Promise<{
   if (await entityHasLogEvent(EntityType.ITEM, itemId, 'sold')) {
     return { success: true, noop: true };
   }
-  const ts = item.soldAt || item.createdAt || new Date();
+  const ts = item.soldAt || item.createdAt || getUTCNow();
   await appendEntityLog(
     EntityType.ITEM,
     item.id,

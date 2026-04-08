@@ -11,6 +11,7 @@ import { getTaskById, upsertTask } from '@/data-store/datastore';
 import { getPlayerById, upsertPlayer } from '@/data-store/datastore';
 import { getAllCharacters, upsertCharacter } from '@/data-store/datastore';
 import { resolveToPlayerIdMaybeCharacter } from './points-rewards-utils';
+import { getUTCNow } from '@/lib/utils/utc-utils';
 // ============================================================================
 // TASK → FINANCIAL RECORD PROPAGATION
 // ============================================================================
@@ -63,7 +64,7 @@ export async function updateFinancialRecordsFromTask(
           station: task.station,
           year,
           month,
-          updatedAt: new Date()
+          updatedAt: getUTCNow()
         };
 
         await upsertFinancial(updatedRecord);
@@ -131,7 +132,7 @@ export async function updateTasksFromFinancialRecord(
           isNotCharged: record.isNotCharged,
           name: record.name,
           station: record.station,
-          updatedAt: new Date()
+          updatedAt: getUTCNow()
         };
 
         await upsertTask(updatedTask);
@@ -207,7 +208,7 @@ export async function updateItemsCreatedByTask(
             price: outputPropsChanged ? (task.outputItemPrice || item.price) : item.price,
             station: outputPropsChanged ? (task.station || item.station) : item.station,
             year,
-            updatedAt: new Date()
+            updatedAt: getUTCNow()
           };
 
           // Update stock quantity if it changed
@@ -237,7 +238,7 @@ export async function updateItemsCreatedByTask(
             itemType: updatedItem.type,
             subItemType: updatedItem.subItemType,
             quantity: updatedItem.stock?.reduce((sum, s) => sum + s.quantity, 0) || 0
-          }, task.updatedAt || new Date());
+          }, task.updatedAt || getUTCNow());
 
           await markEffect(updateKey);
 
@@ -296,7 +297,7 @@ export async function updateItemsCreatedByTask(
       const updatedItem = {
         ...existingItem,
         stock: updatedStock,
-        updatedAt: new Date()
+        updatedAt: getUTCNow()
       };
 
       await upsertItem(updatedItem);
@@ -379,7 +380,7 @@ export async function updateItemsCreatedByRecord(
           price: outputPropsChanged ? (record.outputItemPrice || item.price) : item.price,
           station: outputPropsChanged ? (record.station || item.station) : item.station,
           year: record.year, // inherit year
-          updatedAt: new Date()
+          updatedAt: getUTCNow()
         };
 
         // Update stock quantity if it changed
@@ -526,10 +527,10 @@ export async function updateItemsFromSale(
         const updatedItem = {
           ...item,
           quantitySold: (item.quantitySold || 0) + (line.quantity || 0),
-          soldAt: item.soldAt || (sale.doneAt || sale.saleDate || new Date()),
+          soldAt: item.soldAt || (sale.doneAt || sale.saleDate || getUTCNow()),
           value: line.unitPrice * line.quantity,
           price: line.unitPrice,
-          updatedAt: new Date()
+          updatedAt: getUTCNow()
         };
 
         await upsertItem(updatedItem, { skipWorkflowEffects: true });
@@ -626,7 +627,7 @@ export async function updatePlayerPointsFromSource(
           fp: Math.round((player.totalPoints?.fp || 0) + pointsDelta.fp),
           hp: Math.round((player.totalPoints?.hp || 0) + pointsDelta.hp)
         },
-        updatedAt: new Date()
+        updatedAt: getUTCNow()
       };
     } else {
       // If NOT collected, update Pending (Staged) Points only
@@ -639,7 +640,7 @@ export async function updatePlayerPointsFromSource(
           fp: Math.round((player.pendingPoints?.fp || 0) + pointsDelta.fp),
           hp: Math.round((player.pendingPoints?.hp || 0) + pointsDelta.hp)
         },
-        updatedAt: new Date()
+        updatedAt: getUTCNow()
       };
     }
 
@@ -753,7 +754,7 @@ export async function updateTasksFromItem(
           station: item.station || task.station,
           outputItemPrice: item.price || task.outputItemPrice,
           outputUnitCost: item.unitCost || task.outputUnitCost,
-          updatedAt: new Date()
+          updatedAt: getUTCNow()
         };
         const { upsertTask } = await import('@/data-store/datastore');
         await upsertTask(updatedTask, { skipWorkflowEffects: true });
@@ -804,7 +805,7 @@ export async function updateFinancialRecordsFromItem(
           station: item.station || record.station,
           outputItemPrice: item.price || record.outputItemPrice,
           outputUnitCost: item.unitCost || record.outputUnitCost,
-          updatedAt: new Date()
+          updatedAt: getUTCNow()
         };
         await upsertFinancial(updatedRecord, { skipWorkflowEffects: true });
         console.log(`[updateFinancialRecordsFromItem] ✅ Synchronized financial record ${record.id} with latest item data.`);
@@ -849,7 +850,7 @@ export async function updateSalesFromItem(
         const updatedSale = {
           ...sale,
           lines: updatedLines,
-          updatedAt: new Date()
+          updatedAt: getUTCNow()
         };
         await upsertSale(updatedSale, { skipWorkflowEffects: true });
         console.log(`[updateSalesFromItem] ✅ Updated sale ${sale.id} line with new item name: ${item.name}`);

@@ -1,4 +1,30 @@
 // types/entities.ts
+//
+// ═══════════════════════════════════════════════════════════════════════════
+// DATE HANDLING STANDARD - UTC ONLY
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// ALL DATE FIELDS IN THESE INTERFACES ARE UTC TIMESTAMPS.
+//
+// Storage Format: ISO 8601 strings with Z suffix (e.g., "2024-01-15T10:30:00Z")
+// Internal Format: Date objects (always treated as UTC)
+// Display Format: Converted to user's local timezone in UI layer only
+//
+// Migration:
+// - Use @/lib/utils/utc-utils.ts for all date operations
+// - Use @/lib/utils/date-parsers.ts for input conversion (HTML inputs, API requests)
+// - Use @/lib/utils/date-display-utils.ts for UI display formatting
+// - NEVER use new Date() directly without utility functions
+// - NEVER mix local time and UTC in same calculation
+//
+// Examples:
+// - Storage: entity.createdAt.toISOString() // "2024-01-15T10:30:00.000Z"
+// - Input: parseDateToUTC(userInput) // String/Date → UTC Date
+// - Display: formatForDisplay(utcDate) // UTC Date → Local display
+// - Calculation: addDaysUTC(date, 5) // UTC date arithmetic
+//
+// ═══════════════════════════════════════════════════════════════════════════
+
 import type { AISystemPreset } from '@/lib/ai/system-presets';
 import {
   TaskType,

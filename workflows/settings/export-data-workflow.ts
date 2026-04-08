@@ -4,6 +4,7 @@
 import { kv } from '@/data-store/kv';
 import { buildDataKey, buildIndexKey } from '@/data-store/keys';
 import { EntityType } from '@/types/enums';
+import { getUTCNow } from '@/lib/utils/utc-utils';
 
 // Centralized list of entity types for export operations
 const EXPORTABLE_ENTITY_TYPES = [
@@ -108,7 +109,7 @@ export class ExportDataWorkflow {
       
       const exportData: any = {
         metadata: {
-          exportedAt: new Date().toISOString(),
+          exportedAt: getUTCNow().toISOString(),
           version: '1.0',
           environment: process.env.UPSTASH_REDIS_REST_URL ? 'kv' : 'local'
         },

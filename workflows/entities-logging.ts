@@ -8,7 +8,33 @@ import { kvLPush, kvLRange, kvSAdd, kvSMembers, kvDel, kvLSet } from '@/data-sto
 import { buildLogMonthKey, buildLogMonthsIndexKey, buildLogKey } from '@/data-store/keys';
 import type { Sale } from '@/types/entities';
 import { EntityType, LogEventType, SaleStatus } from '@/types/enums';
-import { saleReferenceDateForItemSoldAndLog } from '@/lib/utils/date-utils';
+import { getUTCNow } from '@/lib/utils/utc-utils';
+import { formatMonthKey } from '@/lib/utils/date-display-utils';
+
+/**
+ * Inlined from date-utils (was: saleReferenceDateForItemSoldAndLog).
+ * Returns the canonical timestamp for sold-item log rows from a sale.
+ * Collected sales use collectedAt; otherwise doneAt → saleDate → now.
+ */
+function saleReferenceDateForItemSoldAndLog(
+  sale: Pick<Sale, 'status' | 'isCollected' | 'collectedAt' | 'doneAt' | 'saleDate'>
+): Date {
+  const isCollected = sale.status === SaleStatus.COLLECTED || !!sale.isCollected;
+  const toValid = (v: unknown): Date | null => {
+    if (v == null || v === '') return null;
+    const d = v instanceof Date ? v : new Date(v as string);
+    return Number.isFinite(d.getTime()) ? d : null;
+  };
+  if (isCollected) {
+    const c = toValid(sale.collectedAt);
+    if (c) return c;
+  }
+  const done = toValid(sale.doneAt);
+  if (done) return done;
+  const sd = toValid(sale.saleDate);
+  if (sd) return sd;
+  return getUTCNow();
+}
 import { kv } from '@/data-store/kv';
 import { v4 as uuid } from 'uuid';
 
@@ -17,17 +43,17 @@ import { v4 as uuid } from 'uuid';
 // ============================================================================
 
 function getCurrentMonthKey(): string {
-  const now = new Date();
-  const mm = String(now.getMonth() + 1).padStart(2, '0');
-  const yy = String(now.getFullYear()).slice(-2);
+  const now = getUTCNow();
+  const mm = String(now.getUTCMonth() + 1).padStart(2, '0');
+  const yy = String(now.getUTCFullYear()).slice(-2);
   return `${mm}-${yy}`;
 }
 
 export function getMonthKeyFromTimestamp(timestamp: string | Date): string {
   const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
   if (isNaN(date.getTime())) return getCurrentMonthKey();
-  const mm = String(date.getMonth() + 1).padStart(2, '0');
-  const yy = String(date.getFullYear()).slice(-2);
+  const mm = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const yy = String(date.getUTCFullYear()).slice(-2);
   return `${mm}-${yy}`;
 }
 
@@ -176,7 +202,7 @@ export async function appendEntityLog(
     id: uuid(),
     entityId,
     event,
-    timestamp: customTimestamp ? (typeof customTimestamp === 'string' ? customTimestamp : customTimestamp.toISOString()) : new Date().toISOString()
+    timestamp: customTimestamp ? (typeof customTimestamp === 'string' ? customTimestamp : customTimestamp.toISOString()) : getUTCNow().toISOString()
   };
 
   switch (entityType) {
@@ -364,7 +390,7 @@ export async function updateEntityLogField(
 
     if (createdEntry) {
       createdEntry[fieldName] = newValue;
-      createdEntry.lastUpdated = new Date().toISOString();
+      createdEntry.lastUpdated = getUTCNow().toISOString();
       await rebuildMonthlyList(entityType, monthKey, list);
       return;
     }
@@ -373,7 +399,7 @@ export async function updateEntityLogField(
     for (let i = 0; i < list.length; i++) {
       if (list[i]?.entityId === entityId) {
         list[i][fieldName] = newValue;
-        list[i].lastUpdated = new Date().toISOString();
+        list[i].lastUpdated = getUTCNow().toISOString();
         await rebuildMonthlyList(entityType, monthKey, list);
         return;
       }
@@ -490,7 +516,7 @@ export async function appendBulkOperationLog(
     importMode: details.importMode,
     exportFormat: details.exportFormat,
     extra: details.extra,
-    timestamp: new Date().toISOString()
+    timestamp: getUTCNow().toISOString()
   };
 
   await kvLPush(listKey, JSON.stringify(entry));
@@ -564,7 +590,7 @@ export async function upsertPlayerPointsChangedLog(
     if (entry.entityId === playerId && entry.event === LogEventType.POINTS_CHANGED) {
       entry.totalPoints = totalPoints;
       entry.points = points;
-      entry.lastUpdated = new Date().toISOString();
+      entry.lastUpdated = getUTCNow().toISOString();
       found = true;
       break;
     }
@@ -658,13 +684,13 @@ export async function softDeleteLogEntry(
 
     if (entry) {
       entry.isDeleted = true;
-      entry.deletedAt = new Date().toISOString();
+      entry.deletedAt = getUTCNow().toISOString();
       entry.deletedBy = characterId;
       if (reason) entry.deleteReason = reason;
 
       if (!entry.editHistory) entry.editHistory = [];
       entry.editHistory.push({
-        editedAt: new Date().toISOString(),
+        editedAt: getUTCNow().toISOString(),
         editedBy: characterId,
         action: 'delete',
         reason
@@ -703,7 +729,7 @@ export async function restoreLogEntry(
 
       if (!entry.editHistory) entry.editHistory = [];
       entry.editHistory.push({
-        editedAt: new Date().toISOString(),
+        editedAt: getUTCNow().toISOString(),
         editedBy: characterId,
         action: 'restore',
         reason
@@ -783,13 +809,13 @@ export async function editLogEntry(
 
       if (changes.length === 0) return;
 
-      entry.editedAt = new Date().toISOString();
+      entry.editedAt = getUTCNow().toISOString();
       entry.editedBy = characterId;
-      entry.lastUpdated = new Date().toISOString();
+      entry.lastUpdated = getUTCNow().toISOString();
 
       if (!entry.editHistory) entry.editHistory = [];
       entry.editHistory.push({
-        editedAt: new Date().toISOString(),
+        editedAt: getUTCNow().toISOString(),
         editedBy: characterId,
         action: 'edit',
         changes,

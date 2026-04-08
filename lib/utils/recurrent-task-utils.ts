@@ -143,8 +143,8 @@ export async function spawnNextRecurrentInstance(
   if (config.type === RecurrentFrequency.CUSTOM) {
     if (config.stopsAfter && config.stopsAfter.type === 'date' && config.stopsAfter.value) {
       safetyLimit = fromRecurrentUTC(
-        config.stopsAfter.value instanceof Date 
-          ? config.stopsAfter.value 
+        config.stopsAfter.value instanceof Date
+          ? config.stopsAfter.value
           : new Date(config.stopsAfter.value)
       );
     }
@@ -158,13 +158,13 @@ export async function spawnNextRecurrentInstance(
   }
 
   // 7. Check for existing instance with same due date (idempotency)
-  // Instead of failing if it exists, we will fast-forward until we find an unspawned date or hit the safety limit!
+  // Instead of timezone-sensitive epochs, we use absolute string dates YYYY-MM-DD for comparison.
   const existingInstances = await getTasksByParentId(template.id);
   const existingDueDatesArray = existingInstances
-      .filter(t => t.type === TaskType.RECURRENT_INSTANCE)
-      .map(t => t.dueDate)
-      .filter(d => d !== undefined);
-      
+    .filter(t => t.type === TaskType.RECURRENT_INSTANCE)
+    .map(t => t.dueDate)
+    .filter(d => d !== undefined);
+
   const existingDueDates = new Set(
     existingDueDatesArray.map(d => {
       const dateObj = d instanceof Date ? d : new Date(d as string);
@@ -172,48 +172,9 @@ export async function spawnNextRecurrentInstance(
     })
   );
 
-  let nextDateKey = `${nextDate.getFullYear()}-${nextDate.getMonth()}-${nextDate.getDate()}`;
-  let maxNextAttempts = 50; // Prevent infinite loops
-  
-  while (existingDueDates.has(nextDateKey) && maxNextAttempts > 0) {
-    maxNextAttempts--;
-    
-    // Fast forward to the next date based on frequency
-    if (config.type === RecurrentFrequency.DAILY) {
-      nextDate = addDaysUTC(toRecurrentUTC(nextDate), config.interval);
-    } else if (config.type === RecurrentFrequency.WEEKLY) {
-      nextDate = addWeeksUTC(toRecurrentUTC(nextDate), config.interval);
-    } else if (config.type === RecurrentFrequency.MONTHLY) {
-      nextDate = addMonthsUTC(toRecurrentUTC(nextDate), config.interval);
-    } else if (config.type === RecurrentFrequency.CUSTOM) {
-      // Find the next custom date after the current nextDate
-      const nextCustom = (config.customDays || [])
-        .map((d: any) => toRecurrentUTC(d instanceof Date ? d : new Date(d)))
-        .filter((d: Date) => !isNaN(d.getTime()))
-        .sort((a: Date, b: Date) => a.getTime() - b.getTime())
-        .find((d: Date) => isNextOccurrence(d, toRecurrentUTC(nextDate)));
-        
-      if (!nextCustom) {
-         console.warn('[spawnNextRecurrentInstance] No next custom date available during fast-forward');
-         return null;
-      }
-      nextDate = nextCustom;
-    } else if (config.type === RecurrentFrequency.ALWAYS) {
-      nextDate = addDaysUTC(toRecurrentUTC(nextDate), config.interval);
-    }
-
-    nextDate = fromRecurrentUTC(nextDate); // Back to local midnight
-    
-    if (safetyLimit && !isWithinSafetyLimit(nextDate, safetyLimit)) {
-      console.warn('[spawnNextRecurrentInstance] Next occurrence exceeds safety limit during fast-forward:', nextDate);
-      return null;
-    }
-    
-    nextDateKey = `${nextDate.getFullYear()}-${nextDate.getMonth()}-${nextDate.getDate()}`;
-  }
-
+  const nextDateKey = `${nextDate.getFullYear()}-${nextDate.getMonth()}-${nextDate.getDate()}`;
   if (existingDueDates.has(nextDateKey)) {
-    console.warn('[spawnNextRecurrentInstance] Exhausted fast-forward attempts. Could not find a free instance slot for:', nextDate);
+    console.warn('[spawnNextRecurrentInstance] Instance already exists for date:', nextDate);
     return null;
   }
 
@@ -349,7 +310,7 @@ export async function canSpawnMoreInstances(template: Task): Promise<boolean> {
     if (!config.customDays || config.customDays.length === 0) {
       return false;
     }
-    
+
     // Sort and normalize dates just like spawn logic
     const normalizedCustomDays = config.customDays
       .map((d: any) => d instanceof Date ? d : new Date(d))
@@ -357,10 +318,10 @@ export async function canSpawnMoreInstances(template: Task): Promise<boolean> {
     const customDatesUTC = normalizedCustomDays.map((d: Date) => toRecurrentUTC(d));
     customDatesUTC.sort((a: Date, b: Date) => a.getTime() - b.getTime());
 
-    const referenceDate = template.lastSpawnedDate 
-      ? fromRecurrentUTC(template.lastSpawnedDate) 
+    const referenceDate = template.lastSpawnedDate
+      ? fromRecurrentUTC(template.lastSpawnedDate)
       : fromRecurrentUTC(template.dueDate || new Date());
-      
+
     // If lastSpawnedDate exists, find next. If not, pick first.
     const nextCustom = template.lastSpawnedDate
       ? customDatesUTC.find((d: Date) => isNextOccurrence(d, referenceDate))
@@ -374,8 +335,8 @@ export async function canSpawnMoreInstances(template: Task): Promise<boolean> {
     // Check custom stopsAfter date limit
     if (config.stopsAfter && config.stopsAfter.type === 'date' && config.stopsAfter.value) {
       const limit = fromRecurrentUTC(
-        config.stopsAfter.value instanceof Date 
-          ? config.stopsAfter.value 
+        config.stopsAfter.value instanceof Date
+          ? config.stopsAfter.value
           : new Date(config.stopsAfter.value)
       );
       const candidateLocal = fromRecurrentUTC(nextCustom);
@@ -861,7 +822,7 @@ export async function cascadeStatusToInstances(
   await Promise.all(
     updatedInstances.map(async (updated) => {
       await upsertTask(updated, { skipWorkflowEffects: true });
-      
+
       // Log status change for each instance with cascade context
       await appendEntityLog(EntityType.TASK, updated.id, LogEventType.UPDATED, {
         oldStatus: instances.find(i => i.id === updated.id)?.status, // Get old status from memory

@@ -23,6 +23,7 @@ import {
   STATUS_DISPLAY_SHORT 
 } from '@/lib/constants/app-constants';
 import ItemsImportExport from '@/components/settings/items-import-export';
+import { TimezoneSettingsCard } from '@/components/settings/timezone-settings-card';
 import { ClientAPI } from '@/lib/client-api';
 
 interface SettingsPanelProps {
@@ -282,6 +283,27 @@ export function SettingsPanel({ onStatusUpdate }: SettingsPanelProps) {
     }
   };
 
+  const handleUTCNormalize = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'utc-normalize' })
+      });
+      const result = await response.json();
+      if (result.success) {
+        updateStatus(`✅ ${result.message}`);
+      } else {
+        updateStatus(`❌ ${result.message}`, true);
+      }
+    } catch (e) {
+      updateStatus('❌ Failed to normalize UTC data', true);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* System Management Card */}
@@ -363,6 +385,11 @@ export function SettingsPanel({ onStatusUpdate }: SettingsPanelProps) {
             <Button onClick={handleBackfillLogs} variant="outline" disabled={isLoading}>
               <Database className="h-4 w-4 mr-2" />
               Backfill Logs
+            </Button>
+            
+            <Button onClick={handleUTCNormalize} variant="outline" disabled={isLoading}>
+              <RefreshCw className="h-4 w-4 mr-2 text-primary" />
+              Heal & Normalize UTC Data
             </Button>
           </div>
         </div>
@@ -529,6 +556,8 @@ export function SettingsPanel({ onStatusUpdate }: SettingsPanelProps) {
         </CardContent>
       </Card>
 
+      <TimezoneSettingsCard />
+      
       {/* CSV Import/Export Card */}
       <Card>
         <CardHeader>

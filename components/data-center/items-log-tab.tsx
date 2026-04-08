@@ -11,7 +11,8 @@ import { processLogData } from '@/lib/utils/logging-utils';
 import { EntityType, LogEventType } from '@/types/enums';
 import { LOG_DISPLAY_ICONS, FINANCIAL_ABBREVIATIONS } from '@/lib/constants/icon-maps';
 import { ItemStatus, ItemType } from '@/types/enums';
-import { formatDisplayDate } from '@/lib/utils/date-utils';
+// UTC STANDARDIZATION: Using new UTC utilities
+import { formatForDisplay } from '@/lib/utils/date-display-utils';
 import { ITEM_STATUS_COLORS } from '@/lib/constants/color-constants';
 import { useThemeColors } from '@/lib/hooks/use-theme-colors';
 import { ITEM_TYPE_ICONS } from '@/lib/constants/icon-maps';
@@ -365,7 +366,7 @@ export function ItemsLogTab({
 
                           {eventKind === LogEventType.COLLECTED.toLowerCase() && entry.collectedAt && (
                             <span className="text-muted-foreground min-w-0 flex-shrink-0">
-                              collected at: {entry.collectedAt ? formatDisplayDate(entry.collectedAt) : 'N/A'}
+                              collected at: {entry.collectedAt ? formatForDisplay(entry.collectedAt) : 'N/A'}
                             </span>
                           )}
 

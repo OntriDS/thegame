@@ -5,6 +5,7 @@ import { makeLink } from '@/links/links-workflows';
 import { createLink } from '@/links/link-registry';
 import { LinkType, EntityType, FOUNDER_CHARACTER_ID } from '@/types/enums';
 import { appendPlayerPointsLog } from './entities-logging';
+import { getUTCNow } from '@/lib/utils/utc-utils';
 
 /**
  * Resolve a candidate id (playerId or characterId) to a valid playerId.
@@ -74,7 +75,7 @@ export async function awardPointsToPlayer(
         fp: Math.round((player.totalPoints?.fp || 0) + (points.fp || 0)),
         hp: Math.round((player.totalPoints?.hp || 0) + (points.hp || 0))
       },
-      updatedAt: new Date()
+      updatedAt: getUTCNow()
     };
 
     // Save updated player
@@ -155,7 +156,7 @@ export async function stagePointsForPlayer(
         fp: Math.round((player.pendingPoints?.fp || 0) + (points.fp || 0)),
         hp: Math.round((player.pendingPoints?.hp || 0) + (points.hp || 0))
       },
-      updatedAt: new Date()
+      updatedAt: getUTCNow()
     };
 
     await upsertPlayer(updatedPlayer);
@@ -198,7 +199,7 @@ export async function withdrawStagedPointsFromPlayer(
         fp: Math.max(0, (player.pendingPoints?.fp || 0) - (points.fp || 0)),
         hp: Math.max(0, (player.pendingPoints?.hp || 0) - (points.hp || 0))
       },
-      updatedAt: new Date()
+      updatedAt: getUTCNow()
     };
 
     await upsertPlayer(updatedPlayer);
@@ -250,7 +251,7 @@ export async function unrewardPointsForPlayer(
         hp: Math.round((player.pendingPoints?.hp || 0) + (points.hp || 0))
       },
       // Note: totalPoints are NOT reduced (they track lifetime earnings)
-      updatedAt: new Date()
+      updatedAt: getUTCNow()
     };
 
     await upsertPlayer(updatedPlayer);
@@ -315,7 +316,7 @@ export async function rewardPointsToPlayer(
         fp: Math.round((player.totalPoints?.fp || 0) + (points.fp || 0)),
         hp: Math.round((player.totalPoints?.hp || 0) + (points.hp || 0))
       },
-      updatedAt: new Date()
+      updatedAt: getUTCNow()
     };
 
     await upsertPlayer(updatedPlayer);
@@ -381,7 +382,7 @@ export async function removePointsFromPlayer(
         hp: Math.max(0, (player.points?.hp || 0) - (points.hp || 0))
       },
       // Note: totalPoints are NOT reduced (they track lifetime earnings)
-      updatedAt: new Date()
+      updatedAt: getUTCNow()
     };
 
     // Save updated player

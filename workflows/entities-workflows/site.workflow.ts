@@ -7,6 +7,8 @@ import { appendEntityLog, updateEntityLeanFields } from '../entities-logging';
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
 import { EffectKeys } from '@/data-store/keys';
 import { getLinksFor, removeLink } from '@/links/link-registry';
+// UTC STANDARDIZATION: Using new UTC utilities
+import { getUTCNow, toUTCISOString } from '@/lib/utils/utc-utils';
 
 const STATE_FIELDS = ['status'];
 
@@ -52,12 +54,12 @@ export async function onSiteUpsert(site: Site, previousSite?: Site): Promise<voi
     if (site.status === SiteStatus.ACTIVE) {
       await appendEntityLog(EntityType.SITE, site.id, LogEventType.ACTIVATED, {
         name: site.name,
-        activatedAt: new Date().toISOString()
+        activatedAt: toUTCISOString(getUTCNow())
       });
     } else if (site.status === SiteStatus.INACTIVE) {
       await appendEntityLog(EntityType.SITE, site.id, LogEventType.DEACTIVATED, {
         name: site.name,
-        deactivatedAt: new Date().toISOString()
+        deactivatedAt: toUTCISOString(getUTCNow())
       });
     }
   }

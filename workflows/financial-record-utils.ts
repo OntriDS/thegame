@@ -24,6 +24,7 @@ import type { Station } from '@/types/type-aliases';
 
 import { BITCOIN_SATOSHIS_PER_BTC, DEFAULT_CURRENCY_EXCHANGE_RATES } from '@/lib/constants/financial-constants';
 import { buildFinrecTitleFromSaleParts, resolveCanonicalSaleTimelineDate } from '@/lib/utils/sale-auto-name-utils';
+import { getUTCNow } from '@/lib/utils/utc-utils';
 
 /**
  * Get the current J$ Balance for an entity (Character or Player)
@@ -150,7 +151,7 @@ export async function createFinancialRecordFromTask(task: Task): Promise<Financi
     // The workflow only calls this when hasEffect('task:{id}:financialCreated') === false
     console.log(`[createFinancialRecordFromTask] Creating new financial record (Effect Registry confirmed no existing record)`);
 
-    const currentDate = new Date();
+    const currentDate = getUTCNow();
     const dateToUse = task.collectedAt || task.doneAt || currentDate;
     const newFinrec: FinancialRecord = {
       id: `finrec-${task.id}`,
@@ -254,7 +255,7 @@ export async function updateFinancialRecordFromTask(task: Task, previousTask: Ta
       isNewItem: task.isNewItem,
       rewards: undefined,
       netCashflow: (task.revenue || 0) - (task.cost || 0),
-      updatedAt: new Date()
+      updatedAt: getUTCNow()
     };
 
     // Store the updated financial record
@@ -370,7 +371,7 @@ export async function calculateBoothFinancials(sale: Sale): Promise<BoothFinanci
   const rate = rates?.colonesToUsd ?? DEFAULT_CURRENCY_EXCHANGE_RATES.colonesToUsd;
   const boothFeeUSD = boothFee / rate;
 
-  const dateToUse = coerceSaleFinrecDate(sale, new Date());
+  const dateToUse = coerceSaleFinrecDate(sale, getUTCNow());
 
   // Default shares
   let shareOfMyItems_Me = 1.0;
@@ -458,7 +459,7 @@ async function resolveSaleDerivedFinrecFields(
   /** e.g. Direct Sale • Jungle Matt • 10-11-25 (matches sale list; no customer in title). */
   finrecName: string;
 }> {
-  const currentDate = new Date();
+  const currentDate = getUTCNow();
   const dateToUse = coerceSaleFinrecDate(sale, currentDate);
   const hasChannel =
     sale.salesChannel != null && String(sale.salesChannel).trim() !== '';
@@ -490,7 +491,7 @@ async function upsertPrimarySaleFinrecFromSale(
   existing: FinancialRecord,
   derived: Awaited<ReturnType<typeof resolveSaleDerivedFinrecFields>>
 ): Promise<FinancialRecord> {
-  const now = new Date();
+  const now = getUTCNow();
   const totalRevenue = Number(sale.totals?.totalRevenue ?? 0) || 0;
   const totalCost = Number(sale.totals?.totalCost ?? 0) || 0;
   const next: FinancialRecord = {
@@ -648,7 +649,7 @@ export async function createFinancialRecordFromSale(sale: Sale): Promise<Financi
       return saved;
     }
 
-    const currentDate = new Date();
+    const currentDate = getUTCNow();
     const canonicalId = `finrec-${sale.id}`;
     const initialRevenue = Number(sale.totals?.totalRevenue ?? 0) || 0;
     const initialCost = Number(sale.totals?.totalCost ?? 0) || 0;
@@ -674,8 +675,8 @@ export async function createFinancialRecordFromSale(sale: Sale): Promise<Financi
       jungleCoinsValue: 0,
       isCollected: false,
       collectedAt: undefined,
-      createdAt: currentDate,
-      updatedAt: currentDate,
+      createdAt: getUTCNow(),
+      updatedAt: getUTCNow(),
       links: [],
     };
 
@@ -758,8 +759,8 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
       status: (!sale.isNotPaid && !sale.isNotCharged || sale.isCollected) ? FinancialStatus.DONE : FinancialStatus.PENDING,
       isNotPaid: sale.isNotPaid || false,
       isNotCharged: sale.isNotCharged || false,
-      updatedAt: new Date(),
-      createdAt: incomeRecord?.createdAt || new Date(),
+      updatedAt: getUTCNow(),
+      createdAt: incomeRecord?.createdAt || getUTCNow(),
       links: incomeRecord?.links || []
     } as FinancialRecord;
 
@@ -801,8 +802,8 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
         status: (!sale.isNotPaid && !sale.isNotCharged || sale.isCollected) ? FinancialStatus.DONE : FinancialStatus.PENDING,
         isNotPaid: sale.isNotPaid || false,
         isNotCharged: sale.isNotCharged || false,
-        updatedAt: new Date(),
-        createdAt: payoutRecord?.createdAt || new Date(),
+        updatedAt: getUTCNow(),
+        createdAt: payoutRecord?.createdAt || getUTCNow(),
         links: payoutRecord?.links || []
       } as FinancialRecord;
 
@@ -834,7 +835,7 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
         netCashflow: 0, 
         description: 'No contract impact for this revision', 
         status: FinancialStatus.DONE,
-        updatedAt: new Date() 
+        updatedAt: getUTCNow() 
       };
       await upsertFinancial(zeroedPayout as FinancialRecord);
     }
@@ -859,7 +860,7 @@ export async function createFinancialRecordFromPointsExchange(
   try {
     console.log(`[createFinancialRecordFromPointsExchange] Creating financial record for points exchange: ${j$Received} J$`);
 
-    const currentDate = new Date();
+    const currentDate = getUTCNow();
     // Use 'Earnings' station from BUSINESS_STRUCTURE.PERSONAL (single source of truth for exchanged points)
     const rewardsStation = BUSINESS_STRUCTURE.PERSONAL.find(s => s === 'Earnings');
     if (!rewardsStation) throw new Error('Earnings station not found in BUSINESS_STRUCTURE');
@@ -883,8 +884,8 @@ export async function createFinancialRecordFromPointsExchange(
       jungleCoinsValue: j$Received * 10, // J$ value in USD (1 J$ = $10)
       netCashflow: 0, // No cashflow, just currency exchange
       status: FinancialStatus.DONE,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      createdAt: getUTCNow(),
+      updatedAt: getUTCNow(),
       links: []
     } as FinancialRecord;
 
@@ -958,7 +959,7 @@ export async function createFinancialRecordFromJ$CashOut(
       amountLabel = `${amountPaid.toFixed(0)} sats`;
     }
 
-    const currentDate = new Date();
+    const currentDate = getUTCNow();
     const exchangeType = cashOutType === 'USD' ? 'J$_TO_USD' : 'J$_TO_ZAPS';
 
     // Get Earnings station from BUSINESS_STRUCTURE.PERSONAL
@@ -986,8 +987,8 @@ export async function createFinancialRecordFromJ$CashOut(
       isCollected: false,
       exchangeType,
       exchangeCounterAmount: cashOutType === 'ZAPS' ? amountPaid : undefined,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      createdAt: getUTCNow(),
+      updatedAt: getUTCNow(),
       links: []
     };
 
@@ -1011,8 +1012,8 @@ export async function createFinancialRecordFromJ$CashOut(
       isCollected: false,
       exchangeType,
       exchangeCounterAmount: cashOutType === 'ZAPS' ? amountPaid : undefined,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      createdAt: getUTCNow(),
+      updatedAt: getUTCNow(),
       links: []
     };
 

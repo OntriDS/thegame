@@ -23,7 +23,11 @@ import { createCharacterFromTask } from '../character-creation-utils';
 import { getCategoryForTaskType } from '@/lib/utils/searchable-select-utils';
 import { kvSRem } from '@/data-store/kv';
 
-import { formatMonthKey, calculateClosingDate } from '@/lib/utils/date-utils';
+// UTC STANDARDIZATION: Using new UTC utilities
+import { formatMonthKey } from '@/lib/utils/date-display-utils';
+import { getUTCNow, endOfMonthUTC } from '@/lib/utils/utc-utils';
+import { parseDateToUTC } from '@/lib/utils/date-parsers';
+
 import {
   updateFinancialRecordsFromTask,
   updateItemsCreatedByTask,
@@ -123,7 +127,7 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
       collectedAtRaw = Number.isFinite(collectedAtCandidate.getTime()) ? collectedAtCandidate : undefined;
     }
     if (!collectedAtRaw) {
-      collectedAtRaw = new Date();
+      collectedAtRaw = getUTCNow();
       // Ensure the collectedAt timestamp is saved if it was missing
       await upsertTask({ ...task, isCollected: true, collectedAt: collectedAtRaw, status: TaskStatus.COLLECTED }, { skipWorkflowEffects: true });
     }
@@ -300,7 +304,7 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
 
   const getTaskArchiveMonth = (t: Task) => {
     const date = t.status === TaskStatus.COLLECTED ? (t.collectedAt || t.doneAt || t.createdAt) : (t.doneAt || t.createdAt);
-    return date ? formatMonthKey(calculateClosingDate(date)) : null;
+    return date ? formatMonthKey(endOfMonthUTC(date)) : null;
   };
 
   const newMonth = isNowArchived ? getTaskArchiveMonth(task) : null;
@@ -402,7 +406,7 @@ export async function removeTaskLogEntriesOnDelete(task: Task): Promise<void> {
         if (!snapshotDate && task.createdAt) snapshotDate = task.createdAt;
 
         if (snapshotDate) {
-          const snapshotMonth = calculateClosingDate(snapshotDate);
+          const snapshotMonth = endOfMonthUTC(snapshotDate);
           const monthKey = formatMonthKey(snapshotMonth);
           await kvSRem(buildArchiveCollectionIndexKey('tasks', monthKey), task.id);
         }
@@ -487,7 +491,7 @@ export async function uncompleteTask(taskId: string): Promise<void> {
             const updatedItem = {
               ...existingItem,
               stock: updatedStock,
-              updatedAt: new Date()
+              updatedAt: getUTCNow()
             };
 
             await upsertItem(updatedItem);
@@ -511,15 +515,15 @@ export async function uncompleteTask(taskId: string): Promise<void> {
     await clearEffect(EffectKeys.sideEffect('task', taskId, 'pointsRewarded')); // Clear the new effect key
     // 3.5 Remove from archive index & clear snapshot effect
     try {
-      let snapshotDate = task.doneAt || task.collectedAt || task.createdAt || new Date();
-      const snapshotMonth = calculateClosingDate(snapshotDate);
+      let snapshotDate = task.doneAt || task.collectedAt || task.createdAt || getUTCNow();
+      const snapshotMonth = endOfMonthUTC(snapshotDate);
       const monthKey = formatMonthKey(snapshotMonth);
 
       await kvSRem(buildArchiveCollectionIndexKey('tasks', monthKey), task.id);
       await clearEffect(EffectKeys.sideEffect('task', taskId, `taskSnapshot:${monthKey}`));
 
       // Also check standard date-based key just in case (fallback)
-      const nowKey = formatMonthKey(calculateClosingDate(new Date()));
+      const nowKey = formatMonthKey(endOfMonthUTC(getUTCNow()));
       if (nowKey !== monthKey) {
         await kvSRem(buildArchiveCollectionIndexKey('tasks', nowKey), task.id);
       }
@@ -550,7 +554,7 @@ async function cascadeCollectionToChildren(parentTask: Task, collectedAt: Date):
     // Import functions we need
     const { getAllTasks, upsertTask } = await import('@/data-store/datastore');
     const { hasEffect, markEffect } = await import('@/data-store/effects-registry');
-    const { formatMonthKey } = await import('@/lib/utils/date-utils');
+    const { formatMonthKey } = await import('@/lib/utils/date-display-utils');
     const { kvSAdd } = await import('@/data-store/kv');
     const { appendEntityLog } = await import('@/workflows/entities-logging');
 
@@ -622,7 +626,7 @@ async function taskHasLifecycleEvent(taskId: string, eventLower: string): Promis
   const { getEntityLogMonths, getEntityLogs } = await import('../entities-logging');
   const months = await getEntityLogMonths(EntityType.TASK);
   const mmYyNow = (() => {
-    const n = new Date();
+    const n = getUTCNow();
     return `${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getFullYear()).slice(-2)}`;
   })();
   const monthSet = new Set<string>([mmYyNow, ...months]);
@@ -682,7 +686,7 @@ export async function ensureTaskCollectedLog(taskId: string): Promise<{
   if (await taskHasLifecycleEvent(taskId, 'collected')) {
     return { success: true, noop: true };
   }
-  const collectedAt = task.collectedAt ? new Date(task.collectedAt) : new Date();
+  const collectedAt = task.collectedAt ? new Date(task.collectedAt) : getUTCNow();
   await appendEntityLog(
     EntityType.TASK,
     task.id,

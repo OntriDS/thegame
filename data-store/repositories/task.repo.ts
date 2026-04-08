@@ -4,6 +4,7 @@ import { kvGet, kvMGet, kvSet, kvDel, kvSMembers, kvSAdd, kvSRem } from '@/data-
 import { buildDataKey, buildIndexKey, buildTaskActiveIndexKey, buildTaskChildrenKey } from '@/data-store/keys';
 import { EntityType } from '@/types/enums';
 import { isTaskActive } from '@/lib/utils/task-active-utils';
+import { getUTCNow } from '@/lib/utils/utc-utils';
 
 const ENTITY = EntityType.TASK;
 
@@ -95,7 +96,7 @@ export async function upsertTask(task: Task): Promise<Task> {
   // Maintain month index (doneAt → collectedAt → createdAt)
   const { formatMonthKey } = await import('@/lib/utils/date-utils');
   const { buildMonthIndexKey } = await import('@/data-store/keys');
-  const date = task.doneAt || task.collectedAt || task.createdAt || new Date();
+  const date = task.doneAt || task.collectedAt || task.createdAt || getUTCNow();
   if (date) {
     const monthKey = formatMonthKey(date);
     await kvSAdd(buildMonthIndexKey(ENTITY, monthKey), task.id);

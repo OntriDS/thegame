@@ -1,4 +1,18 @@
 // lib/constants/date-constants.ts
+/**
+ * @DEPRECATED - Use date-display-utils.ts and date-parsers.ts instead
+ *
+ * This file is maintained for backward compatibility only.
+ * All new code should use the new UTC utilities.
+ *
+ * Migration guide:
+ * - formatDateDDMMYYYY() → formatForDisplay() from date-display-utils.ts
+ * - getCurrentMonth() → getUTCNow().getUTCMonth() + 1
+ * - getCurrentYear() → getUTCNow().getUTCFullYear()
+ *
+ * @see date-display-utils.ts for output formatting
+ * @see date-parsers.ts for input parsing
+ */
 // Date-related constants for the application
 
 export const BASE_YEAR = 2024; // Base year for date calculations

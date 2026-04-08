@@ -2,15 +2,16 @@
 // Sale line processing utilities
 
 import type { Sale, Item, ItemSaleLine, ServiceLine, Task } from '@/types/entities';
-import { LinkType, EntityType, LogEventType, ItemStatus } from '@/types/enums';
+import { LinkType, EntityType, LogEventType, ItemStatus, SaleStatus } from '@/types/enums';
 import { getItemById, upsertItem, deleteItem } from '@/data-store/datastore';
 import { upsertTask } from '@/data-store/datastore';
 import { makeLink } from '@/links/links-workflows';
 import { createLink } from '@/links/link-registry';
 import { clearEffect, hasEffect, markEffect } from '@/data-store/effects-registry';
 import { EffectKeys, buildArchiveCollectionIndexKey, buildArchiveMonthsKey, buildMonthIndexKey } from '@/data-store/keys';
-import { calculateClosingDate, formatMonthKey, formatDisplayDate, saleReferenceDateForItemSoldAndLog } from '@/lib/utils/date-utils';
-import { appendEntityLog } from './entities-logging';
+import { formatMonthKey, formatForDisplay } from '@/lib/utils/date-display-utils';
+import { getUTCNow, endOfMonthUTC } from '@/lib/utils/utc-utils';
+import { appendEntityLog, getMonthKeyFromTimestamp } from './entities-logging';
 import { ORDER_INCREMENT } from '@/lib/constants/app-constants';
 
 /**
@@ -107,7 +108,7 @@ export async function processItemSaleLine(line: ItemSaleLine, sale: Sale): Promi
     // Live inventory: only adjust site stock — do not bump quantitySold or soldAt (sold row holds that).
     let updatedItem = {
       ...item,
-      updatedAt: new Date(),
+      updatedAt: getUTCNow(),
       stock: item.stock ? item.stock.map(stockPoint => ({ ...stockPoint })) : []
     };
 
@@ -162,7 +163,7 @@ export async function processItemSaleLine(line: ItemSaleLine, sale: Sale): Promi
         status: ItemStatus.FOR_SALE,
         quantitySold: 0, // Always 0 for inventory items
         stock: [{ siteId: sale.siteId || updatedItem.stock[0]?.siteId || '', quantity: targetAmount }],
-        updatedAt: new Date()
+        updatedAt: getUTCNow()
       };
       await upsertItem(updatedItem, { skipWorkflowEffects: true });
       console.log(`[processItemSaleLine] 🔄 Restocked ${item.name} to target quantity ${targetAmount}`);
@@ -172,7 +173,7 @@ export async function processItemSaleLine(line: ItemSaleLine, sale: Sale): Promi
         ...updatedItem,
         status: ItemStatus.FOR_SALE, // Keep item active
         quantitySold: 0, // Always 0 for inventory items
-        updatedAt: new Date()
+        updatedAt: getUTCNow()
       };
 
       // Save the updated item (Skip generic workflow to avoid duplicate logs)
@@ -234,8 +235,8 @@ export async function processServiceLine(line: ServiceLine, sale: Sale): Promise
       revenue: 0, // Tasks from sales don't get revenue - it stays in the sale
       rewards: line.taskRewards ? { points: line.taskRewards } : { points: { xp: 0, rp: 0, fp: 0, hp: 0 } },
       isCollected: false,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      createdAt: getUTCNow(),
+      updatedAt: getUTCNow(),
       links: [],
       // Ambassador Fields - inherit from sale
       siteId: sale.siteId,
@@ -328,7 +329,8 @@ export async function ensureSoldItemEntities(sale: Sale, previousSale?: Sale): P
 
     console.log(`[ensureSoldItemEntities] Ensuring ${itemLines.length} item sold entities for sale: ${sale.id}`);
 
-    const { calculateClosingDate, formatMonthKey, formatDisplayDate } = await import('@/lib/utils/date-utils');
+    const { endOfMonthUTC, getUTCNow: _utcNow } = await import('@/lib/utils/utc-utils');
+    const { formatMonthKey, formatForDisplay } = await import('@/lib/utils/date-display-utils');
     const { kvSAdd } = await import('@/data-store/kv');
     const { buildArchiveMonthsKey, buildMonthIndexKey } = await import('@/data-store/keys');
 
@@ -422,7 +424,19 @@ export async function ensureSoldItemEntities(sale: Sale, previousSale?: Sale): P
           continue;
         }
 
-        const refDate = saleReferenceDateForItemSoldAndLog(sale);
+        const refDate = (() => {
+          // Inlined saleReferenceDateForItemSoldAndLog — uses top-level SaleStatus import
+          const isCollected = sale.status === SaleStatus.COLLECTED || !!sale.isCollected;
+          const toValid = (v: unknown): Date | null => {
+            if (v == null || v === '') return null;
+            const d = v instanceof Date ? v : new Date(v as string);
+            return Number.isFinite(d.getTime()) ? d : null;
+          };
+          if (isCollected) { const c = toValid(sale.collectedAt); if (c) return c; }
+          const done = toValid(sale.doneAt); if (done) return done;
+          const sd = toValid(sale.saleDate); if (sd) return sd;
+          return getUTCNow();
+        })();
         const soldItemEntity: Item = {
           ...item,
           id: primaryCloneId,
@@ -436,13 +450,13 @@ export async function ensureSoldItemEntities(sale: Sale, previousSale?: Sale): P
           value: (working.unitPrice || 0) * (working.quantity || 0),
           sourceRecordId: sale.id,
           ownerCharacterId: sale.customerId || item.ownerCharacterId || null,
-          updatedAt: new Date(),
-          description: `Sold in ${sale.counterpartyName || 'Sale'} (${formatDisplayDate(refDate)})`
+          updatedAt: getUTCNow(),
+          description: `Sold in ${sale.counterpartyName || 'Sale'} (${formatForDisplay(refDate)})`
         };
 
         await upsertItem(soldItemEntity, { skipWorkflowEffects: true });
 
-        const archiveMonth = calculateClosingDate(soldItemEntity.soldAt || new Date());
+        const archiveMonth = endOfMonthUTC(soldItemEntity.soldAt instanceof Date ? soldItemEntity.soldAt : getUTCNow());
         const monthKey = formatMonthKey(archiveMonth);
         await kvSAdd(buildMonthIndexKey(EntityType.ITEM, monthKey), soldItemEntity.id);
         await kvSAdd(buildArchiveCollectionIndexKey('items', monthKey), soldItemEntity.id);

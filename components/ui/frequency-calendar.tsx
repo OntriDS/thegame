@@ -13,9 +13,9 @@ import { NumericInput } from '@/components/ui/numeric-input';
 import { Label } from '@/components/ui/label';
 import { DateInput } from '@/components/ui/date-input';
 import { RecurrentFrequency } from '@/types/enums';
-import { formatDisplayDate, formatInputDate } from '@/lib/utils/date-utils';
+// UTC STANDARDIZATION: Using new UTC utilities
+import { formatForDisplay, formatForInput } from '@/lib/utils/date-display-utils';
 import { getInteractiveInnerModalZIndex, getInteractiveSubModalZIndex, getDropdownZIndex } from '@/lib/utils/z-index-utils';
-import { fromRecurrentUTC } from '@/lib/utils/recurrent-date-utils';
 
 export interface FrequencyConfig {
   type: RecurrentFrequency;
@@ -75,30 +75,30 @@ export function FrequencyCalendar({
 
   React.useEffect(() => {
     if (value) {
-      // Convert UTC midnight dates back to local for display
+      // Dates are now stored as UTC, use directly for display
       const normalizedConfig = { ...value };
       if (normalizedConfig.customDays && Array.isArray(normalizedConfig.customDays)) {
         normalizedConfig.customDays = normalizedConfig.customDays.map((day: any) => {
           if (day instanceof Date) {
-            return fromRecurrentUTC(day); // Convert UTC midnight to local
+            return new Date(day); // Keep as UTC date
           }
           if (typeof day === 'string') {
             const date = new Date(day);
-            return isNaN(date.getTime()) ? null : fromRecurrentUTC(date);
+            return isNaN(date.getTime()) ? null : new Date(date);
           }
           return day;
         }).filter((day: any) => day instanceof Date && !isNaN(day.getTime())) as Date[];
       }
 
-      // Also normalize stopsAfter.value to local if it's a date
+      // Also normalize stopsAfter.value to UTC date if it's a date
       if (normalizedConfig.stopsAfter?.type === 'date' && normalizedConfig.stopsAfter.value) {
         if (typeof normalizedConfig.stopsAfter.value === 'string') {
           const date = new Date(normalizedConfig.stopsAfter.value);
           if (!isNaN(date.getTime())) {
-            normalizedConfig.stopsAfter.value = fromRecurrentUTC(date); // Convert UTC midnight to local
+            normalizedConfig.stopsAfter.value = new Date(date); // Keep as UTC date
           }
         } else if (normalizedConfig.stopsAfter.value instanceof Date) {
-          normalizedConfig.stopsAfter.value = fromRecurrentUTC(normalizedConfig.stopsAfter.value); // Convert UTC midnight to local
+          normalizedConfig.stopsAfter.value = new Date(normalizedConfig.stopsAfter.value); // Keep as UTC date
         }
       }
 
@@ -149,7 +149,7 @@ export function FrequencyCalendar({
         ? new Date(config.stopsAfter.value)
         : null;
     if (!dateValue || isNaN(dateValue.getTime())) return 'Never';
-    return `Until ${formatDisplayDate(dateValue)}`;
+    return `Until ${formatForDisplay(dateValue)}`;
   };
 
   return (
@@ -216,7 +216,7 @@ export function FrequencyCalendar({
                       <Button variant="outline" className="w-full justify-start h-8 text-sm">
                         <CalendarIcon className="mr-2 h-3 w-3" />
                         {config.type === RecurrentFrequency.DAILY ?
-                          (customDays.length > 0 && customDays[0] instanceof Date ? `${customDays[0].toLocaleDateString('en-US', { weekday: 'long' })}, ${formatDisplayDate(customDays[0])}` : 'Select starting day') :
+                          (customDays.length > 0 && customDays[0] instanceof Date ? `${customDays[0].toLocaleDateString('en-US', { weekday: 'long' })}, ${formatForDisplay(customDays[0])}` : 'Select starting day') :
                           config.type === RecurrentFrequency.WEEKLY ?
                             (customDays.length > 0 && customDays[0] instanceof Date ? customDays[0].toLocaleDateString('en-US', { weekday: 'long' }) : 'Select starting day of week') :
                             config.type === RecurrentFrequency.MONTHLY ?

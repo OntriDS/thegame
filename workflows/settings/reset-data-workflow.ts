@@ -1,10 +1,10 @@
 // workflows/settings/reset-data-workflow.ts
 // Reset Data Workflow for KV-only architecture
 
-import { kv, kvDel, kvDelMany } from '@/data-store/kv';
+import { kv, kvDel, kvDelMany, kvScan } from '@/data-store/kv';
+import { getUTCNow } from '@/lib/utils/utc-utils';
 import { buildDataKey, buildIndexKey, buildLogKey, buildLinksGlobalIndexKey, buildLinksIndexKey, buildLogMonthKey, buildLogMonthsIndexKey } from '@/data-store/keys';
 import { EntityType, SiteType, SiteStatus, PhysicalBusinessType, DigitalSiteType, SystemSiteType } from '@/types/enums';
-import { kvScan } from '@/data-store/kv';
 import { TransactionManager } from './transaction-manager';
 import { clearAllEffects, clearProcessingStack } from '@/data-store/effects-registry';
 
@@ -652,8 +652,8 @@ export class ResetDataWorkflow {
           name: 'HQ',
           status: SiteStatus.ACTIVE,
           metadata: { type: SiteType.PHYSICAL, businessType: PhysicalBusinessType.STORAGE, settlementId: '', googleMapsAddress: '' },
-          createdAt: new Date(),
-          updatedAt: new Date(),
+          createdAt: getUTCNow(),
+          updatedAt: getUTCNow(),
           links: []
         },
         {
@@ -661,8 +661,8 @@ export class ResetDataWorkflow {
           name: 'Drive',
           status: SiteStatus.ACTIVE,
           metadata: { type: SiteType.DIGITAL, digitalType: DigitalSiteType.REPOSITORY },
-          createdAt: new Date(),
-          updatedAt: new Date(),
+          createdAt: getUTCNow(),
+          updatedAt: getUTCNow(),
           links: []
         },
         {
@@ -670,8 +670,8 @@ export class ResetDataWorkflow {
           name: 'None',
           status: SiteStatus.ACTIVE,
           metadata: { type: SiteType.SYSTEM, systemType: SystemSiteType.UNIVERSAL_TRACKING },
-          createdAt: new Date(),
-          updatedAt: new Date(),
+          createdAt: getUTCNow(),
+          updatedAt: getUTCNow(),
           links: []
         }
       ];

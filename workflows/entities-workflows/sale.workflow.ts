@@ -28,7 +28,9 @@ import { processSaleLines, ensureSoldItemEntities } from '../sale-line-utils';
 import { resyncFinrecItemLinksAfterSoldItemClones } from '../financial-record-utils';
 import { updateFinancialRecordsFromSale, updateItemsFromSale, hasRevenueChanged, hasCostChanged, hasLinesChanged } from '../update-propagation-utils';
 import { createCharacterFromSale } from '../character-creation-utils';
-import { formatMonthKey, calculateClosingDate } from '@/lib/utils/date-utils';
+// UTC STANDARDIZATION: Using new UTC utilities
+import { formatMonthKey } from '@/lib/utils/date-display-utils';
+import { getUTCNow, endOfMonthUTC, toUTCISOString } from '@/lib/utils/utc-utils';
 import { buildArchiveCollectionIndexKey, buildArchiveMonthsKey } from '@/data-store/keys';
 import { getSaleLogDetails } from '@/lib/utils/sale-log-details';
 import { entityHasLogEvent } from '@/lib/utils/entity-log-scan';
@@ -58,18 +60,18 @@ export async function ensureSaleLifecycleLogsForState(sale: Sale): Promise<void>
 
   if (needsCharged && !(await saleHasChargedLog(sale.id))) {
     const chargedAt = sale.chargedAt ? new Date(sale.chargedAt as Date) : undefined;
-    const ts = sale.doneAt || chargedAt || sale.saleDate || sale.updatedAt || new Date();
+    const ts = sale.doneAt || chargedAt || sale.saleDate || sale.updatedAt || getUTCNow();
     await appendEntityLog(EntityType.SALE, sale.id, LogEventType.CHARGED, getSaleLogDetails(sale), ts);
   }
 
   if (isCollectedState && !(await entityHasLogEvent(EntityType.SALE, sale.id, 'collected'))) {
     let defaultCollectedAt: Date;
     if (sale.saleDate) {
-      defaultCollectedAt = calculateClosingDate(sale.saleDate);
+      defaultCollectedAt = endOfMonthUTC(sale.saleDate);
     } else if (sale.createdAt) {
-      defaultCollectedAt = calculateClosingDate(sale.createdAt);
+      defaultCollectedAt = endOfMonthUTC(sale.createdAt);
     } else {
-      defaultCollectedAt = calculateClosingDate(new Date());
+      defaultCollectedAt = endOfMonthUTC(getUTCNow());
     }
     const collectedAt = sale.collectedAt ? new Date(sale.collectedAt) : defaultCollectedAt;
     await appendEntityLog(
@@ -78,7 +80,7 @@ export async function ensureSaleLifecycleLogsForState(sale: Sale): Promise<void>
       LogEventType.COLLECTED,
       {
         ...getSaleLogDetails(sale),
-        collectedAt: collectedAt.toISOString(),
+        collectedAt: collectedAttoUTCISOString(,
       },
       collectedAt
     );
@@ -110,7 +112,7 @@ export async function ensureSaleChargedLog(saleId: string): Promise<{
     return { success: true, noop: true };
   }
   const chargedAt = sale.chargedAt ? new Date(sale.chargedAt as Date) : undefined;
-  const ts = sale.doneAt || chargedAt || sale.saleDate || sale.updatedAt || new Date();
+  const ts = sale.doneAt || chargedAt || sale.saleDate || sale.updatedAt || getUTCNow();
   await appendEntityLog(EntityType.SALE, sale.id, LogEventType.CHARGED, getSaleLogDetails(sale), ts);
   return { success: true };
 }
@@ -132,11 +134,11 @@ export async function ensureSaleCollectedLog(saleId: string): Promise<{
   }
   let defaultCollectedAt: Date;
   if (sale.saleDate) {
-    defaultCollectedAt = calculateClosingDate(sale.saleDate);
+    defaultCollectedAt = endOfMonthUTC(sale.saleDate);
   } else if (sale.createdAt) {
-    defaultCollectedAt = calculateClosingDate(sale.createdAt);
+    defaultCollectedAt = endOfMonthUTC(sale.createdAt);
   } else {
-    defaultCollectedAt = calculateClosingDate(new Date());
+    defaultCollectedAt = endOfMonthUTC(getUTCNow());
   }
   const collectedAt = sale.collectedAt ? new Date(sale.collectedAt) : defaultCollectedAt;
   await appendEntityLog(
@@ -145,7 +147,7 @@ export async function ensureSaleCollectedLog(saleId: string): Promise<{
     LogEventType.COLLECTED,
     {
       ...getSaleLogDetails(sale),
-      collectedAt: collectedAt.toISOString(),
+      collectedAt: collectedAttoUTCISOString(,
     },
     collectedAt
   );
@@ -227,7 +229,7 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
 
   // Log CHARGED milestone (if applicable and not already logged)
   if (isCharged) {
-    const defaultChargedAt = sale.chargedAt ? new Date(sale.chargedAt) : new Date();
+    const defaultChargedAt = sale.chargedAt ? new Date(sale.chargedAt) : getUTCNow();
     // Use doneAt as the primary timestamp for the "Done" milestone in the log
     const logTimestamp = sale.doneAt || defaultChargedAt;
 
@@ -264,13 +266,10 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
   if (isCollected) {
     let defaultCollectedAt: Date;
     if (sale.saleDate) {
-      defaultCollectedAt = calculateClosingDate(sale.saleDate);
+      defaultCollectedAt = endOfMonthUTC(sale.saleDate);
     } else if (sale.createdAt) {
-      defaultCollectedAt = calculateClosingDate(sale.createdAt);
+      defaultCollectedAt = endOfMonthUTC(sale.createdAt);
     } else {
-      const now = new Date();
-      const adjustedNow = new Date(now.getTime() - 6 * 60 * 60 * 1000);
-      defaultCollectedAt = calculateClosingDate(adjustedNow);
     }
 
     const collectedAtRaw = sale.collectedAt ?? defaultCollectedAt;
@@ -285,7 +284,7 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
         LogEventType.COLLECTED,
         {
           ...getSaleLogDetails(sale),
-          collectedAt: collectedAt.toISOString()
+          collectedAt: collectedAttoUTCISOString(
         },
         collectedAt
       );
@@ -326,11 +325,11 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
         sale.id,
         LogEventType.CANCELLED,
         getSaleLogDetails(sale),
-        sale.cancelledAt || sale.saleDate || new Date()
+        sale.cancelledAt || sale.saleDate || getUTCNow()
       );
     } else if (!previousSale.isNotPaid && !previousSale.isNotCharged && (sale.isNotPaid || sale.isNotCharged)) {
       // Reverted to Pending
-      await appendEntityLog(EntityType.SALE, sale.id, LogEventType.PENDING, getSaleLogDetails(sale), sale.saleDate || new Date());
+      await appendEntityLog(EntityType.SALE, sale.id, LogEventType.PENDING, getSaleLogDetails(sale), sale.saleDate || getUTCNow());
     }
   }
 
@@ -426,9 +425,9 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
 
   const getArchiveMonth = (s: Sale) => {
     // User requirement: collectedAt should be the last day of the sale's month
-    const sDate = s.saleDate ? new Date(s.saleDate) : (s.createdAt ? new Date(s.createdAt) : new Date());
-    const date = s.collectedAt ?? calculateClosingDate(sDate);
-    return date ? formatMonthKey(calculateClosingDate(date)) : null;
+    const sDate = s.saleDate ? new Date(s.saleDate) : (s.createdAt ? new Date(s.createdAt) : getUTCNow());
+    const date = s.collectedAt ?? endOfMonthUTC(sDate);
+    return date ? formatMonthKey(endOfMonthUTC(date)) : null;
   };
 
   const newMonth = isNowArchived ? getArchiveMonth(sale) : null;
@@ -462,12 +461,12 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
         return ev === 'collected' || ev === 'charged';
       });
 
-      const collectedAt = sale.collectedAt || calculateClosingDate(sale.saleDate || new Date());
+      const collectedAt = sale.collectedAt || endOfMonthUTC(sale.saleDate || getUTCNow());
 
       const chargedOk =
         sale.status !== SaleStatus.CANCELLED && !sale.isNotPaid && !sale.isNotCharged;
       if (chargedOk) {
-        const ts = sale.doneAt || (sale as { chargedAt?: Date }).chargedAt || sale.saleDate || new Date();
+        const ts = sale.doneAt || (sale as { chargedAt?: Date }).chargedAt || sale.saleDate || getUTCNow();
         const chargedLoggedKey = EffectKeys.sideEffect('sale', sale.id, 'saleDoneLogged');
         if (!(await hasEffect(chargedLoggedKey))) {
           await appendEntityLog(

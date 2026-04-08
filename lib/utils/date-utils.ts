@@ -1,4 +1,20 @@
 // lib/utils/date-utils.ts
+/**
+ * @DEPRECATED - Use utc-utils.ts, date-parsers.ts, and date-display-utils.ts instead
+ *
+ * This file is maintained for backward compatibility only.
+ * All new code should use the new UTC utilities.
+ *
+ * Migration guide:
+ * - formatDisplayDate() → formatForDisplay() from date-display-utils.ts
+ * - parseFlexibleDate() → parseDateToUTC() from date-parsers.ts
+ * - new Date() → getUTCNow() from utc-utils.ts
+ * - toISOString() → toUTCISOString() from utc-utils.ts
+ *
+ * @see utc-utils.ts for core UTC operations
+ * @see date-parsers.ts for input parsing
+ * @see date-display-utils.ts for output formatting
+ */
 // Centralized date formatting utilities using app constants
 import { format, parseISO, isValid, parse } from 'date-fns';
 import type { Task, Sale, FinancialRecord, Item } from '@/types/entities';

@@ -8,6 +8,7 @@ import { upsertItem, removeItem, getItemsBySourceTaskId, getItemsBySourceRecordI
 import { hasEffect, markEffect } from '@/data-store/effects-registry';
 // links are created by processLinkEntity()
 import { v4 as uuid } from 'uuid';
+import { getUTCNow } from '@/lib/utils/utc-utils';
 
 /**
  * Determines the default item status based on item type and sale status
@@ -63,7 +64,7 @@ export async function createItemFromTask(task: Task): Promise<Item | null> {
         const updatedItem: Item = {
           ...existingItem,
           stock: updatedStock,
-          updatedAt: new Date()
+          updatedAt: getUTCNow()
         };
 
         const savedItem = await upsertItem(updatedItem);
@@ -100,9 +101,9 @@ export async function createItemFromTask(task: Task): Promise<Item | null> {
       ownerCharacterId: task.customerCharacterId || null, // Emissary: Pass customer as item owner
       isCollected: false,
       collectedAt: undefined,
-      year: (task.collectedAt || task.doneAt || new Date()).getFullYear(), // Use task's date
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      year: (task.collectedAt || task.doneAt || getUTCNow()).getFullYear(), // Use task's date
+      createdAt: getUTCNow(),
+      updatedAt: getUTCNow(),
       links: [],  // initialize links array (registry creates real links)
       stock: [
         {
@@ -170,7 +171,7 @@ export async function createItemFromRecord(record: FinancialRecord): Promise<Ite
         const updatedItem: Item = {
           ...existingItem,
           stock: updatedStock,
-          updatedAt: new Date(),
+          updatedAt: getUTCNow(),
           ownerCharacterId: existingItem.ownerCharacterId || resolvedOwnerCharacterId || null,
         };
 
@@ -214,8 +215,8 @@ export async function createItemFromRecord(record: FinancialRecord): Promise<Ite
       isCollected: false,
       collectedAt: undefined,
       year: record.year, // Use record's year
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      createdAt: getUTCNow(),
+      updatedAt: getUTCNow(),
       links: [],  // initialize links array (registry creates real links)
       stock: [
         {

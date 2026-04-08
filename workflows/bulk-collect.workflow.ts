@@ -1,5 +1,6 @@
- import { getTasksForMonth, upsertTask } from '@/data-store/datastore';
+import { getTasksForMonth, upsertTask } from '@/data-store/datastore';
 import { TaskStatus } from '@/types/enums';
+import { getUTCNow } from '@/lib/utils/utc-utils';
 
 /**
  * Workflow to automatically collect all DONE tasks for a given month and year.
@@ -23,8 +24,8 @@ export async function bulkCollectMonthTasks(month: number, year: number): Promis
                 const updatedTask = {
                     ...task,
                     status: TaskStatus.COLLECTED,
-                    collectedAt: new Date(),
-                    updatedAt: new Date()
+                    collectedAt: getUTCNow(),
+                    updatedAt: getUTCNow()
                 };
 
                 await upsertTask(updatedTask);

@@ -1,7 +1,8 @@
 // workflows/settings/import-data-workflow.ts
 // Import Data Workflow for KV-only architecture
 
-import { kv, kvDelMany } from '@/data-store/kv';
+import { kv, kvScan, kvGet, kvMSet, kvSAdd, kvDel, kvLPush, kvDelMany } from '@/data-store/kv';
+import { getUTCNow } from '@/lib/utils/utc-utils';
 import { buildDataKey, buildIndexKey, buildLogKey, buildLogMonthKey, buildLogMonthsIndexKey } from '@/data-store/keys';
 import { getMonthKeyFromTimestamp } from '../entities-logging';
 import { EntityType } from '@/types/enums';
@@ -527,7 +528,7 @@ export class ImportDataWorkflow {
           } else {
             const byMonth = new Map<string, any[]>();
             for (const entry of logEntries) {
-              const mkey = getMonthKeyFromTimestamp(entry.timestamp || entry.at || new Date());
+              const mkey = getMonthKeyFromTimestamp(entry.timestamp || entry.at || getUTCNow());
               if (!byMonth.has(mkey)) byMonth.set(mkey, []);
               byMonth.get(mkey)!.push(entry);
             }

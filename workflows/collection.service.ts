@@ -6,7 +6,8 @@ import {
     upsertSale,
 } from '@/data-store/datastore';
 import { TaskStatus, SaleStatus, EntityType } from '@/types/enums';
-import { calculateClosingDate, formatMonthKey } from '@/lib/utils/date-utils';
+import { formatMonthKey } from '@/lib/utils/date-display-utils';
+import { getUTCNow, endOfMonthUTC } from '@/lib/utils/utc-utils';
 import { kvSAdd } from '@/data-store/kv';
 import { buildArchiveMonthsKey } from '@/data-store/keys';
 
@@ -25,8 +26,8 @@ export const CollectionService = {
                 ...task,
                 status: TaskStatus.COLLECTED,
                 isCollected: true,
-                collectedAt: calculateClosingDate(task.doneAt || new Date()),
-                updatedAt: new Date()
+                collectedAt: endOfMonthUTC(task.doneAt ? (task.doneAt instanceof Date ? task.doneAt : new Date(task.doneAt as string)) : getUTCNow()),
+                updatedAt: getUTCNow()
             };
 
             await upsertTask(updatedTask);
@@ -47,8 +48,8 @@ export const CollectionService = {
                 ...sale,
                 status: SaleStatus.COLLECTED,
                 isCollected: true,
-                collectedAt: calculateClosingDate(sale.chargedAt || sale.saleDate || new Date()),
-                updatedAt: new Date()
+                collectedAt: endOfMonthUTC((sale as any).chargedAt ? new Date((sale as any).chargedAt) : sale.saleDate ? (sale.saleDate instanceof Date ? sale.saleDate : new Date(sale.saleDate as string)) : getUTCNow()),
+                updatedAt: getUTCNow()
             };
 
             await upsertSale(updatedSale);
@@ -60,7 +61,7 @@ export const CollectionService = {
     },
 
     async updateArchiveIndex(type: EntityType, month: number, year: number) {
-        const monthKey = formatMonthKey(new Date(year, month - 1, 1));
+        const monthKey = formatMonthKey(new Date(Date.UTC(year, month - 1, 1)));
         await kvSAdd(buildArchiveMonthsKey(), monthKey);
     }
 };

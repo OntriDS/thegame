@@ -8,6 +8,7 @@ import {
   BackfillLogsWorkflow,
   ExportDataWorkflow,
   ImportDataWorkflow,
+  UTCNormalizeWorkflow,
 } from '@/workflows/settings';
 
 // Force dynamic rendering since this route accesses request cookies for auth
@@ -75,6 +76,15 @@ export async function POST(request: NextRequest) {
           success: result.success,
           message: result.message,
           data: result.data
+        }, { status: result.success ? 200 : 500 });
+      }
+ 
+      case 'utc-normalize': {
+        const result = await UTCNormalizeWorkflow.execute();
+        return NextResponse.json({
+          success: result.success,
+          message: result.success ? `Successfully normalized ${result.fixed} fields across ${result.processed} records` : 'Normalization failed',
+          data: result
         }, { status: result.success ? 200 : 500 });
       }
 

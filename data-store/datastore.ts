@@ -87,7 +87,9 @@ import {
 } from '@/workflows/entities-logging';
 import { SummaryService } from './services/summary.service';
 import { SummaryRepository } from './repositories/summary.repo';
+// UTC STANDARDIZATION: Using new UTC utilities
 import { getCurrentMonthKey, formatMonthKey, reviveDates } from '@/lib/utils/date-utils';
+import { getUTCNow, toUTCISOString } from '@/lib/utils/utc-utils';
 import { kvDel, kvMGet, kvSAdd, kvSMembers, kvSRem } from './kv';
 import {
   buildDataKey,
@@ -121,7 +123,7 @@ export async function upsertTask(task: Task, options?: { skipWorkflowEffects?: b
   // Skip if explicitly requested (e.g., intentional duplicate via Duplicate button)
   if (!previous && !options?.skipDuplicateCheck) {
     const DUPLICATION_WINDOW_MS = 30 * 1000; // 30 seconds
-    const now = new Date();
+    const now = getUTCNow();
 
     // Fetch recent tasks (could be optimized with a time-based index, but filtering getAllTasks is acceptable for now given volume)
     // NOTE: In high-volume prod, query by approximate time range is better.
@@ -530,7 +532,7 @@ export async function upsertItem(item: Item, options?: { skipWorkflowEffects?: b
   // Only apply to NEW items (no previous record found) to allow legitimate updates
   if (!previous) {
     const DUPLICATION_WINDOW_MS = 2 * 60 * 1000; // 2 minutes
-    const now = new Date();
+    const now = getUTCNow();
 
     // Fetch recent items
     // NOTE: This could be optimized with a query by createdAt if available in repo, 
@@ -671,7 +673,7 @@ export async function upsertFinancial(financial: FinancialRecord, options?: { sk
   // Only apply to NEW financials (no previous record found) to allow legitimate updates
   if (!previous) {
     const DUPLICATION_WINDOW_MS = 2 * 60 * 1000; // 2 minutes
-    const now = new Date();
+    const now = getUTCNow();
 
     // Fetch recent financials
     const recentFinancials = (await repoGetAllFinancials()).filter(f =>
@@ -794,7 +796,7 @@ export async function upsertSale(sale: Sale, options?: { skipWorkflowEffects?: b
   // Only apply to NEW sales (no previous record found) to allow legitimate updates
   if (!previous) {
     const DUPLICATION_WINDOW_MS = 2 * 60 * 1000; // 2 minutes
-    const now = new Date();
+    const now = getUTCNow();
 
     // Fetch recent sales
     const recentSales = (await repoGetAllSales()).filter(s =>
@@ -967,7 +969,7 @@ export async function upsertCharacter(character: Character, options?: { skipWork
   // Identity Shield: Time-Window Deduplication (2 minutes)
   if (!previous) {
     const DUPLICATION_WINDOW_MS = 2 * 60 * 1000;
-    const now = new Date();
+    const now = getUTCNow();
     const recent = (await repoGetAllCharacters()).filter(c =>
       c.id !== character.id &&
       c.createdAt &&
@@ -1097,7 +1099,7 @@ export async function upsertBusiness(entity: Business): Promise<Business> {
   // Identity Shield: Time-Window Deduplication (2 minutes)
   if (!previous) {
     const DUPLICATION_WINDOW_MS = 2 * 60 * 1000;
-    const now = new Date();
+    const now = getUTCNow();
     const recent = (await repoGetAllBusinesses()).filter(b =>
       b.id !== entity.id &&
       b.createdAt &&
@@ -1395,7 +1397,7 @@ export async function getPlayerArchiveEventsByMonth(mmyy: string): Promise<Playe
         sourceType: 'task',
         sourceId: task.id,
         description: task.name,
-        date: (task.collectedAt ?? task.doneAt ?? new Date()).toISOString(),
+        date: toUTCISOString(task.collectedAt ?? task.doneAt ?? getUTCNow()),
         points: {
           hp: task.rewards?.points?.hp ?? 0,
           fp: task.rewards?.points?.fp ?? 0,
@@ -1413,7 +1415,7 @@ export async function getPlayerArchiveEventsByMonth(mmyy: string): Promise<Playe
         sourceType: 'financial',
         sourceId: financial.id,
         description: financial.name,
-        date: new Date(financial.year, Math.max(0, financial.month - 1), 1).toISOString(),
+        date: toUTCISOString(new Date(Date.UTC(financial.year, Math.max(0, financial.month - 1), 1))),
         points: {
           hp: financial.rewards?.points?.hp ?? 0,
           fp: financial.rewards?.points?.fp ?? 0,
@@ -1431,7 +1433,7 @@ export async function getPlayerArchiveEventsByMonth(mmyy: string): Promise<Playe
         sourceType: 'sale',
         sourceId: sale.id,
         description: sale.counterpartyName ?? 'Sale',
-        date: (sale.collectedAt ?? sale.saleDate ?? new Date()).toISOString(),
+        date: toUTCISOString(sale.collectedAt ?? sale.saleDate ?? getUTCNow()),
         points: {
           hp: sale.rewards?.points?.hp ?? 0,
           fp: sale.rewards?.points?.fp ?? 0,

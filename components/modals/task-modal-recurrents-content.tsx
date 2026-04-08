@@ -38,7 +38,10 @@ import { Calendar as CalendarIcon, Repeat, Network, User } from 'lucide-react';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
 import { format } from 'date-fns';
 import { FrequencyConfig } from '@/components/ui/frequency-calendar';
-import { validateFrequencyConfig, fromRecurrentUTC } from '@/lib/utils/recurrent-date-utils';
+// UTC STANDARDIZATION: Using new UTC utilities
+import { validateFrequencyConfig } from '@/lib/utils/recurrent-date-utils';
+import { getUTCNow } from '@/lib/utils/utc-utils';
+import { formatForDisplay } from '@/lib/utils/date-display-utils';
 import DeleteModal from './submodals/delete-submodal';
 import LinksRelationshipsModal from './submodals/links-relationships-submodal';
 import DatesSubmodal from './submodals/dates-submodal';
@@ -179,7 +182,7 @@ export default function RecurrentTreeModalContent({
       setStation(rawStation);
       setProgress(existingTask.progress);
       // Convert UTC midnight dates back to local for display
-      setDueDate(existingTask.dueDate ? fromRecurrentUTC(existingTask.dueDate) : undefined);
+      setDueDate(existingTask.dueDate ? new Date(existingTask.dueDate) : undefined);
       setLocalDoneAt(existingTask.doneAt ? new Date(existingTask.doneAt) : undefined);
       setLocalCollectedAt(existingTask.collectedAt ? new Date(existingTask.collectedAt) : undefined);
       if (existingTask.scheduledStart) {
@@ -425,8 +428,8 @@ export default function RecurrentTreeModalContent({
       isTemplate: task ? (task.isTemplate ?? (type === TaskType.RECURRENT_TEMPLATE)) : (type === TaskType.RECURRENT_TEMPLATE),
       sourceSaleId: task?.sourceSaleId ?? undefined,
       links: task?.links || [],
-      createdAt: task?.createdAt || new Date(),
-      updatedAt: new Date(),
+      createdAt: task?.createdAt || getUTCNow(),
+      updatedAt: getUTCNow(),
     } as Task;
   };
 
