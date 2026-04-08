@@ -273,7 +273,18 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
       const data = await response.json().catch(() => ({}));
       if (!response.ok || (data && data.success === false)) {
         const message = data?.error || 'Failed to spawn instance.';
-        setSpawnErrorMessage(message);
+        const code = data?.errorCode;
+        
+        let detailedMessage = message;
+        if (code === 'SAFETY_LIMIT_EXCEEDED') {
+          detailedMessage = "Safety limit reached. This template has expired based on its End Date or Due Date.";
+        } else if (code === 'STOP_TIMES_REACHED') {
+          detailedMessage = "Execution limit reached. This template has already spawned the maximum number of times allowed.";
+        } else if (code === 'NO_MORE_CUSTOM_DATES') {
+          detailedMessage = "Custom date list exhausted. There are no more predefined dates left to spawn.";
+        }
+
+        setSpawnErrorMessage(detailedMessage);
         setIsSpawnErrorOpen(true);
         return;
       }
@@ -469,17 +480,25 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
           </div>
           <div className="flex gap-2">
             {task.type === TaskType.RECURRENT_TEMPLATE && (
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={handleSpawnNext}>
-                  Spawn
-                </Button>
-                <span className="text-[10px] text-muted-foreground">
-                  {isNextSpawnLoading
-                    ? 'Calculating next spawn...'
-                    : nextSpawnDate
-                      ? `Next: ${formatDisplayDate(nextSpawnDate)}`
-                      : 'No next date (check repeat settings)'}
-                </span>
+              <div className="flex flex-col items-end gap-1">
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" onClick={handleSpawnNext}>
+                    Spawn
+                  </Button>
+                  <span className="text-[10px] font-medium text-primary">
+                    {isNextSpawnLoading
+                      ? 'Calculating...'
+                      : nextSpawnDate
+                        ? `Next: ${formatDisplayDate(nextSpawnDate)}`
+                        : 'No next date'}
+                  </span>
+                </div>
+                {(task.recurrenceStart || task.recurrenceEnd) && (
+                  <div className="flex gap-2 text-[9px] text-muted-foreground uppercase tracking-wider">
+                    {task.recurrenceStart && <span>Start: {formatDisplayDate(fromRecurrentUTC(task.recurrenceStart))}</span>}
+                    {task.recurrenceEnd && <span>End: {formatDisplayDate(fromRecurrentUTC(task.recurrenceEnd))}</span>}
+                  </div>
+                )}
               </div>
             )}
             {task.type === TaskType.RECURRENT_GROUP && (

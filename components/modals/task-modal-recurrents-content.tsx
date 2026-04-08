@@ -100,6 +100,8 @@ export default function RecurrentTreeModalContent({
       repeatMode: 'periodically',
     }
   );
+  const [recurrenceStart, setRecurrenceStart] = useState<Date | undefined>(undefined);
+  const [recurrenceEnd, setRecurrenceEnd] = useState<Date | undefined>(undefined);
   const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
   const [scheduledStartDate, setScheduledStartDate] = useState<Date | undefined>(undefined);
   const [scheduledStartTime, setScheduledStartTime] = useState<string>('');
@@ -242,6 +244,8 @@ export default function RecurrentTreeModalContent({
           repeatMode: 'periodically',
         }
       );
+      setRecurrenceStart(existingTask.recurrenceStart ? new Date(existingTask.recurrenceStart) : undefined);
+      setRecurrenceEnd(existingTask.recurrenceEnd ? new Date(existingTask.recurrenceEnd) : undefined);
       setParentId(existingTask.parentId || null);
     },
     [getPreference]
@@ -292,6 +296,8 @@ export default function RecurrentTreeModalContent({
       interval: 1,
       repeatMode: 'periodically',
     });
+    setRecurrenceStart(undefined);
+    setRecurrenceEnd(undefined);
     setParentId(null);
   }, [getLastUsedStation, getLastUsedType]);
 
@@ -428,6 +434,8 @@ export default function RecurrentTreeModalContent({
       isTemplate: task ? (task.isTemplate ?? (type === TaskType.RECURRENT_TEMPLATE)) : (type === TaskType.RECURRENT_TEMPLATE),
       sourceSaleId: task?.sourceSaleId ?? undefined,
       links: task?.links || [],
+      recurrenceStart,
+      recurrenceEnd,
       createdAt: task?.createdAt || getUTCNow(),
       updatedAt: getUTCNow(),
     } as Task;
@@ -658,12 +666,36 @@ export default function RecurrentTreeModalContent({
                     {(type === TaskType.RECURRENT_GROUP || type === TaskType.RECURRENT_TEMPLATE) && frequencyConfig && (
                       <span className="text-[10px] text-muted-foreground flex items-center">
                         <Repeat className="w-3 h-3 mr-1" />
-                        Recurring
+                        {recurrenceStart || recurrenceEnd ? 'Bounded Recurrence' : 'Recurring'}
                       </span>
                     )}
                   </div>
                 </Button>
               </div>
+
+              {showScheduler && (
+                <SmartSchedulerSubmodal
+                  open={showScheduler}
+                  onOpenChange={setShowScheduler}
+                  isRecurrent={type === TaskType.RECURRENT_GROUP || type === TaskType.RECURRENT_TEMPLATE}
+                  value={{
+                    dueDate,
+                    scheduledStart: scheduledStartDate,
+                    scheduledEnd: scheduledEndDate,
+                    frequencyConfig,
+                    recurrenceStart,
+                    recurrenceEnd,
+                  }}
+                  onChange={(val) => {
+                    setDueDate(val.dueDate);
+                    setScheduledStartDate(val.scheduledStart);
+                    setScheduledEndDate(val.scheduledEnd);
+                    setFrequencyConfig(val.frequencyConfig);
+                    setRecurrenceStart(val.recurrenceStart);
+                    setRecurrenceEnd(val.recurrenceEnd);
+                  }}
+                />
+              )}
 
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-2">

@@ -359,6 +359,8 @@ export interface Task extends BaseEntity {
   collectedAt?: Date;               // When task was collected (monthly close)
 
   // Recurrent Task Fields (JIT Model)
+  recurrenceStart?: Date;           // [NEW] Explicit start date for recurrence cycle
+  recurrenceEnd?: Date;             // [NEW] Explicit end date (safety limit)
   lastSpawnedDate?: Date;           // Track where recurrence cycle stands for JIT spawning
   originTemplateId?: string | null;   // For orphaned instances - soft link to template that spawned them
 

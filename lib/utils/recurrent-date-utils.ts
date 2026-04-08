@@ -1,206 +1,95 @@
 // lib/utils/recurrent-date-utils.ts
 /**
  * @DEPRECATED - Use utc-utils.ts, date-parsers.ts, and date-display-utils.ts instead
- *
- * This file is maintained for backward compatibility only.
- * All new code should use the new UTC utilities.
- *
- * Migration guide:
- * - toRecurrentUTC() → startOfDayUTC(parseDateToUTC(date)) from utc-utils.ts + date-parsers.ts
- * - fromRecurrentUTC() → No longer needed, use UTC dates directly
- * - addDaysUTC() → addDaysUTC() from utc-utils.ts (same function)
- * - addWeeksUTC() → addWeeksUTC() from utc-utils.ts (same function)
- * - addMonthsUTC() → addMonthsUTC() from utc-utils.ts (same function)
- * - isSameRecurrentDate() → isSameDayUTC() from utc-utils.ts
- * - isNextOccurrence() → isAfterUTC() from utc-utils.ts
- * - isWithinSafetyLimit() → !isAfterUTC(candidate, safetyLimit) from utc-utils.ts
- *
- * @see utc-utils.ts for core UTC operations
- * @see date-parsers.ts for input parsing
- * @see date-display-utils.ts for output formatting
+ * 
+ * NOTE FOR RECURRENT SYSTEM:
+ * This system specifically uses UTC Midnight as the canonical representation 
+ * of a calendar day. All storage and calculations should maintain 00:00:00Z.
  */
-// Isolated timezone handling for Recurrent Tasks (JIT Model)
-// Strict scope: ONLY affects Recurrent Templates and their spawned Instances
-// Mission Tasks, Historical Logs, and existing scheduling remain untouched
+
+import { 
+  addDaysUTC as coreAddDaysUTC,
+  addWeeksUTC as coreAddWeeksUTC,
+  addMonthsUTC as coreAddMonthsUTC,
+  startOfDayUTC,
+  isSameDayUTC,
+  isAfterUTC,
+  toUTC,
+  getDaysInMonthUTC,
+  clampToValidUTC
+} from './utc-utils';
 
 /**
- * Converts a local date to UTC midnight for recurrent task storage.
- * Preserves year, month, day only - time component reset to 00:00:00 UTC.
- * This ensures consistent date storage regardless of user's timezone.
- *
- * @param date - The local date to convert
- * @returns Date set to UTC midnight (00:00:00)
+ * Converts any date to UTC midnight.
  */
 export function toRecurrentUTC(date: Date | string): Date {
-  const localDate = date instanceof Date ? date : new Date(date);
-  return new Date(Date.UTC(localDate.getFullYear(), localDate.getMonth(), localDate.getDate()));
+  return startOfDayUTC(toUTC(date));
 }
 
 /**
- * Converts a UTC midnight date (from storage) back to local display date.
- * Simply creates a new Date from the UTC value - browser handles timezone conversion.
- * Used ONLY for UI rendering layer to match user's preferred visual format.
- *
- * @param utcDate - The UTC midnight date from storage
- * @returns Date in local timezone for display
+ * Converts a UTC midnight date back to local date components.
  */
 export function fromRecurrentUTC(utcDate: Date | string): Date {
-  const dateObj = utcDate instanceof Date ? utcDate : new Date(utcDate);
+  const dateObj = toUTC(utcDate);
   return new Date(dateObj.getUTCFullYear(), dateObj.getUTCMonth(), dateObj.getUTCDate());
 }
 
-/**
- * Safely compares two recurrent dates for equality.
- * Both dates are first converted to UTC midnight for comparison.
- * This accounts for timezone differences when determining if two dates represent the same day.
- *
- * @param date1 - First date to compare
- * @param date2 - Second date to compare
- * @returns true if both dates represent the same UTC day
- */
 export function isSameRecurrentDate(date1: Date, date2: Date): boolean {
-  const d1 = toRecurrentUTC(date1);
-  const d2 = toRecurrentUTC(date2);
-  return d1.getTime() === d2.getTime();
+  return isSameDayUTC(toUTC(date1), toUTC(date2));
 }
 
-/**
- * Determines if a date should be considered as the "next" occurrence.
- * A date is "next" if it's strictly greater than the reference date.
- * Used to determine if a calculated occurrence is in the future.
- *
- * @param candidateDate - The potential next occurrence date
- * @param referenceDate - The reference date (e.g., lastSpawnedDate)
- * @returns true if candidate is strictly after reference date
- */
 export function isNextOccurrence(candidateDate: Date, referenceDate: Date): boolean {
-  return candidateDate.getTime() > referenceDate.getTime();
+  return isAfterUTC(toUTC(candidateDate), toUTC(referenceDate));
 }
 
-/**
- * Calculates the next occurrence of a weekday from a reference date.
- * For example: if reference is Wednesday and we want the next Monday,
- * this returns the date of the following Monday.
- *
- * @param referenceDate - The reference date to start from
- * @param targetDayOfWeek - Target weekday (0=Sunday, 1=Monday, ..., 6=Saturday)
- * @returns Date of the next target weekday
- */
 export function getNextWeekdayFromDate(referenceDate: Date, targetDayOfWeek: number): Date {
-  const date = new Date(referenceDate);
+  const date = toUTC(referenceDate);
   const currentDay = date.getUTCDay();
-  const daysUntilNext = (targetDayOfWeek + 7 - currentDay) % 7;
-  date.setUTCDate(date.getUTCDate() + daysUntilNext);
-  return date;
+  // If targetDayOfWeek is same as current day, we move to next week
+  const daysUntilNext = (targetDayOfWeek + 7 - currentDay) % 7 || 7;
+  const result = new Date(date.getTime());
+  result.setUTCDate(result.getUTCDate() + daysUntilNext);
+  return result;
 }
 
-/**
- * Validates if a date is within a safety limit (template's dueDate).
- * Recurrent instances cannot be created beyond the template's dueDate.
- *
- * @param candidateDate - The potential instance date to validate
- * @param safetyLimitDate - The template's dueDate as safety limit
- * @returns true if candidate date is before or equal to safety limit
- */
 export function isWithinSafetyLimit(candidateDate: Date, safetyLimitDate: Date): boolean {
-  return candidateDate.getTime() <= safetyLimitDate.getTime();
+  return !isAfterUTC(toUTC(candidateDate), toUTC(safetyLimitDate));
 }
 
-/**
- * Formats a recurrent UTC date for display purposes.
- * Converts to local timezone and formats in user-friendly way.
- * Used in UI components to show dates correctly to users.
- *
- * @param utcDate - The UTC midnight date from storage
- * @returns Formatted date string (e.g., "Jan 15, 2024")
- */
-export function formatRecurrentDateForDisplay(utcDate: Date): string {
-  const localDate = fromRecurrentUTC(utcDate);
-  return localDate.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-  });
-}
-
-/**
- * Gets the start of day in UTC for a given date.
- * Useful for calculating time-based recurrence boundaries.
- *
- * @param date - The date to get start of day for
- * @returns Date set to 00:00:00 UTC of the same day
- */
-export function getStartOfDayUTC(date: Date): Date {
-  const dayDate = new Date(date);
-  dayDate.setUTCHours(0, 0, 0, 0);
-  return dayDate;
-}
-
-/**
- * Adds a specified number of days to a date.
- * Returns a new UTC date without modifying the original.
- *
- * @param date - The base date
- * @param days - Number of days to add
- * @returns New date with added days (UTC midnight)
- */
 export function addDaysUTC(date: Date, days: number): Date {
-  const result = new Date(toRecurrentUTC(date));
-  result.setUTCDate(result.getUTCDate() + days);
-  return result;
+  return coreAddDaysUTC(toRecurrentUTC(date), days);
 }
 
-/**
- * Adds a specified number of weeks to a date.
- * Returns a new UTC date without modifying the original.
- *
- * @param date - The base date
- * @param weeks - Number of weeks to add
- * @returns New date with added weeks (UTC midnight)
- */
 export function addWeeksUTC(date: Date, weeks: number): Date {
-  const result = new Date(toRecurrentUTC(date));
-  result.setUTCDate(result.getUTCDate() + (weeks * 7));
-  return result;
+  return coreAddWeeksUTC(toRecurrentUTC(date), weeks);
 }
 
 /**
- * Adds a specified number of months to a date.
- * Returns a new UTC date without modifying the original.
- * Handles month-end edge cases (e.g., Jan 31 + 1 month = Feb 28/29).
- *
- * @param date - The base date
- * @param months - Number of months to add
- * @returns New date with added months (UTC midnight)
+ * Adds months with proper day clamping.
+ * e.g. Jan 31 + 1 month = Feb 28/29 (not March 2/3)
  */
 export function addMonthsUTC(date: Date, months: number): Date {
-  const result = new Date(toRecurrentUTC(date));
-  const newMonth = result.getUTCMonth() + months;
-
-  // Set the year and month, then let JavaScript normalize the day
-  result.setUTCFullYear(result.getUTCFullYear());
-  result.setUTCMonth(newMonth);
-
-  // The day will be automatically clamped to the valid day for that month
-  return result;
+  const source = toRecurrentUTC(date);
+  const targetYear = source.getUTCFullYear();
+  const targetMonth = source.getUTCMonth() + months;
+  const targetDay = source.getUTCDate();
+  
+  // Create candidate
+  const next = new Date(Date.UTC(targetYear, targetMonth, targetDay));
+  
+  // Clamp it
+  return clampToValidUTC(next);
 }
 
-/**
- * Validates that a RecurrentFrequency and RecurrentTaskConfig are compatible.
- * Ensures the configuration can produce valid instances.
- *
- * @param frequencyConfig - The frequency configuration to validate
- * @returns Object with isValid flag and error message if invalid
- */
 export function validateFrequencyConfig(frequencyConfig: any): {
   isValid: boolean;
   error?: string;
 } {
+  // Keeping validation logic as is for now, will be moved to recurrent-validation.ts
   if (!frequencyConfig) {
     return { isValid: true };
   }
 
-  // Basic type check (will be stricter when typed)
   if (!frequencyConfig.type || !frequencyConfig.interval || !frequencyConfig.repeatMode) {
     return {
       isValid: false,
@@ -208,7 +97,6 @@ export function validateFrequencyConfig(frequencyConfig: any): {
     };
   }
 
-  // Validate interval
   if (frequencyConfig.interval < 1) {
     return {
       isValid: false,
@@ -216,15 +104,14 @@ export function validateFrequencyConfig(frequencyConfig: any): {
     };
   }
 
-  // Validate repeat mode
-  if (frequencyConfig.repeatMode !== 'after_done' && frequencyConfig.repeatMode !== 'periodically') {
+  const validModes = ['after_done', 'periodically'];
+  if (!validModes.includes(frequencyConfig.repeatMode)) {
     return {
       isValid: false,
       error: 'Repeat mode must be either "after_done" or "periodically"'
     };
   }
 
-  // Validate stopsAfter if present
   if (frequencyConfig.stopsAfter) {
     if (frequencyConfig.stopsAfter.type === 'times' && frequencyConfig.stopsAfter.value < 1) {
       return {
@@ -241,7 +128,6 @@ export function validateFrequencyConfig(frequencyConfig: any): {
     }
   }
 
-  // Validate custom days for CUSTOM frequency
   if (frequencyConfig.type === 'CUSTOM' && (!frequencyConfig.customDays || frequencyConfig.customDays.length === 0)) {
     return {
       isValid: false,
@@ -250,4 +136,4 @@ export function validateFrequencyConfig(frequencyConfig: any): {
   }
 
   return { isValid: true };
-}
+}

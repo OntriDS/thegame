@@ -18,6 +18,10 @@ function normalizeDate(value?: Date | string | null): Date | null {
 }
 
 function getBaseStart(task: Task): Date | null {
+  // JIT Model: Start from the explicit recurrence boundary if provided
+  const boundaryStart = task.recurrenceStart ? new Date(task.recurrenceStart) : null;
+  if (boundaryStart) return fromRecurrentUTC(boundaryStart);
+
   const scheduledStart = task.scheduledStart ? fromRecurrentUTC(new Date(task.scheduledStart)) : null;
   return scheduledStart || (task.dueDate ? fromRecurrentUTC(new Date(task.dueDate)) : null);
 }
@@ -33,6 +37,10 @@ function getDurationMs(task: Task): number {
 }
 
 function getStopDate(task: Task, config?: FrequencyConfig): Date | null {
+  // JIT Model: Stop at the explicit recurrence boundary if provided
+  const boundaryEnd = task.recurrenceEnd ? new Date(task.recurrenceEnd) : null;
+  if (boundaryEnd) return fromRecurrentUTC(boundaryEnd);
+
   if (config?.stopsAfter?.type === 'date' && config.stopsAfter.value) {
     return fromRecurrentUTC(new Date(config.stopsAfter.value));
   }

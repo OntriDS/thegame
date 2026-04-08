@@ -11,19 +11,15 @@ import { v4 as uuid } from 'uuid';
 import { formatDayMonth, formatDayMonthYear } from '@/lib/utils/date-utils';
 import { ORDER_INCREMENT } from '@/lib/constants/app-constants';
 import { isTaskHistoryTerminal } from '@/lib/utils/task-active-utils';
-import {
+import { 
   toRecurrentUTC,
   fromRecurrentUTC,
-  isSameRecurrentDate,
-  isNextOccurrence,
   getNextWeekdayFromDate,
-  isWithinSafetyLimit,
   addDaysUTC,
   addWeeksUTC,
   addMonthsUTC,
-  validateFrequencyConfig
 } from './recurrent-date-utils';
-import { addDays, addWeeks, addMonths } from 'date-fns';
+import { validateSpawnOperation, getSafetyLimitDate, SpawnErrorCode } from './recurrent-validation';
 
 // ============================================================================
 // SECTION: JIT MODEL - Just-In-Time Instance Spawning
@@ -32,7 +28,6 @@ import { addDays, addWeeks, addMonths } from 'date-fns';
 /**
  * Spawns the next single recurrent instance from a template.
  * Implements the JIT model: creates exactly one instance when manually triggered.
- * Reads template's recurrence rules and lastSpawnedDate to calculate next occurrence.
  *
  * @param template - The Recurrent Template to spawn from
  * @param forceDate - Optional specific date to force (for testing)
@@ -42,193 +37,150 @@ export async function spawnNextRecurrentInstance(
   template: Task,
   forceDate?: Date
 ): Promise<Task | null> {
-  // 1. Validate template has frequencyConfig
-  if (template.type !== TaskType.RECURRENT_TEMPLATE || !template.frequencyConfig) {
-    console.warn('[spawnNextRecurrentInstance] Invalid template:', template.id);
-    return null;
-  }
-
-  // 2. Validate frequency configuration
-  const validation = validateFrequencyConfig(template.frequencyConfig);
+  // 1. Validate template using unified validation
+  const validation = await validateSpawnOperation(template);
   if (!validation.isValid) {
-    console.warn('[spawnNextRecurrentInstance] Invalid frequency config:', validation.error);
+    console.warn('[spawnNextRecurrentInstance] Validation failed:', validation.errorCode, validation.errorMessage);
     return null;
   }
 
-  // 3. Get reference date (lastSpawnedDate or fallback to template.dueDate)
-  const referenceDate = template.lastSpawnedDate ? fromRecurrentUTC(template.lastSpawnedDate) : fromRecurrentUTC(template.dueDate || new Date());
+  // 2. Get reference date
+  // Priority: 1. lastSpawnedDate, 2. recurrenceStart, 3. fallback to dueDate or now
+  const referenceDate = template.lastSpawnedDate 
+    ? fromRecurrentUTC(template.lastSpawnedDate) 
+    : (template.recurrenceStart 
+        ? fromRecurrentUTC(template.recurrenceStart) 
+        : fromRecurrentUTC(template.dueDate || new Date()));
 
-  // 4. Calculate next occurrence based on frequency type
+  // 3. Calculate next occurrence based on frequency type
   const config = template.frequencyConfig;
   let nextDate: Date;
 
-  switch (config.type) {
-    case RecurrentFrequency.ONCE:
-      console.warn('[spawnNextRecurrentInstance] Cannot spawn from ONCE template');
-      return null;
-
-    case RecurrentFrequency.DAILY:
-      nextDate = addDaysUTC(referenceDate, config.interval);
-      break;
-
-    case RecurrentFrequency.WEEKLY:
-      nextDate = addWeeksUTC(referenceDate, config.interval);
-      if (config.daysOfWeek && config.daysOfWeek.length > 0) {
-        // Find next matching weekday
-        nextDate = getNextWeekdayFromDate(referenceDate, config.daysOfWeek[0]);
-      }
-      break;
-
-    case RecurrentFrequency.MONTHLY:
-      nextDate = addMonthsUTC(referenceDate, config.interval);
-      if (config.dayOfMonth) {
-        // Set to specific day of month
-        const targetDay = config.dayOfMonth;
-        const daysInMonth = new Date(nextDate).getUTCDate(); // Get days in resulting month
-        const clampedDay = Math.min(targetDay, daysInMonth); // Clamp to month end
-        nextDate.setUTCDate(clampedDay);
-      }
-      break;
-
-    case RecurrentFrequency.CUSTOM:
-      if (config.customDays && config.customDays.length > 0) {
-        // Normalize to Date objects and sort chronologically
-        const normalizedCustomDays = config.customDays
-          .map((d: any) => d instanceof Date ? d : new Date(d))
-          .filter((d: Date) => !isNaN(d.getTime()));
-
-        const customDatesUTC = normalizedCustomDays.map((d: Date) => toRecurrentUTC(d));
-        customDatesUTC.sort((a: Date, b: Date) => a.getTime() - b.getTime());
-
-        // Focus: If no lastSpawnedDate exists, start with the first custom date.
-        // Otherwise, find the next custom date strictly after the referenceDate.
-        const nextCustom = template.lastSpawnedDate
-          ? customDatesUTC.find((d: Date) => isNextOccurrence(d, referenceDate))
-          : customDatesUTC[0];
-
-        if (nextCustom) {
-          nextDate = nextCustom;
-        } else {
-          console.warn('[spawnNextRecurrentInstance] No next custom date found');
-          return null;
-        }
-      } else {
-        console.warn('[spawnNextRecurrentInstance] No custom days configured');
-        return null;
-      }
-      break;
-
-    case RecurrentFrequency.ALWAYS:
-      // For ALWAYS, use interval as days between instances
-      nextDate = addDaysUTC(referenceDate, config.interval);
-      break;
-
-    default:
-      console.warn('[spawnNextRecurrentInstance] Unknown frequency type:', config.type);
-      return null;
-  }
-
-  // 5. Apply force date if provided (for testing purposes)
   if (forceDate) {
     nextDate = toRecurrentUTC(forceDate);
-  }
-
-  // Convert the calculated UTC midnight date back to Local Midnight date for storage/display
-  nextDate = fromRecurrentUTC(nextDate);
-
-  // 6. Check safety limit
-  // For CUSTOM frequencies, the array itself acts as the limit unless stopsAfter.date is defined.
-  // We ignore template.dueDate for CUSTOM because the UI often sets it to the start date, inadvertently acting as a block.
-  let safetyLimit: Date | null = null;
-  if (config.type === RecurrentFrequency.CUSTOM) {
-    if (config.stopsAfter && config.stopsAfter.type === 'date' && config.stopsAfter.value) {
-      safetyLimit = fromRecurrentUTC(
-        config.stopsAfter.value instanceof Date
-          ? config.stopsAfter.value
-          : new Date(config.stopsAfter.value)
-      );
-    }
   } else {
-    safetyLimit = template.dueDate ? fromRecurrentUTC(template.dueDate) : null;
+    switch (config.type) {
+      case RecurrentFrequency.DAILY:
+        nextDate = addDaysUTC(referenceDate, config.interval);
+        break;
+
+      case RecurrentFrequency.WEEKLY:
+        if (config.daysOfWeek && config.daysOfWeek.length > 0) {
+          // Find next matching weekday
+          // If we haven't spawned yet, we might want the VERY FIRST matching weekday 
+          // including the start day if it matches.
+          if (!template.lastSpawnedDate) {
+            const startDay = referenceDate.getUTCDay();
+            if (config.daysOfWeek.includes(startDay)) {
+              nextDate = new Date(referenceDate);
+            } else {
+              nextDate = getNextWeekdayFromDate(referenceDate, config.daysOfWeek[0]);
+            }
+          } else {
+            nextDate = getNextWeekdayFromDate(referenceDate, config.daysOfWeek[0]);
+          }
+        } else {
+          nextDate = addWeeksUTC(referenceDate, config.interval);
+        }
+        break;
+
+      case RecurrentFrequency.MONTHLY:
+        nextDate = addMonthsUTC(referenceDate, config.interval);
+        if (config.dayOfMonth) {
+          // addMonthsUTC already clamps, but if they specified a DIFFERENT dayOfMonth 
+          // than the start date, we should respect it.
+          nextDate.setUTCDate(config.dayOfMonth);
+          // Re-clamp if dayOfMonth was 31 and we hit Feb
+          const { clampToValidUTC } = await import('./utc-utils');
+          nextDate = clampToValidUTC(nextDate);
+        }
+        break;
+
+      case RecurrentFrequency.CUSTOM:
+        const customDates = config.customDays
+          .map((d: any) => d instanceof Date ? d : new Date(d))
+          .filter((d: Date) => !isNaN(d.getTime()))
+          .sort((a: Date, b: Date) => a.getTime() - b.getTime());
+
+        const candidate = customDates.find((d: Date) => d.getTime() > referenceDate.getTime());
+        if (candidate) {
+          nextDate = toRecurrentUTC(candidate);
+        } else if (!template.lastSpawnedDate && customDates.length > 0) {
+          nextDate = toRecurrentUTC(customDates[0]);
+        } else {
+          return null;
+        }
+        break;
+
+      case RecurrentFrequency.ALWAYS:
+        nextDate = addDaysUTC(referenceDate, config.interval);
+        break;
+
+      default:
+        return null;
+    }
   }
 
-  if (safetyLimit && !isWithinSafetyLimit(nextDate, safetyLimit)) {
-    console.warn('[spawnNextRecurrentInstance] Next occurrence exceeds safety limit:', nextDate);
+  // 4. Final safety limit check (double validation)
+  const safetyLimit = getSafetyLimitDate(template);
+  if (safetyLimit && nextDate.getTime() > safetyLimit.getTime()) {
+    console.warn('[spawnNextRecurrentInstance] Next occurrence exceeds safety limit');
     return null;
   }
 
-  // 7. Check for existing instance with same due date (idempotency)
-  // Instead of timezone-sensitive epochs, we use absolute string dates YYYY-MM-DD for comparison.
+  // 5. Idempotency check (prevent duplicate dates)
+  const nextDateLocal = fromRecurrentUTC(nextDate);
+  const nextDateKey = `${nextDateLocal.getFullYear()}-${String(nextDateLocal.getMonth() + 1).padStart(2, '0')}-${String(nextDateLocal.getDate()).padStart(2, '0')}`;
+  
   const existingInstances = await getTasksByParentId(template.id);
-  const existingDueDatesArray = existingInstances
-    .filter(t => t.type === TaskType.RECURRENT_INSTANCE)
-    .map(t => t.dueDate)
-    .filter(d => d !== undefined);
+  const isDuplicate = existingInstances.some(t => {
+    if (t.type !== TaskType.RECURRENT_INSTANCE || !t.dueDate) return false;
+    const d = new Date(t.dueDate);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    return key === nextDateKey;
+  });
 
-  const existingDueDates = new Set(
-    existingDueDatesArray.map(d => {
-      const dateObj = d instanceof Date ? d : new Date(d as string);
-      return `${dateObj.getFullYear()}-${dateObj.getMonth()}-${dateObj.getDate()}`;
-    })
-  );
-
-  const nextDateKey = `${nextDate.getFullYear()}-${nextDate.getMonth()}-${nextDate.getDate()}`;
-  if (existingDueDates.has(nextDateKey)) {
-    console.warn('[spawnNextRecurrentInstance] Instance already exists for date:', nextDate);
+  if (isDuplicate) {
+    console.warn('[spawnNextRecurrentInstance] Instance already exists for date:', nextDateKey);
     return null;
   }
 
-  // 8. Derive scheduled times aligned to nextDate
+  // 6. Derive scheduled times aligned to nextDate
   const templateStart = template.scheduledStart ? new Date(template.scheduledStart) : null;
   const templateEnd = template.scheduledEnd ? new Date(template.scheduledEnd) : null;
   let scheduledStart: Date | undefined;
   let scheduledEnd: Date | undefined;
 
   if (templateStart) {
-    scheduledStart = new Date(nextDate);
-    scheduledStart.setHours(
-      templateStart.getHours(),
-      templateStart.getMinutes(),
-      templateStart.getSeconds(),
-      0
-    );
-    const durationMs =
-      templateEnd && templateStart
-        ? templateEnd.getTime() - templateStart.getTime()
-        : null;
-    if (durationMs && durationMs > 0) {
+    scheduledStart = new Date(nextDateLocal);
+    scheduledStart.setHours(templateStart.getHours(), templateStart.getMinutes(), templateStart.getSeconds(), 0);
+    const durationMs = templateEnd && templateStart ? templateEnd.getTime() - templateStart.getTime() : 0;
+    if (durationMs > 0) {
       scheduledEnd = new Date(scheduledStart.getTime() + durationMs);
     }
   } else if (templateEnd) {
-    scheduledEnd = new Date(nextDate);
-    scheduledEnd.setHours(
-      templateEnd.getHours(),
-      templateEnd.getMinutes(),
-      templateEnd.getSeconds(),
-      0
-    );
+    scheduledEnd = new Date(nextDateLocal);
+    scheduledEnd.setHours(templateEnd.getHours(), templateEnd.getMinutes(), templateEnd.getSeconds(), 0);
   }
 
-  // 9. Spawn the instance
-  const formattedDate = formatDayMonthYear(nextDate);
-  const separator = ' \u2022 ';
-  const instanceOrder = nextDate.getTime();
+  // 7. Spawn the instance
+  const formattedDate = formatDayMonthYear(nextDateLocal);
   const instance: Task = {
     ...template,
     id: uuid(),
-    name: `${template.name}${separator}${formattedDate}`,
+    name: `${template.name} \u2022 ${formattedDate}`,
     type: TaskType.RECURRENT_INSTANCE,
-    dueDate: nextDate,
+    dueDate: nextDateLocal,
     scheduledStart,
     scheduledEnd,
-    parentId: template.id, // Instance points to its template
+    parentId: template.id,
     isRecurrentGroup: false,
     isTemplate: false,
-    frequencyConfig: undefined, // Instances don't have frequency config
+    frequencyConfig: undefined,
     createdAt: new Date(),
     updatedAt: new Date(),
-    order: instanceOrder,
-    links: [] // Fresh links array for new instance
+    order: nextDateLocal.getTime(),
+    links: []
   };
 
   return instance;
@@ -236,133 +188,41 @@ export async function spawnNextRecurrentInstance(
 
 /**
  * Updates a template's lastSpawnedDate field.
- * Called after successfully spawning an instance to track recurrence cycle.
- *
- * @param templateId - The template's ID to update
- * @param spawnDate - The date of the spawned instance
  */
 export async function updateTemplateLastSpawnedDate(
   templateId: string,
   spawnDate: Date
 ): Promise<void> {
   const template = await getTaskById(templateId);
-  if (!template) {
-    console.warn('[updateTemplateLastSpawnedDate] Template not found:', templateId);
-    return;
-  }
+  if (!template) return;
 
-  const updatedTemplate: Task = {
+  await upsertTask({
     ...template,
-    lastSpawnedDate: toRecurrentUTC(spawnDate), // Convert to UTC midnight for storage
+    lastSpawnedDate: toRecurrentUTC(spawnDate),
     updatedAt: new Date()
-  };
-
-  await upsertTask(updatedTemplate, { skipWorkflowEffects: true });
-  console.log('[updateTemplateLastSpawnedDate] Updated lastSpawnedDate for template:', templateId, spawnDate);
+  }, { skipWorkflowEffects: true });
 }
 
 /**
- * Resets a template's spawn state when frequency configuration changes.
- * Clears lastSpawnedDate so next spawn calculates from template.dueDate.
- *
- * @param templateId - The template's ID to reset
+ * Resets a template's spawn state.
  */
 export async function resetTemplateSpawnState(templateId: string): Promise<void> {
   const template = await getTaskById(templateId);
-  if (!template) {
-    console.warn('[resetTemplateSpawnState] Template not found:', templateId);
-    return;
-  }
+  if (!template) return;
 
-  const updatedTemplate: Task = {
+  await upsertTask({
     ...template,
-    lastSpawnedDate: undefined, // Reset to undefined so next spawn starts from dueDate
+    lastSpawnedDate: undefined,
     updatedAt: new Date()
-  };
-
-  await upsertTask(updatedTemplate, { skipWorkflowEffects: true });
-  console.log('[resetTemplateSpawnState] Reset spawn state for template:', templateId);
+  }, { skipWorkflowEffects: true });
 }
 
 /**
- * Checks if a template is eligible for spawning (has valid frequency config and not exceeded safety limit).
- *
- * @param template - The template to check
- * @returns true if template can spawn more instances
+ * Checks if a template is eligible for spawning.
  */
 export async function canSpawnMoreInstances(template: Task): Promise<boolean> {
-  if (template.type !== TaskType.RECURRENT_TEMPLATE || !template.frequencyConfig) {
-    return false;
-  }
-
-  const config = template.frequencyConfig;
-
-  // For CUSTOM, check if we've exhausted all dates
-  if (config.type === RecurrentFrequency.CUSTOM) {
-    // Also check stopsAfter times
-    if (config.stopsAfter && config.stopsAfter.type === 'times') {
-      const existingCount = (await getTasksByParentId(template.id)).filter(t => t.type === TaskType.RECURRENT_INSTANCE).length;
-      if (existingCount >= (config.stopsAfter.value as number)) {
-        return false;
-      }
-    }
-
-    if (!config.customDays || config.customDays.length === 0) {
-      return false;
-    }
-
-    // Sort and normalize dates just like spawn logic
-    const normalizedCustomDays = config.customDays
-      .map((d: any) => d instanceof Date ? d : new Date(d))
-      .filter((d: Date) => !isNaN(d.getTime()));
-    const customDatesUTC = normalizedCustomDays.map((d: Date) => toRecurrentUTC(d));
-    customDatesUTC.sort((a: Date, b: Date) => a.getTime() - b.getTime());
-
-    const referenceDate = template.lastSpawnedDate
-      ? fromRecurrentUTC(template.lastSpawnedDate)
-      : fromRecurrentUTC(template.dueDate || new Date());
-
-    // If lastSpawnedDate exists, find next. If not, pick first.
-    const nextCustom = template.lastSpawnedDate
-      ? customDatesUTC.find((d: Date) => isNextOccurrence(d, referenceDate))
-      : customDatesUTC[0];
-
-    // If there's no custom date left strictly after referenceDate, we cannot spawn.
-    if (!nextCustom) {
-      return false;
-    }
-
-    // Check custom stopsAfter date limit
-    if (config.stopsAfter && config.stopsAfter.type === 'date' && config.stopsAfter.value) {
-      const limit = fromRecurrentUTC(
-        config.stopsAfter.value instanceof Date
-          ? config.stopsAfter.value
-          : new Date(config.stopsAfter.value)
-      );
-      const candidateLocal = fromRecurrentUTC(nextCustom);
-      if (candidateLocal.getTime() > limit.getTime()) {
-        return false;
-      }
-    }
-
-    return true; // Valid custom date exists and is within limits
-  }
-
-  // STANDARD safety limit for all other frequencies (DAILY, WEEKLY, MONTHLY)
-  const safetyLimit = template.dueDate ? fromRecurrentUTC(template.dueDate) : null;
-  if (!safetyLimit) {
-    if (config.type === RecurrentFrequency.ALWAYS) {
-      return true;
-    }
-    // All other types have safety limits, so check lastSpawnedDate
-  }
-
-  const lastSpawned = template.lastSpawnedDate ? fromRecurrentUTC(template.lastSpawnedDate) : null;
-  if (lastSpawned && safetyLimit && lastSpawned.getTime() >= safetyLimit.getTime()) {
-    return false;
-  }
-
-  return true;
+  const result = await validateSpawnOperation(template);
+  return result.isValid;
 }
 
 // ============================================================================
@@ -478,8 +338,8 @@ export function spawnRecurrentInstance(
 }
 
 /**
+ * @deprecated Use spawnNextRecurrentInstance for JIT spawning instead.
  * Calculates next due dates for a template based on frequency
- * Supports both simple recurrent respawning and template instance creation
  */
 export function calculateNextDueDates(
   template: Task,
@@ -532,13 +392,13 @@ export function calculateNextDueDates(
     // Move to next occurrence based on frequency type
     switch (config.type) {
       case RecurrentFrequency.DAILY:
-        currentDate = addDays(currentDate, config.interval || 1);
+        currentDate = addDaysUTC(currentDate, config.interval || 1);
         break;
       case RecurrentFrequency.WEEKLY:
-        currentDate = addWeeks(currentDate, config.interval || 1);
+        currentDate = addWeeksUTC(currentDate, config.interval || 1);
         break;
       case RecurrentFrequency.MONTHLY:
-        currentDate = addMonths(currentDate, config.interval || 1);
+        currentDate = addMonthsUTC(currentDate, config.interval || 1);
         break;
       case RecurrentFrequency.CUSTOM:
         // For custom frequency, use the normalized custom days
@@ -561,7 +421,7 @@ export function calculateNextDueDates(
         break;
       case RecurrentFrequency.ALWAYS:
         // Continuous - create instances up to safety limit
-        currentDate = addDays(currentDate, config.interval || 1);
+        currentDate = addDaysUTC(currentDate, config.interval || 1);
         break;
       default:
         break;
@@ -572,8 +432,8 @@ export function calculateNextDueDates(
 }
 
 /**
+ * @deprecated Use spawnNextRecurrentInstance for JIT spawning instead.
  * Spawns instances for a template up to a certain date
- * Uses template's dueDate as safety limit to prevent infinite tasks
  */
 export function spawnInstancesForTemplate(
   template: Task,
@@ -639,8 +499,8 @@ export async function archiveCompletedInstances(parentId: string): Promise<Task[
 }
 
 /**
+ * @deprecated Now handled via JIT spawning or centralized replenishment.
  * Handles template instance creation when a template is saved
- * This function should be called when a Recurrent Template is created or updated
  */
 export async function handleTemplateInstanceCreation(template: Task): Promise<Task[]> {
   if (template.type !== TaskType.RECURRENT_TEMPLATE) {

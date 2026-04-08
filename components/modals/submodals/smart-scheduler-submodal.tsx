@@ -18,6 +18,8 @@ export interface ScheduleValue {
     scheduledStart?: Date;
     scheduledEnd?: Date;
     frequencyConfig?: FrequencyConfig;
+    recurrenceStart?: Date;
+    recurrenceEnd?: Date;
 }
 
 interface SmartSchedulerSubmodalProps {
@@ -172,6 +174,14 @@ export function SmartSchedulerSubmodal({
             }
         }
     };
+ 
+    const handleRecurrenceStartChange = (date: Date | undefined) => {
+        onChange({ ...value, recurrenceStart: date });
+    };
+
+    const handleRecurrenceEndChange = (date: Date | undefined) => {
+        onChange({ ...value, recurrenceEnd: date });
+    };
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -241,12 +251,44 @@ export function SmartSchedulerSubmodal({
                             </div>
 
                             {showFrequency && (
-                                <div className="pl-6 border-l-2 ml-2">
+                                <div className="pl-6 border-l-2 ml-2 space-y-4">
                                     <FrequencyCalendar
                                         value={value.frequencyConfig}
                                         onChange={(cfg) => onChange({ ...value, frequencyConfig: cfg })}
                                         allowAlways={isRecurrent}
                                     />
+                                    
+                                    <div className="space-y-3 pt-2 border-t text-[11px]">
+                                        <Label className="text-[10px] text-muted-foreground uppercase font-bold">Recurrence Bounds</Label>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div className="space-y-1">
+                                                <Label className="text-[10px]">Start Boundary</Label>
+                                                <Button 
+                                                    variant="outline" 
+                                                    size="sm" 
+                                                    className="w-full text-[10px] h-7 justify-start font-normal"
+                                                    onClick={() => onChange({ ...value, recurrenceStart: value.scheduledStart || value.dueDate || new Date() })}
+                                                >
+                                                    {value.recurrenceStart ? format(value.recurrenceStart, 'PP') : 'Optional'}
+                                                </Button>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <Label className="text-[10px]">End Boundary</Label>
+                                                <Button 
+                                                    variant="outline" 
+                                                    size="sm" 
+                                                    className="w-full text-[10px] h-7 justify-start font-normal"
+                                                    onClick={() => onChange({ ...value, recurrenceEnd: value.scheduledEnd || value.dueDate || new Date(Date.now() + 30*24*60*60*1000) })}
+                                                >
+                                                    {value.recurrenceEnd ? format(value.recurrenceEnd, 'PP') : 'Optional'}
+                                                </Button>
+                                            </div>
+                                        </div>
+                                        <p className="text-[9px] text-muted-foreground leading-tight">
+                                            Tasks will only spawn WITHIN this range. If left empty, 
+                                            defaults to "Always" or "Until Stop Condition".
+                                        </p>
+                                    </div>
                                 </div>
                             )}
                         </div>

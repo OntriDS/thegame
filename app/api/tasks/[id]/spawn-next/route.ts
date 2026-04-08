@@ -48,24 +48,21 @@ export async function POST(
       );
     }
 
-    // 2. Validate template has frequency configuration
-    if (!template.frequencyConfig) {
+    // 2. Validate template using unified validation
+    const { validateSpawnOperation } = await import('@/lib/utils/recurrent-validation');
+    const validation = await validateSpawnOperation(template);
+    
+    if (!validation.isValid) {
       return NextResponse.json(
-        { error: 'Template has no repeat configuration. Open the template, enable \"Repeat Task\" and set a frequency first.' },
+        { 
+          error: validation.errorMessage || 'Validation failed',
+          errorCode: validation.errorCode
+        },
         { status: 400 }
       );
     }
 
-    // 3. Check whether template is still allowed to spawn
-    const canSpawn = await canSpawnMoreInstances(template);
-    if (!canSpawn) {
-      return NextResponse.json(
-        { error: 'Template cannot spawn more instances (stop condition or safety limit reached).' },
-        { status: 400 }
-      );
-    }
-
-    // 4. Spawn next instance (in-memory)
+    // 3. Spawn next instance
     const instance = await spawnNextRecurrentInstance(template);
 
     if (!instance) {
