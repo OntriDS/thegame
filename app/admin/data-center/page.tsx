@@ -248,42 +248,40 @@ export default function DataCenterPage() {
             )}
           </div>
         )}
-      </Tabs>
-
       <TabsList className="grid w-full grid-cols-8">
-          <TabsTrigger value="tasks-lifecycle" className="flex items-center gap-2">
-            <CheckCircle className="h-4 w-4" />
-            Tasks
-          </TabsTrigger>
-          <TabsTrigger value="items-lifecycle" className="flex items-center gap-2">
-            <TrendingUp className="h-4 w-4" />
-            Items
-          </TabsTrigger>
-          <TabsTrigger value="financials-history" className="flex items-center gap-2">
-            <TrendingUp className="h-4 w-4" />
-            Financials
-          </TabsTrigger>
-          <TabsTrigger value="sales-log" className="flex items-center gap-2">
-            <ShoppingCart className="h-4 w-4" />
-            Sales
-          </TabsTrigger>
-          <TabsTrigger value="characters-log" className="flex items-center gap-2">
-            <Zap className="h-4 w-4" />
-            Characters
-          </TabsTrigger>
-          <TabsTrigger value="player-log" className="flex items-center gap-2">
-            <User className="h-4 w-4" />
-            Player
-          </TabsTrigger>
-          <TabsTrigger value="sites-log" className="flex items-center gap-2">
-            <MapPin className="h-4 w-4" />
-            Sites
-          </TabsTrigger>
-          <TabsTrigger value="links-debug" className="flex items-center gap-2">
-            <LinkIcon className="h-4 w-4" />
-            Links Graph
-          </TabsTrigger>
-        </TabsList>
+        <TabsTrigger value="tasks-lifecycle" className="flex items-center gap-2">
+          <CheckCircle className="h-4 w-4" />
+          Tasks
+        </TabsTrigger>
+        <TabsTrigger value="items-lifecycle" className="flex items-center gap-2">
+          <TrendingUp className="h-4 w-4" />
+          Items
+        </TabsTrigger>
+        <TabsTrigger value="financials-history" className="flex items-center gap-2">
+          <TrendingUp className="h-4 w-4" />
+          Financials
+        </TabsTrigger>
+        <TabsTrigger value="sales-log" className="flex items-center gap-2">
+          <ShoppingCart className="h-4 w-4" />
+          Sales
+        </TabsTrigger>
+        <TabsTrigger value="characters-log" className="flex items-center gap-2">
+          <Zap className="h-4 w-4" />
+          Characters
+        </TabsTrigger>
+        <TabsTrigger value="player-log" className="flex items-center gap-2">
+          <User className="h-4 w-4" />
+          Player
+        </TabsTrigger>
+        <TabsTrigger value="sites-log" className="flex items-center gap-2">
+          <MapPin className="h-4 w-4" />
+          Sites
+        </TabsTrigger>
+        <TabsTrigger value="links-debug" className="flex items-center gap-2">
+          <LinkIcon className="h-4 w-4" />
+          Links Graph
+        </TabsTrigger>
+      </TabsList>
 
         {/* Tasks Lifecycle Tab */}
         <TabsContent value="tasks-lifecycle" className="space-y-4">
