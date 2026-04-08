@@ -75,6 +75,59 @@ const getSafeTaskNameForLogging = (task: Task): string => {
   return fallbacks[task.type] || 'Untitled Task';
 };
 
+/**
+ * Map TaskStatus to LogEventType for status changes
+ * Created and Done/Collected are handled separately in workflow
+ */
+const getStatusEvent = (taskStatus: TaskStatus): LogEventType => {
+  const statusEventMap: Record<string, LogEventType> = {
+    [TaskStatus.ON_HOLD]: LogEventType.ON_HOLD,
+    [TaskStatus.IN_PROGRESS]: LogEventType.IN_PROGRESS,
+    [TaskStatus.FINISHING]: LogEventType.FINISHING,
+    [TaskStatus.FAILED]: LogEventType.FAILED,
+  };
+
+  return statusEventMap[taskStatus] || LogEventType.UPDATED;
+};
+
+/**
+ * Remove intermediate status entries when completing a task that was previously completed
+ * Handles scenarios like DONE → FINISHING → DONE
+ */
+async function cleanUpIntermediateStatusTransitions(
+  taskId: string,
+  previousStatus: TaskStatus,
+  newStatus: TaskStatus
+): Promise<void> {
+  // Check if this is re-completion after intermediate states
+  const isRecompletionAfterIntermediate =
+    (newStatus === TaskStatus.DONE || newStatus === TaskStatus.COLLECTED) &&
+    (previousStatus !== TaskStatus.DONE && previousStatus !== TaskStatus.COLLECTED);
+
+  if (isRecompletionAfterIntermediate) {
+    // Find and remove intermediate status entries between last completion and now
+    const { removeLogEntriesAcrossMonths } = await import('@/workflows/entities-logging');
+
+    await removeLogEntriesAcrossMonths(EntityType.TASK, entry => {
+      if (entry.entityId !== taskId) return false;
+
+      // Remove intermediate status entries that occurred after DONE/COLLECTED
+      const isIntermediateStatus = entry.event === LogEventType.ON_HOLD ||
+                              entry.event === LogEventType.IN_PROGRESS ||
+                              entry.event === LogEventType.FINISHING;
+      const isCompletion = entry.event === LogEventType.DONE || entry.event === LogEventType.COLLECTED;
+
+      // Handle specific idempotency: DONE → FINISHING → DONE (remove FINISHING, keep DONE)
+      const shouldRemoveIntermediate = isIntermediateStatus && !isCompletion;
+      const shouldKeepCompletion = isCompletion && !isIntermediateStatus;
+
+      // Remove intermediate entries that came after a completion entry
+      // Also handle DONE → FINISHING → DONE where FINISHING should be removed
+      return shouldRemoveIntermediate;
+    });
+  }
+}
+
 export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<void> {
   // New task creation
   if (!previousTask) {
@@ -99,22 +152,25 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
     // Continue to DONE logging below if task is Done (whether CREATED just logged or was already there)
   }
 
-  // State changes - append new log
+  // Status changes - log actual status as event (not generic "Updated")
   if (previousTask && previousTask.status !== task.status) {
 
-    // Skip UPDATED logging for special status changes - they have their own events:
-    // - Done → DONE event (logged below)
-    // - Collected → COLLECTED event (logged below)
-    const skipUpdatedForStatuses = ['Done', 'Collected'];
-    if (!skipUpdatedForStatuses.includes(task.status)) {
-      // Log status change with transition context (using UPDATED event)
-      await appendEntityLog(EntityType.TASK, task.id, LogEventType.UPDATED, {
+    // Clean up intermediate status transitions for idempotency
+    await cleanUpIntermediateStatusTransitions(task.id, previousTask.status, task.status);
+
+    // Skip event logging for DONE and COLLECTED (handled separately below)
+    const skipForSpecialStatuses = ['Done', 'Collected'];
+    if (!skipForSpecialStatuses.includes(task.status)) {
+      // Log status change with actual status as event type
+      const statusEvent = getStatusEvent(task.status);
+
+      await appendEntityLog(EntityType.TASK, task.id, statusEvent, {
         name: getSafeTaskNameForLogging(task),
         taskType: task.type,
         station: task.station,
-        oldStatus: previousTask!.status,
+        oldStatus: previousTask.status,
         newStatus: task.status,
-        transition: `${previousTask!.status} → ${task.status}`
+        transition: `${previousTask.status} → ${task.status}`
       });
     }
 

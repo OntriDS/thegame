@@ -30,8 +30,6 @@ const ENTITY_LOG_RELOAD_DEBOUNCE_MS = 400;
 export default function DataCenterPage() {
   const { textColor } = useThemeColors();
   const { getPreference, setPreference } = useUserPreferences();
-  const [isFixingUnknownNames, setIsFixingUnknownNames] = useState(false);
-  const [fixResult, setFixResult] = useState<{ fixed: number; errors?: string[] } | null>(null);
   const [characterLog, setCharacterLog] = useState<any>(null);
   const [playerLog, setPlayerLog] = useState<any>(null);
   const [salesLog, setSalesLog] = useState<any>(null);
@@ -194,23 +192,6 @@ export default function DataCenterPage() {
   };
 
 
-  const handleFixUnknownTaskNames = async () => {
-    if (isFixingUnknownNames) return;
-    setIsFixingUnknownNames(true);
-    setFixResult(null);
-    try {
-      const result = await ClientAPI.fixUnknownTaskNames();
-      setFixResult(result);
-      // Reload logs to show the fixes
-      await handleReloadLogs();
-    } catch (error) {
-      console.error('Failed to fix unknown task names:', error);
-      setFixResult({ fixed: 0, errors: ['Failed to fix unknown task names'] });
-    } finally {
-      setIsFixingUnknownNames(false);
-    }
-  };
-
   return (
     <div className="container mx-auto px-6 space-y-6 ">
       <Tabs value={activeMainTab} onValueChange={(value) => {
@@ -224,30 +205,7 @@ export default function DataCenterPage() {
             availableMonths={availableMonths}
             onChange={setSelectedMonth}
           />
-          <Button
-            variant={activeMainTab === 'tasks-lifecycle' ? 'default' : 'outline'}
-            size="sm"
-            onClick={handleFixUnknownTaskNames}
-            disabled={isFixingUnknownNames || activeMainTab !== 'tasks-lifecycle'}
-          >
-            {isFixingUnknownNames ? 'Fixing...' : 'Fix Unknown Task Names'}
-          </Button>
         </div>
-        {fixResult && (
-          <div className="mb-4 p-4 rounded-lg bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800">
-            <div className="text-sm font-medium text-blue-900 dark:text-blue-100">
-              Fix Results
-            </div>
-            <div className="text-sm text-blue-700 dark:text-blue-300 mt-1">
-              {fixResult.fixed > 0 ? `✓ Fixed ${fixResult.fixed} task log entries` : 'No entries needed fixing'}
-            </div>
-            {fixResult.errors && fixResult.errors.length > 0 && (
-              <div className="text-sm text-red-700 dark:text-red-300 mt-1">
-                Errors: {fixResult.errors.join(', ')}
-              </div>
-            )}
-          </div>
-        )}
       <TabsList className="grid w-full grid-cols-8">
         <TabsTrigger value="tasks-lifecycle" className="flex items-center gap-2">
           <CheckCircle className="h-4 w-4" />

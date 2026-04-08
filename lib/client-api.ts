@@ -122,15 +122,6 @@ export const ClientAPI = {
     return await res.json();
   },
 
-  fixUnknownTaskNames: async (): Promise<{ fixed: number; errors?: string[] }> => {
-    const res = await fetch('/admin/fix-unknown-task-names', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
-    });
-    if (!res.ok) throw new Error('Failed to fix unknown task names');
-    return await res.json();
-  },
-
   // ============================================================================
   // ITEMS - Item management operations
   // ============================================================================

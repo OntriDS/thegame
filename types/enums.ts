@@ -738,6 +738,12 @@ export enum LogEventType {
   // Task-specific events
   UNCOMPLETED = 'UNCOMPLETED',
 
+  // Task status events - match TaskStatus enum values
+  ON_HOLD = 'ON_HOLD',           // Task goes to On Hold
+  IN_PROGRESS = 'IN_PROGRESS',   // Task goes to In Progress
+  FINISHING = 'FINISHING',       // Task goes to Finishing
+  FAILED = 'FAILED',             // Task goes to Failed
+
   // Bulk operations
   BULK_IMPORT = 'BULK_IMPORT',
   BULK_EXPORT = 'BULK_EXPORT',
