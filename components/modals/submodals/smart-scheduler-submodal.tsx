@@ -286,7 +286,7 @@ export function SmartSchedulerSubmodal({
                                         </div>
                                         <p className="text-[9px] text-muted-foreground leading-tight">
                                             Tasks will only spawn WITHIN this range. If left empty, 
-                                            defaults to "Always" or "Until Stop Condition".
+                                            defaults to &quot;Always&quot; or &quot;Until Stop Condition&quot;.
                                         </p>
                                     </div>
                                 </div>
