@@ -59,6 +59,8 @@ import {
 import { getCompanyAreas, getPersonalAreas } from '@/lib/utils/business-structure-utils';
 import type { Area, Station, SubItemType } from './type-aliases';
 
+export type CustomerCounterpartyRole = (CharacterRole.CUSTOMER | CharacterRole.BENEFICIARY);
+
 // ═══════════════════════════════════════════════════════════════════════════
 // SECTION 1: FOUNDATIONAL TYPES
 // ═══════════════════════════════════════════════════════════════════════════
@@ -341,6 +343,7 @@ export interface Task extends BaseEntity {
   customerCharacterId?: string | null;  // Customer for service tasks - passed to created items
   playerCharacterId?: string | null;    // AMBASSADOR: Player character who owns this task
   newCustomerName?: string;             // EMISSARY: Name for new customer character creation
+  customerCharacterRole?: CustomerCounterpartyRole; // EMISSARY: counterparty role for new/selected character
 
   // Item output (DNA for RNA - creates TASK_ITEM links)
   outputItemType?: string;          // Type of item this task creates
@@ -405,6 +408,7 @@ export interface FinancialRecord extends BaseEntity {
 
   // Emissary Fields
   newCustomerName?: string;         // EMISSARY: Name for new customer character creation
+  customerCharacterRole?: CustomerCounterpartyRole; // EMISSARY: counterparty role for new/selected character
 
   // Financial data - SOURCE OF TRUTH for accounting
   // These are the REAL values, copied from Task/Sale DNA via RNA

@@ -23,9 +23,9 @@ import { CharacterRole } from '@/types/enums';
  */
 export const ROLE_BEHAVIORS = {
   [CharacterRole.FOUNDER]: {
-    isImmutable: true,        // Cannot be removed once assigned
-    hideIfNotAssigned: true,  // Don't show option if not already assigned
-    isDisplayOnly: true,      // Cannot be toggled
+    isImmutable: false,
+    hideIfNotAssigned: false, // Allow founder to be manually selected
+    isDisplayOnly: false,     // Allow founder to be manually toggled
     requiresJungleCoins: false,
   },
   [CharacterRole.PLAYER]: {
@@ -39,6 +39,18 @@ export const ROLE_BEHAVIORS = {
     hideIfNotAssigned: true,  // Only show if character has J$
     requiresJungleCoins: true, // Special condition: needs J$ to appear
     isDisplayOnly: true,      // Cannot be toggled when assigned
+  },
+  [CharacterRole.CUSTOMER]: {
+    isImmutable: false,
+    hideIfNotAssigned: false,
+    isDisplayOnly: false,
+    requiresJungleCoins: false,
+  },
+  [CharacterRole.BENEFICIARY]: {
+    isImmutable: false,
+    hideIfNotAssigned: false,
+    isDisplayOnly: false,
+    requiresJungleCoins: false,
   },
   [CharacterRole.APPRENTICE]: {
     isImmutable: false,
@@ -121,6 +133,15 @@ export const ROLE_BENEFITS = {
       "Open a J$ In-game wallet" // Zaps-BJ wallet is in Ideation
     ],
     requirements: ["Make a purchase or get Created by Founder or Team Roles"]
+  },
+  [CharacterRole.BENEFICIARY]: {
+    description: "Receives payouts and performance-based benefits from paid missions or sales",
+    benefits: [
+      "Can be assigned to receive compensation",
+      "Tracks payout-focused role metadata",
+      "Can hold beneficiary-specific analytics"
+    ],
+    requirements: ["Assigned to the role by a Founder or Team character"]
   },
   [CharacterRole.INVESTOR]: {
     description: "Has In-game J$ and Zaps Holdings.",

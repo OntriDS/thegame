@@ -438,27 +438,27 @@ export const PAYMENT_METHOD_CATEGORIES = {
 
 /** Character roles */
 export enum CharacterRole {
-  FOUNDER = 'founder',
-  TEAM = 'team',
-  AI_AGENT = 'ai-agent',
-  CUSTOMER = 'customer',
-  PLAYER = 'player',
-  APPRENTICE = 'apprentice',
-  FAMILY = 'family',
-  INVESTOR = 'investor',
-  ASSOCIATE = 'associate',
-  PARTNER = 'partner',
-  ADMIN = 'admin',
-  DESIGNER = 'designer',
-  MAKER = 'maker',
-  SELLER = 'seller',
-  RESEARCHER = 'researcher',
-  DEVELOPER = 'developer',
-  BOSS = 'boss',
-  ASSISTANT = 'assistant',
-  COLLABORATOR = 'collaborator',
-  STUDENT = 'student',
-  OTHER = 'other'
+  FOUNDER = 'Founder',
+  TEAM = 'Team',
+  AI_AGENT = 'AI-Agent',
+  CUSTOMER = 'Customer',
+  BENEFICIARY = 'Beneficiary',
+  PLAYER = 'Player',
+  APPRENTICE = 'Apprentice',
+  FAMILY = 'Family',
+  INVESTOR = 'Investor',
+  ASSOCIATE = 'Associate',
+  PARTNER = 'Partner',
+  ADMIN = 'Admin',
+  DESIGNER = 'Designer',
+  MAKER = 'Maker',
+  SELLER = 'Seller',
+  RESEARCHER = 'Researcher',
+  DEVELOPER = 'Developer',
+  BOSS = 'Boss',
+  ASSISTANT = 'Assistant',
+  COLLABORATOR = 'Collaborator',
+  STUDENT = 'Student'
 }
 
 /** Character role types for UI organization and permissions */
@@ -485,7 +485,8 @@ export const CHARACTER_ROLE_TYPES = {
     CharacterRole.ASSOCIATE,
     CharacterRole.PARTNER,
     CharacterRole.AI_AGENT,
-    CharacterRole.CUSTOMER
+  CharacterRole.CUSTOMER,
+  CharacterRole.BENEFICIARY
   ]
 } as const;
 

@@ -2,7 +2,7 @@
 // Comprehensive update propagation across ALL entity relationships
 
 import type { Task, Item, Sale, FinancialRecord, Character, Player } from '@/types/entities';
-import { EntityType, FOUNDER_CHARACTER_ID, TaskStatus } from '@/types/enums';
+import { EntityType, FOUNDER_CHARACTER_ID, TaskStatus, CharacterRole } from '@/types/enums';
 import { clearEffect, hasEffect, markEffect } from '@/data-store/effects-registry';
 import { EffectKeys } from '@/data-store/keys';
 import { getFinancialsBySourceTaskId, getFinancialsBySourceSaleId, upsertFinancial, removeFinancial } from '@/data-store/datastore';
@@ -40,6 +40,8 @@ export async function updateFinancialRecordsFromTask(
         task.revenue !== previousTask.revenue ||
         task.isNotPaid !== previousTask.isNotPaid ||
         task.isNotCharged !== previousTask.isNotCharged ||
+        task.customerCharacterId !== previousTask.customerCharacterId ||
+        task.customerCharacterRole !== previousTask.customerCharacterRole ||
         task.name !== previousTask.name ||
         task.station !== previousTask.station;
 
@@ -60,6 +62,8 @@ export async function updateFinancialRecordsFromTask(
           revenue: task.revenue,
           isNotPaid: task.isNotPaid,
           isNotCharged: task.isNotCharged,
+          customerCharacterId: task.customerCharacterId || null,
+          customerCharacterRole: task.customerCharacterRole || CharacterRole.CUSTOMER,
           name: task.name,
           station: task.station,
           year,
@@ -118,6 +122,8 @@ export async function updateTasksFromFinancialRecord(
         record.revenue !== previousRecord.revenue ||
         record.isNotPaid !== previousRecord.isNotPaid ||
         record.isNotCharged !== previousRecord.isNotCharged ||
+        record.customerCharacterId !== previousRecord.customerCharacterId ||
+        record.customerCharacterRole !== previousRecord.customerCharacterRole ||
         record.name !== previousRecord.name ||
         record.station !== previousRecord.station;
 
@@ -130,6 +136,8 @@ export async function updateTasksFromFinancialRecord(
           revenue: record.revenue,
           isNotPaid: record.isNotPaid,
           isNotCharged: record.isNotCharged,
+          customerCharacterId: record.customerCharacterId || null,
+          customerCharacterRole: record.customerCharacterRole || CharacterRole.CUSTOMER,
           name: record.name,
           station: record.station,
           updatedAt: getUTCNow()

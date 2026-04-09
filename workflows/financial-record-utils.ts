@@ -2,7 +2,7 @@
 // Financial record creation and management utilities
 
 import type { Task, FinancialRecord, Sale, ItemSaleLine, Character, Contract, ServiceLine } from '@/types/entities';
-import { LinkType, EntityType, LogEventType, BUSINESS_STRUCTURE, SaleType, SaleStatus, ContractClauseType, ContractStatus, FinancialStatus } from '@/types/enums';
+import { LinkType, EntityType, LogEventType, BUSINESS_STRUCTURE, SaleType, SaleStatus, ContractClauseType, ContractStatus, FinancialStatus, CharacterRole } from '@/types/enums';
 import {
   upsertFinancial,
   getAllFinancials,
@@ -164,6 +164,8 @@ export async function createFinancialRecordFromTask(task: Task): Promise<Financi
       siteId: task.siteId,
       targetSiteId: task.targetSiteId,
       sourceTaskId: task.id, // AMBASSADOR field - points back to Task
+      customerCharacterId: task.customerCharacterId || null,
+      customerCharacterRole: task.customerCharacterRole || CharacterRole.CUSTOMER,
       cost: task.cost || 0,
       revenue: task.revenue || 0,
       jungleCoins: 0, // J$ no longer awarded as task rewards
@@ -232,7 +234,9 @@ export async function updateFinancialRecordFromTask(task: Task, previousTask: Ta
       previousTask.name !== task.name ||
       previousTask.station !== task.station ||
       previousTask.siteId !== task.siteId ||
-      previousTask.targetSiteId !== task.targetSiteId;
+      previousTask.targetSiteId !== task.targetSiteId ||
+      previousTask.customerCharacterId !== task.customerCharacterId ||
+      previousTask.customerCharacterRole !== task.customerCharacterRole;
 
     if (!financialPropsChanged) {
       console.log(`[updateFinancialRecordFromTask] No financial properties changed for task ${task.id}, skipping update`);
@@ -249,6 +253,8 @@ export async function updateFinancialRecordFromTask(task: Task, previousTask: Ta
       station: task.station,
       siteId: task.siteId,
       targetSiteId: task.targetSiteId,
+      customerCharacterId: task.customerCharacterId || null,
+      customerCharacterRole: task.customerCharacterRole || CharacterRole.CUSTOMER,
       isNotPaid: task.isNotPaid,
       isNotCharged: task.isNotCharged,
       outputItemId: task.isNewItem ? null : (task.outputItemId || null),

@@ -16,7 +16,7 @@ import { SmartSchedulerSubmodal } from './submodals/smart-scheduler-submodal';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Task, Item, Site } from '@/types/entities';
 import { getPointsMetadata } from '@/lib/utils/points-utils';
-import { TaskType, TaskStatus, TaskPriority, ItemType, ItemStatus, FOUNDER_CHARACTER_ID, EntityType } from '@/types/enums';
+import { TaskType, TaskStatus, TaskPriority, ItemType, ItemStatus, FOUNDER_CHARACTER_ID, EntityType, CharacterRole } from '@/types/enums';
 import { getStationFromCombined, createTaskParentOptions, createItemTypeSubTypeOptions, getItemTypeFromCombined, getSubTypeFromCombined, createCharacterOptions, createStationCategoryOptions, getCategoryFromCombined } from '@/lib/utils/searchable-select-utils';
 import { createSiteOptionsWithCategories } from '@/lib/utils/site-options-utils';
 import { getStationSelectValue } from '@/lib/utils/business-structure-utils';
@@ -130,6 +130,7 @@ export default function MissionTreeModalContent({
   const [customerCharacterName, setCustomerCharacterName] = useState<string>('');
   const [isNewCustomer, setIsNewCustomer] = useState(true);
   const [newCustomerName, setNewCustomerName] = useState('');
+  const [customerCharacterRole, setCustomerCharacterRole] = useState<CharacterRole>(CharacterRole.CUSTOMER);
   const [playerCharacterId, setPlayerCharacterId] = useState<string | null>(FOUNDER_CHARACTER_ID);
   const [showPlayerCharacterSelector, setShowPlayerCharacterSelector] = useState(false);
   const [showScheduler, setShowScheduler] = useState(false);
@@ -226,6 +227,7 @@ export default function MissionTreeModalContent({
       setCustomerCharacterId(existingTask.customerCharacterId || null);
       setIsNewCustomer(!Boolean(existingTask.customerCharacterId));
       setNewCustomerName(existingTask.newCustomerName || '');
+      setCustomerCharacterRole(existingTask.customerCharacterRole || CharacterRole.CUSTOMER);
       setPlayerCharacterId(existingTask.playerCharacterId || FOUNDER_CHARACTER_ID);
       setRewards({
         points: {
@@ -281,6 +283,7 @@ export default function MissionTreeModalContent({
     setCustomerCharacterName('');
     setIsNewCustomer(true);
     setNewCustomerName('');
+    setCustomerCharacterRole(CharacterRole.CUSTOMER);
     setPlayerCharacterId(FOUNDER_CHARACTER_ID);
     setRewards({ points: { xp: 0, rp: 0, fp: 0, hp: 0 } });
     setParentId(null);
@@ -430,6 +433,7 @@ export default function MissionTreeModalContent({
       parentId,
       customerCharacterId: isNewCustomer ? null : customerCharacterId,
       newCustomerName: isNewCustomer ? newCustomerName.trim() || undefined : undefined,
+      customerCharacterRole,
       playerCharacterId: finalPlayerCharacterId,
       order: determineOrder(),
       isCollected: status === TaskStatus.COLLECTED || isCollected,
@@ -536,6 +540,14 @@ export default function MissionTreeModalContent({
 
   const getCharacterOptions = () => {
     return createCharacterOptions(allCharacters);
+  };
+
+  const handleCounterpartyRoleToggle = () => {
+    const nextRole =
+      customerCharacterRole === CharacterRole.CUSTOMER
+        ? CharacterRole.BENEFICIARY
+        : CharacterRole.CUSTOMER;
+    setCustomerCharacterRole(nextRole);
   };
 
   // Render the form
@@ -811,7 +823,19 @@ export default function MissionTreeModalContent({
             <div className="space-y-3">
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="customer-character" className="text-xs">Customer</Label>
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="customer-character" className="text-xs">{customerCharacterRole}</Label>
+                    {!task?.sourceSaleId && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={handleCounterpartyRoleToggle}
+                        className="h-6 text-xs px-2"
+                      >
+                        {customerCharacterRole === CharacterRole.CUSTOMER ? 'Beneficiary' : 'Customer'}
+                      </Button>
+                    )}
+                  </div>
                   {!task?.sourceSaleId && (
                     <Button
                       size="sm"
@@ -836,14 +860,14 @@ export default function MissionTreeModalContent({
                             disabled
                           >
                             <User className="h-3 w-3 mr-2" />
-                            {customerCharacterId ? customerCharacterName : 'Customer from Sale'}
+                            {customerCharacterId ? customerCharacterName : `${customerCharacterRole} from Sale`}
                           </Button>
                         ) : isNewCustomer ? (
                           <Input
                             id="customer-character"
                             value={newCustomerName}
                             onChange={(e) => setNewCustomerName(e.target.value)}
-                            placeholder="New customer name"
+                            placeholder={customerCharacterRole === CharacterRole.CUSTOMER ? 'New customer name' : 'New beneficiary name'}
                             className="h-8 text-sm"
                           />
                         ) : (
@@ -851,7 +875,7 @@ export default function MissionTreeModalContent({
                             value={customerCharacterId || ''}
                             onValueChange={(value) => setCustomerCharacterId(value || null)}
                             options={getCharacterOptions()}
-                            placeholder="Select customer"
+                            placeholder={customerCharacterRole === CharacterRole.CUSTOMER ? 'Select customer' : 'Select beneficiary'}
                             autoGroupByCategory={true}
                             className="h-8 text-sm"
                             instanceId="mission-task-customer"

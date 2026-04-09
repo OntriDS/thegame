@@ -23,7 +23,7 @@ import {
   Pencil,
 } from 'lucide-react';
 import PlayerCharacterSelectorModal from './submodals/player-character-selector-submodal';
-import { FinancialRecord, Item, Site } from '@/types/entities';
+import { CustomerCounterpartyRole, FinancialRecord, Item, Site } from '@/types/entities';
 import {
   BUSINESS_STRUCTURE,
   FinancialStatus
@@ -74,6 +74,9 @@ function getDefaultItemStatus(itemType: string, isSold: boolean = false): ItemSt
       return ItemStatus.FOR_SALE; // Default fallback
   }
 }
+
+const toCustomerCounterpartyRole = (role?: CharacterRole): CustomerCounterpartyRole =>
+  role === CharacterRole.BENEFICIARY ? CharacterRole.BENEFICIARY : CharacterRole.CUSTOMER;
 
 interface FinancialsModalProps {
   record?: FinancialRecord | null;
@@ -126,6 +129,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
     site: '',
     targetSite: '',
     customerCharacterId: null as string | null,
+    customerCharacterRole: toCustomerCounterpartyRole(CharacterRole.CUSTOMER),
     isNewCustomer: true,
     newCustomerName: '',
     outputItemType: '' as ItemType | '',
@@ -257,6 +261,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
         site: record.siteId || '',
         targetSite: record.targetSiteId || '',
         customerCharacterId: record.customerCharacterId || null,
+        customerCharacterRole: toCustomerCounterpartyRole(record.customerCharacterRole),
         isNewCustomer: !record.customerCharacterId, // Toggle based on whether customer exists
         newCustomerName: '',
         outputItemType: (record.outputItemType as ItemType) || '',
@@ -318,6 +323,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
         site: '',
         targetSite: '',
         customerCharacterId: null,
+        customerCharacterRole: toCustomerCounterpartyRole(CharacterRole.CUSTOMER),
         isNewCustomer: true,
         newCustomerName: '',
         outputItemType: '',
@@ -498,6 +504,23 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
     }
   };
 
+  const getCustomerCharacterOptions = () => {
+    return createCharacterOptions(characters);
+  };
+
+  const handleCounterpartyRoleToggle = () => {
+    setFormData((prev) => {
+      const nextRole =
+        prev.customerCharacterRole === CharacterRole.CUSTOMER
+          ? CharacterRole.BENEFICIARY
+          : CharacterRole.CUSTOMER;
+      return {
+        ...prev,
+        customerCharacterRole: nextRole,
+      };
+    });
+  };
+
   const handleSave = async () => {
     if (isSaving) return;
     setIsSaving(true);
@@ -519,6 +542,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
       targetSiteId: formData.targetSite || null,
       customerCharacterId: formData.isNewCustomer ? null : formData.customerCharacterId,  // Ambassador: Existing customer
       newCustomerName: formData.isNewCustomer ? formData.newCustomerName : undefined,  // EMISSARY: Name for new customer character creation
+      customerCharacterRole: formData.customerCharacterRole,
       playerCharacterId: playerCharacterId,
       cost: formData.cost,
       revenue: formData.revenue,
@@ -771,7 +795,17 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
                   {/* Customer Character - Emissary field for financial records */}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <Label htmlFor="customer-character" className="text-xs">Customer</Label>
+                      <div className="flex items-center gap-2">
+                        <Label htmlFor="customer-character" className="text-xs">{formData.customerCharacterRole}</Label>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={handleCounterpartyRoleToggle}
+                          className="h-6 text-xs px-2"
+                        >
+                          {formData.customerCharacterRole === CharacterRole.CUSTOMER ? 'Beneficiary' : 'Customer'}
+                        </Button>
+                      </div>
                       <Button
                         size="sm"
                         variant="outline"
@@ -786,15 +820,15 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
                         id="customer-character"
                         value={formData.newCustomerName}
                         onChange={(e) => setFormData({ ...formData, newCustomerName: e.target.value })}
-                        placeholder="New customer name"
+                        placeholder={formData.customerCharacterRole === CharacterRole.CUSTOMER ? 'New customer name' : 'New beneficiary name'}
                         className="h-8 text-sm"
                       />
                     ) : (
                       <SearchableSelect
                         value={formData.customerCharacterId || ''}
                         onValueChange={(value) => setFormData({ ...formData, customerCharacterId: value })}
-                        options={createCharacterOptions(characters)}
-                        placeholder="Select customer"
+                        options={getCustomerCharacterOptions()}
+                        placeholder={formData.customerCharacterRole === CharacterRole.CUSTOMER ? 'Select customer' : 'Select beneficiary'}
                         autoGroupByCategory={true}
                         className="h-8 text-sm"
                         onCreate={(query) => setFormData({

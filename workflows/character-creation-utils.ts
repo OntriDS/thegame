@@ -24,7 +24,8 @@ export async function createCharacterFromEntity(
   entityType: 'task' | 'sale' | 'financial' | 'item',
   entityId: string,
   entityName: string,
-  newCustomerName: string
+  newCustomerName: string,
+  customerRole: CharacterRole = CharacterRole.CUSTOMER
 ): Promise<Character | null> {
   try {
     console.log(`[createCharacterFromEntity] Starting character creation from ${entityType}: ${entityName} (${entityId})`);
@@ -39,11 +40,12 @@ export async function createCharacterFromEntity(
     // The workflow only calls this when hasEffect('{entityType}:{id}:characterCreated') === false
     console.log(`[createCharacterFromEntity] Creating new character (Effect Registry confirmed no existing character)`);
     
+    const resolvedCustomerRole = customerRole || CharacterRole.CUSTOMER;
     const newCharacter: Character = {
       id: `character-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       name: newCustomerName.trim(),
-      description: `Customer character created from ${entityType}: ${entityName}`,
-      roles: [CharacterRole.CUSTOMER],
+      description: `${resolvedCustomerRole} character created from ${entityType}: ${entityName}`,
+      roles: [resolvedCustomerRole],
       inventory: [],
       achievementsCharacter: [],
       purchasedAmount: 0,
@@ -76,7 +78,7 @@ export async function createCharacterFromTask(task: Task): Promise<Character | n
   if (!task.newCustomerName) {
     return null;
   }
-  return createCharacterFromEntity('task', task.id, task.name, task.newCustomerName);
+  return createCharacterFromEntity('task', task.id, task.name, task.newCustomerName, task.customerCharacterRole || CharacterRole.CUSTOMER);
 }
 
 export async function createCharacterFromSale(sale: Sale): Promise<Character | null> {
@@ -90,7 +92,7 @@ export async function createCharacterFromFinancial(record: FinancialRecord): Pro
   if (!record.newCustomerName) {
     return null;
   }
-  return createCharacterFromEntity('financial', record.id, record.name, record.newCustomerName);
+  return createCharacterFromEntity('financial', record.id, record.name, record.newCustomerName, record.customerCharacterRole || CharacterRole.CUSTOMER);
 }
 
 export async function createCharacterFromItem(item: Item): Promise<Character | null> {
