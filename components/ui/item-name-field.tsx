@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { SearchableSelect } from '@/components/ui/searchable-select';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import type { Item, Site } from '@/types/entities';
 import { createItemOptions } from '@/lib/utils/searchable-select-utils';
 
@@ -53,10 +54,12 @@ export function ItemNameField({
     setInternalSelectedItemId(selectedItemId);
   }, [selectedItemId]);
 
-  const handleToggleNewItem = () => {
-    const newIsNewItem = !internalIsNewItem;
+  const handleToggleNewItem = (newIsNewItem: boolean) => {
+    if (newIsNewItem === internalIsNewItem) {
+      return;
+    }
     setInternalIsNewItem(newIsNewItem);
-    
+
     if (newIsNewItem) {
       // Switching to new item - clear selected item
       setInternalSelectedItemId('');
@@ -66,7 +69,7 @@ export function ItemNameField({
       // Switching to existing item - clear name field
       onChange('');
     }
-    
+
     onNewItemToggle?.(newIsNewItem);
   };
 
@@ -94,16 +97,37 @@ export function ItemNameField({
     <div className={`space-y-2 ${className || ''}`}>
       <div className="flex items-center justify-between">
         <Label htmlFor="item-name-field" className="text-xs">{label}</Label>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={handleToggleNewItem}
-          disabled={disabled}
-          className="h-6 px-2 text-xs"
-        >
-          {internalIsNewItem ? 'Existing' : 'New'}
-        </Button>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="inline-flex items-center rounded-md border border-input">
+                <Button
+                  type="button"
+                  variant={internalIsNewItem ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => handleToggleNewItem(true)}
+                  disabled={disabled}
+                  className="h-6 px-2 text-xs rounded-r-none"
+                >
+                  New
+                </Button>
+                <Button
+                  type="button"
+                  variant={!internalIsNewItem ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => handleToggleNewItem(false)}
+                  disabled={disabled}
+                  className="h-6 px-2 text-xs rounded-l-none"
+                >
+                  Existing
+                </Button>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>New: create a new item name. Existing: select from existing items.</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
       
       {internalIsNewItem ? (

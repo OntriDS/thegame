@@ -508,17 +508,11 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
     return createCharacterOptions(characters);
   };
 
-  const handleCounterpartyRoleToggle = () => {
-    setFormData((prev) => {
-      const nextRole =
-        prev.customerCharacterRole === CharacterRole.CUSTOMER
-          ? CharacterRole.BENEFICIARY
-          : CharacterRole.CUSTOMER;
-      return {
-        ...prev,
-        customerCharacterRole: nextRole,
-      };
-    });
+  const setCounterpartyRole = (role: CharacterRole) => {
+    setFormData((prev) => ({
+      ...prev,
+      customerCharacterRole: toCustomerCounterpartyRole(role),
+    }));
   };
 
   const handleSave = async () => {
@@ -796,24 +790,44 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <Label htmlFor="customer-character" className="text-xs">{formData.customerCharacterRole}</Label>
+                        <Label htmlFor="customer-character" className="text-xs">Counterparty</Label>
+                        <div className="inline-flex items-center rounded-md border border-input">
+                          <Button
+                            size="sm"
+                            variant={formData.customerCharacterRole === CharacterRole.CUSTOMER ? 'default' : 'outline'}
+                            onClick={() => setCounterpartyRole(CharacterRole.CUSTOMER)}
+                            className="h-6 text-xs px-2 rounded-r-none"
+                          >
+                            Customer
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant={formData.customerCharacterRole === CharacterRole.BENEFICIARY ? 'default' : 'outline'}
+                            onClick={() => setCounterpartyRole(CharacterRole.BENEFICIARY)}
+                            className="h-6 text-xs px-2 rounded-l-none"
+                          >
+                            Beneficiary
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="inline-flex items-center rounded-md border border-input">
                         <Button
                           size="sm"
-                          variant="outline"
-                          onClick={handleCounterpartyRoleToggle}
-                          className="h-6 text-xs px-2"
+                          variant={formData.isNewCustomer ? 'default' : 'outline'}
+                          onClick={() => setFormData({ ...formData, isNewCustomer: true })}
+                          className="h-6 text-xs px-2 rounded-r-none"
                         >
-                          {formData.customerCharacterRole === CharacterRole.CUSTOMER ? 'Beneficiary' : 'Customer'}
+                          New
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant={!formData.isNewCustomer ? 'default' : 'outline'}
+                          onClick={() => setFormData({ ...formData, isNewCustomer: false })}
+                          className="h-6 text-xs px-2 rounded-l-none"
+                        >
+                          Existing
                         </Button>
                       </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setFormData({ ...formData, isNewCustomer: !formData.isNewCustomer })}
-                        className="h-6 text-xs px-2"
-                      >
-                        {formData.isNewCustomer ? 'Existing' : 'New'}
-                      </Button>
                     </div>
                     {formData.isNewCustomer ? (
                       <Input

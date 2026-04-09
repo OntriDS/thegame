@@ -591,12 +591,8 @@ export default function RecurrentTreeModalContent({
     }
   };
 
-  const handleCounterpartyRoleToggle = () => {
-    const nextRole =
-      customerCharacterRole === CharacterRole.CUSTOMER
-        ? CharacterRole.BENEFICIARY
-        : CharacterRole.CUSTOMER;
-    setCustomerCharacterRole(nextRole);
+  const setCounterpartyRole = (role: CharacterRole) => {
+    setCustomerCharacterRole(role);
   };
 
   const getCounterpartyCharacterOptions = () => {
@@ -921,27 +917,47 @@ export default function RecurrentTreeModalContent({
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Label htmlFor="recurrent-customer-character" className="text-xs">{customerCharacterRole}</Label>
-                      {!task?.sourceSaleId && (
+                    <Label htmlFor="recurrent-customer-character" className="text-xs">Counterparty</Label>
+                    {!task?.sourceSaleId && (
+                      <div className="inline-flex items-center rounded-md border border-input">
                         <Button
                           size="sm"
-                          variant="outline"
-                          onClick={handleCounterpartyRoleToggle}
-                          className="h-6 text-xs px-2"
+                          variant={customerCharacterRole === CharacterRole.CUSTOMER ? 'default' : 'outline'}
+                          onClick={() => setCounterpartyRole(CharacterRole.CUSTOMER)}
+                          className="h-6 text-xs px-2 rounded-r-none"
                         >
-                          {customerCharacterRole === CharacterRole.CUSTOMER ? 'Beneficiary' : 'Customer'}
+                          Customer
                         </Button>
-                      )}
+                        <Button
+                          size="sm"
+                          variant={customerCharacterRole === CharacterRole.BENEFICIARY ? 'default' : 'outline'}
+                          onClick={() => setCounterpartyRole(CharacterRole.BENEFICIARY)}
+                          className="h-6 text-xs px-2 rounded-l-none"
+                        >
+                          Beneficiary
+                        </Button>
+                      </div>
+                    )}
                     </div>
                     {!task?.sourceSaleId && (
+                    <div className="inline-flex items-center rounded-md border border-input">
                       <Button
                         size="sm"
-                        variant="outline"
-                        onClick={() => setIsNewCustomer(!isNewCustomer)}
-                        className="h-6 text-xs px-2"
+                        variant={isNewCustomer ? 'default' : 'outline'}
+                        onClick={() => setIsNewCustomer(true)}
+                        className="h-6 text-xs px-2 rounded-r-none"
                       >
-                        {isNewCustomer ? 'Existing' : 'New'}
+                        New
                       </Button>
+                      <Button
+                        size="sm"
+                        variant={!isNewCustomer ? 'default' : 'outline'}
+                        onClick={() => setIsNewCustomer(false)}
+                        className="h-6 text-xs px-2 rounded-l-none"
+                      >
+                        Existing
+                      </Button>
+                    </div>
                     )}
                   </div>
                   <TooltipProvider>
