@@ -818,51 +818,45 @@ export default function MissionTreeModalContent({
             {/* Column 4: Customer, item output */}
             <div className="space-y-3">
               <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Label htmlFor="customer-character" className="text-xs">Counterparty</Label>
-                    {!task?.sourceSaleId && (
-                      <div className="inline-flex items-center rounded-md border border-input">
-                        <Button
-                          size="sm"
-                          variant={customerCharacterRole === CharacterRole.CUSTOMER ? 'default' : 'outline'}
-                          onClick={() => setCounterpartyRole(CharacterRole.CUSTOMER)}
-                          className="h-6 text-xs px-2 rounded-r-none"
-                        >
-                          Customer
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant={customerCharacterRole === CharacterRole.BENEFICIARY ? 'default' : 'outline'}
-                          onClick={() => setCounterpartyRole(CharacterRole.BENEFICIARY)}
-                          className="h-6 text-xs px-2 rounded-l-none"
-                        >
-                          Beneficiary
-                        </Button>
-                      </div>
-                    )}
+                <Label htmlFor="customer-character" className="text-xs">Counterparty</Label>
+                {!task?.sourceSaleId && (
+                  <div className="flex items-center justify-between">
+                    <TooltipProvider delayDuration={1000}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setCounterpartyRole(customerCharacterRole === CharacterRole.CUSTOMER ? CharacterRole.BENEFICIARY : CharacterRole.CUSTOMER)}
+                              className="h-6 text-xs px-2"
+                            >
+                              {customerCharacterRole}
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Customer = money charged to them. Beneficiary = money paid to them.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    <TooltipProvider delayDuration={1000}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setIsNewCustomer(!isNewCustomer)}
+                              className="h-6 text-xs px-2"
+                            >
+                              {isNewCustomer ? 'New' : 'Existing'}
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>New: create a new customer. Existing: choose from existing customers.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </div>
-                  {!task?.sourceSaleId && (
-                    <div className="inline-flex items-center rounded-md border border-input">
-                      <Button
-                        size="sm"
-                        variant={isNewCustomer ? 'default' : 'outline'}
-                        onClick={() => setIsNewCustomer(true)}
-                        className="h-6 text-xs px-2 rounded-r-none"
-                      >
-                        New
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant={!isNewCustomer ? 'default' : 'outline'}
-                        onClick={() => setIsNewCustomer(false)}
-                        className="h-6 text-xs px-2 rounded-l-none"
-                      >
-                        Existing
-                      </Button>
-                    </div>
-                  )}
-                </div>
+                )}
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>

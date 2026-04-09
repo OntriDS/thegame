@@ -1506,38 +1506,24 @@ export default function SalesModal({
                     </div>
 
                     <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label htmlFor="customer" className="text-xs">Customer</Label>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div className="inline-flex items-center rounded-md border border-input">
-                                <Button
-                                  size="sm"
-                                  variant={isNewCustomer ? 'default' : 'outline'}
-                                  onClick={() => setIsNewCustomer(true)}
-                                  disabled={false}
-                                  className="h-6 text-xs px-2 rounded-r-none"
-                                >
-                                  New
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant={!isNewCustomer ? 'default' : 'outline'}
-                                  onClick={() => setIsNewCustomer(false)}
-                                  disabled={false}
-                                  className="h-6 text-xs px-2 rounded-l-none"
-                                >
-                                  Existing
-                                </Button>
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>New: create a new customer. Existing: choose from existing customers.</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </div>
+                      <Label htmlFor="customer" className="text-xs">Customer</Label>
+                      <TooltipProvider delayDuration={1000}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setIsNewCustomer(!isNewCustomer)}
+                              className={`h-6 text-xs px-2`}
+                            >
+                              {isNewCustomer ? 'New' : 'Existing'}
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>New: create a new customer. Existing: choose from existing customers.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                       {isNewCustomer ? (
                         <Input
                           id="customer"
@@ -1782,38 +1768,24 @@ export default function SalesModal({
                     </div>
 
                     <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label htmlFor="customer" className="text-xs">Customer</Label>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div className="inline-flex items-center rounded-md border border-input">
-                                <Button
-                                  size="sm"
-                                  variant={isNewCustomer ? 'default' : 'outline'}
-                                  onClick={() => setIsNewCustomer(true)}
-                                  disabled={false}
-                                  className="h-6 text-xs px-2 rounded-r-none"
-                                >
-                                  New
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant={!isNewCustomer ? 'default' : 'outline'}
-                                  onClick={() => setIsNewCustomer(false)}
-                                  disabled={false}
-                                  className="h-6 text-xs px-2 rounded-l-none"
-                                >
-                                  Existing
-                                </Button>
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>New: create a new customer. Existing: choose from existing customers.</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </div>
+                      <Label htmlFor="customer" className="text-xs">Customer</Label>
+                      <TooltipProvider delayDuration={1000}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setIsNewCustomer(!isNewCustomer)}
+                              className={`h-6 text-xs px-2`}
+                            >
+                              {isNewCustomer ? 'New' : 'Existing'}
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>New: create a new customer. Existing: choose from existing customers.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                       {isNewCustomer ? (
                         <Input
                           id="customer"

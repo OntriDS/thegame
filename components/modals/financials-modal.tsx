@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import NumericInput from '@/components/ui/numeric-input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { ItemNameField } from '@/components/ui/item-name-field';
@@ -788,47 +789,43 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
 
                   {/* Customer Character - Emissary field for financial records */}
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Label htmlFor="customer-character" className="text-xs">Counterparty</Label>
-                        <div className="inline-flex items-center rounded-md border border-input">
+                  <Label htmlFor="customer-character" className="text-xs">Counterparty</Label>
+                  <div className="flex items-center justify-between">
+                    <TooltipProvider delayDuration={1000}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
                           <Button
                             size="sm"
-                            variant={formData.customerCharacterRole === CharacterRole.CUSTOMER ? 'default' : 'outline'}
-                            onClick={() => setCounterpartyRole(CharacterRole.CUSTOMER)}
-                            className="h-6 text-xs px-2 rounded-r-none"
+                            variant="outline"
+                            onClick={() => setCounterpartyRole(formData.customerCharacterRole === CharacterRole.CUSTOMER ? CharacterRole.BENEFICIARY : CharacterRole.CUSTOMER)}
+                            className="h-6 text-xs px-2"
                           >
-                            Customer
+                            {formData.customerCharacterRole}
                           </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Customer = money charged to them. Beneficiary = money paid to them.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    <TooltipProvider delayDuration={1000}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
                           <Button
                             size="sm"
-                            variant={formData.customerCharacterRole === CharacterRole.BENEFICIARY ? 'default' : 'outline'}
-                            onClick={() => setCounterpartyRole(CharacterRole.BENEFICIARY)}
-                            className="h-6 text-xs px-2 rounded-l-none"
+                            variant="outline"
+                            onClick={() => setFormData({ ...formData, isNewCustomer: !formData.isNewCustomer })}
+                            className="h-6 text-xs px-2"
                           >
-                            Beneficiary
+                            {formData.isNewCustomer ? 'New' : 'Existing'}
                           </Button>
-                        </div>
-                      </div>
-                      <div className="inline-flex items-center rounded-md border border-input">
-                        <Button
-                          size="sm"
-                          variant={formData.isNewCustomer ? 'default' : 'outline'}
-                          onClick={() => setFormData({ ...formData, isNewCustomer: true })}
-                          className="h-6 text-xs px-2 rounded-r-none"
-                        >
-                          New
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant={!formData.isNewCustomer ? 'default' : 'outline'}
-                          onClick={() => setFormData({ ...formData, isNewCustomer: false })}
-                          className="h-6 text-xs px-2 rounded-l-none"
-                        >
-                          Existing
-                        </Button>
-                      </div>
-                    </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>New: create a new counterparty. Existing: choose from existing characters.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
                     {formData.isNewCustomer ? (
                       <Input
                         id="customer-character"

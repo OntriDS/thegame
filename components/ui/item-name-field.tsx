@@ -95,33 +95,21 @@ export function ItemNameField({
 
   return (
     <div className={`space-y-2 ${className || ''}`}>
+      <Label htmlFor="item-name-field" className="text-xs">{label}</Label>
       <div className="flex items-center justify-between">
-        <Label htmlFor="item-name-field" className="text-xs">{label}</Label>
-        <TooltipProvider>
+        <TooltipProvider delayDuration={1000}>
           <Tooltip>
             <TooltipTrigger asChild>
-              <div className="inline-flex items-center rounded-md border border-input">
-                <Button
-                  type="button"
-                  variant={internalIsNewItem ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => handleToggleNewItem(true)}
-                  disabled={disabled}
-                  className="h-6 px-2 text-xs rounded-r-none"
-                >
-                  New
-                </Button>
-                <Button
-                  type="button"
-                  variant={!internalIsNewItem ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => handleToggleNewItem(false)}
-                  disabled={disabled}
-                  className="h-6 px-2 text-xs rounded-l-none"
-                >
-                  Existing
-                </Button>
-              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => handleToggleNewItem(!internalIsNewItem)}
+                disabled={disabled}
+                className="h-6 px-2 text-xs"
+              >
+                {internalIsNewItem ? 'New' : 'Existing'}
+              </Button>
             </TooltipTrigger>
             <TooltipContent>
               <p>New: create a new item name. Existing: select from existing items.</p>
