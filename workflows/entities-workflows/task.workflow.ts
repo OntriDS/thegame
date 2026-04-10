@@ -18,8 +18,9 @@ import { upsertTask as repoUpsertTask } from '@/data-store/repositories/task.rep
 import { getLinksFor, removeLink } from '@/links/link-registry';
 import { createItemFromTask, removeItemsCreatedByTask } from '../item-creation-utils';
 import { awardPointsToPlayer, removePointsFromPlayer, stagePointsForPlayer, rewardPointsToPlayer, withdrawStagedPointsFromPlayer, unrewardPointsForPlayer } from '../points-rewards-utils';
-import { createFinancialRecordFromTask, updateFinancialRecordFromTask, removeFinancialRecordsCreatedByTask } from '../financial-record-utils';
+import { createFinancialRecordFromTask, removeFinancialRecordsCreatedByTask } from '../financial-record-utils';
 import { createCharacterFromTask } from '../character-creation-utils';
+import { ensureCounterpartyRoleDatastore } from '@/lib/utils/character-role-sync';
 import { getCategoryForTaskType } from '@/lib/utils/searchable-select-utils';
 import { kvSRem } from '@/data-store/kv';
 
@@ -357,6 +358,15 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
         }
       }
     }
+  }
+
+  const counterpartyPresent = Boolean(task.customerCharacterId && task.customerCharacterRole);
+  const counterpartyChanged =
+    !previousTask ||
+    previousTask.customerCharacterId !== task.customerCharacterId ||
+    previousTask.customerCharacterRole !== task.customerCharacterRole;
+  if (counterpartyPresent && counterpartyChanged) {
+    await ensureCounterpartyRoleDatastore(task.customerCharacterId, task.customerCharacterRole);
   }
 
   // Lean identity fields changed — cascade patch ALL log entries across ALL months and events

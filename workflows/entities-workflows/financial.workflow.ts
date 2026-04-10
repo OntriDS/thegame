@@ -30,6 +30,7 @@ import { formatMonthKey } from '@/lib/utils/date-display-utils';
 import { getUTCNow, endOfMonthUTC } from '@/lib/utils/utc-utils';
 import { buildArchiveCollectionIndexKey, buildArchiveMonthsKey } from '@/data-store/keys';
 import { recalculateCharacterWallet } from '../financial-record-utils';
+import { ensureCounterpartyRoleDatastore } from '@/lib/utils/character-role-sync';
 const STATE_FIELDS = ['isNotPaid', 'isNotCharged'];
 
 /**
@@ -173,6 +174,14 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
       }
     }
 
+    const latestNewFinancial = (await getFinancialById(financial.id)) || financial;
+    if (latestNewFinancial.customerCharacterId && latestNewFinancial.customerCharacterRole) {
+      await ensureCounterpartyRoleDatastore(
+        latestNewFinancial.customerCharacterId,
+        latestNewFinancial.customerCharacterRole
+      );
+    }
+
     await markEffect(effectKey);
     // DONE log is already written above when !isPending (effect-gated). Do not call ensureFinancialDoneLog here —
     // it could append a second DONE if month resolution or list order differed from the guard in appendEntityLog.
@@ -263,6 +272,15 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
       }
     }
 
+  }
+
+  const finCounterpartyPresent = Boolean(financial.customerCharacterId && financial.customerCharacterRole);
+  const finCounterpartyChanged =
+    !previousFinancial ||
+    previousFinancial.customerCharacterId !== financial.customerCharacterId ||
+    previousFinancial.customerCharacterRole !== financial.customerCharacterRole;
+  if (finCounterpartyPresent && finCounterpartyChanged) {
+    await ensureCounterpartyRoleDatastore(financial.customerCharacterId, financial.customerCharacterRole);
   }
 
   // Lean identity fields changed — cascade patch ALL log entries across ALL months and events

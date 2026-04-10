@@ -1,4 +1,5 @@
 import { ClientAPI } from '@/lib/client-api';
+import { getCharacterById, upsertCharacter } from '@/data-store/datastore';
 import { CharacterRole } from '@/types/enums';
 
 const normalizeRole = (value: string): string => value.trim().toLowerCase();
@@ -58,6 +59,44 @@ export const ensureCounterpartyRole = async (
     });
   } catch (error) {
     console.error(`Failed to assign ${role} role to character ${characterId}:`, error);
+  }
+};
+
+export const ensureCharacterHasRoleDatastore = async (
+  characterId: string,
+  role: CharacterRole,
+  options: EnsureCharacterRoleOptions = {}
+): Promise<void> => {
+  const character = await getCharacterById(characterId);
+  if (!character) return;
+
+  const currentRoles = character.roles || [];
+  if (hasRole(currentRoles, role)) return;
+
+  if (hasAnyRoleFromSet(currentRoles, options.skipIfCharacterHasAnyOfRoles || [])) {
+    return;
+  }
+
+  const nextRoles = Array.from(new Set([...currentRoles, role])) as CharacterRole[];
+
+  await upsertCharacter({
+    ...character,
+    roles: nextRoles,
+  });
+};
+
+export const ensureCounterpartyRoleDatastore = async (
+  characterId: string | null | undefined,
+  role: CharacterRole | null | undefined
+): Promise<void> => {
+  if (!characterId || !role) return;
+  const skipRoles = role === CharacterRole.BENEFICIARY ? BENEFICIARY_ROLE_EXEMPT_ROLES : [];
+  try {
+    await ensureCharacterHasRoleDatastore(characterId, role, {
+      skipIfCharacterHasAnyOfRoles: skipRoles,
+    });
+  } catch (error) {
+    console.error(`Failed to assign ${role} role to character ${characterId} (datastore):`, error);
   }
 };
 

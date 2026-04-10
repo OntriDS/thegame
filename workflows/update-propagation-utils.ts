@@ -688,7 +688,9 @@ export function hasFinancialPropsChanged(newEntity: any, oldEntity: any): boolea
     newEntity.isNotPaid !== oldEntity.isNotPaid ||
     newEntity.isNotCharged !== oldEntity.isNotCharged ||
     newEntity.name !== oldEntity.name ||
-    newEntity.station !== oldEntity.station
+    newEntity.station !== oldEntity.station ||
+    newEntity.customerCharacterId !== oldEntity.customerCharacterId ||
+    newEntity.customerCharacterRole !== oldEntity.customerCharacterRole
   );
 }
 
