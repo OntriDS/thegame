@@ -950,17 +950,23 @@ export default function ControlRoom() {
           }
           onSave={async (task) => {
             // Parent only calls DataStore - Adapter processes through Link Connector automatically
-            const finalTask = await ClientAPI.upsertTask(task);
+            try {
+              const finalTask = await ClientAPI.upsertTask(task);
 
-            // Update taskToEdit with fresh data BEFORE modal closes (fixes stale UI issue)
-            setTaskToEdit(finalTask);
+              // Update taskToEdit with fresh data BEFORE modal closes (fixes stale UI issue)
+              setTaskToEdit(finalTask);
 
-            await loadTasks();
+              await loadTasks();
 
-            // If editing a selected task, update the selected node
-            if (selectedNode && selectedNode.task.id === finalTask.id) {
-              const updatedNode = { ...selectedNode, task: finalTask };
-              setSelectedNode(updatedNode);
+              // If editing a selected task, update the selected node
+              if (selectedNode && selectedNode.task.id === finalTask.id) {
+                const updatedNode = { ...selectedNode, task: finalTask };
+                setSelectedNode(updatedNode);
+              }
+            } catch (error) {
+              // Keep modal close UX: mission/recurrent modals only call onOpenChange after onSave resolves.
+              // Log server failures here; without this, a failed POST leaves the dialog stuck open.
+              console.error('[ControlRoom] Failed to save task:', error);
             }
 
             // Financial records, items, and points will be created automatically when task status changes to "Done"

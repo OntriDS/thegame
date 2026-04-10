@@ -394,8 +394,11 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
   const wasArchived = previousTask && (previousTask.status === TaskStatus.DONE || previousTask.status === TaskStatus.COLLECTED);
 
   const getTaskArchiveMonth = (t: Task) => {
-    const date = t.status === TaskStatus.COLLECTED ? (t.collectedAt || t.doneAt || t.createdAt) : (t.doneAt || t.createdAt);
-    return date ? formatMonthKey(endOfMonthUTC(date)) : null;
+    const raw = t.status === TaskStatus.COLLECTED ? (t.collectedAt || t.doneAt || t.createdAt) : (t.doneAt || t.createdAt);
+    if (raw == null) return null;
+    // POST /api/tasks JSON has ISO strings; KV may revive Dates — endOfMonthUTC requires a Date
+    const date = raw instanceof Date ? raw : parseDateToUTC(raw as string | number);
+    return formatMonthKey(endOfMonthUTC(date));
   };
 
   const newMonth = isNowArchived ? getTaskArchiveMonth(task) : null;
@@ -497,7 +500,9 @@ export async function removeTaskLogEntriesOnDelete(task: Task): Promise<void> {
         if (!snapshotDate && task.createdAt) snapshotDate = task.createdAt;
 
         if (snapshotDate) {
-          const snapshotMonth = endOfMonthUTC(snapshotDate);
+          const d =
+            snapshotDate instanceof Date ? snapshotDate : parseDateToUTC(snapshotDate as string | number);
+          const snapshotMonth = endOfMonthUTC(d);
           const monthKey = formatMonthKey(snapshotMonth);
           await kvSRem(buildArchiveCollectionIndexKey('tasks', monthKey), task.id);
         }
@@ -606,7 +611,9 @@ export async function uncompleteTask(taskId: string): Promise<void> {
     await clearEffect(EffectKeys.sideEffect('task', taskId, 'pointsRewarded')); // Clear the new effect key
     // 3.5 Remove from archive index & clear snapshot effect
     try {
-      let snapshotDate = task.doneAt || task.collectedAt || task.createdAt || getUTCNow();
+      const snapshotRaw = task.doneAt || task.collectedAt || task.createdAt || getUTCNow();
+      const snapshotDate =
+        snapshotRaw instanceof Date ? snapshotRaw : parseDateToUTC(snapshotRaw as string | number);
       const snapshotMonth = endOfMonthUTC(snapshotDate);
       const monthKey = formatMonthKey(snapshotMonth);
 
