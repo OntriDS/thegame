@@ -758,6 +758,7 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
     const split = await calculateBoothFinancials(sale);
     const derived = await resolveSaleDerivedFinrecFields(sale);
     const boothTitleBase = composeSaleSourcedFinrecName(sale, derived.siteLabel, split.date);
+    const partnerPayoutRecordName = `${boothTitleBase} • Partner`;
 
     // [IDEMPOTENCY CHECK] Load existing records linked to this sale
     const existingRecords = await getFinancialsBySourceSaleId(sale.id);
@@ -815,7 +816,7 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
       const payoutData: FinancialRecord = {
         ...(payoutRecord || {}),
         id: payoutRecordId,
-        name: `${boothTitleBase} • Partner`,
+        name: partnerPayoutRecordName,
         description: `Impact Ledger: Commission split with partner`,
         year: split.date.getFullYear(),
         month: split.date.getMonth() + 1,
@@ -858,10 +859,11 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
       // If was there but no longer has impact, zero it
       const zeroedPayout = { 
         ...payoutRecord, 
+        name: partnerPayoutRecordName,
+        description: 'No contract impact for this revision',
         revenue: 0, 
         cost: 0, 
         netCashflow: 0, 
-        description: 'No contract impact for this revision', 
         status: FinancialStatus.DONE,
         updatedAt: getUTCNow() 
       };

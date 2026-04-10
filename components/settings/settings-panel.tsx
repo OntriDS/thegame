@@ -252,6 +252,35 @@ export function SettingsPanel({ onStatusUpdate }: SettingsPanelProps) {
     }
   };
 
+  const handleRunPartnerMigrationImmediate = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'migrate-associate-to-partner',
+          parameters: { dryRun: false }
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        const extraDetails = Array.isArray(result.data?.results) ? ` — ${result.data.results.join(' | ')}` : '';
+        updateStatus(`✅ ${result.message}${extraDetails}`);
+      } else {
+        const errorDetails = Array.isArray(result.data?.errors) ? ` — ${result.data.errors.slice(0, 3).join(' | ')}` : '';
+        updateStatus(`❌ ${result.message}${errorDetails}`, true);
+      }
+    } catch (error) {
+      updateStatus('❌ Failed to run associate-to-partner migration. Please try again.', true);
+    } finally {
+      setIsLoading(false);
+      setPartnerMigrationConfirmed(false);
+    }
+  };
+
   const handleRunPartnerMigrationDryRun = () => {
     void handleRunPartnerMigration(true);
   };
@@ -417,6 +446,15 @@ export function SettingsPanel({ onStatusUpdate }: SettingsPanelProps) {
         <div className="border-t pt-4">
           <h4 className="font-medium text-sm mb-3">Role Migration</h4>
           <div className="flex flex-wrap gap-2">
+            <Button
+              onClick={() => void handleRunPartnerMigrationImmediate()}
+              variant="outline"
+              disabled={isLoading}
+            >
+              <PlayCircle className="h-4 w-4 mr-2" />
+              Run Associate→Partner Migration (Fix logs)
+            </Button>
+
             <Button
               onClick={handleRunPartnerMigrationDryRun}
               variant="outline"
