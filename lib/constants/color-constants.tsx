@@ -110,16 +110,17 @@ export const TASK_STATUS_BADGE_COLORS = {
 } as const;
 
 /** Role Colors - for character role badges */
-// Define colors once
-const SPECIAL_ROLE_FOUNDER = 'border-purple-600 bg-purple-600 text-white hover:bg-purple-700 dark:bg-purple-500 dark:text-white dark:hover:bg-purple-600';
-const SPECIAL_ROLE_PLAYER = 'border-primary bg-primary text-white hover:bg-primary/90 dark:bg-primary dark:text-white dark:hover:bg-primary/90';
-const SPECIAL_ROLE_TEAM = 'border-green-600 bg-green-600 text-white hover:bg-green-700 dark:bg-green-500 dark:text-white dark:hover:bg-green-600';
-const SPECIAL_ROLE_INVESTOR = 'border-yellow-500 bg-yellow-500 text-white hover:bg-yellow-900 dark:bg-yellow-800 dark:text-white dark:hover:bg-yellow-600';
-const SPECIAL_ROLE_APPRENTICE = 'border-teal-500 bg-teal-500 text-white hover:bg-teal-700 dark:bg-teal-800 dark:text-white dark:hover:bg-teal-600';
-const SPECIAL_ROLE_FAMILY = 'border-pink-500 bg-pink-500 text-white hover:bg-pink-700 dark:bg-pink-800 dark:text-white dark:hover:bg-pink-600';
-const SPECIAL_ROLE_FRIEND = 'border-stone-500 bg-stone-500 text-white hover:bg-stone-700 dark:bg-stone-800 dark:text-white dark:hover:bg-stone-600';
-const SPECIAL_ROLE_BENEFICIARY = 'border-cyan-500 bg-cyan-500 text-white hover:bg-cyan-700 dark:bg-cyan-800 dark:text-white dark:hover:bg-cyan-600';
-const SPECIAL_ROLE_CUSTOMER = 'border-emerald-500 bg-emerald-500 text-white hover:bg-emerald-700 dark:bg-emerald-800 dark:text-white dark:hover:bg-emerald-600';
+// Founder: Deep Purple - Ultimate Authority, Structure
+const SPECIAL_ROLE_FOUNDER = 'border-purple-900 bg-purple-900 text-white hover:bg-purple-800 dark:bg-purple-800 dark:text-white dark:hover:bg-purple-700';
+const SPECIAL_ROLE_PLAYER = 'border-cyan-600 bg-cyan-600 text-white hover:bg-cyan-700 dark:bg-cyan-500 dark:text-white dark:hover:bg-cyan-600';
+const SPECIAL_ROLE_APPRENTICE = 'border-orange-600 bg-orange-600 text-white hover:bg-orange-700 dark:bg-orange-500 dark:text-white dark:hover:bg-orange-600';
+const SPECIAL_ROLE_TEAM = 'border-teal-600 bg-teal-600 text-white hover:bg-teal-700 dark:bg-teal-500 dark:text-white dark:hover:bg-teal-600';
+const SPECIAL_ROLE_FAMILY = 'border-pink-600 bg-pink-600 text-white hover:bg-pink-700 dark:bg-pink-500 dark:text-white dark:hover:bg-pink-600';
+const SPECIAL_ROLE_INVESTOR = 'border-yellow-500 bg-yellow-500 text-black hover:bg-yellow-600 dark:bg-yellow-400 dark:text-black dark:hover:bg-yellow-500';
+const SPECIAL_ROLE_PARTNER = 'border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-500 dark:text-white dark:hover:bg-emerald-600';
+const SPECIAL_ROLE_AI_AGENT = 'border-lime-600 bg-lime-600 text-white hover:bg-lime-700 dark:bg-lime-500 dark:text-black dark:hover:bg-lime-600';
+const SPECIAL_ROLE_CUSTOMER = 'border-amber-500 bg-amber-0 text-black hover:bg-amber-600 dark:bg-amber-0 dark:text-white dark:hover:bg-amber-500';
+const SPECIAL_ROLE_BENEFICIARY = 'border-rose-600 bg-rose-600 text-white hover:bg-rose-700 dark:bg-rose-500 dark:text-white dark:hover:bg-rose-600';
 const REGULAR_ROLE_DEFAULT = 'border-gray-400 bg-gray-100 text-white dark:bg-gray-700 dark:text-white';
 
 export const ROLE_COLORS = {
@@ -130,7 +131,8 @@ export const ROLE_COLORS = {
   TEAM: SPECIAL_ROLE_TEAM,
   INVESTOR: SPECIAL_ROLE_INVESTOR,
   FAMILY: SPECIAL_ROLE_FAMILY,
-  FRIEND: SPECIAL_ROLE_FRIEND,
+  PARTNER: SPECIAL_ROLE_PARTNER,
+  AI_AGENT: SPECIAL_ROLE_AI_AGENT,
   CUSTOMER: SPECIAL_ROLE_CUSTOMER,
   BENEFICIARY: SPECIAL_ROLE_BENEFICIARY,
   // Regular Roles - all use the same neutral styling
@@ -140,10 +142,12 @@ export const ROLE_COLORS = {
   SELLER: REGULAR_ROLE_DEFAULT,
   RESEARCHER: REGULAR_ROLE_DEFAULT,
   DEVELOPER: REGULAR_ROLE_DEFAULT,
-  AI_AGENT: REGULAR_ROLE_DEFAULT,
   ASSOCIATE: REGULAR_ROLE_DEFAULT,
   COLLABORATOR: REGULAR_ROLE_DEFAULT,
+  BOSS: REGULAR_ROLE_DEFAULT,
+  ASSISTANT: REGULAR_ROLE_DEFAULT,
   STUDENT: REGULAR_ROLE_DEFAULT,
+  FRIEND: REGULAR_ROLE_DEFAULT,
   OTHER: REGULAR_ROLE_DEFAULT,
 } as const;
 

@@ -13,8 +13,10 @@ import NumericInput from '@/components/ui/numeric-input';
 import type { Character } from '@/types/entities';
 import { CharacterRole, CHARACTER_ROLE_TYPES, EntityType, FOUNDER_CHARACTER_ID, LinkType } from '@/types/enums';
 import { ROLE_COLORS } from '@/lib/constants/color-constants';
+import { normalizeCharacterRoles } from '@/lib/character-roles';
 import { useTheme } from '@/lib/hooks/use-theme';
 import { ROLE_BEHAVIORS, canViewAccountInfo } from '@/lib/game-mechanics/roles-rules';
+import { useAuth } from '@/lib/hooks/use-auth';
 import { Network, Info, Trash2, Package, MapPin, Building2 } from 'lucide-react';
 import { ClientAPI } from '@/lib/client-api';
 import { dispatchEntityUpdated, entityTypeToKind } from '@/lib/ui/ui-events';
@@ -43,6 +45,9 @@ interface CharacterModalProps {
  * Character management (Roles, Contact Info, CP, Achievements)
  */
 export default function CharacterModal({ character, open, onOpenChange, onSave }: CharacterModalProps) {
+  // Get current user authentication
+  const { user: currentUser } = useAuth();
+
   // Identity
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -118,7 +123,7 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
           }
 
           setDescription(character?.description || '');
-          setRoles(character?.roles || []);
+          setRoles(normalizeCharacterRoles(character?.roles || []));
           setPurchasedAmount(character?.purchasedAmount ?? 0);
           setCP(character?.CP);
           setAchievementsCharacter(character?.achievementsCharacter || []);
@@ -174,9 +179,11 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
   // Check if editing Player One (Founder)
   const isPlayerOne = character?.id === FOUNDER_CHARACTER_ID || character?.playerId === FOUNDER_CHARACTER_ID;
 
-  // For new characters, also show SpecialFields (they should be able to assign special roles)
-  // Also show if character already has special roles
-  const shouldShowSpecialFields = isPlayerOne || !character || roles.some(role => specialRolesList.includes(role));
+  // Check if current user is a Founder
+  const currentUserIsFounder = currentUser?.roles?.includes(CharacterRole.FOUNDER);
+
+  // ALWAYS show special fields for FOUNDER - they can assign any role to any character
+  const shouldShowSpecialFields = currentUserIsFounder || isPlayerOne || !character || roles.some(role => specialRolesList.includes(role));
 
   // Identity fields follow IAM when this DS character is linked (`accountId`), regardless of PLAYER badge on roles
   const identityManagedByAccount = !!character?.accountId;
@@ -189,7 +196,9 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
     if (!isActive) return ''; // No special styling for inactive roles
 
     // Convert role to uppercase to match ROLE_COLORS keys
-    const roleKey = role.toUpperCase() as keyof typeof ROLE_COLORS;
+    const roleKey = role
+      .toUpperCase()
+      .replace(/-/g, '_') as keyof typeof ROLE_COLORS;
     const colorClass = ROLE_COLORS[roleKey] || ROLE_COLORS.CUSTOMER;
 
     // Return appropriate color based on dark mode
@@ -378,7 +387,7 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
                 <div className="space-y-1">
                   <div className="grid grid-cols-5 gap-1">
                     {regularRoles.map(role => {
-                      const isActive = roles.includes(role);
+                      const isActive = roles.some(r => String(r) === String(role));
                       return (
                         <button
                           key={role}
@@ -402,12 +411,14 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
                     <Label className="text-xs">Special Roles</Label>
                     <div className="grid grid-cols-4 gap-1">
                       {specialRolesList.map(role => {
-                        const hasRole = roles.includes(role);
+                        const hasRole = roles.some(r => String(r) === String(role));
                         const behavior = ROLE_BEHAVIORS[role as keyof typeof ROLE_BEHAVIORS];
 
                         if (!behavior) return null;
-                        if (behavior.hideIfNotAssigned && !hasRole) return null;
-                        const isDisplayOnly = behavior.isDisplayOnly;
+                        // ALWAYS show all roles for Founder
+                        if (behavior.hideIfNotAssigned && !hasRole && !currentUserIsFounder) return null;
+                        // Founder can toggle all roles
+                        const isDisplayOnly = behavior.isDisplayOnly && !currentUserIsFounder;
 
                         return (
                           <button

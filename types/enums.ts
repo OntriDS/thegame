@@ -458,7 +458,8 @@ export enum CharacterRole {
   BOSS = 'Boss',
   ASSISTANT = 'Assistant',
   COLLABORATOR = 'Collaborator',
-  STUDENT = 'Student'
+  STUDENT = 'Student',
+  FRIEND = 'Friend'
 }
 
 /** Character role types for UI organization and permissions */
@@ -473,7 +474,8 @@ export const CHARACTER_ROLE_TYPES = {
     CharacterRole.COLLABORATOR,
     CharacterRole.BOSS,
     CharacterRole.ASSISTANT,
-    CharacterRole.STUDENT
+    CharacterRole.STUDENT,
+    CharacterRole.FRIEND
   ],
   SPECIAL: [
     CharacterRole.FOUNDER,
@@ -485,8 +487,8 @@ export const CHARACTER_ROLE_TYPES = {
     CharacterRole.ASSOCIATE,
     CharacterRole.PARTNER,
     CharacterRole.AI_AGENT,
-  CharacterRole.CUSTOMER,
-  CharacterRole.BENEFICIARY
+    CharacterRole.CUSTOMER,
+    CharacterRole.BENEFICIARY
   ]
 } as const;
 

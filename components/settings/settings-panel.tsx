@@ -13,6 +13,7 @@ import {
   Download, 
   Upload, 
   RefreshCw,
+  Shuffle,
   AlertTriangle,
   CheckCircle,
   XCircle
@@ -44,6 +45,8 @@ export function SettingsPanel({ onStatusUpdate }: SettingsPanelProps) {
   const [clearCacheConfirmed, setClearCacheConfirmed] = useState(false);
   const [showBackfillModal, setShowBackfillModal] = useState(false);
   const [backfillConfirmed, setBackfillConfirmed] = useState(false);
+  const [showNormalizeRolesModal, setShowNormalizeRolesModal] = useState(false);
+  const [normalizeRolesConfirmed, setNormalizeRolesConfirmed] = useState(false);
 
   const updateStatus = (message: string, isError: boolean = false) => {
     setStatus(message);
@@ -212,6 +215,58 @@ export function SettingsPanel({ onStatusUpdate }: SettingsPanelProps) {
     }
   };
 
+  const handleCharacterRolesDryRun = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/admin/migrations/characters/normalize-roles?dryRun=true', {
+        method: 'POST',
+        credentials: 'include'
+      });
+      const result = await response.json();
+
+      if (response.ok) {
+        updateStatus(
+          `✅ Role normalization dry run: scanned ${result.scanned}, rewritten ${result.rewritten}.`
+        );
+      } else {
+        updateStatus(`❌ Role normalization dry run failed`, true);
+      }
+    } catch (error) {
+      updateStatus('❌ Failed to run role normalization dry run.', true);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCharacterRolesApply = async () => {
+    setShowNormalizeRolesModal(false);
+    setNormalizeRolesConfirmed(false);
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/admin/migrations/characters/normalize-roles', {
+        method: 'POST',
+        credentials: 'include'
+      });
+      const result = await response.json();
+
+      if (response.ok) {
+        updateStatus(
+          `✅ Role normalization applied: scanned ${result.scanned}, rewritten ${result.rewritten}.`
+        );
+      } else {
+        updateStatus(`❌ Role normalization failed`, true);
+      }
+    } catch (error) {
+      updateStatus('❌ Failed to apply role normalization.', true);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const openNormalizeRolesApplyModal = () => {
+    setShowNormalizeRolesModal(true);
+  };
+
   const handleExportData = async () => {
     setIsLoading(true);
     
@@ -365,6 +420,16 @@ export function SettingsPanel({ onStatusUpdate }: SettingsPanelProps) {
             <Button onClick={handleBackfillLogs} variant="outline" disabled={isLoading}>
               <Database className="h-4 w-4 mr-2" />
               Backfill Logs
+            </Button>
+
+            <Button onClick={handleCharacterRolesDryRun} variant="outline" disabled={isLoading}>
+              <Shuffle className="h-4 w-4 mr-2" />
+              Normalize Roles (Dry Run)
+            </Button>
+
+            <Button onClick={openNormalizeRolesApplyModal} variant="outline" disabled={isLoading}>
+              <Shuffle className="h-4 w-4 mr-2" />
+              Normalize Roles (Apply)
             </Button>
             
           </div>
@@ -525,6 +590,43 @@ export function SettingsPanel({ onStatusUpdate }: SettingsPanelProps) {
                 className="bg-green-600 hover:bg-green-700"
               >
                 Backfill Logs
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={showNormalizeRolesModal} onOpenChange={setShowNormalizeRolesModal}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-blue-500" />
+                Normalize Character Roles
+              </DialogTitle>
+              <DialogDescription>
+                This will rewrite every character's stored roles to canonical enum values.
+                This is a one-time migration and affects all character records.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="normalize-roles-confirm" 
+                checked={normalizeRolesConfirmed}
+                onCheckedChange={(checked) => setNormalizeRolesConfirmed(checked === true)}
+              />
+              <Label htmlFor="normalize-roles-confirm">
+                I understand this will rewrite stored character role data
+              </Label>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowNormalizeRolesModal(false)}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleCharacterRolesApply} 
+                disabled={!normalizeRolesConfirmed}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                Normalize Roles
               </Button>
             </DialogFooter>
           </DialogContent>

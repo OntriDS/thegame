@@ -4,6 +4,7 @@ import { kvSMembers } from '@/data-store/kv';
 import { IAM_ACCOUNTS_INDEX } from '@/lib/keys';
 import { getAllCharacters } from '@/data-store/repositories/character.repo';
 import { getAllPlayers } from '@/data-store/repositories/player.repo';
+import { CharacterRole } from '@/types/enums';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,7 +24,7 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ error: 'Unauthorized: Session invalid or expired' }, { status: 401 });
       }
 
-      const hasPermission = user.roles.includes('founder' as any) || user.roles.includes('admin' as any);
+      const hasPermission = user.roles.includes(CharacterRole.FOUNDER);
       if (!hasPermission) {
         return NextResponse.json({ error: 'Unauthorized: Insufficient permissions' }, { status: 401 });
       }

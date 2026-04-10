@@ -1,5 +1,6 @@
 import { NextResponse, NextRequest } from 'next/server';
-import { iamService, CharacterRole } from '@/lib/iam-service';
+import { iamService } from '@/lib/iam-service';
+import { CharacterRole } from '@/types/enums';
 
 /**
  * M2M Registration API Route (Admin Only)
@@ -17,7 +18,7 @@ export async function POST(req: NextRequest) {
       const token = req.cookies.get('admin_session')?.value || req.cookies.get('auth_session')?.value;
       const user = token ? await iamService.verifyJWT(token) : null;
       
-      if (user && (user.roles.includes('founder' as any) || user.roles.includes('admin' as any))) {
+      if (user && user.roles.includes(CharacterRole.FOUNDER)) {
         isAuthorized = true;
       }
     }

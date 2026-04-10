@@ -3,6 +3,7 @@ import { kvGet, kvMGet, kvSet, kvDel, kvSAdd, kvSRem, kvSMembers } from '../kv';
 import { buildDataKey, buildIndexKey } from '../keys';
 import { EntityType } from '@/types/enums';
 import type { Character, Business } from '@/types/entities';
+import { normalizeCharacterRoles } from '@/lib/character-roles';
 
 const ENTITY = EntityType.CHARACTER;
 const LEGAL_ENTITY = EntityType.BUSINESS; // Business Entity constant
@@ -18,22 +19,36 @@ export async function getAllCharacters(): Promise<Character[]> {
 
   const keys = ids.map(id => buildDataKey(ENTITY, id));
   const characters = await kvMGet<Character>(keys);
-  return characters.filter((character): character is Character => character !== null && character !== undefined);
+  return characters
+    .filter((character): character is Character => character !== null && character !== undefined)
+    .map((character) => ({
+      ...character,
+      roles: normalizeCharacterRoles(character.roles),
+    }));
 }
 
 export async function getCharacterById(id: string): Promise<Character | null> {
   const key = buildDataKey(ENTITY, id);
-  return await kvGet<Character>(key);
+  const character = await kvGet<Character>(key);
+  if (!character) return null;
+  return {
+    ...character,
+    roles: normalizeCharacterRoles(character.roles),
+  };
 }
 
 export async function upsertCharacter(character: Character): Promise<Character> {
+  const normalizedCharacter = {
+    ...character,
+    roles: normalizeCharacterRoles(character.roles),
+  };
   const key = buildDataKey(ENTITY, character.id);
   const indexKey = buildIndexKey(ENTITY);
 
-  await kvSet(key, character);
+  await kvSet(key, normalizedCharacter);
   await kvSAdd(indexKey, character.id);
 
-  return character;
+  return normalizedCharacter;
 }
 
 export async function deleteCharacter(id: string): Promise<void> {

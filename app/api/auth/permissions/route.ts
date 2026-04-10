@@ -5,8 +5,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { iamService } from '@/lib/iam-service';
 import { PermissionsResponse } from '@/types/auth-types';
+import { CharacterRole } from '@/types/enums';
 
 export const dynamic = 'force-dynamic';
+
+type PermissionsPayload = {
+  permissions: {
+    isFounder: boolean;
+    roles: string[];
+  };
+};
 
 export async function GET(request: NextRequest) {
   try {
@@ -32,9 +40,9 @@ export async function GET(request: NextRequest) {
     // ✅ Get permissions for user using centralized IAM logic
     const permissions = iamService.getPermissions(user);
     
-    return NextResponse.json({ 
+    return NextResponse.json<PermissionsPayload>({ 
       permissions: {
-        isAdmin: permissions.hasRole('founder') || permissions.hasRole('admin'),
+        isFounder: permissions.hasRole(CharacterRole.FOUNDER),
         roles: user.roles
       }
     });

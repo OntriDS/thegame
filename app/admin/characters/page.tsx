@@ -150,7 +150,9 @@ function CharactersPageContent() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredCharacters.map((character) => {
                 const getRoleColor = (role: CharacterRole): string => {
-                  const roleKey = role.toUpperCase() as keyof typeof ROLE_COLORS;
+                  const roleKey = role
+                    .toUpperCase()
+                    .replace(/-/g, '_') as keyof typeof ROLE_COLORS;
                   return ROLE_COLORS[roleKey] || ROLE_COLORS.CUSTOMER;
                 };
 

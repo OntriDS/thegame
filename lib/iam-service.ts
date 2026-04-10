@@ -678,10 +678,12 @@ export class IAMService {
       }
 
       if (data.roles && Array.isArray(data.roles)) {
-        const validRoles = Object.values(CharacterRole) as string[];
-        data.roles = data.roles
-          .map((r: string) => r.toLowerCase())
-          .filter((r: string) => validRoles.includes(r));
+        const validRoles = new Set<CharacterRole>(Object.values(CharacterRole) as CharacterRole[]);
+        const rawRoles = data.roles as unknown[];
+        const normalizedRoles = rawRoles
+          .map((r: unknown): string => String(r).trim())
+          .filter((r: string): r is CharacterRole => validRoles.has(r as CharacterRole));
+        data.roles = normalizedRoles;
       }
 
       return data as unknown as AuthUser;

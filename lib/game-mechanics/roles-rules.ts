@@ -70,12 +70,6 @@ export const ROLE_BEHAVIORS = {
     isDisplayOnly: false,     // Can be freely toggled
     requiresJungleCoins: false,
   },
-  [CharacterRole.BOSS]: {
-    isImmutable: false,
-    hideIfNotAssigned: false,
-    isDisplayOnly: false,     // Can be freely toggled
-    requiresJungleCoins: false,
-  },
   [CharacterRole.PARTNER]: {
     isImmutable: false,
     hideIfNotAssigned: false,
@@ -121,7 +115,7 @@ export const ROLE_BENEFITS = {
       "Can manage in-game currency, points and game-mechanics",
       "Can view Account entity details from Character Modal"
     ],
-    requirements: ["Must be Player One"]
+    requirements: ["Must be Set by Founder"]
   },
   [CharacterRole.CUSTOMER]: {
     description: "Opens purchase tracking & customer analytics",
@@ -132,7 +126,7 @@ export const ROLE_BENEFITS = {
       // "Can login to the customer portal", // In Ideation
       "Open a J$ In-game wallet" // Zaps-BJ wallet is in Ideation
     ],
-    requirements: ["Make a purchase or get Created by Founder or Team Roles"]
+    requirements: ["Make a purchase or get Created by Founder or Team character"]
   },
   [CharacterRole.BENEFICIARY]: {
     description: "Receives payouts and performance-based benefits from paid missions or sales",
@@ -165,16 +159,6 @@ export const ROLE_BENEFITS = {
       "Unlocks the Unique Family achievement (once get, achievement cant be removed)",
       "Immutable role (cannot be removed) in the Character Modal"
       // "Can login to the portal.space and interact with character", // In Ideation
-    ],
-    requirements: ["Only Founder can grant this role"]
-  },
-  [CharacterRole.BOSS]: {
-    description: "Boss role for business ownership and leadership",
-    benefits: [
-      "Can own and manage businesses",
-      "Leadership tracking and analytics",
-      "Can grant special permissions to team members",
-      "Access to business management features"
     ],
     requirements: ["Only Founder can grant this role"]
   },
@@ -214,9 +198,6 @@ export const BUSINESS_ROLES = [
   CharacterRole.SELLER,
   CharacterRole.RESEARCHER,
   CharacterRole.DEVELOPER,
-  CharacterRole.TEAM,
-  CharacterRole.AI_AGENT,
-  CharacterRole.ASSOCIATE,
   CharacterRole.COLLABORATOR
 ] as const;
 
@@ -269,10 +250,9 @@ export function getRoleBenefits(characterRoles: CharacterRole[]): string[] {
 
 /**
  * Check if character can view Account information
- * Only FOUNDER and ADMIN roles can view Account entity details
+ * Only FOUNDER role can view Account entity details
  */
 export function canViewAccountInfo(characterRoles: CharacterRole[]): boolean {
-  return characterRoles.includes(CharacterRole.FOUNDER) ||
-    characterRoles.includes(CharacterRole.ADMIN);
+  return characterRoles.includes(CharacterRole.FOUNDER);
 }
 

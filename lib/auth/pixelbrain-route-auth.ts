@@ -6,6 +6,7 @@
 import { NextRequest } from 'next/server';
 import { iamService } from '@/lib/iam-service';
 import { CharacterRole } from '@/types/enums';
+import { normalizeCharacterRole } from '@/lib/character-roles';
 
 export type PixelbrainRouteAuthResult =
   | { ok: true; user: NonNullable<Awaited<ReturnType<typeof iamService.verifyJWT>>> }
@@ -19,7 +20,10 @@ const ALLOWED_ROLES = new Set<string>([
 
 function hasAllowedRole(roles: string[] | undefined): boolean {
   if (!roles?.length) return false;
-  return roles.some((r) => ALLOWED_ROLES.has(String(r).toLowerCase()));
+  return roles.some((r) => {
+    const normalizedRole = normalizeCharacterRole(r);
+    return Boolean(normalizedRole && ALLOWED_ROLES.has(normalizedRole));
+  });
 }
 
 /**

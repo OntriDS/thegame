@@ -11,6 +11,7 @@ import type { Account } from '@/types/entities';
 import { User, Plus, Mail, Lock, Edit, Trash2, Shield } from 'lucide-react';
 import { CharacterRole } from '@/types/enums';
 import { AccountsDeepLinkTrigger } from '@/components/admin/admin-deep-link-triggers';
+import { normalizeCharacterRole } from '@/lib/character-roles';
 
 function AccountsPageContent() {
   const [showAccountModal, setShowAccountModal] = useState(false);
@@ -133,19 +134,22 @@ function AccountsPageContent() {
   }
 
   // Calculate role stats
+  const hasCharacterRole = (roles: string[] | undefined, role: CharacterRole) =>
+    roles?.some((r) => normalizeCharacterRole(r) === role) ?? false;
+
   const roleStats = {
-    founder: accounts.filter(a => 
-      a.character?.roles?.some(r => r.toLowerCase() === CharacterRole.FOUNDER)
+    founder: accounts.filter(a =>
+      hasCharacterRole(a.character?.roles, CharacterRole.FOUNDER)
     ).length,
-    team: accounts.filter(a => 
-      a.character?.roles?.some(r => r.toLowerCase() === CharacterRole.TEAM)
+    team: accounts.filter(a =>
+      hasCharacterRole(a.character?.roles, CharacterRole.TEAM)
     ).length,
-    agent: accounts.filter(a => 
+    agent: accounts.filter(a =>
       (a as any).type === 'm2m' || 
-      a.character?.roles?.some(r => r.toLowerCase() === CharacterRole.AI_AGENT)
+      hasCharacterRole(a.character?.roles, CharacterRole.AI_AGENT)
     ).length,
-    player: accounts.filter(a => 
-      a.character?.roles?.some(r => r.toLowerCase() === CharacterRole.PLAYER)
+    player: accounts.filter(a =>
+      hasCharacterRole(a.character?.roles, CharacterRole.PLAYER)
     ).length,
   };
 
