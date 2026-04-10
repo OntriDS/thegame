@@ -27,6 +27,7 @@ export interface SettingsResult {
     operation: string;
     environment: string;
     requiresClientExecution?: boolean;
+    summary?: Record<string, unknown>;
   };
 }
 

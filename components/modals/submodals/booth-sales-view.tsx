@@ -220,7 +220,7 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(fun
                 partnerId: line.metadata?.partnerId || line.metadata?.associateId || line.metadata?.customerCharacterId || legacyCounterpartyId || ''
             };
         });
-    }, [lines, sale?.partnerId, legacyCounterpartyId]);
+    }, [lines, legacyCounterpartyId]);
 
     // Delete Confirmation State
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
