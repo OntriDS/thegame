@@ -534,6 +534,8 @@ async function upsertPrimarySaleFinrecFromSale(
     isCollected: existing.isCollected,
     collectedAt: existing.collectedAt,
     updatedAt: now,
+    customerCharacterId: sale.customerId ?? null,
+    customerCharacterRole: sale.customerId ? CharacterRole.CUSTOMER : undefined,
   };
 
   const saved = await upsertFinancial(next, { forceSave: true });
@@ -695,6 +697,8 @@ export async function createFinancialRecordFromSale(sale: Sale): Promise<Financi
       createdAt: getUTCNow(),
       updatedAt: getUTCNow(),
       links: [],
+      customerCharacterId: sale.customerId ?? null,
+      customerCharacterRole: sale.customerId ? CharacterRole.CUSTOMER : undefined,
     };
 
     console.log(`[createFinancialRecordFromSale] Creating finrec:`, newFinrec);
@@ -778,7 +782,9 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
       isNotCharged: sale.isNotCharged || false,
       updatedAt: getUTCNow(),
       createdAt: incomeRecord?.createdAt || getUTCNow(),
-      links: incomeRecord?.links || []
+      links: incomeRecord?.links || [],
+      customerCharacterId: sale.customerId ?? null,
+      customerCharacterRole: sale.customerId ? CharacterRole.CUSTOMER : undefined,
     } as FinancialRecord;
 
     await upsertFinancial(incomeData, { forceSave: true });

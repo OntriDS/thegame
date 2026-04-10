@@ -30,7 +30,7 @@ import { formatMonthKey } from '@/lib/utils/date-display-utils';
 import { getUTCNow, endOfMonthUTC } from '@/lib/utils/utc-utils';
 import { buildArchiveCollectionIndexKey, buildArchiveMonthsKey } from '@/data-store/keys';
 import { recalculateCharacterWallet } from '../financial-record-utils';
-import { ensureCounterpartyRoleDatastore } from '@/lib/utils/character-role-sync';
+import { ensureCounterpartyRoleDatastore } from '@/lib/utils/character-role-sync-server';
 const STATE_FIELDS = ['isNotPaid', 'isNotCharged'];
 
 /**

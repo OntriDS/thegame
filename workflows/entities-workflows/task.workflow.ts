@@ -20,7 +20,7 @@ import { createItemFromTask, removeItemsCreatedByTask } from '../item-creation-u
 import { awardPointsToPlayer, removePointsFromPlayer, stagePointsForPlayer, rewardPointsToPlayer, withdrawStagedPointsFromPlayer, unrewardPointsForPlayer } from '../points-rewards-utils';
 import { createFinancialRecordFromTask, removeFinancialRecordsCreatedByTask } from '../financial-record-utils';
 import { createCharacterFromTask } from '../character-creation-utils';
-import { ensureCounterpartyRoleDatastore } from '@/lib/utils/character-role-sync';
+import { ensureCounterpartyRoleDatastore } from '@/lib/utils/character-role-sync-server';
 import { getCategoryForTaskType } from '@/lib/utils/searchable-select-utils';
 import { kvSRem } from '@/data-store/kv';
 
