@@ -333,7 +333,7 @@ export function createCharacterOptions(characters: Character[], includeNone = fa
 
         return {
             value: char.id,
-            label: `${char.name} (${char.roles.join(', ')})`,
+            label: char.name,
             group: primaryRole.charAt(0).toUpperCase() + primaryRole.slice(1),
             category: 'Persons'
         };

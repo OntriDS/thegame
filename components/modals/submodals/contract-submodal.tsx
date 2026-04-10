@@ -14,6 +14,7 @@ import { ContractStatus, ContractClauseType, LinkType, EntityType, CharacterRole
 import { v4 as uuid } from 'uuid';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ClientAPI } from '@/lib/client-api';
+import { ensureCharacterHasRole } from '@/lib/utils/character-role-sync';
 
 interface ContractSubmodalProps {
     open: boolean;
@@ -260,17 +261,9 @@ export function ContractSubmodal({
                 // Role Assignment
                 if (targetCharacterId) {
                     try {
-                        const character = await ClientAPI.getCharacterById(targetCharacterId);
-                        if (character) {
-                            const currentRoles = character.roles || [];
-                            const newRole = CharacterRole.PARTNER;
-                            if (!currentRoles.includes(newRole)) {
-                                const updatedRoles = [...currentRoles, newRole];
-                                await ClientAPI.upsertCharacter({ ...character, roles: updatedRoles });
-                            }
-                        }
+                        await ensureCharacterHasRole(targetCharacterId, CharacterRole.PARTNER);
                     } catch (err) {
-                        console.error("Failed to update character role", err);
+                        console.error('Failed to update character role', err);
                     }
                 }
             }

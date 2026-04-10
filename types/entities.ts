@@ -994,7 +994,7 @@ export interface Account extends BaseEntity {
 
   // LIFECYCLE
   lastActiveAt: Date;         // Last activity timestamp (any action in system)
-  character?: Character;      // 🏛️ AMBASSADOR FIELD (Associated character for UI convenience)
+  character?: Character;      // 🏛️ AMBASSADOR FIELD (Related character for UI convenience)
 
   // Links System inherited from BaseEntity
   // links: Link[] → ACCOUNT_PLAYER, ACCOUNT_CHARACTER, PLAYER_ACCOUNT, CHARACTER_ACCOUNT

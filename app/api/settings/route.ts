@@ -7,8 +7,7 @@ import {
   ClearCacheWorkflow,
   BackfillLogsWorkflow,
   ExportDataWorkflow,
-  ImportDataWorkflow,
-  MigrateAssociateToPartnerWorkflow,
+  ImportDataWorkflow
 } from '@/workflows/settings';
 
 // Force dynamic rendering since this route accesses request cookies for auth
@@ -78,21 +77,6 @@ export async function POST(request: NextRequest) {
           data: result.data
         }, { status: result.success ? 200 : 500 });
       }
-
-      case 'migrate-associate-to-partner': {
-        const dryRun = parameters?.dryRun !== false;
-        const includePendingFinancials = parameters?.includePendingFinancials === true;
-        const result = await MigrateAssociateToPartnerWorkflow.execute({
-          dryRun,
-          includePendingFinancials
-        });
-        return NextResponse.json({
-          success: result.success,
-          message: result.message,
-          data: result.data
-        }, { status: result.success ? 200 : 500 });
-      }
- 
 
       default:
         return NextResponse.json({ error: 'Unknown action' }, { status: 400 });

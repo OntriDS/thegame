@@ -96,10 +96,6 @@ interface PartnerQuickEntry {
     partnerId: string; // Linking to specific partner
 }
 
-type LegacySale = Sale & {
-    associateId?: string | null;
-};
-
 type SettlementRow = {
     id: string; // category name or item id
     label: string;
@@ -150,8 +146,6 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(fun
 
     // UI Toggles
     const [showItemPicker, setShowItemPicker] = useState(false);
-    const legacyCounterpartyId = ((sale as LegacySale | undefined)?.associateId) || '';
-
     // State for Single Contract (Global for this sale)
     const [selectedContractId, setSelectedContractId] = useState<string>(() => {
         return sale?.metadata?.boothSaleContext?.contractId || (sale as any)?.archiveMetadata?.boothSaleContext?.contractId || '';
@@ -172,8 +166,8 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(fun
         if ((sale as any)?.archiveMetadata?.boothSaleContext?.counterpartyBusinessId) {
             return (sale as any).archiveMetadata.boothSaleContext.counterpartyBusinessId;
         }
-        // 3. Fallback for VERY legacy sales (migrate Character ID to Business ID OR handle preexisting Business ID)
-        const charId = legacyCounterpartyId || sale?.partnerId || '';
+            // 3. Fallback for VERY legacy sales (migrate Character ID to Business ID OR handle preexisting Business ID)
+            const charId = sale?.partnerId || '';
         if (charId) {
             // First check if it's already a Business ID
             if (businesses.some(b => b.id === charId)) {
@@ -188,7 +182,7 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(fun
 
     // View Mode: 'Partner' | 'Off'
     const [viewMode, setViewMode] = useState<'Partner' | 'Off'>(() => {
-        if (sale?.partnerId || legacyCounterpartyId) return 'Partner';
+            if (sale?.partnerId) return 'Partner';
         return 'Off';
     });
 
@@ -197,9 +191,9 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(fun
         const serviceLines = lines.filter(l => {
             // Aggressive fallback for legacy records that might have lost their 'station' or 'kind' enumerations
             const isServiceOrItem = l.kind === 'service' || l.kind === 'item';
-            const hasPartnerStation = ['Booth-Sales', 'Partner-Sales', 'Partner Sales', 'Associate-Sales', 'Associate Sales'].includes((l as any).station as string);
-            const hasLegacyDescription = l.description?.includes('[Partner:') || l.description?.includes('[Associate:');
-            const hasPartnerVault = Boolean((l as any).metadata?.partnerId || (l as any).metadata?.associateId || (l as any).metadata?.customerCharacterId);
+            const hasPartnerStation = ['Booth-Sales', 'Partner-Sales', 'Partner Sales'].includes((l as any).station as string);
+            const hasLegacyDescription = l.description?.includes('[Partner:');
+            const hasPartnerVault = Boolean((l as any).metadata?.partnerId || (l as any).metadata?.customerCharacterId);
 
             return isServiceOrItem && (hasPartnerStation || hasLegacyDescription || hasPartnerVault);
         }) as ServiceLine[];
@@ -217,10 +211,10 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(fun
                 amountCRC: Number.isFinite(amountCRC) ? amountCRC : 0,
                 amountUSD: Number.isFinite(amountUSD) ? amountUSD : 0,
                 category: line.metadata?.category || categoryMatch || 'Other',
-                partnerId: line.metadata?.partnerId || line.metadata?.associateId || line.metadata?.customerCharacterId || legacyCounterpartyId || ''
+                partnerId: line.metadata?.partnerId || line.metadata?.customerCharacterId || ''
             };
         });
-    }, [lines, legacyCounterpartyId]);
+    }, [lines]);
 
     // Delete Confirmation State
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);

@@ -38,6 +38,7 @@ import { formatForDisplay, formatDayMonth } from '@/lib/utils/date-display-utils
 import { getUTCNow } from '@/lib/utils/utc-utils';
 import { TaskModalFooter } from './task-modal';
 import { dispatchEntityUpdated, entityTypeToKind } from '@/lib/ui/ui-events';
+import { ensureCounterpartyRole } from '@/lib/utils/character-role-sync';
 
 interface MissionTreeModalContentProps {
   task?: Task | null;
@@ -460,6 +461,7 @@ export default function MissionTreeModalContent({
     try {
       const newTask = buildTaskFromForm();
       await onSave(newTask);
+      await ensureCounterpartyRole(newTask.customerCharacterId, newTask.customerCharacterRole);
       dispatchEntityUpdated(entityTypeToKind(EntityType.TASK));
       onOpenChange(false);
     } catch (error) {

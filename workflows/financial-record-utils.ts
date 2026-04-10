@@ -368,10 +368,6 @@ export interface BoothFinancialSplit {
   targetEntityName: string;
 }
 
-type LegacySaleWithAssociate = Sale & {
-  associateId?: string | null;
-};
-
 /**
  * NEW: Calculate components for Performance Ledger split (Option C)
  */
@@ -380,7 +376,6 @@ export async function calculateBoothFinancials(sale: Sale): Promise<BoothFinanci
   const rates = await getFinancialConversionRates();
   const rate = rates?.colonesToUsd ?? DEFAULT_CURRENCY_EXCHANGE_RATES.colonesToUsd;
   const boothFeeUSD = boothFee / rate;
-  const legacyCounterpartyId = (sale as LegacySaleWithAssociate).associateId;
 
   const dateToUse = coerceSaleFinrecDate(sale, getUTCNow());
 
@@ -418,9 +413,7 @@ export async function calculateBoothFinancials(sale: Sale): Promise<BoothFinanci
 
     sale.lines.forEach(line => {
       // Determine if it's a Partner line from explicit partner/counterparty metadata
-      const linePartnerId = (line.metadata as any)?.partnerId
-        || (line.metadata as any)?.associateId
-        || (line.metadata as any)?.customerCharacterId;
+      const linePartnerId = (line.metadata as any)?.partnerId || (line.metadata as any)?.customerCharacterId;
       const isPartnerItem = !!(
         linePartnerId &&
         typeof linePartnerId === 'string' &&
@@ -442,7 +435,7 @@ export async function calculateBoothFinancials(sale: Sale): Promise<BoothFinanci
   const partnerCommFromMe = myItemsTotal * (1 - shareOfMyItems_Me);
 
   // Target Entity Resolution
-  let targetEntityId = sale.partnerId || legacyCounterpartyId || sale.customerId;
+  let targetEntityId = sale.partnerId || sale.customerId;
   let targetEntityName = 'Partner';
   if (targetEntityId) {
     const { getBusinessById } = await import('@/data-store/repositories/character.repo');
@@ -740,11 +733,6 @@ export async function calculatePartnerPayout(sale: Sale): Promise<number> {
   const payout = split.partnerCommFromMe - split.myCommFromPartner + partnerGross;
   return payout;
 }
-
-/**
- * Deprecated alias retained for compatibility with legacy call sites.
- */
-export const calculateAssociatePayout = calculatePartnerPayout;
 
 /**
  * Create/Update split financial records for Booth-Sales (Option C)

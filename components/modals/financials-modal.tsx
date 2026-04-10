@@ -47,6 +47,7 @@ import { getZIndexClass } from '@/lib/utils/z-index-utils';
 import { VALIDATION_CONSTANTS } from '@/lib/constants/financial-constants';
 import ConfirmationModal from './submodals/confirmation-submodal';
 import { MonthYearSelector } from '@/components/ui/month-year-selector';
+import { ensureCounterpartyRole } from '@/lib/utils/character-role-sync';
 
 
 // FinancialsModal: UI-only form for financial record data collection and validation
@@ -574,6 +575,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
     try {
       // Emit pure record entity - Links System handles all relationships automatically
       await onSave(recordData);
+      await ensureCounterpartyRole(recordData.customerCharacterId, recordData.customerCharacterRole);
 
       // Dispatch UI update events AFTER successful save
       dispatchEntityUpdated(entityTypeToKind(EntityType.FINANCIAL));

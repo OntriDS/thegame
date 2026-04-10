@@ -52,6 +52,7 @@ import PlayerCharacterSelectorModal from './submodals/player-character-selector-
 import { TaskModalFooter } from './task-modal';
 import { ClientAPI } from '@/lib/client-api';
 import { dispatchEntityUpdated, entityTypeToKind } from '@/lib/ui/ui-events';
+import { ensureCounterpartyRole } from '@/lib/utils/character-role-sync';
 
 interface RecurrentTreeModalContentProps {
   task?: Task | null;
@@ -500,6 +501,7 @@ export default function RecurrentTreeModalContent({
     try {
       const newTask = buildTaskFromForm();
       await onSave(newTask);
+      await ensureCounterpartyRole(newTask.customerCharacterId, newTask.customerCharacterRole);
       dispatchEntityUpdated(entityTypeToKind(EntityType.TASK));
       onOpenChange(false);
     } catch (error) {
@@ -515,6 +517,7 @@ export default function RecurrentTreeModalContent({
     try {
       const newTask = buildTaskFromForm(cascadeData.newStatus);
       await onSave(newTask);
+      await ensureCounterpartyRole(newTask.customerCharacterId, newTask.customerCharacterRole);
       dispatchEntityUpdated(entityTypeToKind(EntityType.TASK));
       onOpenChange(false);
     } catch (error) {
@@ -539,6 +542,7 @@ export default function RecurrentTreeModalContent({
         _skipCascade: true,
       } as Task & { _skipCascade?: boolean };
       await onSave(newTask as Task);
+      await ensureCounterpartyRole(newTask.customerCharacterId, newTask.customerCharacterRole);
       dispatchEntityUpdated(entityTypeToKind(EntityType.TASK));
       onOpenChange(false);
     } catch (error) {

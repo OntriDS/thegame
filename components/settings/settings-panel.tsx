@@ -13,7 +13,6 @@ import {
   Download, 
   Upload, 
   RefreshCw,
-  PlayCircle,
   AlertTriangle,
   CheckCircle,
   XCircle
@@ -43,8 +42,6 @@ export function SettingsPanel({ onStatusUpdate }: SettingsPanelProps) {
   const [clearCacheConfirmed, setClearCacheConfirmed] = useState(false);
   const [showBackfillModal, setShowBackfillModal] = useState(false);
   const [backfillConfirmed, setBackfillConfirmed] = useState(false);
-  const [showPartnerMigrationModal, setShowPartnerMigrationModal] = useState(false);
-  const [partnerMigrationConfirmed, setPartnerMigrationConfirmed] = useState(false);
 
   const updateStatus = (message: string, isError: boolean = false) => {
     setStatus(message);
@@ -213,57 +210,6 @@ export function SettingsPanel({ onStatusUpdate }: SettingsPanelProps) {
     }
   };
 
-  const handleRunPartnerMigration = async (
-    dryRun: boolean,
-    includePendingFinancials: boolean = false,
-    skipConfirmation: boolean = false
-  ) => {
-    if (!dryRun && !skipConfirmation && !partnerMigrationConfirmed) {
-      setShowPartnerMigrationModal(true);
-      return;
-    }
-
-    setShowPartnerMigrationModal(false);
-    if (!dryRun) {
-      setPartnerMigrationConfirmed(false);
-    }
-    setIsLoading(true);
-
-    try {
-      const response = await fetch('/api/settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'migrate-associate-to-partner',
-          parameters: { dryRun, includePendingFinancials }
-        })
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        const extraDetails = Array.isArray(result.data?.results) ? ` — ${result.data.results.join(' | ')}` : '';
-        updateStatus(`✅ ${result.message}${extraDetails}`);
-      } else {
-        const errorDetails = Array.isArray(result.data?.errors) ? ` — ${result.data.errors.slice(0, 3).join(' | ')}` : '';
-        updateStatus(`❌ ${result.message}${errorDetails}`, true);
-      }
-    } catch (error) {
-      updateStatus('❌ Failed to run associate-to-partner migration. Please try again.', true);
-    } finally {
-      setIsLoading(false);
-      setPartnerMigrationConfirmed(false);
-    }
-  };
-
-  const handleRunPartnerMigrationImmediate = () => {
-    void handleRunPartnerMigration(false, true, true);
-  };
-
-  const handleRunPartnerMigrationDryRun = () => {
-    void handleRunPartnerMigration(true, true);
-  };
-
   const handleExportData = async () => {
     setIsLoading(true);
     
@@ -418,40 +364,6 @@ export function SettingsPanel({ onStatusUpdate }: SettingsPanelProps) {
               <Database className="h-4 w-4 mr-2" />
               Backfill Logs
             </Button>
-          </div>
-        </div>
-
-        {/* Migration Section */}
-        <div className="border-t pt-4">
-          <h4 className="font-medium text-sm mb-3">Role Migration</h4>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              onClick={() => void handleRunPartnerMigrationImmediate()}
-              variant="outline"
-              disabled={isLoading}
-            >
-              <PlayCircle className="h-4 w-4 mr-2" />
-              Run Associate→Partner Migration (Fix logs)
-            </Button>
-
-            <Button
-              onClick={handleRunPartnerMigrationDryRun}
-              variant="outline"
-              disabled={isLoading}
-            >
-              <PlayCircle className="h-4 w-4 mr-2" />
-              Run Partner Migration (Dry Run)
-            </Button>
-
-            <Button
-              onClick={() => void handleRunPartnerMigration(false, true)}
-              className="bg-amber-600 hover:bg-amber-700 text-white"
-              disabled={isLoading}
-            >
-              <PlayCircle className="h-4 w-4 mr-2" />
-              Run Partner Migration
-            </Button>
-
           </div>
         </div>
 
@@ -610,44 +522,6 @@ export function SettingsPanel({ onStatusUpdate }: SettingsPanelProps) {
                 className="bg-green-600 hover:bg-green-700"
               >
                 Backfill Logs
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        <Dialog open={showPartnerMigrationModal} onOpenChange={setShowPartnerMigrationModal}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5 text-amber-500" />
-                Confirm Partner Migration
-              </DialogTitle>
-              <DialogDescription>
-                This will migrate historical Associate references into Partner fields and rewrite affected sales, financial records, characters, and contracts.
-                It also includes payout logs currently in pending state.
-                Run this only once unless you have a backup.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="partner-migration-confirm"
-                checked={partnerMigrationConfirmed}
-                onCheckedChange={(checked) => setPartnerMigrationConfirmed(checked === true)}
-              />
-              <Label htmlFor="partner-migration-confirm">
-                I understand this will update existing data in-place
-              </Label>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowPartnerMigrationModal(false)}>
-                Cancel
-              </Button>
-              <Button
-                onClick={() => void handleRunPartnerMigration(false, true)}
-                disabled={!partnerMigrationConfirmed}
-                className="bg-amber-600 hover:bg-amber-700 text-white"
-              >
-                Run Live Migration
               </Button>
             </DialogFooter>
           </DialogContent>

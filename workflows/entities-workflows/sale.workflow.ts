@@ -37,14 +37,6 @@ import { entityHasLogEvent } from '@/lib/utils/entity-log-scan';
 
 const STATE_FIELDS = ['status', 'isNotPaid', 'isNotCharged', 'isCollected', 'postedAt', 'doneAt', 'cancelledAt'];
 
-type LegacySale = Sale & {
-  associateId?: string | null;
-};
-
-function getLegacyCounterpartyId(sale: Sale): string | null | undefined {
-  return (sale as LegacySale).associateId;
-}
-
 function saleHasRewardPoints(sale: Sale): boolean {
   const p = sale.rewards?.points;
   if (!p) return false;
@@ -351,15 +343,12 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
     };
 
     const linesChanged = hasLinesChanged(sale, previousSale);
-    const legacyCounterpartyId = getLegacyCounterpartyId(sale);
-    const previousLegacyCounterpartyId = getLegacyCounterpartyId(previousSale);
     // Check if relevant financial drivers changed (Revenue, Fee, Counterparty, identity, period, etc)
     const hasFinancialDriversChanged =
       linesChanged ||
       hasRevenueChanged(sale, previousSale) ||
       hasCostChanged(sale, previousSale) ||
       sale.boothFee !== previousSale.boothFee ||
-      legacyCounterpartyId !== previousLegacyCounterpartyId ||
       sale.partnerId !== previousSale.partnerId ||
       sale.customerId !== previousSale.customerId ||
       sale.name !== previousSale.name ||

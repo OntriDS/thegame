@@ -43,6 +43,7 @@ import ConfirmationModal from './submodals/confirmation-submodal';
 import ArchiveCollectionConfirmationModal from './submodals/archive-collection-confirmation-submodal';
 import BoothSalesView, { type BoothSalesViewHandle } from './submodals/booth-sales-view';
 import DatesSubmodal from './submodals/dates-submodal';
+import { ensureCounterpartyRole } from '@/lib/utils/character-role-sync';
 
 /** Product lines only (legacy bundle rows normalized to item). */
 function collectItemSaleLines(saleLines: SaleLine[]): ItemSaleLine[] {
@@ -745,14 +746,15 @@ export default function SalesModal({
     setIsNameCustom(Boolean(sale.name?.trim()) && sale.name.trim() !== defaultName);
   }, [open, sale?.id, sale?.name, sale?.type, sale?.siteId, sale?.saleDate, sale?.doneAt, sale?.createdAt, sites]);
 
-  const handleSave = async (overrideSale?: Sale) => {
+  const handleSave = async (overrideSale?: Sale, force: boolean = false) => {
     if (isSaving) return;
 
     // Handle Override (e.g. from BoothSalesView)
     if (overrideSale) {
       setIsSaving(true);
       try {
-        await onSave(overrideSale);
+        await onSave(overrideSale, force);
+        await ensureCounterpartyRole(overrideSale.customerId, CharacterRole.CUSTOMER);
         // Dispatch events AFTER successful save
         dispatchEntityUpdated(entityTypeToKind(EntityType.SALE));
         onOpenChange(false);
@@ -1012,6 +1014,7 @@ export default function SalesModal({
     try {
       // Emit pure sale entity - Links System handles all relationships automatically
       await onSave(saleData);
+      await ensureCounterpartyRole(saleData.customerId, CharacterRole.CUSTOMER);
 
       // Dispatch events AFTER successful save
       dispatchEntityUpdated(entityTypeToKind(EntityType.SALE));
@@ -2345,6 +2348,7 @@ export default function SalesModal({
             try {
               // Force Save
               await onSave(pendingDuplicateSale, true);
+              await ensureCounterpartyRole(pendingDuplicateSale.customerId, CharacterRole.CUSTOMER);
               dispatchEntityUpdated(entityTypeToKind(EntityType.SALE));
               setShowDuplicateModal(false);
               onOpenChange(false);

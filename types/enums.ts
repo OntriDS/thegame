@@ -591,7 +591,7 @@ export enum LinkType {
   SALE_FINREC = 'SALE_FINREC',    // Sale linked to Financial Record
   SALE_PLAYER = 'SALE_PLAYER',    // Sale earned Player points (only for PLAYERS)
   SALE_CHARACTER = 'SALE_CHARACTER', // Sale customer is Character (customer, team member, etc.)
-  SALE_BUSINESS = 'SALE_BUSINESS',   // Sale customer/associate is a Business
+  SALE_BUSINESS = 'SALE_BUSINESS',   // Sale counterparty is a Business
   SALE_SITE = 'SALE_SITE',      // Sale is performed at a Site
 
   // FINANCIAL RECORD relationships
