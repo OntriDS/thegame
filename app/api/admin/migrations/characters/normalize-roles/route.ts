@@ -53,12 +53,29 @@ export async function POST(req: NextRequest) {
   const token = getBearerOrCookieToken(req);
   const adminKey = req.headers.get('x-admin-key');
   const isAdminKeyRequest = adminKey && adminKey === process.env.ADMIN_ACCESS_KEY;
+  
+  if (!isAdminKeyRequest && !token) {
+    return NextResponse.json(
+      { error: 'Unauthorized: Missing auth token', reason: 'missing_token' },
+      { status: 401 }
+    );
+  }
+
   const user = token && !isAdminKeyRequest ? await iamService.verifyJWT(token) : null;
+  if (!isAdminKeyRequest && !user) {
+    return NextResponse.json(
+      { error: 'Unauthorized: Invalid auth token', reason: 'invalid_token' },
+      { status: 401 }
+    );
+  }
   const normalizedUserRoles = user ? normalizeCharacterRoles(user.roles) : [];
   const isFounder = normalizedUserRoles.includes(CharacterRole.FOUNDER);
 
   if (!isAdminKeyRequest && !isFounder) {
-    return NextResponse.json({ error: 'Unauthorized: Only founder role or admin key required' }, { status: 401 });
+    return NextResponse.json(
+      { error: 'Unauthorized: Only founder role or admin key required', reason: 'not_founder' },
+      { status: 401 }
+    );
   }
 
   const searchParams = req.nextUrl.searchParams;

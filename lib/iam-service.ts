@@ -14,6 +14,7 @@ import bcrypt from 'bcryptjs';
 
 import { CharacterRole, EntityType, LinkType } from '@/types/enums';
 export { CharacterRole };
+import { normalizeCharacterRoles } from '@/lib/character-roles';
 
 import { getCharacterById as dsGetCharacterById } from '@/data-store/repositories/character.repo';
 import { getPlayerById as dsGetPlayerById } from '@/data-store/repositories/player.repo';
@@ -678,11 +679,10 @@ export class IAMService {
       }
 
       if (data.roles && Array.isArray(data.roles)) {
-        const validRoles = new Set<CharacterRole>(Object.values(CharacterRole) as CharacterRole[]);
-        const rawRoles = data.roles as unknown[];
-        const normalizedRoles = rawRoles
-          .map((r: unknown): string => String(r).trim())
-          .filter((r: string): r is CharacterRole => validRoles.has(r as CharacterRole));
+        const normalizedRoles = normalizeCharacterRoles(data.roles as (CharacterRole | string)[]);
+        data.roles = normalizedRoles;
+      } else if (typeof data.roles === 'string') {
+        const normalizedRoles = normalizeCharacterRoles([data.roles as string]);
         data.roles = normalizedRoles;
       }
 
