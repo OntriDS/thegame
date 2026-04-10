@@ -53,7 +53,7 @@ export function PartnershipSubmodal({ // Keeping filename export for compatibili
     // --- CREATE MODE STATE ---
     const [selectedEntityType, setSelectedEntityType] = useState<'character' | 'business'>('character');
     const [targetEntityId, setTargetEntityId] = useState('');
-    const [selectedRole, setSelectedRole] = useState<string>('associate');
+    const [selectedRole, setSelectedRole] = useState<string>('partner');
     const [usdAmount, setUsdAmount] = useState<number>(0);
     const [jAmount, setJAmount] = useState<number>(0);
     const [isCreating, setIsCreating] = useState(false);
@@ -70,7 +70,7 @@ export function PartnershipSubmodal({ // Keeping filename export for compatibili
 
     // Load existing relationships from characters
     useEffect(() => {
-        const businessRoles = ['investor', 'partner', 'sponsor', 'associate'];
+        const businessRoles = ['investor', 'partner', 'sponsor'];
 
         const activeRelationships: ActiveRelationship[] = characters
             .filter(char => char.roles && char.roles.some(role => businessRoles.includes(role)))
@@ -90,7 +90,7 @@ export function PartnershipSubmodal({ // Keeping filename export for compatibili
     useEffect(() => {
         const handleUpdate = () => {
             // Re-run the filter logic when data changes
-            const businessRoles = ['investor', 'partner', 'sponsor', 'associate'];
+            const businessRoles = ['investor', 'partner', 'sponsor'];
             const activeRelationships: ActiveRelationship[] = characters
                 .filter(char => char.roles && char.roles.some(role => businessRoles.includes(role)))
                 .map(char => ({
@@ -117,7 +117,7 @@ export function PartnershipSubmodal({ // Keeping filename export for compatibili
     const handleCreateStart = () => {
         setViewMode('create');
         setTargetEntityId('');
-        setSelectedRole('associate');
+        setSelectedRole('partner');
     };
 
     const handleCreateCancel = () => {
@@ -210,7 +210,7 @@ export function PartnershipSubmodal({ // Keeping filename export for compatibili
             return;
         }
 
-        // --- 2. CONTRACT Workflow (Partner, Associate, Sponsor) ---
+        // --- 2. CONTRACT Workflow (Partner, Sponsor) ---
         // Redirect to Contract Modal. Do NOT create anything yet.
         const targetCharacter = characters.find(c => c.id === targetEntityId);
         const targetBusiness = businesses.find(b => b.id === targetEntityId);
@@ -295,7 +295,7 @@ export function PartnershipSubmodal({ // Keeping filename export for compatibili
 
             // 4. Update Character Roles
             // Remove business roles
-            const businessRoles = ['investor', 'partner', 'sponsor', 'associate'];
+        const businessRoles = ['investor', 'partner', 'sponsor'];
 
             if (relationship.entityType === 'character') {
                 const character = await ClientAPI.getCharacterById(relationship.entityId);
@@ -343,7 +343,7 @@ export function PartnershipSubmodal({ // Keeping filename export for compatibili
             case 'partner': return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">Partner</Badge>;
             case 'investor': return <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">Investor</Badge>;
             case 'sponsor': return <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">Sponsor</Badge>;
-            default: return <Badge variant="outline" className="bg-slate-50 text-slate-700 border-slate-200">Associate</Badge>;
+            default: return <Badge variant="outline" className="bg-slate-50 text-slate-700 border-slate-200">Other</Badge>;
         }
     };
 
@@ -384,7 +384,6 @@ export function PartnershipSubmodal({ // Keeping filename export for compatibili
                                     <div className="px-6 pt-3 border-b">
                                         <TabsList className="w-full justify-start h-9 p-0 bg-transparent gap-2">
                                             <TabsTrigger value="all" className="data-[state=active]:border-b-2 data-[state=active]:border-indigo-500 data-[state=active]:bg-transparent data-[state=active]:shadow-none rounded-none px-4 text-xs">All</TabsTrigger>
-                                            <TabsTrigger value="associate" className="data-[state=active]:border-b-2 data-[state=active]:border-slate-500 data-[state=active]:bg-transparent data-[state=active]:shadow-none rounded-none px-4 text-xs">Associates</TabsTrigger>
                                             <TabsTrigger value="partner" className="data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:shadow-none rounded-none px-4 text-xs">Partners</TabsTrigger>
                                             <TabsTrigger value="investor" className="data-[state=active]:border-b-2 data-[state=active]:border-amber-500 data-[state=active]:bg-transparent data-[state=active]:shadow-none rounded-none px-4 text-xs">Investors</TabsTrigger>
                                             <TabsTrigger value="sponsor" className="data-[state=active]:border-b-2 data-[state=active]:border-purple-500 data-[state=active]:bg-transparent data-[state=active]:shadow-none rounded-none px-4 text-xs">Sponsors</TabsTrigger>
@@ -392,7 +391,7 @@ export function PartnershipSubmodal({ // Keeping filename export for compatibili
                                     </div>
 
                                     {/* --- DYNAMIC TABS CONTENT --- */}
-                                    {['all', 'associate', 'partner', 'investor', 'sponsor'].map(tabValue => (
+                                    {['all', 'partner', 'investor', 'sponsor'].map(tabValue => (
                                         <TabsContent key={tabValue} value={tabValue} className="flex-1 m-0 p-0">
                                             <ScrollArea className="flex-1 p-6 h-[350px]">
                                                 {(() => {
@@ -500,7 +499,6 @@ export function PartnershipSubmodal({ // Keeping filename export for compatibili
                                         <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Primary Role</Label>
                                         <div className="grid grid-cols-2 gap-2">
                                             {[
-                                                { id: 'associate', label: 'Associate', icon: Handshake, desc: 'Contractor / Employee' },
                                                 { id: 'partner', label: 'Partner', icon: Users, desc: 'Shared Ownership' },
                                                 { id: 'investor', label: 'Investor', icon: DollarSign, desc: 'Equity for Capital' },
                                                 { id: 'sponsor', label: 'Sponsor', icon: Crown, desc: 'Brand / Funding' },

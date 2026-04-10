@@ -411,11 +411,10 @@ export async function validateBusinessRules(
         if (saleWithChar) {
           const ok =
             saleWithChar.customerId === target.id ||
-            saleWithChar.associateId === target.id ||
             saleWithChar.partnerId === target.id;
           if (!ok) {
             warnings.push(
-              `Sale ${source.id} character link target ${target.id} is not customer, associate, or partner on the sale`
+              `Sale ${source.id} character link target ${target.id} is not customer or partner on the sale`
             );
           }
         }
@@ -425,10 +424,10 @@ export async function validateBusinessRules(
       case 'SALE_BUSINESS': {
         const saleWithBiz = await getSaleById(source.id);
         if (saleWithBiz) {
-          const ok = saleWithBiz.associateId === target.id || saleWithBiz.partnerId === target.id;
+          const ok = saleWithBiz.partnerId === target.id;
           if (!ok) {
             warnings.push(
-              `Sale ${source.id} business link target ${target.id} is not associate or partner on the sale`
+              `Sale ${source.id} business link target ${target.id} is not partner on the sale`
             );
           }
         }

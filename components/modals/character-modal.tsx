@@ -504,7 +504,7 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
               )}
 
               {/* Wallet Button */}
-              {character && (roles.includes(CharacterRole.FOUNDER) || roles.includes(CharacterRole.PLAYER) || roles.includes(CharacterRole.TEAM) || roles.includes(CharacterRole.PARTNER) || roles.includes(CharacterRole.ASSOCIATE) || roles.includes(CharacterRole.CUSTOMER) || roles.includes(CharacterRole.FAMILY)) && (
+              {character && (roles.includes(CharacterRole.FOUNDER) || roles.includes(CharacterRole.PLAYER) || roles.includes(CharacterRole.TEAM) || roles.includes(CharacterRole.PARTNER) || roles.includes(CharacterRole.CUSTOMER) || roles.includes(CharacterRole.FAMILY)) && (
                 <Button
                   variant="outline"
                   onClick={() => setShowWalletModal(true)}

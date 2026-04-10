@@ -37,6 +37,14 @@ import { entityHasLogEvent } from '@/lib/utils/entity-log-scan';
 
 const STATE_FIELDS = ['status', 'isNotPaid', 'isNotCharged', 'isCollected', 'postedAt', 'doneAt', 'cancelledAt'];
 
+type LegacySale = Sale & {
+  associateId?: string | null;
+};
+
+function getLegacyCounterpartyId(sale: Sale): string | null | undefined {
+  return (sale as LegacySale).associateId;
+}
+
 function saleHasRewardPoints(sale: Sale): boolean {
   const p = sale.rewards?.points;
   if (!p) return false;
@@ -202,9 +210,9 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
   // 1.5 BOOTH COST CALCULATION (Must happen BEFORE log creation)
   // For booth sales, calculate cost before creating logs to ensure logs include correct profit
   if (sale.type === SaleType.BOOTH) {
-    const { calculateBoothFinancials, calculateAssociatePayout } = await import('@/workflows/financial-record-utils');
+    const { calculateBoothFinancials, calculatePartnerPayout } = await import('@/workflows/financial-record-utils');
     const split = await calculateBoothFinancials(sale);
-    const payout = await calculateAssociatePayout(sale);
+    const payout = await calculatePartnerPayout(sale);
     const totalCalculatedCost = split.myBoothCost + payout;
 
     // If calculated cost differs from current cost, update it before log creation
@@ -343,13 +351,15 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
     };
 
     const linesChanged = hasLinesChanged(sale, previousSale);
-    // Check if relevant financial drivers changed (Revenue, Fee, Associate, identity, period, etc)
+    const legacyCounterpartyId = getLegacyCounterpartyId(sale);
+    const previousLegacyCounterpartyId = getLegacyCounterpartyId(previousSale);
+    // Check if relevant financial drivers changed (Revenue, Fee, Counterparty, identity, period, etc)
     const hasFinancialDriversChanged =
       linesChanged ||
       hasRevenueChanged(sale, previousSale) ||
       hasCostChanged(sale, previousSale) ||
       sale.boothFee !== previousSale.boothFee ||
-      sale.associateId !== previousSale.associateId ||
+      legacyCounterpartyId !== previousLegacyCounterpartyId ||
       sale.partnerId !== previousSale.partnerId ||
       sale.customerId !== previousSale.customerId ||
       sale.name !== previousSale.name ||
@@ -369,9 +379,9 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
       // [FIX] Update Sale Cost with Payout Amount (for Booth-Sales)
       // This ensures "Sale Log" shows correct Profit (Revenue - Cost)
       if (sale.type === SaleType.BOOTH) {
-        const { calculateBoothFinancials, calculateAssociatePayout } = await import('@/workflows/financial-record-utils');
+        const { calculateBoothFinancials, calculatePartnerPayout } = await import('@/workflows/financial-record-utils');
         const split = await calculateBoothFinancials(sale);
-        const payout = await calculateAssociatePayout(sale);
+        const payout = await calculatePartnerPayout(sale);
         const totalCalculatedCost = split.myBoothCost + payout;
 
         // If calculated cost differs from current cost, update it
@@ -548,7 +558,7 @@ export async function removeSaleEffectsOnDelete(saleId: string, saleSnapshot?: S
       }
     }
 
-    // 2.5 Remove associated Financial Records
+    // 2.5 Remove counterparty Financial Records
     const financialRecords = await getFinancialsBySourceSaleId(saleId);
 
     for (const record of financialRecords) {

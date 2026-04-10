@@ -82,24 +82,28 @@ export interface BoothSalesViewProps {
     exchangeRate?: number;
 }
 
-/** Parent DialogFooter calls this so booth saves use fullSale (metadata, payments, associate context). */
+/** Parent DialogFooter calls this so booth saves use fullSale (metadata, payments, partner context). */
 export type BoothSalesViewHandle = {
     submitBoothSave: () => void;
 };
 
-interface AssociateQuickEntry {
+interface PartnerQuickEntry {
     id: string;
     description: string;
     amountCRC: number;
     amountUSD: number;
     category: string; // e.g., 'O2 Jewelry'
-    associateId: string; // Linking to specific associate
+    partnerId: string; // Linking to specific partner
 }
+
+type LegacySale = Sale & {
+    associateId?: string | null;
+};
 
 type SettlementRow = {
     id: string; // category name or item id
     label: string;
-    isAssociate: boolean;
+    isPartner: boolean;
     totalColones: number;
     totalDollars: number;
     totalBitcoin: number;
@@ -146,6 +150,7 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(fun
 
     // UI Toggles
     const [showItemPicker, setShowItemPicker] = useState(false);
+    const legacyCounterpartyId = ((sale as LegacySale | undefined)?.associateId) || '';
 
     // State for Single Contract (Global for this sale)
     const [selectedContractId, setSelectedContractId] = useState<string>(() => {
@@ -157,8 +162,8 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(fun
         return sale?.metadata?.boothSaleContext?.principalBusinessId || (sale as any)?.archiveMetadata?.boothSaleContext?.principalBusinessId || '';
     });
 
-    // State for Associate (Them)
-    const [selectedAssociateId, setSelectedAssociateId] = useState<string>(() => {
+    // State for Partner (Them)
+    const [selectedPartnerId, setSelectedPartnerId] = useState<string>(() => {
         // 1. Try modern metadata first
         if (sale?.metadata?.boothSaleContext?.counterpartyBusinessId) {
             return sale.metadata.boothSaleContext.counterpartyBusinessId;
@@ -168,7 +173,7 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(fun
             return (sale as any).archiveMetadata.boothSaleContext.counterpartyBusinessId;
         }
         // 3. Fallback for VERY legacy sales (migrate Character ID to Business ID OR handle preexisting Business ID)
-        const charId = sale?.associateId || sale?.partnerId;
+        const charId = legacyCounterpartyId || sale?.partnerId || '';
         if (charId) {
             // First check if it's already a Business ID
             if (businesses.some(b => b.id === charId)) {
@@ -181,23 +186,22 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(fun
         return '';
     }); // Business ID
 
-    // View Mode: 'Associate' | 'Partner' | 'Off'
-    const [viewMode, setViewMode] = useState<'Associate' | 'Partner' | 'Off'>(() => {
-        if (sale?.associateId) return 'Associate';
-        if (sale?.partnerId) return 'Partner';
+    // View Mode: 'Partner' | 'Off'
+    const [viewMode, setViewMode] = useState<'Partner' | 'Off'>(() => {
+        if (sale?.partnerId || legacyCounterpartyId) return 'Partner';
         return 'Off';
     });
 
-    // Derived State: Associate Entries (Single Source of Truth: lines)
-    const associateEntries = useMemo(() => {
+    // Derived State: Partner Entries (Single Source of Truth: lines)
+    const partnerEntries = useMemo(() => {
         const serviceLines = lines.filter(l => {
             // Aggressive fallback for legacy records that might have lost their 'station' or 'kind' enumerations
             const isServiceOrItem = l.kind === 'service' || l.kind === 'item';
-            const hasAssociateStation = ['Booth-Sales', 'Associate-Sales', 'Associate Sales'].includes((l as any).station as string);
-            const hasLegacyDescription = l.description?.includes('[Associate:');
-            const hasAssociateVault = Boolean((l as any).metadata?.associateId);
+            const hasPartnerStation = ['Booth-Sales', 'Partner-Sales', 'Partner Sales', 'Associate-Sales', 'Associate Sales'].includes((l as any).station as string);
+            const hasLegacyDescription = l.description?.includes('[Partner:') || l.description?.includes('[Associate:');
+            const hasPartnerVault = Boolean((l as any).metadata?.partnerId || (l as any).metadata?.associateId || (l as any).metadata?.customerCharacterId);
 
-            return isServiceOrItem && (hasAssociateStation || hasLegacyDescription || hasAssociateVault);
+            return isServiceOrItem && (hasPartnerStation || hasLegacyDescription || hasPartnerVault);
         }) as ServiceLine[];
         return serviceLines.map(sl => {
             // Safely cast to 'any' to dynamically extract either ServiceLine or ItemSaleLine values
@@ -213,10 +217,10 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(fun
                 amountCRC: Number.isFinite(amountCRC) ? amountCRC : 0,
                 amountUSD: Number.isFinite(amountUSD) ? amountUSD : 0,
                 category: line.metadata?.category || categoryMatch || 'Other',
-                associateId: line.metadata?.associateId || line.metadata?.customerCharacterId || sale?.associateId || ''
+                partnerId: line.metadata?.partnerId || line.metadata?.associateId || line.metadata?.customerCharacterId || legacyCounterpartyId || ''
             };
         });
-    }, [lines, sale?.associateId]);
+    }, [lines, sale?.partnerId, legacyCounterpartyId]);
 
     // Delete Confirmation State
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -279,50 +283,50 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(fun
         }
     }, [sale, contracts, businesses, characters, selectedContractId, selectedFounderBusinessId]);
 
-    // Load Default Associate (One time)
+    // Load Default Partner (One time)
     useEffect(() => {
         // Mocking "Maria" as default if she exists IF viewMode is NOT Off AND NOT EDITING
-        if (!sale && viewMode !== 'Off' && !selectedAssociateId && characters.length > 0 && businesses.length > 0) {
+        if (!sale && viewMode !== 'Off' && !selectedPartnerId && characters.length > 0 && businesses.length > 0) {
             const maria = characters.find(c => c.name.toLowerCase().includes('maria') || c.name.includes('O2'));
             if (maria) {
                 const mariaBusiness = businesses.find(b => b.linkedCharacterId === maria.id);
-                if (mariaBusiness) setSelectedAssociateId(mariaBusiness.id);
+                if (mariaBusiness) setSelectedPartnerId(mariaBusiness.id);
             }
         }
 
         // Clear selection if Off
         if (viewMode === 'Off') {
-            setSelectedAssociateId('');
+            setSelectedPartnerId('');
         }
-    }, [characters, businesses, selectedAssociateId, viewMode, sale]);
+    }, [characters, businesses, selectedPartnerId, viewMode, sale]);
 
-    const initialAssociateIdRef = useRef(selectedAssociateId);
+    const initialPartnerIdRef = useRef(selectedPartnerId);
     const initialFounderIdRef = useRef(selectedFounderBusinessId);
 
-    // Auto-select active contract when Associate or Founder Business changes
+    // Auto-select active contract when Partner or Founder Business changes
     useEffect(() => {
         const isNewSale = !sale;
-        const didAssociateChange = selectedAssociateId !== initialAssociateIdRef.current;
+        const didPartnerChange = selectedPartnerId !== initialPartnerIdRef.current;
         const didFounderChange = selectedFounderBusinessId !== initialFounderIdRef.current;
 
         // DO NOT overwrite the saved contract on mount for an existing sale!
-        if (!isNewSale && !didAssociateChange && !didFounderChange) {
+        if (!isNewSale && !didPartnerChange && !didFounderChange) {
             return;
         }
 
-        if (!selectedAssociateId || !selectedFounderBusinessId) {
+        if (!selectedPartnerId || !selectedFounderBusinessId) {
             setSelectedContractId('');
             return;
         }
 
-        const associateBusiness = businesses.find(b => b.id === selectedAssociateId);
-        const linkedCharId = associateBusiness?.linkedCharacterId;
+        const partnerBusiness = businesses.find(b => b.id === selectedPartnerId);
+        const linkedCharId = partnerBusiness?.linkedCharacterId;
 
         // 1. Try Strict Match (ID matches both selected Principal and Counterparty business OR its linked character for legacy contracts)
         let match = contracts.find(c =>
             c.status === ContractStatus.ACTIVE &&
-            ((c.principalBusinessId === selectedFounderBusinessId && (c.counterpartyBusinessId === selectedAssociateId || c.counterpartyBusinessId === linkedCharId)) ||
-                (c.counterpartyBusinessId === selectedFounderBusinessId && (c.principalBusinessId === selectedAssociateId || c.principalBusinessId === linkedCharId)))
+            ((c.principalBusinessId === selectedFounderBusinessId && (c.counterpartyBusinessId === selectedPartnerId || c.counterpartyBusinessId === linkedCharId)) ||
+                (c.counterpartyBusinessId === selectedFounderBusinessId && (c.principalBusinessId === selectedPartnerId || c.principalBusinessId === linkedCharId)))
         );
 
         if (match) {
@@ -331,7 +335,7 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(fun
             // No contract found for this pair -> Clear selection (Default/No Contract)
             setSelectedContractId('');
         }
-    }, [selectedAssociateId, selectedFounderBusinessId, contracts, sale, businesses]);
+    }, [selectedPartnerId, selectedFounderBusinessId, contracts, sale, businesses]);
     // ============================================================================
 
     const myItems = useMemo(
@@ -348,7 +352,7 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(fun
     const totals = useMemo(() => {
         let grossSales = 0;
         let akilesNet = 0;
-        let associateNet = 0;
+        let partnerNet = 0;
 
         // 1. Calculate Baselines (Respecting Currency)
         // Assumption: All Inventory Items (Products & Bundles) are priced in USD for Booth-Sales.
@@ -357,16 +361,16 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(fun
         // Normalize my sales to Colones for calculation (Standardizing on CRC for Booth-Sales Ledger)
         const myItemsTotalValue_CRC = myItemsTotalUSD * exchangeRate;
 
-        // Associate Entries are entered in Colones (and USD now)
-        const assocItemsTotal_CRC = associateEntries.reduce((sum, e) => {
+        // Partner Entries are entered in Colones (and USD now)
+        const partnerItemsTotal_CRC = partnerEntries.reduce((sum, e) => {
             const crcVal = e.amountCRC || 0;
             const usdValAsCRC = (e.amountUSD || 0) * exchangeRate;
             return sum + crcVal + usdValAsCRC;
         }, 0);
 
-        // 2. Default Shares (No Contract Defaults = 100% Me, 0% Assoc, Me pays Costs)
+        // 2. Default Shares (No Contract Defaults = 100% Me, 0% Partner, Me pays Costs)
         let shareOfMyItems_Me = 1.0;
-        let shareOfAssocItems_Me = 0.0;
+        let shareOfPartnerItems_Me = 0.0;
         let shareOfExpenses_Me = 1.0;
 
         // 3. Apply Contract Clauses (Corrected Logic)
@@ -378,11 +382,11 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(fun
                 shareOfMyItems_Me = commClause.companyShare;
             }
 
-            // B. Associate Items (Their Items) -> Apply SALES_SERVICE Clause (If I provide service)
+            // B. Partner Items (Their Items) -> Apply SALES_SERVICE Clause (If I provide service)
             // Logic: I keep 'companyShare' of Their Items (My Commission).
             const serviceClause = activeContract.clauses.find(c => c.type === ContractClauseType.SALES_SERVICE);
             if (serviceClause) {
-                shareOfAssocItems_Me = serviceClause.companyShare;
+                shareOfPartnerItems_Me = serviceClause.companyShare;
             }
 
             // C. Expense Sharing
@@ -394,44 +398,44 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(fun
 
         // 4. Calculate Values (In CRC)
         const revenueMyItems_Me = myItemsTotalValue_CRC * shareOfMyItems_Me;
-        const revenueMyItems_Assoc = myItemsTotalValue_CRC * (1 - shareOfMyItems_Me);
+        const revenueMyItems_Partner = myItemsTotalValue_CRC * (1 - shareOfMyItems_Me);
 
-        const revenueAssocItems_Me = assocItemsTotal_CRC * shareOfAssocItems_Me; // My Commission
-        const revenueAssocItems_Assoc = assocItemsTotal_CRC * (1 - shareOfAssocItems_Me);
+        const revenuePartnerItems_Me = partnerItemsTotal_CRC * shareOfPartnerItems_Me; // My Commission
+        const revenuePartnerItems_Partner = partnerItemsTotal_CRC * (1 - shareOfPartnerItems_Me);
 
         const cost_Me = boothCost * shareOfExpenses_Me;
-        const cost_Assoc = boothCost - cost_Me;
+        const cost_Partner = boothCost - cost_Me;
 
         // 5. Final Calculations
-        grossSales = myItemsTotalValue_CRC + assocItemsTotal_CRC;
+        grossSales = myItemsTotalValue_CRC + partnerItemsTotal_CRC;
 
         // Akiles Net (CRC)
-        akilesNet = revenueMyItems_Me + revenueAssocItems_Me - cost_Me;
+        akilesNet = revenueMyItems_Me + revenuePartnerItems_Me - cost_Me;
 
-        // Associate Net (CRC)
-        associateNet = revenueAssocItems_Assoc + revenueMyItems_Assoc - cost_Assoc;
+        // Partner Net (CRC)
+        partnerNet = revenuePartnerItems_Partner + revenueMyItems_Partner - cost_Partner;
 
         return {
             grossSales,
             myNet: akilesNet,
-            associateNet,
-            myCommissions: revenueAssocItems_Me,
-            associateCommissions: revenueAssocItems_Assoc,
+            partnerNet,
+            myCommissions: revenuePartnerItems_Me,
+            partnerCommissions: revenuePartnerItems_Partner,
             breakdown: {
                 principalSharePct_Me: shareOfMyItems_Me * 100,
-                principalSharePct_Associate: (1 - shareOfMyItems_Me) * 100,
-                associateSharePct_Me: shareOfAssocItems_Me * 100,
-                associateSharePct_Associate: (1 - shareOfAssocItems_Me) * 100,
+                principalSharePct_Partner: (1 - shareOfMyItems_Me) * 100,
+                partnerSharePct_Me: shareOfPartnerItems_Me * 100,
+                partnerSharePct_Partner: (1 - shareOfPartnerItems_Me) * 100,
                 mySales: myItemsTotalValue_CRC,
-                assocSales: assocItemsTotal_CRC,
+                partnerSales: partnerItemsTotal_CRC,
                 costMe: cost_Me,
-                costAssoc: cost_Assoc
+                costPartner: cost_Partner
             }
         };
 
-    }, [myItems, associateEntries, boothCost, activeContract, exchangeRate]);
+    }, [myItems, partnerEntries, boothCost, activeContract, exchangeRate]);
 
-    const getAssociateName = (id: string) => {
+    const getPartnerName = (id: string) => {
         const char = characters.find(c => c.id === id);
         if (char) return char.name;
         const bus = businesses.find(b => b.id === id);
@@ -442,7 +446,7 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(fun
     const salesDistributionMatrix = useMemo(() => {
         // 1. Group Akiles Items (from lines)
         const akilesRows: Record<string, SettlementRow> = {};
-        const associateRows: Record<string, SettlementRow> = {};
+        const partnerRows: Record<string, SettlementRow> = {};
 
         // Process Real Lines (Akiles Inventory)
         lines.filter((l): l is ItemSaleLine => l.kind === 'item').forEach(line => {
@@ -469,7 +473,7 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(fun
                 akilesRows[category] = {
                     id: category,
                     label: category,
-                    isAssociate: false,
+                    isPartner: false,
                     totalColones: metaCRC,
                     totalDollars: (metaUSD > 0 || metaCRC > 0) ? metaUSD : total,
                     totalBitcoin: 0,
@@ -483,15 +487,15 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(fun
             }
         });
 
-        // Process Associate Entries
-        associateEntries.forEach(entry => {
+        // Process Partner Entries
+        partnerEntries.forEach(entry => {
             // Basic category grouping
             const catLabel = entry.category || 'Other';
-            if (!associateRows[catLabel]) {
-                associateRows[catLabel] = {
+            if (!partnerRows[catLabel]) {
+                partnerRows[catLabel] = {
                     id: catLabel,
                     label: catLabel,
-                    isAssociate: true,
+                    isPartner: true,
                     totalColones: entry.amountCRC || 0,
                     totalDollars: entry.amountUSD || 0,
                     totalBitcoin: 0,
@@ -500,8 +504,8 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(fun
                     ownerAmount: 0
                 };
             } else {
-                associateRows[catLabel].totalColones += (entry.amountCRC || 0);
-                associateRows[catLabel].totalDollars += (entry.amountUSD || 0);
+                partnerRows[catLabel].totalColones += (entry.amountCRC || 0);
+                partnerRows[catLabel].totalDollars += (entry.amountUSD || 0);
             }
         });
 
@@ -509,20 +513,20 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(fun
         Object.values(akilesRows).forEach(row => {
             const totalValue = row.totalColones + (row.totalDollars * exchangeRate);
             row.ownerAmount = totalValue * (totals.breakdown.principalSharePct_Me / 100);
-            row.commissionAmount = totalValue * (totals.breakdown.principalSharePct_Associate / 100);
+            row.commissionAmount = totalValue * (totals.breakdown.principalSharePct_Partner / 100);
         });
 
-        Object.values(associateRows).forEach(row => {
+        Object.values(partnerRows).forEach(row => {
             const totalValue = row.totalColones + (row.totalDollars * exchangeRate);
-            row.ownerAmount = totalValue * (totals.breakdown.associateSharePct_Me / 100);
-            row.commissionAmount = totalValue * (totals.breakdown.associateSharePct_Associate / 100);
+            row.ownerAmount = totalValue * (totals.breakdown.partnerSharePct_Me / 100);
+            row.commissionAmount = totalValue * (totals.breakdown.partnerSharePct_Partner / 100);
         });
 
         return {
             akiles: Object.values(akilesRows),
-            associate: Object.values(associateRows)
+            partner: Object.values(partnerRows)
         };
-    }, [associateEntries, items, exchangeRate, totals, lines]);
+    }, [partnerEntries, items, exchangeRate, totals, lines]);
 
 
     // Payments Logic: Auto-calculate remaining need
@@ -530,10 +534,10 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(fun
     useEffect(() => {
         // 1. Calculate Total Incomes (Separated by Currency)
         const totalCRC = salesDistributionMatrix.akiles.reduce((acc, r) => acc + r.totalColones, 0) +
-            salesDistributionMatrix.associate.reduce((acc, r) => acc + r.totalColones, 0);
+            salesDistributionMatrix.partner.reduce((acc, r) => acc + r.totalColones, 0);
 
         const totalDollars = salesDistributionMatrix.akiles.reduce((acc, r) => acc + r.totalDollars, 0) +
-            salesDistributionMatrix.associate.reduce((acc, r) => acc + r.totalDollars, 0);
+            salesDistributionMatrix.partner.reduce((acc, r) => acc + r.totalDollars, 0);
 
         // 2. Calculate Non-USD Payments (Card, BTC, CashCRC)
         const paymentCardVal = Number(paymentCard) || 0;
@@ -562,11 +566,11 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(fun
     // 3. Handlers
     // ============================================================================
 
-    const handleAddAssociateEntry = () => {
+    const handleAddPartnerEntry = () => {
         const amountCRC = parseFloat(quickAmountCRC) || 0;
         const amountUSD = parseFloat(quickAmountUSD) || 0;
 
-        if ((amountCRC <= 0 && amountUSD <= 0) || !selectedAssociateId || !quickCat) return;
+        if ((amountCRC <= 0 && amountUSD <= 0) || !selectedPartnerId || !quickCat) return;
 
         // Create the ServiceLine directly
         const newLineId = uuid();
@@ -579,7 +583,7 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(fun
             // Revenue in USD (Source of Truth for Financials)
             revenue: ((amountCRC / safeExchangeRate) + amountUSD),
             // Descriptive label
-            description: `[Associate: ${getAssociateName(selectedAssociateId)}] ${quickCat}`,
+            description: `[Partner: ${getPartnerName(selectedPartnerId)}] ${quickCat}`,
             taxAmount: 0,
             createTask: false,
             // Metadata stores the raw inputs and relationship info
@@ -587,9 +591,9 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(fun
                 originalAmountCRC: amountCRC,
                 originalAmountUSD: amountUSD,
                 category: quickCat,
-                associateId: selectedAssociateId,
+                partnerId: selectedPartnerId,
                 // Shares will be recalculated on Save, but good to have baseline
-                associateShare: 0,
+                partnerShare: 0,
                 myCommission: 0
             }
         };
@@ -602,7 +606,7 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(fun
         setQuickCat('');
     };
 
-    const handleRemoveAssociateEntry = (id: string) => {
+    const handleRemovePartnerEntry = (id: string) => {
         // Remove directly from lines
         setLines(lines.filter(l => l.lineId !== id));
     };
@@ -622,15 +626,15 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(fun
         const safeExchangeRate = exchangeRate || 500;
 
         // 1. Re-process lines to ensure shares are up to date (Calculated Totals might have changed)
-        // We iterate over the existing lines. If it's an Associate Service line, we update its metadata.
+        // We iterate over the existing lines. If it's a Partner Service line, we update its metadata.
         const updatedLines = lines.map(line => {
             if (line.kind === 'service' && line.station === 'Booth-Sales') {
                 return {
                     ...line,
                     metadata: {
                         ...line.metadata,
-                        associateShare: !Number.isNaN(totals.breakdown.associateSharePct_Associate) ? totals.breakdown.associateSharePct_Associate : 0,
-                        myCommission: !Number.isNaN(totals.breakdown.associateSharePct_Me) ? totals.breakdown.associateSharePct_Me : 0
+                        partnerShare: !Number.isNaN(totals.breakdown.partnerSharePct_Partner) ? totals.breakdown.partnerSharePct_Partner : 0,
+                        myCommission: !Number.isNaN(totals.breakdown.partnerSharePct_Me) ? totals.breakdown.partnerSharePct_Me : 0
                     }
                 };
             }
@@ -643,20 +647,20 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(fun
         const boothMetadata = {
             boothSaleContext: {
                 principalBusinessId: selectedFounderBusinessId,
-                counterpartyBusinessId: selectedAssociateId,
+                counterpartyBusinessId: selectedPartnerId,
                 contractId: selectedContractId,
                 boothCost: boothCost,
                 calculatedTotals: {
                     ...totals,
                     breakdown: {
                         principalSharePct_Me: totals.breakdown.principalSharePct_Me || 0,
-                        principalSharePct_Associate: totals.breakdown.principalSharePct_Associate || 0,
-                        associateSharePct_Me: totals.breakdown.associateSharePct_Me || 0,
-                        associateSharePct_Associate: totals.breakdown.associateSharePct_Associate || 0,
+                        principalSharePct_Partner: totals.breakdown.principalSharePct_Partner || 0,
+                        partnerSharePct_Me: totals.breakdown.partnerSharePct_Me || 0,
+                        partnerSharePct_Partner: totals.breakdown.partnerSharePct_Partner || 0,
                         mySales: totals.breakdown.mySales || 0,
-                        assocSales: totals.breakdown.assocSales || 0,
+                        partnerSales: totals.breakdown.partnerSales || 0,
                         costMe: totals.breakdown.costMe || 0,
-                        costAssoc: totals.breakdown.costAssoc || 0
+                        costPartner: totals.breakdown.costPartner || 0
                     }
                 },
                 paymentDistribution: {
@@ -677,16 +681,15 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(fun
             id: saleId,
             name: saleName,
             description: 'Feria / Booth Sale',
-            saleDate: saleDate, // Using date object directly
+            saleDate: saleDate, 
             type: SaleType.BOOTH,
-            status: status, // Use selected status
+            status: status, 
             isNotPaid: isNotPaid,
             isNotCharged: isNotCharged,
             siteId: siteId,
             salesChannel: 'Booth-Sales' as Station,
-            customerId: null, // Associate/Partner are NOT customers!
-            associateId: (viewMode === 'Associate' && selectedAssociateId) ? selectedAssociateId : null,
-            partnerId: (viewMode === 'Partner' && selectedAssociateId) ? selectedAssociateId : null,
+            customerId: null, 
+            partnerId: (viewMode === 'Partner' && selectedPartnerId) ? selectedPartnerId : null,
 
             // Financials (Converted to USD)
             lines: updatedLines,
@@ -799,21 +802,14 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(fun
 
                 <div className="w-px h-6 bg-slate-200 dark:bg-slate-700 mx-2 ml-auto" />
 
-                {/* Associate / Partner Toggle */}
+                {/* Partner Toggle */}
                 <div className="flex items-center gap-2">
-                    {/* Role Toggle 3-Way */}
                     <div className="flex bg-slate-900 rounded-md p-0.5 border border-slate-700 shrink-0">
                         <button
                             onClick={() => setViewMode('Off')}
                             className={`text-[10px] px-2 py-1 rounded-sm transition-colors ${viewMode === 'Off' ? 'bg-slate-700 text-white font-medium' : 'text-slate-400 hover:text-slate-300'}`}
                         >
                             Off
-                        </button>
-                        <button
-                            onClick={() => setViewMode('Associate')}
-                            className={`text-[10px] px-2 py-1 rounded-sm transition-colors ${viewMode === 'Associate' ? 'bg-pink-600 text-white font-medium' : 'text-slate-400 hover:text-slate-300'}`}
-                        >
-                            Associate
                         </button>
                         <button
                             onClick={() => setViewMode('Partner')}
@@ -906,7 +902,7 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(fun
                             </CardContent>
                         </Card>
 
-                        {/* Card 2: Partner / Associate */}
+                        {/* Card 2: Partner */}
                         {viewMode !== 'Off' && (
                             <Card className="border-pink-500/20 bg-pink-950/20">
                                 <CardContent className="p-4 space-y-3">
@@ -916,11 +912,11 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(fun
                                                 <User className="h-4 w-4 shrink-0" />
                                                 <div className="relative">
                                                     <select
-                                                        value={selectedAssociateId}
-                                                        onChange={(e) => setSelectedAssociateId(e.target.value)}
+                                                        value={selectedPartnerId}
+                                                        onChange={(e) => setSelectedPartnerId(e.target.value)}
                                                         className={cn(
                                                             "h-8 w-44 rounded-md border bg-slate-900 px-3 py-1 text-xs shadow-sm focus:outline-none focus:ring-1 focus:ring-pink-500 truncate pr-6 appearance-none",
-                                                            selectedAssociateId ? "border-pink-500/50 text-pink-200" : "border-slate-700 text-slate-400"
+                                                            selectedPartnerId ? "border-pink-500/50 text-pink-200" : "border-slate-700 text-slate-400"
                                                         )}
                                                     >
                                                         <option value="" disabled>Select Business...</option>
@@ -930,19 +926,10 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(fun
                                                                 if (b.id === selectedFounderBusinessId) return false; // Explicitly blacklist Founder Business
 
                                                                 const linkedChar = characters.find(c => c.id === b.linkedCharacterId);
-                                                                if (viewMode === 'Associate') {
-                                                                    if (linkedChar && linkedChar.roles.includes(CharacterRole.ASSOCIATE)) return true;
-                                                                    return contracts.some(c => c.status === ContractStatus.ACTIVE &&
-                                                                        ((c.principalBusinessId === selectedFounderBusinessId && c.counterpartyBusinessId === b.id) ||
-                                                                            (c.counterpartyBusinessId === selectedFounderBusinessId && c.principalBusinessId === b.id)));
-                                                                }
-                                                                if (viewMode === 'Partner') {
-                                                                    if (linkedChar && linkedChar.roles.includes(CharacterRole.PARTNER)) return true;
-                                                                    return contracts.some(c => c.status === ContractStatus.ACTIVE &&
-                                                                        ((c.principalBusinessId === selectedFounderBusinessId && c.counterpartyBusinessId === b.id) ||
-                                                                            (c.counterpartyBusinessId === selectedFounderBusinessId && c.principalBusinessId === b.id)));
-                                                                }
-                                                                return false;
+                                                                if (linkedChar && linkedChar.roles.includes(CharacterRole.PARTNER)) return true;
+                                                                return contracts.some(c => c.status === ContractStatus.ACTIVE &&
+                                                                    ((c.principalBusinessId === selectedFounderBusinessId && c.counterpartyBusinessId === b.id) ||
+                                                                        (c.counterpartyBusinessId === selectedFounderBusinessId && c.principalBusinessId === b.id)));
                                                             })
                                                             .map(b => (
                                                                 <option key={b.id} value={b.id}>{b.name}</option>
@@ -950,12 +937,12 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(fun
                                                     </select>
                                                     <span className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-pink-400/50 text-[10px]">▼</span>
                                                 </div>
-                                                {selectedAssociateId && (
+                                                {selectedPartnerId && (
                                                     <span className="text-[10px] font-normal text-pink-500/70 ml-1">({viewMode})</span>
                                                 )}
                                             </div>
                                             {/* Contract Selector */}
-                                            {selectedAssociateId && (
+                                            {selectedPartnerId && (
                                                 <div className="flex items-center gap-2 w-auto border-l border-pink-500/20 pl-4 ml-auto">
                                                     <div className="w-auto text-[10px] text-pink-300 font-medium shrink-0">
                                                         Contract:
@@ -970,10 +957,10 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(fun
                                                             {contracts
                                                                 .filter(c => {
                                                                     if (!['Active', 'ACTIVE', 'active'].includes(c.status)) return false;
-                                                                    const assocBusiness = businesses.find(b => b.id === selectedAssociateId);
-                                                                    const linkedCharId = assocBusiness?.linkedCharacterId;
-                                                                    return (c.principalBusinessId === selectedFounderBusinessId && (c.counterpartyBusinessId === selectedAssociateId || c.counterpartyBusinessId === linkedCharId)) ||
-                                                                        (c.counterpartyBusinessId === selectedFounderBusinessId && (c.principalBusinessId === selectedAssociateId || c.principalBusinessId === linkedCharId));
+                                                                    const partnerBusiness = businesses.find(b => b.id === selectedPartnerId);
+                                                                    const linkedCharId = partnerBusiness?.linkedCharacterId;
+                                                                    return (c.principalBusinessId === selectedFounderBusinessId && (c.counterpartyBusinessId === selectedPartnerId || c.counterpartyBusinessId === linkedCharId)) ||
+                                                                        (c.counterpartyBusinessId === selectedFounderBusinessId && (c.principalBusinessId === selectedPartnerId || c.principalBusinessId === linkedCharId));
                                                                 })
                                                                 .map(c => (
                                                                     <option key={c.id} value={c.id}>
@@ -988,8 +975,8 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(fun
                                         </div>
                                     </div>
 
-                                    {/* Quick Entry Form (Only show if associate is selected) */}
-                                    {selectedAssociateId && (
+                                    {/* Quick Entry Form (Only show if partner is selected) */}
+                                    {selectedPartnerId && (
                                         <>
                                             <div className="bg-slate-900/50 p-3 rounded-lg border border-slate-800 space-y-2 mt-2">
                                                 <div className="flex gap-2">
@@ -1018,7 +1005,7 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(fun
                                                         className="flex-1 bg-slate-950 border-slate-700 h-8 text-xs"
                                                     />
                                                     <Button
-                                                        onClick={handleAddAssociateEntry}
+                                                        onClick={handleAddPartnerEntry}
                                                         className="bg-pink-600 hover:bg-pink-700 text-white shrink-0 h-8 text-xs"
                                                         disabled={!quickAmountCRC && !quickAmountUSD}
                                                         size="sm"
@@ -1040,14 +1027,14 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(fun
                                                         </tr>
                                                     </thead>
                                                     <tbody className="divide-y divide-pink-500/10">
-                                                        {associateEntries.length === 0 && (
+                                                        {partnerEntries.length === 0 && (
                                                             <tr>
                                                                 <td colSpan={4} className="p-4 text-center text-muted-foreground italic">
                                                                     No entries yet.
                                                                 </td>
                                                             </tr>
                                                         )}
-                                                        {associateEntries.map(entry => (
+                                                        {partnerEntries.map(entry => (
                                                             <tr key={entry.id} className="bg-slate-900/40 hover:bg-pink-500/10 transition-colors group">
                                                                 <td className="p-2 text-slate-300 font-medium">{entry.category || entry.description}</td>
                                                                 <td className="p-2 text-slate-400 text-right font-mono">
@@ -1057,7 +1044,7 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(fun
                                                                     {entry.amountCRC ? `₡${entry.amountCRC.toLocaleString()}` : '-'}
                                                                 </td>
                                                                 <td className="p-2 text-right">
-                                                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-red-400 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleRemoveAssociateEntry(entry.id)}>
+                                                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-red-400 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleRemovePartnerEntry(entry.id)}>
                                                                         <Trash2 className="h-3 w-3" />
                                                                     </Button>
                                                                 </td>
@@ -1086,9 +1073,9 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(fun
                                     {/* Embedded Header for Akiles Section */}
                                     {/* <div className="grid grid-cols-12 gap-2 px-2 mb-2 items-end">
 
-                                        <div className={`text-right text-[10px] font-semibold text-slate-500 ${selectedAssociateId ? 'col-span-2' : 'col-span-3'}`}>T₡</div>
-                                        <div className={`text-right text-[10px] font-semibold text-slate-500 ${selectedAssociateId ? 'col-span-2' : 'col-span-3'}`}>T$</div>
-                                        {selectedAssociateId && (
+                                        <div className={`text-right text-[10px] font-semibold text-slate-500 ${selectedPartnerId ? 'col-span-2' : 'col-span-3'}`}>T₡</div>
+                                        <div className={`text-right text-[10px] font-semibold text-slate-500 ${selectedPartnerId ? 'col-span-2' : 'col-span-3'}`}>T$</div>
+                                        {selectedPartnerId && (
                                             <>
                                                 <div className="col-span-2 text-right text-[9px] font-bold text-indigo-400 leading-none whitespace-nowrap">OUR SHARE $</div>
                                                 <div className="col-span-3 text-right text-[9px] font-bold text-pink-400 leading-none whitespace-nowrap">THEIR SHARE $</div>
@@ -1098,10 +1085,10 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(fun
 
                                     {salesDistributionMatrix.akiles.map(row => (
                                         <div key={row.id} className="grid grid-cols-12 gap-2 p-2 text-xs border-b border-indigo-500/10 last:border-0 hover:bg-white/5 transition-colors items-center">
-                                            <div className={`font-medium text-indigo-100 truncate ${selectedAssociateId ? 'col-span-3' : 'col-span-6'}`} title={row.label}>{row.label}</div>
-                                            <div className={`text-right font-mono text-slate-400 ${selectedAssociateId ? 'col-span-2' : 'col-span-3'}`}>₡{row.totalColones.toLocaleString()}</div>
-                                            <div className={`text-right font-mono text-slate-300 ${selectedAssociateId ? 'col-span-2' : 'col-span-3'}`}>${row.totalDollars.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</div>
-                                            {selectedAssociateId && (
+                                            <div className={`font-medium text-indigo-100 truncate ${selectedPartnerId ? 'col-span-3' : 'col-span-6'}`} title={row.label}>{row.label}</div>
+                                            <div className={`text-right font-mono text-slate-400 ${selectedPartnerId ? 'col-span-2' : 'col-span-3'}`}>₡{row.totalColones.toLocaleString()}</div>
+                                            <div className={`text-right font-mono text-slate-300 ${selectedPartnerId ? 'col-span-2' : 'col-span-3'}`}>${row.totalDollars.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</div>
+                                            {selectedPartnerId && (
                                                 <>
                                                     <div className="col-span-2 text-right text-indigo-300 font-bold">${(row.ownerAmount / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                                                     <div className="col-span-3 text-right text-pink-300/70">${(row.commissionAmount / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
@@ -1113,14 +1100,14 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(fun
                             )
                         }
 
-                        {/* Associate Section (Only if selected) */}
+                        {/* Partner Section (Only if selected) */}
                         {
-                            selectedAssociateId && salesDistributionMatrix.associate.length > 0 && (
+                            selectedPartnerId && salesDistributionMatrix.partner.length > 0 && (
                                 <div className="p-2 bg-pink-950/20">
-                                    {/* Embedded Header for Associate Section */}
+                                    {/* Embedded Header for Partner Section */}
                                     {/* <div className="grid grid-cols-12 gap-2 px-2 mt-4 mb-2 items-end">
                                         <div className="col-span-3 text-[10px] font-bold text-pink-400 uppercase tracking-wide truncate">
-                                            {`ASSOC (${getAssociateName(selectedAssociateId).toUpperCase().split(' ')[0]})`}
+                                            {`PARTNER (${getPartnerName(selectedPartnerId).toUpperCase().split(' ')[0]})`}
                                         </div>
                                         <div className="col-span-2 text-right text-[10px] font-semibold text-slate-500">T₡</div>
                                         <div className="col-span-2 text-right text-[10px] font-semibold text-slate-500">T$</div>
@@ -1128,7 +1115,7 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(fun
                                         <div className="col-span-3 text-right text-[9px] font-bold text-pink-400 leading-none whitespace-nowrap">THEIR SHARE $</div>
                                     </div> */}
 
-                                    {salesDistributionMatrix.associate.map(row => (
+                                    {salesDistributionMatrix.partner.map(row => (
                                         <div key={row.id} className="grid grid-cols-12 gap-2 p-2 text-xs border-b border-pink-500/10 last:border-0 hover:bg-white/5 transition-colors items-center">
                                             <div className="col-span-3 font-medium text-pink-100 truncate" title={row.label}>{row.label}</div>
                                             <div className="col-span-2 text-right font-mono text-slate-400">₡{row.totalColones.toLocaleString()}</div>
@@ -1145,7 +1132,7 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(fun
                     {/* Summary Footer */}
                     <div className="p-4 bg-slate-950 border-t border-slate-800 space-y-4">
 
-                        <div className={`grid gap-4 ${selectedAssociateId ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                        <div className={`grid gap-4 ${selectedPartnerId ? 'grid-cols-2' : 'grid-cols-1'}`}>
                             {/* My Payout */}
                             <div className="p-3 bg-slate-900 rounded-lg border border-indigo-500/20 shadow-sm">
                                 <div className="flex items-center gap-2 mb-2">
@@ -1220,16 +1207,16 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(fun
                                 </div>
                             </div>
 
-                            {/* Associate Payout (Conditional) */}
-                            {selectedAssociateId && (
+                            {/* Partner Payout (Conditional) */}
+                            {selectedPartnerId && (
                                 <div className="p-3 bg-slate-900 rounded-lg border border-pink-500/20 shadow-sm">
                                     <div className="flex items-center gap-2 mb-2">
                                         <div className="h-6 w-6 rounded-full bg-pink-500/20 flex items-center justify-center text-pink-400 font-bold text-[10px]">
-                                            {selectedAssociateId ? getAssociateName(selectedAssociateId).substring(0, 1).toUpperCase() : 'A'}
+                                            {selectedPartnerId ? getPartnerName(selectedPartnerId).substring(0, 1).toUpperCase() : 'P'}
                                         </div>
                                         <div>
                                             <div className="text-xs font-bold text-pink-100">
-                                                {selectedAssociateId ? getAssociateName(selectedAssociateId) : 'Associate'}
+                                                {selectedPartnerId ? getPartnerName(selectedPartnerId) : 'Partner'}
                                             </div>
                                         </div>
                                     </div>
@@ -1243,12 +1230,12 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(fun
                                             </div>
                                             <div className="grid grid-cols-3 gap-2 text-xs text-pink-100">
                                                 <span>Sales:</span>
-                                                <div className="text-right font-mono">₡{salesDistributionMatrix.associate.reduce((s, r) => s + r.totalColones, 0).toLocaleString()}</div>
-                                                <div className="text-right font-mono">${salesDistributionMatrix.associate.reduce((s, r) => s + r.totalDollars, 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</div>
+                                                <div className="text-right font-mono">₡{salesDistributionMatrix.partner.reduce((s, r) => s + r.totalColones, 0).toLocaleString()}</div>
+                                                <div className="text-right font-mono">${salesDistributionMatrix.partner.reduce((s, r) => s + r.totalDollars, 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</div>
                                             </div>
                                             <div className="grid grid-cols-3 gap-2 text-xs text-red-400">
                                                 <span>Costs:</span>
-                                                <div className="text-right font-mono text-red-400">-₡{totals.breakdown.costAssoc.toLocaleString()}</div>
+                                                <div className="text-right font-mono text-red-400">-₡{totals.breakdown.costPartner.toLocaleString()}</div>
                                                 <div className="text-right font-mono text-slate-600/50">-</div>
                                             </div>
 
@@ -1256,10 +1243,10 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(fun
                                             <div className="grid grid-cols-3 gap-2 text-xs text-pink-200 font-semibold border-t border-pink-500/10 mt-1 pt-1">
                                                 <span>Net:</span>
                                                 <div className="text-right font-mono">
-                                                    ₡{(salesDistributionMatrix.associate.reduce((s, r) => s + r.totalColones, 0) - totals.breakdown.costAssoc).toLocaleString()}
+                                                    ₡{(salesDistributionMatrix.partner.reduce((s, r) => s + r.totalColones, 0) - totals.breakdown.costPartner).toLocaleString()}
                                                 </div>
                                                 <div className="text-right font-mono">
-                                                    ${salesDistributionMatrix.associate.reduce((s, r) => s + r.totalDollars, 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                                                ${salesDistributionMatrix.partner.reduce((s, r) => s + r.totalDollars, 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                                                 </div>
                                             </div>
                                         </div>
@@ -1267,7 +1254,7 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(fun
                                         {/* Final Total Row */}
                                         <div className="grid grid-cols-3 gap-2 text-sm font-bold border-t border-pink-500/20 pt-2 mt-2 text-pink-400 items-end">
                                             <span className="col-span-2 text-[10px] text-pink-400/70 text-right uppercase tracking-wider pb-0.5">Total Eq ($):</span>
-                                            <span className="col-span-1 text-right text-base">${(totals.associateNet / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</span>
+                                        <span className="col-span-1 text-right text-base">${(totals.partnerNet / exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</span>
                                         </div>
                                     </div>
                                 </div>

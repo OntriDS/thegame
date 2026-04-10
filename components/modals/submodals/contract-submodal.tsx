@@ -59,7 +59,7 @@ export function ContractSubmodal({
     // Counterparty State (Them)
     const [selectedEntityType, setSelectedEntityType] = useState<'character' | 'business'>('character');
     const [selectedCounterpartyId, setSelectedCounterpartyId] = useState<string>('');
-    const [selectedRole, setSelectedRole] = useState<string>('associate');
+    const [selectedRole, setSelectedRole] = useState<string>('partner');
     const [isSaving, setIsSaving] = useState(false);
 
     // Filtered Options
@@ -153,30 +153,30 @@ export function ContractSubmodal({
             type,
             description: '',
             companyShare: 0,
-            associateShare: 0
+            partnerShare: 0
         };
 
         // Preset Intelligent Defaults (The "Templates")
         switch (type) {
             case ContractClauseType.SALES_COMMISSION:
-                newClause.description = 'My Items sold by Associate';
+                newClause.description = 'My Items sold by Partner';
                 newClause.companyShare = 0.75; // I keep stock, I keep 75%
-                newClause.associateShare = 0.25; // They get 25% commission
+                newClause.partnerShare = 0.25; // They get 25% commission
                 break;
             case ContractClauseType.SALES_SERVICE:
-                newClause.description = 'Associate Items sold by Me';
+                newClause.description = 'Partner Items sold by Me';
                 newClause.companyShare = 0.25; // I take 25% Service Fee
-                newClause.associateShare = 0.75; // They keep 75%
+                newClause.partnerShare = 0.75; // They keep 75%
                 break;
             case ContractClauseType.EXPENSE_SHARING:
                 newClause.description = 'Shared Booth/Event Costs';
                 newClause.companyShare = 0.50;
-                newClause.associateShare = 0.50;
+                newClause.partnerShare = 0.50;
                 break;
             default:
                 newClause.description = 'Custom Term';
                 newClause.companyShare = 0.50;
-                newClause.associateShare = 0.50;
+                newClause.partnerShare = 0.50;
         }
 
         setClauses([...clauses, newClause]);
@@ -193,11 +193,11 @@ export function ContractSubmodal({
             // Auto-balance shares logic
             if (field === 'companyShare') {
                 const compShare = Math.min(Math.max(Number(value), 0), 1);
-                return { ...c, companyShare: compShare, associateShare: parseFloat((1 - compShare).toFixed(2)) };
+                return { ...c, companyShare: compShare, partnerShare: parseFloat((1 - compShare).toFixed(2)) };
             }
-            if (field === 'associateShare') {
-                const assocShare = Math.min(Math.max(Number(value), 0), 1);
-                return { ...c, associateShare: assocShare, companyShare: parseFloat((1 - assocShare).toFixed(2)) };
+            if (field === 'partnerShare') {
+                const partnerShare = Math.min(Math.max(Number(value), 0), 1);
+                return { ...c, partnerShare: partnerShare, companyShare: parseFloat((1 - partnerShare).toFixed(2)) };
             }
 
             return { ...c, [field]: value };
@@ -438,7 +438,7 @@ export function ContractSubmodal({
                                 <div className="space-y-2">
                                     <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Contract Type</Label>
                                     <div className="grid grid-cols-3 gap-2">
-                                        {[{ id: 'associate', label: 'Associate' }, { id: 'partner', label: 'Partner' }, { id: 'sponsor', label: 'Sponsor' },].map(role => (
+                                        {[{ id: 'partner', label: 'Partner' }, { id: 'sponsor', label: 'Sponsor' },].map(role => (
                                             <div
                                                 key={role.id}
                                                 onClick={() => setSelectedRole(role.id)}
@@ -507,7 +507,7 @@ export function ContractSubmodal({
                                                             </div>
                                                             <span className="text-muted-foreground">/</span>
                                                             <div className="flex-1 relative">
-                                                                <NumericInput value={clause.associateShare * 100} onChange={(v) => updateClause(clause.id, 'associateShare', v / 100)} className="h-8 text-xs pr-6 text-right" />
+                                                                <NumericInput value={clause.partnerShare * 100} onChange={(v) => updateClause(clause.id, 'partnerShare', v / 100)} className="h-8 text-xs pr-6 text-right" />
                                                                 <span className="absolute right-2 top-2 text-[10px] text-muted-foreground font-bold">%</span>
                                                             </div>
                                                         </div>

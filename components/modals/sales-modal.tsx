@@ -774,7 +774,7 @@ export default function SalesModal({
       return;
     }
 
-    // Booth sales are built inside BoothSalesView (metadata, payments, associate context).
+    // Booth sales are built inside BoothSalesView (metadata, payments, partner context).
     // The footer "Update Sale" must not run direct-sale validation (booth lines mix service + items).
     if (type === SaleType.BOOTH) {
       if (boothSaveRef.current) {

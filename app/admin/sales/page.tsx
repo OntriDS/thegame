@@ -192,11 +192,11 @@ function SalesPageContent() {
       } else {
         // Legacy calculation fallback
         const boothFeeUSD = (sale.boothFee || 0) / exchangeRate;
-        const associatePayouts = sale.lines
+        const partnerPayouts = sale.lines
           .filter(l => l.kind === 'service' && (l as any).station === 'Booth-Sales')
           .reduce((sum, l) => sum + ((l as any).revenue || 0), 0);
 
-        cost = boothFeeUSD + associatePayouts;
+        cost = boothFeeUSD + partnerPayouts;
         netProfit = grossRevenue - cost;
       }
     } else {

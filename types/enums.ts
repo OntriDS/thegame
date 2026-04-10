@@ -447,7 +447,6 @@ export enum CharacterRole {
   APPRENTICE = 'Apprentice',
   FAMILY = 'Family',
   INVESTOR = 'Investor',
-  ASSOCIATE = 'Associate',
   PARTNER = 'Partner',
   ADMIN = 'Admin',
   DESIGNER = 'Designer',
@@ -484,7 +483,6 @@ export const CHARACTER_ROLE_TYPES = {
     CharacterRole.TEAM,
     CharacterRole.FAMILY,
     CharacterRole.INVESTOR,
-    CharacterRole.ASSOCIATE,
     CharacterRole.PARTNER,
     CharacterRole.AI_AGENT,
     CharacterRole.CUSTOMER,
@@ -636,7 +634,7 @@ export enum LinkType {
   CHARACTER_ACCOUNT = 'CHARACTER_ACCOUNT', // Character belongs to Account (reverse)
 
   // CONTRACT relationships
-  CONTRACT_CHARACTER = 'CONTRACT_CHARACTER', // Contract applies to Character (Associate)
+  CONTRACT_CHARACTER = 'CONTRACT_CHARACTER', // Contract applies to Character (Partner)
 }
 
 /** Entity Types for Link System */
@@ -687,8 +685,8 @@ export enum ContractStatus {
 
 /** Types of Contract Clauses */
 export enum ContractClauseType {
-  SALES_COMMISSION = 'Commission',      // Principal Products sold by Associate (Company pays commission)
-  SALES_SERVICE = 'Sales Service',       // Associate Products sold by Principal (Company provides service)
+  SALES_COMMISSION = 'Commission',      // Products sold by Partner (Company pays commission)
+  SALES_SERVICE = 'Sales Service',      // My service performed for Partner (Company provides service)
   EXPENSE_SHARING = 'Expense Sharing',   // Shared costs (e.g. Booth Fee)
   OTHER = 'Other'
 }

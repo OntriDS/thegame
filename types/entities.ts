@@ -533,7 +533,7 @@ export interface ContractClause {
 
   // The Split (0.0 - 1.0)
   companyShare: number;      // "Us" (Principal)
-  associateShare: number;    // "Them" (Associate)
+  partnerShare: number;      // "Them" (Partner)
 }
 
 /** 
@@ -543,7 +543,7 @@ export interface ContractClause {
 export interface Contract extends BaseEntity {
   // Parties
   principalBusinessId: string;    // Me / The Company
-  counterpartyBusinessId: string; // The Associate / Partner
+  counterpartyBusinessId: string; // The Partner business (counterparty in contract/sale context)
 
   // Status & Lifecycle
   status: ContractStatus;
@@ -658,7 +658,6 @@ export interface Sale extends BaseEntity {
   siteId: string;                   // Site where sale occurred
   counterpartyName?: string;        // client/store/partner name
   customerId?: string | null;       // Character who is the customer (for tracking purchases)
-  associateId?: string | null;      // Character acting as Associate (Booth-Sales)
   partnerId?: string | null;        // Character acting as Partner (Booth-Sales)
   playerCharacterId?: string | null; // Player character who owns this sale
   salesChannel?: Station | null;    // Sales channel station (e.g., 'Direct-Sales', 'Network', 'Feria Sales')

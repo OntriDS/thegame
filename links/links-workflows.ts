@@ -234,10 +234,6 @@ export async function processSaleEffects(sale: Sale): Promise<void> {
   // resolving any business IDs to their linkedCharacterId.
   const allowedCharacterIds = new Set<string>();
   if (sale.customerId) allowedCharacterIds.add(sale.customerId);
-  if (sale.associateId) {
-    const charId = await resolveToCharacterId(sale.associateId);
-    if (charId) allowedCharacterIds.add(charId);
-  }
   if (sale.partnerId) {
     const charId = await resolveToCharacterId(sale.partnerId);
     if (charId) allowedCharacterIds.add(charId);
@@ -272,23 +268,6 @@ export async function processSaleEffects(sale: Sale): Promise<void> {
         saleType: sale.type,
         totalRevenue: sale.totals.totalRevenue
       });
-    }
-  }
-
-  // --- SALE_CHARACTER for associateId (resolves Business → linkedCharacterId) ---
-  if (sale.associateId) {
-    const charId = await resolveToCharacterId(sale.associateId);
-    if (charId) {
-      const l = makeLink(
-        LinkType.SALE_CHARACTER,
-        { type: EntityType.SALE, id: sale.id },
-        { type: EntityType.CHARACTER, id: charId }
-      );
-      await createLink(l);
-    } else {
-      console.warn(
-        `[processSaleEffects] Associate ID ${sale.associateId} not found as Character or Business with linkedCharacterId. Skipping link.`
-      );
     }
   }
 

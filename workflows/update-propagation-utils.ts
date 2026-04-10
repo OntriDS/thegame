@@ -461,7 +461,7 @@ export async function updateFinancialRecordsFromSale(
     // SPECIAL HANDLING for Booth-Sales (Split Records)
     if (sale.type === 'BOOTH') { // Use string literal matching enum
       // Booth sales manage their own complex record creation/updates (Split Income/Expense)
-      // If we are here, something relevant changed (Revenue, Fee, Associate, etc - driven by caller)
+      // If we are here, something relevant changed (Revenue, Fee, Counterparty, etc - driven by caller)
 
       // If records don't exist, create them. If they do, update them.
       const relatedRecords = await getFinancialsBySourceSaleId(sale.id);

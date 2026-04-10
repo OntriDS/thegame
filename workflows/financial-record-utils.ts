@@ -84,7 +84,7 @@ export async function getJungleCoinBalance(entityId: string): Promise<number> {
       if (record && record.jungleCoins) {
         // Only count if it's the correct record type? 
         // Actually, any J$ attached to a record linked to me is mine.
-        // Except maybe if I'm just an "Associate" on a large sale?
+        // Except maybe if I'm just a contract counterparty on a large sale?
         // Rule: If I am linked to the FinancialRecord, does it mean I own the J$?
         // In "Bonus", yes. In "Exchange", yes.
         // In "Sale Payout", the record has cost/revenue, does it have J$? 
@@ -361,12 +361,16 @@ function composeSaleSourcedFinrecName(sale: Sale, siteLabel: string, dateToUse: 
 export interface BoothFinancialSplit {
   myGross: number;        // Total of Akiles items
   myBoothCost: number;     // Akiles share of booth (e.g. $20)
-  myCommFromAssoc: number; // Akiles commission on Associate items (e.g. $2)
-  assocCommFromMe: number; // Associate commission on Akiles items (e.g. $28)
+  myCommFromPartner: number; // Akiles commission on Partner items (e.g. $2)
+  partnerCommFromMe: number; // Partner commission on Akiles items (e.g. $28)
   date: Date;
   targetEntityId?: string | null;
   targetEntityName: string;
 }
+
+type LegacySaleWithAssociate = Sale & {
+  associateId?: string | null;
+};
 
 /**
  * NEW: Calculate components for Performance Ledger split (Option C)
@@ -376,12 +380,13 @@ export async function calculateBoothFinancials(sale: Sale): Promise<BoothFinanci
   const rates = await getFinancialConversionRates();
   const rate = rates?.colonesToUsd ?? DEFAULT_CURRENCY_EXCHANGE_RATES.colonesToUsd;
   const boothFeeUSD = boothFee / rate;
+  const legacyCounterpartyId = (sale as LegacySaleWithAssociate).associateId;
 
   const dateToUse = coerceSaleFinrecDate(sale, getUTCNow());
 
   // Default shares
   let shareOfMyItems_Me = 1.0;
-  let shareOfAssocItems_Me = 0.0; // My commission on their items
+  let shareOfPartnerItems_Me = 0.0; // My commission on their items
   let shareOfExpenses_Me = 1.0;
 
   // Fetch Contract Clauses
@@ -393,7 +398,7 @@ export async function calculateBoothFinancials(sale: Sale): Promise<BoothFinanci
       if (commClause) shareOfMyItems_Me = commClause.companyShare;
 
       const serviceClause = contract.clauses.find(c => c.type === ContractClauseType.SALES_SERVICE);
-      if (serviceClause) shareOfAssocItems_Me = serviceClause.companyShare;
+      if (serviceClause) shareOfPartnerItems_Me = serviceClause.companyShare;
 
       const expenseClause = contract.clauses.find(c => c.type === ContractClauseType.EXPENSE_SHARING);
       if (expenseClause) shareOfExpenses_Me = expenseClause.companyShare;
@@ -401,31 +406,44 @@ export async function calculateBoothFinancials(sale: Sale): Promise<BoothFinanci
   }
 
   let myItemsTotal = 0;
-  let assocItemsTotal = 0;
+  let partnerItemsTotal = 0;
 
   if (sale.lines) {
+    const founderEntityIds = new Set<string>(
+      [
+        sale.playerCharacterId,
+        sale.metadata?.boothSaleContext?.principalBusinessId
+      ].filter(Boolean) as string[]
+    );
+
     sale.lines.forEach(line => {
-      // Determine if it's an Associate line (service in booth channel OR explicit associateId in metadata)
-      const lineAssocId = (line.metadata as any)?.associateId;
-      const isAssociateItem = !!(lineAssocId && lineAssocId !== 'akiles' && lineAssocId !== sale.playerCharacterId);
+      // Determine if it's a Partner line from explicit partner/counterparty metadata
+      const linePartnerId = (line.metadata as any)?.partnerId
+        || (line.metadata as any)?.associateId
+        || (line.metadata as any)?.customerCharacterId;
+      const isPartnerItem = !!(
+        linePartnerId &&
+        typeof linePartnerId === 'string' &&
+        !founderEntityIds.has(linePartnerId)
+      );
       
       let lineTotal = 0;
       if (line.kind === 'item') lineTotal = ((line as ItemSaleLine).unitPrice || 0) * ((line as ItemSaleLine).quantity || 0);
       else if (line.kind === 'service') lineTotal = (line as ServiceLine).revenue || 0;
 
-      if (isAssociateItem) assocItemsTotal += lineTotal;
+      if (isPartnerItem) partnerItemsTotal += lineTotal;
       else myItemsTotal += lineTotal;
     });
   }
 
   // Final Split Components
   const myBoothCost = boothFeeUSD * shareOfExpenses_Me;
-  const myCommFromAssoc = assocItemsTotal * shareOfAssocItems_Me;
-  const assocCommFromMe = myItemsTotal * (1 - shareOfMyItems_Me);
+  const myCommFromPartner = partnerItemsTotal * shareOfPartnerItems_Me;
+  const partnerCommFromMe = myItemsTotal * (1 - shareOfMyItems_Me);
 
   // Target Entity Resolution
-  let targetEntityId = sale.associateId || sale.partnerId || sale.customerId;
-  let targetEntityName = 'Associate';
+  let targetEntityId = sale.partnerId || legacyCounterpartyId || sale.customerId;
+  let targetEntityName = 'Partner';
   if (targetEntityId) {
     const { getBusinessById } = await import('@/data-store/repositories/character.repo');
     const business = await getBusinessById(targetEntityId);
@@ -441,8 +459,8 @@ export async function calculateBoothFinancials(sale: Sale): Promise<BoothFinanci
   return {
     myGross: myItemsTotal,
     myBoothCost,
-    myCommFromAssoc,
-    assocCommFromMe,
+    myCommFromPartner,
+    partnerCommFromMe,
     date: dateToUse,
     targetEntityId,
     targetEntityName
@@ -708,21 +726,25 @@ export async function createFinancialRecordFromSale(sale: Sale): Promise<Financi
 }
 
 /**
- * Calculate the associate's share of a sale (Legacy wrapper for compatibility)
+ * Calculate the partner's share of a sale (legacy wrappers kept for compatibility).
  */
-export async function calculateAssociatePayout(sale: Sale): Promise<number> {
+export async function calculatePartnerPayout(sale: Sale): Promise<number> {
   const split = await calculateBoothFinancials(sale);
   
   // Total Revenue contained in the Sale object
   const totalRevenue = sale.totals.totalRevenue || 0;
-  // Assoc Gross = What she actually sold (cash Akiles is holding)
-  const assocGross = totalRevenue - split.myGross;
+  // Partner Gross = What was sold as partner items (cash Akiles is holding)
+  const partnerGross = totalRevenue - split.myGross;
   
-  // Total Payout = (Assoc Income from Me) - (My Income from Her) + (Her Gross Sales we are holding)
-  // Example: $28 - $2 + $8 = $34.
-  const payout = split.assocCommFromMe - split.myCommFromAssoc + assocGross;
+  // Total Payout = (Partner Income from Me) - (My Income from Partner) + (Partner Gross Sales we are holding)
+  const payout = split.partnerCommFromMe - split.myCommFromPartner + partnerGross;
   return payout;
 }
+
+/**
+ * Deprecated alias retained for compatibility with legacy call sites.
+ */
+export const calculateAssociatePayout = calculatePartnerPayout;
 
 /**
  * Create/Update split financial records for Booth-Sales (Option C)
@@ -782,9 +804,9 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
     }
 
     // =========================================================================
-    // RECORD 2: Contract Impact (Associate Impact)
+    // RECORD 2: Contract Impact (Partner Impact)
     // =========================================================================
-    const hasContractImpact = split.myCommFromAssoc > 0 || split.assocCommFromMe > 0;
+    const hasContractImpact = split.myCommFromPartner > 0 || split.partnerCommFromMe > 0;
     const payoutRecordId = `finrec-payout-${sale.id}`;
     const payoutRecord = existingRecords.find(r => r.id === payoutRecordId) || 
                          existingRecords.find(r => r.id.includes('payout'));
@@ -793,8 +815,8 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
       const payoutData: FinancialRecord = {
         ...(payoutRecord || {}),
         id: payoutRecordId,
-        name: `${boothTitleBase} • Associate`,
-        description: `Impact Ledger: Commission split with associate`,
+        name: `${boothTitleBase} • Partner`,
+        description: `Impact Ledger: Commission split with partner`,
         year: split.date.getFullYear(),
         month: split.date.getMonth() + 1,
         station: 'Booth-Sales' as Station,
@@ -802,9 +824,9 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
         siteId: sale.siteId,
         sourceSaleId: sale.id,
         salesChannel: 'Booth-Sales' as Station,
-        revenue: split.myCommFromAssoc,
-        cost: split.assocCommFromMe,
-        netCashflow: split.myCommFromAssoc - split.assocCommFromMe,
+        revenue: split.myCommFromPartner,
+        cost: split.partnerCommFromMe,
+        netCashflow: split.myCommFromPartner - split.partnerCommFromMe,
         status: (!sale.isNotPaid && !sale.isNotCharged || sale.isCollected) ? FinancialStatus.DONE : FinancialStatus.PENDING,
         isNotPaid: sale.isNotPaid || false,
         isNotCharged: sale.isNotCharged || false,

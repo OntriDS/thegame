@@ -20,12 +20,12 @@ async function test() {
   console.log('  Net 1:', split.myGross - split.myBoothCost);
 
   console.log('Record 2 (Contract Impact):');
-  console.log('  Revenue (MyCommFromAssoc):', split.myCommFromAssoc);
-  console.log('  Cost (AssocCommFromMe):', split.assocCommFromMe);
-  console.log('  Net 2 (Impact):', split.myCommFromAssoc - split.assocCommFromMe);
+  console.log('  Revenue (MyCommFromPartner):', split.myCommFromPartner);
+  console.log('  Cost (PartnerCommFromMe):', split.partnerCommFromMe);
+  console.log('  Net 2 (Impact):', split.myCommFromPartner - split.partnerCommFromMe);
 
   console.log('--------------------------------------------------');
-  console.log('Combined Net (User Profit):', (split.myGross - split.myBoothCost) + (split.myCommFromAssoc - split.assocCommFromMe));
+  console.log('Combined Net (User Profit):', (split.myGross - split.myBoothCost) + (split.myCommFromPartner - split.partnerCommFromMe));
 }
 
 test().catch(console.error);
