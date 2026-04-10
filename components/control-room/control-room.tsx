@@ -949,27 +949,21 @@ export default function ControlRoom() {
             )
           }
           onSave={async (task) => {
-            try {
-              // Parent only calls DataStore - Adapter processes through Link Connector automatically
-              const finalTask = await ClientAPI.upsertTask(task);
+            // Parent only calls DataStore - Adapter processes through Link Connector automatically
+            const finalTask = await ClientAPI.upsertTask(task);
 
-              // Update taskToEdit with fresh data BEFORE modal closes (fixes stale UI issue)
-              setTaskToEdit(finalTask);
+            // Update taskToEdit with fresh data BEFORE modal closes (fixes stale UI issue)
+            setTaskToEdit(finalTask);
 
-              await loadTasks();
+            await loadTasks();
 
-              // If editing a selected task, update the selected node
-              if (selectedNode && selectedNode.task.id === finalTask.id) {
-                const updatedNode = { ...selectedNode, task: finalTask };
-                setSelectedNode(updatedNode);
-              }
-
-              // Financial records, items, and points will be created automatically when task status changes to "Done"
-
-
-            } catch (error) {
-              console.error('Failed to save task:', error);
+            // If editing a selected task, update the selected node
+            if (selectedNode && selectedNode.task.id === finalTask.id) {
+              const updatedNode = { ...selectedNode, task: finalTask };
+              setSelectedNode(updatedNode);
             }
+
+            // Financial records, items, and points will be created automatically when task status changes to "Done"
           }}
           onComplete={async () => {
             try {

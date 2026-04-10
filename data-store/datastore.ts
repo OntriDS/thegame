@@ -180,8 +180,11 @@ export async function upsertTask(task: Task, options?: { skipWorkflowEffects?: b
     await onTaskUpsert(saved, previous || undefined);
   }
 
+  // onTaskUpsert may call nested upsertTask(skipWorkflowEffects) and update KV; `saved` can be stale.
+  // Links (TASK_CHARACTER, etc.) must match the row actually stored.
   if (!options?.skipLinkEffects) {
-    await processLinkEntity(saved, EntityType.TASK);
+    const latest = await getTaskById(saved.id);
+    await processLinkEntity(latest ?? saved, EntityType.TASK);
   }
 
   return saved;
