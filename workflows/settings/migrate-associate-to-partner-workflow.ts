@@ -4,21 +4,24 @@ import { migrateAssociateToPartner } from '@/workflows/migrate-associate-to-part
 
 export interface AssociateToPartnerMigrationOptions {
   dryRun: boolean;
+  includePendingFinancials?: boolean;
 }
 
 export class MigrateAssociateToPartnerWorkflow {
   static async execute(options: AssociateToPartnerMigrationOptions): Promise<SettingsResult> {
     try {
       const dryRun = options?.dryRun !== false;
+      const includePendingFinancials = options?.includePendingFinancials === true;
       const mode = dryRun ? 'dry-run' : 'live';
-      console.log(`[MigrateAssociateToPartnerWorkflow] Starting ${mode} migration`);
+      console.log(`[MigrateAssociateToPartnerWorkflow] Starting ${mode} migration (includePendingFinancials=${includePendingFinancials})`);
 
-      const result = await migrateAssociateToPartner(dryRun);
+      const result = await migrateAssociateToPartner(dryRun, includePendingFinancials);
 
       const summaryLines: string[] = [
         `Sales scanned: ${result.salesScanned}, migrated: ${result.salesMigrated}, lines migrated: ${result.saleLinesMigrated}`,
         `Characters scanned: ${result.charactersScanned}, migrated: ${result.charactersMigrated}`,
         `Financials scanned: ${result.financialScanned}, migrated: ${result.financialMigrated}`,
+        `Financial scan mode: ${includePendingFinancials ? 'raw+month-index' : 'standard visible only'}`,
         `Contracts scanned: ${result.contractsScanned}, migrated: ${result.contractsMigrated}, clauses migrated: ${result.contractClausesMigrated}`,
         `Errors: ${result.errors.length}`
       ];

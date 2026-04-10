@@ -4,12 +4,15 @@ import {
   getAllCharacters,
   getAllContracts,
   getAllFinancials,
+  getAvailableMonths,
+  getFinancialsForMonth,
   getAllSales,
   upsertCharacter,
   upsertContract,
   upsertFinancial,
   upsertSale
 } from '@/data-store/datastore';
+import { getAllFinancials as getAllFinancialsRaw } from '@/data-store/repositories/financial.repo';
 
 export interface AssociateToPartnerMigrationSummary {
   salesScanned: number;
@@ -40,6 +43,18 @@ const replaceAssociateText = (value: string): string => {
     .replace(/\bASSOCIATE\b/g, 'PARTNER')
     .replace(/\bAssociate\b/g, 'Partner')
     .replace(/\bassociate\b/g, 'partner');
+};
+
+const replaceAssociateSuffixForFinancialName = (value: string): string => {
+  const trimmed = String(value || '').trim();
+  const bulletSuffixPattern = /\s*[•\-–—]\s*associate\s*$/i;
+  if (bulletSuffixPattern.test(trimmed)) {
+    return trimmed.replace(bulletSuffixPattern, ' • Partner');
+  }
+  if (/\bassociate\b/i.test(trimmed)) {
+    return replaceAssociateText(trimmed);
+  }
+  return trimmed;
 };
 
 const normalizeCharacterRoles = (roles: (CharacterRole | string)[]): { roles: CharacterRole[]; changed: boolean } => {
@@ -116,7 +131,10 @@ const migrateSaleLineMetadata = (line: Migratable): { line: Migratable; changed:
   return { line: { ...line, metadata: nextMetadata }, changed: true };
 };
 
-export async function migrateAssociateToPartner(dryRun: boolean = true): Promise<AssociateToPartnerMigrationSummary> {
+export async function migrateAssociateToPartner(
+  dryRun: boolean = true,
+  includePendingFinancials: boolean = true
+): Promise<AssociateToPartnerMigrationSummary> {
   const summary: AssociateToPartnerMigrationSummary = {
     salesScanned: 0,
     salesMigrated: 0,
@@ -216,14 +234,46 @@ export async function migrateAssociateToPartner(dryRun: boolean = true): Promise
   }
 
   // 3) Migrate Financial records (metadata keys + copy text)
-  const financials = await getAllFinancials();
-  summary.financialScanned = financials.length;
-  for (const financial of financials) {
-    const migratedRecord: Migratable = { ...financial };
+  let financialRecords = includePendingFinancials
+    ? await getAllFinancialsRaw()
+    : await getAllFinancials();
+
+  if (includePendingFinancials) {
+    try {
+      const monthKeys = await getAvailableMonths();
+      if (monthKeys.length > 0) {
+        const monthIndexedFinancials = (await Promise.all(
+          monthKeys.map(async (monthKey) => {
+            const [month, yearSuffix] = monthKey.split('-');
+            const monthNum = parseInt(month, 10);
+            const year = parseInt(yearSuffix, 10);
+            if (!Number.isFinite(monthNum) || !Number.isFinite(year)) return [];
+            const fullYear = year < 100 ? 2000 + year : year;
+            return await getFinancialsForMonth(fullYear, monthNum);
+          })
+        )).flat();
+
+        const merged = new Map<string, FinancialRecord>();
+        for (const fin of financialRecords) {
+          merged.set(fin.id, fin);
+        }
+        for (const fin of monthIndexedFinancials) {
+          merged.set(fin.id, fin);
+        }
+        financialRecords = Array.from(merged.values());
+      }
+    } catch (error) {
+      summary.errors.push(`Financial fallback scan by month failed: ${(error as Error).message || String(error)}`);
+    }
+  }
+
+  summary.financialScanned = financialRecords.length;
+  for (const financialRecord of financialRecords) {
+    const migratedRecord: Migratable = { ...financialRecord };
     let changed = false;
 
     if (typeof migratedRecord.name === 'string') {
-      const nextName = replaceAssociateText(migratedRecord.name);
+      const nextName = replaceAssociateSuffixForFinancialName(migratedRecord.name);
       if (nextName !== migratedRecord.name) {
         migratedRecord.name = nextName;
         changed = true;
@@ -291,7 +341,7 @@ export async function migrateAssociateToPartner(dryRun: boolean = true): Promise
         });
       }
     } catch (error) {
-      summary.errors.push(`Financial ${financial.id}: ${(error as Error).message || String(error)}`);
+      summary.errors.push(`Financial ${financialRecord.id}: ${(error as Error).message || String(error)}`);
     }
   }
 

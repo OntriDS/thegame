@@ -81,7 +81,11 @@ export async function POST(request: NextRequest) {
 
       case 'migrate-associate-to-partner': {
         const dryRun = parameters?.dryRun !== false;
-        const result = await MigrateAssociateToPartnerWorkflow.execute({ dryRun });
+        const includePendingFinancials = parameters?.includePendingFinancials === true;
+        const result = await MigrateAssociateToPartnerWorkflow.execute({
+          dryRun,
+          includePendingFinancials
+        });
         return NextResponse.json({
           success: result.success,
           message: result.message,

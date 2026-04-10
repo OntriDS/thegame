@@ -213,8 +213,12 @@ export function SettingsPanel({ onStatusUpdate }: SettingsPanelProps) {
     }
   };
 
-  const handleRunPartnerMigration = async (dryRun: boolean) => {
-    if (!dryRun && !partnerMigrationConfirmed) {
+  const handleRunPartnerMigration = async (
+    dryRun: boolean,
+    includePendingFinancials: boolean = false,
+    skipConfirmation: boolean = false
+  ) => {
+    if (!dryRun && !skipConfirmation && !partnerMigrationConfirmed) {
       setShowPartnerMigrationModal(true);
       return;
     }
@@ -231,7 +235,7 @@ export function SettingsPanel({ onStatusUpdate }: SettingsPanelProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'migrate-associate-to-partner',
-          parameters: { dryRun }
+          parameters: { dryRun, includePendingFinancials }
         })
       });
 
@@ -252,37 +256,12 @@ export function SettingsPanel({ onStatusUpdate }: SettingsPanelProps) {
     }
   };
 
-  const handleRunPartnerMigrationImmediate = async () => {
-    setIsLoading(true);
-    try {
-      const response = await fetch('/api/settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'migrate-associate-to-partner',
-          parameters: { dryRun: false }
-        })
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        const extraDetails = Array.isArray(result.data?.results) ? ` — ${result.data.results.join(' | ')}` : '';
-        updateStatus(`✅ ${result.message}${extraDetails}`);
-      } else {
-        const errorDetails = Array.isArray(result.data?.errors) ? ` — ${result.data.errors.slice(0, 3).join(' | ')}` : '';
-        updateStatus(`❌ ${result.message}${errorDetails}`, true);
-      }
-    } catch (error) {
-      updateStatus('❌ Failed to run associate-to-partner migration. Please try again.', true);
-    } finally {
-      setIsLoading(false);
-      setPartnerMigrationConfirmed(false);
-    }
+  const handleRunPartnerMigrationImmediate = () => {
+    void handleRunPartnerMigration(false, true, true);
   };
 
   const handleRunPartnerMigrationDryRun = () => {
-    void handleRunPartnerMigration(true);
+    void handleRunPartnerMigration(true, true);
   };
 
   const handleExportData = async () => {
@@ -465,7 +444,7 @@ export function SettingsPanel({ onStatusUpdate }: SettingsPanelProps) {
             </Button>
 
             <Button
-              onClick={() => void handleRunPartnerMigration(false)}
+              onClick={() => void handleRunPartnerMigration(false, true)}
               className="bg-amber-600 hover:bg-amber-700 text-white"
               disabled={isLoading}
             >
@@ -645,6 +624,7 @@ export function SettingsPanel({ onStatusUpdate }: SettingsPanelProps) {
               </DialogTitle>
               <DialogDescription>
                 This will migrate historical Associate references into Partner fields and rewrite affected sales, financial records, characters, and contracts.
+                It also includes payout logs currently in pending state.
                 Run this only once unless you have a backup.
               </DialogDescription>
             </DialogHeader>
@@ -663,7 +643,7 @@ export function SettingsPanel({ onStatusUpdate }: SettingsPanelProps) {
                 Cancel
               </Button>
               <Button
-                onClick={() => void handleRunPartnerMigration(false)}
+                onClick={() => void handleRunPartnerMigration(false, true)}
                 disabled={!partnerMigrationConfirmed}
                 className="bg-amber-600 hover:bg-amber-700 text-white"
               >
