@@ -890,6 +890,7 @@ export interface Character extends BaseEntity {
   // 7. BUSINESS METRICS
   wallet?: Wallet;               // THE VAULT: Holds J$ and other assets. Updated transactionally.
   purchasedAmount: number;       // What they've bought from the business (CUSTOMER role)
+  beneficiaryPaidAmount?: number; // Amount paid to this character as a beneficiary (e.g. Partner/Team/Founder payouts)
   inventory: string[];           // Item IDs they own/possess
 
   // 8. RELATIONSHIPS (Ambassador Fields - Links System)

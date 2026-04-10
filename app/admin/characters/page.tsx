@@ -1,46 +1,131 @@
-'use client';
+ 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState, Suspense } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { ClientAPI } from '@/lib/client-api';
 import { useEntityUpdates } from '@/lib/hooks/use-entity-updates';
 import { useKeyboardShortcuts } from '@/lib/hooks/use-keyboard-shortcuts';
 import CharacterModal from '@/components/modals/character-modal';
 import type { Character } from '@/types/entities';
-import { CharacterRole, CHARACTER_ROLE_TYPES } from '@/types/enums';
+import { CharacterRole } from '@/types/enums';
 import { ROLE_COLORS } from '@/lib/constants/color-constants';
-import { Plus, User, Mail, Phone } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Mail, Plus, Phone } from 'lucide-react';
 import { CharactersDeepLinkTrigger } from '@/components/admin/admin-deep-link-triggers';
+
+type CharacterSortOption = 'name-asc' | 'name-desc' | 'role-asc' | 'role-desc';
+type SortByOption = {
+  value: CharacterSortOption;
+  label: string;
+};
+
+const SORT_BY_OPTIONS: SortByOption[] = [
+  { value: 'name-asc', label: 'Name: A-Z' },
+  { value: 'name-desc', label: 'Name: Z-A' },
+  { value: 'role-asc', label: 'Role: A-Z' },
+  { value: 'role-desc', label: 'Role: Z-A' },
+];
+
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
+
+const getRoleColorClass = (role: CharacterRole): string => {
+  const roleKey = role.toUpperCase().replace(/-/g, '_') as keyof typeof ROLE_COLORS;
+  return ROLE_COLORS[roleKey] || ROLE_COLORS.CUSTOMER;
+};
+
+const getSortedRoleList = (roles: CharacterRole[] | undefined | null): CharacterRole[] => {
+  return [...(roles || [])].sort((a, b) => a.localeCompare(b));
+};
+
+const getSafePage = (page: number, totalPages: number): number => {
+  if (totalPages === 0) return 1;
+  if (page < 1) return 1;
+  if (page > totalPages) return totalPages;
+  return page;
+};
+
+const formatUSD = (value: number): string => `$${value.toFixed(2)}`;
 
 function CharactersPageContent() {
   const [showCharacterModal, setShowCharacterModal] = useState(false);
   const [selectedCharacter, setSelectedCharacter] = useState<Character | null>(null);
   const [characters, setCharacters] = useState<Character[]>([]);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
   const [roleFilter, setRoleFilter] = useState<CharacterRole | 'ALL'>('ALL');
+  const [searchInput, setSearchInput] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortOption, setSortOption] = useState<CharacterSortOption>('name-asc');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  const [roleCounts, setRoleCounts] = useState<Record<string, number>>({});
   const [isHydrated, setIsHydrated] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const isLoadingRef = useRef(false);
   const lastRefreshRef = useRef(0);
+  const lastRequestId = useRef(0);
 
   useKeyboardShortcuts({
     onOpenCharacterModal: () => setShowCharacterModal(true),
   });
 
+  const safePage = useMemo(() => getSafePage(page, totalPages), [page, totalPages]);
+
   const loadCharacters = useCallback(async () => {
-    if (isLoadingRef.current) return;
+    const requestId = ++lastRequestId.current;
     isLoadingRef.current = true;
+    setIsLoading(true);
+
     try {
-      const charactersData = await ClientAPI.getCharacters();
-      setCharacters(charactersData || []);
+      const response = await ClientAPI.getCharacterDirectory({
+        search: searchTerm || undefined,
+        role: roleFilter !== 'ALL' ? roleFilter : undefined,
+        sortBy: sortOption.startsWith('role') ? 'role' : 'name',
+        sortOrder: sortOption.endsWith('asc') ? 'asc' : 'desc',
+        page: safePage,
+        pageSize,
+      });
+
+      if (requestId !== lastRequestId.current) return;
+
+      setCharacters(response.items || []);
+      setTotal(response.total);
+      setTotalPages(response.totalPages);
+      setRoleCounts(response.roleCounts || {});
+      if (safePage !== response.page) {
+        setPage(response.page);
+      }
       setIsHydrated(true);
     } catch (error) {
       console.error('[Characters Section] Failed to load characters:', error);
     } finally {
-      isLoadingRef.current = false;
-      lastRefreshRef.current = Date.now();
+      if (requestId === lastRequestId.current) {
+        setIsLoading(false);
+        isLoadingRef.current = false;
+        lastRefreshRef.current = Date.now();
+      }
     }
-  }, []);
+  }, [safePage, searchTerm, roleFilter, sortOption, pageSize]);
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setSearchTerm(searchInput.trim());
+    }, 250);
+    return () => clearTimeout(timeout);
+  }, [searchInput]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchTerm, roleFilter, sortOption, pageSize]);
 
   useEffect(() => {
     loadCharacters();
@@ -83,15 +168,30 @@ function CharactersPageContent() {
     [handleEditCharacter],
   );
 
-  const existingRoles = useMemo(
-    () => Array.from(new Set(characters.flatMap((char) => char.roles))),
-    [characters],
-  );
+  const roleFilterOptions = useMemo(() => {
+    const options: { value: string; label: string }[] = [
+      { value: 'ALL', label: `All Roles (${total})` },
+    ];
 
-  const filteredCharacters = useMemo(() => {
-    if (roleFilter === 'ALL') return characters;
-    return characters.filter((char) => char.roles.includes(roleFilter));
-  }, [characters, roleFilter]);
+    Object.keys(roleCounts)
+      .sort((a, b) => a.localeCompare(b))
+      .forEach((role) => {
+        const count = roleCounts[role] ?? 0;
+        options.push({
+          value: role,
+          label: `${role} (${count})`,
+        });
+      });
+
+    if (roleFilter !== 'ALL' && !options.some((option) => option.value === roleFilter)) {
+      options.push({ value: roleFilter, label: `${roleFilter} (0)` });
+    }
+
+    return options;
+  }, [roleCounts, total, roleFilter]);
+
+  const rangeStart = total === 0 ? 0 : (safePage - 1) * pageSize + 1;
+  const rangeEnd = Math.min(safePage * pageSize, total);
 
   if (!isHydrated) {
     return (
@@ -116,21 +216,12 @@ function CharactersPageContent() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="text-3xl font-bold">Characters</h1>
         <div className="flex items-center gap-2">
-          <select
-            className="h-8 rounded-md border border-input bg-background px-3 text-sm"
-            value={roleFilter}
-            onChange={(event) => setRoleFilter(event.target.value as CharacterRole | 'ALL')}
-          >
-            <option value="ALL">All Roles ({characters.length})</option>
-            {existingRoles.map((role) => {
-              const count = characters.filter((c) => c.roles.includes(role)).length;
-              return (
-                <option key={role} value={role}>
-                  {role} ({count})
-                </option>
-              );
-            })}
-          </select>
+          <Input
+            value={searchInput}
+            onChange={(event) => setSearchInput(event.target.value)}
+            placeholder="Search by name, email, phone or description..."
+            className="h-8 w-72"
+          />
           <Button onClick={handleCreateCharacter} size="sm" variant="default" className="flex items-center gap-2">
             <Plus className="h-4 w-4" />
             Add Character
@@ -139,106 +230,181 @@ function CharactersPageContent() {
       </div>
 
       <Card>
+        <CardContent className="flex flex-wrap gap-2 py-4">
+          <div className="w-full sm:w-52">
+            <Select value={roleFilter} onValueChange={(value) => setRoleFilter(value === 'ALL' ? 'ALL' : (value as CharacterRole))}>
+              <SelectTrigger className="h-8 w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {roleFilterOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="ml-auto flex flex-wrap gap-2">
+            <div className="w-full sm:w-52">
+              <Select value={sortOption} onValueChange={(value) => setSortOption(value as CharacterSortOption)}>
+                <SelectTrigger className="h-8 w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {SORT_BY_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="w-full sm:w-40">
+              <Select value={String(pageSize)} onValueChange={(value) => setPageSize(Number(value))}>
+                <SelectTrigger className="h-8 w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PAGE_SIZE_OPTIONS.map((size) => (
+                    <SelectItem key={size} value={String(size)}>
+                      {size}/page
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
         <CardContent>
-          {filteredCharacters.length === 0 ? (
+          {isLoading ? (
+            <div className="text-center text-muted-foreground py-8">Loading characters...</div>
+          ) : characters.length === 0 ? (
             <div className="text-center text-muted-foreground py-8">
               {roleFilter === 'ALL'
-                ? 'No characters yet. Create the first one!'
+                ? searchTerm
+                  ? `No characters match "${searchTerm}"`
+                  : 'No characters found'
                 : `No characters with ${roleFilter} role.`}
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredCharacters.map((character) => {
-                const getRoleColor = (role: CharacterRole): string => {
-                  const roleKey = role
-                    .toUpperCase()
-                    .replace(/-/g, '_') as keyof typeof ROLE_COLORS;
-                  return ROLE_COLORS[roleKey] || ROLE_COLORS.CUSTOMER;
-                };
-
-                const isSpecialRole = (role: CharacterRole) =>
-                  CHARACTER_ROLE_TYPES.SPECIAL.includes(role as any);
-
-                const specialRoles = character.roles.filter(isSpecialRole);
-                const regularRoles = character.roles.filter((role) => !isSpecialRole(role));
-
-                return (
-                  <Card
-                    key={character.id}
-                    className="cursor-pointer hover:shadow-lg hover:border-primary/50 transition-all"
-                    onClick={() => handleEditCharacter(character)}
-                  >
-                    <CardHeader className="pb-3">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1 min-w-0">
-                          <CardTitle className="text-lg font-semibold truncate">{character.name}</CardTitle>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-muted/50 bg-muted/20">
+                    <th className="px-3 py-2 text-xs font-semibold uppercase tracking-wider">Name</th>
+                    <th className="px-3 py-2 text-xs font-semibold uppercase tracking-wider">Roles</th>
+                    <th className="px-3 py-2 text-xs font-semibold uppercase tracking-wider">Contact</th>
+                    <th className="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-right">Purchased</th>
+                        <th className="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-right">
+                          Beneficiary Paid
+                        </th>
+                    <th className="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-right">Settings</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-muted/20">
+                  {characters.map((character) => {
+                    const roles = getSortedRoleList(character.roles);
+                    const hasContactInfo = character.contactEmail || character.contactPhone;
+                        const purchasedAmount = character.purchasedAmount ?? 0;
+                        const beneficiaryPaidAmount = character.beneficiaryPaidAmount ?? 0;
+                    return (
+                      <tr key={character.id} className="group hover:bg-muted/30 transition-colors">
+                        <td className="px-3 py-3">
+                          <div className="font-semibold">{character.name}</div>
                           {character.description && (
-                            <CardDescription className="text-xs mt-1 line-clamp-1">
+                            <div className="text-xs text-muted-foreground max-w-xl line-clamp-1 mt-1">
                               {character.description}
-                            </CardDescription>
+                            </div>
                           )}
-                        </div>
-                        <User className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div className="space-y-1.5">
-                        {specialRoles.length > 0 && (
+                        </td>
+                        <td className="px-3 py-3">
                           <div className="flex flex-wrap gap-1">
-                            {specialRoles.map((role) => (
+                            {roles.map((role) => (
                               <span
                                 key={role}
-                                className={`text-xs px-2 py-1 rounded-md border font-semibold ${getRoleColor(role)}`}
+                                className={`px-2 py-0.5 rounded-md border text-xs font-semibold ${getRoleColorClass(role)}`}
                               >
                                 {role}
                               </span>
                             ))}
                           </div>
-                        )}
-                        {regularRoles.length > 0 && (
-                          <div className="flex flex-wrap gap-1">
-                            {regularRoles.slice(0, 3).map((role) => (
-                              <span
-                                key={role}
-                                className={`text-xs px-2 py-0.5 rounded-md border ${getRoleColor(role)}`}
-                              >
-                                {role}
-                              </span>
-                            ))}
-                            {regularRoles.length > 3 && (
-                              <span className="text-xs px-2 py-0.5 text-muted-foreground">
-                                +{regularRoles.length - 3} more
-                              </span>
+                        </td>
+                        <td className="px-3 py-3">
+                          <div className="space-y-1 text-xs">
+                            {character.contactEmail && (
+                              <div className="flex items-center gap-2 text-muted-foreground">
+                                <Mail className="h-3 w-3" />
+                                <span>{character.contactEmail}</span>
+                              </div>
                             )}
+                            {character.contactPhone && (
+                              <div className="flex items-center gap-2 text-muted-foreground">
+                                <Phone className="h-3 w-3" />
+                                <span>{character.contactPhone}</span>
+                              </div>
+                            )}
+                            {!hasContactInfo && <span className="text-muted-foreground">No contact info</span>}
                           </div>
-                        )}
-                      </div>
-
-                      <div className="flex items-center gap-3 text-xs pt-2 border-t">
-                        {character.purchasedAmount > 0 && (
-                          <div className="flex items-center gap-1 text-muted-foreground">
-                            <span>Purchased: ${character.purchasedAmount.toFixed(0)}</span>
-                          </div>
-                        )}
-                        {!character.purchasedAmount && (
-                          <span className="text-muted-foreground">No activity yet</span>
-                        )}
-                      </div>
-
-                      {(character.contactEmail || character.contactPhone) && (
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground pt-1">
-                          {character.contactEmail && <Mail className="h-3 w-3" />}
-                          {character.contactPhone && <Phone className="h-3 w-3" />}
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                );
-              })}
+                        </td>
+                        <td className="px-3 py-3 text-right">
+                          {purchasedAmount > 0 ? formatUSD(purchasedAmount) : '—'}
+                        </td>
+                        <td className="px-3 py-3 text-right">
+                          {beneficiaryPaidAmount > 0 ? formatUSD(beneficiaryPaidAmount) : '—'}
+                        </td>
+                        <td className="px-3 py-3 text-right">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleEditCharacter(character)}
+                          >
+                            Edit
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
         </CardContent>
       </Card>
+
+      <div className="flex items-center justify-between">
+        <div className="text-sm text-muted-foreground">
+          Showing {rangeStart}-{rangeEnd} of {total}
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setPage((previous) => Math.max(1, previous - 1))}
+            disabled={isLoading || safePage <= 1 || total === 0}
+            className="flex items-center gap-1"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Prev
+          </Button>
+          <span className="text-sm text-muted-foreground">
+            Page {safePage} / {Math.max(totalPages, 1)}
+          </span>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setPage((previous) => Math.min(totalPages || 1, previous + 1))}
+            disabled={isLoading || safePage >= Math.max(totalPages, 1) || total === 0}
+            className="flex items-center gap-1"
+          >
+            Next
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
 
       <CharacterModal
         character={selectedCharacter}

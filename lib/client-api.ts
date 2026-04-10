@@ -14,6 +14,33 @@
 
 import type { Task, Item, Sale, FinancialRecord, Character, Player, Site, Account, Settlement, AISession, Business, Contract, SummaryTotals } from '@/types/entities';
 import type { AISystemPreset } from '@/lib/ai/system-presets';
+import type { CharacterRole } from '@/types/enums';
+
+export type CharacterDirectorySortBy = 'name' | 'role';
+type CharacterDirectorySortOrder = 'asc' | 'desc';
+
+export interface CharacterDirectoryResponse {
+  items: Character[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  sortBy?: CharacterDirectorySortBy;
+  sortOrder?: CharacterDirectorySortOrder;
+  search?: string;
+  roleFilter: string | null;
+  roleCounts: Record<string, number>;
+}
+
+export interface GetCharacterDirectoryParams {
+  search?: string;
+  role?: CharacterRole | 'ALL';
+  sortBy?: CharacterDirectorySortBy;
+  sortOrder?: CharacterDirectorySortOrder;
+  page?: number;
+  pageSize?: number;
+  filter?: 'special';
+}
 
 export const ClientAPI = {
   getSummary: async (monthYear?: string): Promise<SummaryTotals> => {
@@ -326,6 +353,37 @@ export const ClientAPI = {
     const url = filter ? `/api/characters?filter=${filter}` : '/api/characters';
     const res = await fetch(url);
     if (!res.ok) throw new Error('Failed to fetch characters');
+    return await res.json();
+  },
+
+  getCharacterDirectory: async (params: GetCharacterDirectoryParams = {}): Promise<CharacterDirectoryResponse> => {
+    const searchParams = new URLSearchParams();
+    searchParams.set('view', 'directory');
+
+    if (params.filter === 'special') {
+      searchParams.set('filter', 'special');
+    }
+    if (params.search?.trim()) {
+      searchParams.set('search', params.search.trim());
+    }
+    if (params.role && params.role !== 'ALL') {
+      searchParams.set('role', params.role);
+    }
+    if (params.sortBy) {
+      searchParams.set('sortBy', params.sortBy);
+    }
+    if (params.sortOrder) {
+      searchParams.set('sortOrder', params.sortOrder);
+    }
+    if (typeof params.page === 'number') {
+      searchParams.set('page', String(params.page));
+    }
+    if (typeof params.pageSize === 'number') {
+      searchParams.set('pageSize', String(params.pageSize));
+    }
+
+    const res = await fetch(`/api/characters?${searchParams.toString()}`);
+    if (!res.ok) throw new Error('Failed to fetch character directory');
     return await res.json();
   },
 
