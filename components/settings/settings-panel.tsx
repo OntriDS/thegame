@@ -603,7 +603,7 @@ export function SettingsPanel({ onStatusUpdate }: SettingsPanelProps) {
                 Normalize Character Roles
               </DialogTitle>
               <DialogDescription>
-                This will rewrite every character's stored roles to canonical enum values.
+                This will rewrite every character&apos;s stored roles to canonical enum values.
                 This is a one-time migration and affects all character records.
               </DialogDescription>
             </DialogHeader>

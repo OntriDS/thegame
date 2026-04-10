@@ -29,7 +29,7 @@ function isCanonicalizedAlready(
 
   const rawRoleStrings = rawRoles.map((role) => String(role).trim());
   const rawRoleSet = new Set(rawRoleStrings);
-  const canonicalRoleSet = new Set(normalizedRoles);
+  const canonicalRoleSet = new Set<string>(normalizedRoles);
 
   if (rawRoleStrings.length !== normalizedRoles.length) return false;
   if (rawRoleSet.size !== canonicalRoleSet.size) return false;
