@@ -123,7 +123,26 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
           }
 
           setDescription(character?.description || '');
-          setRoles(normalizeCharacterRoles(character?.roles || []));
+          const normalizedRoles = normalizeCharacterRoles(character?.roles || []);
+          let initialRoles = normalizedRoles;
+          if (character.id && !normalizedRoles.includes(CharacterRole.PARTNER)) {
+            try {
+              const characterLinks = await ClientAPI.getLinksFor({
+                type: EntityType.CHARACTER,
+                id: character.id,
+              });
+              const hasContractLink = characterLinks?.some(
+                (link: { linkType?: string }) => link?.linkType === LinkType.CONTRACT_CHARACTER
+              );
+              if (hasContractLink) {
+                initialRoles = normalizeCharacterRoles([...initialRoles, CharacterRole.PARTNER]);
+              }
+            } catch (error) {
+              console.warn('Could not resolve contract links for role inference:', error);
+            }
+          }
+
+          setRoles(initialRoles);
           setPurchasedAmount(character?.purchasedAmount ?? 0);
           setCP(character?.CP);
           setAchievementsCharacter(character?.achievementsCharacter || []);

@@ -7,16 +7,13 @@ import { getInteractiveSubModalZIndex } from '@/lib/utils/z-index-utils';
 import { Business, Character, Contract } from '@/types/entities';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Label } from '@/components/ui/label';
-import { Check, Plus, Users, Building2, Handshake, DollarSign, Crown, Trash2, Edit, Loader2 } from 'lucide-react';
+import { Plus, Users, Building2, Handshake, Trash2, Edit, Loader2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ClientAPI } from '@/lib/client-api';
-import { EntityType, LinkType, FinancialStatus, CharacterRole } from '@/types/enums';
-import { FinancialRecord, Link } from '@/types/entities';
-import { DEFAULT_CURRENCY_EXCHANGE_RATES } from '@/lib/constants/financial-constants';
-import { NumericInput } from '@/components/ui/numeric-input';
+import { EntityType, LinkType } from '@/types/enums';
 import { ContractSubmodal } from '@/components/modals/submodals/contract-submodal';
 
 
@@ -39,6 +36,33 @@ interface ActiveRelationship {
     status: 'Active' | 'Draft' | 'Ended';
 }
 
+const BUSINESS_ROLE_KEYS = new Set(['partner']);
+const normalizeBusinessRole = (role: string): string =>
+  role.trim().toLowerCase();
+
+const extractBusinessRoles = (roles: string[]): string[] => {
+  const unique = new Set<string>();
+  for (const role of roles || []) {
+    const normalized = normalizeBusinessRole(String(role));
+    if (BUSINESS_ROLE_KEYS.has(normalized)) {
+      unique.add(normalized);
+    }
+  }
+  return Array.from(unique);
+};
+
+const buildBusinessRelationships = (characters: Character[]): ActiveRelationship[] =>
+  characters
+    .map((char) => ({
+      id: char.id,
+      entityId: char.id,
+      entityType: 'character' as const,
+      name: char.name,
+      roles: extractBusinessRoles(char.roles || []),
+      status: 'Active' as const
+    }))
+    .filter((entry) => entry.roles.length > 0);
+
 export function PartnershipSubmodal({ // Keeping filename export for compatibility, but logic is Manager
     open,
     onClose,
@@ -53,10 +77,6 @@ export function PartnershipSubmodal({ // Keeping filename export for compatibili
     // --- CREATE MODE STATE ---
     const [selectedEntityType, setSelectedEntityType] = useState<'character' | 'business'>('character');
     const [targetEntityId, setTargetEntityId] = useState('');
-    const [selectedRole, setSelectedRole] = useState<string>('partner');
-    const [usdAmount, setUsdAmount] = useState<number>(0);
-    const [jAmount, setJAmount] = useState<number>(0);
-    const [isCreating, setIsCreating] = useState(false);
 
     // --- RELATIONSHIPS STATE ---
     const [relationships, setRelationships] = useState<ActiveRelationship[]>([]);
@@ -70,19 +90,7 @@ export function PartnershipSubmodal({ // Keeping filename export for compatibili
 
     // Load existing relationships from characters
     useEffect(() => {
-        const businessRoles = ['investor', 'partner', 'sponsor'];
-
-        const activeRelationships: ActiveRelationship[] = characters
-            .filter(char => char.roles && char.roles.some(role => businessRoles.includes(role)))
-            .map(char => ({
-                id: char.id,
-                entityId: char.id,
-                entityType: 'character' as const,
-                name: char.name,
-                roles: char.roles?.filter(role => businessRoles.includes(role)) || [],
-                status: 'Active' as const
-            }));
-
+        const activeRelationships = buildBusinessRelationships(characters);
         setRelationships(activeRelationships);
     }, [characters, open]);
 
@@ -90,17 +98,7 @@ export function PartnershipSubmodal({ // Keeping filename export for compatibili
     useEffect(() => {
         const handleUpdate = () => {
             // Re-run the filter logic when data changes
-            const businessRoles = ['investor', 'partner', 'sponsor'];
-            const activeRelationships: ActiveRelationship[] = characters
-                .filter(char => char.roles && char.roles.some(role => businessRoles.includes(role)))
-                .map(char => ({
-                    id: char.id,
-                    entityId: char.id,
-                    entityType: 'character' as const,
-                    name: char.name,
-                    roles: char.roles?.filter(role => businessRoles.includes(role)) || [],
-                    status: 'Active' as const
-                }));
+            const activeRelationships = buildBusinessRelationships(characters);
             setRelationships(activeRelationships);
         };
 
@@ -117,100 +115,15 @@ export function PartnershipSubmodal({ // Keeping filename export for compatibili
     const handleCreateStart = () => {
         setViewMode('create');
         setTargetEntityId('');
-        setSelectedRole('partner');
     };
 
     const handleCreateCancel = () => {
         setViewMode('list');
     };
 
-    const handleAmountChange = (value: number, type: 'usd' | 'j') => {
-        if (type === 'usd') {
-            setUsdAmount(value);
-            setJAmount(value / DEFAULT_CURRENCY_EXCHANGE_RATES.j$ToUSD);
-        } else {
-            setJAmount(value);
-            setUsdAmount(value * DEFAULT_CURRENCY_EXCHANGE_RATES.j$ToUSD);
-        }
-    };
-
     const handleCreate = async () => {
         if (!targetEntityId) return;
-
-        // --- 1. INVESTOR Workflow (Immediate) ---
-        if (selectedRole === 'investor') {
-            setIsCreating(true);
-            try {
-                const targetCharacter = characters.find(c => c.id === targetEntityId);
-                const targetBusiness = businesses.find(b => b.id === targetEntityId);
-                const targetName = selectedEntityType === 'character' ? targetCharacter?.name : targetBusiness?.name;
-
-                if (!targetCharacter) return; // Investors must be characters for now? Or businesses too? Assuming Char based on original code.
-
-                // A. Create Financial Record
-                const financialRecord = {
-                    id: crypto.randomUUID(),
-                    name: `Investment from ${targetName}`,
-                    description: `Initial investment injection from ${targetName}`,
-                    type: 'company' as const,
-                    station: 'Investment' as any,
-                    status: FinancialStatus.DONE,
-                    revenue: usdAmount,
-                    cost: 0,
-                    jungleCoins: jAmount,
-                    netCashflow: usdAmount,
-                    jungleCoinsValue: jAmount * DEFAULT_CURRENCY_EXCHANGE_RATES.j$ToUSD,
-                    year: new Date().getFullYear(),
-                    month: new Date().getMonth() + 1,
-                    createdAt: new Date(),
-                    updatedAt: new Date(),
-                    links: [] as Link[],
-                    isCollected: false
-                } as unknown as FinancialRecord;
-
-                const savedRecord = await ClientAPI.upsertFinancialRecord(financialRecord);
-
-                // B. Create Link (FINREC_CHARACTER)
-                const link: Link = {
-                    id: crypto.randomUUID(),
-                    linkType: LinkType.FINREC_CHARACTER,
-                    source: { type: EntityType.FINANCIAL, id: savedRecord.id },
-                    target: { type: EntityType.CHARACTER, id: targetCharacter.id },
-                    createdAt: new Date()
-                };
-                await ClientAPI.createLink(link);
-
-                // C. Assign 'INVESTOR' Role immediately
-                const updatedRoles = [...(targetCharacter.roles || [])];
-                if (!updatedRoles.includes(CharacterRole.INVESTOR)) {
-                    updatedRoles.push(CharacterRole.INVESTOR);
-                }
-
-                await ClientAPI.upsertCharacter({
-                    ...targetCharacter,
-                    roles: updatedRoles,
-                    wallet: {
-                        ...(targetCharacter.wallet || { jungleCoins: 0 }),
-                        jungleCoins: (targetCharacter.wallet?.jungleCoins || 0) + jAmount
-                    }
-                });
-
-                // Refresh
-                if (window) {
-                    window.dispatchEvent(new Event('linksUpdated'));
-                    window.dispatchEvent(new Event('charactersUpdated'));
-                }
-                setViewMode('list');
-
-            } catch (error) {
-                console.error('Failed to create investor:', error);
-            } finally {
-                setIsCreating(false);
-            }
-            return;
-        }
-
-        // --- 2. CONTRACT Workflow (Partner, Sponsor) ---
+        // --- CONTRACT WORKFLOW (Partner) ---
         // Redirect to Contract Modal. Do NOT create anything yet.
         const targetCharacter = characters.find(c => c.id === targetEntityId);
         const targetBusiness = businesses.find(b => b.id === targetEntityId);
@@ -281,7 +194,6 @@ export function PartnershipSubmodal({ // Keeping filename export for compatibili
             const links = await ClientAPI.getLinksFor({ type: relationship.entityType, id: relationship.entityId });
 
             // 2. Identify Links to Delete
-            // We want to delete CONTRACT links and FINREC links (if Investor?)
             // For now, focus on CONTRACT_CHARACTER links which define active business roles
             const linksToDelete = links.filter(l =>
                 l.linkType === LinkType.CONTRACT_CHARACTER &&
@@ -295,13 +207,13 @@ export function PartnershipSubmodal({ // Keeping filename export for compatibili
 
             // 4. Update Character Roles
             // Remove business roles
-        const businessRoles = ['investor', 'partner', 'sponsor'];
-
             if (relationship.entityType === 'character') {
                 const character = await ClientAPI.getCharacterById(relationship.entityId);
                 if (character) {
                     const currentRoles = character.roles || [];
-                    const updatedRoles = currentRoles.filter(r => !businessRoles.includes(r.toLowerCase()));
+                    const updatedRoles = currentRoles.filter(
+                        role => !BUSINESS_ROLE_KEYS.has(normalizeBusinessRole(String(role)))
+                    );
 
                     if (updatedRoles.length !== currentRoles.length) {
                         await ClientAPI.upsertCharacter({
@@ -339,10 +251,8 @@ export function PartnershipSubmodal({ // Keeping filename export for compatibili
 
     // Role Badge Colors
     const getRoleBadge = (role: string) => {
-        switch (role) {
+        switch (role?.toLowerCase()) {
             case 'partner': return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">Partner</Badge>;
-            case 'investor': return <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">Investor</Badge>;
-            case 'sponsor': return <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">Sponsor</Badge>;
             default: return <Badge variant="outline" className="bg-slate-50 text-slate-700 border-slate-200">Other</Badge>;
         }
     };
@@ -385,13 +295,11 @@ export function PartnershipSubmodal({ // Keeping filename export for compatibili
                                         <TabsList className="w-full justify-start h-9 p-0 bg-transparent gap-2">
                                             <TabsTrigger value="all" className="data-[state=active]:border-b-2 data-[state=active]:border-indigo-500 data-[state=active]:bg-transparent data-[state=active]:shadow-none rounded-none px-4 text-xs">All</TabsTrigger>
                                             <TabsTrigger value="partner" className="data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:shadow-none rounded-none px-4 text-xs">Partners</TabsTrigger>
-                                            <TabsTrigger value="investor" className="data-[state=active]:border-b-2 data-[state=active]:border-amber-500 data-[state=active]:bg-transparent data-[state=active]:shadow-none rounded-none px-4 text-xs">Investors</TabsTrigger>
-                                            <TabsTrigger value="sponsor" className="data-[state=active]:border-b-2 data-[state=active]:border-purple-500 data-[state=active]:bg-transparent data-[state=active]:shadow-none rounded-none px-4 text-xs">Sponsors</TabsTrigger>
                                         </TabsList>
                                     </div>
 
                                     {/* --- DYNAMIC TABS CONTENT --- */}
-                                    {['all', 'partner', 'investor', 'sponsor'].map(tabValue => (
+                                    {['all', 'partner'].map(tabValue => (
                                         <TabsContent key={tabValue} value={tabValue} className="flex-1 m-0 p-0">
                                             <ScrollArea className="flex-1 p-6 h-[350px]">
                                                 {(() => {
@@ -494,73 +402,8 @@ export function PartnershipSubmodal({ // Keeping filename export for compatibili
                                         />
                                     </div>
 
-                                    {/* 2. Role Selector */}
-                                    <div className="space-y-2">
-                                        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Primary Role</Label>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            {[
-                                                { id: 'partner', label: 'Partner', icon: Users, desc: 'Shared Ownership' },
-                                                { id: 'investor', label: 'Investor', icon: DollarSign, desc: 'Equity for Capital' },
-                                                { id: 'sponsor', label: 'Sponsor', icon: Crown, desc: 'Brand / Funding' },
-                                            ].map(role => (
-                                                <div
-                                                    key={role.id}
-                                                    onClick={() => setSelectedRole(role.id)}
-                                                    className={`
-                                                        cursor-pointer p-2 rounded border flex flex-col items-center text-center gap-1 transition-all
-                                                        ${selectedRole === role.id
-                                                            ? 'border-indigo-500 bg-indigo-50 text-indigo-900 ring-1 ring-indigo-500'
-                                                            : 'border-muted hover:bg-muted/50'}
-                                                    `}
-                                                >
-                                                    <role.icon className="h-4 w-4 opacity-70" />
-                                                    <div className="text-xs font-medium">{role.label}</div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
+                                    <div className="text-xs text-muted-foreground">New business relationships are Partner-only. This will open contract creation for the selected counterparty.</div>
 
-                                    {/* 3. Investor Specifics (Conditional) */}
-                                    {selectedRole === 'investor' && (
-                                        <div className="space-y-4 animate-in fade-in slide-in-from-top-2 p-4 border rounded-md bg-muted/20">
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <div className="space-y-2">
-                                                    <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Investment (USD)</Label>
-                                                    <div className="relative">
-                                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                                            <span className="text-muted-foreground text-sm">$</span>
-                                                        </div>
-                                                        <NumericInput
-                                                            value={usdAmount}
-                                                            onChange={(val) => handleAmountChange(val || 0, 'usd')}
-                                                            className="pl-7"
-                                                            placeholder="0.00"
-                                                        />
-                                                    </div>
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Tokens (J$)</Label>
-                                                    <div className="relative">
-                                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                                            <span className="text-muted-foreground text-sm">J$</span>
-                                                        </div>
-                                                        <NumericInput
-                                                            value={jAmount}
-                                                            onChange={(val) => handleAmountChange(val || 0, 'j')}
-                                                            className="pl-8"
-                                                            placeholder="0.00"
-                                                        />
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-2 text-[10px] text-muted-foreground bg-blue-50 dark:bg-blue-900/20 p-2 rounded text-center justify-center">
-                                                <span>Exchange Rate: 1 J$ = ${DEFAULT_CURRENCY_EXCHANGE_RATES.j$ToUSD} USD</span>
-                                            </div>
-                                            <p className="text-[10px] text-muted-foreground text-center">
-                                                Creating this will record a financial transaction and issue J$ to the investor.
-                                            </p>
-                                        </div>
-                                    )}
                                 </div>
                             </div>
                         )}
@@ -573,8 +416,8 @@ export function PartnershipSubmodal({ // Keeping filename export for compatibili
                         ) : (
                             <div className="flex w-full justify-between gap-2">
                                 <Button variant="ghost" onClick={handleCreateCancel}>Cancel</Button>
-                                <Button onClick={handleCreate} disabled={!targetEntityId || isCreating} className="bg-indigo-600 hover:bg-indigo-700 min-w-[100px]">
-                                    {isCreating ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Create'}
+                                <Button onClick={handleCreate} disabled={!targetEntityId} className="bg-indigo-600 hover:bg-indigo-700 min-w-[100px]">
+                                    Create
                                 </Button>
                             </div>
                         )}
@@ -592,7 +435,6 @@ export function PartnershipSubmodal({ // Keeping filename export for compatibili
                 availableCharacters={characters}
                 availableBusinesses={businesses}
                 principalEntity={rootEntity}
-                initialRole={selectedRole} // Pass the role we want to create
                 onSave={async (contract) => {
                     await ClientAPI.upsertContract(contract);
                     window.dispatchEvent(new Event('linksUpdated'));

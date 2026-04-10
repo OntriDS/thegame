@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { NumericInput } from '@/components/ui/numeric-input';
 import { Label } from '@/components/ui/label';
 import { SearchableSelect } from '@/components/ui/searchable-select';
-import { Trash2, Plus, FileText, DollarSign, PenTool, Link as LinkIcon, AlertTriangle } from 'lucide-react';
+import { Trash2, Plus, FileText, PenTool, AlertTriangle } from 'lucide-react';
 import { getInteractiveSubModalZIndex } from '@/lib/utils/z-index-utils';
 import { Contract, Business, ContractClause, Character, Link } from '@/types/entities';
 import { ContractStatus, ContractClauseType, LinkType, EntityType, CharacterRole } from '@/types/enums';
@@ -31,8 +31,6 @@ interface ContractSubmodalProps {
     availableCharacters?: Character[];
     availableBusinesses?: Business[];
 
-    // Workflow: Enforce a specific role?
-    initialRole?: string;
 }
 
 export function ContractSubmodal({
@@ -45,7 +43,6 @@ export function ContractSubmodal({
     counterpartyEntity,
     availableCharacters = [],
     availableBusinesses = [],
-    initialRole
 }: ContractSubmodalProps) {
     const [name, setName] = useState('');
     const [status, setStatus] = useState<ContractStatus>(ContractStatus.ACTIVE);
@@ -59,7 +56,6 @@ export function ContractSubmodal({
     // Counterparty State (Them)
     const [selectedEntityType, setSelectedEntityType] = useState<'character' | 'business'>('character');
     const [selectedCounterpartyId, setSelectedCounterpartyId] = useState<string>('');
-    const [selectedRole, setSelectedRole] = useState<string>('partner');
     const [isSaving, setIsSaving] = useState(false);
 
     // Filtered Options
@@ -88,10 +84,6 @@ export function ContractSubmodal({
                 setNotes('');
                 setClauses([]);
 
-                if (initialRole) {
-                    setSelectedRole(initialRole);
-                }
-
                 // Set default counterparty if props provided
                 if (counterpartyEntity) {
                     setSelectedCounterpartyId(counterpartyEntity.id);
@@ -112,7 +104,7 @@ export function ContractSubmodal({
                 }
             }
         }
-    }, [open, initialData, counterpartyEntity, initialRole, availableBusinesses, principalCharacters]); // Minimal deps to avoid loops
+    }, [open, initialData, counterpartyEntity, availableBusinesses, principalCharacters]); // Minimal deps to avoid loops
 
     // Name Auto-Generator
     useEffect(() => {
@@ -221,12 +213,6 @@ export function ContractSubmodal({
             return;
         }
 
-        // 3. Validate Role if New
-        if (!initialData && !selectedRole) {
-            console.error("Role is required");
-            return;
-        }
-
         setIsSaving(true);
 
         try {
@@ -277,7 +263,7 @@ export function ContractSubmodal({
                         const character = await ClientAPI.getCharacterById(targetCharacterId);
                         if (character) {
                             const currentRoles = character.roles || [];
-                            const newRole = selectedRole as any;
+                            const newRole = CharacterRole.PARTNER;
                             if (!currentRoles.includes(newRole)) {
                                 const updatedRoles = [...currentRoles, newRole];
                                 await ClientAPI.upsertCharacter({ ...character, roles: updatedRoles });
@@ -433,22 +419,9 @@ export function ContractSubmodal({
                                 </div>
                             )}
 
-                            {/* 4. ROLE SELECTOR */}
+                            {/* 4. CONTRACT ROLE */}
                             {!initialData && (
-                                <div className="space-y-2">
-                                    <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Contract Type</Label>
-                                    <div className="grid grid-cols-3 gap-2">
-                                        {[{ id: 'partner', label: 'Partner' }, { id: 'sponsor', label: 'Sponsor' },].map(role => (
-                                            <div
-                                                key={role.id}
-                                                onClick={() => setSelectedRole(role.id)}
-                                                className={`cursor-pointer p-2 rounded border text-center transition-all text-sm font-medium ${selectedRole === role.id ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-900 dark:text-indigo-100 ring-1 ring-indigo-500' : 'border-muted hover:bg-muted/50'}`}
-                                            >
-                                                {role.label}
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
+                                <div className="text-xs text-muted-foreground">Contract role is fixed to Partner for this flow.</div>
                             )}
 
                             {/* 5. CLAUSES */}
