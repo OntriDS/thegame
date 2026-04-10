@@ -51,6 +51,47 @@ export async function processLinkEntity(entity: any, entityType: EntityType): Pr
   }
 }
 
+/**
+ * Keep TASK_CHARACTER links aligned with task.customerCharacterId (customer or beneficiary).
+ * Removes stale links when the counterparty changes or is cleared; creates the link when missing.
+ */
+export async function syncTaskCharacterCounterpartyLinks(task: Task): Promise<void> {
+  const desiredId =
+    task.customerCharacterId && String(task.customerCharacterId).trim() !== ''
+      ? String(task.customerCharacterId).trim()
+      : null;
+
+  const existingLinks = await getLinksFor({ type: EntityType.TASK, id: task.id });
+  const taskCharacterLinks = existingLinks.filter((l) => l.linkType === LinkType.TASK_CHARACTER);
+
+  for (const link of taskCharacterLinks) {
+    if (!desiredId || link.target.id !== desiredId) {
+      await removeLink(link.id);
+    }
+  }
+
+  if (!desiredId) return;
+
+  const l = makeLink(
+    LinkType.TASK_CHARACTER,
+    { type: EntityType.TASK, id: task.id },
+    { type: EntityType.CHARACTER, id: desiredId }
+  );
+  const wasCreated = await createLink(l);
+
+  if (wasCreated) {
+    const character = await getCharacterById(desiredId);
+    await appendEntityLog(EntityType.CHARACTER, desiredId, LogEventType.REQUESTED_TASK, {
+      name: character?.name || 'Unknown Character',
+      roles: character?.roles || [],
+      taskId: task.id,
+      taskName: task.name,
+      taskType: task.type,
+      station: task.station
+    });
+  }
+}
+
 export async function processTaskEffects(task: Task): Promise<void> {
   if (task.siteId) {
     const l = makeLink(LinkType.TASK_SITE, { type: EntityType.TASK, id: task.id }, { type: EntityType.SITE, id: task.siteId });
@@ -61,30 +102,9 @@ export async function processTaskEffects(task: Task): Promise<void> {
     await createLink(l);
   }
 
-  // TASK_CHARACTER link (from customerCharacterId)
+  // TASK_CHARACTER: reconcile with counterparty (heals missing links after counterparty-only edits)
   // NOTE: playerCharacterId is internal assignment, not logged as a character action
-  if (task.customerCharacterId) {
-    const l = makeLink(
-      LinkType.TASK_CHARACTER,
-      { type: EntityType.TASK, id: task.id },
-      { type: EntityType.CHARACTER, id: task.customerCharacterId }
-    );
-    const wasCreated = await createLink(l);
-
-    if (wasCreated) {
-      const character = await getCharacterById(task.customerCharacterId);
-
-      // Log in character log (customer requested task)
-      await appendEntityLog(EntityType.CHARACTER, task.customerCharacterId, LogEventType.REQUESTED_TASK, {
-        name: character?.name || 'Unknown Character',
-        roles: character?.roles || [],
-        taskId: task.id,
-        taskName: task.name,
-        taskType: task.type,
-        station: task.station
-      });
-    }
-  }
+  await syncTaskCharacterCounterpartyLinks(task);
 
   // Create TASK_ITEM link for items created from task emissary fields
   if (task.outputItemType && task.outputQuantity && task.status === TaskStatus.DONE) {

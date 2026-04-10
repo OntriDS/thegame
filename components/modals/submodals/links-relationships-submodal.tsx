@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -146,9 +146,9 @@ export default function LinksRelationshipsModal({
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent
         zIndexLayer="SUB_MODALS"
-        className={`max-w-4xl max-h-[80vh] ${getZIndexClass('SUB_MODALS')}`}
+        className={`flex max-h-[85vh] w-full max-w-4xl flex-col gap-0 overflow-hidden p-6 ${getZIndexClass('SUB_MODALS')}`}
       >
-        <DialogHeader>
+        <DialogHeader className="flex-shrink-0 space-y-2 pr-8 text-left">
           <DialogTitle className="flex items-center gap-2">
             <Network className="w-5 h-5" />
             Links — {entity.name || `${entity.type}:${entity.id.slice(0, 8)}`}
@@ -158,68 +158,72 @@ export default function LinksRelationshipsModal({
           </DialogDescription>
         </DialogHeader>
 
-        {loading ? (
-          <div className="flex items-center justify-center py-8">
-            <div className="text-muted-foreground">Loading links…</div>
-          </div>
-        ) : totalLinks === 0 ? (
-          <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
-            <Network className="w-12 h-12 mb-4 opacity-20" />
-            <p>No links for this entity yet</p>
-            <p className="text-sm">Workflows create links when they connect this row to other entities (e.g. a sale to its items).</p>
-          </div>
-        ) : (
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid grid-cols-8 w-full">
-              <TabsTrigger value="all">All ({totalLinks})</TabsTrigger>
-              <TabsTrigger value="tasks">Tasks ({groupedLinks.tasks.length})</TabsTrigger>
-              <TabsTrigger value="items">Items ({groupedLinks.items.length})</TabsTrigger>
-              <TabsTrigger value="financials">Financial ({groupedLinks.financials.length})</TabsTrigger>
-              <TabsTrigger value="sales">Sales ({groupedLinks.sales.length})</TabsTrigger>
-              <TabsTrigger value="characters">Characters ({groupedLinks.characters.length})</TabsTrigger>
-              <TabsTrigger value="players">Players ({groupedLinks.players.length})</TabsTrigger>
-              <TabsTrigger value="sites">Sites ({groupedLinks.sites.length})</TabsTrigger>
-            </TabsList>
+        <div className="mt-4 flex min-h-0 flex-1 flex-col">
+          {loading ? (
+            <div className="flex flex-1 items-center justify-center py-8">
+              <div className="text-muted-foreground">Loading links…</div>
+            </div>
+          ) : totalLinks === 0 ? (
+            <div className="flex flex-1 flex-col items-center justify-center py-8 text-muted-foreground">
+              <Network className="mb-4 h-12 w-12 opacity-20" />
+              <p>No links for this entity yet</p>
+              <p className="text-sm">Workflows create links when they connect this row to other entities (e.g. a sale to its items).</p>
+            </div>
+          ) : (
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex min-h-0 flex-1 flex-col">
+              <TabsList className="grid w-full flex-shrink-0 grid-cols-8">
+                <TabsTrigger value="all">All ({totalLinks})</TabsTrigger>
+                <TabsTrigger value="tasks">Tasks ({groupedLinks.tasks.length})</TabsTrigger>
+                <TabsTrigger value="items">Items ({groupedLinks.items.length})</TabsTrigger>
+                <TabsTrigger value="financials">Financial ({groupedLinks.financials.length})</TabsTrigger>
+                <TabsTrigger value="sales">Sales ({groupedLinks.sales.length})</TabsTrigger>
+                <TabsTrigger value="characters">Characters ({groupedLinks.characters.length})</TabsTrigger>
+                <TabsTrigger value="players">Players ({groupedLinks.players.length})</TabsTrigger>
+                <TabsTrigger value="sites">Sites ({groupedLinks.sites.length})</TabsTrigger>
+              </TabsList>
 
-            <ScrollArea className="h-[400px] mt-4">
-              <TabsContent value="all" className="space-y-2">
-                {links.map(link => (
-                  <LinkCard
-                    key={link.id}
-                    link={link}
-                    currentEntity={entity}
-                    entityNames={entityNames}
-                    onDelete={handleDeleteLink}
-                  />
-                ))}
-              </TabsContent>
-
-              {Object.entries(groupedLinks).map(([type, typeLinks]) => (
-                <TabsContent key={type} value={type} className="space-y-2">
-                  {typeLinks.length === 0 ? (
-                    <div className="text-center text-muted-foreground py-8">
-                      No {type} relationships
-                    </div>
-                  ) : (
-                    typeLinks.map(link => (
-                      <LinkCard
-                        key={link.id}
-                        link={link}
-                        currentEntity={entity}
-                        entityNames={entityNames}
-                        onDelete={handleDeleteLink}
-                      />
-                    ))
-                  )}
+              <ScrollArea className="mt-4 min-h-0 flex-1 pr-3">
+                <TabsContent value="all" className="mt-0 space-y-2 pb-2">
+                  {links.map(link => (
+                    <LinkCard
+                      key={link.id}
+                      link={link}
+                      currentEntity={entity}
+                      entityNames={entityNames}
+                      onDelete={handleDeleteLink}
+                    />
+                  ))}
                 </TabsContent>
-              ))}
-            </ScrollArea>
-          </Tabs>
-        )}
 
-        <div className="flex justify-end gap-2 mt-4">
-          <Button variant="outline" onClick={onClose}>Close</Button>
+                {Object.entries(groupedLinks).map(([type, typeLinks]) => (
+                  <TabsContent key={type} value={type} className="mt-0 space-y-2 pb-2">
+                    {typeLinks.length === 0 ? (
+                      <div className="py-8 text-center text-muted-foreground">
+                        No {type} relationships
+                      </div>
+                    ) : (
+                      typeLinks.map(link => (
+                        <LinkCard
+                          key={link.id}
+                          link={link}
+                          currentEntity={entity}
+                          entityNames={entityNames}
+                          onDelete={handleDeleteLink}
+                        />
+                      ))
+                    )}
+                  </TabsContent>
+                ))}
+              </ScrollArea>
+            </Tabs>
+          )}
         </div>
+
+        <DialogFooter className="mt-4 flex-shrink-0 border-t border-border pt-4 sm:justify-end">
+          <Button type="button" variant="outline" onClick={() => onClose()}>
+            Close
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
