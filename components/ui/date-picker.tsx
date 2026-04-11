@@ -7,9 +7,12 @@ import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import * as PopoverPrimitive from '@radix-ui/react-popover';
-// UTC STANDARDIZATION: Using new UTC utilities
 import { formatForDisplay } from '@/lib/utils/date-display-utils';
-import { startOfDayUTC } from '@/lib/utils/utc-utils';
+import {
+  getBrowserTimezone,
+  getUserTimezone,
+  startOfCalendarDayInTimezone,
+} from '@/lib/utils/user-timezone';
 import { getInteractiveZIndex } from '@/lib/utils/z-index-utils';
 
 interface DatePickerProps {
@@ -30,10 +33,23 @@ export function DatePicker({
   const [open, setOpen] = React.useState(false);
 
   const handleDateSelect = (date: Date | undefined) => {
-    // Convert selected date to UTC midnight for consistency
-    const utcDate = date ? startOfDayUTC(date) : undefined;
-    onChange?.(utcDate);
-    setOpen(false); // Close the popover when date is selected
+    if (!date) {
+      onChange?.(undefined);
+      setOpen(false);
+      return;
+    }
+    // react-day-picker: start of selected day in browser local time (correct UTC instant).
+    const browserTz = getBrowserTimezone();
+    const userTz = getUserTimezone();
+    const y = date.getFullYear();
+    const m = date.getMonth();
+    const d = date.getDate();
+    const stored =
+      browserTz === userTz
+        ? new Date(date.getTime())
+        : startOfCalendarDayInTimezone(y, m, d, userTz);
+    onChange?.(stored);
+    setOpen(false);
   };
 
   return (

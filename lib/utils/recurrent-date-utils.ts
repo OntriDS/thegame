@@ -3,15 +3,14 @@
  * @DEPRECATED - Use utc-utils.ts, date-parsers.ts, and date-display-utils.ts instead
  * 
  * NOTE FOR RECURRENT SYSTEM:
- * This system specifically uses UTC Midnight as the canonical representation 
- * of a calendar day. All storage and calculations should maintain 00:00:00Z.
+ * Dates are absolute UTC instants (e.g. start-of-day in the user’s display TZ from the client).
+ * Do not truncate with startOfDayUTC here — that shifted civil days for non-UTC-midnight instants.
  */
 
 import { 
   addDaysUTC as coreAddDaysUTC,
   addWeeksUTC as coreAddWeeksUTC,
   addMonthsUTC as coreAddMonthsUTC,
-  startOfDayUTC,
   isSameDayUTC,
   isAfterUTC,
   toUTC,
@@ -20,10 +19,10 @@ import {
 } from './utc-utils';
 
 /**
- * Converts any date to UTC midnight.
+ * Normalizes to a Date carrying the same absolute instant (for recurrence math).
  */
 export function toRecurrentUTC(date: Date | string): Date {
-  return startOfDayUTC(toUTC(date));
+  return toUTC(date);
 }
 
 /**

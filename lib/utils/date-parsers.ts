@@ -20,6 +20,16 @@
 import { parseISO, parse, isValid } from 'date-fns';
 import { toUTC, fromLocalToUTC } from './utc-utils';
 
+/** ISO string already anchored to UTC or a fixed offset (do not recompose via local getters). */
+function hasExplicitUtcOrOffset(str: string): boolean {
+  const t = str.trim();
+  return (
+    /Z$/i.test(t) ||
+    /[+-]\d{2}:\d{2}(:\d{2}(\.\d+)?)?$/i.test(t) ||
+    /[+-]\d{4}$/.test(t)
+  );
+}
+
 // ============================================================================
 // CORE PARSING
 // ============================================================================
@@ -38,9 +48,9 @@ export function parseDateToUTC(input: Date | string | number | null | undefined)
     return new Date();
   }
 
-  // Already a Date object - convert to UTC
+  // Date object: internal value is already an absolute UTC instant
   if (input instanceof Date) {
-    return fromLocalToUTC(input);
+    return new Date(input.getTime());
   }
 
   // Number (timestamp) - create UTC date
@@ -61,32 +71,42 @@ export function parseDateToUTC(input: Date | string | number | null | undefined)
  * @throws Error if string is invalid
  */
 function parseStringToUTC(str: string): Date {
-  // 1. Try ISO format first (most reliable)
-  const isoDate = parseISO(str);
+  const trimmed = str.trim();
+
+  const plainYmd = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (plainYmd) {
+    const y = parseInt(plainYmd[1], 10);
+    const mo = parseInt(plainYmd[2], 10);
+    const d = parseInt(plainYmd[3], 10);
+    const utc = new Date(Date.UTC(y, mo - 1, d, 0, 0, 0, 0));
+    if (isValid(utc)) return utc;
+  }
+
+  const isoDate = parseISO(trimmed);
+  if (isValid(isoDate) && hasExplicitUtcOrOffset(trimmed)) {
+    return new Date(isoDate.getTime());
+  }
+
   if (isValid(isoDate)) {
     return fromLocalToUTC(isoDate);
   }
 
-  // 2. Try YYYY-MM-DD (HTML input format)
-  const htmlDate = parse(str, 'yyyy-MM-dd', new Date());
+  const htmlDate = parse(trimmed, 'yyyy-MM-dd', new Date());
   if (isValid(htmlDate)) {
     return fromLocalToUTC(htmlDate);
   }
 
-  // 3. Try DD-MM-YYYY (Display format)
-  const displayDate = parse(str, 'dd-MM-yyyy', new Date());
+  const displayDate = parse(trimmed, 'dd-MM-yyyy', new Date());
   if (isValid(displayDate)) {
     return fromLocalToUTC(displayDate);
   }
 
-  // 4. Try DD/MM/YY (Short format)
-  const shortDate = parse(str, 'dd/MM/yy', new Date());
+  const shortDate = parse(trimmed, 'dd/MM/yy', new Date());
   if (isValid(shortDate)) {
     return fromLocalToUTC(shortDate);
   }
 
-  // 5. Try native parsing (last resort)
-  const native = new Date(str);
+  const native = new Date(trimmed);
   if (isValid(native)) {
     return fromLocalToUTC(native);
   }

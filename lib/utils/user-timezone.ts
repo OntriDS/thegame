@@ -82,6 +82,67 @@ export function getBrowserTimezone(): string {
 }
 
 /**
+ * Calendar date (year, 0-based month, day) as shown in a specific IANA timezone,
+ * packed for comparison (YYYYMMDD).
+ */
+function localDateKeyInTimezone(utcMs: number, timeZone: string): number {
+  const f = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  const parts = f.formatToParts(new Date(utcMs));
+  const y = parseInt(parts.find(p => p.type === 'year')?.value || '0', 10);
+  const m = parseInt(parts.find(p => p.type === 'month')?.value || '0', 10);
+  const d = parseInt(parts.find(p => p.type === 'day')?.value || '0', 10);
+  return y * 10000 + m * 100 + d;
+}
+
+/**
+ * UTC instant for the first millisecond of a civil calendar day in `timeZone`
+ * (local midnight at the start of that day, including DST rules).
+ *
+ * Use when the user picked a (year, month, day) and Display Timezone is `timeZone`.
+ * Client-only (relies on Intl); on server returns UTC midnight of that calendar date.
+ */
+export function startOfCalendarDayInTimezone(
+  year: number,
+  monthIndex: number,
+  day: number,
+  timeZone: string
+): Date {
+  if (typeof window === 'undefined') {
+    return new Date(Date.UTC(year, monthIndex, day, 0, 0, 0, 0));
+  }
+
+  const want = year * 10000 + (monthIndex + 1) * 100 + day;
+
+  let lo = Date.UTC(year, monthIndex, day - 1, 0, 0, 0, 0);
+  let hi = Date.UTC(year, monthIndex, day + 1, 23, 59, 59, 999);
+
+  while (lo < hi) {
+    const mid = Math.floor((lo + hi) / 2);
+    const key = localDateKeyInTimezone(mid, timeZone);
+    if (key < want) lo = mid + 1;
+    else hi = mid;
+  }
+
+  let t = lo;
+  if (localDateKeyInTimezone(t, timeZone) !== want) {
+    return new Date(Date.UTC(year, monthIndex, day, 0, 0, 0, 0));
+  }
+
+  for (let i = 0; i < 48 && t > 0; i++) {
+    const prev = t - 1;
+    if (localDateKeyInTimezone(prev, timeZone) !== want) break;
+    t = prev;
+  }
+
+  return new Date(t);
+}
+
+/**
  * Get the user's preferred timezone from localStorage.
  * Falls back to browser timezone.
  */

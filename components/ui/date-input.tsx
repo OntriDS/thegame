@@ -5,7 +5,6 @@ import { Input } from '@/components/ui/input';
 // UTC STANDARDIZATION: Using new UTC utilities
 import { formatForDisplay } from '@/lib/utils/date-display-utils';
 import { parseDisplayDateToUTC } from '@/lib/utils/date-parsers';
-import { startOfDayUTC } from '@/lib/utils/utc-utils';
 import { cn } from '@/lib/utils';
 
 interface DateInputProps {
@@ -64,7 +63,7 @@ export function DateInput({
       // Validate date and create UTC date
       if (dayNum >= 1 && dayNum <= 31 && monthNum >= 1 && monthNum <= 12 && yearNum >= 1900) {
         // Create UTC date at midnight
-        const utcDate = startOfDayUTC(new Date(Date.UTC(yearNum, monthNum - 1, dayNum)));
+        const utcDate = new Date(Date.UTC(yearNum, monthNum - 1, dayNum));
         // Validate the date is correct (handles edge cases like Feb 31)
         if (
           utcDate.getUTCDate() === dayNum &&

@@ -6,7 +6,7 @@ import { TaskType, TaskStatus, TaskPriority } from '@/types/enums';
 import { getAllTasks, getActiveTasks, upsertTask, getTasksForMonth } from '@/data-store/datastore';
 import { requireAdminAuth } from '@/lib/api-auth';
 // UTC STANDARDIZATION: Using new UTC utilities
-import { getUTCNow, startOfDayUTC } from '@/lib/utils/utc-utils';
+import { getUTCNow } from '@/lib/utils/utc-utils';
 import { parseDateToUTC } from '@/lib/utils/date-parsers';
 
 // Force dynamic rendering - this route accesses cookies
@@ -60,19 +60,18 @@ export async function POST(req: NextRequest) {
     const { skipDuplicateCheck, ...taskData } = body;
     const taskBody = taskData as Task;
 
-    // Normalize frequencyConfig.customDays from strings to UTC midnight Date objects
+    // Normalize frequencyConfig.customDays to parsed UTC instants (preserve client civil day)
     let normalizedFrequencyConfig = taskBody.frequencyConfig;
     if (normalizedFrequencyConfig?.customDays && Array.isArray(normalizedFrequencyConfig.customDays)) {
       normalizedFrequencyConfig = {
         ...normalizedFrequencyConfig,
         customDays: normalizedFrequencyConfig.customDays.map((day: any) => {
           if (day instanceof Date) {
-            return startOfDayUTC(day); // Convert to UTC midnight
+            return new Date(day.getTime());
           }
           if (typeof day === 'string') {
             try {
-              const date = parseDateToUTC(day);
-              return startOfDayUTC(date); // Convert to UTC midnight
+              return parseDateToUTC(day);
             } catch {
               return null;
             }
@@ -82,7 +81,6 @@ export async function POST(req: NextRequest) {
       };
     }
 
-    // Normalize stopsAfter.value to UTC midnight if it's a date
     if (normalizedFrequencyConfig?.stopsAfter?.type === 'date' && normalizedFrequencyConfig.stopsAfter.value) {
       try {
         const dateValue = typeof normalizedFrequencyConfig.stopsAfter.value === 'string'
@@ -90,7 +88,7 @@ export async function POST(req: NextRequest) {
           : normalizedFrequencyConfig.stopsAfter.value;
 
         if (dateValue && !isNaN(dateValue.getTime())) {
-          normalizedFrequencyConfig.stopsAfter.value = startOfDayUTC(dateValue); // Convert to UTC midnight
+          normalizedFrequencyConfig.stopsAfter.value = new Date(dateValue.getTime());
         }
       } catch {
         // Invalid date, leave as is
@@ -113,8 +111,7 @@ export async function POST(req: NextRequest) {
       links: taskBody.links || [],
       createdAt: taskBody.createdAt ? parseDateToUTC(taskBody.createdAt) : getUTCNow(),
       updatedAt: getUTCNow(),
-      // Standardize to UTC midnight for all dates
-      dueDate: taskBody.dueDate ? startOfDayUTC(parseDateToUTC(taskBody.dueDate)) : undefined,
+      dueDate: taskBody.dueDate ? parseDateToUTC(taskBody.dueDate) : undefined,
       doneAt: taskBody.doneAt ? parseDateToUTC(taskBody.doneAt) : (taskBody.status === TaskStatus.DONE ? getUTCNow() : undefined),
       collectedAt: taskBody.collectedAt ? parseDateToUTC(taskBody.collectedAt) : undefined,
       frequencyConfig: normalizedFrequencyConfig
