@@ -168,14 +168,38 @@ export function addYearsUTC(date: Date, years: number): Date {
   return result;
 }
 
+/** Date, epoch ms, or ISO string — KV/JSON often revives dates as strings */
+export type UTCalendarInput = Date | string | number;
+
+function normalizeCalendarBase(input: UTCalendarInput): Date {
+  if (input instanceof Date) {
+    if (!Number.isFinite(input.getTime())) {
+      throw new Error('Invalid Date object');
+    }
+    return new Date(input.getTime());
+  }
+  if (typeof input === 'number') {
+    const d = new Date(input);
+    if (!Number.isFinite(d.getTime())) {
+      throw new Error(`Invalid timestamp: ${input}`);
+    }
+    return d;
+  }
+  const d = new Date(String(input).trim());
+  if (!Number.isFinite(d.getTime())) {
+    throw new Error(`Invalid date string: ${input}`);
+  }
+  return d;
+}
+
 /**
  * Get start of day in UTC (00:00:00).
  *
- * @param date - Base UTC date
+ * @param date - Base UTC date (or ISO string / ms from storage)
  * @returns New UTC date at midnight
  */
-export function startOfDayUTC(date: Date): Date {
-  const result = new Date(date.getTime());
+export function startOfDayUTC(date: UTCalendarInput): Date {
+  const result = normalizeCalendarBase(date);
   result.setUTCHours(0, 0, 0, 0);
   return result;
 }
@@ -183,11 +207,11 @@ export function startOfDayUTC(date: Date): Date {
 /**
  * Get end of day in UTC (23:59:59.999).
  *
- * @param date - Base UTC date
+ * @param date - Base UTC date (or ISO string / ms from storage)
  * @returns New UTC date at end of day
  */
-export function endOfDayUTC(date: Date): Date {
-  const result = new Date(date.getTime());
+export function endOfDayUTC(date: UTCalendarInput): Date {
+  const result = normalizeCalendarBase(date);
   result.setUTCHours(23, 59, 59, 999);
   return result;
 }
@@ -195,11 +219,11 @@ export function endOfDayUTC(date: Date): Date {
 /**
  * Get start of month in UTC (1st at 00:00:00).
  *
- * @param date - Base UTC date
+ * @param date - Base UTC date (or ISO string / ms from storage)
  * @returns New UTC date at start of month
  */
-export function startOfMonthUTC(date: Date): Date {
-  const result = new Date(date.getTime());
+export function startOfMonthUTC(date: UTCalendarInput): Date {
+  const result = normalizeCalendarBase(date);
   result.setUTCDate(1);
   result.setUTCHours(0, 0, 0, 0);
   return result;
@@ -208,11 +232,11 @@ export function startOfMonthUTC(date: Date): Date {
 /**
  * Get end of month in UTC (last day at 23:59:59.999).
  *
- * @param date - Base UTC date
+ * @param date - Base UTC date (or ISO string / ms from storage)
  * @returns New UTC date at end of month
  */
-export function endOfMonthUTC(date: Date): Date {
-  const result = new Date(date.getTime());
+export function endOfMonthUTC(date: UTCalendarInput): Date {
+  const result = normalizeCalendarBase(date);
   result.setUTCMonth(result.getUTCMonth() + 1, 0);
   result.setUTCHours(23, 59, 59, 999);
   return result;
@@ -221,11 +245,11 @@ export function endOfMonthUTC(date: Date): Date {
 /**
  * Get start of week in UTC (Sunday at 00:00:00).
  *
- * @param date - Base UTC date
+ * @param date - Base UTC date (or ISO string / ms from storage)
  * @returns New UTC date at start of week
  */
-export function startOfWeekUTC(date: Date): Date {
-  const result = new Date(date.getTime());
+export function startOfWeekUTC(date: UTCalendarInput): Date {
+  const result = normalizeCalendarBase(date);
   const dayOfWeek = result.getUTCDay();
   result.setUTCDate(result.getUTCDate() - dayOfWeek);
   result.setUTCHours(0, 0, 0, 0);
@@ -235,11 +259,11 @@ export function startOfWeekUTC(date: Date): Date {
 /**
  * Get end of week in UTC (Saturday at 23:59:59.999).
  *
- * @param date - Base UTC date
+ * @param date - Base UTC date (or ISO string / ms from storage)
  * @returns New UTC date at end of week
  */
-export function endOfWeekUTC(date: Date): Date {
-  const result = new Date(date.getTime());
+export function endOfWeekUTC(date: UTCalendarInput): Date {
+  const result = normalizeCalendarBase(date);
   const dayOfWeek = result.getUTCDay();
   result.setUTCDate(result.getUTCDate() + (6 - dayOfWeek));
   result.setUTCHours(23, 59, 59, 999);
