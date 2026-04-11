@@ -220,6 +220,23 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
     }
     const collectedAt = collectedAtRaw;
 
+    // Client bug or legacy payload: isCollected/collectedAt set but status still Done — persist Collected without changing timestamps
+    if (task.status !== TaskStatus.COLLECTED) {
+      const repaired: Task = {
+        ...task,
+        status: TaskStatus.COLLECTED,
+        isCollected: true,
+        collectedAt,
+      };
+      await upsertTask(repaired, { skipWorkflowEffects: true });
+      taskForCounterparty = {
+        ...taskForCounterparty,
+        status: TaskStatus.COLLECTED,
+        isCollected: true,
+        collectedAt,
+      };
+    }
+
     const pointsRewardedEffectKey = EffectKeys.sideEffect('task', task.id, 'pointsRewarded');
 
     if (!(await hasEffect(pointsRewardedEffectKey))) {
@@ -241,7 +258,7 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
       await markEffect(pointsRewardedEffectKey);
 
       // Cascade collection to child instances (only marks them as collected to reward points)
-      await cascadeCollectionToChildren(task, collectedAt);
+      await cascadeCollectionToChildren(taskForCounterparty, collectedAt);
     }
   }
 

@@ -375,10 +375,10 @@ export default function RecurrentTreeModalContent({
     };
 
     const determineFinalStatus = () => {
+      if (status === TaskStatus.COLLECTED) return TaskStatus.COLLECTED;
       if (editingExisting && task?.status === TaskStatus.COLLECTED) return TaskStatus.COLLECTED;
       if (editingExisting && task?.status === TaskStatus.DONE && progress === 100) return TaskStatus.DONE;
       if (progress === 100) return TaskStatus.DONE;
-      if (status === TaskStatus.COLLECTED) return TaskStatus.COLLECTED;
       return status;
     };
 

@@ -377,19 +377,19 @@ export default function MissionTreeModalContent({
       return ORDER_INCREMENT;
     };
 
-    // Determine final status based on progress
+    // Determine final status: explicit Collected from UI must win over stale server DONE + progress 100
     const determineFinalStatus = () => {
+      if (status === TaskStatus.COLLECTED) {
+        return TaskStatus.COLLECTED;
+      }
       if (editingExisting && task?.status === TaskStatus.COLLECTED) {
-        return TaskStatus.COLLECTED; // Keep COLLECTED status if already collected
+        return TaskStatus.COLLECTED;
       }
       if (editingExisting && task?.status === TaskStatus.DONE && progress === 100) {
-        return TaskStatus.DONE; // Keep DONE status if task is complete and progress is 100%
+        return TaskStatus.DONE;
       }
       if (progress === 100) {
-        return TaskStatus.DONE; // Progress 100% => DONE
-      }
-      if (status === TaskStatus.COLLECTED) {
-        return TaskStatus.COLLECTED; // Allow explicit COLLECTED status
+        return TaskStatus.DONE;
       }
       return status;
     };
