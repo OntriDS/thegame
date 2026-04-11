@@ -5,24 +5,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { SearchableSelect } from '@/components/ui/searchable-select';
-import { DatePicker } from '@/components/ui/date-picker';
-import NumericInput from '@/components/ui/numeric-input';
-import { Dialog, DialogContent, DialogClose, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sale, SaleLine, Item, Discount, Site, Character, Task, ItemSaleLine, ServiceLine, Business, Contract } from '@/types/entities';
-import { normalizeSaleLines } from '@/lib/utils/sale-lines-normalize';
-import { getZIndexClass } from '@/lib/utils/z-index-utils';
-import { SaleType, SaleStatus, PaymentMethod, Currency, ItemType, ItemStatus, TaskType, TaskPriority, Collection, STATION_CATEGORIES, CharacterRole, EntityType, LinkType, FOUNDER_CHARACTER_ID } from '@/types/enums';
-import { getSubTypesForItemType } from '@/lib/utils/item-utils';
+import { SaleType, SaleStatus, PaymentMethod, Currency, ItemType, ItemStatus, TaskType, STATION_CATEGORIES, CharacterRole, EntityType, FOUNDER_CHARACTER_ID } from '@/types/enums';
 import type { Station } from '@/types/type-aliases';
 import { CurrencyExchangeRates } from '@/lib/constants/financial-constants';
-import { createSiteOptionsWithCategories } from '@/lib/utils/site-options-utils';
 import { buildAutoSaleName, resolveCanonicalSaleTimelineDate } from '@/lib/utils/sale-auto-name-utils';
-import { createStationCategoryOptions, createTaskParentOptions, createItemTypeSubTypeOptions, getItemTypeFromCombined, getCategoryFromCombined, getStationFromCombined } from '@/lib/utils/searchable-select-utils';
-import { getAreaForStation, getSalesChannelFromSaleType } from '@/lib/utils/business-structure-utils';
+import { getSalesChannelFromSaleType } from '@/lib/utils/business-structure-utils';
+import { createStationCategoryOptions, getCategoryFromCombined, getStationFromCombined } from '@/lib/utils/searchable-select-utils';
 import { roundCurrency2 } from '@/lib/utils/financial-utils';
 import { ClientAPI } from '@/lib/client-api';
 import { dispatchEntityUpdated, entityTypeToKind } from '@/lib/ui/ui-events';
@@ -30,9 +22,7 @@ import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
 import PlayerCharacterSelectorModal from './submodals/player-character-selector-submodal';
 // Side effects handled by parent component via API calls
 import { v4 as uuid } from 'uuid';
-import { Plus, Trash2, Package, DollarSign, Network, ListPlus, Wallet, Gift, User, Store, CalendarIcon, X, Pencil } from 'lucide-react';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { X, Pencil, CalendarIcon, Network, Wallet, Gift, User } from 'lucide-react';
 import DeleteModal from './submodals/delete-submodal';
 import LinksRelationshipsModal from './submodals/links-relationships-submodal';
 import SaleItemsSubModal, { SaleItemLine } from './submodals/sale-items-submodal';
@@ -41,54 +31,62 @@ import ItemEmissarySubModal, { ItemCreationData } from './submodals/item-emissar
 import PointsEmissarySubModal, { PointsData } from './submodals/points-emissary-submodal';
 import ConfirmationModal from './submodals/confirmation-submodal';
 import ArchiveCollectionConfirmationModal from './submodals/archive-collection-confirmation-submodal';
-import BoothSalesView, { type BoothSalesViewHandle } from './submodals/booth-sales-view';
+import SalesModalDirectContent, {
+  type SalesModalDirectContentCommonProps,
+  type SalesModalDirectContentProps,
+} from './sales-modal-direct-content';
+import SalesModalNetworkContent from './sales-modal-network-content';
+import SalesModalOnlineContent from './sales-modal-online-content';
+import SalesModalBoothContent, { type BoothSalesViewHandle as SalesModalBoothContentHandle } from './sales-modal-booth-content';
 import DatesSubmodal from './submodals/dates-submodal';
-import { ensureCounterpartyRole } from '@/lib/utils/character-role-sync';
-
-/** Product lines only (legacy bundle rows normalized to item). */
-function collectItemSaleLines(saleLines: SaleLine[]): ItemSaleLine[] {
-  return normalizeSaleLines(saleLines).filter((l): l is ItemSaleLine => l.kind === 'item');
-}
+import { ensureCounterpartyRole as syncCounterpartyRole } from '@/lib/utils/character-role-sync';
+import {
+  collectItemSaleLines,
+  extractSaleItemTargetIds,
+  getStationValue,
+  resolveItemFromLineItemIdOnly,
+} from '@/lib/utils/sales-modal-utils';
 
 const UNKNOWN_SALE_ITEM_LABEL = 'Unknown item';
 
-/** Read-only summary: type/subtype from catalog for `itemId`. */
-function formatItemTypeSubtypeLabel(itemId: string, catalog: Item[]): string {
-  const it = catalog.find((i) => i.id === itemId);
-  if (!it) return '—';
-  const sub =
-    it.subItemType != null && String(it.subItemType).trim() !== ''
-      ? String(it.subItemType)
-      : '';
-  return sub ? `${it.type} / ${sub}` : String(it.type);
+interface SalesModalContentHostProps {
+  type: SaleType;
+  boothContentKey: string;
+  boothSaveRef: React.Ref<SalesModalBoothContentHandle>;
+  boothContentProps: Omit<React.ComponentPropsWithoutRef<typeof SalesModalBoothContent>, 'children'>;
+  directContentProps: SalesModalDirectContentProps;
+  commonContentProps: SalesModalDirectContentCommonProps;
 }
 
-function extractSaleItemTargetIds(links: unknown[]): string[] {
-  if (!Array.isArray(links)) return [];
-  const out: string[] = [];
-  for (const raw of links) {
-    const l = raw as { linkType?: string; target?: { type?: string; id?: string } };
-    if (l?.linkType !== LinkType.SALE_ITEM) continue;
-    const id = l.target?.id;
-    if (typeof id !== 'string' || !id.trim()) continue;
-    if (String(l.target?.type).toLowerCase() !== EntityType.ITEM) continue;
-    out.push(id);
+function SalesModalContentHost({
+  type,
+  boothContentKey,
+  boothSaveRef,
+  boothContentProps,
+  directContentProps,
+  commonContentProps,
+}: SalesModalContentHostProps) {
+  if (type === SaleType.BOOTH) {
+    return (
+      <div className="flex min-h-0 flex-1 flex-col border-b">
+        <SalesModalBoothContent
+          key={boothContentKey}
+          ref={boothSaveRef}
+          {...boothContentProps}
+        />
+      </div>
+    );
   }
-  return out;
-}
 
-/**
- * Truth for multi-line / booth / submodal rows: each `SaleLine.itemId` maps to at most one Item row.
- * We do NOT scan SALE_ITEM links here — several links cannot be matched to rows without extra metadata.
- */
-function resolveItemFromLineItemIdOnly(
-  lineItemId: string | undefined,
-  items: Item[]
-): { resolvedId: string; isKnown: boolean } {
-  const lid = lineItemId?.trim() ?? '';
-  if (!lid) return { resolvedId: '', isKnown: false };
-  if (items.some((i) => i.id === lid)) return { resolvedId: lid, isKnown: true };
-  return { resolvedId: lid, isKnown: false };
+  if (type === SaleType.DIRECT) {
+    return <SalesModalDirectContent {...directContentProps} />;
+  }
+
+  if (type === SaleType.NETWORK) {
+    return <SalesModalNetworkContent {...commonContentProps} />;
+  }
+
+  return <SalesModalOnlineContent {...commonContentProps} />;
 }
 
 function buildItemLinesFromSelection(items: SaleItemLine[]): SaleLine[] {
@@ -122,12 +120,6 @@ export default function SalesModal({
 }: SalesModalProps) {
   const { getPreference, setPreference } = useUserPreferences();
 
-  // Helper function to get the correct value format for SearchableSelect
-  const getStationValue = (station: Station): string => {
-    const area = getAreaForStation(station);
-    return `${area}:${station}`;
-  };
-
   // Form state
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -159,7 +151,9 @@ export default function SalesModal({
   const [emissaryColumnExpanded, setEmissaryColumnExpanded] = useState(false);
 
   // UI-only helpers
-  const [whatKind, setWhatKind] = useState<'product' | 'service'>('product');
+  const [directWhatKind, setDirectWhatKind] = useState<'product' | 'service'>('product');
+  const isProductMode = type === SaleType.NETWORK || directWhatKind === 'product';
+  const isServiceMode = type === SaleType.DIRECT && directWhatKind === 'service';
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showRelationshipsModal, setShowRelationshipsModal] = useState(false);
   const [playerCharacterId, setPlayerCharacterId] = useState<string | null>(null);
@@ -220,7 +214,7 @@ export default function SalesModal({
   const didInitRef = useRef(false);
   /** After archive modal confirms COLLECTED, allow Save while `sale` prop is still CHARGED until parent refetches */
   const collectedArchiveAcknowledgedForSaleIdRef = useRef<string | null>(null);
-  const boothSaveRef = useRef<BoothSalesViewHandle | null>(null);
+  const boothSaveRef = useRef<SalesModalBoothContentHandle | null>(null);
 
   // Duplicate Prevention
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
@@ -347,7 +341,7 @@ export default function SalesModal({
 
   useLayoutEffect(() => {
     if (!open || !sale?.id || sale.type === SaleType.BOOTH) return;
-    if (whatKind !== 'product') return;
+    if (!isProductMode) return;
     if (!saleItemLinkTargets.length || !items.length) return;
 
     const itemLines = collectItemSaleLines(lines);
@@ -382,7 +376,7 @@ export default function SalesModal({
     sale?.type,
     saleItemLinkTargets,
     items,
-    whatKind,
+    isProductMode,
     lines,
   ]);
 
@@ -396,10 +390,10 @@ export default function SalesModal({
   }, [siteId]);
 
   useEffect(() => {
-    if (whatKind !== 'product') return;
+    if (!isProductMode) return;
     const productRevenue = selectedItems.reduce((sum, item) => sum + (item.total || 0), 0);
     setRevenue(roundCurrency2(productRevenue));
-  }, [selectedItems, whatKind]);
+  }, [selectedItems, isProductMode]);
 
   // Initialize form when sale changes
   useEffect(() => {
@@ -442,7 +436,7 @@ export default function SalesModal({
       setQuickRows([]);
 
       if (sale.type === SaleType.BOOTH) {
-        setWhatKind('product');
+        setDirectWhatKind('product');
         setSelectedTaskId('');
         setTaskName('');
         setTaskType(TaskType.ASSIGNMENT);
@@ -471,7 +465,7 @@ export default function SalesModal({
         });
       } else {
         const hasServiceLines = sale.lines?.some(line => line.kind === 'service');
-        setWhatKind(hasServiceLines ? 'service' : 'product');
+        setDirectWhatKind(hasServiceLines ? 'service' : 'product');
 
         if (hasServiceLines && sale.lines) {
           const serviceLine = sale.lines.find(line => line.kind === 'service');
@@ -550,15 +544,15 @@ export default function SalesModal({
       return UNKNOWN_SALE_ITEM_LABEL;
     };
 
-    if (hasServiceLines) {
-      setWhatKind('service');
+    if (type !== SaleType.NETWORK && hasServiceLines) {
+      setDirectWhatKind('service');
       didInitRef.current = true;
       return;
     }
 
     if (itemLines.length === 1) {
       const [line] = itemLines;
-      setWhatKind('product');
+      setDirectWhatKind('product');
       setManualLines(false);
       setSelectedItems([
         {
@@ -572,7 +566,7 @@ export default function SalesModal({
         },
       ]);
     } else if (itemLines.length > 0) {
-      setWhatKind('product');
+      setDirectWhatKind('product');
       setManualLines(false);
       const mappedItems = itemLines.map((line, idx) => ({
         id: line.lineId?.trim() || `${sale.id}-row-${idx}`,
@@ -592,7 +586,7 @@ export default function SalesModal({
   }, [sale, items]);
 
   useEffect(() => {
-    if (!sale || whatKind !== 'product') return;
+    if (!sale || !isProductMode) return;
     setSelectedItems((prev) =>
       prev.map((row) => {
         const { isKnown, resolvedId } = resolveItemFromLineItemIdOnly(row.itemId, items);
@@ -603,7 +597,7 @@ export default function SalesModal({
         return { ...row, itemName: name };
       })
     );
-  }, [sale, items, whatKind]);
+  }, [sale, items, isProductMode]);
 
   // Load preferences after hydration to prevent SSR mismatches
   useEffect(() => {
@@ -687,7 +681,7 @@ export default function SalesModal({
     setOverallDiscount({});
     setLines([]);
     setPayments([]);
-    setWhatKind('product');
+    setDirectWhatKind('product');
 
     // Reset mini-submodal data
     setTaskItemData({
@@ -754,7 +748,7 @@ export default function SalesModal({
       setIsSaving(true);
       try {
         await onSave(overrideSale, force);
-        await ensureCounterpartyRole(overrideSale.customerId, CharacterRole.CUSTOMER);
+        await syncCounterpartyRole(overrideSale.customerId, CharacterRole.CUSTOMER);
         // Dispatch events AFTER successful save
         dispatchEntityUpdated(entityTypeToKind(EntityType.SALE));
         onOpenChange(false);
@@ -793,7 +787,7 @@ export default function SalesModal({
     const hasProductLines = lines.some(line => line.kind === 'item');
     const hasServiceLines = lines.some(line => line.kind === 'service');
     const hasServiceFieldInput =
-      whatKind === 'service' &&
+      isServiceMode &&
       !manualLines &&
       (
         Boolean(selectedTaskId) ||
@@ -814,7 +808,7 @@ export default function SalesModal({
     // Allow saving with no items/services for cleanup/testing flows.
 
     let effectiveLines: SaleLine[] = lines;
-    if (whatKind === 'product' && selectedItems.length > 0) {
+    if (isProductMode && selectedItems.length > 0) {
       // Reuse stable line ids so ensureSoldItemEntities idempotency + itemsSold summary stay correct on re-save
       effectiveLines = selectedItems.map(item => ({
         lineId: item.id || uuid(),
@@ -825,7 +819,7 @@ export default function SalesModal({
         description: `Sale of ${item.itemName}`,
         taxAmount: 0,
       } as SaleLine));
-    } else if (whatKind === 'service') {
+    } else if (isServiceMode) {
       // Handle SERVICE/ONE - create service line from task fields
       const existingServiceLine = lines.find((l): l is ServiceLine => l.kind === 'service') as ServiceLine | undefined;
       effectiveLines = [{
@@ -1014,7 +1008,7 @@ export default function SalesModal({
     try {
       // Emit pure sale entity - Links System handles all relationships automatically
       await onSave(saleData);
-      await ensureCounterpartyRole(saleData.customerId, CharacterRole.CUSTOMER);
+      await syncCounterpartyRole(saleData.customerId, CharacterRole.CUSTOMER);
 
       // Dispatch events AFTER successful save
       dispatchEntityUpdated(entityTypeToKind(EntityType.SALE));
@@ -1198,29 +1192,6 @@ export default function SalesModal({
     setPayments(newPayments);
   };
 
-  const getTaskOptions = () => {
-    return tasks
-      .filter(task => task.id !== selectedTaskId)
-      .map(task => ({
-        value: task.id,
-        label: task.name,
-        group: task.type
-      }));
-  };
-
-  const getParentTaskOptions = () => {
-    return [
-      { value: '', label: 'No Parent', group: 'None' },
-      ...tasks
-        .filter(task => task.id !== selectedTaskId)
-        .map(task => ({
-          value: task.id,
-          label: task.name,
-          group: task.type
-        }))
-    ];
-  };
-
   // Other Methods handlers
   const handleGiftApplied = (amount: number) => {
     // Create a gift payment
@@ -1237,12 +1208,7 @@ export default function SalesModal({
     setRecordedPayments([...recordedPayments, giftPayment]);
 
     // Reduce revenue by gift amount
-    if (whatKind === 'product') {
-      setRevenue(roundCurrency2(Math.max(0, revenue - amount)));
-    } else {
-      // Service: reduce revenue
-      setRevenue(roundCurrency2(Math.max(0, revenue - amount)));
-    }
+    setRevenue(roundCurrency2(Math.max(0, revenue - amount)));
 
     // Set category to Other-Sales
     setTaskStation(STATION_CATEGORIES.SALES[7] as Station); // 'Other-Sales'
@@ -1291,13 +1257,156 @@ export default function SalesModal({
   const selectedItemsSubtotal = selectedItems.reduce((sum, item) => sum + (item.total || 0), 0);
   const handleCostChange = (value: number) => setCost(roundCurrency2(value));
   const handleRevenueChange = (value: number) => setRevenue(roundCurrency2(value));
-  // SearchableSelect buckets by `group` when `getCategoryForValue` is not passed (see searchable-select.tsx).
-  // Role = group header; label is name only (no redundant roles in the label text).
-  const customerOptions = characters.map((char) => ({
-    value: char.id,
-    label: char.name,
-    group: char.roles && char.roles.length > 0 ? char.roles[0] : 'Other',
-  }));
+
+  const commonContentProps: SalesModalDirectContentCommonProps = {
+    saleDate,
+    setSaleDate: (date) => setSaleDate(date),
+    emissaryColumnExpanded,
+    showAdvanced,
+    toggleAdvanced,
+    siteId,
+    setSiteId,
+    customerId,
+    setCustomerId,
+    isNewCustomer,
+    setIsNewCustomer,
+    newCustomerName,
+    setNewCustomerName,
+    onOpenItemsSubModal: () => setShowItemsSubModal(true),
+    selectedItems,
+    items,
+    selectedItemsSubtotal,
+    cost,
+    onCostChange: handleCostChange,
+    revenue,
+    onRevenueChange: handleRevenueChange,
+    isNotPaid,
+    setIsNotPaid,
+    isNotCharged,
+    setIsNotCharged,
+    updateSaleStatus,
+    playerPoints,
+    setPlayerPoints,
+    description,
+    setDescription,
+    overallDiscount,
+    setOverallDiscount,
+    characters,
+    sites,
+  };
+
+  const directContentProps: SalesModalDirectContentProps = {
+    ...commonContentProps,
+    initialWhatKind: directWhatKind,
+    onWhatKindChange: setDirectWhatKind,
+    isWhatKindToggleDisabled: !!sale?.id,
+    showWhatKindToggle: true,
+    lines,
+    showValidationError,
+    tasks,
+    taskName,
+    setTaskName,
+    taskType,
+    setTaskType,
+    taskParentId,
+    setTaskParentId,
+    taskStation,
+    setTaskStation,
+    onOpenTaskItemSubModal: () => setShowTaskItemSubModal(true),
+    onOpenTaskPointsSubModal: () => setShowTaskPointsSubModal(true),
+  };
+
+  const boothContentProps = {
+    sale,
+    sites,
+    characters,
+    items,
+    businesses,
+    contracts,
+    saleDate,
+    setSaleDate,
+    lines,
+    setLines,
+    siteId,
+    setSiteId,
+    doneAt: localDoneAt,
+    collectedAt: localCollectedAt,
+    onSave: handleSave,
+    onCancel: () => onOpenChange(false),
+    isSaving,
+    status,
+    setStatus,
+    isNotPaid,
+    setIsNotPaid,
+    isNotCharged,
+    setIsNotCharged: (val: boolean) => {
+      setIsNotCharged(val);
+      updateSaleStatus(val);
+    },
+    onDelete: sale?.id ? (() => setShowDeleteModal(true)) : undefined,
+    exchangeRate: exchangeRates?.colonesToUsd,
+  };
+
+  const handleOpenNameSubModal = () => {
+    const liveCanonical = buildAutoSaleName(type, siteId, getTimelineDateForAutoName(), sites);
+    const serverTrim = sale?.name?.trim() ?? '';
+    const nameTrim = name.trim();
+    const formSyncedToServer = !sale?.id || nameTrim === serverTrim;
+    const useStoredCustom =
+      isNameCustom &&
+      formSyncedToServer &&
+      !!serverTrim &&
+      serverTrim !== liveCanonical;
+    setNameDraft(useStoredCustom ? serverTrim : liveCanonical);
+    setShowNameSubModal(true);
+  };
+
+  const isTypeSwitchDisabled = (nextType: SaleType) => {
+    const isExistingSale = Boolean(sale?.id);
+    const isBidirectionalDirectNetwork =
+      (type === SaleType.DIRECT && nextType === SaleType.NETWORK) ||
+      (type === SaleType.NETWORK && nextType === SaleType.DIRECT);
+    return isExistingSale && !isBidirectionalDirectNetwork;
+  };
+
+  const handleTypeChange = (nextType: SaleType) => {
+    setType(nextType);
+    if (!isNameCustom) {
+      setName(getDefaultSaleName(nextType, siteId, getTimelineDateForAutoName()));
+    }
+    const channel = getSalesChannelFromSaleType(nextType);
+    if (channel) {
+      setSalesChannel(channel);
+    }
+  };
+
+  const handleFooterStatusChange = (nextStatus: SaleStatus) => {
+    if (nextStatus !== SaleStatus.COLLECTED) {
+      collectedArchiveAcknowledgedForSaleIdRef.current = null;
+    }
+
+    if (nextStatus === SaleStatus.COLLECTED && status !== SaleStatus.COLLECTED) {
+      setPendingStatusChange({
+        status: nextStatus,
+        onConfirm: () => {
+          if (sale?.id) {
+            collectedArchiveAcknowledgedForSaleIdRef.current = sale.id;
+          }
+          setStatus(nextStatus);
+          setShowArchiveCollectionModal(false);
+          setPendingStatusChange(null);
+        },
+        onCancel: () => {
+          setShowArchiveCollectionModal(false);
+          setPendingStatusChange(null);
+        },
+      });
+      setShowArchiveCollectionModal(true);
+      return;
+    }
+
+    setStatus(nextStatus);
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -1334,64 +1443,16 @@ export default function SalesModal({
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => {
-                  const liveCanonical = buildAutoSaleName(type, siteId, getTimelineDateForAutoName(), sites);
-                  const serverTrim = sale?.name?.trim() ?? '';
-                  const nameTrim = name.trim();
-                  const formSyncedToServer = !sale?.id || nameTrim === serverTrim;
-                  const useStoredCustom =
-                    isNameCustom &&
-                    formSyncedToServer &&
-                    !!serverTrim &&
-                    serverTrim !== liveCanonical;
-                  setNameDraft(useStoredCustom ? serverTrim : liveCanonical);
-                  setShowNameSubModal(true);
-                }}
+                onClick={handleOpenNameSubModal}
                 className="h-8 shrink-0 px-2 text-xs"
               >
                 <Pencil className="h-3 w-3 mr-1" />
                 Name
               </Button>
-              {type !== SaleType.BOOTH && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    if (sale?.id) return;
-
-                    const newKind = whatKind === 'product' ? 'service' : 'product';
-
-                    if (lines.length > 0) {
-                      const existingKinds = new Set(lines.map(line => line.kind));
-
-                      if (newKind === 'product' && existingKinds.has('service')) {
-                        showValidationError('Cannot switch to Product mode. This sale already has service lines. Please clear all lines first.');
-                        return;
-                      }
-
-                      if (newKind === 'service' && existingKinds.has('item')) {
-                        showValidationError('Cannot switch to Service mode. This sale already has product lines. Please clear all lines first.');
-                        return;
-                      }
-                    }
-
-                    setWhatKind(newKind);
-                  }}
-                  className={`h-8 shrink-0 px-3 text-xs ${sale?.id ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  disabled={!!sale?.id}
-                  title={sale?.id ? 'Product/Service type cannot be changed after creation' : 'Toggle between Product and Service'}
-                >
-                  {whatKind === 'product' ? 'Product' : 'Service'}
-                </Button>
-              )}
             </div>
             <div className="ml-auto flex flex-wrap items-center justify-end gap-1.5">
               {Object.values(SaleType).map(t => {
-                const isExistingSale = sale?.id;
-                const isBidirectionalDirectNetwork =
-                  (type === SaleType.DIRECT && t === SaleType.NETWORK) ||
-                  (type === SaleType.NETWORK && t === SaleType.DIRECT);
-                const isDisabled = isExistingSale && !isBidirectionalDirectNetwork;
+                const isDisabled = isTypeSwitchDisabled(t);
 
                 return (
                   <Button
@@ -1401,15 +1462,7 @@ export default function SalesModal({
                     disabled={!!isDisabled}
                     onClick={() => {
                       if (isDisabled) return;
-                      const nextType = t as SaleType;
-                      setType(nextType);
-                      if (!isNameCustom) {
-                        setName(getDefaultSaleName(nextType, siteId, getTimelineDateForAutoName()));
-                      }
-                      const channel = getSalesChannelFromSaleType(t);
-                      if (channel) {
-                        setSalesChannel(channel);
-                      }
+                      handleTypeChange(t);
                     }}
                     className={`h-8 px-2 text-xs ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
                     title={isDisabled ? 'Sale type cannot be changed after creation' : ''}
@@ -1429,750 +1482,115 @@ export default function SalesModal({
           </div>
         </DialogHeader>
 
-        {type === SaleType.BOOTH ? (
-          <div className="flex min-h-0 flex-1 flex-col border-b">
-          <BoothSalesView
-            key={sale?.id ?? 'new-booth'}
-            ref={boothSaveRef}
-            sale={sale || undefined}
-            sites={sites}
-            characters={characters}
-            items={items}
-            businesses={businesses}
-            contracts={contracts}
-            saleDate={saleDate}
-            setSaleDate={setSaleDate}
-            lines={lines}
-            setLines={setLines}
-            siteId={siteId}
-            setSiteId={setSiteId}
-            doneAt={localDoneAt}
-            collectedAt={localCollectedAt}
-            onSave={handleSave}
-            onCancel={() => onOpenChange(false)}
-            isSaving={isSaving}
-            status={status}
-            setStatus={setStatus}
-            isNotPaid={isNotPaid}
-            setIsNotPaid={setIsNotPaid}
-            isNotCharged={isNotCharged}
-            setIsNotCharged={(val) => {
-              setIsNotCharged(val);
-              updateSaleStatus(val);
-            }}
-            onDelete={sale?.id ? (() => setShowDeleteModal(true)) : undefined}
-            exchangeRate={exchangeRates?.colonesToUsd}
-          />
-          </div>
-        ) : (
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden border-b border-border/80">
-          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-4">
-            {/* Row 1: Date */}
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">Date:</span>
-                <div className="min-w-[220px]">
-                  <DatePicker
-                    value={saleDate}
-                    onChange={(date) => setSaleDate(date || new Date())}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Diplomatic Fields Layout — product: items via submodal only */}
-            {whatKind === 'product' && (
-              <>
-                {/* Column Headers */}
-                <div className={`grid gap-4 ${emissaryColumnExpanded ? 'grid-cols-4' : 'grid-cols-3'} mb-2`}>
-                  <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Ambassadors</div>
-                  <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Ambassadors</div>
-                  <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Ambassadors</div>
-                  {emissaryColumnExpanded && (
-                    <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Emissaries</div>
-                  )}
-                </div>
-
-                <div className={`grid gap-4 ${emissaryColumnExpanded ? 'grid-cols-4' : 'grid-cols-3'}`}>
-                  {/* Column 1: Ambassadors - Site & Customer */}
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="site" className="text-xs">Site</Label>
-                      <SearchableSelect
-                        value={siteId}
-                        onValueChange={setSiteId}
-                        options={createSiteOptionsWithCategories(sites)}
-                        autoGroupByCategory={true}
-                        placeholder="Select site"
-                        className="h-8 text-sm"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="customer" className="text-xs">Customer</Label>
-                      <TooltipProvider delayDuration={1000}>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => setIsNewCustomer(!isNewCustomer)}
-                              className={`h-6 text-xs px-2`}
-                            >
-                              {isNewCustomer ? 'New' : 'Existing'}
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>New: create a new customer. Existing: choose from existing customers.</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                      {isNewCustomer ? (
-                        <Input
-                          id="customer"
-                          value={newCustomerName}
-                          onChange={(e) => setNewCustomerName(e.target.value)}
-                          placeholder="New customer name"
-                          className="h-8 text-sm"
-                        />
-                      ) : (
-                        <SearchableSelect
-                          value={customerId || ''}
-                          onValueChange={setCustomerId}
-                          options={customerOptions}
-                          autoGroupByCategory={true}
-                          placeholder="Select customer"
-                          className="h-8 text-sm"
-                        />
-                      )}
-                    </div>
-
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={toggleAdvanced}
-                      className={`h-8 w-full text-xs ${showAdvanced ? 'bg-transparent text-white' : 'bg-muted text-muted-foreground'}`}
-                    >
-                      Advanced
-                    </Button>
-                  </div>
-
-                  {/* Column 2: Items — submodal only */}
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label className="text-xs">Selected Items</Label>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setShowItemsSubModal(true)}
-                        className="h-12 w-full text-xs"
-                      >
-                        <ListPlus className="mr-2 h-4 w-4" />
-                        {selectedItems.length > 0 ? `Edit Items (${selectedItems.length})` : 'Add Items'}
-                      </Button>
-                    </div>
-                    {selectedItems.length > 0 && (
-                      <div className="rounded-md border bg-muted/20 p-2">
-                        <div
-                          className="grid gap-x-2 gap-y-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground"
-                          style={{
-                            gridTemplateColumns: 'minmax(0,1.1fr) minmax(0,1fr) auto auto auto',
-                          }}
-                        >
-                          <div className="truncate">Item</div>
-                          <div className="truncate">Type / Subtype</div>
-                          <div className="text-right">Qty Sold</div>
-                          <div className="text-right">Price</div>
-                          <div className="text-right">Total</div>
-                        </div>
-                        <div className="mt-1 space-y-0.5 border-t border-border/60 pt-1">
-                          {selectedItems.map((row) => (
-                            <div
-                              key={row.id}
-                              className="grid gap-x-2 gap-y-0 text-[11px] text-foreground"
-                              style={{
-                                gridTemplateColumns: 'minmax(0,1.1fr) minmax(0,1fr) auto auto auto',
-                              }}
-                            >
-                              <span className="min-w-0 truncate" title={row.itemName}>
-                                {row.itemName || UNKNOWN_SALE_ITEM_LABEL}
-                              </span>
-                              <span className="min-w-0 truncate text-muted-foreground" title={formatItemTypeSubtypeLabel(row.itemId, items)}>
-                                {formatItemTypeSubtypeLabel(row.itemId, items)}
-                              </span>
-                              <span className="text-right tabular-nums">{row.quantity ?? 0}</span>
-                              <span className="text-right tabular-nums">${(row.unitPrice || 0).toFixed(2)}</span>
-                              <span className="text-right font-medium tabular-nums">${(row.total || 0).toFixed(2)}</span>
-                            </div>
-                          ))}
-                        </div>
-                        <div className="mt-2 flex items-center justify-end gap-2 border-t border-border/60 pt-2">
-                          <span className="text-muted-foreground">Grand Total</span>
-                          <span className="text-xl font-bold tabular-nums text-foreground">${selectedItemsSubtotal.toFixed(2)}</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Column 3: Financial Ambassador Fields */}
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label className="text-xs">Cost & Revenue</Label>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="space-y-2">
-                          <Label htmlFor="cost" className="text-xs">Cost</Label>
-                          <NumericInput
-                            id="cost"
-                            value={cost}
-                            onChange={handleCostChange}
-                            min={0}
-                            step={1}
-                            placeholder="0.00"
-                            className="h-8 text-sm"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="revenue" className="text-xs">Revenue</Label>
-                          <NumericInput
-                            id="revenue"
-                            value={revenue}
-                            onChange={handleRevenueChange}
-                            min={0}
-                            step={1}
-                            placeholder="0.00"
-                            className="h-8 text-sm"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label className="text-xs">Payment Status</Label>
-                      <div className="grid grid-cols-2 gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setIsNotPaid(!isNotPaid)}
-                          className={`h-8 text-xs ${isNotPaid ? 'border-orange-500 text-orange-600' : ''}`}
-                        >
-                          {isNotPaid ? "⚠ Not Paid" : "✓ Paid"}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            const newIsNotCharged = !isNotCharged;
-                            setIsNotCharged(newIsNotCharged);
-                            updateSaleStatus(newIsNotCharged);
-                          }}
-                          className={`h-8 text-xs ${isNotCharged ? 'border-orange-500 text-orange-600' : ''}`}
-                        >
-                          {isNotCharged ? "⚠ Not Charged" : "✓ Charged"}
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Column 4: Emissaries - Player Points (only when expanded) */}
-                  {emissaryColumnExpanded && (
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label className="text-xs">Point Rewards</Label>
-                        <div className="grid grid-cols-4 gap-2">
-                          <div><Label htmlFor="multiple-reward-xp" className="text-xs">XP</Label><NumericInput id="multiple-reward-xp" value={playerPoints.xp} onChange={(value) => setPlayerPoints({ ...playerPoints, xp: value })} min={0} step={1} className="h-8 text-sm" /></div>
-                          <div><Label htmlFor="multiple-reward-rp" className="text-xs">RP</Label><NumericInput id="multiple-reward-rp" value={playerPoints.rp} onChange={(value) => setPlayerPoints({ ...playerPoints, rp: value })} min={0} step={1} className="h-8 text-sm" /></div>
-                          <div><Label htmlFor="multiple-reward-fp" className="text-xs">FP</Label><NumericInput id="multiple-reward-fp" value={playerPoints.fp} onChange={(value) => setPlayerPoints({ ...playerPoints, fp: value })} min={0} step={1} className="h-8 text-sm" /></div>
-                          <div><Label htmlFor="multiple-reward-hp" className="text-xs">HP</Label><NumericInput id="multiple-reward-hp" value={playerPoints.hp} onChange={(value) => setPlayerPoints({ ...playerPoints, hp: value })} min={0} step={1} className="h-8 text-sm" /></div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {showAdvanced && (
-                  <div className="mt-4 space-y-4">
-                    <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Native</div>
-                    <div className="grid grid-cols-3 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="description" className="text-xs">Description</Label>
-                        <Textarea
-                          id="description"
-                          value={description}
-                          onChange={(e) => setDescription(e.target.value)}
-                          placeholder="Additional sale details..."
-                          className="h-16 resize-none text-sm"
-                          rows={3}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="discountAmount" className="text-xs">Discount Amount</Label>
-                        <NumericInput
-                          id="discountAmount"
-                          value={overallDiscount.amount || 0}
-                          onChange={(value) => setOverallDiscount({
-                            ...overallDiscount,
-                            amount: value > 0 ? value : undefined,
-                            percent: value > 0 ? undefined : overallDiscount.percent
-                          })}
-                          min={0}
-                          step={1}
-                          placeholder="0.00"
-                          className="h-8 text-sm"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="discountPercent" className="text-xs">Discount Percent (%)</Label>
-                        <NumericInput
-                          id="discountPercent"
-                          value={overallDiscount.percent || 0}
-                          onChange={(value) => setOverallDiscount({
-                            ...overallDiscount,
-                            percent: value > 0 && value <= 100 ? value : undefined,
-                            amount: value > 0 ? undefined : overallDiscount.amount
-                          })}
-                          min={0}
-                          step={1}
-                          placeholder="0"
-                          className="h-8 text-sm"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-
-            {/* Diplomatic Fields Layout — service */}
-            {whatKind === 'service' && (
-              <>
-                {/* Column Headers */}
-                <div className={`grid gap-4 ${emissaryColumnExpanded ? 'grid-cols-4' : 'grid-cols-3'} mb-2`}>
-                  <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Ambassadors</div>
-                  <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Ambassadors</div>
-                  <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Ambassadors</div>
-                  {emissaryColumnExpanded && (
-                    <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Emissaries</div>
-                  )}
-                </div>
-
-                <div className={`grid gap-4 ${emissaryColumnExpanded ? 'grid-cols-4' : 'grid-cols-3'}`}>
-                  {/* Column 1: Ambassadors - Site & Customer */}
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="site" className="text-xs">Site</Label>
-                      <SearchableSelect
-                        value={siteId}
-                        onValueChange={setSiteId}
-                        options={createSiteOptionsWithCategories(sites)}
-                        autoGroupByCategory={true}
-                        placeholder="Select site"
-                        className="h-8 text-sm"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="customer" className="text-xs">Customer</Label>
-                      <TooltipProvider delayDuration={1000}>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => setIsNewCustomer(!isNewCustomer)}
-                              className={`h-6 text-xs px-2`}
-                            >
-                              {isNewCustomer ? 'New' : 'Existing'}
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>New: create a new customer. Existing: choose from existing customers.</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                      {isNewCustomer ? (
-                        <Input
-                          id="customer"
-                          value={newCustomerName}
-                          onChange={(e) => setNewCustomerName(e.target.value)}
-                          placeholder="New customer name"
-                          className="h-8 text-sm"
-                        />
-                      ) : (
-                        <SearchableSelect
-                          value={customerId || ''}
-                          onValueChange={setCustomerId}
-                          options={customerOptions}
-                          autoGroupByCategory={true}
-                          placeholder="Select customer"
-                          className="h-8 text-sm"
-                        />
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Column 2: Ambassadors - Task */}
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="taskName" className="text-xs">Task Name</Label>
-                      <Input
-                        id="taskName"
-                        value={taskName}
-                        onChange={(e) => setTaskName(e.target.value)}
-                        placeholder="Task name"
-                        className="h-8 text-sm"
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor="taskStation" className="text-xs">Station</Label>
-                      <SearchableSelect
-                        value={getStationValue(taskStation)}
-                        onValueChange={(value) => {
-                          const station = getStationFromCombined(value);
-                          setTaskStation(station as Station);
-                        }}
-                        placeholder="Select station..."
-                        options={createStationCategoryOptions()}
-                        autoGroupByCategory={true}
-                        getCategoryForValue={(value) => getCategoryFromCombined(value)}
-                        className="h-8 text-sm"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="space-y-2">
-                        <Label htmlFor="taskType" className="text-xs">Type</Label>
-                        <Select value={taskType} onValueChange={(value) => setTaskType(value as TaskType)}>
-                          <SelectTrigger className="h-8 text-sm">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {Object.values(TaskType).map(type => (
-                              <SelectItem key={type} value={type}>
-                                {type}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="taskParent" className="text-xs">Parent</Label>
-                        <SearchableSelect
-                          value={taskParentId}
-                          onValueChange={setTaskParentId}
-                          placeholder="No Parent"
-                          options={createTaskParentOptions(tasks, undefined)}
-                          autoGroupByCategory={true}
-                          className="h-8 text-sm"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Mini-submodal buttons for Task data */}
-                    <div className="flex justify-center gap-4 mt-4">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setShowTaskItemSubModal(true)}
-                        className="flex items-center gap-2"
-                      >
-                        <Package className="h-4 w-4" />
-                        Task Item
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setShowTaskPointsSubModal(true)}
-                        className="flex items-center gap-2"
-                      >
-                        <Gift className="h-4 w-4" />
-                        Task Rewards
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Column 3: Financial Ambassador Fields (like TaskModal) */}
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label className="text-xs">Cost & Revenue</Label>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="space-y-2">
-                          <Label htmlFor="cost" className="text-xs">Cost</Label>
-                          <NumericInput
-                            id="cost"
-                            value={cost}
-                            onChange={handleCostChange}
-                            min={0}
-                            step={1}
-                            placeholder="0.00"
-                            className="h-8 text-sm"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="revenue" className="text-xs">Revenue</Label>
-                          <NumericInput
-                            id="revenue"
-                            value={revenue}
-                            onChange={handleRevenueChange}
-                            min={0}
-                            step={1}
-                            placeholder="0.00"
-                            className="h-8 text-sm"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label className="text-xs">Payment Status</Label>
-                      <div className="grid grid-cols-2 gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setIsNotPaid(!isNotPaid)}
-                          className={`h-8 text-xs ${isNotPaid ? 'border-orange-500 text-orange-600' : ''}`}
-                        >
-                          {isNotPaid ? "⚠ Not Paid" : "✓ Paid"}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            const newIsNotCharged = !isNotCharged;
-                            setIsNotCharged(newIsNotCharged);
-                            updateSaleStatus(newIsNotCharged);
-                          }}
-                          className={`h-8 text-xs ${isNotCharged ? 'border-orange-500 text-orange-600' : ''}`}
-                        >
-                          {isNotCharged ? "⚠ Not Charged" : "✓ Charged"}
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Column 4: Emissaries - Player Points (SALE_PLAYER links) */}
-                  {emissaryColumnExpanded && (
-                    <div className="space-y-4">
-                      {/* Sale Player Points - for SALE_PLAYER links */}
-                      <div className="space-y-2">
-                        <Label className="text-xs">Sale Player Points (SALE_PLAYER)</Label>
-                        <div className="grid grid-cols-4 gap-2">
-                          <div><Label htmlFor="service-reward-xp" className="text-xs">XP</Label><NumericInput id="service-reward-xp" value={playerPoints.xp} onChange={(value) => setPlayerPoints({ ...playerPoints, xp: value })} min={0} step={1} className="h-8 text-sm" /></div>
-                          <div><Label htmlFor="service-reward-rp" className="text-xs">RP</Label><NumericInput id="service-reward-rp" value={playerPoints.rp} onChange={(value) => setPlayerPoints({ ...playerPoints, rp: value })} min={0} step={1} className="h-8 text-sm" /></div>
-                          <div><Label htmlFor="service-reward-fp" className="text-xs">FP</Label><NumericInput id="service-reward-fp" value={playerPoints.fp} onChange={(value) => setPlayerPoints({ ...playerPoints, fp: value })} min={0} step={1} className="h-8 text-sm" /></div>
-                          <div><Label htmlFor="service-reward-hp" className="text-xs">HP</Label><NumericInput id="service-reward-hp" value={playerPoints.hp} onChange={(value) => setPlayerPoints({ ...playerPoints, hp: value })} min={0} step={1} className="h-8 text-sm" /></div>
-                        </div>
-                      </div>
-
-                      {/* Note: Item creation is now handled via "Configure Task Item" button below */}
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
-
-            {/* Advanced — service sales only (product uses control in first column) */}
-            {whatKind === 'service' && (
-            <div className="mt-4">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={toggleAdvanced}
-                className={`h-8 text-xs ${showAdvanced ? 'bg-transparent text-white' : 'bg-muted text-muted-foreground'}`}
-              >
-                Advanced
-              </Button>
-
-              {showAdvanced && (
-                <div className="mt-3 space-y-4">
-                  {/* Native Section Header */}
-                  <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Native</div>
-
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="description" className="text-xs">Description</Label>
-                      <Textarea
-                        id="description"
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        placeholder="Additional sale details..."
-                        className="h-16 text-sm resize-none"
-                        rows={3}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="discountAmount" className="text-xs">Discount Amount</Label>
-                      <NumericInput
-                        id="discountAmount"
-                        value={overallDiscount.amount || 0}
-                        onChange={(value) => setOverallDiscount({
-                          ...overallDiscount,
-                          amount: value > 0 ? value : undefined,
-                          percent: value > 0 ? undefined : overallDiscount.percent
-                        })}
-                        min={0}
-                        step={1}
-                        placeholder="0.00"
-                        className="h-8 text-sm"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="discountPercent" className="text-xs">Discount Percent (%)</Label>
-                      <NumericInput
-                        id="discountPercent"
-                        value={overallDiscount.percent || 0}
-                        onChange={(value) => setOverallDiscount({
-                          ...overallDiscount,
-                          percent: value > 0 && value <= 100 ? value : undefined,
-                          amount: value > 0 ? undefined : overallDiscount.amount
-                        })}
-                        min={0}
-                        step={1}
-                        placeholder="0"
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-            )}
-          </div>
-          </div>
-        )}
+        <SalesModalContentHost
+          type={type}
+          boothContentKey={sale?.id ?? 'new-booth'}
+          boothSaveRef={boothSaveRef}
+          boothContentProps={boothContentProps}
+          directContentProps={directContentProps}
+          commonContentProps={commonContentProps}
+        />
 
         <DialogFooter className="mt-auto flex shrink-0 items-center justify-between gap-4 overflow-x-auto border-t bg-background px-6 py-4 flex-nowrap">
-            <div className="flex items-center gap-2 flex-nowrap shrink-0">
-              {sale && (
+          <div className="flex items-center gap-2 flex-nowrap shrink-0">
+            {sale && (
+              <Button
+                variant="outline"
+                onClick={() => setShowDeleteModal(true)}
+                className="h-8 text-xs text-destructive hover:bg-destructive/10 border-destructive/20 mr-4"
+              >
+                Delete
+              </Button>
+            )}
+            {sale && (
+              <>
                 <Button
                   variant="outline"
-                  onClick={() => setShowDeleteModal(true)}
-                  className="h-8 text-xs text-destructive hover:bg-destructive/10 border-destructive/20 mr-4"
+                  onClick={() => setShowDatesModal(true)}
+                  className="h-8 text-xs"
                 >
-                  Delete
+                  <CalendarIcon className="w-3 h-3 mr-1" />
+                  Timeline
                 </Button>
-              )}
-              {sale && (
-                <>
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowDatesModal(true)}
-                    className="h-8 text-xs"
-                  >
-                    <CalendarIcon className="w-3 h-3 mr-1" />
-                    Timeline
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowRelationshipsModal(true)}
-                    className="h-8 text-xs"
-                  >
-                    <Network className="w-3 h-3 mr-1" />
-                    Links
-                  </Button>
-                </>
-              )}
-              <Button
-                variant="outline"
-                onClick={() => setShowPlayerCharacterSelector(true)}
-                className="h-8 text-xs"
-              >
-                <User className="w-3 h-3 mr-1" />
-                Player
-              </Button>
-              {/* Emissaries toggle - show for all modes */}
-              <Button
-                variant="outline"
-                onClick={toggleEmissary}
-                className={`h-8 text-xs ${emissaryColumnExpanded ? 'bg-transparent text-white' : 'bg-muted text-muted-foreground'}`}
-              >
-                Emissaries
-              </Button>
-
-              {/* Payments button */}
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowPaymentsSubModal(true);
-                  setPaymentsModalMode('payments');
-                }}
-                className="h-8 text-xs"
-              >
-                <Wallet className="w-3 h-3 mr-1" />
-                Payments {recordedPayments.length > 0 && `(${recordedPayments.length})`}
-              </Button>
-
-              {/* Other Methods button */}
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowPaymentsSubModal(true);
-                  setPaymentsModalMode('other-methods');
-                }}
-                className="h-8 text-xs"
-              >
-                <Gift className="w-3 h-3 mr-1" />
-                Other Methods
-              </Button>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <div className="hidden sm:block">
-                  <Label className="text-xs">Status</Label>
-                </div>
-                <Select value={status} onValueChange={(value) => {
-                  const newStatus = value as SaleStatus;
-
-                  if (newStatus !== SaleStatus.COLLECTED) {
-                    collectedArchiveAcknowledgedForSaleIdRef.current = null;
-                  }
-
-                  // Show confirmation for COLLECTED status
-                  if (newStatus === SaleStatus.COLLECTED && status !== SaleStatus.COLLECTED) {
-                    setPendingStatusChange({
-                      status: newStatus,
-                      onConfirm: () => {
-                        if (sale?.id) {
-                          collectedArchiveAcknowledgedForSaleIdRef.current = sale.id;
-                        }
-                        setStatus(newStatus);
-                        setShowArchiveCollectionModal(false);
-                        setPendingStatusChange(null);
-                      },
-                      onCancel: () => {
-                        setShowArchiveCollectionModal(false);
-                        setPendingStatusChange(null);
-                      }
-                    });
-                    setShowArchiveCollectionModal(true);
-                    return;
-                  }
-
-                  setStatus(newStatus);
-                }}>
-                  <SelectTrigger className="h-8 text-sm w-auto min-w-[110px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.values(SaleStatus).map(s => (
-                      <SelectItem key={s} value={s}>{s}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button variant="outline" onClick={() => onOpenChange(false)} className="h-8 text-xs" disabled={isSaving}>
-                  Cancel
+                <Button
+                  variant="outline"
+                  onClick={() => setShowRelationshipsModal(true)}
+                  className="h-8 text-xs"
+                >
+                  <Network className="w-3 h-3 mr-1" />
+                  Links
                 </Button>
-                <Button onClick={() => handleSave()} className="h-8 text-xs" disabled={isSaving}>
-                  {isSaving ? 'Saving...' : (sale ? 'Update' : 'Create')} Sale
-                </Button>
+              </>
+            )}
+            <Button
+              variant="outline"
+              onClick={() => setShowPlayerCharacterSelector(true)}
+              className="h-8 text-xs"
+            >
+              <User className="w-3 h-3 mr-1" />
+              Player
+            </Button>
+            {/* Emissaries toggle - show for all modes */}
+            <Button
+              variant="outline"
+              onClick={toggleEmissary}
+              className={`h-8 text-xs ${emissaryColumnExpanded ? 'bg-transparent text-white' : 'bg-muted text-muted-foreground'}`}
+            >
+              Emissaries
+            </Button>
+
+            {/* Payments button */}
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowPaymentsSubModal(true);
+                setPaymentsModalMode('payments');
+              }}
+              className="h-8 text-xs"
+            >
+              <Wallet className="w-3 h-3 mr-1" />
+              Payments {recordedPayments.length > 0 && `(${recordedPayments.length})`}
+            </Button>
+
+            {/* Other Methods button */}
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowPaymentsSubModal(true);
+                setPaymentsModalMode('other-methods');
+              }}
+              className="h-8 text-xs"
+            >
+              <Gift className="w-3 h-3 mr-1" />
+              Other Methods
+            </Button>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <div className="hidden sm:block">
+                <Label className="text-xs">Status</Label>
               </div>
-
+              <Select value={status} onValueChange={(value) => {
+                handleFooterStatusChange(value as SaleStatus);
+              }}>
+                <SelectTrigger className="h-8 text-sm w-auto min-w-[110px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.values(SaleStatus).map(s => (
+                    <SelectItem key={s} value={s}>{s}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button variant="outline" onClick={() => onOpenChange(false)} className="h-8 text-xs" disabled={isSaving}>
+                Cancel
+              </Button>
+              <Button onClick={() => handleSave()} className="h-8 text-xs" disabled={isSaving}>
+                {isSaving ? 'Saving...' : (sale ? 'Update' : 'Create')} Sale
+              </Button>
             </div>
-          </DialogFooter>
+          </div>
+        </DialogFooter>
 
         {/* Delete Modal */}
         {showDeleteModal && (
@@ -2215,7 +1633,7 @@ export default function SalesModal({
           onOpenChange={setShowItemsSubModal}
           onSave={(items) => {
             setSelectedItems(items);
-            if (whatKind === 'product' && !manualLines) {
+            if (isProductMode && !manualLines) {
               setLines(items.length > 0 ? buildItemLinesFromSelection(items) : []);
             }
           }}
@@ -2233,7 +1651,7 @@ export default function SalesModal({
           onGiftApplied={handleGiftApplied}
           onExchangeApplied={handleExchangeApplied}
           onOtherMethodApplied={handleOtherMethodApplied}
-          totalDue={whatKind === 'product'
+          totalDue={isProductMode
             ? selectedItems.reduce((sum, item) => sum + item.total, 0)
             : revenue
           }
@@ -2342,20 +1760,19 @@ export default function SalesModal({
         description={`A very similar sale already exists (${duplicateErrorMessage}). Is this intentional?`}
         confirmText="Force Save"
         cancelText="Cancel"
-        variant="destructive" // Orange in spirit, red in UI
+        variant="destructive"
         onConfirm={async () => {
-          if (pendingDuplicateSale) {
-            try {
-              // Force Save
-              await onSave(pendingDuplicateSale, true);
-              await ensureCounterpartyRole(pendingDuplicateSale.customerId, CharacterRole.CUSTOMER);
-              dispatchEntityUpdated(entityTypeToKind(EntityType.SALE));
-              setShowDuplicateModal(false);
-              onOpenChange(false);
-            } catch (error) {
-              console.error('Force save failed:', error);
-              showValidationError(error instanceof Error ? error.message : 'Force save failed');
-            }
+          if (!pendingDuplicateSale) return;
+
+          try {
+            await onSave(pendingDuplicateSale, true);
+            await syncCounterpartyRole(pendingDuplicateSale.customerId, CharacterRole.CUSTOMER);
+            dispatchEntityUpdated(entityTypeToKind(EntityType.SALE));
+            setShowDuplicateModal(false);
+            onOpenChange(false);
+          } catch (error) {
+            console.error('Force save failed:', error);
+            showValidationError(error instanceof Error ? error.message : 'Force save failed');
           }
         }}
         onCancel={() => setShowDuplicateModal(false)}
