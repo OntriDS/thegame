@@ -1,8 +1,8 @@
 // workflows/entities-workflows/task.workflow.ts
 // Task-specific workflow with state vs descriptive field detection
 
-import { EntityType, LogEventType, TaskStatus, TaskType, FOUNDER_CHARACTER_ID } from '@/types/enums';
-import type { Task } from '@/types/entities';
+import { CharacterRole, EntityType, LogEventType, TaskStatus, TaskType, FOUNDER_CHARACTER_ID } from '@/types/enums';
+import type { CustomerCounterpartyRole, Task } from '@/types/entities';
 import { appendEntityLog, updateEntityLeanFields, removeLogEntriesAcrossMonths } from '../entities-logging';
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
 import { EffectKeys, buildArchiveCollectionIndexKey, buildArchiveMonthsKey } from '@/data-store/keys';
@@ -42,6 +42,7 @@ import {
   uncascadeStatusFromInstances,
   getUndoneInstancesCount
 } from '@/lib/utils/recurrent-task-utils';
+import { resolveCounterpartyForTask, withResolvedTaskCounterparty } from '../task-counterparty-resolution';
 
 const STATE_FIELDS = ['status', 'progress', 'doneAt', 'collectedAt', 'siteId', 'targetSiteId'];
 
@@ -130,6 +131,10 @@ async function cleanUpIntermediateStatusTransitions(
 }
 
 export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<void> {
+  let taskForCounterparty = task;
+
+  const counterpartyResolutionLogPrefix = `[onTaskUpsert] Counterparty resolution (${task.id})`;
+
   // New task creation
   if (!previousTask) {
     const effectKey = EffectKeys.created('task', task.id);
@@ -243,18 +248,39 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
   // Tasks are not physical entities; skip MOVED logging even if site references change.
 
   // Character creation from emissary fields - when newCustomerName is provided
-  if (task.newCustomerName && !task.customerCharacterId) {
+  if (task.newCustomerName && !taskForCounterparty.customerCharacterId) {
     const effectKey = EffectKeys.sideEffect('task', task.id, 'characterCreated');
     if (!(await hasEffect(effectKey))) {
-      const createdCharacter = await createCharacterFromTask(task);
+      const createdCharacter = await createCharacterFromTask(taskForCounterparty);
       if (createdCharacter) {
         // Update task with the created character ID
-        const updatedTask = { ...task, customerCharacterId: createdCharacter.id };
+        const updatedTask = {
+          ...taskForCounterparty,
+          customerCharacterId: createdCharacter.id,
+          customerCharacterRole: CharacterRole.CUSTOMER as CustomerCounterpartyRole
+        };
         await upsertTask(updatedTask, { skipWorkflowEffects: true });
+        taskForCounterparty = updatedTask;
         await markEffect(effectKey);
       }
     }
   }
+
+  const resolvedCounterparty = await resolveCounterpartyForTask(taskForCounterparty);
+  const resolvedTaskForPropagation = withResolvedTaskCounterparty(taskForCounterparty, resolvedCounterparty);
+
+  let resolvedPreviousTaskForPropagation: Task | undefined;
+  if (previousTask) {
+    const resolvedPreviousCounterparty = await resolveCounterpartyForTask(previousTask);
+    resolvedPreviousTaskForPropagation = withResolvedTaskCounterparty(previousTask, resolvedPreviousCounterparty);
+    const previousCounterpartySummary = `${resolvedPreviousCounterparty.characterId || 'null'}/${resolvedPreviousCounterparty.characterRole || 'null'}/${resolvedPreviousCounterparty.source}`;
+    console.log(`${counterpartyResolutionLogPrefix} previous -> ${previousCounterpartySummary}`);
+  }
+
+  console.log(
+    `${counterpartyResolutionLogPrefix} current -> ${resolvedCounterparty.characterId || 'null'}/` +
+      `${resolvedCounterparty.characterRole || 'null'}/${resolvedCounterparty.source}`
+  );
 
   // PARALLEL SIDE EFFECTS - when task is completed (Done or Collected)
   // Run all independent side effects concurrently for 60-70% performance improvement
@@ -302,10 +328,19 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
         (async () => {
           const effectKey = EffectKeys.sideEffect('task', task.id, 'financialCreated');
           if (!(await hasEffect(effectKey))) {
-            const createdFinancial = await createFinancialRecordFromTask(task);
+            const createdFinancial = await createFinancialRecordFromTask(resolvedTaskForPropagation);
             if (createdFinancial) {
+              console.log(
+                `[onTaskUpsert] financialCreated resolvedCounterparty=${resolvedTaskForPropagation.customerCharacterId || 'null'}/` +
+                  `${resolvedTaskForPropagation.customerCharacterRole || 'null'}/${resolvedCounterparty.source}`
+              );
               await markEffect(effectKey);
+              console.log(`[onTaskUpsert] ✅ Created/updated financial record ${createdFinancial.id} for task ${task.id}`);
+            } else {
+              console.log(`[onTaskUpsert] ⏭️ financialCreated skipped - createFinancialRecordFromTask returned null for task ${task.id}`);
             }
+          } else {
+            console.log(`[onTaskUpsert] ⏭️ financialCreated skipped - effect guard already set for task ${task.id}`);
           }
         })()
       );
@@ -318,8 +353,8 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
   // COMPREHENSIVE UPDATE PROPAGATION - when task properties change
   if (previousTask) {
     // Propagate to Financial Records
-    if (hasFinancialPropsChanged(task, previousTask)) {
-      await updateFinancialRecordsFromTask(task, previousTask);
+    if (hasFinancialPropsChanged(resolvedTaskForPropagation, resolvedPreviousTaskForPropagation || previousTask)) {
+      await updateFinancialRecordsFromTask(resolvedTaskForPropagation, resolvedPreviousTaskForPropagation || previousTask);
     }
 
     // Propagate to Items
@@ -360,13 +395,16 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
     }
   }
 
-  const counterpartyPresent = Boolean(task.customerCharacterId && task.customerCharacterRole);
+  const counterpartyPresent = Boolean(resolvedTaskForPropagation.customerCharacterId && resolvedTaskForPropagation.customerCharacterRole);
   const counterpartyChanged =
-    !previousTask ||
-    previousTask.customerCharacterId !== task.customerCharacterId ||
-    previousTask.customerCharacterRole !== task.customerCharacterRole;
+    !resolvedPreviousTaskForPropagation ||
+    resolvedPreviousTaskForPropagation.customerCharacterId !== resolvedTaskForPropagation.customerCharacterId ||
+    resolvedPreviousTaskForPropagation.customerCharacterRole !== resolvedTaskForPropagation.customerCharacterRole;
   if (counterpartyPresent && counterpartyChanged) {
-    await ensureCounterpartyRoleDatastore(task.customerCharacterId, task.customerCharacterRole);
+    await ensureCounterpartyRoleDatastore(
+      resolvedTaskForPropagation.customerCharacterId,
+      resolvedTaskForPropagation.customerCharacterRole
+    );
   }
 
   // Lean identity fields changed — cascade patch ALL log entries across ALL months and events

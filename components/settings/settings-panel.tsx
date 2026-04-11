@@ -210,6 +210,29 @@ export function SettingsPanel({ onStatusUpdate }: SettingsPanelProps) {
     }
   };
 
+  const handleBackfillTaskFinancialCounterparty = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'backfill-task-counterparty-financial' })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        updateStatus(`✅ ${result.message}`);
+      } else {
+        updateStatus(`❌ ${result.message}`, true);
+      }
+    } catch (error) {
+      updateStatus('❌ Failed to backfill task financial counterparty metadata. Please try again.', true);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleExportData = async () => {
     setIsLoading(true);
     
@@ -363,6 +386,10 @@ export function SettingsPanel({ onStatusUpdate }: SettingsPanelProps) {
             <Button onClick={handleBackfillLogs} variant="outline" disabled={isLoading}>
               <Database className="h-4 w-4 mr-2" />
               Backfill Logs
+            </Button>
+            <Button onClick={handleBackfillTaskFinancialCounterparty} variant="outline" disabled={isLoading}>
+              <Database className="h-4 w-4 mr-2" />
+              Backfill Task Financial Counterparty
             </Button>
           </div>
         </div>

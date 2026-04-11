@@ -2,16 +2,65 @@
 // Comprehensive update propagation across ALL entity relationships
 
 import type { Task, Item, Sale, FinancialRecord, Character, Player } from '@/types/entities';
-import { EntityType, FOUNDER_CHARACTER_ID, TaskStatus, CharacterRole } from '@/types/enums';
+import { EntityType, FOUNDER_CHARACTER_ID, TaskStatus, CharacterRole, LinkType } from '@/types/enums';
 import { clearEffect, hasEffect, markEffect } from '@/data-store/effects-registry';
 import { EffectKeys } from '@/data-store/keys';
-import { getFinancialsBySourceTaskId, getFinancialsBySourceSaleId, upsertFinancial, removeFinancial } from '@/data-store/datastore';
+import { getFinancialsBySourceTaskId, getFinancialsBySourceSaleId, getFinancialById, upsertFinancial, removeFinancial } from '@/data-store/datastore';
 import { getItemsBySourceTaskId, getItemsBySourceRecordId, getItemById, upsertItem, removeItem } from '@/data-store/datastore';
 import { getTaskById, upsertTask } from '@/data-store/datastore';
 import { getPlayerById, upsertPlayer } from '@/data-store/datastore';
 import { getAllCharacters, upsertCharacter } from '@/data-store/datastore';
 import { resolveToPlayerIdMaybeCharacter } from './points-rewards-utils';
 import { getUTCNow } from '@/lib/utils/utc-utils';
+import { getLinksFor } from '@/links/link-registry';
+
+const normalizeDate = (value: Date | string | null | undefined): Date => {
+  if (value instanceof Date) {
+    return Number.isFinite(value.getTime()) ? value : new Date();
+  }
+  if (typeof value === 'string') {
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+  }
+  return new Date();
+};
+
+const dedupeById = <T extends { id?: string }>(values: (T | null | undefined)[]): T[] => {
+  const byId = new Map<string, T>();
+  for (const item of values) {
+    if (!item?.id) continue;
+    if (!byId.has(item.id)) {
+      byId.set(item.id, item);
+    }
+  }
+  return Array.from(byId.values());
+};
+
+async function getFinancialRecordsForTask(taskId: string): Promise<FinancialRecord[]> {
+  const bySourceTaskId = await getFinancialsBySourceTaskId(taskId);
+  if (bySourceTaskId.length > 0) return bySourceTaskId;
+
+  console.log(`[updateFinancialRecordsFromTask] No index rows for sourceTaskId=${taskId}. Using fallback lookup.`);
+
+  const fallbackRows: FinancialRecord[] = [];
+  const directId = `finrec-${taskId}`;
+  const directRecord = await getFinancialById(directId);
+  if (directRecord) {
+    fallbackRows.push(directRecord);
+  }
+
+  const taskLinks = await getLinksFor({ type: EntityType.TASK, id: taskId });
+  const finrecLinks = taskLinks.filter((link) => link.linkType === LinkType.TASK_FINREC);
+  for (const link of finrecLinks) {
+    if (link.target.type !== EntityType.FINANCIAL || !link.target.id) continue;
+    const record = await getFinancialById(link.target.id);
+    if (record) {
+      fallbackRows.push(record);
+    }
+  }
+
+  return dedupeById([...bySourceTaskId, ...fallbackRows]);
+}
 // ============================================================================
 // TASK → FINANCIAL RECORD PROPAGATION
 // ============================================================================
@@ -24,7 +73,7 @@ export async function updateFinancialRecordsFromTask(
     console.log(`[updateFinancialRecordsFromTask] Updating financial records for task: ${task.name}`);
 
     // OPTIMIZED: Only load financials created by this task (already filtered by index)
-    const relatedRecords = await getFinancialsBySourceTaskId(task.id);
+    const relatedRecords = await getFinancialRecordsForTask(task.id);
 
     for (const record of relatedRecords) {
       const updateKey = EffectKeys.sideEffect('task', task.id, `updateFinancial:${record.id}:${task.updatedAt?.getTime()}`);
@@ -52,8 +101,9 @@ export async function updateFinancialRecordsFromTask(
         let month = record.month;
         if (statePropsChanged) {
           const dateToUse = task.collectedAt || task.doneAt || record.createdAt;
-          year = dateToUse.getFullYear();
-          month = dateToUse.getMonth() + 1;
+          const safeDate = normalizeDate(dateToUse);
+          year = safeDate.getFullYear();
+          month = safeDate.getMonth() + 1;
         }
 
         const updatedRecord = {
@@ -75,6 +125,10 @@ export async function updateFinancialRecordsFromTask(
         await markEffect(updateKey);
 
         console.log(`[updateFinancialRecordsFromTask] ✅ Updated financial record: ${record.id}`);
+      } else {
+        console.log(
+          `[updateFinancialRecordsFromTask] ⏭️ Skipped financial record ${record.id}: no financial/state delta detected after resolution`
+        );
       }
     }
   } catch (error) {

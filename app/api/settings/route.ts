@@ -6,6 +6,7 @@ import {
   ClearLogsWorkflow,
   ClearCacheWorkflow,
   BackfillLogsWorkflow,
+  BackfillTaskFinancialCounterpartyWorkflow,
   ExportDataWorkflow,
   ImportDataWorkflow
 } from '@/workflows/settings';
@@ -53,6 +54,14 @@ export async function POST(request: NextRequest) {
 
       case 'backfill-logs': {
         const result = await BackfillLogsWorkflow.execute();
+        return NextResponse.json({
+          success: result.success,
+          message: result.message,
+          data: result.data
+        }, { status: result.success ? 200 : 500 });
+      }
+      case 'backfill-task-counterparty-financial': {
+        const result = await BackfillTaskFinancialCounterpartyWorkflow.execute();
         return NextResponse.json({
           success: result.success,
           message: result.message,
