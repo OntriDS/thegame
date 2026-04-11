@@ -158,24 +158,28 @@ export async function ensureSaleCollectedLog(saleId: string): Promise<{
 export const ensureSaleCollectedLifecycleLog = ensureSaleCollectedLog;
 
 export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<void> {
+  let effectiveSale = sale;
+  const isNewSale = !previousSale;
+
   // New sale creation
-  if (!previousSale) {
+  if (isNewSale) {
     const effectKey = EffectKeys.created('sale', sale.id);
     if (await hasEffect(effectKey)) return;
 
     await markEffect(effectKey);
+  }
 
-    // Character creation from emissary fields - when newCustomerName is provided
-    if (sale.newCustomerName && !sale.customerId) {
-      const characterEffectKey = EffectKeys.sideEffect('sale', sale.id, 'characterCreated');
-      if (!(await hasEffect(characterEffectKey))) {
-        const createdCharacter = await createCharacterFromSale(sale);
-        if (createdCharacter) {
-          // Update sale with the created character ID
-          const updatedSale = { ...sale, customerId: createdCharacter.id };
-          await upsertSale(updatedSale, { skipWorkflowEffects: true, skipLinkEffects: true });
-          await markEffect(characterEffectKey);
-        }
+  // Character creation from emissary fields - when newCustomerName is provided
+  if (effectiveSale.newCustomerName && !effectiveSale.customerId) {
+    const characterEffectKey = EffectKeys.sideEffect('sale', effectiveSale.id, 'characterCreated');
+    if (!(await hasEffect(characterEffectKey))) {
+      const createdCharacter = await createCharacterFromSale(effectiveSale);
+      if (createdCharacter) {
+        // Update sale with the created character ID
+        effectiveSale = { ...effectiveSale, customerId: createdCharacter.id };
+        await upsertSale(effectiveSale, { skipWorkflowEffects: true, skipLinkEffects: true });
+        await markEffect(characterEffectKey);
+        sale = effectiveSale;
       }
     }
   }

@@ -259,6 +259,11 @@ export function LogEntryEditModal({
               <code className="text-[10px]">id</code> matches above; if missing, try the same key for adjacent{' '}
               <code className="text-[10px]">MM-YY</code> months after a timestamp edit.
             </p>
+            <p className="text-muted-foreground leading-snug border-t pt-2 mt-2">
+              <span className="font-medium text-foreground">Save behavior:</span> updates this row in place (same{' '}
+              <code className="text-[10px]">id</code>) via <code className="text-[10px]">editLogEntry</code> — it does{' '}
+              <strong className="font-medium text-foreground">not</strong> append a duplicate list element.
+            </p>
           </div>
 
           {/* Compact metadata header */}

@@ -11,9 +11,28 @@ import { Palette, Bell, User, FileText, AlertTriangle } from 'lucide-react';
 import { ThemeSelector } from '@/components/theme/theme-selector';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
 
+type DedupeMigrationResponse = {
+  ok?: boolean;
+  mode?: string;
+  hint?: string;
+  dryRun?: boolean;
+  totalRemoved?: number;
+  monthsTouched?: number;
+  steps?: Array<{
+    entityType: string;
+    monthKey: string;
+    before: number;
+    after: number;
+    removed: number;
+  }>;
+  error?: string;
+};
+
 export function SystemSettingsTab() {
   const { getPreference, setPreference } = useUserPreferences();
   const [logManagementEnabled, setLogManagementEnabled] = useState(false);
+  const [dedupeLoading, setDedupeLoading] = useState<'idle' | 'preview' | 'execute'>('idle');
+  const [dedupeResult, setDedupeResult] = useState<DedupeMigrationResponse | null>(null);
 
   useEffect(() => {
     setLogManagementEnabled(getPreference('log-management-enabled', false));
@@ -99,6 +118,112 @@ export function SystemSettingsTab() {
             >
               Sync Now
             </Button>
+          </div>
+
+          <div className="flex flex-col gap-3 p-4 bg-red-50/50 dark:bg-red-950/20 rounded-lg border border-red-100 dark:border-red-900/40">
+            <div className="space-y-1">
+              <p className="text-sm font-medium">Deduplicate lifecycle log rows (duplicate IDs)</p>
+              <p className="text-xs text-muted-foreground">
+                Within each monthly Redis list, collapse multiple elements that share the same <code className="text-[10px]">id</code>.
+                Keeps the newest timestamp (then richest edit history). Fixes legacy data from an old log-edit relocate bug.
+                Preview does not write; apply rewrites affected lists.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={dedupeLoading !== 'idle'}
+                className="border-amber-600 text-amber-700 dark:text-amber-400 hover:bg-amber-600 hover:text-white"
+                onClick={async () => {
+                  setDedupeLoading('preview');
+                  setDedupeResult(null);
+                  try {
+                    const res = await fetch('/api/logs/dedupe-duplicate-ids', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({}),
+                    });
+                    const data = (await res.json()) as DedupeMigrationResponse;
+                    if (!res.ok) {
+                      setDedupeResult({ error: data.error || res.statusText });
+                    } else {
+                      setDedupeResult(data);
+                    }
+                  } catch (e: any) {
+                    setDedupeResult({ error: e?.message || 'Request failed' });
+                  } finally {
+                    setDedupeLoading('idle');
+                  }
+                }}
+              >
+                {dedupeLoading === 'preview' ? 'Previewing…' : 'Preview (dry run)'}
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                disabled={dedupeLoading !== 'idle'}
+                onClick={async () => {
+                  if (
+                    !confirm(
+                      'Apply deduplication to all entity log months? This rewrites Redis lists where duplicate ids were found. Run Preview first if unsure.'
+                    )
+                  ) {
+                    return;
+                  }
+                  setDedupeLoading('execute');
+                  setDedupeResult(null);
+                  try {
+                    const res = await fetch('/api/logs/dedupe-duplicate-ids', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ confirm: true }),
+                    });
+                    const data = (await res.json()) as DedupeMigrationResponse;
+                    if (!res.ok) {
+                      setDedupeResult({ error: data.error || res.statusText });
+                    } else {
+                      setDedupeResult(data);
+                    }
+                  } catch (e: any) {
+                    setDedupeResult({ error: e?.message || 'Request failed' });
+                  } finally {
+                    setDedupeLoading('idle');
+                  }
+                }}
+              >
+                {dedupeLoading === 'execute' ? 'Applying…' : 'Apply migration'}
+              </Button>
+            </div>
+            {dedupeResult && (
+              <div className="rounded-md border bg-background/80 text-xs font-mono max-h-48 overflow-y-auto p-2 space-y-1">
+                {dedupeResult.error ? (
+                  <p className="text-red-600 dark:text-red-400">{dedupeResult.error}</p>
+                ) : (
+                  <>
+                    <p>
+                      <span className="text-muted-foreground">Mode:</span> {dedupeResult.mode}{' '}
+                      <span className="text-muted-foreground">| removed:</span> {dedupeResult.totalRemoved ?? 0}{' '}
+                      <span className="text-muted-foreground">| months touched:</span> {dedupeResult.monthsTouched ?? 0}
+                    </p>
+                    {dedupeResult.hint ? (
+                      <p className="text-muted-foreground">{dedupeResult.hint}</p>
+                    ) : null}
+                    {dedupeResult.steps && dedupeResult.steps.length > 0 ? (
+                      <ul className="list-disc pl-4 space-y-0.5">
+                        {dedupeResult.steps.map((s, i) => (
+                          <li key={`${s.entityType}-${s.monthKey}-${i}`}>
+                            {s.entityType} {s.monthKey}: {s.before} → {s.after} (−{s.removed})
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-muted-foreground">No duplicate ids found in scanned months.</p>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
