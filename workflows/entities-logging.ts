@@ -10,6 +10,7 @@ import type { Sale } from '@/types/entities';
 import { EntityType, LogEventType, SaleStatus } from '@/types/enums';
 import { getUTCNow } from '@/lib/utils/utc-utils';
 import { formatMonthKey } from '@/lib/utils/date-display-utils';
+import { v4 as uuid } from 'uuid';
 
 /**
  * Inlined from date-utils (was: saleReferenceDateForItemSoldAndLog).
@@ -36,7 +37,6 @@ function saleReferenceDateForItemSoldAndLog(
   return getUTCNow();
 }
 import { kv } from '@/data-store/kv';
-import { v4 as uuid } from 'uuid';
 
 // ============================================================================
 // Helpers
@@ -1043,127 +1043,3 @@ export async function removeLogEntriesAcrossMonths(
   return totalRemoved;
 }
 
-// ============================================================================
-// Migration: duplicate log entry ids in the same month (legacy relocate bug)
-// ============================================================================
-
-/** Entity types that use monthly KV lists under `thegame:logs:<type>:<MM-YY>`. */
-export const LOG_ENTITY_TYPES_ALL: EntityType[] = [
-  EntityType.TASK,
-  EntityType.ITEM,
-  EntityType.SALE,
-  EntityType.FINANCIAL,
-  EntityType.CHARACTER,
-  EntityType.PLAYER,
-  EntityType.SITE,
-];
-
-function pickBetterLogDuplicate(a: any, b: any): any {
-  const ma = logEntryTimestampMs(a);
-  const mb = logEntryTimestampMs(b);
-  if (ma !== mb) return mb > ma ? b : a;
-  const ha = Array.isArray(a?.editHistory) ? a.editHistory.length : 0;
-  const hb = Array.isArray(b?.editHistory) ? b.editHistory.length : 0;
-  if (ha !== hb) return hb > ha ? b : a;
-  const sa = String(a?.lastUpdated || a?.editedAt || '');
-  const sb = String(b?.lastUpdated || b?.editedAt || '');
-  if (sa !== sb) return sb > sa ? b : a;
-  return b;
-}
-
-function ensureLogEntryIdForWrite(entry: any): any {
-  if (entry?.id) return entry;
-  return { ...entry, id: uuid() };
-}
-
-/**
- * Collapse duplicate `id` values in a single month list. Keeps one row per id:
- * newest `timestamp` wins; ties broken by longer `editHistory`, then `lastUpdated`/`editedAt`.
- */
-export async function dedupeLogMonthDuplicateIds(
-  entityType: EntityType,
-  monthKey: string,
-  options?: { dryRun?: boolean }
-): Promise<{ before: number; after: number; removed: number }> {
-  const raw = await kvLRange(buildLogMonthKey(entityType, monthKey), 0, -1);
-  const list = raw.map(parseEntry);
-  const before = list.length;
-  if (before === 0) {
-    return { before: 0, after: 0, removed: 0 };
-  }
-
-  const noId = list.filter(e => !e?.id);
-  const withId = list.filter(e => e?.id);
-  const bestById = new Map<string, any>();
-  for (const e of withId) {
-    const prev = bestById.get(e.id);
-    if (!prev) bestById.set(e.id, e);
-    else bestById.set(e.id, pickBetterLogDuplicate(prev, e));
-  }
-
-  const kept = [...bestById.values(), ...noId];
-  kept.sort((a, b) => logEntryTimestampMs(b) - logEntryTimestampMs(a));
-  const after = kept.length;
-  const removed = before - after;
-
-  if (!options?.dryRun && removed > 0) {
-    await rebuildMonthlyList(entityType, monthKey, kept.map(ensureLogEntryIdForWrite));
-  }
-
-  return { before, after, removed };
-}
-
-export type MigrateDedupeLogsResult = {
-  dryRun: boolean;
-  totalRemoved: number;
-  monthsTouched: number;
-  steps: Array<{
-    entityType: string;
-    monthKey: string;
-    before: number;
-    after: number;
-    removed: number;
-  }>;
-};
-
-/**
- * Repair duplicate UUIDs in monthly log lists (same id appeared twice+ in one list).
- * Scans `logs:index:months` + current calendar month for each entity type.
- *
- * Does **not** merge the same id across different months (that is a separate data shape).
- */
-export async function migrateDedupeDuplicateLogIdsAcrossAll(
-  options?: { dryRun?: boolean; entityTypes?: EntityType[] }
-): Promise<MigrateDedupeLogsResult> {
-  const dryRun = options?.dryRun ?? false;
-  const types =
-    options?.entityTypes?.length && options.entityTypes.length > 0
-      ? options.entityTypes
-      : LOG_ENTITY_TYPES_ALL;
-
-  const steps: MigrateDedupeLogsResult['steps'] = [];
-  let totalRemoved = 0;
-  let monthsTouched = 0;
-
-  for (const entityType of types) {
-    const indexed = await getEntityLogMonths(entityType);
-    const monthSet = uniqueMonthSearchOrder(entityType, indexed);
-
-    for (const monthKey of monthSet) {
-      const result = await dedupeLogMonthDuplicateIds(entityType, monthKey, { dryRun });
-      if (result.removed > 0) {
-        monthsTouched += 1;
-        totalRemoved += result.removed;
-        steps.push({
-          entityType: String(entityType),
-          monthKey,
-          before: result.before,
-          after: result.after,
-          removed: result.removed,
-        });
-      }
-    }
-  }
-
-  return { dryRun, totalRemoved, monthsTouched, steps };
-}

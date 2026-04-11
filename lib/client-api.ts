@@ -1277,12 +1277,4 @@ export const ClientAPI = {
     return await res.json();
   },
 
-  repairAutomations: async (): Promise<{ success: boolean; message: string; stats: any }> => {
-    const res = await fetch('/api/admin/repair-automations', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
-    });
-    if (!res.ok) throw new Error('Failed to repair automations');
-    return await res.json();
-  },
 };

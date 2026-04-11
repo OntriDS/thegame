@@ -31,8 +31,6 @@ interface SettingsPanelProps {
 export function SettingsPanel({ onStatusUpdate }: SettingsPanelProps) {
   const [status, setStatus] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
-  const [monthIndexBackfilled, setMonthIndexBackfilled] = useState(false);
-  
   // Modal states
   const [showClearLogsModal, setShowClearLogsModal] = useState(false);
   const [clearLogsConfirmed, setClearLogsConfirmed] = useState(false);
@@ -40,8 +38,6 @@ export function SettingsPanel({ onStatusUpdate }: SettingsPanelProps) {
   const [resetDefaultsConfirmed, setResetDefaultsConfirmed] = useState(false);
   const [showClearCacheModal, setShowClearCacheModal] = useState(false);
   const [clearCacheConfirmed, setClearCacheConfirmed] = useState(false);
-  const [showBackfillModal, setShowBackfillModal] = useState(false);
-  const [backfillConfirmed, setBackfillConfirmed] = useState(false);
 
   const updateStatus = (message: string, isError: boolean = false) => {
     setStatus(message);
@@ -57,26 +53,6 @@ export function SettingsPanel({ onStatusUpdate }: SettingsPanelProps) {
     }, DAY_IN_MS / 24 / 60 / 60 * timeout);
   };
 
-  const handleBackfillMonthIndexes = async () => {
-    setIsLoading(true);
-    try {
-      const res = await fetch('/api/init/backfill-month-indexes', {
-        method: 'POST',
-        credentials: 'include'
-      });
-      const result = await res.json();
-      if (res.ok && result?.success) {
-        setMonthIndexBackfilled(true);
-        updateStatus(`✅ Month indexes backfilled (${result.indexed} indexed)`);
-      } else {
-        updateStatus(`❌ Failed to backfill month indexes`, true);
-      }
-    } catch (e) {
-      updateStatus('❌ Failed to backfill month indexes', true);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleClearLogs = async () => {
     if (!clearLogsConfirmed) {
@@ -179,59 +155,7 @@ export function SettingsPanel({ onStatusUpdate }: SettingsPanelProps) {
     }
   };
 
-  const handleBackfillLogs = async () => {
-    if (!backfillConfirmed) {
-      setShowBackfillModal(true);
-      return;
-    }
-    
-    setShowBackfillModal(false);
-    setBackfillConfirmed(false);
-    setIsLoading(true);
-    
-    try {
-      const response = await fetch('/api/settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'backfill-logs' })
-      });
-      
-      const result = await response.json();
-      
-      if (result.success) {
-        updateStatus(`✅ ${result.message}`);
-      } else {
-        updateStatus(`❌ ${result.message}`, true);
-      }
-    } catch (error) {
-      updateStatus('❌ Failed to backfill logs. Please try again.', true);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
-  const handleBackfillTaskFinancialCounterparty = async () => {
-    setIsLoading(true);
-    try {
-      const response = await fetch('/api/settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'backfill-task-counterparty-financial' })
-      });
-      
-      const result = await response.json();
-      
-      if (result.success) {
-        updateStatus(`✅ ${result.message}`);
-      } else {
-        updateStatus(`❌ ${result.message}`, true);
-      }
-    } catch (error) {
-      updateStatus('❌ Failed to backfill task financial counterparty metadata. Please try again.', true);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleExportData = async () => {
     setIsLoading(true);
@@ -369,27 +293,9 @@ export function SettingsPanel({ onStatusUpdate }: SettingsPanelProps) {
               Clear Logs
             </Button>
 
-            <Button 
-              onClick={handleBackfillMonthIndexes} 
-              variant="outline" 
-              disabled={isLoading || monthIndexBackfilled}
-            >
-              <Database className="h-4 w-4 mr-2" />
-              {monthIndexBackfilled ? 'Month Indexes Backfilled' : 'Backfill Month Indexes (One-time)'}
-            </Button>
-            
             <Button onClick={handleClearCache} variant="outline" disabled={isLoading}>
               <RefreshCw className="h-4 w-4 mr-2" />
               Clear Cache
-            </Button>
-            
-            <Button onClick={handleBackfillLogs} variant="outline" disabled={isLoading}>
-              <Database className="h-4 w-4 mr-2" />
-              Backfill Logs
-            </Button>
-            <Button onClick={handleBackfillTaskFinancialCounterparty} variant="outline" disabled={isLoading}>
-              <Database className="h-4 w-4 mr-2" />
-              Backfill Task Financial Counterparty
             </Button>
           </div>
         </div>
@@ -513,42 +419,6 @@ export function SettingsPanel({ onStatusUpdate }: SettingsPanelProps) {
                 className="bg-blue-600 hover:bg-blue-700"
               >
                 Clear Cache
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        <Dialog open={showBackfillModal} onOpenChange={setShowBackfillModal}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5 text-green-500" />
-                Backfill Logs
-              </DialogTitle>
-              <DialogDescription>
-                This will regenerate all logs from existing data to ensure consistency.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="backfill-confirm" 
-                checked={backfillConfirmed}
-                onCheckedChange={(checked) => setBackfillConfirmed(checked === true)}
-              />
-              <Label htmlFor="backfill-confirm">
-                I understand this will regenerate all logs
-              </Label>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowBackfillModal(false)}>
-                Cancel
-              </Button>
-              <Button 
-                onClick={handleBackfillLogs} 
-                disabled={!backfillConfirmed}
-                className="bg-green-600 hover:bg-green-700"
-              >
-                Backfill Logs
               </Button>
             </DialogFooter>
           </DialogContent>
