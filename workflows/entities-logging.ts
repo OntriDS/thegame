@@ -83,6 +83,10 @@ function coerceLogEditTimestamp(value: string): string {
 
 /**
  * Write entry to the monthly list that matches `entry.timestamp` (move across months if needed).
+ *
+ * Removes **every** list element with this `id` in source (and in target when moving) so we never
+ * leave duplicate-id ghosts. Older code used a single findIndex/splice, which let a second copy with
+ * the same id survive and confused UI/dedupe (e.g. financial log “name won’t stick”).
  */
 async function relocateLogEntryToCorrectMonth(
   entityType: EntityType,
@@ -92,29 +96,27 @@ async function relocateLogEntryToCorrectMonth(
 ): Promise<{ monthKey: string }> {
   const targetMonthKey = getMonthKeyFromTimestamp(updatedEntry.timestamp);
   const sourceList = await readMonthlyList(entityType, sourceMonthKey);
-  const idx = sourceList.findIndex(e => e.id === entryId);
-  if (idx === -1) {
+  if (!sourceList.some(e => e.id === entryId)) {
     throw new Error(`Log entry ${entryId} not found in month ${sourceMonthKey}`);
   }
 
+  const sortNewestFirst = (arr: any[]) =>
+    [...arr].sort((a, b) => logEntryTimestampMs(b) - logEntryTimestampMs(a));
+
   if (targetMonthKey === sourceMonthKey) {
-    sourceList[idx] = updatedEntry;
-    await rebuildMonthlyList(entityType, sourceMonthKey, sourceList);
+    const without = sourceList.filter(e => e.id !== entryId);
+    without.push(updatedEntry);
+    await rebuildMonthlyList(entityType, sourceMonthKey, sortNewestFirst(without));
     return { monthKey: sourceMonthKey };
   }
 
-  sourceList.splice(idx, 1);
-  await rebuildMonthlyList(entityType, sourceMonthKey, sourceList);
+  const sourceWithout = sourceList.filter(e => e.id !== entryId);
+  await rebuildMonthlyList(entityType, sourceMonthKey, sourceWithout);
 
   const targetList = await readMonthlyList(entityType, targetMonthKey);
-  const existingIdx = targetList.findIndex(e => e.id === entryId);
-  if (existingIdx >= 0) {
-    targetList[existingIdx] = updatedEntry;
-  } else {
-    targetList.push(updatedEntry);
-  }
-  targetList.sort((a, b) => logEntryTimestampMs(b) - logEntryTimestampMs(a));
-  await rebuildMonthlyList(entityType, targetMonthKey, targetList);
+  const targetWithout = targetList.filter(e => e.id !== entryId);
+  targetWithout.push(updatedEntry);
+  await rebuildMonthlyList(entityType, targetMonthKey, sortNewestFirst(targetWithout));
   await kvSAdd(buildLogMonthsIndexKey(entityType), targetMonthKey);
   return { monthKey: targetMonthKey };
 }

@@ -751,9 +751,31 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
     const derived = await resolveSaleDerivedFinrecFields(sale);
     const boothTitleBase = composeSaleSourcedFinrecName(sale, derived.siteLabel, split.date);
     const partnerPayoutRecordName = `${boothTitleBase} • Partner`;
+    const payoutCounterpartyId = split.targetEntityId || null;
 
     // [IDEMPOTENCY CHECK] Load existing records linked to this sale
     const existingRecords = await getFinancialsBySourceSaleId(sale.id);
+
+    const cleanupPayoutCharacterLinks = async (
+      financialRecordId: string,
+      keepCharacterId: string | null
+    ): Promise<void> => {
+      const finrecLinks = await getLinksFor({ type: EntityType.FINANCIAL, id: financialRecordId });
+      for (const link of finrecLinks) {
+        if (![LinkType.FINREC_CHARACTER, LinkType.CHARACTER_FINREC].includes(link.linkType)) continue;
+
+        const linkedCharacterId =
+          link.source.type === EntityType.FINANCIAL && link.source.id === financialRecordId && link.target.type === EntityType.CHARACTER
+            ? link.target.id
+            : link.source.type === EntityType.CHARACTER && link.target.type === EntityType.FINANCIAL && link.target.id === financialRecordId
+              ? link.source.id
+              : null;
+
+        if (linkedCharacterId && linkedCharacterId !== keepCharacterId) {
+          await removeLink(link.id);
+        }
+      }
+    };
 
     // =========================================================================
     // RECORD 1: Akiles Core Business Performance
@@ -807,6 +829,8 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
                          existingRecords.find(r => r.id.includes('payout'));
 
     if (hasContractImpact) {
+      await cleanupPayoutCharacterLinks(payoutRecordId, payoutCounterpartyId);
+
       const payoutData: FinancialRecord = {
         ...(payoutRecord || {}),
         id: payoutRecordId,
@@ -827,7 +851,9 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
         isNotCharged: sale.isNotCharged || false,
         updatedAt: getUTCNow(),
         createdAt: payoutRecord?.createdAt || getUTCNow(),
-        links: payoutRecord?.links || []
+        links: payoutRecord?.links || [],
+        customerCharacterId: payoutCounterpartyId,
+        customerCharacterRole: payoutCounterpartyId ? CharacterRole.BENEFICIARY : undefined,
       } as FinancialRecord;
 
       await upsertFinancial(payoutData, { forceSave: true });
@@ -841,16 +867,23 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
       }
 
       // Verify/Create FINREC_CHARACTER Link
-      if (split.targetEntityId) {
+      if (payoutCounterpartyId) {
         const finrecLinks = await getLinksFor({ type: EntityType.FINANCIAL, id: payoutRecordId });
-        const hasCharLink = finrecLinks.some(l => l.linkType === LinkType.FINREC_CHARACTER && l.target.id === split.targetEntityId);
+        const hasCharLink = finrecLinks.some(
+          l =>
+            l.linkType === LinkType.FINREC_CHARACTER &&
+            ((l.source.type === EntityType.FINANCIAL && l.source.id === payoutRecordId && l.target.type === EntityType.CHARACTER && l.target.id === payoutCounterpartyId) ||
+             (l.target.type === EntityType.FINANCIAL && l.target.id === payoutRecordId && l.source.type === EntityType.CHARACTER && l.source.id === payoutCounterpartyId))
+        );
         if (!hasCharLink) {
-          const charLink = makeLink(LinkType.FINREC_CHARACTER, { type: EntityType.FINANCIAL, id: payoutRecordId }, { type: EntityType.CHARACTER, id: split.targetEntityId });
+          const charLink = makeLink(LinkType.FINREC_CHARACTER, { type: EntityType.FINANCIAL, id: payoutRecordId }, { type: EntityType.CHARACTER, id: payoutCounterpartyId });
           await createLink(charLink);
         }
       }
     } else if (payoutRecord) {
       // If was there but no longer has impact, zero it
+      await cleanupPayoutCharacterLinks(payoutRecordId, null);
+
       const zeroedPayout = { 
         ...payoutRecord, 
         name: partnerPayoutRecordName,
@@ -859,6 +892,8 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
         cost: 0, 
         netCashflow: 0, 
         status: FinancialStatus.DONE,
+        customerCharacterId: null,
+        customerCharacterRole: undefined,
         updatedAt: getUTCNow() 
       };
       await upsertFinancial(zeroedPayout as FinancialRecord);
