@@ -1413,7 +1413,7 @@ export default function SalesModal({
       <DialogContent
         zIndexLayer={'MODALS'}
         hideClose
-        className="flex h-[90vh] w-full max-w-7xl flex-col gap-0 overflow-hidden p-0"
+        className="flex h-[90vh] w-full max-w-[88rem] flex-col gap-0 overflow-hidden p-0"
       >
         <DialogHeader className="shrink-0 space-y-0 border-b px-6 py-4 text-left">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2">

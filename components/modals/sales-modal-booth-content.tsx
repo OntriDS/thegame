@@ -903,7 +903,7 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
     // 4. Render
     // ============================================================================
     return (
-      <div className="flex flex-col h-full bg-slate-50/50 dark:bg-slate-900/50 -mx-6 -mt-6 -mb-4 p-4 pt-4 overflow-hidden">
+      <div className="flex flex-col h-full bg-slate-50/50 dark:bg-slate-900/50 -mx-4 -mt-4 -mb-2 p-4 pt-6 overflow-hidden">
         {/* Header / Setup Toolbar */}
         <div className="flex items-center gap-4 bg-white dark:bg-slate-800 p-2 rounded-lg shadow-sm border mb-4 shrink-0 overflow-x-auto">
           {/* Date */}
