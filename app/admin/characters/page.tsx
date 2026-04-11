@@ -18,7 +18,7 @@ import CharacterModal from '@/components/modals/character-modal';
 import type { Character } from '@/types/entities';
 import { CharacterRole } from '@/types/enums';
 import { ROLE_COLORS } from '@/lib/constants/color-constants';
-import { ChevronLeft, ChevronRight, Mail, Plus, Phone } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Mail, Phone, Plus, RefreshCw } from 'lucide-react';
 import { CharactersDeepLinkTrigger } from '@/components/admin/admin-deep-link-triggers';
 
 type CharacterSortOption = 'name-asc' | 'name-desc' | 'role-asc' | 'role-desc';
@@ -138,6 +138,11 @@ function CharactersPageContent() {
     loadCharacters();
   }, [loadCharacters]);
 
+  const handleReload = useCallback(() => {
+    if (isLoadingRef.current) return;
+    loadCharacters();
+  }, [loadCharacters]);
+
   useEntityUpdates('character', handleUpdate);
 
   const handleCharacterSave = useCallback(async (character: Character) => {
@@ -198,10 +203,22 @@ function CharactersPageContent() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold">Characters</h1>
-          <Button onClick={handleCreateCharacter} size="sm" variant="default" className="flex items-center gap-2">
-            <Plus className="h-4 w-4" />
-            Add Character
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleReload}
+              disabled={isLoading}
+              className="flex items-center gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+              Reload
+            </Button>
+            <Button onClick={handleCreateCharacter} size="sm" variant="default" className="flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              Add Character
+            </Button>
+          </div>
         </div>
         <div className="flex items-center justify-center h-64">
           <div className="text-muted-foreground">Loading characters...</div>
@@ -216,6 +233,16 @@ function CharactersPageContent() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="text-3xl font-bold">Characters</h1>
         <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleReload}
+            disabled={isLoading}
+            className="flex items-center gap-2"
+          >
+            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+            Reload
+          </Button>
           <Input
             value={searchInput}
             onChange={(event) => setSearchInput(event.target.value)}
@@ -298,9 +325,9 @@ function CharactersPageContent() {
                     <th className="px-3 py-2 text-xs font-semibold uppercase tracking-wider">Name</th>
                     <th className="px-3 py-2 text-xs font-semibold uppercase tracking-wider">Roles</th>
                     <th className="px-3 py-2 text-xs font-semibold uppercase tracking-wider">Contact</th>
-                    <th className="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-right">Purchased</th>
+                    <th className="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-right">Charged</th>
                         <th className="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-right">
-                          Beneficiary Paid
+                          Paid
                         </th>
                     <th className="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-right">Settings</th>
                   </tr>

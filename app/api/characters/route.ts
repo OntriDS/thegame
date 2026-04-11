@@ -45,6 +45,11 @@ const getRoleSortValue = (character: Character): string => {
     .toLowerCase();
 };
 
+const isCustomerRole = (role?: string | null): boolean => {
+  const normalized = normalizeCharacterRole(role);
+  return normalized == null || normalized === CharacterRole.CUSTOMER;
+};
+
 const buildDirectoryRoleCounts = (characters: Character[]): Record<string, number> => {
   const result: Record<string, number> = {};
   for (const character of characters) {
@@ -65,12 +70,12 @@ const buildDirectoryAmountTotals = async (characterIds: string[]): Promise<Map<s
 
   if (characterIds.length === 0) return totals;
 
-  // Purchased amount: based on customer-character relations from Financial records
+  // Charged amount: based on customer-character relations from Financial records
   const financials = await getAllFinancials();
   for (const record of financials) {
     const customerCharacterId = record.customerCharacterId;
     if (!customerCharacterId || !idSet.has(customerCharacterId)) continue;
-    if (record.customerCharacterRole && record.customerCharacterRole !== CharacterRole.CUSTOMER) continue;
+    if (!isCustomerRole(record.customerCharacterRole)) continue;
 
     const amount = Number(record.revenue || 0);
     if (!Number.isFinite(amount) || amount <= 0) continue;
