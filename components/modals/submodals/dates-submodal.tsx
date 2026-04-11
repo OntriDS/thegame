@@ -74,9 +74,9 @@ export default function DatesSubmodal({
         ? isSoldItem
         : isSale
             ? (normalizedStatus === 'charged' || normalizedStatus === 'collected')
-            : isFinancial
-                ? (normalizedStatus === 'done' || normalizedStatus === 'charged')
-                : (normalizedStatus === 'done' || normalizedStatus === 'collected');
+        : isFinancial
+            ? (normalizedStatus === 'done' || normalizedStatus === 'charged')
+            : (normalizedStatus === 'done' || normalizedStatus === 'failed');
     const showCollectedSection = isSale || isTask;
     const isCollectedAllowed = showCollectedSection && normalizedStatus === 'collected';
 
@@ -128,15 +128,15 @@ export default function DatesSubmodal({
                             onChange={setLocalDoneAt}
                             disabled={!isDoneAllowed}
                         />
-                        {!isDoneAllowed ? (
+                            {!isDoneAllowed ? (
                             <p className="text-[10px] text-amber-600 dark:text-amber-500 font-medium">
                                 {isItem
                                     ? 'Set item status to Sold first to unlock this date.'
                                     : isSale
                                         ? 'Please set the sale status to Charged or Collected first to unlock this date.'
-                                        : isFinancial
-                                            ? 'Please set the financial status to Done (or Charged) first to unlock this date.'
-                                            : 'Please set the task status to Done or Collected first to unlock this date.'
+                                                : isFinancial
+                                                    ? 'Please set the financial status to Done (or Charged) first to unlock this date.'
+                                                    : 'Please set the task status to Done or Failed first to unlock this date. Collected has its own Collected date below.'
                                 }
                             </p>
                         ) : (
