@@ -130,8 +130,72 @@ async function cleanUpIntermediateStatusTransitions(
   }
 }
 
+/**
+ * First transition into Failed: clear collection, reverse staged/rewarded points, FAILED log, persist normalized row.
+ * Does not run when task was already Failed (idempotent re-save).
+ */
+async function normalizeTaskFailedState(task: Task, previousTask?: Task): Promise<Task> {
+  const doneAtRaw = task.doneAt || previousTask?.doneAt || getUTCNow();
+  const doneAt = doneAtRaw instanceof Date ? doneAtRaw : parseDateToUTC(doneAtRaw as string | number);
+
+  const merged: Task = {
+    ...task,
+    status: TaskStatus.FAILED,
+    isCollected: false,
+    collectedAt: undefined,
+    doneAt,
+  };
+
+  if (previousTask) {
+    const wasCollected =
+      previousTask.status === TaskStatus.COLLECTED || previousTask.isCollected === true;
+    const stagingKey = EffectKeys.sideEffect('task', task.id, 'pointsStaged');
+    const pointsRewardedKey = EffectKeys.sideEffect('task', task.id, 'pointsRewarded');
+    const playerRef = task.playerCharacterId || FOUNDER_CHARACTER_ID;
+
+    if (wasCollected && task.rewards?.points) {
+      if (await hasEffect(pointsRewardedKey)) {
+        await unrewardPointsForPlayer(playerRef, task.rewards.points, task.id, EntityType.TASK);
+        await clearEffect(pointsRewardedKey);
+      } else if (await hasEffect(stagingKey)) {
+        await withdrawStagedPointsFromPlayer(playerRef, task.rewards.points, task.id, EntityType.TASK);
+        await clearEffect(stagingKey);
+      }
+      await removeLogEntriesAcrossMonths(
+        EntityType.TASK,
+        e => e.entityId === task.id && e.event === LogEventType.COLLECTED
+      );
+    } else if (previousTask.status === TaskStatus.DONE && task.rewards?.points && (await hasEffect(stagingKey))) {
+      await withdrawStagedPointsFromPlayer(playerRef, task.rewards.points, task.id, EntityType.TASK);
+      await clearEffect(stagingKey);
+    }
+  }
+
+  await clearEffect(EffectKeys.sideEffect('task', task.id, 'pointsAwarded'));
+
+  const failedLoggedKey = EffectKeys.sideEffect('task', task.id, 'failedLogged');
+  if (!(await hasEffect(failedLoggedKey))) {
+    await appendEntityLog(
+      EntityType.TASK,
+      task.id,
+      LogEventType.FAILED,
+      {
+        name: getSafeTaskNameForLogging(merged),
+        taskType: merged.type,
+        station: merged.station,
+      },
+      doneAt
+    );
+    await markEffect(failedLoggedKey);
+  }
+
+  await upsertTask(merged, { skipWorkflowEffects: true });
+  return merged;
+}
+
 export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<void> {
   let taskForCounterparty = task;
+  let outputsTask: Task = task;
 
   const counterpartyResolutionLogPrefix = `[onTaskUpsert] Counterparty resolution (${task.id})`;
 
@@ -150,9 +214,13 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
       await markEffect(effectKey);
     }
 
-    // Return early ONLY if CREATED was already logged AND task is NOT Done
-    // This prevents duplicates but allows Done tasks to proceed to DONE logging
-    if (alreadyLoggedCreated && task.status !== TaskStatus.DONE) {
+    // Return early ONLY if CREATED was already logged AND task is not terminal
+    if (
+      alreadyLoggedCreated &&
+      task.status !== TaskStatus.DONE &&
+      task.status !== TaskStatus.FAILED &&
+      task.status !== TaskStatus.COLLECTED
+    ) {
       return;
     }
     // Continue to DONE logging below if task is Done (whether CREATED just logged or was already there)
@@ -164,8 +232,8 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
     // Clean up intermediate status transitions for idempotency
     await cleanUpIntermediateStatusTransitions(task.id, previousTask.status, task.status);
 
-    // Skip event logging for DONE and COLLECTED (handled separately below)
-    const skipForSpecialStatuses = ['Done', 'Collected'];
+    // Skip generic status log for Done, Collected, Failed (FAILED logged in normalizeTaskFailedState)
+    const skipForSpecialStatuses = ['Done', 'Collected', 'Failed'];
     if (!skipForSpecialStatuses.includes(task.status)) {
       // Log status change with actual status as event type
       const statusEvent = getStatusEvent(task.status);
@@ -180,50 +248,65 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
       });
     }
 
-    // Handle uncompletion (Done/Collected → Other status)
-    if ((previousTask!.status === TaskStatus.DONE || previousTask!.status === TaskStatus.COLLECTED) && task.status !== TaskStatus.DONE && task.status !== TaskStatus.COLLECTED) {
+    const isTerminalStatus = (s: TaskStatus) =>
+      s === TaskStatus.DONE || s === TaskStatus.COLLECTED || s === TaskStatus.FAILED;
 
-      // Uncomplete the task and remove effects
+    // Uncomplete when leaving a success/collection terminal for an active (non-terminal) status — not when moving Done→Collected or to Failed
+    if (
+      (previousTask!.status === TaskStatus.DONE || previousTask!.status === TaskStatus.COLLECTED) &&
+      !isTerminalStatus(task.status)
+    ) {
+      await uncompleteTask(task.id);
+    }
+
+    // Failed → active: same rollback path as uncomplete
+    if (previousTask!.status === TaskStatus.FAILED && !isTerminalStatus(task.status)) {
       await uncompleteTask(task.id);
     }
 
   }
 
+  if (task.status === TaskStatus.FAILED && (!previousTask || previousTask.status !== TaskStatus.FAILED)) {
+    outputsTask = await normalizeTaskFailedState(task, previousTask);
+    taskForCounterparty = outputsTask;
+  }
+
   // Log DONE event - either when status changes to Done OR when creating a task that's already Done
-  if (task.status === TaskStatus.DONE && task.doneAt) {
+  if (outputsTask.status === TaskStatus.DONE && outputsTask.doneAt) {
     const shouldLogDone = !previousTask || !previousTask.doneAt;
     if (shouldLogDone) {
-      await appendEntityLog(EntityType.TASK, task.id, LogEventType.DONE, {
-        name: getSafeTaskNameForLogging(task),
-        taskType: task.type,
-        station: task.station
-      }, task.doneAt);
+      await appendEntityLog(EntityType.TASK, outputsTask.id, LogEventType.DONE, {
+        name: getSafeTaskNameForLogging(outputsTask),
+        taskType: outputsTask.type,
+        station: outputsTask.station
+      }, outputsTask.doneAt);
     }
   }
 
   const statusBecameCollected =
-    task.status === TaskStatus.COLLECTED &&
+    outputsTask.status === TaskStatus.COLLECTED &&
     (!previousTask || previousTask.status !== TaskStatus.COLLECTED);
   const flagBecameCollected =
-    !!task.isCollected && (!previousTask || !previousTask.isCollected);
+    !!outputsTask.isCollected && (!previousTask || !previousTask.isCollected);
 
-  if (statusBecameCollected || flagBecameCollected) {
-    let collectedAtRaw = task.collectedAt;
+  if (outputsTask.status !== TaskStatus.FAILED && (statusBecameCollected || flagBecameCollected)) {
+    let collectedAtRaw = outputsTask.collectedAt;
     if (collectedAtRaw) {
       const collectedAtCandidate = collectedAtRaw instanceof Date ? collectedAtRaw : new Date(collectedAtRaw);
       collectedAtRaw = Number.isFinite(collectedAtCandidate.getTime()) ? collectedAtCandidate : undefined;
     }
     if (!collectedAtRaw) {
       collectedAtRaw = getUTCNow();
-      // Ensure the collectedAt timestamp is saved if it was missing
-      await upsertTask({ ...task, isCollected: true, collectedAt: collectedAtRaw, status: TaskStatus.COLLECTED }, { skipWorkflowEffects: true });
+      await upsertTask(
+        { ...outputsTask, isCollected: true, collectedAt: collectedAtRaw, status: TaskStatus.COLLECTED },
+        { skipWorkflowEffects: true }
+      );
     }
     const collectedAt = collectedAtRaw;
 
-    // Client bug or legacy payload: isCollected/collectedAt set but status still Done — persist Collected without changing timestamps
-    if (task.status !== TaskStatus.COLLECTED) {
+    if (outputsTask.status !== TaskStatus.COLLECTED) {
       const repaired: Task = {
-        ...task,
+        ...outputsTask,
         status: TaskStatus.COLLECTED,
         isCollected: true,
         collectedAt,
@@ -237,27 +320,24 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
       };
     }
 
-    const pointsRewardedEffectKey = EffectKeys.sideEffect('task', task.id, 'pointsRewarded');
+    const pointsRewardedEffectKey = EffectKeys.sideEffect('task', outputsTask.id, 'pointsRewarded');
 
     if (!(await hasEffect(pointsRewardedEffectKey))) {
-      // Log COLLECTED event (Points Claimed)
-      await appendEntityLog(EntityType.TASK, task.id, LogEventType.COLLECTED, {
-        name: getSafeTaskNameForLogging(task),
-        taskType: task.type,
-        station: task.station
+      await appendEntityLog(EntityType.TASK, outputsTask.id, LogEventType.COLLECTED, {
+        name: getSafeTaskNameForLogging(outputsTask),
+        taskType: outputsTask.type,
+        station: outputsTask.station,
       }, collectedAt);
 
-      // Reward points if rewards exist AND they were staged (prevents double-counting legacy tasks)
-      const stagingEffectKey = EffectKeys.sideEffect('task', task.id, 'pointsStaged');
+      const stagingEffectKey = EffectKeys.sideEffect('task', outputsTask.id, 'pointsStaged');
 
-      if (task.rewards?.points && await hasEffect(stagingEffectKey)) {
-        const playerId = task.playerCharacterId || FOUNDER_CHARACTER_ID;
-        await rewardPointsToPlayer(playerId, task.rewards.points, task.id, EntityType.TASK, collectedAt);
+      if (outputsTask.rewards?.points && (await hasEffect(stagingEffectKey))) {
+        const playerId = outputsTask.playerCharacterId || FOUNDER_CHARACTER_ID;
+        await rewardPointsToPlayer(playerId, outputsTask.rewards.points, outputsTask.id, EntityType.TASK, collectedAt);
       }
 
       await markEffect(pointsRewardedEffectKey);
 
-      // Cascade collection to child instances (only marks them as collected to reward points)
       await cascadeCollectionToChildren(taskForCounterparty, collectedAt);
     }
   }
@@ -302,18 +382,23 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
       `${resolvedCounterparty.characterRole || 'null'}/${resolvedCounterparty.source}`
   );
 
-  // PARALLEL SIDE EFFECTS - when task is completed (Done or Collected)
-  // Run all independent side effects concurrently for 60-70% performance improvement
-  if (task.status === TaskStatus.DONE || task.status === TaskStatus.COLLECTED) {
+  // Side effects: Done, Collected, or Failed get items + financials; only Done/Collected stage points (not Failed)
+  const terminalForOutputs =
+    outputsTask.status === TaskStatus.DONE ||
+    outputsTask.status === TaskStatus.COLLECTED ||
+    outputsTask.status === TaskStatus.FAILED;
+  const terminalForPointsStaging =
+    outputsTask.status === TaskStatus.DONE || outputsTask.status === TaskStatus.COLLECTED;
+
+  if (terminalForOutputs) {
     const sideEffects: Promise<void>[] = [];
 
-    // Item creation from emissary fields
-    if (task.outputItemType && task.outputQuantity) {
+    if (outputsTask.outputItemType && outputsTask.outputQuantity) {
       sideEffects.push(
         (async () => {
-          const effectKey = EffectKeys.sideEffect('task', task.id, 'itemCreated');
+          const effectKey = EffectKeys.sideEffect('task', outputsTask.id, 'itemCreated');
           if (!(await hasEffect(effectKey))) {
-            const createdItem = await createItemFromTask(task);
+            const createdItem = await createItemFromTask(outputsTask);
             if (createdItem) {
               await markEffect(effectKey);
             }
@@ -322,31 +407,25 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
       );
     }
 
-    // Points awarding - when task is completed with rewards
-    // Use task.playerCharacterId directly as playerId (they're the same now with unified 'creator' ID)
-    if (task.rewards?.points) {
+    if (terminalForPointsStaging && outputsTask.rewards?.points) {
       sideEffects.push(
         (async () => {
-          (async () => {
-            // Use 'pointsStaged' key to distinguish from legacy 'pointsAwarded'
-            const stagingKey = EffectKeys.sideEffect('task', task.id, 'pointsStaged');
-            const legacyKey = EffectKeys.sideEffect('task', task.id, 'pointsAwarded');
+          const stagingKey = EffectKeys.sideEffect('task', outputsTask.id, 'pointsStaged');
+          const legacyKey = EffectKeys.sideEffect('task', outputsTask.id, 'pointsAwarded');
 
-            if (!(await hasEffect(stagingKey)) && !(await hasEffect(legacyKey))) {
-              const playerId = task.playerCharacterId || FOUNDER_CHARACTER_ID;
-              await stagePointsForPlayer(playerId, task.rewards.points, task.id, EntityType.TASK);
-              await markEffect(stagingKey);
-            }
-          })()
+          if (!(await hasEffect(stagingKey)) && !(await hasEffect(legacyKey))) {
+            const playerId = outputsTask.playerCharacterId || FOUNDER_CHARACTER_ID;
+            await stagePointsForPlayer(playerId, outputsTask.rewards.points, outputsTask.id, EntityType.TASK);
+            await markEffect(stagingKey);
+          }
         })()
       );
     }
 
-    // Financial record creation from task
-    if (task.cost || task.revenue || task.rewards?.points) {
+    if (outputsTask.cost || outputsTask.revenue || outputsTask.rewards?.points) {
       sideEffects.push(
         (async () => {
-          const effectKey = EffectKeys.sideEffect('task', task.id, 'financialCreated');
+          const effectKey = EffectKeys.sideEffect('task', outputsTask.id, 'financialCreated');
           if (!(await hasEffect(effectKey))) {
             const createdFinancial = await createFinancialRecordFromTask(resolvedTaskForPropagation);
             if (createdFinancial) {
@@ -355,59 +434,54 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
                   `${resolvedTaskForPropagation.customerCharacterRole || 'null'}/${resolvedCounterparty.source}`
               );
               await markEffect(effectKey);
-              console.log(`[onTaskUpsert] ✅ Created/updated financial record ${createdFinancial.id} for task ${task.id}`);
+              console.log(`[onTaskUpsert] ✅ Created/updated financial record ${createdFinancial.id} for task ${outputsTask.id}`);
             } else {
-              console.log(`[onTaskUpsert] ⏭️ financialCreated skipped - createFinancialRecordFromTask returned null for task ${task.id}`);
+              console.log(`[onTaskUpsert] ⏭️ financialCreated skipped - createFinancialRecordFromTask returned null for task ${outputsTask.id}`);
             }
           } else {
-            console.log(`[onTaskUpsert] ⏭️ financialCreated skipped - effect guard already set for task ${task.id}`);
+            console.log(`[onTaskUpsert] ⏭️ financialCreated skipped - effect guard already set for task ${outputsTask.id}`);
           }
         })()
       );
     }
 
-    // Wait for all side effects to complete
     await Promise.all(sideEffects);
   }
 
   // COMPREHENSIVE UPDATE PROPAGATION - when task properties change
   if (previousTask) {
-    // Propagate to Financial Records
     if (hasFinancialPropsChanged(resolvedTaskForPropagation, resolvedPreviousTaskForPropagation || previousTask)) {
       await updateFinancialRecordsFromTask(resolvedTaskForPropagation, resolvedPreviousTaskForPropagation || previousTask);
     }
 
-    // Propagate to Items
-    if (hasOutputPropsChanged(task, previousTask)) {
-      await updateItemsCreatedByTask(task, previousTask);
+    if (hasOutputPropsChanged(outputsTask, previousTask)) {
+      await updateItemsCreatedByTask(outputsTask, previousTask);
     }
 
-    // Propagate to Player (points delta)
-    if (hasRewardsChanged(task, previousTask)) {
-      await updatePlayerPointsFromSource(EntityType.TASK, task, previousTask);
+    if (hasRewardsChanged(outputsTask, previousTask)) {
+      await updatePlayerPointsFromSource(EntityType.TASK, outputsTask, previousTask);
     }
 
-    // Recurrent Template status changes (no auto instance creation here; JIT spawn-only model)
-    if (task.type === TaskType.RECURRENT_TEMPLATE) {
-      // Handle status changes for Recurrent Templates
-      const statusChanged = previousTask.status !== task.status;
+    if (outputsTask.type === TaskType.RECURRENT_TEMPLATE) {
+      const statusChanged = previousTask.status !== outputsTask.status;
 
       if (statusChanged) {
-        // Check if user requested to skip cascading (via temporary metadata)
-        const skipCascade = (task as any)._skipCascade === true;
+        const skipCascade = (outputsTask as any)._skipCascade === true;
 
         if (skipCascade) {
         } else {
-          // Detect template status reversal (uncascade)
-          const statusReverted = previousTask.status === TaskStatus.DONE && task.status !== TaskStatus.DONE;
+          const statusReverted =
+            previousTask.status === TaskStatus.DONE &&
+            outputsTask.status !== TaskStatus.DONE &&
+            outputsTask.status !== TaskStatus.COLLECTED &&
+            outputsTask.status !== TaskStatus.FAILED;
 
           if (statusReverted) {
-            const { reverted } = await uncascadeStatusFromInstances(task.id, task.status);
+            await uncascadeStatusFromInstances(outputsTask.id, outputsTask.status);
           } else {
-            // Forward cascade: cascade status to instances
-            const undoneCount = await getUndoneInstancesCount(task.id, task.status);
+            const undoneCount = await getUndoneInstancesCount(outputsTask.id, outputsTask.status);
             if (undoneCount > 0) {
-              const { updated } = await cascadeStatusToInstances(task.id, task.status, previousTask.status);
+              await cascadeStatusToInstances(outputsTask.id, outputsTask.status, previousTask.status);
             }
           }
         }
@@ -430,15 +504,15 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
   // Lean identity fields changed — cascade patch ALL log entries across ALL months and events
   if (previousTask) {
     const leanFieldsChanged =
-      previousTask.name !== task.name ||
-      previousTask.type !== task.type ||
-      previousTask.station !== task.station;
+      previousTask.name !== outputsTask.name ||
+      previousTask.type !== outputsTask.type ||
+      previousTask.station !== outputsTask.station;
 
     if (leanFieldsChanged) {
-      await updateEntityLeanFields(EntityType.TASK, task.id, {
-        name: task.name,
-        taskType: task.type || 'Unknown',
-        station: task.station || 'Unknown',
+      await updateEntityLeanFields(EntityType.TASK, outputsTask.id, {
+        name: outputsTask.name,
+        taskType: outputsTask.type || 'Unknown',
+        station: outputsTask.station || 'Unknown',
       });
     }
   }
@@ -448,19 +522,30 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
   // Ensure the entity is correctly placed in the right month's sorted set.
   // We sweep all available months to completely eradicate Snapshot-era ghost duplicates.
   // ---------------------------------------------------------------------------
-  const isNowArchived = task.status === TaskStatus.DONE || task.status === TaskStatus.COLLECTED;
-  const wasArchived = previousTask && (previousTask.status === TaskStatus.DONE || previousTask.status === TaskStatus.COLLECTED);
+  const isNowArchived =
+    outputsTask.status === TaskStatus.DONE ||
+    outputsTask.status === TaskStatus.COLLECTED ||
+    outputsTask.status === TaskStatus.FAILED;
+  const wasArchived =
+    previousTask &&
+    (previousTask.status === TaskStatus.DONE ||
+      previousTask.status === TaskStatus.COLLECTED ||
+      previousTask.status === TaskStatus.FAILED);
 
   const getTaskArchiveMonth = (t: Task) => {
-    const raw = t.status === TaskStatus.COLLECTED ? (t.collectedAt || t.doneAt || t.createdAt) : (t.doneAt || t.createdAt);
+    let raw: Date | string | undefined;
+    if (t.status === TaskStatus.COLLECTED) {
+      raw = t.collectedAt || t.doneAt || t.createdAt;
+    } else {
+      raw = t.doneAt || t.createdAt;
+    }
     if (raw == null) return null;
-    // POST /api/tasks JSON has ISO strings; KV may revive Dates — endOfMonthUTC requires a Date
     const date = raw instanceof Date ? raw : parseDateToUTC(raw as string | number);
     return formatMonthKey(endOfMonthUTC(date));
   };
 
-  const newMonth = isNowArchived ? getTaskArchiveMonth(task) : null;
-  const oldMonth = wasArchived ? getTaskArchiveMonth(previousTask) : null;
+  const newMonth = isNowArchived ? getTaskArchiveMonth(outputsTask) : null;
+  const oldMonth = wasArchived && previousTask ? getTaskArchiveMonth(previousTask) : null;
 
   if (isNowArchived || wasArchived) {
     const { kvSAdd, kvSRem } = await import('@/data-store/kv');
@@ -551,7 +636,12 @@ export async function removeTaskLogEntriesOnDelete(task: Task): Promise<void> {
     );
 
     // 7. Remove from archive index (if applicable)
-    if (task.status === TaskStatus.DONE || task.isCollected || task.status === TaskStatus.COLLECTED) {
+    if (
+      task.status === TaskStatus.DONE ||
+      task.status === TaskStatus.FAILED ||
+      task.isCollected ||
+      task.status === TaskStatus.COLLECTED
+    ) {
       try {
         let snapshotDate = task.doneAt;
         if (!snapshotDate && task.collectedAt) snapshotDate = task.collectedAt;
@@ -667,6 +757,8 @@ export async function uncompleteTask(taskId: string): Promise<void> {
     await clearEffect(EffectKeys.sideEffect('task', taskId, 'financialCreated'));
     await clearEffect(EffectKeys.sideEffect('task', taskId, 'pointsAwarded'));
     await clearEffect(EffectKeys.sideEffect('task', taskId, 'pointsRewarded')); // Clear the new effect key
+    await clearEffect(EffectKeys.sideEffect('task', taskId, 'pointsStaged'));
+    await clearEffect(EffectKeys.sideEffect('task', taskId, 'failedLogged'));
     // 3.5 Remove from archive index & clear snapshot effect
     try {
       const snapshotRaw = task.doneAt || task.collectedAt || task.createdAt || getUTCNow();
@@ -689,9 +781,11 @@ export async function uncompleteTask(taskId: string): Promise<void> {
 
     // 4. Remove DONE and COLLECTED logs (Idempotency)
     // Instead of logging "UNCOMPLETED", we simply remove the entries that made it "complete"
-    const removedCount = await removeLogEntriesAcrossMonths(EntityType.TASK, entry =>
+    await removeLogEntriesAcrossMonths(EntityType.TASK, entry =>
       entry.entityId === taskId &&
-      (entry.event === LogEventType.DONE || entry.event === LogEventType.COLLECTED)
+      (entry.event === LogEventType.DONE ||
+        entry.event === LogEventType.COLLECTED ||
+        entry.event === LogEventType.FAILED)
     );
 
   } catch (error) {

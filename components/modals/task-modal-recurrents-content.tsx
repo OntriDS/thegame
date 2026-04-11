@@ -375,6 +375,7 @@ export default function RecurrentTreeModalContent({
     };
 
     const determineFinalStatus = () => {
+      if (status === TaskStatus.FAILED) return TaskStatus.FAILED;
       if (status === TaskStatus.COLLECTED) return TaskStatus.COLLECTED;
       if (editingExisting && task?.status === TaskStatus.COLLECTED) return TaskStatus.COLLECTED;
       if (editingExisting && task?.status === TaskStatus.DONE && progress === 100) return TaskStatus.DONE;
@@ -396,7 +397,7 @@ export default function RecurrentTreeModalContent({
       progress,
       dueDate,
       doneAt: localDoneAt,
-      collectedAt: localCollectedAt,
+      collectedAt: finalStatus === TaskStatus.FAILED ? undefined : localCollectedAt,
       scheduledStart: finalScheduledStart,
       scheduledEnd: finalScheduledEnd,
       cost,
@@ -426,7 +427,8 @@ export default function RecurrentTreeModalContent({
       customerCharacterRole,
       playerCharacterId: finalPlayerCharacterId,
       order: determineOrder(),
-      isCollected: status === TaskStatus.COLLECTED || isCollected,
+      isCollected:
+        finalStatus === TaskStatus.FAILED ? false : finalStatus === TaskStatus.COLLECTED || isCollected,
       isNewItem,
       isSold,
       outputItemId: isNewItem ? null : (selectedItemId || task?.outputItemId || null),
@@ -482,7 +484,11 @@ export default function RecurrentTreeModalContent({
       try {
         const affectedCount = await ClientAPI.getUndoneInstancesCount(task.id, status);
         if (affectedCount > 0) {
-          const isReversal = task.status === TaskStatus.DONE && status !== TaskStatus.DONE;
+          const isReversal =
+            task.status === TaskStatus.DONE &&
+            status !== TaskStatus.DONE &&
+            status !== TaskStatus.COLLECTED &&
+            status !== TaskStatus.FAILED;
           setCascadeData({
             newStatus: status,
             oldStatus: task.status,
@@ -1188,6 +1194,10 @@ export default function RecurrentTreeModalContent({
                   return;
                 }
                 setStatus(newStatus);
+                if (newStatus === TaskStatus.FAILED) {
+                  setIsCollected(false);
+                  setLocalCollectedAt(undefined);
+                }
                 if (newStatus === TaskStatus.CREATED || newStatus === TaskStatus.ON_HOLD) {
                   setProgress(0);
                 } else if (newStatus === TaskStatus.IN_PROGRESS) {
@@ -1206,6 +1216,7 @@ export default function RecurrentTreeModalContent({
                 {Object.values(TaskStatus)
                   .filter((taskStatus) => {
                     if (taskStatus === TaskStatus.COLLECTED && (isNotPaid || isNotCharged)) return false;
+                    if (status === TaskStatus.FAILED && taskStatus === TaskStatus.COLLECTED) return false;
                     return true;
                   })
                   .map((taskStatus) => (

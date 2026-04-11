@@ -95,6 +95,8 @@ export const TASK_PRIORITY_ICON_COLORS = {
 /** Task Status Icon Colors */
 export const TASK_STATUS_ICON_COLORS = {
   [TaskStatus.DONE]: 'text-green-600 dark:text-green-400',
+  [TaskStatus.FAILED]: 'text-red-600 dark:text-red-400',
+  [TaskStatus.COLLECTED]: 'text-emerald-600 dark:text-emerald-400',
 } as const;
 
 /** Task Status Badge Colors - For weekly schedule badges (solid backgrounds) */

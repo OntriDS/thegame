@@ -77,8 +77,14 @@ const makeDragPreview = (treeRef: React.RefObject<TreeApi<TreeNode>>) =>
     const Icon = TASK_TYPE_ICONS[treeNode.task.type as keyof typeof TASK_TYPE_ICONS] || TASK_TYPE_ICONS[TaskType.ASSIGNMENT];
 
     const getTaskIconColorClass = (task: TreeNode['task']): string => {
+      if (task.status === TaskStatus.COLLECTED) {
+        return TASK_STATUS_ICON_COLORS[TaskStatus.COLLECTED];
+      }
       if (task.status === TaskStatus.DONE) {
         return TASK_STATUS_ICON_COLORS[TaskStatus.DONE];
+      }
+      if (task.status === TaskStatus.FAILED) {
+        return TASK_STATUS_ICON_COLORS[TaskStatus.FAILED];
       }
 
       const priority = task.priority as TaskPriority | undefined;
@@ -280,8 +286,14 @@ export default function TaskTree({
       const Icon = TASK_TYPE_ICONS[treeNode.task.type as keyof typeof TASK_TYPE_ICONS] || TASK_TYPE_ICONS[TaskType.ASSIGNMENT];
 
       const getTaskIconColorClass = (task: TreeNode['task']): string => {
+        if (task.status === TaskStatus.COLLECTED) {
+          return TASK_STATUS_ICON_COLORS[TaskStatus.COLLECTED];
+        }
         if (task.status === TaskStatus.DONE) {
           return TASK_STATUS_ICON_COLORS[TaskStatus.DONE];
+        }
+        if (task.status === TaskStatus.FAILED) {
+          return TASK_STATUS_ICON_COLORS[TaskStatus.FAILED];
         }
 
         const priority = task.priority as TaskPriority | undefined;

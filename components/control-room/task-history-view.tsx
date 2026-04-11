@@ -83,8 +83,16 @@ function formatTaskHistoryDate(value: unknown): string {
     return isNaN(d.getTime()) ? 'Unknown' : format(d, 'PP');
 }
 
-/** Same line for every History row: Done + Collected (status only affects styling elsewhere). */
+/** Timeline line for History rows: Done + Collected, or Failed (no collection). */
 function TaskHistoryDoneCollectedLine({ task }: { task: Task | EnrichedTask }) {
+    if (task.status === TaskStatus.FAILED) {
+        const failedLabel = formatTaskHistoryDate(task.doneAt);
+        return (
+            <div className="flex items-center gap-1.5 font-medium whitespace-nowrap text-red-600 dark:text-red-400/80">
+                <span>Failed: {failedLabel}</span>
+            </div>
+        );
+    }
     const doneLabel = formatTaskHistoryDate(task.doneAt);
     const collectedLabel = formatTaskHistoryDate(task.collectedAt);
     const tone =
@@ -98,6 +106,12 @@ function TaskHistoryDoneCollectedLine({ task }: { task: Task | EnrichedTask }) {
             <span>Collected: {collectedLabel}</span>
         </div>
     );
+}
+
+function taskHistoryBorderClass(task: Task | EnrichedTask): string {
+    if (task.status === TaskStatus.COLLECTED) return 'border-l-emerald-500';
+    if (task.status === TaskStatus.FAILED) return 'border-l-red-500';
+    return 'border-l-green-400';
 }
 
 // Sort orphan tasks by the selected criteria
@@ -188,7 +202,7 @@ function renderTaskHierarchy(
         <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-2">
             {groupedTasks.size === 0 && orphanTasks.length === 0 ? (
                 <div className="text-center text-muted-foreground py-10">
-                    No completed tasks found for this month.
+                    No archived tasks found for this month.
                 </div>
             ) : (
                 <>
@@ -198,7 +212,7 @@ function renderTaskHierarchy(
                         return (
                             <Card
                                 key={task.id}
-                                className={`hover:bg-muted/50 transition-colors cursor-pointer border-l-4 ${task.status === TaskStatus.COLLECTED ? 'border-l-emerald-500' : 'border-l-green-400'}`}
+                                className={`hover:bg-muted/50 transition-colors cursor-pointer border-l-4 ${taskHistoryBorderClass(task)}`}
                                 onClick={() => onSelectTask?.(task)}
                             >
                                 <CardContent className="p-3 flex items-center gap-3">
@@ -236,7 +250,7 @@ function renderTaskHierarchy(
                                         return (
                                             <Card
                                                 key={task.id}
-                                                className={`hover:bg-muted/50 transition-colors cursor-pointer border-l-4 ${task.status === TaskStatus.COLLECTED ? 'border-l-emerald-500' : 'border-l-green-400'}`}
+                                                className={`hover:bg-muted/50 transition-colors cursor-pointer border-l-4 ${taskHistoryBorderClass(task)}`}
                                                 onClick={() => onSelectTask?.(task)}
                                             >
                                                 <CardContent className="p-3 flex items-center gap-3">
@@ -349,7 +363,7 @@ export default function TaskHistoryView({ onSelectTask, refreshKey = 0 }: TaskHi
                         <Calendar className="h-6 w-6 text-primary" />
                         Task History
                     </h2>
-                    <p className="text-sm text-muted-foreground">Review completed missions and assignments</p>
+                    <p className="text-sm text-muted-foreground">Review done, collected, and failed tasks</p>
                 </div>
                 
                 <div className="flex items-center gap-4">
@@ -357,14 +371,28 @@ export default function TaskHistoryView({ onSelectTask, refreshKey = 0 }: TaskHi
                     {!isLoading && (
                         <div className="flex items-center gap-3 px-3 py-1.5 bg-muted/50 rounded-lg border border-muted text-xs font-medium">
                             <div className="flex items-center gap-1.5">
-                                <span className="text-muted-foreground uppercase tracking-tight">Tasks Done:</span>
+                                <span className="text-muted-foreground uppercase tracking-tight">Total:</span>
                                 <span className="text-primary font-bold">{tasks.length}</span>
+                            </div>
+                            <div className="w-px h-3 bg-muted-foreground/20" />
+                            <div className="flex items-center gap-1.5">
+                                <span className="text-muted-foreground uppercase tracking-tight">Done:</span>
+                                <span className="text-green-600 dark:text-green-400 font-bold">
+                                    {tasks.filter(t => t.status === TaskStatus.DONE).length}
+                                </span>
                             </div>
                             <div className="w-px h-3 bg-muted-foreground/20" />
                             <div className="flex items-center gap-1.5">
                                 <span className="text-muted-foreground uppercase tracking-tight">Collected:</span>
                                 <span className="text-emerald-600 dark:text-emerald-400 font-bold">
                                     {tasks.filter(t => t.status === TaskStatus.COLLECTED).length}
+                                </span>
+                            </div>
+                            <div className="w-px h-3 bg-muted-foreground/20" />
+                            <div className="flex items-center gap-1.5">
+                                <span className="text-muted-foreground uppercase tracking-tight">Failed:</span>
+                                <span className="text-red-600 dark:text-red-400 font-bold">
+                                    {tasks.filter(t => t.status === TaskStatus.FAILED).length}
                                 </span>
                             </div>
                         </div>

@@ -377,8 +377,11 @@ export default function MissionTreeModalContent({
       return ORDER_INCREMENT;
     };
 
-    // Determine final status: explicit Collected from UI must win over stale server DONE + progress 100
+    // Explicit Failed / Collected from UI must win over stale server DONE + progress 100
     const determineFinalStatus = () => {
+      if (status === TaskStatus.FAILED) {
+        return TaskStatus.FAILED;
+      }
       if (status === TaskStatus.COLLECTED) {
         return TaskStatus.COLLECTED;
       }
@@ -394,20 +397,21 @@ export default function MissionTreeModalContent({
       return status;
     };
 
+    const finalStatus = determineFinalStatus();
     const finalPlayerCharacterId = playerCharacterId || FOUNDER_CHARACTER_ID;
 
     return {
       id: draftId.current,
       name: name.trim(),
       description: description.trim(),
-      status: determineFinalStatus(),
+      status: finalStatus,
       priority,
       type,
       station,
       progress,
       dueDate,
       doneAt: localDoneAt,
-      collectedAt: localCollectedAt,
+      collectedAt: finalStatus === TaskStatus.FAILED ? undefined : localCollectedAt,
       scheduledStart: finalScheduledStart,
       scheduledEnd: finalScheduledEnd,
       cost,
@@ -437,7 +441,8 @@ export default function MissionTreeModalContent({
       customerCharacterRole,
       playerCharacterId: finalPlayerCharacterId,
       order: determineOrder(),
-      isCollected: status === TaskStatus.COLLECTED || isCollected,
+      isCollected:
+        finalStatus === TaskStatus.FAILED ? false : finalStatus === TaskStatus.COLLECTED || isCollected,
       isNewItem,
       isSold,
       outputItemId: isNewItem ? null : (selectedItemId || task?.outputItemId || null),
@@ -1102,6 +1107,10 @@ export default function MissionTreeModalContent({
                   return;
                 }
                 setStatus(newStatus);
+                if (newStatus === TaskStatus.FAILED) {
+                  setIsCollected(false);
+                  setLocalCollectedAt(undefined);
+                }
                 if (newStatus === TaskStatus.CREATED || newStatus === TaskStatus.ON_HOLD) {
                   setProgress(0);
                 } else if (newStatus === TaskStatus.IN_PROGRESS) {
@@ -1120,6 +1129,7 @@ export default function MissionTreeModalContent({
                 {Object.values(TaskStatus)
                   .filter((taskStatus) => {
                     if (taskStatus === TaskStatus.COLLECTED && (isNotPaid || isNotCharged)) return false;
+                    if (status === TaskStatus.FAILED && taskStatus === TaskStatus.COLLECTED) return false;
                     return true;
                   })
                   .map((taskStatus) => (
