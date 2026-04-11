@@ -108,10 +108,10 @@ const ResizableSidebar = ({
 
 export default function ControlRoom() {
   // ————— state —————
-  const { getPreference, setPreference } = useUserPreferences();
+  const { getPreference, setPreference, isLoading: isPreferencesLoading } = useUserPreferences();
   const [tree, setTree] = useState<TreeNode[]>([]);
   const expandedPreferenceKey = 'control-room-expanded-nodes';
-  const parseExpandedPreference = () => {
+  const parseExpandedPreference = useCallback(() => {
     const saved = getPreference(expandedPreferenceKey);
     if (!saved) return new Set<string>();
     try {
@@ -123,8 +123,17 @@ export default function ControlRoom() {
       console.warn('[ControlRoom] Failed to parse expanded preference', error);
     }
     return new Set<string>();
-  };
-  const [expanded, setExpanded] = useState<Set<string>>(parseExpandedPreference);
+  }, [getPreference]);
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const hasExpandedPreferenceSync = useRef(false);
+
+  useEffect(() => {
+    if (isPreferencesLoading || hasExpandedPreferenceSync.current) {
+      return;
+    }
+    hasExpandedPreferenceSync.current = true;
+    setExpanded(parseExpandedPreference());
+  }, [isPreferencesLoading, parseExpandedPreference]);
   const [selectedNode, setSelectedNode] = useState<TreeNode | null>(null);
   const selectedNodeRef = useRef<TreeNode | null>(null);
   selectedNodeRef.current = selectedNode;

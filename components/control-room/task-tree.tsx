@@ -424,16 +424,11 @@ export default function TaskTree({
 
   return (
     <aside className="w-full h-full border-b sm:border-b-0 sm:border-r bg-muted/20 flex flex-col overflow-hidden">
-      <div className="p-3 border-b space-y-3">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            {/* No master toggle - removed */}
-          </div>
+      <div className="p-3 border-b">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex gap-1">
             {activeSubTab === 'mission-tree' && (
               <>
-                {/* Mission Group Toggle */}
                 {missionGroupNodes.length > 0 && (
                   <Button
                     variant={allMissionGroupsExpanded ? "default" : "ghost"}
@@ -444,7 +439,6 @@ export default function TaskTree({
                     {React.createElement(TASK_TYPE_ICONS[TaskType.MISSION_GROUP] || TASK_TYPE_ICONS[TaskType.ASSIGNMENT], { className: "h-4 w-4" })}
                   </Button>
                 )}
-                {/* Mission Toggle */}
                 {missionNodes.length > 0 && (
                   <Button
                     variant={allMissionsExpanded ? "default" : "ghost"}
@@ -455,7 +449,6 @@ export default function TaskTree({
                     {React.createElement(TASK_TYPE_ICONS[TaskType.MISSION] || TASK_TYPE_ICONS[TaskType.ASSIGNMENT], { className: "h-4 w-4" })}
                   </Button>
                 )}
-                {/* Milestone Toggle */}
                 <Button
                   variant={allMilestonesExpanded ? "default" : "ghost"}
                   size="sm"
@@ -468,7 +461,6 @@ export default function TaskTree({
             )}
             {activeSubTab === 'recurrent-tasks' && (
               <>
-                {/* Recurrent Group Toggle */}
                 {recurrentGroupNodes.length > 0 && (
                   <Button
                     variant={allRecurrentGroupsExpanded ? "default" : "ghost"}
@@ -479,7 +471,6 @@ export default function TaskTree({
                     {React.createElement(TASK_TYPE_ICONS[TaskType.RECURRENT_GROUP] || TASK_TYPE_ICONS[TaskType.ASSIGNMENT], { className: "h-4 w-4" })}
                   </Button>
                 )}
-                {/* Recurrent Template Toggle */}
                 {recurrentTemplateNodes.length > 0 && (
                   <Button
                     variant={allRecurrentTemplatesExpanded ? "default" : "ghost"}
@@ -493,17 +484,7 @@ export default function TaskTree({
               </>
             )}
           </div>
-          {activeSubTab !== 'automation-tree' && (
-            <Button variant="ghost" size="sm" onClick={onNewTask}>
-              <PlusCircle className="h-4 w-4 mr-2" />
-              {activeSubTab === 'recurrent-tasks' ? '+ New Recurrent' : '+ New Task'}
-            </Button>
-          )}
-        </div>
-
-        {/* --- NEW: Filter Controls --- */}
-        <div className="space-y-2">
-          <div className="grid grid-cols-2 gap-2">
+          <div className="flex items-center gap-2">
             <Select value={stationFilters.size === 0 ? 'all' : Array.from(stationFilters)[0]} onValueChange={v => {
               if (v === 'all') {
                 onStationFilterChange(new Set());
@@ -511,7 +492,7 @@ export default function TaskTree({
                 onStationFilterChange(new Set([v as Station]));
               }
             }}>
-              <SelectTrigger className="text-xs w-full">
+              <SelectTrigger className="text-xs w-40">
                 <SelectValue placeholder="Filter by Station" />
               </SelectTrigger>
               <SelectContent>
@@ -524,7 +505,7 @@ export default function TaskTree({
               </SelectContent>
             </Select>
             <Select value={typeFilter} onValueChange={v => onTypeFilterChange(v as TaskType | 'all')}>
-              <SelectTrigger className="text-xs w-full">
+              <SelectTrigger className="text-xs w-44">
                 <SelectValue placeholder="Filter by Type" />
               </SelectTrigger>
               <SelectContent>
@@ -537,6 +518,12 @@ export default function TaskTree({
               </SelectContent>
             </Select>
           </div>
+          {activeSubTab !== 'automation-tree' && (
+            <Button variant="ghost" size="sm" onClick={onNewTask}>
+              <PlusCircle className="h-4 w-4 mr-2" />
+              + New Task
+            </Button>
+          )}
         </div>
       </div>
 
