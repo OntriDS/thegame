@@ -153,6 +153,17 @@ function sortMonthsDesc(months: string[]): string[] {
   });
 }
 
+/** Same log entry id can exist in multiple month lists after timestamp edits; KV may store boolean or string */
+function isLogEntrySoftDeleted(entry: any): boolean {
+  if (entry == null) return false;
+  const v = entry.isDeleted;
+  return v === true || v === 'true';
+}
+
+function uniqueMonthSearchOrder(entityType: EntityType, monthsFromIndex: string[]): string[] {
+  return [...new Set([getCurrentMonthKey(), ...monthsFromIndex])];
+}
+
 /** Parse a raw LRANGE element into a JS object */
 function parseEntry(raw: string | any): any {
   if (typeof raw === 'string') {
@@ -676,13 +687,15 @@ export async function softDeleteLogEntry(
   reason?: string
 ): Promise<void> {
   const months = await getEntityLogMonths(entityType);
-  const searchOrder = [getCurrentMonthKey(), ...months.filter(m => m !== getCurrentMonthKey())];
+  const searchOrder = uniqueMonthSearchOrder(entityType, months);
+  let foundAny = false;
 
   for (const monthKey of searchOrder) {
     const list = await readMonthlyList(entityType, monthKey);
-    const entry = list.find(e => e.id === entryId);
+    const matches = list.filter(e => e.id === entryId);
+    if (matches.length === 0) continue;
 
-    if (entry) {
+    for (const entry of matches) {
       entry.isDeleted = true;
       entry.deletedAt = getUTCNow().toISOString();
       entry.deletedBy = characterId;
@@ -695,13 +708,15 @@ export async function softDeleteLogEntry(
         action: 'delete',
         reason
       });
-
-      await rebuildMonthlyList(entityType, monthKey, list);
-      return;
+      foundAny = true;
     }
+
+    await rebuildMonthlyList(entityType, monthKey, list);
   }
 
-  throw new Error(`Log entry ${entryId} not found in ${entityType} log`);
+  if (!foundAny) {
+    throw new Error(`Log entry ${entryId} not found in ${entityType} log`);
+  }
 }
 
 export async function restoreLogEntry(
@@ -711,17 +726,15 @@ export async function restoreLogEntry(
   reason?: string
 ): Promise<void> {
   const months = await getEntityLogMonths(entityType);
-  const searchOrder = [getCurrentMonthKey(), ...months.filter(m => m !== getCurrentMonthKey())];
+  const searchOrder = uniqueMonthSearchOrder(entityType, months);
 
+  // Prefer a soft-deleted copy. The same id can exist in multiple month buckets (e.g. after
+  // relocating timestamp) and the current-month list may still hold a stale non-deleted row.
   for (const monthKey of searchOrder) {
     const list = await readMonthlyList(entityType, monthKey);
-    const entry = list.find(e => e.id === entryId);
+    const entry = list.find(e => e.id === entryId && isLogEntrySoftDeleted(e));
 
     if (entry) {
-      if (!entry.isDeleted) {
-        throw new Error(`Log entry ${entryId} is not deleted`);
-      }
-
       entry.isDeleted = false;
       delete entry.deletedAt;
       delete entry.deletedBy;
@@ -736,7 +749,24 @@ export async function restoreLogEntry(
       });
 
       await rebuildMonthlyList(entityType, monthKey, list);
+
+      for (const otherMonth of searchOrder) {
+        if (otherMonth === monthKey) continue;
+        const otherList = await readMonthlyList(entityType, otherMonth);
+        const pruned = otherList.filter(e => e.id !== entryId);
+        if (pruned.length !== otherList.length) {
+          await rebuildMonthlyList(entityType, otherMonth, pruned);
+        }
+      }
+
       return;
+    }
+  }
+
+  for (const monthKey of searchOrder) {
+    const list = await readMonthlyList(entityType, monthKey);
+    if (list.some(e => e.id === entryId)) {
+      throw new Error(`Log entry ${entryId} is not deleted`);
     }
   }
 
@@ -750,20 +780,21 @@ export async function permanentDeleteLogEntry(
   reason?: string
 ): Promise<void> {
   const months = await getEntityLogMonths(entityType);
-  const searchOrder = [getCurrentMonthKey(), ...months.filter(m => m !== getCurrentMonthKey())];
+  const searchOrder = uniqueMonthSearchOrder(entityType, months);
+  let removedAny = false;
 
   for (const monthKey of searchOrder) {
     const list = await readMonthlyList(entityType, monthKey);
-    const entryIndex = list.findIndex(e => e.id === entryId);
-
-    if (entryIndex !== -1) {
-      list.splice(entryIndex, 1);
-      await rebuildMonthlyList(entityType, monthKey, list);
-      return;
+    const next = list.filter(e => e.id !== entryId);
+    if (next.length !== list.length) {
+      removedAny = true;
+      await rebuildMonthlyList(entityType, monthKey, next);
     }
   }
 
-  throw new Error(`Log entry ${entryId} not found in ${entityType} log`);
+  if (!removedAny) {
+    throw new Error(`Log entry ${entryId} not found in ${entityType} log`);
+  }
 }
 
 export async function editLogEntry(
@@ -781,7 +812,7 @@ export async function editLogEntry(
     const entry = list.find(e => e.id === entryId);
 
     if (entry) {
-      if (entry.isDeleted) {
+      if (isLogEntrySoftDeleted(entry)) {
         throw new Error(`Cannot edit deleted log entry ${entryId}`);
       }
 
