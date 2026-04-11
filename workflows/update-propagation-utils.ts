@@ -15,14 +15,25 @@ import { getUTCNow } from '@/lib/utils/utc-utils';
 import { getLinksFor } from '@/links/link-registry';
 
 const normalizeDate = (value: Date | string | null | undefined): Date => {
+  const parsed = parseDateOrNull(value);
+  return parsed ? parsed : new Date();
+};
+
+const parseDateOrNull = (value: Date | string | null | undefined): Date | null => {
   if (value instanceof Date) {
-    return Number.isFinite(value.getTime()) ? value : new Date();
+    const time = value.getTime();
+    return Number.isFinite(time) ? value : null;
   }
   if (typeof value === 'string') {
     const parsed = new Date(value);
-    return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+    const time = parsed.getTime();
+    return Number.isNaN(time) ? null : parsed;
   }
-  return new Date();
+  return null;
+};
+
+const toDateTimestamp = (value: Date | string | null | undefined): number => {
+  return parseDateOrNull(value)?.getTime() ?? 0;
 };
 
 const dedupeById = <T extends { id?: string }>(values: (T | null | undefined)[]): T[] => {
@@ -76,7 +87,7 @@ export async function updateFinancialRecordsFromTask(
     const relatedRecords = await getFinancialRecordsForTask(task.id);
 
     for (const record of relatedRecords) {
-      const updateKey = EffectKeys.sideEffect('task', task.id, `updateFinancial:${record.id}:${task.updatedAt?.getTime()}`);
+      const updateKey = EffectKeys.sideEffect('task', task.id, `updateFinancial:${record.id}:${toDateTimestamp(task.updatedAt)}`);
 
       if (await hasEffect(updateKey)) {
         console.log(`[updateFinancialRecordsFromTask] ⏭️ Already updated record: ${record.id}`);
@@ -163,7 +174,7 @@ export async function updateTasksFromFinancialRecord(
     const relatedTasks = [task];
 
     for (const task of relatedTasks) {
-      const updateKey = EffectKeys.sideEffect('financial', record.id, `updateTask:${task.id}:${record.updatedAt?.getTime()}`);
+      const updateKey = EffectKeys.sideEffect('financial', record.id, `updateTask:${task.id}:${toDateTimestamp(record.updatedAt)}`);
 
       if (await hasEffect(updateKey)) {
         console.log(`[updateTasksFromFinancialRecord] ⏭️ Already updated task: ${task.id}`);
@@ -223,7 +234,7 @@ export async function updateItemsCreatedByTask(
     const relatedItems = await getItemsBySourceTaskId(task.id);
 
     if (!task.isNewItem && previousTask.isNewItem && relatedItems.length > 0) {
-      const removalKey = EffectKeys.sideEffect('task', task.id, `removeCreatedItems:${task.updatedAt?.getTime()}`);
+      const removalKey = EffectKeys.sideEffect('task', task.id, `removeCreatedItems:${toDateTimestamp(task.updatedAt)}`);
       if (!(await hasEffect(removalKey))) {
         for (const item of relatedItems) {
           try {
@@ -239,7 +250,7 @@ export async function updateItemsCreatedByTask(
 
     if (task.isNewItem || previousTask.isNewItem) {
       for (const item of relatedItems) {
-        const updateKey = EffectKeys.sideEffect('task', task.id, `updateItem:${item.id}:${task.updatedAt?.getTime()}`);
+        const updateKey = EffectKeys.sideEffect('task', task.id, `updateItem:${item.id}:${toDateTimestamp(task.updatedAt)}`);
 
         if (await hasEffect(updateKey)) {
           console.log(`[updateItemsCreatedByTask] ⏭️ Already updated item: ${item.id}`);
@@ -259,7 +270,7 @@ export async function updateItemsCreatedByTask(
         if (outputPropsChanged || statePropsChanged) {
           let year = item.year;
           if (statePropsChanged) {
-            const dateToUse = task.collectedAt || task.doneAt || item.createdAt;
+            const dateToUse = normalizeDate(task.collectedAt || task.doneAt || item.createdAt);
             year = dateToUse.getFullYear();
           }
 
@@ -330,7 +341,7 @@ export async function updateItemsCreatedByTask(
       }
 
       const siteId = preferredSiteId || existingItem.stock?.[0]?.siteId || 'hq';
-      const updateKey = EffectKeys.sideEffect('task', task.id, `updateExistingItem:${itemId}:${siteId}:${effectLabel}:${task.updatedAt?.getTime()}`);
+      const updateKey = EffectKeys.sideEffect('task', task.id, `updateExistingItem:${itemId}:${siteId}:${effectLabel}:${toDateTimestamp(task.updatedAt)}`);
 
       if (await hasEffect(updateKey)) {
         console.log(`[updateItemsCreatedByTask] ⏭️ Already adjusted existing item ${itemId} @ ${siteId}`);
@@ -417,7 +428,7 @@ export async function updateItemsCreatedByRecord(
     const relatedItems = await getItemsBySourceRecordId(record.id);
 
     for (const item of relatedItems) {
-      const updateKey = EffectKeys.sideEffect('financial', record.id, `updateItem:${item.id}:${record.updatedAt?.getTime()}`);
+      const updateKey = EffectKeys.sideEffect('financial', record.id, `updateItem:${item.id}:${toDateTimestamp(record.updatedAt)}`);
 
       if (await hasEffect(updateKey)) {
         console.log(`[updateItemsCreatedByRecord] ⏭️ Already updated item: ${item.id}`);
@@ -659,7 +670,7 @@ export async function updatePlayerPointsFromSource(
       return;
     }
 
-    const updateKey = EffectKeys.sideEffect(sourceType, newSource.id, `updatePlayerPoints:${player.id}:${newSource.updatedAt?.getTime()}`);
+    const updateKey = EffectKeys.sideEffect(sourceType, newSource.id, `updatePlayerPoints:${player.id}:${toDateTimestamp(newSource.updatedAt)}`);
 
     if (await hasEffect(updateKey)) {
       console.log(`[updatePlayerPointsFromSource] ⏭️ Already updated player: ${player.id}`);
@@ -729,9 +740,9 @@ export function hasStatePropsChanged(newEntity: any, oldEntity: any): boolean {
   return (
     newEntity.status !== oldEntity.status ||
     newEntity.isCollected !== oldEntity.isCollected ||
-    newEntity.doneAt?.getTime() !== oldEntity.doneAt?.getTime() ||
-    newEntity.collectedAt?.getTime() !== oldEntity.collectedAt?.getTime() ||
-    newEntity.saleDate?.getTime() !== oldEntity.saleDate?.getTime()
+    toDateTimestamp(newEntity.doneAt) !== toDateTimestamp(oldEntity.doneAt) ||
+    toDateTimestamp(newEntity.collectedAt) !== toDateTimestamp(oldEntity.collectedAt) ||
+    toDateTimestamp(newEntity.saleDate) !== toDateTimestamp(oldEntity.saleDate)
   );
 }
 
