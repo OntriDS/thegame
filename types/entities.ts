@@ -248,7 +248,7 @@ export interface Item extends BaseEntity {
   /** @deprecated Use keepInInventoryAfterSold instead - controls whether item stays in inventory after sale */
   restockable?: boolean;
   keepInInventoryAfterSold?: boolean;  // whether item should remain in inventory after being sold (new replacement for restockable)
-  restockToTarget?: boolean;  // whether item should restock to target quantity on Network Sales (mainly for consignment)
+  restockToTarget?: boolean;  // whether item should be restocked to target quantity when sold (mainly for consignment)
 
   // Inventory tracking - UNIFIED STOCK SYSTEM
   // totalQuantity = sum of all stock.quantity (computed property)

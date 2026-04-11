@@ -155,13 +155,6 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
     }
   }, [item, name, description, type, station, subItemType, collection, status, quantity, unitCost, price, keepInInventoryAfterSold, restockToTarget, year, imageUrl, width, height, size, targetAmount, site, originalFiles, accessoryFiles, setPreference]);
 
-  // Validation: Auto-disable restockToTarget if keepInInventoryAfterSold is false
-  useEffect(() => {
-    if (!keepInInventoryAfterSold && restockToTarget) {
-      setRestockToTarget(false);
-    }
-  }, [keepInInventoryAfterSold, restockToTarget]);
-
   useEffect(() => {
     const targetAmountNum = parseFloat(targetAmount);
     if ((!targetAmount || isNaN(targetAmountNum) || targetAmountNum <= 0) && restockToTarget) {
@@ -1049,22 +1042,36 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
                 </Label>
               </div>
 
-              <div className="flex items-center gap-3 pt-1">
+            <div className="flex items-center gap-3 pt-1">
                 <Switch
                   id="restockToTarget"
                   checked={restockToTarget}
                   onCheckedChange={(checked) => setRestockToTarget(checked)}
-                  disabled={!keepInInventoryAfterSold || !targetAmount || parseFloat(targetAmount) <= 0}
+                disabled={!targetAmount || parseFloat(targetAmount) <= 0}
                 />
                 <Label htmlFor="restockToTarget" className="text-xs">
-                  Restock to Target Quantity?
-                  {(!keepInInventoryAfterSold || !targetAmount || parseFloat(targetAmount) <= 0) && (
+                Restock when Sold?
+                {(!targetAmount || parseFloat(targetAmount) <= 0) && (
                     <span className="text-muted-foreground ml-2">
-                      {(!keepInInventoryAfterSold) && "(requires Keep in Inventory)"}
                       {(!targetAmount || parseFloat(targetAmount) <= 0) && "(requires Target Amount > 0)"}
                     </span>
                   )}
                 </Label>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-6"
+                disabled={!targetAmount || parseFloat(targetAmount) <= 0}
+                onClick={() => {
+                  const parsedTarget = parseFloat(targetAmount);
+                  if (!Number.isFinite(parsedTarget) || parsedTarget <= 0) {
+                    return;
+                  }
+                  setQuantity(parsedTarget);
+                }}
+              >
+                Restock
+              </Button>
               </div>
             </div>
           </div>
