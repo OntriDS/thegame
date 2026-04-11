@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Edit2, Info } from 'lucide-react';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
 import { formatMonthKey } from '@/lib/utils/date-utils';
+import { buildLogMonthKey } from '@/data-store/keys';
 
 /** Value for `<input type="datetime-local" />` from stored log timestamp (ISO or DD-MM-YYYY). */
 function timestampToDatetimeLocal(v: string | undefined): string {
@@ -214,6 +215,14 @@ export function LogEntryEditModal({
 
   if (!entry) return null;
 
+  let kvLogListKey = '';
+  try {
+    const mmyy = formatMonthKey(entry.timestamp);
+    kvLogListKey = buildLogMonthKey(entityType, mmyy);
+  } catch {
+    kvLogListKey = `(invalid timestamp — check logs:index:months:${entityType} for month keys)`;
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className={`max-w-4xl ${getZIndexClass('SUB_MODALS')}`}>
@@ -225,19 +234,45 @@ export function LogEntryEditModal({
         </DialogHeader>
         
         <div className="space-y-4">
+          {/* KV / Upstash identifiers (log rows live in a LIST at this key; match element by id) */}
+          <div className="space-y-2 p-3 rounded-lg border bg-muted/20 text-xs">
+            <div className="font-semibold text-foreground flex items-center gap-1">
+              <Info className="h-3.5 w-3.5 shrink-0" />
+              Storage (manual edit in Upstash)
+            </div>
+            <div>
+              <span className="text-muted-foreground block mb-0.5">Log entry id</span>
+              <code className="block break-all rounded bg-muted px-2 py-1.5 text-[11px] leading-relaxed">
+                {entry.id || '—'}
+              </code>
+            </div>
+            <div>
+              <span className="text-muted-foreground block mb-0.5">
+                Redis list key (from entity + entry timestamp month)
+              </span>
+              <code className="block break-all rounded bg-muted px-2 py-1.5 text-[11px] leading-relaxed">
+                {kvLogListKey}
+              </code>
+            </div>
+            <p className="text-muted-foreground leading-snug">
+              Value type is a <strong className="font-medium text-foreground">list</strong> of JSON strings. Find the element whose{' '}
+              <code className="text-[10px]">id</code> matches above; if missing, try the same key for adjacent{' '}
+              <code className="text-[10px]">MM-YY</code> months after a timestamp edit.
+            </p>
+          </div>
+
           {/* Compact metadata header */}
-          <div className="flex items-center gap-4 p-3 bg-muted/30 rounded-lg border border-dashed text-xs text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 p-3 bg-muted/30 rounded-lg border border-dashed text-xs text-muted-foreground">
             <div className="flex items-center gap-1">
-              <Info className="h-3 w-3" />
               <span className="font-medium">Event:</span> {entry.event || 'N/A'}
             </div>
-            <span>•</span>
+            <span className="hidden sm:inline">•</span>
             <div>
               <span className="font-medium">Date:</span> {entry.timestamp || 'N/A'}
             </div>
-            <span>•</span>
-            <div className="truncate">
-              <span className="font-medium">Entity:</span> {entry.entityId?.substring(0, 16)}...
+            <span className="hidden sm:inline">•</span>
+            <div className="min-w-0 break-all">
+              <span className="font-medium">Entity id:</span> {entry.entityId || 'N/A'}
             </div>
           </div>
 
