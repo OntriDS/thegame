@@ -179,8 +179,17 @@ export function FinancialsLogTab({ financialsLog, onReload, isReloading }: Finan
                     const revenue = isNotCharged ? 0 : rawRevenue;
                     const profit = revenue - cost;
 
-                    // Extract financial fields properly - use displayName from normalization
-                    const name = entry.displayName || entry.name || entry.taskName || entry.recordName || entry.description || entry.message || 'Unnamed';
+                    // Prefer this log line's own `name`. `displayName` is shared per financial record
+                    // (latest timestamp wins across PENDING/DONE rows), so edits to one line looked like
+                    // they "did nothing" while the title still showed another row's name.
+                    const name =
+                      entry.name ||
+                      entry.recordName ||
+                      entry.taskName ||
+                      entry.displayName ||
+                      entry.description ||
+                      entry.message ||
+                      'Unnamed';
                     const financialType = entry.type || '—';
                     const station = formatStation(entry.station);
                     const category = entry.category || '—';
