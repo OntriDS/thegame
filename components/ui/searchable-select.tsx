@@ -217,7 +217,7 @@ export function SearchableSelect({
             />
             <CommandList
               className={cn(
-                'overflow-y-auto scrollbar-thin',
+            'overflow-y-auto overflow-x-hidden custom-scrollbar',
                 popoverWiden ? 'max-h-[min(42vh,340px)]' : 'max-h-[200px]'
               )}
               onWheel={(e) => {

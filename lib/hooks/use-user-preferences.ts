@@ -109,8 +109,9 @@ export function useUserPreferences() {
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
       }
+      void debouncedSave();
     };
-  }, []);
+  }, [debouncedSave]);
 
   return {
     preferences,

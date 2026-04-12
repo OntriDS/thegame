@@ -1,7 +1,7 @@
 // lib/constants/app-constants.ts
 // Application constants used throughout the system
 import { Currency, TaskType } from '@/types/enums';
-import { Network, Target, Award, CheckSquare, Flag, Zap } from 'lucide-react';
+import { Network, Target, Trophy, CheckSquare, Layers, Goal, Star, Zap } from 'lucide-react';
 
 export const ORDER_INCREMENT = 1000; // Used for task ordering
 export const DRAG_Z_INDEX = 1000; // Z-index for dragging elements
@@ -55,12 +55,12 @@ export const CRC_CURRENCY = Currency.CRC; // Costa Rica Colon currency
 // Task Type Icon Mapping - Centralized icon definitions for task types
 export const TASK_TYPE_ICONS: Record<TaskType, React.ElementType> = {
   [TaskType.MISSION_GROUP]: Network,
-  [TaskType.MISSION]: Award,
-  [TaskType.MILESTONE]: Flag,
-  [TaskType.GOAL]: Target,
+  [TaskType.MISSION]: Trophy,
+  [TaskType.MILESTONE]: Star,
+  [TaskType.GOAL]: Goal,
   [TaskType.ASSIGNMENT]: CheckSquare,
   [TaskType.RECURRENT_GROUP]: Network,
-  [TaskType.RECURRENT_TEMPLATE]: Flag,
+  [TaskType.RECURRENT_TEMPLATE]: Layers,
   [TaskType.RECURRENT_INSTANCE]: Target,
   [TaskType.AUTOMATION]: Zap
 };

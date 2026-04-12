@@ -193,8 +193,26 @@ export default function ControlRoom() {
   useEffect(() => {
     if (activeSubTab === 'automation-tree') {
       setTypeFilter('all');
+      return;
     }
-  }, [activeSubTab]);
+
+    if (activeSubTab === 'recurrent-tasks') {
+      if (typeFilter !== TaskType.RECURRENT_GROUP &&
+          typeFilter !== TaskType.RECURRENT_TEMPLATE &&
+          typeFilter !== TaskType.RECURRENT_INSTANCE) {
+        setTypeFilter('all');
+      }
+      return;
+    }
+
+    if (typeFilter === TaskType.GOAL ||
+        typeFilter === TaskType.RECURRENT_GROUP ||
+        typeFilter === TaskType.RECURRENT_TEMPLATE ||
+        typeFilter === TaskType.RECURRENT_INSTANCE ||
+        typeFilter === TaskType.AUTOMATION) {
+      setTypeFilter('all');
+    }
+  }, [activeSubTab, typeFilter]);
 
   /** Single GET /api/tasks per run: updates `allTasks` (calendar, weekly, gantt) and filtered `tree`. */
   const loadTasks = useCallback(async (): Promise<TreeNode[]> => {

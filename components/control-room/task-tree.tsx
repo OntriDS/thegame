@@ -9,11 +9,13 @@ import type { Station } from '@/types/type-aliases';
 import { ChevronRight, ChevronDown, PlusCircle } from 'lucide-react';
 import { TRANSITION_DURATION_150, TASK_TYPE_ICONS } from '@/lib/constants/app-constants';
 import { TASK_PRIORITY_ICON_COLORS, TASK_STATUS_ICON_COLORS } from '@/lib/constants/color-constants';
+import { getStationFromCombined } from '@/lib/utils/searchable-select-utils';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Tree } from 'react-arborist';
 import type { CursorProps, DragPreviewProps, MoveHandler, NodeRendererProps, TreeApi } from 'react-arborist';
+import { SearchableSelect } from '@/components/ui/searchable-select';
+import { STATION_CATEGORIES } from '@/types/enums';
 
-// --- UPDATED Props Interface ---
 interface TaskTreeProps {
   tree: TreeNode[];
   expanded: Set<string>;
@@ -31,9 +33,6 @@ interface TaskTreeProps {
   onChangeOrder: (taskId: string, parentId: string | null, newPosition: number) => Promise<void> | void;
   onMove?: MoveHandler<TreeNode>;
 }
-
-// Helper to get root stations (all stations are root level now)
-const getRootStations = () => ['ADMIN', 'RESEARCH', 'DEV', 'ARTDESIGN', 'MAKERSPACE', 'SALES', 'PERSONAL'] as const;
 
 // Collect all nodes of a given type across the entire tree (recursive)
 function collectNodesByType(nodes: TreeNode[], type: TaskType): TreeNode[] {
@@ -130,6 +129,7 @@ export default function TaskTree({
         : Object.values(TaskType).filter(
           (t) =>
             t !== TaskType.RECURRENT_GROUP &&
+              t !== TaskType.GOAL &&
             t !== TaskType.RECURRENT_TEMPLATE &&
             t !== TaskType.RECURRENT_INSTANCE &&
             t !== TaskType.AUTOMATION
@@ -142,35 +142,124 @@ export default function TaskTree({
   const milestoneNodes = React.useMemo(() => collectNodesByType(tree, TaskType.MILESTONE), [tree]);
   const recurrentGroupNodes = React.useMemo(() => collectNodesByType(tree, TaskType.RECURRENT_GROUP), [tree]);
   const recurrentTemplateNodes = React.useMemo(() => collectNodesByType(tree, TaskType.RECURRENT_TEMPLATE), [tree]);
+  const parentIdByNodeId = React.useMemo(() => {
+    const map = new Map<string, string | null>();
+    const walk = (nodes: TreeNode[]) => {
+      nodes.forEach(node => {
+        map.set(node.task.id, node.task.parentId ?? null);
+        if (node.children.length > 0) {
+          walk(node.children);
+        }
+      });
+    };
 
-  // --- Optimization: Memoize states derived from expanded set ---
-  // This avoids re-scanning arrays on every render, only when expanded set changes
-  const allMissionGroupsExpanded = React.useMemo(() =>
-    missionGroupNodes.length > 0 && missionGroupNodes.every(node => expanded.has(node.task.id)),
-    [missionGroupNodes, expanded]);
+    walk(tree);
+    return map;
+  }, [tree]);
+  const expandableNodeIds = React.useMemo(() => {
+    const ids = new Set<string>();
+    const walk = (nodes: TreeNode[]) => {
+      nodes.forEach(node => {
+        if (node.children.length > 0) {
+          ids.add(node.task.id);
+          walk(node.children);
+        }
+      });
+    };
 
-  const allMissionsExpanded = React.useMemo(() =>
-    missionNodes.length > 0 && missionNodes.every(node => expanded.has(node.task.id)),
-    [missionNodes, expanded]);
-
-  const allMilestonesExpanded = React.useMemo(() =>
-    milestoneNodes.length > 0 && milestoneNodes.every(node => expanded.has(node.task.id)),
-    [milestoneNodes, expanded]);
-
-  const allRecurrentGroupsExpanded = React.useMemo(() =>
-    recurrentGroupNodes.length > 0 && recurrentGroupNodes.every(node => expanded.has(node.task.id)),
-    [recurrentGroupNodes, expanded]);
-
-  const allRecurrentTemplatesExpanded = React.useMemo(() =>
-    recurrentTemplateNodes.length > 0 && recurrentTemplateNodes.every(node => expanded.has(node.task.id)),
-    [recurrentTemplateNodes, expanded]);
+    walk(tree);
+    return ids;
+  }, [tree]);
+  const topLevelMissionGroupNodes = React.useMemo(
+    () => missionGroupNodes.filter((node) => !parentIdByNodeId.get(node.task.id)),
+    [missionGroupNodes, parentIdByNodeId]
+  );
+  const nestedMissionGroupNodes = React.useMemo(
+    () => missionGroupNodes.filter((node) => parentIdByNodeId.get(node.task.id)),
+    [missionGroupNodes, parentIdByNodeId]
+  );
 
   const treeRef = useRef<TreeApi<TreeNode> | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const isRestoringTreeOpenState = useRef(false);
   const [containerSize, setContainerSize] = useState<{ width: number; height: number }>({
     width: 0,
     height: 0,
   });
+  const stationFilterData = useMemo(() => {
+    const options: Array<{ value: string; label: string; group: string }> = [
+      { value: 'all', label: 'All Stations', group: 'All' },
+    ];
+    const stationGroups = new Map<string, Station[]>();
+
+    Object.entries(STATION_CATEGORIES).forEach(([area, stations]) => {
+      const stationList = [...stations] as Station[];
+      stationGroups.set(area, stationList);
+      options.push({
+        value: `area:${area}`,
+        label: `${area} (All Stations)`,
+        group: 'Area',
+      });
+      stationList.forEach(station => {
+        options.push({
+          value: `${area}:${station}`,
+          label: station,
+          group: area,
+        });
+      });
+    });
+
+    return { options, stationGroups };
+  }, []);
+  const stationFilterValue = useMemo(() => {
+    if (stationFilters.size === 0) {
+      return 'all';
+    }
+
+    if (stationFilters.size === 1) {
+      const selectedStation = Array.from(stationFilters)[0];
+      for (const [area, stations] of stationFilterData.stationGroups.entries()) {
+        if (stations.includes(selectedStation)) {
+          return `${area}:${selectedStation}`;
+        }
+      }
+      return 'all';
+    }
+
+    const areaMatch = Array.from(stationFilterData.stationGroups.entries()).find(([, stations]) =>
+      stations.length === stationFilters.size && stations.every(station => stationFilters.has(station))
+    );
+    if (areaMatch) {
+      return `area:${areaMatch[0]}`;
+    }
+
+    return 'multiple';
+  }, [stationFilters, stationFilterData.stationGroups]);
+  const stationFilterLabel = stationFilterValue === 'multiple' ? 'Multiple Stations' : '';
+  const handleStationFilterValueChange = (value: string) => {
+    if (value === 'all' || value === '') {
+      onStationFilterChange(new Set());
+      return;
+    }
+
+    if (value.startsWith('area:')) {
+      const area = value.replace('area:', '');
+      const areaStations = stationFilterData.stationGroups.get(area);
+      if (areaStations) {
+        onStationFilterChange(new Set(areaStations));
+      } else {
+        onStationFilterChange(new Set());
+      }
+      return;
+    }
+
+    const station = getStationFromCombined(value);
+    if (station) {
+      onStationFilterChange(new Set([station as Station]));
+    } else {
+      onStationFilterChange(new Set());
+    }
+  };
 
   useLayoutEffect(() => {
     const element = containerRef.current;
@@ -190,73 +279,140 @@ export default function TaskTree({
     return () => observer.disconnect();
   }, []);
 
-  const toggleNode = useCallback((nodeId: string) => {
-    treeRef.current?.toggle(nodeId);
-    onToggle(nodeId);
-  }, [onToggle]);
+  const setNodeOpenState = useCallback((nodeId: string, isOpen: boolean) => {
+    const api = treeRef.current;
+    if (!api) return;
+    if (isOpen) {
+      const chain: string[] = [];
+      const seen = new Set<string>();
+      let currentId: string | null | undefined = nodeId;
 
-  const handleToggleMissionGroups = () => {
-    if (allMissionGroupsExpanded) {
-      missionGroupNodes.forEach(node => toggleNode(node.task.id));
+      while (currentId) {
+        if (seen.has(currentId)) break;
+        chain.push(currentId);
+        seen.add(currentId);
+        const parentId = parentIdByNodeId.get(currentId);
+        if (parentId === undefined) break;
+        currentId = parentId;
+      }
+
+      for (let i = chain.length - 1; i >= 0; i--) {
+        api.open(chain[i]);
+      }
     } else {
-      missionGroupNodes.forEach(node => {
-        if (!expanded.has(node.task.id)) {
-          toggleNode(node.task.id);
+      api.close(nodeId);
+    }
+  }, [parentIdByNodeId]);
+
+  const setNodeStateForList = useCallback((nodes: TreeNode[], isOpen: boolean) => {
+    nodes.forEach(node => {
+      setNodeOpenState(node.task.id, isOpen);
+    });
+  }, [setNodeOpenState]);
+
+  useEffect(() => {
+    const api = treeRef.current;
+    if (!api) return;
+
+    isRestoringTreeOpenState.current = true;
+    try {
+      expandableNodeIds.forEach((nodeId) => {
+        const shouldOpen = expanded.has(nodeId);
+        const isOpen = api.isOpen(nodeId);
+
+        if (shouldOpen !== isOpen) {
+          setNodeOpenState(nodeId, shouldOpen);
         }
       });
+    } finally {
+      isRestoringTreeOpenState.current = false;
+    }
+  }, [expanded, expandableNodeIds, setNodeOpenState]);
+
+  const isNodeEffectivelyOpen = useCallback((nodeId: string) => {
+    const api = treeRef.current;
+    if (!api) {
+      return expanded.has(nodeId);
+    }
+
+    if (!api.isOpen(nodeId)) return false;
+
+    const seen = new Set<string>();
+    let currentId: string | null | undefined = parentIdByNodeId.get(nodeId);
+
+    while (currentId) {
+      if (seen.has(currentId)) break;
+      if (!api.isOpen(currentId)) return false;
+      seen.add(currentId);
+      const parentId = parentIdByNodeId.get(currentId);
+      if (parentId === undefined) break;
+      currentId = parentId;
+    }
+
+    return true;
+  }, [expanded, parentIdByNodeId]);
+
+  const areAllNodesOpen = useCallback((nodes: TreeNode[]) => {
+    const expandableNodes = nodes.filter(node => node.children.length > 0);
+    if (expandableNodes.length === 0) return false;
+    return expandableNodes.every(node => isNodeEffectivelyOpen(node.task.id));
+  }, [isNodeEffectivelyOpen]);
+
+  const handleToggleMissionGroups = () => {
+    const allOpen = areAllNodesOpen(missionGroupNodes);
+    if (allOpen) {
+      setNodeStateForList(missionGroupNodes, false);
+      setNodeStateForList(missionNodes, false);
+      setNodeStateForList(milestoneNodes, false);
+    } else {
+      setNodeStateForList(missionNodes, false);
+      setNodeStateForList(milestoneNodes, false);
+      setNodeStateForList(nestedMissionGroupNodes, false);
+      setNodeStateForList(topLevelMissionGroupNodes, true);
+      setNodeStateForList(missionNodes, false);
+      setNodeStateForList(milestoneNodes, false);
     }
   };
 
   const handleToggleMissions = () => {
-    if (allMissionsExpanded) {
-      missionNodes.forEach(node => toggleNode(node.task.id));
+    const allOpen = areAllNodesOpen(missionNodes);
+    if (allOpen) {
+      setNodeStateForList(missionNodes, false);
+      setNodeStateForList(milestoneNodes, false);
     } else {
-      missionNodes.forEach(node => {
-        if (!expanded.has(node.task.id)) {
-          toggleNode(node.task.id);
-        }
-      });
+      setNodeStateForList(missionGroupNodes, true);
+      setNodeStateForList(missionNodes, true);
     }
   };
 
   const handleToggleMilestones = () => {
-    if (allMilestonesExpanded) {
-      milestoneNodes.forEach(node => toggleNode(node.task.id));
+    const allOpen = areAllNodesOpen(milestoneNodes);
+    if (allOpen) {
+      setNodeStateForList(milestoneNodes, false);
     } else {
-      milestoneNodes.forEach(node => {
-        if (!expanded.has(node.task.id)) toggleNode(node.task.id);
-      });
-      missionNodes.forEach(node => {
-        if (!expanded.has(node.task.id)) toggleNode(node.task.id);
-      });
-      missionGroupNodes.forEach(node => {
-        if (!expanded.has(node.task.id)) toggleNode(node.task.id);
-      });
+      setNodeStateForList(missionGroupNodes, true);
+      setNodeStateForList(missionNodes, true);
+      setNodeStateForList(milestoneNodes, true);
     }
   };
 
   const handleToggleRecurrentGroups = () => {
-    if (allRecurrentGroupsExpanded) {
-      recurrentGroupNodes.forEach(node => toggleNode(node.task.id));
+    const allOpen = areAllNodesOpen(recurrentGroupNodes);
+    if (allOpen) {
+      setNodeStateForList(recurrentGroupNodes, false);
+      setNodeStateForList(recurrentTemplateNodes, false);
     } else {
-      recurrentGroupNodes.forEach(node => {
-        if (!expanded.has(node.task.id)) {
-          toggleNode(node.task.id);
-        }
-      });
+      setNodeStateForList(recurrentGroupNodes, true);
     }
   };
 
   const handleToggleRecurrentTemplates = () => {
-    if (allRecurrentTemplatesExpanded) {
-      recurrentTemplateNodes.forEach(node => toggleNode(node.task.id));
+    const allOpen = areAllNodesOpen(recurrentTemplateNodes);
+    if (allOpen) {
+      setNodeStateForList(recurrentTemplateNodes, false);
     } else {
-      recurrentTemplateNodes.forEach(node => {
-        if (!expanded.has(node.task.id)) toggleNode(node.task.id);
-      });
-      recurrentGroupNodes.forEach(node => {
-        if (!expanded.has(node.task.id)) toggleNode(node.task.id);
-      });
+      setNodeStateForList(recurrentGroupNodes, true);
+      setNodeStateForList(recurrentTemplateNodes, true);
     }
   };
 
@@ -421,6 +577,11 @@ export default function TaskTree({
     };
 
   const dragPreviewRenderer = useMemo(() => makeDragPreview(treeRef), []);
+  const missionGroupsExpandedForUi = areAllNodesOpen(missionGroupNodes);
+  const missionsExpandedForUi = areAllNodesOpen(missionNodes);
+  const milestonesExpandedForUi = areAllNodesOpen(milestoneNodes);
+  const recurrentGroupsExpandedForUi = areAllNodesOpen(recurrentGroupNodes);
+  const recurrentTemplatesExpandedForUi = areAllNodesOpen(recurrentTemplateNodes);
 
   return (
     <aside className="w-full h-full border-b sm:border-b-0 sm:border-r bg-muted/20 flex flex-col overflow-hidden">
@@ -431,7 +592,7 @@ export default function TaskTree({
               <>
                 {missionGroupNodes.length > 0 && (
                   <Button
-                    variant={allMissionGroupsExpanded ? "default" : "ghost"}
+                    variant={missionGroupsExpandedForUi ? "default" : "ghost"}
                     size="sm"
                     className="text-xs px-2"
                     onClick={handleToggleMissionGroups}
@@ -441,7 +602,7 @@ export default function TaskTree({
                 )}
                 {missionNodes.length > 0 && (
                   <Button
-                    variant={allMissionsExpanded ? "default" : "ghost"}
+                    variant={missionsExpandedForUi ? "default" : "ghost"}
                     size="sm"
                     className="text-xs px-2"
                     onClick={handleToggleMissions}
@@ -449,21 +610,23 @@ export default function TaskTree({
                     {React.createElement(TASK_TYPE_ICONS[TaskType.MISSION] || TASK_TYPE_ICONS[TaskType.ASSIGNMENT], { className: "h-4 w-4" })}
                   </Button>
                 )}
-                <Button
-                  variant={allMilestonesExpanded ? "default" : "ghost"}
-                  size="sm"
-                  className="text-xs px-2"
-                  onClick={handleToggleMilestones}
-                >
-                  {React.createElement(TASK_TYPE_ICONS[TaskType.MILESTONE] || TASK_TYPE_ICONS[TaskType.ASSIGNMENT], { className: "h-4 w-4" })}
-                </Button>
+                {milestoneNodes.length > 0 && (
+                  <Button
+                    variant={milestonesExpandedForUi ? "default" : "ghost"}
+                    size="sm"
+                    className="text-xs px-2"
+                    onClick={handleToggleMilestones}
+                  >
+                    {React.createElement(TASK_TYPE_ICONS[TaskType.MILESTONE] || TASK_TYPE_ICONS[TaskType.ASSIGNMENT], { className: "h-4 w-4" })}
+                  </Button>
+                )}
               </>
             )}
             {activeSubTab === 'recurrent-tasks' && (
               <>
                 {recurrentGroupNodes.length > 0 && (
                   <Button
-                    variant={allRecurrentGroupsExpanded ? "default" : "ghost"}
+                    variant={recurrentGroupsExpandedForUi ? "default" : "ghost"}
                     size="sm"
                     className="text-xs px-2"
                     onClick={handleToggleRecurrentGroups}
@@ -473,7 +636,7 @@ export default function TaskTree({
                 )}
                 {recurrentTemplateNodes.length > 0 && (
                   <Button
-                    variant={allRecurrentTemplatesExpanded ? "default" : "ghost"}
+                    variant={recurrentTemplatesExpandedForUi ? "default" : "ghost"}
                     size="sm"
                     className="text-xs px-2"
                     onClick={handleToggleRecurrentTemplates}
@@ -485,25 +648,14 @@ export default function TaskTree({
             )}
           </div>
           <div className="flex items-center gap-2">
-            <Select value={stationFilters.size === 0 ? 'all' : Array.from(stationFilters)[0]} onValueChange={v => {
-              if (v === 'all') {
-                onStationFilterChange(new Set());
-              } else {
-                onStationFilterChange(new Set([v as Station]));
-              }
-            }}>
-              <SelectTrigger className="text-xs w-40">
-                <SelectValue placeholder="Filter by Station" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Stations</SelectItem>
-                {getRootStations().map(station => (
-                  <SelectItem key={station} value={station}>
-                    {station}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              value={stationFilterValue}
+              onValueChange={handleStationFilterValueChange}
+              placeholder="Filter by Station"
+              options={stationFilterData.options}
+              className="text-xs w-40"
+              initialLabel={stationFilterLabel}
+            />
             <Select value={typeFilter} onValueChange={v => onTypeFilterChange(v as TaskType | 'all')}>
               <SelectTrigger className="text-xs w-44">
                 <SelectValue placeholder="Filter by Type" />
@@ -535,12 +687,16 @@ export default function TaskTree({
             width={containerSize.width || '100%'}
             rowHeight={40}
             indent={24}
+            openByDefault={false}
             idAccessor={(node: TreeNode) => node.task.id}
             childrenAccessor={(node: TreeNode) => node.children}
             selection={selectedNode?.task.id}
             onSelect={handleSelectFromTree}
             onMove={onMove}
-            onToggle={onToggle}
+            onToggle={(nodeId) => {
+              if (isRestoringTreeOpenState.current) return;
+              onToggle(nodeId);
+            }}
             initialOpenState={initialOpenState}
             ref={treeRef}
             renderCursor={ThemedCursor}

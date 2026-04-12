@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Edit, BarChart, Target, Award, CheckSquare, Flag, ChevronsRight, Users, Copy, Check, ChevronDown, Tag, Play } from 'lucide-react';
+import { Edit, BarChart, CheckSquare, Flag, ChevronsRight, Users, Copy, Check, ChevronDown, Tag, Play } from 'lucide-react';
 import TaskModal from '@/components/modals/task-modal';
 import { useState, useRef, useEffect } from 'react';
 import { ClientAPI } from '@/lib/client-api';
@@ -49,6 +49,8 @@ const getStatusColor = (status: string, isDarkMode: boolean = false) => {
 export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTasks = [] }: TaskDetailViewProps) {
   const { isDarkMode } = useThemeColors();
   const Icon = node ? (categoryIcons[node.task.type as keyof typeof categoryIcons] || CheckSquare) : BarChart;
+  const MilestoneIcon = categoryIcons[TaskType.MILESTONE] || CheckSquare;
+  const GoalIcon = categoryIcons[TaskType.GOAL] || CheckSquare;
 
   // Inline editing states
   const [editingField, setEditingField] = useState<string | null>(null);
@@ -519,7 +521,7 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
                     size="sm"
                     onClick={() => handleOpenMissionTreeTask(TaskType.MILESTONE)}
                   >
-                    <Target className="h-4 w-4 mr-2" />
+                    <MilestoneIcon className="h-4 w-4 mr-2" />
                     Milestone
                   </Button>
                 )}
@@ -528,7 +530,7 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
                   size="sm"
                   onClick={() => handleOpenMissionTreeTask(TaskType.GOAL)}
                 >
-                  <Award className="h-4 w-4 mr-2" />
+                  <GoalIcon className="h-4 w-4 mr-2" />
                   Goal
                 </Button>
               </>
