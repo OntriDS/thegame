@@ -5,6 +5,17 @@
 import { NextRequest } from 'next/server';
 import { iamService } from './iam-service';
 import { CharacterRole } from '@/types/enums';
+import { isFounder, isGameAdmin } from '@/integrity/iam/permissions';
+
+function extractAuthRoles(user: { roles?: unknown } | null): string[] {
+  if (!user?.roles || !Array.isArray(user.roles)) {
+    return [];
+  }
+
+  return user.roles
+    .map((role) => String(role).toLowerCase())
+    .filter((role) => role.length > 0);
+}
 
 function extractAuthToken(req: NextRequest): string | null {
   const authHeader = req.headers.get('Authorization');
@@ -40,8 +51,7 @@ export async function requireAdminAuth(req: NextRequest): Promise<boolean> {
     // Verify the JWT token using centralized IAM service
     const user = await iamService.verifyJWT(token);
 
-    if (user && user.isActive) {
-      // console.log('[API Auth] User authenticated successfully');
+    if (user?.isActive && isGameAdmin(user.roles)) {
       return true;
     } else {
       return false;
@@ -65,11 +75,7 @@ export async function requireFounderAdminAuth(req: NextRequest): Promise<boolean
       return false;
     }
 
-    const roles = Array.isArray(user.roles)
-      ? user.roles.map((role) => String(role).toLowerCase())
-      : [];
-
-    return roles.includes(CharacterRole.FOUNDER.toLowerCase());
+    return isFounder(user.roles);
   } catch (error) {
     console.error('[API Auth] Error verifying founder authorization:', error);
     return false;
@@ -88,9 +94,7 @@ export async function requireProvisioningM2MAuth(req: NextRequest): Promise<bool
       return false;
     }
 
-    const roles = Array.isArray(user.roles)
-      ? user.roles.map((role) => String(role).toLowerCase())
-      : [];
+    const roles = extractAuthRoles(user);
 
     if (!roles.includes(CharacterRole.AI_AGENT.toLowerCase())) {
       return false;
@@ -100,7 +104,7 @@ export async function requireProvisioningM2MAuth(req: NextRequest): Promise<bool
       return false;
     }
 
-    const username = String(user.username || '').trim().toLowerCase();
+    const username = String((user as { appId?: string }).appId || user.username || '').trim().toLowerCase();
     if (!username) {
       return false;
     }

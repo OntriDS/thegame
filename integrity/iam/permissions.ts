@@ -22,7 +22,36 @@ export interface AuthPermissions {
   can: (resource: string, action: string) => boolean;
 }
 
-export const PRIVILEGED_ROLES = ['founder'] as const;
+export const THEGAME_KNOWN_ROLES = {
+  FOUNDER: 'founder',
+  TEAM: 'team',
+  APPRENTICE: 'apprentice',
+  CUSTOMER: 'customer',
+  PLAYER: 'player',
+  PARTNER: 'partner',
+  BENEFICIARY: 'beneficiary',
+  FAMILY: 'family',
+  INVESTOR: 'investor',
+  AI_AGENT: 'ai-agent',
+  FRIEND: 'friend',
+  TEAM_MEMBER: 'team-member',
+} as const;
+
+export const GOD_RIGHT_ROLE = THEGAME_KNOWN_ROLES.FOUNDER;
+
+export const THEGAME_SPECIAL_ROLES = [
+  THEGAME_KNOWN_ROLES.FOUNDER,
+  THEGAME_KNOWN_ROLES.TEAM,
+  THEGAME_KNOWN_ROLES.APPRENTICE,
+  THEGAME_KNOWN_ROLES.CUSTOMER,
+  THEGAME_KNOWN_ROLES.PLAYER,
+  THEGAME_KNOWN_ROLES.PARTNER,
+  THEGAME_KNOWN_ROLES.BENEFICIARY,
+  THEGAME_KNOWN_ROLES.FAMILY,
+  THEGAME_KNOWN_ROLES.INVESTOR,
+  THEGAME_KNOWN_ROLES.AI_AGENT,
+  THEGAME_KNOWN_ROLES.FRIEND,
+] as const;
 
 export const THEGAME_PERMISSION_MATRIX: readonly PermissionRule[] = [
   { resource: 'tasks', action: 'read', roles: ['founder', 'team'] },
@@ -88,8 +117,36 @@ export function canAccess(
   );
 }
 
-export function isPrivileged(roles: unknown): boolean {
-  return hasAnyRole(roles, PRIVILEGED_ROLES);
+export function isGameAdmin(roles: unknown): boolean {
+  return hasAnyRole(roles, [GOD_RIGHT_ROLE]);
+}
+
+export function isFounder(roles: unknown): boolean {
+  return hasAnyRole(roles, [THEGAME_KNOWN_ROLES.FOUNDER]);
+}
+
+export function isTeam(roles: unknown): boolean {
+  return hasAnyRole(roles, [THEGAME_KNOWN_ROLES.TEAM]);
+}
+
+export function isApprentice(roles: unknown): boolean {
+  return hasAnyRole(roles, [THEGAME_KNOWN_ROLES.APPRENTICE]);
+}
+
+export function isCustomer(roles: unknown): boolean {
+  return hasAnyRole(roles, [THEGAME_KNOWN_ROLES.CUSTOMER]);
+}
+
+export function isPlayer(roles: unknown): boolean {
+  return hasAnyRole(roles, [THEGAME_KNOWN_ROLES.PLAYER]);
+}
+
+export function isPartner(roles: unknown): boolean {
+  return hasAnyRole(roles, [THEGAME_KNOWN_ROLES.PARTNER]);
+}
+
+export function isSpecialRole(roles: unknown): boolean {
+  return hasAnyRole(roles, THEGAME_SPECIAL_ROLES);
 }
 
 export function createPermissionEvaluator(
@@ -97,21 +154,21 @@ export function createPermissionEvaluator(
   permissionMatrix: readonly PermissionRule[] = THEGAME_PERMISSION_MATRIX,
 ): AuthPermissions {
   const normalizedRoles = normalizeRoles(rawRoles);
-  const hasFounder = isPrivileged(normalizedRoles);
+  const hasAdminRight = isGameAdmin(normalizedRoles);
 
   return {
     hasRole: (role: string) => {
-      if (hasFounder) return true;
+      if (hasAdminRight) return true;
       const normalizedRole = normalizeRole(role);
       if (!normalizedRole) return false;
       return normalizedRoles.includes(normalizedRole);
     },
     hasAnyRole: (roles: readonly string[]) => {
-      if (hasFounder) return true;
+      if (hasAdminRight) return true;
       return normalizeRoles(roles).some((role) => normalizedRoles.includes(role));
     },
     can: (resource: string, action: string) => {
-      if (hasFounder) return true;
+      if (hasAdminRight) return true;
       return canAccess(normalizedRoles, resource, action, permissionMatrix);
     },
   };

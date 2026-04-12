@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdminAuth } from '@/lib/api-auth';
 import { iamService } from '@/lib/iam-service';
-import { CharacterRole } from '@/types/enums';
+import { isFounder } from '@/integrity/iam/permissions';
 
 // Force dynamic rendering since this route accesses request cookies
 export const dynamic = 'force-dynamic';
@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     const token =
       request.cookies.get('admin_session')?.value || request.cookies.get('auth_session')?.value;
     const user = token ? await iamService.verifyJWT(token) : null;
-    const isAuthorized = Boolean(user?.roles?.includes(CharacterRole.FOUNDER));
+    const isAuthorized = Boolean(user && isFounder(user.roles));
     const characterId = isAuthorized ? user?.characterId : undefined;
 
     return NextResponse.json({

@@ -6,7 +6,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { iamService } from '@/lib/iam-service';
 import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
-import { CharacterRole } from '@/types/enums';
+import { isFounder, isGameAdmin } from '@/integrity/iam/permissions';
 
 // Initialize Rate Limiter: 60 requests per minute per IP
 const ratelimit = new Ratelimit({
@@ -62,17 +62,32 @@ export async function middleware(request: NextRequest) {
     const user = await iamService.verifyJWT(token);
 
     if (user && user.isActive) {
-    const founderRole = CharacterRole.FOUNDER.toLowerCase();
-    const isFounder = Array.isArray(user.roles)
-      ? user.roles.some((role) => String(role).toLowerCase() === founderRole)
-        : false;
+      const isAuthorizedForAdmin = isGameAdmin(user.roles);
+      const hasFounderRole = isFounder(user.roles);
+
+      if (!isAuthorizedForAdmin) {
+        console.log('[Middleware] ❌ Non-admin role blocked from /admin:', {
+          accountId: user.accountId,
+          roles: user.roles,
+          pathname,
+        });
+        if (isLoginPage) {
+          const response = NextResponse.next();
+          response.cookies.delete('auth_session');
+          return response;
+        }
+
+        const response = NextResponse.redirect(new URL('/admin/login', request.url));
+        response.cookies.delete('auth_session');
+        return response;
+      }
 
       const isFounderOnlySection =
         pathname.startsWith('/admin/accounts') ||
         pathname.startsWith('/admin/iam');
 
       // Accounts and IAM Console are intentionally founder-only
-      if (isFounderOnlySection && !isFounder) {
+      if (isFounderOnlySection && !hasFounderRole) {
         console.log('[Middleware] Non-founder user blocked from founder-only section:', {
           accountId: user.accountId,
           roles: user.roles,

@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ error: 'Unauthorized: Session invalid or expired' }, { status: 401 });
       }
 
-      const hasPermission = user.roles.includes(CharacterRole.FOUNDER);
+      const hasPermission = user.roles.some((role) => String(role).toLowerCase() === CharacterRole.FOUNDER.toLowerCase());
       if (!hasPermission) {
         return NextResponse.json({ error: 'Unauthorized: Insufficient permissions' }, { status: 401 });
       }
