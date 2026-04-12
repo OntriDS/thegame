@@ -1,6 +1,6 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { iamService, CharacterRole } from '@/lib/iam-service';
-import { requireAdminAuth } from '@/lib/api-auth';
+import { requireFounderAdminAuth } from '@/lib/api-auth';
 import { getCharacterById } from '@/data-store/repositories/character.repo';
 
 /**
@@ -10,7 +10,7 @@ import { getCharacterById } from '@/data-store/repositories/character.repo';
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
-  if (!(await requireAdminAuth(req))) {
+  if (!(await requireFounderAdminAuth(req))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  if (!(await requireAdminAuth(req))) {
+  if (!(await requireFounderAdminAuth(req))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

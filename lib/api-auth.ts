@@ -4,6 +4,7 @@
 
 import { NextRequest } from 'next/server';
 import { iamService } from './iam-service';
+import { CharacterRole } from '@/types/enums';
 
 /**
  * Require admin authentication for API routes
@@ -31,6 +32,32 @@ export async function requireAdminAuth(req: NextRequest): Promise<boolean> {
     }
   } catch (error) {
     console.error('[API Auth] Error verifying authentication:', error);
+    return false;
+  }
+}
+
+export async function requireFounderAdminAuth(req: NextRequest): Promise<boolean> {
+  try {
+    const authHeader = req.headers.get('Authorization');
+    const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null;
+    const token = bearerToken || req.cookies.get('auth_session')?.value || req.cookies.get('admin_session')?.value;
+
+    if (!token) {
+      return false;
+    }
+
+    const user = await iamService.verifyJWT(token);
+    if (!user || !user.isActive) {
+      return false;
+    }
+
+    const roles = Array.isArray(user.roles)
+      ? user.roles.map((role) => String(role).toLowerCase())
+      : [];
+
+    return roles.includes(CharacterRole.FOUNDER);
+  } catch (error) {
+    console.error('[API Auth] Error verifying founder authorization:', error);
     return false;
   }
 }

@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { iamService } from '@/lib/iam-service';
 import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
+import { CharacterRole } from '@/types/enums';
 
 // Initialize Rate Limiter: 60 requests per minute per IP
 const ratelimit = new Ratelimit({
@@ -61,6 +62,23 @@ export async function middleware(request: NextRequest) {
     const user = await iamService.verifyJWT(token);
 
     if (user && user.isActive) {
+      const isFounder = Array.isArray(user.roles)
+        ? user.roles.some((role) => String(role).toLowerCase() === CharacterRole.FOUNDER)
+        : false;
+
+      const isFounderOnlySection =
+        pathname.startsWith('/admin/accounts') ||
+        pathname.startsWith('/admin/iam');
+
+      // Accounts and IAM Console are intentionally founder-only
+      if (isFounderOnlySection && !isFounder) {
+        console.log('[Middleware] Non-founder user blocked from founder-only section:', {
+          accountId: user.accountId,
+          roles: user.roles,
+          pathname,
+        });
+        return NextResponse.redirect(new URL('/admin/control-room', request.url));
+      }
       
       // UX WIN: If they are already logged in, don't let them sit on the login page!
       if (isLoginPage) {

@@ -13,7 +13,7 @@ import { CharacterRole } from '@/types/enums';
 import { AccountsDeepLinkTrigger } from '@/components/admin/admin-deep-link-triggers';
 import { normalizeCharacterRole } from '@/lib/character-roles';
 
-function AccountsPageContent() {
+function AccountsPageContent({ canAccessIAMConsole, isCheckingIAMConsole }: { canAccessIAMConsole: boolean; isCheckingIAMConsole: boolean; }) {
   const [showAccountModal, setShowAccountModal] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -162,13 +162,25 @@ function AccountsPageContent() {
           <p className="text-[10px] font-bold text-muted-foreground mt-1 uppercase tracking-widest opacity-50">System Identity & Access Management</p>
         </div>
         <div className="flex items-center gap-2">
-          <Link
-            href="/admin/iam"
-            className="inline-flex items-center justify-center rounded-md text-sm font-bold uppercase tracking-widest transition-colors border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-4 shadow-sm"
-          >
-            <Shield className="h-4 w-4 mr-2" />
-            IAM Console
-          </Link>
+          {canAccessIAMConsole ? (
+            <Link
+              href="/admin/iam"
+              className="inline-flex items-center justify-center rounded-md text-sm font-bold uppercase tracking-widest transition-colors border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-4 shadow-sm"
+            >
+              <Shield className="h-4 w-4 mr-2" />
+              IAM Console
+            </Link>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled
+              className="inline-flex items-center justify-center rounded-md text-sm font-bold uppercase tracking-widest transition-colors border border-muted text-muted-foreground h-9 px-4 shadow-sm opacity-50 cursor-not-allowed"
+            >
+              <Shield className="h-4 w-4 mr-2" />
+              {isCheckingIAMConsole ? 'Checking access…' : 'IAM Console'}
+            </Button>
+          )}
           <Button onClick={handleCreateAccount} size="sm" className="bg-primary hover:bg-primary/90 font-bold uppercase tracking-widest shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95 px-6">
             <Plus className="h-4 w-4 mr-2" />
             Add Account
@@ -327,9 +339,27 @@ function AccountsPageContent() {
 }
 
 export default function AccountsPage() {
+  const [hasIAMAccess, setHasIAMAccess] = React.useState(false);
+  const [isCheckingIAMAccess, setIsCheckingIAMAccess] = React.useState(true);
+
+  React.useEffect(() => {
+    const checkAccess = async () => {
+      try {
+        const response = await fetch('/api/auth/check-founder');
+        const data = response.ok ? await response.json() : { isAuthorized: false };
+        setHasIAMAccess(Boolean(data.isAuthorized));
+      } catch {
+        setHasIAMAccess(false);
+      } finally {
+        setIsCheckingIAMAccess(false);
+      }
+    };
+    checkAccess();
+  }, []);
+
   return (
     <Suspense fallback={<div className="container mx-auto px-6 py-8 text-sm text-muted-foreground">Loading accounts…</div>}>
-      <AccountsPageContent />
+      <AccountsPageContent canAccessIAMConsole={hasIAMAccess} isCheckingIAMConsole={isCheckingIAMAccess} />
     </Suspense>
   );
 }

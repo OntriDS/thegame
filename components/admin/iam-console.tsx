@@ -21,6 +21,8 @@ export default function IAMConsole() {
   const [generatedKey, setGeneratedKey] = useState<{ appId: string, apiKey: string } | null>(null);
   const [targetAppId, setTargetAppId] = useState('pixelbrain');
   const [copied, setCopied] = useState(false);
+  const [hasFounderAccess, setHasFounderAccess] = useState<boolean>(false);
+  const [isFounderCheckLoading, setIsFounderCheckLoading] = useState(true);
 
   useEffect(() => {
     fetchIAMData();
@@ -72,6 +74,22 @@ export default function IAMConsole() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const checkFounderAccess = async () => {
+    try {
+      const response = await fetch('/api/auth/check-founder');
+      const data = response.ok ? await response.json() : { isAuthorized: false };
+      setHasFounderAccess(Boolean(data.isAuthorized));
+    } catch {
+      setHasFounderAccess(false);
+    } finally {
+      setIsFounderCheckLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    checkFounderAccess();
+  }, []);
+
   if (error) {
     return (
       <div className="p-8 text-center bg-destructive/10 border border-destructive/20 rounded-2xl">
@@ -97,13 +115,25 @@ export default function IAMConsole() {
           <p className="text-muted-foreground font-medium uppercase tracking-widest text-xs mt-1">Identity & Access Management</p>
         </div>
         <div className="flex items-center gap-3">
-          <Link
-            href="/admin/accounts"
-            className="inline-flex items-center justify-center rounded-md text-sm font-bold uppercase tracking-widest transition-colors border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-3 gap-2 border-primary/20"
-          >
-            <Users className="h-4 w-4" />
-            Accounts
-          </Link>
+          {hasFounderAccess ? (
+            <Link
+              href="/admin/accounts"
+              className="inline-flex items-center justify-center rounded-md text-sm font-bold uppercase tracking-widest transition-colors border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-3 gap-2 border-primary/20"
+            >
+              <Users className="h-4 w-4" />
+              Accounts
+            </Link>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={true}
+              className={`h-9 px-3 gap-2 text-sm font-bold uppercase tracking-widest border border-muted text-muted-foreground ${isFounderCheckLoading ? 'cursor-wait' : 'cursor-not-allowed opacity-50'}`}
+            >
+              <Users className="h-4 w-4" />
+              {isFounderCheckLoading ? 'Checking access…' : 'Accounts'}
+            </Button>
+          )}
           <Button onClick={fetchIAMData} disabled={isLoading} variant="outline" size="sm" className="gap-2 border-primary/20">
             <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
             Sync Vault
@@ -355,3 +385,6 @@ export default function IAMConsole() {
     </div>
   );
 }
+
+  const [hasAccess, setHasAccess] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
