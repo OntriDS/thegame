@@ -11,6 +11,7 @@ import { buildAccountKey, buildAccountByEmailKey, buildM2MKey, IAM_ACCOUNTS_INDE
 import { v4 as uuidv4 } from 'uuid';
 import { SignJWT, jwtVerify } from 'jose';
 import bcrypt from 'bcryptjs';
+import { getUTCNow, toUTCISOString, fromUTCISOString, toUTC } from '@/lib/utils/utc-utils';
 
 import { CharacterRole, EntityType, LinkType } from '@/types/enums';
 export { CharacterRole };
@@ -41,6 +42,8 @@ export interface Account {
   name: string;
   email: string;
   phone?: string;
+  phoneCountryCode?: string;
+  requiresFounderAuth?: boolean;
   passwordHash: string | null;
   passphraseFlag: boolean;
   isActive: boolean;
@@ -76,6 +79,7 @@ interface CreateAccountDTO {
   name: string;
   email: string;
   phone?: string;
+  phoneCountryCode?: string;
   password?: string;
   passphraseFlag?: boolean;
 }
@@ -93,6 +97,7 @@ export class IAMService {
   // ═══════════════════════════════════════════════════════════════
 
   async createAccount(data: CreateAccountDTO): Promise<Account> {
+    const now = getUTCNow();
     let passwordHash: string | null = null;
 
     if (data.password) {
@@ -105,12 +110,14 @@ export class IAMService {
       name: data.name,
       email: data.email.toLowerCase(),
       phone: data.phone,
+      phoneCountryCode: data.phoneCountryCode?.trim(),
+      requiresFounderAuth: false,
       passwordHash,
       passphraseFlag: data.passphraseFlag || false,
       isActive: true,
       isVerified: false,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: toUTCISOString(now),
+      updatedAt: toUTCISOString(now),
     };
 
     await kvSet(buildAccountKey(account.id), account);
@@ -144,6 +151,8 @@ export class IAMService {
       name?: string;
       email?: string;
       phone?: string | undefined;
+      phoneCountryCode?: string;
+      requiresFounderAuth?: boolean;
       password?: string;
       isActive?: boolean;
       isVerified?: boolean;
@@ -151,6 +160,7 @@ export class IAMService {
   ): Promise<Account> {
     const account = await this.getAccountById(accountId);
     if (!account) throw new Error('Account not found');
+    const now = getUTCNow();
 
     let passwordHash: string | null | undefined;
     if (updates.password !== undefined) {
@@ -176,10 +186,12 @@ export class IAMService {
       name: updates.name !== undefined ? updates.name.trim() : account.name,
       email: nextEmail,
       phone: updates.phone !== undefined ? updates.phone?.trim() : account.phone,
+      phoneCountryCode: updates.phoneCountryCode !== undefined ? updates.phoneCountryCode?.trim() : account.phoneCountryCode,
+      requiresFounderAuth: updates.requiresFounderAuth !== undefined ? updates.requiresFounderAuth : account.requiresFounderAuth,
       passwordHash: passwordHash !== undefined ? passwordHash : account.passwordHash,
       isActive: updates.isActive !== undefined ? updates.isActive : account.isActive,
       isVerified: updates.isVerified !== undefined ? updates.isVerified : account.isVerified,
-      updatedAt: new Date().toISOString(),
+      updatedAt: toUTCISOString(now),
     };
 
     await kvSet(buildAccountKey(accountId), updated);
@@ -189,11 +201,12 @@ export class IAMService {
   async disableAccount(accountId: string): Promise<void> {
     const account = await this.getAccountById(accountId);
     if (!account) return;
+    const now = getUTCNow();
 
     const updated: Account = {
       ...account,
       isActive: false,
-      updatedAt: new Date().toISOString(),
+      updatedAt: toUTCISOString(now),
     };
 
     await kvSet(buildAccountKey(accountId), updated);
@@ -220,7 +233,8 @@ export class IAMService {
     }
 
     const token = uuidv4();
-    const expiry = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // 1 hour
+    const now = getUTCNow();
+    const expiry = toUTCISOString(toUTC(now.getTime() + 60 * 60 * 1000)); // 1 hour
 
     const resetKey = `iam:reset:${token}`;
     await kvSet(resetKey, {
@@ -234,7 +248,7 @@ export class IAMService {
       ...account,
       resetToken: token,
       resetTokenExpiry: expiry,
-      updatedAt: new Date().toISOString()
+      updatedAt: toUTCISOString(now),
     };
     await kvSet(buildAccountKey(account.id), updated);
 
@@ -253,7 +267,8 @@ export class IAMService {
     }
 
     // Check expiry
-    if (new Date(resetData.expiresAt) < new Date()) {
+    const now = getUTCNow();
+    if (fromUTCISOString(resetData.expiresAt).getTime() < now.getTime()) {
       await kvDel(resetKey);
       return { valid: false };
     }
@@ -289,7 +304,7 @@ export class IAMService {
       passwordHash,
       resetToken: undefined,
       resetTokenExpiry: undefined,
-      updatedAt: new Date().toISOString()
+      updatedAt: toUTCISOString(getUTCNow()),
     };
 
     await kvSet(buildAccountKey(account.id), updated);
@@ -317,9 +332,21 @@ export class IAMService {
 
     let character = await dsGetCharacterById(characterId);
     if (!character) throw new Error('Character not found in Game Data-Store');
+    const now = getUTCNow();
+    if (!character.accountId) {
+      await upsertCharacter(
+        {
+          ...character,
+          accountId,
+          updatedAt: now,
+        },
+        { skipWorkflowEffects: true, skipLinkEffects: true }
+      );
+      character = (await dsGetCharacterById(characterId))!;
+    }
 
     account.characterId = characterId;
-    account.updatedAt = new Date().toISOString();
+    account.updatedAt = toUTCISOString(now);
     await kvSet(buildAccountKey(accountId), account);
 
     const link: Link = {
@@ -327,7 +354,7 @@ export class IAMService {
       linkType: LinkType.ACCOUNT_CHARACTER,
       source: { type: EntityType.ACCOUNT, id: accountId },
       target: { type: EntityType.CHARACTER, id: characterId },
-      createdAt: new Date(),
+      createdAt: now,
     };
     await rosettaCreateLink(link, { skipValidation: true });
 
@@ -361,7 +388,7 @@ export class IAMService {
     const char = await dsGetCharacterById(acLink.target.id);
     if (char && !account.characterId) {
       account.characterId = char.id;
-      account.updatedAt = new Date().toISOString();
+      account.updatedAt = toUTCISOString(getUTCNow());
       await kvSet(buildAccountKey(accountId), account);
     }
     return char;
@@ -417,7 +444,7 @@ export class IAMService {
     const existing = await this.getPlayerByCharacterId(characterId);
     if (existing) {
       account.playerId = existing.id;
-      account.updatedAt = new Date().toISOString();
+      account.updatedAt = toUTCISOString(getUTCNow());
       await kvSet(buildAccountKey(accountId), account);
       return;
     }
@@ -429,7 +456,7 @@ export class IAMService {
       character.roles.includes(CharacterRole.TEAM);
     if (!eligible) return;
 
-    const now = new Date();
+    const now = getUTCNow();
     const newPlayer: Player = {
       id: uuidv4(),
       name: character.name || account.name,
@@ -485,7 +512,7 @@ export class IAMService {
     );
 
     account.playerId = newPlayer.id;
-    account.updatedAt = new Date().toISOString();
+    account.updatedAt = toUTCISOString(now);
     await kvSet(buildAccountKey(accountId), account);
   }
 
@@ -662,7 +689,7 @@ export class IAMService {
     await kvSet(buildM2MKey(appId), {
       appId,
       apiKey,
-      createdAt: new Date().toISOString()
+      createdAt: toUTCISOString(getUTCNow())
     });
     await kvSAdd(IAM_M2M_INDEX, appId);
     return apiKey;

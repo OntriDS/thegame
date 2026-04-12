@@ -4,6 +4,7 @@
  */
 
 import { iamService } from '@/lib/iam-service';
+import { getUTCNow, toUTC } from '@/lib/utils/utc-utils';
 
 /** Refresh if within this window of IAM token expiry (10m). Middle of 30–60s buffer. */
 const REFRESH_BUFFER_MS = 45_000;
@@ -23,11 +24,12 @@ export function clearPixelbrainOutboundM2MTokenCache(): void {
 export async function getCachedPixelbrainOutboundToken(
   apiKey: string
 ): Promise<{ token: string; expiresAt: Date }> {
-  const now = Date.now();
-  if (cache && now < cache.issuedAtMs + TOKEN_TTL_MS - REFRESH_BUFFER_MS) {
+  const now = getUTCNow();
+  const nowMs = now.getTime();
+  if (cache && nowMs < cache.issuedAtMs + TOKEN_TTL_MS - REFRESH_BUFFER_MS) {
     return {
       token: cache.token,
-      expiresAt: new Date(cache.issuedAtMs + TOKEN_TTL_MS),
+      expiresAt: toUTC(cache.issuedAtMs + TOKEN_TTL_MS),
     };
   }
 
@@ -37,6 +39,6 @@ export async function getCachedPixelbrainOutboundToken(
     throw new Error('M2M token exchange failed: invalid appId or apiKey');
   }
 
-  cache = { token, issuedAtMs: now };
-  return { token, expiresAt: new Date(now + TOKEN_TTL_MS) };
+  cache = { token, issuedAtMs: nowMs };
+  return { token, expiresAt: toUTC(nowMs + TOKEN_TTL_MS) };
 }

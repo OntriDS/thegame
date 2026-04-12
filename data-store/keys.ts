@@ -6,6 +6,7 @@ import { EntityType } from '@/types/enums';
 
 const MMYY_REGEX = /^(0[1-9]|1[0-2])-\d{2}$/;
 const NAMESPACE = 'thegame:';
+const CHARACTER_INDEX_PREFIX = `${NAMESPACE}index:character`;
 
 function normalizeMonthKey(mmyy: string): string {
   const value = mmyy.trim();
@@ -29,6 +30,14 @@ export function buildIndexKey(entity: string): string {
 
 export function buildEntityIndexKey(entity: string, field: string, value: string): string {
   return `${NAMESPACE}index:${entity}:${field}:${value}`;
+}
+
+export function buildCharacterEmailIndexKey(email: string): string {
+  return `${CHARACTER_INDEX_PREFIX}:email:${email}`;
+}
+
+export function buildCharacterPhoneIndexKey(phone: string): string {
+  return `${CHARACTER_INDEX_PREFIX}:phone:${phone}`;
 }
 
 export function buildArchiveDataKey(entity: string, mmyy: string, id: string): string {

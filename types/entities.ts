@@ -878,7 +878,9 @@ export interface Character extends BaseEntity {
   // 4. CONTACT INFORMATION (MIGRATION NOTE: Moving to Account entity)
   description?: string;          // short description/notes (already in BaseEntity, kept for clarity)
   contactPhone?: string;         // phone number - V0.1: Still here, Future: Remove (use Account.phone)
+  contactPhoneCountryCode?: string; // optional country code used for phone indexing + validation
   contactEmail?: string;         // email address - V0.1: Still here, Future: Remove (use Account.email)
+  allowAccountLinking?: boolean; // Controls whether existing Character can be matched by registration flow
 
   // 5. COMM COLOR - Communication style (KEY!)
   commColor?: CommColor;         // How to communicate with this person - ESSENTIAL for interaction!
@@ -968,6 +970,8 @@ export interface Account extends BaseEntity {
   // name inherited from BaseEntity → Real person's name
   email: string;              // Real person's email (unique, required)
   phone?: string;             // Real person's phone (optional)
+  phoneCountryCode?: string;  // Optional country code for phone normalization
+  requiresFounderAuth?: boolean; // Set when matching requires manual founder review
 
   // AUTHENTICATION (Security Layer)
   passwordHash: string;       // Hashed password (bcrypt/argon2)
