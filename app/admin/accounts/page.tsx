@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ClientAPI } from '@/lib/client-api';
 import { useEntityUpdates } from '@/lib/hooks/use-entity-updates';
@@ -11,7 +11,7 @@ import type { Account } from '@/types/entities';
 import { User, Plus, Mail, Lock, Edit, Trash2, Shield } from 'lucide-react';
 import { CharacterRole } from '@/types/enums';
 import { AccountsDeepLinkTrigger } from '@/components/admin/admin-deep-link-triggers';
-import { normalizeCharacterRole } from '@/lib/character-roles';
+import { filterRolesToSpecialOnly, normalizeCharacterRole } from '@/lib/character-roles';
 
 function AccountsPageContent({ canAccessIAMConsole, isCheckingIAMConsole }: { canAccessIAMConsole: boolean; isCheckingIAMConsole: boolean; }) {
   const [showAccountModal, setShowAccountModal] = useState(false);
@@ -76,8 +76,15 @@ function AccountsPageContent({ canAccessIAMConsole, isCheckingIAMConsole }: { ca
       admin: 'bg-rose-500/10 text-rose-500 border-rose-500/20',
       team: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
       'ai-agent': 'bg-amber-500/10 text-amber-500 border-amber-500/20',
+      m2m: 'bg-orange-500/10 text-orange-500 border-orange-500/20',
       developer: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
       player: 'bg-violet-500/10 text-violet-500 border-violet-500/20',
+      customer: 'bg-sky-500/10 text-sky-500 border-sky-500/20',
+      beneficiary: 'bg-cyan-500/10 text-cyan-500 border-cyan-500/20',
+      apprentice: 'bg-lime-500/10 text-lime-500 border-lime-500/20',
+      family: 'bg-fuchsia-500/10 text-fuchsia-500 border-fuchsia-500/20',
+      investor: 'bg-rose-500/10 text-rose-500 border-rose-500/20',
+      partner: 'bg-purple-500/10 text-purple-500 border-purple-500/20',
     };
 
     const colorClass = roleColors[role.toLowerCase()] || 'bg-slate-500/10 text-slate-500 border-slate-500/20';
@@ -137,21 +144,125 @@ function AccountsPageContent({ canAccessIAMConsole, isCheckingIAMConsole }: { ca
   const hasCharacterRole = (roles: string[] | undefined, role: CharacterRole) =>
     roles?.some((r) => normalizeCharacterRole(r) === role) ?? false;
 
-  const roleStats = {
-    founder: accounts.filter(a =>
-      hasCharacterRole(a.character?.roles, CharacterRole.FOUNDER)
-    ).length,
-    team: accounts.filter(a =>
-      hasCharacterRole(a.character?.roles, CharacterRole.TEAM)
-    ).length,
-    agent: accounts.filter(a =>
-      (a as any).type === 'm2m' || 
-      hasCharacterRole(a.character?.roles, CharacterRole.AI_AGENT)
-    ).length,
-    player: accounts.filter(a =>
-      hasCharacterRole(a.character?.roles, CharacterRole.PLAYER)
-    ).length,
+  const specialRoleOrder: CharacterRole[] = [
+    CharacterRole.FOUNDER,
+    CharacterRole.TEAM,
+    CharacterRole.AI_AGENT,
+    CharacterRole.CUSTOMER,
+    CharacterRole.PLAYER,
+    CharacterRole.BENEFICIARY,
+    CharacterRole.APPRENTICE,
+    CharacterRole.FAMILY,
+    CharacterRole.INVESTOR,
+    CharacterRole.PARTNER,
+  ];
+
+  const specialRoleMeta: Record<CharacterRole | string, {
+    title: string;
+    classes: string;
+    labelColor: string;
+    valueColor: string;
+    iconColor: string;
+  }> = {
+    [CharacterRole.FOUNDER]: {
+      title: 'Founders',
+      classes: 'bg-indigo-500/5 border-indigo-500/10',
+      labelColor: 'text-indigo-500/50',
+      valueColor: 'text-indigo-600',
+      iconColor: 'text-indigo-600',
+    },
+    [CharacterRole.TEAM]: {
+      title: 'Team Members',
+      classes: 'bg-emerald-500/5 border-emerald-500/10',
+      labelColor: 'text-emerald-500/50',
+      valueColor: 'text-emerald-600',
+      iconColor: 'text-emerald-600',
+    },
+    [CharacterRole.AI_AGENT]: {
+      title: 'AI Agents',
+      classes: 'bg-amber-500/5 border-amber-500/10',
+      labelColor: 'text-amber-500/50',
+      valueColor: 'text-amber-600',
+      iconColor: 'text-amber-600',
+    },
+    [CharacterRole.CUSTOMER]: {
+      title: 'Customers',
+      classes: 'bg-sky-500/5 border-sky-500/10',
+      labelColor: 'text-sky-500/50',
+      valueColor: 'text-sky-600',
+      iconColor: 'text-sky-600',
+    },
+    [CharacterRole.PLAYER]: {
+      title: 'Players',
+      classes: 'bg-violet-500/5 border-violet-500/10',
+      labelColor: 'text-violet-500/50',
+      valueColor: 'text-violet-600',
+      iconColor: 'text-violet-600',
+    },
+    [CharacterRole.BENEFICIARY]: {
+      title: 'Beneficiaries',
+      classes: 'bg-cyan-500/5 border-cyan-500/10',
+      labelColor: 'text-cyan-500/50',
+      valueColor: 'text-cyan-600',
+      iconColor: 'text-cyan-600',
+    },
+    [CharacterRole.APPRENTICE]: {
+      title: 'Apprentices',
+      classes: 'bg-lime-500/5 border-lime-500/10',
+      labelColor: 'text-lime-500/50',
+      valueColor: 'text-lime-600',
+      iconColor: 'text-lime-600',
+    },
+    [CharacterRole.FAMILY]: {
+      title: 'Family',
+      classes: 'bg-fuchsia-500/5 border-fuchsia-500/10',
+      labelColor: 'text-fuchsia-500/50',
+      valueColor: 'text-fuchsia-600',
+      iconColor: 'text-fuchsia-600',
+    },
+    [CharacterRole.INVESTOR]: {
+      title: 'Investors',
+      classes: 'bg-rose-500/5 border-rose-500/10',
+      labelColor: 'text-rose-500/50',
+      valueColor: 'text-rose-600',
+      iconColor: 'text-rose-600',
+    },
+    [CharacterRole.PARTNER]: {
+      title: 'Partners',
+      classes: 'bg-purple-500/5 border-purple-500/10',
+      labelColor: 'text-purple-500/50',
+      valueColor: 'text-purple-600',
+      iconColor: 'text-purple-600',
+    },
   };
+
+  const topRowCards = [
+    ...specialRoleOrder.map((role) => ({
+      id: role,
+      title: specialRoleMeta[role].title,
+      labelColor: specialRoleMeta[role].labelColor,
+      count: accounts.filter(
+        (account) => (account as any).type !== 'm2m' && hasCharacterRole(account.character?.roles, role)
+      ).length,
+      classes: specialRoleMeta[role].classes,
+      valueColor: specialRoleMeta[role].valueColor,
+      iconColor: specialRoleMeta[role].iconColor,
+    })),
+    {
+      id: 'm2m',
+      title: 'M2M',
+      labelColor: 'text-orange-500/50',
+      count: accounts.filter((account) => (account as any).type === 'm2m').length,
+      classes: 'bg-orange-500/5 border-orange-500/10',
+      valueColor: 'text-orange-600',
+      iconColor: 'text-orange-600',
+    },
+  ];
+
+  const getSpecialRolesForAccount = (account: Account) =>
+    (account as any).type === 'm2m'
+      ? ['m2m']
+      : filterRolesToSpecialOnly(account.character?.roles);
 
   return (
     <div className="min-h-screen bg-background p-6 space-y-8">
@@ -189,46 +300,23 @@ function AccountsPageContent({ canAccessIAMConsole, isCheckingIAMConsole }: { ca
       </div>
 
       {/* Stats Overview */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="bg-indigo-500/5 border-indigo-500/10 shadow-sm overflow-hidden group">
-          <CardContent className="p-4 relative">
-            <div className="text-[10px] font-black uppercase tracking-widest text-indigo-500/50 mb-1">Founders</div>
-            <div className="text-3xl font-black text-indigo-600">{roleStats.founder}</div>
-            <div className="absolute top-4 right-4 opacity-10 group-hover:opacity-20 transition-opacity">
-              <User className="h-8 w-8 text-indigo-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-emerald-500/5 border-emerald-500/10 shadow-sm overflow-hidden group">
-          <CardContent className="p-4 relative">
-            <div className="text-[10px] font-black uppercase tracking-widest text-emerald-500/50 mb-1">Team Members</div>
-            <div className="text-3xl font-black text-emerald-600">{roleStats.team}</div>
-            <div className="absolute top-4 right-4 opacity-10 group-hover:opacity-20 transition-opacity">
-              <User className="h-8 w-8 text-emerald-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-amber-500/5 border-amber-500/10 shadow-sm overflow-hidden group">
-          <CardContent className="p-4 relative">
-            <div className="text-[10px] font-black uppercase tracking-widest text-amber-500/50 mb-1">AI Agents</div>
-            <div className="text-3xl font-black text-amber-600">{roleStats.agent}</div>
-            <div className="absolute top-4 right-4 opacity-10 group-hover:opacity-20 transition-opacity">
-              <div className="h-8 w-8 font-black text-2xl">AI</div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-violet-500/5 border-violet-500/10 shadow-sm overflow-hidden group">
-          <CardContent className="p-4 relative">
-            <div className="text-[10px] font-black uppercase tracking-widest text-violet-500/50 mb-1">Players</div>
-            <div className="text-3xl font-black text-violet-600">{roleStats.player}</div>
-            <div className="absolute top-4 right-4 opacity-10 group-hover:opacity-20 transition-opacity">
-              <User className="h-8 w-8 text-violet-600" />
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
+        {topRowCards.map((card) => (
+          <Card
+            key={card.id}
+            className={`${card.classes} shadow-sm overflow-hidden group`}
+          >
+            <CardContent className="p-4 relative">
+              <div className={`text-[10px] font-black uppercase tracking-widest ${card.labelColor} mb-1`}>
+                {card.title}
+              </div>
+              <div className={`text-3xl font-black ${card.valueColor}`}>{card.count}</div>
+              <div className="absolute top-4 right-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                <User className={`h-8 w-8 ${card.iconColor}`} />
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       {/* Accounts Table */}
@@ -268,11 +356,11 @@ function AccountsPageContent({ canAccessIAMConsole, isCheckingIAMConsole }: { ca
                     </td>
                     <td className="p-4">
                       <div className="flex flex-wrap justify-center gap-1">
-                        {account.type === 'm2m' ?
-                          getRoleBadge('ai-agent') :
-                          account.character?.roles?.map((role: string) => getRoleBadge(role)) ||
-                          <span className="text-[10px] opacity-30 italic font-bold text-destructive">Missing Character Link</span>
-                        }
+                        {getSpecialRolesForAccount(account).length > 0 ? (
+                          getSpecialRolesForAccount(account).map((role) => getRoleBadge(role))
+                        ) : (
+                          <span className="text-[10px] opacity-30 italic font-bold text-destructive">No special role</span>
+                        )}
                       </div>
                     </td>
                     <td className="p-4">
