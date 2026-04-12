@@ -53,7 +53,13 @@ export function filterRolesToSpecialOnly(
   for (const r of roles) {
     const key = normalizeRoleKey(String(r));
     const canonicalRole = ROLE_CANONICAL_MAP.get(key);
-    if (!canonicalRole || seen.has(canonicalRole)) continue;
+    if (
+      !canonicalRole ||
+      !SPECIAL_CHARACTER_ROLE_SET.has(key) ||
+      seen.has(canonicalRole)
+    ) {
+      continue;
+    }
     seen.add(canonicalRole);
     out.push(canonicalRole);
   }

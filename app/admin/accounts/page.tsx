@@ -300,19 +300,19 @@ function AccountsPageContent({ canAccessIAMConsole, isCheckingIAMConsole }: { ca
       </div>
 
       {/* Stats Overview */}
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
+      <div className="grid grid-cols-[repeat(11,minmax(0,1fr))] gap-3">
         {topRowCards.map((card) => (
           <Card
             key={card.id}
             className={`${card.classes} shadow-sm overflow-hidden group`}
           >
             <CardContent className="p-4 relative">
-              <div className={`text-[10px] font-black uppercase tracking-widest ${card.labelColor} mb-1`}>
+              <div className={`text-[9px] font-black uppercase tracking-wider ${card.labelColor} mb-1`}>
                 {card.title}
               </div>
-              <div className={`text-3xl font-black ${card.valueColor}`}>{card.count}</div>
+              <div className={`text-2xl font-black ${card.valueColor}`}>{card.count}</div>
               <div className="absolute top-4 right-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                <User className={`h-8 w-8 ${card.iconColor}`} />
+                <User className={`h-7 w-7 ${card.iconColor}`} />
               </div>
             </CardContent>
           </Card>

@@ -41,9 +41,9 @@ export default function AccountModal({ account, character, open, onOpenChange, o
 
   // Password update fields (only for editing)
   const [showPasswordUpdate, setShowPasswordUpdate] = useState(false);
-  const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [storedPasswordHash, setStoredPasswordHash] = useState('');
 
   // Character selection for linking
   const [characters, setCharacters] = useState<Character[]>([]);
@@ -110,6 +110,18 @@ export default function AccountModal({ account, character, open, onOpenChange, o
           setEmail(account.email || '');
           setPhone(account.phone || '');
           setPassword(''); // Don't show existing password
+          setStoredPasswordHash(account.passwordHash || '');
+
+          if (isFounder && account.id) {
+            try {
+              const refreshedAccount = await ClientAPI.getAccountById(account.id);
+              if (refreshedAccount?.passwordHash) {
+                setStoredPasswordHash(refreshedAccount.passwordHash);
+              }
+            } catch (refreshError) {
+              console.error('[Account Modal] Failed to refresh account credential hash:', refreshError);
+            }
+          }
 
           // Set selected character
           if (account.characterId) {
@@ -138,21 +150,21 @@ export default function AccountModal({ account, character, open, onOpenChange, o
         setPassword('');
         setSelectedCharacterId('');
         setShowPasswordUpdate(false);
-        setCurrentPassword('');
         setNewPassword('');
         setConfirmPassword('');
         setError(null);
+        setStoredPasswordHash('');
       }
     };
 
     loadData();
-  }, [open, account, character]);
+  }, [open, account, account?.id, character, isFounder]);
 
   const handlePasswordUpdate = async () => {
     if (isSaving) return;
 
     // Password update validation
-    if (!currentPassword.trim() || !newPassword.trim() || !confirmPassword.trim()) {
+    if (!newPassword.trim() || !confirmPassword.trim()) {
       setError('All password fields are required');
       return;
     }
@@ -174,7 +186,6 @@ export default function AccountModal({ account, character, open, onOpenChange, o
       await ClientAPI.updateAccount(account!.id, { password: newPassword });
 
       // Clear password fields
-      setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
       setShowPasswordUpdate(false);
@@ -440,6 +451,24 @@ export default function AccountModal({ account, character, open, onOpenChange, o
                     <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-md">
                       <p className="text-xs text-amber-700 font-medium">
                         Founder-only: You can change this user&apos;s password. The user will need to use the new password on next login.
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="stored-password-hash" className="text-xs font-medium">
+                        Stored Password Hash
+                      </Label>
+                      <Input
+                        id="stored-password-hash"
+                        type="text"
+                        readOnly
+                        value={storedPasswordHash || 'No stored hash available'}
+                        disabled={isSaving}
+                        className="bg-muted/40 font-mono text-xs"
+                        autoComplete="off"
+                      />
+                      <p className="text-[11px] text-amber-700 font-medium">
+                        Security note: passwords are stored as one-way bcrypt hashes, so the original password cannot be recovered.
                       </p>
                     </div>
 
