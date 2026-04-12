@@ -33,6 +33,7 @@ import { getCharacterById as dsGetCharacterById } from '@/data-store/repositorie
 import { getPlayerById as dsGetPlayerById } from '@/data-store/repositories/player.repo';
 import { upsertCharacter, upsertPlayer } from '@/data-store/datastore';
 import { getLinksFor, createLink as rosettaCreateLink } from '@/links/link-registry';
+import { removeAccountEffectsOnDelete } from '@/workflows/entities-workflows/account.workflow';
 import type { Character as GameCharacter, Link, Player } from '@/types/entities';
 
 // --- Interfaces ---
@@ -198,18 +199,82 @@ export class IAMService {
     return updated;
   }
 
+  /**
+   * Unlink IAM account from the Game Data-Store character: merge identity onto the character,
+   * clear `accountId` on the character, remove Rosetta links for this account id.
+   */
+  private async unlinkIamAccountFromDatastore(account: Account): Promise<void> {
+    const now = getUTCNow();
+    const accountId = account.id;
+
+    let character =
+      (account.characterId ? await dsGetCharacterById(account.characterId) : null) ??
+      (await this.resolveCharacterForAccount(accountId));
+
+    if (character) {
+      const mergedName = (character.name?.trim() || account.name?.trim() || '').trim() || character.name;
+      const mergedPhone = character.contactPhone || account.phone || undefined;
+      const mergedEmail = character.contactEmail || account.email || undefined;
+      const mergedPhoneCountry =
+        character.contactPhoneCountryCode || account.phoneCountryCode || undefined;
+
+      await upsertCharacter(
+        {
+          ...character,
+          accountId: null,
+          name: mergedName,
+          contactPhone: mergedPhone,
+          contactEmail: mergedEmail,
+          contactPhoneCountryCode: mergedPhoneCountry,
+          updatedAt: now,
+        },
+        { skipWorkflowEffects: true, skipLinkEffects: true },
+      );
+    }
+
+    await removeAccountEffectsOnDelete(accountId);
+  }
+
+  /**
+   * Soft-disable: unlink + `isActive: false`. IAM row and `iam:index:accounts` membership stay so
+   * admin UIs can show **Inactive**. Email mapping is removed so the address can register again.
+   * For full KV removal use {@link deleteAccountPermanently}.
+   */
   async disableAccount(accountId: string): Promise<void> {
     const account = await this.getAccountById(accountId);
     if (!account) return;
     const now = getUTCNow();
 
+    await this.unlinkIamAccountFromDatastore(account);
+
     const updated: Account = {
       ...account,
       isActive: false,
+      characterId: undefined,
+      playerId: undefined,
       updatedAt: toUTCISOString(now),
     };
 
     await kvSet(buildAccountKey(accountId), updated);
+    await kvSAdd(IAM_ACCOUNTS_INDEX, accountId);
+    await kvDel(buildAccountByEmailKey(account.email));
+  }
+
+  /**
+   * Hard delete: unlink from character, remove Rosetta links, delete IAM keys (no ghost row).
+   * Admin DELETE /api/accounts/[id] uses this.
+   */
+  async deleteAccountPermanently(accountId: string): Promise<void> {
+    const account = await this.getAccountById(accountId);
+    if (!account) return;
+
+    await this.unlinkIamAccountFromDatastore(account);
+
+    if (account.resetToken) {
+      await kvDel(`iam:reset:${account.resetToken}`);
+    }
+
+    await kvDel(buildAccountKey(accountId));
     await kvSRem(IAM_ACCOUNTS_INDEX, accountId);
     await kvDel(buildAccountByEmailKey(account.email));
   }

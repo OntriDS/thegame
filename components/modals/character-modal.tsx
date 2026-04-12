@@ -60,7 +60,8 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
 
   // Account Info Modal
   const [showAccountInfo, setShowAccountInfo] = useState(false);
-  const [accountData, setAccountData] = useState<any>(null);
+  /** `undefined` = identity link still resolving; `null` = no active IAM row for this character.accountId */
+  const [accountData, setAccountData] = useState<any | null | undefined>(undefined);
 
   // Loading state
   const [isSaving, setIsSaving] = useState(false);
@@ -99,13 +100,23 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
           // auth already uses this character + roles (FOUNDER, TEAM, etc.); name may only live on Account.
           const shouldLoadLinkedAccount = !!character.accountId;
           if (shouldLoadLinkedAccount) {
+            setAccountData(undefined);
             try {
               const account = await ClientAPI.getAccount(character.accountId!);
-              if (account) {
+              const accountUsable = account && account.isActive !== false;
+              if (accountUsable) {
                 setAccountData(account);
                 setName((character.name?.trim() || account.name?.trim() || '').trim());
                 setContactEmail(account.email || character?.contactEmail || '');
                 setContactPhone(account.phone || character?.contactPhone || '');
+              } else {
+                // IAM row missing, disabled, or admin "delete" — character should be editable from DS + optional stale account fields
+                setAccountData(null);
+                setName(
+                  (character.name?.trim() || account?.name?.trim() || '').trim() || character.name || '',
+                );
+                setContactEmail(character?.contactEmail || account?.email || '');
+                setContactPhone(character?.contactPhone || account?.phone || '');
               }
             } catch (error) {
               console.error('Failed to load account data:', error);
@@ -204,8 +215,9 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
   // ALWAYS show special fields for FOUNDER - they can assign any role to any character
   const shouldShowSpecialFields = currentUserIsFounder || isPlayerOne || !character || roles.some(role => specialRolesList.includes(role));
 
-  // Identity fields follow IAM when this DS character is linked (`accountId`), regardless of PLAYER badge on roles
-  const identityManagedByAccount = !!character?.accountId;
+  // Identity follows IAM only when DS still points at an account id AND that account is active (GET returned a usable row)
+  const identityManagedByAccount =
+    !!character?.accountId && accountData !== null && (accountData === undefined || accountData.isActive !== false);
 
   // Get theme for dark mode detection
   const { isDark } = useTheme();
@@ -250,8 +262,8 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
         isActive: character?.isActive ?? true,  // Character is active by default
         links: character?.links || [],
 
-        // Account Ambassador - Preserve existing accountId
-        accountId: character?.accountId || null,
+        // Keep accountId only while an active IAM row is driving identity; otherwise clear stale pointers (e.g. after admin disable/delete)
+        accountId: identityManagedByAccount ? (character?.accountId ?? null) : null,
 
         // Character core
         roles,

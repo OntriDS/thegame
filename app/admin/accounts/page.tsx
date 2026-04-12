@@ -7,15 +7,21 @@ import { Button } from '@/components/ui/button';
 import { ClientAPI } from '@/lib/client-api';
 import { useEntityUpdates } from '@/lib/hooks/use-entity-updates';
 import AccountModal from '@/components/modals/account-modal';
+import DeleteModal from '@/components/modals/submodals/delete-submodal';
+import ConfirmationModal from '@/components/modals/submodals/confirmation-submodal';
 import type { Account } from '@/types/entities';
-import { User, Plus, Mail, Lock, Edit, Trash2, Shield } from 'lucide-react';
-import { CharacterRole } from '@/types/enums';
+import { User, Plus, Edit, Trash2, Shield, UserRoundX } from 'lucide-react';
+import { CharacterRole, EntityType } from '@/types/enums';
 import { AccountsDeepLinkTrigger } from '@/components/admin/admin-deep-link-triggers';
 import { filterRolesToSpecialOnly, normalizeCharacterRole } from '@/lib/character-roles';
 
 function AccountsPageContent({ canAccessIAMConsole, isCheckingIAMConsole }: { canAccessIAMConsole: boolean; isCheckingIAMConsole: boolean; }) {
   const [showAccountModal, setShowAccountModal] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
+  const [accountPendingDelete, setAccountPendingDelete] = useState<Account | null>(null);
+  const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
+  const [accountPendingDisable, setAccountPendingDisable] = useState<Account | null>(null);
+  const [showDisableAccountConfirm, setShowDisableAccountConfirm] = useState(false);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -61,14 +67,29 @@ function AccountsPageContent({ canAccessIAMConsole, isCheckingIAMConsole }: { ca
     [handleEditAccount],
   );
 
-  const handleDeleteAccount = useCallback(async (account: Account) => {
-    try {
-      await ClientAPI.deleteAccount(account.id);
-      await loadAccounts();
-    } catch (error) {
-      console.error('[Accounts Section] Failed to delete account:', error);
+  const openDeleteAccountConfirm = useCallback((account: Account) => {
+    setAccountPendingDelete(account);
+    setShowDeleteAccountModal(true);
+  }, []);
+
+  const handleDeleteAccountModalOpenChange = useCallback((open: boolean) => {
+    setShowDeleteAccountModal(open);
+    if (!open) {
+      setAccountPendingDelete(null);
     }
-  }, [loadAccounts]);
+  }, []);
+
+  const openDisableAccountConfirm = useCallback((account: Account) => {
+    setAccountPendingDisable(account);
+    setShowDisableAccountConfirm(true);
+  }, []);
+
+  const handleDisableAccountModalOpenChange = useCallback((open: boolean) => {
+    setShowDisableAccountConfirm(open);
+    if (!open) {
+      setAccountPendingDisable(null);
+    }
+  }, []);
 
   const getRoleBadge = (role: string) => {
     const roleColors: Record<string, string> = {
@@ -97,7 +118,16 @@ function AccountsPageContent({ canAccessIAMConsole, isCheckingIAMConsole }: { ca
   };
 
   const getAccountStatus = (account: any) => {
-    if (account.isActive) {
+    if (account.type === 'm2m') {
+      return (
+        <span className="flex items-center gap-1.5 text-amber-600 font-bold text-[10px] uppercase tracking-widest">
+          <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+          M2M
+        </span>
+      );
+    }
+    const active = account.isActive !== false;
+    if (active) {
       return (
         <span className="flex items-center gap-1.5 text-green-600 font-bold text-[10px] uppercase tracking-widest">
           <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
@@ -106,7 +136,7 @@ function AccountsPageContent({ canAccessIAMConsole, isCheckingIAMConsole }: { ca
       );
     }
     return (
-      <span className="flex items-center gap-1.5 text-red-600 font-bold text-[10px] uppercase tracking-widest opacity-50">
+      <span className="flex items-center gap-1.5 text-red-600 font-bold text-[10px] uppercase tracking-widest">
         <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
         Inactive
       </span>
@@ -335,7 +365,12 @@ function AccountsPageContent({ canAccessIAMConsole, isCheckingIAMConsole }: { ca
               </thead>
               <tbody className="divide-y divide-primary/5">
                 {accounts.map((account: any) => (
-                  <tr key={account.id} className="group hover:bg-primary/5 transition-colors">
+                  <tr
+                    key={account.id}
+                    className={`group hover:bg-primary/5 transition-colors ${
+                      account.type !== 'm2m' && account.isActive === false ? 'opacity-75' : ''
+                    }`}
+                  >
                     <td className="p-4">
                       <div className="flex items-center gap-3">
                         <div>
@@ -375,14 +410,29 @@ function AccountsPageContent({ canAccessIAMConsole, isCheckingIAMConsole }: { ca
                               size="sm"
                               onClick={() => handleEditAccount(account)}
                               className="h-8 w-8 p-0 hover:bg-primary/20 hover:text-primary transition-all active:scale-90"
+                              aria-label={`Edit account ${account.email}`}
                             >
                               <Edit className="h-4 w-4" />
                             </Button>
+                            {account.isActive !== false && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => openDisableAccountConfirm(account)}
+                                className="h-8 w-8 p-0 text-amber-600/70 hover:bg-amber-500/10 hover:text-amber-600 transition-all active:scale-90"
+                                title="Disable login (record stays as Inactive)"
+                                aria-label={`Disable account ${account.email}`}
+                              >
+                                <UserRoundX className="h-4 w-4" />
+                              </Button>
+                            )}
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => handleDeleteAccount(account)}
+                              onClick={() => openDeleteAccountConfirm(account)}
                               className="h-8 w-8 p-0 text-destructive/50 hover:bg-destructive/10 hover:text-destructive transition-all active:scale-90"
+                              title="Permanently remove IAM row and keys"
+                              aria-label={`Permanently delete account ${account.email}`}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -419,6 +469,37 @@ function AccountsPageContent({ canAccessIAMConsole, isCheckingIAMConsole }: { ca
         onOpenChange={setShowAccountModal}
         onSave={async (account: Account) => {
           await ClientAPI.upsertAccount(account);
+          await loadAccounts();
+        }}
+      />
+
+      {accountPendingDelete && (
+        <DeleteModal
+          open={showDeleteAccountModal}
+          onOpenChange={handleDeleteAccountModalOpenChange}
+          entityType={EntityType.ACCOUNT}
+          entities={[accountPendingDelete]}
+          onComplete={() => {
+            void loadAccounts();
+          }}
+        />
+      )}
+
+      <ConfirmationModal
+        open={showDisableAccountConfirm}
+        onOpenChange={handleDisableAccountModalOpenChange}
+        title="Disable this account?"
+        description={
+          accountPendingDisable
+            ? `Login will stop for ${accountPendingDisable.email}. The linked character is unlinked and contact fields are copied onto the character. This row stays in the list as Inactive until you permanently delete it (trash). The email address is freed for new registrations.`
+            : ''
+        }
+        confirmText="Disable account"
+        cancelText="Cancel"
+        variant="destructive"
+        onConfirm={async () => {
+          if (!accountPendingDisable) return;
+          await ClientAPI.disableAccount(accountPendingDisable.id);
           await loadAccounts();
         }}
       />

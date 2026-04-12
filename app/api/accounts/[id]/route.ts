@@ -52,7 +52,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   if (!(await requireAdminAuth(req))) return new NextResponse('Unauthorized', { status: 401 });
-  await iamService.disableAccount(params.id);
+  await iamService.deleteAccountPermanently(params.id);
   return new NextResponse(null, { status: 204 });
 }
 

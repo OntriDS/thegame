@@ -471,6 +471,12 @@ export const ClientAPI = {
     if (!res.ok) throw new Error('Failed to delete account');
   },
 
+  /** Soft-disable: unlink character, remove email mapping; row stays (Inactive in admin). */
+  disableAccount: async (id: string): Promise<void> => {
+    const res = await fetch(`/api/accounts/${id}/disable`, { method: 'POST' });
+    if (!res.ok) throw new Error('Failed to disable account');
+  },
+
   updateAccount: async (id: string, updates: { password?: string }): Promise<void> => {
     const res = await fetch(`/api/accounts/${id}`, {
       method: 'PATCH',

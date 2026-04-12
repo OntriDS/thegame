@@ -1,6 +1,7 @@
 /**
- * IAM System Redis Key Patterns
- * Standardized across all projects (thegame, pixelbrain, akiles-ecosystem)
+ * IAM Redis key patterns — shared across TheGame, Akiles-Ecosystem, and Pixelbrain when they use
+ * the same Upstash database: all IAM data lives under `iam:*` (not under `thegame:` / per-app prefix).
+ * Game entities (characters, items, …) use `thegame:data:*` — see `data-store/keys.ts`.
  */
 
 export const buildAccountKey = (id: string) => `iam:account:${id}`;
