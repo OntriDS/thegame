@@ -583,7 +583,7 @@ export default function SalesModal({
     }
 
     didInitRef.current = true;
-  }, [sale, items]);
+  }, [type, sale, items]);
 
   useEffect(() => {
     if (!sale || !isProductMode) return;

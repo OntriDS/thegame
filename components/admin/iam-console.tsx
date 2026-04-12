@@ -385,6 +385,3 @@ export default function IAMConsole() {
     </div>
   );
 }
-
-  const [hasAccess, setHasAccess] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
