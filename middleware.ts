@@ -62,8 +62,9 @@ export async function middleware(request: NextRequest) {
     const user = await iamService.verifyJWT(token);
 
     if (user && user.isActive) {
-      const isFounder = Array.isArray(user.roles)
-        ? user.roles.some((role) => String(role).toLowerCase() === CharacterRole.FOUNDER)
+    const founderRole = CharacterRole.FOUNDER.toLowerCase();
+    const isFounder = Array.isArray(user.roles)
+      ? user.roles.some((role) => String(role).toLowerCase() === founderRole)
         : false;
 
       const isFounderOnlySection =

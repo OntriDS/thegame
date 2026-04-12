@@ -69,7 +69,7 @@ export async function requireFounderAdminAuth(req: NextRequest): Promise<boolean
       ? user.roles.map((role) => String(role).toLowerCase())
       : [];
 
-    return roles.includes(CharacterRole.FOUNDER);
+    return roles.includes(CharacterRole.FOUNDER.toLowerCase());
   } catch (error) {
     console.error('[API Auth] Error verifying founder authorization:', error);
     return false;
@@ -92,7 +92,7 @@ export async function requireProvisioningM2MAuth(req: NextRequest): Promise<bool
       ? user.roles.map((role) => String(role).toLowerCase())
       : [];
 
-    if (!roles.includes(CharacterRole.AI_AGENT)) {
+    if (!roles.includes(CharacterRole.AI_AGENT.toLowerCase())) {
       return false;
     }
 
