@@ -176,15 +176,15 @@ function AccountsPageContent({ canAccessIAMConsole, isCheckingIAMConsole }: { ca
 
   const specialRoleOrder: CharacterRole[] = [
     CharacterRole.FOUNDER,
+    CharacterRole.PLAYER,
     CharacterRole.TEAM,
+    CharacterRole.APPRENTICE,
+    CharacterRole.PARTNER,
     CharacterRole.AI_AGENT,
     CharacterRole.CUSTOMER,
-    CharacterRole.PLAYER,
     CharacterRole.BENEFICIARY,
-    CharacterRole.APPRENTICE,
     CharacterRole.FAMILY,
-    CharacterRole.INVESTOR,
-    CharacterRole.PARTNER,
+    CharacterRole.INVESTOR
   ];
 
   const specialRoleMeta: Record<CharacterRole | string, {
