@@ -154,7 +154,6 @@ export default function ControlRoom() {
 
   // Filter State
   const [stationFilters, setStationFilters] = useState<Set<Station>>(new Set());
-  const [typeFilter, setTypeFilter] = useState<TaskType | 'all'>('all');
   // Sub-tab State
   const [activeSubTab, setActiveSubTab] = useState<ControlRoomTab>('mission-tree');
   const [refreshKey, setRefreshKey] = useState(0);
@@ -190,30 +189,6 @@ export default function ControlRoom() {
     }
   }, [getPreference]);
 
-  useEffect(() => {
-    if (activeSubTab === 'automation-tree') {
-      setTypeFilter('all');
-      return;
-    }
-
-    if (activeSubTab === 'recurrent-tasks') {
-      if (typeFilter !== TaskType.RECURRENT_GROUP &&
-          typeFilter !== TaskType.RECURRENT_TEMPLATE &&
-          typeFilter !== TaskType.RECURRENT_INSTANCE) {
-        setTypeFilter('all');
-      }
-      return;
-    }
-
-    if (typeFilter === TaskType.GOAL ||
-        typeFilter === TaskType.RECURRENT_GROUP ||
-        typeFilter === TaskType.RECURRENT_TEMPLATE ||
-        typeFilter === TaskType.RECURRENT_INSTANCE ||
-        typeFilter === TaskType.AUTOMATION) {
-      setTypeFilter('all');
-    }
-  }, [activeSubTab, typeFilter]);
-
   /** Single GET /api/tasks per run: updates `allTasks` (calendar, weekly, gantt) and filtered `tree`. */
   const loadTasks = useCallback(async (): Promise<TreeNode[]> => {
     try {
@@ -246,39 +221,6 @@ export default function ControlRoom() {
       if (stationFilters.size > 0) {
         tasks = tasks.filter(task => stationFilters.has(task.station));
       }
-      if (typeFilter !== 'all') {
-        // Show all tasks of the selected type, plus their descendants only
-        const tasksOfCategory = tasks.filter(t => t.type === typeFilter);
-        const tasksToInclude = new Set<string>();
-
-        // Add all tasks of the selected category plus their descendants
-        tasksOfCategory.forEach(task => {
-          tasksToInclude.add(task.id);
-          // Add all descendants of this task
-          const addDescendants = (taskId: string) => {
-            tasks.forEach(t => {
-              if (t.parentId === taskId && !tasksToInclude.has(t.id)) {
-                tasksToInclude.add(t.id);
-                addDescendants(t.id);
-              }
-            });
-          };
-          addDescendants(task.id);
-        });
-
-        // Filter tasks to only include the ones we want to show
-        tasks = tasks.filter(t => tasksToInclude.has(t.id));
-
-        // For filtered tasks, we need to adjust parent references to create a proper tree
-        // If a task's parent is not in the filtered set, make it a top-level task
-        tasks = tasks.map(task => {
-          if (task.parentId && !tasksToInclude.has(task.parentId)) {
-            return { ...task, parentId: null };
-          }
-          return task;
-        });
-      }
-
       const newTree = buildTaskTree(tasks);
       setTree(newTree);
       return newTree;
@@ -287,7 +229,7 @@ export default function ControlRoom() {
       setTree([]);
       return [];
     }
-  }, [stationFilters, typeFilter, activeSubTab]);
+  }, [stationFilters, activeSubTab]);
 
   useEffect(() => {
     void loadTasks();
@@ -808,8 +750,6 @@ export default function ControlRoom() {
                     onNewTask={handleNewTask}
                     stationFilters={stationFilters}
                     onStationFilterChange={setStationFilters}
-                    typeFilter={typeFilter}
-                    onTypeFilterChange={setTypeFilter}
                     activeSubTab="mission-tree"
                     onChangeOrder={handleChangeOrder}
                     onMove={handleTreeMove}
@@ -848,8 +788,6 @@ export default function ControlRoom() {
                     onNewTask={handleNewTask}
                     stationFilters={stationFilters}
                     onStationFilterChange={setStationFilters}
-                    typeFilter={typeFilter}
-                    onTypeFilterChange={setTypeFilter}
                     activeSubTab="recurrent-tasks"
                     onChangeOrder={handleChangeOrder}
                     onMove={handleTreeMove}
@@ -888,8 +826,6 @@ export default function ControlRoom() {
                     onNewTask={handleNewTask}
                     stationFilters={stationFilters}
                     onStationFilterChange={setStationFilters}
-                    typeFilter={typeFilter}
-                    onTypeFilterChange={setTypeFilter}
                     activeSubTab="automation-tree"
                     onChangeOrder={handleChangeOrder}
                     onMove={handleTreeMove}

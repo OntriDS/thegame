@@ -3,7 +3,6 @@
 import { TreeNode } from '@/lib/utils/tree-utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TaskType, TaskStatus, TaskPriority } from '@/types/enums';
 import type { Station } from '@/types/type-aliases';
 import { ChevronRight, ChevronDown, PlusCircle } from 'lucide-react';
@@ -26,8 +25,6 @@ interface TaskTreeProps {
   // --- NEW Filter Props ---
   stationFilters: Set<Station>;
   onStationFilterChange: (filters: Set<Station>) => void;
-  typeFilter: TaskType | 'all';
-  onTypeFilterChange: (value: TaskType | 'all') => void;
   // --- NEW Tab Props ---
   activeSubTab: 'mission-tree' | 'recurrent-tasks' | 'automation-tree' | 'schedule' | 'calendar';
   onChangeOrder: (taskId: string, parentId: string | null, newPosition: number) => Promise<void> | void;
@@ -115,26 +112,10 @@ export default function TaskTree({
   onSelectNode,
   stationFilters,
   onStationFilterChange,
-  typeFilter,
-  onTypeFilterChange,
   activeSubTab,
   onChangeOrder,
   onMove,
 }: TaskTreeProps) {
-  const typeOptions: TaskType[] =
-    activeSubTab === 'recurrent-tasks'
-      ? [TaskType.RECURRENT_GROUP, TaskType.RECURRENT_TEMPLATE, TaskType.RECURRENT_INSTANCE]
-      : activeSubTab === 'automation-tree'
-        ? [TaskType.AUTOMATION]
-        : Object.values(TaskType).filter(
-          (t) =>
-            t !== TaskType.RECURRENT_GROUP &&
-              t !== TaskType.GOAL &&
-            t !== TaskType.RECURRENT_TEMPLATE &&
-            t !== TaskType.RECURRENT_INSTANCE &&
-            t !== TaskType.AUTOMATION
-        );
-
   // --- Optimization: Memoize node collections ---
   // These specific traversals were previously happening multiple times per render
   const missionGroupNodes = React.useMemo(() => collectNodesByType(tree, TaskType.MISSION_GROUP), [tree]);
@@ -656,19 +637,6 @@ export default function TaskTree({
               className="text-xs w-40"
               initialLabel={stationFilterLabel}
             />
-            <Select value={typeFilter} onValueChange={v => onTypeFilterChange(v as TaskType | 'all')}>
-              <SelectTrigger className="text-xs w-44">
-                <SelectValue placeholder="Filter by Type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                {typeOptions.map((type) => (
-                  <SelectItem key={type} value={type}>
-                    {type}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
           {activeSubTab !== 'automation-tree' && (
             <Button variant="ghost" size="sm" onClick={onNewTask}>
