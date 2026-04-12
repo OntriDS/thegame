@@ -15,6 +15,18 @@ import bcrypt from 'bcryptjs';
 import { CharacterRole, EntityType, LinkType } from '@/types/enums';
 export { CharacterRole };
 import { normalizeCharacterRoles } from '@/lib/character-roles';
+import {
+  createPermissionEvaluator,
+  type AuthPermissions,
+  THEGAME_PERMISSION_MATRIX,
+} from '@/integrity/iam/permissions';
+
+/**
+ * AUTHZ NOTE:
+ * Role evaluation is centralized here:
+ * - The privileged-admin role list is defined in integrity/iam/permissions.ts
+ * - This service must never add its own founder/team/admin overrides.
+ */
 
 import { getCharacterById as dsGetCharacterById } from '@/data-store/repositories/character.repo';
 import { getPlayerById as dsGetPlayerById } from '@/data-store/repositories/player.repo';
@@ -71,36 +83,6 @@ interface CreateAccountDTO {
 const HANDSHAKE_PREFIX = 'iam:handshake:';
 
 // --- Permissions & RBAC ---
-
-export interface Permission {
-  resource: string;
-  action: string;
-  roles: CharacterRole[];
-}
-
-export interface AuthPermissions {
-  hasRole: (role: string | CharacterRole) => boolean;
-  hasAnyRole: (roles: (string | CharacterRole)[]) => boolean;
-  can: (resource: string, action: string) => boolean;
-}
-
-const PERMISSION_MATRIX: Permission[] = [
-  { resource: 'tasks', action: 'read', roles: [CharacterRole.FOUNDER, CharacterRole.TEAM] },
-  { resource: 'tasks', action: 'write', roles: [CharacterRole.FOUNDER, CharacterRole.TEAM] },
-  { resource: 'tasks', action: 'delete', roles: [CharacterRole.FOUNDER] },
-  { resource: 'finances', action: 'read', roles: [CharacterRole.FOUNDER] },
-  { resource: 'finances', action: 'write', roles: [CharacterRole.FOUNDER] },
-  { resource: 'inventory', action: 'read', roles: [CharacterRole.FOUNDER, CharacterRole.TEAM] },
-  { resource: 'inventory', action: 'write', roles: [CharacterRole.FOUNDER, CharacterRole.TEAM] },
-  { resource: 'sales', action: 'read', roles: [CharacterRole.FOUNDER, CharacterRole.TEAM] },
-  { resource: 'sales', action: 'write', roles: [CharacterRole.FOUNDER, CharacterRole.TEAM] },
-  { resource: 'players', action: 'read', roles: [CharacterRole.FOUNDER] },
-  { resource: 'players', action: 'write', roles: [CharacterRole.FOUNDER] },
-  { resource: 'users', action: 'read', roles: [CharacterRole.FOUNDER] },
-  { resource: 'users', action: 'write', roles: [CharacterRole.FOUNDER] },
-  { resource: 'settings', action: 'read', roles: [CharacterRole.FOUNDER] },
-  { resource: 'settings', action: 'write', roles: [CharacterRole.FOUNDER] },
-];
 
 // --- IAM Service Implementation ---
 
@@ -512,29 +494,7 @@ export class IAMService {
   // ═══════════════════════════════════════════════════════════════
 
   getPermissions(user: AuthUser): AuthPermissions {
-    const userRoles = user.roles || [];
-
-    return {
-      hasRole: (role: string | CharacterRole) => {
-        if (userRoles.includes(CharacterRole.FOUNDER)) return true;
-        return userRoles.includes(role as any);
-      },
-
-      hasAnyRole: (roles: (string | CharacterRole)[]) => {
-        if (userRoles.includes(CharacterRole.FOUNDER)) return true;
-        return roles.some(role => userRoles.includes(role as any));
-      },
-
-      can: (resource: string, action: string) => {
-        if (userRoles.includes(CharacterRole.FOUNDER)) return true;
-        const matchingPermissions = PERMISSION_MATRIX.filter(
-          perm => perm.resource === resource && perm.action === action
-        );
-        return matchingPermissions.some(perm =>
-          perm.roles.some(role => userRoles.includes(role))
-        );
-      },
-    };
+    return createPermissionEvaluator(user.roles, THEGAME_PERMISSION_MATRIX);
   }
 
   // ═══════════════════════════════════════════════════════════════
