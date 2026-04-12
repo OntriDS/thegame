@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { SessionManager } from '@/lib/utils/session-manager';
-import { kvGet, kvSet } from '@/data-store/kv';
+import { kvGet, kvSet } from '@/lib/utils/kv';
 import { getCachedPixelbrainOutboundToken } from '@/lib/auth/outbound-pixelbrain-m2m';
 import {
   aiAssistantModelFromSession,
@@ -225,3 +225,4 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: 'Failed to process AI request' }, { status: 500 });
   }
 }
+

@@ -1,6 +1,6 @@
 // data-store/repositories/task.repo.ts
 import type { Task } from '@/types/entities';
-import { kvGet, kvMGet, kvSet, kvDel, kvSMembers, kvSAdd, kvSRem } from '@/data-store/kv';
+import { kvGet, kvMGet, kvSet, kvDel, kvSMembers, kvSAdd, kvSRem } from '@/lib/utils/kv';
 import { buildDataKey, buildIndexKey, buildTaskActiveIndexKey, buildTaskChildrenKey } from '@/data-store/keys';
 import { EntityType } from '@/types/enums';
 import { isTaskActive } from '@/lib/utils/task-active-utils';
@@ -129,5 +129,6 @@ export async function deleteTask(id: string): Promise<void> {
   await kvSRem(indexKey, id);
   await kvSRem(buildTaskActiveIndexKey(), id);
 }
+
 
 

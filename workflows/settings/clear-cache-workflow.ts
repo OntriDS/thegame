@@ -1,7 +1,7 @@
 // workflows/settings/clear-cache-workflow.ts
 // Clear Cache Workflow for KV-only architecture
 
-import { kv, kvDelMany } from '@/data-store/kv';
+import { kv, kvDelMany } from '@/lib/utils/kv';
 
 export interface SettingsResult {
   success: boolean;
@@ -149,3 +149,4 @@ export class ClearCacheWorkflow {
     }
   }
 }
+

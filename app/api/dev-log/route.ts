@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
   try {
     // In production with KV, read from KV
     if (process.env.UPSTASH_REDIS_REST_URL) {
-      const { kvGet } = await import('@/data-store/kv');
+      const { kvGet } = await import('@/lib/utils/kv');
       const devLog = await kvGet('thegame:data:dev-log');
 
       if (devLog) {
@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
 
     // In production with KV, write to KV
     if (process.env.UPSTASH_REDIS_REST_URL) {
-      const { kvSet } = await import('@/data-store/kv');
+      const { kvSet } = await import('@/lib/utils/kv');
       await kvSet('thegame:data:dev-log', devLogData);
       return NextResponse.json({ success: true, message: 'Dev log updated successfully' });
     } else {

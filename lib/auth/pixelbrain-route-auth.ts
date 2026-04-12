@@ -42,7 +42,7 @@ export async function verifyPixelbrainRouteAccess(
   request: NextRequest
 ): Promise<PixelbrainRouteAuthResult> {
   const bearer = getBearerToken(request);
-  const sessionCookie = request.cookies.get('auth_session')?.value;
+  const sessionCookie = request.cookies.get('iam_session')?.value;
   const token = bearer ?? sessionCookie;
 
   if (!token) {

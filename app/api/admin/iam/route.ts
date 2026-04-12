@@ -1,6 +1,6 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { iamService } from '@/lib/iam-service';
-import { kvSMembers } from '@/data-store/kv';
+import { kvSMembers } from '@/lib/utils/kv';
 import { IAM_ACCOUNTS_INDEX } from '@/lib/keys';
 import { getAllCharacters } from '@/data-store/repositories/character.repo';
 import { getAllPlayers } from '@/data-store/repositories/player.repo';
@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
   try {
     const adminKey = req.headers.get('x-admin-key');
     if (!adminKey || adminKey !== process.env.ADMIN_ACCESS_KEY) {
-      const token = req.cookies.get('admin_session')?.value || req.cookies.get('auth_session')?.value;
+      const token = req.cookies.get('iam_session')?.value;
       const user = token ? await iamService.verifyJWT(token) : null;
 
       if (!user) {
@@ -56,3 +56,4 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+

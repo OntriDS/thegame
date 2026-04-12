@@ -49,8 +49,8 @@ export async function POST(req: Request) {
       next: '/admin'
     });
 
-    // 4. Set the SINGLE Canonical Auth Cookie
-    response.cookies.set('auth_session', result.token, {
+  // 4. Set the SINGLE Canonical Auth Cookie
+  response.cookies.set('iam_session', result.token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',

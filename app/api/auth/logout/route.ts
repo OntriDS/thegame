@@ -8,12 +8,8 @@ export async function POST() {
   try {
     const response = NextResponse.json({ success: true, next: '/admin/login' });
     
-    // 1. Clear the canonical auth cookie
-    response.cookies.delete('auth_session');
-
-    // 2. Legacy Cleanup: Sweep away the old ghost cookie 
-    // (Prevents caching issues for users who logged in before the IAM migration)
-    response.cookies.delete('admin_session');
+    // Clear the canonical auth cookie
+    response.cookies.delete('iam_session');
 
     console.log('[Logout API] ✅ Logout successful (cookies cleared)');
     return response;

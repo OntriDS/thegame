@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
   try {
     // In production with KV, read from KV
     if (process.env.UPSTASH_REDIS_REST_URL) {
-      const { kvGet } = await import('@/data-store/kv');
+      const { kvGet } = await import('@/lib/utils/kv');
       const notesData = await kvGet('thegame:data:notes-log');
 
       if (notesData) {
@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
 
     // In production with KV, write to KV
     if (process.env.UPSTASH_REDIS_REST_URL) {
-      const { kvGet, kvSet } = await import('@/data-store/kv');
+      const { kvGet, kvSet } = await import('@/lib/utils/kv');
 
       // Get current notes data
       const existingData = await kvGet('thegame:data:notes-log');
@@ -128,7 +128,7 @@ export async function PUT(req: NextRequest) {
 
     // In production with KV, write to KV
     if (process.env.UPSTASH_REDIS_REST_URL) {
-      const { kvGet, kvSet } = await import('@/data-store/kv');
+      const { kvGet, kvSet } = await import('@/lib/utils/kv');
 
       // Get current notes data
       const currentData = await kvGet('thegame:data:notes-log') || { entries: [], lastUpdated: new Date().toISOString() };
@@ -205,7 +205,7 @@ export async function DELETE(req: NextRequest) {
 
     // In production with KV, write to KV
     if (process.env.UPSTASH_REDIS_REST_URL) {
-      const { kvGet, kvSet } = await import('@/data-store/kv');
+      const { kvGet, kvSet } = await import('@/lib/utils/kv');
 
       // Get current notes data
       const currentData = await kvGet('thegame:data:notes-log') || { entries: [], lastUpdated: new Date().toISOString() };

@@ -1,6 +1,6 @@
 // lib/utils/task-index-migration.ts
 import { getAllTasks } from '@/data-store/datastore';
-import { kvSAdd } from '@/data-store/kv';
+import { kvSAdd } from '@/lib/utils/kv';
 import { buildTaskChildrenKey } from '@/data-store/keys';
 
 /**
@@ -28,3 +28,4 @@ export async function rebuildTaskParentChildIndex() {
   console.log(`[Migration] Finished. Indexed ${indexedCount} parent-child relationships.`);
   return { indexedCount, totalTasks: tasks.length };
 }
+

@@ -9,7 +9,7 @@ import { getSaleById } from '@/data-store/repositories/sale.repo';
 import { getCharacterById } from '@/data-store/repositories/character.repo';
 import { getPlayerById } from '@/data-store/repositories/player.repo';
 import { getAccountById } from '@/data-store/repositories/account.repo';
-import { kvGet } from '@/data-store/kv';
+import { kvGet } from '@/lib/utils/kv';
 import { buildDataKey } from '@/data-store/keys';
 import { getLinksFor } from './link-registry';
 
@@ -484,3 +484,4 @@ export async function validateBusinessRules(
     };
   }
 }
+

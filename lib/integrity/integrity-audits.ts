@@ -13,7 +13,7 @@ import {
   getContractById,
   getSettlementById,
 } from '@/data-store/datastore';
-import { kvSMembers, kvGet } from '@/data-store/kv';
+import { kvSMembers, kvGet } from '@/lib/utils/kv';
 import {
   buildMonthIndexKey,
   buildArchiveIndexKey,
@@ -346,3 +346,4 @@ export async function auditArchiveCompleteness(month: number, year: number): Pro
     issues,
   };
 }
+

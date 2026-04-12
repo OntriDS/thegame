@@ -246,10 +246,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const token =
-    req.headers.get('Authorization')?.startsWith('Bearer ')
-      ? req.headers.get('Authorization')!.substring(7).trim()
-      : req.cookies.get('auth_session')?.value || req.cookies.get('admin_session')?.value;
+    const token =
+      req.headers.get('Authorization')?.startsWith('Bearer ')
+        ? req.headers.get('Authorization')!.substring(7).trim()
+        : req.cookies.get('iam_session')?.value;
 
   try {
     const body = (await req.json()) as Character;

@@ -18,7 +18,7 @@ type PermissionsPayload = {
 
 export async function GET(request: NextRequest) {
   try {
-    const token = request.cookies.get('auth_session')?.value;
+    const token = request.cookies.get('iam_session')?.value;
 
     if (!token) {
       return NextResponse.json<PermissionsResponse>(

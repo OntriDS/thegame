@@ -143,7 +143,7 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
 
       if (!(await hasEffect(archiveIndexEffectKey))) {
         const monthKey = formatMonthKey(snapshotMonthDate);
-        const { kvSAdd } = await import('@/data-store/kv');
+        const { kvSAdd } = await import('@/lib/utils/kv');
         const archiveIndexKey = buildArchiveCollectionIndexKey('financials', monthKey);
         await kvSAdd(archiveIndexKey, financial.id);
 
@@ -224,7 +224,7 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
 
     if (!(await hasEffect(archiveIndexEffectKey))) {
       const monthKey = formatMonthKey(snapshotMonthDate);
-      const { kvSAdd } = await import('@/data-store/kv');
+      const { kvSAdd } = await import('@/lib/utils/kv');
       const archiveIndexKey = buildArchiveCollectionIndexKey('financials', monthKey);
       await kvSAdd(archiveIndexKey, financial.id);
 
@@ -327,7 +327,7 @@ export async function onFinancialUpsert(financial: FinancialRecord, previousFina
     const oldMonth = wasArchived ? getArchiveMonth(previousFinancial) : null;
 
     if (newMonth !== oldMonth || (!newMonth && oldMonth)) {
-      const { kvSAdd, kvSRem } = await import('@/data-store/kv');
+      const { kvSAdd, kvSRem } = await import('@/lib/utils/kv');
       const { getAvailableArchiveMonths } = await import('@/data-store/datastore');
       const { buildArchiveMonthsKey } = await import('@/data-store/keys');
 
@@ -504,7 +504,7 @@ export async function removeRecordEffectsOnDelete(recordId: string): Promise<voi
           snapshotDate = endOfMonthUTC(record.createdAt instanceof Date ? record.createdAt : new Date(record.createdAt as string));
         }
         const monthKey = formatMonthKey(snapshotDate);
-        const { kvSRem } = await import('@/data-store/kv');
+        const { kvSRem } = await import('@/lib/utils/kv');
         const archiveIndexKey = buildArchiveCollectionIndexKey('financials', monthKey);
         await kvSRem(archiveIndexKey, recordId);
         await clearEffect(EffectKeys.sideEffect('financial', recordId, `financialSnapshot:${monthKey}`));
@@ -561,3 +561,4 @@ async function removePlayerPointsFromRecord(recordId: string): Promise<void> {
     console.error(`[removePlayerPointsFromRecord] ❌ Failed to remove player points for record ${recordId}:`, error);
   }
 }
+

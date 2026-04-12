@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdminAuth } from '@/lib/api-auth';
-import { kvGet, kvSet } from '@/data-store/kv';
+import { kvGet, kvSet } from '@/lib/utils/kv';
 import { SYNC_STRATEGIES } from '@/workflows/settings/research-sync';
 import fs from 'fs';
 import path from 'path';
@@ -382,3 +382,4 @@ async function applySyncStrategy(
       return { action: 'skipped', reason: 'Unknown strategy' };
   }
 }
+

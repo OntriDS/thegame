@@ -2,7 +2,7 @@
 // Backup Management API for KV-only architecture
 
 import { NextRequest, NextResponse } from 'next/server';
-import { kv } from '@/data-store/kv';
+import { kv } from '@/lib/utils/kv';
 import { requireAdminAuth } from '@/lib/api-auth';
 import { EntityType } from '@/types/enums';
 
@@ -150,3 +150,4 @@ export async function GET(req: NextRequest) {
     );
   }
 }
+

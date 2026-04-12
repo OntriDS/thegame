@@ -1,10 +1,10 @@
 // workflows/settings/transaction-manager.ts
 // Transaction Manager for rollback support in Settings workflows
 
-import { kv } from '@/data-store/kv';
+import { kv } from '@/lib/utils/kv';
 import { buildDataKey, buildIndexKey, buildLogKey } from '@/data-store/keys';
 import { EntityType } from '@/types/enums';
-import { kvScan } from '@/data-store/kv';
+import { kvScan } from '@/lib/utils/kv';
 
 export interface TransactionState {
   clearedEntities: Map<EntityType, string[]>;
@@ -213,3 +213,4 @@ export class TransactionManager {
     return this.state !== null;
   }
 }
+

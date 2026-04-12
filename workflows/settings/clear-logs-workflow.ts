@@ -1,7 +1,7 @@
 // workflows/settings/clear-logs-workflow.ts
 // Clear Logs Workflow for KV-only architecture
 
-import { kv } from '@/data-store/kv';
+import { kv } from '@/lib/utils/kv';
 import { buildLogKey } from '@/data-store/keys';
 import { EntityType } from '@/types/enums';
 import { TransactionManager } from './transaction-manager';
@@ -153,3 +153,4 @@ export class ClearLogsWorkflow {
     }
   }
 }
+

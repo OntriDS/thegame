@@ -4,7 +4,7 @@
  */
 
 export const buildAccountKey = (id: string) => `iam:account:${id}`;
-export const buildAccountByEmailKey = (email: string) => `iam:account_by_email:${email.toLowerCase()}`;
+export const buildAccountByEmailKey = (email: string) => `iam:account:email:${email.toLowerCase()}`;
 
 // M2M API Keys: iam:m2m:{appId}
 export const buildM2MKey = (appId: string) => `iam:m2m:${appId}`;

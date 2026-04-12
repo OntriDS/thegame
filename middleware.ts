@@ -41,7 +41,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // 2. Extract Token (SINGLE SOURCE OF TRUTH)
-  const sessionCookie = request.cookies.get('auth_session')?.value;
+  const sessionCookie = request.cookies.get('iam_session')?.value;
   
   // Support Bearer Token for M2M (Pixelbrain) / API access
   const authHeader = request.headers.get('Authorization');
@@ -73,12 +73,12 @@ export async function middleware(request: NextRequest) {
         });
         if (isLoginPage) {
           const response = NextResponse.next();
-          response.cookies.delete('auth_session');
+          response.cookies.delete('iam_session');
           return response;
         }
 
         const response = NextResponse.redirect(new URL('/admin/login', request.url));
-        response.cookies.delete('auth_session');
+        response.cookies.delete('iam_session');
         return response;
       }
 
@@ -123,13 +123,13 @@ export async function middleware(request: NextRequest) {
     // If they are on the login page with a BAD cookie, let them stay to log in again, but clear the bad cookie
     if (isLoginPage) {
       const response = NextResponse.next();
-      response.cookies.delete('auth_session');
+      response.cookies.delete('iam_session');
       return response;
     }
 
     // Otherwise, redirect to login and clear the bad cookie
     const response = NextResponse.redirect(new URL('/admin/login', request.url));
-    response.cookies.delete('auth_session');
+    response.cookies.delete('iam_session');
     return response;
 
   } catch (error) {

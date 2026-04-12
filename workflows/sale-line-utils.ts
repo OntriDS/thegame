@@ -331,7 +331,7 @@ export async function ensureSoldItemEntities(sale: Sale, previousSale?: Sale): P
 
     const { endOfMonthUTC, getUTCNow: _utcNow } = await import('@/lib/utils/utc-utils');
     const { formatMonthKey, formatForDisplay } = await import('@/lib/utils/date-display-utils');
-    const { kvSAdd } = await import('@/data-store/kv');
+    const { kvSAdd } = await import('@/lib/utils/kv');
     const { buildArchiveMonthsKey, buildMonthIndexKey } = await import('@/data-store/keys');
 
     let changedLines = false;
@@ -496,3 +496,4 @@ export async function ensureSoldItemEntities(sale: Sale, previousSale?: Sale): P
       await upsertSale({ ...sale, lines: newLines }, { skipWorkflowEffects: true, skipLinkEffects: true });
     }
 }
+

@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
   try {
     // In production with KV, read from KV
     if (process.env.UPSTASH_REDIS_REST_URL) {
-      const { kvGet } = await import('@/data-store/kv');
+      const { kvGet } = await import('@/lib/utils/kv');
       const projectStatus = await kvGet('thegame:data:project-status');
 
       if (projectStatus) {
@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
 
     // In production with KV, write to KV
     if (process.env.UPSTASH_REDIS_REST_URL) {
-      const { kvSet } = await import('@/data-store/kv');
+      const { kvSet } = await import('@/lib/utils/kv');
       await kvSet('thegame:data:project-status', projectStatusData);
       return NextResponse.json({ success: true, message: 'Project status updated successfully' });
     } else {
@@ -84,7 +84,7 @@ export async function PUT(req: NextRequest) {
     // Get current project status
     let projectStatus: any;
     if (process.env.UPSTASH_REDIS_REST_URL) {
-      const { kvGet, kvSet } = await import('@/data-store/kv');
+      const { kvGet, kvSet } = await import('@/lib/utils/kv');
       projectStatus = await kvGet('thegame:data:project-status');
 
       if (projectStatus && projectStatus.phasePlan && projectStatus.phasePlan[phaseKey]) {

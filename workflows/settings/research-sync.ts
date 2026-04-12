@@ -1,4 +1,4 @@
-import { kvGet, kvSet } from '@/data-store/kv';
+import { kvGet, kvSet } from '@/lib/utils/kv';
 
 // === TYPES ===
 export interface SyncResult {

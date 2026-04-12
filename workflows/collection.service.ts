@@ -8,7 +8,7 @@ import {
 import { TaskStatus, SaleStatus, EntityType } from '@/types/enums';
 import { formatMonthKey } from '@/lib/utils/date-display-utils';
 import { getUTCNow, endOfMonthUTC } from '@/lib/utils/utc-utils';
-import { kvSAdd } from '@/data-store/kv';
+import { kvSAdd } from '@/lib/utils/kv';
 import { buildArchiveMonthsKey } from '@/data-store/keys';
 
 /**
@@ -65,3 +65,4 @@ export const CollectionService = {
         await kvSAdd(buildArchiveMonthsKey(), monthKey);
     }
 };
+

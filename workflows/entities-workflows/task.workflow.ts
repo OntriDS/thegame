@@ -22,7 +22,7 @@ import { createFinancialRecordFromTask, removeFinancialRecordsCreatedByTask } fr
 import { createCharacterFromTask } from '../character-creation-utils';
 import { ensureCounterpartyRoleDatastore } from '@/lib/utils/character-role-sync-server';
 import { getCategoryForTaskType } from '@/lib/utils/searchable-select-utils';
-import { kvSRem } from '@/data-store/kv';
+import { kvSRem } from '@/lib/utils/kv';
 
 // UTC STANDARDIZATION: Using new UTC utilities
 import { formatMonthKey } from '@/lib/utils/date-display-utils';
@@ -548,7 +548,7 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
   const oldMonth = wasArchived && previousTask ? getTaskArchiveMonth(previousTask) : null;
 
   if (isNowArchived || wasArchived) {
-    const { kvSAdd, kvSRem } = await import('@/data-store/kv');
+    const { kvSAdd, kvSRem } = await import('@/lib/utils/kv');
     const { getAvailableArchiveMonths } = await import('@/data-store/datastore');
 
     const monthIndex = (m: string) => buildArchiveCollectionIndexKey('tasks', m);
@@ -805,7 +805,7 @@ async function cascadeCollectionToChildren(parentTask: Task, collectedAt: Date):
     const { getAllTasks, upsertTask } = await import('@/data-store/datastore');
     const { hasEffect, markEffect } = await import('@/data-store/effects-registry');
     const { formatMonthKey } = await import('@/lib/utils/date-display-utils');
-    const { kvSAdd } = await import('@/data-store/kv');
+    const { kvSAdd } = await import('@/lib/utils/kv');
     const { appendEntityLog } = await import('@/workflows/entities-logging');
 
     // Get all tasks to find children
@@ -950,3 +950,4 @@ export async function ensureTaskCollectedLog(taskId: string): Promise<{
   );
   return { success: true };
 }
+

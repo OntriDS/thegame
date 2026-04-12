@@ -4,7 +4,7 @@
 // Reads: LRANGE (paginated, scoped to one month)
 // Edit/Delete: read-modify-write on monthly list (rare operations, ~50 entries)
 
-import { kvLPush, kvLRange, kvSAdd, kvSMembers, kvDel, kvLSet } from '@/data-store/kv';
+import { kvLPush, kvLRange, kvSAdd, kvSMembers, kvDel, kvLSet } from '@/lib/utils/kv';
 import { buildLogMonthKey, buildLogMonthsIndexKey, buildLogKey } from '@/data-store/keys';
 import type { Sale } from '@/types/entities';
 import { EntityType, LogEventType, SaleStatus } from '@/types/enums';
@@ -36,7 +36,7 @@ function saleReferenceDateForItemSoldAndLog(
   if (sd) return sd;
   return getUTCNow();
 }
-import { kv } from '@/data-store/kv';
+import { kv } from '@/lib/utils/kv';
 
 // ============================================================================
 // Helpers
@@ -1042,4 +1042,5 @@ export async function removeLogEntriesAcrossMonths(
 
   return totalRemoved;
 }
+
 

@@ -22,8 +22,7 @@ function extractAuthToken(req: NextRequest): string | null {
   const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null;
   return (
     bearerToken ||
-    req.cookies.get('auth_session')?.value ||
-    req.cookies.get('admin_session')?.value ||
+    req.cookies.get('iam_session')?.value ||
     null
   );
 }

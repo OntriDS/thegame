@@ -12,8 +12,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ isAuthorized: false, error: 'Unauthorized' }, { status: 401 });
     }
 
-    const token =
-      request.cookies.get('admin_session')?.value || request.cookies.get('auth_session')?.value;
+    const token = request.cookies.get('iam_session')?.value;
     const user = token ? await iamService.verifyJWT(token) : null;
     const isAuthorized = Boolean(user && isFounder(user.roles));
     const characterId = isAuthorized ? user?.characterId : undefined;

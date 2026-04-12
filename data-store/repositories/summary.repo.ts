@@ -1,4 +1,4 @@
-import { kv } from '@/data-store/kv';
+import { kv } from '@/lib/utils/kv';
 import { buildSummaryMonthsKey } from '../keys';
 import type { SummaryTotals } from '@/types/entities';
 
@@ -128,7 +128,7 @@ export class SummaryRepository {
    */
   static async resetSummary(monthYear?: string) {
     const key = monthYear ? this.getMonthlyKey(monthYear) : this.ALL_TIME_KEY;
-    await (await import('@/data-store/kv')).kv.del(key);
+    await (await import('@/lib/utils/kv')).kv.del(key);
   }
 
   /**
@@ -136,7 +136,7 @@ export class SummaryRepository {
    */
   static async getSummary(monthYear?: string): Promise<SummaryTotals> {
     const key = monthYear ? this.getMonthlyKey(monthYear) : this.ALL_TIME_KEY;
-    const data = await (await import('@/data-store/kv')).kv.hgetall(key) as any;
+    const data = await (await import('@/lib/utils/kv')).kv.hgetall(key) as any;
 
     return {
       revenue: Number(data?.revenue || 0),
@@ -153,3 +153,4 @@ export class SummaryRepository {
     };
   }
 }
+

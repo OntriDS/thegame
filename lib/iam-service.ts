@@ -6,7 +6,7 @@
  * Players live only in the Game Data-Store (`thegame:data:player:*`), not `iam:player:*`.
  */
 
-import { kvGet, kvSet, kvSAdd, kvSRem, kvSMembers, kvDel } from '@/data-store/kv';
+import { kvGet, kvSet, kvSAdd, kvSRem, kvSMembers, kvDel } from '@/lib/utils/kv';
 import { buildAccountKey, buildAccountByEmailKey, buildM2MKey, IAM_ACCOUNTS_INDEX, IAM_M2M_INDEX } from './keys';
 import { v4 as uuidv4 } from 'uuid';
 import { SignJWT, jwtVerify } from 'jose';
@@ -18,7 +18,7 @@ import { normalizeCharacterRoles } from '@/lib/character-roles';
 import {
   createPermissionEvaluator,
   type AuthPermissions,
-  THEGAME_PERMISSION_MATRIX,
+  PERMISSION_MATRIX,
 } from '@/integrity/iam/permissions';
 
 /**
@@ -494,7 +494,7 @@ export class IAMService {
   // ═══════════════════════════════════════════════════════════════
 
   getPermissions(user: AuthUser): AuthPermissions {
-    return createPermissionEvaluator(user.roles, THEGAME_PERMISSION_MATRIX);
+    return createPermissionEvaluator(user.roles, PERMISSION_MATRIX);
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -687,7 +687,7 @@ export class IAMService {
   async generateHandshakeToken(targetApp: string, user: AuthUser): Promise<string> {
     const token = uuidv4();
     const key = `${HANDSHAKE_PREFIX}${token}`;
-    const { kv } = await import('@/data-store/kv');
+    const { kv } = await import('@/lib/utils/kv');
     await (kv as any).set(key, { ...user, aud: targetApp }, { ex: 60 });
     return token;
   }
@@ -702,7 +702,7 @@ export class IAMService {
       return null;
     }
 
-    const { kv } = await import('@/data-store/kv');
+    const { kv } = await import('@/lib/utils/kv');
     await kv.del(key);
 
     const { aud, ...user } = data;
@@ -711,7 +711,7 @@ export class IAMService {
 
   async listM2MApps(): Promise<{ appId: string; createdAt: string }[]> {
     const indexed = await kvSMembers(IAM_M2M_INDEX);
-    const { kvScan } = await import('@/data-store/kv');
+    const { kvScan } = await import('@/lib/utils/kv');
     const allKeys = await kvScan('iam:m2m:');
     const fromKeys = allKeys
       .map((k: string) => k.split(':').pop() || '')
@@ -738,3 +738,4 @@ export class IAMService {
 }
 
 export const iamService = new IAMService();
+

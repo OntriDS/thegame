@@ -4,7 +4,7 @@ import 'server-only';
 
 import { LinkType, EntityType } from '@/types/enums';
 import type { Link } from '@/types/entities';
-import { kvGet, kvSet, kvDel, kvSAdd, kvSRem, kvSMembers, kvScan, kvMGet } from '@/data-store/kv';
+import { kvGet, kvSet, kvDel, kvSAdd, kvSRem, kvSMembers, kvScan, kvMGet } from '@/lib/utils/kv';
 import { buildLinkKey, buildLinksGlobalIndexKey, buildLinksIndexKey } from '@/data-store/keys';
 import { validateLink } from './link-validation';
 
@@ -97,5 +97,6 @@ export async function getAllLinks(): Promise<Link[]> {
   const linkKeys = ids.map(buildLinkKey);
   return mgetLinksByKeys(linkKeys);
 }
+
 
 

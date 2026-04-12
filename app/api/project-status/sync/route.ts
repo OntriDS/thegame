@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
 
         // 2. Write to the KV Store (if configured)
         if (process.env.UPSTASH_REDIS_REST_URL) {
-            const { kvSet } = await import('@/data-store/kv');
+            const { kvSet } = await import('@/lib/utils/kv');
 
             // Update the timestamp to now
             fileStatusData.lastUpdated = new Date().toISOString();
@@ -52,3 +52,4 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Failed to sync project status' }, { status: 500 });
     }
 }
+

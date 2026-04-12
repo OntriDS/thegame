@@ -184,7 +184,7 @@ export class SummaryService {
    */
   static async rebuildAllSummaries(): Promise<{ success: boolean; count: number }> {
     const { formatMonthKey } = await import('@/lib/utils/date-utils');
-    const { kvDel, kvSAdd } = await import('@/data-store/kv');
+    const { kvDel, kvSAdd } = await import('@/lib/utils/kv');
     const { buildSummaryMonthsKey } = await import('@/data-store/keys');
     
     // 1. Reset Global All-Time summary
@@ -291,7 +291,7 @@ export class SummaryService {
   }
 
   private static async getMonthKeysFromLiveIndexes(): Promise<string[]> {
-    const { kvScan } = await import('@/data-store/kv');
+    const { kvScan } = await import('@/lib/utils/kv');
     const prefixes = [
       'thegame:index:sale:by-month:',
       'thegame:index:task:by-month:',
@@ -311,3 +311,4 @@ export class SummaryService {
     return [...months];
   }
 }
+

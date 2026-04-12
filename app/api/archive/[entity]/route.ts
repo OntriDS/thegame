@@ -104,7 +104,7 @@ export async function POST(
     const monthKey = formatMonthKey(soldAt);
 
     // Add to index instead of snapshotting
-    const { kvSAdd } = await import('@/data-store/kv');
+    const { kvSAdd } = await import('@/lib/utils/kv');
     const { buildArchiveCollectionIndexKey } = await import('@/data-store/keys');
     await kvSAdd(buildArchiveCollectionIndexKey('items', monthKey), normalizedSnapshot.id);
 

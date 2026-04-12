@@ -22,38 +22,36 @@ export interface AuthPermissions {
   can: (resource: string, action: string) => boolean;
 }
 
-export const THEGAME_KNOWN_ROLES = {
+export const CHARACTERS_SPECIAL_ROLES = {
   FOUNDER: 'founder',
-  TEAM: 'team',
-  APPRENTICE: 'apprentice',
-  CUSTOMER: 'customer',
   PLAYER: 'player',
-  PARTNER: 'partner',
-  BENEFICIARY: 'beneficiary',
+  APPRENTICE: 'apprentice',
+  TEAM: 'team',
   FAMILY: 'family',
   INVESTOR: 'investor',
+  PARTNER: 'partner',
   AI_AGENT: 'ai-agent',
-  FRIEND: 'friend',
-  TEAM_MEMBER: 'team-member',
+  CUSTOMER: 'customer',
+  BENEFICIARY: 'beneficiary',
 } as const;
 
-export const GOD_RIGHT_ROLE = THEGAME_KNOWN_ROLES.FOUNDER;
+// FOUNDER acts as the 'System Admin, God Rights Role'.
+export const FOUNDER_ROLE = CHARACTERS_SPECIAL_ROLES.FOUNDER;
 
-export const THEGAME_SPECIAL_ROLES = [
-  THEGAME_KNOWN_ROLES.FOUNDER,
-  THEGAME_KNOWN_ROLES.TEAM,
-  THEGAME_KNOWN_ROLES.APPRENTICE,
-  THEGAME_KNOWN_ROLES.CUSTOMER,
-  THEGAME_KNOWN_ROLES.PLAYER,
-  THEGAME_KNOWN_ROLES.PARTNER,
-  THEGAME_KNOWN_ROLES.BENEFICIARY,
-  THEGAME_KNOWN_ROLES.FAMILY,
-  THEGAME_KNOWN_ROLES.INVESTOR,
-  THEGAME_KNOWN_ROLES.AI_AGENT,
-  THEGAME_KNOWN_ROLES.FRIEND,
+export const SPECIAL_ROLES = [
+  CHARACTERS_SPECIAL_ROLES.FOUNDER,
+  CHARACTERS_SPECIAL_ROLES.PLAYER,
+  CHARACTERS_SPECIAL_ROLES.APPRENTICE,
+  CHARACTERS_SPECIAL_ROLES.TEAM,
+  CHARACTERS_SPECIAL_ROLES.FAMILY,
+  CHARACTERS_SPECIAL_ROLES.INVESTOR,
+  CHARACTERS_SPECIAL_ROLES.PARTNER,
+  CHARACTERS_SPECIAL_ROLES.AI_AGENT,
+  CHARACTERS_SPECIAL_ROLES.CUSTOMER,
+  CHARACTERS_SPECIAL_ROLES.BENEFICIARY,
 ] as const;
 
-export const THEGAME_PERMISSION_MATRIX: readonly PermissionRule[] = [
+export const PERMISSION_MATRIX: readonly PermissionRule[] = [
   { resource: 'tasks', action: 'read', roles: ['founder', 'team'] },
   { resource: 'tasks', action: 'write', roles: ['founder', 'team'] },
   { resource: 'tasks', action: 'delete', roles: ['founder'] },
@@ -100,7 +98,7 @@ export function canAccess(
   roles: unknown,
   resource: string,
   action: string,
-  permissionMatrix: readonly PermissionRule[] = THEGAME_PERMISSION_MATRIX,
+  permissionMatrix: readonly PermissionRule[] = PERMISSION_MATRIX,
 ): boolean {
   const normalizedRoles = normalizeRoles(roles);
   const normalizedResource = normalizeResourceAction(resource);
@@ -118,40 +116,40 @@ export function canAccess(
 }
 
 export function isGameAdmin(roles: unknown): boolean {
-  return hasAnyRole(roles, [GOD_RIGHT_ROLE]);
+  return hasAnyRole(roles, [FOUNDER_ROLE]);
 }
 
 export function isFounder(roles: unknown): boolean {
-  return hasAnyRole(roles, [THEGAME_KNOWN_ROLES.FOUNDER]);
+  return hasAnyRole(roles, [CHARACTERS_SPECIAL_ROLES.FOUNDER]);
 }
 
 export function isTeam(roles: unknown): boolean {
-  return hasAnyRole(roles, [THEGAME_KNOWN_ROLES.TEAM]);
+  return hasAnyRole(roles, [CHARACTERS_SPECIAL_ROLES.TEAM]);
 }
 
 export function isApprentice(roles: unknown): boolean {
-  return hasAnyRole(roles, [THEGAME_KNOWN_ROLES.APPRENTICE]);
+  return hasAnyRole(roles, [CHARACTERS_SPECIAL_ROLES.APPRENTICE]);
 }
 
 export function isCustomer(roles: unknown): boolean {
-  return hasAnyRole(roles, [THEGAME_KNOWN_ROLES.CUSTOMER]);
+  return hasAnyRole(roles, [CHARACTERS_SPECIAL_ROLES.CUSTOMER]);
 }
 
 export function isPlayer(roles: unknown): boolean {
-  return hasAnyRole(roles, [THEGAME_KNOWN_ROLES.PLAYER]);
+  return hasAnyRole(roles, [CHARACTERS_SPECIAL_ROLES.PLAYER]);
 }
 
 export function isPartner(roles: unknown): boolean {
-  return hasAnyRole(roles, [THEGAME_KNOWN_ROLES.PARTNER]);
+  return hasAnyRole(roles, [CHARACTERS_SPECIAL_ROLES.PARTNER]);
 }
 
 export function isSpecialRole(roles: unknown): boolean {
-  return hasAnyRole(roles, THEGAME_SPECIAL_ROLES);
+  return hasAnyRole(roles, SPECIAL_ROLES);
 }
 
 export function createPermissionEvaluator(
   rawRoles: unknown,
-  permissionMatrix: readonly PermissionRule[] = THEGAME_PERMISSION_MATRIX,
+  permissionMatrix: readonly PermissionRule[] = PERMISSION_MATRIX,
 ): AuthPermissions {
   const normalizedRoles = normalizeRoles(rawRoles);
   const hasAdminRight = isGameAdmin(normalizedRoles);

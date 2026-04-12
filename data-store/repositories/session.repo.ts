@@ -1,6 +1,6 @@
 // data-store/repositories/session.repo.ts
 import type { AISession } from '@/types/entities';
-import { kvGet, kvMGet, kvSet, kvDel, kvSMembers, kvSAdd, kvSRem } from '@/data-store/kv';
+import { kvGet, kvMGet, kvSet, kvDel, kvSMembers, kvSAdd, kvSRem } from '@/lib/utils/kv';
 import { buildDataKey, buildIndexKey } from '@/data-store/keys';
 import { EntityType } from '@/types/enums';
 
@@ -52,4 +52,5 @@ export async function deleteSession(id: string): Promise<void> {
   await kvDel(key);
   await kvSRem(indexKey, id);
 }
+
 

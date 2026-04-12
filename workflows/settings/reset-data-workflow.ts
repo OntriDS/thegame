@@ -1,7 +1,7 @@
 // workflows/settings/reset-data-workflow.ts
 // Reset Data Workflow for KV-only architecture
 
-import { kv, kvDel, kvDelMany, kvScan } from '@/data-store/kv';
+import { kv, kvDel, kvDelMany, kvScan } from '@/lib/utils/kv';
 import { getUTCNow } from '@/lib/utils/utc-utils';
 import { buildDataKey, buildIndexKey, buildLogKey, buildLinksGlobalIndexKey, buildLinksIndexKey, buildLogMonthKey, buildLogMonthsIndexKey } from '@/data-store/keys';
 import { EntityType, SiteType, SiteStatus, PhysicalBusinessType, DigitalSiteType, SystemSiteType } from '@/types/enums';
@@ -767,3 +767,4 @@ export class ResetDataWorkflow {
     }
   }
 }
+

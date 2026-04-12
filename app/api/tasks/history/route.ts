@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdminAuth } from '@/lib/api-auth';
 import { getTaskById } from '@/data-store/datastore';
-import { kvSMembers } from '@/data-store/kv';
+import { kvSMembers } from '@/lib/utils/kv';
 import { buildArchiveCollectionIndexKey } from '@/data-store/keys';
 import { formatMonthKey } from '@/lib/utils/date-utils';
 import type { Task } from '@/types/entities';
@@ -57,3 +57,4 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: 'Failed to load task history' }, { status: 500 });
     }
 }
+

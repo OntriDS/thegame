@@ -438,27 +438,27 @@ export const PAYMENT_METHOD_CATEGORIES = {
 
 /** Character roles */
 export enum CharacterRole {
-  FOUNDER = 'Founder',
-  TEAM = 'Team',
-  AI_AGENT = 'AI-Agent',
-  CUSTOMER = 'Customer',
-  BENEFICIARY = 'Beneficiary',
-  PLAYER = 'Player',
-  APPRENTICE = 'Apprentice',
-  FAMILY = 'Family',
-  INVESTOR = 'Investor',
-  PARTNER = 'Partner',
-  ADMIN = 'Admin',
-  DESIGNER = 'Designer',
-  MAKER = 'Maker',
-  SELLER = 'Seller',
-  RESEARCHER = 'Researcher',
-  DEVELOPER = 'Developer',
-  BOSS = 'Boss',
-  ASSISTANT = 'Assistant',
-  COLLABORATOR = 'Collaborator',
-  STUDENT = 'Student',
-  FRIEND = 'Friend'
+  FOUNDER = 'founder',
+  TEAM = 'team',
+  AI_AGENT = 'ai-agent',
+  CUSTOMER = 'customer',
+  BENEFICIARY = 'beneficiary',
+  PLAYER = 'player',
+  APPRENTICE = 'apprentice',
+  FAMILY = 'family',
+  INVESTOR = 'investor',
+  PARTNER = 'partner',
+  ADMIN = 'admin',
+  DESIGNER = 'designer',
+  MAKER = 'maker',
+  SELLER = 'seller',
+  RESEARCHER = 'researcher',
+  DEVELOPER = 'developer',
+  BOSS = 'boss',
+  ASSISTANT = 'assistant',
+  COLLABORATOR = 'collaborator',
+  STUDENT = 'student',
+  FRIEND = 'friend'
 }
 
 /** Character role types for UI organization and permissions */

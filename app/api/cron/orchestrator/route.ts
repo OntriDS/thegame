@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
 
         // --- JOB: Pixelbrain Autonomous Pulse (Piggyback Strategy) ---
         // We read the shared KV directly from the common Redis instance
-        const { kv } = await import('@/data-store/kv');
+        const { kv } = await import('@/lib/utils/kv');
         const pulseOn = await kv.get('pixelbrain:config:pulse') === true || await kv.get('pixelbrain:config:pulse') === 'ON';
         
         if (pulseOn) {
@@ -69,3 +69,4 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
     }
 }
+

@@ -438,7 +438,7 @@ export async function onSaleUpsert(sale: Sale, previousSale?: Sale): Promise<voi
   const oldMonth = wasArchived ? getArchiveMonth(previousSale!) : null;
 
   if (newMonth !== oldMonth || (!newMonth && oldMonth)) {
-    const { kvSAdd, kvSRem } = await import('@/data-store/kv');
+    const { kvSAdd, kvSRem } = await import('@/lib/utils/kv');
     const { getAvailableArchiveMonths } = await import('@/data-store/datastore');
     const { buildArchiveMonthsKey } = await import('@/data-store/keys');
 
@@ -671,3 +671,4 @@ async function removeSoldItemRowsForDeletedSale(saleId: string, sale: Sale | nul
     console.error(`[removeSoldItemRowsForDeletedSale] ❌ Failed for sale ${saleId}:`, error);
   }
 }
+

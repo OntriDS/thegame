@@ -10,8 +10,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
-    // Check for both legacy and multi-user cookies
-    const token = request.cookies.get('auth_session')?.value || request.cookies.get('admin_session')?.value;
+    const token = request.cookies.get('iam_session')?.value;
 
     if (!token) {
       return NextResponse.json<AuthCheckResponse>(

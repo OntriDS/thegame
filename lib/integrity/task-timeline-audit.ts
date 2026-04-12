@@ -2,7 +2,7 @@ import 'server-only';
 
 import { isValid } from 'date-fns';
 import { getAllTasks, getAvailableArchiveMonths, getTaskById } from '@/data-store/datastore';
-import { kvSMembers } from '@/data-store/kv';
+import { kvSMembers } from '@/lib/utils/kv';
 import { buildArchiveCollectionIndexKey, buildTaskActiveIndexKey } from '@/data-store/keys';
 import { formatMonthKey } from '@/lib/utils/date-utils';
 import { isTaskActive, isTaskCompleted } from '@/lib/utils/task-active-utils';
@@ -181,3 +181,4 @@ export async function auditActiveTasksMissingFromActiveIndex(): Promise<Integrit
     issues,
   };
 }
+

@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
       isAuthorized = true;
     } else {
       // Fallback: Check for valid admin session cookie for UI-based registration
-      const token = req.cookies.get('admin_session')?.value || req.cookies.get('auth_session')?.value;
+      const token = req.cookies.get('iam_session')?.value;
       const user = token ? await iamService.verifyJWT(token) : null;
       
       if (user && user.roles.includes(CharacterRole.FOUNDER)) {

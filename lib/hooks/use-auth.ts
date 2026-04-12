@@ -20,13 +20,8 @@ export function useAuth() {
   const [error, setError] = useState<Error | null>(null);
   const [permissions, setPermissions] = useState<AuthPermissions | null>(null);
 
-  // ✅ DETECT WHICH AUTH SYSTEM
-  // Passphrase-only flow sets `admin_session` but does NOT set `auth_session`.
-  // Email/password flow sets both cookies.
-  const isPassphraseUser =
-    typeof document !== 'undefined' &&
-    getCookie('admin_session') !== undefined &&
-    getCookie('auth_session') === undefined;
+  // Legacy passphrase detection removed with unified cookie migration.
+  const isPassphraseUser = false;
 
   // ✅ LOAD AUTH STATE BASED ON SYSTEM
   useEffect(() => {
@@ -152,47 +147,23 @@ export function useAuth() {
       setIsLoading(true);
       setError(null);
 
-      if (isPassphraseUser) {
-        const response = await fetch('/api/auth/passphrase-login/logout', {
-          method: 'POST'
-        });
+      await fetch('/api/auth/logout', {
+        method: 'POST'
+      });
 
-        if (!response.ok) {
-          throw new Error('Logout failed');
-        }
+      setUser(null);
+      setPermissions(null);
 
-        setUser(null);
-        setPermissions(null);
-
-        // Clear window state
-        if (typeof window !== 'undefined') {
-          (window as any).__AUTH_STATE__ = {
-            isAuthenticated: false,
-            user: null,
-            permissions: null
-          };
-        }
-
-        router.push('/admin/login');
-      } else {
-        await fetch('/api/auth/logout', {
-          method: 'POST'
-        });
-
-        setUser(null);
-        setPermissions(null);
-
-        // Clear window state
-        if (typeof window !== 'undefined') {
-          (window as any).__AUTH_STATE__ = {
-            isAuthenticated: false,
-            user: null,
-            permissions: null
-          };
-        }
-
-        router.push('/admin/login');
+      // Clear window state
+      if (typeof window !== 'undefined') {
+        (window as any).__AUTH_STATE__ = {
+          isAuthenticated: false,
+          user: null,
+          permissions: null
+        };
       }
+
+      router.push('/admin/login');
     } catch (err) {
       console.error('[useAuth] Logout error:', err);
       setError(err as Error);

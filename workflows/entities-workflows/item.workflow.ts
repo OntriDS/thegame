@@ -128,7 +128,7 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
     
     // THEGAME MARCH FIX: Standardize on monthly index, no 'collected' archive for items
     const { buildMonthIndexKey } = await import('@/data-store/keys');
-    const { kvSAdd } = await import('@/data-store/kv');
+    const { kvSAdd } = await import('@/lib/utils/kv');
     await kvSAdd(buildMonthIndexKey(EntityType.ITEM, monthKey), cloneId);
     await kvSAdd(buildArchiveMonthsKey(), monthKey);
 
@@ -239,7 +239,7 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
       const currentTargetDate = item.soldAt || item.createdAt || getUTCNow();
       const targetMonth = formatMonthKey(endOfMonthUTC(currentTargetDate));
 
-      const { kvSAdd, kvSRem } = await import('@/data-store/kv');
+      const { kvSAdd, kvSRem } = await import('@/lib/utils/kv');
       const { buildMonthIndexKey } = await import('@/data-store/keys');
 
       // Remove from all other months to ensure single source of truth
@@ -285,7 +285,7 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
       }
     } else {
       // Clean up indexes if item reverts to an active inventory state
-      const { kvSRem } = await import('@/data-store/kv');
+      const { kvSRem } = await import('@/lib/utils/kv');
       const { buildMonthIndexKey } = await import('@/data-store/keys');
       const allMonths = await getAvailableArchiveMonths();
       for (const m of allMonths) {
@@ -371,5 +371,6 @@ export async function processItemCreationEffects(item: Item): Promise<void> {
   // Items are just inventory/assets - financial effects come from Tasks/Records
   // This is different from Tasks/Records which have cost/revenue properties
 }
+
 
 

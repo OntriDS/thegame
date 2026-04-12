@@ -1,7 +1,7 @@
 // workflows/settings/export-data-workflow.ts
 // Export Data Workflow for KV-only architecture
 
-import { kv } from '@/data-store/kv';
+import { kv } from '@/lib/utils/kv';
 import { buildDataKey, buildIndexKey } from '@/data-store/keys';
 import { EntityType } from '@/types/enums';
 import { getUTCNow } from '@/lib/utils/utc-utils';
@@ -313,3 +313,4 @@ export class ExportDataWorkflow {
     }
   }
 }
+
