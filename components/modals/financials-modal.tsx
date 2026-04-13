@@ -53,30 +53,6 @@ import { ensureCounterpartyRole } from '@/lib/utils/character-role-sync';
 // FinancialsModal: UI-only form for financial record data collection and validation
 // Side effects and persistence handled by parent component
 
-
-// Helper function to determine default item status (same as Task completion)
-function getDefaultItemStatus(itemType: string, isSold: boolean = false): ItemStatus {
-  if (isSold) {
-    return ItemStatus.SOLD;
-  }
-
-  switch (itemType) {
-    case 'Product':
-    case 'Merch':
-    case 'Print':
-    case 'Sticker':
-      return ItemStatus.FOR_SALE;
-    case 'Material':
-    case 'Supply':
-      return ItemStatus.IDLE;
-    case 'Equipment':
-    case 'Tool':
-      return ItemStatus.IDLE;
-    default:
-      return ItemStatus.FOR_SALE; // Default fallback
-  }
-}
-
 const toCustomerCounterpartyRole = (role?: CharacterRole): CustomerCounterpartyRole =>
   role === CharacterRole.BENEFICIARY ? CharacterRole.BENEFICIARY : CharacterRole.CUSTOMER;
 

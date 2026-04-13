@@ -9,6 +9,7 @@ import {
   PrintSubType,
   StickerSubType,
   MerchSubType,
+  CraftSubType,
   MaterialSubType,
   EquipmentSubType,
   BundleSubType
@@ -23,6 +24,7 @@ export function getItemCategory(itemType: ItemType): ItemCategory {
     case ItemType.PRINT:
     case ItemType.STICKER:
     case ItemType.MERCH:
+    case ItemType.CRAFT:
       return ItemCategory.MODEL_ITEM;
     case ItemType.BUNDLE:
       return ItemCategory.BUNDLE_ITEM;
@@ -47,6 +49,8 @@ export function getSubTypesForItemType(itemType: ItemType): SubItemType[] {
       return Object.values(StickerSubType);
     case ItemType.MERCH:
       return Object.values(MerchSubType);
+    case ItemType.CRAFT:
+      return Object.values(CraftSubType);
     case ItemType.BUNDLE:
       return Object.values(BundleSubType);
     case ItemType.MATERIAL:
@@ -62,7 +66,7 @@ export function getSubTypesForItemType(itemType: ItemType): SubItemType[] {
 export function getItemTypesForCategory(category: ItemCategory): ItemType[] {
   switch (category) {
     case ItemCategory.MODEL_ITEM:
-      return [ItemType.DIGITAL, ItemType.ARTWORK, ItemType.PRINT, ItemType.STICKER, ItemType.MERCH];
+      return [ItemType.DIGITAL, ItemType.ARTWORK, ItemType.PRINT, ItemType.STICKER, ItemType.MERCH, ItemType.CRAFT];
     case ItemCategory.BUNDLE_ITEM:
       return [ItemType.BUNDLE];
     case ItemCategory.RESOURCE_ITEM:

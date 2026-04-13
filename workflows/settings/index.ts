@@ -6,6 +6,7 @@ export { ClearLogsWorkflow } from './clear-logs-workflow';
 export { ClearCacheWorkflow } from './clear-cache-workflow';
 export { ExportDataWorkflow } from './export-data-workflow';
 export { ImportDataWorkflow } from './import-data-workflow';
+export { NormalizeItemTaxonomyWorkflow } from './normalize-item-taxonomy-workflow';
 
 // Common types
 export type { SettingsResult } from './reset-data-workflow';

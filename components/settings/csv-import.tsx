@@ -17,6 +17,7 @@ import { FileReference } from '@/types/entities';
 import { calculateTotalQuantity } from '@/lib/utils/business-utils';
 import { getAllStations } from '@/lib/utils/business-structure-utils';
 import { getSiteByName } from '@/lib/utils/site-options-utils';
+import { normalizeItemTypeString, normalizeSubItemTypeForItemType } from '@/lib/item-taxonomy-normalize';
 
 type ImportMode = 'replace' | 'merge' | 'add-only';
 
@@ -196,17 +197,16 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
 
       // Stock is already properly set above based on site validation
 
-      // Determine item type from CSV or use selected type
-      const itemTypeFromCSV = row.ItemType || row.itemType || ItemType.DIGITAL;
-
-      // Validate that the item type exists in our enums
-      if (!Object.values(ItemType).includes(itemTypeFromCSV as ItemType)) {
-        console.error(`Invalid item type in CSV: "${itemTypeFromCSV}" at row ${index + 1}`);
+      // Determine item type from CSV or use selected type (legacy title-case accepted)
+      const rawItemType = row.ItemType || row.itemType || ItemType.DIGITAL;
+      const resolvedItemType = normalizeItemTypeString(String(rawItemType));
+      if (!resolvedItemType || !Object.values(ItemType).includes(resolvedItemType)) {
+        console.error(`Invalid item type in CSV: "${rawItemType}" at row ${index + 1}`);
         console.error(`Valid types are:`, Object.values(ItemType));
-        throw new Error(`Invalid item type: "${itemTypeFromCSV}" at row ${index + 1}. Valid types are: ${Object.values(ItemType).join(', ')}`);
+        throw new Error(`Invalid item type: "${rawItemType}" at row ${index + 1}. Valid types are: ${Object.values(ItemType).join(', ')}`);
       }
 
-      const finalItemType = itemTypeFromCSV as ItemType;
+      const finalItemType = resolvedItemType;
 
       // Handle collection - if empty, set to "No Collection"
       const collection = row.Collection || row.collection;
@@ -255,7 +255,11 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
         soldThisMonth,
         lastRestockDate,
         year: parseInt(row.Year || row.year) || new Date().getFullYear(),
-        subItemType: (row.SubItemType || row.subItemType) as SubItemType | undefined,
+        subItemType: (() => {
+          const raw = row.SubItemType || row.subItemType;
+          if (!raw || String(raw).trim() === '') return undefined;
+          return normalizeSubItemTypeForItemType(finalItemType, String(raw)) as SubItemType | undefined;
+        })(),
         imageUrl: row.ImageUrl || undefined,
         originalFiles: originalFiles.length > 0 ? originalFiles : undefined,
         accessoryFiles: accessoryFiles.length > 0 ? accessoryFiles : undefined,
@@ -425,6 +429,7 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
     const stickerSubtypes = getSubTypesForItemType(ItemType.STICKER);
     const bundleSubtypes = getSubTypesForItemType(ItemType.BUNDLE);
     const merchSubtypes = getSubTypesForItemType(ItemType.MERCH);
+    const craftSubtypes = getSubTypesForItemType(ItemType.CRAFT);
     const materialSubtypes = getSubTypesForItemType(ItemType.MATERIAL);
     const equipmentSubtypes = getSubTypesForItemType(ItemType.EQUIPMENT);
 
@@ -432,15 +437,16 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
     const collections = Object.values(Collection);
 
     const template = `ItemType,SubItemType,Name,TotalQuantity,Site,Status,Collection,UnitCost,AdditionalCost,Price,Value,QuantitySold,TargetAmount,SoldThisMonth,LastRestockDate,SourceTaskId,Year,ImageUrl,OriginalFiles,AccessoryFiles,Width,Height,Size
-    "Digital","${digitalSubtypes[0]}","Organic Imaginary Digital",0,"Digital Space","Idle","${collections[1]}",0.00,0.00,25.00,0.00,0,,,,"",2024,https://example.com/organic-imaginary-digital.jpg,,,,,
-    "Artwork","${artworkSubtypes[0]}","Organic Imaginary Canvas",1,"Home","For Sale","${collections[1]}",5.00,0.00,150.00,0.00,0,,,,"",2024,https://example.com/organic-imaginary-canvas.jpg,,,,30,40,
-    "Print","${printSubtypes[0]}","Organic Imaginary Print",0,"None","To Order","${collections[1]}",5.00,0.00,25.00,0.00,0,,,,"",2024,https://example.com/organic-imaginary-canvas.jpg,,,,30,40,
-    "Sticker","${stickerSubtypes[0]}","Red Dope Crew Sticker",100,"Feria Box","For Sale","${collections[6]}",0.30,0.00,2.50,0.00,0,,,,"",2024,https://example.com/red-dope-crew-sticker.jpg,,,,5,5,
-    "Bundle","${bundleSubtypes[0]}","Smoking Lounge Stickers",80,"Smoking Lounge","For Sale","${collections[6]}",0.30,0.00,2.50,0.00,0,,,,"",2024,https://example.com/smoking-lounge-bundle.jpg,,,,,,,
-    "Merch","${merchSubtypes[0]}","Dope Crew T-Shirt",35,"Home","For Sale","${collections[6]}",8.00,0.00,25.00,0.00,0,,,,"",2024,https://example.com/dope-crew-tshirt.jpg,,,,,M,
-    "Merch","${merchSubtypes[2]}","Dope Crew Shoes",20,"Home","For Sale","${collections[6]}",15.00,0.00,45.00,0.00,0,,,,"",2024,https://example.com/dope-crew-tshirt.jpg,,,,,7.5,
-    "Material","${materialSubtypes[0]}","Acrylic Paint Set",10,"Home","For Sale","Art Supplies",15.00,0.00,25.00,0.00,0,,,,"",2024,https://example.com/acrylic-paint-set.jpg,,,,,,,
-    "Equipment","${equipmentSubtypes[0]}","Canvas Stretcher",2,"Home","For Sale","Art Tools",45.00,0.00,75.00,0.00,0,,,,"",2024,https://example.com/acrylic-paint-set.jpg,,,,,`;
+    "${ItemType.DIGITAL}","${digitalSubtypes[0]}","Organic Imaginary Digital",0,"Digital Space","Idle","${collections[1]}",0.00,0.00,25.00,0.00,0,,,,"",2024,https://example.com/organic-imaginary-digital.jpg,,,,,
+    "${ItemType.ARTWORK}","${artworkSubtypes[0]}","Organic Imaginary Canvas",1,"Home","For Sale","${collections[1]}",5.00,0.00,150.00,0.00,0,,,,"",2024,https://example.com/organic-imaginary-canvas.jpg,,,,30,40,
+    "${ItemType.PRINT}","${printSubtypes[0]}","Organic Imaginary Print",0,"None","To Order","${collections[1]}",5.00,0.00,25.00,0.00,0,,,,"",2024,https://example.com/organic-imaginary-canvas.jpg,,,,30,40,
+    "${ItemType.STICKER}","${stickerSubtypes[0]}","Red Dope Crew Sticker",100,"Feria Box","For Sale","${collections[6]}",0.30,0.00,2.50,0.00,0,,,,"",2024,https://example.com/red-dope-crew-sticker.jpg,,,,5,5,
+    "${ItemType.BUNDLE}","${bundleSubtypes[0]}","Smoking Lounge Stickers",80,"Smoking Lounge","For Sale","${collections[6]}",0.30,0.00,2.50,0.00,0,,,,"",2024,https://example.com/smoking-lounge-bundle.jpg,,,,,,,
+    "${ItemType.MERCH}","${merchSubtypes[0]}","Dope Crew T-Shirt",35,"Home","For Sale","${collections[6]}",8.00,0.00,25.00,0.00,0,,,,"",2024,https://example.com/dope-crew-tshirt.jpg,,,,,M,
+    "${ItemType.MERCH}","${merchSubtypes[2]}","Dope Crew Shoes",20,"Home","For Sale","${collections[6]}",15.00,0.00,45.00,0.00,0,,,,"",2024,https://example.com/dope-crew-tshirt.jpg,,,,,7.5,
+    "${ItemType.CRAFT}","${craftSubtypes[0]}","Gallery Frame 50x70",3,"Home","For Sale","${collections[6]}",12.00,0.00,35.00,0.00,0,,,,"",2024,https://example.com/gallery-frame.jpg,,,,,,,
+    "${ItemType.MATERIAL}","${materialSubtypes[0]}","Acrylic Paint Set",10,"Home","For Sale","Art Supplies",15.00,0.00,25.00,0.00,0,,,,"",2024,https://example.com/acrylic-paint-set.jpg,,,,,,,
+    "${ItemType.EQUIPMENT}","${equipmentSubtypes[0]}","Canvas Stretcher",2,"Home","For Sale","Art Tools",45.00,0.00,75.00,0.00,0,,,,"",2024,https://example.com/acrylic-paint-set.jpg,,,,,`;
 
     const blob = new Blob([template], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);

@@ -707,7 +707,7 @@ export function InventoryDisplay({
 
 
 
-  // Helper function to get proper display names for tabs
+  // Helper function to get proper display names for tabs (plural where the UI expects it)
   const getTabDisplayName = (itemType: ItemType): string => {
     switch (itemType) {
       case ItemType.DIGITAL:
@@ -722,12 +722,14 @@ export function InventoryDisplay({
         return 'Merch';
       case ItemType.CRAFT:
         return 'Craft';
+      case ItemType.BUNDLE:
+        return 'Bundles';
       case ItemType.MATERIAL:
         return 'Materials';
       case ItemType.EQUIPMENT:
         return 'Equipment';
       default:
-        return itemType;
+        return String(itemType);
     }
   };
 

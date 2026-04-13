@@ -27,6 +27,7 @@ import {
     ItemStatus
 } from '@/types/enums';
 import { SubItemType } from '@/types/type-aliases';
+import { getItemTypeLabel, getSubItemTypeLabel } from '@/lib/constants/item-taxonomy-labels';
 
 // ============================================================================
 // ITEM HELPERS
@@ -99,7 +100,7 @@ export function createItemOptions(
             return {
                 value: model.primaryId,
                 label: `${model.name} (${model.totalQty})`,
-                group: groupByStation ? model.station : model.type,
+                group: groupByStation ? model.station : getItemTypeLabel(model.type),
                 category: category
             };
         });
@@ -171,7 +172,7 @@ export function createDistinctItemOptions(
         options.push({
             value: item.id,
             label,
-            group: item.type,
+            group: getItemTypeLabel(item.type),
             category,
         });
     }
@@ -239,7 +240,7 @@ export function createItemOptionsForSite(
             return {
                 value: `${m.primaryId}:${m.siteId}`,
                 label: `${m.name} - ${siteName}: ${m.quantity}`,
-                group: m.type,
+                group: getItemTypeLabel(m.type),
                 category: category
             };
         });
@@ -255,7 +256,7 @@ export function createItemOptionsForSite(
             options.push({
                 value: `${item.id}:none`,
                 label: `${item.name} (Qty: 0)`,
-                group: item.type,
+                group: getItemTypeLabel(item.type),
                 category: category
             });
         }
@@ -276,7 +277,7 @@ export function createItemTypeOptionsWithCategories() {
         const category = getCategoryForItemType(type);
         options.push({
             value: type,
-            label: type,
+            label: getItemTypeLabel(type),
             group: category, // Group by high-level category
             category: category
         });
@@ -293,8 +294,8 @@ export function createItemTypeSubTypeOptions() {
         Object.values(subTypes).forEach(subType => {
             options.push({
                 value: `${itemType}:${subType}`,
-                label: subType,
-                group: itemType
+                label: getSubItemTypeLabel(subType),
+                group: getItemTypeLabel(itemType)
             });
         });
     };

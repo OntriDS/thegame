@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { ClientAPI } from '@/lib/client-api';
 import { ItemType, ItemStatus } from '@/types/enums';
 import { calculateTotalQuantity } from '@/lib/utils/business-utils';
+import { normalizeItemTypeString } from '@/lib/item-taxonomy-normalize';
 
 export default function ItemsImportExport() {
   const [isImportOpen, setIsImportOpen] = useState(false);
@@ -32,7 +33,7 @@ export default function ItemsImportExport() {
     const byStatus = {} as Record<string, number>;
     
     Object.values(ItemType).forEach(type => {
-      byType[type] = items.filter(item => item.type === type).length;
+      byType[type] = items.filter((item) => (normalizeItemTypeString(String(item.type)) ?? item.type) === type).length;
     });
     
     items.forEach(item => {

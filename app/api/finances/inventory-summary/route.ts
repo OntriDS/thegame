@@ -3,6 +3,7 @@ import { getAllItems } from '@/data-store/datastore';
 import { requireAdminAuth } from '@/lib/api-auth';
 import { ItemType } from '@/types/enums';
 import { Item } from '@/types/entities';
+import { normalizeItemTypeString } from '@/lib/item-taxonomy-normalize';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
@@ -52,7 +53,9 @@ export async function GET(req: NextRequest) {
             // The getAllItems() returns all items. 
             // The stock quantity logic handles availability.
 
-            const bucketKey = ITEM_TYPE_TO_BUCKET[item.type as ItemType];
+            const canonicalType =
+              normalizeItemTypeString(String(item.type)) ?? (item.type as ItemType);
+            const bucketKey = ITEM_TYPE_TO_BUCKET[canonicalType];
             if (!bucketKey) return;
 
             const quantity = (item.stock || []).reduce((sum, stockPoint) => sum + (Number(stockPoint.quantity) || 0), 0);

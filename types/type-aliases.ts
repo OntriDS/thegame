@@ -13,6 +13,7 @@ import {
   PrintSubType,
   StickerSubType,
   MerchSubType,
+  CraftSubType,
   MaterialSubType,
   EquipmentSubType,
   BundleSubType
@@ -29,7 +30,7 @@ export type Region = keyof typeof LOCATION_STRUCTURE[Continent][Country];
 // Settlement is now a proper interface in entities.ts, not a type alias
 
 // Re-export SubType enums as types for backward compatibility
-export type { DigitalSubType, ArtworkSubType, PrintSubType, StickerSubType, MerchSubType, MaterialSubType, EquipmentSubType, BundleSubType };
+export type { DigitalSubType, ArtworkSubType, PrintSubType, StickerSubType, MerchSubType, CraftSubType, MaterialSubType, EquipmentSubType, BundleSubType };
 
 // Union type for all possible SubItemTypes (all Item categories)
 export type SubItemType = 
@@ -38,6 +39,7 @@ export type SubItemType =
   | PrintSubType
   | StickerSubType
   | MerchSubType 
+  | CraftSubType
   | MaterialSubType 
   | EquipmentSubType
   | BundleSubType;

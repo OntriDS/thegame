@@ -237,17 +237,17 @@ export enum PointType {
 /** All Items - Products, Bundles, Materials and Equipment */
 export enum ItemType {
   // MODEL_ITEM - Individual products that can be separated by model, subtype, site and collection
-  DIGITAL = 'Digital',
-  ARTWORK = 'Artwork',
-  PRINT = 'Print',
-  STICKER = 'Sticker',
-  MERCH = 'Merch',
-  CRAFT = 'Craft',
+  DIGITAL = 'digital',
+  ARTWORK = 'artwork',
+  PRINT = 'print',
+  STICKER = 'sticker',
+  MERCH = 'merch',
+  CRAFT = 'craft',
   // BUNDLE_ITEM - Business Logic Items that are Packs of the same Type of Item.
-  BUNDLE = 'Bundle',            // Pack of Stickers or Prints
+  BUNDLE = 'bundle',            // Pack of Stickers or Prints
   // RESOURCE_ITEM - Materials and Equipment for production
-  MATERIAL = 'Material',
-  EQUIPMENT = 'Equipment',
+  MATERIAL = 'material',
+  EQUIPMENT = 'equipment',
 }
 
 /** Item Categories for UI organization and business logic */
@@ -319,74 +319,74 @@ export enum Collection {
 
 /** Digital Item SubTypes */
 export enum DigitalSubType {
-  DIGITAL_ART = "Digital Art",
-  DIGITIZATION = "Digitization",
-  ANIMATION = "Animation",
-  NFT = "NFT"
+  DIGITAL_ART = "digital-art",
+  DIGITIZATION = "digitization",
+  ANIMATION = "animation",
+  NFT = "nft"
 }
 
 /** Artwork Item SubTypes */
 export enum ArtworkSubType {
-  ACRYLIC_CANVAS = "Acrylic on Canvas",
-  ACRYLIC_WOOD = "Acrylic on Wood",
-  ASSEMBLAGE = "Assemblage",
-  MURAL = "Mural",
-  FURNITURE_ART = "Furniture Art"
+  ACRYLIC_CANVAS = "acrylic-on-canvas",
+  ACRYLIC_WOOD = "acrylic-on-wood",
+  ASSEMBLAGE = "assemblage",
+  MURAL = "mural",
+  FURNITURE_ART = "furniture-art"
 }
 
 /** Print Item SubTypes */
 export enum PrintSubType {
-  GICLEE_PRINT = "Giclee Print",
-  POSTER_PRINT = "Poster Print",
-  PRINT_ON_FRAME = "Print on Frame"
+  GICLEE_PRINT = "giclee-print",
+  POSTER_PRINT = "poster-print",
+  PRINT_ON_FRAME = "print-on-frame"
 }
 
 /** Sticker Item SubTypes */
 export enum StickerSubType {
-  BRILLIANT_WHITE = "Brilliant White",
-  REFLECTIVE = "Reflective",
-  MATE = "Mate"
+  BRILLIANT_WHITE = "brilliant-white",
+  REFLECTIVE = "reflective",
+  MATE = "mate"
 }
 
 /** Merch Item SubTypes */
 export enum MerchSubType {
-  T_SHIRT = "T-Shirt",
-  BAG = "Bag",
-  SHOES = "Shoes",
-  RASHGUARD = "Rashguard",
-  SPORTS_BRA = "Sports Bra",
-  T_SHIRT_ALLOVER = "T-Shirt AllOver",
-  MERCHANDISE = "Merchandise"
+  T_SHIRT = "t-shirt",
+  BAG = "bag",
+  SHOES = "shoes",
+  RASHGUARD = "rashguard",
+  SPORTS_BRA = "sports-bra",
+  T_SHIRT_ALLOVER = "t-shirt-allover",
+  MERCHANDISE = "merchandise"
 }
 
 /** Craft Item SubTypes */
 export enum CraftSubType {
-  FRAME = "Frame",
-  FURNITURE = "Furniture",
-  STANDS = "Stands",
+  FRAME = "frame",
+  FURNITURE = "furniture",
+  STANDS = "stands",
 }
 
 /** Bundle Item SubTypes */
 export enum BundleSubType {
-  STICKERS = "Sticker",
-  PRINTS = "Print"
+  STICKERS = "sticker",
+  PRINTS = "print"
 }
 
 /** Material Item SubTypes */
 export enum MaterialSubType {
-  ART_MATERIAL = "Art Material",
-  DESIGN_MATERIAL = "Design Material",
-  WORKSHOP_MATERIAL = "Workshop Material"
+  ART_MATERIAL = "art-material",
+  DESIGN_MATERIAL = "design-material",
+  WORKSHOP_MATERIAL = "workshop-material"
 }
 
 /** Equipment Item SubTypes */
 export enum EquipmentSubType {
-  ART_EQUIPMENT = "Art Equipment",
-  DESIGN_EQUIPMENT = "Design Equipment",
-  WORKSHOP_EQUIPMENT = "Workshop Equipment",
-  SALES_EQUIPMENT = "Store Equipment",
-  PERSONAL_EQUIPMENT = "Personal Equipment",
-  VEHICLE = "Vehicle",
+  ART_EQUIPMENT = "art-equipment",
+  DESIGN_EQUIPMENT = "design-equipment",
+  WORKSHOP_EQUIPMENT = "workshop-equipment",
+  SALES_EQUIPMENT = "store-equipment",
+  PERSONAL_EQUIPMENT = "personal-equipment",
+  VEHICLE = "vehicle",
 }
 
 // ============================================================================

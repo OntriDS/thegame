@@ -102,6 +102,12 @@ import {
 } from './keys';
 import { isTaskActive, isTaskCompleted } from '@/lib/utils/task-active-utils';
 import type { PlayerArchiveRow } from '@/types/archive';
+import {
+  normalizeItemTaxonomyFields,
+  normalizeTaskOutputTaxonomy,
+  normalizeFinancialOutputTaxonomy,
+  normalizeSaleOutputTaxonomy,
+} from '@/lib/item-taxonomy-normalize';
 
 // TASKS
 export async function upsertTask(task: Task, options?: { skipWorkflowEffects?: boolean; skipLinkEffects?: boolean; skipDuplicateCheck?: boolean }): Promise<Task> {
@@ -112,10 +118,11 @@ export async function upsertTask(task: Task, options?: { skipWorkflowEffects?: b
   }
 
   const previous = await repoGetTaskById(task.id);
-  const normalizedTask =
+  let normalizedTask =
     task.status === TaskStatus.DONE
       ? { ...task, priority: TaskPriority.NORMAL }
       : task;
+  normalizedTask = normalizeTaskOutputTaxonomy(normalizedTask);
   const saved = await repoUpsertTask(normalizedTask);
 
   // Identity Shield: Time-Window Deduplication (30 seconds)
@@ -529,7 +536,8 @@ export async function removeTask(id: string, options?: RemoveTaskOptions): Promi
 // - This prevents data loss but may cause 500 errors if workflows throw
 // - API routes MUST have try/catch to handle workflow failures gracefully
 export async function upsertItem(item: Item, options?: { skipWorkflowEffects?: boolean; skipLinkEffects?: boolean }): Promise<Item> {
-  const previous = await repoGetItemById(item.id);
+  const itemNorm = normalizeItemTaxonomyFields(item);
+  const previous = await repoGetItemById(itemNorm.id);
 
   // Identity Shield: Time-Window Deduplication (2 minutes)
   // Only apply to NEW items (no previous record found) to allow legitimate updates
@@ -541,7 +549,7 @@ export async function upsertItem(item: Item, options?: { skipWorkflowEffects?: b
     // NOTE: This could be optimized with a query by createdAt if available in repo, 
     // but filtering getAllItems is acceptable for current scale.
     const recentItems = (await repoGetAllItems()).filter(i =>
-      i.id !== item.id && // exclude self
+      i.id !== itemNorm.id && // exclude self
       i.createdAt &&
       (now.getTime() - new Date(i.createdAt).getTime() < DUPLICATION_WINDOW_MS)
     );
@@ -549,17 +557,17 @@ export async function upsertItem(item: Item, options?: { skipWorkflowEffects?: b
     const isDuplicate = recentItems.some(existing => {
       // 1. Basic Identity Match
       return (
-        existing.name === item.name &&
-        existing.type === item.type &&
-        existing.station === item.station &&
-        existing.subItemType === item.subItemType &&
+        existing.name === itemNorm.name &&
+        existing.type === itemNorm.type &&
+        existing.station === itemNorm.station &&
+        existing.subItemType === itemNorm.subItemType &&
         // Check stock length as a proxy for "same content"
-        (existing.stock?.length || 0) === (item.stock?.length || 0)
+        (existing.stock?.length || 0) === (itemNorm.stock?.length || 0)
       );
     });
 
     if (isDuplicate) {
-      console.warn(`[upsertItem] Prevented duplicate item creation: ${item.name}`);
+      console.warn(`[upsertItem] Prevented duplicate item creation: ${itemNorm.name}`);
       // We technically haven't saved it yet in this flow (repoUpsertItem is called AFTER this check in my proposed change, 
       // but wait... the original code calls repoUpsertItem at line 206. I need to intercept BEFORE line 206).
 
@@ -573,15 +581,15 @@ export async function upsertItem(item: Item, options?: { skipWorkflowEffects?: b
   }
 
   // Data Normalization: Standardize status strings to Enum values
-  const rawStatus = (item.status || '').toString().toLowerCase();
-  let normalizedStatus = item.status;
+  const rawStatus = (itemNorm.status || '').toString().toLowerCase();
+  let normalizedStatus = itemNorm.status;
 
   if (rawStatus === 'sold' || rawStatus === 'itemstatus.sold') {
     normalizedStatus = ItemStatus.SOLD;
   }
 
   const saved = await repoUpsertItem({
-    ...item,
+    ...itemNorm,
     status: normalizedStatus
   });  // ✅ Item persisted here
 
@@ -670,7 +678,8 @@ export async function removeItem(id: string): Promise<void> {
 
 // FINANCIALS
 export async function upsertFinancial(financial: FinancialRecord, options?: { skipWorkflowEffects?: boolean; skipLinkEffects?: boolean; forceSave?: boolean }): Promise<FinancialRecord> {
-  const previous = await repoGetFinancialById(financial.id);
+  const financialNorm = normalizeFinancialOutputTaxonomy(financial);
+  const previous = await repoGetFinancialById(financialNorm.id);
 
   // Identity Shield: Time-Window Deduplication (2 minutes)
   // Only apply to NEW financials (no previous record found) to allow legitimate updates
@@ -680,7 +689,7 @@ export async function upsertFinancial(financial: FinancialRecord, options?: { sk
 
     // Fetch recent financials
     const recentFinancials = (await repoGetAllFinancials()).filter(f =>
-      f.id !== financial.id && // exclude self
+      f.id !== financialNorm.id && // exclude self
       f.createdAt &&
       (now.getTime() - new Date(f.createdAt).getTime() < DUPLICATION_WINDOW_MS)
     );
@@ -688,21 +697,21 @@ export async function upsertFinancial(financial: FinancialRecord, options?: { sk
     const isDuplicate = recentFinancials.some(existing => {
       // 1. Basic Identity Match
       return (
-        existing.name === financial.name &&
-        existing.status === financial.status &&
-        existing.year === financial.year &&
-        existing.month === financial.month &&
-        existing.type === financial.type
+        existing.name === financialNorm.name &&
+        existing.status === financialNorm.status &&
+        existing.year === financialNorm.year &&
+        existing.month === financialNorm.month &&
+        existing.type === financialNorm.type
       );
     });
 
     if (isDuplicate) {
-      console.warn(`[upsertFinancial] Prevented duplicate financial creation: ${financial.name}`);
+      console.warn(`[upsertFinancial] Prevented duplicate financial creation: ${financialNorm.name}`);
       throw new Error(`DUPLICATE_FINANCIAL_DETECTED: A similar financial record was created less than 2 minutes ago.`);
     }
   }
 
-  const saved = await repoUpsertFinancial(financial);
+  const saved = await repoUpsertFinancial(financialNorm);
 
   // Phase 2: Rolling Summary Update (Delta Approach)
   await SummaryService.updateFinancialCounters(saved, previous || undefined);
@@ -823,7 +832,9 @@ export async function upsertSale(sale: Sale, options?: { skipWorkflowEffects?: b
     }
   }
 
-  const saleToPersist = roundSaleTotals(ensureItemSaleLineIds(normalizeSale(sale)));
+  const saleToPersist = roundSaleTotals(
+    ensureItemSaleLineIds(normalizeSale(normalizeSaleOutputTaxonomy(sale)))
+  );
   const saved = await repoUpsertSale(saleToPersist);
 
   // Phase 2: Rolling Summary Update

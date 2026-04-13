@@ -6,7 +6,8 @@ import {
   ClearLogsWorkflow,
   ClearCacheWorkflow,
   ExportDataWorkflow,
-  ImportDataWorkflow
+  ImportDataWorkflow,
+  NormalizeItemTaxonomyWorkflow
 } from '@/workflows/settings';
 
 // Force dynamic rendering since this route accesses request cookies for auth
@@ -66,6 +67,21 @@ export async function POST(request: NextRequest) {
           message: result.message,
           data: result.data
         }, { status: result.success ? 200 : 500 });
+      }
+
+      case 'normalize-item-taxonomy': {
+        const result = await NormalizeItemTaxonomyWorkflow.execute({
+          dryRun: parameters?.dryRun !== false,
+          scopes: parameters?.scopes,
+        });
+        return NextResponse.json(
+          {
+            success: result.success,
+            message: result.message,
+            data: result.data,
+          },
+          { status: result.success ? 200 : 500 }
+        );
       }
 
       default:
