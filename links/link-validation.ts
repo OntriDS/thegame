@@ -398,13 +398,18 @@ export async function validateBusinessRules(
         }
         break;
 
-      case 'CHARACTER_PLAYER':
-        // Validate that character belongs to the player
+      case 'CHARACTER_PLAYER': {
         const char = await getCharacterById(source.id);
-        if (char && char.playerId !== target.id) {
+        if (
+          char &&
+          char.playerId != null &&
+          String(char.playerId).trim() !== '' &&
+          char.playerId !== target.id
+        ) {
           warnings.push(`Character playerId (${char.playerId}) does not match target player ID (${target.id})`);
         }
         break;
+      }
 
       case 'SALE_CHARACTER': {
         const saleWithChar = await getSaleById(source.id);

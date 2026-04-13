@@ -11,7 +11,12 @@ import { Textarea } from '@/components/ui/textarea';
 import NumericInput from '@/components/ui/numeric-input';
 
 import type { Character } from '@/types/entities';
-import { CharacterRole, CHARACTER_ROLE_TYPES, EntityType, FOUNDER_CHARACTER_ID, LinkType } from '@/types/enums';
+import {
+  CharacterRole,
+  CHARACTER_ROLE_TYPES,
+  EntityType,
+  LinkType,
+} from '@/types/enums';
 import { ROLE_COLORS } from '@/lib/constants/color-constants';
 import { normalizeCharacterRoles } from '@/lib/character-roles';
 import { useTheme } from '@/lib/hooks/use-theme';
@@ -227,14 +232,14 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
   // Special roles (badges, system-controlled)
   const specialRolesList = CHARACTER_ROLE_TYPES.SPECIAL.map(r => r as CharacterRole);
 
-  // Check if editing Player One (Founder)
-  const isPlayerOne = character?.id === FOUNDER_CHARACTER_ID || character?.playerId === FOUNDER_CHARACTER_ID;
-
-  // Check if current user is a Founder
   const currentUserIsFounder = currentUser?.roles?.includes(CharacterRole.FOUNDER);
+  const characterHasFounderRole = roles.includes(CharacterRole.FOUNDER);
 
-  // ALWAYS show special fields for FOUNDER - they can assign any role to any character
-  const shouldShowSpecialFields = currentUserIsFounder || isPlayerOne || !character || roles.some(role => specialRolesList.includes(role));
+  const shouldShowSpecialFields =
+    currentUserIsFounder ||
+    characterHasFounderRole ||
+    !character ||
+    roles.some(role => specialRolesList.includes(role));
 
   // Identity follows IAM only when DS still points at an account id AND that account is active (GET returned a usable row)
   const identityManagedByAccount =
@@ -301,8 +306,11 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
         purchasedAmount,
         inventory: character?.inventory || [], // Empty array for new characters
 
-        // Relationships - V0.1: Founder player is the default
-        playerId: character?.playerId || FOUNDER_CHARACTER_ID,
+        // Player entity link: unchanged on edit; absent on create (this modal does not assign Player rows).
+        playerId:
+          character?.playerId != null && String(character.playerId).trim() !== ''
+            ? character.playerId
+            : null,
 
         // Lifecycle
         lastActiveAt: character?.lastActiveAt || new Date(),

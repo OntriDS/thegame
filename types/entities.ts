@@ -896,7 +896,8 @@ export interface Character extends BaseEntity {
   inventory: string[];           // Item IDs they own/possess
 
   // 8. RELATIONSHIPS (Ambassador Fields - Links System)
-  playerId: string;              // 🏛️ Links to Player who manages this character - REQUIRED
+  /** DS Player id when linked; null/omit until a Player is attached in TheGame (founder workflow). Not set by IAM / signup. */
+  playerId?: string | null;
   siteId?: string | null;        // AMBASSADOR: Character's home site or primary work location
 
   // 9. SOCIAL GRAPH - V0.2

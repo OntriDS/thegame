@@ -31,7 +31,7 @@ import {
 } from '@/types/entities';
 import { Plus, DollarSign, TrendingUp, TrendingDown, Building2, User, Archive, Loader2 } from 'lucide-react';
 import { MONTHS, getYearRange, getMonthName, getCurrentMonth } from '@/lib/constants/date-constants';
-import { BUSINESS_STRUCTURE, ItemType, FOUNDER_CHARACTER_ID } from '@/types/enums';
+import { BUSINESS_STRUCTURE, ItemType, FOUNDER_PLAYER_ID } from '@/types/enums';
 import { getCompanyAreas, getPersonalAreas, isCompanyStation, getAreaForStation } from '@/lib/utils/business-structure-utils';
 import { CompanyRecordsList, PersonalRecordsList } from '@/components/finances/financial-records-components';
 import { MonthSelector } from '@/components/ui/month-selector';
@@ -333,10 +333,10 @@ function FinancesPageContent() {
         console.error('Failed to get current user from session:', error);
       }
 
-      // Fallback to FOUNDER_CHARACTER_ID if no session player found (for development/single-user)
+      // Fallback to founder Player id if no session player found (not CHARACTER id — players use FOUNDER_PLAYER_ID)
       if (!currentPlayerId) {
         const players = await ClientAPI.getPlayers().catch(() => []);
-        currentPlayerId = players.find((p: any) => p.id === FOUNDER_CHARACTER_ID)?.id || players[0]?.id || null;
+        currentPlayerId = players.find((p: { id: string }) => p.id === FOUNDER_PLAYER_ID)?.id || players[0]?.id || null;
       }
 
       // Fetch J$ balance for current user's player only

@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { User, Network, Coins, Target, TrendingUp, Flag } from 'lucide-react';
 import { Player, Character } from '@/types/entities';
-import { EntityType } from '@/types/enums';
+import { EntityType, FOUNDER_PLAYER_ID } from '@/types/enums';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
 import {
   createEmptyPlayerConversionRatesForm,
@@ -81,22 +81,40 @@ export function PlayerModal({ player, open, onOpenChange, onSave }: PlayerModalP
       const loadData = async () => {
         setIsLoading(true);
         try {
-          // Load player (either passed player or fetch Player One)
+          // Load player: prefer explicit prop; else canonical founder player id (not players[0] — order is unstable).
           let playerToLoad = player;
           if (!playerToLoad) {
             const players = await ClientAPI.getPlayers();
-            playerToLoad = players.find(p => p.name === 'Player One') || players[0];
+            playerToLoad =
+              players.find((p) => p.id === FOUNDER_PLAYER_ID) ||
+              players.find((p) => p.name === 'Player One') ||
+              players[0];
           }
 
           if (playerToLoad) {
+            const resolveCharactersForPlayer = (allChars: Character[], p: Player): Character[] => {
+              const byId = new Map(allChars.map((c) => [c.id, c]));
+              const ordered: Character[] = [];
+              for (const id of p.characterIds || []) {
+                const c = byId.get(id);
+                if (c) ordered.push(c);
+              }
+              for (const c of allChars) {
+                if (c.playerId === p.id && !ordered.some((o) => o.id === c.id)) {
+                  ordered.push(c);
+                }
+              }
+              return ordered;
+            };
+
             // Parallel data fetching for better performance
             const [playerCharacters, assets, j$Balance, ratesData] = await Promise.all([
-              ClientAPI.getCharacters().then(chars =>
-                chars.filter(c => c.playerId === playerToLoad!.id)
-              ).catch(error => {
-                console.error('Failed to load characters:', error);
-                return [];
-              }),
+              ClientAPI.getCharacters()
+                .then((chars) => resolveCharactersForPlayer(chars, playerToLoad!))
+                .catch((error) => {
+                  console.error('Failed to load characters:', error);
+                  return [];
+                }),
               ClientAPI.getPersonalAssets().catch(error => {
                 console.error('Failed to load personal assets:', error);
                 return null;

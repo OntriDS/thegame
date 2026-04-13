@@ -31,7 +31,7 @@ import {
 
 import { getCharacterById as dsGetCharacterById } from '@/data-store/repositories/character.repo';
 import { getPlayerById as dsGetPlayerById } from '@/data-store/repositories/player.repo';
-import { upsertCharacter, upsertPlayer } from '@/data-store/datastore';
+import { upsertCharacter } from '@/data-store/datastore';
 import { getLinksFor, createLink as rosettaCreateLink } from '@/links/link-registry';
 import { removeAccountEffectsOnDelete } from '@/workflows/entities-workflows/account.workflow';
 import type { Character as GameCharacter, Link, Player } from '@/types/entities';
@@ -405,6 +405,10 @@ export class IAMService {
       return { success: false, error: 'Email is already verified' };
     }
 
+    if (account.verificationToken) {
+      await kvDel(`iam:verify:${account.verificationToken}`);
+    }
+
     const verificationToken = uuidv4();
     const now = getUTCNow();
     const expiresAt = toUTCISOString(toUTC(now.getTime() + 24 * 60 * 60 * 1000));
@@ -516,9 +520,6 @@ export class IAMService {
     };
     await rosettaCreateLink(link, { skipValidation: true });
 
-    // DS Player + Character↔Player links only (never ACCOUNT_PLAYER — IAM account is not a DS entity)
-    await this.ensureDataStorePlayerForLinkedCharacter(accountId, characterId, character);
-
     const freshAccount = await this.getAccountById(accountId);
     character = (await dsGetCharacterById(characterId))!;
 
@@ -563,7 +564,7 @@ export class IAMService {
 
   async getPlayerByCharacterId(characterId: string): Promise<Player | null> {
     const character = await dsGetCharacterById(characterId);
-    if (character?.playerId) {
+    if (character?.playerId != null && character.playerId !== '') {
       const byField = await dsGetPlayerById(character.playerId);
       if (byField) return byField;
     }
@@ -584,94 +585,6 @@ export class IAMService {
       }
     }
     return null;
-  }
-
-  /**
-   * When an IAM account links to a character, ensure a DS Player exists and
-   * Character↔Player Rosetta links (CHARACTER_PLAYER + PLAYER_CHARACTER).
-   * Does NOT create ACCOUNT_PLAYER (IAM accounts are not `thegame:data:account` rows).
-   */
-  private async ensureDataStorePlayerForLinkedCharacter(
-    accountId: string,
-    characterId: string,
-    character: GameCharacter
-  ): Promise<void> {
-    const account = await this.getAccountById(accountId);
-    if (!account) return;
-
-    const existing = await this.getPlayerByCharacterId(characterId);
-    if (existing) {
-      account.playerId = existing.id;
-      account.updatedAt = toUTCISOString(getUTCNow());
-      await kvSet(buildAccountKey(accountId), account);
-      return;
-    }
-
-    // DS Player + CHARACTER_PLAYER links for any login-linked staff role (not only the `player` badge).
-    const eligible =
-      character.roles.includes(CharacterRole.PLAYER) ||
-      character.roles.includes(CharacterRole.FOUNDER) ||
-      character.roles.includes(CharacterRole.TEAM);
-    if (!eligible) return;
-
-    const now = getUTCNow();
-    const newPlayer: Player = {
-      id: uuidv4(),
-      name: character.name || account.name,
-      description: `Player for character ${character.name || characterId}`,
-      accountId,
-      email: account.email || '',
-      passwordHash: '',
-      level: 1,
-      totalPoints: { hp: 0, fp: 0, rp: 0, xp: 0 },
-      points: { hp: 0, fp: 0, rp: 0, xp: 0 },
-      characterIds: [characterId],
-      badges: [],
-      achievements: [],
-      lastActiveAt: now,
-      totalTasksCompleted: 0,
-      totalSalesCompleted: 0,
-      totalItemsSold: 0,
-      isActive: true,
-      createdAt: now,
-      updatedAt: now,
-      links: [],
-    };
-
-    await upsertPlayer(newPlayer, { skipWorkflowEffects: true, skipLinkEffects: true });
-
-    const updatedChar: GameCharacter = {
-      ...character,
-      playerId: newPlayer.id,
-      updatedAt: now,
-    };
-    await upsertCharacter(updatedChar, { skipWorkflowEffects: true, skipLinkEffects: true });
-
-    await rosettaCreateLink(
-      {
-        id: uuidv4(),
-        linkType: LinkType.CHARACTER_PLAYER,
-        source: { type: EntityType.CHARACTER, id: characterId },
-        target: { type: EntityType.PLAYER, id: newPlayer.id },
-        createdAt: now,
-      },
-      { skipValidation: true }
-    );
-
-    await rosettaCreateLink(
-      {
-        id: uuidv4(),
-        linkType: LinkType.PLAYER_CHARACTER,
-        source: { type: EntityType.PLAYER, id: newPlayer.id },
-        target: { type: EntityType.CHARACTER, id: characterId },
-        createdAt: now,
-      },
-      { skipValidation: true }
-    );
-
-    account.playerId = newPlayer.id;
-    account.updatedAt = toUTCISOString(now);
-    await kvSet(buildAccountKey(accountId), account);
   }
 
   // ═══════════════════════════════════════════════════════════════

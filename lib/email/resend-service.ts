@@ -1,3 +1,5 @@
+import * as React from 'react';
+import { render } from '@react-email/render';
 import { Resend } from 'resend';
 import PasswordResetEmail from '@/emails/password-reset';
 import AccountVerificationEmail from '@/emails/account-verification';
@@ -38,15 +40,18 @@ export async function sendPasswordResetEmail({
 }: SendPasswordResetParams): Promise<EmailResult> {
   try {
     const resetLink = `${getPublicAppUrl()}/auth/reset-password?token=${encodeURIComponent(resetToken)}`;
-    const result = await resend.emails.send({
-      from: getFromAddress(),
-      to: [email],
-      subject: 'Reset Your Akiles Digital Universe Password',
-      react: PasswordResetEmail({
+    const html = await render(
+      React.createElement(PasswordResetEmail, {
         userName,
         resetLink,
         expiresAt: expiresAt.toLocaleString(),
       }),
+    );
+    const result = await resend.emails.send({
+      from: getFromAddress(),
+      to: [email],
+      subject: 'Reset Your Akiles Digital Universe Password',
+      html,
     });
     if (result.error) {
       return { success: false, error: result.error.message };
@@ -69,15 +74,18 @@ export async function sendAccountVerificationEmail({
 }: SendAccountVerificationParams): Promise<EmailResult> {
   try {
     const verificationLink = `${getPublicAppUrl()}/auth/verify-email?token=${encodeURIComponent(verificationToken)}`;
-    const result = await resend.emails.send({
-      from: getFromAddress(),
-      to: [email],
-      subject: 'Verify Your Akiles Digital Universe Account',
-      react: AccountVerificationEmail({
+    const html = await render(
+      React.createElement(AccountVerificationEmail, {
         userName,
         verificationLink,
         expiresAt: expiresAt.toLocaleString(),
       }),
+    );
+    const result = await resend.emails.send({
+      from: getFromAddress(),
+      to: [email],
+      subject: 'Verify Your Akiles Digital Universe Account',
+      html,
     });
     if (result.error) {
       return { success: false, error: result.error.message };
