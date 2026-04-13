@@ -37,7 +37,7 @@ const SORT_BY_OPTIONS: SortByOption[] = [
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 
 const getRoleColorClass = (role: CharacterRole): string => {
-  const roleKey = role.toUpperCase().replace(/-/g, '_') as keyof typeof ROLE_COLORS;
+  const roleKey = role.toUpperCase().replace(/-/g, '') as keyof typeof ROLE_COLORS;
   return ROLE_COLORS[roleKey] || ROLE_COLORS.CUSTOMER;
 };
 

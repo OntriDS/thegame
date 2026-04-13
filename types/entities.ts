@@ -856,7 +856,7 @@ export interface Player extends BaseEntity {
  * - Customers: Buy products (CUSTOMER role)
  * - Family: Personal relationships (FAMILY role)
  * - Business roles: Admin, Designer, Producer, Seller, Researcher, Developer, Agent
- * - Investors: Investment tracking (INVESTOR role, set by Founder)
+ * - Token Holders: Token-based role (TOKENHOLDER role, set by Founder)
  * 
  * Key Concepts:
  * - NO login/authentication (managed by Player)

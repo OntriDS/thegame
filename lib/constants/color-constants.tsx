@@ -118,7 +118,7 @@ const SPECIAL_ROLE_PLAYER = 'border-cyan-600 bg-cyan-600 text-white hover:bg-cya
 const SPECIAL_ROLE_APPRENTICE = 'border-orange-600 bg-orange-600 text-white hover:bg-orange-700 dark:bg-orange-500 dark:text-white dark:hover:bg-orange-600';
 const SPECIAL_ROLE_TEAM = 'border-teal-600 bg-teal-600 text-white hover:bg-teal-700 dark:bg-teal-500 dark:text-white dark:hover:bg-teal-600';
 const SPECIAL_ROLE_FAMILY = 'border-pink-600 bg-pink-600 text-white hover:bg-pink-700 dark:bg-pink-500 dark:text-white dark:hover:bg-pink-600';
-const SPECIAL_ROLE_INVESTOR = 'border-yellow-500 bg-yellow-500 text-black hover:bg-yellow-600 dark:bg-yellow-400 dark:text-black dark:hover:bg-yellow-500';
+const SPECIAL_ROLE_TOKENHOLDER = 'border-yellow-500 bg-yellow-500 text-black hover:bg-yellow-600 dark:bg-yellow-400 dark:text-black dark:hover:bg-yellow-500';
 const SPECIAL_ROLE_PARTNER = 'border-fuchsia-600 bg-fuchsia-400 text-white hover:bg-fuchsia-600 dark:bg-fuchsia-500 dark:text-white dark:hover:bg-fuchsia-700';
 const SPECIAL_ROLE_AI_AGENT = 'border-lime-600 bg-lime-600 text-white hover:bg-lime-700 dark:bg-lime-500 dark:text-black dark:hover:bg-lime-600';
 const SPECIAL_ROLE_CUSTOMER = 'border-amber-500 bg-amber-800 text-black hover:bg-amber-700 dark:bg-amber-900 dark:text-white dark:hover:bg-amber-500';
@@ -131,7 +131,7 @@ export const ROLE_COLORS = {
   PLAYER: SPECIAL_ROLE_PLAYER,
   APPRENTICE: SPECIAL_ROLE_APPRENTICE,
   TEAM: SPECIAL_ROLE_TEAM,
-  INVESTOR: SPECIAL_ROLE_INVESTOR,
+  TOKENHOLDER: SPECIAL_ROLE_TOKENHOLDER,
   FAMILY: SPECIAL_ROLE_FAMILY,
   PARTNER: SPECIAL_ROLE_PARTNER,
   AI_AGENT: SPECIAL_ROLE_AI_AGENT,

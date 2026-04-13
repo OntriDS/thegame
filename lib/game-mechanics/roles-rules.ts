@@ -8,6 +8,18 @@
 // do not rely on ROLE_BENEFITS text for security.
 
 import { CharacterRole } from '@/types/enums';
+import { normalizeCharacterRole } from '@/lib/character-roles';
+
+const normalizeRoles = (roles: readonly (CharacterRole | string | null | undefined)[]): CharacterRole[] => {
+  const normalized = new Set<CharacterRole>();
+
+  roles.forEach((rawRole) => {
+    const role = normalizeCharacterRole(rawRole);
+    if (role) normalized.add(role);
+  });
+
+  return Array.from(normalized);
+};
 
 /**
  * Role Behavior Configuration
@@ -25,7 +37,7 @@ import { CharacterRole } from '@/types/enums';
  * - Business Roles + PLAYER: Can complete station tasks
  * - Business Roles ONLY: External contractor (no TheCompany benefits)
  * - FOUNDER: Full system access, immutable role
- * - INVESTOR: Investment tracking & returns, immutable role
+ * - TOKENHOLDER: Token-Holding role
  */
 export const ROLE_BEHAVIORS = {
   [CharacterRole.FOUNDER]: {
@@ -40,7 +52,7 @@ export const ROLE_BEHAVIORS = {
     isDisplayOnly: true,      // Based on character-player link
     requiresJungleCoins: false,
   },
-  [CharacterRole.INVESTOR]: {
+  [CharacterRole.TOKENHOLDER]: {
     isImmutable: true,        // Cannot be removed once assigned
     hideIfNotAssigned: true,  // Only show if character has J$
     requiresJungleCoins: true, // Special condition: needs J$ to appear
@@ -89,6 +101,102 @@ export const ROLE_BEHAVIORS = {
     requiresJungleCoins: false,
   }
 } as const;
+
+/**
+ * Player-selectable roles for player eligibility in the game domain.
+ */
+export const PLAYER_SELECTABLE_ROLES: readonly CharacterRole[] = [
+  CharacterRole.FOUNDER,
+  CharacterRole.TEAM,
+  CharacterRole.APPRENTICE,
+] as const;
+
+export const FOUNDER_ONLY_GRANT_ROLES: readonly CharacterRole[] = [
+  CharacterRole.FOUNDER,
+  CharacterRole.TEAM,
+  CharacterRole.APPRENTICE,
+];
+
+export const TOKEN_HOLDER_REQUIRED_GRANT_ROLES: readonly CharacterRole[] = [
+  CharacterRole.TOKENHOLDER,
+];
+
+const hasEnoughJungleCoins = (jungleCoins?: number | null): boolean => {
+  const normalizedCoins = Math.max(0, Number(jungleCoins ?? 0));
+  return normalizedCoins > 0;
+};
+
+type RoleGrantOptions = {
+  characterRoles?: readonly (CharacterRole | string | null | undefined)[];
+  characterJungleCoins?: number | null;
+};
+
+export const hasPlayerSelectableRole = (roles: readonly (CharacterRole | string | null | undefined)[]): boolean => {
+  return normalizeRoles(roles).some((role) => PLAYER_SELECTABLE_ROLES.includes(role));
+};
+
+export const canGrantSpecialRole = (
+  granterRoles: readonly (CharacterRole | string | null | undefined)[],
+  targetRole: CharacterRole,
+  options: RoleGrantOptions = {},
+): boolean => {
+  const normalizedGranter = normalizeRoles(granterRoles);
+  const isFounderGranter = normalizedGranter.includes(CharacterRole.FOUNDER);
+
+  if (targetRole === CharacterRole.PLAYER) {
+    return canGrantPlayerRole(granterRoles, options.characterRoles ?? [], targetRole);
+  }
+
+  if (TOKEN_HOLDER_REQUIRED_GRANT_ROLES.includes(targetRole)) {
+    if (!isFounderGranter && !hasEnoughJungleCoins(options.characterJungleCoins)) {
+      return false;
+    }
+    return true;
+  }
+
+  if (!isFounderGranter && FOUNDER_ONLY_GRANT_ROLES.includes(targetRole)) {
+    return false;
+  }
+
+  return true;
+};
+
+export const getRoleGrantDenialReason = (
+  granterRoles: readonly (CharacterRole | string | null | undefined)[],
+  targetRole: CharacterRole,
+  options: RoleGrantOptions = {},
+): string | null => {
+  if (canGrantSpecialRole(granterRoles, targetRole, options)) {
+    return null;
+  }
+
+  const normalizedGranter = normalizeRoles(granterRoles);
+  const isFounderGranter = normalizedGranter.includes(CharacterRole.FOUNDER);
+
+  if (targetRole === CharacterRole.PLAYER) {
+    return 'PLAYER role requires one of: founder, team, or apprentice role assigned first.';
+  }
+
+  if (TOKEN_HOLDER_REQUIRED_GRANT_ROLES.includes(targetRole) && !isFounderGranter) {
+    return 'Token-Holder role requires Jungle Coins in character wallet.';
+  }
+
+  if (FOUNDER_ONLY_GRANT_ROLES.includes(targetRole) && !isFounderGranter) {
+    return `Only Founder can grant ${targetRole} role.`;
+  }
+
+  return `Cannot grant ${targetRole} role.`;
+};
+
+export const canGrantPlayerRole = (
+  granterRoles: readonly (CharacterRole | string | null | undefined)[],
+  characterRoles: readonly (CharacterRole | string | null | undefined)[],
+  targetRole: CharacterRole,
+): boolean => {
+  if (normalizeRoles(granterRoles).includes(CharacterRole.FOUNDER)) return true;
+  if (targetRole !== CharacterRole.PLAYER) return true;
+  return hasPlayerSelectableRole(characterRoles);
+};
 
 /**
  * Role Benefits Configuration (V0.2)
@@ -149,7 +257,7 @@ export const ROLE_BENEFITS = {
     ],
     requirements: ["Assigned to the role by a Founder or Team character"]
   },
-  [CharacterRole.INVESTOR]: {
+  [CharacterRole.TOKENHOLDER]: {
     description: "Has In-game J$ and Zaps Holdings.",
     benefits: [
       "In-game J$ and Zaps assets tracking",
@@ -201,7 +309,8 @@ export const ROLE_BENEFITS = {
 
 /**
  * Business Roles Configuration
- * Defines business roles and their capabilities
+ * Defines business roles for task routing and station permissions
+ * (not to be confused with character role grant policies).
  */
 export const BUSINESS_ROLES = [
   CharacterRole.ADMIN,

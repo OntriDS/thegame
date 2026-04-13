@@ -7,6 +7,7 @@ import { iamService } from '@/lib/iam-service';
 import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
 import { isFounder, isGameAdmin } from '@/integrity/iam/permissions';
+import { ADMIN_SECTIONS } from '@/lib/constants/sections';
 
 // Initialize Rate Limiter: 60 requests per minute per IP
 const ratelimit = new Ratelimit({
@@ -15,6 +16,15 @@ const ratelimit = new Ratelimit({
   analytics: false,
   prefix: 'thegame:ratelimit',
 });
+
+const getAdminSectionResource = (pathname: string): string | null => {
+  const match = pathname.match(/^\/admin\/([^/]+)/);
+  if (!match) return null;
+
+  const section = match[1]?.toLowerCase();
+  const definition = ADMIN_SECTIONS.find((item) => item.slug === section);
+  return definition?.permissionResource ?? null;
+};
 
 export const config = {
   matcher: ['/admin/:path*'],
@@ -63,6 +73,7 @@ export async function middleware(request: NextRequest) {
 
     if (user && user.isActive) {
       const isAuthorizedForAdmin = isGameAdmin(user.roles);
+      const permissions = iamService.getPermissions(user);
       const hasFounderRole = isFounder(user.roles);
 
       if (!isAuthorizedForAdmin) {
@@ -92,6 +103,17 @@ export async function middleware(request: NextRequest) {
           accountId: user.accountId,
           roles: user.roles,
           pathname,
+        });
+        return NextResponse.redirect(new URL('/admin/control-room', request.url));
+      }
+
+      const sectionResource = getAdminSectionResource(pathname);
+      if (sectionResource && !permissions.can(sectionResource, 'enter')) {
+        console.log('[Middleware] Section enter denied by permissions matrix:', {
+          accountId: user.accountId,
+          roles: user.roles,
+          pathname,
+          sectionResource,
         });
         return NextResponse.redirect(new URL('/admin/control-room', request.url));
       }

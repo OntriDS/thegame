@@ -337,8 +337,8 @@ export enum ArtworkSubType {
 /** Print Item SubTypes */
 export enum PrintSubType {
   GICLEE_PRINT = "Giclee Print",
-  STANDARD_PRINT = "Standard Print",
-  GICLEE_PRINT_ON_FRAME = "Giclee Print on Frame"
+  POSTER_PRINT = "Poster Print",
+  PRINT_ON_FRAME = "Print on Frame"
 }
 
 /** Sticker Item SubTypes */
@@ -355,7 +355,8 @@ export enum MerchSubType {
   SHOES = "Shoes",
   RASHGUARD = "Rashguard",
   SPORTS_BRA = "Sports Bra",
-  T_SHIRT_ALLOVER = "T-Shirt AllOver"
+  T_SHIRT_ALLOVER = "T-Shirt AllOver",
+  MERCHANDISE = "Merchandise"
 }
 
 /** Craft Item SubTypes */
@@ -446,7 +447,7 @@ export enum CharacterRole {
   PLAYER = 'player',
   APPRENTICE = 'apprentice',
   FAMILY = 'family',
-  INVESTOR = 'investor',
+  TOKENHOLDER = 'token-holder',
   PARTNER = 'partner',
   ADMIN = 'admin',
   DESIGNER = 'designer',
@@ -482,7 +483,7 @@ export const CHARACTER_ROLE_TYPES = {
     CharacterRole.APPRENTICE,
     CharacterRole.TEAM,
     CharacterRole.FAMILY,
-    CharacterRole.INVESTOR,
+    CharacterRole.TOKENHOLDER,
     CharacterRole.PARTNER,
     CharacterRole.AI_AGENT,
     CharacterRole.CUSTOMER,

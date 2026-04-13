@@ -112,7 +112,7 @@ function AccountsPageContent({ canAccessIAMConsole, isCheckingIAMConsole }: { ca
       beneficiary: 'bg-cyan-500/10 text-cyan-500 border-cyan-500/20',
       apprentice: 'bg-lime-500/10 text-lime-500 border-lime-500/20',
       family: 'bg-fuchsia-500/10 text-fuchsia-500 border-fuchsia-500/20',
-      investor: 'bg-rose-500/10 text-rose-500 border-rose-500/20',
+      'token-holder': 'bg-rose-500/10 text-rose-500 border-rose-500/20',
       partner: 'bg-purple-500/10 text-purple-500 border-purple-500/20',
     };
 
@@ -186,7 +186,7 @@ function AccountsPageContent({ canAccessIAMConsole, isCheckingIAMConsole }: { ca
     CharacterRole.CUSTOMER,
     CharacterRole.BENEFICIARY,
     CharacterRole.FAMILY,
-    CharacterRole.INVESTOR
+    CharacterRole.TOKENHOLDER
   ];
 
   const specialRoleMeta: Record<CharacterRole | string, {
@@ -252,8 +252,8 @@ function AccountsPageContent({ canAccessIAMConsole, isCheckingIAMConsole }: { ca
       valueColor: 'text-fuchsia-600',
       iconColor: 'text-fuchsia-600',
     },
-    [CharacterRole.INVESTOR]: {
-      title: 'Investors',
+    [CharacterRole.TOKENHOLDER]: {
+      title: 'Token Holders',
       classes: 'bg-rose-500/5 border-rose-500/10',
       labelColor: 'text-rose-500/50',
       valueColor: 'text-rose-600',

@@ -4,9 +4,12 @@ import { requireAdminAuth } from '@/lib/api-auth';
 import { iamService } from '@/lib/iam-service';
 import { CharacterRole, EntityType, LinkType } from '@/types/enums';
 import { characterHasSpecialRole, normalizeCharacterRole, normalizeCharacterRoles } from '@/lib/character-roles';
+import { canGrantSpecialRole, getRoleGrantDenialReason } from '@/lib/game-mechanics/roles-rules';
 import { getAllCharacters, getCharacterById, upsertCharacter, getAllFinancials, getFinancialById } from '@/data-store/datastore';
 import type { Character } from '@/types/entities';
 import { getLinksFor } from '@/links/link-registry';
+import { kvGet, kvSAdd, kvSet } from '@/lib/utils/kv';
+import { toUTCISOString } from '@/lib/utils/utc-utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -140,6 +143,43 @@ const buildDirectoryAmountTotals = async (characterIds: string[]): Promise<Map<s
   return totals;
 };
 
+type AkilesCharacterSnapshot = {
+  id: string;
+  accountId: string;
+  name: string;
+  roles: CharacterRole[];
+  profile: Record<string, any>;
+  createdAt: string;
+  updatedAt: string;
+};
+
+const toIsoTimestamp = (value?: Date | string | null): string | null => {
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isFinite(date.getTime()) ? date.toISOString() : null;
+};
+
+const syncAkilesCharacterSnapshot = async (character: Character): Promise<void> => {
+  if (!character.id || !character.accountId) return;
+
+  const now = new Date();
+  const snapshotKey = `iam:character:${character.id}`;
+  const existing = await kvGet<AkilesCharacterSnapshot>(snapshotKey);
+
+  const snapshot: AkilesCharacterSnapshot = {
+    id: character.id,
+    accountId: character.accountId,
+    name: (character.name || 'Customer').trim(),
+    roles: normalizeCharacterRoles(character.roles),
+    profile: existing?.profile || {},
+    createdAt: toIsoTimestamp(existing?.createdAt) || toIsoTimestamp(character.createdAt) || toUTCISOString(now),
+    updatedAt: toUTCISOString(now),
+  };
+
+  await kvSet(snapshotKey, snapshot);
+  await kvSAdd('iam:index:characters', character.id);
+};
+
 /**
  * GET /api/characters
  * Returns characters from the Game Data-Store.
@@ -259,10 +299,30 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const isFounder = tokenUser.roles.includes(CharacterRole.FOUNDER);
+    const actorRoles = normalizeCharacterRoles(Array.isArray(tokenUser.roles) ? tokenUser.roles : []);
     const normalizedIncomingRoles = normalizeCharacterRoles(body.roles);
     const existingCharacter = body.id ? await getCharacterById(body.id) : null;
-    const existingRoles = existingCharacter ? existingCharacter.roles : [];
+    const existingRoles = normalizeCharacterRoles(existingCharacter?.roles || []);
+
+    const addedRoles = normalizedIncomingRoles.filter((role) => !existingRoles.includes(role));
+    const disallowedRole = addedRoles.find((role) =>
+      !canGrantSpecialRole(actorRoles, role, {
+        characterRoles: existingRoles,
+        characterJungleCoins: existingCharacter?.wallet?.jungleCoins,
+      }),
+    );
+    if (disallowedRole) {
+      const denialReason = getRoleGrantDenialReason(actorRoles, disallowedRole, {
+        characterRoles: existingRoles,
+        characterJungleCoins: existingCharacter?.wallet?.jungleCoins,
+      });
+      return NextResponse.json(
+        { error: denialReason || 'Forbidden: Only founders can grant this role' },
+        { status: 403 },
+      );
+    }
+
+    const isFounder = actorRoles.includes(CharacterRole.FOUNDER);
 
     const rolesCanChange =
       normalizedIncomingRoles.length === existingRoles.length &&
@@ -286,6 +346,11 @@ export async function POST(req: NextRequest) {
       lastActiveAt: body.lastActiveAt ? new Date(body.lastActiveAt) : new Date(),
     };
     const saved = await upsertCharacter(character);
+    try {
+      await syncAkilesCharacterSnapshot(saved);
+    } catch (error) {
+      console.error('[API] Failed syncing linked Akiles character snapshot:', error);
+    }
     return NextResponse.json(saved);
   } catch (error: any) {
     console.error('[API] Error saving character:', error);

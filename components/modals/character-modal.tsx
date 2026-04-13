@@ -15,7 +15,13 @@ import { CharacterRole, CHARACTER_ROLE_TYPES, EntityType, FOUNDER_CHARACTER_ID, 
 import { ROLE_COLORS } from '@/lib/constants/color-constants';
 import { normalizeCharacterRoles } from '@/lib/character-roles';
 import { useTheme } from '@/lib/hooks/use-theme';
-import { ROLE_BEHAVIORS, canViewAccountInfo } from '@/lib/game-mechanics/roles-rules';
+import {
+  ROLE_BEHAVIORS,
+  FOUNDER_ONLY_GRANT_ROLES,
+  canGrantSpecialRole,
+  getRoleGrantDenialReason,
+  canViewAccountInfo,
+} from '@/lib/game-mechanics/roles-rules';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { Network, Info, Package, MapPin, Building2 } from 'lucide-react';
 import { ClientAPI } from '@/lib/client-api';
@@ -189,6 +195,21 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
   }, [open, character]); // open needed for async loading, character for data changes
 
   const toggleRole = (role: CharacterRole, checked: boolean) => {
+    const previousRoles = roles;
+    const denialReason = getRoleGrantDenialReason(
+      currentUser?.roles || [],
+      role,
+      {
+        characterRoles: previousRoles,
+        characterJungleCoins: jungleCoinsBalance,
+      },
+    );
+
+    if (checked && denialReason) {
+      alert(denialReason);
+      return;
+    }
+
     if (checked) setRoles(prev => (prev.includes(role) ? prev : [...prev, role]));
     else setRoles(prev => prev.filter(r => r !== role));
   };
@@ -227,9 +248,7 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
     if (!isActive) return ''; // No special styling for inactive roles
 
     // Convert role to uppercase to match ROLE_COLORS keys
-    const roleKey = role
-      .toUpperCase()
-      .replace(/-/g, '_') as keyof typeof ROLE_COLORS;
+    const roleKey = role.toUpperCase().replace(/-/g, '') as keyof typeof ROLE_COLORS;
     const colorClass = ROLE_COLORS[roleKey] || ROLE_COLORS.CUSTOMER;
 
     // Return appropriate color based on dark mode
@@ -444,18 +463,44 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
                       {specialRolesList.map(role => {
                         const hasRole = roles.some(r => String(r) === String(role));
                         const behavior = ROLE_BEHAVIORS[role as keyof typeof ROLE_BEHAVIORS];
+                        const canGrantForUser = canGrantSpecialRole(
+                          currentUser?.roles || [],
+                          role,
+                          {
+                            characterRoles: roles,
+                            characterJungleCoins: jungleCoinsBalance,
+                          },
+                        );
+                        const canEnableRole = canGrantForUser;
 
                         if (!behavior) return null;
                         // ALWAYS show all roles for Founder
                         if (behavior.hideIfNotAssigned && !hasRole && !currentUserIsFounder) return null;
-                        // Founder can toggle all roles
-                        const isDisplayOnly = behavior.isDisplayOnly && !currentUserIsFounder;
+                        // Founder can toggle all roles; everyone else respects role rules
+                        const isDisplayOnly = (behavior.isDisplayOnly || !canEnableRole) && !currentUserIsFounder;
+                        const isRestrictedRole = FOUNDER_ONLY_GRANT_ROLES.includes(role);
+                        const isFounderOnlyRole = isRestrictedRole && !currentUserIsFounder;
+                        const denialReason = getRoleGrantDenialReason(
+                          currentUser?.roles || [],
+                          role,
+                          {
+                            characterRoles: roles,
+                            characterJungleCoins: jungleCoinsBalance,
+                          },
+                        );
+                        const isRestrictionMessage = Boolean(denialReason) && !hasRole;
+                        const isTooltipNeeded = isFounderOnlyRole || isRestrictionMessage;
+                        const disabledReason = isFounderOnlyRole
+                          ? 'Only Founder can grant this role'
+                          : denialReason ?? undefined;
 
                         return (
                           <button
                             key={role}
                             type="button"
+                            disabled={isDisplayOnly}
                             onClick={() => !isDisplayOnly && toggleRole(role, !hasRole)}
+                            title={isTooltipNeeded ? disabledReason : undefined}
                             className={`h-7 text-xs px-2 rounded-md border transition-colors ${hasRole
                               ? getRoleColor(role, true) + (isDisplayOnly ? ' cursor-not-allowed' : '')
                               : 'border-input bg-background hover:bg-muted hover:text-accent-foreground'
