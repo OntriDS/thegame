@@ -10,10 +10,11 @@ import AccountModal from '@/components/modals/account-modal';
 import DeleteModal from '@/components/modals/submodals/delete-submodal';
 import ConfirmationModal from '@/components/modals/submodals/confirmation-submodal';
 import type { Account } from '@/types/entities';
-import { User, Plus, Edit, Trash2, Shield, UserRoundX } from 'lucide-react';
+import { User, Plus, Edit, Trash2, Shield, UserRoundX, ArrowUpDown } from 'lucide-react';
 import { CharacterRole, EntityType } from '@/types/enums';
 import { AccountsDeepLinkTrigger } from '@/components/admin/admin-deep-link-triggers';
 import { filterRolesToSpecialOnly, normalizeCharacterRole } from '@/lib/character-roles';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 function AccountsPageContent({ canAccessIAMConsole, isCheckingIAMConsole }: { canAccessIAMConsole: boolean; isCheckingIAMConsole: boolean; }) {
   const [showAccountModal, setShowAccountModal] = useState(false);
@@ -24,6 +25,9 @@ function AccountsPageContent({ canAccessIAMConsole, isCheckingIAMConsole }: { ca
   const [showDisableAccountConfirm, setShowDisableAccountConfirm] = useState(false);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [accountSortOption, setAccountSortOption] = useState<
+    'name-asc' | 'name-desc' | 'email-asc' | 'email-desc' | 'roles-asc' | 'roles-desc' | 'date-newest' | 'date-oldest'
+  >('name-asc');
 
   const loadAccounts = useCallback(async () => {
     setIsLoading(true);
@@ -299,6 +303,52 @@ function AccountsPageContent({ canAccessIAMConsole, isCheckingIAMConsole }: { ca
       ? ['m2m']
       : filterRolesToSpecialOnly(account.character?.roles);
 
+  const getAccountSortValue = (account: Account, option: typeof accountSortOption): string | number => {
+    switch (option) {
+      case 'name-asc':
+      case 'name-desc':
+        return (account.name || '').toLowerCase();
+      case 'email-asc':
+      case 'email-desc':
+        return (account.email || '').toLowerCase();
+      case 'roles-asc':
+      case 'roles-desc': {
+        const roles = getSpecialRolesForAccount(account);
+        return roles.map((role) => String(role).toLowerCase()).sort().join(', ');
+      }
+      case 'date-newest':
+      case 'date-oldest': {
+        const created = new Date(account.createdAt || 0).getTime();
+        return Number.isNaN(created) ? 0 : created;
+      }
+      default:
+        return '';
+    }
+  };
+
+  const sortedAccounts = (() => {
+    const sorted = [...accounts];
+    sorted.sort((a, b) => {
+      const left = getAccountSortValue(a, accountSortOption);
+      const right = getAccountSortValue(b, accountSortOption);
+
+      if (typeof left === 'number' && typeof right === 'number') {
+        return accountSortOption === 'date-newest'
+          ? right - left
+          : accountSortOption === 'date-oldest'
+            ? left - right
+            : left - right;
+      }
+
+      const leftText = String(left);
+      const rightText = String(right);
+      return accountSortOption.endsWith('asc')
+        ? leftText.localeCompare(rightText)
+        : rightText.localeCompare(leftText);
+    });
+    return sorted;
+  })();
+
   return (
     <div className="min-h-screen bg-background p-6 space-y-8">
       <AccountsDeepLinkTrigger onAccount={handleAccountDeepLink} />
@@ -357,6 +407,30 @@ function AccountsPageContent({ canAccessIAMConsole, isCheckingIAMConsole }: { ca
       {/* Accounts Table */}
       <Card className="border-primary/10 bg-background/50 backdrop-blur-sm shadow-2xl">
         <CardContent className="p-0">
+          <div className="flex items-center justify-between border-b border-primary/10 bg-muted/30 px-4 py-3">
+            <div className="text-xs font-black uppercase tracking-wider opacity-50">Accounts</div>
+            <div className="flex items-center gap-2 text-xs">
+              <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+              <Select
+                value={accountSortOption}
+                onValueChange={(value) => setAccountSortOption(value as typeof accountSortOption)}
+              >
+                <SelectTrigger className="w-56 h-8">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="name-asc">Name: A-Z</SelectItem>
+                  <SelectItem value="name-desc">Name: Z-A</SelectItem>
+                  <SelectItem value="email-asc">Email: A-Z</SelectItem>
+                  <SelectItem value="email-desc">Email: Z-A</SelectItem>
+                  <SelectItem value="roles-asc">Roles: A-Z</SelectItem>
+                  <SelectItem value="roles-desc">Roles: Z-A</SelectItem>
+                  <SelectItem value="date-newest">Date Created: Newest First</SelectItem>
+                  <SelectItem value="date-oldest">Date Created: Oldest First</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
@@ -369,7 +443,7 @@ function AccountsPageContent({ canAccessIAMConsole, isCheckingIAMConsole }: { ca
                 </tr>
               </thead>
               <tbody className="divide-y divide-primary/5">
-                {accounts.map((account: any) => {
+                {sortedAccounts.map((account: any) => {
                   const isFounder = isFounderAccount(account);
                   return (
                     <tr
@@ -459,7 +533,7 @@ function AccountsPageContent({ canAccessIAMConsole, isCheckingIAMConsole }: { ca
                   );
                 })}
 
-                {accounts.length === 0 && (
+                {sortedAccounts.length === 0 && (
                   <tr>
                     <td colSpan={5} className="p-12 text-center">
                       <div className="flex flex-col items-center gap-2 opacity-30">

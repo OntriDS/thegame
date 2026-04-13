@@ -5,10 +5,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Task, Item, FinancialRecord, Sale, Site, Account } from '@/types/entities';
 import { EntityType, SiteType } from '@/types/enums';
-import { ArrowUpDown, Trash2 } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import { ClientAPI } from '@/lib/client-api';
 import { dispatchEntityUpdated, entityTypeToKind } from '@/lib/ui/ui-events';
 // Side effects handled by parent component via API calls
@@ -48,8 +47,6 @@ const ENTITY_TYPE_WARNING_LABELS: Record<DeletableEntityType, string> = {
   [EntityType.ACCOUNT]: 'account',
 };
 
-type DeleteAccountSortOption = 'name-asc' | 'name-desc' | 'email-asc' | 'email-desc' | 'roles-asc' | 'roles-desc' | 'date-newest' | 'date-oldest';
-
 // Entity types that can have related items (for checking sourceTaskId/sourceRecordId)
 const ENTITY_TYPES_WITH_RELATED_ITEMS: DeletableEntityType[] = [EntityType.TASK, EntityType.FINANCIAL];
 
@@ -65,7 +62,6 @@ export default function DeleteModal({
   const [deleteLinkedCharacter, setDeleteLinkedCharacter] = useState(false);
   /** When true, hard-delete active subtasks under this parent; default is orphan only. */
   const [cascadeDeleteChildTasks, setCascadeDeleteChildTasks] = useState(false);
-  const [accountSortOption, setAccountSortOption] = useState<DeleteAccountSortOption>('name-asc');
   const [isProcessing, setIsProcessing] = useState(false);
   const [relatedItems, setRelatedItems] = useState<Item[]>([]);
   /** Task ids (among `entities`) that have at least one descendant in the tree */
@@ -323,62 +319,11 @@ export default function DeleteModal({
     return account.character?.id || account.characterId;
   };
 
-  const getAccountSortValue = (account: Account, option: DeleteAccountSortOption): string | number => {
-    switch (option) {
-      case 'name-asc':
-      case 'name-desc':
-        return (account.name || '').toLowerCase();
-      case 'email-asc':
-      case 'email-desc':
-        return (account.email || '').toLowerCase();
-      case 'roles-asc':
-      case 'roles-desc': {
-        const roles = (account.character?.roles || []).map((role) => String(role).toLowerCase()).sort();
-        return roles.join(', ');
-      }
-      case 'date-newest':
-      case 'date-oldest': {
-        const created = new Date(account.createdAt || 0).getTime();
-        return Number.isNaN(created) ? 0 : created;
-      }
-    default:
-      return '';
-    }
-  };
-
   const getAccountDescription = (account: Account): string => {
     const roles = (account.character?.roles || []).map((role) => String(role));
     const createdAt = account.createdAt ? new Date(account.createdAt).toLocaleString() : 'Unknown';
     return `Email: ${account.email} • Roles: ${roles.length ? roles.join(', ') : 'No roles'} • Created: ${createdAt}`;
   };
-
-  const sortAccountsForDisplay = (accounts: Account[], sortOption: DeleteAccountSortOption): Account[] => {
-    const sorted = [...accounts];
-    sorted.sort((a, b) => {
-      const left = getAccountSortValue(a, sortOption);
-      const right = getAccountSortValue(b, sortOption);
-
-      if (sortOption === 'date-newest') {
-        return Number(right) - Number(left);
-      }
-      if (sortOption === 'date-oldest') {
-        return Number(left) - Number(right);
-      }
-
-      if (typeof left === 'number' && typeof right === 'number') {
-        return left - right;
-      }
-      const leftText = String(left);
-      const rightText = String(right);
-
-      return (sortOption.endsWith('asc') ? leftText.localeCompare(rightText) : rightText.localeCompare(leftText));
-    });
-    return sorted;
-  };
-
-  const displayedEntities = entityType === EntityType.ACCOUNT
-    ? sortAccountsForDisplay(entities as Account[], accountSortOption)
-    : entities;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -406,29 +351,9 @@ export default function DeleteModal({
           <div className="text-sm text-muted-foreground">
             <div className="flex items-center justify-between gap-2">
               <strong>{getEntityTypeLabel()}{entities.length > 1 ? 's' : ''} to delete:</strong>
-              {entityType === EntityType.ACCOUNT && entities.length > 1 && (
-                <div className="flex items-center gap-2">
-                  <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
-                  <Select value={accountSortOption} onValueChange={(value) => setAccountSortOption(value as DeleteAccountSortOption)}>
-                    <SelectTrigger className="w-56 h-8">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="name-asc">Name: A-Z</SelectItem>
-                      <SelectItem value="name-desc">Name: Z-A</SelectItem>
-                      <SelectItem value="email-asc">Email: A-Z</SelectItem>
-                      <SelectItem value="email-desc">Email: Z-A</SelectItem>
-                      <SelectItem value="roles-asc">Roles: A-Z</SelectItem>
-                      <SelectItem value="roles-desc">Roles: Z-A</SelectItem>
-                      <SelectItem value="date-newest">Date Created: Newest First</SelectItem>
-                      <SelectItem value="date-oldest">Date Created: Oldest First</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
             </div>
             <div className="mt-2 space-y-2 max-h-32 overflow-y-auto">
-              {displayedEntities.map((entity) => {
+              {entities.map((entity) => {
                 if (entityType === EntityType.ACCOUNT) {
                   return (
                     <div key={entity.id} className="p-2 bg-muted rounded text-xs">
