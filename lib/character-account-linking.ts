@@ -247,13 +247,16 @@ async function createCustomerCharacter(input: {
 }
 
 async function provisionMatchToAccount(character: Character, input: ProvisionInput, matchType: ProvisionMatchType): Promise<ProvisionResponse> {
-  const createdAccount = await iamService.createAccount({
-    name: input.name,
-    email: input.email,
-    phone: input.phone,
-    phoneCountryCode: input.phoneCountryCode,
-    password: input.password,
-  });
+  const createdAccount = await iamService.createAccount(
+    {
+      name: input.name,
+      email: input.email,
+      phone: input.phone,
+      phoneCountryCode: input.phoneCountryCode,
+      password: input.password,
+    },
+    { skipGlobalEmailMapping: true },
+  );
 
   await iamService.linkAccountToCharacter(createdAccount.id, character.id);
 

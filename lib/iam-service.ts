@@ -97,7 +97,15 @@ export class IAMService {
   // ACCOUNT CRUD (iam:account:*)
   // ═══════════════════════════════════════════════════════════════
 
-  async createAccount(data: CreateAccountDTO): Promise<Account> {
+  /**
+   * @param options.skipGlobalEmailMapping — When true, does not write `iam:account:email:*`.
+   *   Use for Akiles-driven customer provision: the hub already owns the canonical email map
+   *   for that address; TheGame still creates `iam:account:{id}` for character linking + admin IAM.
+   */
+  async createAccount(
+    data: CreateAccountDTO,
+    options?: { skipGlobalEmailMapping?: boolean },
+  ): Promise<Account> {
     const now = getUTCNow();
     let passwordHash: string | null = null;
 
@@ -122,7 +130,9 @@ export class IAMService {
     };
 
     await kvSet(buildAccountKey(account.id), account);
-    await kvSet(buildAccountByEmailKey(account.email), { accountId: account.id });
+    if (!options?.skipGlobalEmailMapping) {
+      await kvSet(buildAccountByEmailKey(account.email), { accountId: account.id });
+    }
     await kvSAdd(IAM_ACCOUNTS_INDEX, account.id);
 
     return account;

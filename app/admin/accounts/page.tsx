@@ -67,10 +67,15 @@ function AccountsPageContent({ canAccessIAMConsole, isCheckingIAMConsole }: { ca
     [handleEditAccount],
   );
 
+  const isFounderAccount = useCallback((account: Account) => {
+    return (account.character?.roles || []).some((role) => normalizeCharacterRole(role) === CharacterRole.FOUNDER);
+  }, []);
+
   const openDeleteAccountConfirm = useCallback((account: Account) => {
+    if (isFounderAccount(account)) return;
     setAccountPendingDelete(account);
     setShowDeleteAccountModal(true);
-  }, []);
+  }, [isFounderAccount]);
 
   const handleDeleteAccountModalOpenChange = useCallback((open: boolean) => {
     setShowDeleteAccountModal(open);
@@ -364,87 +369,95 @@ function AccountsPageContent({ canAccessIAMConsole, isCheckingIAMConsole }: { ca
                 </tr>
               </thead>
               <tbody className="divide-y divide-primary/5">
-                {accounts.map((account: any) => (
-                  <tr
-                    key={account.id}
-                    className={`group hover:bg-primary/5 transition-colors ${
-                      account.type !== 'm2m' && account.isActive === false ? 'opacity-75' : ''
-                    }`}
-                  >
-                    <td className="p-4">
-                      <div className="flex items-center gap-3">
-                        <div>
-                          <div className="font-black uppercase tracking-tighter text-base leading-none group-hover:text-primary transition-colors flex items-center gap-2">
-                            {account.name}
-                            {account.type === 'm2m' && (
-                              <span className="px-1.5 py-0.5 rounded text-[8px] font-black bg-amber-500 text-white uppercase tracking-widest">M2M</span>
-                            )}
+                {accounts.map((account: any) => {
+                  const isFounder = isFounderAccount(account);
+                  return (
+                    <tr
+                      key={account.id}
+                      className={`group hover:bg-primary/5 transition-colors ${
+                        account.type !== 'm2m' && account.isActive === false ? 'opacity-75' : ''
+                      }`}
+                    >
+                      <td className="p-4">
+                        <div className="flex items-center gap-3">
+                          <div>
+                            <div className="font-black uppercase tracking-tighter text-base leading-none group-hover:text-primary transition-colors flex items-center gap-2">
+                              {account.name}
+                              {account.type === 'm2m' && (
+                                <span className="px-1.5 py-0.5 rounded text-[8px] font-black bg-amber-500 text-white uppercase tracking-widest">M2M</span>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <div className="flex flex-col">
-                        <div className="text-xs font-bold opacity-70 group-hover:opacity-100 transition-opacity">{account.email}</div>
-                        {account.phone && <div className="text-[10px] opacity-40">{account.phone}</div>}
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <div className="flex flex-wrap justify-center gap-1">
-                        {getSpecialRolesForAccount(account).length > 0 ? (
-                          getSpecialRolesForAccount(account).map((role) => getRoleBadge(role))
-                        ) : (
-                          <span className="text-[10px] opacity-30 italic font-bold text-destructive">No special role</span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      {getAccountStatus(account)}
-                    </td>
-                    <td className="p-4 text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        {account.type !== 'm2m' && (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleEditAccount(account)}
-                              className="h-8 w-8 p-0 hover:bg-primary/20 hover:text-primary transition-all active:scale-90"
-                              aria-label={`Edit account ${account.email}`}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            {account.isActive !== false && (
+                      </td>
+                      <td className="p-4">
+                        <div className="flex flex-col">
+                          <div className="text-xs font-bold opacity-70 group-hover:opacity-100 transition-opacity">{account.email}</div>
+                          {account.phone && <div className="text-[10px] opacity-40">{account.phone}</div>}
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <div className="flex flex-wrap justify-center gap-1">
+                          {getSpecialRolesForAccount(account).length > 0 ? (
+                            getSpecialRolesForAccount(account).map((role) => getRoleBadge(role))
+                          ) : (
+                            <span className="text-[10px] opacity-30 italic font-bold text-destructive">No special role</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        {getAccountStatus(account)}
+                      </td>
+                      <td className="p-4 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          {account.type !== 'm2m' && (
+                            <>
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => openDisableAccountConfirm(account)}
-                                className="h-8 w-8 p-0 text-amber-600/70 hover:bg-amber-500/10 hover:text-amber-600 transition-all active:scale-90"
-                                title="Disable login (record stays as Inactive)"
-                                aria-label={`Disable account ${account.email}`}
+                                onClick={() => handleEditAccount(account)}
+                                className="h-8 w-8 p-0 hover:bg-primary/20 hover:text-primary transition-all active:scale-90"
+                                aria-label={`Edit account ${account.email}`}
                               >
-                                <UserRoundX className="h-4 w-4" />
+                                <Edit className="h-4 w-4" />
                               </Button>
-                            )}
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => openDeleteAccountConfirm(account)}
-                              className="h-8 w-8 p-0 text-destructive/50 hover:bg-destructive/10 hover:text-destructive transition-all active:scale-90"
-                              title="Permanently remove IAM row and keys"
-                              aria-label={`Permanently delete account ${account.email}`}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </>
-                        )}
-                        {account.type === 'm2m' && (
-                          <div className="text-[10px] font-black text-amber-500/50 mr-2 uppercase tracking-widest italic">System Managed</div>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                              {account.isActive !== false && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => openDisableAccountConfirm(account)}
+                                  className="h-8 w-8 p-0 text-amber-600/70 hover:bg-amber-500/10 hover:text-amber-600 transition-all active:scale-90"
+                                  title="Disable login (record stays as Inactive)"
+                                  aria-label={`Disable account ${account.email}`}
+                                >
+                                  <UserRoundX className="h-4 w-4" />
+                                </Button>
+                              )}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => openDeleteAccountConfirm(account)}
+                                disabled={isFounder}
+                                className={`h-8 w-8 p-0 transition-all active:scale-90 ${
+                                  isFounder
+                                    ? 'text-muted-foreground/50 hover:bg-transparent hover:text-muted-foreground/50 cursor-not-allowed'
+                                    : 'text-destructive/50 hover:bg-destructive/10 hover:text-destructive'
+                                }`}
+                                title={isFounder ? 'Founder account cannot be deleted' : 'Permanently remove IAM row and keys'}
+                                aria-label={`Permanently delete account ${account.email}`}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </>
+                          )}
+                          {account.type === 'm2m' && (
+                            <div className="text-[10px] font-black text-amber-500/50 mr-2 uppercase tracking-widest italic">System Managed</div>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
 
                 {accounts.length === 0 && (
                   <tr>

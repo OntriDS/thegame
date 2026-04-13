@@ -1,7 +1,8 @@
 /**
- * IAM Redis key patterns — shared across TheGame, Akiles-Ecosystem, and Pixelbrain when they use
- * the same Upstash database: all IAM data lives under `iam:*` (not under `thegame:` / per-app prefix).
- * Game entities (characters, items, …) use `thegame:data:*` — see `data-store/keys.ts`.
+ * IAM Redis keys — shared across apps on the same Upstash: `iam:*` is the single IAM namespace.
+ * `iam:account:email:{email}` is the canonical email → accountId map for login resolution; do not
+ * register a second mapping when provisioning from Akiles (see `createAccount` skipGlobalEmailMapping).
+ * Game entities use `thegame:data:*` — see `data-store/keys.ts`.
  */
 
 export const buildAccountKey = (id: string) => `iam:account:${id}`;
