@@ -64,6 +64,12 @@ export const ROLE_BEHAVIORS = {
     isDisplayOnly: false,     // Can be freely toggled
     requiresJungleCoins: false,
   },
+  [CharacterRole.AI_AGENT]: {
+    isImmutable: false,
+    hideIfNotAssigned: false,
+    isDisplayOnly: false,
+    requiresJungleCoins: false,
+  },
   [CharacterRole.FAMILY]: {
     isImmutable: false,
     hideIfNotAssigned: false,

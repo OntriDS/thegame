@@ -29,19 +29,6 @@ export function CompanyFinancesTab({
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Jungle Coins</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {atomicSummary?.jungleCoins || 0} J$
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
         {isLoading ? (
           <div className="flex flex-col items-center justify-center p-12 space-y-4">
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>

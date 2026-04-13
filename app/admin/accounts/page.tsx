@@ -156,7 +156,6 @@ function AccountsPageContent({ canAccessIAMConsole, isCheckingIAMConsole }: { ca
     return (
       <div className="space-y-6 p-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-1xl font-white uppercase tracking-tighter">Accounts</h1>
           <div className="flex items-center gap-2">
             <Link
               href="/admin/iam"
@@ -165,11 +164,12 @@ function AccountsPageContent({ canAccessIAMConsole, isCheckingIAMConsole }: { ca
               <Shield className="h-4 w-4 mr-2" />
               IAM Console
             </Link>
-            <Button onClick={handleCreateAccount} size="sm" className="bg-primary hover:bg-primary/90">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Account
-            </Button>
+            <h1 className="text-1xl font-white uppercase tracking-tighter">Accounts</h1>
           </div>
+          <Button onClick={handleCreateAccount} size="sm" className="bg-primary hover:bg-primary/90">
+            <Plus className="h-4 w-4 mr-2" />
+            Add Account
+          </Button>
         </div>
         <div className="flex flex-col items-center justify-center h-64 space-y-4">
           <div className="h-8 w-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
@@ -353,30 +353,34 @@ function AccountsPageContent({ canAccessIAMConsole, isCheckingIAMConsole }: { ca
     <div className="min-h-screen bg-background p-6 space-y-8">
       <AccountsDeepLinkTrigger onAccount={handleAccountDeepLink} />
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-1xl font-black uppercase tracking-tightest leading-none text-white drop-shadow-sm">Accounts</h1>
-          <p className="text-[10px] font-bold text-muted-foreground mt-1 uppercase tracking-widest opacity-50">System Identity & Access Management</p>
+        <div className="flex items-start gap-4">
+          <div className="flex items-center">
+            {canAccessIAMConsole ? (
+              <Link
+                href="/admin/iam"
+                className="inline-flex items-center justify-center rounded-md text-sm font-bold uppercase tracking-widest transition-colors border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-4 shadow-sm"
+              >
+                <Shield className="h-4 w-4 mr-2" />
+                IAM Console
+              </Link>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                disabled
+                className="inline-flex items-center justify-center rounded-md text-sm font-bold uppercase tracking-widest transition-colors border border-muted text-muted-foreground h-9 px-4 shadow-sm opacity-50 cursor-not-allowed"
+              >
+                <Shield className="h-4 w-4 mr-2" />
+                {isCheckingIAMConsole ? 'Checking access…' : 'IAM Console'}
+              </Button>
+            )}
+          </div>
+          <div>
+            <h1 className="text-1xl font-black uppercase tracking-tightest leading-none text-white drop-shadow-sm">Accounts</h1>
+            <p className="text-[10px] font-bold text-muted-foreground mt-1 uppercase tracking-widest opacity-50">System Identity & Access Management</p>
+          </div>
         </div>
         <div className="flex items-center gap-2">
-          {canAccessIAMConsole ? (
-            <Link
-              href="/admin/iam"
-              className="inline-flex items-center justify-center rounded-md text-sm font-bold uppercase tracking-widest transition-colors border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-4 shadow-sm"
-            >
-              <Shield className="h-4 w-4 mr-2" />
-              IAM Console
-            </Link>
-          ) : (
-            <Button
-              variant="outline"
-              size="sm"
-              disabled
-              className="inline-flex items-center justify-center rounded-md text-sm font-bold uppercase tracking-widest transition-colors border border-muted text-muted-foreground h-9 px-4 shadow-sm opacity-50 cursor-not-allowed"
-            >
-              <Shield className="h-4 w-4 mr-2" />
-              {isCheckingIAMConsole ? 'Checking access…' : 'IAM Console'}
-            </Button>
-          )}
           <div className="flex items-center gap-2 text-xs">
             <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
             <Select
