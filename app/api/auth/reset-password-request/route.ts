@@ -1,43 +1,50 @@
-import { NextResponse, NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
 import { iamService } from '@/lib/iam-service';
+import { sendPasswordResetEmail } from '@/lib/email/resend-service';
 
 /**
  * Password Reset Request API
  * Generates a reset token for the given email
- * In production, this would send an email with the reset link
- * For now, it returns the token directly for testing
+ * Sends a password reset email and returns generic response.
  */
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { email } = body;
+    const email = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : '';
 
     if (!email) {
       return NextResponse.json(
-        { error: 'Email is required' },
+        { success: false, message: 'Email is required' },
         { status: 400 }
       );
     }
 
-    const result = await iamService.generatePasswordResetToken(email.trim().toLowerCase());
-
-    if (!result.success) {
-      // Don't reveal if account exists or not for security
-      return NextResponse.json({
-        success: false,
-        message: 'If an account exists with this email, a reset token has been generated.',
-        // For development/testing, return the token
-        token: result.token // TODO: Remove this in production and send via email instead
-      });
+    const account = await iamService.getAccountByEmail(email);
+    if (account) {
+      const result = await iamService.generatePasswordResetToken(email);
+      if (result.success && result.token) {
+        const emailResult = await sendPasswordResetEmail({
+          email,
+          userName: account.name || email.split('@')[0],
+          resetToken: result.token,
+          expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+        });
+        if (!emailResult.success) {
+          console.error('[Password Reset Request] Failed to send reset email:', emailResult.error);
+          return NextResponse.json(
+            { success: false, error: 'Unable to process reset request at this time. Please try again.' },
+            { status: 502 }
+          );
+        }
+      }
     }
 
-    console.log(`[Password Reset] Reset token generated for ${email}: ${result.token}`);
-
+    // Generic response avoids leaking account existence.
     return NextResponse.json({
       success: true,
-      message: 'If an account exists with this email, a reset token has been generated.',
-      token: result.token // TODO: In production, send this via email instead
+      message: 'If an account exists with this email, a reset link has been sent.',
     });
+
   } catch (error: any) {
     console.error('[Password Reset Request] Error:', error);
     return NextResponse.json(

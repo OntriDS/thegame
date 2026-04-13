@@ -1,6 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
 import type { Character } from '@/types/entities';
-import { CharacterRole } from '@/types/enums';
 import { getAllCharacters, upsertCharacter } from '@/data-store/datastore';
 import { getCharacterById } from '@/data-store/repositories/character.repo';
 import { kvDel, kvScan, kvSAdd, kvSMembers } from '@/data-store/kv';
@@ -227,7 +226,7 @@ async function createCustomerCharacter(input: {
     id: uuidv4(),
     name: input.name,
     description: `Customer account for ${input.email}`,
-    roles: [CharacterRole.CUSTOMER],
+    roles: [],
     achievementsCharacter: [],
     purchasedAmount: 0,
     inventory: [],

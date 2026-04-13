@@ -178,7 +178,7 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
           setDescription('');
           setContactPhone('');
           setContactEmail('');
-          setRoles([CharacterRole.CUSTOMER]); // Default to CUSTOMER role for new characters
+          setRoles([]); // Roles optional; CUSTOMER is granted via sales / store purchase, not by default
           setPurchasedAmount(0);
           setCP(undefined);
           setAchievementsCharacter([]);

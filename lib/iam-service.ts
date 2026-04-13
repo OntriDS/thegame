@@ -53,6 +53,9 @@ export interface Account {
   playerId?: string;
   resetToken?: string;
   resetTokenExpiry?: string;
+  verificationToken?: string;
+  verificationTokenExpiry?: string;
+  isVerifiedAt?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -389,6 +392,86 @@ export class IAMService {
     await kvDel(resetKey);
 
     return { success: true };
+  }
+
+  async generateEmailVerificationToken(
+    email: string
+  ): Promise<{ success: boolean; token?: string; expiresAt?: string; error?: string }> {
+    const account = await this.getAccountByEmail(email.toLowerCase());
+    if (!account) {
+      return { success: false, error: 'Account not found' };
+    }
+    if (account.isVerified) {
+      return { success: false, error: 'Email is already verified' };
+    }
+
+    const verificationToken = uuidv4();
+    const now = getUTCNow();
+    const expiresAt = toUTCISOString(toUTC(now.getTime() + 24 * 60 * 60 * 1000));
+    const verificationKey = `iam:verify:${verificationToken}`;
+
+    await kvSet(verificationKey, {
+      accountId: account.id,
+      email: account.email,
+      expiresAt,
+    });
+
+    await kvSet(buildAccountKey(account.id), {
+      ...account,
+      verificationToken,
+      verificationTokenExpiry: expiresAt,
+      updatedAt: toUTCISOString(now),
+    });
+
+    return {
+      success: true,
+      token: verificationToken,
+      expiresAt,
+    };
+  }
+
+  async confirmEmailVerificationToken(
+    token: string
+  ): Promise<{ success: boolean; accountId?: string; error?: string }> {
+    const verificationKey = `iam:verify:${token}`;
+    const verificationData = await kvGet<{ accountId: string; email: string; expiresAt: string }>(
+      verificationKey
+    );
+
+    if (!verificationData) {
+      return {
+        success: false,
+        error: 'Invalid or expired verification token',
+      };
+    }
+
+    if (fromUTCISOString(verificationData.expiresAt).getTime() < getUTCNow().getTime()) {
+      await kvDel(verificationKey);
+      return {
+        success: false,
+        error: 'Verification link has expired. Please request a new one.',
+      };
+    }
+
+    const account = await this.getAccountById(verificationData.accountId);
+    if (!account) {
+      return { success: false, error: 'Account not found' };
+    }
+
+    const now = getUTCNow();
+    const verifiedAt = toUTCISOString(now);
+    const updated: Account = {
+      ...account,
+      isVerified: true,
+      verificationToken: undefined,
+      verificationTokenExpiry: undefined,
+      isVerifiedAt: verifiedAt,
+      updatedAt: verifiedAt,
+    };
+
+    await kvSet(buildAccountKey(account.id), updated);
+    await kvDel(verificationKey);
+    return { success: true, accountId: account.id };
   }
 
   // ═══════════════════════════════════════════════════════════════
