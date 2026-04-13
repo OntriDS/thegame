@@ -25,7 +25,7 @@ import {
 /**
  * AUTHZ NOTE:
  * Role evaluation is centralized here:
- * - The privileged-admin role list is defined in integrity/iam/permissions.ts
+ * - Canonical policy file: thegame/integrity/iam/permissions.ts (imported as @/integrity/iam/permissions)
  * - This service must never add its own founder/team/admin overrides.
  */
 

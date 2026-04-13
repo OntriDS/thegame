@@ -106,7 +106,6 @@ function AccountsPageContent({ canAccessIAMConsole, isCheckingIAMConsole }: { ca
       admin: 'bg-rose-500/10 text-rose-500 border-rose-500/20',
       team: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
       'ai-agent': 'bg-amber-500/10 text-amber-500 border-amber-500/20',
-      m2m: 'bg-orange-500/10 text-orange-500 border-orange-500/20',
       developer: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
       player: 'bg-violet-500/10 text-violet-500 border-violet-500/20',
       customer: 'bg-sky-500/10 text-sky-500 border-sky-500/20',
@@ -127,14 +126,6 @@ function AccountsPageContent({ canAccessIAMConsole, isCheckingIAMConsole }: { ca
   };
 
   const getAccountStatus = (account: any) => {
-    if (account.type === 'm2m') {
-      return (
-        <span className="flex items-center gap-1.5 text-amber-600 font-bold text-[10px] uppercase tracking-widest">
-          <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-          M2M
-        </span>
-      );
-    }
     const active = account.isActive !== false;
     if (active) {
       return (
@@ -182,6 +173,8 @@ function AccountsPageContent({ canAccessIAMConsole, isCheckingIAMConsole }: { ca
   // Calculate role stats
   const hasCharacterRole = (roles: string[] | undefined, role: CharacterRole) =>
     roles?.some((r) => normalizeCharacterRole(r) === role) ?? false;
+
+  const displayedAccounts = accounts.filter((account) => (account as any).type !== 'm2m');
 
   const specialRoleOrder: CharacterRole[] = [
     CharacterRole.FOUNDER,
@@ -280,28 +273,15 @@ function AccountsPageContent({ canAccessIAMConsole, isCheckingIAMConsole }: { ca
       id: role,
       title: specialRoleMeta[role].title,
       labelColor: specialRoleMeta[role].labelColor,
-      count: accounts.filter(
-        (account) => (account as any).type !== 'm2m' && hasCharacterRole(account.character?.roles, role)
-      ).length,
+      count: displayedAccounts.filter((account) => hasCharacterRole(account.character?.roles, role)).length,
       classes: specialRoleMeta[role].classes,
       valueColor: specialRoleMeta[role].valueColor,
       iconColor: specialRoleMeta[role].iconColor,
     })),
-    {
-      id: 'm2m',
-      title: 'M2M',
-      labelColor: 'text-orange-500/50',
-      count: accounts.filter((account) => (account as any).type === 'm2m').length,
-      classes: 'bg-orange-500/5 border-orange-500/10',
-      valueColor: 'text-orange-600',
-      iconColor: 'text-orange-600',
-    },
   ];
 
   const getSpecialRolesForAccount = (account: Account) =>
-    (account as any).type === 'm2m'
-      ? ['m2m']
-      : filterRolesToSpecialOnly(account.character?.roles);
+    filterRolesToSpecialOnly(account.character?.roles);
 
   const getAccountSortValue = (account: Account, option: typeof accountSortOption): string | number => {
     switch (option) {
@@ -327,7 +307,7 @@ function AccountsPageContent({ canAccessIAMConsole, isCheckingIAMConsole }: { ca
   };
 
   const sortedAccounts = (() => {
-    const sorted = [...accounts];
+    const sorted = [...displayedAccounts];
     sorted.sort((a, b) => {
       const left = getAccountSortValue(a, accountSortOption);
       const right = getAccountSortValue(b, accountSortOption);
@@ -453,7 +433,7 @@ function AccountsPageContent({ canAccessIAMConsole, isCheckingIAMConsole }: { ca
                     <tr
                       key={account.id}
                       className={`group hover:bg-primary/5 transition-colors ${
-                        account.type !== 'm2m' && account.isActive === false ? 'opacity-75' : ''
+                        account.isActive === false ? 'opacity-75' : ''
                       }`}
                     >
                       <td className="p-4">
@@ -461,9 +441,6 @@ function AccountsPageContent({ canAccessIAMConsole, isCheckingIAMConsole }: { ca
                           <div>
                             <div className="font-black uppercase tracking-tighter text-base leading-none group-hover:text-primary transition-colors flex items-center gap-2">
                               {account.name}
-                              {account.type === 'm2m' && (
-                                <span className="px-1.5 py-0.5 rounded text-[8px] font-black bg-amber-500 text-white uppercase tracking-widest">M2M</span>
-                              )}
                             </div>
                           </div>
                         </div>
@@ -488,49 +465,44 @@ function AccountsPageContent({ canAccessIAMConsole, isCheckingIAMConsole }: { ca
                       </td>
                       <td className="p-4 text-right">
                         <div className="flex items-center justify-end gap-1">
-                          {account.type !== 'm2m' && (
-                            <>
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEditAccount(account)}
+                              className="h-8 w-8 p-0 hover:bg-primary/20 hover:text-primary transition-all active:scale-90"
+                              aria-label={`Edit account ${account.email}`}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            {account.isActive !== false && (
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => handleEditAccount(account)}
-                                className="h-8 w-8 p-0 hover:bg-primary/20 hover:text-primary transition-all active:scale-90"
-                                aria-label={`Edit account ${account.email}`}
+                                onClick={() => openDisableAccountConfirm(account)}
+                                className="h-8 w-8 p-0 text-amber-600/70 hover:bg-amber-500/10 hover:text-amber-600 transition-all active:scale-90"
+                                title="Disable login (record stays as Inactive)"
+                                aria-label={`Disable account ${account.email}`}
                               >
-                                <Edit className="h-4 w-4" />
+                                <UserRoundX className="h-4 w-4" />
                               </Button>
-                              {account.isActive !== false && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => openDisableAccountConfirm(account)}
-                                  className="h-8 w-8 p-0 text-amber-600/70 hover:bg-amber-500/10 hover:text-amber-600 transition-all active:scale-90"
-                                  title="Disable login (record stays as Inactive)"
-                                  aria-label={`Disable account ${account.email}`}
-                                >
-                                  <UserRoundX className="h-4 w-4" />
-                                </Button>
-                              )}
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => openDeleteAccountConfirm(account)}
-                                disabled={isFounder}
-                                className={`h-8 w-8 p-0 transition-all active:scale-90 ${
-                                  isFounder
-                                    ? 'text-muted-foreground/50 hover:bg-transparent hover:text-muted-foreground/50 cursor-not-allowed'
-                                    : 'text-destructive/50 hover:bg-destructive/10 hover:text-destructive'
-                                }`}
-                                title={isFounder ? 'Founder account cannot be deleted' : 'Permanently remove IAM row and keys'}
-                                aria-label={`Permanently delete account ${account.email}`}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </>
-                          )}
-                          {account.type === 'm2m' && (
-                            <div className="text-[10px] font-black text-amber-500/50 mr-2 uppercase tracking-widest italic">System Managed</div>
-                          )}
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openDeleteAccountConfirm(account)}
+                              disabled={isFounder}
+                              className={`h-8 w-8 p-0 transition-all active:scale-90 ${
+                                isFounder
+                                  ? 'text-muted-foreground/50 hover:bg-transparent hover:text-muted-foreground/50 cursor-not-allowed'
+                                  : 'text-destructive/50 hover:bg-destructive/10 hover:text-destructive'
+                              }`}
+                              title={isFounder ? 'Founder account cannot be deleted' : 'Permanently remove IAM row and keys'}
+                              aria-label={`Permanently delete account ${account.email}`}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </>
                         </div>
                       </td>
                     </tr>

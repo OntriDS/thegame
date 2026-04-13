@@ -1,5 +1,11 @@
 // lib/game-mechanics/roles-rules.ts
 // Role Behavior Rules - Game Mechanics for Character Roles
+//
+// This file is NOT the IAM permission matrix. It drives Character Modal UX (toggles, copy, compound
+// rules like BUSINESS_ROLES + PLAYER). Shared RBAC for APIs/admin is in thegame/integrity/iam/permissions.ts
+
+// (copied per app). If a rule becomes a real gate, add a PERMISSION_MATRIX row and call canAccess —
+// do not rely on ROLE_BENEFITS text for security.
 
 import { CharacterRole } from '@/types/enums';
 
