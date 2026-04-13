@@ -17,7 +17,7 @@ import { normalizeCharacterRoles } from '@/lib/character-roles';
 import { useTheme } from '@/lib/hooks/use-theme';
 import { ROLE_BEHAVIORS, canViewAccountInfo } from '@/lib/game-mechanics/roles-rules';
 import { useAuth } from '@/lib/hooks/use-auth';
-import { Network, Info, Trash2, Package, MapPin, Building2 } from 'lucide-react';
+import { Network, Info, Package, MapPin, Building2 } from 'lucide-react';
 import { ClientAPI } from '@/lib/client-api';
 import { dispatchEntityUpdated, entityTypeToKind } from '@/lib/ui/ui-events';
 import DeleteModal from './submodals/delete-submodal';
@@ -509,6 +509,17 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
 
           <DialogFooter className="flex items-center justify-between">
             <div className="flex items-center gap-4">
+              {/* Delete Button - Only when editing existing character */}
+              {character && (
+                <Button
+                  variant="outline"
+                  onClick={handleDelete}
+                  className="h-8 text-xs text-destructive hover:bg-destructive/10 border-destructive/20 mr-4"
+                >
+                  Delete
+                </Button>
+              )}
+
               {/* Account Info Button - Only for FOUNDER/ADMIN roles */}
               {character && canViewAccountInfo(roles) && (
                 <Button
@@ -582,16 +593,6 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
                 </Button>
               )}
 
-              {/* Delete Button - Only when editing existing character */}
-              {character && (
-                <Button
-                  variant="outline"
-                  onClick={handleDelete}
-                  className="h-8 text-xs text-muted-foreground hover:text-foreground"
-                >
-                  Delete
-                </Button>
-              )}
             </div>
 
             <div className="flex items-center gap-2 ml-auto">
