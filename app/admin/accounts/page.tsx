@@ -377,6 +377,27 @@ function AccountsPageContent({ canAccessIAMConsole, isCheckingIAMConsole }: { ca
               {isCheckingIAMConsole ? 'Checking access…' : 'IAM Console'}
             </Button>
           )}
+          <div className="flex items-center gap-2 text-xs">
+            <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+            <Select
+              value={accountSortOption}
+              onValueChange={(value) => setAccountSortOption(value as typeof accountSortOption)}
+            >
+              <SelectTrigger className="w-44 h-8 md:w-56">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="name-asc">Name: A-Z</SelectItem>
+                <SelectItem value="name-desc">Name: Z-A</SelectItem>
+                <SelectItem value="email-asc">Email: A-Z</SelectItem>
+                <SelectItem value="email-desc">Email: Z-A</SelectItem>
+                <SelectItem value="roles-asc">Roles: A-Z</SelectItem>
+                <SelectItem value="roles-desc">Roles: Z-A</SelectItem>
+                <SelectItem value="date-newest">Date Created: Newest First</SelectItem>
+                <SelectItem value="date-oldest">Date Created: Oldest First</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <Button onClick={handleCreateAccount} size="sm" className="bg-primary hover:bg-primary/90 font-bold uppercase tracking-widest shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95 px-6">
             <Plus className="h-4 w-4 mr-2" />
             Add Account
@@ -407,29 +428,8 @@ function AccountsPageContent({ canAccessIAMConsole, isCheckingIAMConsole }: { ca
       {/* Accounts Table */}
       <Card className="border-primary/10 bg-background/50 backdrop-blur-sm shadow-2xl">
         <CardContent className="p-0">
-          <div className="flex items-center justify-between border-b border-primary/10 bg-muted/30 px-4 py-3">
+          <div className="flex items-center border-b border-primary/10 bg-muted/30 px-4 py-3">
             <div className="text-xs font-black uppercase tracking-wider opacity-50">Accounts</div>
-            <div className="flex items-center gap-2 text-xs">
-              <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
-              <Select
-                value={accountSortOption}
-                onValueChange={(value) => setAccountSortOption(value as typeof accountSortOption)}
-              >
-                <SelectTrigger className="w-56 h-8">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="name-asc">Name: A-Z</SelectItem>
-                  <SelectItem value="name-desc">Name: Z-A</SelectItem>
-                  <SelectItem value="email-asc">Email: A-Z</SelectItem>
-                  <SelectItem value="email-desc">Email: Z-A</SelectItem>
-                  <SelectItem value="roles-asc">Roles: A-Z</SelectItem>
-                  <SelectItem value="roles-desc">Roles: Z-A</SelectItem>
-                  <SelectItem value="date-newest">Date Created: Newest First</SelectItem>
-                  <SelectItem value="date-oldest">Date Created: Oldest First</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
