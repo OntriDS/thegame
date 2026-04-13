@@ -110,7 +110,7 @@ import {
 } from '@/lib/item-taxonomy-normalize';
 
 // TASKS
-export async function upsertTask(task: Task, options?: { skipWorkflowEffects?: boolean; skipLinkEffects?: boolean; skipDuplicateCheck?: boolean; skipTaxonomyNormalize?: boolean }): Promise<Task> {
+export async function upsertTask(task: Task, options?: { skipWorkflowEffects?: boolean; skipLinkEffects?: boolean; skipDuplicateCheck?: boolean }): Promise<Task> {
   // Explicitly block self-referential parent assignment (circular reference)
   if (task.parentId && task.parentId === task.id) {
     console.warn(`[Datastore] Prevented Task ${task.id} from becoming its own parent.`);
@@ -122,9 +122,7 @@ export async function upsertTask(task: Task, options?: { skipWorkflowEffects?: b
     task.status === TaskStatus.DONE
       ? { ...task, priority: TaskPriority.NORMAL }
       : task;
-  if (!options?.skipTaxonomyNormalize) {
-    normalizedTask = normalizeTaskOutputTaxonomy(normalizedTask);
-  }
+  normalizedTask = normalizeTaskOutputTaxonomy(normalizedTask);
   const saved = await repoUpsertTask(normalizedTask);
 
   // Identity Shield: Time-Window Deduplication (30 seconds)
@@ -537,8 +535,8 @@ export async function removeTask(id: string, options?: RemoveTaskOptions): Promi
 // - If workflows fail, the item still exists in the database
 // - This prevents data loss but may cause 500 errors if workflows throw
 // - API routes MUST have try/catch to handle workflow failures gracefully
-export async function upsertItem(item: Item, options?: { skipWorkflowEffects?: boolean; skipLinkEffects?: boolean; skipTaxonomyNormalize?: boolean }): Promise<Item> {
-  const itemNorm = options?.skipTaxonomyNormalize ? item : normalizeItemTaxonomyFields(item);
+export async function upsertItem(item: Item, options?: { skipWorkflowEffects?: boolean; skipLinkEffects?: boolean }): Promise<Item> {
+  const itemNorm = normalizeItemTaxonomyFields(item);
   const previous = await repoGetItemById(itemNorm.id);
 
   // Identity Shield: Time-Window Deduplication (2 minutes)
@@ -679,8 +677,8 @@ export async function removeItem(id: string): Promise<void> {
 }
 
 // FINANCIALS
-export async function upsertFinancial(financial: FinancialRecord, options?: { skipWorkflowEffects?: boolean; skipLinkEffects?: boolean; forceSave?: boolean; skipTaxonomyNormalize?: boolean }): Promise<FinancialRecord> {
-  const financialNorm = options?.skipTaxonomyNormalize ? financial : normalizeFinancialOutputTaxonomy(financial);
+export async function upsertFinancial(financial: FinancialRecord, options?: { skipWorkflowEffects?: boolean; skipLinkEffects?: boolean; forceSave?: boolean }): Promise<FinancialRecord> {
+  const financialNorm = normalizeFinancialOutputTaxonomy(financial);
   const previous = await repoGetFinancialById(financialNorm.id);
 
   // Identity Shield: Time-Window Deduplication (2 minutes)
@@ -803,7 +801,7 @@ export async function removeFinancial(id: string): Promise<void> {
 }
 
 // SALES
-export async function upsertSale(sale: Sale, options?: { skipWorkflowEffects?: boolean; skipLinkEffects?: boolean; forceSave?: boolean; skipTaxonomyNormalize?: boolean }): Promise<Sale> {
+export async function upsertSale(sale: Sale, options?: { skipWorkflowEffects?: boolean; skipLinkEffects?: boolean; forceSave?: boolean }): Promise<Sale> {
   const previous = await repoGetSaleById(sale.id);
 
   // Identity Shield: Time-Window Deduplication (2 minutes)
@@ -834,8 +832,9 @@ export async function upsertSale(sale: Sale, options?: { skipWorkflowEffects?: b
     }
   }
 
-  const saleForNormalize = options?.skipTaxonomyNormalize ? sale : normalizeSaleOutputTaxonomy(sale);
-  const saleToPersist = roundSaleTotals(ensureItemSaleLineIds(normalizeSale(saleForNormalize)));
+  const saleToPersist = roundSaleTotals(
+    ensureItemSaleLineIds(normalizeSale(normalizeSaleOutputTaxonomy(sale)))
+  );
   const saved = await repoUpsertSale(saleToPersist);
 
   // Phase 2: Rolling Summary Update

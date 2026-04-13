@@ -14,7 +14,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { ItemNameField } from '@/components/ui/item-name-field';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  ModalToggleTooltip,
+  MODAL_TOGGLE_TOOLTIP_COPY,
+} from '@/components/ui/modal-toggle-tooltip';
 import { Task, Item, Site } from '@/types/entities';
 import { getPointsMetadata } from '@/lib/utils/points-utils';
 import { TaskType, TaskStatus, TaskPriority, RecurrentFrequency, FOUNDER_CHARACTER_ID, EntityType, ItemType, ItemStatus, CharacterRole } from '@/types/enums';
@@ -846,28 +849,24 @@ export default function RecurrentTreeModalContent({
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="recurrent-task-revenue" className="text-xs">Revenue ($)</Label>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className="relative">
-                          <NumericInput
-                            id="recurrent-task-revenue"
-                            value={revenue}
-                            onChange={(val) => setRevenue(val)}
-                            min={0}
-                            step={PRICE_STEP}
-                            className="h-8 text-sm"
-                            disabled={!!task?.sourceSaleId}
-                          />
-                        </div>
-                      </TooltipTrigger>
-                      {task?.sourceSaleId && (
-                        <TooltipContent>
-                          <p>Revenue is managed by the source Sale - cannot edit here</p>
-                        </TooltipContent>
-                      )}
-                    </Tooltip>
-                  </TooltipProvider>
+                  <div
+                    className="relative"
+                    title={
+                      task?.sourceSaleId
+                        ? 'Revenue is managed by the source Sale - cannot edit here'
+                        : undefined
+                    }
+                  >
+                    <NumericInput
+                      id="recurrent-task-revenue"
+                      value={revenue}
+                      onChange={(val) => setRevenue(val)}
+                      min={0}
+                      step={PRICE_STEP}
+                      className="h-8 text-sm"
+                      disabled={!!task?.sourceSaleId}
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -928,85 +927,61 @@ export default function RecurrentTreeModalContent({
                   <Label htmlFor="recurrent-customer-character" className="text-xs">Counterparty</Label>
                   {!task?.sourceSaleId && (
                     <div className="flex items-center justify-between">
-                      <TooltipProvider delayDuration={1000}>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => setCounterpartyRole(customerCharacterRole === CharacterRole.CUSTOMER ? CharacterRole.BENEFICIARY : CharacterRole.CUSTOMER)}
-                              className="h-6 text-xs px-2"
-                            >
-                              {customerCharacterRole}
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Customer = money charged to them. Beneficiary = money paid to them.</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                      <TooltipProvider delayDuration={1000}>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => setIsNewCustomer(!isNewCustomer)}
-                              className="h-6 text-xs px-2"
-                            >
-                              {isNewCustomer ? 'New' : 'Existing'}
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>New: create a new customer. Existing: choose from existing customers.</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
+                      <ModalToggleTooltip content={MODAL_TOGGLE_TOOLTIP_COPY.counterpartyRole}>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setCounterpartyRole(customerCharacterRole === CharacterRole.CUSTOMER ? CharacterRole.BENEFICIARY : CharacterRole.CUSTOMER)}
+                          className="h-6 text-xs px-2"
+                        >
+                          {customerCharacterRole}
+                        </Button>
+                      </ModalToggleTooltip>
+                      <ModalToggleTooltip content={MODAL_TOGGLE_TOOLTIP_COPY.newExistingCustomer}>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setIsNewCustomer(!isNewCustomer)}
+                          className="h-6 text-xs px-2"
+                        >
+                          {isNewCustomer ? 'New' : 'Existing'}
+                        </Button>
+                      </ModalToggleTooltip>
                     </div>
                   )}
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div>
-                          {task?.sourceSaleId ? (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              className="w-full h-8 text-xs justify-start"
-                              disabled
-                            >
-                              <User className="h-3 w-3 mr-2" />
-                              {customerCharacterId ? customerCharacterName : `${customerCharacterRole} from Sale`}
-                            </Button>
-                          ) : isNewCustomer ? (
-                            <Input
-                              id="recurrent-customer-character"
-                              value={newCustomerName}
-                              onChange={(e) => setNewCustomerName(e.target.value)}
-                              placeholder={customerCharacterRole === CharacterRole.CUSTOMER ? 'New customer name' : 'New beneficiary name'}
-                              className="h-8 text-sm"
-                            />
-                          ) : (
-                            <SearchableSelect
-                              value={customerCharacterId || ''}
-                              onValueChange={(value) => setCustomerCharacterId(value || null)}
-                            options={getCounterpartyCharacterOptions()}
-                            placeholder={customerCharacterRole === CharacterRole.CUSTOMER ? 'Select customer' : 'Select beneficiary'}
-                              autoGroupByCategory={true}
-                              className="h-8 text-sm"
-                              instanceId="recurrent-task-customer"
-                            />
-                          )}
-                        </div>
-                      </TooltipTrigger>
-                      {task?.sourceSaleId && (
-                        <TooltipContent>
-                          <p>Customer is managed by the source Sale - cannot edit here</p>
-                        </TooltipContent>
-                      )}
-                    </Tooltip>
-                  </TooltipProvider>
+                  <div>
+                    {task?.sourceSaleId ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="w-full h-8 text-xs justify-start"
+                        disabled
+                        title="Customer is managed by the source Sale - cannot edit here"
+                      >
+                        <User className="h-3 w-3 mr-2" />
+                        {customerCharacterId ? customerCharacterName : `${customerCharacterRole} from Sale`}
+                      </Button>
+                    ) : isNewCustomer ? (
+                      <Input
+                        id="recurrent-customer-character"
+                        value={newCustomerName}
+                        onChange={(e) => setNewCustomerName(e.target.value)}
+                        placeholder={customerCharacterRole === CharacterRole.CUSTOMER ? 'New customer name' : 'New beneficiary name'}
+                        className="h-8 text-sm"
+                      />
+                    ) : (
+                      <SearchableSelect
+                        value={customerCharacterId || ''}
+                        onValueChange={(value) => setCustomerCharacterId(value || null)}
+                        options={getCounterpartyCharacterOptions()}
+                        placeholder={customerCharacterRole === CharacterRole.CUSTOMER ? 'Select customer' : 'Select beneficiary'}
+                        autoGroupByCategory={true}
+                        className="h-8 text-sm"
+                        instanceId="recurrent-task-customer"
+                      />
+                    )}
+                  </div>
                 </div>
 
                 <div className="space-y-2">

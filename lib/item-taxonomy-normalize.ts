@@ -1,10 +1,9 @@
 // lib/item-taxonomy-normalize.ts
-// Normalize legacy item type / subtype strings to canonical enum storage values.
+// Coerce item type / subtype strings to canonical enum values on write (exact or case-insensitive match).
 
 import { ItemType } from '@/types/enums';
 import type { SubItemType } from '@/types/type-aliases';
 import { getSubTypesForItemType } from '@/lib/utils/item-utils';
-import { LEGACY_ITEM_TYPE_TO_CANONICAL, LEGACY_SUBTYPE_BY_ITEM_TYPE } from '@/lib/item-taxonomy-legacy';
 import type { Item, Task, FinancialRecord, ServiceLine, Sale, SaleLine } from '@/types/entities';
 
 const ITEM_TYPE_VALUES = new Set<string>(Object.values(ItemType));
@@ -14,8 +13,6 @@ export function normalizeItemTypeString(raw: string | undefined | null): ItemTyp
   const s = String(raw).trim();
   if (s === '') return undefined;
   if (ITEM_TYPE_VALUES.has(s)) return s as ItemType;
-  const fromLegacy = LEGACY_ITEM_TYPE_TO_CANONICAL[s];
-  if (fromLegacy !== undefined) return fromLegacy;
   const lower = s.toLowerCase();
   if (ITEM_TYPE_VALUES.has(lower)) return lower as ItemType;
   return undefined;
@@ -30,9 +27,9 @@ export function normalizeSubItemTypeForItemType(
   if (s === '') return undefined;
   const allowed = getSubTypesForItemType(itemType);
   if (allowed.includes(s as SubItemType)) return s;
-  const legacyMap = LEGACY_SUBTYPE_BY_ITEM_TYPE[itemType];
-  const mapped = legacyMap?.[s];
-  if (mapped && allowed.includes(mapped as SubItemType)) return mapped;
+  const lower = s.toLowerCase();
+  const hit = allowed.find((a) => String(a).toLowerCase() === lower);
+  if (hit) return hit;
   return s;
 }
 

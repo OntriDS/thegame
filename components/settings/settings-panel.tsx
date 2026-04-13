@@ -24,7 +24,6 @@ import {
 } from '@/lib/constants/app-constants';
 import ItemsImportExport from '@/components/settings/items-import-export';
 import { TimezoneSettingsCard } from '@/components/settings/timezone-settings-card';
-import { ITEM_TAXONOMY_SCOPES } from '@/lib/item-taxonomy-migrate-scopes';
 interface SettingsPanelProps {
   onStatusUpdate?: (status: string) => void;
 }
@@ -39,10 +38,6 @@ export function SettingsPanel({ onStatusUpdate }: SettingsPanelProps) {
   const [resetDefaultsConfirmed, setResetDefaultsConfirmed] = useState(false);
   const [showClearCacheModal, setShowClearCacheModal] = useState(false);
   const [clearCacheConfirmed, setClearCacheConfirmed] = useState(false);
-  const [taxonomyScopes, setTaxonomyScopes] = useState<string[]>(['all']);
-  const [taxonomyReportText, setTaxonomyReportText] = useState<string>('');
-  const [showTaxonomyApplyModal, setShowTaxonomyApplyModal] = useState(false);
-  const [taxonomyApplyConfirmed, setTaxonomyApplyConfirmed] = useState(false);
 
   const updateStatus = (message: string, isError: boolean = false) => {
     setStatus(message);
@@ -194,83 +189,6 @@ export function SettingsPanel({ onStatusUpdate }: SettingsPanelProps) {
       updateStatus('❌ Failed to export data. Please try again.', true);
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const TAXONOMY_SCOPE_LABELS: Record<string, string> = {
-    all: 'All (types + subtypes)',
-    'item-type': 'Item types only',
-    digital: 'Digital subtypes',
-    artwork: 'Artwork subtypes',
-    print: 'Print subtypes',
-    sticker: 'Sticker subtypes',
-    merch: 'Merch subtypes',
-    craft: 'Craft subtypes',
-    bundle: 'Bundle subtypes',
-    material: 'Material subtypes',
-    equipment: 'Equipment subtypes',
-  };
-
-  const toggleTaxonomyScope = (scope: string, checked: boolean) => {
-    if (scope === 'all') {
-      setTaxonomyScopes(checked ? ['all'] : []);
-      return;
-    }
-    setTaxonomyScopes((prev) => {
-      let next = prev.filter((s) => s !== 'all');
-      if (checked) next = [...next.filter((s) => s !== scope), scope];
-      else next = next.filter((s) => s !== scope);
-      return next.length === 0 ? ['all'] : next;
-    });
-  };
-
-  const runNormalizeItemTaxonomy = async (dryRun: boolean) => {
-    const scopes = taxonomyScopes.includes('all') ? ['all'] : taxonomyScopes.length > 0 ? taxonomyScopes : ['all'];
-    if (!dryRun) {
-      setShowTaxonomyApplyModal(false);
-      setTaxonomyApplyConfirmed(false);
-    }
-    setIsLoading(true);
-    setTaxonomyReportText('');
-    try {
-      const response = await fetch('/api/settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'normalize-item-taxonomy',
-          parameters: { dryRun, scopes },
-        }),
-      });
-      const result = await response.json();
-      const data = result.data;
-      const reportJson =
-        data != null
-          ? JSON.stringify(
-              {
-                message: result.message,
-                report: data.report,
-                items: data.items,
-                tasks: data.tasks,
-                financials: data.financials,
-                sales: data.sales,
-                errors: data.errors,
-              },
-              null,
-              2
-            )
-          : JSON.stringify(result, null, 2);
-      setTaxonomyReportText(reportJson);
-      if (result.success) {
-        updateStatus(`✅ ${result.message}`);
-      } else {
-        updateStatus(`❌ ${result.message}`, true);
-      }
-    } catch {
-      updateStatus('❌ Item taxonomy migration failed.', true);
-    } finally {
-      setIsLoading(false);
-      setShowTaxonomyApplyModal(false);
-      setTaxonomyApplyConfirmed(false);
     }
   };
 
@@ -524,93 +442,6 @@ export function SettingsPanel({ onStatusUpdate }: SettingsPanelProps) {
         </CardHeader>
         <CardContent>
           <ItemsImportExport />
-        </CardContent>
-      </Card>
-
-      <Card className="lg:col-span-2">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Database className="h-5 w-5" />
-            Item type and subtype migration
-          </CardTitle>
-          <CardDescription>
-            Normalize legacy item <code className="text-xs">type</code> / <code className="text-xs">subItemType</code> and
-            matching output fields on tasks, sales (service lines), and financial records. Run a dry run first; apply writes
-            to the database. Scoped runs (not &quot;All&quot;) only change the fields for the scopes you select—full taxonomy
-            normalization on save still happens when you edit items elsewhere in the app.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-wrap gap-4">
-            {ITEM_TAXONOMY_SCOPES.map((scope) => (
-              <div key={scope} className="flex items-center space-x-2">
-                <Checkbox
-                  id={`taxonomy-scope-${scope}`}
-                  checked={taxonomyScopes.includes(scope)}
-                  onCheckedChange={(c) => toggleTaxonomyScope(scope, c === true)}
-                />
-                <Label htmlFor={`taxonomy-scope-${scope}`} className="text-sm font-normal cursor-pointer">
-                  {TAXONOMY_SCOPE_LABELS[scope] ?? scope}
-                </Label>
-              </div>
-            ))}
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant="outline"
-              disabled={isLoading}
-              onClick={() => runNormalizeItemTaxonomy(true)}
-            >
-              Dry run
-            </Button>
-            <Button
-              variant="destructive"
-              disabled={isLoading}
-              onClick={() => setShowTaxonomyApplyModal(true)}
-            >
-              Apply migration
-            </Button>
-          </div>
-          {taxonomyReportText ? (
-            <pre className="text-xs bg-muted p-3 rounded-md max-h-80 overflow-auto border whitespace-pre-wrap">
-              {taxonomyReportText}
-            </pre>
-          ) : null}
-
-          <Dialog open={showTaxonomyApplyModal} onOpenChange={setShowTaxonomyApplyModal}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2">
-                  <AlertTriangle className="h-5 w-5 text-red-500" />
-                  Apply item taxonomy migration
-                </DialogTitle>
-                <DialogDescription>
-                  This will update stored item types and subtypes (and related output fields) according to the selected
-                  scopes. Run a dry run first and keep a backup export.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="taxonomy-apply-confirm"
-                  checked={taxonomyApplyConfirmed}
-                  onCheckedChange={(checked) => setTaxonomyApplyConfirmed(checked === true)}
-                />
-                <Label htmlFor="taxonomy-apply-confirm">I understand this will modify production data</Label>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setShowTaxonomyApplyModal(false)}>
-                  Cancel
-                </Button>
-                <Button
-                  disabled={!taxonomyApplyConfirmed}
-                  className="bg-red-600 hover:bg-red-700"
-                  onClick={() => runNormalizeItemTaxonomy(false)}
-                >
-                  Apply
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
         </CardContent>
       </Card>
     </div>

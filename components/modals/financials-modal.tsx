@@ -10,10 +10,13 @@ import { Input } from '@/components/ui/input';
 import NumericInput from '@/components/ui/numeric-input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { ItemNameField } from '@/components/ui/item-name-field';
+import {
+  ModalToggleTooltip,
+  MODAL_TOGGLE_TOOLTIP_COPY,
+} from '@/components/ui/modal-toggle-tooltip';
 import {
   Plus,
   Trash2,
@@ -769,40 +772,26 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
                   <div className="space-y-2">
                   <Label htmlFor="customer-character" className="text-xs">Counterparty</Label>
                   <div className="flex items-center justify-between">
-                    <TooltipProvider delayDuration={1000}>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setCounterpartyRole(formData.customerCharacterRole === CharacterRole.CUSTOMER ? CharacterRole.BENEFICIARY : CharacterRole.CUSTOMER)}
-                            className="h-6 text-xs px-2"
-                          >
-                            {formData.customerCharacterRole}
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Customer = money charged to them. Beneficiary = money paid to them.</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                    <TooltipProvider delayDuration={1000}>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setFormData({ ...formData, isNewCustomer: !formData.isNewCustomer })}
-                            className="h-6 text-xs px-2"
-                          >
-                            {formData.isNewCustomer ? 'New' : 'Existing'}
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>New: create a new counterparty. Existing: choose from existing characters.</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+                    <ModalToggleTooltip content={MODAL_TOGGLE_TOOLTIP_COPY.counterpartyRole}>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setCounterpartyRole(formData.customerCharacterRole === CharacterRole.CUSTOMER ? CharacterRole.BENEFICIARY : CharacterRole.CUSTOMER)}
+                        className="h-6 text-xs px-2"
+                      >
+                        {formData.customerCharacterRole}
+                      </Button>
+                    </ModalToggleTooltip>
+                    <ModalToggleTooltip content={MODAL_TOGGLE_TOOLTIP_COPY.newExistingCounterparty}>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setFormData({ ...formData, isNewCustomer: !formData.isNewCustomer })}
+                        className="h-6 text-xs px-2"
+                      >
+                        {formData.isNewCustomer ? 'New' : 'Existing'}
+                      </Button>
+                    </ModalToggleTooltip>
                   </div>
                     {formData.isNewCustomer ? (
                       <Input

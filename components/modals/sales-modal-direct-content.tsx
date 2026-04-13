@@ -10,7 +10,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { DatePicker } from '@/components/ui/date-picker';
 import NumericInput from '@/components/ui/numeric-input';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  ModalToggleTooltip,
+  MODAL_TOGGLE_TOOLTIP_COPY,
+} from '@/components/ui/modal-toggle-tooltip';
 import { Package, Gift, ListPlus } from 'lucide-react';
 import type { Station } from '@/types/type-aliases';
 import { Discount, Task, Character, Item, Site, SaleLine } from '@/types/entities';
@@ -235,23 +238,16 @@ export default function SalesModalDirectContent({
 
                 <div className="space-y-2">
                   <Label htmlFor="customer" className="text-xs">Customer</Label>
-                  <TooltipProvider delayDuration={1000}>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setIsNewCustomer(!isNewCustomer)}
-                          className={`h-6 text-xs px-2`}
-                        >
-                          {isNewCustomer ? 'New' : 'Existing'}
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>New: create a new customer. Existing: choose from existing customers.</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                  <ModalToggleTooltip content={MODAL_TOGGLE_TOOLTIP_COPY.newExistingCustomer}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setIsNewCustomer(!isNewCustomer)}
+                      className={`h-6 text-xs px-2`}
+                    >
+                      {isNewCustomer ? 'New' : 'Existing'}
+                    </Button>
+                  </ModalToggleTooltip>
                   {isNewCustomer ? (
                     <Input
                       id="customer"
@@ -531,23 +527,16 @@ export default function SalesModalDirectContent({
 
                 <div className="space-y-2">
                   <Label htmlFor="customer" className="text-xs">Customer</Label>
-                  <TooltipProvider delayDuration={1000}>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setIsNewCustomer(!isNewCustomer)}
-                          className={`h-6 text-xs px-2`}
-                        >
-                          {isNewCustomer ? 'New' : 'Existing'}
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>New: create a new customer. Existing: choose from existing customers.</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                  <ModalToggleTooltip content={MODAL_TOGGLE_TOOLTIP_COPY.newExistingCustomer}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setIsNewCustomer(!isNewCustomer)}
+                      className={`h-6 text-xs px-2`}
+                    >
+                      {isNewCustomer ? 'New' : 'Existing'}
+                    </Button>
+                  </ModalToggleTooltip>
                   {isNewCustomer ? (
                     <Input
                       id="customer"

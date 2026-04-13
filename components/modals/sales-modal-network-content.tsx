@@ -7,12 +7,15 @@ import { Textarea } from '@/components/ui/textarea';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { DatePicker } from '@/components/ui/date-picker';
 import NumericInput from '@/components/ui/numeric-input';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { createSiteOptionsWithCategories } from '@/lib/utils/site-options-utils';
 import { Item } from '@/types/entities';
 import type { SalesModalDirectContentCommonProps } from './sales-modal-direct-content';
 import type { SaleItemLine } from './submodals/sale-items-submodal';
 import { ListPlus } from 'lucide-react';
+import {
+  ModalToggleTooltip,
+  MODAL_TOGGLE_TOOLTIP_COPY,
+} from '@/components/ui/modal-toggle-tooltip';
 
 export type SalesModalNetworkContentProps = Pick<
   SalesModalDirectContentCommonProps,
@@ -144,23 +147,16 @@ export default function SalesModalNetworkContent({
 
               <div className="space-y-2">
                 <Label htmlFor="customer" className="text-xs">Customer</Label>
-                <TooltipProvider delayDuration={1000}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setIsNewCustomer(!isNewCustomer)}
-                        className={`h-6 text-xs px-2`}
-                      >
-                        {isNewCustomer ? 'New' : 'Existing'}
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>New: create a new customer. Existing: choose from existing customers.</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                <ModalToggleTooltip content={MODAL_TOGGLE_TOOLTIP_COPY.newExistingCustomer}>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setIsNewCustomer(!isNewCustomer)}
+                    className={`h-6 text-xs px-2`}
+                  >
+                    {isNewCustomer ? 'New' : 'Existing'}
+                  </Button>
+                </ModalToggleTooltip>
                 {isNewCustomer ? (
                   <Input
                     id="customer"

@@ -5,7 +5,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { SearchableSelect } from '@/components/ui/searchable-select';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  ModalToggleTooltip,
+  MODAL_TOGGLE_TOOLTIP_COPY,
+} from '@/components/ui/modal-toggle-tooltip';
 import type { Item, Site } from '@/types/entities';
 import { createItemOptions } from '@/lib/utils/searchable-select-utils';
 
@@ -97,25 +100,21 @@ export function ItemNameField({
     <div className={`space-y-2 ${className || ''}`}>
       <Label htmlFor="item-name-field" className="text-xs">{label}</Label>
       <div className="flex items-center justify-between">
-        <TooltipProvider delayDuration={1000}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => handleToggleNewItem(!internalIsNewItem)}
-                disabled={disabled}
-                className="h-6 px-2 text-xs"
-              >
-                {internalIsNewItem ? 'New' : 'Existing'}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>New: create a new item name. Existing: select from existing items.</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <ModalToggleTooltip
+          content={MODAL_TOGGLE_TOOLTIP_COPY.newExistingItem}
+          disabled={disabled}
+        >
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => handleToggleNewItem(!internalIsNewItem)}
+            disabled={disabled}
+            className="h-6 px-2 text-xs"
+          >
+            {internalIsNewItem ? 'New' : 'Existing'}
+          </Button>
+        </ModalToggleTooltip>
       </div>
       
       {internalIsNewItem ? (
