@@ -226,6 +226,10 @@ export function SettingsPanel({ onStatusUpdate }: SettingsPanelProps) {
 
   const runNormalizeItemTaxonomy = async (dryRun: boolean) => {
     const scopes = taxonomyScopes.includes('all') ? ['all'] : taxonomyScopes.length > 0 ? taxonomyScopes : ['all'];
+    if (!dryRun) {
+      setShowTaxonomyApplyModal(false);
+      setTaxonomyApplyConfirmed(false);
+    }
     setIsLoading(true);
     setTaxonomyReportText('');
     try {
@@ -532,7 +536,8 @@ export function SettingsPanel({ onStatusUpdate }: SettingsPanelProps) {
           <CardDescription>
             Normalize legacy item <code className="text-xs">type</code> / <code className="text-xs">subItemType</code> and
             matching output fields on tasks, sales (service lines), and financial records. Run a dry run first; apply writes
-            to the database.
+            to the database. Scoped runs (not &quot;All&quot;) only change the fields for the scopes you select—full taxonomy
+            normalization on save still happens when you edit items elsewhere in the app.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

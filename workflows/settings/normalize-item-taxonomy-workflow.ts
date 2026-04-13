@@ -136,7 +136,7 @@ export class NormalizeItemTaxonomyWorkflow {
         }
         if (!dryRun) {
           try {
-            await upsertItem(next);
+            await upsertItem(next, { skipTaxonomyNormalize: true });
           } catch (e) {
             errors.push(`item ${item.id}: ${e instanceof Error ? e.message : String(e)}`);
           }
@@ -156,7 +156,7 @@ export class NormalizeItemTaxonomyWorkflow {
         }
         if (!dryRun) {
           try {
-            await upsertTask(next);
+            await upsertTask(next, { skipTaxonomyNormalize: true });
           } catch (e) {
             errors.push(`task ${task.id}: ${e instanceof Error ? e.message : String(e)}`);
           }
@@ -176,7 +176,7 @@ export class NormalizeItemTaxonomyWorkflow {
         }
         if (!dryRun) {
           try {
-            await upsertFinancial(next);
+            await upsertFinancial(next, { skipTaxonomyNormalize: true });
           } catch (e) {
             errors.push(`financial ${fin.id}: ${e instanceof Error ? e.message : String(e)}`);
           }
@@ -196,7 +196,7 @@ export class NormalizeItemTaxonomyWorkflow {
         }
         if (!dryRun) {
           try {
-            await upsertSale(next);
+            await upsertSale(next, { skipTaxonomyNormalize: true });
           } catch (e) {
             errors.push(`sale ${sale.id}: ${e instanceof Error ? e.message : String(e)}`);
           }
