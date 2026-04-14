@@ -257,6 +257,18 @@ async function provisionMatchToAccount(character: Character, input: ProvisionInp
     { skipGlobalEmailMapping: true },
   );
 
+  const registeredName = input.name.trim();
+  if (character.name !== registeredName) {
+    character = await upsertCharacter(
+      {
+        ...character,
+        name: registeredName,
+        updatedAt: getUTCNow(),
+      },
+      { skipWorkflowEffects: true, skipLinkEffects: true },
+    );
+  }
+
   await iamService.linkAccountToCharacter(createdAccount.id, character.id);
 
   const linkedAccount = await iamService.getAccountById(createdAccount.id);

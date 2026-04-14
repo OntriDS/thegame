@@ -125,21 +125,28 @@ function AccountsPageContent({ canAccessIAMConsole, isCheckingIAMConsole }: { ca
     );
   };
 
-  const getAccountStatus = (account: any) => {
-    const active = account.isActive !== false;
-    if (active) {
-      return (
-        <span className="flex items-center gap-1.5 text-green-600 font-bold text-[10px] uppercase tracking-widest">
-          <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
-          Active
-        </span>
-      );
-    }
+  const getStatusDots = (account: any) => {
+    const isActive = account.isActive !== false;
+    const isVerified = account.isVerified === true;
+
     return (
-      <span className="flex items-center gap-1.5 text-red-600 font-bold text-[10px] uppercase tracking-widest">
-        <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
-        Inactive
-      </span>
+      <div className="flex justify-center gap-6">
+        {/* Active Status - Big Green Circle */}
+        <div className={`w-5 h-5 rounded-full flex items-center justify-center transition-all ${
+          isActive 
+            ? 'bg-emerald-500 shadow-[0_0_12px_#10b981] ring-2 ring-emerald-400/50' 
+            : 'bg-zinc-700 ring-1 ring-zinc-600'
+        }`}>
+          {isActive && <div className="w-2.5 h-2.5 bg-white rounded-full animate-pulse" />}
+        </div>
+
+        {/* Verified Status - Big Green/Red Circle */}
+        <div className={`w-5 h-5 rounded-full flex items-center justify-center transition-all ${
+          isVerified 
+            ? 'bg-emerald-500 shadow-[0_0_12px_#10b981]' 
+            : 'bg-rose-500 shadow-[0_0_8px_#ef4444]'
+        }`} />
+      </div>
     );
   };
 
@@ -422,7 +429,8 @@ function AccountsPageContent({ canAccessIAMConsole, isCheckingIAMConsole }: { ca
                   <th className="p-4 font-black uppercase tracking-widest text-[10px] opacity-50">Account</th>
                   <th className="p-4 font-black uppercase tracking-widest text-[10px] opacity-50">Email / System ID</th>
                   <th className="p-4 font-black uppercase tracking-widest text-[10px] opacity-50 text-center">Roles</th>
-                  <th className="p-4 font-black uppercase tracking-widest text-[10px] opacity-50">Status</th>
+                  <th className="p-4 font-black uppercase tracking-widest text-[10px] opacity-50 text-center">Active</th>
+                  <th className="p-4 font-black uppercase tracking-widest text-[10px] opacity-50 text-center">Verified</th>
                   <th className="p-4 font-black uppercase tracking-widest text-[10px] opacity-50 text-right">Settings</th>
                 </tr>
               </thead>
@@ -461,7 +469,7 @@ function AccountsPageContent({ canAccessIAMConsole, isCheckingIAMConsole }: { ca
                         </div>
                       </td>
                       <td className="p-4">
-                        {getAccountStatus(account)}
+                        {getStatusDots(account)}
                       </td>
                       <td className="p-4 text-right">
                         <div className="flex items-center justify-end gap-1">
