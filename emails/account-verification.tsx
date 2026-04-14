@@ -46,7 +46,7 @@ export default function AccountVerificationEmail({
           </Text>
           <Text style={{ ...emailText, wordBreak: 'break-all' }}>{verificationLink}</Text>
 
-          <Text style={emailText}>This link expires in 24 hours ({expiresAt}).</Text>
+          <Text style={emailText}>This link expires in 60 minutes (at {expiresAt}).</Text>
 
           <Text style={emailText}>
             If you did not create this account, please ignore this message. Your email address will not

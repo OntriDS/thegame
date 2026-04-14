@@ -6,7 +6,7 @@
  * Players live only in the Game Data-Store (`thegame:data:player:*`), not `iam:player:*`.
  */
 
-import { kvGet, kvSet, kvSAdd, kvSRem, kvSMembers, kvDel } from '@/lib/utils/kv';
+import { kvGet, kvSet, kvSetWithTTL, kvSAdd, kvSRem, kvSMembers, kvDel } from '@/lib/utils/kv';
 import { buildAccountKey, buildAccountByEmailKey, buildM2MKey, IAM_ACCOUNTS_INDEX, IAM_M2M_INDEX } from './keys';
 import { v4 as uuidv4 } from 'uuid';
 import { SignJWT, jwtVerify } from 'jose';
@@ -35,6 +35,9 @@ import { upsertCharacter } from '@/data-store/datastore';
 import { getLinksFor, createLink as rosettaCreateLink } from '@/links/link-registry';
 import { removeAccountEffectsOnDelete } from '@/workflows/entities-workflows/account.workflow';
 import type { Character as GameCharacter, Link, Player } from '@/types/entities';
+
+const EMAIL_VERIFICATION_TTL_MINUTES = 60;
+const EMAIL_VERIFICATION_TTL_SECONDS = EMAIL_VERIFICATION_TTL_MINUTES * 60;
 
 // --- Interfaces ---
 
@@ -269,6 +272,9 @@ export class IAMService {
     };
 
     await kvSet(buildAccountKey(accountId), updated);
+    if (account.verificationToken) {
+      await kvDel(`iam:verify:${account.verificationToken}`);
+    }
     await kvSAdd(IAM_ACCOUNTS_INDEX, accountId);
     await kvDel(buildAccountByEmailKey(account.email));
   }
@@ -285,6 +291,9 @@ export class IAMService {
 
     if (account.resetToken) {
       await kvDel(`iam:reset:${account.resetToken}`);
+    }
+    if (account.verificationToken) {
+      await kvDel(`iam:verify:${account.verificationToken}`);
     }
 
     await kvDel(buildAccountKey(accountId));
@@ -411,14 +420,16 @@ export class IAMService {
 
     const verificationToken = uuidv4();
     const now = getUTCNow();
-    const expiresAt = toUTCISOString(toUTC(now.getTime() + 24 * 60 * 60 * 1000));
+    const expiresAt = toUTCISOString(
+      toUTC(now.getTime() + EMAIL_VERIFICATION_TTL_MINUTES * 60 * 1000),
+    );
     const verificationKey = `iam:verify:${verificationToken}`;
 
-    await kvSet(verificationKey, {
+    await kvSetWithTTL(verificationKey, {
       accountId: account.id,
       email: account.email,
       expiresAt,
-    });
+    }, EMAIL_VERIFICATION_TTL_SECONDS);
 
     await kvSet(buildAccountKey(account.id), {
       ...account,

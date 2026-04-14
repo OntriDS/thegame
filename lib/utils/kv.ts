@@ -6,7 +6,7 @@ import { Redis } from '@upstash/redis';
 
 type KVClient = {
   get: <T>(key: string) => Promise<T | null>;
-  set: (key: string, value: unknown) => Promise<void>;
+  set: (key: string, value: unknown, options?: { ex?: number }) => Promise<void>;
   del: (key: string, ...keys: string[]) => Promise<void>;
   mget: (keys: string[]) => Promise<(unknown | null)[]>;
   mset: (keyValues: Record<string, unknown>) => Promise<void>;
@@ -42,6 +42,10 @@ export async function kvGet<T>(key: string): Promise<T | null> {
 
 export async function kvSet<T>(key: string, value: T): Promise<void> {
   await kv.set(key, value as any);
+}
+
+export async function kvSetWithTTL<T>(key: string, value: T, ttlSeconds: number): Promise<void> {
+  await kv.set(key, value as any, { ex: ttlSeconds });
 }
 
 export async function kvDel(key: string): Promise<void> {

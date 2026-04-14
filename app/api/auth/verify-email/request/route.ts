@@ -2,6 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { iamService } from '@/lib/iam-service';
 import { sendAccountVerificationEmail } from '@/lib/email/resend-service';
 
+const VERIFY_LINK_TTL_MINUTES = 60;
+
+function formatExpiryTime(expiresAt: string): string {
+  return new Date(expiresAt).toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+}
+
 function getNormalizedEmail(body: unknown): string {
   if (!body || typeof body !== 'object') return '';
   const payload = body as { email?: unknown };
@@ -49,7 +59,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'If an account exists, a verification email has been sent.',
+      message:
+        `If an account exists, a verification email has been sent. ` +
+        `Link expires in ${VERIFY_LINK_TTL_MINUTES} minutes (at ${formatExpiryTime(tokenResult.expiresAt)}).`,
     });
   } catch (error) {
     console.error('[Verify Email Request] Error:', error);

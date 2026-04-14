@@ -32,6 +32,14 @@ function toEmailResult(error: unknown): EmailResult {
   return { success: false, error: 'Unknown email error' };
 }
 
+function formatVerificationExpiryLabel(expiresAt: Date): string {
+  return expiresAt.toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+}
+
 export async function sendPasswordResetEmail({
   email,
   userName,
@@ -78,7 +86,7 @@ export async function sendAccountVerificationEmail({
       React.createElement(AccountVerificationEmail, {
         userName,
         verificationLink,
-        expiresAt: expiresAt.toLocaleString(),
+        expiresAt: formatVerificationExpiryLabel(expiresAt),
       }),
     );
     const result = await resend.emails.send({
