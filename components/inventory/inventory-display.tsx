@@ -12,6 +12,7 @@ import { Item } from '@/types/entities';
 import { useEntityUpdates } from '@/lib/hooks/use-entity-updates';
 import { ItemType, ItemCategory, ItemStatus, InventoryTab, Collection } from '@/types/enums';
 import { isSoldStatus } from '@/lib/utils/status-utils';
+import { getItemStatusLabel } from '@/lib/constants/status-display-labels';
 import { getItemCategory } from '@/lib/utils/item-utils';
 import ItemModal from '@/components/modals/item-modal';
 import BulkEditModal from '@/components/modals/submodals/bulk-edit-submodal';
@@ -1111,7 +1112,7 @@ export function InventoryDisplay({
                               {renderEditableField(sticker, 'status', sticker.status, 'select',
                                 Object.values(ItemStatus).map(status => ({
                                   value: status,
-                                  label: status
+                                  label: getItemStatusLabel(status)
                                 }))
                               )}
                             </div>
@@ -1308,7 +1309,7 @@ export function InventoryDisplay({
                                   </SelectTrigger>
                                   <SelectContent>
                                     {Object.values(ItemStatus).map(s => (
-                                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                                      <SelectItem key={s} value={s}>{getItemStatusLabel(s)}</SelectItem>
                                     ))}
                                   </SelectContent>
                                 </Select>

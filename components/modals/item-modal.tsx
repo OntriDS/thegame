@@ -14,6 +14,7 @@ import { ItemNameField } from '@/components/ui/item-name-field';
 import { Switch } from '@/components/ui/switch';
 import { Item, Site, StockPoint, Sale, SaleLine } from '@/types/entities';
 import { ItemType, ItemStatus, Collection, EntityType, STATION_CATEGORIES, SaleType, SaleStatus, PaymentMethod, Currency } from '@/types/enums';
+import { getItemStatusLabel } from '@/lib/constants/status-display-labels';
 import { getSubTypesForItemType } from '@/lib/utils/item-utils';
 import { getCategoryForItemType, createStationCategoryOptions, getStationFromCombined, getCategoryFromCombined, createItemTypeSubTypeOptions, getItemTypeFromCombined, getSubTypeFromCombined } from '@/lib/utils/searchable-select-utils';
 import { getAreaForStation } from '@/lib/utils/business-structure-utils';
@@ -1229,7 +1230,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
                   </SelectTrigger>
                   <SelectContent>
                     {Object.values(ItemStatus).map(status => (
-                      <SelectItem key={status} value={status}>{status}</SelectItem>
+                      <SelectItem key={status} value={status}>{getItemStatusLabel(status)}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

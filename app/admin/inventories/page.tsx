@@ -9,6 +9,7 @@ import { useUserPreferences } from "@/lib/hooks/use-user-preferences";
 import { InventoryDisplay } from "@/components/inventory/inventory-display";
 import { ClientAPI } from "@/lib/client-api";
 import { ItemStatus } from "@/types/enums";
+import { getItemStatusLabel } from "@/lib/constants/status-display-labels";
 import { Item, Site } from "@/types/entities";
 import { getZIndexClass } from "@/lib/utils/z-index-utils";
 import { CurrencyExchangeRates, DEFAULT_CURRENCY_EXCHANGE_RATES } from "@/lib/constants/financial-constants";
@@ -111,7 +112,7 @@ function InventoriesPageContent() {
               <SelectContent>
                 <SelectItem value="all">All</SelectItem>
                 {Object.values(ItemStatus).map(status => (
-                  <SelectItem key={status} value={status}>{status}</SelectItem>
+                  <SelectItem key={status} value={status}>{getItemStatusLabel(status)}</SelectItem>
                 ))}
               </SelectContent>
             </Select>

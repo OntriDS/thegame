@@ -5,7 +5,7 @@
   "phasePlan": {
     "phase14.1": {
       "phaseName": "Automation tasks, 'Pixelbrain' AI Agents and MCP",
-      "status": "In Progress",
+      "status": "in-progress",
       "description": "Automation tasks, Create 'Pixelbrain' project (AI Agents and MCP) and connect it to TheGame",
       "deliverables": [
         "Develop 'Pixelbrain', a 'Orchestrator Agent' to Manage a Set of 'AI Agents'",
@@ -21,7 +21,7 @@
     },
     "phase14.2": {
       "phaseName": "Maps and Accounts Sections, UI and Gameplay",
-      "status": "In Progress",
+      "status": "in-progress",
       "description": "Complete Maps and Accounts Sections, Improve UI and Gameplay (Player and Characters)",
       "deliverables": [
         "Make the Map and Sites visible with GoogleMap",
@@ -37,7 +37,7 @@
     },
     "phase14.3": {
       "phaseName": "Debug and Optimize V0.1",
-      "status": "In Progress",
+      "status": "in-progress",
       "description": "",
       "deliverables": [
         "Network Sales in Sales Modal, Booth Sales Footer Fixes, Sales Summaries bugs",
@@ -55,7 +55,7 @@
     },
     "phase14.4": {
       "phaseName": "Clean Code and Documentation",
-      "status": "In Progress",
+      "status": "in-progress",
       "description": "",
       "deliverables": [
         "Clean and Update All the TheGame Documentation, Create Pixelbrain Documentation",
@@ -69,7 +69,7 @@
   "nextSprintPlan": {
     "phaseX.1": {
       "phaseName": "V0.2 Initialization",
-      "status": "Not Started",
+      "status": "not-started",
       "description": "",
       "deliverables": [
       "System: Player-One Bootstrap process",
@@ -83,56 +83,56 @@
     },
     "phaseX.2": {
       "phaseName": "",
-      "status": "Not Started",
+      "status": "not-started",
       "description": "",
       "deliverables": []
     },
     "phaseX.3": {
       "phaseName": "",
-      "status": "Not Started",
+      "status": "not-started",
       "description": "",
       "deliverables": []
     },
     "phaseX.4": {
       "phaseName": "",
-      "status": "Not Started",
+      "status": "not-started",
       "description": "",
       "deliverables": []
     }
   },
   "systems": {
     "system": {
-      "status": "Done",
+      "status": "done",
       "version": "v0.1",
       "description": "Foundation with proper enums, entities, and data flow"
     },
     "dashboards": {
-      "status": "Done",
+      "status": "done",
       "version": "v0.1",
       "description": "Dashboard system for tracking key bussiness metrics and progress"
     },
     "controlRoom": {
-      "status": "Done",
+      "status": "done",
       "version": "v0.1",
       "description": "Implemented with hierarchical task management"
     },
     "inventories": {
-      "status": "Done",
+      "status": "done",
       "version": "v0.1",
       "description": "Unified Stock management at different Sites"
     },
     "finances": {
-      "status": "Done",
+      "status": "done",
       "version": "v0.1",
       "description": "Implemented with Company/Personal split and In-Game Currency"
     },
     "sales": {
-      "status": "Done",
+      "status": "done",
       "version": "v0.1",
       "description": "Track Sales from different sources"
     },
     "maps": {
-      "status": "In Progress",
+      "status": "in-progress",
       "version": "v0.1",
       "description": "Basic Sites System and World Map"
     },
@@ -142,17 +142,17 @@
       "description": "Basic Character system with Roles"
     },
     "dataCenter": {
-      "status": "Done",
+      "status": "done",
       "version": "v0.1",
       "description": "Central repository for Logs and Links"
     },
     "archive": {
-      "status": "Done",
+      "status": "done",
       "version": "v0.1",
       "description": "Basic Archive system for storing full entities historical data"
     },
     "player": {
-      "status": "Done",
+      "status": "done",
       "version": "v0.1",
       "description": "Basic Player system with Points"
     },
@@ -162,22 +162,22 @@
       "description": "Accounts Section and Management"
     },
     "research": {
-      "status": "Done",
+      "status": "done",
       "version": "v0.1",
       "description": "Basic Project Development, Diagrams, Notes"
     },
     "settings": {
-      "status": "Done",
+      "status": "done",
       "version": "v0.1",
       "description": "Basic Settings System"
     },
     "pixelbrain-integration": {
-      "status": "In Progress",
+      "status": "in-progress",
       "version": "v0.1",
       "description": "Basic MCP and AI Agents System"
     },
     "ecosystem-integration": {
-      "status": "In Progress",
+      "status": "in-progress",
       "version": "v0.1",
       "description": "Available Items, Inventory and Accounts Integration"
     }

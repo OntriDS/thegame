@@ -3,45 +3,44 @@
 
 import { TaskStatus, FinancialStatus, DevSprintStatus, ItemStatus, EntityType } from '@/types/enums';
 
-/** Task status key mappings */
+/** Task status keys (aligned with stored slug / enum value). */
 export const taskStatusKeyMap: Record<TaskStatus, string> = {
-  [TaskStatus.CREATED]: 'created',
-  [TaskStatus.ON_HOLD]: 'onHold',
-  [TaskStatus.IN_PROGRESS]: 'inProgress',
-  [TaskStatus.FINISHING]: 'finishing',
-  [TaskStatus.DONE]: 'done',
-  [TaskStatus.COLLECTED]: 'collected',
-  [TaskStatus.FAILED]: 'failed',
-  [TaskStatus.NONE]: 'none',
+  [TaskStatus.CREATED]: TaskStatus.CREATED,
+  [TaskStatus.ON_HOLD]: TaskStatus.ON_HOLD,
+  [TaskStatus.IN_PROGRESS]: TaskStatus.IN_PROGRESS,
+  [TaskStatus.FINISHING]: TaskStatus.FINISHING,
+  [TaskStatus.DONE]: TaskStatus.DONE,
+  [TaskStatus.COLLECTED]: TaskStatus.COLLECTED,
+  [TaskStatus.FAILED]: TaskStatus.FAILED,
+  [TaskStatus.NONE]: TaskStatus.NONE,
 };
 
-/** Financial status key mappings */
+/** Financial status keys (aligned with stored slug / enum value). */
 export const financialStatusKeyMap: Record<FinancialStatus, string> = {
-  [FinancialStatus.PENDING]: 'pending',
-  [FinancialStatus.DONE]: 'done',
+  [FinancialStatus.PENDING]: FinancialStatus.PENDING,
+  [FinancialStatus.DONE]: FinancialStatus.DONE,
 };
 
-
-/** Dev Sprint status key mappings */
+/** Dev sprint status keys (aligned with stored slug / enum value). */
 export const devSprintStatusKeyMap: Record<DevSprintStatus, string> = {
-  [DevSprintStatus.NOT_STARTED]: 'notStarted',
-  [DevSprintStatus.IN_PROGRESS]: 'inProgress',
-  [DevSprintStatus.DONE]: 'done',
+  [DevSprintStatus.NOT_STARTED]: DevSprintStatus.NOT_STARTED,
+  [DevSprintStatus.IN_PROGRESS]: DevSprintStatus.IN_PROGRESS,
+  [DevSprintStatus.DONE]: DevSprintStatus.DONE,
 };
 
-/** Item status key mappings */
+/** Item status keys (aligned with stored slug / enum value). */
 export const itemStatusKeyMap: Record<ItemStatus, string> = {
-  [ItemStatus.CREATED]: 'created',
-  [ItemStatus.FOR_SALE]: 'forSale',
-  [ItemStatus.SOLD]: 'sold',
-  [ItemStatus.TO_ORDER]: 'toOrder',
-  [ItemStatus.TO_DO]: 'toDo',
-  [ItemStatus.GIFTED]: 'gifted',
-  [ItemStatus.RESERVED]: 'reserved',
-  [ItemStatus.OBSOLETE]: 'obsolete',
-  [ItemStatus.DAMAGED]: 'damaged',
-  [ItemStatus.IDLE]: 'idle',
-  [ItemStatus.CONSIGNMENT]: 'consignment',
+  [ItemStatus.CREATED]: ItemStatus.CREATED,
+  [ItemStatus.FOR_SALE]: ItemStatus.FOR_SALE,
+  [ItemStatus.SOLD]: ItemStatus.SOLD,
+  [ItemStatus.TO_ORDER]: ItemStatus.TO_ORDER,
+  [ItemStatus.TO_DO]: ItemStatus.TO_DO,
+  [ItemStatus.GIFTED]: ItemStatus.GIFTED,
+  [ItemStatus.RESERVED]: ItemStatus.RESERVED,
+  [ItemStatus.OBSOLETE]: ItemStatus.OBSOLETE,
+  [ItemStatus.DAMAGED]: ItemStatus.DAMAGED,
+  [ItemStatus.IDLE]: ItemStatus.IDLE,
+  [ItemStatus.CONSIGNMENT]: ItemStatus.CONSIGNMENT,
 };
 
 

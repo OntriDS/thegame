@@ -15,7 +15,8 @@ import {
   RefreshCw,
   AlertTriangle,
   CheckCircle,
-  XCircle
+  XCircle,
+  GitBranch
 } from 'lucide-react';
 import { 
   DAY_IN_MS, 
@@ -38,6 +39,9 @@ export function SettingsPanel({ onStatusUpdate }: SettingsPanelProps) {
   const [resetDefaultsConfirmed, setResetDefaultsConfirmed] = useState(false);
   const [showClearCacheModal, setShowClearCacheModal] = useState(false);
   const [clearCacheConfirmed, setClearCacheConfirmed] = useState(false);
+  const [migrateReport, setMigrateReport] = useState<string>('');
+  const [showMigrateApplyModal, setShowMigrateApplyModal] = useState(false);
+  const [migrateApplyConfirmed, setMigrateApplyConfirmed] = useState(false);
 
   const updateStatus = (message: string, isError: boolean = false) => {
     setStatus(message);
@@ -192,6 +196,65 @@ export function SettingsPanel({ onStatusUpdate }: SettingsPanelProps) {
     }
   };
 
+  const handleMigrateDryRun = async () => {
+    setIsLoading(true);
+    setMigrateReport('');
+    try {
+      const response = await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'migrate-status-slugs',
+          parameters: { dryRun: true },
+        }),
+      });
+      const result = await response.json();
+      setMigrateReport(JSON.stringify(result, null, 2));
+      if (result.success) {
+        updateStatus(`✅ ${result.message}`);
+      } else {
+        updateStatus(`❌ ${result.message}`, true);
+      }
+    } catch {
+      updateStatus('❌ Status migration dry run failed.', true);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleMigrateApply = async () => {
+    if (!migrateApplyConfirmed) {
+      setShowMigrateApplyModal(true);
+      return;
+    }
+    setShowMigrateApplyModal(false);
+    setMigrateApplyConfirmed(false);
+    setIsLoading(true);
+    setMigrateReport('');
+    try {
+      const response = await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'migrate-status-slugs',
+          parameters: { dryRun: false },
+        }),
+      });
+      const result = await response.json();
+      setMigrateReport(JSON.stringify(result, null, 2));
+      if (result.success) {
+        updateStatus(`✅ ${result.message}`);
+        setTimeout(() => window.location.reload(), 1500);
+      } else {
+        updateStatus(`❌ ${result.message}`, true);
+      }
+    } catch {
+      updateStatus('❌ Status migration apply failed.', true);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleImportData = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -283,6 +346,38 @@ export function SettingsPanel({ onStatusUpdate }: SettingsPanelProps) {
             </div>
           </div>
         </div> 
+
+        {/* Status slug migration (one-time KV + project-status) */}
+        <div className="border-t pt-4">
+          <h4 className="font-medium text-sm mb-3 flex items-center gap-2">
+            <GitBranch className="h-4 w-4" />
+            Status storage migration
+          </h4>
+          <p className="text-xs text-muted-foreground mb-3">
+            Rewrites legacy status strings to kebab-case slugs on all indexed entities, project-status, and dev-log sprint/phase rows.
+            Run <strong>Dry run</strong> first; unmapped values must be empty before <strong>Apply</strong>.
+          </p>
+          <div className="flex flex-wrap gap-2 mb-3">
+            <Button onClick={handleMigrateDryRun} variant="outline" disabled={isLoading}>
+              Dry run status migration
+            </Button>
+            <Button
+              onClick={() => {
+                setMigrateApplyConfirmed(false);
+                setShowMigrateApplyModal(true);
+              }}
+              variant="destructive"
+              disabled={isLoading}
+            >
+              Apply status migration
+            </Button>
+          </div>
+          {migrateReport && (
+            <pre className="text-[10px] bg-muted/50 rounded-md p-3 max-h-48 overflow-auto border">
+              {migrateReport}
+            </pre>
+          )}
+        </div>
 
         {/* System Maintenance Section */}
         <div className="border-t pt-4">
@@ -383,6 +478,41 @@ export function SettingsPanel({ onStatusUpdate }: SettingsPanelProps) {
                 className="bg-red-600 hover:bg-red-700 text-white"
               >
                 Reset to Defaults
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={showMigrateApplyModal} onOpenChange={setShowMigrateApplyModal}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-red-500" />
+                Apply status migration
+              </DialogTitle>
+              <DialogDescription>
+                This writes normalized status slugs to KV (and project-status file or KV). Run a dry run with zero unmapped values first.
+                Reload the app after apply.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="migrate-apply-confirm"
+                checked={migrateApplyConfirmed}
+                onCheckedChange={(checked) => setMigrateApplyConfirmed(checked === true)}
+              />
+              <Label htmlFor="migrate-apply-confirm">I ran dry run with no unmapped values</Label>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowMigrateApplyModal(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleMigrateApply}
+                disabled={!migrateApplyConfirmed}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                Apply migration
               </Button>
             </DialogFooter>
           </DialogContent>

@@ -6,6 +6,7 @@ export { ClearLogsWorkflow } from './clear-logs-workflow';
 export { ClearCacheWorkflow } from './clear-cache-workflow';
 export { ExportDataWorkflow } from './export-data-workflow';
 export { ImportDataWorkflow } from './import-data-workflow';
+export { MigrateStatusSlugsWorkflow } from './migrate-status-slugs-workflow';
 
 // Common types
 export type { SettingsResult } from './reset-data-workflow';

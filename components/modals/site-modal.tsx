@@ -18,6 +18,7 @@ import {
   LOCATION_HIERARCHY,
   EntityType
 } from '@/types/enums';
+import { getSiteStatusLabel } from '@/lib/constants/status-display-labels';
 import { createSettlementOptions } from '@/lib/utils/searchable-select-utils';
 import SettlementSubmodal from './submodals/settlement-submodal';
 import { MapPin, Cloud, Sparkles, Trash2, Network, User } from 'lucide-react';
@@ -57,7 +58,7 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
 
   // Digital site fields
   const [digitalUrl, setDigitalUrl] = useState('');
-  const [digitalType, setDigitalType] = useState<DigitalSiteType>(DigitalSiteType.DIGITAL_STORAGE);
+  const [digitalType, setDigitalType] = useState<DigitalSiteType>(DigitalSiteType.REPOSITORY);
 
   // Special site fields
   const [systemPurpose, setSystemPurpose] = useState<SystemSiteType>(SystemSiteType.UNIVERSAL_TRACKING);
@@ -109,7 +110,7 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
         setGoogleMapsAddress(physicalMeta.googleMapsAddress || '');
       } else if (site.metadata.type === SiteType.DIGITAL) {
         const digitalMeta = site.metadata as DigitalSiteMetadata;
-        setDigitalType(digitalMeta.digitalType || DigitalSiteType.DIGITAL_STORAGE);
+        setDigitalType(digitalMeta.digitalType || DigitalSiteType.REPOSITORY);
         setDigitalUrl((digitalMeta as any).url || '');
       } else if (site.metadata.type === SiteType.SYSTEM) {
         const systemMeta = site.metadata as SystemSiteMetadata;
@@ -129,7 +130,7 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
       setBusinessType(PhysicalBusinessType.STORAGE);
       setGoogleMapsAddress('');
       setDigitalUrl('');
-      setDigitalType(DigitalSiteType.DIGITAL_STORAGE);
+      setDigitalType(DigitalSiteType.REPOSITORY);
       setSystemPurpose(SystemSiteType.UNIVERSAL_TRACKING);
     }
 
@@ -502,7 +503,7 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
                     </SelectTrigger>
                     <SelectContent>
                       {Object.values(SiteStatus).map(s => (
-                        <SelectItem key={s} value={s}>{s}</SelectItem>
+                        <SelectItem key={s} value={s}>{getSiteStatusLabel(s)}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>

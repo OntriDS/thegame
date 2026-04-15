@@ -3,6 +3,7 @@
 
 import { useState } from 'react';
 import { TaskStatus } from '@/types/enums';
+import { getTaskStatusLabel } from '@/lib/constants/status-display-labels';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -57,18 +58,18 @@ export default function CascadeStatusConfirmationModal({
 
   const getStatusColor = (status: TaskStatus) => {
     switch (status) {
-      case 'Done': return 'text-green-600';
-      case 'In Progress': return 'text-blue-600';
-      case 'On Hold': return 'text-gray-600';
-      case 'Failed': return 'text-red-600';
+      case TaskStatus.DONE: return 'text-green-600';
+      case TaskStatus.IN_PROGRESS: return 'text-blue-600';
+      case TaskStatus.ON_HOLD: return 'text-gray-600';
+      case TaskStatus.FAILED: return 'text-red-600';
       default: return 'text-gray-600';
     }
   };
 
   const getStatusIcon = (status: TaskStatus) => {
     switch (status) {
-      case 'Done': return <CheckCircle className="h-4 w-4" />;
-      case 'Failed': return <XCircle className="h-4 w-4" />;
+      case TaskStatus.DONE: return <CheckCircle className="h-4 w-4" />;
+      case TaskStatus.FAILED: return <XCircle className="h-4 w-4" />;
       default: return <AlertTriangle className="h-4 w-4" />;
     }
   };
@@ -98,11 +99,11 @@ export default function CascadeStatusConfirmationModal({
               <>
                 The template <strong>&quot;{templateName}&quot;</strong> status changed from{' '}
                 <span className={`font-medium ${getStatusColor(oldStatus)}`}>
-                  {oldStatus}
+                  {getTaskStatusLabel(oldStatus)}
                 </span>{' '}
                 to{' '}
                 <span className={`font-medium ${getStatusColor(newStatus)}`}>
-                  {newStatus}
+                  {getTaskStatusLabel(newStatus)}
                 </span>
                 . This will affect {affectedInstancesCount} instance{affectedInstancesCount !== 1 ? 's' : ''}.
               </>
@@ -110,11 +111,11 @@ export default function CascadeStatusConfirmationModal({
               <>
                 Template <strong>&quot;{templateName}&quot;</strong> status changed from{' '}
                 <span className={`font-medium ${getStatusColor(oldStatus)}`}>
-                  {oldStatus}
+                  {getTaskStatusLabel(oldStatus)}
                 </span>{' '}
                 to{' '}
                 <span className={`font-medium ${getStatusColor(newStatus)}`}>
-                  {newStatus}
+                  {getTaskStatusLabel(newStatus)}
                 </span>
                 . {affectedInstancesCount} instance{affectedInstancesCount !== 1 ? 's' : ''} will be affected.
               </>
@@ -133,11 +134,11 @@ export default function CascadeStatusConfirmationModal({
               <span className="text-sm font-medium">Status Change:</span>
               <div className="flex items-center gap-2">
                 <span className={`text-sm ${getStatusColor(oldStatus)}`}>
-                  {oldStatus}
+                  {getTaskStatusLabel(oldStatus)}
                 </span>
                 <span className="text-muted-foreground">→</span>
                 <span className={`text-sm ${getStatusColor(newStatus)}`}>
-                  {newStatus}
+                  {getTaskStatusLabel(newStatus)}
                 </span>
               </div>
             </div>
@@ -158,7 +159,7 @@ export default function CascadeStatusConfirmationModal({
                   <p className="font-medium">Warning: Status Reversal</p>
                   <p className="mt-1">
                     This will revert the status of {affectedInstancesCount} instance{affectedInstancesCount !== 1 ? 's' : ''}
-                    back to <span className="font-medium">{newStatus}</span>.
+                    back to <span className="font-medium">{getTaskStatusLabel(newStatus)}</span>.
                   </p>
                 </div>
               </div>

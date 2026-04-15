@@ -258,7 +258,7 @@ export function createRecurrentGroup(
     name,
     description,
     type: TaskType.RECURRENT_GROUP,
-    status: 'Not Started' as any, // Will be updated when we add the new status
+    status: TaskStatus.CREATED,
     priority: 'Normal' as any,
     station: station as any,
     progress: 0,
@@ -291,7 +291,7 @@ export function createRecurrentTemplate(
     name,
     description,
     type: TaskType.RECURRENT_TEMPLATE,
-    status: 'Not Started' as any,
+    status: TaskStatus.CREATED,
     priority: 'Normal' as any,
     station: station as any,
     progress: 0,

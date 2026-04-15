@@ -8,6 +8,7 @@ import NumericInput from '@/components/ui/numeric-input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { ItemType, Collection, ItemStatus } from '@/types/enums';
+import { getItemStatusLabel } from '@/lib/constants/status-display-labels';
 import { getSubTypesForItemType } from '@/lib/utils/item-utils';
 import { getCategoryForItemType, createItemTypeSubTypeOptions, getItemTypeFromCombined } from '@/lib/utils/searchable-select-utils';
 import { createSiteOptionsWithCategories } from '@/lib/utils/site-options-utils';
@@ -308,7 +309,7 @@ export default function ItemEmissarySubModal({
               <SelectContent>
                 {Object.values(ItemStatus).map((status) => (
                   <SelectItem key={status} value={status}>
-                    {status}
+                    {getItemStatusLabel(status)}
                   </SelectItem>
                 ))}
               </SelectContent>

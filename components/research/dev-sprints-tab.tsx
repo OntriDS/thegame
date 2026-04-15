@@ -6,12 +6,18 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowUpDown, RefreshCw, CheckCircle, Circle, Clock } from 'lucide-react';
 import { useState } from 'react';
-import { TaskStatus, DevSprintStatus } from '@/types/enums';
+import { DevSprintStatus } from '@/types/enums';
 import { DEV_SPRINT_STATUS_COLORS } from '@/lib/constants/status-colors';
 import { useThemeColors } from '@/lib/hooks/use-theme-colors';
 import { processLogData } from '@/lib/utils/logging-utils';
 import { getPhaseStatusBadgeProps } from '@/lib/utils/phase-status-utils';
 import { formatDateDDMMYYYY } from '@/lib/constants/date-constants';
+
+/** Legacy dev-log used `completed`; align with DevSprintStatus for colors/icons */
+function normalizeSprintPhaseStatusForUi(status: string): string {
+  if (status === 'completed') return DevSprintStatus.DONE;
+  return status;
+}
 
 interface DevSprintsTabProps {
   projectStatus: any;
@@ -201,9 +207,10 @@ export function DevSprintsTab({
   const logEntries = generateLogEntries();
 
   const getPhaseIcon = (status: string) => {
+    const s = normalizeSprintPhaseStatusForUi(status);
     // Use centralized colors for consistency
-    const getIconColor = (status: string) => {
-      const statusColors = DEV_SPRINT_STATUS_COLORS[status as DevSprintStatus];
+    const getIconColor = (st: string) => {
+      const statusColors = DEV_SPRINT_STATUS_COLORS[st as DevSprintStatus];
       if (statusColors) {
         return isDarkMode ? statusColors.dark.replace('bg-', 'text-').replace('-800', '-200').replace('-900', '-200') :
           statusColors.light.replace('bg-', 'text-').replace('-100', '-600');
@@ -211,11 +218,11 @@ export function DevSprintsTab({
       return isDarkMode ? "text-gray-200" : "text-gray-400";
     };
 
-    switch (status) {
-      case DevSprintStatus.DONE: return <CheckCircle className={`h-4 w-4 ${getIconColor(status)}`} />;
-      case DevSprintStatus.IN_PROGRESS: return <Clock className={`h-4 w-4 ${getIconColor(status)}`} />;
-      case DevSprintStatus.NOT_STARTED: return <Circle className={`h-4 w-4 ${getIconColor(status)}`} />;
-      default: return <Circle className={`h-4 w-4 ${getIconColor(status)}`} />;
+    switch (s) {
+      case DevSprintStatus.DONE: return <CheckCircle className={`h-4 w-4 ${getIconColor(s)}`} />;
+      case DevSprintStatus.IN_PROGRESS: return <Clock className={`h-4 w-4 ${getIconColor(s)}`} />;
+      case DevSprintStatus.NOT_STARTED: return <Circle className={`h-4 w-4 ${getIconColor(s)}`} />;
+      default: return <Circle className={`h-4 w-4 ${getIconColor(s)}`} />;
     }
   };
 

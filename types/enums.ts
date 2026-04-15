@@ -79,23 +79,28 @@ export const LOCATION_HIERARCHY = LOCATION_STRUCTURE;
 
 /** Physical Site Business Types */
 export enum PhysicalBusinessType {
-  STORE = 'Store',            // Items left to sell (Smoking Lounge, Tagua...)
+  STORE = 'Store',                          // Physical store (Smoking Lounge, Tagua...)
   SELLING_POINT = 'Selling point',          // Stores, Ferias, Festivals that buy at discount (El Hornito, Eco Feria, Envision...)
-  TEACHING_SPACE = 'Teaching space',         // Teaching sites (Jungle Academy...)
-  HQ = 'HQ',                     // HQ sites (Home, Feria Box...)
-  ART_GALLERY = 'Art gallery',            // Gallery sites (Gallery 1084...)
-  DESIGN_SPACE = 'Design space',           // Design hub sites (Design Hub...)
-  WORKSHOP = 'Workshop',                // Production sites for creating items
-  STORAGE = 'Storage',                // Warehouse sites (Home, Feria Box...)
-  PROVIDER = 'Provider',                // Provider sites (Colono, Iguana Verde, Art Depot...)
-  LIVING_SPACE = 'Living space',        // Living sites (Rents for Living Space...)
+  TEACHING_SPACE = 'Teaching space',        // Teaching sites (Jungle Academy...)
+  HQ = 'HQ',                                // HQ sites (Home, Feria Box...)
+  ART_GALLERY = 'Art gallery',              // Gallery sites (Gallery 1084...)
+  DESIGN_SPACE = 'Design space',            // Design hub sites (Design Hub...)
+  WORKSHOP = 'Workshop',                    // Workshop sites (Workshop...)
+  STORAGE = 'Storage',                      // Warehouse sites (Home, Feria Box...)
+  PROVIDER = 'Provider',                    // Provider sites (Colono, Iguana Verde, Art Depot...)
+  LIVING_SPACE = 'Living space',            // Living sites (Rents for Living Space...)
+  BANK = 'Bank',                            // Bank sites (BCR, BN...)
 }
 
 /** Cloud Digital Types */
 export enum DigitalSiteType {
-  REPOSITORY = 'repository',             // Source files, templates, digital assets
-  DIGITAL_STORAGE = 'digital storage',        // Drives, digital art folder, online galleries
-  NFT_WALLET = 'nft wallet'              // NFT assets
+  REPOSITORY = 'repository',                  // Repos
+  DATABASE = 'data base',                     // Drives, Cloud Storage
+  WEBSITEAPP = 'website app',                 // Websites Apps
+  NFT_PLATFORM = 'nft platform',              // NFT Platforms
+  SOCIAL_MEDIA = 'social media',              // Social Media Platforms
+  LLM_AGENT = 'llm agent',                    // LLM Agents (ChatGPT, Gemini, Claude, etc.)
+  BANKING_PLATFORM = 'banking platform',      // Banking Platforms
 }
 
 /** System Site Purposes */
@@ -114,8 +119,8 @@ export enum SiteType {
 
 /** Status of Sites - controls state */
 export enum SiteStatus {
-  ACTIVE = 'Active',    // Site is in use
-  INACTIVE = 'Inactive',  // Site is not being used
+  ACTIVE = 'active',    // Site is in use
+  INACTIVE = 'inactive',  // Site is not being used
 }
 
 /** Site categories for UI organization and SearchableSelect grouping */
@@ -131,11 +136,16 @@ export const SITE_CATEGORIES = {
     PhysicalBusinessType.STORAGE,
     PhysicalBusinessType.PROVIDER,
     PhysicalBusinessType.LIVING_SPACE,
+    PhysicalBusinessType.BANK,
   ],
   DIGITAL: [
     DigitalSiteType.REPOSITORY,
-    DigitalSiteType.DIGITAL_STORAGE,
-    DigitalSiteType.NFT_WALLET
+    DigitalSiteType.DATABASE,
+    DigitalSiteType.WEBSITEAPP,
+    DigitalSiteType.NFT_PLATFORM,
+    DigitalSiteType.SOCIAL_MEDIA,
+    DigitalSiteType.LLM_AGENT,
+    DigitalSiteType.BANKING_PLATFORM,
   ],
   SYSTEM: [
     SystemSiteType.UNIVERSAL_TRACKING,
@@ -180,14 +190,14 @@ export enum RecurrentFrequency {
 
 /** Workflow state of a Task */
 export enum TaskStatus {
-  CREATED = 'Created',
-  ON_HOLD = 'On Hold',
-  IN_PROGRESS = 'In Progress',
-  FINISHING = 'Finishing',
-  DONE = 'Done',
-  COLLECTED = 'Collected',
-  FAILED = 'Failed',
-  NONE = 'None',        // no status
+  CREATED = 'created',
+  ON_HOLD = 'on-hold',
+  IN_PROGRESS = 'in-progress',
+  FINISHING = 'finishing',
+  DONE = 'done',
+  COLLECTED = 'collected',
+  FAILED = 'failed',
+  NONE = 'none',        // no status
 }
 
 /** Optional urgency flag (--► replaces "Awaiting / Urgent …") */
@@ -205,8 +215,8 @@ export enum TaskPriority {
 
 /** Status of Records (completed tasks) */
 export enum FinancialStatus {
-  PENDING = 'PENDING',  // When isNotPaid or isNotCharged - excluded from cashflow
-  DONE = 'Done',        // When paid/charged and processed
+  PENDING = 'pending',  // When isNotPaid or isNotCharged - excluded from cashflow
+  DONE = 'done',        // When paid/charged and processed
 }
 
 /** In-game currency system */
@@ -266,31 +276,28 @@ export enum InventoryTab {
   PRINTS = 'prints',
   MERCH = 'merch',
   CRAFT = 'crafts',
-
   // BUNDLE_ITEM tabs
   BUNDLES = 'bundles',    // Business Logic Items (Bundles)
-
   // RESOURCE_ITEM tabs
   MATERIALS = 'materials',
   EQUIPMENT = 'equipment',
-
   // LIFECYCLE tabs
   SOLD_ITEMS = 'sold-items',  // Items that have been sold
 }
 
 /** Lifecycle state of ONE Item /SKU */
 export enum ItemStatus {
-  CREATED = 'Created',
-  FOR_SALE = 'For Sale',
-  SOLD = 'Sold',
-  TO_ORDER = 'To Order',
-  TO_DO = 'To Do',
-  GIFTED = 'Gifted',
-  RESERVED = 'Reserved',
-  CONSIGNMENT = 'Consignment',
-  OBSOLETE = 'Obsolete',
-  DAMAGED = 'Damaged',
-  IDLE = 'Idle',
+  CREATED = 'created',
+  FOR_SALE = 'for-sale',
+  SOLD = 'sold',
+  TO_ORDER = 'to-order',
+  TO_DO = 'to-do',
+  GIFTED = 'gifted',
+  RESERVED = 'reserved',
+  CONSIGNMENT = 'consignment',
+  OBSOLETE = 'obsolete',
+  DAMAGED = 'damaged',
+  IDLE = 'idle',
 }
 
 /** Creative collections */
@@ -403,11 +410,11 @@ export enum SaleType {
 
 /** Sales transaction status */
 export enum SaleStatus {
-  PENDING = 'PENDING',      // Sale isNotCharged
-  ON_HOLD = 'ON_HOLD',      // Waiting for other reasons
-  CHARGED = 'CHARGED',      // Sale is Charged
-  COLLECTED = 'COLLECTED',  // Sale is Collected for reporting
-  CANCELLED = 'CANCELLED',  // Sale is Cancelled
+  PENDING = 'pending',      // Sale isNotCharged
+  ON_HOLD = 'on-hold',      // Waiting for other reasons
+  CHARGED = 'charged',      // Sale is Charged
+  COLLECTED = 'collected',  // Sale is Collected for reporting
+  CANCELLED = 'cancelled',  // Sale is Cancelled
 }
 
 /** Payment methods for sales */
@@ -678,10 +685,10 @@ export enum BusinessType {
 
 /** Status of Contracts */
 export enum ContractStatus {
-  DRAFT = 'Draft',            // Being created/negotiated
-  ACTIVE = 'Active',          // Currently in effect
-  PAUSED = 'Paused',           // Temporarily paused
-  TERMINATED = 'Terminated'  // Ended before expiration
+  DRAFT = 'draft',            // Being created/negotiated
+  ACTIVE = 'active',          // Currently in effect
+  PAUSED = 'paused',           // Temporarily paused
+  TERMINATED = 'terminated'  // Ended before expiration
 }
 
 /** Types of Contract Clauses */
@@ -781,9 +788,9 @@ export enum NotebookType {
 
 /** Status of Dev Sprints/Phases */
 export enum DevSprintStatus {
-  NOT_STARTED = 'Not Started',
-  IN_PROGRESS = 'In Progress',
-  DONE = 'Done',
+  NOT_STARTED = 'not-started',
+  IN_PROGRESS = 'in-progress',
+  DONE = 'done',
 }
 
 // ============================================================================

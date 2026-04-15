@@ -12,6 +12,7 @@ import { ClientAPI } from "@/lib/client-api";
 import { SiteModal } from "@/components/modals/site-modal";
 import type { Site } from "@/types/entities";
 import { SiteType, SiteStatus } from "@/types/enums";
+import { getSiteStatusLabel } from "@/lib/constants/status-display-labels";
 import { MapDeepLinkTrigger } from '@/components/admin/admin-deep-link-triggers';
 
 function MapPageContent() {
@@ -169,7 +170,7 @@ function MapPageContent() {
           comparison = a.metadata.type.localeCompare(b.metadata.type);
           break;
         case 'status':
-          comparison = (a.status || 'Active').localeCompare(b.status || 'Active');
+          comparison = (a.status || SiteStatus.ACTIVE).localeCompare(b.status || SiteStatus.ACTIVE);
           break;
         case 'createdAt':
           const aTime = new Date(a.createdAt || 0).getTime();
@@ -396,8 +397,8 @@ function MapPageContent() {
                               <p className="text-sm text-muted-foreground line-clamp-2">{site.description}</p>
                             )}
                             <div className="flex items-center gap-2 text-xs">
-                              <div className={`w-2 h-2 rounded-full ${site.status === 'Active' ? 'bg-green-500' : 'bg-gray-400'}`} />
-                              <span className="text-muted-foreground">{site.status || 'Active'}</span>
+                              <div className={`w-2 h-2 rounded-full ${site.status === SiteStatus.ACTIVE ? 'bg-green-500' : 'bg-gray-400'}`} />
+                              <span className="text-muted-foreground">{getSiteStatusLabel(site.status || SiteStatus.ACTIVE)}</span>
                             </div>
                             {site.metadata.type === SiteType.PHYSICAL && 'settlementId' in site.metadata && (
                               <div className="text-xs text-muted-foreground">

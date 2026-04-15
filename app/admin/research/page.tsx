@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { BookOpen, Map, FileText, Compass, Zap, CheckCircle, AlertTriangle, X, Bot } from 'lucide-react';
 import { useState, useEffect, Suspense } from 'react';
-import { NotebookType, TaskStatus } from '@/types/enums';
+import { NotebookType, DevSprintStatus } from '@/types/enums';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
 import { formatDateDDMMYYYY } from '@/lib/constants/date-constants';
 import { NotesTab } from '@/components/research/notes-tab';
@@ -268,7 +268,7 @@ function ResearchPageContent() {
     }
 
     const currentStatus = projectStatus.phasePlan[phaseKey].status;
-    const statusCycle = [TaskStatus.CREATED, TaskStatus.IN_PROGRESS, TaskStatus.DONE];
+    const statusCycle = [DevSprintStatus.NOT_STARTED, DevSprintStatus.IN_PROGRESS, DevSprintStatus.DONE];
     const currentIndex = statusCycle.indexOf(currentStatus);
     const nextIndex = (currentIndex + 1) % statusCycle.length;
     const newStatus = statusCycle[nextIndex];
@@ -304,7 +304,7 @@ function ResearchPageContent() {
 
     // Check if all phases are "Done"
     const incompletePhasesList = Object.entries(projectStatus.phasePlan)
-      .filter(([phaseKey, phase]: [string, any]) => phase.status !== TaskStatus.DONE)
+      .filter(([phaseKey, phase]: [string, any]) => phase.status !== DevSprintStatus.DONE)
       .map(([phaseKey, phase]: [string, any]) => phase.phaseName);
 
     if (incompletePhasesList.length > 0) {
@@ -336,12 +336,14 @@ function ResearchPageContent() {
         description: `Sprint ${projectStatus.currentSprintNumber} completed successfully`,
         completedAt: formatDateDDMMYYYY(new Date()), // DD-MM-YYYY format
         challenge: projectStatus.currentChallenge || 'System Development',
+        status: DevSprintStatus.DONE,
         phases: Object.entries(projectStatus.phasePlan).map(([phaseKey, phase]: [string, any]) => ({
           id: phaseKey,
           phaseName: phase.phaseName || phaseKey, // Use phaseName if available, fallback to phaseKey
           description: phase.description,
           completedAt: formatDateDDMMYYYY(new Date()), // DD-MM-YYYY format
-          completedFeatures: phase.deliverables || []
+          completedFeatures: phase.deliverables || [],
+          status: DevSprintStatus.DONE,
         }))
       };
 
@@ -398,25 +400,25 @@ function ResearchPageContent() {
         nextSprintPlan: {
           [`phaseX.1`]: {
             "phaseName": "",
-            "status": "Not Started",
+            "status": DevSprintStatus.NOT_STARTED,
             "description": "",
             "deliverables": []
           },
           [`phaseX.2`]: {
             "phaseName": "",
-            "status": "Not Started",
+            "status": DevSprintStatus.NOT_STARTED,
             "description": "",
             "deliverables": []
           },
           [`phaseX.3`]: {
             "phaseName": "",
-            "status": "Not Started",
+            "status": DevSprintStatus.NOT_STARTED,
             "description": "",
             "deliverables": []
           },
           [`phaseX.4`]: {
             "phaseName": "",
-            "status": "Not Started",
+            "status": DevSprintStatus.NOT_STARTED,
             "description": "",
             "deliverables": []
           }

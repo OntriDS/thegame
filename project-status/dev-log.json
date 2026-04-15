@@ -6,7 +6,7 @@
       "description": "Complete project setup, tech stack, and basic UI foundation",
       "challenge": "Establish complete technical foundation and basic UI system",
       "completedAt": "08-06-2025",
-      "status": "completed",
+      "status": "done",
       "phases": [
         {
           "id": "phase-1.1",
@@ -18,7 +18,7 @@
             "Git repository setup"
           ],
           "completedAt": "01-06-2025",
-          "status": "completed"
+          "status": "done"
         },
         {
           "id": "phase-1.2",
@@ -30,7 +30,7 @@
             "Basic ESLint configuration"
           ],
           "completedAt": "03-06-2025",
-          "status": "completed"
+          "status": "done"
         },
         {
           "id": "phase-1.3",
@@ -42,7 +42,7 @@
             "Basic component configuration"
           ],
           "completedAt": "05-06-2025",
-          "status": "completed"
+          "status": "done"
         },
         {
           "id": "phase-1.4",
@@ -55,7 +55,7 @@
             "Dark/light mode switching"
           ],
           "completedAt": "08-06-2025",
-          "status": "completed"
+          "status": "done"
         }
       ]
     },
@@ -65,7 +65,7 @@
       "description": "Create data persistence system and basic task management",
       "challenge": "Establish data foundation and create functional task management system",
       "completedAt": "15-06-2025",
-      "status": "completed",
+      "status": "done",
       "phases": [
         {
           "id": "phase-2.1",
@@ -77,7 +77,7 @@
             "localStorage integration"
           ],
           "completedAt": "10-06-2025",
-          "status": "completed"
+          "status": "done"
         },
         {
           "id": "phase-2.2",
@@ -89,7 +89,7 @@
             "Component refresh mechanism"
           ],
           "completedAt": "12-06-2025",
-          "status": "completed"
+          "status": "done"
         },
         {
           "id": "phase-2.3",
@@ -101,7 +101,7 @@
             "Task list display"
           ],
           "completedAt": "13-06-2025",
-          "status": "completed"
+          "status": "done"
         },
         {
           "id": "phase-2.4",
@@ -113,7 +113,7 @@
             "Task status management"
           ],
           "completedAt": "15-06-2025",
-          "status": "completed"
+          "status": "done"
         }
       ]
     },
@@ -123,7 +123,7 @@
       "description": "Enhance task management and create financial tracking system",
       "challenge": "Build advanced task management features and establish financial tracking foundation",
       "completedAt": "25-06-2025",
-      "status": "completed",
+      "status": "done",
       "phases": [
         {
           "id": "phase-3.1",
@@ -136,7 +136,7 @@
             "Custom resizable sidebar"
           ],
           "completedAt": "18-06-2025",
-          "status": "completed"
+          "status": "done"
         },
         {
           "id": "phase-3.2",
@@ -148,7 +148,7 @@
             "Basic financial CRUD operations"
           ],
           "completedAt": "22-06-2025",
-          "status": "completed"
+          "status": "done"
         },
         {
           "id": "phase-3.3",
@@ -160,7 +160,7 @@
             "Monthly tracking structure"
           ],
           "completedAt": "25-06-2025",
-          "status": "completed"
+          "status": "done"
         }
       ]
     },
@@ -170,7 +170,7 @@
       "description": "Complete financial system and begin inventory management",
       "challenge": "Add advanced financial features and create inventory system foundation",
       "completedAt": "05-07-2025",
-      "status": "completed",
+      "status": "done",
       "phases": [
         {
           "id": "phase-4.1",
@@ -183,7 +183,7 @@
             "Multi-currency support"
           ],
           "completedAt": "28-06-2025",
-          "status": "completed"
+          "status": "done"
         },
         {
           "id": "phase-4.2",
@@ -195,7 +195,7 @@
             "Asset management system"
           ],
           "completedAt": "01-07-2025",
-          "status": "completed"
+          "status": "done"
         },
         {
           "id": "phase-4.3",
@@ -207,7 +207,7 @@
             "Basic inventory CRUD operations"
           ],
           "completedAt": "03-07-2025",
-          "status": "completed"
+          "status": "done"
         },
         {
           "id": "phase-4.4",
@@ -219,7 +219,7 @@
             "Simple inventory tabs"
           ],
           "completedAt": "05-07-2025",
-          "status": "completed"
+          "status": "done"
         }
       ]
     },
@@ -229,7 +229,7 @@
       "description": "Complete inventory system and establish location management",
       "challenge": "Build advanced inventory features and create location system foundation",
       "completedAt": "18-07-2025",
-      "status": "completed",
+      "status": "done",
       "phases": [
         {
           "id": "phase-5.1",
@@ -242,7 +242,7 @@
             "Advanced inventory interface"
           ],
           "completedAt": "10-07-2025",
-          "status": "completed"
+          "status": "done"
         },
         {
           "id": "phase-5.2",
@@ -255,7 +255,7 @@
             "Location transfer system"
           ],
           "completedAt": "15-07-2025",
-          "status": "completed"
+          "status": "done"
         },
         {
           "id": "phase-5.3",
@@ -267,7 +267,7 @@
             "Business type integration"
           ],
           "completedAt": "18-07-2025",
-          "status": "completed"
+          "status": "done"
         }
       ]
     },
@@ -277,7 +277,7 @@
       "description": "Complete location system and create basic maps placeholder structure",
       "challenge": "Integrate location system with inventory and prepare maps foundation for future development",
       "completedAt": "28-07-2025",
-      "status": "completed",
+      "status": "done",
       "phases": [
         {
           "id": "phase-6.1",
@@ -290,7 +290,7 @@
             "Stock management updates"
           ],
           "completedAt": "22-07-2025",
-          "status": "completed"
+          "status": "done"
         },
         {
           "id": "phase-6.2",
@@ -303,7 +303,7 @@
             "Location hierarchy display integration"
           ],
           "completedAt": "28-07-2025",
-          "status": "completed"
+          "status": "done"
         }
       ]
     },
@@ -313,7 +313,7 @@
       "description": "Add advanced UI features and establish DataCenter logging system",
       "challenge": "Implement advanced UI components and create comprehensive logging foundation",
       "completedAt": "28-08-2025",
-      "status": "completed",
+      "status": "done",
       "phases": [
         {
           "id": "phase-7.1",
@@ -327,7 +327,7 @@
             "Bulk operations and move system modals"
           ],
           "completedAt": "15-08-2025",
-          "status": "completed"
+          "status": "done"
         },
         {
           "id": "phase-7.2",
@@ -341,7 +341,7 @@
             "Development history logging foundation"
           ],
           "completedAt": "22-08-2025",
-          "status": "completed"
+          "status": "done"
         },
         {
           "id": "phase-7.3",
@@ -355,7 +355,7 @@
             "System integration foundation for future development"
           ],
           "completedAt": "28-08-2025",
-          "status": "completed"
+          "status": "done"
         }
       ]
     },
@@ -365,7 +365,7 @@
       "description": "Sprint 8 completed - DataCenter system with comprehensive logging and Site System integration",
       "challenge": "The Automation Loop - System needs to become self-sustaining rather than requiring manual input",
       "completedAt": "04-09-2025",
-      "status": "completed",
+      "status": "done",
       "phases": [
         {
           "id": "phase-8.1",
@@ -377,7 +377,7 @@
             "Comprehensive project status showing all systems and their status"
           ],
           "completedAt": "01-09-2025",
-          "status": "completed"
+          "status": "done"
         },
         {
           "id": "phase-8.2",
@@ -389,7 +389,7 @@
             "Ensure Site System and Dev Logs are properly integrated"
           ],
           "completedAt": "02-09-2025",
-          "status": "completed"
+          "status": "done"
         },
         {
           "id": "phase-8.3",
@@ -401,7 +401,7 @@
             "Validate automation logic with sample data"
           ],
           "completedAt": "03-09-2025",
-          "status": "completed"
+          "status": "done"
         },
         {
           "id": "phase-8.4",
@@ -414,7 +414,7 @@
             "Develop Completed Tasks and Sold Items Logs"
           ],
           "completedAt": "04-09-2025",
-          "status": "completed"
+          "status": "done"
         }
       ]
     },
@@ -424,7 +424,7 @@
       "description": "System Integration & Recurrent Tasks",
       "challenge": "System Development",
       "completedAt": "16-09-2025",
-      "status": "completed",
+      "status": "done",
       "phases": [
         {
           "id": "phase-phase9.1",
@@ -437,7 +437,7 @@
             "Separate task-related vs standalone financial operations"
           ],
           "completedAt": "08-09-2025",
-          "status": "completed"
+          "status": "done"
         },
         {
           "id": "phase-phase9.2",
@@ -450,7 +450,7 @@
             "Test with real workflow examples (classes, buy orders)"
           ],
           "completedAt": "14-09-2025",
-          "status": "completed"
+          "status": "done"
         },
         {
           "id": "phase-phase9.3",
@@ -460,7 +460,7 @@
             "Redesign the note-taking system UI and Functionality"
           ],
           "completedAt": "16-09-2025",
-          "status": "completed"
+          "status": "done"
         },
         {
           "id": "phase-phase9.4",
@@ -474,7 +474,7 @@
             "Solved DatePicker, FrequencyCalendar, and SearchableSelect interaction issues"
           ],
           "completedAt": "10-09-2025",
-          "status": "completed"
+          "status": "done"
         }
       ]
     },
@@ -484,7 +484,7 @@
       "description": "System Clean Up & Archive Foundation",
       "challenge": "System Development BLA BLA BLA",
       "completedAt": "29-09-2025",
-      "status": "completed",
+      "status": "done",
       "phases": [
         {
           "id": "phase-phase10.1",
@@ -502,7 +502,7 @@
             "Refactor item import logic, for consistency"
           ],
           "completedAt": "29-09-2025",
-          "status": "completed"
+          "status": "done"
         },
         {
           "id": "phase-phase10.2",
@@ -518,7 +518,7 @@
             "Solve idempotency bug in task completion and Clear Logs Integration in both localhost and Vercel"
           ],
           "completedAt": "29-09-2025",
-          "status": "completed"
+          "status": "done"
         },
         {
           "id": "phase-phase10.3",
@@ -536,7 +536,7 @@
             "Add Colones, Sats and USD calculations to the Assets Modal and fix Step/Decimals validation"
           ],
           "completedAt": "29-09-2025",
-          "status": "completed"
+          "status": "done"
         },
         {
           "id": "phase-phase10.4",
@@ -555,7 +555,7 @@
             "Full system clean up, refactor, extractions, debug console logs and old system code"
           ],
           "completedAt": "29-09-2025",
-          "status": "completed"
+          "status": "done"
         }
       ]
     },

@@ -10,6 +10,7 @@ import { useEntityUpdates } from "@/lib/hooks/use-entity-updates";
 import { ClientAPI } from "@/lib/client-api";
 import { Sale } from "@/types/entities";
 import { SaleType, SaleStatus } from "@/types/enums";
+import { getSaleStatusLabel } from "@/lib/constants/status-display-labels";
 import { formatDateDDMMYYYY, getMonthName } from "@/lib/constants/date-constants";
 import { getAllSiteNames } from "@/lib/utils/site-options-utils";
 import { Plus, Calendar, DollarSign, Package, TrendingUp, Archive, Loader2 } from "lucide-react";
@@ -148,7 +149,7 @@ function SalesPageContent() {
 
     return (
       <Badge className={statusColors[status]}>
-        {status}
+        {getSaleStatusLabel(status)}
       </Badge>
     );
   };
@@ -381,7 +382,7 @@ function SalesPageContent() {
                 <SelectContent>
                   <SelectItem value="all">All Status</SelectItem>
                   {Object.values(SaleStatus).map(status => (
-                    <SelectItem key={status} value={status as string}>{status as string}</SelectItem>
+                    <SelectItem key={status} value={status as string}>{getSaleStatusLabel(status)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

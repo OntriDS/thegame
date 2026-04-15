@@ -1,5 +1,6 @@
 import { DevSprintStatus } from '@/types/enums';
 import { DEV_SPRINT_STATUS_COLORS } from '@/lib/constants/status-colors';
+import { getDevSprintStatusLabel } from '@/lib/constants/status-display-labels';
 import { formatDateDDMMYYYY } from '@/lib/constants/date-constants';
 import { ClientAPI } from '@/lib/client-api';
 
@@ -14,27 +15,27 @@ export const getPhaseStatusBadgeProps = (status: string, phaseKey: string, onCyc
       return {
         className: `${isDarkMode ? DEV_SPRINT_STATUS_COLORS[DevSprintStatus.DONE].dark : DEV_SPRINT_STATUS_COLORS[DevSprintStatus.DONE].light} ${baseClasses}`,
         onClick: () => onCycleStatus(phaseKey),
-        children: DevSprintStatus.DONE
+        children: getDevSprintStatusLabel(DevSprintStatus.DONE)
       };
     case DevSprintStatus.IN_PROGRESS: 
       return {
         className: `${isDarkMode ? DEV_SPRINT_STATUS_COLORS[DevSprintStatus.IN_PROGRESS].dark : DEV_SPRINT_STATUS_COLORS[DevSprintStatus.IN_PROGRESS].light} ${baseClasses}`,
         onClick: () => onCycleStatus(phaseKey),
-        children: DevSprintStatus.IN_PROGRESS
+        children: getDevSprintStatusLabel(DevSprintStatus.IN_PROGRESS)
       };
     case DevSprintStatus.NOT_STARTED: 
       return {
         variant: "outline" as const,
         className: `${isDarkMode ? DEV_SPRINT_STATUS_COLORS[DevSprintStatus.NOT_STARTED].dark : DEV_SPRINT_STATUS_COLORS[DevSprintStatus.NOT_STARTED].light} ${baseClasses}`,
         onClick: () => onCycleStatus(phaseKey),
-        children: DevSprintStatus.NOT_STARTED
+        children: getDevSprintStatusLabel(DevSprintStatus.NOT_STARTED)
       };
     default: 
       return {
         variant: "outline" as const,
         className: `${isDarkMode ? DEV_SPRINT_STATUS_COLORS[DevSprintStatus.NOT_STARTED].dark : DEV_SPRINT_STATUS_COLORS[DevSprintStatus.NOT_STARTED].light} ${baseClasses}`,
         onClick: () => onCycleStatus(phaseKey),
-        children: status
+        children: getDevSprintStatusLabel(status)
       };
   }
 };

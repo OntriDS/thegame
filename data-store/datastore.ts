@@ -101,6 +101,7 @@ import {
   buildTaskActiveIndexKey,
 } from './keys';
 import { isTaskActive, isTaskCompleted } from '@/lib/utils/task-active-utils';
+import { isSoldStatus } from '@/lib/utils/status-utils';
 import type { PlayerArchiveRow } from '@/types/archive';
 import {
   normalizeItemTaxonomyFields,
@@ -1299,13 +1300,7 @@ export async function getArchivedItemsByMonth(mmyy: string): Promise<Item[]> {
   const items = await getItemsForMonth(year, parseInt(month, 10));
 
   // Archive Vault Filter: Only show sold/collected items
-  const { ItemStatus } = await import('@/types/enums');
-  return items.filter(i =>
-    (i.status as string || '').toUpperCase() === 'SOLD' ||
-    (i.status as string || '').toUpperCase() === 'ITEMSTATUS.SOLD' ||
-    (i.status as string || '').toUpperCase() === 'COLLECTED' ||
-    i.isCollected
-  );
+  return items.filter(i => isSoldStatus(i.status));
 }
 
 export async function getArchivedSalesByMonth(mmyy: string): Promise<Sale[]> {

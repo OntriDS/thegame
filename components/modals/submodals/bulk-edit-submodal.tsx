@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ItemType, ItemStatus, Collection, EntityType } from '@/types/enums';
+import { getItemStatusLabel } from '@/lib/constants/status-display-labels';
 import { getSubTypesForItemType } from '@/lib/utils/item-utils';
 import { getCategoryForItemType, createStationCategoryOptions, getStationFromCombined, getCategoryFromCombined, createItemTypeSubTypeOptions, getItemTypeFromCombined, getSubTypeFromCombined } from '@/lib/utils/searchable-select-utils';
 import type { SubItemType, Station } from '@/types/type-aliases';
@@ -149,7 +150,7 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
             </SelectTrigger>
             <SelectContent>
               {Object.values(ItemStatus).map(status => (
-                <SelectItem key={status} value={status}>{status}</SelectItem>
+                <SelectItem key={status} value={status}>{getItemStatusLabel(status)}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -346,7 +347,7 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
                 <SelectContent>
                   <SelectItem value="all">All Statuses</SelectItem>
                   {Object.values(ItemStatus).map(status => (
-                    <SelectItem key={status} value={status}>{status}</SelectItem>
+                    <SelectItem key={status} value={status}>{getItemStatusLabel(status)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

@@ -16,6 +16,7 @@ import { buildAutoSaleName, resolveCanonicalSaleTimelineDate } from '@/lib/utils
 import { getSalesChannelFromSaleType } from '@/lib/utils/business-structure-utils';
 import { createStationCategoryOptions, getCategoryFromCombined, getStationFromCombined } from '@/lib/utils/searchable-select-utils';
 import { roundCurrency2 } from '@/lib/utils/financial-utils';
+import { getSaleStatusLabel } from '@/lib/constants/status-display-labels';
 import { ClientAPI } from '@/lib/client-api';
 import { dispatchEntityUpdated, entityTypeToKind } from '@/lib/ui/ui-events';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
@@ -1578,7 +1579,7 @@ export default function SalesModal({
                 </SelectTrigger>
                 <SelectContent>
                   {Object.values(SaleStatus).map(s => (
-                    <SelectItem key={s} value={s}>{s}</SelectItem>
+                    <SelectItem key={s} value={s}>{getSaleStatusLabel(s)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

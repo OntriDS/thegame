@@ -20,6 +20,7 @@ import { SmartSchedulerSubmodal } from './submodals/smart-scheduler-submodal';
 import { Task, Item, Site } from '@/types/entities';
 import { getPointsMetadata } from '@/lib/utils/points-utils';
 import { TaskType, TaskStatus, TaskPriority, ItemType, ItemStatus, FOUNDER_CHARACTER_ID, EntityType, CharacterRole } from '@/types/enums';
+import { getItemStatusLabel, getTaskStatusLabel } from '@/lib/constants/status-display-labels';
 import { getStationFromCombined, createTaskParentOptions, createItemTypeSubTypeOptions, getItemTypeFromCombined, getSubTypeFromCombined, createCharacterOptions, createStationCategoryOptions, getCategoryFromCombined } from '@/lib/utils/searchable-select-utils';
 import { createSiteOptionsWithCategories } from '@/lib/utils/site-options-utils';
 import { getStationSelectValue } from '@/lib/utils/business-structure-utils';
@@ -224,7 +225,7 @@ export default function MissionTreeModalContent({
       setOutputItemName(existingTask.outputItemName || '');
       setOutputItemPrice(existingTask.outputItemPrice || 0);
       setOutputItemPriceString(String(existingTask.outputItemPrice || 0));
-      setIsNewItem(existingTask.isNewItem || false);
+      setIsNewItem(existingTask.isNewItem || !Boolean(existingTask.outputItemId));
       setIsSold(existingTask.isSold || false);
       setOutputItemStatus(existingTask.outputItemStatus || ItemStatus.FOR_SALE);
       setSelectedItemId(existingTask.outputItemId || '');
@@ -983,7 +984,7 @@ export default function MissionTreeModalContent({
                       <SelectContent>
                         {Object.values(ItemStatus).map((s) => (
                           <SelectItem key={s} value={String(s)}>
-                            {s}
+                            {getItemStatusLabel(s)}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -995,6 +996,11 @@ export default function MissionTreeModalContent({
                     <ItemNameField
                       value={outputItemName}
                       onChange={setOutputItemName}
+                      isNewItem={isNewItem}
+                      onNewItemToggle={setIsNewItem}
+                      selectedItemId={selectedItemId}
+                      items={allItems}
+                      onItemSelect={setSelectedItemId}
                       placeholder="Enter item name"
                       className="h-8 text-sm"
                     />
@@ -1109,7 +1115,7 @@ export default function MissionTreeModalContent({
                   })
                   .map((taskStatus) => (
                     <SelectItem key={taskStatus} value={String(taskStatus)}>
-                      {String(taskStatus).replace('_', ' ')}
+                      {getTaskStatusLabel(taskStatus)}
                     </SelectItem>
                   ))}
               </SelectContent>

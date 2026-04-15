@@ -233,7 +233,7 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
     await cleanUpIntermediateStatusTransitions(task.id, previousTask.status, task.status);
 
     // Skip generic status log for Done, Collected, Failed (FAILED logged in normalizeTaskFailedState)
-    const skipForSpecialStatuses = ['Done', 'Collected', 'Failed'];
+    const skipForSpecialStatuses = [TaskStatus.DONE, TaskStatus.COLLECTED, TaskStatus.FAILED];
     if (!skipForSpecialStatuses.includes(task.status)) {
       // Log status change with actual status as event type
       const statusEvent = getStatusEvent(task.status);

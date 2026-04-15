@@ -3,6 +3,7 @@
 import { TreeNode } from '@/lib/utils/tree-utils';
 import { Task } from '@/types/entities';
 import { TaskType, TaskStatus, TaskPriority } from '@/types/enums';
+import { getTaskStatusLabel } from '@/lib/constants/status-display-labels';
 import { getAllStationNames } from '@/lib/utils/searchable-select-utils';
 import { TASK_STATUS_COLORS } from '@/lib/constants/color-constants';
 import { TASK_TYPE_ICONS } from '@/lib/constants/icon-maps';
@@ -69,6 +70,8 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
   const [nextSpawnDate, setNextSpawnDate] = useState<Date | null>(null);
   const [isNextSpawnLoading, setIsNextSpawnLoading] = useState(false);
   const [isDuplicating, setIsDuplicating] = useState(false);
+  const [editingSubTaskStatusId, setEditingSubTaskStatusId] = useState<string | null>(null);
+  const [tempSubTaskStatus, setTempSubTaskStatus] = useState<TaskStatus | ''>('');
   const inputRef = useRef<HTMLInputElement>(null);
 
   // No initialization needed for ClientAPI
@@ -172,6 +175,20 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
 
     setEditingField(null);
     setTempValue('');
+  };
+
+  const saveSubTaskStatus = async (subTask: Task, nextStatus: TaskStatus) => {
+    const updatedTask: Task = {
+      ...subTask,
+      doneAt: undefined,
+      collectedAt: undefined,
+      status: nextStatus,
+    };
+
+    await ClientAPI.upsertTask(updatedTask);
+    setEditingSubTaskStatusId(null);
+    setTempSubTaskStatus('');
+    onTaskUpdate?.();
   };
 
   const cancelEdit = () => {
@@ -620,7 +637,7 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
                 <SelectContent>
                   {Object.values(TaskStatus).map((status) => (
                     <SelectItem key={status} value={status} className="text-xs">
-                      {status}
+                      {getTaskStatusLabel(status)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -630,7 +647,7 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
                 className={`inline-block px-2 py-1 text-xs font-medium rounded cursor-pointer hover:opacity-80 ${getStatusColor(task.status, isDarkMode)}`}
                 onClick={() => startEditing('status', task.status)}
               >
-                {task.status}
+                {getTaskStatusLabel(task.status)}
               </span>
             )}
           </Card>
@@ -748,7 +765,7 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
         {/* Sub-Tasks / Children */}
         {children.length > 0 && (
           <div>
-            <h3 className="text-sm font-semibold mb-2">Sub-Items ({children.length})</h3>
+            <h3 className="text-sm font-semibold mb-2">Sub-Tasks ({children.length})</h3>
             <Card>
               <CardContent className="p-2">
                 <div className="space-y-1">
@@ -758,9 +775,51 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
                         <Icon className="h-3 w-3 text-muted-foreground" />
                         <span className="text-sm font-medium">{childNode.task.name}</span>
                       </div>
-                      <span className={`inline-block px-2 py-1 text-xs font-medium rounded ${getStatusColor(childNode.task.status, isDarkMode)}`}>
-                        {childNode.task.status}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        {editingSubTaskStatusId === childNode.task.id ? (
+                          <Select
+                            value={tempSubTaskStatus || childNode.task.status}
+                            onValueChange={(value) => void saveSubTaskStatus(childNode.task, value as TaskStatus)}
+                            onOpenChange={(open) => {
+                              if (!open) {
+                                setEditingSubTaskStatusId(null);
+                                setTempSubTaskStatus('');
+                              }
+                            }}
+                          >
+                            <SelectTrigger className="h-6 w-28 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Object.values(TaskStatus).map((taskStatus) => (
+                                <SelectItem key={taskStatus} value={taskStatus} className="text-xs">
+                                  {getTaskStatusLabel(taskStatus)}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <span
+                            className={`inline-block px-2 py-1 text-xs font-medium rounded cursor-pointer hover:opacity-80 ${getStatusColor(childNode.task.status, isDarkMode)}`}
+                            onClick={() => {
+                              setEditingSubTaskStatusId(childNode.task.id);
+                              setTempSubTaskStatus(childNode.task.status);
+                            }}
+                          >
+                            {getTaskStatusLabel(childNode.task.status)}
+                          </span>
+                        )}
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-6 px-2 text-xs"
+                          onClick={() => onEditTask(childNode.task)}
+                        >
+                          <Edit className="h-3 w-3 mr-1" />
+                          Edit
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>

@@ -437,16 +437,16 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
     const collections = Object.values(Collection);
 
     const template = `ItemType,SubItemType,Name,TotalQuantity,Site,Status,Collection,UnitCost,AdditionalCost,Price,Value,QuantitySold,TargetAmount,SoldThisMonth,LastRestockDate,SourceTaskId,Year,ImageUrl,OriginalFiles,AccessoryFiles,Width,Height,Size
-    "${ItemType.DIGITAL}","${digitalSubtypes[0]}","Organic Imaginary Digital",0,"Digital Space","Idle","${collections[1]}",0.00,0.00,25.00,0.00,0,,,,"",2024,https://example.com/organic-imaginary-digital.jpg,,,,,
-    "${ItemType.ARTWORK}","${artworkSubtypes[0]}","Organic Imaginary Canvas",1,"Home","For Sale","${collections[1]}",5.00,0.00,150.00,0.00,0,,,,"",2024,https://example.com/organic-imaginary-canvas.jpg,,,,30,40,
-    "${ItemType.PRINT}","${printSubtypes[0]}","Organic Imaginary Print",0,"None","To Order","${collections[1]}",5.00,0.00,25.00,0.00,0,,,,"",2024,https://example.com/organic-imaginary-canvas.jpg,,,,30,40,
-    "${ItemType.STICKER}","${stickerSubtypes[0]}","Red Dope Crew Sticker",100,"Feria Box","For Sale","${collections[6]}",0.30,0.00,2.50,0.00,0,,,,"",2024,https://example.com/red-dope-crew-sticker.jpg,,,,5,5,
-    "${ItemType.BUNDLE}","${bundleSubtypes[0]}","Smoking Lounge Stickers",80,"Smoking Lounge","For Sale","${collections[6]}",0.30,0.00,2.50,0.00,0,,,,"",2024,https://example.com/smoking-lounge-bundle.jpg,,,,,,,
-    "${ItemType.MERCH}","${merchSubtypes[0]}","Dope Crew T-Shirt",35,"Home","For Sale","${collections[6]}",8.00,0.00,25.00,0.00,0,,,,"",2024,https://example.com/dope-crew-tshirt.jpg,,,,,M,
-    "${ItemType.MERCH}","${merchSubtypes[2]}","Dope Crew Shoes",20,"Home","For Sale","${collections[6]}",15.00,0.00,45.00,0.00,0,,,,"",2024,https://example.com/dope-crew-tshirt.jpg,,,,,7.5,
-    "${ItemType.CRAFT}","${craftSubtypes[0]}","Gallery Frame 50x70",3,"Home","For Sale","${collections[6]}",12.00,0.00,35.00,0.00,0,,,,"",2024,https://example.com/gallery-frame.jpg,,,,,,,
-    "${ItemType.MATERIAL}","${materialSubtypes[0]}","Acrylic Paint Set",10,"Home","For Sale","Art Supplies",15.00,0.00,25.00,0.00,0,,,,"",2024,https://example.com/acrylic-paint-set.jpg,,,,,,,
-    "${ItemType.EQUIPMENT}","${equipmentSubtypes[0]}","Canvas Stretcher",2,"Home","For Sale","Art Tools",45.00,0.00,75.00,0.00,0,,,,"",2024,https://example.com/acrylic-paint-set.jpg,,,,,`;
+    "${ItemType.DIGITAL}","${digitalSubtypes[0]}","Organic Imaginary Digital",0,"Digital Space","${ItemStatus.IDLE}","${collections[1]}",0.00,0.00,25.00,0.00,0,,,,"",2024,https://example.com/organic-imaginary-digital.jpg,,,,,
+    "${ItemType.ARTWORK}","${artworkSubtypes[0]}","Organic Imaginary Canvas",1,"Home","${ItemStatus.FOR_SALE}","${collections[1]}",5.00,0.00,150.00,0.00,0,,,,"",2024,https://example.com/organic-imaginary-canvas.jpg,,,,30,40,
+    "${ItemType.PRINT}","${printSubtypes[0]}","Organic Imaginary Print",0,"None","${ItemStatus.TO_ORDER}","${collections[1]}",5.00,0.00,25.00,0.00,0,,,,"",2024,https://example.com/organic-imaginary-canvas.jpg,,,,30,40,
+    "${ItemType.STICKER}","${stickerSubtypes[0]}","Red Dope Crew Sticker",100,"Feria Box","${ItemStatus.FOR_SALE}","${collections[6]}",0.30,0.00,2.50,0.00,0,,,,"",2024,https://example.com/red-dope-crew-sticker.jpg,,,,5,5,
+    "${ItemType.BUNDLE}","${bundleSubtypes[0]}","Smoking Lounge Stickers",80,"Smoking Lounge","${ItemStatus.FOR_SALE}","${collections[6]}",0.30,0.00,2.50,0.00,0,,,,"",2024,https://example.com/smoking-lounge-bundle.jpg,,,,,,,
+    "${ItemType.MERCH}","${merchSubtypes[0]}","Dope Crew T-Shirt",35,"Home","${ItemStatus.FOR_SALE}","${collections[6]}",8.00,0.00,25.00,0.00,0,,,,"",2024,https://example.com/dope-crew-tshirt.jpg,,,,,M,
+    "${ItemType.MERCH}","${merchSubtypes[2]}","Dope Crew Shoes",20,"Home","${ItemStatus.FOR_SALE}","${collections[6]}",15.00,0.00,45.00,0.00,0,,,,"",2024,https://example.com/dope-crew-tshirt.jpg,,,,,7.5,
+    "${ItemType.CRAFT}","${craftSubtypes[0]}","Gallery Frame 50x70",3,"Home","${ItemStatus.FOR_SALE}","${collections[6]}",12.00,0.00,35.00,0.00,0,,,,"",2024,https://example.com/gallery-frame.jpg,,,,,,,
+    "${ItemType.MATERIAL}","${materialSubtypes[0]}","Acrylic Paint Set",10,"Home","${ItemStatus.FOR_SALE}","Art Supplies",15.00,0.00,25.00,0.00,0,,,,"",2024,https://example.com/acrylic-paint-set.jpg,,,,,,,
+    "${ItemType.EQUIPMENT}","${equipmentSubtypes[0]}","Canvas Stretcher",2,"Home","${ItemStatus.FOR_SALE}","Art Tools",45.00,0.00,75.00,0.00,0,,,,"",2024,https://example.com/acrylic-paint-set.jpg,,,,,`;
 
     const blob = new Blob([template], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);

@@ -21,12 +21,11 @@ import {
   User
 } from 'lucide-react';
 import { useMemo } from 'react';
-
-type SystemStatus = 'Done' | 'In Progress' | 'Not Started';
+import { DevSprintStatus } from '@/types/enums';
 
 type ProjectStatus = {
   currentSprint?: string;
-  systems?: Record<string, { status: SystemStatus; version: string; description?: string }>;
+  systems?: Record<string, { status: DevSprintStatus | string; version: string; description?: string }>;
 };
 
 // Icon mapping for each system
@@ -66,26 +65,26 @@ const systemNames = {
   foundations: 'Foundations',
 };
 
-function getStatusColor(status: SystemStatus) {
+function getStatusColor(status: DevSprintStatus | string) {
   switch (status) {
-    case 'Done':
+    case DevSprintStatus.DONE:
       return 'from-green-400 to-emerald-500';
-    case 'In Progress':
+    case DevSprintStatus.IN_PROGRESS:
       return 'from-yellow-400 to-amber-500';
-    case 'Not Started':
+    case DevSprintStatus.NOT_STARTED:
       return 'from-gray-300 to-slate-400';
     default:
       return 'from-gray-300 to-slate-400';
   }
 }
 
-function getStatusGlow(status: SystemStatus) {
+function getStatusGlow(status: DevSprintStatus | string) {
   switch (status) {
-    case 'Done':
+    case DevSprintStatus.DONE:
       return 'shadow-green-500/50';
-    case 'In Progress':
+    case DevSprintStatus.IN_PROGRESS:
       return 'shadow-blue-500/50';
-    case 'Not Started':
+    case DevSprintStatus.NOT_STARTED:
       return 'shadow-gray-400/30';
     default:
       return 'shadow-gray-400/30';
@@ -96,7 +95,7 @@ function BuildingFloor({
   systems, 
   floorNumber 
 }: { 
-  systems: Array<[string, { status: SystemStatus; version: string; description?: string }]>;
+  systems: Array<[string, { status: DevSprintStatus | string; version: string; description?: string }]>;
   floorNumber: number;
 }) {
   return (
@@ -169,7 +168,7 @@ function SmartBuilding({ systems }: { systems: NonNullable<ProjectStatus['system
     const sorted = entries.sort((a, b) => order.indexOf(a[0]) - order.indexOf(b[0]));
     
     // Group into floors (2 systems per floor)
-    const floors: Array<Array<[string, { status: SystemStatus; version: string; description?: string }]>> = [];
+    const floors: Array<Array<[string, { status: DevSprintStatus | string; version: string; description?: string }]>> = [];
     for (let i = 0; i < sorted.length; i += 2) {
       floors.push(sorted.slice(i, i + 2));
     }

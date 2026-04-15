@@ -11,6 +11,7 @@ import { Trash2, Plus, FileText, PenTool, AlertTriangle } from 'lucide-react';
 import { getInteractiveSubModalZIndex } from '@/lib/utils/z-index-utils';
 import { Contract, Business, ContractClause, Character, Link } from '@/types/entities';
 import { ContractStatus, ContractClauseType, LinkType, EntityType, CharacterRole } from '@/types/enums';
+import { getContractStatusLabel } from '@/lib/constants/status-display-labels';
 import { v4 as uuid } from 'uuid';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ClientAPI } from '@/lib/client-api';
@@ -311,7 +312,7 @@ export function ContractSubmodal({
                                         : 'text-muted-foreground hover:bg-muted'
                                     }`}
                             >
-                                {s}
+                                {getContractStatusLabel(s)}
                             </button>
                         ))}
                     </div>

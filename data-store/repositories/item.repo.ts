@@ -100,8 +100,11 @@ export async function upsertItem(item: Item): Promise<Item> {
     }
     const direct = enumByLc.get(lc);
     const alias = lc.startsWith('itemstatus.') ? enumByLc.get(lc.split('.').pop() || '') : undefined;
+    const hyphenated = lc.replace(/\s+/g, '-');
+    const byHyphen = enumByLc.get(hyphenated);
     if (direct) normalizedStatus = direct;
     else if (alias) normalizedStatus = alias;
+    else if (byHyphen) normalizedStatus = byHyphen;
   }
   const toSave: Item = normalizedStatus ? { ...item, status: normalizedStatus as any } : item;
 
