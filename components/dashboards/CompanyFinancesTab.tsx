@@ -5,7 +5,9 @@ import { Building2 } from 'lucide-react';
 import { CompanyMonthlySummary, SummaryTotals } from '@/types/entities';
 import { formatCurrency } from '@/lib/utils/financial-utils';
 import { formatMonthKey } from '@/lib/utils/date-utils';
-import { BUSINESS_STRUCTURE } from '@/types/enums';
+import { BUSINESS_STRUCTURE, FINANCE_DASHBOARD_COMPANY_AREA_KEYS } from '@/types/enums';
+import type { Area } from '@/types/type-aliases';
+import { getAreaDisplayLabel, getStationDisplayLabel } from '@/lib/constants/business-structure-labels';
 
 interface CompanyFinancesTabProps {
   selectedMonthKey: string;
@@ -35,13 +37,16 @@ export function CompanyFinancesTab({
             <p className="text-sm text-muted-foreground">Loading station breakdowns...</p>
           </div>
         ) : (
-          ['ADMIN', 'RESEARCH', 'ARTDESIGN', 'MAKERSPACE', 'SALES'].map((area: string) => {
-            const areaStations = (BUSINESS_STRUCTURE as any)[area] || [];
+          <>
+            {FINANCE_DASHBOARD_COMPANY_AREA_KEYS.map((area: Area) => {
+            const areaStations = BUSINESS_STRUCTURE[area] || [];
 
             return (
               <Card key={area} className="mb-4">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-lg font-semibold">{area} Area</CardTitle>
+                  <CardTitle className="text-lg font-semibold">
+                    {getAreaDisplayLabel(area)} Area
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -52,7 +57,7 @@ export function CompanyFinancesTab({
                       return (
                         <Card key={station} className="border-muted bg-muted/10">
                           <CardHeader className="pb-2">
-                            <CardTitle className="text-sm">{station}</CardTitle>
+                            <CardTitle className="text-sm">{getStationDisplayLabel(station)}</CardTitle>
                           </CardHeader>
                           <CardContent>
                             <div className={`text-lg font-bold ${net === 0 ? 'text-muted-foreground' :
@@ -78,7 +83,8 @@ export function CompanyFinancesTab({
                 </CardContent>
               </Card>
             );
-          })
+          })}
+          </>
         )}
       </CardContent>
     </Card>

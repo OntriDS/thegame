@@ -202,21 +202,21 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
       if (sale?.metadata?.boothSaleContext?.counterpartyBusinessId) {
         return sale.metadata.boothSaleContext.counterpartyBusinessId;
       }
-      // 2. Try legacy archiveMetadata context
+      // 2. Try archiveMetadata context
       if (
         (sale as any)?.archiveMetadata?.boothSaleContext?.counterpartyBusinessId
       ) {
         return (sale as any).archiveMetadata.boothSaleContext
           .counterpartyBusinessId;
       }
-      // 3. Fallback for VERY legacy sales (migrate Character ID to Business ID OR handle preexisting Business ID)
+      // 3. Fallback for older sales records (migrate Character ID to Business ID or preexisting Business ID)
       const charId = sale?.partnerId || "";
       if (charId) {
         // First check if it's already a Business ID
         if (businesses.some((b) => b.id === charId)) {
           return charId;
         }
-        // Otherwise try migrating Character ID to linked Business ID
+        // Otherwise map Character ID to linked Business ID
         const linkedBusiness = businesses.find(
           (b) => b.linkedCharacterId === charId,
         );
@@ -234,14 +234,14 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
     // Derived State: Partner Entries (Single Source of Truth: lines)
     const partnerEntries = useMemo(() => {
       const serviceLines = lines.filter((l) => {
-        // Aggressive fallback for legacy records that might have lost their 'station' or 'kind' enumerations
+        // Aggressive fallback for older records that might have lost their 'station' or 'kind' enumerations
         const isServiceOrItem = l.kind === "service" || l.kind === "item";
         const hasPartnerStation = [
           "Booth-Sales",
           "Partner-Sales",
           "Partner Sales",
         ].includes((l as any).station as string);
-        const hasLegacyDescription = l.description?.includes("[Partner:");
+        const hasHistoricalDescription = l.description?.includes("[Partner:");
         const hasPartnerVault = Boolean(
           (l as any).metadata?.partnerId ||
           (l as any).metadata?.customerCharacterId,
@@ -249,7 +249,7 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
 
         return (
           isServiceOrItem &&
-          (hasPartnerStation || hasLegacyDescription || hasPartnerVault)
+          (hasPartnerStation || hasHistoricalDescription || hasPartnerVault)
         );
       }) as ServiceLine[];
       return serviceLines.map((sl) => {
@@ -412,7 +412,7 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
       );
       const linkedCharId = partnerBusiness?.linkedCharacterId;
 
-      // 1. Try Strict Match (ID matches both selected Principal and Counterparty business OR its linked character for legacy contracts)
+      // 1. Try Strict Match (ID matches both selected Principal and Counterparty business or linked character for older contracts)
       let match = contracts.find(
         (c) =>
           c.status === ContractStatus.ACTIVE &&
@@ -770,7 +770,7 @@ const BoothSalesView = forwardRef<BoothSalesViewHandle, BoothSalesViewProps>(
       // 1. Re-process lines to ensure shares are up to date (Calculated Totals might have changed)
       // We iterate over the existing lines. If it's a Partner Service line, we update its metadata.
       const updatedLines = lines.map((line) => {
-        if (line.kind === "service" && line.station === "Booth-Sales") {
+        if (line.kind === "service" && line.station === "booth-sales") {
           return {
             ...line,
             metadata: {

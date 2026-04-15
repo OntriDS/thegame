@@ -194,7 +194,7 @@ function SalesPageContent() {
         // Legacy calculation fallback
         const boothFeeUSD = (sale.boothFee || 0) / exchangeRate;
         const partnerPayouts = sale.lines
-          .filter(l => l.kind === 'service' && (l as any).station === 'Booth-Sales')
+          .filter(l => l.kind === 'service' && (l as any).station === 'booth-sales')
           .reduce((sum, l) => sum + ((l as any).revenue || 0), 0);
 
         cost = boothFeeUSD + partnerPayouts;

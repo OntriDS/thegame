@@ -5,20 +5,20 @@
 // BUSINESS STRUCTURE - Single source of truth for sections and stations
 // ============================================================================
 
-/** Business Structure - Single source of truth for sections and stations */
+/** Business Structure - single source of truth; values are kebab-case slugs for storage/API. */
 export const BUSINESS_STRUCTURE = {
-  ADMIN: ['Strategy', 'Finances', 'Team', 'Inventory', 'Transport', 'Rents', 'Partnerships', 'Projects', 'Items'],
-  RESEARCH: ['Library', 'Studies', 'Processes', 'Reviews', 'Ebooks', 'Innovation', 'Classes'],
-  DEV: ['Systems-Dev'],
-  ARTDESIGN: ['Paint', 'Digital-Art', 'Design', 'Animation'],
-  MAKERSPACE: ['Craft'],
-  SALES: ['Direct-Sales', 'Booth-Sales', 'Network', 'Marketing', 'Online-Sales', 'Portfolio', 'Dispatches', 'Gallery-Store', 'Bookings'],
-  PERSONAL: ['Family', 'Food', 'Health', 'Earnings', 'Transport-P', 'Rent-P', 'Other-P']
+  admin: ['strategy', 'finances', 'team', 'inventory', 'transport', 'rents', 'partnerships', 'projects', 'items'],
+  research: ['library', 'studies', 'processes', 'reviews', 'ebooks', 'innovation', 'classes'],
+  dev: ['systems-dev'],
+  'art-design': ['paint', 'digital-art', 'design', 'animation'],
+  'maker-space': ['craft'],
+  sales: ['direct-sales', 'booth-sales', 'network', 'marketing', 'online-sales', 'portfolio', 'dispatches', 'gallery-store', 'bookings'],
+  personal: ['family', 'food', 'health', 'rewards', 'transport-p', 'rent-p', 'other-p'],
 } as const;
 
 // Areas (top-level business areas)
-export const COMPANY_AREAS = ['ADMIN', 'RESEARCH', 'DEV', 'ARTDESIGN', 'MAKERSPACE', 'SALES'] as const;
-export const PERSONAL_AREAS = ['PERSONAL'] as const;
+export const COMPANY_AREAS = ['admin', 'research', 'dev', 'art-design', 'maker-space', 'sales'] as const;
+export const PERSONAL_AREAS = ['personal'] as const;
 export const ALL_AREAS = [...COMPANY_AREAS, ...PERSONAL_AREAS] as const;
 
 // Type exports
@@ -31,14 +31,23 @@ export type Station = typeof BUSINESS_STRUCTURE[Area][number];
 
 /** Station categories for SearchableSelect grouping - derived from BUSINESS_STRUCTURE */
 export const STATION_CATEGORIES = {
-  ADMIN: BUSINESS_STRUCTURE.ADMIN,
-  RESEARCH: BUSINESS_STRUCTURE.RESEARCH,
-  DEV: BUSINESS_STRUCTURE.DEV,
-  ARTDESIGN: BUSINESS_STRUCTURE.ARTDESIGN,
-  MAKERSPACE: BUSINESS_STRUCTURE.MAKERSPACE,
-  SALES: BUSINESS_STRUCTURE.SALES,
-  PERSONAL: BUSINESS_STRUCTURE.PERSONAL
+  admin: BUSINESS_STRUCTURE.admin,
+  research: BUSINESS_STRUCTURE.research,
+  dev: BUSINESS_STRUCTURE.dev,
+  'art-design': BUSINESS_STRUCTURE['art-design'],
+  'maker-space': BUSINESS_STRUCTURE['maker-space'],
+  sales: BUSINESS_STRUCTURE.sales,
+  personal: BUSINESS_STRUCTURE.personal,
 } as const;
+
+/** Company areas shown on finance dashboard breakdown (excludes dev). */
+export const FINANCE_DASHBOARD_COMPANY_AREA_KEYS = [
+  'admin',
+  'research',
+  'art-design',
+  'maker-space',
+  'sales',
+] as const;
 
 // ============================================================================
 // LOCATION STRUCTURE
@@ -46,24 +55,24 @@ export const STATION_CATEGORIES = {
 
 /** Geographic Location Structure - Single source of truth for geographic hierarchy */
 export const LOCATION_STRUCTURE = {
-  'North America': {
-    'United States': ['United States'],
-    'Canada': ['Canada']
+  'north-america': {
+    'united-states': ['united-states'],
+    canada: ['canada']
   },
-  'Central America': {
-    'Costa Rica': ['Puntarenas', 'San Jose', 'Guanacaste', 'Limon'],
-    'Panama': ['Panama'],
-    'Nicaragua': ['Nicaragua'],
-    'El Salvador': ['El Salvador']
+  'central-america': {
+    'costa-rica': ['puntarenas', 'san-jose', 'guanacaste', 'limon'],
+    panama: ['panama'],
+    nicaragua: ['nicaragua'],
+    'el-salvador': ['el-salvador']
   },
-  'South America': {
-    'Venezuela': ['Margarita Island', 'Caracas'],
-    'Colombia': ['Bogota'],
-    'Uruguay': ['Montevideo'],
-    'Chile': ['Santiago'],
-    'Argentina': ['Buenos Aires'],
-    'Brasil': ['Rio de Janeiro'],
-    'Peru': ['Lima']
+  'south-america': {
+    venezuela: ['margarita-island', 'caracas'],
+    colombia: ['bogota'],
+    uruguay: ['montevideo'],
+    chile: ['santiago'],
+    argentina: ['buenos-aires'],
+    brasil: ['rio-de-janeiro'],
+    peru: ['lima']
   },
 } as const;
 
@@ -79,42 +88,42 @@ export const LOCATION_HIERARCHY = LOCATION_STRUCTURE;
 
 /** Physical Site Business Types */
 export enum PhysicalBusinessType {
-  STORE = 'Store',                          // Physical store (Smoking Lounge, Tagua...)
-  SELLING_POINT = 'Selling point',          // Stores, Ferias, Festivals that buy at discount (El Hornito, Eco Feria, Envision...)
-  TEACHING_SPACE = 'Teaching space',        // Teaching sites (Jungle Academy...)
-  HQ = 'HQ',                                // HQ sites (Home, Feria Box...)
-  ART_GALLERY = 'Art gallery',              // Gallery sites (Gallery 1084...)
-  DESIGN_SPACE = 'Design space',            // Design hub sites (Design Hub...)
-  WORKSHOP = 'Workshop',                    // Workshop sites (Workshop...)
-  STORAGE = 'Storage',                      // Warehouse sites (Home, Feria Box...)
-  PROVIDER = 'Provider',                    // Provider sites (Colono, Iguana Verde, Art Depot...)
-  LIVING_SPACE = 'Living space',            // Living sites (Rents for Living Space...)
-  BANK = 'Bank',                            // Bank sites (BCR, BN...)
+  STORE = 'store',                          // Physical store (Smoking Lounge, Tagua...)
+  SELLING_POINT = 'selling-point',          // Stores, Ferias, Festivals that buy at discount (El Hornito, Eco Feria, Envision...)
+  TEACHING_SPACE = 'teaching-space',        // Teaching sites (Jungle Academy...)
+  HQ = 'hq',                                // HQ sites (Home, Feria Box...)
+  ART_GALLERY = 'art-gallery',              // Gallery sites (Gallery 1084...)
+  DESIGN_SPACE = 'design-space',            // Design hub sites (Design Hub...)
+  WORKSHOP = 'workshop',                    // Workshop sites (Workshop...)
+  STORAGE = 'storage',                      // Warehouse sites (Home, Feria Box...)
+  PROVIDER = 'provider',                    // Provider sites (Colono, Iguana Verde, Art Depot...)
+  LIVING_SPACE = 'living-space',            // Living sites (Rents for Living Space...)
+  BANK = 'bank',                            // Bank sites (BCR, BN...)
 }
 
 /** Cloud Digital Types */
 export enum DigitalSiteType {
   REPOSITORY = 'repository',                  // Repos
-  DATABASE = 'data base',                     // Drives, Cloud Storage
-  WEBSITEAPP = 'website app',                 // Websites Apps
-  NFT_PLATFORM = 'nft platform',              // NFT Platforms
-  SOCIAL_MEDIA = 'social media',              // Social Media Platforms
-  LLM_AGENT = 'llm agent',                    // LLM Agents (ChatGPT, Gemini, Claude, etc.)
-  BANKING_PLATFORM = 'banking platform',      // Banking Platforms
+  DATABASE = 'database',                      // Drives, Cloud Storage
+  WEBSITEAPP = 'website-app',                 // Websites Apps
+  NFT_PLATFORM = 'nft-platform',              // NFT Platforms
+  SOCIAL_MEDIA = 'social-media',              // Social Media Platforms
+  LLM_AGENT = 'llm-agent',                    // LLM Agents (ChatGPT, Gemini, Claude, etc.)
+  BANKING_PLATFORM = 'banking-platform',      // Banking Platforms
 }
 
 /** System Site Purposes */
 export enum SystemSiteType {
-  UNIVERSAL_TRACKING = 'universal tracking', // Items no longer at specific sites
-  SOLD_ITEMS = 'sold items',         // Sold items tracking
+  UNIVERSAL_TRACKING = 'universal-tracking', // Items no longer at specific sites
+  SOLD_ITEMS = 'sold-items',         // Sold items tracking
   ARCHIVED = 'archived',           // Archived/historical items
 }
 
 /** SiteType enum for backward compatibility with entities */
 export enum SiteType {
-  PHYSICAL = 'PHYSICAL',  // Physical locations with addresses
-  DIGITAL = 'DIGITAL',    // Digital/cloud storage locations
-  SYSTEM = 'SYSTEM'       // System-managed locations
+  PHYSICAL = 'physical',  // Physical locations with addresses
+  DIGITAL = 'digital',    // Digital/cloud storage locations
+  SYSTEM = 'system'       // System-managed locations
 }
 
 /** Status of Sites - controls state */
@@ -125,7 +134,7 @@ export enum SiteStatus {
 
 /** Site categories for UI organization and SearchableSelect grouping */
 export const SITE_CATEGORIES = {
-  PHYSICAL: [
+  [SiteType.PHYSICAL]: [
     PhysicalBusinessType.STORE,
     PhysicalBusinessType.SELLING_POINT,
     PhysicalBusinessType.TEACHING_SPACE,
@@ -138,7 +147,7 @@ export const SITE_CATEGORIES = {
     PhysicalBusinessType.LIVING_SPACE,
     PhysicalBusinessType.BANK,
   ],
-  DIGITAL: [
+  [SiteType.DIGITAL]: [
     DigitalSiteType.REPOSITORY,
     DigitalSiteType.DATABASE,
     DigitalSiteType.WEBSITEAPP,
@@ -147,7 +156,7 @@ export const SITE_CATEGORIES = {
     DigitalSiteType.LLM_AGENT,
     DigitalSiteType.BANKING_PLATFORM,
   ],
-  SYSTEM: [
+  [SiteType.SYSTEM]: [
     SystemSiteType.UNIVERSAL_TRACKING,
     SystemSiteType.SOLD_ITEMS,
     SystemSiteType.ARCHIVED,
@@ -160,32 +169,42 @@ export const SITE_CATEGORIES = {
 
 /** Mission Tree & hierarchies */
 export enum TaskType {
-  MISSION_GROUP = 'Mission Group',   // Folder/container for missions tree tasks
-  MISSION = 'Mission',
-  MILESTONE = 'Milestone',
-  GOAL = 'Goal',
-  ASSIGNMENT = 'Assignment',
-  RECURRENT_GROUP = 'Recurrent Group',      // Folder/container for recurrent tree tasks
-  RECURRENT_TEMPLATE = 'Recurrent Template',   // Sets frequency pattern for instances
-  RECURRENT_INSTANCE = 'Recurrent Instance',    // Spawned with due date from templates or Individual creation
-  AUTOMATION = 'Automation'            // Automation tasks (e.g., monthly close) for User and Agents
+  MISSION_GROUP = 'mission-group',   // Folder/container for missions tree tasks
+  MISSION = 'mission',
+  MILESTONE = 'milestone',
+  GOAL = 'goal',
+  ASSIGNMENT = 'assignment',
+  RECURRENT_GROUP = 'recurrent-group',      // Folder/container for recurrent tree tasks
+  RECURRENT_TEMPLATE = 'recurrent-template',   // Sets frequency pattern for instances
+  RECURRENT_INSTANCE = 'recurrent-instance',    // Spawned with due date from templates or Individual creation
+  AUTOMATION = 'automation'            // Automation tasks (e.g., monthly close) for User and Agents
 }
 
 /** Task categories for UI organization and SearchableSelect grouping */
 export const TASK_CATEGORIES = {
-  MISSION: ['Mission Group', 'Mission', 'Milestone', 'Goal', 'Assignment'],
-  RECURRENT: ['Recurrent Group', 'Recurrent Template', 'Recurrent Instance'],
-  AUTOMATION: ['Automation']
+  MISSION: [
+    TaskType.MISSION_GROUP,
+    TaskType.MISSION,
+    TaskType.MILESTONE,
+    TaskType.GOAL,
+    TaskType.ASSIGNMENT,
+  ],
+  RECURRENT: [
+    TaskType.RECURRENT_GROUP,
+    TaskType.RECURRENT_TEMPLATE,
+    TaskType.RECURRENT_INSTANCE,
+  ],
+  AUTOMATION: [TaskType.AUTOMATION],
 } as const;
 
 /** Recurrent task frequency options */
 export enum RecurrentFrequency {
-  ONCE = 'Once',
-  DAILY = 'Daily',
-  WEEKLY = 'Weekly',
-  MONTHLY = 'Monthly',
-  CUSTOM = 'Custom',
-  ALWAYS = 'Always'
+  ONCE = 'once',
+  DAILY = 'daily',
+  WEEKLY = 'weekly',
+  MONTHLY = 'monthly',
+  CUSTOM = 'custom',
+  ALWAYS = 'always'
 }
 
 /** Workflow state of a Task */
@@ -202,11 +221,11 @@ export enum TaskStatus {
 
 /** Optional urgency flag (--► replaces "Awaiting / Urgent …") */
 export enum TaskPriority {
-  NOT_NOW = 'Not Now',
-  SLOW = 'Slow',
-  NORMAL = 'Normal',
-  IMPORTANT = 'Important',
-  URGENT = 'Urgent',
+  NOT_NOW = 'not-now',
+  SLOW = 'slow',
+  NORMAL = 'normal',
+  IMPORTANT = 'important',
+  URGENT = 'urgent',
 }
 
 // ============================================================================
@@ -234,10 +253,10 @@ export enum Currency {
 
 /** Points System Enums */
 export enum PointType {
-  XP = 'XP',   // Experience Points
-  RP = 'RP',    // Research Points
-  FP = 'FP',    // Family Points 
-  HP = 'HP',    // Health Points
+  XP = 'xp',   // Experience Points
+  RP = 'rp',    // Research Points
+  FP = 'fp',    // Family Points 
+  HP = 'hp',    // Health Points
 }
 
 // ============================================================================
@@ -302,22 +321,22 @@ export enum ItemStatus {
 
 /** Creative collections */
 export enum Collection {
-  NO_COLLECTION = 'No Collection',
-  ORGANIC_IMAGINARY = 'Organic Imaginary',
-  ANIMAL_KINGDOM = 'Animal Kingdom',
-  MUSHLAND = 'Mushland',
-  SEVEN_ELEMENTS = 'Seven Elements',
-  BITCOIN = 'Bitcoin',
-  DOPE_CREW = 'Dope Crew',
-  WORDS = 'Words',
-  FRUITS_VEGGIES = 'Fruits & Veggies',
-  FLOWERS = 'Flowers',
-  KINGS_QUEENS = 'Kings & Queens',
-  POLYGONAL_HD = 'Polygonal HD',
-  RELIQUIAS = 'Reliquias',
-  BITUAYA = 'Bituaya',
-  LANDSCAPES = 'Landscapes',
-  EXILIADO = 'Exiliado',
+  NO_COLLECTION = 'no-collection',
+  ORGANIC_IMAGINARY = 'organic-imaginary',
+  ANIMAL_KINGDOM = 'animal-kingdom',
+  MUSHLAND = 'mushland',
+  SEVEN_ELEMENTS = 'seven-elements',
+  BITCOIN = 'bitcoin',
+  DOPE_CREW = 'dope-crew',
+  WORDS = 'words',
+  FRUITS_VEGGIES = 'fruits-veggies',
+  FLOWERS = 'flowers',
+  KINGS_QUEENS = 'kings-queens',
+  POLYGONAL_HD = 'polygonal-hd',
+  RELIQUIAS = 'reliquias',
+  BITUAYA = 'bituaya',
+  LANDSCAPES = 'landscapes',
+  EXILIADO = 'exiliado',
 }
 
 // ============================================================================
@@ -402,10 +421,10 @@ export enum EquipmentSubType {
 
 /** Sales transaction types */
 export enum SaleType {
-  DIRECT = 'DIRECT',
-  BOOTH = 'BOOTH',
-  NETWORK = 'NETWORK',
-  ONLINE = 'ONLINE',
+  DIRECT = 'direct',
+  BOOTH = 'booth',
+  NETWORK = 'network',
+  ONLINE = 'online',
 }
 
 /** Sales transaction status */
@@ -420,25 +439,36 @@ export enum SaleStatus {
 /** Payment methods for sales */
 export enum PaymentMethod {
   // Regular payment methods
-  FIAT_USD = '$ CASH',
-  FIAT_CRC = '₡ CASH',
-  BTC = 'BITCOIN',
-  CARD = 'CARD',
-  SINPE = 'SINPE',
-  PAYPAL = 'PAYPAL',
-  WIRE_TRANSFER = 'WIRE',
+  FIAT_USD = 'fiat-usd',
+  FIAT_CRC = 'fiat-crc',
+  BTC = 'btc',
+  CARD = 'card',
+  SINPE = 'sinpe',
+  PAYPAL = 'paypal',
+  WIRE_TRANSFER = 'wire-transfer',
 
   // Special payment methods
-  GIFT = 'GIFT',
-  EXCHANGE = 'EXCHANGE',
-  OTHER = 'OTHER',
+  GIFT = 'gift',
+  EXCHANGE = 'exchange',
+  OTHER = 'other',
 }
 
 /** Payment method categories for UI organization */
-export const PAYMENT_METHOD_CATEGORIES = {
-  REGULAR: ['FIAT_USD', 'FIAT_CRC', 'BTC', 'CARD', 'SINPE', 'PAYPAL', 'WIRE_TRANSFER'],
-  SPECIAL: ['GIFT', 'EXCHANGE', 'OTHER']
-} as const;
+export const PAYMENT_METHOD_CATEGORIES: {
+  REGULAR: PaymentMethod[];
+  SPECIAL: PaymentMethod[];
+} = {
+  REGULAR: [
+    PaymentMethod.FIAT_USD,
+    PaymentMethod.FIAT_CRC,
+    PaymentMethod.BTC,
+    PaymentMethod.CARD,
+    PaymentMethod.SINPE,
+    PaymentMethod.PAYPAL,
+    PaymentMethod.WIRE_TRANSFER,
+  ],
+  SPECIAL: [PaymentMethod.GIFT, PaymentMethod.EXCHANGE, PaymentMethod.OTHER],
+};
 
 // ============================================================================
 // CHARACTER ENUMS
@@ -499,76 +529,98 @@ export const CHARACTER_ROLE_TYPES = {
 } as const;
 
 export enum IntelectualFunction {
-  SELF_AWARE = 'Self Awareness',     // Self-monitoring / error monitoring: Notice performance drift, catch mistakes, adjust in-flight.
-  EMOTION_CONTROL = 'Emotion Control',    // Emotional regulation: Modulate frustration, stress, and reward-seeking so you can execute.
-  DECISION_MAKING = 'Decision Making',    // Decision-making (valuation & risk): Choose under uncertainty; weigh cost/benefit and risk.
-  CREATIVITY = 'Creativity',         // ability to generate original ideas, view situations from new perspectives, and produce novel outcomes. 
-  PROBLEM_SOLVING = 'Problem Solving',    // Problem solving (strategy generation): Diagnose blockers, generate options, test and iterate.
-  SELF_CONTROL = 'Self Control',       // Inhibitory control: Resist impulses and delay gratification to stay aligned with goals.
-  WORK_MEMORY = 'Working Memory',     // Hold and manipulate information in mind while acting.
-  ADAPTABILITY = 'Adaptability',       // Cognitive flexibility: Switch tasks/strategies and adapt when conditions change.
-  INITIATIVE = 'Initiative',         // Task initiation: Start without over-prepping, perfectionism, or avoidance.
-  PLANNING = 'Planning',           // Planning & prioritization: Choose strategy, order steps, and decide what matters now vs later.
-  ORGANIZATION = 'Organization',       // Organization & sequencing: Structure info, assets, and steps into workable sequences.
-  TIME_MNGM = 'Time Management',    // Time management & estimation: Estimate durations, pace work, respect timeboxes, finish on time.
-  CONCENTRATION = 'Concentration',      // Sustained attention (focus): Maintain engagement, reduce distractibility.
-  DETERMINATION = 'Determination',      // Goal-directed persistence: Keep advancing long arcs despite friction or boredom.
+  SELF_AWARE = 'self-awareness',     // Self-monitoring / error monitoring: Notice performance drift, catch mistakes, adjust in-flight.
+  EMOTION_CONTROL = 'emotion-control',    // Emotional regulation: Modulate frustration, stress, and reward-seeking so you can execute.
+  DECISION_MAKING = 'decision-making',    // Decision-making (valuation & risk): Choose under uncertainty; weigh cost/benefit and risk.
+  CREATIVITY = 'creativity',         // ability to generate original ideas, view situations from new perspectives, and produce novel outcomes. 
+  PROBLEM_SOLVING = 'problem-solving',    // Problem solving (strategy generation): Diagnose blockers, generate options, test and iterate.
+  SELF_CONTROL = 'self-control',       // Inhibitory control: Resist impulses and delay gratification to stay aligned with goals.
+  WORK_MEMORY = 'working-memory',     // Hold and manipulate information in mind while acting.
+  ADAPTABILITY = 'adaptability',       // Cognitive flexibility: Switch tasks/strategies and adapt when conditions change.
+  INITIATIVE = 'initiative',         // Task initiation: Start without over-prepping, perfectionism, or avoidance.
+  PLANNING = 'planning',           // Planning & prioritization: Choose strategy, order steps, and decide what matters now vs later.
+  ORGANIZATION = 'organization',       // Organization & sequencing: Structure info, assets, and steps into workable sequences.
+  TIME_MNGM = 'time-management',    // Time management & estimation: Estimate durations, pace work, respect timeboxes, finish on time.
+  CONCENTRATION = 'concentration',      // Sustained attention (focus): Maintain engagement, reduce distractibility.
+  DETERMINATION = 'determination',      // Goal-directed persistence: Keep advancing long arcs despite friction or boredom.
 }
 
 export enum Attribute {
-  PERCEPTION = 'Perception',     // also rection
-  LOGIC = 'Logic',          // also analysis
-  FITNESS = 'Fitness',        // also strength, physical attractiveness, physical health
-  CHARISMA = 'Charisma',       // also charm
-  WISDOM = 'Wisdom',         // also knowledge
-  LEADERSHIP = 'Leadership',     // also authority
-  COMMUNICATION = 'Communication',  // also rhetoric
-  VISION = 'Vision',
-  RESILIENCE = 'Resilience',     // also endurance
-  EMPATHY = 'Empathy',
-  INTEGRITY = 'Integrity',      // also honesty
+  PERCEPTION = 'perception',     // also rection
+  LOGIC = 'logic',          // also analysis
+  FITNESS = 'fitness',        // also strength, physical attractiveness, physical health
+  CHARISMA = 'charisma',       // also charm
+  WISDOM = 'wisdom',         // also knowledge
+  LEADERSHIP = 'leadership',     // also authority
+  COMMUNICATION = 'communication',  // also rhetoric
+  VISION = 'vision',
+  RESILIENCE = 'resilience',     // also endurance
+  EMPATHY = 'empathy',
+  INTEGRITY = 'integrity',      // also honesty
 }
 
 export enum Skill {
-  DESIGN_THINKING = 'Design Thinking',
-  PROJECT_MANAGEMENT = 'Project Management',
-  TEACHING = 'Teaching',
-  NEGOTIATION = 'Negotiation',
-  NARRATIVE = 'Narrative',
-  DEVELOPING = 'Developing',
-  HANDCRAFTING = 'Handcrafting',
-  PAINTING = 'Painting',
-  ILLUSTRATION = 'Illustration',
+  DESIGN_THINKING = 'design-thinking',
+  PROJECT_MANAGEMENT = 'project-management',
+  TEACHING = 'teaching',
+  NEGOTIATION = 'negotiation',
+  NARRATIVE = 'narrative',
+  DEVELOPING = 'developing',
+  HANDCRAFTING = 'handcrafting',
+  PAINTING = 'painting',
+  ILLUSTRATION = 'illustration',
 }
 
 /** Skills categories for UI organization and SearchableSelect grouping */
 export const SKILLS_CATEGORIES = {
   COGNITIVE: [
-    'SELF_AWARE', 'EMOTION_CONTROL', 'DECISION_MAKING', 'CREATIVITY',
-    'PROBLEM_SOLVING', 'SELF_CONTROL', 'WORK_MEMORY', 'ADAPTABILITY',
-    'INITIATIVE', 'PLANNING'
+    IntelectualFunction.SELF_AWARE,
+    IntelectualFunction.EMOTION_CONTROL,
+    IntelectualFunction.DECISION_MAKING,
+    IntelectualFunction.CREATIVITY,
+    IntelectualFunction.PROBLEM_SOLVING,
+    IntelectualFunction.SELF_CONTROL,
+    IntelectualFunction.WORK_MEMORY,
+    IntelectualFunction.ADAPTABILITY,
+    IntelectualFunction.INITIATIVE,
+    IntelectualFunction.PLANNING,
   ],
   CHARACTER: [
-    'PERCEPTION', 'LOGIC', 'FITNESS', 'CHARISMA', 'WISDOM',
-    'LEADERSHIP', 'COMMUNICATION', 'VISION', 'RESILIENCE', 'EMPATHY'
+    Attribute.PERCEPTION,
+    Attribute.LOGIC,
+    Attribute.FITNESS,
+    Attribute.CHARISMA,
+    Attribute.WISDOM,
+    Attribute.LEADERSHIP,
+    Attribute.COMMUNICATION,
+    Attribute.VISION,
+    Attribute.RESILIENCE,
+    Attribute.EMPATHY,
   ],
   PRACTICAL: [
-    'DESIGN_THINKING', 'PROJECT_MANAGEMENT', 'TEACHING', 'NEGOTIATION',
-    'NARRATIVE', 'DEVELOPING', 'HANDCRAFTING', 'PAINTING', 'ILLUSTRATION'
-  ]
+    Skill.DESIGN_THINKING,
+    Skill.PROJECT_MANAGEMENT,
+    Skill.TEACHING,
+    Skill.NEGOTIATION,
+    Skill.NARRATIVE,
+    Skill.DEVELOPING,
+    Skill.HANDCRAFTING,
+    Skill.PAINTING,
+    Skill.ILLUSTRATION,
+  ],
 } as const;
 
 export enum CommColor {
-  RED = 'Red',               // Explained in detail later
-  YELLOW = 'Yellow',            // Explained in detail later
-  GREEN = 'Green',             // Explained in detail later
-  BLUE = 'Blue',              // Explained in detail later
-  PURPLE = 'Purple',            // Explained in detail later
-  ORANGE = 'Orange',            // Explained in detail later
-  TURQUOISE = 'Turquoise',         // Explained in detail later
-  BROWN = 'Brown',              // RARE: Red-Green, Pacific Bossy, traits unknown
-  YELLOW_BLUE = 'Yellow-Blue',        // RARE: Yellow-Blue, Joyful Techinical, traits unknown
-  YELLOW_GREEN = 'Yellow-Green',       // RARE: Yellow-Green, Pacific Joyful, possibly a Bob Marley
+  RED = 'red',               // Explained in detail later
+  YELLOW = 'yellow',            // Explained in detail later
+  GREEN = 'green',             // Explained in detail later
+  BLUE = 'blue',              // Explained in detail later
+  PURPLE = 'purple',            // Explained in detail later
+  ORANGE = 'orange',            // Explained in detail later
+  TURQUOISE = 'turquoise',         // Explained in detail later
+  BROWN = 'brown',              // RARE: Red-Green, Pacific Bossy, traits unknown
+  YELLOW_BLUE = 'yellow-blue',        // RARE: Yellow-Blue, Joyful Techinical, traits unknown
+  YELLOW_GREEN = 'yellow-green',       // RARE: Yellow-Green, Pacific Joyful, possibly a Bob Marley
 }
 
 // ============================================================================
@@ -673,10 +725,10 @@ export enum EntityType {
 
 /** Types of Business Entities */
 export enum BusinessType {
-  COMPANY = 'Company',        // A registered business entity
-  INDIVIDUAL = 'Individual',  // A person acting as a business entity
-  DAO = 'DAO',                // Decentralized Autonomous Organization
-  NON_PROFIT = 'Non-Profit'   // Non-profit organization
+  COMPANY = 'company',        // A registered business entity
+  INDIVIDUAL = 'individual',  // A person acting as a business entity
+  DAO = 'dao',                // Decentralized Autonomous Organization
+  NON_PROFIT = 'non-profit'   // Non-profit organization
 }
 
 // ============================================================================
@@ -693,10 +745,10 @@ export enum ContractStatus {
 
 /** Types of Contract Clauses */
 export enum ContractClauseType {
-  SALES_COMMISSION = 'Commission',      // Products sold by Partner (Company pays commission)
-  SALES_SERVICE = 'Sales Service',      // My service performed for Partner (Company provides service)
-  EXPENSE_SHARING = 'Expense Sharing',   // Shared costs (e.g. Booth Fee)
-  OTHER = 'Other'
+  SALES_COMMISSION = 'commission',      // Products sold by Partner (Company pays commission)
+  SALES_SERVICE = 'sales-service',      // My service performed for Partner (Company provides service)
+  EXPENSE_SHARING = 'expense-sharing',   // Shared costs (e.g. Booth Fee)
+  OTHER = 'other'
 }
 
 // ============================================================================
@@ -778,9 +830,9 @@ export enum NoteColor {
 /** Notebook types for the note-taking system */
 export enum NotebookType {
   ALL_NOTES = 'all',
-  CURRENT_SPRINT = 'current_sprint',
+  CURRENT_SPRINT = 'current-sprint',
   CHALLENGES = 'challenges',
-  ROAD_AHEAD = 'road_ahead',
+  ROAD_AHEAD = 'road-ahead',
   STRATEGY = 'strategy',
   IDEAS = 'ideas',
   GENERAL = 'general'

@@ -22,6 +22,7 @@ import { Task, Item, Site } from '@/types/entities';
 import { getPointsMetadata } from '@/lib/utils/points-utils';
 import { TaskType, TaskStatus, TaskPriority, RecurrentFrequency, FOUNDER_CHARACTER_ID, EntityType, ItemType, ItemStatus, CharacterRole } from '@/types/enums';
 import { getItemStatusLabel, getTaskStatusLabel } from '@/lib/constants/status-display-labels';
+import { getTaskPriorityLabel, getTaskTypeLabel } from '@/lib/constants/task-taxonomy-labels';
 import {
   getStationFromCombined,
   createTaskParentOptions,
@@ -93,7 +94,7 @@ export default function RecurrentTreeModalContent({
   const [status, setStatus] = useState<TaskStatus>(TaskStatus.CREATED);
   const [priority, setPriority] = useState<TaskPriority>(TaskPriority.NORMAL);
   const [type, setType] = useState<TaskType>(TaskType.RECURRENT_TEMPLATE);
-  const [station, setStation] = useState<Station>('Strategy' as Station);
+  const [station, setStation] = useState<Station>('strategy' as Station);
   const [progress, setProgress] = useState(0);
   const [localDoneAt, setLocalDoneAt] = useState<Date | undefined>(undefined);
   const [localCollectedAt, setLocalCollectedAt] = useState<Date | undefined>(undefined);
@@ -166,7 +167,7 @@ export default function RecurrentTreeModalContent({
 
   const getLastUsedStation = useCallback((): Station => {
     const saved = getPreference('task-modal-last-station');
-    return (saved as Station) || ('Strategy' as Station);
+    return (saved as Station) || ('strategy' as Station);
   }, [getPreference]);
 
   const getLastUsedType = useCallback((): TaskType => {
@@ -185,7 +186,7 @@ export default function RecurrentTreeModalContent({
       const rawStation =
         existingTask.station != null && String(existingTask.station).trim() !== ''
           ? existingTask.station
-          : (((getPreference('task-modal-last-station') as Station) || 'Strategy') as Station);
+          : (((getPreference('task-modal-last-station') as Station) || 'strategy') as Station);
       setStation(rawStation);
       setProgress(existingTask.progress);
       // Convert UTC midnight dates back to local for display
@@ -730,7 +731,7 @@ export default function RecurrentTreeModalContent({
                     <SelectContent>
                       {Object.values(TaskPriority).map((p) => (
                         <SelectItem key={p} value={String(p)}>
-                          {p}
+                          {getTaskPriorityLabel(p)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -793,7 +794,7 @@ export default function RecurrentTreeModalContent({
                       )
                       .map((taskType) => (
                         <SelectItem key={taskType} value={String(taskType)}>
-                          {taskType}
+                          {getTaskTypeLabel(taskType)}
                         </SelectItem>
                       ))}
                   </SelectContent>

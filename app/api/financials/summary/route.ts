@@ -39,7 +39,7 @@ export async function GET(request: Request) {
         const companyTotals = calculateTotals(companyBreakdown);
 
         // Aggregate personal records
-        const personalStations = BUSINESS_STRUCTURE.PERSONAL;
+        const personalStations = BUSINESS_STRUCTURE.personal;
         const personalBreakdown = aggregateRecordsByStation(personalRecords, personalStations);
         const personalTotals = calculateTotals(personalBreakdown);
 

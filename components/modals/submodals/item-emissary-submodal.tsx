@@ -19,6 +19,7 @@ import { SearchableSelect } from '@/components/ui/searchable-select';
 import { ItemNameField } from '@/components/ui/item-name-field';
 import { ClientAPI } from '@/lib/client-api';
 import { Item, Site } from '@/types/entities';
+import { getCollectionLabel } from '@/lib/constants/collection-labels';
 
 interface ItemCreationData {
   outputItemType: ItemType | '';
@@ -355,7 +356,7 @@ export default function ItemEmissarySubModal({
                 <SelectContent>
                   {Object.values(Collection).map(collection => (
                     <SelectItem key={collection} value={collection}>
-                      {collection}
+                      {getCollectionLabel(collection)}
                     </SelectItem>
                   ))}
                 </SelectContent>

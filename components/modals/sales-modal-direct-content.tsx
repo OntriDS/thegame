@@ -21,6 +21,7 @@ import { TaskType } from '@/types/enums';
 import { createSiteOptionsWithCategories } from '@/lib/utils/site-options-utils';
 import { createStationCategoryOptions, createTaskParentOptions, getCategoryFromCombined, getStationFromCombined } from '@/lib/utils/searchable-select-utils';
 import { formatItemTypeSubtypeLabel, getStationValue } from '@/lib/utils/sales-modal-utils';
+import { getTaskTypeLabel } from '@/lib/constants/task-taxonomy-labels';
 import type { SaleItemLine } from './submodals/sale-items-submodal';
 
 export interface SalesModalDirectContentCommonProps {
@@ -594,11 +595,11 @@ export default function SalesModalDirectContent({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {Object.values(TaskType).map((type) => (
-                          <SelectItem key={type} value={type}>
-                            {type}
-                          </SelectItem>
-                        ))}
+                      {Object.values(TaskType).map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {getTaskTypeLabel(type)}
+                        </SelectItem>
+                      ))}
                       </SelectContent>
                     </Select>
                   </div>

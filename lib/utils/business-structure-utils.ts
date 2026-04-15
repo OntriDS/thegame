@@ -43,7 +43,7 @@ export function getAreaForStation(station: Station): Area | null {
 export function getStationSelectValue(station: Station | null | undefined): string {
   if (station == null || String(station).trim() === '') return 'none:';
   const area = getAreaForStation(station);
-  return `${area || 'ADMIN'}:${station}`;
+  return `${area || 'admin'}:${station}`;
 }
 
 // Check if a station belongs to company areas
@@ -76,11 +76,11 @@ export function getSalesChannelFromSaleType(saleType: string): Station | null {
     .toUpperCase();
 
   const typeToChannel: Record<string, Station> = {
-    DIRECT: 'Direct-Sales' as Station,
-    BOOTH: 'Booth-Sales' as Station,
-    NETWORK: 'Network' as Station,
-    ONLINE: 'Online-Sales' as Station,
-    NFT: 'Online-Sales' as Station,
+    DIRECT: 'direct-sales' as Station,
+    BOOTH: 'booth-sales' as Station,
+    NETWORK: 'network' as Station,
+    ONLINE: 'online-sales' as Station,
+    NFT: 'online-sales' as Station,
   };
 
   return typeToChannel[key] ?? null;

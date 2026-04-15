@@ -83,16 +83,16 @@ export const isValidStatus = (status: string, entityType: EntityType | 'record' 
       return false;
   }
 };
-/** Check if an item status represents a SOLD state (robust check for legacy variations) */
+/** Check if an item status represents a SOLD state */
 export const isSoldStatus = (status: any): boolean => {
   if (!status) return false;
   const s = status.toString().toLowerCase();
-  return s === 'sold' || s === 'itemstatus.sold' || status === ItemStatus.SOLD;
+  return s === ItemStatus.SOLD;
 };
 
-/** Check if an entity status represents a COLLECTED state (robust check for legacy variations) */
+/** Check if an entity status represents a COLLECTED state */
 export const isCollectedStatus = (status: any): boolean => {
   if (!status) return false;
   const s = status.toString().toLowerCase();
-  return s === 'collected' || s === 'itemstatus.collected' || status === TaskStatus.COLLECTED;
+  return s === TaskStatus.COLLECTED;
 };

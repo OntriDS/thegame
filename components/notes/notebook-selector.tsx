@@ -15,6 +15,7 @@ import {
   Plus
 } from 'lucide-react';
 import { NotebookType } from '@/types/enums';
+import { getNotebookTypeLabel } from '@/lib/constants/notes-taxonomy-labels';
 
 interface NotebookSelectorProps {
   selectedNotebook: string;
@@ -28,48 +29,48 @@ interface NotebookSelectorProps {
 }
 
 const notebookConfig = [
-  { 
-    id: NotebookType.ALL_NOTES, 
-    label: 'All Notes', 
+  {
+    id: NotebookType.ALL_NOTES,
+    label: getNotebookTypeLabel(NotebookType.ALL_NOTES),
     icon: BookOpen,
-    color: 'text-blue-600'
+    color: 'text-blue-600',
   },
-  { 
-    id: NotebookType.CURRENT_SPRINT, 
-    label: 'Current Sprint', 
+  {
+    id: NotebookType.CURRENT_SPRINT,
+    label: getNotebookTypeLabel(NotebookType.CURRENT_SPRINT),
     icon: Target,
-    color: 'text-green-600'
+    color: 'text-green-600',
   },
-  { 
-    id: NotebookType.CHALLENGES, 
-    label: 'Challenges', 
+  {
+    id: NotebookType.CHALLENGES,
+    label: getNotebookTypeLabel(NotebookType.CHALLENGES),
     icon: Wrench,
-    color: 'text-red-600'
+    color: 'text-red-600',
   },
-  { 
-    id: NotebookType.ROAD_AHEAD, 
-    label: 'Road Ahead', 
+  {
+    id: NotebookType.ROAD_AHEAD,
+    label: getNotebookTypeLabel(NotebookType.ROAD_AHEAD),
     icon: CalendarDays,
-    color: 'text-purple-600'
+    color: 'text-purple-600',
   },
-  { 
-    id: NotebookType.STRATEGY, 
-    label: 'Strategy', 
+  {
+    id: NotebookType.STRATEGY,
+    label: getNotebookTypeLabel(NotebookType.STRATEGY),
     icon: Zap,
-    color: 'text-orange-600'
+    color: 'text-orange-600',
   },
-  { 
-    id: NotebookType.IDEAS, 
-    label: 'Ideas', 
+  {
+    id: NotebookType.IDEAS,
+    label: getNotebookTypeLabel(NotebookType.IDEAS),
     icon: Lightbulb,
-    color: 'text-yellow-600'
+    color: 'text-yellow-600',
   },
-  { 
-    id: NotebookType.GENERAL, 
-    label: 'General', 
+  {
+    id: NotebookType.GENERAL,
+    label: getNotebookTypeLabel(NotebookType.GENERAL),
     icon: FileText,
-    color: 'text-gray-600'
-  }
+    color: 'text-gray-600',
+  },
 ];
 
 export function NotebookSelector({

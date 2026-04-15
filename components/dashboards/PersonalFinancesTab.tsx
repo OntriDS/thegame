@@ -6,6 +6,7 @@ import { PersonalMonthlySummary } from '@/types/entities';
 import { formatCurrency } from '@/lib/utils/financial-utils';
 import { formatMonthKey } from '@/lib/utils/date-utils';
 import { BUSINESS_STRUCTURE } from '@/types/enums';
+import { getStationDisplayLabel } from '@/lib/constants/business-structure-labels';
 
 interface PersonalFinancesTabProps {
   selectedMonthKey: string;
@@ -34,14 +35,14 @@ export function PersonalFinancesTab({
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {BUSINESS_STRUCTURE.PERSONAL.map((station: string) => {
+            {BUSINESS_STRUCTURE.personal.map((station: string) => {
               const breakdown = personalSummary?.categoryBreakdown[station];
               const net = breakdown ? breakdown.net : 0;
 
               return (
                 <Card key={station} className="border-muted bg-muted/10">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">{station}</CardTitle>
+                    <CardTitle className="text-sm">{getStationDisplayLabel(station)}</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className={`text-lg font-bold ${net === 0 ? 'text-muted-foreground' :

@@ -14,6 +14,7 @@ import { ItemType, ItemCategory, ItemStatus, InventoryTab, Collection } from '@/
 import { isSoldStatus } from '@/lib/utils/status-utils';
 import { getItemStatusLabel } from '@/lib/constants/status-display-labels';
 import { getItemCategory } from '@/lib/utils/item-utils';
+import { getCollectionLabel } from '@/lib/constants/collection-labels';
 import ItemModal from '@/components/modals/item-modal';
 import BulkEditModal from '@/components/modals/submodals/bulk-edit-submodal';
 import InlineEditor from '@/components/control-room/inline-editor';
@@ -30,7 +31,7 @@ import { Switch } from '@/components/ui/switch';
 import { formatMonthKey, getCurrentMonthKey, sortMonthKeys, formatDisplayDate } from '@/lib/utils/date-utils';
 
 function inventoryTabForItem(item: Item): InventoryTab {
-  if (isSoldStatus(item.status) || String(item.status).toLowerCase() === 'collected') {
+  if (isSoldStatus(item.status)) {
     return InventoryTab.SOLD_ITEMS;
   }
   switch (item.type) {
@@ -1135,7 +1136,7 @@ export function InventoryDisplay({
                         <div className="flex items-center gap-4">
                           {/* Column 1: Collection */}
                           <div className="text-xs text-muted-foreground truncate flex-1 min-w-0">
-                            {sticker.collection || 'No Collection'}
+                            {getCollectionLabel(sticker.collection || Collection.NO_COLLECTION)}
                           </div>
 
                           {/* Column 2: Subtype */}

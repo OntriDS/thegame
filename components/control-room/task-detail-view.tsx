@@ -4,6 +4,7 @@ import { TreeNode } from '@/lib/utils/tree-utils';
 import { Task } from '@/types/entities';
 import { TaskType, TaskStatus, TaskPriority } from '@/types/enums';
 import { getTaskStatusLabel } from '@/lib/constants/status-display-labels';
+import { getTaskTypeLabel, getTaskPriorityLabel } from '@/lib/constants/task-taxonomy-labels';
 import { getAllStationNames } from '@/lib/utils/searchable-select-utils';
 import { TASK_STATUS_COLORS } from '@/lib/constants/color-constants';
 import { TASK_TYPE_ICONS } from '@/lib/constants/icon-maps';
@@ -469,19 +470,19 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
                 <SelectContent>
                   {Object.values(TaskType).map((type) => (
                     <SelectItem key={type} value={type} className="text-xs">
-                      {type}
+                      {getTaskTypeLabel(type)}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             ) : (
               <div className="flex items-center gap-2">
-                <span
-                  className="inline-block px-2 py-1 text-xs font-medium bg-muted text-muted-foreground rounded border cursor-pointer hover:bg-muted/80"
-                  onClick={() => startEditing('type', task.type)}
-                >
-                  {task.type}
-                </span>
+                  <span
+                    className="inline-block px-2 py-1 text-xs font-medium bg-muted text-muted-foreground rounded border cursor-pointer hover:bg-muted/80"
+                    onClick={() => startEditing('type', task.type)}
+                  >
+                    {getTaskTypeLabel(task.type)}
+                  </span>
 
                 {/* Financial Status Badges */}
                 {task.isNotPaid && (
@@ -664,7 +665,7 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
                 <SelectContent>
                   {Object.values(TaskPriority).map((priority) => (
                     <SelectItem key={priority} value={priority} className="text-xs">
-                      {priority}
+                      {getTaskPriorityLabel(priority)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -674,7 +675,7 @@ export default function TaskDetailView({ node, onEditTask, onTaskUpdate, allTask
                 className="text-sm font-bold cursor-pointer hover:bg-muted/50 px-1 rounded"
                 onClick={() => startEditing('priority', task.priority)}
               >
-                {task.priority}
+                {getTaskPriorityLabel(task.priority)}
               </div>
             )}
           </Card>

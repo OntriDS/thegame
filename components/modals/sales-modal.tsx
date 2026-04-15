@@ -1141,7 +1141,7 @@ export default function SalesModal({
     const newLine: SaleLine = {
       lineId: uuid(),
       kind: 'service',
-      station: 'Digital-Art',
+      station: 'digital-art',
       revenue: 0,
       description: '',
       taxAmount: 0,
@@ -1212,7 +1212,7 @@ export default function SalesModal({
     setRevenue(roundCurrency2(Math.max(0, revenue - amount)));
 
     // Set category to Other-Sales
-    setTaskStation(STATION_CATEGORIES.SALES[7] as Station); // 'Other-Sales'
+    setTaskStation(STATION_CATEGORIES.sales[7] as Station); // gallery-store
   };
 
   const handleExchangeApplied = (description: string, value: number, category?: string) => {
@@ -1236,7 +1236,7 @@ export default function SalesModal({
     if (category) {
       setTaskStation(category as Station);
     } else {
-      setTaskStation(STATION_CATEGORIES.SALES[7] as Station); // 'Other-Sales'
+      setTaskStation(STATION_CATEGORIES.sales[7] as Station); // gallery-store
     }
   };
 

@@ -1,7 +1,7 @@
 // data-store/repositories/item.repo.ts
 import { kvGet, kvMGet, kvSet, kvDel, kvSAdd, kvSRem, kvSMembers } from '../kv';
 import { buildDataKey, buildIndexKey, buildMonthIndexKey, buildEntityIndexKey, buildArchiveMonthsKey } from '../keys';
-import { EntityType, ItemType, ItemStatus } from '@/types/enums';
+import { EntityType, ItemType } from '@/types/enums';
 import type { Item } from '@/types/entities';
 import { formatMonthKey } from '@/lib/utils/date-utils';
 
@@ -89,24 +89,7 @@ export async function upsertItem(item: Item): Promise<Item> {
   // Get previous item to clean up old indexes if they changed
   const previousItem = await kvGet<Item>(key);
 
-  // Normalize status to canonical enum values
-  const statusRaw = (item.status as any) as string | undefined;
-  let normalizedStatus = statusRaw;
-  if (statusRaw) {
-    const lc = statusRaw.toString().trim().toLowerCase();
-    const enumByLc = new Map<string, ItemStatus>();
-    for (const v of Object.values(ItemStatus)) {
-      enumByLc.set(v.toLowerCase(), v);
-    }
-    const direct = enumByLc.get(lc);
-    const alias = lc.startsWith('itemstatus.') ? enumByLc.get(lc.split('.').pop() || '') : undefined;
-    const hyphenated = lc.replace(/\s+/g, '-');
-    const byHyphen = enumByLc.get(hyphenated);
-    if (direct) normalizedStatus = direct;
-    else if (alias) normalizedStatus = alias;
-    else if (byHyphen) normalizedStatus = byHyphen;
-  }
-  const toSave: Item = normalizedStatus ? { ...item, status: normalizedStatus as any } : item;
+  const toSave: Item = item;
 
   await kvSet(key, toSave);
   await kvSAdd(indexKey, item.id);

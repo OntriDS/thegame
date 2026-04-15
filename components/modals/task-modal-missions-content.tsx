@@ -21,6 +21,7 @@ import { Task, Item, Site } from '@/types/entities';
 import { getPointsMetadata } from '@/lib/utils/points-utils';
 import { TaskType, TaskStatus, TaskPriority, ItemType, ItemStatus, FOUNDER_CHARACTER_ID, EntityType, CharacterRole } from '@/types/enums';
 import { getItemStatusLabel, getTaskStatusLabel } from '@/lib/constants/status-display-labels';
+import { getTaskPriorityLabel, getTaskTypeLabel } from '@/lib/constants/task-taxonomy-labels';
 import { getStationFromCombined, createTaskParentOptions, createItemTypeSubTypeOptions, getItemTypeFromCombined, getSubTypeFromCombined, createCharacterOptions, createStationCategoryOptions, getCategoryFromCombined } from '@/lib/utils/searchable-select-utils';
 import { createSiteOptionsWithCategories } from '@/lib/utils/site-options-utils';
 import { getStationSelectValue } from '@/lib/utils/business-structure-utils';
@@ -95,7 +96,7 @@ export default function MissionTreeModalContent({
   const [status, setStatus] = useState<TaskStatus>(TaskStatus.CREATED);
   const [priority, setPriority] = useState<TaskPriority>(TaskPriority.NORMAL);
   const [type, setType] = useState<TaskType>(TaskType.MISSION);
-  const [station, setStation] = useState<Station>('Strategy' as Station);
+  const [station, setStation] = useState<Station>('strategy' as Station);
   const [progress, setProgress] = useState(0);
   const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
   const [localDoneAt, setLocalDoneAt] = useState<Date | undefined>(undefined);
@@ -160,7 +161,7 @@ export default function MissionTreeModalContent({
 
   const getLastUsedStation = useCallback((): Station => {
     const saved = getPreference('task-modal-last-station');
-    return (saved as Station) || ('Strategy' as Station);
+    return (saved as Station) || ('strategy' as Station);
   }, [getPreference]);
 
   const getLastUsedType = useCallback((): TaskType => {
@@ -179,7 +180,7 @@ export default function MissionTreeModalContent({
       const rawStation =
         existingTask.station != null && String(existingTask.station).trim() !== ''
           ? existingTask.station
-          : (((getPreference('task-modal-last-station') as Station) || 'Strategy') as Station);
+          : (((getPreference('task-modal-last-station') as Station) || 'strategy') as Station);
       setStation(rawStation);
       setProgress(existingTask.progress);
       // Dates are now stored as UTC, use directly
@@ -625,7 +626,7 @@ export default function MissionTreeModalContent({
                     <SelectContent>
                       {Object.values(TaskPriority).map((p) => (
                         <SelectItem key={p} value={String(p)}>
-                          {p}
+                          {getTaskPriorityLabel(p)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -695,7 +696,7 @@ export default function MissionTreeModalContent({
                       )
                       .map((taskType) => (
                         <SelectItem key={taskType} value={String(taskType)}>
-                          {taskType}
+                          {getTaskTypeLabel(taskType)}
                         </SelectItem>
                       ))}
                   </SelectContent>

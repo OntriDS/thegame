@@ -163,13 +163,13 @@ export const ROLE_COLORS = {
  * This is the SINGLE SOURCE OF TRUTH for area-based visual communication
  */
 export const AREA_COLORS = {
-  ADMIN: 'purple',      // Strategy, management, administration
-  RESEARCH: 'cyan',     // Studies, classes
-  DEV: 'indigo',        // Systems Development
-  ARTDESIGN: 'turquoise',  // Creative processes, design work
-  MAKERSPACE: 'orange', // Manufacturing, production work
-  SALES: 'yellow',      // Sales, marketing, bookings
-  PERSONAL: 'brown',    // Personal tasks and activities
+  admin: 'purple',
+  research: 'cyan',
+  dev: 'indigo',
+  'art-design': 'turquoise',
+  'maker-space': 'orange',
+  sales: 'yellow',
+  personal: 'brown',
 } as const;
 
 /**
@@ -177,16 +177,10 @@ export const AREA_COLORS = {
  * Inherits from parent area by default, but can have custom colors
  */
 export const STATION_COLORS = {
-  // Personal stations with custom colors
-  'Family': 'pink',       // Family activities
-  'Health': 'green',      // Health and wellness
-  'Earnings': 'gold',     // Personal earnings
-
-
-  // Admin stations with custom colors
-  'Projects': 'royalblue', // Project management
-
-  // All other stations inherit from their parent area
+  family: 'pink',
+  health: 'green',
+  rewards: 'gold',
+  projects: 'royalblue',
 } as const;
 
 /**

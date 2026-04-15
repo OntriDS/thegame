@@ -7,6 +7,7 @@ import { RefreshCw, Link, MapPin, Cloud, Home, Sparkles } from 'lucide-react';
 import { useState } from 'react';
 import { processLogData } from '@/lib/utils/logging-utils';
 import { SiteStatus, SiteType, EntityType } from '@/types/enums';
+import { getDigitalSiteTypeLabel, getPhysicalSiteTypeLabel, getSystemSiteTypeLabel } from '@/lib/constants/site-taxonomy-labels';
 import { SITE_STATUS_COLORS } from '@/lib/constants/color-constants';
 import { useThemeColors } from '@/lib/hooks/use-theme-colors';
 import { LinksSubModal } from '@/components/modals/submodals/links-submodal';
@@ -160,10 +161,16 @@ export function SitesLogTab({ sitesLog, onReload, isReloading }: SitesLogTabProp
                     // Use displayName from normalization, fallback to entry data
                     const siteName = entry.displayName || entry.name || 'Site';
                     const siteType = entry.type || SiteType.PHYSICAL;
-                    const businessType = entry.businessType || '—';
+                    const businessType = entry.businessType
+                      ? getPhysicalSiteTypeLabel(entry.businessType)
+                      : '—';
                     const settlement = entry.settlementId || '—';
-                    const digitalType = entry.digitalType || '—';
-                    const purpose = entry.systemType || '—';
+                    const digitalType = entry.digitalType
+                      ? getDigitalSiteTypeLabel(entry.digitalType)
+                      : '—';
+                    const purpose = entry.systemType
+                      ? getSystemSiteTypeLabel(entry.systemType)
+                      : '—';
                     const date = entry.displayDate || entry.timestamp || '';
 
                     return (

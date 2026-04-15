@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Notebook } from '@/types/entities';
 import { NotebookType, NoteColor } from '@/types/enums';
+import { getNotebookTypeLabel, getNoteColorLabel } from '@/lib/constants/notes-taxonomy-labels';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
 import { 
   BookOpen, 
@@ -33,9 +34,9 @@ interface NotebookEditorModalProps {
 
 const colorOptions = Object.values(NoteColor).map(color => ({
   value: color,
-  label: color.charAt(0).toUpperCase() + color.slice(1),
-  class: color === NoteColor.WHITE 
-    ? 'bg-card border-border' 
+  label: getNoteColorLabel(color),
+  class: color === NoteColor.WHITE
+    ? 'bg-card border-border'
     : `bg-${color}-50/50 border-${color}-200 dark:bg-${color}-950/20 dark:border-${color}-800/50`
 }));
 
@@ -68,16 +69,16 @@ export function NotebookEditorModal({
   });
 
   // Available notebooks (predefined ones)
-  const availableNotebooks = [
-    { id: 'add_new', label: 'Add New Notebook', icon: Plus },
-    { id: NotebookType.ALL_NOTES, label: 'All Notes', icon: BookOpen },
-    { id: NotebookType.CURRENT_SPRINT, label: 'Current Sprint', icon: Target },
-    { id: NotebookType.CHALLENGES, label: 'Challenges', icon: Wrench },
-    { id: NotebookType.ROAD_AHEAD, label: 'Road Ahead', icon: CalendarDays },
-    { id: NotebookType.STRATEGY, label: 'Strategy', icon: Zap },
-    { id: NotebookType.IDEAS, label: 'Ideas', icon: Lightbulb },
-    { id: NotebookType.GENERAL, label: 'General', icon: FileText }
-  ];
+const availableNotebooks = [
+  { id: 'add_new', label: 'Add New Notebook', icon: Plus },
+  { id: NotebookType.ALL_NOTES, label: getNotebookTypeLabel(NotebookType.ALL_NOTES), icon: BookOpen },
+  { id: NotebookType.CURRENT_SPRINT, label: getNotebookTypeLabel(NotebookType.CURRENT_SPRINT), icon: Target },
+  { id: NotebookType.CHALLENGES, label: getNotebookTypeLabel(NotebookType.CHALLENGES), icon: Wrench },
+  { id: NotebookType.ROAD_AHEAD, label: getNotebookTypeLabel(NotebookType.ROAD_AHEAD), icon: CalendarDays },
+  { id: NotebookType.STRATEGY, label: getNotebookTypeLabel(NotebookType.STRATEGY), icon: Zap },
+  { id: NotebookType.IDEAS, label: getNotebookTypeLabel(NotebookType.IDEAS), icon: Lightbulb },
+  { id: NotebookType.GENERAL, label: getNotebookTypeLabel(NotebookType.GENERAL), icon: FileText }
+];
 
   useEffect(() => {
     if (notebook) {

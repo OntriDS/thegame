@@ -49,7 +49,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
   // Memoized to prevent dependency changes on every render
   const getLastUsedStation = useCallback((): Station => {
     const saved = getPreference('item-modal-last-station');
-    return (saved as Station) || ('Inventory' as Station);
+    return (saved as Station) || ('inventory' as Station);
   }, [getPreference]);
 
   // Helper function to get the correct value format for SearchableSelect
@@ -173,7 +173,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
           setName(formData.name || '');
           setDescription(formData.description || '');
           setType(formData.type || defaultItemType || ItemType.STICKER);
-          setStation(formData.station || 'ADMIN');
+          setStation(formData.station || 'strategy');
           setSubItemType(formData.subItemType || '');
           setCollection(formData.collection || Collection.NO_COLLECTION);
           setStatus(formData.status || ItemStatus.FOR_SALE);
@@ -661,7 +661,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         setName(selectedItem.name);
         setDescription(selectedItem.description || '');
         setType(selectedItem.type);
-        setStation(selectedItem.station || 'ADMIN');
+        setStation(selectedItem.station || 'strategy');
         setSubItemType(selectedItem.subItemType || '');
         setCollection(selectedItem.collection || Collection.NO_COLLECTION);
         setStatus(selectedItem.status || ItemStatus.FOR_SALE);

@@ -25,7 +25,7 @@ function soldRowLabel(resolved: Item | undefined, lineName?: string): string {
 const ITEM_DEFAULTS = {
   type: ItemType.ARTWORK, // Defaulting to Artwork for creative context
   status: ItemStatus.FOR_SALE,
-  station: 'Strategy' as const, // Default station
+  station: 'strategy' as const, // Default station
   stock: [],
   unitCost: 0,
   additionalCost: 0,

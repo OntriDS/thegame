@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { BookOpen, Map, FileText, Compass, Zap, CheckCircle, AlertTriangle, X, Bot } from 'lucide-react';
 import { useState, useEffect, Suspense } from 'react';
 import { NotebookType, DevSprintStatus } from '@/types/enums';
+import { getNotebookTypeLabel } from '@/lib/constants/notes-taxonomy-labels';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
 import { formatDateDDMMYYYY } from '@/lib/constants/date-constants';
 import { NotesTab } from '@/components/research/notes-tab';
@@ -117,46 +118,46 @@ function ResearchPageContent() {
           const initialNotebooks = [
             {
               id: NotebookType.ALL_NOTES,
-              label: 'All Notes',
+              label: getNotebookTypeLabel(NotebookType.ALL_NOTES),
               icon: 'BookOpen',
-              color: 'text-black-600'
+              color: 'text-black-600',
             },
             {
               id: NotebookType.CURRENT_SPRINT,
-              label: 'Current Sprint',
+              label: getNotebookTypeLabel(NotebookType.CURRENT_SPRINT),
               icon: 'Target',
-              color: 'text-green-600'
+              color: 'text-green-600',
             },
             {
               id: NotebookType.CHALLENGES,
-              label: 'Challenges',
+              label: getNotebookTypeLabel(NotebookType.CHALLENGES),
               icon: 'Wrench',
-              color: 'text-red-600'
+              color: 'text-red-600',
             },
             {
               id: NotebookType.ROAD_AHEAD,
-              label: 'Road Ahead',
+              label: getNotebookTypeLabel(NotebookType.ROAD_AHEAD),
               icon: 'CalendarDays',
-              color: 'text-purple-600'
+              color: 'text-purple-600',
             },
             {
               id: NotebookType.STRATEGY,
-              label: 'Strategy',
+              label: getNotebookTypeLabel(NotebookType.STRATEGY),
               icon: 'Zap',
-              color: 'text-orange-600'
+              color: 'text-orange-600',
             },
             {
               id: NotebookType.IDEAS,
-              label: 'Ideas',
+              label: getNotebookTypeLabel(NotebookType.IDEAS),
               icon: 'Lightbulb',
-              color: 'text-yellow-600'
+              color: 'text-yellow-600',
             },
             {
               id: NotebookType.GENERAL,
-              label: 'General',
+              label: getNotebookTypeLabel(NotebookType.GENERAL),
               icon: 'FileText',
-              color: 'text-gray-600'
-            }
+              color: 'text-gray-600',
+            },
           ];
           setNotebooks(initialNotebooks);
           setPreference('research-notebooks', JSON.stringify(initialNotebooks));
@@ -167,46 +168,46 @@ function ResearchPageContent() {
         const initialNotebooks = [
           {
             id: NotebookType.ALL_NOTES,
-            label: 'All Notes',
+            label: getNotebookTypeLabel(NotebookType.ALL_NOTES),
             icon: 'BookOpen',
-            color: 'text-black-600'
+            color: 'text-black-600',
           },
           {
             id: NotebookType.CURRENT_SPRINT,
-            label: 'Current Sprint',
+            label: getNotebookTypeLabel(NotebookType.CURRENT_SPRINT),
             icon: 'Target',
-            color: 'text-green-600'
+            color: 'text-green-600',
           },
           {
             id: NotebookType.CHALLENGES,
-            label: 'Challenges',
+            label: getNotebookTypeLabel(NotebookType.CHALLENGES),
             icon: 'Wrench',
-            color: 'text-red-600'
+            color: 'text-red-600',
           },
           {
             id: NotebookType.ROAD_AHEAD,
-            label: 'Road Ahead',
+            label: getNotebookTypeLabel(NotebookType.ROAD_AHEAD),
             icon: 'CalendarDays',
-            color: 'text-purple-600'
+            color: 'text-purple-600',
           },
           {
             id: NotebookType.STRATEGY,
-            label: 'Strategy',
+            label: getNotebookTypeLabel(NotebookType.STRATEGY),
             icon: 'Zap',
-            color: 'text-orange-600'
+            color: 'text-orange-600',
           },
           {
             id: NotebookType.IDEAS,
-            label: 'Ideas',
+            label: getNotebookTypeLabel(NotebookType.IDEAS),
             icon: 'Lightbulb',
-            color: 'text-yellow-600'
+            color: 'text-yellow-600',
           },
           {
             id: NotebookType.GENERAL,
-            label: 'General',
+            label: getNotebookTypeLabel(NotebookType.GENERAL),
             icon: 'FileText',
-            color: 'text-gray-600'
-          }
+            color: 'text-gray-600',
+          },
         ];
         setNotebooks(initialNotebooks);
       }

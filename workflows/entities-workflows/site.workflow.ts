@@ -1,7 +1,7 @@
 // workflows/entities-workflows/site.workflow.ts
 // Site-specific workflow with ACTIVATED, DEACTIVATED events
 
-import { EntityType, LogEventType, SiteStatus } from '@/types/enums';
+import { EntityType, LogEventType, SiteStatus, SiteType } from '@/types/enums';
 import type { Site } from '@/types/entities';
 import { appendEntityLog, updateEntityLeanFields } from '../entities-logging';
 import { hasEffect, markEffect, clearEffect, clearEffectsByPrefix } from '@/data-store/effects-registry';
@@ -32,14 +32,14 @@ export async function onSiteUpsert(site: Site, previousSite?: Site): Promise<voi
     
     // Add type-specific metadata fields based on site type
     if (site.metadata) {
-      if (site.metadata.type === 'PHYSICAL' && 'businessType' in site.metadata) {
+      if (site.metadata.type === SiteType.PHYSICAL && 'businessType' in site.metadata) {
         logPayload.businessType = site.metadata.businessType;
         if (site.metadata.settlementId) {
           logPayload.settlementId = site.metadata.settlementId;
         }
-      } else if (site.metadata.type === 'DIGITAL' && 'digitalType' in site.metadata) {
+      } else if (site.metadata.type === SiteType.DIGITAL && 'digitalType' in site.metadata) {
         logPayload.digitalType = site.metadata.digitalType;
-      } else if (site.metadata.type === 'SYSTEM' && 'systemType' in site.metadata) {
+      } else if (site.metadata.type === SiteType.SYSTEM && 'systemType' in site.metadata) {
         logPayload.systemType = site.metadata.systemType;
       }
     }

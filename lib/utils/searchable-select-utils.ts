@@ -26,8 +26,10 @@ import {
     EquipmentSubType,
     ItemStatus
 } from '@/types/enums';
-import { SubItemType } from '@/types/type-aliases';
+import type { Area, Station, SubItemType } from '@/types/type-aliases';
 import { getItemTypeLabel, getSubItemTypeLabel } from '@/lib/constants/item-taxonomy-labels';
+import { getAreaDisplayLabel, getStationDisplayLabel } from '@/lib/constants/business-structure-labels';
+import { getCountryLabel, getRegionLabel } from '@/lib/constants/site-taxonomy-labels';
 
 // ============================================================================
 // ITEM HELPERS
@@ -370,12 +372,11 @@ export function createSettlementOptions(settlements: Settlement[]) {
     // Group by Country -> Region -> Settlement
     // SearchableSelect supports 'group' and 'category'.
     // We'll use Country as Category, Region as Group.
-
     return settlements.map(settlement => ({
         value: settlement.id,
         label: settlement.name,
-        group: settlement.region,
-        category: settlement.country
+        group: getRegionLabel(settlement.region),
+        category: getCountryLabel(settlement.country),
     })).sort((a, b) => a.category.localeCompare(b.category) || a.group.localeCompare(b.group));
 }
 
@@ -404,11 +405,13 @@ export function createStationCategoryOptions() {
     const options: Array<{ value: string; label: string; group: string }> = [];
 
     Object.entries(STATION_CATEGORIES).forEach(([category, stations]) => {
+        const area = category as Area;
         stations.forEach((station: string) => {
+            const st = station as Station;
             options.push({
                 value: `${category}:${station}`,
-                label: station,
-                group: category // Makes 'group' the Area (e.g., SALES, ADMIN)
+                label: getStationDisplayLabel(st),
+                group: getAreaDisplayLabel(area),
             });
         });
     });

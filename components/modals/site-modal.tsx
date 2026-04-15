@@ -15,10 +15,15 @@ import {
   PhysicalBusinessType,
   DigitalSiteType,
   SystemSiteType,
-  LOCATION_HIERARCHY,
   EntityType
 } from '@/types/enums';
 import { getSiteStatusLabel } from '@/lib/constants/status-display-labels';
+import {
+  getSiteTypeLabel,
+  getPhysicalSiteTypeLabel,
+  getDigitalSiteTypeLabel,
+  getSystemSiteTypeLabel,
+} from '@/lib/constants/site-taxonomy-labels';
 import { createSettlementOptions } from '@/lib/utils/searchable-select-utils';
 import SettlementSubmodal from './submodals/settlement-submodal';
 import { MapPin, Cloud, Sparkles, Trash2, Network, User } from 'lucide-react';
@@ -222,16 +227,11 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
     }
   };
 
-  const [settlementOptions, setSettlementOptions] = useState<Array<{ value: string, label: string, category: string }>>([]);
+  const [settlementOptions, setSettlementOptions] = useState<Array<{ value: string; label: string; category: string }>>([]);
 
   // Load settlement options when settlements change
   useEffect(() => {
-    const options = settlements.map(settlement => ({
-      value: settlement.id,
-      label: settlement.name,
-      category: settlement.country
-    }));
-    setSettlementOptions(options);
+    setSettlementOptions(createSettlementOptions(settlements));
   }, [settlements]);
 
   const handleDeleteComplete = () => {
@@ -239,14 +239,6 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
     // Dispatch UI update event after successful deletion
     dispatchEntityUpdated(entityTypeToKind(EntityType.SITE));
     onOpenChange(false);
-  };
-
-  // Simple settlement options - no categorization needed
-  const getSettlementOptions = () => {
-    return settlements.map(settlement => ({
-      value: settlement.id,
-      label: settlement.name
-    }));
   };
 
   return (
@@ -296,9 +288,9 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={SiteType.PHYSICAL}>Physical</SelectItem>
-                    <SelectItem value={SiteType.DIGITAL}>Digital</SelectItem>
-                    <SelectItem value={SiteType.SYSTEM}>System</SelectItem>
+                    <SelectItem value={SiteType.PHYSICAL}>{getSiteTypeLabel(SiteType.PHYSICAL)}</SelectItem>
+                    <SelectItem value={SiteType.DIGITAL}>{getSiteTypeLabel(SiteType.DIGITAL)}</SelectItem>
+                    <SelectItem value={SiteType.SYSTEM}>{getSiteTypeLabel(SiteType.SYSTEM)}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -342,7 +334,7 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
                     <SelectContent>
                       {Object.values(PhysicalBusinessType).map(type => (
                         <SelectItem key={type} value={type}>
-                          {type}
+                          {getPhysicalSiteTypeLabel(type)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -365,7 +357,7 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
                     <SelectContent>
                       {Object.values(DigitalSiteType).map(type => (
                         <SelectItem key={type} value={type}>
-                          {type}
+                          {getDigitalSiteTypeLabel(type)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -400,7 +392,7 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
                     <SelectContent>
                       {Object.values(SystemSiteType).map(type => (
                         <SelectItem key={type} value={type}>
-                          {type}
+                          {getSystemSiteTypeLabel(type)}
                         </SelectItem>
                       ))}
                     </SelectContent>

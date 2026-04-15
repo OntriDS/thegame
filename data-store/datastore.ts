@@ -581,17 +581,8 @@ export async function upsertItem(item: Item, options?: { skipWorkflowEffects?: b
     }
   }
 
-  // Data Normalization: Standardize status strings to Enum values
-  const rawStatus = (itemNorm.status || '').toString().toLowerCase();
-  let normalizedStatus = itemNorm.status;
-
-  if (rawStatus === 'sold' || rawStatus === 'itemstatus.sold') {
-    normalizedStatus = ItemStatus.SOLD;
-  }
-
   const saved = await repoUpsertItem({
-    ...itemNorm,
-    status: normalizedStatus
+    ...itemNorm
   });  // ✅ Item persisted here
 
   // Phase 2: Rolling Summary Update

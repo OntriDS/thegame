@@ -22,6 +22,7 @@ import { MapPin, Package, Trash2 } from 'lucide-react';
 
 import { getAllSiteNames } from '@/lib/utils/site-options-utils';
 import { ClientAPI } from '@/lib/client-api';
+import { getCollectionLabel } from '@/lib/constants/collection-labels';
 import DeleteModal from './delete-submodal';
 
 interface BulkEditModalProps {
@@ -163,9 +164,9 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
               <SelectValue placeholder="Select collection" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="none">No Collection</SelectItem>
+              <SelectItem value="none">{getCollectionLabel(Collection.NO_COLLECTION)}</SelectItem>
               {Object.values(Collection).map(collection => (
-                <SelectItem key={collection} value={collection}>{collection}</SelectItem>
+                <SelectItem key={collection} value={collection}>{getCollectionLabel(collection)}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -309,7 +310,7 @@ export default function BulkEditModal({ open, onOpenChange, itemType, sites, onC
                 <SelectContent>
                   <SelectItem value="all">All Collections</SelectItem>
                   {Object.values(Collection).map(collection => (
-                    <SelectItem key={collection} value={collection}>{collection}</SelectItem>
+                    <SelectItem key={collection} value={collection}>{getCollectionLabel(collection)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

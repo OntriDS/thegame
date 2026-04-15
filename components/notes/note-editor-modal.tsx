@@ -13,6 +13,8 @@ import { Note, Notebook } from '@/types/entities';
 import { NotebookType, NoteColor, NOTE_TAGS } from '@/types/enums';
 import { getZIndexClass } from '@/lib/utils/z-index-utils';
 import { getColorLabel } from '@/lib/constants/color-constants';
+import { getStationDisplayLabel } from '@/lib/constants/business-structure-labels';
+import type { Station } from '@/types/type-aliases';
 import { parseRichText } from '@/lib/utils/rich-text-utils';
 import { RichTextEditor } from './rich-text-editor';
 import {
@@ -492,7 +494,7 @@ export function NoteEditorModal({
                       // Business Structure tags
                       ...NOTE_TAGS.map(tag => ({
                         value: tag,
-                        label: tag,
+                        label: getStationDisplayLabel(tag as Station),
                         group: 'Business Structure'
                       })),
                       // Custom tags from ALL notes

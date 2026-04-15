@@ -17,6 +17,8 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { NOTE_TAGS } from '@/types/enums';
+import { getStationDisplayLabel } from '@/lib/constants/business-structure-labels';
+import type { Station } from '@/types/type-aliases';
 import { Note } from '@/types/entities';
 
 interface NotesSearchFilterProps {
@@ -200,7 +202,7 @@ export function NotesSearchFilter({
                 // Business Structure tags
                 ...NOTE_TAGS.map(tag => ({ 
                   value: tag, 
-                  label: tag,
+                  label: getStationDisplayLabel(tag as Station),
                   group: 'Business Structure'
                 })),
                 // Custom tags (others)

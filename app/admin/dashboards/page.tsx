@@ -94,7 +94,7 @@ export default function DashboardsPage() {
       const companyBreakdown = aggregateRecordsByStation(companyRecords, companyStations);
       const companyTotals = calculateTotals(companyBreakdown);
 
-      const personalStations = BUSINESS_STRUCTURE.PERSONAL;
+      const personalStations = BUSINESS_STRUCTURE.personal;
       const personalBreakdown = aggregateRecordsByStation(personalRecords, personalStations as any);
       const personalTotals = calculateTotals(personalBreakdown);
 

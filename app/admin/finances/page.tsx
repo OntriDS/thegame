@@ -33,6 +33,8 @@ import { Plus, DollarSign, TrendingUp, TrendingDown, Building2, User, Archive, L
 import { MONTHS, getYearRange, getMonthName, getCurrentMonth } from '@/lib/constants/date-constants';
 import { BUSINESS_STRUCTURE, ItemType, FOUNDER_PLAYER_ID } from '@/types/enums';
 import { getCompanyAreas, getPersonalAreas, isCompanyStation, getAreaForStation } from '@/lib/utils/business-structure-utils';
+import { getAreaDisplayLabel, getStationDisplayLabel } from '@/lib/constants/business-structure-labels';
+import type { Area, Station } from '@/types/type-aliases';
 import { CompanyRecordsList, PersonalRecordsList } from '@/components/finances/financial-records-components';
 import { MonthSelector } from '@/components/ui/month-selector';
 import { formatMonthKey, getCurrentMonthKey, sortMonthKeys, formatDisplayDate } from '@/lib/utils/date-utils';
@@ -1339,13 +1341,15 @@ export default function FinancesPage() {
 const getCompanyCategoryOptions = () => {
   const options: Array<{ value: string; label: string; group: string }> = [];
 
-  Object.entries(BUSINESS_STRUCTURE).forEach(([station, categories]) => {
-    if (station !== 'PERSONAL') {
+  Object.entries(BUSINESS_STRUCTURE).forEach(([areaKey, categories]) => {
+    if (areaKey !== 'personal') {
+      const area = areaKey as Area;
       categories.forEach((category) => {
+        const st = category as Station;
         options.push({
           value: category,
-          label: category,
-          group: station
+          label: getStationDisplayLabel(st),
+          group: getAreaDisplayLabel(area),
         });
       });
     }
@@ -1357,11 +1361,12 @@ const getCompanyCategoryOptions = () => {
 const getPersonalCategoryOptions = () => {
   const options: Array<{ value: string; label: string; group: string }> = [];
 
-  BUSINESS_STRUCTURE['PERSONAL'].forEach((category) => {
+  BUSINESS_STRUCTURE.personal.forEach((category) => {
+    const st = category as Station;
     options.push({
       value: category,
-      label: category,
-      group: 'PERSONAL'
+      label: getStationDisplayLabel(st),
+      group: getAreaDisplayLabel('personal'),
     });
   });
 

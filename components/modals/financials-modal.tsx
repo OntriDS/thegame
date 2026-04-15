@@ -33,6 +33,7 @@ import {
   FinancialStatus
 } from '@/types/enums';
 import { getCompanyAreas, getPersonalAreas, isCompanyStation, isPersonalStation, getAreaForStation } from '@/lib/utils/business-structure-utils';
+import { getStationDisplayLabel } from '@/lib/constants/business-structure-labels';
 import type { Station, SubItemType } from '@/types/type-aliases';
 import { ItemType, Collection, CharacterRole, FOUNDER_CHARACTER_ID, EntityType } from '@/types/enums';
 import { getSubTypesForItemType } from '@/lib/utils/item-utils';
@@ -41,6 +42,7 @@ import { createSiteOptionsWithCategories } from '@/lib/utils/site-options-utils'
 import { ClientAPI } from '@/lib/client-api';
 import { dispatchEntityUpdated, entityTypeToKind } from '@/lib/ui/ui-events';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
+import { getCollectionLabel } from '@/lib/constants/collection-labels';
 // Side effects handled by parent component via API calls
 import { v4 as uuid } from 'uuid';
 import { PRICE_STEP, QUANTITY_STEP, J$_TO_USD_RATE } from '@/lib/constants/app-constants';
@@ -78,14 +80,16 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
   // User preference functions - memoized to prevent dependency changes
   const getLastUsedStation = useCallback((): Station => {
     const saved = getPreference('finrec-modal-last-station');
-    return (saved as Station) || ('Strategy' as Station);
+    return (saved as Station) || ('strategy' as Station);
   }, [getPreference]);
 
   const getLastUsedCategory = useCallback((station: Station): Station => {
     const saved = getPreference(`finrec-modal-last-category-${station}`);
     if (saved) return saved as Station;
-    const categories = BUSINESS_STRUCTURE[station as keyof typeof BUSINESS_STRUCTURE];
-    return categories && categories.length > 0 ? categories[0] : categories[0] as Station;
+    const area = getAreaForStation(station);
+    if (!area) return 'strategy' as Station;
+    const categories = BUSINESS_STRUCTURE[area];
+    return (categories && categories.length > 0 ? categories[0] : station) as Station;
   }, [getPreference]);
 
 
@@ -577,7 +581,8 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
   };
 
   // Get available categories based on selected station
-  const availableCategories = BUSINESS_STRUCTURE[formData.station as keyof typeof BUSINESS_STRUCTURE] || [];
+  const finrecStationArea = getAreaForStation(formData.station);
+  const availableCategories = finrecStationArea ? [...BUSINESS_STRUCTURE[finrecStationArea]] : [];
 
   return (
     <>
@@ -598,7 +603,8 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
               </div>
               <div className="text-sm font-medium text-muted-foreground">
                 Financial Type: <span className="text-foreground">{isCompany ? 'Company' : 'Personal'}</span> |
-                Station: <span className="text-foreground">{formData.station}</span>
+                Station:{' '}
+                <span className="text-foreground">{getStationDisplayLabel(formData.station)}</span>
               </div>
               <div className="mt-2 flex flex-wrap items-end gap-3">
                 <div>
@@ -944,7 +950,7 @@ export default function FinancialsModal({ record, year, month, open, onOpenChang
                               <SelectItem value="none">Uncategorized</SelectItem>
                               {Object.values(Collection).map((collection) => (
                                 <SelectItem key={collection} value={collection}>
-                                  {collection}
+                                  {getCollectionLabel(collection)}
                                 </SelectItem>
                               ))}
                             </SelectContent>

@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Note } from '@/types/entities';
 import { NotebookType } from '@/types/enums';
+import { getNotebookTypeLabel } from '@/lib/constants/notes-taxonomy-labels';
 import { NoteCard } from './note-card';
 import { NotebookSelector } from './notebook-selector';
 import { NotesSearchFilter } from './notes-search-filter';
@@ -216,13 +217,10 @@ export function NotesGrid({
       {/* Main Content */}
       <div className="lg:col-span-3 space-y-4">
         <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-semibold">
-              {selectedNotebook === NotebookType.ALL_NOTES 
-                ? 'All Notes' 
-                : Object.values(NotebookType).find(n => n === selectedNotebook)?.replace('_', ' ') || 'Notes'
-              }
-            </h2>
+        <div>
+          <h2 className="text-xl font-semibold">
+            {getNotebookTypeLabel(selectedNotebook as NotebookType) || 'Notes'}
+          </h2>
             <p className="text-sm text-muted-foreground">
               {filteredNotes.length} note{filteredNotes.length !== 1 ? 's' : ''}
             </p>

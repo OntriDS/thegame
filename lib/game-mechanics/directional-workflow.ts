@@ -184,7 +184,7 @@ function generateTargetData(
         ...baseData,
         type: 'ARTWORK', // Default type, should be configurable
         status: 'FOR_SALE',
-        station: 'ARTDESIGN',
+        station: 'digital-art',
         category: 'Artworks',
         stock: [],
         unitCost: 0,
@@ -216,7 +216,7 @@ function generateTargetData(
         ...baseData,
         year: new Date().getFullYear(),
         month: new Date().getMonth() + 1,
-        station: 'SALES',
+        station: 'direct-sales',
         category: 'Direct',
         type: 'company',
         cost: 0,

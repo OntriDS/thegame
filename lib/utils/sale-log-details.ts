@@ -4,10 +4,10 @@ import { SaleType } from '@/types/enums';
 /** Lean payload fields persisted on SALE entity lifecycle log rows */
 export function getSaleLogDetails(sale: Sale) {
   const stationMap: Record<string, string> = {
-    [SaleType.DIRECT]: 'Direct-Sales',
-    [SaleType.BOOTH]: 'Booth-Sales',
-    [SaleType.NETWORK]: 'Network',
-    [SaleType.ONLINE]: 'Online-Sales',
+    [SaleType.DIRECT]: 'direct-sales',
+    [SaleType.BOOTH]: 'booth-sales',
+    [SaleType.NETWORK]: 'network',
+    [SaleType.ONLINE]: 'online-sales',
   };
 
   return {

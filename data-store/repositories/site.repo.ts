@@ -1,7 +1,7 @@
 // data-store/repositories/site.repo.ts
 import { kvGet, kvMGet, kvSet, kvDel, kvSAdd, kvSRem, kvSMembers } from '../kv';
 import { buildDataKey, buildIndexKey } from '../keys';
-import { EntityType } from '@/types/enums';
+import { EntityType, SiteType } from '@/types/enums';
 import type { Site, Settlement, PhysicalSiteMetadata } from '@/types/entities';
 
 const ENTITY = EntityType.SITE;
@@ -84,7 +84,7 @@ export async function removeSettlement(id: string): Promise<void> {
 export async function getSitesBySettlement(settlementId: string): Promise<Site[]> {
   const allSites = await getAllSites();
   return allSites.filter(site => {
-    if (site.metadata.type !== 'PHYSICAL') return false;
+    if (site.metadata.type !== SiteType.PHYSICAL) return false;
     const physicalMeta = site.metadata as PhysicalSiteMetadata;
     return physicalMeta.settlementId === settlementId;
   });
@@ -105,7 +105,7 @@ export async function getSitesByRadius(
   });
   
   return allSites.filter(site => {
-    if (site.metadata.type !== 'PHYSICAL') return false;
+    if (site.metadata.type !== SiteType.PHYSICAL) return false;
     const physicalMeta = site.metadata as PhysicalSiteMetadata;
     const settlement = settlementsMap.get(physicalMeta.settlementId);
     

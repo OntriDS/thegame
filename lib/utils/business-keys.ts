@@ -2,7 +2,7 @@
 // Business key generation for bulk operations deduplication
 // Business keys identify records based on real-world properties, not technical IDs
 
-import { EntityType } from '@/types/enums';
+import { EntityType, Collection } from '@/types/enums';
 import type { Item, Task, Sale, FinancialRecord, Character, Player, Site } from '@/types/entities';
 
 /**
@@ -38,12 +38,12 @@ export function getBusinessKey(entityType: EntityType, record: any): string {
 /**
  * Generate business key for Item entity
  * Key: type|name|collection (lowercased, trimmed)
- * Collection defaults to "No Collection" if not provided (matches Collection.NO_COLLECTION enum)
+ * Collection defaults to the `Collection.NO_COLLECTION` slug if not provided (matches Collection enum)
  */
 function getItemBusinessKey(item: Item): string {
   const type = (item.type || '').trim().toLowerCase();
   const name = (item.name || '').trim().toLowerCase();
-  const collection = (item.collection || 'No Collection').toString().trim().toLowerCase();
+  const collection = (item.collection || Collection.NO_COLLECTION).toString().trim().toLowerCase();
   
   return `${type}|${name}|${collection}`;
 }

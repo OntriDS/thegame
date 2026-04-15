@@ -483,7 +483,7 @@ async function resolveSaleDerivedFinrecFields(
   const salesChannel =
     (hasChannel ? sale.salesChannel : null) ||
     getSalesChannelFromSaleType(String(sale.type)) ||
-    ('Direct-Sales' as Station);
+    ('direct-sales' as Station);
   const station = salesChannel;
 
   const { customerLabel, siteLabel } = await resolveSaleCustomerAndSiteLabels(sale);
@@ -838,11 +838,11 @@ export async function createFinancialRecordFromBoothSale(sale: Sale): Promise<vo
         description: `Impact Ledger: Commission split with partner`,
         year: split.date.getFullYear(),
         month: split.date.getMonth() + 1,
-        station: 'Booth-Sales' as Station,
+        station: 'booth-sales' as Station,
         type: 'company',
         siteId: sale.siteId,
         sourceSaleId: sale.id,
-        salesChannel: 'Booth-Sales' as Station,
+        salesChannel: 'booth-sales' as Station,
         revenue: split.myCommFromPartner,
         cost: split.partnerCommFromMe,
         netCashflow: split.myCommFromPartner - split.partnerCommFromMe,
@@ -920,9 +920,8 @@ export async function createFinancialRecordFromPointsExchange(
     console.log(`[createFinancialRecordFromPointsExchange] Creating financial record for points exchange: ${j$Received} J$`);
 
     const currentDate = getUTCNow();
-    // Use 'Earnings' station from BUSINESS_STRUCTURE.PERSONAL (single source of truth for exchanged points)
-    const rewardsStation = BUSINESS_STRUCTURE.PERSONAL.find(s => s === 'Earnings');
-    if (!rewardsStation) throw new Error('Earnings station not found in BUSINESS_STRUCTURE');
+    const rewardsStation = BUSINESS_STRUCTURE.personal.find((s) => s === 'rewards');
+    if (!rewardsStation) throw new Error('rewards station not found in BUSINESS_STRUCTURE');
     const station = rewardsStation as Station;
 
     const newFinrec: FinancialRecord = {
@@ -981,7 +980,7 @@ export async function createFinancialRecordFromJ$CashOut(
     console.log(`[createFinancialRecordFromJ$CashOut] Creating financial records for cash-out: ${j$Sold} J$ for ${cashOutType}`);
 
     // Determine company station (always Team for buybacks now that Founder is removed as a station)
-    const teamStation = BUSINESS_STRUCTURE.ADMIN.find(s => s === 'Team');
+    const teamStation = BUSINESS_STRUCTURE.admin.find((s) => s === 'team');
     if (!teamStation) throw new Error('Team station not found in BUSINESS_STRUCTURE');
     const companyStation = teamStation as Station;
 
@@ -1021,10 +1020,9 @@ export async function createFinancialRecordFromJ$CashOut(
     const currentDate = getUTCNow();
     const exchangeType = cashOutType === 'USD' ? 'J$_TO_USD' : 'J$_TO_ZAPS';
 
-    // Get Earnings station from BUSINESS_STRUCTURE.PERSONAL
-    const earningsStation = BUSINESS_STRUCTURE.PERSONAL.find(s => s === 'Earnings');
-    if (!earningsStation) throw new Error('Earnings station not found in BUSINESS_STRUCTURE');
-    const personalStation = earningsStation as Station;
+    const personalRewardsStation = BUSINESS_STRUCTURE.personal.find((s) => s === 'rewards');
+    if (!personalRewardsStation) throw new Error('rewards station not found in BUSINESS_STRUCTURE');
+    const personalStation = personalRewardsStation as Station;
 
     // Create personal FinancialRecord (J$ deduction)
     const personalFinrec: FinancialRecord = {

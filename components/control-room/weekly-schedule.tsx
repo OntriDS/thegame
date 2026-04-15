@@ -2,10 +2,11 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { Task } from '@/types/entities';
-import { TaskType, TaskStatus } from '@/types/enums';
+import { TaskType, TaskStatus, PointType } from '@/types/enums';
 import { format, addDays, startOfWeek, getHours, setHours, setMinutes, differenceInMinutes, isSameDay, differenceInDays } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useThemeColors } from '@/lib/hooks/use-theme-colors';
+import { getPointTypeLabel } from '@/lib/constants/player-taxonomy-labels';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ChevronLeft, ChevronRight, Plus, Star, Zap, Brain, TrendingUp, Heart, Clock } from 'lucide-react';
@@ -319,15 +320,42 @@ export default function WeeklySchedule({ tasks, onNewTask, onEditTask, onTaskUpd
         return (xp > 0 || rp > 0 || fp > 0 || hp > 0);
     };
 
+    const POINT_TYPE_METADATA: Array<{
+        type: PointType;
+        icon: typeof Star;
+        color: string;
+    }> = [
+        { type: PointType.XP, icon: Star, color: 'text-yellow-400' },
+        { type: PointType.RP, icon: Brain, color: 'text-purple-400' },
+        { type: PointType.FP, icon: Heart, color: 'text-pink-400' },
+        { type: PointType.HP, icon: Zap, color: 'text-green-400' },
+    ];
+
     // Get individual point types for display with names
     const getPointTypes = (task: Task) => {
         if (!task.rewards?.points) return [];
-        const { xp, rp, fp, hp } = task.rewards.points;
-        const points = [];
-        if (xp > 0) points.push({ type: 'xp', value: xp, icon: Star, label: 'XP', color: 'text-yellow-400' });
-        if (rp > 0) points.push({ type: 'rp', value: rp, icon: Brain, label: 'RP', color: 'text-purple-400' });
-        if (fp > 0) points.push({ type: 'fp', value: fp, icon: Heart, label: 'FP', color: 'text-pink-400' });
-        if (hp > 0) points.push({ type: 'hp', value: hp, icon: Zap, label: 'HP', color: 'text-green-400' });
+        const pointsObject = task.rewards.points as Record<string, number>;
+        const points: Array<{
+            type: PointType;
+            value: number;
+            icon: typeof Star;
+            label: string;
+            color: string;
+        }> = [];
+
+        for (const metadata of POINT_TYPE_METADATA) {
+            const value = pointsObject[metadata.type] || 0;
+            if (value > 0) {
+                points.push({
+                    type: metadata.type,
+                    value,
+                    icon: metadata.icon,
+                    label: getPointTypeLabel(metadata.type),
+                    color: metadata.color,
+                });
+            }
+        }
+
         return points;
     };
 

@@ -17,6 +17,7 @@ import { getZIndexClass } from '@/lib/utils/z-index-utils';
 import { getAreaForStation } from '@/lib/utils/business-structure-utils';
 import { createStationCategoryOptions, getStationFromCombined, getCategoryFromCombined } from '@/lib/utils/searchable-select-utils';
 import type { Station } from '@/types/type-aliases';
+import { getPaymentMethodLabel } from '@/lib/constants/sales-taxonomy-labels';
 
 export interface SalePaymentLine {
   id: string;
@@ -267,7 +268,7 @@ export default function SalePaymentsSubModal({
                         value={payment.amount}
                         onChange={(amount) => handleAmountChange(payment.id, amount)}
                         placeholder="0.00"
-                        className={`h-8 text-xs ${PAYMENT_METHOD_CATEGORIES.SPECIAL.includes(payment.method as any) ? 'opacity-75' : ''}`}
+                        className={`h-8 text-xs ${PAYMENT_METHOD_CATEGORIES.SPECIAL.includes(payment.method) ? 'opacity-75' : ''}`}
                       />
                     </div>
                     <div className="col-span-2">
@@ -285,10 +286,10 @@ export default function SalePaymentsSubModal({
                       </Select>
                     </div>
                     <div className="col-span-3">
-                      {PAYMENT_METHOD_CATEGORIES.SPECIAL.includes(payment.method as any) ? (
+                      {PAYMENT_METHOD_CATEGORIES.SPECIAL.includes(payment.method) ? (
                         // Show special methods as read-only with styling
                         <div className="h-8 px-3 py-1 bg-muted/50 border rounded-md flex items-center text-xs">
-                          <span className="text-muted-foreground">{payment.method}</span>
+                          <span className="text-muted-foreground">{getPaymentMethodLabel(payment.method)}</span>
                           <Badge variant="secondary" className="ml-2 text-xs">
                             Other Method
                           </Badge>
@@ -303,9 +304,9 @@ export default function SalePaymentsSubModal({
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            {PAYMENT_METHOD_CATEGORIES.REGULAR.map((methodKey) => (
-                              <SelectItem key={methodKey} value={PaymentMethod[methodKey as keyof typeof PaymentMethod]}>
-                                {PaymentMethod[methodKey as keyof typeof PaymentMethod]}
+                            {PAYMENT_METHOD_CATEGORIES.REGULAR.map((method) => (
+                              <SelectItem key={method} value={method}>
+                                {getPaymentMethodLabel(method)}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -317,7 +318,7 @@ export default function SalePaymentsSubModal({
                         value={payment.notes || ''}
                         onChange={(e) => handleNotesChange(payment.id, e.target.value)}
                         placeholder="Notes"
-                        className={`h-8 text-xs ${PAYMENT_METHOD_CATEGORIES.SPECIAL.includes(payment.method as any) ? 'opacity-75' : ''}`}
+                        className={`h-8 text-xs ${PAYMENT_METHOD_CATEGORIES.SPECIAL.includes(payment.method) ? 'opacity-75' : ''}`}
                       />
                     </div>
                     <div className="col-span-1 flex justify-center">

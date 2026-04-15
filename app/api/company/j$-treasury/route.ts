@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
     // Filter for company records with Team station
     const companyRecords = allRecords.filter(record =>
       record.type === 'company' &&
-      (record.station === 'Team')
+      record.station === 'team'
     );
 
     if (companyRecords.length === 0) {

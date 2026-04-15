@@ -9,9 +9,10 @@ import { Download, Upload, FileText } from 'lucide-react';
 import { CSVImport } from './csv-import';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ClientAPI } from '@/lib/client-api';
-import { ItemType, ItemStatus } from '@/types/enums';
+import { ItemType, ItemStatus, Collection } from '@/types/enums';
 import { calculateTotalQuantity } from '@/lib/utils/business-utils';
 import { normalizeItemTypeString } from '@/lib/item-taxonomy-normalize';
+import { getCollectionLabel } from '@/lib/constants/collection-labels';
 
 export default function ItemsImportExport() {
   const [isImportOpen, setIsImportOpen] = useState(false);
@@ -237,7 +238,7 @@ function convertItemsToCSV(items: any[]): string {
       escapeCSVField(totalQuantity),
       escapeCSVField(site),
       escapeCSVField(item.status),
-      escapeCSVField(item.collection || 'No Collection'),
+      escapeCSVField(getCollectionLabel(item.collection || Collection.NO_COLLECTION)),
       escapeCSVField(item.unitCost || 0),
       escapeCSVField(item.additionalCost || 0),
       escapeCSVField(item.price || 0),

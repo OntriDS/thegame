@@ -18,6 +18,7 @@ import { calculateTotalQuantity } from '@/lib/utils/business-utils';
 import { getAllStations } from '@/lib/utils/business-structure-utils';
 import { getSiteByName } from '@/lib/utils/site-options-utils';
 import { normalizeItemTypeString, normalizeSubItemTypeForItemType } from '@/lib/item-taxonomy-normalize';
+import { normalizeCollectionValue } from '@/lib/constants/collection-labels';
 
 type ImportMode = 'replace' | 'merge' | 'add-only';
 
@@ -197,7 +198,7 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
 
       // Stock is already properly set above based on site validation
 
-      // Determine item type from CSV or use selected type (legacy title-case accepted)
+      // Determine item type from CSV or use selected type
       const rawItemType = row.ItemType || row.itemType || ItemType.DIGITAL;
       const resolvedItemType = normalizeItemTypeString(String(rawItemType));
       if (!resolvedItemType || !Object.values(ItemType).includes(resolvedItemType)) {
@@ -208,9 +209,10 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
 
       const finalItemType = resolvedItemType;
 
-      // Handle collection - if empty, set to "No Collection"
-      const collection = row.Collection || row.collection;
-      const finalCollection = collection && collection.trim() !== '' ? collection : 'No Collection';
+      // Handle collection - map uploaded label or canonical slug to a stored collection
+      const collectionInput = row.Collection || row.collection;
+      const normalizedCollection = normalizeCollectionValue(collectionInput);
+      const finalCollection = normalizedCollection ?? Collection.NO_COLLECTION;
 
       // Determine status - Digital-Art defaults to "Idle", others to "For Sale"
       const status = row.Status || row.status;
@@ -241,8 +243,8 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
         type: finalItemType,
         collection: finalCollection,
         status: finalStatus,
-        station: (row.Station || row.station || 'Strategy') as Station,
-        area: 'ADMIN' as Area, // Default area for imported items
+        station: (row.Station || row.station || 'strategy') as Station,
+        area: 'admin' as Area, // Default area for imported items
         stock,
         dimensions: width > 0 || height > 0 ? { width, height, area } : undefined,
         size,

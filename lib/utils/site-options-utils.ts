@@ -1,5 +1,6 @@
 import { Site } from '@/types/entities';
 import { SiteType } from '@/types/enums';
+import { getSiteTypeLabel } from '@/lib/constants/site-taxonomy-labels';
 
 /**
  * Creates site options for SearchableSelect components from Site entities
@@ -15,7 +16,7 @@ export const createSiteOptions = (sites: Site[]): Array<{ value: string; label: 
   return sites.map(site => ({
     value: site.id,
     label: site.name,
-    group: site.metadata.type || 'PHYSICAL' // Default to PHYSICAL if type not set
+    group: site.metadata.type ? getSiteTypeLabel(site.metadata.type) : getSiteTypeLabel(SiteType.PHYSICAL)
   }));
 };
 
@@ -31,7 +32,7 @@ export const createSiteOptions = (sites: Site[]): Array<{ value: string; label: 
  */
 export const createSiteOptionsWithCategories = (sites: Site[]): Array<{ value: string; label: string; category?: string }> => {
   // Enforce enum-defined order for groups: PHYSICAL → DIGITAL → SYSTEM
-  const groupOrder: Record<string, number> = {
+  const groupOrder: Record<SiteType, number> = {
     [SiteType.PHYSICAL]: 0,
     [SiteType.DIGITAL]: 1,
     [SiteType.SYSTEM]: 2
@@ -48,11 +49,7 @@ export const createSiteOptionsWithCategories = (sites: Site[]): Array<{ value: s
 
   return sortedSites.map(site => {
     const siteType = site.metadata?.type || SiteType.PHYSICAL;
-    const category = siteType === SiteType.DIGITAL
-      ? 'DIGITAL'
-      : siteType === SiteType.SYSTEM
-        ? 'SYSTEM'
-        : 'PHYSICAL';
+    const category = getSiteTypeLabel(siteType);
 
     return {
       value: site.id,
