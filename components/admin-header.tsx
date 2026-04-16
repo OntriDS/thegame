@@ -2,59 +2,28 @@
 
 import Link from 'next/link'
 import { ModeToggle } from '@/components/ui/mode-toggle'
-import { useEffect, useState } from 'react'
+import { useMemo } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { showKeyboardShortcutsHelp } from '@/lib/hooks/use-keyboard-shortcuts'
 import { Button } from '@/components/ui/button'
 import { Keyboard, CircleUserRound } from 'lucide-react'
-import { ClientAPI } from '@/lib/client-api'
-import { createPermissionEvaluator } from '@/integrity/iam/permissions'
 import { ADMIN_SECTIONS } from '@/lib/constants/sections'
+import { useAuth } from '@/lib/hooks/use-auth'
 
 export function AdminHeader() {
   const router = useRouter();
   const path = usePathname();
-  const [sectionsToDisplay, setSectionsToDisplay] = useState<typeof ADMIN_SECTIONS>(ADMIN_SECTIONS);
+  const { permissions, logout } = useAuth();
 
-  useEffect(() => {
-    let isMounted = true;
-
-    const loadPermissions = async () => {
-      try {
-        const response = await fetch('/api/auth/check');
-        if (!response.ok) {
-          return;
-        }
-
-        const data = await response.json();
-        const roles = Array.isArray(data?.user?.roles) ? data.user.roles : [];
-        if (!roles.length) {
-          return;
-        }
-
-        const permissionEvaluator = createPermissionEvaluator(roles);
-        const allowedSections = ADMIN_SECTIONS.filter((section) => {
-          if (!section.permissionResource) {
-            return true;
-          }
-
-          return permissionEvaluator.can(section.permissionResource, 'enter');
-        });
-
-        if (isMounted) {
-          setSectionsToDisplay(allowedSections);
-        }
-      } catch (error) {
-        console.error('[AdminHeader] Failed to load permissions for section visibility:', error);
+  const sectionsToDisplay = useMemo(() => {
+    if (!permissions) return ADMIN_SECTIONS;
+    return ADMIN_SECTIONS.filter((section) => {
+      if (!section.permissionResource) {
+        return true;
       }
-    };
-
-    loadPermissions();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+      return permissions.can(section.permissionResource, 'enter');
+    });
+  }, [permissions]);
 
   return (
     <header className="flex items-center justify-between px-6 border-b h-14">
@@ -100,7 +69,7 @@ export function AdminHeader() {
           title="Logout"
           onClick={async () => {
             try {
-              await ClientAPI.logout();
+              await logout();
             } finally {
               router.push('/');
             }

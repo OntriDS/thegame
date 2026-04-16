@@ -9,6 +9,8 @@ export interface AuthUser {
   characterId: string;
   roles: string[];
   isActive: boolean;
+  accountId?: string;
+  sub?: string;
 }
 
 export interface AuthSession {
@@ -37,8 +39,8 @@ export interface LoginResponse {
 
 export interface AuthCheckResponse {
   authenticated: boolean;
-  user?: AuthUser;
-  permissions?: AuthPermissions;
+  user: AuthUser | null;
+  permissions: AuthPermissions | null;
   error?: string;
 }
 

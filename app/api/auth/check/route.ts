@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
 
     if (!token) {
       return NextResponse.json<AuthCheckResponse>(
-        { authenticated: false, error: 'No session token' },
+        { authenticated: false, user: null, permissions: null, error: 'No session token' },
         { status: 401 }
       );
     }
@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
 
     if (!user) {
       return NextResponse.json<AuthCheckResponse>(
-        { authenticated: false, error: 'Invalid or expired session' },
+        { authenticated: false, user: null, permissions: null, error: 'Invalid or expired session' },
         { status: 401 }
       );
     }
@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('[Auth Check API] Error:', error);
     return NextResponse.json<AuthCheckResponse>(
-      { authenticated: false, error: 'Auth check failed' },
+      { authenticated: false, user: null, permissions: null, error: 'Auth check failed' },
       { status: 500 }
     );
   }

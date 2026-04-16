@@ -1,107 +1,194 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { AuthUser, AuthPermissions } from '@/types/auth-types';
+import { AuthUser, AuthPermissions, AuthCheckResponse } from '@/types/auth-types';
 
-// Helper function to read cookies client-side
-function getCookie(name: string): string | undefined {
-  if (typeof document === 'undefined') return undefined;
-  const value = `; ${document.cookie}`;
-  const parts = value.split(`; ${name}=`);
-  if (parts.length === 2) return parts.pop()?.split(';').shift();
-  return undefined;
+const authStateSubscribers = new Set<(state: AuthCheckResponse | null) => void>();
+let sharedAuthCheck: AuthCheckResponse | null = null;
+let sharedAuthFetchPromise: Promise<AuthCheckResponse> | null = null;
+
+function notifyAuthSubscribers(state: AuthCheckResponse | null) {
+  authStateSubscribers.forEach(listener => {
+    try {
+      listener(state);
+    } catch (error) {
+      console.error('[useAuth] Auth listener failed:', error);
+    }
+  });
+}
+
+function updateSharedAuthState(state: AuthCheckResponse | null) {
+  sharedAuthCheck = state;
+  persistWindowAuthState(state);
+  notifyAuthSubscribers(state);
+}
+
+function persistWindowAuthState(state: AuthCheckResponse | null) {
+  if (typeof window === 'undefined') return;
+  (window as any).__AUTH_STATE__ = {
+    isAuthenticated: !!(state?.authenticated && state?.user),
+    user: state?.user ?? null,
+    permissions: state?.permissions ?? null,
+  };
+}
+
+function subscribeToAuthState(listener: (state: AuthCheckResponse | null) => void) {
+  authStateSubscribers.add(listener);
+  return () => {
+    authStateSubscribers.delete(listener);
+  };
+}
+
+async function fetchAuthCheckResponse(): Promise<AuthCheckResponse> {
+  const response = await fetch('/api/auth/check');
+  const base: AuthCheckResponse = {
+    authenticated: false,
+    user: null,
+    permissions: null,
+  };
+
+  try {
+    const parsed = await response.json();
+    if (!response.ok) {
+      return {
+        ...base,
+        error: parsed?.error || `Authentication check failed (${response.status})`,
+      };
+    }
+
+    return {
+      authenticated: !!parsed?.authenticated,
+      user: parsed?.user ?? null,
+      permissions: parsed?.permissions ?? null,
+      error: parsed?.error,
+    };
+  } catch (error) {
+    return {
+      ...base,
+      error: error instanceof Error ? error.message : 'Failed to parse auth check response',
+    };
+  }
+}
+
+async function ensureAuthCheck(forceRefresh = false): Promise<AuthCheckResponse> {
+  if (!forceRefresh && sharedAuthCheck) {
+    return sharedAuthCheck;
+  }
+
+  if (sharedAuthFetchPromise) {
+    return sharedAuthFetchPromise;
+  }
+
+  const promise = (async () => {
+    try {
+      const latest = await fetchAuthCheckResponse();
+      updateSharedAuthState(latest);
+      return latest;
+    } catch (error) {
+      console.warn('[useAuth] Failed to refresh auth check:', error);
+      const fallback = sharedAuthCheck ?? {
+        authenticated: false,
+        user: null,
+        permissions: null,
+        error: 'Authentication check failed',
+      };
+      updateSharedAuthState({
+        ...fallback,
+        error: fallback.error ?? (error instanceof Error ? error.message : 'Authentication check failed'),
+      });
+      return fallback;
+    } finally {
+      sharedAuthFetchPromise = null;
+    }
+  })();
+
+  sharedAuthFetchPromise = promise;
+  return promise;
 }
 
 export function useAuth() {
   const router = useRouter();
-  const [user, setUser] = useState<AuthUser | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(() => sharedAuthCheck?.user ?? null);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
-  const [permissions, setPermissions] = useState<AuthPermissions | null>(null);
+  const [error, setError] = useState<Error | null>(() =>
+    sharedAuthCheck?.error ? new Error(sharedAuthCheck.error) : null
+  );
+  const [permissions, setPermissions] = useState<AuthPermissions | null>(() => sharedAuthCheck?.permissions ?? null);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => !!(sharedAuthCheck?.authenticated && sharedAuthCheck?.user));
 
-  // Legacy passphrase detection removed with unified cookie migration.
   const isPassphraseUser = false;
 
-  // ✅ LOAD AUTH STATE BASED ON SYSTEM
-  useEffect(() => {
-    loadAuthState();
-  }, []);
-
-  async function loadAuthState() {
+  const loadAuthState = useCallback(async (forceRefresh = false) => {
     try {
       setIsLoading(true);
       setError(null);
 
-      const response = await fetch('/api/auth/check');
-      if (!response.ok) {
-        throw new Error('Authentication check failed');
-      }
-
-      const data = await response.json();
+      const data = await ensureAuthCheck(forceRefresh);
 
       if (!data.authenticated || !data.user) {
         setUser(null);
         setPermissions(null);
-
-        // Store in window for subsequent loads
+        setIsAuthenticated(false);
+        setError(new Error(data.error || 'Not authenticated'));
         if (typeof window !== 'undefined') {
           (window as any).__AUTH_STATE__ = {
             isAuthenticated: false,
             user: null,
-            permissions: null
+            permissions: null,
           };
         }
-
-        throw new Error('Not authenticated');
+        return;
       }
 
       setUser(data.user);
-      setPermissions(data.permissions);
-
-      // Store in window for subsequent loads
-      if (typeof window !== 'undefined') {
-        (window as any).__AUTH_STATE__ = {
-          isAuthenticated: true,
-          user: data.user,
-          permissions: data.permissions
-        };
-      }
-
+      setPermissions(data.permissions ?? null);
+      setIsAuthenticated(true);
       setError(null);
-      setIsLoading(false);
     } catch (err) {
       console.error('[useAuth] Error loading auth state:', err);
-      setError(err as Error);
+      setError(err instanceof Error ? err : new Error('Authentication check failed'));
       setUser(null);
       setPermissions(null);
+      setIsAuthenticated(false);
+    } finally {
       setIsLoading(false);
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    void loadAuthState();
+  }, [loadAuthState]);
+
+  useEffect(() => {
+    const handleAuthUpdate = (next: AuthCheckResponse | null) => {
+      setUser(next?.user ?? null);
+      setPermissions(next?.permissions ?? null);
+      setIsAuthenticated(!!(next?.authenticated && next?.user));
+      if (next?.error) {
+        setError(new Error(next.error));
+      } else {
+        setError(null);
+      }
+    };
+    const unsubscribe = subscribeToAuthState(handleAuthUpdate);
+    return unsubscribe;
+  }, []);
 
   async function login(username: string | null, password: string | null, rememberMe: boolean): Promise<void> {
     try {
       setIsLoading(true);
       setError(null);
 
-      // For passphrase login, we use the passphrase-login endpoint directly
-      // This is called from the login page after the passphrase is submitted
       if (username === null && password === null) {
-        console.log('[useAuth] Skipping login - called after passphrase login');
-        const response = await fetch('/api/auth/check');
-        if (response.ok) {
-          const data = await response.json();
-          if (data.authenticated && data.user) {
-            setUser(data.user);
-            setPermissions(data.permissions);
-            router.push('/admin');
-          }
+        await loadAuthState(true);
+        if (sharedAuthCheck?.authenticated && sharedAuthCheck.user) {
+          router.push('/admin');
         }
         setIsLoading(false);
         return;
       }
 
-      // Username/password login for regular users
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -116,19 +203,7 @@ export function useAuth() {
       const data = await response.json();
 
       if (data.success && data.user) {
-        setUser(data.user);
-        setPermissions(data.permissions);
-
-        // Store in window for subsequent loads
-        if (typeof window !== 'undefined') {
-          (window as any).__AUTH_STATE__ = {
-            isAuthenticated: true,
-            user: data.user,
-            permissions: data.permissions
-          };
-        }
-
-        setIsLoading(false);
+        await loadAuthState(true);
         router.push('/admin');
       } else {
         throw new Error('Login failed');
@@ -138,6 +213,7 @@ export function useAuth() {
       setError(err as Error);
       setUser(null);
       setPermissions(null);
+      setIsAuthenticated(false);
       setIsLoading(false);
     }
   }
@@ -151,24 +227,33 @@ export function useAuth() {
         method: 'POST'
       });
 
+      updateSharedAuthState({
+        authenticated: false,
+        user: null,
+        permissions: null,
+        error: 'Logged out'
+      });
+
       setUser(null);
       setPermissions(null);
+      setIsAuthenticated(false);
 
-      // Clear window state
       if (typeof window !== 'undefined') {
         (window as any).__AUTH_STATE__ = {
           isAuthenticated: false,
           user: null,
-          permissions: null
+          permissions: null,
         };
       }
 
+      setIsLoading(false);
       router.push('/admin/login');
     } catch (err) {
       console.error('[useAuth] Logout error:', err);
       setError(err as Error);
       setUser(null);
       setPermissions(null);
+      setIsAuthenticated(false);
       setIsLoading(false);
     }
   }
@@ -178,10 +263,11 @@ export function useAuth() {
     isLoading,
     error,
     permissions,
-    isAuthenticated: !!user,
+    isAuthenticated,
     isPassphraseUser,
     login,
     logout,
     refetch: loadAuthState
   };
 }
+

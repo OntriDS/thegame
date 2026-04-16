@@ -19,6 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Textarea } from '@/components/ui/textarea';
 import { ClientAPI } from '@/lib/client-api';
+import { useAuth } from '@/lib/hooks/use-auth';
 import { getZIndexClass, getModalZIndex } from '@/lib/utils/z-index-utils';
 import { useEntityUpdates } from '@/lib/hooks/use-entity-updates';
 import {
@@ -127,6 +128,7 @@ function mergeInventoryTotalsIntoAssets(assets: any, inventoryTotals: InventoryB
 
 function FinancesPageContent() {
   const { getPreference, setPreference, isLoading: preferencesLoading } = useUserPreferences();
+  const { user: authUser } = useAuth();
   const [selectedMonthKey, setSelectedMonthKey] = useState(getCurrentMonthKey());
   const [availableMonths, setAvailableMonths] = useState<string[]>([]);
   const [companySummary, setCompanySummary] = useState<CompanyMonthlySummary | null>(null);
@@ -295,7 +297,7 @@ function FinancesPageContent() {
     }
   };
 
-  const loadAssets = async () => {
+  const loadAssets = useCallback(async () => {
     try {
       const [companyData, personalData] = await Promise.all([
         ClientAPI.getCompanyAssets(),
@@ -313,26 +315,19 @@ function FinancesPageContent() {
       setCompanyAssets(mergedCompanyData);
       setPersonalAssets(personalData);
 
-      // Get current user's player ID from session (multiplayer-ready)
+      // Resolve current player's ID via shared auth state (multiplayer-ready)
       let currentPlayerId: string | null = null;
-      try {
-        const authResponse = await fetch('/api/auth/check');
-        if (authResponse.ok) {
-          const authData = await authResponse.json();
-          if (authData.authenticated && authData.user?.sub) {
-            // Check if sub is a valid UUID (account ID) before calling getAccount
-            const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(authData.user.sub);
-            if (isUUID) {
-              // Get account from session (sub is account ID)
-              const account = await ClientAPI.getAccount(authData.user.sub);
-              if (account?.playerId) {
-                currentPlayerId = account.playerId;
-              }
-            }
+      const accountIdCandidate = authUser?.accountId ?? authUser?.userId ?? null;
+      const isUUID = (value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+      if (accountIdCandidate && isUUID(accountIdCandidate)) {
+        try {
+          const account = await ClientAPI.getAccount(accountIdCandidate);
+          if (account?.playerId) {
+            currentPlayerId = account.playerId;
           }
+        } catch (error) {
+          console.error('Failed to resolve account for player lookup:', error);
         }
-      } catch (error) {
-        console.error('Failed to get current user from session:', error);
       }
 
       // Fallback to founder Player id if no session player found (not CHARACTER id — players use FOUNDER_PLAYER_ID)
@@ -368,9 +363,9 @@ function FinancesPageContent() {
       console.error('Failed to load assets:', error);
     }
 
-  };
+  }, [authUser]);
 
-  const loadPartnershipData = async () => {
+  const loadPartnershipData = useCallback(async () => {
     try {
       const [loadedContracts, loadedEntities, loadedCharacters, loadedSites] = await Promise.all([
         ClientAPI.getContracts(),
@@ -385,7 +380,7 @@ function FinancesPageContent() {
     } catch (error) {
       console.error('Failed to load partnership data:', error);
     }
-  };
+  }, []);
 
   const handleCreateBusiness = async (entity: Business) => {
     try {
@@ -432,7 +427,7 @@ function FinancesPageContent() {
     }
   };
 
-  const handleAssetsUpdate = async () => {
+  const handleAssetsUpdate = useCallback(async () => {
     try {
       const [companyData, personalData] = await Promise.all([
         ClientAPI.getCompanyAssets(),
@@ -452,9 +447,9 @@ function FinancesPageContent() {
     } catch (error) {
       console.error('Failed to update assets:', error);
     }
-  };
+  }, []);
 
-  const handleItemsUpdate = async () => {
+  const handleItemsUpdate = useCallback(async () => {
     try {
       const [companyData, inventoryTotals] = await Promise.all([
         ClientAPI.getCompanyAssets(),
@@ -465,7 +460,7 @@ function FinancesPageContent() {
     } catch (error) {
       console.error('Failed to update company inventory totals:', error);
     }
-  };
+  }, []);
 
   // Listen for financials updates to refresh summaries
   useEntityUpdates('financial', () => setRefreshKey(prev => prev + 1));
@@ -473,7 +468,6 @@ function FinancesPageContent() {
   // Listen for items updates to refresh assets
   useEntityUpdates('item', handleItemsUpdate);
 
-  // Load assets from data store and mark as hydrated
   // Load assets from data store and mark as hydrated
   useEffect(() => {
     loadAssets();
@@ -484,7 +478,7 @@ function FinancesPageContent() {
     return () => {
       window.removeEventListener('assetsUpdated', handleAssetsUpdate);
     };
-  }, []);
+  }, [loadAssets, loadPartnershipData, handleAssetsUpdate]);
 
   // Don't render until hydrated to prevent hydration mismatch
   if (!isHydrated || !companyAssets || !personalAssets) {

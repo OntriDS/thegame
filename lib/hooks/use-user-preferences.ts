@@ -6,45 +6,132 @@ interface UserPreferences {
   [key: string]: any;
 }
 
+const PREFERENCE_CACHE_KEY = 'thegame:user-preferences:cache';
+const PREFERENCE_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+let sharedPreferenceCache: Record<string, any> | null = null;
+let sharedPreferenceTimestamp = 0;
+let sharedPreferenceFetchPromise: Promise<Record<string, any>> | null = null;
+const preferenceCacheSubscribers = new Set<() => void>();
+
+function notifyPreferenceCacheSubscribers() {
+  preferenceCacheSubscribers.forEach(listener => {
+    try {
+      listener();
+    } catch (error) {
+      console.error('[UserPreferences] Cache listener failed:', error);
+    }
+  });
+}
+
+function updatePreferenceCache(value: Record<string, any>) {
+  sharedPreferenceCache = { ...value };
+  sharedPreferenceTimestamp = Date.now();
+
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem(PREFERENCE_CACHE_KEY, JSON.stringify(sharedPreferenceCache));
+    } catch (error) {
+      console.error('[UserPreferences] Failed to persist cache to localStorage:', error);
+    }
+  }
+
+  notifyPreferenceCacheSubscribers();
+}
+
+function subscribeToPreferenceCache(listener: () => void) {
+  preferenceCacheSubscribers.add(listener);
+  return () => {
+    preferenceCacheSubscribers.delete(listener);
+  };
+}
+
+function readPreferencesFromStorage(): Record<string, any> | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem(PREFERENCE_CACHE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch (error) {
+    console.error('[UserPreferences] Failed to parse cached preferences:', error);
+    return null;
+  }
+}
+
+function isPreferenceCacheFresh(): boolean {
+  if (!sharedPreferenceCache) return false;
+  return Date.now() - sharedPreferenceTimestamp < PREFERENCE_CACHE_TTL_MS;
+}
+
+async function fetchPreferencesFromServer(): Promise<Record<string, any>> {
+  const response = await fetch('/api/user-preferences');
+  if (!response.ok) {
+    throw new Error('Failed to load user preferences');
+  }
+  const data = await response.json();
+  const normalized = data ?? {};
+  updatePreferenceCache(normalized);
+  return normalized;
+}
+
+async function ensurePreferenceCache(): Promise<Record<string, any>> {
+  if (isPreferenceCacheFresh() && sharedPreferenceCache) {
+    return sharedPreferenceCache;
+  }
+
+  if (sharedPreferenceFetchPromise) {
+    return sharedPreferenceFetchPromise;
+  }
+
+  const promise = (async () => {
+    try {
+      return await fetchPreferencesFromServer();
+    } catch (error) {
+      console.warn('[UserPreferences] Failed to refresh cache:', error);
+      return sharedPreferenceCache ?? {};
+    } finally {
+      sharedPreferenceFetchPromise = null;
+    }
+  })();
+
+  sharedPreferenceFetchPromise = promise;
+  return promise;
+}
+
 export function useUserPreferences() {
-  const [preferences, setPreferences] = useState<UserPreferences>({});
+  const [preferences, setPreferences] = useState<UserPreferences>(() => sharedPreferenceCache ?? {});
   const [isLoading, setIsLoading] = useState(true);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const pendingSavesRef = useRef<Map<string, any>>(new Map());
-  const preferencesRef = useRef<UserPreferences>({});
+  const preferencesRef = useRef<UserPreferences>(sharedPreferenceCache ?? {});
 
-  // Load preferences from KV
   const loadPreferences = useCallback(async () => {
     try {
       setIsLoading(true);
-      
-      // Load from KV
-      try {
-        const response = await fetch('/api/user-preferences');
-        if (response.ok) {
-          const kvPrefs = await response.json();
-          setPreferences(kvPrefs);
-          preferencesRef.current = kvPrefs;
-        } else {
-          // If KV fails, start with empty preferences
-          setPreferences({});
-      preferencesRef.current = {};
-          preferencesRef.current = {};
-        }
-      } catch (error) {
-        console.warn('Failed to load preferences from KV:', error);
-        // Graceful degradation - start with empty preferences
-        setPreferences({});
+
+      const storedPreferences =
+        sharedPreferenceCache ?? readPreferencesFromStorage();
+
+      if (storedPreferences) {
+        setPreferences(storedPreferences);
+        preferencesRef.current = storedPreferences;
+        sharedPreferenceCache = storedPreferences;
+        sharedPreferenceTimestamp = 0;
       }
+
+      const freshPreferences = await ensurePreferenceCache();
+      setPreferences(freshPreferences);
+      preferencesRef.current = freshPreferences;
     } catch (error) {
       console.error('Error loading preferences:', error);
-      setPreferences({});
+      const fallback = sharedPreferenceCache ?? {};
+      setPreferences(fallback);
+      preferencesRef.current = fallback;
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  // Debounced save function - batches multiple preference changes
   const debouncedSave = useCallback(async () => {
     if (pendingSavesRef.current.size === 0) return;
 
@@ -52,7 +139,6 @@ export function useUserPreferences() {
     pendingSavesRef.current.clear();
 
     try {
-      // Save all pending preferences in a single request
       await fetch('/api/user-preferences', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -60,50 +146,51 @@ export function useUserPreferences() {
       });
     } catch (error) {
       console.warn('Failed to save preferences to KV:', error);
-      // Note: We don't revert the optimistic update - user sees immediate feedback
-      // The preferences will be corrected on next page load if KV is still failing
     }
   }, []);
 
-  // Save preference to KV with optimistic updates and debouncing
   const setPreference = useCallback(async (key: string, value: any) => {
     try {
-      // Update local state immediately (optimistic update)
       setPreferences(prev => {
         const updated = { ...prev, [key]: value };
         preferencesRef.current = updated;
+        updatePreferenceCache(updated);
         return updated;
       });
 
-      // Add to pending saves
       pendingSavesRef.current.set(key, value);
 
-      // Clear existing timeout
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
       }
 
-      // Set new timeout for debounced save (500ms delay)
       saveTimeoutRef.current = setTimeout(() => {
         debouncedSave();
       }, 500);
-
     } catch (error) {
       console.error('Error setting preference:', error);
     }
   }, [debouncedSave]);
 
-  // Get a specific preference value
   const getPreference = useCallback((key: string, defaultValue?: any) => {
     return preferencesRef.current[key] ?? defaultValue;
   }, []);
 
-  // Load preferences on mount
   useEffect(() => {
     loadPreferences();
   }, [loadPreferences]);
 
-  // Cleanup timeout on unmount
+  useEffect(() => {
+    const handleCacheUpdate = () => {
+      if (!sharedPreferenceCache) return;
+      setPreferences(sharedPreferenceCache);
+      preferencesRef.current = sharedPreferenceCache;
+    };
+
+    const unsubscribe = subscribeToPreferenceCache(handleCacheUpdate);
+    return unsubscribe;
+  }, []);
+
   useEffect(() => {
     return () => {
       if (saveTimeoutRef.current) {

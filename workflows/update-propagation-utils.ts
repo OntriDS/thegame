@@ -2,7 +2,7 @@
 // Comprehensive update propagation across ALL entity relationships
 
 import type { Task, Item, Sale, FinancialRecord, Character, Player } from '@/types/entities';
-import { EntityType, FOUNDER_CHARACTER_ID, TaskStatus, CharacterRole, LinkType } from '@/types/enums';
+import { EntityType, FOUNDER_CHARACTER_ID, TaskStatus, CharacterRole, LinkType, SaleType } from '@/types/enums';
 import { clearEffect, hasEffect, markEffect } from '@/data-store/effects-registry';
 import { EffectKeys } from '@/data-store/keys';
 import { getFinancialsBySourceTaskId, getFinancialsBySourceSaleId, getFinancialById, upsertFinancial, removeFinancial } from '@/data-store/datastore';
@@ -510,7 +510,7 @@ export async function updateFinancialRecordsFromSale(
 
     // NEW SALE HANDLING: If no previous sale, strictly create records
     if (!previousSale) {
-      if (sale.type === 'BOOTH') {
+      if (sale.type === SaleType.BOOTH) {
         await createFinancialRecordFromBoothSale(sale);
       } else if (sale.totals.totalRevenue > 0) {
         const effectKey = EffectKeys.sideEffect('sale', sale.id, 'financialCreated');
@@ -524,7 +524,7 @@ export async function updateFinancialRecordsFromSale(
 
     // UPDATE EXISTING SALE HANDLING
     // SPECIAL HANDLING for Booth-Sales (Split Records)
-    if (sale.type === 'BOOTH') { // Use string literal matching enum
+    if (sale.type === SaleType.BOOTH) {
       // Booth sales manage their own complex record creation/updates (Split Income/Expense)
       // If we are here, something relevant changed (Revenue, Fee, Counterparty, etc - driven by caller)
 
