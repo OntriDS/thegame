@@ -58,6 +58,7 @@ interface CharacterModalProps {
 export default function CharacterModal({ character, open, onOpenChange, onSave }: CharacterModalProps) {
   // Get current user authentication
   const { user: currentUser } = useAuth();
+  const currentUserRoles = normalizeCharacterRoles(currentUser?.roles || []);
 
   // Identity
   const [name, setName] = useState('');
@@ -202,7 +203,7 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
   const toggleRole = (role: CharacterRole, checked: boolean) => {
     const previousRoles = roles;
     const denialReason = getRoleGrantDenialReason(
-      currentUser?.roles || [],
+      currentUserRoles,
       role,
       {
         characterRoles: previousRoles,
@@ -232,7 +233,7 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
   // Special roles (badges, system-controlled)
   const specialRolesList = CHARACTER_ROLE_TYPES.SPECIAL.map(r => r as CharacterRole);
 
-  const currentUserIsFounder = currentUser?.roles?.includes(CharacterRole.FOUNDER);
+  const currentUserIsFounder = currentUserRoles.includes(CharacterRole.FOUNDER);
   const characterHasFounderRole = roles.includes(CharacterRole.FOUNDER);
 
   const shouldShowSpecialFields =
@@ -472,7 +473,7 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
                         const hasRole = roles.some(r => String(r) === String(role));
                         const behavior = ROLE_BEHAVIORS[role as keyof typeof ROLE_BEHAVIORS];
                         const canGrantForUser = canGrantSpecialRole(
-                          currentUser?.roles || [],
+                          currentUserRoles,
                           role,
                           {
                             characterRoles: roles,
@@ -489,7 +490,7 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
                         const isRestrictedRole = FOUNDER_ONLY_GRANT_ROLES.includes(role);
                         const isFounderOnlyRole = isRestrictedRole && !currentUserIsFounder;
                         const denialReason = getRoleGrantDenialReason(
-                          currentUser?.roles || [],
+                          currentUserRoles,
                           role,
                           {
                             characterRoles: roles,
