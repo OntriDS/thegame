@@ -8,7 +8,7 @@ import { LinksSubModal } from '@/components/modals/submodals/links-submodal';
 import { useState, useEffect } from 'react';
 // UTC STANDARDIZATION: Using new UTC utilities
 import { formatForDisplay } from '@/lib/utils/date-display-utils';
-import { EntityType, LogEventType } from '@/types/enums';
+import { EntityType, LogEventType, PointType } from '@/types/enums';
 import { getPointsMetadata } from '@/lib/utils/points-utils';
 import { ClientAPI } from '@/lib/client-api';
 import { cn } from '@/lib/utils';
@@ -237,18 +237,18 @@ export function PlayerLogTab({ playerLog, onReload, isReloading }: PlayerLogTabP
                       <div className="flex items-center gap-2">
                         {getPointsMetadata().map((pointType) => {
                           const points = entry.points;
-                          const pointValue = points[pointType.key.toLowerCase() as keyof typeof points] || 0;
-                          const colorClasses = {
-                            'XP': 'border-orange-600 text-orange-600',
-                            'RP': 'border-purple-600 text-purple-600', 
-                            'FP': 'border-red-600 text-red-600',
-                            'HP': 'border-green-600 text-green-600'
+                          const pointValue = points[pointType.key] || 0;
+                          const colorClasses: Record<PointType, string> = {
+                            [PointType.XP]: 'border-orange-600 text-orange-600',
+                            [PointType.RP]: 'border-purple-600 text-purple-600',
+                            [PointType.FP]: 'border-red-600 text-red-600',
+                            [PointType.HP]: 'border-green-600 text-green-600'
                           };
                           
                           return (
                             <div key={pointType.key} className={cn(
                               "px-2 py-1 rounded border text-xs font-medium",
-                              pointValue > 0 ? colorClasses[pointType.key as keyof typeof colorClasses] : "border-muted text-muted-foreground"
+                              pointValue > 0 ? colorClasses[pointType.key] : "border-muted text-muted-foreground"
                             )}>
                               {pointType.label}: {pointValue}
                             </div>
