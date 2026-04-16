@@ -5,7 +5,7 @@ import type { Task, Item, FinancialRecord, Sale, Character, Player, Site, Settle
 import { roundSaleTotals } from '@/lib/utils/financial-utils';
 import { ensureItemSaleLineIds, normalizeSale } from '@/lib/utils/sale-lines-normalize';
 import type { TaskSnapshot, ItemSnapshot, SaleSnapshot, FinancialSnapshot } from '@/types/archive';
-import { EntityType, ItemType, TaskPriority, TaskStatus, FinancialStatus, TaskType, SaleStatus, ItemStatus } from '@/types/enums';
+import { CharacterRole, EntityType, ItemType, TaskPriority, TaskStatus, FinancialStatus, TaskType, SaleStatus, ItemStatus } from '@/types/enums';
 import {
   upsertTask as repoUpsertTask,
   getAllTasks as repoGetAllTasks,
@@ -109,6 +109,46 @@ import {
   normalizeFinancialOutputTaxonomy,
   normalizeSaleOutputTaxonomy,
 } from '@/lib/item-taxonomy-normalize';
+
+type EcosystemCharacterSnapshot = {
+  id: string;
+  accountId: string;
+  name: string;
+  roles: CharacterRole[];
+  profile: Record<string, any>;
+  createdAt: string;
+  updatedAt: string;
+};
+
+const toIsoTimestamp = (value?: Date | string | null): string | null => {
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isFinite(date.getTime()) ? date.toISOString() : null;
+};
+
+const syncEcosystemCharacterSnapshot = async (character: Character): Promise<void> => {
+  if (!character.id || !character.accountId) return;
+
+  const now = new Date();
+  const snapshotKey = `iam:character:${character.id}`;
+  const existing = await kvGet<EcosystemCharacterSnapshot>(snapshotKey);
+
+  const snapshot: EcosystemCharacterSnapshot = {
+    id: character.id,
+    accountId: character.accountId,
+    name: (character.name || 'Customer').trim(),
+    roles: character.roles,
+    profile: existing?.profile || {},
+    createdAt:
+      toIsoTimestamp(existing?.createdAt) ||
+      toIsoTimestamp(character.createdAt) ||
+      toUTCISOString(now),
+    updatedAt: toUTCISOString(now),
+  };
+
+  await kvSet(snapshotKey, snapshot);
+  await kvSAdd('iam:index:characters', character.id);
+};
 
 // TASKS
 export async function upsertTask(task: Task, options?: { skipWorkflowEffects?: boolean; skipLinkEffects?: boolean; skipDuplicateCheck?: boolean }): Promise<Task> {
@@ -995,6 +1035,11 @@ export async function upsertCharacter(character: Character, options?: { skipWork
   }
 
   const saved = await repoUpsertCharacter(character);
+  try {
+    await syncEcosystemCharacterSnapshot(saved);
+  } catch (error) {
+    console.error('[Datastore] Failed syncing linked Akiles character snapshot:', error);
+  }
 
   if (!options?.skipWorkflowEffects) {
     const { onCharacterUpsert } = await import('@/workflows/entities-workflows/character.workflow');

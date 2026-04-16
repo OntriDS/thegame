@@ -4,32 +4,30 @@
  */
 import { CHARACTER_ROLE_TYPES, CharacterRole } from '@/types/enums';
 
-const normalizeRoleKey = (value: string): string =>
-  value.trim().toLowerCase().replace(/[^a-z]/g, '');
-
-const SPECIAL_LOWER = (CHARACTER_ROLE_TYPES.SPECIAL as readonly CharacterRole[]).map(
-  (r) => normalizeRoleKey(r)
+const ROLE_LOOKUP = new Set<string>(Object.values(CharacterRole) as string[]);
+const SPECIAL_ROLE_SET = new Set<CharacterRole>(
+  CHARACTER_ROLE_TYPES.SPECIAL as readonly CharacterRole[],
 );
 
-export const SPECIAL_CHARACTER_ROLE_SET = new Set<string>(SPECIAL_LOWER);
-const ROLE_CANONICAL_MAP = new Map<string, CharacterRole>(
-  (Object.values(CharacterRole) as CharacterRole[]).map((role) => [
-    normalizeRoleKey(role),
-    role
-  ] as const)
-);
+const normalizeCharacterRoleValue = (role: string): CharacterRole | undefined => {
+  const normalized = role.trim();
+  return ROLE_LOOKUP.has(normalized) ? (normalized as CharacterRole) : undefined;
+};
 
 export function characterHasSpecialRole(
-  roles: (CharacterRole | string)[] | undefined | null
+  roles: readonly (CharacterRole | string | null | undefined)[] | undefined | null
 ): boolean {
   if (!roles?.length) return false;
-  return roles.some(r => SPECIAL_CHARACTER_ROLE_SET.has(normalizeRoleKey(String(r))));
+  return roles.some((rawRole) => {
+    if (typeof rawRole !== 'string') return false;
+    const role = normalizeCharacterRoleValue(rawRole);
+    return !!role && SPECIAL_ROLE_SET.has(role);
+  });
 }
 
 export function normalizeCharacterRole(role: CharacterRole | string | null | undefined): CharacterRole | undefined {
-  if (!role) return undefined;
-  const key = normalizeRoleKey(String(role));
-  return ROLE_CANONICAL_MAP.get(key);
+  if (!role || typeof role !== 'string') return undefined;
+  return normalizeCharacterRoleValue(role);
 }
 
 export function normalizeCharacterRoles(
@@ -51,17 +49,13 @@ export function filterRolesToSpecialOnly(
   const seen = new Set<string>();
   const out: string[] = [];
   for (const r of roles) {
-    const key = normalizeRoleKey(String(r));
-    const canonicalRole = ROLE_CANONICAL_MAP.get(key);
-    if (
-      !canonicalRole ||
-      !SPECIAL_CHARACTER_ROLE_SET.has(key) ||
-      seen.has(canonicalRole)
-    ) {
+    if (typeof r !== 'string') continue;
+    const role = normalizeCharacterRoleValue(r);
+    if (!role || !SPECIAL_ROLE_SET.has(role) || seen.has(role)) {
       continue;
     }
-    seen.add(canonicalRole);
-    out.push(canonicalRole);
+    seen.add(role);
+    out.push(role);
   }
   return out;
 }

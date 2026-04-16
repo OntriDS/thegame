@@ -4,7 +4,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { iamService } from '@/lib/iam-service';
-import { AuthCheckResponse } from '@/types/auth-types';
+import { AuthCheckPayload } from '@/types/auth-types';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     const token = request.cookies.get('iam_session')?.value;
 
     if (!token) {
-      return NextResponse.json<AuthCheckResponse>(
+      return NextResponse.json<AuthCheckPayload>(
         { authenticated: false, user: null, permissions: null, error: 'No session token' },
         { status: 401 }
       );
@@ -23,23 +23,24 @@ export async function GET(request: NextRequest) {
     const user = await iamService.verifyJWT(token);
 
     if (!user) {
-      return NextResponse.json<AuthCheckResponse>(
+      return NextResponse.json<AuthCheckPayload>(
         { authenticated: false, user: null, permissions: null, error: 'Invalid or expired session' },
         { status: 401 }
       );
     }
 
-    // ✅ Get permissions for user
-    const permissions = iamService.getPermissions(user);
+    const permissions = {
+      roles: user.roles,
+    };
 
-    return NextResponse.json<AuthCheckResponse>({
+    return NextResponse.json<AuthCheckPayload>({
       authenticated: true,
       user,
       permissions,
     });
   } catch (error) {
     console.error('[Auth Check API] Error:', error);
-    return NextResponse.json<AuthCheckResponse>(
+    return NextResponse.json<AuthCheckPayload>(
       { authenticated: false, user: null, permissions: null, error: 'Auth check failed' },
       { status: 500 }
     );

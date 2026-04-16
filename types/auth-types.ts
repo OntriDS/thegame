@@ -25,6 +25,10 @@ export interface AuthPermissions {
   hasAnyRole: (roles: string[]) => boolean;
 }
 
+export interface AuthPermissionsPayload {
+  roles: string[];
+}
+
 export interface LoginRequest {
   username: string;
   password: string;
@@ -43,6 +47,11 @@ export interface AuthCheckResponse {
   permissions: AuthPermissions | null;
   error?: string;
 }
+
+export type AuthCheckPayload = Omit<AuthCheckResponse, 'permissions'> & {
+  permissions?: AuthPermissionsPayload | null;
+  user?: AuthUser | null;
+};
 
 export interface PermissionsResponse {
   can: (resource: string, action: string) => boolean;

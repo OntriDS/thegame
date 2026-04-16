@@ -2,7 +2,51 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { AuthUser, AuthPermissions, AuthCheckResponse } from '@/types/auth-types';
+import { AuthUser, AuthPermissions, AuthCheckResponse, AuthPermissionsPayload } from '@/types/auth-types';
+import { createPermissionEvaluator } from '@/integrity/iam/permissions';
+
+function getPermissionRoles(rawPermissions: unknown, fallbackRoles: string[]): string[] {
+  if (!rawPermissions || typeof rawPermissions !== 'object') {
+    return fallbackRoles;
+  }
+
+  const candidate = rawPermissions as AuthPermissionsPayload;
+  if (Array.isArray(candidate.roles)) {
+    return candidate.roles.filter((role): role is string => typeof role === 'string');
+  }
+
+  return fallbackRoles;
+}
+
+type AuthCheckPayloadResponse = Omit<AuthCheckResponse, 'user' | 'permissions'> & {
+  user?: AuthUser | null;
+  permissions?: AuthPermissionsPayload | null;
+};
+
+function isAuthPermissions(value: unknown): value is AuthPermissions {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const candidate = value as AuthPermissions;
+  return (
+    typeof candidate.can === 'function' &&
+    typeof candidate.hasRole === 'function' &&
+    typeof candidate.hasAnyRole === 'function'
+  );
+}
+
+function normalizePermissions(
+  user: AuthUser | null,
+  rawPermissions: AuthPermissionsPayload | null | undefined
+): AuthPermissions | null {
+  if (!user) return null;
+  if (isAuthPermissions(rawPermissions)) {
+    return rawPermissions;
+  }
+  const roles = getPermissionRoles(rawPermissions, user.roles);
+  return createPermissionEvaluator(roles);
+}
 
 const authStateSubscribers = new Set<(state: AuthCheckResponse | null) => void>();
 let sharedAuthCheck: AuthCheckResponse | null = null;
@@ -49,7 +93,7 @@ async function fetchAuthCheckResponse(): Promise<AuthCheckResponse> {
   };
 
   try {
-    const parsed = await response.json();
+    const parsed = (await response.json()) as AuthCheckPayloadResponse | null;
     if (!response.ok) {
       return {
         ...base,
@@ -57,10 +101,13 @@ async function fetchAuthCheckResponse(): Promise<AuthCheckResponse> {
       };
     }
 
+    const user = parsed?.user ?? null;
+    const isAuthenticated = parsed?.authenticated === true && user !== null;
+
     return {
-      authenticated: !!parsed?.authenticated,
-      user: parsed?.user ?? null,
-      permissions: parsed?.permissions ?? null,
+      authenticated: isAuthenticated,
+      user,
+      permissions: isAuthenticated ? normalizePermissions(user, parsed?.permissions) : null,
       error: parsed?.error,
     };
   } catch (error) {

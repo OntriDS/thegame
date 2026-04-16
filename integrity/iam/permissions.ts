@@ -1,3 +1,4 @@
+import { CharacterRole } from '@/types/enums';
 /**
  * IAM permissions — canonical policy (TheGame).
  *
@@ -110,19 +111,30 @@ export const PERMISSION_MATRIX: readonly PermissionRule[] = [
   { resource: 'settings', action: 'delete', roles: ['founder'] },                         // Delete Setting: Reserved to Founder
 ] as const;
 
-function normalizeRole(role: unknown): string | null {
-  if (typeof role !== 'string') return null;
-  const normalized = role.trim().toLowerCase();
-  return normalized.length ? normalized : null;
-}
+const VALID_ROLES = new Set<string>(Object.values(CharacterRole) as string[]);
 
 export function normalizeRoles(rawRoles: unknown): string[] {
   if (!rawRoles) return [];
+  const unique = new Set<string>();
+
   if (Array.isArray(rawRoles)) {
-    return rawRoles.map(normalizeRole).filter((value): value is string => !!value);
+    for (const rawRole of rawRoles) {
+      if (typeof rawRole !== 'string') continue;
+      const role = rawRole.trim();
+      if (!role || !VALID_ROLES.has(role)) continue;
+      unique.add(role);
+    }
+    return Array.from(unique);
   }
-  const role = normalizeRole(rawRoles);
-  return role ? [role] : [];
+
+  if (typeof rawRoles === 'string') {
+    const role = rawRoles.trim();
+    if (role && VALID_ROLES.has(role)) {
+      unique.add(role);
+    }
+  }
+
+  return Array.from(unique);
 }
 
 export function hasAnyRole(roles: unknown, requiredRoles: readonly string[]): boolean {
@@ -152,7 +164,7 @@ export function canAccess(
   );
 
   return matching.some((permission) =>
-    permission.roles.some((permissionRole) => normalizedRoles.includes(normalizeRole(permissionRole)!)),
+    permission.roles.some((permissionRole) => normalizedRoles.includes(permissionRole)),
   );
 }
 
@@ -198,9 +210,9 @@ export function createPermissionEvaluator(
   return {
     hasRole: (role: string) => {
       if (hasAdminRight) return true;
-      const normalizedRole = normalizeRole(role);
-      if (!normalizedRole) return false;
-      return normalizedRoles.includes(normalizedRole);
+      const trimmedRole = typeof role === 'string' ? role.trim() : '';
+      if (!trimmedRole || !VALID_ROLES.has(trimmedRole)) return false;
+      return normalizedRoles.includes(trimmedRole);
     },
     hasAnyRole: (roles: readonly string[]) => {
       if (hasAdminRight) return true;

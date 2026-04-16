@@ -15,7 +15,6 @@ import { getUTCNow, toUTCISOString, fromUTCISOString, toUTC } from '@/lib/utils/
 
 import { CharacterRole, EntityType, LinkType } from '@/types/enums';
 export { CharacterRole };
-import { normalizeCharacterRoles } from '@/lib/character-roles';
 import {
   createPermissionEvaluator,
   type AuthPermissions,
@@ -38,6 +37,37 @@ import type { Character as GameCharacter, Link, Player } from '@/types/entities'
 
 const EMAIL_VERIFICATION_TTL_MINUTES = 60;
 const EMAIL_VERIFICATION_TTL_SECONDS = EMAIL_VERIFICATION_TTL_MINUTES * 60;
+const VALID_CHARACTER_ROLES = new Set<string>(Object.values(CharacterRole) as string[]);
+
+const parseCharacterRoles = (rawRoles: unknown, label: string): CharacterRole[] => {
+  if (!rawRoles) return [];
+  if (!Array.isArray(rawRoles)) {
+    throw new Error(`${label} roles must be an array.`);
+  }
+
+  const seen = new Set<string>();
+  const parsed: CharacterRole[] = [];
+
+  for (const rawRole of rawRoles) {
+    if (typeof rawRole !== 'string') {
+      throw new Error(`${label} roles must contain role strings.`);
+    }
+
+    const role = rawRole.trim();
+    if (!role) continue;
+
+    if (!VALID_CHARACTER_ROLES.has(role)) {
+      throw new Error(`Invalid role "${role}" in ${label.toLowerCase()} roles.`);
+    }
+
+    if (!seen.has(role)) {
+      seen.add(role);
+      parsed.push(role as CharacterRole);
+    }
+  }
+
+  return parsed;
+};
 
 // --- Interfaces ---
 
@@ -748,11 +778,9 @@ export class IAMService {
       }
 
       if (data.roles && Array.isArray(data.roles)) {
-        const normalizedRoles = normalizeCharacterRoles(data.roles as (CharacterRole | string)[]);
-        data.roles = normalizedRoles;
+        data.roles = parseCharacterRoles(data.roles, 'Token');
       } else if (typeof data.roles === 'string') {
-        const normalizedRoles = normalizeCharacterRoles([data.roles as string]);
-        data.roles = normalizedRoles;
+        data.roles = parseCharacterRoles([data.roles], 'Token');
       }
 
       return data as unknown as AuthUser;

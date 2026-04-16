@@ -8,18 +8,6 @@
 // do not rely on ROLE_BENEFITS text for security.
 
 import { CharacterRole } from '@/types/enums';
-import { normalizeCharacterRole } from '@/lib/character-roles';
-
-const normalizeRoles = (roles: readonly (CharacterRole | string | null | undefined)[]): CharacterRole[] => {
-  const normalized = new Set<CharacterRole>();
-
-  roles.forEach((rawRole) => {
-    const role = normalizeCharacterRole(rawRole);
-    if (role) normalized.add(role);
-  });
-
-  return Array.from(normalized);
-};
 
 /**
  * Role Behavior Configuration
@@ -127,21 +115,20 @@ const hasEnoughJungleCoins = (jungleCoins?: number | null): boolean => {
 };
 
 type RoleGrantOptions = {
-  characterRoles?: readonly (CharacterRole | string | null | undefined)[];
+  characterRoles?: readonly CharacterRole[];
   characterJungleCoins?: number | null;
 };
 
-export const hasPlayerSelectableRole = (roles: readonly (CharacterRole | string | null | undefined)[]): boolean => {
-  return normalizeRoles(roles).some((role) => PLAYER_SELECTABLE_ROLES.includes(role));
+export const hasPlayerSelectableRole = (roles: readonly CharacterRole[]): boolean => {
+  return roles.some((role) => PLAYER_SELECTABLE_ROLES.includes(role));
 };
 
 export const canGrantSpecialRole = (
-  granterRoles: readonly (CharacterRole | string | null | undefined)[],
+  granterRoles: readonly CharacterRole[],
   targetRole: CharacterRole,
   options: RoleGrantOptions = {},
 ): boolean => {
-  const normalizedGranter = normalizeRoles(granterRoles);
-  const isFounderGranter = normalizedGranter.includes(CharacterRole.FOUNDER);
+  const isFounderGranter = granterRoles.includes(CharacterRole.FOUNDER);
 
   if (targetRole === CharacterRole.PLAYER) {
     return canGrantPlayerRole(granterRoles, options.characterRoles ?? [], targetRole);
@@ -162,7 +149,7 @@ export const canGrantSpecialRole = (
 };
 
 export const getRoleGrantDenialReason = (
-  granterRoles: readonly (CharacterRole | string | null | undefined)[],
+  granterRoles: readonly CharacterRole[],
   targetRole: CharacterRole,
   options: RoleGrantOptions = {},
 ): string | null => {
@@ -170,8 +157,7 @@ export const getRoleGrantDenialReason = (
     return null;
   }
 
-  const normalizedGranter = normalizeRoles(granterRoles);
-  const isFounderGranter = normalizedGranter.includes(CharacterRole.FOUNDER);
+  const isFounderGranter = granterRoles.includes(CharacterRole.FOUNDER);
 
   if (targetRole === CharacterRole.PLAYER) {
     return 'PLAYER role requires one of: founder, team, or apprentice role assigned first.';
@@ -189,11 +175,11 @@ export const getRoleGrantDenialReason = (
 };
 
 export const canGrantPlayerRole = (
-  granterRoles: readonly (CharacterRole | string | null | undefined)[],
-  characterRoles: readonly (CharacterRole | string | null | undefined)[],
+  granterRoles: readonly CharacterRole[],
+  characterRoles: readonly CharacterRole[],
   targetRole: CharacterRole,
 ): boolean => {
-  if (normalizeRoles(granterRoles).includes(CharacterRole.FOUNDER)) return true;
+  if (granterRoles.includes(CharacterRole.FOUNDER)) return true;
   if (targetRole !== CharacterRole.PLAYER) return true;
   return hasPlayerSelectableRole(characterRoles);
 };
