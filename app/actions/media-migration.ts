@@ -16,17 +16,22 @@ export async function initializeItemMedia(dryRun: boolean = true) {
     const totalCount = items.length;
 
     for (const item of items) {
-      if (!item.media) {
+      const hasLegacyFields = 'imageUrl' in item || 'originalFiles' in item || 'accessoryFiles' in item || 'isCollected' in item || 'collectedAt' in item || 'restockable' in item;
+      
+      if (!item.media || hasLegacyFields) {
         updatedCount++;
         if (!dryRun) {
+          // Destructure to remove legacy fields
+          const { imageUrl, originalFiles, accessoryFiles, isCollected, collectedAt, restockable, ...cleanItem } = item as any;
+          
           const updatedItem: Item = {
-            ...item,
-            media: {
+            ...cleanItem,
+            media: item.media || {
               main: "",
               thumb: "",
               gallery: [],
             },
-            sourceFileUrl: "",
+            sourceFileUrl: item.sourceFileUrl || "",
             updatedAt: new Date(),
           };
           await upsertItem(updatedItem);

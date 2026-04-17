@@ -119,7 +119,6 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
       stock: [{ siteId: primarySite, quantity: 0 }],
       quantitySold: quantityToSell,
       soldAt: soldAt,
-      isCollected: false,
       sourceRecordId: 'manual', 
       updatedAt: getUTCNow()
     };
@@ -136,8 +135,7 @@ export async function onItemUpsert(item: Item, previousItem?: Item): Promise<voi
     let updatedBaseItem: Item;
     const remainingStock = Math.max(0, previousStockTotal - quantityToSell);
 
-    // Support both new field and migration from old restockable field
-    const shouldKeepInInventory = item.keepInInventoryAfterSold ?? item.restockable ?? false;
+    const shouldKeepInInventory = item.keepInInventoryAfterSold ?? false;
 
     // Handle restockToTarget logic (consignment behavior)
     const shouldRestockToTarget = item.restockToTarget ?? false;

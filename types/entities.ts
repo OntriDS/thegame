@@ -245,8 +245,6 @@ export interface Item extends BaseEntity {
   price: number;                // target selling price
   value: number;                // actual sale price (0 if not sold)
 
-  /** @deprecated Use keepInInventoryAfterSold instead - controls whether item stays in inventory after sale */
-  restockable?: boolean;
   keepInInventoryAfterSold?: boolean;  // whether item should remain in inventory after being sold (new replacement for restockable)
   restockToTarget?: boolean;           // whether item should be restocked to target quantity when sold (mainly for consignment)
 
@@ -274,14 +272,6 @@ export interface Item extends BaseEntity {
   // LOGISTICS (Source Files for Printing (pdf, png)
   sourceFileUrl?: string;  // OPTIONAL: Google Drive link to the raw production file (PDF/PNG)
 
-  /** @deprecated Use media.main instead */
-  imageUrl?: string;            // URL to item image/photo
-
-  /** @deprecated Use sourceFileUrl or media.gallery instead */
-  originalFiles?: FileReference[];
-  /** @deprecated Use media.gallery instead */
-  accessoryFiles?: FileReference[];
-
   // Ambassador Fields (Links System - references to other entities)
   sourceTaskId?: string | null;    // e.g. related to "Order Stickers"
   sourceRecordId?: string | null;  // e.g. related to "Buy Fan" record
@@ -293,11 +283,6 @@ export interface Item extends BaseEntity {
 
   // Sale tracking
   soldAt?: Date;                   // When item was sold
-
-  /** @deprecated Items archive when sold — not via monthly collection */
-  isCollected?: boolean;
-  /** @deprecated */
-  collectedAt?: Date;
 
   // Rewards (DNA for RNA)
   rewards?: Rewards;               // Standard rewards (XP, RP, FP, HP)

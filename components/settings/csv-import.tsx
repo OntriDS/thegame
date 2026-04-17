@@ -218,24 +218,6 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
       const status = row.Status || row.status;
       const finalStatus = status || (finalItemType === ItemType.DIGITAL ? ItemStatus.IDLE : ItemStatus.FOR_SALE);
 
-      // Parse file attachments
-      const parseFileReferences = (field: string): FileReference[] => {
-        if (!field || field.trim() === '') return [];
-
-        return field.split(';').map(fileRef => {
-          const parts = fileRef.split(':');
-          if (parts.length >= 2) {
-            return {
-              url: parts[0] === 'symbolic' ? undefined : parts[0],
-              type: parts[1]
-            };
-          }
-          return { type: fileRef.trim() }; // Fallback for simple types
-        });
-      };
-
-      const originalFiles = parseFileReferences(row.OriginalFiles || row.originalFiles);
-      const accessoryFiles = parseFileReferences(row.AccessoryFiles || row.accessoryFiles);
 
       return {
         id: `imported-${Date.now()}-${index}`,
@@ -262,19 +244,15 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
           if (!raw || String(raw).trim() === '') return undefined;
           return normalizeSubItemTypeForItemType(finalItemType, String(raw)) as SubItemType | undefined;
         })(),
-        imageUrl: row.ImageUrl || undefined,
         media: {
-          main: "",
-          thumb: "",
-          gallery: [],
+          main: row.MediaMain || row.mediaMain || row.ImageUrl || row.imageUrl || "",
+          thumb: row.MediaThumb || row.mediaThumb || "",
+          gallery: row.MediaGallery || row.mediaGallery ? (row.MediaGallery || row.mediaGallery).split(';').map((s: string) => s.trim()).filter(Boolean) : [],
         },
-        sourceFileUrl: "",
-        originalFiles: originalFiles.length > 0 ? originalFiles : undefined,
-        accessoryFiles: accessoryFiles.length > 0 ? accessoryFiles : undefined,
+        sourceFileUrl: row.SourceFileUrl || row.sourceFileUrl || "",
         sourceTaskId,
         createdAt: new Date(),
         updatedAt: new Date(),
-        isCollected: false,
         links: [] // initialize links array
       };
     }));
@@ -444,17 +422,17 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
     // Get valid collections from enums to ensure template examples are always current
     const collections = Object.values(Collection);
 
-    const template = `ItemType,SubItemType,Name,TotalQuantity,Site,Status,Collection,UnitCost,AdditionalCost,Price,Value,QuantitySold,TargetAmount,SoldThisMonth,LastRestockDate,SourceTaskId,Year,ImageUrl,OriginalFiles,AccessoryFiles,Width,Height,Size
-    "${ItemType.DIGITAL}","${digitalSubtypes[0]}","Organic Imaginary Digital",0,"Digital Space","${ItemStatus.IDLE}","${collections[1]}",0.00,0.00,25.00,0.00,0,,,,"",2024,https://example.com/organic-imaginary-digital.jpg,,,,,
-    "${ItemType.ARTWORK}","${artworkSubtypes[0]}","Organic Imaginary Canvas",1,"Home","${ItemStatus.FOR_SALE}","${collections[1]}",5.00,0.00,150.00,0.00,0,,,,"",2024,https://example.com/organic-imaginary-canvas.jpg,,,,30,40,
-    "${ItemType.PRINT}","${printSubtypes[0]}","Organic Imaginary Print",0,"None","${ItemStatus.TO_ORDER}","${collections[1]}",5.00,0.00,25.00,0.00,0,,,,"",2024,https://example.com/organic-imaginary-canvas.jpg,,,,30,40,
-    "${ItemType.STICKER}","${stickerSubtypes[0]}","Red Dope Crew Sticker",100,"Feria Box","${ItemStatus.FOR_SALE}","${collections[6]}",0.30,0.00,2.50,0.00,0,,,,"",2024,https://example.com/red-dope-crew-sticker.jpg,,,,5,5,
-    "${ItemType.BUNDLE}","${bundleSubtypes[0]}","Smoking Lounge Stickers",80,"Smoking Lounge","${ItemStatus.FOR_SALE}","${collections[6]}",0.30,0.00,2.50,0.00,0,,,,"",2024,https://example.com/smoking-lounge-bundle.jpg,,,,,,,
-    "${ItemType.MERCH}","${merchSubtypes[0]}","Dope Crew T-Shirt",35,"Home","${ItemStatus.FOR_SALE}","${collections[6]}",8.00,0.00,25.00,0.00,0,,,,"",2024,https://example.com/dope-crew-tshirt.jpg,,,,,M,
-    "${ItemType.MERCH}","${merchSubtypes[2]}","Dope Crew Shoes",20,"Home","${ItemStatus.FOR_SALE}","${collections[6]}",15.00,0.00,45.00,0.00,0,,,,"",2024,https://example.com/dope-crew-tshirt.jpg,,,,,7.5,
-    "${ItemType.CRAFT}","${craftSubtypes[0]}","Gallery Frame 50x70",3,"Home","${ItemStatus.FOR_SALE}","${collections[6]}",12.00,0.00,35.00,0.00,0,,,,"",2024,https://example.com/gallery-frame.jpg,,,,,,,
-    "${ItemType.MATERIAL}","${materialSubtypes[0]}","Acrylic Paint Set",10,"Home","${ItemStatus.FOR_SALE}","Art Supplies",15.00,0.00,25.00,0.00,0,,,,"",2024,https://example.com/acrylic-paint-set.jpg,,,,,,,
-    "${ItemType.EQUIPMENT}","${equipmentSubtypes[0]}","Canvas Stretcher",2,"Home","${ItemStatus.FOR_SALE}","Art Tools",45.00,0.00,75.00,0.00,0,,,,"",2024,https://example.com/acrylic-paint-set.jpg,,,,,`;
+    const template = `ItemType,SubItemType,Name,TotalQuantity,Site,Status,Collection,UnitCost,AdditionalCost,Price,Value,QuantitySold,TargetAmount,SoldThisMonth,LastRestockDate,SourceTaskId,Year,MediaMain,MediaThumb,MediaGallery,SourceFileUrl,Width,Height,Size
+    "${ItemType.DIGITAL}","${digitalSubtypes[0]}","Digital",0,"","${ItemStatus.IDLE}","${collections[1]}",0.00,0.00,25.00,0.00,0,,,,"",2024,"items/stickers/example-main.png","items/stickers/example-thumb.jpg","items/stickers/gallery1.jpg;items/stickers/gallery2.jpg","https://drive.google.com/...",,
+    "${ItemType.ARTWORK}","${artworkSubtypes[0]}","Canvas",1,"","${ItemStatus.FOR_SALE}","${collections[1]}",5.00,0.00,150.00,0.00,0,,,,"",2024,"items/canvas/example-main.png",,,"",30,40,
+    "${ItemType.PRINT}","${printSubtypes[0]}","Print",0,"","${ItemStatus.TO_ORDER}","${collections[1]}",5.00,0.00,25.00,0.00,0,,,,"",2024,"items/prints/example-main.png",,,"",30,40,
+    "${ItemType.STICKER}","${stickerSubtypes[0]}","Sticker",100,"","${ItemStatus.FOR_SALE}","${collections[6]}",0.30,0.00,2.50,0.00,0,,,,"",2024,"items/stickers/red-dope-main.png",,,"",5,5,
+    "${ItemType.BUNDLE}","${bundleSubtypes[0]}","Bundle",80,"","${ItemStatus.FOR_SALE}","${collections[6]}",0.30,0.00,2.50,0.00,0,,,,"",2024,"items/bundles/smoking-lounge-main.png",,,"",,,,
+    "${ItemType.MERCH}","${merchSubtypes[0]}","T-Shirt",35,"","${ItemStatus.FOR_SALE}","${collections[6]}",8.00,0.00,25.00,0.00,0,,,,"",2024,"items/merch/dope-crew-tshirt-main.png",,,"",,,M
+    "${ItemType.MERCH}","${merchSubtypes[2]}","Shoes",20,"","${ItemStatus.FOR_SALE}","${collections[6]}",15.00,0.00,45.00,0.00,0,,,,"",2024,"items/merch/dope-crew-shoes-main.png",,,"",,,7.5
+    "${ItemType.CRAFT}","${craftSubtypes[0]}","Frame",3,"","${ItemStatus.FOR_SALE}","${collections[6]}",12.00,0.00,35.00,0.00,0,,,,"",2024,"items/craft/gallery-frame-main.png",,,"",,,,
+    "${ItemType.MATERIAL}","${materialSubtypes[0]}","Paints",10,"","${ItemStatus.FOR_SALE}","Art Supplies",15.00,0.00,25.00,0.00,0,,,,"",2024,"items/materials/acrylic-set-main.png",,,"",,,,
+    "${ItemType.EQUIPMENT}","${equipmentSubtypes[0]}","Machine",2,"","${ItemStatus.FOR_SALE}","Art Tools",45.00,0.00,75.00,0.00,0,,,,"",2024,"items/equipment/stretcher-main.png",,,"",,,`;
 
     const blob = new Blob([template], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);

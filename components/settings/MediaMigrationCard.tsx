@@ -51,16 +51,16 @@ export function MediaMigrationCard() {
           <CardTitle>Media Schema Migration</CardTitle>
         </div>
         <CardDescription>
-          Initializes the new R2 media schema for all existing items. 
-          This adds an empty media object to items that don&apos;t have one to ensure type safety.
+          Finalizes the R2 media schema and performs a destructive cleanup of legacy fields 
+          (imageUrl, originalFiles, accessoryFiles, isCollected, collectedAt) from all items.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-900 rounded-md p-3 flex gap-3 text-sm text-yellow-800 dark:text-yellow-200">
+        <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 rounded-md p-3 flex gap-3 text-sm text-red-800 dark:text-red-200">
           <AlertTriangle className="h-5 w-5 shrink-0" />
           <p>
-            <strong>Safe Update:</strong> This only initializes missing fields. It does not touch existing image data. 
-            Run a <strong>Dry-run</strong> first to check counts.
+            <strong>Destructive Cleanup:</strong> This will PERMANENTLY REMOVE the legacy media and collection fields from the database. 
+            Run a <strong>Dry-run</strong> first to check how many items will be cleaned.
           </p>
         </div>
 

@@ -304,8 +304,7 @@ export class MCPServer {
           price: args.value || 0,
           value: 0,
           quantitySold: 0,
-          targetAmount: undefined,
-          isCollected: false
+          targetAmount: undefined
         };
         return await DataStore.upsertItem(item);
       }

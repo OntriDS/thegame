@@ -99,8 +99,6 @@ export async function createItemFromTask(task: Task): Promise<Item | null> {
       quantitySold: 0,
       sourceTaskId: task.id, // Link item back to the task that created it
       ownerCharacterId: task.customerCharacterId || null, // Emissary: Pass customer as item owner
-      isCollected: false,
-      collectedAt: undefined,
       year: (task.collectedAt || task.doneAt || getUTCNow()).getFullYear(), // Use task's date
       createdAt: getUTCNow(),
       updatedAt: getUTCNow(),
@@ -218,8 +216,6 @@ export async function createItemFromRecord(record: FinancialRecord): Promise<Ite
       quantitySold: 0,
       sourceRecordId: record.id, // Link item back to the record that created it
       ownerCharacterId: resolvedOwnerCharacterId,
-      isCollected: false,
-      collectedAt: undefined,
       year: record.year, // Use record's year
       createdAt: getUTCNow(),
       updatedAt: getUTCNow(),

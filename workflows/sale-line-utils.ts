@@ -149,8 +149,7 @@ export async function processItemSaleLine(line: ItemSaleLine, sale: Sale): Promi
     const remainingStock = updatedItem.stock.reduce((sum, stockPoint) => sum + stockPoint.quantity, 0);
 
     // Handle keepInInventoryAfterSold logic
-    // Support both new field and migration from old restockable field
-    const shouldKeepInInventory = item.keepInInventoryAfterSold ?? item.restockable ?? false;
+    const shouldKeepInInventory = item.keepInInventoryAfterSold ?? false;
 
     // Handle restockToTarget logic (mainly for Network Sales)
     const shouldRestockToTarget = item.restockToTarget ?? false;
@@ -442,7 +441,6 @@ export async function ensureSoldItemEntities(sale: Sale, previousSale?: Sale): P
           id: primaryCloneId,
           name: item.name,
           status: ItemStatus.SOLD,
-          isCollected: sale.isCollected || false,
           stock: [{ siteId: sale.siteId || item.stock?.[0]?.siteId || '', quantity: 0 }],
           quantitySold: working.quantity || 0,
           soldAt: refDate,

@@ -74,7 +74,6 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
   const [keepInInventoryAfterSold, setKeepInInventoryAfterSold] = useState<boolean>(false);
   const [restockToTarget, setRestockToTarget] = useState<boolean>(false);
   const [year, setYear] = useState(new Date().getFullYear());
-  const [imageUrl, setImageUrl] = useState('');
   const [mediaMain, setMediaMain] = useState('');
   const [mediaThumb, setMediaThumb] = useState('');
   const [mediaGallery, setMediaGallery] = useState(''); // semi-colon separated
@@ -103,7 +102,6 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
   const [showSoldConfirmation, setShowSoldConfirmation] = useState(false);
   const [pendingSoldStatus, setPendingSoldStatus] = useState(false);
   const [localSoldAt, setLocalSoldAt] = useState<Date | undefined>(item?.soldAt ? new Date(item.soldAt) : undefined);
-  const [localCollectedAt, setLocalCollectedAt] = useState<Date | undefined>(item?.collectedAt ? new Date(item.collectedAt) : undefined);
 
   // Item selection states for compound field
   const [isNewItem, setIsNewItem] = useState(true);
@@ -112,9 +110,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
   const [sites, setSites] = useState<Site[]>([]);
 
 
-  // File attachment states
-  const [originalFiles, setOriginalFiles] = useState('');
-  const [accessoryFiles, setAccessoryFiles] = useState('');
+
 
   const currentEditingItem = useMemo(() => {
     if (item) return item;
@@ -130,9 +126,8 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
   // Identity Vault: Persist ID across renders to prevent duplicate creation on multiple saves
   const draftId = useRef(item?.id || uuid());
 
-  // Save form data to preferences when modal closes
   const saveFormDataToStorage = useCallback(() => {
-    if (!item) { // Only save for new items, not when editing existing items
+    if (!item) {
       const formData = {
         name,
         description,
@@ -147,7 +142,6 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         keepInInventoryAfterSold,
         restockToTarget,
         year,
-        imageUrl,
         mediaMain,
         mediaThumb,
         mediaGallery,
@@ -156,13 +150,11 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         height,
         size,
         targetAmount,
-        site,
-        originalFiles,
-        accessoryFiles
+        site
       };
       setPreference('item-modal-form-data', JSON.stringify(formData));
     }
-  }, [item, name, description, type, station, subItemType, collection, status, quantity, unitCost, price, keepInInventoryAfterSold, restockToTarget, year, imageUrl, mediaMain, mediaThumb, mediaGallery, sourceFileUrl, width, height, size, targetAmount, site, originalFiles, accessoryFiles, setPreference]);
+  }, [item, name, description, type, station, subItemType, collection, status, quantity, unitCost, price, keepInInventoryAfterSold, restockToTarget, year, mediaMain, mediaThumb, mediaGallery, sourceFileUrl, width, height, size, targetAmount, site, setPreference]);
 
   useEffect(() => {
     const targetAmountNum = parseFloat(targetAmount);
@@ -191,9 +183,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
           setKeepInInventoryAfterSold(
             typeof formData.keepInInventoryAfterSold === 'boolean'
               ? formData.keepInInventoryAfterSold
-              : typeof formData.restockable === 'boolean'
-                ? formData.restockable // Migrate old restockable value
-                : false // Default to false for all item types
+              : false // Default to false for all item types
           );
           setRestockToTarget(
             typeof formData.restockToTarget === 'boolean'
@@ -201,7 +191,6 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
               : false // Default to false
           );
           setYear(formData.year || new Date().getFullYear());
-          setImageUrl(formData.imageUrl || '');
           setMediaMain(formData.mediaMain || '');
           setMediaThumb(formData.mediaThumb || '');
           setMediaGallery(formData.mediaGallery || '');
@@ -211,8 +200,6 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
           setSize(formData.size || '');
           setTargetAmount(formData.targetAmount || '');
           setSite(formData.site || '');
-          setOriginalFiles(formData.originalFiles || '');
-          setAccessoryFiles(formData.accessoryFiles || '');
         } catch (error) {
           console.error('Error loading form data from preferences:', error);
         }
@@ -347,8 +334,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
       status: ItemStatus.SOLD,
       createdAt: soldAt,
       updatedAt: soldAt,
-      isCollected: false,
-      keepInInventoryAfterSold: targetItem.keepInInventoryAfterSold ?? targetItem.restockable ?? false,
+      keepInInventoryAfterSold: targetItem.keepInInventoryAfterSold ?? false,
       restockToTarget: targetItem.restockToTarget ?? false,
       links: [],
       metadata: {
@@ -400,9 +386,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         setKeepInInventoryAfterSold(
           typeof refreshed.keepInInventoryAfterSold === 'boolean'
             ? refreshed.keepInInventoryAfterSold
-            : typeof refreshed.restockable === 'boolean'
-              ? refreshed.restockable // Migrate old restockable value to keepInInventoryAfterSold
-              : false // Default to false
+            : false // Default to false
         );
         setRestockToTarget(
           typeof refreshed.restockToTarget === 'boolean'
@@ -459,17 +443,12 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
     quickSellSiteId,
     refreshItemAfterQuickSell
   ]);
-
   const handleDatesUpdate = useCallback(async (updates: {
     createdAt?: Date;
     doneAt?: Date;
-    collectedAt?: Date;
   }) => {
     if (updates.doneAt !== undefined) {
       setLocalSoldAt(updates.doneAt);
-    }
-    if (updates.collectedAt !== undefined) {
-      setLocalCollectedAt(updates.collectedAt);
     }
   }, []);
 
@@ -568,9 +547,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
       setKeepInInventoryAfterSold(
         typeof item.keepInInventoryAfterSold === 'boolean'
           ? item.keepInInventoryAfterSold
-          : typeof item.restockable === 'boolean'
-            ? item.restockable // Migrate old restockable value to keepInInventoryAfterSold
-            : false // Default to false
+          : false // Default to false
       );
       setRestockToTarget(
         typeof item.restockToTarget === 'boolean'
@@ -578,7 +555,6 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
           : false // Default to false
       );
       setYear(item.year || new Date().getFullYear());
-      setImageUrl(item.imageUrl || '');
       setMediaMain(item.media?.main || '');
       setMediaThumb(item.media?.thumb || '');
       setMediaGallery(item.media?.gallery?.join(';') || '');
@@ -589,14 +565,6 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
       setTargetAmount(item.targetAmount?.toString() || '');
       setQuantitySold(item.quantitySold || 0);
 
-      // Parse file attachments for display
-      const formatFileReferences = (files?: FileReference[]): string => {
-        if (!files || files.length === 0) return '';
-        return files.map(f => `${f.url || 'symbolic'}:${f.type}`).join(';');
-      };
-
-      setOriginalFiles(formatFileReferences(item.originalFiles));
-      setAccessoryFiles(formatFileReferences(item.accessoryFiles));
       setOwnerCharacterId(item.ownerCharacterId || null);
 
       // Reset init guard when editing
@@ -609,7 +577,6 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
       const lastStation = getLastUsedStation();
       setStation(lastStation);
       setLocalSoldAt(undefined);
-      setLocalCollectedAt(undefined);
       // Other fields remain as-is or are loaded from persisted draft via loadFormDataFromStorage
     }
   }, [item, defaultItemType, getLastUsedStation, initialSiteId]);
@@ -697,9 +664,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         setKeepInInventoryAfterSold(
           typeof selectedItem.keepInInventoryAfterSold === 'boolean'
             ? selectedItem.keepInInventoryAfterSold
-            : typeof selectedItem.restockable === 'boolean'
-              ? selectedItem.restockable // Migrate old restockable value to keepInInventoryAfterSold
-              : false // Default to false
+            : false // Default to false
         );
         setRestockToTarget(
           typeof selectedItem.restockToTarget === 'boolean'
@@ -707,7 +672,6 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
             : false // Default to false
         );
         setYear(selectedItem.year || new Date().getFullYear());
-        setImageUrl(selectedItem.imageUrl || '');
         setMediaMain(selectedItem.media?.main || '');
         setMediaThumb(selectedItem.media?.thumb || '');
         setMediaGallery(selectedItem.media?.gallery?.join(';') || '');
@@ -719,10 +683,6 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         setTargetAmount(selectedItem.targetAmount?.toString() || '');
         setQuantitySold(selectedItem.quantitySold || 0);
         setLocalSoldAt(selectedItem.soldAt ? new Date(selectedItem.soldAt) : undefined);
-        setLocalCollectedAt(selectedItem.collectedAt ? new Date(selectedItem.collectedAt) : undefined);
-        // Handle file references
-        setOriginalFiles(Array.isArray(selectedItem.originalFiles) ? selectedItem.originalFiles.map(f => f.url || '').join(', ') : '');
-        setAccessoryFiles(Array.isArray(selectedItem.accessoryFiles) ? selectedItem.accessoryFiles.map(f => f.url || '').join(', ') : '');
         setOwnerCharacterId(selectedItem.ownerCharacterId || null);
       }
     }
@@ -796,25 +756,6 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         }];
       }
 
-      // Parse file attachments
-      const parseFileReferences = (field: string): FileReference[] => {
-        if (!field || field.trim() === '') return [];
-
-        return field.split(';').map(fileRef => {
-          const parts = fileRef.split(':');
-          if (parts.length >= 2) {
-            return {
-              url: parts[0] === 'symbolic' ? undefined : parts[0],
-              type: parts[1]
-            };
-          }
-          return { type: fileRef.trim() }; // Fallback for simple types
-        });
-      };
-
-      const parsedOriginalFiles = parseFileReferences(originalFiles);
-      const parsedAccessoryFiles = parseFileReferences(accessoryFiles);
-
       let finalId = item?.id;
       if (!finalId) {
         if (selectedItemId) {
@@ -847,10 +788,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
           gallery: mediaGallery ? mediaGallery.split(';').map(s => s.trim()).filter(Boolean) : undefined,
         },
         sourceFileUrl: sourceFileUrl || undefined,
-        imageUrl: imageUrl || undefined,
         stock: updatedStock,
-        originalFiles: parseFileReferences(originalFiles),
-        accessoryFiles: parseFileReferences(accessoryFiles),
         dimensions,
         size: parsedSize,
         targetAmount: targetAmount && !isNaN(parseFloat(targetAmount)) ? parseFloat(targetAmount) : undefined,
@@ -859,8 +797,6 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         createdAt: (item || existingItems.find(i => i.id === selectedItemId))?.createdAt || new Date(),
         updatedAt: new Date(),
         soldAt: localSoldAt ?? item?.soldAt,
-        collectedAt: localCollectedAt,
-        isCollected: false,
         links: (item || existingItems.find(i => i.id === selectedItemId))?.links || [],  // preserve embedded mirror
       };
 
@@ -892,7 +828,6 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
   const showSubItemType = getSubTypesForItemType(type).length > 0;
   const showDimensions = type === ItemType.PRINT || type === ItemType.ARTWORK || type === ItemType.STICKER || type === ItemType.MATERIAL;
   const showModelSize = type === ItemType.PRINT || type === ItemType.ARTWORK || type === ItemType.MERCH;
-  const showImageUrl = true; // Always show Image URL field for all item types
   const showYear = true; // Always show Year field
 
   return (
@@ -1115,134 +1050,105 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
             </Button>
 
             {showMoreFields && (
-              <div className="grid grid-cols-4 gap-4 mt-4">
-                <div>
-                  <Label htmlFor="description" className="text-xs">Description</Label>
-                  <Input
-                    id="description"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Item description"
-                    className="h-8 text-sm mt-1"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="mediaMain" className="text-xs">R2 Main Key (Project)</Label>
-                  <Input
-                    id="mediaMain"
-                    value={mediaMain}
-                    onChange={(e) => setMediaMain(e.target.value)}
-                    placeholder="items/stickers/.../main.png"
-                    className="h-8 text-sm mt-1 ring-1 ring-primary/20"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="mediaThumb" className="text-xs">R2 Thumb Key (JPEG)</Label>
-                  <Input
-                    id="mediaThumb"
-                    value={mediaThumb}
-                    onChange={(e) => setMediaThumb(e.target.value)}
-                    placeholder="items/stickers/.../thumb.jpg"
-                    className="h-8 text-sm mt-1"
-                  />
-                </div>
-
-                <div className="col-span-2">
-                  <Label htmlFor="mediaGallery" className="text-xs">R2 Gallery Keys (Semicolon separated)</Label>
-                  <Input
-                    id="mediaGallery"
-                    value={mediaGallery}
-                    onChange={(e) => setMediaGallery(e.target.value)}
-                    placeholder="key1.jpg;key2.jpg"
-                    className="h-8 text-sm mt-1"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="sourceFileUrl" className="text-xs">Source File URL (Drive/Raw)</Label>
-                  <Input
-                    id="sourceFileUrl"
-                    value={sourceFileUrl}
-                    onChange={(e) => setSourceFileUrl(e.target.value)}
-                    placeholder="https://drive.google.com/..."
-                    className="h-8 text-sm mt-1"
-                  />
-                </div>
-
-                <div className="opacity-50">
-                  <Label htmlFor="imageUrl" className="text-xs">Old Image URL (Deprecated)</Label>
-                  <Input
-                    id="imageUrl"
-                    value={imageUrl}
-                    onChange={(e) => setImageUrl(e.target.value)}
-                    placeholder="Deprecating..."
-                    className="h-8 text-sm mt-1"
-                  />
-                </div>
-
-                <div className="opacity-50">
-                  <Label htmlFor="originalFiles" className="text-xs">Original Files (Deprecated)</Label>
-                  <Input
-                    id="originalFiles"
-                    value={originalFiles}
-                    onChange={(e) => setOriginalFiles(e.target.value)}
-                    placeholder="Deprecating..."
-                    className="h-8 text-sm mt-1"
-                  />
-                </div>
-
-                <div className="opacity-50">
-                  <Label htmlFor="accessoryFiles" className="text-xs">Accessory Files (Deprecated)</Label>
-                  <Input
-                    id="accessoryFiles"
-                    value={accessoryFiles}
-                    onChange={(e) => setAccessoryFiles(e.target.value)}
-                    placeholder="Deprecating..."
-                    className="h-8 text-sm mt-1"
-                  />
-                </div>
-
-                {showDimensions && (
-                  <>
-                    <div>
-                      <Label htmlFor="width" className="text-xs">Width (cm)</Label>
-                      <NumericInput
-                        id="width"
-                        value={width ? parseFloat(width) : 0}
-                        onChange={(value) => setWidth(value.toString())}
-                        min={0}
-                        step={0.1}
-                        className="h-8 text-sm mt-1"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="height" className="text-xs">Height (cm)</Label>
-                      <NumericInput
-                        id="height"
-                        value={height ? parseFloat(height) : 0}
-                        onChange={(value) => setHeight(value.toString())}
-                        min={0}
-                        step={0.1}
-                        className="h-8 text-sm mt-1"
-                      />
-                    </div>
-                  </>
-                )}
-
-                {showModelSize && (
+              <div className="space-y-4 mt-4">
+                <div className="grid grid-cols-4 gap-4">
                   <div>
-                    <Label htmlFor="size" className="text-xs">Model Size</Label>
+                    <Label htmlFor="description" className="text-xs">Description</Label>
                     <Input
-                      id="size"
-                      value={size}
-                      onChange={(e) => setSize(e.target.value)}
-                      placeholder="M, L, XL, 7.5"
+                      id="description"
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      placeholder="Item description"
                       className="h-8 text-sm mt-1"
                     />
                   </div>
-                )}
+
+                  <div>
+                    <Label htmlFor="mediaMain" className="text-xs">R2 Main Key (Project)</Label>
+                    <Input
+                      id="mediaMain"
+                      value={mediaMain}
+                      onChange={(e) => setMediaMain(e.target.value)}
+                      placeholder="items/stickers/.../main.png"
+                      className="h-8 text-sm mt-1 ring-1 ring-primary/20"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="mediaThumb" className="text-xs">R2 Thumb Key (JPEG)</Label>
+                    <Input
+                      id="mediaThumb"
+                      value={mediaThumb}
+                      onChange={(e) => setMediaThumb(e.target.value)}
+                      placeholder="items/stickers/.../thumb.jpg"
+                      className="h-8 text-sm mt-1"
+                    />
+                  </div>
+
+                  <div className="col-span-2">
+                    <Label htmlFor="mediaGallery" className="text-xs">R2 Gallery Keys (Semicolon separated)</Label>
+                    <Input
+                      id="mediaGallery"
+                      value={mediaGallery}
+                      onChange={(e) => setMediaGallery(e.target.value)}
+                      placeholder="key1.jpg;key2.jpg"
+                      className="h-8 text-sm mt-1"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="sourceFileUrl" className="text-xs">Source File URL (Drive/Raw)</Label>
+                    <Input
+                      id="sourceFileUrl"
+                      value={sourceFileUrl}
+                      onChange={(e) => setSourceFileUrl(e.target.value)}
+                      placeholder="https://drive.google.com/..."
+                      className="h-8 text-sm mt-1"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-4 gap-4">
+                  {showDimensions && (
+                    <>
+                      <div>
+                        <Label htmlFor="width" className="text-xs">Width (cm)</Label>
+                        <NumericInput
+                          id="width"
+                          value={width ? parseFloat(width) : 0}
+                          onChange={(value) => setWidth(value.toString())}
+                          min={0}
+                          step={0.1}
+                          className="h-8 text-sm mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="height" className="text-xs">Height (cm)</Label>
+                        <NumericInput
+                          id="height"
+                          value={height ? parseFloat(height) : 0}
+                          onChange={(value) => setHeight(value.toString())}
+                          min={0}
+                          step={0.1}
+                          className="h-8 text-sm mt-1"
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  {showModelSize && (
+                    <div>
+                      <Label htmlFor="size" className="text-xs">Model Size</Label>
+                      <Input
+                        id="size"
+                        value={size}
+                        onChange={(e) => setSize(e.target.value)}
+                        placeholder="M, L, XL, 7.5"
+                        className="h-8 text-sm mt-1"
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -1326,7 +1232,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         open={showDeleteModal}
         onOpenChange={setShowDeleteModal}
         entityType={EntityType.ITEM}
-        entities={(item || (selectedItemId && existingItems.find(i => i.id === selectedItemId))) ? [item || existingItems.find(i => i.id === selectedItemId)!] : []}
+        entities={currentEditingItem ? [currentEditingItem] : []}
         onComplete={async () => {
           setShowDeleteModal(false);
           // Reload existing items to update SearchableSelect
@@ -1506,7 +1412,6 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
           entityId={currentEditingItem?.id ? `data:item:${currentEditingItem.id}` : undefined}
           createdAt={currentEditingItem?.createdAt ? new Date(currentEditingItem.createdAt) : undefined}
           doneAt={localSoldAt}
-          collectedAt={localCollectedAt}
           currentStatus={status}
           onDatesChange={handleDatesUpdate}
         />

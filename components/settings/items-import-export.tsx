@@ -188,7 +188,7 @@ export default function ItemsImportExport() {
           <div className="font-medium mb-2">CSV Format:</div>
           <div className="space-y-1">
             <div className="break-all">
-              <code className="text-xs">ItemType,SubItemType,Name,TotalQuantity,Site,Status,Collection,UnitCost,AdditionalCost,Price,Value,QuantitySold,TargetAmount,SoldThisMonth,LastRestockDate,SourceTaskId,Year,ImageUrl,OriginalFiles,AccessoryFiles,Width,Height,Size</code>
+              <code className="text-xs">ItemType,SubItemType,Name,TotalQuantity,Site,Status,Collection,UnitCost,AdditionalCost,Price,Value,QuantitySold,TargetAmount,SoldThisMonth,LastRestockDate,SourceTaskId,Year,Width,Height,Size,MediaMain,MediaThumb,MediaGallery,SourceFileUrl</code>
             </div>
             <div className="mt-2">
               <strong>Note:</strong> Items without a Site field will be imported as ideation items (no stock location).
@@ -205,8 +205,8 @@ function convertItemsToCSV(items: any[]): string {
   const headers = [
     'ItemType', 'SubItemType', 'Name', 'TotalQuantity', 'Site', 'Status', 
     'Collection', 'UnitCost', 'AdditionalCost', 'Price', 'Value', 'QuantitySold', 'TargetAmount',
-    'SoldThisMonth', 'LastRestockDate', 'SourceTaskId', 'Year', 'ImageUrl', 
-    'OriginalFiles', 'AccessoryFiles', 'Width', 'Height', 'Size'
+    'SoldThisMonth', 'LastRestockDate', 'SourceTaskId', 'Year', 'Width', 'Height', 'Size',
+    'MediaMain', 'MediaThumb', 'MediaGallery', 'SourceFileUrl'
   ];
   
   const csvRows = [headers.join(',')];
@@ -249,12 +249,13 @@ function convertItemsToCSV(items: any[]): string {
       escapeCSVField(item.lastRestockDate ? item.lastRestockDate.toISOString().split('T')[0] : ''),
       escapeCSVField(item.sourceTaskId || ''),
       escapeCSVField(item.year || ''),
-      escapeCSVField(item.imageUrl || ''),
-      escapeCSVField(Array.isArray(item.originalFiles) ? item.originalFiles.map((f: any) => f.name || f).join(';') : ''),
-      escapeCSVField(Array.isArray(item.accessoryFiles) ? item.accessoryFiles.map((f: any) => f.name || f).join(';') : ''),
       escapeCSVField(item.dimensions?.width || ''),
       escapeCSVField(item.dimensions?.height || ''),
-      escapeCSVField(item.size || '')
+      escapeCSVField(item.size || ''),
+      escapeCSVField(item.media?.main || ''),
+      escapeCSVField(item.media?.thumb || ''),
+      escapeCSVField(item.media?.gallery?.join(';') || ''),
+      escapeCSVField(item.sourceFileUrl || '')
     ];
     csvRows.push(row.join(','));
   });
