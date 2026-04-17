@@ -6,6 +6,7 @@ import { getTaskById, upsertTask } from '@/data-store/datastore';
 import { spawnNextRecurrentInstance, updateTemplateLastSpawnedDate, canSpawnMoreInstances } from '@/lib/utils/recurrent-task-utils';
 import { EntityType, TaskType } from '@/types/enums';
 import { toRecurrentUTC, fromRecurrentUTC } from '@/lib/utils/recurrent-date-utils';
+import { requireAdminAuth } from '@/lib/api-auth';
 
 /**
  * POST /api/tasks/[id]/spawn-next
@@ -26,6 +27,10 @@ export async function POST(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  if (!(await requireAdminAuth(req))) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const templateId = params.id;
   const { searchParams } = new URL(req.url);
   const isPreview = searchParams.get('preview') === '1';

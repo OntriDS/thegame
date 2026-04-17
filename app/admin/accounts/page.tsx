@@ -125,27 +125,32 @@ function AccountsPageContent({ canAccessIAMConsole, isCheckingIAMConsole }: { ca
     );
   };
 
-  const getStatusDots = (account: any) => {
+  const getActiveStatusDot = (account: any) => {
     const isActive = account.isActive !== false;
-    const isVerified = account.isVerified === true;
-
     return (
-      <div className="flex justify-center gap-6">
-        {/* Active Status - Big Green Circle */}
-        <div className={`w-5 h-5 rounded-full flex items-center justify-center transition-all ${
-          isActive 
-            ? 'bg-emerald-500 shadow-[0_0_12px_#10b981] ring-2 ring-emerald-400/50' 
-            : 'bg-zinc-700 ring-1 ring-zinc-600'
-        }`}>
-          {isActive && <div className="w-2.5 h-2.5 bg-white rounded-full animate-pulse" />}
+      <div className="flex justify-center">
+        <div
+          className={`h-3.5 w-3.5 rounded-full flex items-center justify-center transition-all ${
+            isActive
+              ? 'bg-emerald-500 shadow-[0_0_8px_#10b981] ring-1 ring-emerald-400/50'
+              : 'bg-zinc-700 ring-1 ring-zinc-600'
+          }`}
+        >
+          {isActive && <div className="h-1.5 w-1.5 bg-white rounded-full animate-pulse" />}
         </div>
+      </div>
+    );
+  };
 
-        {/* Verified Status - Big Green/Red Circle */}
-        <div className={`w-5 h-5 rounded-full flex items-center justify-center transition-all ${
-          isVerified 
-            ? 'bg-emerald-500 shadow-[0_0_12px_#10b981]' 
-            : 'bg-rose-500 shadow-[0_0_8px_#ef4444]'
-        }`} />
+  const getVerifiedStatusDot = (account: any) => {
+    const isVerified = account.isVerified === true;
+    return (
+      <div className="flex justify-center">
+        <div
+          className={`h-3.5 w-3.5 rounded-full flex items-center justify-center transition-all ${
+            isVerified ? 'bg-cyan-500 shadow-[0_0_6px_#10b981]' : 'bg-orange-500 shadow-[0_0_6px_#ef4444]'
+          }`}
+        />
       </div>
     );
   };
@@ -396,8 +401,8 @@ function AccountsPageContent({ canAccessIAMConsole, isCheckingIAMConsole }: { ca
         </div>
       </div>
 
-      {/* Stats Overview */}
-      <div className="grid grid-cols-[repeat(11,minmax(0,1fr))] gap-3">
+      {/* Stats Overview — one track per role card (10 roles) */}
+      <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-5 lg:grid-cols-10">
         {topRowCards.map((card) => (
           <Card
             key={card.id}
@@ -468,9 +473,8 @@ function AccountsPageContent({ canAccessIAMConsole, isCheckingIAMConsole }: { ca
                           )}
                         </div>
                       </td>
-                      <td className="p-4">
-                        {getStatusDots(account)}
-                      </td>
+                      <td className="p-4">{getActiveStatusDot(account)}</td>
+                      <td className="p-4">{getVerifiedStatusDot(account)}</td>
                       <td className="p-4 text-right">
                         <div className="flex items-center justify-end gap-1">
                           <>
@@ -519,7 +523,7 @@ function AccountsPageContent({ canAccessIAMConsole, isCheckingIAMConsole }: { ca
 
                 {sortedAccounts.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="p-12 text-center">
+                    <td colSpan={6} className="p-12 text-center">
                       <div className="flex flex-col items-center gap-2 opacity-30">
                         <User className="h-12 w-12" />
                         <div className="font-black uppercase tracking-widest text-sm">No Accounts Found</div>

@@ -3,10 +3,10 @@ import { Task } from '@/types/entities';
 import { TaskType, RecurrentFrequency } from '@/types/enums';
 import { 
   fromRecurrentUTC, 
-  validateFrequencyConfig 
+  validateFrequencyConfig,
+  getUTCCivilDayStartMs,
 } from './recurrent-date-utils';
 import { getTasksByParentId } from '@/data-store/datastore';
-import { isAfterUTC, toUTC } from './utc-utils';
 
 export enum SpawnErrorCode {
   INVALID_TYPE = 'INVALID_TYPE',
@@ -48,7 +48,7 @@ export function getSafetyLimitDate(template: Task): Date | null {
     );
   }
 
-  // Priority 3: Legacy dueDate (only for non-CUSTOM frequencies)
+  // Priority 3: Template dueDate as end boundary (non-custom patterns only; custom uses recurrenceEnd)
   if (config.type !== RecurrentFrequency.CUSTOM && template.dueDate) {
     return fromRecurrentUTC(template.dueDate);
   }
@@ -124,13 +124,12 @@ export async function validateSpawnOperation(template: Task): Promise<Validation
   // Check safety limit
   const safetyLimit = getSafetyLimitDate(template);
   if (safetyLimit) {
-    const lastSpawned = template.lastSpawnedDate ? fromRecurrentUTC(template.lastSpawnedDate) : null;
-    if (lastSpawned && !isAfterUTC(toUTC(safetyLimit), toUTC(lastSpawned)) && lastSpawned.getTime() !== safetyLimit.getTime()) {
-        // This is a bit complex, but basically if lastSpawned is already at or past safetyLimit
-    }
-    
-    // Simpler check: if we already spawned something on the safety limit day
-    if (lastSpawned && lastSpawned.getTime() >= safetyLimit.getTime()) {
+    const lastSpawnedDay = template.lastSpawnedDate
+      ? getUTCCivilDayStartMs(template.lastSpawnedDate)
+      : null;
+    const safetyLimitDay = getUTCCivilDayStartMs(safetyLimit);
+
+    if (lastSpawnedDay !== null && lastSpawnedDay > safetyLimitDay) {
       return {
         isValid: false,
         errorCode: SpawnErrorCode.SAFETY_LIMIT_EXCEEDED,
@@ -149,16 +148,25 @@ export async function validateSpawnOperation(template: Task): Promise<Validation
       };
     }
 
-    const referenceDate = template.lastSpawnedDate
-      ? fromRecurrentUTC(template.lastSpawnedDate)
-      : (template.recurrenceStart ? fromRecurrentUTC(template.recurrenceStart) : fromRecurrentUTC(template.dueDate || new Date()));
+    const referenceSource =
+      template.lastSpawnedDate ??
+      template.recurrenceStart ??
+      template.dueDate ??
+      new Date();
+    const refDayMs = getUTCCivilDayStartMs(
+      referenceSource instanceof Date ? referenceSource : new Date(referenceSource)
+    );
+    const hasLastSpawn = Boolean(template.lastSpawnedDate);
 
     const customDates = config.customDays
-      .map((d: any) => d instanceof Date ? d : new Date(d))
+      .map((d: any) => (d instanceof Date ? d : new Date(d)))
       .filter((d: Date) => !isNaN(d.getTime()))
-      .sort((a: Date, b: Date) => a.getTime() - b.getTime());
+      .sort((a: Date, b: Date) => getUTCCivilDayStartMs(a) - getUTCCivilDayStartMs(b));
 
-    const nextDate = customDates.find((d: Date) => d.getTime() > referenceDate.getTime());
+    const nextDate = customDates.find((d: Date) => {
+      const dayMs = getUTCCivilDayStartMs(d);
+      return hasLastSpawn ? dayMs > refDayMs : dayMs >= refDayMs;
+    });
     if (!nextDate) {
       return {
         isValid: false,
@@ -167,7 +175,10 @@ export async function validateSpawnOperation(template: Task): Promise<Validation
       };
     }
 
-    if (safetyLimit && nextDate.getTime() > safetyLimit.getTime()) {
+    if (
+      safetyLimit &&
+      getUTCCivilDayStartMs(nextDate) > getUTCCivilDayStartMs(safetyLimit)
+    ) {
       return {
         isValid: false,
         errorCode: SpawnErrorCode.CUSTOM_DATE_BEYOND_LIMIT,

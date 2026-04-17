@@ -104,7 +104,7 @@ export function getOccurrencesForRange(task: Task, rangeStart: Date, rangeEnd: D
     return occurrences;
   }
 
-  const type = frequency.type;
+  const type = frequency.type as RecurrentFrequency;
   const interval = Math.max(1, Number(frequency.interval || 1));
 
   if (type === RecurrentFrequency.CUSTOM) {

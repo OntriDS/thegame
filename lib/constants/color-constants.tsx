@@ -1,7 +1,7 @@
 // lib/constants/color-constants.tsx
 // Centralized color definitions for all status badges
 
-import { TaskStatus, ItemStatus, SiteStatus, TaskPriority } from '@/types/enums';
+import { CharacterRole, TaskStatus, ItemStatus, SiteStatus, TaskPriority } from '@/types/enums';
 
 // ============================================================================
 // SHARED STATUS COLOR BASE (DRY PRINCIPLE)
@@ -112,44 +112,45 @@ export const TASK_STATUS_BADGE_COLORS = {
 } as const;
 
 /** Role Colors - for character role badges */
+const toRoleKey = (role: CharacterRole) => role.toUpperCase().replace(/-/g, '');
+
 // Founder: Deep Purple - Ultimate Authority, Structure
-const SPECIAL_ROLE_FOUNDER = 'border-purple-900 bg-purple-900 text-white hover:bg-purple-800 dark:bg-purple-800 dark:text-white dark:hover:bg-purple-700';
-const SPECIAL_ROLE_PLAYER = 'border-cyan-600 bg-cyan-600 text-white hover:bg-cyan-700 dark:bg-cyan-500 dark:text-white dark:hover:bg-cyan-600';
-const SPECIAL_ROLE_APPRENTICE = 'border-orange-600 bg-orange-600 text-white hover:bg-orange-700 dark:bg-orange-500 dark:text-white dark:hover:bg-orange-600';
-const SPECIAL_ROLE_TEAM = 'border-teal-600 bg-teal-600 text-white hover:bg-teal-700 dark:bg-teal-500 dark:text-white dark:hover:bg-teal-600';
-const SPECIAL_ROLE_FAMILY = 'border-pink-600 bg-pink-600 text-white hover:bg-pink-700 dark:bg-pink-500 dark:text-white dark:hover:bg-pink-600';
-const SPECIAL_ROLE_TOKENHOLDER = 'border-yellow-500 bg-yellow-500 text-black hover:bg-yellow-600 dark:bg-yellow-400 dark:text-black dark:hover:bg-yellow-500';
-const SPECIAL_ROLE_PARTNER = 'border-fuchsia-600 bg-fuchsia-400 text-white hover:bg-fuchsia-600 dark:bg-fuchsia-500 dark:text-white dark:hover:bg-fuchsia-700';
-const SPECIAL_ROLE_AI_AGENT = 'border-lime-600 bg-lime-600 text-white hover:bg-lime-700 dark:bg-lime-500 dark:text-black dark:hover:bg-lime-600';
-const SPECIAL_ROLE_CUSTOMER = 'border-amber-500 bg-amber-800 text-black hover:bg-amber-700 dark:bg-amber-900 dark:text-white dark:hover:bg-amber-500';
-const SPECIAL_ROLE_BENEFICIARY = 'border-red-600 bg-red-600 text-white hover:bg-red-700 dark:bg-red-600 dark:text-white dark:hover:bg-red-700';
-const REGULAR_ROLE_DEFAULT = 'border-gray-400 bg-gray-100 text-white dark:bg-gray-700 dark:text-white';
+const SPECIAL_ROLE_FOUNDER =      'border-1 border-purple-500  bg-purple-400  text-black  hover:bg-purple-600   dark:bg-purple-800  dark:text-white dark:hover:bg-purple-600';
+const SPECIAL_ROLE_PLAYER =       'border-1 border-indigo-500    bg-indigo-300    text-black  hover:bg-indigo-600     dark:bg-indigo-800    dark:text-white dark:hover:bg-cyan-600';
+const SPECIAL_ROLE_APPRENTICE =   'border-1 border-orange-500  bg-orange-400  text-black  hover:bg-orange-600   dark:bg-orange-700  dark:text-white dark:hover:bg-orange-600';
+const SPECIAL_ROLE_TEAM =         'border-1 border-teal-500    bg-teal-400    text-black  hover:bg-teal-600     dark:bg-teal-800    dark:text-white dark:hover:bg-teal-600';
+const SPECIAL_ROLE_TOKENHOLDER =  'border-1 border-amber-500   bg-amber-400   text-black  hover:bg-amber-600    dark:bg-amber-700   dark:text-white dark:hover:bg-amber-600';
+const SPECIAL_ROLE_CUSTOMER =     'border-1 border-sky-500   bg-sky-400   text-black  hover:bg-sky-600       dark:bg-sky-700    dark:text-white dark:hover:bg-sky-600';
+const SPECIAL_ROLE_FAMILY =       'border-1 border-pink-500    bg-pink-300    text-black  hover:bg-pink-600     dark:bg-pink-700    dark:text-white dark:hover:bg-pink-600';
+const SPECIAL_ROLE_PARTNER =      'border-1 border-rose-500    bg-rose-300    text-black  hover:bg-rose-600     dark:bg-rose-800    dark:text-white dark:hover:bg-rose-600';
+const SPECIAL_ROLE_BENEFICIARY =  'border-1 border-fuchsia-500 bg-fuchsia-400 text-black  hover:bg-fuchsia-600  dark:bg-fuchsia-700 dark:text-white dark:hover:bg-fuchsia-600';
+const SPECIAL_ROLE_AI_AGENT =     'border-1 border-stone-500   bg-stone-400   text-black  hover:bg-stone-600    dark:bg-stone-700   dark:text-white dark:hover:bg-stone-600';
+const REGULAR_ROLE_DEFAULT =      'border-1 border-slate-500   bg-slate-300   text-black  hover:bg-slate-600    dark:bg-slate-800   dark:text-white dark:hover:bg-slate-600';
 
 export const ROLE_COLORS = {
   // Special Roles - High contrast, vibrant colors
-  FOUNDER: SPECIAL_ROLE_FOUNDER,
-  PLAYER: SPECIAL_ROLE_PLAYER,
-  APPRENTICE: SPECIAL_ROLE_APPRENTICE,
-  TEAM: SPECIAL_ROLE_TEAM,
-  TOKENHOLDER: SPECIAL_ROLE_TOKENHOLDER,
-  FAMILY: SPECIAL_ROLE_FAMILY,
-  PARTNER: SPECIAL_ROLE_PARTNER,
-  AI_AGENT: SPECIAL_ROLE_AI_AGENT,
-  CUSTOMER: SPECIAL_ROLE_CUSTOMER,
-  BENEFICIARY: SPECIAL_ROLE_BENEFICIARY,
+  [toRoleKey(CharacterRole.FOUNDER)]: SPECIAL_ROLE_FOUNDER,
+  [toRoleKey(CharacterRole.PLAYER)]: SPECIAL_ROLE_PLAYER,
+  [toRoleKey(CharacterRole.APPRENTICE)]: SPECIAL_ROLE_APPRENTICE,
+  [toRoleKey(CharacterRole.TEAM)]: SPECIAL_ROLE_TEAM,
+  [toRoleKey(CharacterRole.TOKENHOLDER)]: SPECIAL_ROLE_TOKENHOLDER,
+  [toRoleKey(CharacterRole.FAMILY)]: SPECIAL_ROLE_FAMILY,
+  [toRoleKey(CharacterRole.PARTNER)]: SPECIAL_ROLE_PARTNER,
+  [toRoleKey(CharacterRole.AI_AGENT)]: SPECIAL_ROLE_AI_AGENT,
+  [toRoleKey(CharacterRole.CUSTOMER)]: SPECIAL_ROLE_CUSTOMER,
+  [toRoleKey(CharacterRole.BENEFICIARY)]: SPECIAL_ROLE_BENEFICIARY,
   // Regular Roles - all use the same neutral styling
-  ADMIN: REGULAR_ROLE_DEFAULT,
-  DESIGNER: REGULAR_ROLE_DEFAULT,
-  MAKER: REGULAR_ROLE_DEFAULT,
-  SELLER: REGULAR_ROLE_DEFAULT,
-  RESEARCHER: REGULAR_ROLE_DEFAULT,
-  DEVELOPER: REGULAR_ROLE_DEFAULT,
-  COLLABORATOR: REGULAR_ROLE_DEFAULT,
-  BOSS: REGULAR_ROLE_DEFAULT,
-  ASSISTANT: REGULAR_ROLE_DEFAULT,
-  STUDENT: REGULAR_ROLE_DEFAULT,
-  FRIEND: REGULAR_ROLE_DEFAULT,
-  OTHER: REGULAR_ROLE_DEFAULT,
+  [toRoleKey(CharacterRole.ADMIN)]: REGULAR_ROLE_DEFAULT,
+  [toRoleKey(CharacterRole.DESIGNER)]: REGULAR_ROLE_DEFAULT,
+  [toRoleKey(CharacterRole.MAKER)]: REGULAR_ROLE_DEFAULT,
+  [toRoleKey(CharacterRole.SELLER)]: REGULAR_ROLE_DEFAULT,
+  [toRoleKey(CharacterRole.RESEARCHER)]: REGULAR_ROLE_DEFAULT,
+  [toRoleKey(CharacterRole.DEVELOPER)]: REGULAR_ROLE_DEFAULT,
+  [toRoleKey(CharacterRole.COLLABORATOR)]: REGULAR_ROLE_DEFAULT,
+  [toRoleKey(CharacterRole.BOSS)]: REGULAR_ROLE_DEFAULT,
+  [toRoleKey(CharacterRole.ASSISTANT)]: REGULAR_ROLE_DEFAULT,
+  [toRoleKey(CharacterRole.STUDENT)]: REGULAR_ROLE_DEFAULT,
+  [toRoleKey(CharacterRole.FRIEND)]: REGULAR_ROLE_DEFAULT,
 } as const;
 
 // ============================================================================

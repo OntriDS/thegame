@@ -7,6 +7,7 @@
  * Do not truncate with startOfDayUTC here — that shifted civil days for non-UTC-midnight instants.
  */
 
+import { RecurrentFrequency } from '@/types/enums';
 import { 
   addDaysUTC as coreAddDaysUTC,
   addWeeksUTC as coreAddWeeksUTC,
@@ -17,6 +18,25 @@ import {
   getDaysInMonthUTC,
   clampToValidUTC
 } from './utc-utils';
+
+/**
+ * Milliseconds for 00:00:00 of the **UTC calendar date** of this instant
+ * (getUTCFullYear / getUTCMonth / getUTCDate only — never the machine timezone).
+ *
+ * Custom `customDays` and spawn bookkeeping use absolute instants; this is how we
+ * compare “which calendar day” consistently on the server (e.g. Vercel UTC) and
+ * in the client without mixing in `fromRecurrentUTC`’s `new Date(y,m,d)` behavior.
+ */
+export function getUTCCivilDayStartMs(input: Date | string | number): number {
+  const u = toUTC(input instanceof Date ? input : typeof input === 'number' ? input : String(input).trim());
+  return Date.UTC(u.getUTCFullYear(), u.getUTCMonth(), u.getUTCDate());
+}
+
+/** `YYYY-MM-DD` from UTC calendar components — for idempotent spawn / duplicate checks. */
+export function utcCalendarDayKey(input: Date | string | number): string {
+  const u = toUTC(input instanceof Date ? input : typeof input === 'number' ? input : String(input).trim());
+  return `${u.getUTCFullYear()}-${String(u.getUTCMonth() + 1).padStart(2, '0')}-${String(u.getUTCDate()).padStart(2, '0')}`;
+}
 
 /**
  * Normalizes to a Date carrying the same absolute instant (for recurrence math).
@@ -89,10 +109,21 @@ export function validateFrequencyConfig(frequencyConfig: any): {
     return { isValid: true };
   }
 
-  if (!frequencyConfig.type || !frequencyConfig.interval || !frequencyConfig.repeatMode) {
+  if (
+    !frequencyConfig.type ||
+    !Object.values(RecurrentFrequency).includes(frequencyConfig.type as RecurrentFrequency)
+  ) {
     return {
       isValid: false,
-      error: 'Frequency configuration must include type, interval, and repeatMode'
+      error: 'Frequency configuration must include a valid type',
+    };
+  }
+  const type = frequencyConfig.type as RecurrentFrequency;
+
+  if (!frequencyConfig.interval || !frequencyConfig.repeatMode) {
+    return {
+      isValid: false,
+      error: 'Frequency configuration must include interval and repeatMode'
     };
   }
 
@@ -127,12 +158,43 @@ export function validateFrequencyConfig(frequencyConfig: any): {
     }
   }
 
-  if (frequencyConfig.type === 'CUSTOM' && (!frequencyConfig.customDays || frequencyConfig.customDays.length === 0)) {
+  if (type === RecurrentFrequency.CUSTOM && (!frequencyConfig.customDays || frequencyConfig.customDays.length === 0)) {
     return {
       isValid: false,
       error: 'Custom frequency must specify at least one date'
     };
   }
 
+  // Custom list: each entry is a stored instant; spawn compares UTC calendar days.
+  // We only reject duplicates (same UTC Y-M-D twice), which add no spawn slots.
+  // We do not relate stopsAfter.times to customDays.length: the cap is on instance
+  // row count (deletions, lastSpawned, etc.), not on “one row per listed day”.
+  if (type === RecurrentFrequency.CUSTOM && frequencyConfig.customDays?.length) {
+    const dayKeys: string[] = [];
+    for (const d of frequencyConfig.customDays) {
+      const raw = d instanceof Date ? d : new Date(d);
+      if (Number.isNaN(raw.getTime())) {
+        return {
+          isValid: false,
+          error: 'Custom frequency contains an invalid date',
+        };
+      }
+      try {
+        dayKeys.push(utcCalendarDayKey(raw));
+      } catch {
+        return {
+          isValid: false,
+          error: 'Custom frequency contains an invalid date',
+        };
+      }
+    }
+    if (dayKeys.length !== new Set(dayKeys).size) {
+      return {
+        isValid: false,
+        error: 'Custom dates cannot include the same calendar day more than once',
+      };
+    }
+  }
+
   return { isValid: true };
-}
+}
