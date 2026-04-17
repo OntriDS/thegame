@@ -162,7 +162,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
       };
       setPreference('item-modal-form-data', JSON.stringify(formData));
     }
-  }, [item, name, description, type, station, subItemType, collection, status, quantity, unitCost, price, keepInInventoryAfterSold, restockToTarget, year, imageUrl, width, height, size, targetAmount, site, originalFiles, accessoryFiles, setPreference]);
+  }, [item, name, description, type, station, subItemType, collection, status, quantity, unitCost, price, keepInInventoryAfterSold, restockToTarget, year, imageUrl, mediaMain, mediaThumb, mediaGallery, sourceFileUrl, width, height, size, targetAmount, site, originalFiles, accessoryFiles, setPreference]);
 
   useEffect(() => {
     const targetAmountNum = parseFloat(targetAmount);

@@ -52,7 +52,7 @@ export function MediaMigrationCard() {
         </div>
         <CardDescription>
           Initializes the new R2 media schema for all existing items. 
-          This adds an empty media object to items that don't have one to ensure type safety.
+          This adds an empty media object to items that don&apos;t have one to ensure type safety.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
