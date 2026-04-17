@@ -290,6 +290,12 @@ export class MCPServer {
           createdAt: new Date(),
           updatedAt: new Date(),
           links: [],
+          media: {
+            main: "",
+            thumb: "",
+            gallery: [],
+          },
+          sourceFileUrl: "",
           // Add other required fields with defaults
           dimensions: undefined,
           size: undefined,

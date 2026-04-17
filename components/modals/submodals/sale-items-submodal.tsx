@@ -315,6 +315,12 @@ export default function SaleItemsSubModal({
         ...ITEM_DEFAULTS,
         id: uuid(),
         name: name,
+        media: {
+          main: "",
+          thumb: "",
+          gallery: [],
+        },
+        sourceFileUrl: "",
         createdAt: new Date(),
         updatedAt: new Date(),
         links: []

@@ -104,6 +104,12 @@ export async function createItemFromTask(task: Task): Promise<Item | null> {
       year: (task.collectedAt || task.doneAt || getUTCNow()).getFullYear(), // Use task's date
       createdAt: getUTCNow(),
       updatedAt: getUTCNow(),
+      media: {
+        main: "",
+        thumb: "",
+        gallery: [],
+      },
+      sourceFileUrl: "",
       links: [],  // initialize links array (registry creates real links)
       stock: [
         {
@@ -217,6 +223,12 @@ export async function createItemFromRecord(record: FinancialRecord): Promise<Ite
       year: record.year, // Use record's year
       createdAt: getUTCNow(),
       updatedAt: getUTCNow(),
+      media: {
+        main: "",
+        thumb: "",
+        gallery: [],
+      },
+      sourceFileUrl: "",
       links: [],  // initialize links array (registry creates real links)
       stock: [
         {

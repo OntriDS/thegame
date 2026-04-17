@@ -75,6 +75,10 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
   const [restockToTarget, setRestockToTarget] = useState<boolean>(false);
   const [year, setYear] = useState(new Date().getFullYear());
   const [imageUrl, setImageUrl] = useState('');
+  const [mediaMain, setMediaMain] = useState('');
+  const [mediaThumb, setMediaThumb] = useState('');
+  const [mediaGallery, setMediaGallery] = useState(''); // semi-colon separated
+  const [sourceFileUrl, setSourceFileUrl] = useState('');
   const [width, setWidth] = useState('');
   const [height, setHeight] = useState('');
   const [size, setSize] = useState('');
@@ -144,6 +148,10 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         restockToTarget,
         year,
         imageUrl,
+        mediaMain,
+        mediaThumb,
+        mediaGallery,
+        sourceFileUrl,
         width,
         height,
         size,
@@ -194,6 +202,10 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
           );
           setYear(formData.year || new Date().getFullYear());
           setImageUrl(formData.imageUrl || '');
+          setMediaMain(formData.mediaMain || '');
+          setMediaThumb(formData.mediaThumb || '');
+          setMediaGallery(formData.mediaGallery || '');
+          setSourceFileUrl(formData.sourceFileUrl || '');
           setWidth(formData.width || '');
           setHeight(formData.height || '');
           setSize(formData.size || '');
@@ -567,6 +579,10 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
       );
       setYear(item.year || new Date().getFullYear());
       setImageUrl(item.imageUrl || '');
+      setMediaMain(item.media?.main || '');
+      setMediaThumb(item.media?.thumb || '');
+      setMediaGallery(item.media?.gallery?.join(';') || '');
+      setSourceFileUrl(item.sourceFileUrl || '');
       setWidth(item.dimensions?.width?.toString() || '');
       setHeight(item.dimensions?.height?.toString() || '');
       setSize(item.size || '');
@@ -692,6 +708,10 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         );
         setYear(selectedItem.year || new Date().getFullYear());
         setImageUrl(selectedItem.imageUrl || '');
+        setMediaMain(selectedItem.media?.main || '');
+        setMediaThumb(selectedItem.media?.thumb || '');
+        setMediaGallery(selectedItem.media?.gallery?.join(';') || '');
+        setSourceFileUrl(selectedItem.sourceFileUrl || '');
         // Extract dimensions
         setWidth(selectedItem.dimensions?.width?.toString() || '');
         setHeight(selectedItem.dimensions?.height?.toString() || '');
@@ -821,7 +841,13 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         restockToTarget,
         quantitySold,
         year,
-        imageUrl,
+        media: {
+          main: mediaMain,
+          thumb: mediaThumb || undefined,
+          gallery: mediaGallery ? mediaGallery.split(';').map(s => s.trim()).filter(Boolean) : undefined,
+        },
+        sourceFileUrl: sourceFileUrl || undefined,
+        imageUrl: imageUrl || undefined,
         stock: updatedStock,
         originalFiles: parseFileReferences(originalFiles),
         accessoryFiles: parseFileReferences(accessoryFiles),
@@ -1102,34 +1128,78 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
                 </div>
 
                 <div>
-                  <Label htmlFor="imageUrl" className="text-xs">Image URL</Label>
+                  <Label htmlFor="mediaMain" className="text-xs">R2 Main Key (Project)</Label>
+                  <Input
+                    id="mediaMain"
+                    value={mediaMain}
+                    onChange={(e) => setMediaMain(e.target.value)}
+                    placeholder="items/stickers/.../main.png"
+                    className="h-8 text-sm mt-1 ring-1 ring-primary/20"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="mediaThumb" className="text-xs">R2 Thumb Key (JPEG)</Label>
+                  <Input
+                    id="mediaThumb"
+                    value={mediaThumb}
+                    onChange={(e) => setMediaThumb(e.target.value)}
+                    placeholder="items/stickers/.../thumb.jpg"
+                    className="h-8 text-sm mt-1"
+                  />
+                </div>
+
+                <div className="col-span-2">
+                  <Label htmlFor="mediaGallery" className="text-xs">R2 Gallery Keys (Semicolon separated)</Label>
+                  <Input
+                    id="mediaGallery"
+                    value={mediaGallery}
+                    onChange={(e) => setMediaGallery(e.target.value)}
+                    placeholder="key1.jpg;key2.jpg"
+                    className="h-8 text-sm mt-1"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="sourceFileUrl" className="text-xs">Source File URL (Drive/Raw)</Label>
+                  <Input
+                    id="sourceFileUrl"
+                    value={sourceFileUrl}
+                    onChange={(e) => setSourceFileUrl(e.target.value)}
+                    placeholder="https://drive.google.com/..."
+                    className="h-8 text-sm mt-1"
+                  />
+                </div>
+
+                <div className="opacity-50">
+                  <Label htmlFor="imageUrl" className="text-xs">Old Image URL (Deprecated)</Label>
                   <Input
                     id="imageUrl"
                     value={imageUrl}
                     onChange={(e) => setImageUrl(e.target.value)}
-                    placeholder="URL to item image"
+                    placeholder="Deprecating..."
                     className="h-8 text-sm mt-1"
                   />
                 </div>
 
-                <div>
-                  <Label htmlFor="originalFiles" className="text-xs">Original Files</Label>
+                <div className="opacity-50">
+                  <Label htmlFor="originalFiles" className="text-xs">Original Files (Deprecated)</Label>
                   <Input
                     id="originalFiles"
                     value={originalFiles}
                     onChange={(e) => setOriginalFiles(e.target.value)}
-                    placeholder="url:type;url:type"
+                    placeholder="Deprecating..."
                     className="h-8 text-sm mt-1"
                   />
                 </div>
 
-                <div>
-                  <Label htmlFor="accessoryFiles" className="text-xs">Accessory Files</Label>
+                <div className="opacity-50">
+                  <Label htmlFor="accessoryFiles" className="text-xs">Accessory Files (Deprecated)</Label>
                   <Input
                     id="accessoryFiles"
                     value={accessoryFiles}
                     onChange={(e) => setAccessoryFiles(e.target.value)}
-                    placeholder="url:type;url:type"
+                    placeholder="Deprecating..."
                     className="h-8 text-sm mt-1"
                   />
                 </div>

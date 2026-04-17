@@ -376,13 +376,18 @@ export enum StickerSubType {
 
 /** Merch Item SubTypes */
 export enum MerchSubType {
+  MUG = "mug",
   T_SHIRT = "t-shirt",
+  T_SHIRT_ALLOVER = "t-shirt-allover",
+  T_SHIRT_TANKTOP = "t-shirt-tanktop",
   BAG = "bag",
+  BACKPACK = "backpack",
   SHOES = "shoes",
   RASHGUARD = "rashguard",
   SPORTS_BRA = "sports-bra",
-  T_SHIRT_ALLOVER = "t-shirt-allover",
-  MERCHANDISE = "merchandise"
+  STICKERS_INT_KISSCUT = "stickers-int-kisscut",
+  PRINTS_INT_GICLEE_BACKFRAMED = "prints-int-giclee-backframed",
+  OTHER_MERCHANDISE = "other-merchandise"
 }
 
 /** Craft Item SubTypes */

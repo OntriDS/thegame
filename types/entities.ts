@@ -263,10 +263,23 @@ export interface Item extends BaseEntity {
   // Metadata
   year?: number;                // year of creation/purchase
   subItemType?: SubItemType;    // for merch: T-Shirt, Bag, Shoes, Rashguard, Sports Bra, T-Shirt AllOver
+  
+  // NEW MEDIA SCHEMA
+  media: {
+    main: string;          // REQUIRED: R2 Key to the 1280px PNG (e.g., "items/.../tech-spiral-main.png")
+    thumb?: string;        // OPTIONAL: R2 Key to the 400px JPEG
+    gallery?: string[];    // OPTIONAL: Array of R2 Keys to 1024 px JPGs
+  };
+
+  // LOGISTICS (Source Files for Printing (pdf, png)
+  sourceFileUrl?: string;  // OPTIONAL: Google Drive link to the raw production file (PDF/PNG)
+
+  /** @deprecated Use media.main instead */
   imageUrl?: string;            // URL to item image/photo
 
-  // File attachments
+  /** @deprecated Use sourceFileUrl or media.gallery instead */
   originalFiles?: FileReference[];
+  /** @deprecated Use media.gallery instead */
   accessoryFiles?: FileReference[];
 
   // Ambassador Fields (Links System - references to other entities)

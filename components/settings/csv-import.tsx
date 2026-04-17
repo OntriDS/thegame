@@ -263,6 +263,12 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
           return normalizeSubItemTypeForItemType(finalItemType, String(raw)) as SubItemType | undefined;
         })(),
         imageUrl: row.ImageUrl || undefined,
+        media: {
+          main: "",
+          thumb: "",
+          gallery: [],
+        },
+        sourceFileUrl: "",
         originalFiles: originalFiles.length > 0 ? originalFiles : undefined,
         accessoryFiles: accessoryFiles.length > 0 ? accessoryFiles : undefined,
         sourceTaskId,

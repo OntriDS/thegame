@@ -2,14 +2,15 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Palette, Bell, User } from 'lucide-react';
+import { Palette, Bell, User, Wrench } from 'lucide-react';
 import { ThemeSelector } from '@/components/theme/theme-selector';
+import { MediaMigrationCard } from './MediaMigrationCard';
 
 export function SystemSettingsTab() {
   return (
     <TabsContent value="system" className="space-y-4">
       <Tabs defaultValue="theme" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="theme" className="flex items-center gap-2">
             <Palette className="h-4 w-4" />
             Theme
@@ -21,6 +22,10 @@ export function SystemSettingsTab() {
           <TabsTrigger value="account" className="flex items-center gap-2">
             <User className="h-4 w-4" />
             Account
+          </TabsTrigger>
+          <TabsTrigger value="maintenance" className="flex items-center gap-2">
+            <Wrench className="h-4 w-4" />
+            Maintenance
           </TabsTrigger>
         </TabsList>
 
@@ -63,6 +68,10 @@ export function SystemSettingsTab() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="maintenance" className="space-y-4">
+          <MediaMigrationCard />
         </TabsContent>
       </Tabs>
     </TabsContent>
