@@ -389,10 +389,10 @@ export async function POST(req: NextRequest) {
           const targetEvent = String(newEvent || hit.entry.event || '').toUpperCase();
           let timestampIso: string | undefined;
           if (targetEvent === 'SOLD') {
-            const raw = item.soldAt || item.collectedAt || item.createdAt;
+            const raw = item.soldAt || item.createdAt;
             timestampIso = raw ? new Date(raw).toISOString() : undefined;
           } else if (targetEvent === 'COLLECTED') {
-            const raw = item.collectedAt || item.soldAt || item.createdAt;
+            const raw = item.soldAt || item.createdAt;
             timestampIso = raw ? new Date(raw).toISOString() : undefined;
           }
           const patchResult = await patchLogEntryById(EntityType.ITEM, {

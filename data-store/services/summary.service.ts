@@ -76,7 +76,7 @@ export class SummaryService {
     newItem: Item,
     oldItem?: Item
   ): Promise<void> {
-    const date = newItem.soldAt || newItem.collectedAt || newItem.updatedAt || new Date();
+    const date = newItem.soldAt || newItem.updatedAt || new Date();
     const monthYear = formatMonthKey(new Date(date));
     let itemsSoldDelta = 0;
 
@@ -147,7 +147,7 @@ export class SummaryService {
   }
 
   static async handleItemDeletion(item: Item) {
-    const date = item.soldAt || item.collectedAt || new Date();
+    const date = item.soldAt || new Date();
     await SummaryRepository.updateCounters({
       monthYear: formatMonthKey(new Date(date)),
       itemsSoldDelta: -(item.quantitySold || 0)

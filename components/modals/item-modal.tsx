@@ -238,8 +238,17 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         return;
       }
     }
+    
+    // Clear soldAt if moving away from SOLD status
+    if (value !== ItemStatus.SOLD) {
+      setLocalSoldAt(undefined);
+    } else if (!localSoldAt) {
+      // If manually setting to SOLD without a valid soldAt, set one now
+      setLocalSoldAt(new Date());
+    }
+    
     setStatus(value);
-  }, [currentEditingItem, openQuickSellFlow]);
+  }, [currentEditingItem, openQuickSellFlow, localSoldAt]);
 
   const executeQuickSale = useCallback(async (targetItem: Item, siteId: string, quantity: number) => {
     const now = new Date();
@@ -796,7 +805,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         // Preserve creation date if editing, otherwise new date
         createdAt: (item || existingItems.find(i => i.id === selectedItemId))?.createdAt || new Date(),
         updatedAt: new Date(),
-        soldAt: localSoldAt ?? item?.soldAt,
+        soldAt: status === ItemStatus.SOLD ? (localSoldAt ?? item?.soldAt ?? new Date()) : undefined,
         links: (item || existingItems.find(i => i.id === selectedItemId))?.links || [],  // preserve embedded mirror
       };
 
@@ -1392,6 +1401,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
           entityType="item"
           entityName={currentEditingItem.name || 'Untitled Item'}
           onConfirm={() => {
+            setLocalSoldAt(new Date());
             setStatus(ItemStatus.SOLD);
             setShowSoldConfirmation(false);
             setPendingSoldStatus(false);
