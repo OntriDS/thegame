@@ -121,7 +121,66 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
     [sites]
   );
 
+  // R2 helpers ---------------------------------------------------------------
+  const [autoPrefixR2, setAutoPrefixR2] = useState<boolean>(() => {
+    const saved = getPreference('item-modal-auto-prefix-r2');
+    if (typeof saved === 'boolean') return saved;
+    if (saved === 'true') return true;
+    if (saved === 'false') return false;
+    return true; // default ON
+  });
 
+  const r2Prefix = useMemo(() => {
+    const parts: string[] = [];
+    if (station) parts.push(String(station));
+    if (type) parts.push(String(type));
+    if (subItemType) parts.push(String(subItemType));
+    return parts.join('/');
+  }, [station, type, subItemType]);
+
+  const applyR2PrefixToValue = useCallback(
+    (raw: string): string => {
+      const trimmed = raw.trim();
+      if (!trimmed) return '';
+      if (!autoPrefixR2 || !r2Prefix) return trimmed;
+      if (trimmed.startsWith(r2Prefix)) return trimmed;
+      return `${r2Prefix}/${trimmed}`;
+    },
+    [autoPrefixR2, r2Prefix]
+  );
+
+  const applyR2PrefixToGallery = useCallback(
+    (raw: string): string => {
+      if (!raw) return '';
+      const parts = raw
+        .split(';')
+        .map((s) => s.trim())
+        .filter(Boolean);
+      if (!parts.length) return '';
+      const prefixed = parts.map((part) => applyR2PrefixToValue(part));
+      return prefixed.join(';');
+    },
+    [applyR2PrefixToValue]
+  );
+
+  const makeR2ArrowFillHandler =
+    (setter: (value: string) => void) =>
+    (event: any) => {
+      if (event.key !== 'ArrowRight') return;
+      if (!autoPrefixR2 || !r2Prefix) return;
+      if (typeof event.currentTarget?.value !== 'string') return;
+      if (event.currentTarget.value.trim() !== '') return;
+      event.preventDefault();
+      setter(`${r2Prefix}/`);
+    };
+
+  const r2MainPlaceholder =
+    r2Prefix ? `${r2Prefix}/main.png` : 'station/item-type/subtype/main.png';
+  const r2ThumbPlaceholder =
+    r2Prefix ? `${r2Prefix}/thumb.jpg` : 'station/item-type/subtype/thumb.jpg';
+  const r2GalleryPlaceholder = r2Prefix
+    ? `${r2Prefix}/gallery-1.jpg;${r2Prefix}/gallery-2.jpg`
+    : 'file-1.jpg;file-2.jpg';
 
 
   const currentEditingItem = useMemo(() => {
@@ -777,6 +836,14 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         }];
       }
 
+      // Resolve final media values with optional R2 prefixing
+      const finalMediaMain = applyR2PrefixToValue(mediaMain);
+      const finalMediaThumb = applyR2PrefixToValue(mediaThumb);
+      const finalMediaGalleryString = applyR2PrefixToGallery(mediaGallery);
+      const finalMediaGalleryArray = finalMediaGalleryString
+        ? finalMediaGalleryString.split(';').map((s) => s.trim()).filter(Boolean)
+        : undefined;
+
       let finalId = item?.id;
       if (!finalId) {
         if (selectedItemId) {
@@ -804,9 +871,9 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         quantitySold,
         year,
         media: {
-          main: mediaMain,
-          thumb: mediaThumb || undefined,
-          gallery: mediaGallery ? mediaGallery.split(';').map(s => s.trim()).filter(Boolean) : undefined,
+          main: finalMediaMain,
+          thumb: finalMediaThumb || undefined,
+          gallery: finalMediaGalleryArray,
         },
         sourceFileUrl: sourceFileUrl || undefined,
         stock: updatedStock,
@@ -1061,114 +1128,154 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
 
           {/* More Fields (Collapsible) */}
           <div className="border-t pt-3 mt-4">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowMoreFields(!showMoreFields)}
-              className="h-7 text-xs"
-            >
-              {showMoreFields ? 'Hide' : 'Show'} Extra Fields
-            </Button>
+            <div className="flex items-center justify-between gap-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowMoreFields(!showMoreFields)}
+                className="h-7 text-xs"
+              >
+                {showMoreFields ? 'Hide' : 'Show'} Extra Fields
+              </Button>
+              <div className="flex items-center gap-2">
+                <Switch
+                  id="autoPrefixR2"
+                  checked={autoPrefixR2}
+                  onCheckedChange={(checked) => {
+                    setAutoPrefixR2(checked);
+                    void setPreference('item-modal-auto-prefix-r2', checked);
+                  }}
+                />
+                <Label htmlFor="autoPrefixR2" className="text-xs cursor-pointer select-none">
+                  Prefix r2
+                </Label>
+              </div>
+            </div>
 
             {showMoreFields && (
               <div className="space-y-4 mt-4">
-                <div className="grid grid-cols-4 gap-4">
-                  <div>
-                    <Label htmlFor="description" className="text-xs">Description</Label>
-                    <Input
-                      id="description"
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                      placeholder="Item description"
-                      className="h-8 text-sm mt-1"
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="mediaMain" className="text-xs">R2 Main Key (Project)</Label>
-                    <Input
-                      id="mediaMain"
-                      value={mediaMain}
-                      onChange={(e) => setMediaMain(e.target.value)}
-                      placeholder="items/stickers/.../main.png"
-                      className="h-8 text-sm mt-1 ring-1 ring-primary/20"
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="mediaThumb" className="text-xs">R2 Thumb Key (JPEG)</Label>
-                    <Input
-                      id="mediaThumb"
-                      value={mediaThumb}
-                      onChange={(e) => setMediaThumb(e.target.value)}
-                      placeholder="items/stickers/.../thumb.jpg"
-                      className="h-8 text-sm mt-1"
-                    />
-                  </div>
-
-                  <div className="col-span-2">
-                    <Label htmlFor="mediaGallery" className="text-xs">R2 Gallery Keys (Semicolon separated)</Label>
-                    <Input
-                      id="mediaGallery"
-                      value={mediaGallery}
-                      onChange={(e) => setMediaGallery(e.target.value)}
-                      placeholder="key1.jpg;key2.jpg"
-                      className="h-8 text-sm mt-1"
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="sourceFileUrl" className="text-xs">Source File URL (Drive/Raw)</Label>
-                    <Input
-                      id="sourceFileUrl"
-                      value={sourceFileUrl}
-                      onChange={(e) => setSourceFileUrl(e.target.value)}
-                      placeholder="https://drive.google.com/..."
-                      className="h-8 text-sm mt-1"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-4 gap-4">
-                  {showDimensions && (
-                    <>
-                      <div>
-                        <Label htmlFor="width" className="text-xs">Width (cm)</Label>
-                        <NumericInput
-                          id="width"
-                          value={width ? parseFloat(width) : 0}
-                          onChange={(value) => setWidth(value.toString())}
-                          min={0}
-                          step={0.1}
-                          className="h-8 text-sm mt-1"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="height" className="text-xs">Height (cm)</Label>
-                        <NumericInput
-                          id="height"
-                          value={height ? parseFloat(height) : 0}
-                          onChange={(value) => setHeight(value.toString())}
-                          min={0}
-                          step={0.1}
-                          className="h-8 text-sm mt-1"
-                        />
-                      </div>
-                    </>
-                  )}
-
-                  {showModelSize && (
+                <div className="grid grid-cols-3 gap-4">
+                  {/* Left: R2 keys + source URL */}
+                  <div className="col-span-2 space-y-3">
                     <div>
-                      <Label htmlFor="size" className="text-xs">Model Size</Label>
+                      <Label htmlFor="mediaMain" className="text-xs">
+                        Main r2 key (.png)
+                      </Label>
                       <Input
-                        id="size"
-                        value={size}
-                        onChange={(e) => setSize(e.target.value)}
-                        placeholder="M, L, XL, 7.5"
+                        id="mediaMain"
+                        value={mediaMain}
+                        onChange={(e) => setMediaMain(e.target.value)}
+                        placeholder={r2MainPlaceholder}
+                        className="h-8 text-sm mt-1 ring-1 ring-primary/20"
+                        onKeyDown={makeR2ArrowFillHandler(setMediaMain)}
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="mediaGallery" className="text-xs">
+                        Gallery r2 key (.jpg ) (separation semicolon)
+                      </Label>
+                      <Input
+                        id="mediaGallery"
+                        value={mediaGallery}
+                        onChange={(e) => setMediaGallery(e.target.value)}
+                        placeholder={r2GalleryPlaceholder}
+                        className="h-8 text-sm mt-1"
+                        onKeyDown={makeR2ArrowFillHandler(setMediaGallery)}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label htmlFor="mediaThumb" className="text-xs">
+                          Thumb r2 key (.jpg)
+                        </Label>
+                        <Input
+                          id="mediaThumb"
+                          value={mediaThumb}
+                          onChange={(e) => setMediaThumb(e.target.value)}
+                          placeholder={r2ThumbPlaceholder}
+                          className="h-8 text-sm mt-1"
+                          onKeyDown={makeR2ArrowFillHandler(setMediaThumb)}
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="sourceFileUrl" className="text-xs">
+                          Source file url
+                        </Label>
+                        <Input
+                          id="sourceFileUrl"
+                          value={sourceFileUrl}
+                          onChange={(e) => setSourceFileUrl(e.target.value)}
+                          placeholder="https://drive.google.com/..."
+                          className="h-8 text-sm mt-1"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right: description + dimensions + model size */}
+                  <div className="space-y-3">
+                    <div>
+                      <Label htmlFor="description" className="text-xs">
+                        Description
+                      </Label>
+                      <Input
+                        id="description"
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        placeholder="Item description"
                         className="h-8 text-sm mt-1"
                       />
                     </div>
-                  )}
+
+                    {showDimensions && (
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <Label htmlFor="width" className="text-xs">
+                            Width (cm)
+                          </Label>
+                          <NumericInput
+                            id="width"
+                            value={width ? parseFloat(width) : 0}
+                            onChange={(value) => setWidth(value.toString())}
+                            min={0}
+                            step={0.1}
+                            className="h-8 text-sm mt-1"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="height" className="text-xs">
+                            Height (cm)
+                          </Label>
+                          <NumericInput
+                            id="height"
+                            value={height ? parseFloat(height) : 0}
+                            onChange={(value) => setHeight(value.toString())}
+                            min={0}
+                            step={0.1}
+                            className="h-8 text-sm mt-1"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {showModelSize && (
+                      <div>
+                        <Label htmlFor="size" className="text-xs">
+                          Model Size
+                        </Label>
+                        <Input
+                          id="size"
+                          value={size}
+                          onChange={(e) => setSize(e.target.value)}
+                          placeholder="M, L, XL, 7.5"
+                          className="h-8 text-sm mt-1"
+                        />
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
