@@ -44,6 +44,13 @@ export function ModalToggleTooltip({
   const timerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const id = React.useId();
 
+  React.useEffect(() => {
+    return () => {
+      clearTimer();
+      setOpen(false);
+    };
+  }, []);
+
   const clearTimer = () => {
     if (timerRef.current) {
       clearTimeout(timerRef.current);
@@ -77,8 +84,6 @@ export function ModalToggleTooltip({
       className={cn('relative inline-flex', className)}
       onMouseEnter={scheduleShow}
       onMouseLeave={hide}
-      onFocusCapture={scheduleShow}
-      onBlurCapture={hide}
     >
       {trigger}
       {open ? (

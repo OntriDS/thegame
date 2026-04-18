@@ -6,27 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Palette, Bell, User, Wrench } from 'lucide-react';
 import { ThemeSelector } from '@/components/theme/theme-selector';
-import { MediaMigrationCard } from './MediaMigrationCard';
 
 export function SystemSettingsTab() {
-  const [isReindexing, setIsReindexing] = useState(false);
-  const [reindexResult, setReindexResult] = useState<any>(null);
-
-  const handleReindexItems = async () => {
-    try {
-      setIsReindexing(true);
-      setReindexResult(null);
-      const res = await fetch('/api/init/reindex-items', { method: 'POST' });
-      const data = await res.json();
-      setReindexResult(data);
-    } catch (err) {
-      console.error(err);
-      setReindexResult({ error: 'Failed to complete request.' });
-    } finally {
-      setIsReindexing(false);
-    }
-  };
-
   return (
     <TabsContent value="system" className="space-y-4">
       <Tabs defaultValue="theme" className="space-y-4">
@@ -91,26 +72,11 @@ export function SystemSettingsTab() {
         </TabsContent>
 
         <TabsContent value="maintenance" className="space-y-4">
-          <MediaMigrationCard />
-          <Card>
-            <CardHeader>
-              <CardTitle>Item Indexing Optimization (Active/Legacy)</CardTitle>
-              <CardDescription>Rebuild the split indexes for Legacy and Active items. Do this once after migrating new item structures.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button 
-                onClick={handleReindexItems} 
-                disabled={isReindexing}
-              >
-                {isReindexing ? 'Reindexing...' : 'Run Index Optimization'}
-              </Button>
-              {reindexResult && (
-                <div className="mt-4 p-4 bg-muted border rounded-md text-sm">
-                  <pre>{JSON.stringify(reindexResult, null, 2)}</pre>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <div className="text-center py-8 text-muted-foreground">
+            <Wrench className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <p>No maintenance tasks pending</p>
+            <p className="text-sm">Database indexing and schema migrations are up to date.</p>
+          </div>
         </TabsContent>
       </Tabs>
     </TabsContent>

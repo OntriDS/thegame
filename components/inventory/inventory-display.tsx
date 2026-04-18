@@ -1478,34 +1478,24 @@ export function InventoryDisplay({
 
     return (
       <div className="space-y-4">
-        {/* Legacy UX Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-muted/30 p-3 rounded-lg border">
-          <div className="flex flex-col gap-1">
-            <h3 className="font-semibold text-lg flex items-center gap-2">
-              <Archive className="h-5 w-5 text-primary" />
-              {showLegacyItems ? 'Legacy Items (Historical Portfolio)' : 'Sold Items Archive'}
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              {showLegacyItems ? 'Items from previous historical eras' : 'Browse items that have been sold'}
-            </p>
-          </div>
-          
-          <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <h3 className="text-lg font-semibold">{showLegacyItems ? 'Legacy Portfolio Items' : 'Sold Items'}</h3>
             <Button
-              variant="outline"
+              variant="ghost"
               size="sm"
               onClick={() => {
                 setShowLegacyItems(!showLegacyItems);
               }}
-              className={showLegacyItems ? "bg-primary/10 border-primary" : ""}
+              className={`h-7 px-2 text-[10px] uppercase font-bold tracking-wider border transition-colors ${
+                showLegacyItems 
+                  ? "bg-primary/10 border-primary text-primary hover:bg-primary/20" 
+                  : "bg-muted/50 border-transparent text-muted-foreground hover:bg-muted"
+              }`}
             >
-              {showLegacyItems ? 'View Application Sales' : 'Legacy Portfolio Items'}
+              {showLegacyItems ? 'Switch to Sold Items' : 'View Legacy Portfolio'}
             </Button>
           </div>
-        </div>
-
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold">{showLegacyItems ? 'Historical Portfolio Index' : 'Sold Items'}</h3>
           <div className="flex items-center gap-2 ml-auto">
             {/* Sorting Dropdown - Matching TaskHistoryView pattern */}
             <div className="flex items-center gap-1 text-xs mr-2 border rounded-md px-2 py-0.5 bg-muted/40">

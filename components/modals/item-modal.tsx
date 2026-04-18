@@ -43,13 +43,16 @@ interface ItemModalProps {
   initialSiteId?: string;
 }
 
+const DEFAULT_NEW_ITEM_STATION: Station = 'items';
+const DEFAULT_NONE_SITE = 'None';
+
 export default function ItemModal({ item, defaultItemType, open, onOpenChange, onSave, initialSiteId }: ItemModalProps) {
   const { getPreference, setPreference } = useUserPreferences();
 
   // Memoized to prevent dependency changes on every render
   const getLastUsedStation = useCallback((): Station => {
     const saved = getPreference('item-modal-last-station');
-    return (saved as Station) || ('inventory' as Station);
+    return (saved as Station) || DEFAULT_NEW_ITEM_STATION;
   }, [getPreference]);
 
   // Helper function to get the correct value format for SearchableSelect
@@ -83,7 +86,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
   const [size, setSize] = useState('');
   const [targetAmount, setTargetAmount] = useState('');
   const [quantitySold, setQuantitySold] = useState(0);
-  const [site, setSite] = useState<string>('');
+  const [site, setSite] = useState<string>(DEFAULT_NONE_SITE);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showMoreFields, setShowMoreFields] = useState(false);
   const [showLinksModal, setShowLinksModal] = useState(false);
@@ -108,6 +111,15 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
   const [selectedItemId, setSelectedItemId] = useState('');
   const [existingItems, setExistingItems] = useState<Item[]>([]);
   const [sites, setSites] = useState<Site[]>([]);
+  const siteOptions = useMemo(
+    () => {
+      const options = createSiteOptionsWithCategories(sites);
+      return options.some(option => option.value === DEFAULT_NONE_SITE)
+        ? options
+        : [{ value: DEFAULT_NONE_SITE, label: 'None', category: 'Other' }, ...options];
+    },
+    [sites]
+  );
 
 
 
@@ -173,7 +185,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
           setName(formData.name || '');
           setDescription(formData.description || '');
           setType(formData.type || defaultItemType || ItemType.STICKER);
-          setStation(formData.station || 'strategy');
+          setStation(formData.station || DEFAULT_NEW_ITEM_STATION);
           setSubItemType(formData.subItemType || '');
           setCollection(formData.collection || Collection.NO_COLLECTION);
           setStatus(formData.status || ItemStatus.FOR_SALE);
@@ -199,7 +211,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
           setHeight(formData.height || '');
           setSize(formData.size || '');
           setTargetAmount(formData.targetAmount || '');
-          setSite(formData.site || '');
+          setSite(formData.site || DEFAULT_NONE_SITE);
         } catch (error) {
           console.error('Error loading form data from preferences:', error);
         }
@@ -981,7 +993,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
                   value={site}
                   onValueChange={(value) => setSite(value)}
                   placeholder="Select site"
-                  options={createSiteOptionsWithCategories(sites)}
+                  options={siteOptions}
                   autoGroupByCategory={true}
                   className="h-8 text-sm"
                 />
