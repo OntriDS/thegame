@@ -18,7 +18,7 @@ import { getCollectionLabel } from '@/lib/constants/collection-labels';
 import ItemModal from '@/components/modals/item-modal';
 import BulkEditModal from '@/components/modals/submodals/bulk-edit-submodal';
 import InlineEditor from '@/components/control-room/inline-editor';
-import { MapPin, Pencil, Package, Settings, Package2, ChevronDown, ChevronRight, AlertTriangle, RefreshCw, ArrowUpDown, Archive } from 'lucide-react';
+import { MapPin, Pencil, Package, Settings, Package2, ChevronDown, ChevronRight, AlertTriangle, RefreshCw, ArrowUpDown, Archive, Search, X } from 'lucide-react';
 import { ITEM_TYPE_ICONS } from '@/lib/constants/icon-maps';
 import { Site } from '@/types/entities';
 import { DEFAULT_YELLOW_THRESHOLD } from '@/lib/constants/app-constants';
@@ -135,6 +135,15 @@ export function InventoryDisplay({
   
   // Sold Items Sort state
   const [soldItemsSortOption, setSoldItemsSortOption] = useState<'date-desc' | 'date-asc' | 'price-desc' | 'price-asc' | 'name-asc' | 'name-desc' | 'type-asc' | 'site-asc'>('date-desc');
+  const [soldItemsSearchQuery, setSoldItemsSearchQuery] = useState('');
+  const [soldItemsSearchResults, setSoldItemsSearchResults] = useState<Item[]>([]);
+  const [soldItemsSearchAllMatches, setSoldItemsSearchAllMatches] = useState<Item[]>([]);
+  const [isSearchingSoldItems, setIsSearchingSoldItems] = useState(false);
+  const [legacyCurrentPage, setLegacyCurrentPage] = useState(1);
+  const [legacyTotalItems, setLegacyTotalItems] = useState(0);
+  const [legacyTotalPages, setLegacyTotalPages] = useState(1);
+
+  const LEGACY_ITEMS_PAGE_SIZE = 50;
 
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   
@@ -168,8 +177,23 @@ export function InventoryDisplay({
 
       if (activeTab === InventoryTab.SOLD_ITEMS) {
         if (showLegacyItems) {
-          items = await ClientAPI.getItems(undefined, undefined, undefined, 'legacy');
+          const siteId = selectedSite === 'all' ? undefined : selectedSite;
+          const legacyPageResponse = await ClientAPI.getLegacyItemsPage(
+            legacyCurrentPage,
+            LEGACY_ITEMS_PAGE_SIZE,
+            siteId,
+            soldItemsSortOption
+          );
+
+          items = legacyPageResponse.items;
+          setLegacyTotalItems(legacyPageResponse.total);
+          setLegacyTotalPages(Math.max(1, legacyPageResponse.totalPages));
+          if (legacyCurrentPage > legacyPageResponse.totalPages && legacyPageResponse.totalPages > 0) {
+            setLegacyCurrentPage(Math.max(1, legacyPageResponse.totalPages));
+          }
         } else {
+          setLegacyTotalItems(0);
+          setLegacyTotalPages(1);
           // Use status filter for sold items with month selector
           const [mm, yy] = selectedMonthKey.split('-');
           const monthNum = parseInt(mm, 10);
@@ -221,7 +245,7 @@ export function InventoryDisplay({
     } catch (error) {
       console.error('Failed to load items:', error);
     }
-  }, [activeTab, selectedSite, selectedStatus, selectedMonthKey, showLegacyItems]);
+  }, [activeTab, selectedSite, selectedStatus, selectedMonthKey, showLegacyItems, legacyCurrentPage, soldItemsSortOption]);
 
   // Hydration sync - runs only once on mount
   useEffect(() => {
@@ -239,6 +263,93 @@ export function InventoryDisplay({
     setShowItemModal(true);
     onDeepLinkItemConsumed?.();
   }, [deepLinkItem, onMonthChange, onDeepLinkItemConsumed]);
+
+  useEffect(() => {
+    if (!isHydrated || activeTab !== InventoryTab.SOLD_ITEMS) {
+      setSoldItemsSearchQuery('');
+      setSoldItemsSearchResults([]);
+      setSoldItemsSearchAllMatches([]);
+      setIsSearchingSoldItems(false);
+      return;
+    }
+
+    const query = soldItemsSearchQuery.trim().toLowerCase();
+    if (!query || query.length < 2) {
+      setSoldItemsSearchResults([]);
+      setSoldItemsSearchAllMatches([]);
+      setIsSearchingSoldItems(false);
+      return;
+    }
+
+    let cancelled = false;
+    setIsSearchingSoldItems(true);
+
+    const timeoutId = window.setTimeout(() => {
+      void (async () => {
+        try {
+          const siteId = selectedSite === 'all' ? undefined : selectedSite;
+          const query = soldItemsSearchQuery.trim().toLowerCase();
+          const soldItems = showLegacyItems
+            ? await ClientAPI.searchLegacyItems(query, siteId, soldItemsSortOption)
+            : await ClientAPI.getItems(
+              'all',
+              undefined,
+              undefined,
+              ItemStatus.SOLD,
+              siteId
+            );
+
+          if (cancelled) return;
+
+          const sortedResults = [...soldItems]
+            .filter(item => (item.name || '').toLowerCase().includes(query))
+            .sort((a, b) => {
+              const aDate = new Date((showLegacyItems ? (a.updatedAt || a.createdAt) : (a.soldAt || a.updatedAt || a.createdAt)) || 0).getTime();
+              const bDate = new Date((showLegacyItems ? (b.updatedAt || b.createdAt) : (b.soldAt || b.updatedAt || b.createdAt)) || 0).getTime();
+              switch (soldItemsSortOption) {
+                case 'name-asc':
+                  return (a.name || '').localeCompare(b.name || '');
+                case 'name-desc':
+                  return (b.name || '').localeCompare(a.name || '');
+                case 'type-asc':
+                  return (a.type || '').localeCompare(b.type || '');
+                case 'site-asc':
+                  return (a.stock?.[0]?.siteId || '').localeCompare(b.stock?.[0]?.siteId || '');
+                case 'price-asc':
+                  return (a.price || 0) - (b.price || 0);
+                case 'price-desc':
+                  return (b.price || 0) - (a.price || 0);
+                case 'date-asc':
+                  return aDate - bDate;
+                case 'date-desc':
+                default:
+                  return bDate - aDate;
+              }
+            });
+
+          const results = sortedResults.slice(0, 12);
+
+          setSoldItemsSearchAllMatches(sortedResults);
+          setSoldItemsSearchResults(results);
+        } catch (error) {
+          if (cancelled) return;
+          console.error('Failed to search sold items:', error);
+          setSoldItemsSearchResults([]);
+          setSoldItemsSearchAllMatches([]);
+        } finally {
+          if (!cancelled) {
+            setIsSearchingSoldItems(false);
+          }
+        }
+      })();
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timeoutId);
+      setIsSearchingSoldItems(false);
+    };
+    }, [activeTab, isHydrated, selectedSite, soldItemsSearchQuery, showLegacyItems, soldItemsSortOption]);
 
 
   useEffect(() => {
@@ -406,6 +517,29 @@ export function InventoryDisplay({
     setTargetSiteId(siteId);
     setDefaultItemType(item.type);
     setShowItemModal(true);
+  };
+
+  const handleOpenSoldItemFromSearch = (item: Item) => {
+    if (showLegacyItems) {
+      const searchIndex = soldItemsSearchAllMatches.findIndex(match => match.id === item.id);
+      if (searchIndex >= 0) {
+        const targetPage = Math.floor(searchIndex / LEGACY_ITEMS_PAGE_SIZE) + 1;
+        setLegacyCurrentPage(targetPage);
+      }
+    } else {
+      const anchorDate = item.soldAt || item.updatedAt || item.createdAt;
+      if (anchorDate) {
+        onMonthChange(formatMonthKey(anchorDate));
+      }
+    }
+
+    setActiveTab(InventoryTab.SOLD_ITEMS);
+    setPreference('inventory-active-tab', InventoryTab.SOLD_ITEMS);
+    setSoldItemsSearchQuery('');
+    setSoldItemsSearchResults([]);
+    setSoldItemsSearchAllMatches([]);
+    setIsSearchingSoldItems(false);
+    handleEditItem(item);
   };
 
   const handleSaveItem = async (item: Item) => {
@@ -1448,11 +1582,16 @@ export function InventoryDisplay({
   const renderSoldItemsTab = () => {
     // API now handles filtering by month directly, so we use items as-is
     const sortedSoldItems = [...items].sort((a, b) => {
+      const getSoldItemsDate = (item: Item) => {
+        return showLegacyItems
+          ? (item.updatedAt || item.createdAt || 0)
+          : (item.soldAt || item.updatedAt || item.createdAt || 0);
+      };
       switch (soldItemsSortOption) {
         case 'date-desc':
-          return new Date(b.soldAt || 0).getTime() - new Date(a.soldAt || 0).getTime();
+          return new Date(getSoldItemsDate(b)).getTime() - new Date(getSoldItemsDate(a)).getTime();
         case 'date-asc':
-          return new Date(a.soldAt || 0).getTime() - new Date(b.soldAt || 0).getTime();
+          return new Date(getSoldItemsDate(a)).getTime() - new Date(getSoldItemsDate(b)).getTime();
         case 'price-desc':
           const valB = b.value || (b.price * (b.quantitySold || 0));
           const valA = a.value || (a.price * (a.quantitySold || 0));
@@ -1476,6 +1615,13 @@ export function InventoryDisplay({
       }
     });
 
+    const visibleSoldItems = showLegacyItems
+      ? sortedSoldItems
+      : sortedSoldItems;
+
+    const legacyRangeStart = showLegacyItems ? ((legacyCurrentPage - 1) * LEGACY_ITEMS_PAGE_SIZE) + 1 : 0;
+    const legacyRangeEnd = showLegacyItems ? Math.min(legacyCurrentPage * LEGACY_ITEMS_PAGE_SIZE, legacyTotalItems) : 0;
+
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between mb-4">
@@ -1486,6 +1632,10 @@ export function InventoryDisplay({
               size="sm"
               onClick={() => {
                 setShowLegacyItems(!showLegacyItems);
+                setLegacyCurrentPage(1);
+                setSoldItemsSearchQuery('');
+                setSoldItemsSearchResults([]);
+                setSoldItemsSearchAllMatches([]);
               }}
               className={`h-7 px-2 text-[10px] uppercase font-bold tracking-wider border transition-colors ${
                 showLegacyItems 
@@ -1497,8 +1647,77 @@ export function InventoryDisplay({
             </Button>
           </div>
           <div className="flex items-center gap-2 ml-auto">
-            {/* Sorting Dropdown - Matching TaskHistoryView pattern */}
-            <div className="flex items-center gap-1 text-xs mr-2 border rounded-md px-2 py-0.5 bg-muted/40">
+            <div className="relative w-64">
+                <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder={showLegacyItems ? 'Search legacy items...' : 'Search sold items...'}
+                  value={soldItemsSearchQuery}
+                  onChange={(e) => setSoldItemsSearchQuery(e.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Escape') {
+                      setSoldItemsSearchQuery('');
+                      setSoldItemsSearchResults([]);
+                      setSoldItemsSearchAllMatches([]);
+                    }
+                    if (event.key === 'Enter' && soldItemsSearchResults.length === 1) {
+                      handleOpenSoldItemFromSearch(soldItemsSearchResults[0]);
+                    }
+                  }}
+                  className="h-7 w-64 pl-7 pr-7 text-[11px]"
+                />
+                {/*Search Items Results */}
+                {soldItemsSearchQuery && (
+                  <button
+                    type="button"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-sm p-0.5 text-muted-foreground hover:bg-muted"
+                    onClick={() => {
+                      setSoldItemsSearchQuery('');
+                      setSoldItemsSearchResults([]);
+                      setSoldItemsSearchAllMatches([]);
+                    }}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+                {soldItemsSearchQuery.trim().length >= 2 ? (
+                  <div className="absolute z-30 mt-1 w-full rounded-md border bg-card shadow-lg">
+                    {isSearchingSoldItems ? (
+                      <div className="px-3 py-2 text-xs text-muted-foreground">
+                        {showLegacyItems ? 'Searching legacy items…' : 'Searching sold items…'}
+                      </div>
+                    ) : soldItemsSearchResults.length === 0 ? (
+                      <div className="px-3 py-2 text-xs text-muted-foreground">
+                        {showLegacyItems ? 'No legacy items match your search.' : 'No sold items match your search.'}
+                      </div>
+                    ) : (
+                      <div className="max-h-64 overflow-y-auto">
+                        {soldItemsSearchResults.map(item => {
+                          const monthSource = showLegacyItems
+                            ? item.updatedAt || item.createdAt
+                            : item.soldAt || item.updatedAt || item.createdAt;
+                          const monthLabel = monthSource ? formatMonthKey(monthSource) : 'Unknown month';
+
+                          return (
+                            <button
+                              key={item.id}
+                              type="button"
+                              className="w-full text-left px-3 py-2 text-xs hover:bg-accent border-b last:border-b-0"
+                              onClick={() => handleOpenSoldItemFromSearch(item)}
+                            >
+                              <p className="font-medium truncate">{item.name}</p>
+                              <p className="text-[10px] text-muted-foreground">
+                                {item.type?.toLowerCase()} • {monthLabel}
+                              </p>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                ) : null}
+              </div>
+            {/* Sorting Dropdown */}
+            <div className="flex items-center gap-2 text-xs mr-2 border rounded-md px-2 py-0.5 bg-muted/40">
               <ArrowUpDown className="h-3 w-3 text-muted-foreground mr-1" />
               <Select 
                 value={soldItemsSortOption} 
@@ -1522,7 +1741,7 @@ export function InventoryDisplay({
                 </SelectContent>
               </Select>
             </div>
-
+            {/* Month Selector */}
             {!showLegacyItems && (
               <MonthSelector
                 selectedMonth={selectedMonthKey}
@@ -1530,6 +1749,7 @@ export function InventoryDisplay({
                 onChange={onMonthChange}
               />
             )}
+            {/* Reload Button */}
             <Button
               size="sm"
               variant="outline"
@@ -1546,7 +1766,7 @@ export function InventoryDisplay({
 
 
         <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-          {isHydrated && sortedSoldItems.map(item => {
+          {isHydrated && visibleSoldItems.map(item => {
             const siteName = item.stock?.[0]?.siteId || '';
             const qty = item.quantitySold || 0;
             const unitPrice = item.price || 0;
@@ -1600,6 +1820,49 @@ export function InventoryDisplay({
             );
           })}
         </div>
+
+        {showLegacyItems && legacyTotalItems > LEGACY_ITEMS_PAGE_SIZE && (
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <p>
+              Showing {legacyRangeStart}-{legacyRangeEnd} of {legacyTotalItems} legacy items
+            </p>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  if (legacyCurrentPage > 1) {
+                    setLegacyCurrentPage(prev => Math.max(1, prev - 1));
+                    setSoldItemsSearchQuery('');
+                    setSoldItemsSearchResults([]);
+                    setSoldItemsSearchAllMatches([]);
+                  }
+                }}
+                disabled={legacyCurrentPage <= 1}
+              >
+                Previous
+              </Button>
+              <span className="text-sm text-foreground">
+                Page {legacyCurrentPage} / {legacyTotalPages}
+              </span>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  if (legacyCurrentPage < legacyTotalPages) {
+                    setLegacyCurrentPage(prev => Math.min(legacyTotalPages, prev + 1));
+                    setSoldItemsSearchQuery('');
+                    setSoldItemsSearchResults([]);
+                    setSoldItemsSearchAllMatches([]);
+                  }
+                }}
+                disabled={legacyCurrentPage >= legacyTotalPages}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        )}
 
         {items.length === 0 && (
           <div className="text-center py-8 text-muted-foreground">

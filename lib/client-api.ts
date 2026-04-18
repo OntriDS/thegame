@@ -14,7 +14,7 @@
 
 import type { Task, Item, Sale, FinancialRecord, Character, Player, Site, Account, Settlement, AISession, Business, Contract, SummaryTotals } from '@/types/entities';
 import type { AISystemPreset } from '@/lib/ai/system-presets';
-import type { CharacterRole } from '@/types/enums';
+import { ItemStatus, type CharacterRole } from '@/types/enums';
 
 export type CharacterDirectorySortBy = 'name' | 'role';
 type CharacterDirectorySortOrder = 'asc' | 'desc';
@@ -40,6 +40,14 @@ export interface GetCharacterDirectoryParams {
   page?: number;
   pageSize?: number;
   filter?: 'special';
+}
+
+export interface LegacyItemsPageResponse {
+  items: Item[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
 }
 
 export const ClientAPI = {
@@ -167,6 +175,38 @@ export const ClientAPI = {
     const url = params.toString() ? `${base}?${params.toString()}` : base;
     const res = await fetch(url);
     if (!res.ok) throw new Error('Failed to fetch items');
+    return await res.json();
+  },
+
+  getLegacyItemsPage: async (
+    page: number = 1,
+    pageSize: number = 50,
+    siteId?: string,
+    sort: string = 'date-desc',
+    search?: string
+  ): Promise<LegacyItemsPageResponse> => {
+    const params = new URLSearchParams();
+    params.append('status', ItemStatus.LEGACY);
+    params.append('page', String(page));
+    params.append('pageSize', String(pageSize));
+    if (sort) params.append('sort', sort);
+    if (siteId) params.append('siteId', siteId);
+    if (search) params.append('search', search);
+
+    const res = await fetch(`/api/items?${params.toString()}`);
+    if (!res.ok) throw new Error('Failed to fetch legacy items');
+    return await res.json();
+  },
+
+  searchLegacyItems: async (query: string, siteId?: string, sort: string = 'date-desc'): Promise<Item[]> => {
+    const params = new URLSearchParams();
+    params.append('status', ItemStatus.LEGACY);
+    params.append('search', query);
+    if (sort) params.append('sort', sort);
+    if (siteId) params.append('siteId', siteId);
+
+    const res = await fetch(`/api/items?${params.toString()}`);
+    if (!res.ok) throw new Error('Failed to search legacy items');
     return await res.json();
   },
 

@@ -2,11 +2,11 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { v4 as uuid } from 'uuid';
 import type { Item } from '@/types/entities';
-import { getAllItems, getItemsByType, upsertItem, getItemsForMonth, getArchivedItemsByMonth, getActiveItems, getLegacyItems } from '@/data-store/datastore';
+import { getAllItems, getItemsByType, upsertItem, getItemsForMonth, getActiveItems, getLegacyItems } from '@/data-store/datastore';
 import { requireAdminAuth } from '@/lib/api-auth';
 import { ItemStatus } from '@/types/enums';
 import { isSoldStatus } from '@/lib/utils/status-utils';
-import { formatMonthKey } from '@/lib/utils/date-utils';
+import { parseFlexibleDate } from '@/lib/utils/date-utils';
 
 // Force dynamic rendering - this route accesses cookies
 export const dynamic = 'force-dynamic';
@@ -20,8 +20,15 @@ export async function GET(req: NextRequest) {
   const typeFilter = searchParams.get('type');
   const monthParam = searchParams.get('month');
   const yearParam = searchParams.get('year');
-  const statusFilter = searchParams.get('status');
+  const statusFilter = searchParams.get('status')?.toLowerCase();
   const siteFilter = searchParams.get('siteId');
+  const pageParam = searchParams.get('page');
+  const pageSizeParam = searchParams.get('pageSize');
+  const sortOption = searchParams.get('sort') || 'date-desc';
+  const searchQuery = searchParams.get('search')?.trim().toLowerCase() || '';
+
+  const page = pageParam ? parseInt(pageParam, 10) : undefined;
+  const pageSize = pageSizeParam ? parseInt(pageSizeParam, 10) : undefined;
 
   const normalizeYear = (y: string | null): number | null => {
     if (!y) return null;
@@ -47,7 +54,7 @@ export async function GET(req: NextRequest) {
     items = await getItemsForMonth(year, month);
   }
   // Strategy 2: Legacy fetching (Optimized)
-  else if (statusFilter === 'legacy') {
+  else if (statusFilter === ItemStatus.LEGACY) {
     items = await getLegacyItems();
   }
   // Strategy 3: Type-based fetching (Optimized)
@@ -77,18 +84,18 @@ export async function GET(req: NextRequest) {
 
   // 2. Status Filter
   if (statusFilter) {
-    const targetStatus = statusFilter.toLowerCase();
+    const targetStatus = statusFilter;
 
     // If 'all' is explicitly requested, bypass status filtering entirely to fetch everything (including SOLD)
     if (targetStatus !== 'all') {
       items = items.filter(item => {
         const isSold = isSoldStatus(item.status);
           
-        if (targetStatus === 'sold') return isSold;
+        if (targetStatus === ItemStatus.SOLD) return isSold;
         return (item.status || '').toString().toLowerCase() === targetStatus;
       });
     }
-  } else if (!month && !year && statusFilter !== 'legacy') {
+  } else if (!month && !year && statusFilter !== ItemStatus.LEGACY) {
     // Default behavior for Active Inventory (no month/year specified AND no explicit status):
     // Show only active items (unsold). The active index already excludes sold/legacy,
     // so this is just a safety catch for any strategy leaks.
@@ -99,19 +106,17 @@ export async function GET(req: NextRequest) {
   // If we fetched all items (e.g. because of status filter), we still need to filter by month if provided
   if (month && year && (statusFilter || typeFilter)) {
     // When filtering sold items by month, we use soldAt date
-    if (statusFilter?.toLowerCase() === 'sold') {
+    if (statusFilter === ItemStatus.SOLD) {
       items = items.filter(item => {
         // Fallback to updatedAt or createdAt if soldAt is missing (e.g. imported items)
         const dateStr = item.soldAt || item.updatedAt || item.createdAt;
         if (!dateStr) return false;
-        const { parseFlexibleDate } = require('@/lib/utils/date-utils');
         const d = parseFlexibleDate(dateStr);
         return d.getMonth() + 1 === month && d.getFullYear() === year;
       });
     } else {
       // For other items, use createdAt or similar logic if needed
       items = items.filter(item => {
-        const { parseFlexibleDate } = require('@/lib/utils/date-utils');
         const d = parseFlexibleDate(item.createdAt);
         return d.getMonth() + 1 === month && d.getFullYear() === year;
       });
@@ -125,6 +130,57 @@ export async function GET(req: NextRequest) {
       const stockAtSite = item.stock?.some(s => s.siteId === siteFilter);
       return !!stockAtSite;
     });
+  }
+
+  const isLegacyTab = statusFilter === ItemStatus.LEGACY;
+
+  if (isLegacyTab) {
+    if (searchQuery) {
+      items = items.filter(item => (item.name || '').toLowerCase().includes(searchQuery));
+    }
+
+    items = [...items].sort((a, b) => {
+      const aDate = new Date(a.updatedAt || a.createdAt || 0).getTime();
+      const bDate = new Date(b.updatedAt || b.createdAt || 0).getTime();
+      switch (sortOption) {
+        case 'name-asc':
+          return (a.name || '').localeCompare(b.name || '');
+        case 'name-desc':
+          return (b.name || '').localeCompare(a.name || '');
+        case 'type-asc':
+          return (a.type || '').localeCompare(b.type || '');
+        case 'site-asc':
+          return ((a.stock?.[0]?.siteId || '')).localeCompare((b.stock?.[0]?.siteId || ''));
+        case 'price-asc':
+          return ((a.value ?? (a.price * (a.quantitySold || 0))) || 0) - ((b.value ?? (b.price * (b.quantitySold || 0))) || 0);
+        case 'price-desc':
+          return ((b.value ?? (b.price * (b.quantitySold || 0))) || 0) - ((a.value ?? (a.price * (a.quantitySold || 0))) || 0);
+        case 'date-asc':
+          return aDate - bDate;
+        case 'date-desc':
+        default:
+          return bDate - aDate;
+      }
+    });
+
+    if (typeof page === 'number' && Number.isFinite(page) && typeof pageSize === 'number' && Number.isFinite(pageSize)) {
+      const normalizedPage = Math.max(1, page);
+      const normalizedPageSize = Math.max(1, Math.min(100, pageSize));
+      const total = items.length;
+      const totalPages = Math.max(1, Math.ceil(total / normalizedPageSize));
+      const pagedItems = items.slice(
+        (normalizedPage - 1) * normalizedPageSize,
+        normalizedPage * normalizedPageSize
+      );
+
+      return NextResponse.json({
+        items: pagedItems,
+        total,
+        page: normalizedPage,
+        pageSize: normalizedPageSize,
+        totalPages,
+      });
+    }
   }
 
   return NextResponse.json(items);

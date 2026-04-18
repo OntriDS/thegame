@@ -42,6 +42,16 @@ function InventoriesPageContent() {
 
   const clearDeepLinkItem = useCallback(() => setDeepLinkItem(null), []);
 
+  const handleMonthChange = useCallback((monthKey: string) => {
+    setSelectedMonthKey(monthKey);
+    setAvailableMonths((prevMonths) => {
+      if (prevMonths.includes(monthKey)) {
+        return prevMonths;
+      }
+      return sortMonthKeys([monthKey, ...prevMonths]);
+    });
+  }, []);
+
   // Load sites and available months
   useEffect(() => {
     const loadData = async () => {
@@ -128,7 +138,7 @@ function InventoriesPageContent() {
         selectedStatus={selectedStatus}
         selectedMonthKey={selectedMonthKey}
         availableMonths={availableMonths}
-        onMonthChange={setSelectedMonthKey}
+        onMonthChange={handleMonthChange}
         deepLinkItem={deepLinkItem}
         onDeepLinkItemConsumed={clearDeepLinkItem}
       />
