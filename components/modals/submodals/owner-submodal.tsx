@@ -19,6 +19,9 @@ interface OwnerModalProps {
   entityName: string;
   linkType: LinkType.SITE_CHARACTER | LinkType.ITEM_CHARACTER;
   onOwnersChanged?: () => void;
+  isDraft?: boolean;
+  currentOwnerId?: string | null;
+  onDraftOwnerChange?: (characterId: string | null) => void;
 }
 
 export default function OwnerSubmodal({
@@ -28,7 +31,10 @@ export default function OwnerSubmodal({
   entityId,
   entityName,
   linkType,
-  onOwnersChanged
+  onOwnersChanged,
+  isDraft = false,
+  currentOwnerId = null,
+  onDraftOwnerChange
 }: OwnerModalProps) {
   const [characters, setCharacters] = useState<Character[]>([]);
   const [owners, setOwners] = useState<Character[]>([]);
@@ -40,11 +46,24 @@ export default function OwnerSubmodal({
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
+      setSelectedOwnerId('');
+      setSearchTerm('');
 
-      // Load all active characters
+      // Load characters for selection (prefer active first)
       const allCharacters = await ClientAPI.getCharacters();
       const activeCharacters = allCharacters.filter((c: Character) => c.isActive);
-      setCharacters(activeCharacters);
+      const selectableCharacters = activeCharacters.length > 0 ? activeCharacters : allCharacters;
+      setCharacters(selectableCharacters);
+
+      if (isDraft) {
+        if (currentOwnerId) {
+          const currentOwner = allCharacters.find((c: Character) => c.id === currentOwnerId);
+          setOwners(currentOwner ? [currentOwner] : []);
+        } else {
+          setOwners([]);
+        }
+        return;
+      }
 
       // Load ALL owners from links (no primary/additional distinction)
       const links = await ClientAPI.getLinksFor({ type: entityType, id: entityId });
@@ -61,14 +80,14 @@ export default function OwnerSubmodal({
       });
 
       // Get all owners
-      const currentOwners = activeCharacters.filter((c: Character) => ownerIds.has(c.id));
+      const currentOwners = selectableCharacters.filter((c: Character) => ownerIds.has(c.id));
       setOwners(currentOwners);
     } catch (error) {
       console.error('Failed to load data:', error);
     } finally {
       setLoading(false);
     }
-  }, [entityType, entityId, linkType]);
+  }, [entityType, entityId, linkType, isDraft, currentOwnerId]);
 
   // Load data when modal opens
   useEffect(() => {
@@ -91,6 +110,15 @@ export default function OwnerSubmodal({
 
     try {
       setSaving(true);
+
+      if (isDraft) {
+        const selectedCharacter = characters.find((character: Character) => character.id === selectedOwnerId);
+        setOwners(selectedCharacter ? [selectedCharacter] : []);
+        onDraftOwnerChange?.(selectedOwnerId);
+        setSelectedOwnerId('');
+        setSearchTerm('');
+        return;
+      }
 
       // Create link in canonical direction
       const link = {
@@ -122,6 +150,14 @@ export default function OwnerSubmodal({
   const handleRemoveOwner = async (characterId: string) => {
     try {
       setSaving(true);
+
+      if (isDraft) {
+        setOwners([]);
+        onDraftOwnerChange?.(null);
+        setSelectedOwnerId('');
+        setSearchTerm('');
+        return;
+      }
 
       // Find the link to remove
       const links = await ClientAPI.getLinksFor({ type: entityType, id: entityId });

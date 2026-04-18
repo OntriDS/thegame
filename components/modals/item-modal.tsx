@@ -106,7 +106,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
   const [localSoldAt, setLocalSoldAt] = useState<Date | undefined>(item?.soldAt ? new Date(item.soldAt) : undefined);
 
   // Item selection states for compound field
-  const [isNewItem, setIsNewItem] = useState(true);
+  const [isNameFieldNewItem, setIsNameFieldNewItem] = useState(true);
   const [selectedItemId, setSelectedItemId] = useState('');
   const [existingItems, setExistingItems] = useState<Item[]>([]);
   const [sites, setSites] = useState<Site[]>([]);
@@ -203,8 +203,10 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
   // Identity Vault: Persist ID across renders to prevent duplicate creation on multiple saves
   const draftId = useRef(item?.id || uuid());
 
-  const ownerEntityId = item?.id || selectedItemId || '';
-  const ownerEntityName = item?.name || currentEditingItem?.name || 'Item';
+  const ownerEntityIdForLinks = item?.id || selectedItemId || draftId.current;
+  const ownerEntityName = item?.name || currentEditingItem?.name || name || 'Item';
+  const hasEditableItem = !!(item || selectedItemId);
+  const isDraftItem = !hasEditableItem;
 
   const saveFormDataToStorage = useCallback(() => {
     if (!item) {
@@ -552,10 +554,17 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
   useEffect(() => {
     if (open && !item) {
       loadFormDataFromStorage();
+      setSelectedItemId('');
+      setOwnerCharacterId(null);
+      setOwnerCharacterName('');
     }
     // Reset init guard when modal closes (allows fresh init on next open)
     if (!open) {
       didInitRef.current = false;
+      setOwnerCharacterId(null);
+      setOwnerCharacterName('');
+      setSelectedItemId('');
+      setShowOwnerModal(false);
     }
   }, [open, item, loadFormDataFromStorage]);
 
@@ -655,6 +664,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
       setQuantitySold(item.quantitySold || 0);
 
       setOwnerCharacterId(item.ownerCharacterId || null);
+      setOwnerCharacterName('');
 
       // Reset init guard when editing
       didInitRef.current = false;
@@ -666,6 +676,9 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
       const lastStation = getLastUsedStation();
       setStation(lastStation);
       setLocalSoldAt(undefined);
+      setSelectedItemId('');
+      setOwnerCharacterId(null);
+      setOwnerCharacterName('');
       // Other fields remain as-is or are loaded from persisted draft via loadFormDataFromStorage
     }
   }, [item, defaultItemType, getLastUsedStation, initialSiteId]);
@@ -779,7 +792,9 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
 
   const handleSave = async () => {
     if (isSaving) return;
+    const isCreatingNewItem = !item && !selectedItemId;
     setIsSaving(true);
+    setShowOwnerModal(false);
 
     try {
       const dimensions = width && height ? {
@@ -909,6 +924,10 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
       dispatchEntityUpdated(entityTypeToKind(EntityType.ITEM));
 
       // Links are loaded on-demand when user clicks "View Links" button
+      if (isCreatingNewItem) {
+        setOwnerCharacterId(null);
+        setOwnerCharacterName('');
+      }
       onOpenChange(false);
     } catch (error) {
       console.error('Save failed:', error);
@@ -948,8 +967,8 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
                   items={existingItems}
                   selectedItemId={selectedItemId}
                   onItemSelect={handleItemSelect}
-                  isNewItem={isNewItem}
-                  onNewItemToggle={setIsNewItem}
+                  isNewItem={isNameFieldNewItem}
+                  onNewItemToggle={setIsNameFieldNewItem}
                   label="Item Name"
                   sites={sites}
                 />
@@ -1292,7 +1311,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
 
           <DialogFooter className="flex justify-between flex-wrap gap-4 items-center pt-4 border-t">
             <div className="flex gap-2 flex-wrap items-center">
-              {item && ( // Show DELETE/VIEW LINKS/MOVE for existing items
+              {hasEditableItem && ( // Show DELETE/VIEW LINKS/MOVE for existing items
                 <>
                   <Button
                     variant="outline"
@@ -1383,7 +1402,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
               setSelectedItemId('');
               setName('');
               // Reset form to create mode
-              setIsNewItem(true);
+              setIsNameFieldNewItem(true);
             }
           } catch (error) {
             console.error('Failed to reload items after deletion:', error);
@@ -1492,22 +1511,35 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
       )}
 
       {/* Owner Submodal */}
-      {(item || selectedItemId) && (
+      {open && (
         <OwnerSubmodal
           open={showOwnerModal}
           onOpenChange={setShowOwnerModal}
           entityType={EntityType.ITEM}
-          entityId={ownerEntityId}
+          entityId={ownerEntityIdForLinks}
           entityName={ownerEntityName}
           linkType={LinkType.ITEM_CHARACTER}
-          onOwnersChanged={() => {
+          isDraft={isDraftItem}
+          currentOwnerId={ownerCharacterId}
+          onDraftOwnerChange={(ownerId) => {
+            setOwnerCharacterId(ownerId);
+            if (ownerId) {
+              ClientAPI.getCharacters().then((characters) => {
+                const owner = characters.find(c => c.id === ownerId);
+                setOwnerCharacterName(owner?.name || 'Unknown');
+              }).catch(() => setOwnerCharacterName('Unknown'));
+            } else {
+              setOwnerCharacterName('');
+            }
+          }}
+          onOwnersChanged={isDraftItem ? undefined : () => {
             // Refresh owner display
             const loadOwner = async () => {
-              const links = await ClientAPI.getLinksFor({ type: EntityType.ITEM, id: ownerEntityId });
+              const links = await ClientAPI.getLinksFor({ type: EntityType.ITEM, id: ownerEntityIdForLinks });
               const ownerLink = links.find((link: Link) => {
                 if (link.linkType !== LinkType.ITEM_CHARACTER) return false;
-                const isCanonical = link.source.type === EntityType.ITEM && link.source.id === ownerEntityId && link.target.type === EntityType.CHARACTER;
-                const isReverse = link.target.type === EntityType.ITEM && link.target.id === ownerEntityId && link.source.type === EntityType.CHARACTER;
+                const isCanonical = link.source.type === EntityType.ITEM && link.source.id === ownerEntityIdForLinks && link.target.type === EntityType.CHARACTER;
+                const isReverse = link.target.type === EntityType.ITEM && link.target.id === ownerEntityIdForLinks && link.source.type === EntityType.CHARACTER;
                 return isCanonical || isReverse;
               });
               const ownerId = ownerLink?.source.type === EntityType.CHARACTER
@@ -1551,8 +1583,8 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         />
       )}
 
-      {/* Dates & Timeline Submodal - Only for SOLD items, not inventory items */}
-      {(localSoldAt || status === ItemStatus.SOLD) && (
+      {/* Dates & Timeline Submodal */}
+      {hasEditableItem && currentEditingItem && (
         <DatesSubmodal
           open={showDatesModal}
           onOpenChange={setShowDatesModal}

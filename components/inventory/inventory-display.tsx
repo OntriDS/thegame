@@ -557,6 +557,8 @@ export function InventoryDisplay({
 
       // Close modal after successful save
       setShowItemModal(false);
+      setEditingItem(undefined);
+      setTargetSiteId(undefined);
     } catch (error) {
       console.error('Failed to save item:', error);
       // Don't close modal on error, let user retry
