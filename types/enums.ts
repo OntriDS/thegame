@@ -317,6 +317,7 @@ export enum ItemStatus {
   OBSOLETE = 'obsolete',
   DAMAGED = 'damaged',
   IDLE = 'idle',
+  LEGACY = 'legacy',
 }
 
 /** Creative collections */

@@ -20,7 +20,9 @@ import {
   deleteItem as repoDeleteItem,
   getItemsBySourceTaskId as repoGetItemsBySourceTaskId,
   getItemsBySourceRecordId as repoGetItemsBySourceRecordId,
-  getItemsByType as repoGetItemsByType
+  getItemsByType as repoGetItemsByType,
+  getActiveItems as repoGetActiveItems,
+  getLegacyItems as repoGetLegacyItems
 } from './repositories/item.repo';
 import {
   upsertFinancial as repoUpsertFinancial,
@@ -642,6 +644,14 @@ export async function upsertItem(item: Item, options?: { skipWorkflowEffects?: b
 
 export async function getAllItems(): Promise<Item[]> {
   return await repoGetAllItems();
+}
+
+export async function getActiveItems(): Promise<Item[]> {
+  return await repoGetActiveItems();
+}
+
+export async function getLegacyItems(): Promise<Item[]> {
+  return await repoGetLegacyItems();
 }
 
 // Phase 6: Unified & Optimized Items fetching (Active + Archive)

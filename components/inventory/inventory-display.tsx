@@ -18,7 +18,7 @@ import { getCollectionLabel } from '@/lib/constants/collection-labels';
 import ItemModal from '@/components/modals/item-modal';
 import BulkEditModal from '@/components/modals/submodals/bulk-edit-submodal';
 import InlineEditor from '@/components/control-room/inline-editor';
-import { MapPin, Pencil, Package, Settings, Package2, ChevronDown, ChevronRight, AlertTriangle, RefreshCw, ArrowUpDown } from 'lucide-react';
+import { MapPin, Pencil, Package, Settings, Package2, ChevronDown, ChevronRight, AlertTriangle, RefreshCw, ArrowUpDown, Archive } from 'lucide-react';
 import { ITEM_TYPE_ICONS } from '@/lib/constants/icon-maps';
 import { Site } from '@/types/entities';
 import { DEFAULT_YELLOW_THRESHOLD } from '@/lib/constants/app-constants';
@@ -137,6 +137,9 @@ export function InventoryDisplay({
   const [soldItemsSortOption, setSoldItemsSortOption] = useState<'date-desc' | 'date-asc' | 'price-desc' | 'price-asc' | 'name-asc' | 'name-desc' | 'type-asc' | 'site-asc'>('date-desc');
 
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
+  
+  // Legacy Items UI Toggle
+  const [showLegacyItems, setShowLegacyItems] = useState(false);
 
   // Helper to get ItemType from InventoryTab
   const getItemTypeForTab = (tab: InventoryTab): ItemType | 'all' => {
@@ -164,21 +167,25 @@ export function InventoryDisplay({
       let items: Item[];
 
       if (activeTab === InventoryTab.SOLD_ITEMS) {
-        // Use status filter for sold items with month selector
-        const [mm, yy] = selectedMonthKey.split('-');
-        const monthNum = parseInt(mm, 10);
-        const yearNum = 2000 + parseInt(yy, 10);
+        if (showLegacyItems) {
+          items = await ClientAPI.getItems(undefined, undefined, undefined, 'legacy');
+        } else {
+          // Use status filter for sold items with month selector
+          const [mm, yy] = selectedMonthKey.split('-');
+          const monthNum = parseInt(mm, 10);
+          const yearNum = 2000 + parseInt(yy, 10);
 
-        const monthItems = await ClientAPI.getItems(
-          'all',
-          monthNum,
-          yearNum,
-          ItemStatus.SOLD,
-          selectedSite === 'all' ? undefined : selectedSite
-        );
+          const monthItems = await ClientAPI.getItems(
+            'all',
+            monthNum,
+            yearNum,
+            ItemStatus.SOLD,
+            selectedSite === 'all' ? undefined : selectedSite
+          );
 
-        // Items are already filtered by month from API, no need for additional filtering
-        items = monthItems;
+          // Items are already filtered by month from API, no need for additional filtering
+          items = monthItems;
+        }
       } else if (activeTabItemType === 'all') {
         // Load all items
         items = await ClientAPI.getItems(
@@ -214,7 +221,7 @@ export function InventoryDisplay({
     } catch (error) {
       console.error('Failed to load items:', error);
     }
-  }, [activeTab, selectedSite, selectedStatus, selectedMonthKey]);
+  }, [activeTab, selectedSite, selectedStatus, selectedMonthKey, showLegacyItems]);
 
   // Hydration sync - runs only once on mount
   useEffect(() => {
@@ -1471,8 +1478,34 @@ export function InventoryDisplay({
 
     return (
       <div className="space-y-4">
+        {/* Legacy UX Header */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-muted/30 p-3 rounded-lg border">
+          <div className="flex flex-col gap-1">
+            <h3 className="font-semibold text-lg flex items-center gap-2">
+              <Archive className="h-5 w-5 text-primary" />
+              {showLegacyItems ? 'Legacy Items (Historical Portfolio)' : 'Sold Items Archive'}
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              {showLegacyItems ? 'Items from previous historical eras' : 'Browse items that have been sold'}
+            </p>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setShowLegacyItems(!showLegacyItems);
+              }}
+              className={showLegacyItems ? "bg-primary/10 border-primary" : ""}
+            >
+              {showLegacyItems ? 'View Application Sales' : 'Legacy Portfolio Items'}
+            </Button>
+          </div>
+        </div>
+
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold">Sold Items</h3>
+          <h3 className="text-lg font-semibold">{showLegacyItems ? 'Historical Portfolio Index' : 'Sold Items'}</h3>
           <div className="flex items-center gap-2 ml-auto">
             {/* Sorting Dropdown - Matching TaskHistoryView pattern */}
             <div className="flex items-center gap-1 text-xs mr-2 border rounded-md px-2 py-0.5 bg-muted/40">
@@ -1500,11 +1533,13 @@ export function InventoryDisplay({
               </Select>
             </div>
 
-            <MonthSelector
-              selectedMonth={selectedMonthKey}
-              availableMonths={availableMonths}
-              onChange={onMonthChange}
-            />
+            {!showLegacyItems && (
+              <MonthSelector
+                selectedMonth={selectedMonthKey}
+                availableMonths={availableMonths}
+                onChange={onMonthChange}
+              />
+            )}
             <Button
               size="sm"
               variant="outline"
@@ -1579,8 +1614,8 @@ export function InventoryDisplay({
         {items.length === 0 && (
           <div className="text-center py-8 text-muted-foreground">
             <Package className="w-12 h-12 mx-auto mb-4 opacity-50" />
-            <p>No sold items found for this month.</p>
-            <p className="text-sm">Select a different month to view sold items.</p>
+            <p>{showLegacyItems ? 'No historical legacy items found.' : 'No sold items found for this month.'}</p>
+            <p className="text-sm">{showLegacyItems ? 'Import using CSV or manually assign items to Legacy status.' : 'Select a different month to view sold items.'}</p>
           </div>
         )}
       </div>

@@ -1,7 +1,8 @@
 // data-store/repositories/item.repo.ts
 import { kvGet, kvMGet, kvSet, kvDel, kvSAdd, kvSRem, kvSMembers } from '../kv';
-import { buildDataKey, buildIndexKey, buildMonthIndexKey, buildEntityIndexKey, buildArchiveMonthsKey } from '../keys';
-import { EntityType, ItemType } from '@/types/enums';
+import { buildDataKey, buildIndexKey, buildMonthIndexKey, buildEntityIndexKey, buildArchiveMonthsKey, buildItemActiveIndexKey, buildItemLegacyIndexKey } from '../keys';
+import { EntityType, ItemType, ItemStatus } from '@/types/enums';
+import { isSoldStatus } from '@/lib/utils/status-utils';
 import type { Item } from '@/types/entities';
 import { formatMonthKey } from '@/lib/utils/date-utils';
 
@@ -15,6 +16,33 @@ const ENTITY = EntityType.ITEM;
  */
 export async function getAllItems(): Promise<Item[]> {
   const indexKey = buildIndexKey(ENTITY);
+  const ids = await kvSMembers(indexKey);
+  if (ids.length === 0) return [];
+
+  const keys = ids.map(id => buildDataKey(ENTITY, id));
+  const items = await kvMGet<Item>(keys);
+  return items.filter((item): item is Item => item !== null && item !== undefined);
+}
+
+/**
+ * Get active items (not sold, not legacy)
+ * OPTIMIZED: Replaces generalized getAllItems() for UI active inventory fetching
+ */
+export async function getActiveItems(): Promise<Item[]> {
+  const indexKey = buildItemActiveIndexKey();
+  const ids = await kvSMembers(indexKey);
+  if (ids.length === 0) return [];
+
+  const keys = ids.map(id => buildDataKey(ENTITY, id));
+  const items = await kvMGet<Item>(keys);
+  return items.filter((item): item is Item => item !== null && item !== undefined);
+}
+
+/**
+ * Get legacy historical items
+ */
+export async function getLegacyItems(): Promise<Item[]> {
+  const indexKey = buildItemLegacyIndexKey();
   const ids = await kvSMembers(indexKey);
   if (ids.length === 0) return [];
 
@@ -92,12 +120,34 @@ export async function upsertItem(item: Item): Promise<Item> {
   const toSave: Item = item;
 
   await kvSet(key, toSave);
-  await kvSAdd(indexKey, item.id);
 
-  // Maintain month index (soldAt → createdAt)
+  const activeIndexKey = buildItemActiveIndexKey();
+  const legacyIndexKey = buildItemLegacyIndexKey();
+  const isLegacy = toSave.status === ItemStatus.LEGACY;
+  const isSold = isSoldStatus(toSave.status);
+
+  // 1. Maintain main index: Every item EXCEPT legacy
+  if (isLegacy) {
+    await kvSRem(indexKey, item.id);
+    await kvSAdd(legacyIndexKey, item.id);
+    await kvSRem(activeIndexKey, item.id);
+  } else {
+    await kvSAdd(indexKey, item.id);
+    await kvSRem(legacyIndexKey, item.id);
+
+    // 2. Maintain active index: Every item EXCEPT sold/legacy
+    if (isSold) {
+      await kvSRem(activeIndexKey, item.id);
+    } else {
+      await kvSAdd(activeIndexKey, item.id);
+    }
+  }
+
+  // 3. Maintain month index (soldAt → createdAt)
   // CRITICAL: Sold items must be indexed by their soldAt date to appear in the correct "Sold Items" month tab
+  // Legacy items are intentionally EXCLUDED from month indexing so they stay fully hidden
   const dateForIndex = toSave.soldAt || toSave.createdAt;
-  if (dateForIndex) {
+  if (!isLegacy && dateForIndex) {
     const currentMonthKey = formatMonthKey(dateForIndex);
     await kvSAdd(buildMonthIndexKey(ENTITY, currentMonthKey), item.id);
     // Ensure this month appears in the global month selector (archive months set)
@@ -184,4 +234,6 @@ export async function deleteItem(id: string): Promise<void> {
 
   await kvDel(key);
   await kvSRem(indexKey, id);
+  await kvSRem(buildItemActiveIndexKey(), id);
+  await kvSRem(buildItemLegacyIndexKey(), id);
 }

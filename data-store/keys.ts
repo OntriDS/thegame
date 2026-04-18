@@ -72,6 +72,16 @@ export function buildTaskActiveIndexKey(): string {
   return `${NAMESPACE}index:task:active`;
 }
 
+/** Active items (not sold, not legacy) */
+export function buildItemActiveIndexKey(): string {
+  return `${NAMESPACE}index:item:active`;
+}
+
+/** Historical portfolio legacy items */
+export function buildItemLegacyIndexKey(): string {
+  return `${NAMESPACE}index:item:legacy`;
+}
+
 export function buildLinksIndexKey(entityType: string, id: string): string {
   return `${NAMESPACE}index:links:by-entity:${entityType}:${id}`; // set of link ids
 }

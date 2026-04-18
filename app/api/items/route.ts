@@ -2,7 +2,7 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { v4 as uuid } from 'uuid';
 import type { Item } from '@/types/entities';
-import { getAllItems, getItemsByType, upsertItem, getItemsForMonth, getArchivedItemsByMonth } from '@/data-store/datastore';
+import { getAllItems, getItemsByType, upsertItem, getItemsForMonth, getArchivedItemsByMonth, getActiveItems, getLegacyItems } from '@/data-store/datastore';
 import { requireAdminAuth } from '@/lib/api-auth';
 import { ItemStatus } from '@/types/enums';
 import { isSoldStatus } from '@/lib/utils/status-utils';
@@ -46,13 +46,21 @@ export async function GET(req: NextRequest) {
   if (month && year) {
     items = await getItemsForMonth(year, month);
   }
-  // Strategy 2: Type-based fetching (Optimized)
+  // Strategy 2: Legacy fetching (Optimized)
+  else if (statusFilter === 'legacy') {
+    items = await getLegacyItems();
+  }
+  // Strategy 3: Type-based fetching (Optimized)
   // Ignore 'all' type filter as it's a client-side concept
   else if (typeFilter && typeFilter !== 'all') {
     const types = typeFilter.split(',').map(t => t.trim());
     items = await getItemsByType(types);
   }
-  // Strategy 3: Fetch All (Fallback)
+  // Strategy 4: Active fetching (Optimized fallback for standard Active Inventory loads)
+  else if (!statusFilter || statusFilter === 'active') {
+    items = await getActiveItems();
+  }
+  // Strategy 5: Fetch All (Explicit Fallback)
   else {
     items = await getAllItems();
   }
@@ -80,10 +88,11 @@ export async function GET(req: NextRequest) {
         return (item.status || '').toString().toLowerCase() === targetStatus;
       });
     }
-  } else if (!month && !year) {
+  } else if (!month && !year && statusFilter !== 'legacy') {
     // Default behavior for Active Inventory (no month/year specified AND no explicit status):
-    // Show only active items (unsold)
-    items = items.filter(item => !isSoldStatus(item.status));
+    // Show only active items (unsold). The active index already excludes sold/legacy,
+    // so this is just a safety catch for any strategy leaks.
+    items = items.filter(item => !isSoldStatus(item.status) && item.status !== ItemStatus.LEGACY);
   }
 
   // 3. Month Filter (if not using Strategy 1)
