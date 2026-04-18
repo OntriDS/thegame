@@ -24,6 +24,7 @@ const STATUS_COLOR_BASE = {
   OBSOLETE: 'border-red-500 bg-red-100 text-red-800',
   DAMAGED: 'border-red-500 bg-red-100 text-red-800',
   IDLE: 'border-gray-500 bg-gray-100 text-gray-800',
+  LEGACY: 'border-purple-500 bg-purple-100 text-purple-800',
 } as const;
 
 // ============================================================================
@@ -55,6 +56,7 @@ export const ITEM_STATUS_COLORS = {
   [ItemStatus.DAMAGED]: { light: STATUS_COLOR_BASE.DAMAGED, dark: STATUS_COLOR_BASE.DAMAGED },
   [ItemStatus.IDLE]: { light: STATUS_COLOR_BASE.IDLE, dark: STATUS_COLOR_BASE.IDLE },
   [ItemStatus.CONSIGNMENT]: { light: STATUS_COLOR_BASE.FINISHING, dark: STATUS_COLOR_BASE.FINISHING },
+  [ItemStatus.LEGACY]: { light: STATUS_COLOR_BASE.LEGACY, dark: STATUS_COLOR_BASE.LEGACY },
 } as const;
 
 /** Site Status Colors - Light & Dark Mode with border contrast */

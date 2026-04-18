@@ -38,6 +38,7 @@ export const ITEM_STATUS_LABEL: Record<ItemStatus, string> = {
   [ItemStatus.OBSOLETE]: 'Obsolete',
   [ItemStatus.DAMAGED]: 'Damaged',
   [ItemStatus.IDLE]: 'Idle',
+  [ItemStatus.LEGACY]: 'Legacy',
 };
 
 export const FINANCIAL_STATUS_LABEL: Record<FinancialStatus, string> = {
