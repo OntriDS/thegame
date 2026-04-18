@@ -41,6 +41,7 @@ export const itemStatusKeyMap: Record<ItemStatus, string> = {
   [ItemStatus.DAMAGED]: ItemStatus.DAMAGED,
   [ItemStatus.IDLE]: ItemStatus.IDLE,
   [ItemStatus.CONSIGNMENT]: ItemStatus.CONSIGNMENT,
+  [ItemStatus.LEGACY]: ItemStatus.LEGACY,
 };
 
 
