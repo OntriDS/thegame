@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { ItemNameField } from '@/components/ui/item-name-field';
 import { Switch } from '@/components/ui/switch';
-import { Item, Site, StockPoint, Sale, SaleLine } from '@/types/entities';
+import { FileReference, Item, Link, Site, StockPoint, Sale, SaleLine } from '@/types/entities';
 import { ItemType, ItemStatus, Collection, EntityType, STATION_CATEGORIES, SaleType, SaleStatus, PaymentMethod, Currency } from '@/types/enums';
 import { getItemStatusLabel } from '@/lib/constants/status-display-labels';
 import { getSubTypesForItemType } from '@/lib/utils/item-utils';
@@ -25,7 +25,6 @@ import { createSiteOptionsWithCategories } from '@/lib/utils/site-options-utils'
 import { Package, Trash2, User, Network, CalendarIcon } from 'lucide-react';
 import { ClientAPI } from '@/lib/client-api';
 import DeleteModal from './submodals/delete-submodal';
-import { FileReference } from '@/types/entities';
 import LinksRelationshipsModal from './submodals/links-relationships-submodal';
 import DatesSubmodal from './submodals/dates-submodal';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
@@ -139,25 +138,31 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
   }, [station, type, subItemType]);
 
   const applyR2PrefixToValue = useCallback(
-    (raw: string): string => {
+    (raw: string, defaultExtension: '.png' | '.jpg'): string => {
       const trimmed = raw.trim();
       if (!trimmed) return '';
       if (!autoPrefixR2 || !r2Prefix) return trimmed;
-      if (trimmed.startsWith(r2Prefix)) return trimmed;
-      return `${r2Prefix}/${trimmed}`;
+      const appendExtension = (value: string) => {
+        const pathWithoutQuery = value.split('?')[0].split('#')[0];
+        const filename = pathWithoutQuery.split('/').pop() || '';
+        const hasExtension = /\.[a-z0-9]{2,5}$/i.test(filename);
+        return hasExtension ? value : `${value}${defaultExtension}`;
+      };
+      if (trimmed.startsWith(r2Prefix)) return appendExtension(trimmed);
+      return appendExtension(`${r2Prefix}/${trimmed}`);
     },
     [autoPrefixR2, r2Prefix]
   );
 
   const applyR2PrefixToGallery = useCallback(
-    (raw: string): string => {
+    (raw: string, defaultExtension: '.jpg'): string => {
       if (!raw) return '';
       const parts = raw
         .split(';')
         .map((s) => s.trim())
         .filter(Boolean);
       if (!parts.length) return '';
-      const prefixed = parts.map((part) => applyR2PrefixToValue(part));
+      const prefixed = parts.map((part) => applyR2PrefixToValue(part, defaultExtension));
       return prefixed.join(';');
     },
     [applyR2PrefixToValue]
@@ -191,11 +196,15 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
     return null;
   }, [item, selectedItemId, existingItems]);
 
+
   // Guard for one-time initialization of new items
   const didInitRef = useRef(false);
 
   // Identity Vault: Persist ID across renders to prevent duplicate creation on multiple saves
   const draftId = useRef(item?.id || uuid());
+
+  const ownerEntityId = item?.id || selectedItemId || '';
+  const ownerEntityName = item?.name || currentEditingItem?.name || 'Item';
 
   const saveFormDataToStorage = useCallback(() => {
     if (!item) {
@@ -837,9 +846,9 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
       }
 
       // Resolve final media values with optional R2 prefixing
-      const finalMediaMain = applyR2PrefixToValue(mediaMain);
-      const finalMediaThumb = applyR2PrefixToValue(mediaThumb);
-      const finalMediaGalleryString = applyR2PrefixToGallery(mediaGallery);
+      const finalMediaMain = applyR2PrefixToValue(mediaMain, '.png');
+      const finalMediaThumb = applyR2PrefixToValue(mediaThumb, '.jpg');
+      const finalMediaGalleryString = applyR2PrefixToGallery(mediaGallery, '.jpg');
       const finalMediaGalleryArray = finalMediaGalleryString
         ? finalMediaGalleryString.split(';').map((s) => s.trim()).filter(Boolean)
         : undefined;
@@ -1483,23 +1492,33 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
       )}
 
       {/* Owner Submodal */}
-      {item && (
+      {(item || selectedItemId) && (
         <OwnerSubmodal
           open={showOwnerModal}
           onOpenChange={setShowOwnerModal}
           entityType={EntityType.ITEM}
-          entityId={item.id}
-          entityName={item.name}
+          entityId={ownerEntityId}
+          entityName={ownerEntityName}
           linkType={LinkType.ITEM_CHARACTER}
           onOwnersChanged={() => {
             // Refresh owner display
             const loadOwner = async () => {
-              const links = await ClientAPI.getLinksFor({ type: EntityType.ITEM, id: item.id });
-              const ownerLink = links.find(l => l.linkType === LinkType.ITEM_CHARACTER);
-              if (ownerLink && ownerLink.target.type === EntityType.CHARACTER) {
-                setOwnerCharacterId(ownerLink.target.id);
+              const links = await ClientAPI.getLinksFor({ type: EntityType.ITEM, id: ownerEntityId });
+              const ownerLink = links.find((link: Link) => {
+                if (link.linkType !== LinkType.ITEM_CHARACTER) return false;
+                const isCanonical = link.source.type === EntityType.ITEM && link.source.id === ownerEntityId && link.target.type === EntityType.CHARACTER;
+                const isReverse = link.target.type === EntityType.ITEM && link.target.id === ownerEntityId && link.source.type === EntityType.CHARACTER;
+                return isCanonical || isReverse;
+              });
+              const ownerId = ownerLink?.source.type === EntityType.CHARACTER
+                ? ownerLink.source.id
+                : ownerLink?.target.type === EntityType.CHARACTER
+                  ? ownerLink.target.id
+                  : null;
+              if (ownerId) {
+                setOwnerCharacterId(ownerId);
                 const characters = await ClientAPI.getCharacters();
-                const owner = characters.find(c => c.id === ownerLink.target.id);
+                const owner = characters.find(c => c.id === ownerId);
                 setOwnerCharacterName(owner?.name || 'Unknown');
               } else {
                 setOwnerCharacterId(null);
