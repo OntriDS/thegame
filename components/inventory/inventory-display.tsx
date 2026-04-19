@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ClientAPI } from '@/lib/client-api';
 import { Item } from '@/types/entities';
 import { useEntityUpdates } from '@/lib/hooks/use-entity-updates';
-import { ItemType, ItemCategory, ItemStatus, InventoryTab, Collection } from '@/types/enums';
+import { ItemType, ItemCategory, ItemStatus, InventoryTab, Collection, DigitalSubType, ArtworkSubType, PrintSubType } from '@/types/enums';
 import { isSoldStatus } from '@/lib/utils/status-utils';
 import { getItemStatusLabel } from '@/lib/constants/status-display-labels';
 import { getItemCategory } from '@/lib/utils/item-utils';
@@ -18,7 +18,36 @@ import { getCollectionLabel } from '@/lib/constants/collection-labels';
 import ItemModal from '@/components/modals/item-modal';
 import BulkEditModal from '@/components/modals/submodals/bulk-edit-submodal';
 import InlineEditor from '@/components/control-room/inline-editor';
-import { MapPin, Pencil, Package, Settings, Package2, ChevronDown, ChevronRight, AlertTriangle, RefreshCw, ArrowUpDown, Archive, Search, X } from 'lucide-react';
+import {
+  MapPin,
+  Pencil,
+  Package,
+  Settings,
+  Package2,
+  ChevronDown,
+  ChevronRight,
+  AlertTriangle,
+  RefreshCw,
+  ArrowUpDown,
+  Archive,
+  Search,
+  X,
+  Sparkles,
+  Palette,
+  Film,
+  Scan,
+  Image as LucideImage,
+  ImageIcon,
+  Printer,
+  CheckCircle2,
+  XCircle,
+  Brush,
+  TreePine,
+  Boxes,
+  LayoutGrid,
+  Armchair,
+  Frame,
+} from 'lucide-react';
 import { ITEM_TYPE_ICONS } from '@/lib/constants/icon-maps';
 import { Site } from '@/types/entities';
 import { DEFAULT_YELLOW_THRESHOLD } from '@/lib/constants/app-constants';
@@ -56,6 +85,16 @@ function inventoryTabForItem(item: Item): InventoryTab {
       return InventoryTab.DIGITAL;
   }
 }
+
+type InventorySortOption =
+  | 'collection-asc'
+  | 'collection-desc'
+  | 'site-asc'
+  | 'site-desc'
+  | 'subtype-asc'
+  | 'subtype-desc'
+  | 'price-desc'
+  | 'price-asc';
 
 interface InventoryDisplayProps {
   sites: Site[];
@@ -101,9 +140,14 @@ export function InventoryDisplay({
   const [editingField, setEditingField] = useState<{ itemId: string; field: string } | null>(null);
 
   const [stickersViewBy, setStickersViewBy] = useState<'collection' | 'subtype' | 'location' | 'model'>('collection');
-  const [artworksViewBy, setArtworksViewBy] = useState<'collection' | 'subtype' | 'location'>('collection');
   const [merchViewBy, setMerchViewBy] = useState<'collection' | 'subtype' | 'location'>('subtype');
-  const [printsViewBy, setPrintsViewBy] = useState<'collection' | 'subtype' | 'location'>('collection');
+
+  const [digitalSearchQuery, setDigitalSearchQuery] = useState('');
+  const [digitalSortOption, setDigitalSortOption] = useState<InventorySortOption>('collection-asc');
+  const [artworksSearchQuery, setArtworksSearchQuery] = useState('');
+  const [artworksSortOption, setArtworksSortOption] = useState<InventorySortOption>('collection-asc');
+  const [printsSearchQuery, setPrintsSearchQuery] = useState('');
+  const [printsSortOption, setPrintsSortOption] = useState<InventorySortOption>('collection-asc');
 
   const [movingItem, setMovingItem] = useState<Item | undefined>(undefined);
   const lastRequestIdRef = useRef(0);
@@ -390,6 +434,24 @@ export function InventoryDisplay({
     }
   }, [selectedColumns, setPreference, preferencesLoaded]);
 
+  useEffect(() => {
+    if (preferencesLoaded) {
+      setPreference('inventory-digital-sort', digitalSortOption);
+    }
+  }, [digitalSortOption, preferencesLoaded, setPreference]);
+
+  useEffect(() => {
+    if (preferencesLoaded) {
+      setPreference('inventory-artworks-sort', artworksSortOption);
+    }
+  }, [artworksSortOption, preferencesLoaded, setPreference]);
+
+  useEffect(() => {
+    if (preferencesLoaded) {
+      setPreference('inventory-prints-sort', printsSortOption);
+    }
+  }, [printsSortOption, preferencesLoaded, setPreference]);
+
   // Load active tab ONCE on mount
   useEffect(() => {
     const savedActiveTab = getPreference('inventory-active-tab', InventoryTab.DIGITAL);
@@ -464,6 +526,30 @@ export function InventoryDisplay({
       setSoldItemsSortOption(savedSoldItemsSort as any);
     }
 
+    const digitalSortValues: InventorySortOption[] = [
+      'collection-asc',
+      'collection-desc',
+      'site-asc',
+      'site-desc',
+      'subtype-asc',
+      'subtype-desc',
+    ];
+    const savedDigitalSort = getPreference('inventory-digital-sort');
+    if (savedDigitalSort && digitalSortValues.includes(savedDigitalSort as InventorySortOption)) {
+      setDigitalSortOption(savedDigitalSort as InventorySortOption);
+    }
+
+    const artworkSortValues: InventorySortOption[] = [...digitalSortValues, 'price-asc', 'price-desc'];
+    const savedArtworksSort = getPreference('inventory-artworks-sort');
+    if (savedArtworksSort && artworkSortValues.includes(savedArtworksSort as InventorySortOption)) {
+      setArtworksSortOption(savedArtworksSort as InventorySortOption);
+    }
+
+    const savedPrintsSort = getPreference('inventory-prints-sort');
+    if (savedPrintsSort && artworkSortValues.includes(savedPrintsSort as InventorySortOption)) {
+      setPrintsSortOption(savedPrintsSort as InventorySortOption);
+    }
+
     // Mark preferences as loaded to enable saving
     setPreferencesLoaded(true);
   }, [getPreference]);
@@ -504,6 +590,333 @@ export function InventoryDisplay({
       style: 'currency',
       currency: currency
     }).format(amount);
+  };
+
+  const getPrimarySiteName = (item: Item): string => {
+    const id = item.stock?.[0]?.siteId;
+    if (!id) return '';
+    return sites.find(s => s.id === id)?.name ?? id;
+  };
+
+  const getCollectionSortLabel = (item: Item): string => {
+    if (!item.collection) return '';
+    return getCollectionLabel(item.collection).toLowerCase();
+  };
+
+  const compareNameTiebreak = (a: Item, b: Item) =>
+    a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+
+  const applySearchAndSort = (list: Item[], query: string, sort: InventorySortOption): Item[] => {
+    const q = query.trim().toLowerCase();
+    const filtered = q
+      ? list.filter(i => {
+          const collLabel = i.collection ? getCollectionLabel(i.collection).toLowerCase() : '';
+          const siteLabel = getPrimarySiteName(i).toLowerCase();
+          return (
+            i.name.toLowerCase().includes(q) ||
+            collLabel.includes(q) ||
+            String(i.collection ?? '').toLowerCase().includes(q) ||
+            siteLabel.includes(q) ||
+            (i.station || '').toLowerCase().includes(q) ||
+            (i.subItemType || '').toLowerCase().includes(q) ||
+            String(i.year ?? '').includes(q)
+          );
+        })
+      : list;
+
+    return [...filtered].sort((a, b) => {
+      let cmp = 0;
+      switch (sort) {
+        case 'collection-asc':
+        case 'collection-desc': {
+          const emptyA = !a.collection;
+          const emptyB = !b.collection;
+          if (emptyA && emptyB) cmp = 0;
+          else if (emptyA) cmp = 1;
+          else if (emptyB) cmp = -1;
+          else cmp = getCollectionSortLabel(a).localeCompare(getCollectionSortLabel(b));
+          if (sort === 'collection-desc') cmp = -cmp;
+          break;
+        }
+        case 'site-asc':
+        case 'site-desc': {
+          const ka = getPrimarySiteName(a).toLowerCase();
+          const kb = getPrimarySiteName(b).toLowerCase();
+          const emptyA = !ka;
+          const emptyB = !kb;
+          if (emptyA && emptyB) cmp = 0;
+          else if (emptyA) cmp = 1;
+          else if (emptyB) cmp = -1;
+          else cmp = ka.localeCompare(kb);
+          if (sort === 'site-desc') cmp = -cmp;
+          break;
+        }
+        case 'subtype-asc':
+        case 'subtype-desc': {
+          const sa = (a.subItemType || '').toLowerCase();
+          const sb = (b.subItemType || '').toLowerCase();
+          const emptyA = !sa;
+          const emptyB = !sb;
+          if (emptyA && emptyB) cmp = 0;
+          else if (emptyA) cmp = 1;
+          else if (emptyB) cmp = -1;
+          else cmp = sa.localeCompare(sb);
+          if (sort === 'subtype-desc') cmp = -cmp;
+          break;
+        }
+        case 'price-asc':
+          cmp = (a.price || 0) - (b.price || 0);
+          break;
+        case 'price-desc':
+          cmp = (b.price || 0) - (a.price || 0);
+          break;
+        default:
+          cmp = 0;
+      }
+      if (cmp !== 0) return cmp;
+      return compareNameTiebreak(a, b);
+    });
+  };
+
+  const renderInventoryToolbar = (opts: {
+    search: string;
+    onSearchChange: (v: string) => void;
+    sort: InventorySortOption;
+    onSortChange: (v: InventorySortOption) => void;
+    sortOptions: { value: InventorySortOption; label: string }[];
+    placeholder: string;
+  }) => (
+    <div className="flex flex-wrap items-center gap-2">
+      <div className="relative w-full min-w-[10rem] max-w-[14rem] sm:w-56 sm:max-w-none">
+        <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+        <Input
+          placeholder={opts.placeholder}
+          value={opts.search}
+          onChange={e => opts.onSearchChange(e.target.value)}
+          onKeyDown={e => {
+            if (e.key === 'Escape') opts.onSearchChange('');
+          }}
+          className="h-7 pl-7 pr-7 text-[11px]"
+        />
+        {opts.search ? (
+          <button
+            type="button"
+            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-sm p-0.5 text-muted-foreground hover:bg-muted"
+            onClick={() => opts.onSearchChange('')}
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        ) : null}
+      </div>
+      <div className="flex items-center gap-1 text-xs border rounded-md px-2 py-0.5 bg-muted/40">
+        <ArrowUpDown className="h-3 w-3 text-muted-foreground shrink-0" />
+        <Select value={opts.sort} onValueChange={v => opts.onSortChange(v as InventorySortOption)}>
+          <SelectTrigger className="h-7 min-w-[9.5rem] w-40 max-w-[12rem] bg-transparent border-none text-[11px] font-medium shadow-none hover:bg-muted/60 py-0 sm:max-w-none">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {opts.sortOptions.map(o => (
+              <SelectItem key={o.value} value={o.value}>
+                {o.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    </div>
+  );
+
+  const DIGITAL_SORT_OPTIONS: { value: InventorySortOption; label: string }[] = [
+    { value: 'collection-asc', label: 'Collection A-Z' },
+    { value: 'collection-desc', label: 'Collection Z-A' },
+    { value: 'site-asc', label: 'Sites A-Z' },
+    { value: 'site-desc', label: 'Sites Z-A' },
+    { value: 'subtype-asc', label: 'Subtype A-Z' },
+    { value: 'subtype-desc', label: 'Subtype Z-A' },
+  ];
+
+  const INVENTORY_SORT_OPTIONS_WITH_PRICE: { value: InventorySortOption; label: string }[] = [
+    ...DIGITAL_SORT_OPTIONS,
+    { value: 'price-desc', label: 'Price: high to low' },
+    { value: 'price-asc', label: 'Price: low to high' },
+  ];
+
+  const getDigitalSubtypeIcon = (subType?: string) => {
+    switch (subType) {
+      case DigitalSubType.NFT:
+        return Sparkles;
+      case DigitalSubType.DIGITAL_ART:
+        return Palette;
+      case DigitalSubType.ANIMATION:
+        return Film;
+      case DigitalSubType.DIGITIZATION:
+        return Scan;
+      default:
+        return ImageIcon;
+    }
+  };
+
+  const getDigitalSubtypeLabel = (subType?: string) => {
+    switch (subType) {
+      case DigitalSubType.NFT:
+        return 'NFT';
+      case DigitalSubType.DIGITAL_ART:
+        return 'Digital Art';
+      case DigitalSubType.ANIMATION:
+        return 'Animation';
+      case DigitalSubType.DIGITIZATION:
+        return 'Digitization';
+      default:
+        return 'Digital';
+    }
+  };
+
+  const MediaFlag = ({ label, ok }: { label: string; ok: boolean }) => (
+    <span
+      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border ${
+        ok
+          ? 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30'
+          : 'bg-rose-500/15 text-rose-500 border-rose-500/30'
+      }`}
+    >
+      {ok ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+      {label}
+    </span>
+  );
+
+  const getArtworkSubtypeIcon = (subType?: string) => {
+    switch (subType) {
+      case ArtworkSubType.ACRYLIC_CANVAS:
+        return Brush;
+      case ArtworkSubType.ACRYLIC_WOOD:
+        return TreePine;
+      case ArtworkSubType.ASSEMBLAGE:
+        return Boxes;
+      case ArtworkSubType.MURAL:
+        return LayoutGrid;
+      case ArtworkSubType.FURNITURE_ART:
+        return Armchair;
+      default:
+        return Frame;
+    }
+  };
+
+  const getArtworkSubtypeLabel = (subType?: string) => {
+    switch (subType) {
+      case ArtworkSubType.ACRYLIC_CANVAS:
+        return 'Acrylic on canvas';
+      case ArtworkSubType.ACRYLIC_WOOD:
+        return 'Acrylic on wood';
+      case ArtworkSubType.ASSEMBLAGE:
+        return 'Assemblage';
+      case ArtworkSubType.MURAL:
+        return 'Mural';
+      case ArtworkSubType.FURNITURE_ART:
+        return 'Furniture art';
+      default:
+        return 'Artwork';
+    }
+  };
+
+  /** Neutral frame + pill: subtype is communicated by the icon only (less noise vs Digital rows). */
+  const NEUTRAL_ACCENT = {
+    pill:
+      'border border-zinc-200/90 bg-zinc-100/70 text-zinc-700 dark:border-zinc-700/80 dark:bg-zinc-800/60 dark:text-zinc-300',
+    frame:
+      'border border-stone-200/90 bg-stone-100/70 text-stone-700 shadow-inner ring-1 ring-inset ring-stone-300/50 dark:border-zinc-700 dark:bg-zinc-900/50 dark:text-zinc-300 dark:ring-zinc-600/40',
+  } as const;
+
+  const getArtworkSubtypeAccent = (_subType?: string): { pill: string; frame: string } => NEUTRAL_ACCENT;
+
+  /** Print card mock: dark frame slot + dark subtype badge (white label). */
+  const PRINT_CARD_FRAME =
+    'rounded-lg border border-zinc-600/70 bg-zinc-800/90 shadow-inner ring-0 dark:border-zinc-700 dark:bg-zinc-900/95';
+  const PRINT_SUBTYPE_BADGE =
+    'inline-flex items-center rounded-md border border-zinc-500/50 bg-zinc-900/90 px-2.5 py-0.5 text-xs font-medium text-zinc-50 dark:border-zinc-600 dark:bg-black/50 dark:text-white';
+
+  const getPrintSubtypeIcon = (subType?: string) => {
+    switch (subType) {
+      case PrintSubType.GICLEE_PRINT:
+        return LucideImage;
+      case PrintSubType.POSTER_PRINT:
+        return Printer;
+      case PrintSubType.PRINT_ON_FRAME:
+        return Frame;
+      default:
+        return ImageIcon;
+    }
+  };
+
+  const getPrintSubtypeLabel = (subType?: string) => {
+    switch (subType) {
+      case PrintSubType.GICLEE_PRINT:
+        return 'Giclée print';
+      case PrintSubType.POSTER_PRINT:
+        return 'Poster print';
+      case PrintSubType.PRINT_ON_FRAME:
+        return 'Print on frame';
+      default:
+        return 'Print';
+    }
+  };
+
+  /** Prints tab only: dark red “off” pills to match inventory print-card mock. */
+  const PrintsMediaFlag = ({ label, ok }: { label: string; ok: boolean }) => (
+    <span
+      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${
+        ok
+          ? 'border border-emerald-500/35 bg-emerald-950/40 text-emerald-400'
+          : 'border border-red-900/90 bg-red-950/90 text-red-400'
+      }`}
+    >
+      {ok ? <CheckCircle2 className="h-3 w-3 shrink-0" /> : <XCircle className="h-3 w-3 shrink-0" />}
+      {label}
+    </span>
+  );
+
+  const StockEnergyRing = ({ qty, target }: { qty: number; target?: number }) => {
+    const size = 72;
+    const stroke = 5;
+    const radius = (size - stroke) / 2;
+    const circumference = 2 * Math.PI * radius;
+    const hasTarget = typeof target === 'number' && target > 0;
+    const ratio = hasTarget ? Math.min(Math.max(qty / (target as number), 0), 1) : qty > 0 ? 1 : 0;
+    const dash = circumference * ratio;
+
+    return (
+      <div className="flex flex-col items-center gap-1.5">
+        <span className="whitespace-nowrap text-[10px] font-medium uppercase leading-none tracking-normal text-zinc-500 dark:text-zinc-400">
+          Stock units
+        </span>
+        <div className="relative" style={{ width: size, height: size }}>
+          <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden className="-rotate-90">
+            <circle
+              cx={size / 2}
+              cy={size / 2}
+              r={radius * 0.75}
+              stroke="currentColor"
+              strokeWidth={stroke}
+              className="text-zinc-600/50 dark:text-white/15"
+              fill="none"
+            />
+            <circle
+              cx={size / 2}
+              cy={size / 2}
+              r={radius * 0.75}
+              stroke="currentColor"
+              strokeWidth={stroke}
+              strokeLinecap="round"
+              className="text-orange-500 transition-[stroke-dasharray] duration-300"
+              fill="none"
+              strokeDasharray={`${dash} ${circumference}`}
+            />
+          </svg>
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center leading-none">
+            <span className="text-2xl font-bold tabular-nums tracking-tight text-zinc-900 dark:text-white">{qty}</span>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   const handleAddItem = (itemType: ItemType) => {
@@ -878,26 +1291,38 @@ export function InventoryDisplay({
     }
   };
 
-  const renderTabHeader = <T extends string>(title: string, itemType: ItemType, viewBy?: T, onViewByChange?: (value: T) => void, viewOptions?: { value: T; label: string }[]) => (
-    <div className="flex items-center justify-between">
-      <div className="flex items-center gap-4">
-        <h3 className="text-lg font-semibold">{title}</h3>
-        {viewBy && onViewByChange && viewOptions && (
+  const renderTabHeader = <T extends string>(
+    title: string,
+    itemType: ItemType,
+    viewBy?: T,
+    onViewByChange?: (value: T) => void,
+    viewOptions?: { value: T; label: string }[],
+    beforeAdd?: ReactNode
+  ) => (
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex min-w-0 flex-wrap items-center gap-3 gap-y-2">
+        <h3 className="text-lg font-semibold shrink-0">{title}</h3>
+        {viewBy != null && onViewByChange && viewOptions ? (
           <Select value={viewBy} onValueChange={onViewByChange}>
             <SelectTrigger className="w-40">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {viewOptions.map(option => (
-                <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
-        )}
+        ) : null}
       </div>
-      <Button size="sm" className="bg-primary hover:bg-primary/90" onClick={() => handleAddItem(itemType)}>
-        Add {itemType}
-      </Button>
+      <div className="flex min-w-0 flex-wrap items-center justify-end gap-2 sm:shrink-0">
+        {beforeAdd}
+        <Button size="sm" className="bg-primary hover:bg-primary/90 shrink-0" onClick={() => handleAddItem(itemType)}>
+          Add {itemType}
+        </Button>
+      </div>
     </div>
   );
 
@@ -1899,108 +2324,203 @@ export function InventoryDisplay({
     );
   };
 
-  // Other tabs with similar compact design
   const renderDigitalArtTab = () => {
-    const digitalArtItems = getFilteredItems(ItemType.DIGITAL);
+    const baseDigitalItems = getFilteredItems(ItemType.DIGITAL);
+    const digitalArtItems = applySearchAndSort(baseDigitalItems, digitalSearchQuery, digitalSortOption);
 
     return (
       <div className="space-y-4">
-        {renderTabHeader(getTabDisplayName(ItemType.DIGITAL), ItemType.DIGITAL)}
+        {renderTabHeader(
+          getTabDisplayName(ItemType.DIGITAL),
+          ItemType.DIGITAL,
+          undefined,
+          undefined,
+          undefined,
+          renderInventoryToolbar({
+            search: digitalSearchQuery,
+            onSearchChange: setDigitalSearchQuery,
+            sort: digitalSortOption,
+            onSortChange: v => {
+              setDigitalSortOption(v);
+            },
+            sortOptions: DIGITAL_SORT_OPTIONS,
+            placeholder: 'Search digital…',
+          })
+        )}
 
-        <div className="grid gap-3 md:grid-cols-3 lg:grid-cols-4">
-          {digitalArtItems.map(item => (
-            <div key={item.id} className="bg-card border rounded p-3 hover:bg-accent/50 cursor-pointer" onClick={() => handleEditItem(item)}>
-              <div className="space-y-2">
-                <div className="font-medium text-sm">{item.name}</div>
-                <div className="text-xs text-muted-foreground">{item.collection}</div>
-                <div className="text-xs text-muted-foreground">
-                  {getAreaForStation(item.station) || 'N/A'} - {item.station}
+        {baseDigitalItems.length === 0 ? (
+          <div className="flex items-center justify-center py-12 bg-card border rounded-lg text-sm text-muted-foreground">
+            No digital items yet
+          </div>
+        ) : digitalArtItems.length === 0 ? (
+          <div className="flex items-center justify-center py-12 bg-card border rounded-lg text-sm text-muted-foreground">
+            No items match &ldquo;{digitalSearchQuery.trim()}&rdquo;
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-3">
+            {digitalArtItems.map(item => {
+              const Icon = getDigitalSubtypeIcon(item.subItemType);
+              const isNFT = item.subItemType === DigitalSubType.NFT;
+              const totalQty = item.stock?.reduce((s, stock) => s + stock.quantity, 0) || 0;
+
+              return (
+                <div
+                  key={item.id}
+                  onClick={() => handleEditItem(item)}
+                  className="flex items-center gap-2 sm:gap-3 p-3 bg-card border rounded-lg hover:bg-accent/40 cursor-pointer transition-colors min-w-0"
+                >
+                  <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-muted flex items-center justify-center text-muted-foreground">
+                    <Icon className="w-6 h-6" />
+                  </div>
+
+                  <div className="min-w-0 flex-1 flex items-baseline gap-2">
+                    <span className="text-base font-semibold leading-tight truncate">{item.name}</span>
+                    <span
+                      className={`text-sm shrink-0 truncate max-w-[min(40%,7rem)] ${
+                        item.collection ? 'text-muted-foreground' : 'text-rose-500/80'
+                      }`}
+                    >
+                      {item.collection ? getCollectionLabel(item.collection) : 'No collection'}
+                    </span>
+                  </div>
+
+                  <span className="hidden md:block shrink-0 max-w-[5rem] truncate text-xs text-foreground" title={item.station}>
+                    {item.station || '—'}
+                  </span>
+
+                  <span className="hidden md:inline-flex shrink-0 items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-primary/10 dark:text-zinc-300 dark:bg-zinc-800 border border-primary/20 dark:border-zinc-700/80">
+                    {getDigitalSubtypeLabel(item.subItemType)}
+                  </span>
+
+                  <span
+                    className={`hidden md:inline shrink-0 min-w-[2.25rem] text-right text-xs tabular-nums ${
+                      item.year != null ? 'text-muted-foreground' : 'text-rose-500/80'
+                    }`}
+                  >
+                    {item.year ?? 'missing'}
+                  </span>
+
+                  <div className="hidden sm:flex items-center gap-1 shrink-0">
+                    <MediaFlag label="Main" ok={!!item.media?.main} />
+                    <MediaFlag label="Gallery" ok={!!item.media?.gallery?.length} />
+                    <MediaFlag label="Thumb" ok={!!item.media?.thumb} />
+                    <MediaFlag label="Source" ok={!!item.sourceFileUrl} />
+                  </div>
+
+                  {isNFT && (
+                    <div className="flex shrink-0 items-center gap-2 text-sm tabular-nums">
+                      <span className="font-bold">{totalQty}</span>
+                      <span className="text-xs text-muted-foreground">{formatCurrency(item.price)}</span>
+                    </div>
+                  )}
                 </div>
-                <div className="flex justify-between items-center">
-                  <div className="text-sm font-bold">{item.stock?.reduce((s, stock) => s + stock.quantity, 0) || 0}</div>
-                  <div className="text-sm">{formatCurrency(item.price)}</div>
-                </div>
-                <Button size="sm" variant="ghost" className="w-full h-8 text-xs" onClick={(e) => { e.stopPropagation(); handleEditItem(item); }}>Edit</Button>
-              </div>
-            </div>
-          ))}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     );
   };
 
-  // Compact Artworks View - Organized by view selector
   const renderArtworksTab = () => {
-    const artworkItems = getFilteredItems(ItemType.ARTWORK);
-
-    // Group items based on selected view
-    const groupedArtworks = artworkItems.reduce((acc, artwork) => {
-      let key: string;
-      switch (artworksViewBy) {
-        case 'location':
-          key = artwork.stock[0]?.siteId || 'Unknown Location';
-          break;
-        case 'subtype':
-          key = artwork.subItemType || 'No Subtype';
-          break;
-        default: // collection
-          key = artwork.collection || 'Uncategorized';
-      }
-
-      if (!acc[key]) acc[key] = [];
-      acc[key].push(artwork);
-      return acc;
-    }, {} as Record<string, Item[]>);
-
-    // Sort items within each group
-    Object.keys(groupedArtworks).forEach(key => {
-      groupedArtworks[key] = sortItems(groupedArtworks[key]);
-    });
-
-    const viewOptions: { value: 'collection' | 'subtype' | 'location'; label: string }[] = [
-      { value: 'location', label: 'Location' },
-      { value: 'collection', label: 'Collection' },
-      { value: 'subtype', label: 'Subtype' }
-    ];
+    const baseArtworkItems = getFilteredItems(ItemType.ARTWORK);
+    const artworkItems = applySearchAndSort(baseArtworkItems, artworksSearchQuery, artworksSortOption);
 
     return (
       <div className="space-y-4">
-        {renderTabHeader(getTabDisplayName(ItemType.ARTWORK), ItemType.ARTWORK, artworksViewBy, (value: 'collection' | 'subtype' | 'location') => setArtworksViewBy(value), viewOptions)}
+        {renderTabHeader(
+          getTabDisplayName(ItemType.ARTWORK),
+          ItemType.ARTWORK,
+          undefined,
+          undefined,
+          undefined,
+          renderInventoryToolbar({
+            search: artworksSearchQuery,
+            onSearchChange: setArtworksSearchQuery,
+            sort: artworksSortOption,
+            onSortChange: v => {
+              setArtworksSortOption(v);
+            },
+            sortOptions: INVENTORY_SORT_OPTIONS_WITH_PRICE,
+            placeholder: 'Search artworks…',
+          })
+        )}
 
-        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-          {Object.entries(groupedArtworks).map(([groupKey, groupArtworks]) => (
-            <div key={groupKey} className="border rounded-lg">
-              <div className="bg-muted/50 px-4 py-2 border-b">
-                <h4 className="font-medium text-sm">{artworksViewBy === 'location' ? <><MapPin className="w-4 h-4 inline mr-1" />{groupKey}</> : groupKey}</h4>
-              </div>
-              <div className="p-4">
-                <div className="space-y-3">
-                  {groupArtworks.map(artwork => (
-                    <div key={artwork.id} className="bg-card border rounded p-3 hover:bg-accent/50 cursor-pointer" onClick={() => handleEditItem(artwork)}>
-                      <div className="space-y-2">
-                        <div className="font-medium text-sm">{artwork.name}</div>
-                        <div className="text-xs text-muted-foreground">{artwork.collection}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {getAreaForStation(artwork.station) || 'N/A'} - {artwork.station}
-                        </div>
-                        {artwork.dimensions && (
-                          <div className="text-xs text-muted-foreground">
-                            {artwork.dimensions.width}×{artwork.dimensions.height} cm
-                          </div>
-                        )}
-                        <div className="flex justify-between items-center">
-                          <div className="text-sm font-bold">{artwork.stock?.reduce((s, stock) => s + stock.quantity, 0) || 0}</div>
-                          <div className="text-sm">{formatCurrency(artwork.price)}</div>
-                        </div>
-                        <Button size="sm" variant="ghost" className="w-full h-8 text-xs" onClick={(e) => { e.stopPropagation(); handleEditItem(artwork, artworksViewBy === 'location' ? groupKey : undefined); }}>Edit</Button>
-                      </div>
+        {baseArtworkItems.length === 0 ? (
+          <div className="flex items-center justify-center py-12 bg-card border rounded-lg text-sm text-muted-foreground">
+            No artworks yet
+          </div>
+        ) : artworkItems.length === 0 ? (
+          <div className="flex items-center justify-center py-12 bg-card border rounded-lg text-sm text-muted-foreground">
+            No items match &ldquo;{artworksSearchQuery.trim()}&rdquo;
+          </div>
+        ) : (
+          <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {artworkItems.map(artwork => {
+              const accent = getArtworkSubtypeAccent(artwork.subItemType);
+              const Icon = getArtworkSubtypeIcon(artwork.subItemType);
+              const totalQty = artwork.stock?.reduce((s, stock) => s + stock.quantity, 0) || 0;
+              const dims =
+                artwork.dimensions != null
+                  ? `${artwork.dimensions.width}×${artwork.dimensions.height} cm`
+                  : null;
+
+              return (
+                <div
+                  key={artwork.id}
+                  onClick={() => handleEditItem(artwork)}
+                  className="flex min-h-0 min-w-0 cursor-pointer flex-col gap-3 rounded-xl border bg-card p-4 shadow-sm transition-colors hover:bg-accent/40 sm:flex-row sm:items-stretch sm:gap-4"
+                >
+                  <div
+                    className={`mx-auto flex h-32 w-32 shrink-0 items-center justify-center rounded-lg sm:mx-0 ${accent.frame}`}
+                  >
+                    <Icon className="h-14 w-14 text-muted-foreground" aria-hidden />
+                  </div>
+                  <div className="flex min-w-0 flex-1 flex-col gap-2.5">
+                    <div className="flex flex-col gap-1 min-[380px]:flex-row min-[380px]:items-baseline min-[380px]:justify-between min-[380px]:gap-2">
+                      <span className="truncate text-lg font-semibold leading-snug tracking-tight">{artwork.name}</span>
+                      <span
+                        className={`shrink-0 truncate text-sm min-[380px]:max-w-[45%] min-[380px]:text-right ${
+                          artwork.collection ? 'text-muted-foreground' : 'text-rose-500/80'
+                        }`}
+                      >
+                        {artwork.collection ? getCollectionLabel(artwork.collection) : 'No collection'}
+                      </span>
                     </div>
-                  ))}
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-sm leading-snug text-muted-foreground">
+                      <span
+                        className={`inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-medium ${accent.pill}`}
+                      >
+                        {getArtworkSubtypeLabel(artwork.subItemType)}
+                      </span>
+                      {dims ? <span>{dims}</span> : <span className="italic text-muted-foreground/80">No dimensions</span>}
+                      <span className="text-muted-foreground/35">·</span>
+                      <span className={artwork.year != null ? '' : 'text-rose-500/80'}>{artwork.year ?? 'missing'}</span>
+                      <span className="text-muted-foreground/35">·</span>
+                      <span className="max-w-full truncate" title={artwork.station}>
+                        {artwork.station || '—'}
+                      </span>
+                      <span className="text-muted-foreground/35">·</span>
+                      <span className="max-w-full truncate" title={getPrimarySiteName(artwork) || undefined}>
+                        {getPrimarySiteName(artwork) || 'No site'}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                      <MediaFlag label="Main" ok={!!artwork.media?.main} />
+                      <MediaFlag label="Gallery" ok={!!artwork.media?.gallery?.length} />
+                      <MediaFlag label="Thumb" ok={!!artwork.media?.thumb} />
+                      <MediaFlag label="Source" ok={!!artwork.sourceFileUrl} />
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 flex-row items-center justify-between gap-3 border-t border-border/60 pt-3 tabular-nums sm:flex-col sm:items-end sm:justify-center sm:border-t-0 sm:border-l sm:pl-4 sm:pt-0">
+                    <span className="text-base font-bold">{totalQty}</span>
+                    <span className="text-sm text-muted-foreground">{formatCurrency(artwork.price)}</span>
+                  </div>
                 </div>
-              </div>
-            </div>
-          ))}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     );
   };
@@ -2141,79 +2661,111 @@ export function InventoryDisplay({
     );
   };
 
-  // Compact Prints View - Organized by view selector
   const renderPrintsTab = () => {
-    const printItems = getFilteredItems(ItemType.PRINT);
-
-    // Group items based on selected view
-    const groupedPrints = printItems.reduce((acc, print) => {
-      let key: string;
-      switch (printsViewBy) {
-        case 'location':
-          key = print.stock[0]?.siteId || 'Unknown Location';
-          break;
-        case 'subtype':
-          key = print.subItemType || 'No Subtype';
-          break;
-        default: // collection
-          key = print.collection || 'Uncategorized';
-      }
-
-      if (!acc[key]) acc[key] = [];
-      acc[key].push(print);
-      return acc;
-    }, {} as Record<string, Item[]>);
-
-    // Sort items within each group
-    Object.keys(groupedPrints).forEach(key => {
-      groupedPrints[key] = sortItems(groupedPrints[key]);
-    });
-
-    const viewOptions: { value: 'collection' | 'subtype' | 'location'; label: string }[] = [
-      { value: 'collection', label: 'Collection' },
-      { value: 'subtype', label: 'Subtype' },
-      { value: 'location', label: 'Location' }
-    ];
+    const basePrintItems = getFilteredItems(ItemType.PRINT);
+    const printItems = applySearchAndSort(basePrintItems, printsSearchQuery, printsSortOption);
 
     return (
       <div className="space-y-4">
-        {renderTabHeader(getTabDisplayName(ItemType.PRINT), ItemType.PRINT, printsViewBy, (value: 'collection' | 'subtype' | 'location') => setPrintsViewBy(value), viewOptions)}
+        {renderTabHeader(
+          getTabDisplayName(ItemType.PRINT),
+          ItemType.PRINT,
+          undefined,
+          undefined,
+          undefined,
+          renderInventoryToolbar({
+            search: printsSearchQuery,
+            onSearchChange: setPrintsSearchQuery,
+            sort: printsSortOption,
+            onSortChange: v => {
+              setPrintsSortOption(v);
+            },
+            sortOptions: INVENTORY_SORT_OPTIONS_WITH_PRICE,
+            placeholder: 'Search prints…',
+          })
+        )}
 
-        {Object.entries(groupedPrints).map(([groupKey, groupPrints]) => (
-          <div key={groupKey} className="border rounded-lg">
-            <div className="bg-muted/50 px-4 py-2 border-b">
-              <h4 className="font-medium text-sm">{printsViewBy === 'location' ? <><MapPin className="w-4 h-4 inline mr-1" />{groupKey}</> : groupKey}</h4>
-            </div>
-            <div className="divide-y">
-              {groupPrints.map(print => (
-                <div key={print.id} className="flex items-center justify-between p-3 hover:bg-accent/50 cursor-pointer">
-                  <div className="flex-1">
-                    <div className="font-medium text-sm">{print.name}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {getAreaForStation(print.station) || 'N/A'} - {print.station}
+        {basePrintItems.length === 0 ? (
+          <div className="flex items-center justify-center py-12 bg-card border rounded-lg text-sm text-muted-foreground">
+            No prints yet
+          </div>
+        ) : printItems.length === 0 ? (
+          <div className="flex items-center justify-center py-12 bg-card border rounded-lg text-sm text-muted-foreground">
+            No items match &ldquo;{printsSearchQuery.trim()}&rdquo;
+          </div>
+        ) : (
+          <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {printItems.map(print => {
+              const Icon = getPrintSubtypeIcon(print.subItemType);
+              const totalQty = print.stock?.reduce((s, stock) => s + stock.quantity, 0) || 0;
+              const target = print.targetAmount;
+              const dims =
+                print.dimensions != null
+                  ? `${print.dimensions.width}×${print.dimensions.height} cm`
+                  : null;
+              const siteName = getPrimarySiteName(print);
+
+              return (
+                <div
+                  key={print.id}
+                  onClick={() => handleEditItem(print)}
+                  className="grid min-h-0 min-w-0 cursor-pointer grid-cols-1 gap-3 rounded-xl border border-border/80 bg-card p-4 shadow-sm transition-colors hover:bg-accent/40 sm:grid-cols-[7rem_minmax(0,1fr)_auto] sm:items-stretch sm:gap-x-4 sm:gap-y-0"
+                >
+                  {/* Col 1: thumbnail / subtype icon */}
+                  <div className="flex justify-center sm:justify-start sm:self-start">
+                    <div className={`flex h-28 w-28 shrink-0 items-center justify-center ${PRINT_CARD_FRAME}`}>
+                      <Icon className="h-12 w-12 text-zinc-100 dark:text-zinc-100" aria-hidden />
                     </div>
-                    {print.dimensions && (
-                      <div className="text-xs text-muted-foreground">
-                        {print.dimensions.width}×{print.dimensions.height} cm
-                      </div>
-                    )}
                   </div>
-                  <div className="flex items-center gap-4 text-sm">
-                    <div className="text-center">
-                      <div className="font-bold">{print.stock?.reduce((s, stock) => s + stock.quantity, 0) || 0}</div>
-                      <div className="text-xs text-muted-foreground">units</div>
+
+                  {/* Col 2: title + badge, dimensions, meta, then flags on the bottom */}
+                  <div className="flex min-w-0 flex-col gap-2.5">
+                    <div className="flex min-w-0 items-start justify-between gap-2">
+                      <span className="min-w-0 flex-1 truncate text-lg font-semibold leading-snug tracking-tight text-foreground">
+                        {print.name}
+                      </span>
+                      <span className={`${PRINT_SUBTYPE_BADGE} shrink-0`}>{getPrintSubtypeLabel(print.subItemType)}</span>
                     </div>
-                    <div className="text-center">
-                      <div className="font-bold">{formatCurrency(print.price)}</div>
-                      <div className="text-xs text-muted-foreground">price</div>
+                    {dims ? (
+                      <span className="text-sm text-muted-foreground">{dims}</span>
+                    ) : (
+                      <span className="text-sm italic text-rose-500/80">No dimensions</span>
+                    )}
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-sm leading-snug text-muted-foreground">
+                      <span className={print.collection ? '' : 'text-rose-500/80'}>
+                        {print.collection ? getCollectionLabel(print.collection) : 'No collection'}
+                      </span>
+                      <span className="text-muted-foreground/35">·</span>
+                      <span className={print.year != null ? '' : 'text-rose-500/80'}>{print.year ?? 'missing'}</span>
+                      <span className="text-muted-foreground/35">·</span>
+                      <span className="max-w-full truncate" title={print.station}>
+                        {print.station || '—'}
+                      </span>
+                      <span className="text-muted-foreground/35">·</span>
+                      <span className="max-w-full truncate" title={siteName || undefined}>
+                        {siteName || 'No site'}
+                      </span>
                     </div>
-                    <Button size="sm" variant="ghost" onClick={() => handleEditItem(print, printsViewBy === 'location' ? groupKey : undefined)}>Edit</Button>
+                    <div className="flex max-w-full flex-wrap justify-end gap-1.5 pt-0.5">
+                      <PrintsMediaFlag label="Main" ok={!!print.media?.main} />
+                      <PrintsMediaFlag label="Gallery" ok={!!print.media?.gallery?.length} />
+                      <PrintsMediaFlag label="Thumb" ok={!!print.media?.thumb} />
+                      <PrintsMediaFlag label="Source" ok={!!print.sourceFileUrl} />
+                    </div>
+                  </div>
+
+                  {/* Col 3: divider + stock ring + price (vertically centered as a stack) */}
+                  <div className="flex flex-col items-end justify-center gap-4 border-t border-border/60 pt-3 sm:min-w-[5.75rem] sm:border-t-0 sm:border-l sm:border-border/60 sm:pl-4 sm:pt-0">
+                    <StockEnergyRing qty={totalQty} target={target} />
+                    <span className="inline-flex items-center rounded-full border border-orange-500/55 bg-zinc-950/95 px-3 py-1 text-sm font-semibold text-orange-500 shadow-[0_0_18px_-3px_rgba(249,115,22,0.45)] tabular-nums dark:bg-black/60">
+                      {formatCurrency(print.price)}
+                    </span>
                   </div>
                 </div>
-              ))}
-            </div>
+              );
+            })}
           </div>
-        ))}
+        )}
       </div>
     );
   };
