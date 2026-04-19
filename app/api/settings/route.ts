@@ -7,10 +7,7 @@ import {
   ClearCacheWorkflow,
   ExportDataWorkflow,
   ImportDataWorkflow,
-  UtcArchiveIndexMigrationWorkflow,
-  RepairTaskMonthIndexWorkflow,
 } from '@/workflows/settings';
-import { auditTaskMonthIndexContamination } from '@/lib/integrity/task-timeline-audit';
 
 // Force dynamic rendering since this route accesses request cookies for auth
 export const dynamic = 'force-dynamic';
@@ -69,43 +66,6 @@ export async function POST(request: NextRequest) {
           message: result.message,
           data: result.data
         }, { status: result.success ? 200 : 500 });
-      }
-
-      case 'utc-archive-index-migration': {
-        const dryRun = parameters?.dryRun !== false;
-        const result = await UtcArchiveIndexMigrationWorkflow.execute({ dryRun });
-        return NextResponse.json(
-          {
-            success: result.success,
-            message: result.message,
-            data: result.data,
-          },
-          { status: result.success ? 200 : 500 }
-        );
-      }
-
-      case 'repair-task-month-index': {
-        const dryRun = parameters?.dryRun ?? false;
-        const result = await RepairTaskMonthIndexWorkflow.execute({ dryRun });
-        return NextResponse.json(
-          {
-            success: result.success,
-            message: result.message,
-            data: result.data,
-          },
-          { status: result.success ? 200 : 500 }
-        );
-      }
-
-      case 'audit-task-month-index-contamination': {
-        const month = Number(parameters?.month);
-        const year = Number(parameters?.year);
-        if (!Number.isFinite(month) || !Number.isFinite(year) || month < 1 || month > 12) {
-          return NextResponse.json({ error: 'Invalid month or year' }, { status: 400 });
-        }
-
-        const data = await auditTaskMonthIndexContamination(month, year);
-        return NextResponse.json({ success: true, data });
       }
 
       default:
