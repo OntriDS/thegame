@@ -128,6 +128,24 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
     if (saved === 'false') return false;
     return true; // default ON
   });
+  const [autoSuffixR2, setAutoSuffixR2] = useState<boolean>(() => {
+    const saved = getPreference('item-modal-auto-suffix-r2');
+    if (typeof saved === 'boolean') return saved;
+    if (saved === 'true') return true;
+    if (saved === 'false') return false;
+    return true; // default ON
+  });
+
+  const toKebabCase = (value: string): string => {
+    return value
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  };
 
   const r2Prefix = useMemo(() => {
     const parts: string[] = [];
@@ -137,55 +155,103 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
     return parts.join('/');
   }, [station, type, subItemType]);
 
+  const r2NameSlug = useMemo(() => toKebabCase(name) || 'item', [name]);
+  const r2FileBySlug = useCallback(
+    (suffix: string, extension: '.png' | '.jpg') => `${r2NameSlug}-${suffix}${extension}`,
+    [r2NameSlug]
+  );
+  const buildR2AutoValue = useCallback(
+    (suffix: string, extension: '.png' | '.jpg') => {
+      if (!autoSuffixR2) {
+        if (autoPrefixR2 && r2Prefix) return `${r2Prefix}/`;
+        return '';
+      }
+      const filename = r2FileBySlug(suffix, extension);
+      return autoPrefixR2 && r2Prefix ? `${r2Prefix}/${filename}` : filename;
+    },
+    [autoPrefixR2, autoSuffixR2, r2Prefix, r2FileBySlug]
+  );
+
   const applyR2PrefixToValue = useCallback(
-    (raw: string, defaultExtension: '.png' | '.jpg'): string => {
+    (raw: string): string => {
       const trimmed = raw.trim();
       if (!trimmed) return '';
       if (!autoPrefixR2 || !r2Prefix) return trimmed;
-      const appendExtension = (value: string) => {
-        const pathWithoutQuery = value.split('?')[0].split('#')[0];
-        const filename = pathWithoutQuery.split('/').pop() || '';
-        const hasExtension = /\.[a-z0-9]{2,5}$/i.test(filename);
-        return hasExtension ? value : `${value}${defaultExtension}`;
-      };
-      if (trimmed.startsWith(r2Prefix)) return appendExtension(trimmed);
-      return appendExtension(`${r2Prefix}/${trimmed}`);
+      if (trimmed.startsWith(r2Prefix)) return trimmed;
+      return `${r2Prefix}/${trimmed}`;
     },
     [autoPrefixR2, r2Prefix]
   );
 
-  const applyR2PrefixToGallery = useCallback(
-    (raw: string, defaultExtension: '.jpg'): string => {
+  const applyR2SuffixToValue = useCallback(
+    (raw: string, requiredSuffix: string, defaultExtension: '.png' | '.jpg'): string => {
       if (!raw) return '';
-      const parts = raw
-        .split(';')
-        .map((s) => s.trim())
-        .filter(Boolean);
-      if (!parts.length) return '';
-      const prefixed = parts.map((part) => applyR2PrefixToValue(part, defaultExtension));
-      return prefixed.join(';');
+      const trimmed = raw.trim();
+      if (!trimmed || !autoSuffixR2) return trimmed;
+      const separatorIndex = trimmed.search(/[?#]/);
+      const suffix = separatorIndex >= 0 ? trimmed.slice(separatorIndex) : '';
+      const path = separatorIndex >= 0 ? trimmed.slice(0, separatorIndex) : trimmed;
+      const parts = path.split('/');
+      const filename = parts.pop() || '';
+      if (!parts.length && !filename) return `${path}${suffix}`;
+
+      if (!filename) return `${path}${suffix}`;
+      const extensionMatch = filename.match(/\.[a-z0-9]{2,6}$/i);
+      const extension = extensionMatch ? extensionMatch[0] : '';
+      const baseName = extension ? filename.slice(0, -extension.length) : filename;
+      const hasNamingSuffix = requiredSuffix.startsWith('gallery-')
+        ? /-gallery-\d+$/i.test(baseName)
+        : new RegExp(`-${requiredSuffix}$`, 'i').test(baseName);
+      const normalizedBaseName = hasNamingSuffix ? baseName : `${baseName}-${requiredSuffix}`;
+      const finalName = `${normalizedBaseName}${extension || defaultExtension}`;
+      const prefix = parts.length > 0 ? `${parts.join('/')}/` : '';
+
+      return `${prefix}${finalName}${suffix}`;
     },
-    [applyR2PrefixToValue]
+    [autoSuffixR2]
+  );
+
+  const applyR2PrefixAndSuffixToValue = useCallback(
+    (raw: string, requiredSuffix: string, defaultExtension: '.png' | '.jpg') => {
+      const withPrefix = applyR2PrefixToValue(raw);
+      return applyR2SuffixToValue(withPrefix, requiredSuffix, defaultExtension);
+    },
+    [applyR2PrefixToValue, applyR2SuffixToValue]
   );
 
   const makeR2ArrowFillHandler =
-    (setter: (value: string) => void) =>
+    (setter: (value: string) => void, mode: 'main' | 'thumb' | 'gallery') =>
     (event: any) => {
       if (event.key !== 'ArrowRight') return;
-      if (!autoPrefixR2 || !r2Prefix) return;
+      if (!autoPrefixR2 && !autoSuffixR2) return;
       if (typeof event.currentTarget?.value !== 'string') return;
-      if (event.currentTarget.value.trim() !== '') return;
+      const currentValue = event.currentTarget.value;
+
+      if (mode === 'gallery') {
+        const parts = currentValue
+          .split(';')
+          .map((part: string) => part.trim())
+          .filter(Boolean);
+        const nextIndex = parts.length + 1;
+        if (nextIndex > 3) return;
+        event.preventDefault();
+        const nextGalleryValue = buildR2AutoValue(`gallery-${nextIndex}`, '.jpg');
+        const nextValue = nextIndex === 1 ? nextGalleryValue : `${currentValue};${nextGalleryValue}`;
+        setter(nextValue);
+        return;
+      }
+
+      if (currentValue.trim() !== '') return;
       event.preventDefault();
-      setter(`${r2Prefix}/`);
+
+      const suffix = mode;
+      const extension = mode === 'main' ? '.png' : '.jpg';
+      setter(buildR2AutoValue(suffix, extension));
     };
 
-  const r2MainPlaceholder =
-    r2Prefix ? `${r2Prefix}/main.png` : 'station/item-type/subtype/main.png';
-  const r2ThumbPlaceholder =
-    r2Prefix ? `${r2Prefix}/thumb.jpg` : 'station/item-type/subtype/thumb.jpg';
-  const r2GalleryPlaceholder = r2Prefix
-    ? `${r2Prefix}/gallery-1.jpg;${r2Prefix}/gallery-2.jpg`
-    : 'file-1.jpg;file-2.jpg';
+  const r2MainPlaceholder = `${autoPrefixR2 && r2Prefix ? `${r2Prefix}/` : ''}${r2FileBySlug('main', '.png')}`;
+  const r2ThumbPlaceholder = `${autoPrefixR2 && r2Prefix ? `${r2Prefix}/` : ''}${r2FileBySlug('thumb', '.jpg')}`;
+  const r2GalleryPlaceholder = `${autoPrefixR2 && r2Prefix ? `${r2Prefix}/` : ''}${r2FileBySlug('gallery-1', '.jpg')};${autoPrefixR2 && r2Prefix ? `${r2Prefix}/` : ''}${r2FileBySlug('gallery-2', '.jpg')};${autoPrefixR2 && r2Prefix ? `${r2Prefix}/` : ''}${r2FileBySlug('gallery-3', '.jpg')}`;
 
 
   const currentEditingItem = useMemo(() => {
@@ -634,10 +700,10 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
 
       // Populate quantity based on specific site if provided, otherwise show total
       if (initialSiteId) {
-        const specificStock = item.stock?.find(s => s.siteId === initialSiteId);
+        const specificStock = item.stock?.find((stockPoint) => stockPoint.siteId === initialSiteId);
         setQuantity(specificStock?.quantity || 0);
       } else {
-        setQuantity(item.stock?.reduce((s, stock) => s + stock.quantity, 0) || 0);
+        setQuantity(item.stock?.reduce((total: number, stockPoint) => total + stockPoint.quantity, 0) || 0);
       }
 
       setUnitCost(item.unitCost || 0);
@@ -752,7 +818,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         setStatus(selectedItem.status || ItemStatus.FOR_SALE);
         // Calculate quantity: use site-specific if initialSiteId is set, otherwise total
         if (initialSiteId) {
-          const specificStock = selectedItem.stock?.find(s => s.siteId === initialSiteId);
+        const specificStock = selectedItem.stock?.find((stockPoint) => stockPoint.siteId === initialSiteId);
           setQuantity(specificStock?.quantity || 0);
           setSite(initialSiteId);
         } else {
@@ -860,12 +926,17 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
         }];
       }
 
-      // Resolve final media values with optional R2 prefixing
-      const finalMediaMain = applyR2PrefixToValue(mediaMain, '.png');
-      const finalMediaThumb = applyR2PrefixToValue(mediaThumb, '.jpg');
-      const finalMediaGalleryString = applyR2PrefixToGallery(mediaGallery, '.jpg');
+      // Resolve final media values with optional R2 prefix/suffix handling
+      const finalMediaMain = applyR2PrefixAndSuffixToValue(mediaMain, 'main', '.png');
+      const finalMediaThumb = applyR2PrefixAndSuffixToValue(mediaThumb, 'thumb', '.jpg');
+      const finalMediaGalleryString = mediaGallery
+        .split(';')
+        .map((part) => part.trim())
+        .filter(Boolean)
+        .map((part, index) => applyR2PrefixAndSuffixToValue(part, `gallery-${index + 1}`, '.jpg'))
+        .join(';');
       const finalMediaGalleryArray = finalMediaGalleryString
-        ? finalMediaGalleryString.split(';').map((s) => s.trim()).filter(Boolean)
+        ? finalMediaGalleryString.split(';').map((part: string) => part.trim()).filter(Boolean)
         : undefined;
 
       let finalId = item?.id;
@@ -1166,17 +1237,32 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
                 {showMoreFields ? 'Hide' : 'Show'} Extra Fields
               </Button>
               <div className="flex items-center gap-2">
-                <Switch
-                  id="autoPrefixR2"
-                  checked={autoPrefixR2}
-                  onCheckedChange={(checked) => {
-                    setAutoPrefixR2(checked);
-                    void setPreference('item-modal-auto-prefix-r2', checked);
-                  }}
-                />
-                <Label htmlFor="autoPrefixR2" className="text-xs cursor-pointer select-none">
-                  Prefix r2
-                </Label>
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="autoPrefixR2"
+                    checked={autoPrefixR2}
+                    onCheckedChange={(checked) => {
+                      setAutoPrefixR2(checked);
+                      void setPreference('item-modal-auto-prefix-r2', checked);
+                    }}
+                  />
+                  <Label htmlFor="autoPrefixR2" className="text-xs cursor-pointer select-none">
+                    Prefix r2
+                  </Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="autoSuffixR2"
+                    checked={autoSuffixR2}
+                    onCheckedChange={(checked) => {
+                      setAutoSuffixR2(checked);
+                      void setPreference('item-modal-auto-suffix-r2', checked);
+                    }}
+                  />
+                  <Label htmlFor="autoSuffixR2" className="text-xs cursor-pointer select-none">
+                    Suffix r2
+                  </Label>
+                </div>
               </div>
             </div>
 
@@ -1195,13 +1281,13 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
                         onChange={(e) => setMediaMain(e.target.value)}
                         placeholder={r2MainPlaceholder}
                         className="h-8 text-sm mt-1 ring-1 ring-primary/20"
-                        onKeyDown={makeR2ArrowFillHandler(setMediaMain)}
+                        onKeyDown={makeR2ArrowFillHandler(setMediaMain, 'main')}
                       />
                     </div>
 
                     <div>
                       <Label htmlFor="mediaGallery" className="text-xs">
-                        Gallery r2 key (.jpg ) (separation semicolon)
+                        Gallery r2 key (.jpg ; separate semicolon)
                       </Label>
                       <Input
                         id="mediaGallery"
@@ -1209,7 +1295,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
                         onChange={(e) => setMediaGallery(e.target.value)}
                         placeholder={r2GalleryPlaceholder}
                         className="h-8 text-sm mt-1"
-                        onKeyDown={makeR2ArrowFillHandler(setMediaGallery)}
+                        onKeyDown={makeR2ArrowFillHandler(setMediaGallery, 'gallery')}
                       />
                     </div>
 
@@ -1224,7 +1310,7 @@ export default function ItemModal({ item, defaultItemType, open, onOpenChange, o
                           onChange={(e) => setMediaThumb(e.target.value)}
                           placeholder={r2ThumbPlaceholder}
                           className="h-8 text-sm mt-1"
-                          onKeyDown={makeR2ArrowFillHandler(setMediaThumb)}
+                          onKeyDown={makeR2ArrowFillHandler(setMediaThumb, 'thumb')}
                         />
                       </div>
 

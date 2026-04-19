@@ -16,7 +16,7 @@ const toTitle = (slug: string): string =>
 
 export const SITE_TYPE_LABEL: Record<SiteType, string> = {
   [SiteType.PHYSICAL]: 'Physical',
-  [SiteType.DIGITAL]: 'Digital',
+  [SiteType.DIGITAL_SITE]: 'Digital Site',
   [SiteType.SYSTEM]: 'System',
 };
 

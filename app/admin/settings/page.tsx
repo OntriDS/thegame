@@ -1,27 +1,16 @@
 'use client';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
 import { Settings, User, Cog, Database } from "lucide-react";
-import { useState } from "react";
-import { 
-  DAY_IN_MS, 
-  STATUS_DISPLAY_LONG 
-} from '@/lib/constants/app-constants';
-import { SettingsPanel } from '@/components/settings/settings-panel';
-import { AdminSettingsTab } from '@/components/settings/admin-settings-tab';
-import { SystemSettingsTab } from '@/components/settings/system-settings-tab';
-import { LinkRulesTab } from '@/components/research/link-rules-tab';
-import { ResearchSyncTab } from '@/components/settings/research-sync-tab';
-import SeedDataPage from '@/app/admin/seed-data/page';
+import { SettingsPanel } from '../../../components/settings/settings-panel';
+import { AdminSettingsTab } from '../../../components/settings/admin-settings-tab';
+import { SystemSettingsTab } from '../../../components/settings/system-settings-tab';
+import { LinkRulesTab } from '../../../components/research/link-rules-tab';
+import { ResearchSyncTab } from '../../../components/settings/research-sync-tab';
+import SeedDataPage from '../../../app/admin/seed-data/page';
 
 
 export default function SettingsPage() {
-  const [status, setStatus] = useState<string>('');
-
-
   return (
     <div className="space-y-8">
       <Tabs defaultValue="general" className="space-y-6">
@@ -53,7 +42,7 @@ export default function SettingsPage() {
         </TabsList>
         
         <TabsContent value="general" className="space-y-4">
-          <SettingsPanel onStatusUpdate={setStatus} />
+          <SettingsPanel />
         </TabsContent>
         <TabsContent value="seed-data" className="space-y-4">
           <SeedDataPage />

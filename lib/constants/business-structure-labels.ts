@@ -32,7 +32,7 @@ export const STATION_DISPLAY_LABEL: Record<Station, string> = {
   classes: 'Classes',
   'systems-dev': 'Systems-Dev',
   paint: 'Paint',
-  'digital-art': 'Digital-Art',
+  digitals: 'Digitals',
   design: 'Design',
   animation: 'Animation',
   craft: 'Craft',

@@ -267,13 +267,6 @@ export default function CharacterModal({ character, open, onOpenChange, onSave }
     if (isSaving) return;
     setIsSaving(true);
 
-    // Validation: Characters must have at least one role
-    if (roles.length === 0) {
-      alert('Please select at least one role for the character.');
-      setIsSaving(false);
-      return;
-    }
-
     try {
       // If character has PLAYER role, don't save name/email/phone (they're from Account)
       const shouldPreserveContactInfo = identityManagedByAccount;

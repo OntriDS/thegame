@@ -59,7 +59,7 @@ export function SitesLogTab({ sitesLog, onReload, isReloading }: SitesLogTabProp
     switch (siteType) {
       case SiteType.PHYSICAL:
         return <MapPin className="h-4 w-4 text-muted-foreground" />;
-      case SiteType.DIGITAL:
+      case SiteType.DIGITAL_SITE:
         return <Cloud className="h-4 w-4 text-muted-foreground" />;
       case SiteType.SYSTEM:
         return <Sparkles className="h-4 w-4 text-muted-foreground" />;
@@ -209,7 +209,7 @@ export function SitesLogTab({ sitesLog, onReload, isReloading }: SitesLogTabProp
                               </>
                             )}
                             
-                            {siteType === SiteType.DIGITAL && digitalType !== '—' && (
+                            {siteType === SiteType.DIGITAL_SITE && digitalType !== '—' && (
                               <span className="text-muted-foreground min-w-0 flex-shrink-0">
                                 {digitalType}
                               </span>

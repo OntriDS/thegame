@@ -104,7 +104,7 @@ function MapPageContent() {
   const getSiteTypeColor = (type: SiteType): string => {
     switch (type) {
       case SiteType.PHYSICAL: return 'bg-blue-500';
-      case SiteType.DIGITAL: return 'bg-purple-500';
+      case SiteType.DIGITAL_SITE: return 'bg-purple-500';
       case SiteType.SYSTEM: return 'bg-green-500';
       default: return 'bg-gray-500';
     }
@@ -113,7 +113,7 @@ function MapPageContent() {
   const getSiteTypeBadgeColor = (type: SiteType): string => {
     switch (type) {
       case SiteType.PHYSICAL: return 'text-blue-700 bg-blue-100 dark:text-blue-300 dark:bg-blue-900';
-      case SiteType.DIGITAL: return 'text-purple-700 bg-purple-100 dark:text-purple-300 dark:bg-purple-900';
+      case SiteType.DIGITAL_SITE: return 'text-purple-700 bg-purple-100 dark:text-purple-300 dark:bg-purple-900';
       case SiteType.SYSTEM: return 'text-green-700 bg-green-100 dark:text-green-300 dark:bg-green-900';
       default: return 'text-gray-700 bg-gray-100 dark:text-gray-300 dark:bg-gray-900';
     }
@@ -349,9 +349,9 @@ function MapPageContent() {
                         <MapPin className="h-4 w-4 mr-1" />
                         Physical ({sites.filter(s => s.metadata.type === SiteType.PHYSICAL && s.status === SiteStatus.ACTIVE).length})
                       </TabsTrigger>
-                      <TabsTrigger value={SiteType.DIGITAL}>
+                      <TabsTrigger value={SiteType.DIGITAL_SITE}>
                         <Cloud className="h-4 w-4 mr-1" />
-                        Digital ({sites.filter(s => s.metadata.type === SiteType.DIGITAL && s.status === SiteStatus.ACTIVE).length})
+                        Digital ({sites.filter(s => s.metadata.type === SiteType.DIGITAL_SITE && s.status === SiteStatus.ACTIVE).length})
                       </TabsTrigger>
                       <TabsTrigger value={SiteType.SYSTEM}>
                         <Sparkles className="h-4 w-4 mr-1" />

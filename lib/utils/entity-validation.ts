@@ -55,7 +55,7 @@ export function validateSite(site: any, index: number): ValidationResult {
     if (!site.metadata.settlementId) {
       warnings.push(`Physical site missing 'metadata.settlementId' (recommended)`);
     }
-  } else if (type === SiteType.DIGITAL) {
+  } else if (type === SiteType.DIGITAL_SITE) {
     if (!site.metadata.digitalType) {
       errors.push(`Digital sites require 'metadata.digitalType' field`);
     }

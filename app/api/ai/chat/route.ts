@@ -20,7 +20,30 @@ function sanitizeTargetAgent(raw: unknown): string {
 }
 
 function pixelbrainBaseUrl(): string {
-  const base = process.env.PIXELBRAIN_API_URL || '';
+  const localUrl = process.env.PIXELBRAIN_API_URL_LOCAL?.trim();
+  const useLocal = (process.env.PIXELBRAIN_USE_LOCAL || '').toLowerCase() === 'true';
+  const isNonProd = process.env.NODE_ENV !== 'production';
+
+  if (isNonProd && useLocal) {
+    if (!localUrl) {
+      return '';
+    }
+
+    try {
+      const parsed = new URL(localUrl);
+      const isLocalHost = parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1';
+      const isHttpOrHttps = parsed.protocol === 'http:' || parsed.protocol === 'https:';
+
+      if (isLocalHost && isHttpOrHttps) {
+        return localUrl.replace(/\/$/, '');
+      }
+    } catch {
+      return '';
+    }
+    return '';
+  }
+
+  const base = process.env.PIXELBRAIN_API_URL?.trim() || '';
   return base.replace(/\/$/, '');
 }
 
@@ -61,7 +84,10 @@ export async function POST(request: NextRequest) {
     const base = pixelbrainBaseUrl();
     if (!base) {
       return Response.json(
-        { error: 'PIXELBRAIN_API_URL not configured' },
+        {
+          error:
+            'Pixelbrain API base URL is not configured. Set PIXELBRAIN_API_URL (prod) or PIXELBRAIN_API_URL_LOCAL + PIXELBRAIN_USE_LOCAL=true (dev).',
+        },
         { status: 500 }
       );
     }

@@ -2,7 +2,7 @@
 // Directional workflow engine for the Links system (Rosetta Stone pattern)
 
 import { Link } from '../../types/entities';
-import { LinkType, EntityType, SaleStatus } from '../../types/enums';
+import { LinkType, EntityType } from '../../types/enums';
 import { DirectionalRule, ENTITY_RULES } from './entity-rules';
 
 export interface WorkflowTrigger {
@@ -177,58 +177,10 @@ function generateTargetData(
     links: []
   };
 
-  // Add specific data based on target type and link type
-  switch (rule.linkType) {
-    case 'TASK_ITEM':
-      return {
-        ...baseData,
-        type: 'ARTWORK', // Default type, should be configurable
-        status: 'FOR_SALE',
-        station: 'digital-art',
-        category: 'Artworks',
-        stock: [],
-        unitCost: 0,
-        additionalCost: 0,
-        price: 0,
-        value: 0,
-        quantitySold: 0,
-        sourceTaskId: trigger.entityId
-      };
-
-    case 'TASK_SALE':
-      return {
-        ...baseData,
-        saleDate: new Date(),
-        type: 'FERIA',
-        status: SaleStatus.PENDING,
-        siteId: 'ECO_FERIA', // Default site
-        lines: [],
-        totals: {
-          subtotal: 0,
-          discountTotal: 0,
-          taxTotal: 0,
-          totalRevenue: 0
-        }
-      };
-
-    case 'SALE_FINREC':
-      return {
-        ...baseData,
-        year: new Date().getFullYear(),
-        month: new Date().getMonth() + 1,
-        station: 'direct-sales',
-        category: 'Direct',
-        type: 'company',
-        cost: 0,
-        revenue: 0,
-        jungleCoins: 0,
-        netCashflow: 0,
-        jungleCoinsValue: 0
-      };
-
-    default:
-      return baseData;
-  }
+  // Keep directional payload generation neutral.
+  // Legacy hardcoded cases were removed to avoid creating invalid canonical payloads.
+  // TODO: Reintroduce explicit, typed target builders when workflow-specific payload contracts are defined.
+  return baseData;
 }
 
 /**

@@ -1141,7 +1141,7 @@ export default function SalesModal({
     const newLine: SaleLine = {
       lineId: uuid(),
       kind: 'service',
-      station: 'digital-art',
+      station: 'design',
       revenue: 0,
       description: '',
       taxAmount: 0,

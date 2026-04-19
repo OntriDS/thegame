@@ -113,7 +113,7 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
         setSettlementId(physicalMeta.settlementId || '');
         setBusinessType(physicalMeta.businessType || PhysicalBusinessType.STORAGE);
         setGoogleMapsAddress(physicalMeta.googleMapsAddress || '');
-      } else if (site.metadata.type === SiteType.DIGITAL) {
+      } else if (site.metadata.type === SiteType.DIGITAL_SITE) {
         const digitalMeta = site.metadata as DigitalSiteMetadata;
         setDigitalType(digitalMeta.digitalType || DigitalSiteType.REPOSITORY);
         setDigitalUrl((digitalMeta as any).url || '');
@@ -168,9 +168,9 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
           settlementId,
           googleMapsAddress
         } as PhysicalSiteMetadata;
-      } else if (siteType === SiteType.DIGITAL) {
+      } else if (siteType === SiteType.DIGITAL_SITE) {
         metadata = {
-          type: SiteType.DIGITAL,
+          type: SiteType.DIGITAL_SITE,
           digitalType,
           url: digitalUrl
         } as DigitalSiteMetadata & { url: string };
@@ -248,7 +248,7 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
           <DialogHeader className="border-b pb-4">
             <DialogTitle className="flex items-center gap-2">
               {siteType === SiteType.PHYSICAL && <MapPin className="h-5 w-5" />}
-              {siteType === SiteType.DIGITAL && <Cloud className="h-5 w-5" />}
+              {siteType === SiteType.DIGITAL_SITE && <Cloud className="h-5 w-5" />}
               {siteType === SiteType.SYSTEM && <Sparkles className="h-5 w-5" />}
               <span>{site ? 'Edit Site' : 'New Site'}</span>
             </DialogTitle>
@@ -289,7 +289,7 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value={SiteType.PHYSICAL}>{getSiteTypeLabel(SiteType.PHYSICAL)}</SelectItem>
-                    <SelectItem value={SiteType.DIGITAL}>{getSiteTypeLabel(SiteType.DIGITAL)}</SelectItem>
+                    <SelectItem value={SiteType.DIGITAL_SITE}>{getSiteTypeLabel(SiteType.DIGITAL_SITE)}</SelectItem>
                     <SelectItem value={SiteType.SYSTEM}>{getSiteTypeLabel(SiteType.SYSTEM)}</SelectItem>
                   </SelectContent>
                 </Select>
@@ -343,7 +343,7 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
               </div>
             )}
 
-            {siteType === SiteType.DIGITAL && (
+            {siteType === SiteType.DIGITAL_SITE && (
               <div className="grid grid-cols-4 gap-4">
                 <div className="col-span-2 space-y-2">
                   <Label htmlFor="digitalType" className="text-xs">Digital Type *</Label>

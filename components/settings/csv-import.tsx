@@ -409,6 +409,8 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
 
   const getCSVTemplate = () => {
     // Get valid subtypes from enums to ensure template examples are always current
+    const allStations = getAllStations();
+    const templateStation = allStations.includes('items') ? 'items' : allStations[0] || 'items';
     const digitalSubtypes = getSubTypesForItemType(ItemType.DIGITAL);
     const artworkSubtypes = getSubTypesForItemType(ItemType.ARTWORK);
     const printSubtypes = getSubTypesForItemType(ItemType.PRINT);
@@ -422,17 +424,16 @@ export function CSVImport({ onImportComplete, onImportStart }: CSVImportProps) {
     // Get valid collections from enums to ensure template examples are always current
     const collections = Object.values(Collection);
 
-    const template = `ItemType,SubItemType,Name,TotalQuantity,Site,Status,Collection,UnitCost,AdditionalCost,Price,Value,QuantitySold,TargetAmount,SoldThisMonth,LastRestockDate,SourceTaskId,Year,MediaMain,MediaThumb,MediaGallery,SourceFileUrl,Width,Height,Size
-    "${ItemType.DIGITAL}","${digitalSubtypes[0]}","Digital",0,"","${ItemStatus.IDLE}","${collections[1]}",0.00,0.00,25.00,0.00,0,,,,"",2024,"items/stickers/example-main.png","items/stickers/example-thumb.jpg","items/stickers/gallery1.jpg;items/stickers/gallery2.jpg","https://drive.google.com/...",,
-    "${ItemType.ARTWORK}","${artworkSubtypes[0]}","Canvas",1,"","${ItemStatus.FOR_SALE}","${collections[1]}",5.00,0.00,150.00,0.00,0,,,,"",2024,"items/canvas/example-main.png",,,"",30,40,
-    "${ItemType.PRINT}","${printSubtypes[0]}","Print",0,"","${ItemStatus.TO_ORDER}","${collections[1]}",5.00,0.00,25.00,0.00,0,,,,"",2024,"items/prints/example-main.png",,,"",30,40,
-    "${ItemType.STICKER}","${stickerSubtypes[0]}","Sticker",100,"","${ItemStatus.FOR_SALE}","${collections[6]}",0.30,0.00,2.50,0.00,0,,,,"",2024,"items/stickers/red-dope-main.png",,,"",5,5,
-    "${ItemType.BUNDLE}","${bundleSubtypes[0]}","Bundle",80,"","${ItemStatus.FOR_SALE}","${collections[6]}",0.30,0.00,2.50,0.00,0,,,,"",2024,"items/bundles/smoking-lounge-main.png",,,"",,,,
-    "${ItemType.MERCH}","${merchSubtypes[0]}","T-Shirt",35,"","${ItemStatus.FOR_SALE}","${collections[6]}",8.00,0.00,25.00,0.00,0,,,,"",2024,"items/merch/dope-crew-tshirt-main.png",,,"",,,M
-    "${ItemType.MERCH}","${merchSubtypes[2]}","Shoes",20,"","${ItemStatus.FOR_SALE}","${collections[6]}",15.00,0.00,45.00,0.00,0,,,,"",2024,"items/merch/dope-crew-shoes-main.png",,,"",,,7.5
-    "${ItemType.CRAFT}","${craftSubtypes[0]}","Frame",3,"","${ItemStatus.FOR_SALE}","${collections[6]}",12.00,0.00,35.00,0.00,0,,,,"",2024,"items/craft/gallery-frame-main.png",,,"",,,,
-    "${ItemType.MATERIAL}","${materialSubtypes[0]}","Paints",10,"","${ItemStatus.FOR_SALE}","Art Supplies",15.00,0.00,25.00,0.00,0,,,,"",2024,"items/materials/acrylic-set-main.png",,,"",,,,
-    "${ItemType.EQUIPMENT}","${equipmentSubtypes[0]}","Machine",2,"","${ItemStatus.FOR_SALE}","Art Tools",45.00,0.00,75.00,0.00,0,,,,"",2024,"items/equipment/stretcher-main.png",,,"",,,`;
+    const template = `Station,ItemType,SubItemType,Name,TotalQuantity,Site,Status,Collection,UnitCost,AdditionalCost,Price,Value,QuantitySold,TargetAmount,SoldThisMonth,LastRestockDate,SourceTaskId,Year,MediaMain,MediaThumb,MediaGallery,SourceFileUrl,Width,Height,Size
+    "${templateStation}","${ItemType.DIGITAL}","${digitalSubtypes[0]}","Digital",1,"None","${ItemStatus.IDLE}","${collections[1]}",0.00,0.00,25.00,0.00,0,,,,"",2024,"items/digital/digital-art/digital-main.png","items/digital/digital-art/digital-thumb.jpg","","",,
+    "${templateStation}","${ItemType.ARTWORK}","${artworkSubtypes[0]}","Artwork",1,"None","${ItemStatus.FOR_SALE}","${collections[2]}",5.00,0.00,150.00,0.00,0,,,,"",2024,"items/artwork/acrylic-on-canvas/artwork-main.png","items/artworks/acrylic-on-canvas/artwork-thumb.jpg","","",,0,0,
+    "${templateStation}","${ItemType.PRINT}","${printSubtypes[0]}","Print",1,"None","${ItemStatus.FOR_SALE}","${collections[3]}",5.00,0.00,25.00,0.00,0,,,,"",2024,"items/print/giclee-print/print-main.png",,,"",40,40,
+    "${templateStation}","${ItemType.STICKER}","${stickerSubtypes[0]}","Sticker",10,"None","${ItemStatus.FOR_SALE}","${collections[4]}",0.30,0.00,2.50,0.00,0,,,,"",2024,"items/sticker/brilliant-white/sticker-main.png",,,"",8,5,
+    "${templateStation}","${ItemType.BUNDLE}","${bundleSubtypes[0]}","Bundle",100,"None","${ItemStatus.FOR_SALE}","${collections[5]}",0.30,0.00,2.50,0.00,0,,,,"",2024,"items/bundle/sticker/bundle-stickers-main.png",,,"",,,,
+    "${templateStation}","${ItemType.MERCH}","${merchSubtypes[2]}","Shoes",1,"None","${ItemStatus.FOR_SALE}","${collections[6]}",15.00,0.00,45.00,0.00,0,,,,"",2024,"items/merch/shoes/shoes-main.png",,,"",,,8
+    "${templateStation}","${ItemType.CRAFT}","${craftSubtypes[0]}","Frame",1,"None","${ItemStatus.IDLE}","${collections[7]}",12.00,0.00,35.00,0.00,0,,,,"",2024,"items/craft/frame/frame-main.png",,,"",,,,
+    "${templateStation}","${ItemType.MATERIAL}","${materialSubtypes[0]}","Paints",1,"None","${ItemStatus.IDLE}","Art Supplies",15.00,0.00,25.00,0.00,0,,,,"",2024,"items/material/art-material/paints-set-main.png",,,"",,,,
+    "${templateStation}","${ItemType.EQUIPMENT}","${equipmentSubtypes[0]}","Machine",1,"None","${ItemStatus.IDLE}","Art Tools",45.00,0.00,75.00,0.00,0,,,,"",2024,"items/equipment/workshop-equipment/drill-main.png",,,"",,,`;
 
     const blob = new Blob([template], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);

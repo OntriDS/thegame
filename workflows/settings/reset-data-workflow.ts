@@ -660,7 +660,7 @@ export class ResetDataWorkflow {
           id: 'drive',
           name: 'Drive',
           status: SiteStatus.ACTIVE,
-          metadata: { type: SiteType.DIGITAL, digitalType: DigitalSiteType.REPOSITORY },
+          metadata: { type: SiteType.DIGITAL_SITE, digitalType: DigitalSiteType.REPOSITORY },
           createdAt: getUTCNow(),
           updatedAt: getUTCNow(),
           links: []

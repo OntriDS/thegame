@@ -170,7 +170,7 @@ export interface PhysicalSiteMetadata extends BaseSiteMetadata {
 }
 
 export interface DigitalSiteMetadata extends BaseSiteMetadata {
-  type: SiteType.DIGITAL;
+  type: SiteType.DIGITAL_SITE;
   digitalType: DigitalSiteType;
 }
 

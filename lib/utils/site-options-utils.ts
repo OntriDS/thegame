@@ -34,7 +34,7 @@ export const createSiteOptionsWithCategories = (sites: Site[]): Array<{ value: s
   // Enforce enum-defined order for groups: PHYSICAL → DIGITAL → SYSTEM
   const groupOrder: Record<SiteType, number> = {
     [SiteType.PHYSICAL]: 0,
-    [SiteType.DIGITAL]: 1,
+    [SiteType.DIGITAL_SITE]: 1,
     [SiteType.SYSTEM]: 2
   };
 

@@ -10,7 +10,7 @@ export const BUSINESS_STRUCTURE = {
   admin: ['strategy', 'finances', 'team', 'inventory', 'transport', 'rents', 'partnerships', 'projects', 'items'],
   research: ['library', 'studies', 'processes', 'reviews', 'ebooks', 'innovation', 'classes'],
   dev: ['systems-dev'],
-  'art-design': ['paint', 'digital-art', 'design', 'animation'],
+  'art-design': ['paint', 'digitals', 'design', 'animation'],
   'maker-space': ['craft'],
   sales: ['direct-sales', 'booth-sales', 'network', 'marketing', 'online-sales', 'portfolio', 'dispatches', 'gallery-store', 'bookings'],
   personal: ['family', 'food', 'health', 'rewards', 'transport-p', 'rent-p', 'other-p'],
@@ -122,7 +122,7 @@ export enum SystemSiteType {
 /** SiteType enum for backward compatibility with entities */
 export enum SiteType {
   PHYSICAL = 'physical',  // Physical locations with addresses
-  DIGITAL = 'digital',    // Digital/cloud storage locations
+  DIGITAL_SITE = 'digital-site',    // Digital/cloud storage locations
   SYSTEM = 'system'       // System-managed locations
 }
 
@@ -147,7 +147,7 @@ export const SITE_CATEGORIES = {
     PhysicalBusinessType.LIVING_SPACE,
     PhysicalBusinessType.BANK,
   ],
-  [SiteType.DIGITAL]: [
+  [SiteType.DIGITAL_SITE]: [
     DigitalSiteType.REPOSITORY,
     DigitalSiteType.DATABASE,
     DigitalSiteType.WEBSITEAPP,

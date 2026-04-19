@@ -37,7 +37,7 @@ export async function onSiteUpsert(site: Site, previousSite?: Site): Promise<voi
         if (site.metadata.settlementId) {
           logPayload.settlementId = site.metadata.settlementId;
         }
-      } else if (site.metadata.type === SiteType.DIGITAL && 'digitalType' in site.metadata) {
+      } else if (site.metadata.type === SiteType.DIGITAL_SITE && 'digitalType' in site.metadata) {
         logPayload.digitalType = site.metadata.digitalType;
       } else if (site.metadata.type === SiteType.SYSTEM && 'systemType' in site.metadata) {
         logPayload.systemType = site.metadata.systemType;

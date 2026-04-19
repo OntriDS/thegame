@@ -42,7 +42,7 @@ export enum DevStation {
 
 export enum ArtDesignStation {
   PAINT = 'paint',
-  DIGITAL_ART = 'digital-art',
+  DIGITAL = 'digitals',
   DESIGN = 'design',
   ANIMATION = 'animation',
 }
