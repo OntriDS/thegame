@@ -105,6 +105,7 @@ export enum PhysicalBusinessType {
 export enum DigitalSiteType {
   REPOSITORY = 'repository',                  // Repos
   DATABASE = 'database',                      // Drives, Cloud Storage
+  LOCAL = 'local',                            // Local/On-device storage
   WEBSITEAPP = 'website-app',                 // Websites Apps
   NFT_PLATFORM = 'nft-platform',              // NFT Platforms
   SOCIAL_MEDIA = 'social-media',              // Social Media Platforms
@@ -150,6 +151,7 @@ export const SITE_CATEGORIES = {
   [SiteType.DIGITAL_SITE]: [
     DigitalSiteType.REPOSITORY,
     DigitalSiteType.DATABASE,
+    DigitalSiteType.LOCAL,
     DigitalSiteType.WEBSITEAPP,
     DigitalSiteType.NFT_PLATFORM,
     DigitalSiteType.SOCIAL_MEDIA,

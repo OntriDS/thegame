@@ -37,6 +37,7 @@ export const PHYSICAL_SITE_TYPE_LABEL: Record<PhysicalBusinessType, string> = {
 export const DIGITAL_SITE_TYPE_LABEL: Record<DigitalSiteType, string> = {
   [DigitalSiteType.REPOSITORY]: 'Repository',
   [DigitalSiteType.DATABASE]: 'Database',
+  [DigitalSiteType.LOCAL]: 'Local',
   [DigitalSiteType.WEBSITEAPP]: 'Website App',
   [DigitalSiteType.NFT_PLATFORM]: 'NFT Platform',
   [DigitalSiteType.SOCIAL_MEDIA]: 'Social Media',

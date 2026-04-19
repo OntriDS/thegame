@@ -113,13 +113,15 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
         setSettlementId(physicalMeta.settlementId || '');
         setBusinessType(physicalMeta.businessType || PhysicalBusinessType.STORAGE);
         setGoogleMapsAddress(physicalMeta.googleMapsAddress || '');
+        setDigitalUrl('');
       } else if (site.metadata.type === SiteType.DIGITAL_SITE) {
         const digitalMeta = site.metadata as DigitalSiteMetadata;
         setDigitalType(digitalMeta.digitalType || DigitalSiteType.REPOSITORY);
-        setDigitalUrl((digitalMeta as any).url || '');
+        setDigitalUrl(digitalMeta.url || '');
       } else if (site.metadata.type === SiteType.SYSTEM) {
         const systemMeta = site.metadata as SystemSiteMetadata;
         setSystemPurpose(systemMeta.systemType || SystemSiteType.UNIVERSAL_TRACKING);
+        setDigitalUrl('');
       }
 
       // Reset init guard when editing
@@ -281,7 +283,13 @@ export function SiteModal({ site, open, onOpenChange, onSave }: SiteModalProps) 
                 <Label htmlFor="siteType" className="text-xs">Type *</Label>
                 <Select
                   value={siteType}
-                  onValueChange={(v) => setSiteType(v as SiteType)}
+                  onValueChange={(v) => {
+                    const nextType = v as SiteType;
+                    setSiteType(nextType);
+                    if (nextType !== SiteType.DIGITAL_SITE) {
+                      setDigitalUrl('');
+                    }
+                  }}
                   disabled={isNoneSite(site)}
                 >
                   <SelectTrigger id="siteType" className="h-8 text-sm">
