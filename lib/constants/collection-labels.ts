@@ -17,6 +17,7 @@ export const COLLECTION_LABEL: Record<Collection, string> = {
   [Collection.BITUAYA]: 'Bituaya',
   [Collection.LANDSCAPES]: 'Landscapes',
   [Collection.EXILIADO]: 'Exiliado',
+  [Collection.CLIENT_WORK]: 'Client Work',
 };
 
 export function getCollectionLabel(value: Collection | string | undefined | null): string {
