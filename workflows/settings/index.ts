@@ -7,6 +7,7 @@ export { ClearCacheWorkflow } from './clear-cache-workflow';
 export { ExportDataWorkflow } from './export-data-workflow';
 export { ImportDataWorkflow } from './import-data-workflow';
 export { UtcArchiveIndexMigrationWorkflow } from './utc-archive-index-migration-workflow';
+export { RepairTaskMonthIndexWorkflow } from './repair-task-month-index-workflow';
 
 // Common types
 export type { SettingsResult } from './reset-data-workflow';

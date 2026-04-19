@@ -23,7 +23,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { MonthSelector } from "@/components/ui/month-selector";
-import { getCurrentMonthKey, sortMonthKeys } from "@/lib/utils/date-utils";
+import { useMonthlySummary } from '@/lib/hooks/use-monthly-summary';
 import { InventoriesDeepLinkTrigger } from '@/components/admin/admin-deep-link-triggers';
 
 function InventoriesPageContent() {
@@ -32,9 +32,12 @@ function InventoriesPageContent() {
   const [selectedSite, setSelectedSite] = useState<string | 'all'>('all');
   const [selectedStatus, setSelectedStatus] = useState<ItemStatus | 'all'>('all');
   const [sites, setSites] = useState<Site[]>([]);
-  const [selectedMonthKey, setSelectedMonthKey] = useState(getCurrentMonthKey());
-  const [availableMonths, setAvailableMonths] = useState<string[]>([]);
   const [deepLinkItem, setDeepLinkItem] = useState<Item | null>(null);
+  const {
+    selectedMonthKey,
+    setSelectedMonthKey,
+    availableMonths,
+  } = useMonthlySummary({ loadSummary: false });
 
   const handleInventoryDeepLink = useCallback((item: Item) => {
     setDeepLinkItem(item);
@@ -42,29 +45,12 @@ function InventoriesPageContent() {
 
   const clearDeepLinkItem = useCallback(() => setDeepLinkItem(null), []);
 
-  const handleMonthChange = useCallback((monthKey: string) => {
-    setSelectedMonthKey(monthKey);
-    setAvailableMonths((prevMonths) => {
-      if (prevMonths.includes(monthKey)) {
-        return prevMonths;
-      }
-      return sortMonthKeys([monthKey, ...prevMonths]);
-    });
-  }, []);
-
   // Load sites and available months
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [sitesData, monthsData] = await Promise.all([
-          ClientAPI.getSites(),
-          ClientAPI.getAvailableSummaryMonths()
-        ]);
+        const sitesData = await ClientAPI.getSites();
         setSites(sitesData);
-        
-        const current = getCurrentMonthKey();
-        const allMonths = monthsData.includes(current) ? monthsData : [current, ...monthsData];
-        setAvailableMonths(sortMonthKeys(allMonths));
       } catch (error) {
         console.error('Failed to load inventories data:', error);
       }
@@ -138,7 +124,7 @@ function InventoriesPageContent() {
         selectedStatus={selectedStatus}
         selectedMonthKey={selectedMonthKey}
         availableMonths={availableMonths}
-        onMonthChange={handleMonthChange}
+        onMonthChange={setSelectedMonthKey}
         deepLinkItem={deepLinkItem}
         onDeepLinkItemConsumed={clearDeepLinkItem}
       />

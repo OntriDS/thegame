@@ -144,6 +144,55 @@ export async function auditCompletedTasksMissingFromCompletedIndex(): Promise<In
   };
 }
 
+/**
+ * Task month index should include only completed/terminal rows.
+ */
+export async function auditTaskMonthIndexContamination(month: number, year: number): Promise<IntegrityAuditResult> {
+  const mmyy = toMMYY(month, year);
+  const monthKey = formatArchiveMonthKeyUTCFromParts(year, month);
+  const issues: IntegrityIssue[] = [];
+  const total = { n: 0 };
+
+  const ids = await kvSMembers(buildMonthIndexKey(EntityType.TASK, monthKey));
+  for (const id of ids) {
+    const task = await getTaskById(id);
+    if (!task) {
+      pushIssue(
+        issues,
+        total,
+        'TASK_MONTH_INDEX_ORPHAN',
+        `Task id in task month index for ${mmyy} but no record found: ${id}`,
+        EntityType.TASK,
+        id
+      );
+      continue;
+    }
+
+    if (!isTaskCompleted(task)) {
+      pushIssue(
+        issues,
+        total,
+        'TASK_MONTH_INDEX_NON_COMPLETED',
+        `Task ${id} is indexed for ${mmyy} but is not completed`,
+        EntityType.TASK,
+        id
+      );
+    }
+  }
+
+  return {
+    ok: total.n === 0,
+    audit: 'taskMonthIndexContamination',
+    scope: { month, year, mmyy },
+    summary: {
+      totalIssueCount: total.n,
+      truncated: total.n > INTEGRITY_ISSUES_CAP,
+      notes: `Scanned ${ids.length} task ids in ${formatArchiveMonthKeyUTCFromParts(year, month)} bucket.`,
+    },
+    issues,
+  };
+}
+
 /** Not-yet-completed tasks should be listed in thegame:index:task:active (after upsert/repair). */
 export async function auditActiveTasksMissingFromActiveIndex(): Promise<IntegrityAuditResult> {
   const tasks = await getAllTasks();

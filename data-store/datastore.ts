@@ -530,9 +530,8 @@ export async function migrateUtcMonthlyRedisIndexes(options: {
 
   const desiredTaskMonthByMonth: Record<string, Set<string>> = {};
   for (const t of tasks) {
-    const raw = (t as { doneAt?: unknown }).doneAt || (t as { collectedAt?: unknown }).collectedAt || t.createdAt || getUTCNow();
-    const d = raw instanceof Date ? raw : new Date(raw as string);
-    const mmyy = formatArchiveMonthKeyUTC(Number.isFinite(d.getTime()) ? d : getUTCNow());
+    if (!isTaskCompleted(t)) continue;
+    const mmyy = resolveTaskCompletedArchiveMonthKeyUTC(t);
     if (!desiredTaskMonthByMonth[mmyy]) desiredTaskMonthByMonth[mmyy] = new Set();
     desiredTaskMonthByMonth[mmyy].add(t.id);
   }

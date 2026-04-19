@@ -6,12 +6,12 @@ import { ClientAPI } from '@/lib/client-api';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { MonthSelector } from '@/components/ui/month-selector';
-import { getCurrentMonthKey, sortMonthKeys } from '@/lib/utils/date-utils';
 import { format } from 'date-fns';
 import { Loader2, Calendar, ChevronRight, FolderOpen, ArrowUpDown } from 'lucide-react';
 import { reviveDates } from '@/lib/utils/date-utils';
 import { TASK_TYPE_ICONS } from '@/lib/constants/app-constants';
 import { TaskType, TaskStatus } from '@/types/enums';
+import { useMonthlySummary } from '@/lib/hooks/use-monthly-summary';
 
 interface TaskHistoryViewProps {
     onSelectTask?: (task: Task) => void;
@@ -292,29 +292,15 @@ interface AvailableMonth {
 export type TaskHistorySort = 'done-date' | 'name-asc';
 
 export default function TaskHistoryView({ onSelectTask, refreshKey = 0 }: TaskHistoryViewProps) {
-    const [availableMonths, setAvailableMonths] = useState<string[]>([]);
-    const [selectedMonthKey, setSelectedMonthKey] = useState(getCurrentMonthKey());
     const [tasks, setTasks] = useState<Task[]>([]);
     const [isLoading, setIsLoading] = useState(false);
-    const [isLoadingMonths, setIsLoadingMonths] = useState(true);
+    const {
+      availableMonths,
+      selectedMonthKey,
+      setSelectedMonthKey,
+      isMonthsLoading,
+    } = useMonthlySummary({ loadSummary: false });
     const [sortOption, setSortOption] = useState<TaskHistorySort>('done-date');
-    // Load available months
-    useEffect(() => {
-        const loadMonths = async () => {
-            try {
-                const months = await ClientAPI.getAvailableSummaryMonths();
-                const current = getCurrentMonthKey();
-                const allMonths = months.includes(current) ? months : [current, ...months];
-                setAvailableMonths(sortMonthKeys(allMonths));
-            } catch (error) {
-                console.error('Failed to load archive months:', error);
-                setAvailableMonths([getCurrentMonthKey()]);
-            } finally {
-                setIsLoadingMonths(false);
-            }
-        };
-        loadMonths();
-    }, []);
 
     // Load tasks for selected month/year + all tasks for hierarchy
     useEffect(() => {
@@ -347,7 +333,7 @@ export default function TaskHistoryView({ onSelectTask, refreshKey = 0 }: TaskHi
         loadTasks();
     }, [selectedMonthKey, refreshKey]);
 
-    if (isLoadingMonths) {
+    if (isMonthsLoading) {
         return (
             <div className="flex items-center justify-center h-full">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />

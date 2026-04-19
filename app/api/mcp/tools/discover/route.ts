@@ -236,6 +236,22 @@ const TOOLS = [
     },
   },
   {
+    id: 'thegame.summary.describe',
+    name: 'Describe monthly summary',
+    description:
+      'Read month-level summary hash presence, final hash snapshot, and raw month-index counts for sales, financials, tasks, and items.',
+    systemId: 'thegame',
+    parameters: {
+      type: 'object',
+      properties: {
+        monthKey: {
+          type: 'string',
+          description: 'Optional month in MM-YY, MM-YYYY, or YYYY-MM format.',
+        },
+      },
+    },
+  },
+  {
     id: 'thegame.logs.patchEntry',
     name: 'Patch one entity log row',
     description:

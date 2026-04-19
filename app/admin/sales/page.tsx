@@ -18,10 +18,10 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import SalesModal from "@/components/modals/sales-modal";
 import { MonthSelector } from "@/components/ui/month-selector";
 import { CurrencyExchangeRates, DEFAULT_CURRENCY_EXCHANGE_RATES } from "@/lib/constants/financial-constants";
-import { SummaryTotals } from "@/types/entities";
 import { formatCurrency } from "@/lib/utils/financial-utils";
-import { formatMonthKey, getCurrentMonthKey, sortMonthKeys } from "@/lib/utils/date-utils";
+import { formatMonthKey } from "@/lib/utils/date-utils";
 import { SalesDeepLinkTrigger } from '@/components/admin/admin-deep-link-triggers';
+import { useMonthlySummary } from '@/lib/hooks/use-monthly-summary';
 
 function SalesPageContent() {
   const { activeBg } = useThemeColors();
@@ -32,33 +32,20 @@ function SalesPageContent() {
   const [selectedStatus, setSelectedStatus] = useState<SaleStatus | 'all'>('all');
   const [selectedSite, setSelectedSite] = useState<string | 'all'>('all');
   const [isLoading, setIsLoading] = useState(true);
-  const [isAtomicLoading, setIsAtomicLoading] = useState(false);
-  const [atomicSummary, setAtomicSummary] = useState<SummaryTotals | null>(null);
   const [showSalesModal, setShowSalesModal] = useState(false);
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
-  const [selectedMonthKey, setSelectedMonthKey] = useState(getCurrentMonthKey());
-  const [availableMonths, setAvailableMonths] = useState<string[]>([]);
   const [exchangeRates, setExchangeRates] = useState<CurrencyExchangeRates>(DEFAULT_CURRENCY_EXCHANGE_RATES);
+  const {
+    selectedMonthKey,
+    setSelectedMonthKey,
+    availableMonths,
+    atomicSummary,
+  } = useMonthlySummary();
 
   const handleDeepLinkSale = useCallback((sale: Sale) => {
     setSelectedMonthKey(formatMonthKey(sale.saleDate));
     setEditingSale(sale);
     setShowSalesModal(true);
-  }, []);
-
-  // Load available months once
-  useEffect(() => {
-    const loadMonths = async () => {
-      try {
-        const months = await ClientAPI.getAvailableSummaryMonths();
-        const current = getCurrentMonthKey();
-        const allMonths = months.includes(current) ? months : [current, ...months];
-        setAvailableMonths(sortMonthKeys(allMonths));
-      } catch (err) {
-        setAvailableMonths([getCurrentMonthKey()]);
-      }
-    };
-    loadMonths();
   }, []);
 
   // Load sales data & config
@@ -95,13 +82,7 @@ function SalesPageContent() {
       const monthNum = parseInt(mm, 10);
       const yearNum = 2000 + parseInt(yy, 10);
 
-      // 1. Fetch Atomic Summary (INSTANT & NON-BLOCKING)
-      setIsAtomicLoading(true);
-      ClientAPI.getSummary(selectedMonthKey)
-        .then(setAtomicSummary)
-        .finally(() => setIsAtomicLoading(false));
-
-      // 2. Fetch Full Detailed Sales (O(N) - BACKGROUND)
+      // Fetch Full Detailed Sales (O(N) - BACKGROUND)
       setIsLoading(true);
       const [salesData, sitesData, ratesData] = await Promise.all([
         ClientAPI.getSales(
@@ -158,10 +139,6 @@ function SalesPageContent() {
     );
   };
 
-  const calculateTotalRevenue = () => {
-    return filteredSales.reduce((total, sale) => total + sale.totals.totalRevenue, 0);
-  };
-
   const getSaleFinancials = (sale: Sale) => {
     const grossRevenue = sale.totals.totalRevenue;
     let cost = 0;
@@ -202,21 +179,6 @@ function SalesPageContent() {
     }
 
     return { grossRevenue, cost, netProfit };
-  };
-
-  const calculateTotalProfit = () => {
-    return filteredSales.reduce((total, sale) => total + getSaleFinancials(sale).netProfit, 0);
-  };
-
-  const calculateTotalItems = () => {
-    return filteredSales.reduce((total, sale) => {
-      return total + sale.lines.reduce((lineTotal, line) => {
-        if (line.kind === 'item') {
-          return lineTotal + line.quantity;
-        }
-        return lineTotal;
-      }, 0);
-    }, 0);
   };
 
   const handleNewSale = () => {
@@ -291,7 +253,7 @@ function SalesPageContent() {
           </CardContent>
         </Card>
 
-        {/* Net Profit (Dynamic) - Keeping as secondary/detailed */}
+        {/* Net Profit (Detail) */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Net Profit (Detail)</CardTitle>
@@ -299,10 +261,10 @@ function SalesPageContent() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600 dark:text-green-500">
-              {formatCurrency(calculateTotalProfit())}
+              {formatCurrency(atomicSummary?.profit ?? 0)}
             </div>
             <p className="text-xs text-muted-foreground">
-              Based on {filteredSales.length} records
+              Monthly total
             </p>
           </CardContent>
         </Card>

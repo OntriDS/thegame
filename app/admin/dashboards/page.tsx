@@ -1,83 +1,46 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { ClientAPI } from '@/lib/client-api';
-import {
-  FinancialRecord,
-  CompanyMonthlySummary,
-  PersonalMonthlySummary,
-} from '@/types/entities';
-import { Building2, User, TrendingUp, TrendingDown, BarChart3, Grid3x3, Calendar, ShoppingBag, Package, CheckSquare, Layers } from 'lucide-react';
-import { MONTHS, getYearRange, getMonthName, getCurrentMonth } from '@/lib/constants/date-constants';
-import { formatMonthKey, getCurrentMonthKey, sortMonthKeys } from '@/lib/utils/date-utils';
+import { CompanyMonthlySummary, PersonalMonthlySummary } from '@/types/entities';
+import { BarChart3 } from 'lucide-react';
 import { BUSINESS_STRUCTURE } from '@/types/enums';
 import { getCompanyAreas, getPersonalAreas } from '@/lib/utils/business-structure-utils';
 import { MonthSelector } from '@/components/ui/month-selector';
-import { Switch } from '@/components/ui/switch';
-import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
-import { SummaryTotals } from '@/types/entities';
+import { useMonthlySummary } from '@/lib/hooks/use-monthly-summary';
 import {
   aggregateRecordsByStation,
   calculateTotals,
-  formatDecimal,
-  formatCurrency,
 } from '@/lib/utils/financial-utils';
-import type {
-  ProductPerformance,
-  ChannelPerformance,
-  ProductChannelMatrix,
-} from '@/lib/analytics/financial-analytics';
 
 import { CompanyFinancesTab } from '@/components/dashboards/CompanyFinancesTab';
 import { PersonalFinancesTab } from '@/components/dashboards/PersonalFinancesTab';
 import { SalesPerformanceTab } from '@/components/dashboards/SalesPerformanceTab';
 import { ItemPerformanceTab } from '@/components/dashboards/ItemPerformanceTab';
 import { TaskPerformanceTab } from '@/components/dashboards/TaskPerformanceTab';
+ 
+// Atomic aggregates come from atomicSummary only. FinancialRecord fetch drives per-station/category breakdown views exclusively.
 
 export default function DashboardsPage() {
-  const { getPreference, setPreference, isLoading: preferencesLoading } = useUserPreferences();
-  const [selectedMonthKey, setSelectedMonthKey] = useState(getCurrentMonthKey());
-  const [availableMonths, setAvailableMonths] = useState<string[]>([]);
-  const [atomicSummary, setAtomicSummary] = useState<SummaryTotals | null>(null);
+  const {
+    selectedMonthKey,
+    availableMonths,
+    atomicSummary,
+    isSummaryLoading,
+    setSelectedMonthKey,
+    refreshSummary,
+  } = useMonthlySummary();
   const [companySummary, setCompanySummary] = useState<CompanyMonthlySummary | null>(null);
   const [personalSummary, setPersonalSummary] = useState<PersonalMonthlySummary | null>(null);
   const [activeTab, setActiveTab] = useState('company-finances');
   const [refreshKey, setRefreshKey] = useState(0);
-  const [isAtomicLoading, setIsAtomicLoading] = useState(false);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
 
-  // Load preferences
-  useEffect(() => {
-    if (!preferencesLoading) {
-      // Preference load removed
-    }
-  }, [preferencesLoading, getPreference]);
-
-  // Load available months
-  useEffect(() => {
-    const loadMonths = async () => {
-      try {
-        const months = await ClientAPI.getAvailableSummaryMonths();
-        setAvailableMonths(sortMonthKeys(months));
-      } catch (err) {
-        console.error("Failed to load summary months", err);
-      }
-    };
-    loadMonths();
-  }, []);
-
   const loadSummaries = useCallback(async () => {
-    setIsAtomicLoading(true);
     setIsDetailLoading(true);
     try {
-      // 1. Atomic Summary (Used by almost all tabs)
-      const atomic = await ClientAPI.getSummary(selectedMonthKey);
-      setAtomicSummary(atomic);
-      setIsAtomicLoading(false);
-
       // 2. Financial Summaries
       const [mm, yy] = selectedMonthKey.split('-');
       const monthNum = parseInt(mm, 10);
@@ -121,7 +84,6 @@ export default function DashboardsPage() {
       console.error("Failed to load dashboard summaries", err);
     } finally {
       setIsDetailLoading(false);
-      setIsAtomicLoading(false);
     }
   }, [selectedMonthKey]);
 
@@ -146,14 +108,17 @@ export default function DashboardsPage() {
             size="sm"
             variant="outline"
             className="rounded-full px-4"
-            onClick={() => setRefreshKey(prev => prev + 1)}
-            disabled={isAtomicLoading || isDetailLoading}
+            onClick={() => {
+              setRefreshKey((prev) => prev + 1);
+              refreshSummary();
+            }}
+            disabled={isSummaryLoading || isDetailLoading}
           >
             Refresh
           </Button>
         </div>
       </div>
-      <Tabs defaultValue="company-finances" onValueChange={setActiveTab} className="space-y-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <div className="bg-white dark:bg-slate-900 p-1 rounded-xl border shadow-sm inline-flex">
           <TabsList className="bg-transparent border-none">
             <TabsTrigger value="company-finances" className="rounded-lg px-4 py-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">

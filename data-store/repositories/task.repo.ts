@@ -1,10 +1,10 @@
 // data-store/repositories/task.repo.ts
 import type { Task } from '@/types/entities';
 import { kvGet, kvMGet, kvSet, kvDel, kvSMembers, kvSAdd, kvSRem } from '@/lib/utils/kv';
-import { buildDataKey, buildIndexKey, buildTaskActiveIndexKey, buildTaskChildrenKey } from '@/data-store/keys';
+import { buildDataKey, buildIndexKey, buildTaskActiveIndexKey, buildTaskChildrenKey, buildMonthIndexKey } from '@/data-store/keys';
 import { EntityType } from '@/types/enums';
-import { isTaskActive } from '@/lib/utils/task-active-utils';
-import { getUTCNow, formatArchiveMonthKeyUTC } from '@/lib/utils/utc-utils';
+import { isTaskActive, isTaskCompleted } from '@/lib/utils/task-active-utils';
+import { resolveTaskCompletedArchiveMonthKeyUTC } from '@/lib/utils/task-archive-index-utils';
 
 const ENTITY = EntityType.TASK;
 
@@ -93,22 +93,16 @@ export async function upsertTask(task: Task): Promise<Task> {
     await kvSRem(activeKey, task.id);
   }
 
-  // Maintain month index (doneAt → collectedAt → createdAt)
-  const { buildMonthIndexKey } = await import('@/data-store/keys');
-  const date = task.doneAt || task.collectedAt || task.createdAt || getUTCNow();
-  if (date) {
-    const monthKey = formatArchiveMonthKeyUTC(date);
-    await kvSAdd(buildMonthIndexKey(ENTITY, monthKey), task.id);
+  // Maintain month index for terminal/history tasks only.
+  const monthKeyForTask = isTaskCompleted(task) ? resolveTaskCompletedArchiveMonthKeyUTC(task) : null;
+  if (monthKeyForTask) {
+    await kvSAdd(buildMonthIndexKey(ENTITY, monthKeyForTask), task.id);
   }
 
   if (previous) {
-    const prevDate = (previous as any).doneAt || (previous as any).collectedAt || (previous as any).createdAt;
-    if (prevDate) {
-      const prevMonthKey = formatArchiveMonthKeyUTC(prevDate);
-      const currMonthKey = formatArchiveMonthKeyUTC(date);
-      if (prevMonthKey !== currMonthKey) {
-        await kvSRem(buildMonthIndexKey(ENTITY, prevMonthKey), task.id);
-      }
+    const prevMonthKey = resolveTaskCompletedArchiveMonthKeyUTC(previous as Task);
+    if (prevMonthKey && prevMonthKey !== monthKeyForTask) {
+      await kvSRem(buildMonthIndexKey(ENTITY, prevMonthKey), task.id);
     }
   }
 

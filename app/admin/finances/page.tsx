@@ -31,16 +31,15 @@ import {
   Item,
 } from '@/types/entities';
 import { Plus, DollarSign, TrendingUp, TrendingDown, Building2, User, Archive, Loader2 } from 'lucide-react';
-import { MONTHS, getYearRange, getMonthName, getCurrentMonth } from '@/lib/constants/date-constants';
+import { getMonthName } from '@/lib/constants/date-constants';
 import { BUSINESS_STRUCTURE, ItemType, FOUNDER_PLAYER_ID } from '@/types/enums';
 import { getCompanyAreas, getPersonalAreas, isCompanyStation, getAreaForStation } from '@/lib/utils/business-structure-utils';
 import { getAreaDisplayLabel, getStationDisplayLabel } from '@/lib/constants/business-structure-labels';
 import type { Area, Station } from '@/types/type-aliases';
 import { CompanyRecordsList, PersonalRecordsList } from '@/components/finances/financial-records-components';
 import { MonthSelector } from '@/components/ui/month-selector';
-import { formatMonthKey, getCurrentMonthKey, sortMonthKeys, formatDisplayDate } from '@/lib/utils/date-utils';
+import { formatMonthKey, formatDisplayDate } from '@/lib/utils/date-utils';
 import { Switch } from '@/components/ui/switch';
-import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
 import {
   formatDecimal,
   getCashTotal,
@@ -70,6 +69,7 @@ import { monthKeyFromYearMonth } from '@/lib/utils/entity-admin-deep-links';
 
 import { PartnershipsManager } from '@/components/finances/partnerships-manager';
 import { useKeyboardShortcuts } from '@/lib/hooks/use-keyboard-shortcuts';
+import { useMonthlySummary } from '@/lib/hooks/use-monthly-summary';
 import { Contract, Business, Character, Site } from '@/types/entities';
 import {
   DEFAULT_CURRENCY_EXCHANGE_RATES,
@@ -127,10 +127,12 @@ function mergeInventoryTotalsIntoAssets(assets: any, inventoryTotals: InventoryB
 }
 
 function FinancesPageContent() {
-  const { getPreference, setPreference, isLoading: preferencesLoading } = useUserPreferences();
   const { user: authUser } = useAuth();
-  const [selectedMonthKey, setSelectedMonthKey] = useState(getCurrentMonthKey());
-  const [availableMonths, setAvailableMonths] = useState<string[]>([]);
+  const {
+    selectedMonthKey,
+    setSelectedMonthKey,
+    availableMonths,
+  } = useMonthlySummary({ loadSummary: false });
   const [companySummary, setCompanySummary] = useState<CompanyMonthlySummary | null>(null);
   const [personalSummary, setPersonalSummary] = useState<PersonalMonthlySummary | null>(null);
   const [aggregatedFinancialData, setAggregatedFinancialData] = useState<any>(null);
@@ -224,23 +226,6 @@ function FinancesPageContent() {
     };
 
     loadConversionRates();
-  }, []);
-
-  // Load available months once
-  useEffect(() => {
-    const loadMonths = async () => {
-      try {
-        const months = await ClientAPI.getAvailableSummaryMonths();
-        // Ensure current month is always in the list if not there
-        const current = getCurrentMonthKey();
-        const allMonths = months.includes(current) ? months : [current, ...months];
-        setAvailableMonths(sortMonthKeys(allMonths));
-      } catch (err) {
-        console.warn("Failed to load available months", err);
-        setAvailableMonths([getCurrentMonthKey()]);
-      }
-    };
-    loadMonths();
   }, []);
 
   const loadSummaries = useCallback(async () => {

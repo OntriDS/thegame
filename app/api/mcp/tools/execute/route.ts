@@ -25,13 +25,85 @@ import {
   auditActiveTasksMissingFromActiveIndex,
   auditCompletedTasksMissingFromCompletedIndex,
   auditTaskTimelineVsMonthIndex,
+  auditTaskMonthIndexContamination,
 } from '@/lib/integrity/task-timeline-audit';
 import { SummaryService } from '@/data-store/services/summary.service';
+import { SummaryRepository } from '@/data-store/repositories/summary.repo';
+import { buildMonthIndexKey } from '@/data-store/keys';
 import { EntityType } from '@/types/enums';
-import { getUTCNow, toUTC, endOfDayUTC, startOfMonthUTC, endOfMonthUTC } from '@/lib/utils/utc-utils';
+import {
+  getUTCNow,
+  toUTC,
+  endOfDayUTC,
+  startOfMonthUTC,
+  endOfMonthUTC,
+  formatArchiveMonthKeyUTCFromParts,
+} from '@/lib/utils/utc-utils';
+import { kvSMembers } from '@/lib/utils/kv';
 
 const DEFAULT_LIST_LIMIT = 50;
 const MAX_LIST_LIMIT = 200;
+
+function normalizeMonthKeyForSummary(monthKey: string): string | null {
+  const value = String(monthKey).trim();
+  if (!value) return null;
+
+  const mmYyyyMatch = value.match(/^(\d{2})-(\d{4})$/);
+  const mmYyMatch = value.match(/^(\d{2})-(\d{2})$/);
+  const yyyyMmMatch = value.match(/^(\d{4})-(\d{2})$/);
+
+  if (!mmYyyyMatch && !mmYyMatch && !yyyyMmMatch) return null;
+
+  const monthText = mmYyyyMatch ? mmYyyyMatch[1] : mmYyMatch ? mmYyMatch[1] : yyyyMmMatch ? yyyyMmMatch[2] : '';
+  const yearText = mmYyyyMatch ? mmYyyyMatch[2] : mmYyMatch ? `20${mmYyMatch[2]}` : yyyyMmMatch ? yyyyMmMatch[1] : '';
+
+  const month = Number(monthText);
+  const year = Number(yearText);
+
+  if (!Number.isFinite(month) || !Number.isFinite(year)) return null;
+  if (month < 1 || month > 12) return null;
+  if (year < 2000 || year > 2100) return null;
+
+  return formatArchiveMonthKeyUTCFromParts(year, month);
+}
+
+async function describeMonthlySummary(monthKey: string): Promise<{
+  monthKey: string;
+  hashExists: boolean;
+  hash: Awaited<ReturnType<typeof SummaryRepository.getSummary>>;
+  counts: {
+    sales: number;
+    tasks: number;
+    financials: number;
+    items: number;
+  };
+}> {
+  const normalizedMonthKey = normalizeMonthKeyForSummary(monthKey);
+  if (!normalizedMonthKey) {
+    throw new Error('Invalid monthKey format. Expected MM-YY, MM-YYYY, or YYYY-MM.');
+  }
+
+  const [salesIds, taskIds, financialIds, itemIds, hash, rawHash] = await Promise.all([
+    kvSMembers(buildMonthIndexKey(EntityType.SALE, normalizedMonthKey)),
+    kvSMembers(buildMonthIndexKey(EntityType.TASK, normalizedMonthKey)),
+    kvSMembers(buildMonthIndexKey(EntityType.FINANCIAL, normalizedMonthKey)),
+    kvSMembers(buildMonthIndexKey(EntityType.ITEM, normalizedMonthKey)),
+    SummaryRepository.getSummary(normalizedMonthKey),
+    SummaryRepository.getRawSummary(normalizedMonthKey),
+  ]);
+
+  return {
+    monthKey: normalizedMonthKey,
+    hashExists: rawHash !== null,
+    hash,
+    counts: {
+      sales: (salesIds || []).length,
+      tasks: (taskIds || []).length,
+      financials: (financialIds || []).length,
+      items: (itemIds || []).length,
+    },
+  };
+}
 
 function clampLimit(raw: unknown): number {
   const n = Number(raw);
@@ -309,9 +381,32 @@ export async function POST(req: NextRequest) {
         const data = await auditCompletedTasksMissingFromCompletedIndex();
         return NextResponse.json({ success: true, data });
       }
+      case 'thegame.integrity.taskMonthIndexContamination': {
+        const my = parseMonthYear(parameters);
+        if (!my) {
+          return NextResponse.json(
+            { success: false, error: 'month and year (valid calendar) are required' },
+            { status: 400 }
+          );
+        }
+        const data = await auditTaskMonthIndexContamination(my.month, my.year);
+        return NextResponse.json({ success: true, data });
+      }
       case 'thegame.integrity.activeTasksMissingFromActiveIndex': {
         const data = await auditActiveTasksMissingFromActiveIndex();
         return NextResponse.json({ success: true, data });
+      }
+      case 'thegame.summary.describe': {
+        const monthKey = parameters.monthKey ? String(parameters.monthKey).trim() : '';
+        try {
+          const now = getUTCNow();
+          const normalizedMonthKey = monthKey || formatArchiveMonthKeyUTCFromParts(now.getUTCFullYear(), now.getUTCMonth() + 1);
+          const data = await describeMonthlySummary(normalizedMonthKey);
+          return NextResponse.json({ success: true, data });
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Invalid monthKey';
+          return NextResponse.json({ success: false, error: message }, { status: 400 });
+        }
       }
       case 'thegame.tasks.repairPrimaryIndex': {
         const data = await repairPrimaryTaskIndex();
@@ -333,8 +428,30 @@ export async function POST(req: NextRequest) {
         const monthKey = parameters.monthKey ? String(parameters.monthKey).trim() : undefined;
         if (monthKey) {
           try {
-            const totals = await SummaryService.rebuildSummaryForMonth(monthKey);
-            return NextResponse.json({ success: true, message: `Rebuilt summary for ${monthKey}`, data: { totals } });
+            const normalizedMonthKey = normalizeMonthKeyForSummary(monthKey);
+            if (!normalizedMonthKey) {
+              return NextResponse.json(
+                { success: false, error: 'Invalid monthKey format. Expected MM-YY, MM-YYYY, or YYYY-MM.' },
+                { status: 400 }
+              );
+            }
+
+            const pre = await describeMonthlySummary(normalizedMonthKey);
+            const totals = await SummaryService.rebuildSummaryForMonth(normalizedMonthKey);
+            const post = await describeMonthlySummary(normalizedMonthKey);
+
+            if (!post.hashExists) {
+              return NextResponse.json({ success: false, error: `Failed to write summary hash for ${normalizedMonthKey}.` }, { status: 500 });
+            }
+
+            return NextResponse.json({
+              success: true,
+              monthKey: normalizedMonthKey,
+              pre,
+              post,
+              totals,
+              wroteHash: post.hashExists,
+            });
           } catch (err) {
             const message = err instanceof Error ? err.message : 'Invalid monthKey';
             return NextResponse.json({ success: false, error: message }, { status: 400 });
