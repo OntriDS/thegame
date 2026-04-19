@@ -1239,7 +1239,9 @@ export async function getSalesForMonth(year: number, month: number): Promise<Sal
  */
 export async function getSalesFromMonthIndex(mmyy: string): Promise<Sale[]> {
   const activeIndexKey = buildMonthIndexKey(EntityType.SALE, mmyy);
-  const ids = await kvSMembers(activeIndexKey);
+  const archiveIndexKey = buildArchiveCollectionIndexKey('sales', mmyy);
+  const { kvSUnion } = await import('./kv');
+  const ids = await kvSUnion(activeIndexKey, archiveIndexKey);
 
   if (!ids || ids.length === 0) return [];
 

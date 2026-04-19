@@ -3,6 +3,7 @@ import type { NextRequest } from 'next/server';
 import { verifyPixelbrainRouteAccess } from '@/lib/auth/pixelbrain-route-auth';
 import {
   getAllSales,
+  getSalesForMonth,
   getAllTasks,
   getAllPlayers,
   getAllFinancials,
@@ -27,6 +28,7 @@ import {
 } from '@/lib/integrity/task-timeline-audit';
 import { SummaryService } from '@/data-store/services/summary.service';
 import { EntityType } from '@/types/enums';
+import { getUTCNow, toUTC, endOfDayUTC, startOfMonthUTC, endOfMonthUTC } from '@/lib/utils/utc-utils';
 
 const DEFAULT_LIST_LIMIT = 50;
 const MAX_LIST_LIMIT = 200;
@@ -50,6 +52,32 @@ function parseMonthYear(params: Record<string, unknown>): { month: number; year:
   if (month < 1 || month > 12) return null;
   if (year < 2000 || year > 2100) return null;
   return { month, year };
+}
+
+function isMonthScopedUTCRange(startRaw: string, endRaw: string): { year: number; month: number } | null {
+  try {
+    const start = toUTC(startRaw);
+    const end = endOfDayUTC(toUTC(endRaw));
+
+    const monthStart = startOfMonthUTC(start);
+    const monthEnd = endOfMonthUTC(start);
+
+    if (start.getTime() !== monthStart.getTime()) return null;
+    if (end.getTime() !== monthEnd.getTime()) return null;
+    if (
+      start.getUTCFullYear() !== end.getUTCFullYear() ||
+      start.getUTCMonth() !== end.getUTCMonth()
+    ) {
+      return null;
+    }
+
+    return {
+      year: start.getUTCFullYear(),
+      month: start.getUTCMonth() + 1,
+    };
+  } catch {
+    return null;
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -102,12 +130,21 @@ export async function POST(req: NextRequest) {
         const dateRange = parameters.dateRange as { start?: string; end?: string } | undefined;
         let sales = await getAllSales();
         if (dateRange?.start && dateRange?.end) {
-          const start = new Date(dateRange.start).getTime();
-          const end = new Date(dateRange.end).getTime();
-          sales = sales.filter((s) => {
-            const t = new Date(s.saleDate).getTime();
-            return t >= start && t <= end;
-          });
+          const monthly = isMonthScopedUTCRange(dateRange.start, dateRange.end);
+          if (monthly) {
+            sales = await getSalesForMonth(monthly.year, monthly.month);
+          } else {
+            const start = toUTC(dateRange.start).getTime();
+            const end = endOfDayUTC(toUTC(dateRange.end)).getTime();
+            sales = sales.filter((s) => {
+              try {
+                const timestamp = toUTC(s.saleDate).getTime();
+                return timestamp >= start && timestamp <= end;
+              } catch {
+                return false;
+              }
+            });
+          }
         }
         const slice = sales.slice(offset, offset + limit);
         const hasMore = offset + limit < sales.length;
@@ -332,12 +369,12 @@ export async function POST(req: NextRequest) {
           let timestampIso: string | undefined;
           if (targetEvent === 'CHARGED' || targetEvent === 'DONE') {
             const d = sale.doneAt || (sale as { chargedAt?: Date }).chargedAt;
-            timestampIso = d ? new Date(d).toISOString() : undefined;
+            timestampIso = d ? toUTC(d).toISOString() : undefined;
           } else if (targetEvent === 'COLLECTED') {
             const raw =
               sale.collectedAt ||
-              calculateClosingDate(sale.saleDate ? new Date(sale.saleDate) : new Date());
-            timestampIso = raw ? new Date(raw).toISOString() : undefined;
+              calculateClosingDate(sale.saleDate ? toUTC(sale.saleDate) : getUTCNow());
+            timestampIso = raw ? toUTC(raw).toISOString() : undefined;
           }
           const patchResult = await patchLogEntryById(EntityType.SALE, {
             logEntryId,
@@ -364,10 +401,10 @@ export async function POST(req: NextRequest) {
           const targetEvent = String(newEvent || hit.entry.event || '').toUpperCase();
           let timestampIso: string | undefined;
           if (targetEvent === 'DONE' && task.doneAt) {
-            timestampIso = new Date(task.doneAt).toISOString();
+            timestampIso = toUTC(task.doneAt).toISOString();
           } else if (targetEvent === 'COLLECTED') {
-            const raw = task.collectedAt || task.doneAt || new Date();
-            timestampIso = new Date(raw).toISOString();
+            const raw = task.collectedAt || task.doneAt || getUTCNow();
+            timestampIso = toUTC(raw).toISOString();
           }
           const patchResult = await patchLogEntryById(EntityType.TASK, {
             logEntryId,
@@ -395,10 +432,10 @@ export async function POST(req: NextRequest) {
           let timestampIso: string | undefined;
           if (targetEvent === 'SOLD') {
             const raw = item.soldAt || item.createdAt;
-            timestampIso = raw ? new Date(raw).toISOString() : undefined;
+            timestampIso = raw ? toUTC(raw).toISOString() : undefined;
           } else if (targetEvent === 'COLLECTED') {
             const raw = item.soldAt || item.createdAt;
-            timestampIso = raw ? new Date(raw).toISOString() : undefined;
+            timestampIso = raw ? toUTC(raw).toISOString() : undefined;
           }
           const patchResult = await patchLogEntryById(EntityType.ITEM, {
             logEntryId,
@@ -427,7 +464,7 @@ export async function POST(req: NextRequest) {
               { status: 404 }
             );
           }
-          const refMonth = new Date(financial.year, financial.month - 1, 1);
+          const refMonth = toUTC(Date.UTC(financial.year, financial.month - 1, 1));
           const targetEvent = String(newEvent || hit.entry.event || '').toUpperCase();
           let timestampIso: string | undefined;
           if (
@@ -440,7 +477,7 @@ export async function POST(req: NextRequest) {
             timestampIso = refMonth.toISOString();
           } else if (targetEvent === 'COLLECTED') {
             const raw = financial.collectedAt || refMonth;
-            timestampIso = new Date(raw).toISOString();
+            timestampIso = toUTC(raw).toISOString();
           }
           const patchResult = await patchLogEntryById(EntityType.FINANCIAL, {
             logEntryId,
