@@ -204,7 +204,13 @@ export async function spawnNextRecurrentInstance(
     createdAt: new Date(),
     updatedAt: new Date(),
     order: nextDateLocal.getTime(),
-    links: []
+    links: [],
+    // Never inherit terminal / completion DNA from the template (breaks DONE logs, finrecs, archive).
+    status: TaskStatus.CREATED,
+    progress: 0,
+    doneAt: undefined,
+    collectedAt: undefined,
+    isCollected: false,
   };
 
   return instance;
@@ -357,7 +363,12 @@ export function spawnRecurrentInstance(
     createdAt: new Date(),
     updatedAt: new Date(),
     order: instanceOrder,
-    links: [] // new instance gets fresh links[]
+    links: [], // new instance gets fresh links[]
+    status: TaskStatus.CREATED,
+    progress: 0,
+    doneAt: undefined,
+    collectedAt: undefined,
+    isCollected: false,
   };
 }
 

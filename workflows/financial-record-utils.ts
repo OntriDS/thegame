@@ -25,6 +25,7 @@ import type { Station } from '@/types/type-aliases';
 import { BITCOIN_SATOSHIS_PER_BTC, DEFAULT_CURRENCY_EXCHANGE_RATES } from '@/lib/constants/financial-constants';
 import { buildFinrecTitleFromSaleParts, resolveCanonicalSaleTimelineDate } from '@/lib/utils/sale-auto-name-utils';
 import { getUTCNow } from '@/lib/utils/utc-utils';
+import { parseDateToUTC } from '@/lib/utils/date-parsers';
 
 /**
  * Get the current J$ Balance for an entity (Character or Player)
@@ -152,7 +153,9 @@ export async function createFinancialRecordFromTask(task: Task): Promise<Financi
     console.log(`[createFinancialRecordFromTask] Creating new financial record (Effect Registry confirmed no existing record)`);
 
     const currentDate = getUTCNow();
-    const dateToUse = task.collectedAt || task.doneAt || currentDate;
+    const rawDate = task.collectedAt || task.doneAt || currentDate;
+    const dateToUse =
+      rawDate instanceof Date ? rawDate : parseDateToUTC(rawDate as string | number);
     const newFinrec: FinancialRecord = {
       id: `finrec-${task.id}`,
       name: task.name,

@@ -443,15 +443,22 @@ export function createTaskParentOptions(
         filteredTasks = filteredTasks.filter(t => t.id !== excludeTaskId);
     }
 
-    // 2. Filter by Context
+    // 2. Filter by Context — must match control-room `canBeParentRecurrent` (recurrent ∩ mission = ∅).
+    // Recurrent tree only: Group → (Template | Instance*); Template → Instance.
+    // *Instance may also hang directly under a Group (same rule as drag/drop in the tree).
     if (isRecurrentContext) {
-        // If we are in recurrent context, mostly show Recurrent Groups as parents
-        // or Recurrent Templates (if we are an instance, though typically instances point to templates via separate field)
-        // For Recurrent Template, parent is Recurrent Group.
-        filteredTasks = filteredTasks.filter(t =>
-            t.type === TaskType.RECURRENT_GROUP ||
-            t.type === TaskType.MISSION // Can always parent to a Mission
-        );
+        if (currentTaskType === TaskType.RECURRENT_INSTANCE) {
+            filteredTasks = filteredTasks.filter(
+                t => t.type === TaskType.RECURRENT_TEMPLATE || t.type === TaskType.RECURRENT_GROUP
+            );
+        } else if (currentTaskType === TaskType.RECURRENT_TEMPLATE) {
+            filteredTasks = filteredTasks.filter(t => t.type === TaskType.RECURRENT_GROUP);
+        } else if (currentTaskType === TaskType.RECURRENT_GROUP) {
+            filteredTasks = filteredTasks.filter(t => t.type === TaskType.RECURRENT_GROUP);
+        } else {
+            // Unknown type in recurrent modal: only another group is always valid as a folder parent.
+            filteredTasks = filteredTasks.filter(t => t.type === TaskType.RECURRENT_GROUP);
+        }
     } else {
         // Standard context
         // Hide Recurrent Templates and Instances (they shouldn't be parents of normal tasks usually)

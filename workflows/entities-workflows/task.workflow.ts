@@ -273,7 +273,12 @@ export async function onTaskUpsert(task: Task, previousTask?: Task): Promise<voi
 
   // Log DONE event - either when status changes to Done OR when creating a task that's already Done
   if (outputsTask.status === TaskStatus.DONE && outputsTask.doneAt) {
-    const shouldLogDone = !previousTask || !previousTask.doneAt;
+    // Use prior *status*, not doneAt: instances spawned from a completed template could carry a stray
+    // template doneAt while still active, which incorrectly suppressed DONE logs and downstream effects.
+    const wasAlreadyTerminalDoneLike =
+      previousTask &&
+      (previousTask.status === TaskStatus.DONE || previousTask.status === TaskStatus.COLLECTED);
+    const shouldLogDone = !wasAlreadyTerminalDoneLike;
     if (shouldLogDone) {
       await appendEntityLog(EntityType.TASK, outputsTask.id, LogEventType.DONE, {
         name: getSafeTaskNameForLogging(outputsTask),
