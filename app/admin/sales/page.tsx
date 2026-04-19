@@ -18,7 +18,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import SalesModal from "@/components/modals/sales-modal";
 import { MonthSelector } from "@/components/ui/month-selector";
 import { CurrencyExchangeRates, DEFAULT_CURRENCY_EXCHANGE_RATES } from "@/lib/constants/financial-constants";
-import { formatCurrency } from "@/lib/utils/financial-utils";
+import { formatCurrency, roundCurrency2 } from "@/lib/utils/financial-utils";
 import { formatMonthKey } from "@/lib/utils/date-utils";
 import { SalesDeepLinkTrigger } from '@/components/admin/admin-deep-link-triggers';
 import { useMonthlySummary } from '@/lib/hooks/use-monthly-summary';
@@ -41,6 +41,15 @@ function SalesPageContent() {
     availableMonths,
     atomicSummary,
   } = useMonthlySummary();
+  const [monthlySalesProfit, setMonthlySalesProfit] = useState<number>(0);
+
+  const isCountableSaleForSummary = useCallback((sale: Sale) => {
+    return (
+      sale.status === SaleStatus.CHARGED ||
+      sale.status === SaleStatus.COLLECTED ||
+      (sale as { isCollected?: boolean }).isCollected === true
+    );
+  }, []);
 
   const handleDeepLinkSale = useCallback((sale: Sale) => {
     setSelectedMonthKey(formatMonthKey(sale.saleDate));
@@ -139,7 +148,7 @@ function SalesPageContent() {
     );
   };
 
-  const getSaleFinancials = (sale: Sale) => {
+  const getSaleFinancials = useCallback((sale: Sale) => {
     const grossRevenue = sale.totals.totalRevenue;
     let cost = 0;
     let netProfit = 0;
@@ -179,7 +188,14 @@ function SalesPageContent() {
     }
 
     return { grossRevenue, cost, netProfit };
-  };
+  }, [exchangeRates]);
+
+  useEffect(() => {
+    const nextMonthlySalesProfit = sales
+      .filter(isCountableSaleForSummary)
+      .reduce((sum, sale) => sum + getSaleFinancials(sale).netProfit, 0);
+    setMonthlySalesProfit(roundCurrency2(nextMonthlySalesProfit));
+  }, [sales, getSaleFinancials, isCountableSaleForSummary]);
 
   const handleNewSale = () => {
     setEditingSale(null);
@@ -256,12 +272,12 @@ function SalesPageContent() {
         {/* Net Profit (Detail) */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Net Profit (Detail)</CardTitle>
+            <CardTitle className="text-sm font-medium">Net Profit (Sales)</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600 dark:text-green-500">
-              {formatCurrency(atomicSummary?.profit ?? 0)}
+              {formatCurrency(monthlySalesProfit)}
             </div>
             <p className="text-xs text-muted-foreground">
               Monthly total
